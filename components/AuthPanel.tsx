@@ -9,6 +9,7 @@ export function AuthPanel({supabase}:{supabase:SupabaseClient}) {
   const [mode,setMode]=useState<Mode>("login"),[busy,setBusy]=useState(false);
   const [email,setEmail]=useState(""),[password,setPassword]=useState("");
   const [first,setFirst]=useState(""),[last,setLast]=useState(""),[phone,setPhone]=useState(""),[occupation,setOccupation]=useState(""),[city,setCity]=useState(""),[state,setState]=useState("");
+  const [assistantName,setAssistantName]=useState("Juan");
   const [error,setError]=useState(""),[success,setSuccess]=useState("");
   const handle=async(e:FormEvent)=>{
     e.preventDefault();setError("");setSuccess("");setBusy(true);
@@ -26,7 +27,8 @@ export function AuthPanel({supabase}:{supabase:SupabaseClient}) {
         email,password,
         options:{emailRedirectTo:window.location.origin,data:{
           first_name:first.trim(),last_name:last.trim(),phone:phone.trim(),
-          occupation:occupation.trim(),city:city.trim(),state:state.trim()
+          occupation:occupation.trim(),city:city.trim(),state:state.trim(),
+          assistant_name:assistantName.trim()||"Juan",owner_language:"es",customer_language:"en"
         }}
       });
       if(error)throw error;
@@ -62,6 +64,7 @@ export function AuthPanel({supabase}:{supabase:SupabaseClient}) {
           <div className="field-group full"><label className="label">Ocupación *</label><input className="field" required maxLength={100} value={occupation} onChange={e=>setOccupation(e.target.value)} placeholder="Electricista, contratista, carpintero…"/></div>
           <div className="field-group"><label className="label">Ciudad</label><input className="field" maxLength={90} value={city} onChange={e=>setCity(e.target.value)} placeholder="Columbus"/></div>
           <div className="field-group"><label className="label">Estado</label><input className="field" maxLength={90} value={state} onChange={e=>setState(e.target.value)} placeholder="Georgia"/></div>
+          <div className="field-group full"><label className="label">¿Cómo quieres llamar a tu asistente?</label><input className="field" maxLength={40} value={assistantName} onChange={e=>setAssistantName(e.target.value)} placeholder="Juan"/></div>
         </div>}
         <div className="field-group"><label className="label">Correo electrónico</label><input className="field" type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="tu@correo.com"/></div>
         {mode!=="forgot"&&<div className="field-group"><div className="row between"><label className="label">Contraseña</label>{mode==="login"&&<button className="linkbutton small" type="button" onClick={()=>{setMode("forgot");setError("");setSuccess("");}}>¿Olvidaste tu contraseña?</button>}</div><input className="field" type="password" minLength={mode==="signup"?8:1} autoComplete={mode==="login"?"current-password":"new-password"} required value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••"/></div>}
