@@ -1,5 +1,5 @@
 import { NextRequest,NextResponse } from "next/server";
-import { authenticatedUser } from "@/lib/auth-server";
+import { authenticatedUser, consumeCredit } from "@/lib/auth-server";
 export const runtime = "nodejs";
 export async function POST(req:NextRequest){
   if(!await authenticatedUser(req))return NextResponse.json({error:"Inicia sesión."},{status:401});
@@ -12,6 +12,7 @@ export async function POST(req:NextRequest){
     const voice=lang==="en"?process.env.ELEVENLABS_VOICE_EN:process.env.ELEVENLABS_VOICE_ES;
     if(!voice) return NextResponse.json({error:"Configura el ID de voz para "+lang+" en Vercel."},{status:503});
     if(!text.trim())return NextResponse.json({error:"Texto vacío."},{status:400});
+    if(!await consumeCredit(req,"voice"))return NextResponse.json({error:"Límite de audio diario alcanzado o acceso denegado."},{status:429});
     const r=await fetch("https://api.elevenlabs.io/v1/text-to-speech/"+encodeURIComponent(voice),{
       method:"POST",headers:{"xi-api-key":key,"Content-Type":"application/json","Accept":"audio/mpeg"},
       body:JSON.stringify({text,model_id:process.env.ELEVENLABS_TTS_MODEL||"eleven_flash_v2_5",

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticatedUser } from "@/lib/auth-server";
+import { authenticatedUser, consumeCredit } from "@/lib/auth-server";
 export const runtime = "nodejs";
 export async function POST(req:NextRequest) {
   if (!await authenticatedUser(req)) return NextResponse.json({error:"Inicia sesión."},{status:401});
@@ -7,6 +7,7 @@ export async function POST(req:NextRequest) {
   try {
     const form=await req.formData(), file=form.get("audio");
     if (!(file instanceof Blob) || file.size===0 || file.size>10_000_000) return NextResponse.json({error:"Audio inválido o demasiado grande."},{status:400});
+    if(!await consumeCredit(req,"voice"))return NextResponse.json({error:"Límite de audio diario alcanzado o acceso denegado."},{status:429});
     const forward=new FormData();
     forward.append("model_id","scribe_v2");
     forward.append("file",file,"audio.webm");

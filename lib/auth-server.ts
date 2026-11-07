@@ -20,3 +20,21 @@ export async function authenticatedUser(req: NextRequest): Promise<string | null
     return data.user.id;
   } catch { return null; }
 }
+
+
+// Quotas are enforced atomically inside Supabase using the caller's JWT.
+// Users of other applications on the shared Supabase Auth pool cannot use these credits.
+export async function consumeCredit(req: NextRequest, kind: "ai" | "voice"): Promise<boolean> {
+  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!token || !url || !key) return false;
+  try {
+    const client = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: "Bearer " + token } }
+    });
+    const { data, error } = await client.rpc("smartjob_take_credit", { p_kind: kind });
+    return !error && data?.allowed === true;
+  } catch { return false; }
+}

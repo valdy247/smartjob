@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticatedUser } from "@/lib/auth-server";
+import { authenticatedUser, consumeCredit } from "@/lib/auth-server";
 import { assistantPrompt, supportedLanguages } from "@/lib/ai-prompt";
 import { compareNumbers } from "@/lib/qa";
 import type { JobContext, Actor, AiTurn } from "@/lib/types";
@@ -7,11 +7,15 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   const userId = await authenticatedUser(req);
   if (!userId) return NextResponse.json({ error: "Sesión inválida. Inicia sesión otra vez." }, { status: 401 });
-  if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: "La clave de OpenAI no está configurada en Vercel." }, { status: 503 });
+  const gatewayToken = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || req.headers.get("x-vercel-oidc-token");
+  const tokenForModel = process.env.OPENAI_API_KEY || gatewayToken;
+  const throughGateway = !process.env.OPENAI_API_KEY;
+  if (!tokenForModel) return NextResponse.json({ error: "No hay proveedor de IA configurado. Activa Vercel AI Gateway u OpenAI." }, { status: 503 });
   try {
     const body = await req.json();
     const text = String(body.text || "").trim().slice(0,2400);
     if (!text) return NextResponse.json({ error: "No hay voz ni texto para procesar." }, { status: 400 });
+    if (!await consumeCredit(req,"ai")) return NextResponse.json({error:"Límite de 40 consultas diarias alcanzado o no tienes permiso de uso. Inténtalo mañana."},{status:429});
     const actor: Actor = body.actor === "customer" ? "customer" : "owner";
     const context: JobContext = {
       job_type: String(body.context?.job_type||"").slice(0,100), city:String(body.context?.city||"").slice(0,90),
@@ -24,11 +28,11 @@ export async function POST(req: NextRequest) {
     const owner = supportedLanguages[String(body.ownerLanguage)] ? String(body.ownerLanguage) : "es";
     const customer = supportedLanguages[String(body.customerLanguage)] ? String(body.customerLanguage) : "en";
     const prompt = assistantPrompt(actor, String(body.assistantName || "Juan").slice(0,40), owner, customer, context, recent);
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch(throughGateway ? "https://ai-gateway.vercel.sh/v1/chat/completions" : "https://api.openai.com/v1/chat/completions", {
       method:"POST",
-      headers:{ "Authorization":"Bearer "+process.env.OPENAI_API_KEY, "Content-Type":"application/json" },
+      headers:{ "Authorization":"Bearer "+tokenForModel, "Content-Type":"application/json" },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+        model: throughGateway ? "openai/" + (process.env.OPENAI_MODEL || "gpt-4.1-mini") : (process.env.OPENAI_MODEL || "gpt-4.1-mini"),
         temperature:0.15, response_format:{type:"json_object"},
         max_tokens:750,
         messages:[{role:"system",content:prompt},{role:"user",content:text}]

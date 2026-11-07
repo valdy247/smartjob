@@ -66,3 +66,7 @@ Deploy from GitHub \`valdy247/smartjob\` to Vercel. Configure environment variab
 - No image-based door inspection or verified local labor-rate feed.
 - No distributed request rate limits or per-user AI budget yet.
 - MVP has 2 modes, no billing, no production monitoring.
+
+## Vercel AI Gateway and limits
+
+If no direct `OPENAI_API_KEY` is supplied, the server uses Vercel AI Gateway with automatic OIDC credentials (or `AI_GATEWAY_API_KEY` in local development). Gateway must be enabled and billable in the Vercel team. Requests use model `openai/gpt-4.1-mini` unless `OPENAI_MODEL` is set. This incurs token costs under the gateway. User-facing AI and TTS are never invoked without sign-in and a Smart Job profile. Supabase `smartjob_daily_usage` and `smartjob_take_credit` implement an atomic cap of 40 LLM requests and 80 audio requests per user per day; add stronger per-IP abuse controls and a team spend budget before broad public launch.
