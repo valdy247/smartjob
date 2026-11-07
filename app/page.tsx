@@ -37,12 +37,51 @@ export default function Home(){
   },[]);
   useEffect(()=>{
     if(!supabase||!user){setProfile(null);setCheckingProfile(false);return;}
-    let alive=true;setCheckingProfile(true);
-    supabase.from("smartjob_profiles").select("*").eq("id",user.id).maybeSingle().then(({data,error})=>{
+    let alive=true;
+    const currentUser=user;
+    setCheckingProfile(true);
+    // Signup already collected the professional's details. Persist them once after
+    // confirmation/login rather than sending the user through a duplicate form.
+    async function loadOrCreateProfile(){
+      const {data:existing,error:lookupError}=await supabase!.from("smartjob_profiles")
+        .select("*").eq("id",currentUser.id).maybeSingle();
       if(!alive)return;
-      if(error)console.error("Profile lookup",error.message);
-      setProfile(data??null);setCheckingProfile(false);
-    });return()=>{alive=false;};
+      if(existing){setProfile(existing as Profile);setCheckingProfile(false);return;}
+      if(lookupError){
+        console.error("Smart Job profile lookup",lookupError.message);
+        setProfile(null);setCheckingProfile(false);return;
+      }
+      const metadata=currentUser.user_metadata||{};
+      const first=String(metadata.first_name||"").trim();
+      const last=String(metadata.last_name||"").trim();
+      const phone=String(metadata.phone||"").trim();
+      const occupation=String(metadata.occupation||"").trim();
+      if(first&&last&&phone&&occupation){
+        const initial:Profile={
+          id:currentUser.id,first_name:first,last_name:last,phone,occupation,
+          city:String(metadata.city||"").trim(),state:String(metadata.state||"").trim(),
+          country:"US",assistant_name:String(metadata.assistant_name||"Juan").trim()||"Juan",
+          owner_language:String(metadata.owner_language||"es"),
+          customer_language:String(metadata.customer_language||"en")
+        };
+        const {data:created,error:creationError}=await supabase!.from("smartjob_profiles")
+          .upsert(initial,{onConflict:"id",ignoreDuplicates:true}).select("*").maybeSingle();
+        if(!alive)return;
+        if(creationError)console.error("Smart Job profile creation",creationError.message);
+        if(created){setProfile(created as Profile);setCheckingProfile(false);return;}
+        // If another tab inserted the profile concurrently, read it without overwriting.
+        const {data:concurrent}=await supabase!.from("smartjob_profiles")
+          .select("*").eq("id",currentUser.id).maybeSingle();
+        if(!alive)return;
+        setProfile((concurrent as Profile|null)||null);
+      }else{
+        // Legacy/shared-auth identities missing registration data use onboarding once.
+        setProfile(null);
+      }
+      if(alive)setCheckingProfile(false);
+    }
+    void loadOrCreateProfile();
+    return()=>{alive=false;};
   },[supabase,user?.id]);
   const signout=async()=>{await supabase?.auth.signOut();setTab("live");};
   if(splash||starting||checkingProfile)return <div className="splash"><div className="splash-inner"><span className="brandmark"><Headphones size={46} strokeWidth={2.3}/></span><h1>smart<span style={{color:"var(--lime)"}}>job</span></h1><p className="eyebrow" style={{color:"#b1c2b0"}}>Tu trabajo. Sin barreras.</p><div className="splash-track"/></div></div>;
