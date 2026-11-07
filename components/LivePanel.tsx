@@ -127,13 +127,13 @@ export function LivePanel({profile,supabase,apiStatus}:{profile:Profile,supabase
               <div className="pill">TÚ · PROFESIONAL</div>
               <button type="button" disabled={Boolean(busy)||Boolean(recording&&recording!=="owner")} className="circle" onClick={()=>void startOrStop("owner")} aria-label={recording==="owner"?"Detener grabación":"Hablar como profesional"}>{recording==="owner"?<Square size={30} fill="currentColor"/>:<Mic size={34}/>}</button>
               <strong>{recording==="owner"?"Detener":"Hablar"}</strong>
-              {recording==="owner"?<div className="wave"><span/><span/><span/><span/><span/></div>:}
+              {recording==="owner"?<div className="wave"><span/><span/><span/><span/><span/></div>:null}
             </div>
             <div className={"talkbox customer "+(recording==="customer"?"recording":"")}>
               <div className="pill" style={{background:"#49352d",borderColor:"#715143",color:"#ffc6ac"}}>CLIENTE</div>
               <button type="button" disabled={Boolean(busy)||Boolean(recording&&recording!=="customer")} className="circle" onClick={()=>void startOrStop("customer")} aria-label={recording==="customer"?"Detener grabación":"Hablar como cliente"}>{recording==="customer"?<Square size={30} fill="currentColor"/>:<Mic size={34}/>}</button>
               <strong>{recording==="customer"?"Detener":"Hablar"}</strong>
-              {recording==="customer"?<div className="wave"><span/><span/><span/><span/><span/></div>:}
+              {recording==="customer"?<div className="wave"><span/><span/><span/><span/><span/></div>:null}
             </div>
           </div>
           {busy&&<div className="notice info" style={{marginTop:14}}><AudioLines size={16} style={{verticalAlign:"middle",marginRight:8}}/>{busy}</div>}
