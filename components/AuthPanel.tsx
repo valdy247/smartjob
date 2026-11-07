@@ -41,22 +41,18 @@ export function AuthPanel({supabase}:{supabase:SupabaseClient}) {
     <section className="auth-side">
       <Brand/>
       <div style={{position:"relative",zIndex:1,marginTop:50}}>
-        <p className="eyebrow">TU NUEVA VENTAJA PROFESIONAL</p>
-        <h1 className="auth-head">Habla cualquier idioma.<br/><span style={{color:"var(--lime)"}}>Trabaja sin límites.</span></h1>
-        <p className="auth-left-sub">Tu intérprete y asistente inteligente para atender clientes, explicar trabajos y tomar mejores decisiones.</p>
-        <div className="auth-graphic">
-          <div className="brandmark"><Languages size={26}/></div>
-          <div><strong>Una conversación. Dos idiomas.</strong><p className="muted small" style={{margin:"5px 0 0"}}>Traducción natural + asesoría cuando la necesitas.</p></div>
-          <Sparkles size={19} color="var(--lime)"/>
-        </div>
+        <p className="eyebrow">SMART JOB</p>
+        <h1 className="auth-head">Habla sin límites.<br/><span style={{color:"var(--lime)"}}>Trabaja mejor.</span></h1>
+        
+
       </div>
-      <div className="auth-points"><span><ShieldCheck size={18} color="var(--lime)"/> Tu cuenta privada</span><span><BriefcaseBusiness size={18} color="var(--lime)"/> Para cualquier profesión</span></div>
+
     </section>
     <main className="auth-right">
       <form className="auth-card" onSubmit={handle}>
         <p className="eyebrow">{mode==="signup"?"CREA TU CUENTA":mode==="forgot"?"RECUPERA EL ACCESO":"BIENVENIDO DE NUEVO"}</p>
-        <h1>{mode==="signup"?"Empieza hoy.":mode==="forgot"?"¿Olvidaste tu clave?":"Bienvenido a Smart Job."}</h1>
-        <p className="muted small" style={{marginBottom:25}}>{mode==="signup"?"Configura tu perfil profesional en menos de un minuto.":mode==="forgot"?"Te enviaremos un enlace para crear una nueva contraseña.":"Tu asistente está listo para ayudarte con tu siguiente cliente."}</p>
+        <h1>{mode==="signup"?"Crear cuenta":mode==="forgot"?"Recuperar contraseña":"Iniciar sesión"}</h1>
+        
         {mode==="signup"&&<div className="form-grid">
           <div className="field-group"><label className="label">Nombre *</label><input className="field" required maxLength={60} value={first} onChange={e=>setFirst(e.target.value)} placeholder="Valdy"/></div>
           <div className="field-group"><label className="label">Apellidos *</label><input className="field" required maxLength={80} value={last} onChange={e=>setLast(e.target.value)} placeholder="Mena"/></div>
@@ -78,7 +74,7 @@ export function AuthPanel({supabase}:{supabase:SupabaseClient}) {
             {mode==="signup"||mode==="forgot"?"Inicia sesión":"Crear una cuenta"}
           </button>
         </div>
-        <p className="tiny muted" style={{textAlign:"center",margin:"22px 0 0"}}><LockKeyhole size={12} style={{verticalAlign:"middle"}}/> Tu información se protege con autenticación Supabase.</p>
+        
       </form>
     </main>
   </div>;
