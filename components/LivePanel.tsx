@@ -15,7 +15,7 @@ async function authedFetch(supabase:SupabaseClient,url:string,options:RequestIni
 }
 export function LivePanel({profile,supabase,apiStatus}:{profile:Profile,supabase:SupabaseClient,apiStatus:Record<string,boolean>}){
   const [context,setContext]=useState<JobContext>({...contextBlank,city:profile.city,state:profile.state});
-  const [contextSaved,setContextSaved]=useState(""),[contextOpen,setContextOpen]=useState(true);
+  const [contextSaved,setContextSaved]=useState(""),[contextOpen,setContextOpen]=useState(false);
   const [ownerLang,setOwnerLang]=useState(profile.owner_language||"es"),[customerLang,setCustomerLang]=useState(profile.customer_language||"en");
   const [speaker,setSpeaker]=useState<Actor>("owner"),[text,setText]=useState("");
   const [accepted,setAccepted]=useState(false),[busy,setBusy]=useState(""),[error,setError]=useState("");
@@ -110,13 +110,13 @@ export function LivePanel({profile,supabase,apiStatus}:{profile:Profile,supabase
   const clear=()=>{audio.current?.pause();window.speechSynthesis?.cancel();setTurns([]);setError("");};
   return <div>
     <div className="hero">
-      <div><p className="eyebrow">TU ALIADO EN CADA CONVERSACIÓN</p><h1>Traductor <em>Live.</em></h1><p className="muted">Habla con tu cliente o pregúntale a {profile.assistant_name} lo que necesitas.</p></div>
+      <div><h1>Traductor <em>Live.</em></h1></div>
       <span className={"pill "+(apiStatus.ai?"":"warning")}><span className="dot"/>{apiStatus.ai?"IA conectada":"IA por conectar"}</span>
     </div>
     <div className="gridmain">
       <div>
         <section className="card">
-          <div className="card-head"><h2 className="inline-icon"><Languages size={20} color="var(--lime)"/> Conversación en vivo</h2><span className="pill off">Por turnos</span></div>
+          <div className="card-head"><h2 className="inline-icon"><Languages size={20} color="var(--lime)"/> Conversación</h2></div>
           <div className="language-row">
             <div><label className="label">Tu idioma</label><select className="field" aria-label="Idioma del profesional" value={ownerLang} onChange={e=>setOwnerLang(e.target.value)}>{Object.entries(langs).map(([code,label])=><option key={code} value={code}>{label}</option>)}</select></div>
             <button className="swap" type="button" aria-label="Intercambiar idiomas" onClick={()=>{setOwnerLang(customerLang);setCustomerLang(ownerLang);}}><ArrowDownUp size={18}/></button>
@@ -126,19 +126,19 @@ export function LivePanel({profile,supabase,apiStatus}:{profile:Profile,supabase
             <div className={"talkbox "+(recording==="owner"?"recording":"")}>
               <div className="pill">TÚ · PROFESIONAL</div>
               <button type="button" disabled={Boolean(busy)||Boolean(recording&&recording!=="owner")} className="circle" onClick={()=>void startOrStop("owner")} aria-label={recording==="owner"?"Detener grabación":"Hablar como profesional"}>{recording==="owner"?<Square size={30} fill="currentColor"/>:<Mic size={34}/>}</button>
-              <strong>{recording==="owner"?"Grabando… toca para terminar":"Toca para hablar"}</strong>
-              {recording==="owner"?<div className="wave"><span/><span/><span/><span/><span/></div>:<span className="tiny muted">Dile a {profile.assistant_name} qué necesitas</span>}
+              <strong>{recording==="owner"?"Detener":"Hablar"}</strong>
+              {recording==="owner"?<div className="wave"><span/><span/><span/><span/><span/></div>:}
             </div>
             <div className={"talkbox customer "+(recording==="customer"?"recording":"")}>
               <div className="pill" style={{background:"#49352d",borderColor:"#715143",color:"#ffc6ac"}}>CLIENTE</div>
               <button type="button" disabled={Boolean(busy)||Boolean(recording&&recording!=="customer")} className="circle" onClick={()=>void startOrStop("customer")} aria-label={recording==="customer"?"Detener grabación":"Hablar como cliente"}>{recording==="customer"?<Square size={30} fill="currentColor"/>:<Mic size={34}/>}</button>
-              <strong>{recording==="customer"?"Grabando… toca para terminar":"Que hable el cliente"}</strong>
-              {recording==="customer"?<div className="wave"><span/><span/><span/><span/><span/></div>:<span className="tiny muted">Se traduce a tu idioma</span>}
+              <strong>{recording==="customer"?"Detener":"Hablar"}</strong>
+              {recording==="customer"?<div className="wave"><span/><span/><span/><span/><span/></div>:}
             </div>
           </div>
           {busy&&<div className="notice info" style={{marginTop:14}}><AudioLines size={16} style={{verticalAlign:"middle",marginRight:8}}/>{busy}</div>}
           <div className="divider"/>
-          <div className="row between" style={{marginBottom:12}}><span className="label" style={{margin:0}}>O prueba escribiendo</span><span className="tiny muted">Usa IA real, no una demo</span></div>
+          <label className="label">Escribir mensaje</label>
           <div className="tabs-sub" style={{marginBottom:11}}><button type="button" className={speaker==="owner"?"on":""} onClick={()=>setSpeaker("owner")}>Yo hablo</button><button type="button" className={speaker==="customer"?"on":""} onClick={()=>setSpeaker("customer")}>Cliente habla</button></div>
           <form className="text-entry" onSubmit={submit}><input className="field" aria-label="Mensaje a traducir" value={text} onChange={e=>setText(e.target.value)} placeholder={speaker==="owner"?profile.assistant_name+", dile al cliente…":"My name is Nathan…"} maxLength={2400}/><button type="submit" className="btn primary" disabled={Boolean(busy)||!text.trim()} aria-label="Enviar mensaje"><Send size={18}/></button></form>
           <div className="quick-row">
@@ -147,12 +147,12 @@ export function LivePanel({profile,supabase,apiStatus}:{profile:Profile,supabase
             <button type="button" onClick={()=>{setSpeaker("owner");setText(profile.assistant_name+", pregúntale al cliente cómo se llama.");}}>Pedir el nombre</button>
           </div>
           <div className="divider"/>
-          <label className="checkbox-label"><input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)}/><span>Confirmo que puedo compartir esta conversación con los proveedores de reconocimiento de voz y de IA. Avisaré a la otra persona antes de grabar. Las frases se mantienen solo durante esta sesión de navegador y no se guardan en Smart Job.</span></label>
+          <label className="checkbox-label"><input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)}/><span>Acepto enviar audio y texto a los proveedores de IA e informaré a la otra persona. Smart Job no guarda el historial de esta sesión.</span></label>
           {error&&<div role="alert" className="notice danger" style={{marginTop:14}}><AlertTriangle size={15} style={{verticalAlign:"middle",marginRight:7}}/>{error}</div>}
         </section>
         <section className="card">
           <div className="card-head"><h2 className="inline-icon"><MessageSquareText size={20} color="var(--lime)"/> Conversación</h2><button className="btn smol ghost" onClick={clear} type="button" disabled={!turns.length}><Trash2 size={14}/>Limpiar</button></div>
-          {!turns.length?<div className="empty"><div className="orb" style={{height:76,width:76}}><AudioLines size={28}/></div><strong>Todo empieza con una conversación</strong><span className="small">Toca un micrófono o escribe un mensaje para comenzar.</span><span className="tiny">El asistente no enviará consejos privados al cliente.</span></div>:
+          {!turns.length?<div className="empty"><div className="orb" style={{height:76,width:76}}><AudioLines size={28}/></div><strong>Empieza a hablar</strong><span className="small">O escribe un mensaje.</span></div>:
             <div className="history">{turns.slice().reverse().map(turn=><article key={turn.id} className={"turn "+(turn.actor==="customer"?"customer":"")}>
               <div className="turnhead"><span>{turn.actor==="owner"?"Tú":"Cliente"} · {new Date(turn.timestamp).toLocaleTimeString("es-US",{hour:"2-digit",minute:"2-digit"})}</span><span className={"chip "+turn.mode}>{turn.mode==="advice"?"Consejo privado":turn.mode==="relay"?"Para el cliente":"Interpretación"}</span></div>
               <div className="original">{turn.source}</div><div className="translated">{turn.output}</div>
@@ -163,14 +163,8 @@ export function LivePanel({profile,supabase,apiStatus}:{profile:Profile,supabase
       </div>
       <aside>
         <div className="card">
-          <div className="card-head"><h2 className="inline-icon"><Sparkles size={20} color="var(--lime)"/> {profile.assistant_name}</h2><span className="pill">Asistente IA</span></div>
-          <div className="welcome-art"><div className="orb"><AudioLines size={42}/></div></div>
-          <p className="muted small" style={{marginBottom:0}}>Te escucha, habla por ti y puede ayudarte con decisiones de trabajo. <strong style={{color:"var(--white)"}}>Tus preguntas privadas nunca se dicen en voz alta al cliente.</strong></p>
-          <div className="divider"/><div className="helper"><Headphones size={16} color="var(--lime)" style={{flexShrink:0}}/>Usa el modo por turnos para evitar eco. La calidad y latencia reales dependen de la red y de las APIs.</div>
-        </div>
-        <div className="card">
           <div className="card-head"><h2 className="inline-icon"><ClipboardList size={20} color="var(--lime)"/> Contexto del trabajo</h2><button type="button" className="btn ghost smol" aria-label="Expandir contexto" onClick={()=>setContextOpen(!contextOpen)}><ChevronDown size={16}/></button></div>
-          <p className="small muted">Dale a {profile.assistant_name} la ubicación y detalles para que te asesore con información relevante.</p>
+          
           {contextOpen&&<div className="stack">
             <div><label className="label">Tipo de trabajo</label><input className="field" value={context.job_type} onChange={e=>setContext({...context,job_type:e.target.value})} placeholder="Instalar puerta interior"/></div>
             <div className="form-grid">
@@ -188,7 +182,7 @@ export function LivePanel({profile,supabase,apiStatus}:{profile:Profile,supabase
             <button type="button" className="btn primary block" onClick={()=>void saveContext()}><Save size={16}/>Guardar contexto</button>
           </div>}
         </div>
-        <div className="notice info" style={{marginTop:17}}><ShieldCheck size={17} style={{verticalAlign:"middle",marginRight:8}}/><strong>Información profesional:</strong> las estimaciones son orientativas, no presupuestos verificados. Verifica medidas, materiales, permisos y riesgos antes de comprometerte.</div>
+        <p className="muted tiny" style={{marginTop:12}}>Las estimaciones de IA son orientativas. Verifica medidas, precios y seguridad.</p>
       </aside>
     </div>
   </div>;
