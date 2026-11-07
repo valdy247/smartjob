@@ -9,7 +9,7 @@ export function SettingsPanel({profile,supabase,onChange,onLogout,status}:{profi
     const {error}=await supabase.from("smartjob_profiles").upsert({...form,updated_at:new Date().toISOString()});
     if(error)setMessage(error.message);else{onChange(form);setMessage("Perfil guardado.");}setSaving(false);
   };
-  return <div><div className="hero"><div><p className="eyebrow">TU ESPACIO</p><h1>Mi <em>perfil.</em></h1><p className="muted">Personaliza tu experiencia y el nombre de tu asistente.</p></div></div>
+  return <div><div className="hero"><div><h1>Mi <em>perfil.</em></h1></div></div>
   <div className="gridmain">
     <form className="card" onSubmit={save}><div className="card-head"><h2>Datos profesionales</h2><SlidersHorizontal size={18} color="var(--lime)"/></div>
       <div className="form-grid">
@@ -29,7 +29,7 @@ export function SettingsPanel({profile,supabase,onChange,onLogout,status}:{profi
     <aside><div className="card">
       <div className="card-head"><h2>Integraciones</h2><Shield size={18} color="var(--lime)"/></div>
       {[["Supabase Auth","auth"],["OpenAI · asistente","ai"],["ElevenLabs · voz","speech"],["Voces configuradas","voices"],["Telefonía","telephone"]].map(([label,key])=><div key={key} className="row between" style={{marginBottom:14}}><span className="small">{label}</span><span className={"pill "+(status[key]?"":"off")}><BadgeCheck size={12}/>{status[key]?"Activo":"Pendiente"}</span></div>)}
-      <div className="divider"/><p className="muted small">Las credenciales de IA se guardan solamente como variables privadas en Vercel; nunca en el navegador.</p>
+      <div className="divider"/>
       <button type="button" className="btn danger block" onClick={onLogout}><LogOut size={16}/>Cerrar sesión</button>
     </div></aside>
   </div></div>;
