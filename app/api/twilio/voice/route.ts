@@ -9,6 +9,6 @@ export const dynamic="force-dynamic";
 export async function POST(req:NextRequest){
  const params=await authenticTwilio(req);
  if(!params)return twiml(say("No autorizado.")+"<Hangup/>",403);
- if(!hasPilotConfiguration())return twiml(say("Smart Job aún necesita configurar sus servicios de voz.")+"<Hangup/>");
+ if(!hasPilotConfiguration(req.headers.get("x-vercel-oidc-token")))return twiml(say("Smart Job aún necesita configurar sus servicios de voz.")+"<Hangup/>");
  return twiml(say("Smart Job. Prueba de traducción telefónica.")+gather(1));
 }
