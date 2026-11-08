@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 export const e164 = (value) => /^\+[1-9]\d{7,14}$/.test(value || "");
 export const callSid = (value) => /^CA[a-f\d]{32}$/i.test(value || "");
 export const accountSid = (value) => /^AC[a-f\d]{32}$/i.test(value || "");
+export const validReceiver = (value) => e164(value) || /^client:sj_[a-f\d]{32}$/i.test(value || "");
 
 export function routeSignature(secret, {bridge, customer, twilio, owner, customerLanguage, ownerLanguage}) {
   return createHmac("sha256", secret)
