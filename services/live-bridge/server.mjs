@@ -24,7 +24,8 @@ const app=createServer((req,res)=>{
   const path=new URL(req.url||"/","http://localhost").pathname.replace(/\/$/,"")||"/";
   if(["GET","HEAD"].includes(req.method)&&["/","/health"].includes(path)){
     res.writeHead(200,{"content-type":"application/json","cache-control":"no-store"});
-    return res.end(req.method==="HEAD"?"":JSON.stringify({ok:true,service:"smartjob-live-bridge",bridges:rooms.size,version:2}));
+    return res.end(req.method==="HEAD"?"":JSON.stringify({ok:true,service:"smartjob-live-bridge",bridges:rooms.size,
+      capacity:MAX_ACTIVE_BRIDGES,accepting:rooms.size<MAX_ACTIVE_BRIDGES,version:3}));
   }
   if(req.method==="POST"&&path==="/internal/end"){
     const stamp=req.headers["x-smartjob-timestamp"]||"",sig=req.headers["x-smartjob-signature"]||"";
