@@ -57,7 +57,7 @@ export function bridgeTwiML(role:"customer"|"professional",bridge:string,config?
     ' echoPromptFiltering="true" applicationReconnect="true">'+tags+
     '</ConversationRelay></Connect><Hangup/>');
 }
-export async function verifiedLiveRequest(req:NextRequest,expectedTo?:string){
+export async function verifiedLiveRequest(req:NextRequest,expectedTo?:string|null){
   return authenticTwilio(req,expectedTo);
 }
 export function notReady(){
