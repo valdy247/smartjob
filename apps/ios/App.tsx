@@ -36,6 +36,10 @@ export default function App(){
   billing:{enabled:boolean;message:string};
  }|null>(null);
  const [overviewBusy,setOverviewBusy]=useState(false);
+ const [billingOverview,setBillingOverview]=useState<{
+  plan:string;status:string;minutes:{included:number;used:number;available:number;rollover:number;topup:number};
+  note:string
+ }|null>(null);
  const [phoneVerification,setPhoneVerification]=useState<{requestId:string;phone:string;verified:boolean;smsAvailable:boolean;requestStatus:string}|null>(null);
  const [smsCode,setSmsCode]=useState(""),[smsSent,setSmsSent]=useState(false);
  const [smsBusy,setSmsBusy]=useState(false),[verificationLoading,setVerificationLoading]=useState(false);
@@ -171,6 +175,10 @@ export default function App(){
      });
      if(!result.ok)throw new Error("No pudimos obtener tu centro de activación.");
      setAccountOverview(await result.json());
+     const billing=await fetch(api+"/api/billing/overview",{
+       headers:{"Authorization":"Bearer "+data.session.access_token}
+     }).catch(()=>null);
+     if(billing?.ok)setBillingOverview(await billing.json());
    }catch(e){setError(e instanceof Error?e.message:"Error de conexión.");}
    finally{setOverviewBusy(false);}
  }
@@ -315,6 +323,13 @@ export default function App(){
            <Text style={styles.helper}>Número Smart Job: {accountOverview.twilioPhone||"Pendiente de asignación"}</Text>
            <Text style={styles.helper}>Llamadas últimos 30 días: {accountOverview.usage.calls} · completadas: {accountOverview.usage.completed} · minutos registrados: {accountOverview.usage.minutes}</Text>
            <Text style={styles.helper}>Los minutos son orientativos, no un importe facturado. {accountOverview.billing.message}</Text>
+           {billingOverview?<View style={{marginTop:10}}>
+             <Text style={styles.callLabel}>PLAN DE VMV CALL</Text>
+             <Text style={styles.statusText}>Plan: {billingOverview.plan==="none"?"Sin suscripción":billingOverview.plan.toUpperCase()}</Text>
+             <Text style={styles.statusText}>Minutos disponibles: {billingOverview.minutes.available}</Text>
+             <Text style={styles.helper}>Consumidos: {billingOverview.minutes.used} · Incluidos: {billingOverview.minutes.included} · Acumulados: {billingOverview.minutes.rollover}</Text>
+             <Text style={styles.helper}>Las compras y la gestión de planes se preparan primero para la web. {billingOverview.note}</Text>
+           </View>:null}
            {accountOverview.forwardingReady&&accountOverview.twilioPhone?
            <View style={{marginTop:14}}>
              <Text style={styles.callLabel}>CONECTA TU NÚMERO ACTUAL</Text>
