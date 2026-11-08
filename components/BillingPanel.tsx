@@ -6,7 +6,7 @@ import {BadgeCheck,CreditCard,Languages,Volume2} from "lucide-react";
 type Plan={id:"starter"|"pro"|"premium";name:string;priceCents:number;minutes:number;
  topupCentsPerMinute:number;rolloverCap:number;customVoice:boolean;customGreeting:boolean};
 type Overview={plans:Plan[];plan:string;status:string;subscriptionActive:boolean;
- periodEnd:string|null;minutes:{included:number;used:number;available:number;rollover:number;topup:number;reserved:number};
+ periodEnd:string|null;minutes:{included:number;used:number;available:number;rollover:number;topup:number;reserved:number;temporaryHold:number;holdUntil:string|null};
  topup:{plan:string;minutes:number;priceCents:number;available:boolean}|null;
  billingMode:string;canCheckout:boolean;hasPortal:boolean;note:string};
 type Preferences={editable:boolean;settings:{voice_customer:string;voice_owner:string;
@@ -65,6 +65,9 @@ export function BillingPanel({supabase,userId}:{supabase:SupabaseClient;userId:s
    <div className="row between small" style={{marginTop:11}}>
     <span>Minutos disponibles</span><strong>{overview.minutes.available}</strong>
    </div>
+   {overview.minutes.temporaryHold>0?<p className="small muted" style={{marginTop:9}}>
+    Prueba de corte: {overview.minutes.temporaryHold} minutos conservados temporalmente. Se liberan automáticamente al terminar el período de prueba.
+   </p>:null}
    <div className="row between small" style={{marginTop:11}}>
     <span>Consumidos este ciclo</span><strong>{overview.minutes.used}</strong>
    </div>
