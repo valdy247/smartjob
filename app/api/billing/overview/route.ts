@@ -1,6 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
-import {PLAN_CATALOG,TOPUP_CATALOG,topupPriceEnv,getBillingAccount,balance,eligible,priceEnv,stripeTestReady,
+import {PLAN_CATALOG,TOPUP_CATALOG,topupPriceEnv,getBillingAccount,balance,testMinutesHeld,eligible,priceEnv,stripeTestReady,
  type PlanCode} from "@/lib/vmv-billing";
 import {noStore} from "@/lib/vmv-stripe";
 const isPlanCode=(x:string):x is PlanCode=>x==="starter"||x==="pro"||x==="premium";
@@ -24,7 +24,8 @@ export async function GET(req:NextRequest){
   subscriptionActive:eligible(account),periodEnd:account?.current_period_end||null,
   minutes:{included:account?.included_minutes||0,used:account?.used_minutes||0,
    reserved:account?.reserved_minutes||0,rollover:account?.rollover_minutes||0,
-   topup:account?.topup_minutes||0,available:balance(account)},
+   topup:account?.topup_minutes||0,available:balance(account),
+   temporaryHold:testMinutesHeld(account),holdUntil:testMinutesHeld(account)?account?.test_hold_until:null},
   topup:topup?{plan:selected,minutes:topup.minutes,priceCents:topup.usdCents,
     available:eligible(account)&&stripeTestReady()&&taxReady&&
       /^price_[a-zA-Z0-9]+$/.test(topupPriceEnv(selected as PlanCode))}:null,
