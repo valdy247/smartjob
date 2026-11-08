@@ -17,7 +17,7 @@ export function gather(turn:number):string{
   (turn===1?say("Habla en español después de este mensaje. Escucharás la traducción en inglés."):say("Otra frase, o cuelga."))+
   '</Gather>'+say("No se escuchó voz. Adiós.")+'<Hangup/>';
 }
-export async function authenticTwilio(req:NextRequest):Promise<URLSearchParams|null>{
+export async function authenticTwilio(req:NextRequest,expectedTo?:string):Promise<URLSearchParams|null>{
  const token=process.env.TWILIO_AUTH_TOKEN;
  const sig=req.headers.get("x-twilio-signature");
  if(!token||!sig)return null;
@@ -44,7 +44,7 @@ export async function authenticTwilio(req:NextRequest):Promise<URLSearchParams|n
  let actual:Buffer;try{actual=Buffer.from(sig,"base64");}catch{return null;}
  if(actual.length!==expected.length||!timingSafeEqual(expected,actual))return null;
  const account=process.env.TWILIO_ACCOUNT_SID;
- const number=process.env.TWILIO_NUMBER;
+ const number=expectedTo||process.env.TWILIO_NUMBER;
  if(account&&params.get("AccountSid")!==account)return null;
  if(number&&params.get("To")!==number)return null;
  if(!/^CA[0-9a-f]{32}$/i.test(params.get("CallSid")||""))return null;
