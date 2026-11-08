@@ -20,7 +20,7 @@ test("invalid phones and call identifiers fail closed",()=>{
   assert.equal(callSid("CA123"),false);
 });
 test("high risk utterances must never stream before verification",()=>{
-  for(const sample of ["I want 2 cakes","cuesta veinte dólares","I'm allergic to peanuts","un kilo de chocolate","What price?"]){
+  for(const sample of ["I want 2 cakes","cuesta veinte dólares","I'm allergic to peanuts","un kilo de chocolate","What price?","alergia al maní","la entrega es el miércoles","january fifteenth","tres onzas de leche"]){
     assert.ok(needsVerifiedTranslation(sample),sample);
   }
   assert.equal(needsVerifiedTranslation("Good morning, how can I help?"),false);
