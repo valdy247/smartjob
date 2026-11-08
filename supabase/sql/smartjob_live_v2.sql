@@ -113,7 +113,7 @@ alter table public.smartjob_phone_routes add constraint smartjob_route_forward_m
  check (forwarding_mode in ('none','conditional','all_calls'));
 alter table public.smartjob_phone_routes drop constraint if exists smartjob_route_no_forward_loop;
 alter table public.smartjob_phone_routes add constraint smartjob_route_no_forward_loop
- check (forwarding_mode='none' or (public_number is not null and public_number<>destination_phone));
+ check (forwarding_mode='none' or (public_number is not null and (receive_method='ios_app' or public_number<>destination_phone)));
 create unique index if not exists smartjob_active_public_phone_unique
  on public.smartjob_phone_routes(public_number)
  where enabled and forwarding_mode<>'none';
