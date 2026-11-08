@@ -20,7 +20,7 @@ export async function findPhoneRoute(number:string){
   if(!db||!phone.test(number))return null;
   const {data,error}=await db.from("smartjob_phone_routes").select("id,user_id,twilio_number,destination_phone,receive_method,customer_language,owner_language,assistant_name,enabled")
     .eq("twilio_number",number).eq("enabled",true).maybeSingle();
-  if(error){console.error("Smart Job route lookup unavailable",error.code);return null;}
+  if(error){console.error("Smart Job route lookup unavailable",{code:error.code||"unknown",message:String(error.message||"unknown").slice(0,180),details:String(error.details||"").slice(0,160),hint:String(error.hint||"").slice(0,120)});return null;}
   if(!data||![data.twilio_number,data.destination_phone].every(n=>phone.test(n))||
      !["en-US","es-ES"].includes(data.customer_language)||!["en-US","es-ES"].includes(data.owner_language)||data.customer_language===data.owner_language)return null;
   if(!["pstn","ios_app"].includes(data.receive_method))return null;
