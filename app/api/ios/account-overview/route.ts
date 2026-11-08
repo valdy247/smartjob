@@ -1,7 +1,7 @@
 import {NextRequest,NextResponse} from "next/server";
 import {createClient} from "@supabase/supabase-js";
 import {authenticatedUser} from "@/lib/auth-server";
-import {getBillingAccount,billingEnabled,balance,eligible as billingEligible} from "@/lib/vmv-billing";
+import {getBillingAccount,billingEnabledFor,balance,eligible as billingEligible} from "@/lib/vmv-billing";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const headers={"Cache-Control":"no-store"};
@@ -37,9 +37,9 @@ export async function GET(req:NextRequest){
   carrier:verification.data?.carrier||null,
   forwardingReported:route?.forwarding_mode!=="none"&&Boolean(route?.forwarding_mode),
   usage:{periodDays:30,calls:count,completed,seconds:duration,minutes:Math.ceil(duration/60),metering:"indicative"},
-  billing:{enabled:billingEnabled(),active:billingEligible(billingAccount),
+  billing:{enabled:billingEnabledFor(uid),active:billingEligible(billingAccount),
     plan:billingAccount?.plan_code||"none",availableMinutes:balance(billingAccount),
-    message:billingEnabled()?"Las llamadas requieren minutos de un plan activo.":
+    message:billingEnabledFor(uid)?"Las llamadas requieren minutos de un plan activo.":
       "El control automático de minutos aún está en preparación."},
   nextAction:eligible?"Activar manualmente el desvío en el operador y confirmar con una llamada real.":"Verificar el número y activar primero la recepción iOS."
  },{headers});
