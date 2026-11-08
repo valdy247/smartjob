@@ -12,7 +12,7 @@ export async function GET(){
  try{
   const raw=await fetch(url+"/rest/v1/smartjob_phone_routes?select=id&limit=1",{
     method:"GET",cache:"no-store",signal:AbortSignal.timeout(7000),
-    headers:{"apikey":key,"Authorization":"Bearer "+key,"Accept":"application/json"}
+    headers:{"apikey":key,"Accept":"application/json","User-Agent":"smartjob-backend/1.0"}
   });
   const rawBody=(await raw.text()).slice(0,600);
   const status=raw.status;
