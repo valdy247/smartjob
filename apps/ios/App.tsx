@@ -30,6 +30,12 @@ export default function App(){
  const [invite,setInvite]=useState<CallInvite|null>(null),[call,setCall]=useState<Call|null>(null);
  const [error,setError]=useState("");
  const [voiceDiagnostic,setVoiceDiagnostic]=useState("Sin diagnóstico de registro todavía.");
+ const [accountOverview,setAccountOverview]=useState<{
+  verified:boolean;connectedToApp:boolean;forwardingReady:boolean;twilioPhone:string|null;
+  publicPhone:string|null;carrier:string|null;usage:{calls:number;completed:number;minutes:number;periodDays:number};
+  billing:{enabled:boolean;message:string};
+ }|null>(null);
+ const [overviewBusy,setOverviewBusy]=useState(false);
  const [phoneVerification,setPhoneVerification]=useState<{requestId:string;phone:string;verified:boolean;smsAvailable:boolean;requestStatus:string}|null>(null);
  const [smsCode,setSmsCode]=useState(""),[smsSent,setSmsSent]=useState(false);
  const [smsBusy,setSmsBusy]=useState(false),[verificationLoading,setVerificationLoading]=useState(false);
@@ -154,6 +160,24 @@ export default function App(){
    }catch(e){setVerifyMessage(e instanceof Error?e.message:"No se pudo verificar el código.");}
    finally{setSmsBusy(false);}
  }
+ async function refreshAccountOverview(){
+   if(!supabase||!sessionRef.current)return;
+   setOverviewBusy(true);
+   try{
+     const {data}=await supabase.auth.getSession();
+     if(!data.session)return;
+     const result=await fetch(api+"/api/ios/account-overview",{
+       headers:{"Authorization":"Bearer "+data.session.access_token}
+     });
+     if(!result.ok)throw new Error("No pudimos obtener tu centro de activación.");
+     setAccountOverview(await result.json());
+   }catch(e){setError(e instanceof Error?e.message:"Error de conexión.");}
+   finally{setOverviewBusy(false);}
+ }
+ useEffect(()=>{
+  if(!session?.user.id){setAccountOverview(null);return;}
+  void refreshAccountOverview();
+ },[session?.user.id]);
  async function testIncomingCall(){
    if(!supabase||!ready)return;
    setTestBusy(true);setError("");
@@ -305,6 +329,29 @@ export default function App(){
            <Text style={styles.helper}>Diagnóstico VoIP: {voiceDiagnostic}</Text>
            {ready?<Text style={styles.helper}>Llamada de prueba de Twilio: no cambia la configuración de tu número ni activa el desvío del operador. Máximo tres pruebas al día.</Text>:null}
          </>}
+       </View>
+       <View style={styles.card}>
+         <Text style={styles.cardTitle}>Mi número y consumo</Text>
+         <Text style={styles.helper}>Gestiona la recepción de llamadas reales y comprueba tu consumo sin límite de pruebas.</Text>
+         <Button label={overviewBusy?"Actualizando…":"Actualizar mi estado"} secondary disabled={overviewBusy}
+           onPress={()=>void refreshAccountOverview()}/>
+         {accountOverview?<>
+           <Text style={styles.statusText}>Recepción iOS: {accountOverview.connectedToApp?"Activada":"Pendiente"}</Text>
+           <Text style={styles.helper}>Número verificado: {accountOverview.verified?"Sí":"Pendiente"}</Text>
+           <Text style={styles.helper}>Número Smart Job: {accountOverview.twilioPhone||"Pendiente de asignación"}</Text>
+           <Text style={styles.helper}>Llamadas últimos 30 días: {accountOverview.usage.calls} · completadas: {accountOverview.usage.completed} · minutos registrados: {accountOverview.usage.minutes}</Text>
+           <Text style={styles.helper}>Los minutos son orientativos, no un importe facturado. {accountOverview.billing.message}</Text>
+           {accountOverview.forwardingReady&&accountOverview.twilioPhone?
+           <View style={{marginTop:14}}>
+             <Text style={styles.callLabel}>CONECTA TU NÚMERO ACTUAL</Text>
+             <Text style={styles.helper}>Tu número Verizon continúa funcionando de forma normal hasta que TÚ actives el desvío en el operador.</Text>
+             <Text style={styles.statusText}>1. Confirma que Smart Job recibe llamadas incluso con el iPhone bloqueado.</Text>
+             <Text style={styles.statusText}>2. Desde tu línea Verizon, marca *72 seguido de {accountOverview.twilioPhone.slice(2)} y escucha la confirmación.</Text>
+             <Text style={styles.statusText}>3. Pide una llamada REAL a tu número Verizon para confirmar traducción en ambos idiomas.</Text>
+             <Text style={styles.helper}>Para volver al funcionamiento normal, marca *73 desde Verizon. No configures el destino Twilio para que llame de nuevo a Verizon: provocaría un bucle.</Text>
+           </View>:
+           <Text style={styles.helper}>Para habilitar el desvío primero debes verificar tu teléfono y configurar la recepción iOS. No actives *72 todavía.</Text>}
+         </>:null}
        </View>
        <View style={styles.card}>
          <Text style={styles.cardTitle}>Verifica tu número por SMS</Text>
