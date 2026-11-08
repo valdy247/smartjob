@@ -1,5 +1,5 @@
 import {NextRequest,NextResponse} from "next/server";
-import {billingAdmin,priceEnv,stripeTestReady,type PlanCode} from "@/lib/vmv-billing";
+import {billingAdmin,priceEnv,stripeTestReady,TOPUP_CATALOG,isPlan,topupPriceEnv,type PlanCode} from "@/lib/vmv-billing";
 import {noStore,verifyStripeWebhook} from "@/lib/vmv-stripe";
 export const runtime="nodejs";export const dynamic="force-dynamic";
 const ids=(s:unknown,prefix:string)=>typeof s==="string"&&new RegExp("^"+prefix+"_[a-zA-Z0-9_]+$").test(s);
@@ -17,6 +17,30 @@ export async function POST(req:NextRequest){
  try{event=JSON.parse(raw);}catch{return NextResponse.json({error:"invalid_event"},{status:400,headers:noStore});}
  if(event.livemode!==false||!ids(event.id,"evt"))
   return NextResponse.json({error:"invalid_mode"},{status:400,headers:noStore});
+ if(["checkout.session.completed","checkout.session.async_payment_succeeded"].includes(event.type)){
+  const session=event.data?.object||{},meta=session.metadata||{};
+  if(session.mode!=="payment"||!ids(session.id,"cs_test")||
+     session.payment_status!=="paid")return NextResponse.json({received:true},{headers:noStore});
+  const plan=meta.vmv_topup_plan,uid=meta.smartjob_user_id;
+  if(!isPlan(plan)||!uuid(uid)||session.client_reference_id!==uid||
+     !ids(session.customer,"cus")||!/^price_/.test(topupPriceEnv(plan)))
+   return NextResponse.json({error:"invalid_topup"},{status:422,headers:noStore});
+  const bundle=TOPUP_CATALOG[plan];
+  if(Number(meta.vmv_topup_minutes)!==bundle.minutes||
+     session.amount_subtotal!==bundle.usdCents||session.currency!=="usd")
+   return NextResponse.json({error:"topup_mismatch"},{status:422,headers:noStore});
+  const db=billingAdmin();
+  if(!db)return NextResponse.json({error:"billing_unavailable"},{status:503,headers:noStore});
+  const {data,error}=await db.rpc("smartjob_apply_stripe_topup",{
+   p_checkout_id:session.id,p_event_id:event.id,p_user_id:uid,
+   p_customer_id:session.customer,p_plan:plan,p_minutes:bundle.minutes
+  });
+  if(error||data!==true){
+   console.error("VMV topup sync failed",error?.code||"rejected");
+   return NextResponse.json({error:"topup_sync_unavailable"},{status:503,headers:noStore});
+  }
+  return NextResponse.json({received:true},{headers:noStore});
+ }
  if(!["customer.subscription.created","customer.subscription.updated",
        "customer.subscription.deleted"].includes(event.type))
   return NextResponse.json({received:true},{headers:noStore});
