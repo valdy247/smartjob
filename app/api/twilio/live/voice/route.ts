@@ -27,7 +27,7 @@ async function stopOutbound(sid:string,outbound:string,token:string){
   });}catch{}
 }
 export async function POST(req:NextRequest){
-  const fields=await verifiedLiveRequest(req);
+  const fields=await verifiedLiveRequest(req,null);
   if(!fields)return twiml(say("Unauthenticated call.","en-US")+"<Hangup/>",403);
   if(!liveReady())return notReady();
   const from=fields.get("From")||"",to=fields.get("To")||"",bridge=fields.get("CallSid")||"",
