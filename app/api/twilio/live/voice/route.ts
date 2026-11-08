@@ -3,7 +3,7 @@ import {baseUrl,bridgeSignature,bridgeTwiML,E164,liveReady,notReady,verifiedLive
 import {findPhoneRoute,partnerSignature,reservePhoneSession,assignOutboundCall,updatePhoneSession,tenantsReady} from "@/lib/phone-routes";
 import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 import {getPaidCallPreferences,selectedVoice} from "@/lib/vmv-voices";
-import {billingEnabled,claimCallMinutes,settleCallMinutes} from "@/lib/vmv-billing";
+import {billingEnabledFor,claimCallMinutes,settleCallMinutes} from "@/lib/vmv-billing";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
@@ -118,7 +118,7 @@ export async function POST(req:NextRequest){
     return twiml(say("All interpreters are currently busy. Please try again later.","en-US")+"<Hangup/>");
   }
   let reservedMinutes=0;
-  if(route&&billingEnabled()){
+  if(route&&billingEnabledFor(route.user_id)){
     reservedMinutes=await claimCallMinutes(bridge,route.user_id,Math.min(30,Math.ceil(maxDuration/60)));
     if(reservedMinutes<1){
       await updatePhoneSession(bridge,"failed");
