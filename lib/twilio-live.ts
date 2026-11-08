@@ -56,7 +56,7 @@ export function bridgeTwiML(role:"customer"|"professional",bridge:string,config?
     '" transcriptionLanguage="'+lang+'" ttsLanguage="'+lang+
     '" ttsProvider="ElevenLabs" welcomeGreeting="'+xmlEscape(greet)+
     '" welcomeGreetingInterruptible="none" speechTimeout="650" interruptible="speech" interruptSensitivity="medium"'+
-    ' echoPromptFiltering="true" applicationReconnect="true">'+tags+
+    '>'+tags+
     '</ConversationRelay></Connect><Hangup/>');
 }
 export async function verifiedLiveRequest(req:NextRequest,expectedTo?:string|null){
