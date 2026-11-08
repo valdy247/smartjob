@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Smart Job",
+    "slug": "smartjob-ios",
+    "scheme": "smartjob",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "bundleIdentifier": "com.valdy247.smartjob",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Smart Job necesita el micrófono para interpretar llamadas de voz en vivo.",
+        "UIBackgroundModes": [
+          "audio",
+          "voip"
+        ]
+      },
+      "entitlements": {
+        "aps-environment": "development"
+      }
+    },
+    "plugins": [
+      "@twilio/voice-react-native-sdk",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": null
+      }
+    }
+  }
+}
