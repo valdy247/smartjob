@@ -25,6 +25,25 @@ const app=createServer((req,res)=>{
     res.writeHead(200,{"content-type":"application/json","cache-control":"no-store"});
     return res.end(req.method==="HEAD"?"":JSON.stringify({ok:true,service:"smartjob-live-bridge",bridges:rooms.size,version:2}));
   }
+  if(req.method==="POST"&&path==="/internal/end"){
+    const stamp=req.headers["x-smartjob-timestamp"]||"",sig=req.headers["x-smartjob-signature"]||"";
+    const seconds=Number(stamp);
+    if(!/^1\d{9}$/.test(stamp)||Math.abs(Date.now()/1000-seconds)>30||!/^[a-f\d]{64}$/i.test(sig)){
+      res.writeHead(403).end();return;
+    }
+    let input="";
+    req.on("data",chunk=>{input+=chunk;if(input.length>300)req.destroy();});
+    req.on("end",()=>{
+      const bridge=input;
+      const expected=createHmac("sha256",AUTH).update("smartjob-end-v1\n"+stamp+"\n"+bridge).digest("hex");
+      if(!callSid(bridge)||sig.length!==expected.length||!timingSafeEqual(Buffer.from(sig,"hex"),Buffer.from(expected,"hex"))){
+        res.writeHead(403).end();return;
+      }
+      void finishRoom(bridge,"twilio-callback");
+      res.writeHead(204).end();
+    });
+    return;
+  }
   res.writeHead(404,{"content-type":"text/plain"}).end("Not found");
 });
 const wss=new WebSocketServer({noServer:true,maxPayload:12_000,perMessageDeflate:false});
