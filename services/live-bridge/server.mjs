@@ -1,7 +1,7 @@
 import {createHmac,timingSafeEqual} from "node:crypto";
 import {createServer} from "node:http";
 import {WebSocketServer,WebSocket} from "ws";
-import {accountSid,callSid,e164,matchesRouteSignature,makeStreamingTokens} from "./relay-core.mjs";
+import {accountSid,callSid,e164,validReceiver,matchesRouteSignature,makeStreamingTokens} from "./relay-core.mjs";
 
 const AUTH=process.env.TWILIO_AUTH_TOKEN||"";
 const ACCOUNT=process.env.TWILIO_ACCOUNT_SID||"";
@@ -64,7 +64,7 @@ function safeSetup(data){
   const isNew=Boolean(p.routeSignature);
   if(isNew){
     const route={bridge,customer:p.customer,twilio:p.twilio,owner:p.owner,customerLanguage:p.customerLanguage,ownerLanguage:p.ownerLanguage};
-    if(!e164(route.customer)||!e164(route.twilio)||!(e164(route.owner)||/^client:sj_[a-f0-9]{32}$/i.test(route.owner))||!["en-US","es-ES"].includes(route.customerLanguage)||!["en-US","es-ES"].includes(route.ownerLanguage)||route.customerLanguage===route.ownerLanguage||!matchesRouteSignature(AUTH,route,p.routeSignature))return null;
+    if(!e164(route.customer)||!e164(route.twilio)||!validReceiver(route.owner)||!["en-US","es-ES"].includes(route.customerLanguage)||!["en-US","es-ES"].includes(route.ownerLanguage)||route.customerLanguage===route.ownerLanguage||!matchesRouteSignature(AUTH,route,p.routeSignature))return null;
     if(role==="customer"&&(data.from!==route.customer||data.to!==route.twilio||data.callSid!==bridge))return null;
     if(role==="professional"&&(data.from!==route.twilio||data.to!==route.owner))return null;
   }else{
