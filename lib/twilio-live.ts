@@ -36,8 +36,8 @@ export function bridgeTwiML(role:"customer"|"professional",bridge:string){
   '</ConversationRelay></Connect><Hangup/>';
  return twiml(relay);
 }
-export async function verifiedLiveRequest(req:NextRequest){
- return authenticTwilio(req);
+export async function verifiedLiveRequest(req:NextRequest,expectedTo?:string){
+ return authenticTwilio(req,expectedTo);
 }
 export function notReady(){
  return twiml(say("Smart Job. El modo de traducción en vivo está en preparación.")+"<Hangup/>");
