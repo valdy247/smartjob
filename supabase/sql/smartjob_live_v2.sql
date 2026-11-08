@@ -73,7 +73,7 @@ create policy "smartjob_provisioning_owner_read" on public.smartjob_provisioning
  for select to authenticated using(user_id=(select auth.uid()));
 drop policy if exists "smartjob_provisioning_user_create" on public.smartjob_provisioning_requests;
 create policy "smartjob_provisioning_user_create" on public.smartjob_provisioning_requests
- for insert to authenticated with check(user_id=(select auth.uid()) and status='pending');
+ for insert to authenticated with check(user_id=(select auth.uid()) and status='pending' and phone_verified_at is null);
 
 
 -- Bring-your-existing-number onboarding preferences. A request DOES NOT prove
