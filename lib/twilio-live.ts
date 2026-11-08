@@ -12,7 +12,8 @@ export function liveReady(){
   const ws=process.env.SMARTJOB_LIVE_WS_URL||"";
   return Boolean(process.env.SMARTJOB_LIVE_ENABLED==="true"&&
     /^wss:\/\/[a-zA-Z0-9.-]+(?::443)?\/relay$/.test(ws)&&
-    E164(process.env.SMARTJOB_DUO_EN_PHONE)&&E164(process.env.SMARTJOB_DUO_ES_PHONE)&&
+    (process.env.SMARTJOB_MULTI_TENANT_ENABLED==="true" ||
+      (E164(process.env.SMARTJOB_DUO_EN_PHONE)&&E164(process.env.SMARTJOB_DUO_ES_PHONE)))&&
     E164(process.env.TWILIO_NUMBER)&&process.env.TWILIO_AUTH_TOKEN);
 }
 export function bridgeSignature(bridge:string){
