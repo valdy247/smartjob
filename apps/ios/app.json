@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Smart Job",
-    "slug": "smartjob-ios",
+    "slug": "smart-job",
     "scheme": "smartjob",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -24,10 +24,6 @@
       "@twilio/voice-react-native-sdk",
       "expo-secure-store"
     ],
-    "extra": {
-      "eas": {
-        "projectId": null
-      }
-    }
+    "owner": "smart-job"
   }
 }
