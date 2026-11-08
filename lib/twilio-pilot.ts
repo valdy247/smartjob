@@ -66,8 +66,8 @@ export function readAudio(token:string):string|null{
   return value.text;
  }catch{return null;}
 }
-export function hasPilotConfiguration():boolean{
+export function hasPilotConfiguration(oidcToken?:string|null):boolean{
  return Boolean(process.env.TWILIO_AUTH_TOKEN&&process.env.ELEVENLABS_API_KEY&&(
-  process.env.OPENAI_API_KEY||process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN
+  process.env.OPENAI_API_KEY||process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN||oidcToken
  ));
 }
