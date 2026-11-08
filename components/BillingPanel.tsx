@@ -7,6 +7,7 @@ type Plan={id:"starter"|"pro"|"premium";name:string;priceCents:number;minutes:nu
  topupCentsPerMinute:number;rolloverCap:number;customVoice:boolean;customGreeting:boolean};
 type Overview={plans:Plan[];plan:string;status:string;subscriptionActive:boolean;
  periodEnd:string|null;minutes:{included:number;used:number;available:number;rollover:number;topup:number;reserved:number};
+ topup:{plan:string;minutes:number;priceCents:number;available:boolean}|null;
  billingMode:string;canCheckout:boolean;hasPortal:boolean;note:string};
 type Preferences={editable:boolean;settings:{voice_customer:string;voice_owner:string;
  greeting_customer:string;greeting_owner:string}};
@@ -81,6 +82,17 @@ export function BillingPanel({supabase,userId}:{supabase:SupabaseClient;userId:s
       </button>
     </div>)}
    </div>
+   {overview.topup?<div className="notice info" style={{marginTop:16}}>
+     <strong>Recargar minutos</strong>
+     <p className="small muted" style={{marginTop:7}}>
+       {overview.topup.minutes} minutos adicionales por ${(overview.topup.priceCents/100).toFixed(2)}. Se suman a tu saldo disponible.
+     </p>
+     <button className="btn primary block" type="button" style={{marginTop:12}}
+      disabled={busy||!overview.topup.available}
+      onClick={()=>void action("/api/billing/topup",overview.topup!.plan)}>
+      {overview.topup.available?"Comprar minutos de prueba":"Recargas próximamente"}
+     </button>
+   </div>:null}
    {overview.hasPortal?<button className="btn primary block" type="button"
     disabled={busy} style={{marginTop:16}} onClick={()=>void action("/api/billing/portal")}>
     Gestionar suscripción en Stripe
