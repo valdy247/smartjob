@@ -6,27 +6,31 @@ import type {Profile,CallSettings} from "@/lib/types";
 
 type PhoneRoute={id:string;twilio_number:string;destination_phone:string;customer_language:string;owner_language:string;enabled:boolean;assistant_name:string};
 type CallRecord={bridge_sid:string;status:string;duration_seconds:number|null;started_at:string};
+type ProvisionRequest={id:string;status:string;created_at:string};
 const blank:CallSettings={existing_phone:"",forwarding_enabled:false,desired_language:"es",caller_language:"en",assistant_name:"Juan"};
 const statusLabel:Record<string,string>={"initiated":"Iniciando","ringing":"Llamando","in-progress":"En curso","completed":"Finalizada","busy":"Ocupado","no-answer":"Sin respuesta","canceled":"Cancelada","failed":"Fallida"};
 export function CallsPanel({supabase,profile,apiStatus}:{supabase:SupabaseClient;profile:Profile;apiStatus:Record<string,boolean>}){
   const [form,setForm]=useState<CallSettings>(blank);
   const [route,setRoute]=useState<PhoneRoute|null>(null),[history,setHistory]=useState<CallRecord[]>([]);
+  const [request,setRequest]=useState<ProvisionRequest|null>(null),[requestBusy,setRequestBusy]=useState(false);
   const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
   const [message,setMessage]=useState(""),[error,setError]=useState("");
   useEffect(()=>{
     let alive=true;
     async function load(){
       setLoading(true);
-      const [settings,routing,calls]=await Promise.all([
+      const [settings,routing,calls,requests]=await Promise.all([
         supabase.from("smartjob_call_settings").select("*").eq("user_id",profile.id).maybeSingle(),
         supabase.from("smartjob_phone_routes").select("id,twilio_number,destination_phone,customer_language,owner_language,enabled,assistant_name").eq("user_id",profile.id).limit(1).maybeSingle(),
-        supabase.from("smartjob_call_sessions").select("bridge_sid,status,duration_seconds,started_at").eq("owner_id",profile.id).order("started_at",{ascending:false}).limit(10)
+        supabase.from("smartjob_call_sessions").select("bridge_sid,status,duration_seconds,started_at").eq("owner_id",profile.id).order("started_at",{ascending:false}).limit(10),
+        supabase.from("smartjob_provisioning_requests").select("id,status,created_at").eq("user_id",profile.id).order("created_at",{ascending:false}).limit(1).maybeSingle()
       ]);
       if(!alive)return;
       setForm(settings.data?{...blank,...settings.data}:{...blank,existing_phone:profile.phone,desired_language:profile.owner_language,caller_language:profile.customer_language,assistant_name:profile.assistant_name});
       setRoute((routing.data as PhoneRoute|null)||null);
       setHistory((calls.data as CallRecord[]|null)||[]);
-      if(settings.error||routing.error||calls.error)setError("No se pudo cargar toda la información de telefonía. Verifica tu conexión.");
+      setRequest((requests.data as ProvisionRequest|null)||null);
+      if(settings.error||routing.error||calls.error||requests.error)setError("No se pudo cargar toda la información de telefonía. Verifica tu conexión.");
       setLoading(false);
     }
     void load();
@@ -43,6 +47,24 @@ export function CallsPanel({supabase,profile,apiStatus}:{supabase:SupabaseClient
     if(saveError)setError(saveError.message);
     else setMessage(route?.enabled?"Preferencias guardadas. Los cambios de la línea activa requieren verificación.":"Preferencias guardadas. Para recibir llamadas, primero debe asignarse un número verificado.");
     setBusy(false);
+  };
+  const submitRequest=async()=>{
+    setError("");setMessage("");
+    const destination=form.existing_phone.trim().replace(/[ ()-]/g,"");
+    if(!/^\+[1-9]\d{7,14}$/.test(destination)){setError("Ingresa un teléfono válido con código de país, por ejemplo +17060000000.");return;}
+    if(form.desired_language===form.caller_language){setError("Elige dos idiomas diferentes.");return;}
+    const name=form.assistant_name.trim();
+    if(!name||name.length>40){setError("El nombre del asistente debe tener entre 1 y 40 caracteres.");return;}
+    setRequestBusy(true);
+    const {data,error:requestError}=await supabase.from("smartjob_provisioning_requests").insert({
+      user_id:profile.id,destination_phone:destination,
+      customer_language:form.caller_language==="es"?"es-ES":"en-US",
+      owner_language:form.desired_language==="es"?"es-ES":"en-US",
+      assistant_name:name
+    }).select("id,status,created_at").single();
+    if(requestError)setError(requestError.code==="23505"?"Ya tienes una solicitud pendiente.":"No fue posible enviar la solicitud. Inténtalo de nuevo.");
+    else{setRequest(data as ProvisionRequest);setMessage("Solicitud recibida. Tu línea aún no está activa y no se realizará ningún cargo automático.");}
+    setRequestBusy(false);
   };
   const active=Boolean(route?.enabled);
   return <div>
@@ -89,6 +111,15 @@ export function CallsPanel({supabase,profile,apiStatus}:{supabase:SupabaseClient
           {error&&<div role="alert" className="notice danger" style={{marginBottom:13}}>{error}</div>}
           <button className="btn primary block" type="submit" disabled={busy}><Check size={16}/>{busy?"Guardando…":"Guardar preferencias"}</button>
         </form>
+        <div className="card" style={{marginTop:20}}>
+          <div className="card-head"><h2>Solicitar una línea</h2><PhoneForwarded size={18} color="var(--lime)"/></div>
+          <p className="small muted">Podemos preparar un número Smart Job para recibir llamadas traducidas en el teléfono que indicaste. Debemos comprobar el número y los costos antes de activarlo.</p>
+          {request&&<p className="small" style={{marginTop:12}}>Tu última solicitud: <strong>{({pending:"Pendiente de revisión",contacted:"En contacto",approved:"Aprobada",rejected:"No aprobada",activated:"Activada"} as Record<string,string>)[request.status]||request.status}</strong></p>}
+          <button className="btn primary block" type="button" style={{marginTop:16}} onClick={()=>void submitRequest()} disabled={requestBusy||active||request?.status==="pending"}>
+            {requestBusy?"Enviando…":active?"Línea ya asignada":request?.status==="pending"?"Solicitud enviada":"Solicitar activación sin cargo"}
+          </button>
+          <p className="small muted" style={{marginTop:10}}>Solicitar no compra números, no activa llamadas ni contrata un plan. El servicio se habilitará solo después de verificar el destino y acordar las condiciones.</p>
+        </div>
         <div className="card" style={{marginTop:20}}>
           <div className="card-head"><h2>Historial de llamadas</h2><Clock3 size={18} color="var(--lime)"/></div>
           <p className="small muted">Solo estado y duración. Smart Job no guarda aquí grabaciones ni transcripciones de lo que hablaron.</p>
