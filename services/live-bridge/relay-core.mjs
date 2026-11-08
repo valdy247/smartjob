@@ -18,7 +18,7 @@ export function matchesRouteSignature(secret, route, provided) {
 // Keep prices, dates, phone numbers, allergies, measurements and quantities in the
 // verified full-response lane. We never stream them before quality checks complete.
 export function needsVerifiedTranslation(source) {
-  return /[$€£%]|\d|\b(?:allerg(?:y|ies|ic|ia|ias)|peanut|nuts?|gluten|milk|dairy|egg|huevo|leche|nuez|cacahuate|maní|precio|price|cost|dollar|dólar|dólares|pesos?|euros?|cent|kilos?|kilograms?|pounds?|libras?|grams?|gramos?|ounces?|onzas?|veinte|twenty|one|two|three|four|five|six|seven|eight|nine|ten|hundred|thousand|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|cien|mil|half|quarter|medio|media|hora|hour|minute|minuto)\b/i.test(source);
+  return /[$€£%]|\d|(?<![\p{L}\d])(?:alérgic[oa]s?|alergias?|sesenta|setenta|ochenta|noventa|cuarenta|cincuenta|treinta|cientos?|millones?|millions?|hundreds?|date|fecha|tomorrow|mañana|yesterday|ayer|today|hoy|monday|tuesday|wednesday|thursday|friday|saturday|sunday|lunes|martes|miércoles|jueves|viernes|sábado|domingo|january|february|march|april|may|june|july|august|september|october|november|december|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|allerg(?:y|ies|ic|ia|ias)|peanut|nuts?|gluten|milk|dairy|egg|huevo|leche|nuez|cacahuate|maní|precio|price|cost|dollar|dólar|dólares|pesos?|euros?|cent|kilos?|kilograms?|pounds?|libras?|grams?|gramos?|ounces?|onzas?|veinte|twenty|one|two|three|four|five|six|seven|eight|nine|ten|hundred|thousand|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|cien|mil|half|quarter|medio|media|hora|hour|minute|minuto)(?![\p{L}\d])/iu.test(source);
 }
 
 export function makeStreamingTokens(send) {
