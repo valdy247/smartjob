@@ -204,7 +204,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   .text-entry{flex-direction:column}
   .text-entry .field{min-width:0}
   .text-entry .btn{width:100%}
-  .mobile-nav .navitem{font-size:12px;gap:5px}
+  .mobile-nav .navitem{font-size:11px;gap:3px;flex-direction:column;white-space:normal;line-height:1.2;text-align:center;min-height:56px}
   .mobile-nav .navitem svg{width:18px;height:18px}
   .card{padding:16px 14px}
   .topbar .brandmark{width:38px;height:38px}
@@ -220,3 +220,5 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
     scroll-behavior:auto!important;transition-duration:.01ms!important}
 }
+
+@media(max-width:950px){body:has(input:focus,textarea:focus,select:focus) .mobile-nav{visibility:hidden;pointer-events:none}}
