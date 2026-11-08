@@ -11,15 +11,16 @@ export const dynamic="force-dynamic";
 // and a server-generated bridge signature can terminate the paired session.
 export async function POST(req:NextRequest){
   const p=await verifiedLiveRequest(req,null);
-  if(!p)return twiml("<Hangup/>",403);
+  if(!p){console.error("Smart Job paired end webhook authentication rejected");return twiml("<Hangup/>",403);}
   const q=req.nextUrl.searchParams;
   const bridge=q.get("bridge")||"",sig=q.get("sig")||"";
-  if(!verifiedBridge(bridge,sig))return twiml("<Hangup/>",403);
+  if(!verifiedBridge(bridge,sig)){console.error("Smart Job paired end signature rejected");return twiml("<Hangup/>",403);}
   const callbackSid=p.get("CallSid")||"";
   if(!/^CA[a-f\d]{32}$/i.test(callbackSid))return twiml("<Hangup/>",403);
   const state=p.get("CallStatus")||"";
   const seconds=Number(p.get("CallDuration")||"");
   const terminal=["completed","busy","failed","no-answer","canceled"];
+  console.info("Smart Job paired leg callback",{isInbound:callbackSid===bridge,status:state,duration:Number.isFinite(seconds)?seconds:null});
   if(terminal.includes(state)||callbackSid===bridge){
     await updatePhoneSession(bridge,terminal.includes(state)?state:"completed",
       Number.isInteger(seconds)&&seconds>=0?seconds:undefined);
