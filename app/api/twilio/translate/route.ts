@@ -8,11 +8,11 @@ export async function POST(req:NextRequest){
  if(!params)return twiml(say("No autorizado.")+"<Hangup/>",403);
  const turn=Number(new URL(req.url).searchParams.get("turn")||"1");
  if(!Number.isInteger(turn)||turn<1||turn>4)return twiml("<Hangup/>");
- if(!hasPilotConfiguration())return twiml(say("El traductor todavía no está configurado.")+"<Hangup/>");
+ if(!hasPilotConfiguration(req.headers.get("x-vercel-oidc-token")))return twiml(say("El traductor todavía no está configurado.")+"<Hangup/>");
  const original=(params.get("SpeechResult")||"").trim().slice(0,400);
  if(!original)return twiml(say("No entendí. Intenta otra vez.")+gather(turn+1));
  const direct=Boolean(process.env.OPENAI_API_KEY);
- const auth=process.env.OPENAI_API_KEY||process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN;
+ const auth=process.env.OPENAI_API_KEY||process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN||req.headers.get("x-vercel-oidc-token");
  const url=direct?"https://api.openai.com/v1/chat/completions":"https://ai-gateway.vercel.sh/v1/chat/completions";
  try{
   const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+auth},
