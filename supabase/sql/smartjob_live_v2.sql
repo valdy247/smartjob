@@ -97,3 +97,23 @@ alter table public.smartjob_provisioning_requests
   drop constraint if exists smartjob_provision_answer_method;
 alter table public.smartjob_provisioning_requests
   add constraint smartjob_provision_answer_method check(answer_method in ('app','separate_line'));
+
+
+-- A customer can advertise their original carrier number while forwarding
+-- voice to a dedicated, VERIFIED Twilio relay number. Never dial the public
+-- number on the other leg: it would forward back into the relay and loop.
+alter table public.smartjob_phone_routes
+ add column if not exists public_number text,
+ add column if not exists forwarding_mode text not null default 'none';
+alter table public.smartjob_phone_routes drop constraint if exists smartjob_route_public_number_format;
+alter table public.smartjob_phone_routes add constraint smartjob_route_public_number_format
+ check (public_number is null or public_number ~ '^\+[1-9][0-9]{7,14}$');
+alter table public.smartjob_phone_routes drop constraint if exists smartjob_route_forward_mode;
+alter table public.smartjob_phone_routes add constraint smartjob_route_forward_mode
+ check (forwarding_mode in ('none','conditional','all_calls'));
+alter table public.smartjob_phone_routes drop constraint if exists smartjob_route_no_forward_loop;
+alter table public.smartjob_phone_routes add constraint smartjob_route_no_forward_loop
+ check (forwarding_mode='none' or (public_number is not null and public_number<>destination_phone));
+create unique index if not exists smartjob_active_public_phone_unique
+ on public.smartjob_phone_routes(public_number)
+ where enabled and forwarding_mode<>'none';
