@@ -26,7 +26,7 @@ function next(role:Role,turn:number,first=false):string {
  const speechLocale=english?"en-US":"es-US";
  const action=path+"?mode=speak&role="+role+"&turn="+turn;
  const intro=prompt?say(prompt,locale):"";
- return '<Gather input="speech" language="'+speechLocale+'" speechTimeout="auto" timeout="20" actionOnEmptyResult="true" method="POST" action="'+action+'">'+intro+'</Gather>'+
+ return '<Gather input="speech" language="'+speechLocale+'" speechTimeout="auto" timeout="20" actionOnEmptyResult="true" method="POST" action="'+escaped(action)+'">'+intro+'</Gather>'+
  say(english?"The test is ending. Please call back if needed.":"La prueba está terminando. Vuelve a llamar si lo necesitas.",locale)+"<Hangup/>";
 }
 function resultXml(inner:string){return twiml(inner);}
