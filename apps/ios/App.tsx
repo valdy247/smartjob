@@ -63,11 +63,16 @@ export default function App(){
      const res=await fetch(api+"/api/ios/voice-token",{
        method:"POST",headers:{Authorization:"Bearer "+data.session.access_token}
      });
+     const contentType=res.headers.get("content-type")||"";
+     if(!contentType.includes("application/json")){
+       throw new Error("El servidor configurado no tiene activo el servicio de llamadas para iPhone (HTTP "+res.status+"). La aplicación está en pruebas; no actives el desvío de tu línea.");
+     }
      const value=await res.json();
      if(!res.ok){
        if(res.status===403)throw new Error("Tu línea todavía necesita verificación y autorización.");
-       if(res.status===503)throw new Error("La recepción de llamadas iPhone todavía no está habilitada.");
-       throw new Error("No se pudo registrar el teléfono.");
+       if(res.status===503)throw new Error("La recepción de llamadas iPhone todavía no está habilitada en este servidor.");
+       if(res.status===404)throw new Error("Esta versión del servidor todavía no incluye la recepción de llamadas para iPhone.");
+       throw new Error("No se pudo registrar el teléfono (HTTP "+res.status+").");
      }
      if(typeof value.token!=="string")throw new Error("Token de llamadas inválido.");
      await voice.initializePushRegistry();
