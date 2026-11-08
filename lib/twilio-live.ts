@@ -30,7 +30,7 @@ export function bridgeTwiML(role:"customer"|"professional",bridge:string){
  const relay='<Connect><ConversationRelay url="'+xmlEscape(process.env.SMARTJOB_LIVE_WS_URL||"")+
   '" transcriptionLanguage="'+locale+'" ttsLanguage="'+locale+
   '" ttsProvider="ElevenLabs" welcomeGreeting="'+xmlEscape(greet)+
-  '" welcomeGreetingInterruptible="none" speechTimeout="800" echoPromptFiltering="true">'+
+  '" welcomeGreetingInterruptible="none" speechTimeout="800">'+
   '<Parameter name="bridge" value="'+bridge+'"/>'+
   '<Parameter name="role" value="'+role+'"/>'+
   '</ConversationRelay></Connect><Hangup/>';
