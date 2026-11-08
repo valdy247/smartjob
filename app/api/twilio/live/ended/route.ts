@@ -2,6 +2,7 @@ import {createHmac} from "node:crypto";
 import {NextRequest} from "next/server";
 import {twiml} from "@/lib/twilio-pilot";
 import {verifiedBridge,verifiedLiveRequest} from "@/lib/twilio-live";
+import {updatePhoneSession} from "@/lib/phone-routes";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
@@ -16,6 +17,13 @@ export async function POST(req:NextRequest){
   if(!verifiedBridge(bridge,sig))return twiml("<Hangup/>",403);
   const callbackSid=p.get("CallSid")||"";
   if(!/^CA[a-f\d]{32}$/i.test(callbackSid))return twiml("<Hangup/>",403);
+  const state=p.get("CallStatus")||"";
+  const seconds=Number(p.get("CallDuration")||"");
+  const terminal=["completed","busy","failed","no-answer","canceled"];
+  if(terminal.includes(state)||callbackSid===bridge){
+    await updatePhoneSession(bridge,terminal.includes(state)?state:"completed",
+      Number.isInteger(seconds)&&seconds>=0?seconds:undefined);
+  }
   const stamp=String(Math.floor(Date.now()/1000));
   const signature=createHmac("sha256",process.env.TWILIO_AUTH_TOKEN||"")
     .update("smartjob-end-v1\n"+stamp+"\n"+bridge).digest("hex");
