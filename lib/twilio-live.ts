@@ -30,7 +30,8 @@ export function relayRouteSignature(bridge:string,config:RelayOptions){
     .digest("hex");
 }
 export function validatedConfig(config:RelayOptions){
-  return Boolean([config.customer,config.twilio,config.owner].every(n=>E164(n))&&
+  return Boolean(E164(config.customer)&&E164(config.twilio)&&
+    (E164(config.owner)||/^client:sj_[a-f0-9]{32}$/i.test(config.owner))&&
     ["en-US","es-ES"].includes(config.customerLanguage)&&
     ["en-US","es-ES"].includes(config.ownerLanguage)&&
     config.customerLanguage!==config.ownerLanguage);
