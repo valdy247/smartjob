@@ -1,0 +1,35 @@
+name: Smart Job Live Bridge
+on:
+  push:
+    branches:
+      - "feat/live-v2-production-foundations"
+    paths:
+      - "services/live-bridge/**"
+      - ".github/workflows/live-bridge.yml"
+  pull_request:
+    paths:
+      - "services/live-bridge/**"
+      - ".github/workflows/live-bridge.yml"
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Set up Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: services/live-bridge/package.json
+      - name: Install
+        run: npm install --no-audit --no-fund
+        working-directory: services/live-bridge
+      - name: Syntax check
+        run: npm run check
+        working-directory: services/live-bridge
+      - name: Unit tests
+        run: npm test
+        working-directory: services/live-bridge
