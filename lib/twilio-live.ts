@@ -7,6 +7,8 @@ export type RelayOptions={
   customer:string;twilio:string;owner:string;
   customerLanguage:"en-US"|"es-ES";ownerLanguage:"en-US"|"es-ES";
   assistantName?:string;
+  voiceCustomer?:string;voiceOwner?:string;
+  greetingCustomer?:string;greetingOwner?:string;
 };
 export function liveReady(){
   const ws=process.env.SMARTJOB_LIVE_WS_URL||"";
@@ -40,9 +42,14 @@ export function validatedConfig(config:RelayOptions){
 export function bridgeTwiML(role:"customer"|"professional",bridge:string,config?:RelayOptions){
   const lang=role==="customer"?(config?.customerLanguage||"en-US"):(config?.ownerLanguage||"es-ES");
   const name=(config?.assistantName||"Mayuli").replace(/[^\p{L}\p{N} .'-]/gu,"").slice(0,35);
-  const greet=lang==="en-US"
+  const standardGreeting=lang==="en-US"
     ?"Welcome to Smart Job. This call uses live AI interpretation. We are connecting you with "+name+". Please speak English."
     :"Bienvenido a Smart Job. Esta llamada utiliza interpretación en vivo con inteligencia artificial. Habla español con normalidad.";
+  const customGreeting=role==="customer"?config?.greetingCustomer:config?.greetingOwner;
+  const greet=customGreeting&&customGreeting.length<=180?customGreeting:standardGreeting;
+  const chosenVoice=role==="customer"?config?.voiceCustomer:config?.voiceOwner;
+  const voiceAttribute=chosenVoice&&/^[a-zA-Z0-9]{20}-v4$/.test(chosenVoice)
+    ?' voice="'+xmlEscape(chosenVoice)+'"':"";
   const params:[string,string][]=[["bridge",bridge],["role",role]];
   if(config){
     params.push(["customer",config.customer],["twilio",config.twilio],["owner",config.owner],
@@ -54,7 +61,7 @@ export function bridgeTwiML(role:"customer"|"professional",bridge:string,config?
   const action=xmlEscape(PILOT_BASE+"/api/twilio/live/ended?bridge="+bridge+"&sig="+bridgeSignature(bridge));
   return twiml('<Connect action="'+action+'" method="POST"><ConversationRelay url="'+url+
     '" transcriptionLanguage="'+lang+'" ttsLanguage="'+lang+
-    '" ttsProvider="ElevenLabs" welcomeGreeting="'+xmlEscape(greet)+
+    '" ttsProvider="ElevenLabs"'+voiceAttribute+' welcomeGreeting="'+xmlEscape(greet)+
     '" welcomeGreetingInterruptible="none" speechTimeout="650" interruptible="speech" interruptSensitivity="medium"'+
     '>'+tags+
     '</ConversationRelay></Connect><Hangup/>');
