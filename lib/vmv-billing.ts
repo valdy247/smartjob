@@ -20,7 +20,8 @@ export const topupPriceEnv=(plan:PlanCode):string=>
 export type BillingAccount={
  user_id:string;plan_code:string;status:string;stripe_customer_id:string|null;
  stripe_subscription_id:string|null;current_period_end:string|null;included_minutes:number;
- used_minutes:number;reserved_minutes:number;rollover_minutes:number;topup_minutes:number
+ used_minutes:number;reserved_minutes:number;rollover_minutes:number;topup_minutes:number;
+ test_held_minutes:number;test_hold_until:string|null
 };
 // Preview-only trial gate. The global toggle alone cannot enforce quotas on
 // arbitrary users or on production; explicit test account matching is required.
@@ -37,7 +38,7 @@ export function billingAdmin(){
 export async function getBillingAccount(uid:string):Promise<BillingAccount|null>{
  const db=billingAdmin();if(!db)return null;
  const {data,error}=await db.from("smartjob_billing_accounts")
-  .select("user_id,plan_code,status,stripe_customer_id,stripe_subscription_id,current_period_end,included_minutes,used_minutes,reserved_minutes,rollover_minutes,topup_minutes")
+  .select("user_id,plan_code,status,stripe_customer_id,stripe_subscription_id,current_period_end,included_minutes,used_minutes,reserved_minutes,rollover_minutes,topup_minutes,test_held_minutes,test_hold_until")
   .eq("user_id",uid).maybeSingle();
  if(error){console.error("VMV billing account read",error.code);return null;}
  return data as BillingAccount|null;
@@ -45,8 +46,10 @@ export async function getBillingAccount(uid:string):Promise<BillingAccount|null>
 export const eligible=(account:BillingAccount|null)=>Boolean(account&&
  ["active","trialing"].includes(account.status)&&
  account.current_period_end&&Date.parse(account.current_period_end)>Date.now());
+export const testMinutesHeld=(a:BillingAccount|null)=>a?.test_hold_until&&
+ Date.parse(a.test_hold_until)>Date.now()?a.test_held_minutes:0;
 export const balance=(a:BillingAccount|null)=>a?
- Math.max(0,a.included_minutes+a.rollover_minutes+a.topup_minutes-a.used_minutes-a.reserved_minutes):0;
+ Math.max(0,a.included_minutes+a.rollover_minutes+a.topup_minutes-a.used_minutes-a.reserved_minutes-testMinutesHeld(a)):0;
 export async function claimCallMinutes(bridge:string,uid:string,maxMinutes=10){
  const db=billingAdmin();if(!db)return 0;
  const released=await db.rpc("smartjob_reap_call_reservations",{p_user_id:uid});
