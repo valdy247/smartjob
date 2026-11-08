@@ -6,7 +6,7 @@ export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
 export async function POST(req:NextRequest){
-  const fields=await verifiedLiveRequest(req);
+  const fields=await verifiedLiveRequest(req,null);
   if(!fields)return twiml("<Hangup/>",403);
   if(!liveReady())return notReady();
   const q=new URL(req.url).searchParams;
