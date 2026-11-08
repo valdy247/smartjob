@@ -61,7 +61,7 @@ export async function POST(req:NextRequest){
       customerLanguage:route.customer_language,ownerLanguage:route.owner_language,
       assistantName:route.assistant_name
     };
-    if(!validatedConfig(config)||!await reservePhoneSession(bridge,route)){
+    if(!validatedConfig(config)){
       return twiml(say("All interpreters are currently busy. Please try again later.","en-US")+"<Hangup/>");
     }
   }
@@ -89,6 +89,9 @@ export async function POST(req:NextRequest){
     const retry=xmlEscape(baseUrl+"/api/twilio/live/voice?warm="+(attempt+1));
     return twiml((attempt===0?say("Smart Job is connecting your interpreter. Please hold.","en-US"):"")+
       '<Pause length="9"/><Redirect method="POST">'+retry+"</Redirect>");
+  }
+  if(route&&!await reservePhoneSession(bridge,route)){
+    return twiml(say("All interpreters are currently busy. Please try again later.","en-US")+"<Hangup/>");
   }
   const signature=tenantId?partnerSignature(bridge,tenantId,from):bridgeSignature(bridge);
   const partnerUrl=baseUrl+"/api/twilio/live/partner?bridge="+bridge+"&sig="+signature+
