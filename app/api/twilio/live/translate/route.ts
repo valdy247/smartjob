@@ -5,7 +5,7 @@ export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
 type TranslationRequest={original?:unknown;role?:unknown;sourceLanguage?:unknown;stream?:unknown};
-const blockedForStreaming=/[$€£%]|\d|\b(?:allerg(?:y|ies|ic|ia|ias)|peanut|nuts?|gluten|milk|dairy|egg|huevo|leche|nuez|cacahuate|maní|precio|price|cost|dollar|dólar|dólares|pesos?|euros?|cent|kilos?|kilograms?|pounds?|libras?|grams?|gramos?|ounces?|onzas?|veinte|twenty|two|three|four|five|six|seven|eight|nine|ten|hundred|thousand|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|cien|mil|half|quarter|medio|media|hora|hour|minute|minuto)\b/i;
+const blockedForStreaming=/[$€£%]|\d|\b(?:allerg(?:y|ies|ic|ia|ias)|peanut|nuts?|gluten|milk|dairy|egg|huevo|leche|nuez|cacahuate|maní|precio|price|cost|dollar|dólar|dólares|pesos?|euros?|cent|kilos?|kilograms?|pounds?|libras?|grams?|gramos?|ounces?|onzas?|veinte|twenty|one|two|three|four|five|six|seven|eight|nine|ten|hundred|thousand|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|cien|mil|half|quarter|medio|media|hora|hour|minute|minuto)\b/i;
 
 function provider(){
   const direct=Boolean(process.env.OPENAI_API_KEY);
