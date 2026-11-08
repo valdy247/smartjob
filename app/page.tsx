@@ -105,9 +105,9 @@ export default function Home(){
     </main>
     <footer className="footer">Smart Job · AI Professional Assistant · Web MVP · 2026</footer>
     <nav className="mobile-nav" aria-label="Navegación móvil">
-      <button onClick={()=>setTab("calls")} type="button" className={"navitem "+(tab==="calls"?"active":"")}><PhoneCall size={19}/>Llamadas</button>
-      <button onClick={()=>setTab("live")} type="button" className={"navitem "+(tab==="live"?"active":"")}><Languages size={19}/>Traductor Live</button>
-      <button onClick={()=>setTab("settings")} type="button" className={"navitem "+(tab==="settings"?"active":"")}><Settings2 size={19}/></button>
+      <button onClick={()=>setTab("calls")} type="button" aria-current={tab==="calls"?"page":undefined} className={"navitem "+(tab==="calls"?"active":"")}><PhoneCall size={19}/>Llamadas</button>
+      <button onClick={()=>setTab("live")} type="button" aria-current={tab==="live"?"page":undefined} className={"navitem "+(tab==="live"?"active":"")}><Languages size={19}/>Traductor Live</button>
+      <button onClick={()=>setTab("settings")} type="button" aria-label="Ir a mi perfil" aria-current={tab==="settings"?"page":undefined} className={"navitem "+(tab==="settings"?"active":"")}><Settings2 size={19}/>Perfil</button>
     </nav>
   </div>;
 }
