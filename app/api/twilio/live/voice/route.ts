@@ -2,6 +2,7 @@ import {NextRequest} from "next/server";
 import {baseUrl,bridgeSignature,bridgeTwiML,E164,liveReady,notReady,verifiedLiveRequest,validatedConfig,type RelayOptions} from "@/lib/twilio-live";
 import {findPhoneRoute,partnerSignature,reservePhoneSession,assignOutboundCall,updatePhoneSession,tenantsReady} from "@/lib/phone-routes";
 import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
+import {getPaidCallPreferences,selectedVoice} from "@/lib/vmv-voices";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
@@ -74,6 +75,13 @@ export async function POST(req:NextRequest){
     };
     if(!validatedConfig(config)){
       return twiml(say("All interpreters are currently busy. Please try again later.","en-US")+"<Hangup/>");
+    }
+    const prefs=await getPaidCallPreferences(route.user_id);
+    if(prefs){
+      config.greetingCustomer=prefs.greeting_customer||undefined;
+      config.greetingOwner=prefs.greeting_owner||undefined;
+      config.voiceCustomer=selectedVoice(prefs.voice_customer,route.customer_language)||undefined;
+      config.voiceOwner=selectedVoice(prefs.voice_owner,route.owner_language)||undefined;
     }
   }
   // On Render's free plan, waking the idle WebSocket host can take longer than
