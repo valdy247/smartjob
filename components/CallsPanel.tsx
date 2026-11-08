@@ -3,6 +3,7 @@ import {useEffect,useState,type FormEvent} from "react";
 import {Check,PhoneCall,PhoneForwarded,ShieldAlert,Settings2,Clock3,ShieldCheck,Info} from "lucide-react";
 import type {SupabaseClient} from "@supabase/supabase-js";
 import type {Profile,CallSettings} from "@/lib/types";
+import {BillingPanel} from "./BillingPanel";
 
 type PhoneRoute={id:string;twilio_number:string;destination_phone:string;public_number:string|null;forwarding_mode:string;customer_language:string;owner_language:string;enabled:boolean;receive_method:"pstn"|"ios_app";assistant_name:string};
 type CallRecord={bridge_sid:string;status:string;duration_seconds:number|null;started_at:string};
@@ -188,6 +189,7 @@ export function CallsPanel({supabase,profile,apiStatus}:{supabase:SupabaseClient
           </button>
           <p className="small muted" style={{marginTop:10}}>Esta solicitud no cambia tu operador, no activa un desvío, no compra números y no genera cargos. La traducción automática aún necesita configuración y una aplicación de recepción o línea alternativa.</p>
         </div>
+        <BillingPanel supabase={supabase} userId={profile.id}/>
         <div className="card" style={{marginTop:20}}>
           <div className="card-head"><h2>Historial de llamadas</h2><Clock3 size={18} color="var(--lime)"/></div>
           <p className="small muted">Solo estado y duración. Smart Job no guarda aquí grabaciones ni transcripciones de lo que hablaron.</p>
