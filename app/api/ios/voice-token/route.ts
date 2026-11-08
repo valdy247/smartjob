@@ -17,7 +17,7 @@ function voiceToken(identity:string){
   if(!/^AC[a-f0-9]{32}$/i.test(sid)||!/^SK[a-f0-9]{32}$/i.test(key)||
       !secret||!/^CR[a-f0-9]{32}$/i.test(push))return null;
   const now=Math.floor(Date.now()/1000);
-  const head={typ:"JWT",alg:"HS256"};
+  const head={typ:"JWT",alg:"HS256",cty:"twilio-fpa;v=1"};
   // Incoming-only grant: the native app cannot arbitrarily dial phone numbers.
   const payload={
     jti:key+"-"+randomUUID(),iss:key,sub:sid,iat:now,nbf:now-5,exp:now+3600,
