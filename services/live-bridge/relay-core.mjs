@@ -18,7 +18,7 @@ export function matchesRouteSignature(secret, route, provided) {
 // Keep prices, dates, phone numbers, allergies, measurements and quantities in the
 // verified full-response lane. We never stream them before quality checks complete.
 export function needsVerifiedTranslation(source) {
-  return /[$€£%]|\d|\b(?:allerg(?:y|ies|ic|ia|ias)|peanut|nuts?|gluten|milk|dairy|egg|huevo|leche|nuez|cacahuate|maní|precio|price|cost|dollar|dólar|dólares|pesos?|euros?|cent|kilos?|kilograms?|pounds?|libras?|grams?|gramos?|ounces?|onzas?|veinte|twenty|two|three|four|five|six|seven|eight|nine|ten|hundred|thousand|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|cien|mil|half|quarter|medio|media|hora|hour|minute|minuto)\b/i.test(source);
+  return /[$€£%]|\d|\b(?:allerg(?:y|ies|ic|ia|ias)|peanut|nuts?|gluten|milk|dairy|egg|huevo|leche|nuez|cacahuate|maní|precio|price|cost|dollar|dólar|dólares|pesos?|euros?|cent|kilos?|kilograms?|pounds?|libras?|grams?|gramos?|ounces?|onzas?|veinte|twenty|one|two|three|four|five|six|seven|eight|nine|ten|hundred|thousand|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|cien|mil|half|quarter|medio|media|hora|hour|minute|minuto)\b/i.test(source);
 }
 
 export function makeStreamingTokens(send) {
