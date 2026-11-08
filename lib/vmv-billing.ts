@@ -22,7 +22,14 @@ export type BillingAccount={
  stripe_subscription_id:string|null;current_period_end:string|null;included_minutes:number;
  used_minutes:number;reserved_minutes:number;rollover_minutes:number;topup_minutes:number
 };
-export const billingEnabled=()=>process.env.SMARTJOB_BILLING_ENFORCEMENT_ENABLED==="true";
+// Preview-only trial gate. The global toggle alone cannot enforce quotas on
+// arbitrary users or on production; explicit test account matching is required.
+export const billingEnabledFor=(userId:string)=>Boolean(
+ process.env.SMARTJOB_BILLING_ENFORCEMENT_ENABLED==="true"&&
+ process.env.SMARTJOB_STRIPE_MODE==="test"&&
+ /^[a-f0-9-]{36}$/i.test(process.env.SMARTJOB_BILLING_TEST_OWNER_ID||"")&&
+ process.env.SMARTJOB_BILLING_TEST_OWNER_ID===userId
+);
 export function billingAdmin(){
  const url=process.env.NEXT_PUBLIC_SUPABASE_URL,secret=process.env.SUPABASE_SECRET_KEY;
  return url&&secret?createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}}):null;
