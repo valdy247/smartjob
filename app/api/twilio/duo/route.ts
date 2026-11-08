@@ -89,8 +89,14 @@ async function deliver(account:string,peer:string,translated:string,role:Role,tu
  return true;
 }
 export async function POST(req:NextRequest){
+ const modeHint=new URL(req.url).searchParams.get("mode")||"entry";
+ console.info("Smart Job duo webhook received",req.method,modeHint);
  const data=await authenticTwilio(req);
- if(!data)return resultXml(say("Unauthorized.","en-US")+"<Hangup/>");
+ if(!data){
+  console.error("Smart Job duo webhook signature/parameters rejected",req.method,modeHint);
+  return resultXml(say("Smart Job could not verify this call.","en-US")+"<Hangup/>");
+ }
+ console.info("Smart Job duo webhook validated",req.method,modeHint);
  const c=config();
  if(!c.valid)return resultXml(say("La prueba entre dos teléfonos todavía no está configurada.")+"<Hangup/>");
  const from=data.get("From")||"";
@@ -122,3 +128,7 @@ export async function POST(req:NextRequest){
   return resultXml(say(role==="en"?"Temporary issue, please try again.":"Problema temporal. Inténtalo otra vez.",loc)+next(role,turn+1));
  }
 }
+
+// Twilio numbers can be configured to deliver the initial Voice webhook via GET.
+// Request authentication still validates Twilio's signature over the entire URL.
+export async function GET(req:NextRequest){return POST(req);}
