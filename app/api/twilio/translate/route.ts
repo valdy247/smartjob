@@ -28,6 +28,36 @@ export async function POST(req:NextRequest){
   if(!translated||compareNumbers(original,translated)){
    return twiml(say("No pude verificar las cantidades. Repite esa frase.")+gather(turn+1));
   }
+  // Twilio treats failed <Play> audio URLs as a fatal call error. Check
+  // ElevenLabs with a tiny, low-cost sample first; if the account rejects
+  // synthesis, keep the caller connected using Twilio's English voice.
+  // This is a pilot safety net, not the final real-time audio architecture.
+  let elevenReady=false;
+  try{
+   const voice=process.env.ELEVENLABS_VOICE_EN||"JBFqnCBsd6RMkjVDRZzb";
+   const check=await fetch("https://api.elevenlabs.io/v1/text-to-speech/"+encodeURIComponent(voice)+"?output_format=mp3_44100_128",{
+    method:"POST",
+    headers:{"xi-api-key":process.env.ELEVENLABS_API_KEY||"","Content-Type":"application/json","Accept":"audio/mpeg"},
+    body:JSON.stringify({text:"OK",model_id:process.env.ELEVENLABS_TTS_MODEL||"eleven_flash_v2_5"}),
+    signal:AbortSignal.timeout(4500)
+   });
+   if(check.ok){
+    elevenReady=true;
+    await check.body?.cancel();
+   }else{
+    // Never log the input text, credentials, or provider's full error message.
+    let issue="unknown";
+    try{
+     const problem=await check.json();
+     const code=problem?.detail?.status||problem?.detail?.type||problem?.status||"unknown";
+     if(typeof code==="string")issue=code.replace(/[^a-zA-Z0-9_:-]/g,"").slice(0,80);
+    }catch{}
+    console.error("Smart Job ElevenLabs pilot voice rejected",check.status,issue);
+   }
+  }catch(e){
+   console.error("Smart Job ElevenLabs pilot voice unavailable",e instanceof Error?e.name:"unknown");
+  }
+  if(!elevenReady)return twiml(say(translated,"en-US")+gather(turn+1));
   const encrypted=sealAudio(translated);
   return twiml('<Play>'+PILOT_BASE+'/api/twilio/audio?token='+encrypted+'</Play>'+gather(turn+1));
  }catch(e){
