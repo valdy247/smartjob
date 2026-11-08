@@ -9,7 +9,7 @@ const callSid=/^CA[a-f\d]{32}$/i,accountSid=/^AC[a-f\d]{32}$/i;
 const maxDuration=Math.min(1800,Math.max(60,Number(process.env.SMARTJOB_MAX_CALL_SECONDS||600)));
 async function dial(sid:string,token:string,to:string,from:string,url:string,callback:string){
   const payload=new URLSearchParams({
-    To:to,From:from,Url:url,Method:"POST",Timeout:"25",TimeLimit:String(maxDuration),
+    To:to,From:from,Url:url,Method:"POST",Timeout:"12",TimeLimit:String(maxDuration),
     StatusCallback:callback,StatusCallbackMethod:"POST",StatusCallbackEvent:"completed"
   });
   const res=await fetch("https://api.twilio.com/2010-04-01/Accounts/"+sid+"/Calls.json",{
@@ -25,6 +25,17 @@ async function stopOutbound(sid:string,outbound:string,token:string){
     method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded",Authorization:"Basic "+Buffer.from(sid+":"+token).toString("base64")},
     body:"Status=completed",signal:AbortSignal.timeout(4000),cache:"no-store"
   });}catch{}
+}
+async function inboundAlive(sid:string,token:string,bridge:string){
+ try{
+  const response=await fetch("https://api.twilio.com/2010-04-01/Accounts/"+sid+"/Calls/"+bridge+".json",{
+   headers:{Authorization:"Basic "+Buffer.from(sid+":"+token).toString("base64")},
+   signal:AbortSignal.timeout(3500),cache:"no-store"
+  });
+  if(!response.ok)return false;
+  const call=await response.json();
+  return ["in-progress","ringing","queued"].includes(String(call.status||""));
+ }catch{return false;}
 }
 export async function POST(req:NextRequest){
   const fields=await verifiedLiveRequest(req,null);
@@ -70,7 +81,7 @@ export async function POST(req:NextRequest){
   // hold loop until /health confirms the audio server is actually ready.
   // No outgoing PSTN leg or billable interpreter reservation is made while cold.
   const attemptRaw=req.nextUrl.searchParams.get("warm");
-  const attempt=attemptRaw&&/^\\d$/.test(attemptRaw)?Number(attemptRaw):0;
+  const attempt=attemptRaw&&/^[0-8]$/.test(attemptRaw)?Number(attemptRaw):0;
   const healthUrl="https://"+new URL(process.env.SMARTJOB_LIVE_WS_URL||"wss://invalid.example/relay").host+"/health";
   let bridgeReady=false;
   try{
@@ -98,6 +109,11 @@ export async function POST(req:NextRequest){
     (tenantId?"&route="+encodeURIComponent(tenantId)+"&caller="+encodeURIComponent(from):"");
   const callback=baseUrl+"/api/twilio/live/ended?bridge="+bridge+"&sig="+bridgeSignature(bridge);
   try{
+    if(!await inboundAlive(sid,token,bridge)){
+      console.info("Smart Job caller disconnected before PSTN dial");
+      if(route)await updatePhoneSession(bridge,"canceled");
+      return twiml("<Hangup/>");
+    }
     const outbound=await dial(sid,token,owner,to,partnerUrl,callback);
     if(!outbound){
       if(route)await updatePhoneSession(bridge,"failed");
