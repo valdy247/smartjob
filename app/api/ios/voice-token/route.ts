@@ -34,9 +34,15 @@ export async function POST(req:NextRequest){
   const userId=await authenticatedUser(req);
   if(!userId)return NextResponse.json({error:"unauthorized"},{status:401,headers:noStore});
   const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
-  const secret=process.env.SUPABASE_SECRET_KEY||"";
-  if(!url||!secret)return NextResponse.json({error:"mobile_voice_not_configured"},{status:503,headers:noStore});
-  const db=createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}});
+  const publishable=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
+  const authorization=req.headers.get("authorization")||"";
+  if(!url||!publishable||!authorization)return NextResponse.json({error:"mobile_voice_not_configured"},{status:503,headers:noStore});
+  // Read only the authenticated account's route, enforcing the existing Supabase RLS policy.
+  // This does not require a privileged server key and cannot read another user's routes.
+  const db=createClient(url,publishable,{
+    auth:{persistSession:false,autoRefreshToken:false},
+    global:{headers:{Authorization:authorization}}
+  });
   const {data,error}=await db.from("smartjob_phone_routes")
     .select("id,user_id,receive_method,enabled").eq("user_id",userId)
     .eq("receive_method","ios_app").eq("enabled",true).limit(1).maybeSingle();
