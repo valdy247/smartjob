@@ -2,6 +2,7 @@ import {NextRequest} from "next/server";
 import {bridgeTwiML,E164,liveReady,notReady,verifiedBridge,verifiedLiveRequest,validatedConfig,type RelayOptions} from "@/lib/twilio-live";
 import {findPhoneRouteById,tenantsReady,verifyPartnerSignature} from "@/lib/phone-routes";
 import {twiml} from "@/lib/twilio-pilot";
+import {getPaidCallPreferences,selectedVoice} from "@/lib/vmv-voices";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
@@ -28,6 +29,13 @@ export async function POST(req:NextRequest){
       assistantName:route.assistant_name
     };
     if(!validatedConfig(config)){console.error("Smart Job partner config invalid");return twiml("<Hangup/>",403);}
+    const prefs=await getPaidCallPreferences(route.user_id);
+    if(prefs){
+      config.greetingCustomer=prefs.greeting_customer||undefined;
+      config.greetingOwner=prefs.greeting_owner||undefined;
+      config.voiceCustomer=selectedVoice(prefs.voice_customer,route.customer_language)||undefined;
+      config.voiceOwner=selectedVoice(prefs.voice_owner,route.owner_language)||undefined;
+    }
     console.info("Smart Job partner PSTN leg acknowledged");
     return bridgeTwiML("professional",bridge,config);
   }
