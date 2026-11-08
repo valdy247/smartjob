@@ -3,14 +3,15 @@ import {baseUrl,bridgeSignature,bridgeTwiML,E164,liveReady,notReady,verifiedLive
 import {findPhoneRoute,partnerSignature,reservePhoneSession,assignOutboundCall,updatePhoneSession,tenantsReady} from "@/lib/phone-routes";
 import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 import {getPaidCallPreferences,selectedVoice} from "@/lib/vmv-voices";
+import {billingEnabled,claimCallMinutes,settleCallMinutes} from "@/lib/vmv-billing";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
 const callSid=/^CA[a-f\d]{32}$/i,accountSid=/^AC[a-f\d]{32}$/i;
 const maxDuration=Math.min(1800,Math.max(60,Number(process.env.SMARTJOB_MAX_CALL_SECONDS||600)));
-async function dial(sid:string,token:string,to:string,from:string,url:string,callback:string){
+async function dial(sid:string,token:string,to:string,from:string,url:string,callback:string,seconds=maxDuration){
   const payload=new URLSearchParams({
-    To:to,From:from,Url:url,Method:"POST",Timeout:"12",TimeLimit:String(maxDuration),
+    To:to,From:from,Url:url,Method:"POST",Timeout:"12",TimeLimit:String(Math.min(maxDuration,Math.max(60,seconds))),
     StatusCallback:callback,StatusCallbackMethod:"POST",StatusCallbackEvent:"completed"
   });
   const res=await fetch("https://api.twilio.com/2010-04-01/Accounts/"+sid+"/Calls.json",{
@@ -91,12 +92,13 @@ export async function POST(req:NextRequest){
   const attemptRaw=req.nextUrl.searchParams.get("warm");
   const attempt=attemptRaw&&/^[0-8]$/.test(attemptRaw)?Number(attemptRaw):0;
   const healthUrl="https://"+new URL(process.env.SMARTJOB_LIVE_WS_URL||"wss://invalid.example/relay").host+"/health";
-  let bridgeReady=false;
+  let bridgeReady=false,atCapacity=false;
   try{
     const health=await fetch(healthUrl,{cache:"no-store",signal:AbortSignal.timeout(1700)});
     if(health.ok){
       const body=await health.json().catch(()=>null);
       bridgeReady=body?.ok===true&&body?.service==="smartjob-live-bridge";
+      atCapacity=body?.accepting===false;
     }
   }catch{}
   if(!bridgeReady){
@@ -109,8 +111,19 @@ export async function POST(req:NextRequest){
     return twiml((attempt===0?say("Smart Job is connecting your interpreter. Please hold.","en-US"):"")+
       '<Pause length="9"/><Redirect method="POST">'+retry+"</Redirect>");
   }
+  if(atCapacity){
+    return twiml(say("All interpreters are currently busy. Please try again shortly.","en-US")+"<Hangup/>");
+  }
   if(route&&!await reservePhoneSession(bridge,route)){
     return twiml(say("All interpreters are currently busy. Please try again later.","en-US")+"<Hangup/>");
+  }
+  let reservedMinutes=0;
+  if(route&&billingEnabled()){
+    reservedMinutes=await claimCallMinutes(bridge,route.user_id,Math.min(30,Math.ceil(maxDuration/60)));
+    if(reservedMinutes<1){
+      await updatePhoneSession(bridge,"failed");
+      return twiml(say("Your available translated minutes have been used. Please renew or recharge your plan.","en-US")+"<Hangup/>");
+    }
   }
   const signature=tenantId?partnerSignature(bridge,tenantId,from):bridgeSignature(bridge);
   const partnerUrl=baseUrl+"/api/twilio/live/partner?bridge="+bridge+"&sig="+signature+
@@ -119,23 +132,28 @@ export async function POST(req:NextRequest){
   try{
     if(!await inboundAlive(sid,token,bridge)){
       console.info("Smart Job caller disconnected before PSTN dial");
+      if(reservedMinutes)await settleCallMinutes(bridge,0);
       if(route)await updatePhoneSession(bridge,"canceled");
       return twiml("<Hangup/>");
     }
-    const outbound=await dial(sid,token,owner,to,partnerUrl,callback);
+    const outbound=await dial(sid,token,owner,to,partnerUrl,callback,
+      reservedMinutes>0?reservedMinutes*60:maxDuration);
     if(!outbound){
       if(route)await updatePhoneSession(bridge,"failed");
+      if(reservedMinutes)await settleCallMinutes(bridge,0);
       return twiml(say("We cannot connect your interpreter right now. Please try again.","en-US")+"<Hangup/>");
     }
     if(route&&!await assignOutboundCall(bridge,outbound)){
       await stopOutbound(sid,outbound,token);
       await updatePhoneSession(bridge,"failed");
+      if(reservedMinutes)await settleCallMinutes(bridge,0);
       return twiml(say("Unable to connect. Please call again.","en-US")+"<Hangup/>");
     }
     console.info("Smart Job live outbound call accepted",route?"tenant":"pilot");
     return bridgeTwiML("customer",bridge,config);
   }catch(e){
     if(route)await updatePhoneSession(bridge,"failed");
+    if(reservedMinutes)await settleCallMinutes(bridge,0);
     console.error("Smart Job live dial failed",e instanceof Error?e.name:"unknown");
     return twiml(say("Connection unavailable. Please try again.","en-US")+"<Hangup/>");
   }
