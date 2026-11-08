@@ -45,7 +45,17 @@ export async function POST(req:NextRequest){
     if(!tenantsReady())return twiml(say("This telephone number is not yet enabled.","en-US")+"<Hangup/>");
     route=await findPhoneRoute(to);
     if(!route)return twiml(say("This telephone number is not yet enabled.","en-US")+"<Hangup/>");
-    owner=route.destination_phone;tenantId=route.id;
+    // The original forwarded Verizon number must never be dialed again.
+    // Only provisioned, enabled routes can ring the native Twilio Voice client.
+    if(route.receive_method==="ios_app"){
+      if(process.env.SMARTJOB_IOS_VOICE_ENABLED!=="true"||
+         !process.env.TWILIO_IOS_PUSH_CREDENTIAL_SID)
+        return twiml(say("Mobile interpretation is not available yet.","en-US")+"<Hangup/>");
+      owner="client:sj_"+route.user_id.replaceAll("-","");
+    }else{
+      owner=route.destination_phone;
+    }
+    tenantId=route.id;
     config={
       customer:from,twilio:to,owner,
       customerLanguage:route.customer_language,ownerLanguage:route.owner_language,
