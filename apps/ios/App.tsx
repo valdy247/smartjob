@@ -14,6 +14,7 @@ export default function App(){
  const [session,setSession]=useState<Session|null>(null);
  const [email,setEmail]=useState(""),[password,setPassword]=useState("");
  const [working,setWorking]=useState(false),[registering,setRegistering]=useState(false);
+ const [testBusy,setTestBusy]=useState(false);
  const [ready,setReady]=useState(false),[status,setStatus]=useState("Prepara la recepción de llamadas");
  const [invite,setInvite]=useState<CallInvite|null>(null),[call,setCall]=useState<Call|null>(null);
  const [error,setError]=useState("");
@@ -127,6 +128,31 @@ export default function App(){
    }catch(e){setVerifyMessage(e instanceof Error?e.message:"No se pudo verificar el código.");}
    finally{setSmsBusy(false);}
  }
+ async function testIncomingCall(){
+   if(!supabase||!ready)return;
+   setTestBusy(true);setError("");
+   try{
+     const {data}=await supabase.auth.getSession();
+     if(!data.session)throw new Error("Tu sesión ha expirado. Vuelve a entrar.");
+     const result=await fetch(api+"/api/ios/test-call",{
+       method:"POST",headers:{"Authorization":"Bearer "+data.session.access_token}
+     });
+     if(!(result.headers.get("content-type")||"").includes("application/json"))
+       throw new Error("El servidor de pruebas todavía no está disponible.");
+     const value=await result.json() as Record<string,unknown>;
+     if(!result.ok){
+       if(value.error==="test_call_rate_limit")
+         throw new Error("Demasiados intentos. Espera un minuto; máximo tres pruebas al día.");
+       if(value.error==="twilio_test_call_failed")
+         throw new Error("Twilio no pudo iniciar la llamada"+(typeof value.providerCode==="number"?" (código "+value.providerCode+")":"")+".");
+       if(value.error==="phone_not_verified")
+         throw new Error("Debes verificar tu número por SMS antes de hacer la prueba.");
+       throw new Error("No pudimos iniciar la prueba. Servidor HTTP "+result.status+".");
+     }
+     setStatus("Llamada enviada · revisa la pantalla de tu iPhone");
+   }catch(e){setError(e instanceof Error?e.message:"No se pudo solicitar la llamada de prueba.");}
+   finally{setTestBusy(false);}
+ }
  async function registerPhone(){
    const client=supabase;
    if(!client||!sessionRef.current)return;
@@ -152,7 +178,7 @@ export default function App(){
      await voice.initializePushRegistry();
      await voice.register(value.token);
      registeredAt.current=Date.now();setReady(true);
-     setStatus("iPhone registrado para recibir llamadas");
+     setStatus(value.testOnly===true?"iPhone registrado para llamadas de prueba":"iPhone registrado para recibir llamadas");
    }catch(e){
      setReady(false);
      setError(e instanceof Error?e.message:"No fue posible activar la recepción.");
@@ -243,6 +269,9 @@ export default function App(){
            <Text style={styles.helper}>La recepción funciona solamente para números verificados y autorizados. No activa ningún desvío de Verizon.</Text>
            <Button label={registering?"Registrando…":ready?"Actualizar conexión":"Preparar mi iPhone"}
              disabled={registering} onPress={()=>void registerPhone()}/>
+           {ready?<Button label={testBusy?"Solicitando llamada…":"Probar llamada a mi iPhone"}
+             secondary disabled={testBusy||registering} onPress={()=>void testIncomingCall()}/>:null}
+           {ready?<Text style={styles.helper}>Llamada de prueba de Twilio: no cambia la configuración de tu número ni activa el desvío del operador. Máximo tres pruebas al día.</Text>:null}
          </>}
        </View>
        <View style={styles.card}>
