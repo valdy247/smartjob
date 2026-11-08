@@ -42,6 +42,8 @@ export const balance=(a:BillingAccount|null)=>a?
  Math.max(0,a.included_minutes+a.rollover_minutes+a.topup_minutes-a.used_minutes-a.reserved_minutes):0;
 export async function claimCallMinutes(bridge:string,uid:string,maxMinutes=10){
  const db=billingAdmin();if(!db)return 0;
+ const released=await db.rpc("smartjob_reap_call_reservations",{p_user_id:uid});
+ if(released.error){console.error("VMV stale call recovery failed",released.error.code);return 0;}
  const {data,error}=await db.rpc("smartjob_claim_call_quota",{
   p_bridge_sid:bridge,p_user_id:uid,p_max_minutes:maxMinutes
  });
