@@ -84,14 +84,15 @@ function peerRole(role){return role==="customer"?"professional":"customer";}
 function roomFor(id){
   if(rooms.has(id))return rooms.get(id);
   if(rooms.size>=MAX_ACTIVE_BRIDGES)return null;
-  const room={customer:null,professional:null,customerSid:null,professionalSid:null,started:Date.now(),jobs:{customer:null,professional:null},closing:false};
+  const room={customer:null,professional:null,customerSid:null,professionalSid:null,started:Date.now(),jobs:{customer:null,professional:null},queues:{customer:[],professional:[]},contexts:{customer:null,professional:null},closing:false};
   rooms.set(id,room);return room;
 }
-function cancelJob(room,role){
+function cancelJob(room,role,clearQueue=false){
   const active=room.jobs[role];
   if(active){active.abort();room.jobs[role]=null;}
+  if(clearQueue)room.queues[role].length=0;
 }
-function abortRoom(room){cancelJob(room,"customer");cancelJob(room,"professional");}
+function abortRoom(room){cancelJob(room,"customer",true);cancelJob(room,"professional",true);}
 async function callApi(sid,form){
   const auth="Basic "+Buffer.from(ACCOUNT+":"+AUTH).toString("base64");
   return fetch("https://api.twilio.com/2010-04-01/Accounts/"+ACCOUNT+"/Calls/"+sid+".json",{
@@ -133,7 +134,7 @@ async function interpret(source,role,sourceLanguage,signal,onToken){
   const stamp=String(Math.floor(Date.now()/1000));
   const sig=createHmac("sha256",AUTH).update("smartjob-bridge-v1\n"+stamp+"\n"+body).digest("hex");
   const response=await fetch(WEB_API,{method:"POST",headers:{"Content-Type":"application/json","x-smartjob-timestamp":stamp,"x-smartjob-signature":sig},
-    body,signal});
+    body,signal:AbortSignal.any([signal,AbortSignal.timeout(10000)])});
   if(!response.ok)throw new Error("translation_http_"+response.status);
   if(!response.body)throw new Error("translation_no_body");
   const reader=response.body.getReader(),decoder=new TextDecoder();
@@ -159,34 +160,47 @@ async function interpret(source,role,sourceLanguage,signal,onToken){
     if(!done)throw new Error("translation_truncated");
   }finally{reader.releaseLock();}
 }
-function startTranslation(room,ctx,speech){
-  const peer=room[peerRole(ctx.role)];
-  if(!open(peer)){
-    sendText(room[ctx.role],ctx.role==="customer"?"The other person has not connected.":"La otra persona todavía no está conectada.");
+function queueTranslation(room,ctx,speech){
+  const role=ctx.role;
+  if(!open(room[peerRole(role)])){
+    sendText(room[role],role==="customer"?"The other person has not connected.":"La otra persona todavía no está conectada.");
     return;
   }
-  cancelJob(room,ctx.role);
+  if(room.queues[role].length>=5){
+    sendText(room[role],role==="customer"?"Please pause for the interpretation.":"Por favor, haz una pausa para la traducción.");
+    return;
+  }
+  room.contexts[role]=ctx;
+  room.queues[role].push(speech);
+  pumpTranslation(room,role);
+}
+function pumpTranslation(room,role){
+  if(room.closing||room.jobs[role]||!room.queues[role].length)return;
+  const ctx=room.contexts[role],peer=room[peerRole(role)];
+  if(!ctx||!open(peer)){room.queues[role].length=0;return;}
+  const speech=room.queues[role].shift();
   const controller=new AbortController();
-  room.jobs[ctx.role]=controller;
-  const begun=Date.now(),sender=ctx.role;
+  room.jobs[role]=controller;
+  const begun=Date.now();
   const stream=makeStreamingTokens((token,last)=>{
     if(!controller.signal.aborted&&open(peer)&&!room.closing)sendText(peer,token,{last,interruptible:true,preemptible:false});
   });
   void (async()=>{
     try{
-      await interpret(speech,sender,sender==="customer"?ctx.customerLanguage:ctx.ownerLanguage,controller.signal,token=>stream.next(token));
-      if(!controller.signal.aborted&&room.jobs[sender]===controller){
+      await interpret(speech,role,role==="customer"?ctx.customerLanguage:ctx.ownerLanguage,controller.signal,token=>stream.next(token));
+      if(!controller.signal.aborted&&room.jobs[role]===controller){
         const count=stream.finish();
         if(!count)throw new Error("translation_empty");
-        console.info("Live Bridge completed turn",sender,"duration_ms",Date.now()-begun,"tokens",count);
+        console.info("Live Bridge completed turn",role,"duration_ms",Date.now()-begun,"tokens",count);
       }
     }catch(e){
       if(!controller.signal.aborted){
         console.error("Live Bridge translation issue",e?.name==="AbortError"?"aborted":String(e?.message||"unknown").replace(/[^a-zA-Z0-9_]/g,"").slice(0,60));
-        sendText(room[sender],sender==="customer"?"Please repeat that sentence.":"Repite esa frase, por favor.");
+        sendText(room[role],role==="customer"?"Please repeat that sentence.":"Repite esa frase, por favor.");
       }
     }finally{
-      if(room.jobs[sender]===controller)room.jobs[sender]=null;
+      if(room.jobs[role]===controller)room.jobs[role]=null;
+      pumpTranslation(room,role);
     }
   })();
 }
@@ -230,13 +244,13 @@ wss.on("connection",ws=>{
     }
     if(event.type==="interrupt"){
       // The receiver is speaking: cancel unfinished interpretation sent to them.
-      cancelJob(room,peerRole(ctx.role));
+      cancelJob(room,peerRole(ctx.role),true);
       console.info("Live Bridge translation interrupted",ctx.role);return;
     }
     if(event.type!=="prompt"||event.last!==true)return;
     const speech=String(event.voicePrompt||"").trim();
     if(!speech||speech.length>400)return;
-    startTranslation(room,ctx,speech);
+    queueTranslation(room,ctx,speech);
   });
   ws.on("close",()=>{
     if(!ctx)return;
