@@ -1,6 +1,8 @@
 import { createCipheriv,createDecipheriv,createHash,createHmac,randomBytes,timingSafeEqual } from "node:crypto";
 import { NextRequest,NextResponse } from "next/server";
-export const PILOT_BASE = "https://smartjob-xi.vercel.app";
+// Use the webhook host for this deployment so Twilio-signed callback URLs stay on the same environment.
+// Production keeps the existing public host when no override is configured.
+export const PILOT_BASE = process.env.TWILIO_WEBHOOK_BASE_URL || "https://smartjob-xi.vercel.app";
 const XML_HEADERS={"Content-Type":"text/xml; charset=utf-8","Cache-Control":"no-store"};
 export function xmlEscape(text:string):string{
  return text.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&apos;");
