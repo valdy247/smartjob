@@ -48,9 +48,24 @@ export async function POST(req:NextRequest){
     .eq("receive_method","ios_app").eq("enabled",true).limit(1).maybeSingle();
   if(error){console.error("Smart Job mobile route lookup",{code:error.code||"unknown",message:String(error.message||"unknown").slice(0,220),status:("status" in error?error.status:"n/a")});
     return NextResponse.json({error:"mobile_voice_unavailable"},{status:503,headers:noStore});}
-  if(!data)return NextResponse.json({error:"mobile_voice_not_approved"},{status:403,headers:noStore});
+  // The verified user's Preview pilot may register for a test call without
+  // activating a production phone route or changing a Twilio webhook.
+  let testOnly=false;
+  if(!data&&process.env.SMARTJOB_IOS_TEST_MODE==="true"){
+    const verified=await db.from("smartjob_provisioning_requests")
+      .select("id").eq("user_id",userId).eq("answer_method","app")
+      .not("phone_verified_at","is",null)
+      .in("status",["pending","contacted","approved","activated"])
+      .order("created_at",{ascending:false}).limit(1).maybeSingle();
+    if(verified.error){
+      console.error("Smart Job iOS verified pilot lookup",verified.error.code||"unknown");
+      return NextResponse.json({error:"mobile_voice_unavailable"},{status:503,headers:noStore});
+    }
+    testOnly=Boolean(verified.data);
+  }
+  if(!data&&!testOnly)return NextResponse.json({error:"mobile_voice_not_approved"},{status:403,headers:noStore});
   const identity=serviceIdentity(userId);
   const token=voiceToken(identity);
   if(!token)return NextResponse.json({error:"mobile_voice_not_configured"},{status:503,headers:noStore});
-  return NextResponse.json({token,identity,expiresInSeconds:3600},{headers:noStore});
+  return NextResponse.json({token,identity,expiresInSeconds:3600,testOnly},{headers:noStore});
 }
