@@ -47,7 +47,7 @@ export async function POST(req:NextRequest){
      return answer({error:"twilio_test_call_failed",providerCode:typeof result.code==="number"?result.code:null},502);
    }
    console.info("Smart Job iOS verified VoIP test queued");
-   return answer({queued:true,message:"La llamada de prueba fue solicitada a Twilio."});
+   return answer({queued:true,callSid:result.sid,message:"La llamada de prueba fue solicitada a Twilio. Puedes consultar su resultado sin consumir otro intento."});
  }catch(e){
    console.error("Smart Job iOS test call network failure",e instanceof Error?e.name:"unknown");
    return answer({error:"twilio_test_call_failed"},502);
