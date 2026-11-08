@@ -4,7 +4,7 @@ import {Check,PhoneCall,PhoneForwarded,ShieldAlert,Settings2,Clock3,ShieldCheck,
 import type {SupabaseClient} from "@supabase/supabase-js";
 import type {Profile,CallSettings} from "@/lib/types";
 
-type PhoneRoute={id:string;twilio_number:string;destination_phone:string;customer_language:string;owner_language:string;enabled:boolean;assistant_name:string};
+type PhoneRoute={id:string;twilio_number:string;destination_phone:string;public_number:string|null;forwarding_mode:string;customer_language:string;owner_language:string;enabled:boolean;assistant_name:string};
 type CallRecord={bridge_sid:string;status:string;duration_seconds:number|null;started_at:string};
 type ProvisionRequest={id:string;status:string;created_at:string;destination_phone:string;carrier:string;connection_mode:string;answer_method:string};
 const blank:CallSettings={existing_phone:"",forwarding_enabled:false,desired_language:"es",caller_language:"en",assistant_name:"Juan"};
@@ -22,7 +22,7 @@ export function CallsPanel({supabase,profile,apiStatus}:{supabase:SupabaseClient
       setLoading(true);
       const [settings,routing,calls,requests]=await Promise.all([
         supabase.from("smartjob_call_settings").select("*").eq("user_id",profile.id).maybeSingle(),
-        supabase.from("smartjob_phone_routes").select("id,twilio_number,destination_phone,customer_language,owner_language,enabled,assistant_name").eq("user_id",profile.id).limit(1).maybeSingle(),
+        supabase.from("smartjob_phone_routes").select("id,twilio_number,destination_phone,public_number,forwarding_mode,customer_language,owner_language,enabled,assistant_name").eq("user_id",profile.id).limit(1).maybeSingle(),
         supabase.from("smartjob_call_sessions").select("bridge_sid,status,duration_seconds,started_at").eq("owner_id",profile.id).order("started_at",{ascending:false}).limit(10),
         supabase.from("smartjob_provisioning_requests").select("id,status,created_at,destination_phone,carrier,connection_mode,answer_method").eq("user_id",profile.id).order("created_at",{ascending:false}).limit(1).maybeSingle()
       ]);
@@ -80,8 +80,9 @@ export function CallsPanel({supabase,profile,apiStatus}:{supabase:SupabaseClient
         </div>
         {active&&route&&<div className="card" style={{marginBottom:18}}>
           <div className="card-head"><h2>Tu línea Smart Job</h2><ShieldCheck size={18} color="var(--lime)"/></div>
-          <p className="small muted">Los clientes marcan este número; Smart Job llama a tu teléfono y traduce la conversación.</p>
-          <p style={{fontSize:23,fontWeight:750,margin:"14px 0 6px"}}>{route.twilio_number}</p>
+          <p className="small muted">{route.public_number?"Tus clientes siguen marcando tu número habitual. La línea técnica de Smart Job recibe las llamadas según el desvío verificado.":"Tus clientes marcan este número Smart Job y se realiza la traducción en una llamada separada."}</p>
+          <p style={{fontSize:23,fontWeight:750,margin:"14px 0 6px"}}>{route.public_number||route.twilio_number}</p>
+          {route.public_number&&<p className="small muted">Línea técnica de recepción: {route.twilio_number}</p>}
           <div className="row between small" style={{marginTop:12}}><span>Teléfono de destino</span><strong>{route.destination_phone}</strong></div>
           <div className="row between small" style={{marginTop:12}}><span>Idiomas activos</span><strong>{route.customer_language} → {route.owner_language}</strong></div>
           <p className="small muted" style={{marginTop:14}}>Los desvíos y cambios de destino se activan después de verificar el número. Nunca se habilitan solo por registrarse.</p>
