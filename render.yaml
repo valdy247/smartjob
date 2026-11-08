@@ -3,7 +3,7 @@ services:
     name: smartjob-live-bridge
     runtime: node
     rootDir: services/live-bridge
-    plan: starter
+    plan: free
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /health
