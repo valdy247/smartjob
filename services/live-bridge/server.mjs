@@ -71,7 +71,7 @@ function safeSetup(data){
     if(role==="customer"&&(data.from!==EN||data.to!==TWILIO||data.callSid!==bridge))return null;
     if(role==="professional"&&(data.from!==TWILIO||data.to!==ES))return null;
   }
-  return {role,bridge,callSid:data.callSid,sessionId:data.sessionId,connectionType:data.connectionType||"initial"};
+  return {role,bridge,callSid:data.callSid,sessionId:data.sessionId,connectionType:data.connectionType||"initial",customerLanguage:isNew?p.customerLanguage:"en-US",ownerLanguage:isNew?p.ownerLanguage:"es-ES"};
 }
 const open=ws=>ws?.readyState===WebSocket.OPEN;
 function sendText(ws,text,{last=true,interruptible=true,preemptible=false}={}){
@@ -128,8 +128,8 @@ async function verifyDisconnectedLeg(id,role,sid){
   }catch(e){console.error("Live Bridge disconnect status check",e?.name||"error");}
 }
 
-async function interpret(source,role,signal,onToken){
-  const body=JSON.stringify({original:source,role,stream:true});
+async function interpret(source,role,sourceLanguage,signal,onToken){
+  const body=JSON.stringify({original:source,role,sourceLanguage,stream:true});
   const stamp=String(Math.floor(Date.now()/1000));
   const sig=createHmac("sha256",AUTH).update("smartjob-bridge-v1\n"+stamp+"\n"+body).digest("hex");
   const response=await fetch(WEB_API,{method:"POST",headers:{"Content-Type":"application/json","x-smartjob-timestamp":stamp,"x-smartjob-signature":sig},
@@ -174,7 +174,7 @@ function startTranslation(room,ctx,speech){
   });
   void (async()=>{
     try{
-      await interpret(speech,sender,controller.signal,token=>stream.next(token));
+      await interpret(speech,sender,sender==="customer"?ctx.customerLanguage:ctx.ownerLanguage,controller.signal,token=>stream.next(token));
       if(!controller.signal.aborted&&room.jobs[sender]===controller){
         const count=stream.finish();
         if(!count)throw new Error("translation_empty");
@@ -216,8 +216,8 @@ wss.on("connection",ws=>{
       room[setup.role]=ws;room[setup.role+"Sid"]=setup.callSid;
       ctx=setup;console.info("Live Bridge participant connected",setup.role);
       if(open(room.customer)&&open(room.professional)){
-        sendText(room.customer,"Your interpreter is connected. Please speak in English.");
-        sendText(room.professional,"El intérprete está conectado. Puedes hablar español.");
+        sendText(room.customer,setup.customerLanguage==="en-US"?"Your interpreter is connected. Please speak English.":"El intérprete está conectado. Puedes hablar español.");
+        sendText(room.professional,setup.ownerLanguage==="es-ES"?"El intérprete está conectado. Puedes hablar español.":"Your interpreter is connected. Please speak English.");
       }
       return;
     }
