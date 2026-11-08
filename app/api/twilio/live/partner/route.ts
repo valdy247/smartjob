@@ -4,7 +4,7 @@ import { twiml } from "@/lib/twilio-pilot";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export async function POST(req:NextRequest){
- const fields=await verifiedLiveRequest(req);
+ const fields=await verifiedLiveRequest(req,E164(process.env.SMARTJOB_DUO_ES_PHONE));
  if(!fields)return twiml("<Hangup/>",403);
  const query=new URL(req.url).searchParams;
  const bridge=query.get("bridge")||"";
