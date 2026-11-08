@@ -4,7 +4,7 @@ import {Check,PhoneCall,PhoneForwarded,ShieldAlert,Settings2,Clock3,ShieldCheck,
 import type {SupabaseClient} from "@supabase/supabase-js";
 import type {Profile,CallSettings} from "@/lib/types";
 
-type PhoneRoute={id:string;twilio_number:string;destination_phone:string;public_number:string|null;forwarding_mode:string;customer_language:string;owner_language:string;enabled:boolean;assistant_name:string};
+type PhoneRoute={id:string;twilio_number:string;destination_phone:string;public_number:string|null;forwarding_mode:string;customer_language:string;owner_language:string;enabled:boolean;receive_method:"pstn"|"ios_app";assistant_name:string};
 type CallRecord={bridge_sid:string;status:string;duration_seconds:number|null;started_at:string};
 type ProvisionRequest={id:string;status:string;created_at:string;destination_phone:string;carrier:string;connection_mode:string;answer_method:string};
 const blank:CallSettings={existing_phone:"",forwarding_enabled:false,desired_language:"es",caller_language:"en",assistant_name:"Juan"};
@@ -16,13 +16,15 @@ export function CallsPanel({supabase,profile,apiStatus}:{supabase:SupabaseClient
   const [carrier,setCarrier]=useState("other"),[connectionMode,setConnectionMode]=useState("conditional"),[answerMethod,setAnswerMethod]=useState("app");
   const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
   const [message,setMessage]=useState(""),[error,setError]=useState("");
+  const [account,setAccount]=useState<{forwardingReady:boolean;verified:boolean;twilioPhone:string|null;usage:{calls:number;completed:number;minutes:number};billing:{enabled:boolean;message:string}}|null>(null);
+
   useEffect(()=>{
     let alive=true;
     async function load(){
       setLoading(true);
       const [settings,routing,calls,requests]=await Promise.all([
         supabase.from("smartjob_call_settings").select("*").eq("user_id",profile.id).maybeSingle(),
-        supabase.from("smartjob_phone_routes").select("id,twilio_number,destination_phone,public_number,forwarding_mode,customer_language,owner_language,enabled,assistant_name").eq("user_id",profile.id).limit(1).maybeSingle(),
+        supabase.from("smartjob_phone_routes").select("id,twilio_number,destination_phone,public_number,forwarding_mode,receive_method,customer_language,owner_language,enabled,assistant_name").eq("user_id",profile.id).limit(1).maybeSingle(),
         supabase.from("smartjob_call_sessions").select("bridge_sid,status,duration_seconds,started_at").eq("owner_id",profile.id).order("started_at",{ascending:false}).limit(10),
         supabase.from("smartjob_provisioning_requests").select("id,status,created_at,destination_phone,carrier,connection_mode,answer_method").eq("user_id",profile.id).order("created_at",{ascending:false}).limit(1).maybeSingle()
       ]);
@@ -36,6 +38,15 @@ export function CallsPanel({supabase,profile,apiStatus}:{supabase:SupabaseClient
       setLoading(false);
     }
     void load();
+    async function loadAccount(){
+      const {data}=await supabase.auth.getSession();
+      if(!data.session||!alive)return;
+      try{
+        const res=await fetch("/api/ios/account-overview",{headers:{Authorization:"Bearer "+data.session.access_token}});
+        if(res.ok&&alive)setAccount(await res.json());
+      }catch{}
+    }
+    void loadAccount();
     return()=>{alive=false;};
   },[supabase,profile.id,profile.phone,profile.owner_language,profile.customer_language,profile.assistant_name]);
   const save=async(e:FormEvent)=>{
@@ -87,6 +98,17 @@ export function CallsPanel({supabase,profile,apiStatus}:{supabase:SupabaseClient
           <div className="row between small" style={{marginTop:12}}><span>Idiomas activos</span><strong>{route.customer_language} → {route.owner_language}</strong></div>
           <p className="small muted" style={{marginTop:14}}>Los desvíos y cambios de destino se activan después de verificar el número. Nunca se habilitan solo por registrarse.</p>
         </div>}
+        {active&&route&&<section className="card" style={{marginBottom:20}}>
+          <div className="card-head"><h2>Activación real y minutos</h2><ShieldCheck size={18} color="var(--lime)"/></div>
+          <div className="row between small" style={{marginBottom:12}}><span>Recepción de llamadas</span><strong>{route.receive_method==="ios_app"?"Smart Job iPhone":"Otro teléfono"}</strong></div>
+          {account?<div className="row between small" style={{marginBottom:12}}><span>Consumo últimos 30 días</span><strong>{account.usage.minutes} minutos · {account.usage.calls} llamadas</strong></div>:null}
+          <p className="small muted">Minutos informativos, no factura. {account?.billing.message||"El cobro automático todavía no está configurado."}</p>
+          {account?.forwardingReady&&route.receive_method==="ios_app"?<div className="notice info" style={{marginTop:15}}>
+            <strong>Conservar tu número de Verizon</strong>
+            <p className="small" style={{marginTop:8}}>Solo después de comprobar que Smart Job recibe llamadas con el iPhone bloqueado: desde la línea Verizon marca <strong>*72{route.twilio_number.replace(/^\\+1/,"")}</strong>. Verizon debe confirmar la activación. Pide a otra persona una llamada real a tu número habitual.</p>
+            <p className="small" style={{marginTop:8}}>Para desactivar el desvío y recibir llamadas normales en Verizon, marca <strong>*73</strong> desde esa línea. Smart Job no activa ni comprueba automáticamente el desvío del operador.</p>
+          </div>:<p className="small muted" style={{marginTop:10}}>No actives desvíos hasta verificar el número y confirmar la recepción en Smart Job iOS. Evita devolver llamadas al mismo número para no crear bucles.</p>}
+        </section>}
         <form className="card" onSubmit={save}>
           <div className="card-head"><h2>Preferencias</h2><Settings2 size={18} color="#9dacb7"/></div>
           <div className="field-group"><label className="label">Tu número actual (el que ya conocen tus clientes)</label>
@@ -146,7 +168,7 @@ export function CallsPanel({supabase,profile,apiStatus}:{supabase:SupabaseClient
             <div className="field-group full">
               <label htmlFor="answer-method" className="label">Cómo contestarías con traducción</label>
               <select id="answer-method" className="field" value={answerMethod} onChange={e=>setAnswerMethod(e.target.value)} disabled={Boolean(request?.status==="pending")}>
-                <option value="app">Aplicación de Smart Job (en desarrollo)</option>
+                <option value="app">Aplicación Smart Job (iOS)</option>
                 <option value="separate_line">Otra línea o teléfono (requiere verificación)</option>
               </select>
             </div>
