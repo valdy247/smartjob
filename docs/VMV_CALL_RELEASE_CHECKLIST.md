@@ -3,9 +3,9 @@
 **Rama:** `feat/live-v2-production-foundations`. No fusionar con `main` sin validar la telefonía. La ruta de recepción iOS real, puente Render y traducción EN/ES siguen siendo el piloto operativo.
 
 ## Funcionalidades implementadas
-- Catálogo propuesto en `lib/vmv-billing.ts`: Starter $9.99/20 min, Pro $19.99/45 min, Premium $49.99/130 min. Precios todavía NO creados en Stripe.
+- Catálogo propuesto en `lib/vmv-billing.ts`: Starter $9.99/20 min, Pro $19.99/45 min, Premium $49.99/130 min. Los seis productos y precios se han creado en Stripe **sandbox** y las referencias están configuradas en Vercel Preview.
 - Recargas propuestas por plan: Starter 20 min/$7.80; Pro 30 min/$9.60; Premium 60 min/$16.20.
-- Stripe Checkout para suscripciones y recargas (solo test, deshabilitado hasta configurar credenciales y políticas fiscales).
+- Stripe Checkout para suscripciones y recargas (solo test, pendiente de la credencial privada `STRIPE_SECRET_KEY` en Vercel).
 - Stripe Billing Portal para gestionar suscripciones, vía URL privada en servidor.
 - Webhook de Stripe verificado por firma y tiempo, con sincronización transaccional y deduplicación en Supabase.
 - Saldo de minutos y contabilidad atómica por llamada: reservar, limitar duración, liquidar y recuperar reservas abandonadas.
@@ -27,23 +27,23 @@ Tablas: `smartjob_billing_accounts`, `smartjob_billing_events`, `smartjob_call_p
 
 ## Configuración pendiente en Vercel Preview (rama de funcionalidades)
 Todas las claves son **solo servidor**; jamás usar `NEXT_PUBLIC_` en secretos.
-- `SMARTJOB_STRIPE_MODE=test`
+- `SMARTJOB_STRIPE_MODE=test` ✅ configurado en Preview
 - `STRIPE_SECRET_KEY=sk_test_...`
-- `STRIPE_WEBHOOK_SECRET=whsec_...`
-- `STRIPE_PRICE_STARTER=price_...`
-- `STRIPE_PRICE_PRO=price_...`
-- `STRIPE_PRICE_PREMIUM=price_...`
-- `STRIPE_TOPUP_STARTER=price_...`
-- `STRIPE_TOPUP_PRO=price_...`
-- `STRIPE_TOPUP_PREMIUM=price_...`
-- `SMARTJOB_PUBLIC_APP_URL=https://<dominio-preview-autorizado>`
-- `SMARTJOB_TAX_MODE=automatic` o `not_collected`: decidir explícitamente conforme a obligaciones fiscales. No presupone exención fiscal.
-- `SMARTJOB_BILLING_ENFORCEMENT_ENABLED=false` (o ausente) hasta completar pruebas y cobros reales. **No habilitar para la cuenta piloto sin una suscripción/grant probado.**
+- `STRIPE_WEBHOOK_SECRET=whsec_...` ✅ guardado de forma cifrada en Preview, sin exponer la clave
+- `STRIPE_PRICE_STARTER=price_...` ✅ configurado en Preview
+- `STRIPE_PRICE_PRO=price_...` ✅ configurado en Preview
+- `STRIPE_PRICE_PREMIUM=price_...` ✅ configurado en Preview
+- `STRIPE_TOPUP_STARTER=price_...` ✅ configurado en Preview
+- `STRIPE_TOPUP_PRO=price_...` ✅ configurado en Preview
+- `STRIPE_TOPUP_PREMIUM=price_...` ✅ configurado en Preview
+- `SMARTJOB_PUBLIC_APP_URL` ✅ URL estable del Preview configurada
+- `SMARTJOB_TAX_MODE=not_collected` ✅ en sandbox; el usuario indicó que no está registrado para recaudar sales tax. Este valor NO determina cumplimiento legal ni habilita cobros live. Stripe Tax ya tiene domicilio fiscal en Georgia y status `active`. Antes de producción revisar con especialista si el servicio telefónico/traducción está sujeto a impuestos y obligaciones en Georgia u otros estados.
+- `SMARTJOB_BILLING_ENFORCEMENT_ENABLED=false` ✅ hasta completar pruebas y cobros reales. **No habilitar para la cuenta piloto sin una suscripción/grant probado.**
 
-Registrar `/api/billing/webhook` en Stripe **test** con eventos:
+Webhook **test** registrado y conectado a `/api/billing/webhook` (endpoint `we_1UZevjAdCVhAgQsqvZmx7qor`), con eventos:
 `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `checkout.session.completed`, `checkout.session.async_payment_succeeded`.
 
-**Bloqueadores conocidos:** la cuenta Stripe enlazada está en sandbox, no tiene productos ni precios, y Stripe Tax indica `status=pending` con `head_office` pendiente. Hace falta definir el tratamiento fiscal antes de crear productos/precios. La conexión del plugin Stripe no instala automáticamente `STRIPE_SECRET_KEY` en Vercel.
+**Bloqueador inmediato:** el usuario debe crear/obtener una clave secreta de Stripe TEST para esta cuenta y guardarla directamente como `STRIPE_SECRET_KEY` (tipo cifrado) en el Preview de Vercel para la rama `feat/live-v2-production-foundations`. NO pegarla en chat ni exponerla en el cliente. Después, redeploy y probar Checkout + webhook. La cuenta Stripe está en sandbox y Stripe Tax indica `status=active`; la decisión legal sobre impuestos sigue siendo necesaria antes de cobrar dinero real. Los precios están creados y vinculados a Preview.
 
 ## Pruebas ejecutadas
 - Funciones RLS: clientes no pueden otorgarse minutos ni modificar saldos/preferencias premium.
