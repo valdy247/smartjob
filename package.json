@@ -7,7 +7,7 @@
     "build": "npm run bridge:test && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "bridge:test": "node --test services/live-bridge/relay-core.test.mjs"
+    "bridge:test": "node --check services/live-bridge/server.mjs && node --test services/live-bridge/relay-core.test.mjs"
   },
   "engines": {
     "node": ">=20.9"
