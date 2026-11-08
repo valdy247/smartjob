@@ -64,7 +64,7 @@ function safeSetup(data){
   const isNew=Boolean(p.routeSignature);
   if(isNew){
     const route={bridge,customer:p.customer,twilio:p.twilio,owner:p.owner,customerLanguage:p.customerLanguage,ownerLanguage:p.ownerLanguage};
-    if(![route.customer,route.twilio,route.owner].every(e164)||!["en-US","es-ES"].includes(route.customerLanguage)||!["en-US","es-ES"].includes(route.ownerLanguage)||route.customerLanguage===route.ownerLanguage||!matchesRouteSignature(AUTH,route,p.routeSignature))return null;
+    if(!e164(route.customer)||!e164(route.twilio)||!(e164(route.owner)||/^client:sj_[a-f0-9]{32}$/i.test(route.owner))||!["en-US","es-ES"].includes(route.customerLanguage)||!["en-US","es-ES"].includes(route.ownerLanguage)||route.customerLanguage===route.ownerLanguage||!matchesRouteSignature(AUTH,route,p.routeSignature))return null;
     if(role==="customer"&&(data.from!==route.customer||data.to!==route.twilio||data.callSid!==bridge))return null;
     if(role==="professional"&&(data.from!==route.twilio||data.to!==route.owner))return null;
   }else{
