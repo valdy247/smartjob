@@ -4,7 +4,7 @@ import {compareNumbers} from "@/lib/qa";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
-type TranslationRequest={original?:unknown;role?:unknown;stream?:unknown};
+type TranslationRequest={original?:unknown;role?:unknown;sourceLanguage?:unknown;stream?:unknown};
 const blockedForStreaming=/[$€£%]|\d|\b(?:allerg(?:y|ies|ic|ia|ias)|peanut|nuts?|gluten|milk|dairy|egg|huevo|leche|nuez|cacahuate|maní|precio|price|cost|dollar|dólar|peso|euro|cent|one|two|three|four|five|six|seven|eight|nine|ten|hundred|thousand|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|cien|mil|half|quarter|medio|media|hora|hour|minute|minuto)\b/i;
 
 function provider(){
@@ -13,8 +13,9 @@ function provider(){
   return {auth,url:direct?"https://api.openai.com/v1/chat/completions":"https://ai-gateway.vercel.sh/v1/chat/completions",
     model:direct?(process.env.OPENAI_MODEL||"gpt-4.1-mini"):"openai/"+(process.env.OPENAI_MODEL||"gpt-4.1-mini")};
 }
-const instructions=(role:"customer"|"professional")=>{
-  const source=role==="customer"?"English":"Spanish",target=role==="customer"?"Spanish":"English";
+const instructions=(role:"customer"|"professional",sourceLanguage?:"en-US"|"es-ES")=>{
+  const source=sourceLanguage?(sourceLanguage==="en-US"?"English":"Spanish"):(role==="customer"?"English":"Spanish");
+  const target=source==="English"?"Spanish":"English";
   return "You are a professional telephone interpreter. Translate from "+source+" to "+target+
     ". Preserve meaning, questions, names, flavors, allergies, prices, amounts, and quantities exactly. "+
     "Do not answer, explain, sanitize, or invent facts. Output ONLY the translation, with natural punctuation. "+
@@ -41,10 +42,10 @@ function streamResponse(work:(emit:(item:Record<string,unknown>)=>void,signal:Ab
   });
   return new Response(stream,{status:200,headers:{"Content-Type":"application/x-ndjson; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
 }
-async function verifiedTranslation(original:string,role:"customer"|"professional",auth:string,url:string,model:string,signal:AbortSignal){
+async function verifiedTranslation(original:string,role:"customer"|"professional",sourceLanguage:"en-US"|"es-ES"|undefined,auth:string,url:string,model:string,signal:AbortSignal){
   const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+auth},
     body:JSON.stringify({model,temperature:0,max_tokens:220,response_format:{type:"json_object"},messages:[
-      {role:"system",content:instructions(role)+" Return a JSON object with exactly one key: translation."},
+      {role:"system",content:instructions(role,sourceLanguage)+" Return a JSON object with exactly one key: translation."},
       {role:"user",content:original}
     ]}),signal,cache:"no-store"});
   if(!res.ok)throw new Error("provider_http_"+res.status);
@@ -52,10 +53,10 @@ async function verifiedTranslation(original:string,role:"customer"|"professional
   if(typeof value!=="string"||!value.trim()||value.length>600||compareNumbers(original,value))throw new Error("translation_quality_check");
   return value.trim();
 }
-async function streamingTranslation(original:string,role:"customer"|"professional",auth:string,url:string,model:string,signal:AbortSignal,emit:(item:Record<string,unknown>)=>void){
+async function streamingTranslation(original:string,role:"customer"|"professional",sourceLanguage:"en-US"|"es-ES"|undefined,auth:string,url:string,model:string,signal:AbortSignal,emit:(item:Record<string,unknown>)=>void){
   const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+auth},
     body:JSON.stringify({model,stream:true,temperature:0,max_tokens:220,messages:[
-      {role:"system",content:instructions(role)}, {role:"user",content:original}
+      {role:"system",content:instructions(role,sourceLanguage)}, {role:"user",content:original}
     ]}),signal,cache:"no-store"});
   if(!res.ok||!res.body)throw new Error("provider_http_"+res.status);
   const reader=res.body.getReader(),decoder=new TextDecoder();
@@ -104,16 +105,18 @@ export async function POST(req:NextRequest){
   const auth=configuredAuth||req.headers.get("x-vercel-oidc-token");
   if(!auth)return NextResponse.json({error:"translation_not_configured"},{status:503});
   const original=item.original,role=item.role;
+  if(item.sourceLanguage!==undefined&&!["en-US","es-ES"].includes(String(item.sourceLanguage)))return NextResponse.json({error:"unsupported_language"},{status:400});
+  const sourceLanguage=item.sourceLanguage as "en-US"|"es-ES"|undefined;
   if(item.stream===true){
     return streamResponse(async(emit,signal)=>{
       if(blockedForStreaming.test(original)){
-        const translation=await verifiedTranslation(original,role,auth,url,model,signal);
+        const translation=await verifiedTranslation(original,role,sourceLanguage,auth,url,model,signal);
         emit({token:translation});
-      }else await streamingTranslation(original,role,auth,url,model,signal,emit);
+      }else await streamingTranslation(original,role,sourceLanguage,auth,url,model,signal,emit);
     },req.signal);
   }
   try{
-    const translation=await verifiedTranslation(original,role,auth,url,model,req.signal);
+    const translation=await verifiedTranslation(original,role,sourceLanguage,auth,url,model,req.signal);
     return NextResponse.json({translation},{headers:{"Cache-Control":"no-store"}});
   }catch(e){
     console.error("Smart Job live verified translation failed",e instanceof Error?e.name:"unknown");
