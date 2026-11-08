@@ -15,9 +15,13 @@ export async function POST(req:NextRequest){
   if(id){
     if(!tenantsReady()||!verifyPartnerSignature(bridge,id,caller,sig))return twiml("<Hangup/>",403);
     const route=await findPhoneRouteById(id);
-    if(!route||from!==route.twilio_number||to!==route.destination_phone)return twiml("<Hangup/>",403);
+    if(!route||from!==route.twilio_number)return twiml("<Hangup/>",403);
+    const receiver=route.receive_method==="ios_app"
+      ?"client:sj_"+route.user_id.replaceAll("-",""):route.destination_phone;
+    if(to!==receiver||(route.receive_method==="ios_app"&&process.env.SMARTJOB_IOS_VOICE_ENABLED!=="true"))
+      return twiml("<Hangup/>",403);
     const config:RelayOptions={
-      customer:caller,twilio:route.twilio_number,owner:route.destination_phone,
+      customer:caller,twilio:route.twilio_number,owner:receiver,
       customerLanguage:route.customer_language,ownerLanguage:route.owner_language,
       assistantName:route.assistant_name
     };
