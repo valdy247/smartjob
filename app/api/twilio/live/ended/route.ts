@@ -2,7 +2,7 @@ import {createHmac} from "node:crypto";
 import {NextRequest} from "next/server";
 import {twiml} from "@/lib/twilio-pilot";
 import {verifiedBridge,verifiedLiveRequest} from "@/lib/twilio-live";
-import {updatePhoneSession} from "@/lib/phone-routes";
+import {updatePhoneSession,getPairedCallSids} from "@/lib/phone-routes";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
@@ -24,6 +24,25 @@ export async function POST(req:NextRequest){
   if(terminal.includes(state)||callbackSid===bridge){
     await updatePhoneSession(bridge,terminal.includes(state)?state:"completed",
       Number.isInteger(seconds)&&seconds>=0?seconds:undefined);
+  }
+  // A caller hanging up must immediately cancel the separately-created
+  // outbound phone call. Render's WebSocket room may not exist yet.
+  const pair=await getPairedCallSids(bridge);
+  const other=callbackSid===bridge?pair?.outboundSid:bridge;
+  if(other&&other!==callbackSid&&terminal.includes(state)){
+    const account=process.env.TWILIO_ACCOUNT_SID||p.get("AccountSid")||"";
+    const token=process.env.TWILIO_AUTH_TOKEN||"";
+    if(/^AC[a-f\\d]{32}$/i.test(account)&&token){
+      try{
+        const reply=await fetch("https://api.twilio.com/2010-04-01/Accounts/"+account+"/Calls/"+other+".json",{
+          method:"POST",cache:"no-store",signal:AbortSignal.timeout(4500),
+          headers:{"Content-Type":"application/x-www-form-urlencoded",
+            Authorization:"Basic "+Buffer.from(account+":"+token).toString("base64")},
+          body:"Status=completed"
+        });
+        console.info("Smart Job paired leg canceled",{isInbound:callbackSid===bridge,http:reply.status});
+      }catch(e){console.error("Smart Job paired leg cancel failed",e instanceof Error?e.name:"unknown");}
+    }
   }
   const stamp=String(Math.floor(Date.now()/1000));
   const signature=createHmac("sha256",process.env.TWILIO_AUTH_TOKEN||"")
