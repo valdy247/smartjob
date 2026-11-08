@@ -11,8 +11,9 @@ const EN=process.env.SMARTJOB_DUO_EN_PHONE||"";
 const ES=process.env.SMARTJOB_DUO_ES_PHONE||"";
 const TWILIO=process.env.TWILIO_NUMBER||"";
 const PORT=Number(process.env.PORT||3001);
-const MAX_ACTIVE_BRIDGES=Math.max(1,Math.min(30,Number(process.env.SMARTJOB_MAX_CONCURRENT_CALLS||1)));
-const MAX_CALL_SECONDS=Math.max(60,Math.min(1800,Number(process.env.SMARTJOB_MAX_CALL_SECONDS||600)));
+const boundedEnv=(raw,fallback,min,max)=>{const n=Number(raw);return Number.isFinite(n)&&Number.isInteger(n)?Math.max(min,Math.min(max,n)):fallback;};
+const MAX_ACTIVE_BRIDGES=boundedEnv(process.env.SMARTJOB_MAX_CONCURRENT_CALLS,1,1,30);
+const MAX_CALL_SECONDS=boundedEnv(process.env.SMARTJOB_MAX_CALL_SECONDS,600,60,1800);
 const rooms=new Map();
 if(!AUTH||!accountSid(ACCOUNT)||!/^wss:\/\/[a-z0-9.-]+\/relay$/i.test(WSS_URL)||![EN,ES,TWILIO].every(e164)){
   console.error("Required Live Bridge environment variables are missing or invalid.");
