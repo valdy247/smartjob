@@ -24,6 +24,11 @@
       "@twilio/voice-react-native-sdk",
       "expo-secure-store"
     ],
-    "owner": "smart-job"
+    "owner": "smart-job",
+    "extra": {
+      "eas": {
+        "projectId": "98b22fe3-9111-42d7-bdab-7ca7208dc257"
+      }
+    }
   }
 }
