@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from "next/server";
 import {createClient} from "@supabase/supabase-js";
 import {authenticatedUser} from "@/lib/auth-server";
+import {getBillingAccount,billingEnabled,balance,eligible} from "@/lib/vmv-billing";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const headers={"Cache-Control":"no-store"};
@@ -25,6 +26,7 @@ export async function GET(req:NextRequest){
    &&/^\+1\d{10}$/.test(route.destination_phone||"")
    &&route.twilio_number!==route.destination_phone;
  const duration=(calls.data||[]).reduce((sum,c)=>sum+Math.max(0,Math.min(86400,c.duration_seconds||0)),0);
+ const billingAccount=await getBillingAccount(uid);
  const count=(calls.data||[]).length;
  const completed=(calls.data||[]).filter(c=>c.status==="completed").length;
  return NextResponse.json({
@@ -35,7 +37,10 @@ export async function GET(req:NextRequest){
   carrier:verification.data?.carrier||null,
   forwardingReported:route?.forwarding_mode!=="none"&&Boolean(route?.forwarding_mode),
   usage:{periodDays:30,calls:count,completed,seconds:duration,minutes:Math.ceil(duration/60),metering:"indicative"},
-  billing:{enabled:false,message:"La facturación automatizada todavía no está habilitada."},
+  billing:{enabled:billingEnabled(),active:eligible(billingAccount),
+    plan:billingAccount?.plan_code||"none",availableMinutes:balance(billingAccount),
+    message:billingEnabled()?"Las llamadas requieren minutos de un plan activo.":
+      "El control automático de minutos aún está en preparación."},
   nextAction:eligible?"Activar manualmente el desvío en el operador y confirmar con una llamada real.":"Verificar el número y activar primero la recepción iOS."
  },{headers});
 }
