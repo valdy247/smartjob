@@ -117,3 +117,12 @@ alter table public.smartjob_phone_routes add constraint smartjob_route_no_forwar
 create unique index if not exists smartjob_active_public_phone_unique
  on public.smartjob_phone_routes(public_number)
  where enabled and forwarding_mode<>'none';
+
+
+-- Per-route answering mechanism. Mobile Voice identities are enabled only by
+-- a trusted provisioning process after native PushKit/CallKit registration.
+alter table public.smartjob_phone_routes
+ add column if not exists receive_method text not null default 'pstn';
+alter table public.smartjob_phone_routes drop constraint if exists smartjob_receive_method_check;
+alter table public.smartjob_phone_routes add constraint smartjob_receive_method_check
+ check(receive_method in ('pstn','ios_app'));
