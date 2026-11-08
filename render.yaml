@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: smartjob-live-bridge
+    runtime: node
+    rootDir: services/live-bridge
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_NUMBER
+        sync: false
+      - key: SMARTJOB_DUO_EN_PHONE
+        sync: false
+      - key: SMARTJOB_DUO_ES_PHONE
+        sync: false
+      - key: PUBLIC_WS_URL
+        sync: false
