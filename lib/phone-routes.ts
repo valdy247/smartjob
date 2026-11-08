@@ -2,7 +2,7 @@ import {createClient} from "@supabase/supabase-js";
 import {createHmac,timingSafeEqual} from "node:crypto";
 
 export type ActivePhoneRoute={
-  id:string;user_id:string;twilio_number:string;destination_phone:string;
+  id:string;user_id:string;twilio_number:string;destination_phone:string;receive_method:"pstn"|"ios_app";
   customer_language:"en-US"|"es-ES";owner_language:"en-US"|"es-ES";assistant_name:string;enabled:boolean;
 };
 const phone=/^\+[1-9]\d{7,14}$/;
@@ -18,17 +18,18 @@ export function tenantsReady(){
 export async function findPhoneRoute(number:string){
   const db=admin();
   if(!db||!phone.test(number))return null;
-  const {data,error}=await db.from("smartjob_phone_routes").select("id,user_id,twilio_number,destination_phone,customer_language,owner_language,assistant_name,enabled")
+  const {data,error}=await db.from("smartjob_phone_routes").select("id,user_id,twilio_number,destination_phone,receive_method,customer_language,owner_language,assistant_name,enabled")
     .eq("twilio_number",number).eq("enabled",true).maybeSingle();
   if(error){console.error("Smart Job route lookup unavailable",error.code);return null;}
   if(!data||![data.twilio_number,data.destination_phone].every(n=>phone.test(n))||
      !["en-US","es-ES"].includes(data.customer_language)||!["en-US","es-ES"].includes(data.owner_language)||data.customer_language===data.owner_language)return null;
+  if(!["pstn","ios_app"].includes(data.receive_method))return null;
   return data as ActivePhoneRoute;
 }
 export async function findPhoneRouteById(id:string){
   const db=admin();
   if(!db||!/^[a-f\d-]{36}$/i.test(id))return null;
-  const {data,error}=await db.from("smartjob_phone_routes").select("id,user_id,twilio_number,destination_phone,customer_language,owner_language,assistant_name,enabled")
+  const {data,error}=await db.from("smartjob_phone_routes").select("id,user_id,twilio_number,destination_phone,receive_method,customer_language,owner_language,assistant_name,enabled")
     .eq("id",id).eq("enabled",true).maybeSingle();
   if(error||!data)return null;
   if(!phone.test(data.destination_phone)||!phone.test(data.twilio_number))return null;
