@@ -17,8 +17,10 @@ if(!AUTH||!/^AC[a-f\d]{32}$/i.test(ACCOUNT)||!/^wss:\/\/[a-z0-9.-]+\/relay$/i.te
  process.exit(1);
 }
 const app=createServer((req,res)=>{
- if(req.method==="GET"&&req.url==="/health"){
+ const path=new URL(req.url||"/","http://localhost").pathname.replace(/\/$/,"")||"/";
+ if((req.method==="GET"||req.method==="HEAD")&&(path==="/"||path==="/health")){
   res.writeHead(200,{"content-type":"application/json","cache-control":"no-store"});
+  if(req.method==="HEAD")return res.end();
   return res.end(JSON.stringify({ok:true,service:"smartjob-live-bridge",bridges:rooms.size}));
  }
  res.writeHead(404,{"content-type":"text/plain"}).end("Not found");
