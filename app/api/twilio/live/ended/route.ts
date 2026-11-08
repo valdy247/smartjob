@@ -3,6 +3,7 @@ import {NextRequest} from "next/server";
 import {twiml} from "@/lib/twilio-pilot";
 import {verifiedBridge,verifiedLiveRequest} from "@/lib/twilio-live";
 import {updatePhoneSession,getPairedCallSids} from "@/lib/phone-routes";
+import {billingEnabled,settleCallMinutes} from "@/lib/vmv-billing";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
@@ -24,6 +25,14 @@ export async function POST(req:NextRequest){
   if(terminal.includes(state)||callbackSid===bridge){
     await updatePhoneSession(bridge,terminal.includes(state)?state:"completed",
       Number.isInteger(seconds)&&seconds>=0?seconds:undefined);
+  }
+  // Settle only from the outbound leg's positive connected duration.
+  // The inbound callback often reports zero and must not erase a valid charge.
+  // Failed/busy outbound legs release their reservation without charging minutes.
+  if(billingEnabled()&&callbackSid!==bridge&&terminal.includes(state)){
+    if(Number.isInteger(seconds)&&seconds>0)await settleCallMinutes(bridge,seconds);
+    else if(["failed","busy","no-answer","canceled"].includes(state))
+      await settleCallMinutes(bridge,0);
   }
   // A caller hanging up must immediately cancel the separately-created
   // outbound phone call. Render's WebSocket room may not exist yet.
