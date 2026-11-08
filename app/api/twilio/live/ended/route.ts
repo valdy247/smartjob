@@ -10,7 +10,7 @@ export const dynamic="force-dynamic";
 // terminal state. It never includes transcripts, and only a valid Twilio call
 // and a server-generated bridge signature can terminate the paired session.
 export async function POST(req:NextRequest){
-  const p=await verifiedLiveRequest(req);
+  const p=await verifiedLiveRequest(req,null);
   if(!p)return twiml("<Hangup/>",403);
   const q=req.nextUrl.searchParams;
   const bridge=q.get("bridge")||"",sig=q.get("sig")||"";
