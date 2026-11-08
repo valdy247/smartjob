@@ -40,7 +40,7 @@ export async function POST(req:NextRequest){
   const {data,error}=await db.from("smartjob_phone_routes")
     .select("id,user_id,receive_method,enabled").eq("user_id",userId)
     .eq("receive_method","ios_app").eq("enabled",true).limit(1).maybeSingle();
-  if(error){console.error("Smart Job mobile route lookup",error.code);
+  if(error){console.error("Smart Job mobile route lookup",{code:error.code||"unknown",message:String(error.message||"unknown").slice(0,220),status:("status" in error?error.status:"n/a")});
     return NextResponse.json({error:"mobile_voice_unavailable"},{status:503,headers:noStore});}
   if(!data)return NextResponse.json({error:"mobile_voice_not_approved"},{status:403,headers:noStore});
   const identity=serviceIdentity(userId);
