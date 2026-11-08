@@ -48,3 +48,29 @@ grant select on public.smartjob_call_sessions to authenticated;
 drop policy if exists "smartjob_call_owner_read" on public.smartjob_call_sessions;
 create policy "smartjob_call_owner_read" on public.smartjob_call_sessions
 for select to authenticated using(owner_id=(select auth.uid()));
+
+
+-- Customer signup requests: user can submit ONE pending request without buying a
+-- phone number or initiating calls. Only the verified operator may change status.
+create table if not exists public.smartjob_provisioning_requests(
+ id uuid primary key default gen_random_uuid(),
+ user_id uuid not null references auth.users(id) on delete cascade,
+ destination_phone text not null check(destination_phone ~ '^\+[1-9][0-9]{7,14}$'),
+ customer_language text not null check(customer_language in ('en-US','es-ES')),
+ owner_language text not null check(owner_language in ('en-US','es-ES') and owner_language<>customer_language),
+ assistant_name text not null check(char_length(assistant_name) between 1 and 40),
+ status text not null default 'pending' check(status in ('pending','contacted','approved','rejected','activated')),
+ created_at timestamptz not null default now(),
+ updated_at timestamptz not null default now()
+);
+create unique index if not exists smartjob_one_pending_request_per_user on public.smartjob_provisioning_requests(user_id) where status='pending';
+create index if not exists smartjob_provisioning_user_date on public.smartjob_provisioning_requests(user_id,created_at desc);
+alter table public.smartjob_provisioning_requests enable row level security;
+revoke all on public.smartjob_provisioning_requests from anon,authenticated;
+grant select,insert on public.smartjob_provisioning_requests to authenticated;
+drop policy if exists "smartjob_provisioning_owner_read" on public.smartjob_provisioning_requests;
+create policy "smartjob_provisioning_owner_read" on public.smartjob_provisioning_requests
+ for select to authenticated using(user_id=(select auth.uid()));
+drop policy if exists "smartjob_provisioning_user_create" on public.smartjob_provisioning_requests;
+create policy "smartjob_provisioning_user_create" on public.smartjob_provisioning_requests
+ for insert to authenticated with check(user_id=(select auth.uid()) and status='pending');
