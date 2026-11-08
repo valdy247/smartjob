@@ -16,7 +16,10 @@
         "simulator": false
       },
       "developmentClient": false,
-      "environment": "development"
+      "environment": "development",
+      "env": {
+        "EXPO_PUBLIC_SMARTJOB_PREVIEW": "true"
+      }
     },
     "production": {
       "autoIncrement": true
