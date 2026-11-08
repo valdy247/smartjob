@@ -1,0 +1,56 @@
+// VMV Call subscription catalogue. Prices are proposals until Stripe test-mode
+// prices, taxes and App Store compliance are approved. Never trust a client price.
+import {createClient} from "@supabase/supabase-js";
+
+export type PlanCode="starter"|"pro"|"premium";
+export const PLAN_CATALOG={
+ starter:{name:"Starter",usdCents:999,minutes:20,topupCentsPerMinute:39,rolloverCap:0,customVoice:false,customGreeting:false},
+ pro:{name:"Pro",usdCents:1999,minutes:45,topupCentsPerMinute:32,rolloverCap:0,customVoice:true,customGreeting:true},
+ premium:{name:"Premium",usdCents:4999,minutes:130,topupCentsPerMinute:27,rolloverCap:65,customVoice:true,customGreeting:true}
+} as const;
+export const isPlan=(s:unknown):s is PlanCode=>typeof s==="string"&&Object.hasOwn(PLAN_CATALOG,s);
+export type BillingAccount={
+ user_id:string;plan_code:string;status:string;stripe_customer_id:string|null;
+ stripe_subscription_id:string|null;current_period_end:string|null;included_minutes:number;
+ used_minutes:number;reserved_minutes:number;rollover_minutes:number;topup_minutes:number
+};
+export const billingEnabled=()=>process.env.SMARTJOB_BILLING_ENFORCEMENT_ENABLED==="true";
+export function billingAdmin(){
+ const url=process.env.NEXT_PUBLIC_SUPABASE_URL,secret=process.env.SUPABASE_SECRET_KEY;
+ return url&&secret?createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}}):null;
+}
+export async function getBillingAccount(uid:string):Promise<BillingAccount|null>{
+ const db=billingAdmin();if(!db)return null;
+ const {data,error}=await db.from("smartjob_billing_accounts")
+  .select("user_id,plan_code,status,stripe_customer_id,stripe_subscription_id,current_period_end,included_minutes,used_minutes,reserved_minutes,rollover_minutes,topup_minutes")
+  .eq("user_id",uid).maybeSingle();
+ if(error){console.error("VMV billing account read",error.code);return null;}
+ return data as BillingAccount|null;
+}
+export const eligible=(account:BillingAccount|null)=>Boolean(account&&
+ ["active","trialing"].includes(account.status)&&
+ account.current_period_end&&Date.parse(account.current_period_end)>Date.now());
+export const balance=(a:BillingAccount|null)=>a?
+ Math.max(0,a.included_minutes+a.rollover_minutes+a.topup_minutes-a.used_minutes-a.reserved_minutes):0;
+export async function claimCallMinutes(bridge:string,uid:string,maxMinutes=10){
+ const db=billingAdmin();if(!db)return 0;
+ const {data,error}=await db.rpc("smartjob_claim_call_quota",{
+  p_bridge_sid:bridge,p_user_id:uid,p_max_minutes:maxMinutes
+ });
+ if(error){console.error("VMV call quota unavailable",error.code);return 0;}
+ return Number.isInteger(data)&&data>0?data:0;
+}
+export async function settleCallMinutes(bridge:string,seconds:number){
+ const db=billingAdmin();if(!db)return false;
+ const {error}=await db.rpc("smartjob_settle_call_quota",{
+  p_bridge_sid:bridge,p_seconds:Math.max(0,Math.min(86400,Math.floor(seconds)))
+ });
+ if(error){console.error("VMV call settlement unavailable",error.code);return false;}
+ return true;
+}
+export const priceEnv=(plan:PlanCode):string=>{
+ const key={starter:"STRIPE_PRICE_STARTER",pro:"STRIPE_PRICE_PRO",premium:"STRIPE_PRICE_PREMIUM"}[plan];
+ return process.env[key]||"";
+};
+export const stripeTestReady=()=>process.env.SMARTJOB_STRIPE_MODE==="test"&&
+ /^sk_test_/.test(process.env.STRIPE_SECRET_KEY||"");
