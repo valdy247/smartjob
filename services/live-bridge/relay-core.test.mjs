@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {accountSid,callSid,e164,matchesRouteSignature,needsVerifiedTranslation,makeStreamingTokens,routeSignature} from "./relay-core.mjs";
+import {accountSid,callSid,e164,validReceiver,matchesRouteSignature,needsVerifiedTranslation,makeStreamingTokens,routeSignature} from "./relay-core.mjs";
 
 const route = {
   bridge:"CA"+"1".repeat(32),customer:"+17065550101",twilio:"+17065550102",
@@ -31,4 +31,12 @@ test("stream tokens are ordered and only the last is final",()=>{
   assert.equal(stream.finish(),3);
   assert.deepEqual(tokens,[{token:"Hola",last:false},{token:", ¿cómo",last:false},{token:" estás?",last:true}]);
   stream.finish(); assert.equal(tokens.length,3);
+});
+
+test("iOS receiver identity is accepted only in strict client namespace",()=>{
+  assert.equal(validReceiver("client:sj_"+"1".repeat(32)),true);
+  assert.equal(validReceiver("+17065550123"),true);
+  assert.equal(validReceiver("client:random"),false);
+  assert.equal(validReceiver("client:sj_"+"1".repeat(31)),false);
+  assert.equal(validReceiver("client:sj_"+"1".repeat(32)+":evil"),false);
 });
