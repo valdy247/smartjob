@@ -17,6 +17,10 @@ export default function App(){
  const [ready,setReady]=useState(false),[status,setStatus]=useState("Prepara la recepción de llamadas");
  const [invite,setInvite]=useState<CallInvite|null>(null),[call,setCall]=useState<Call|null>(null);
  const [error,setError]=useState("");
+ const [phoneVerification,setPhoneVerification]=useState<{requestId:string;phone:string;verified:boolean;smsAvailable:boolean;requestStatus:string}|null>(null);
+ const [smsCode,setSmsCode]=useState(""),[smsSent,setSmsSent]=useState(false);
+ const [smsBusy,setSmsBusy]=useState(false),[verificationLoading,setVerificationLoading]=useState(false);
+ const [verifyMessage,setVerifyMessage]=useState("");
  const registeredAt=useRef(0),inviteRef=useRef<CallInvite|null>(null),callRef=useRef<Call|null>(null);
  const sessionRef=useRef<Session|null>(null);
  useEffect(()=>{
@@ -27,7 +31,7 @@ export default function App(){
    const {data}=client.auth.onAuthStateChange((_event,next)=>{
      if(!mounted)return;
      setSession(next);sessionRef.current=next;
-     if(!next){setReady(false);setStatus("Inicia sesión para recibir llamadas");}
+     if(!next){setReady(false);setPhoneVerification(null);setSmsCode("");setSmsSent(false);setStatus("Inicia sesión para recibir llamadas");}
    });
    return()=>{mounted=false;data.subscription.unsubscribe();};
  },[]);
@@ -52,6 +56,76 @@ export default function App(){
    connected.addListener(Call.Event.Disconnected,()=>{
      callRef.current=null;setCall(null);setStatus("Llamada finalizada");
    });
+ }
+ async function phoneApi(path:string,body?:Record<string,unknown>):Promise<Record<string,unknown>>{
+   const client=supabase;
+   if(!client)throw new Error("Inicia sesión primero.");
+   const {data}=await client.auth.getSession();
+   if(!data.session)throw new Error("Tu sesión ha expirado. Vuelve a entrar.");
+   const res=await fetch(api+"/api/ios/phone-verification"+path,{
+     method:body?"POST":"GET",
+     headers:{"Authorization":"Bearer "+data.session.access_token,
+       ...(body?{"Content-Type":"application/json"}:{})},
+     ...(body?{body:JSON.stringify(body)}:{})
+   });
+   if(!(res.headers.get("content-type")||"").includes("application/json"))
+     throw new Error("El servidor SMS no está disponible en esta versión.");
+   const value=await res.json() as Record<string,unknown>;
+   if(!res.ok){
+     const messages:Record<string,string>={
+       sms_not_configured:"El servicio de SMS aún necesita configurarse en Twilio.",
+       sms_rate_limit:"Espera al menos un minuto antes de solicitar otro código. Máximo cinco SMS al día.",
+       sms_delivery_failed:"Twilio no pudo entregar el SMS. Revisa tu número e inténtalo después.",
+       incorrect_or_expired_code:"El código no es correcto o ha expirado. Revisa el SMS.",
+       too_many_attempts:"Demasiados intentos. Solicita un nuevo código más tarde.",
+       invalid_code:"Introduce el código numérico del SMS.",
+       verification_already_completed:"Este número ya fue verificado.",
+       verification_save_failed:"El código fue aceptado, pero no se guardó la verificación. Contacta al soporte.",
+       no_verification_request:"Todavía no hay un número registrado en tu cuenta.",
+       verification_unavailable:"El servidor de verificación no está disponible.",
+       unauthorized:"Inicia sesión de nuevo para verificar tu línea."
+     };
+     throw new Error(messages[String(value.error||"")]||"La verificación no se completó (HTTP "+res.status+").");
+   }
+   return value;
+ }
+ async function refreshPhoneVerification(){
+   setVerificationLoading(true);setVerifyMessage("");
+   try{
+     const value=await phoneApi("");
+     setPhoneVerification({
+       requestId:String(value.requestId||""),phone:String(value.phone||""),
+       verified:value.verified===true,smsAvailable:value.smsAvailable===true,
+       requestStatus:String(value.requestStatus||"pending")
+     });
+   }catch(e){setVerifyMessage(e instanceof Error?e.message:"No se pudo consultar el número.");}
+   finally{setVerificationLoading(false);}
+ }
+ useEffect(()=>{
+   if(!session?.user.id){setPhoneVerification(null);return;}
+   void refreshPhoneVerification();
+ },[session?.user.id]);
+ async function sendSmsCode(){
+   if(!phoneVerification)return;
+   setSmsBusy(true);setError("");setVerifyMessage("");
+   try{
+     await phoneApi("/send",{requestId:phoneVerification.requestId});
+     setSmsSent(true);setVerifyMessage("Código enviado a "+phoneVerification.phone+". Escríbelo abajo.");
+   }catch(e){setVerifyMessage(e instanceof Error?e.message:"No se pudo enviar el código.");}
+   finally{setSmsBusy(false);}
+ }
+ async function confirmSmsCode(){
+   if(!phoneVerification)return;
+   setSmsBusy(true);setError("");setVerifyMessage("");
+   try{
+     const result=await phoneApi("/check",{requestId:phoneVerification.requestId,code:smsCode.trim()});
+     if(result.verified!==true)throw new Error("No se pudo completar la verificación.");
+     setPhoneVerification({...phoneVerification,verified:true});
+     setSmsCode("");setSmsSent(false);
+     setStatus("Número verificado · pendiente de aprobación de llamadas");
+     setVerifyMessage("Número verificado por SMS. Falta la autorización de tu línea para recibir llamadas.");
+   }catch(e){setVerifyMessage(e instanceof Error?e.message:"No se pudo verificar el código.");}
+   finally{setSmsBusy(false);}
  }
  async function registerPhone(){
    const client=supabase;
@@ -171,6 +245,34 @@ export default function App(){
              disabled={registering} onPress={()=>void registerPhone()}/>
          </>}
        </View>
+       <View style={styles.card}>
+         <Text style={styles.cardTitle}>Verifica tu número por SMS</Text>
+         <Text style={styles.helper}>Comprobamos que tienes acceso al número de teléfono registrado en Smart Job. No activa el desvío de llamadas.</Text>
+         {verificationLoading?<ActivityIndicator color={colors.accent}/>:
+          phoneVerification?
+           phoneVerification.verified?
+             <Text style={styles.success}>✓ Número {phoneVerification.phone} verificado. Esperando autorización de la línea.</Text>:
+           <>
+             <Text style={styles.statusText}>Número registrado: {phoneVerification.phone}</Text>
+             {phoneVerification.requestStatus!=="pending"?
+               <Text style={styles.helper}>Tu solicitud está en revisión. La verificación todavía no está disponible.</Text>:
+               phoneVerification.smsAvailable?
+               <>
+                 <Button label={smsBusy?"Enviando…":"Enviar código por SMS"} disabled={smsBusy} onPress={()=>void sendSmsCode()}/>
+                 {smsSent?<View style={{marginTop:16}}>
+                   <Text style={styles.helper}>Introduce el código que recibiste por mensaje de texto.</Text>
+                   <TextInput style={styles.field} keyboardType="number-pad" textContentType="oneTimeCode"
+                     autoComplete="sms-otp" maxLength={10} placeholder="Código SMS" placeholderTextColor="#71808B"
+                     value={smsCode} onChangeText={value=>setSmsCode(value.replace(/[^0-9]/g,""))}/>
+                   <Button label={smsBusy?"Verificando…":"Confirmar código"} disabled={smsBusy||smsCode.length<4}
+                     onPress={()=>void confirmSmsCode()}/>
+                 </View>:null}
+               </>:<Text style={styles.helper}>La verificación SMS está preparada, pero falta conectar el servicio Twilio Verify.</Text>}
+           </>:
+           <Button label="Consultar mi número" onPress={()=>void refreshPhoneVerification()}/>
+         }
+         {verifyMessage?<Text style={styles.verifyMessage}>{verifyMessage}</Text>:null}
+       </View>
        <View style={styles.notice}>
          <Text style={styles.noticeTitle}>Tus clientes conservan tu número</Text>
          <Text style={styles.noticeBody}>El desvío del operador se configura después de verificar tu línea y comprobar que este iPhone puede recibir llamadas. No actives *72 todavía.</Text>
@@ -222,5 +324,7 @@ const styles=StyleSheet.create({
  signoutText:{fontSize:13,fontWeight:"700",color:colors.muted},
  alert:{borderWidth:1,borderColor:"#9D5454",backgroundColor:"#342426",borderRadius:13,padding:15,marginBottom:16},
  alertText:{fontSize:13,color:"#FFD0CE",lineHeight:20},
+ success:{fontSize:14,color:colors.accent,lineHeight:22,fontWeight:"700"},
+ verifyMessage:{fontSize:13,color:colors.text,lineHeight:21,marginTop:13},
  footer:{color:"#617380",fontSize:10,fontWeight:"700",letterSpacing:1.4,alignSelf:"center",marginTop:26}
 });
