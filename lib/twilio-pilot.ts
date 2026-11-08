@@ -21,16 +21,25 @@ export async function authenticTwilio(req:NextRequest):Promise<URLSearchParams|n
  const token=process.env.TWILIO_AUTH_TOKEN;
  const sig=req.headers.get("x-twilio-signature");
  if(!token||!sig)return null;
- if(!req.headers.get("content-type")?.includes("application/x-www-form-urlencoded"))return null;
- const body=await req.text();
- if(body.length>16000)return null;
- const params=new URLSearchParams(body);
+ if(req.method!=="GET"&&req.method!=="POST")return null;
+ let params:URLSearchParams;
+ if(req.method==="GET"){
+  // For Twilio GET webhooks, all signed fields are part of the query string.
+  params=new URL(req.url).searchParams;
+ }else{
+  if(!req.headers.get("content-type")?.includes("application/x-www-form-urlencoded"))return null;
+  const body=await req.text();
+  if(body.length>16000)return null;
+  params=new URLSearchParams(body);
+ }
  const url=new URL(req.url);
  const base=process.env.TWILIO_WEBHOOK_BASE_URL||PILOT_BASE;
  const signedUrl=new URL(url.pathname+url.search,base).toString();
  let data=signedUrl;
- const fields=[...new Set(params.keys())].sort();
- for(const field of fields)for(const value of params.getAll(field).sort())data+=field+value;
+ if(req.method==="POST"){
+  const fields=[...new Set(params.keys())].sort();
+  for(const field of fields)for(const value of params.getAll(field).sort())data+=field+value;
+ }
  const expected=createHmac("sha1",token).update(data).digest();
  let actual:Buffer;try{actual=Buffer.from(sig,"base64");}catch{return null;}
  if(actual.length!==expected.length||!timingSafeEqual(expected,actual))return null;
