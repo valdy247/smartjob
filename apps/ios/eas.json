@@ -14,7 +14,9 @@
       "distribution": "internal",
       "ios": {
         "simulator": false
-      }
+      },
+      "developmentClient": false,
+      "environment": "development"
     },
     "production": {
       "autoIncrement": true
