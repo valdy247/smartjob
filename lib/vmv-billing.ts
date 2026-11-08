@@ -9,6 +9,14 @@ export const PLAN_CATALOG={
  premium:{name:"Premium",usdCents:4999,minutes:130,topupCentsPerMinute:27,rolloverCap:65,customVoice:true,customGreeting:true}
 } as const;
 export const isPlan=(s:unknown):s is PlanCode=>typeof s==="string"&&Object.hasOwn(PLAN_CATALOG,s);
+export const TOPUP_CATALOG={
+ starter:{minutes:20,usdCents:780},
+ pro:{minutes:30,usdCents:960},
+ premium:{minutes:60,usdCents:1620}
+} as const;
+export const topupPriceEnv=(plan:PlanCode):string=>
+ process.env[{starter:"STRIPE_TOPUP_STARTER",pro:"STRIPE_TOPUP_PRO",
+ premium:"STRIPE_TOPUP_PREMIUM"}[plan]]||"";
 export type BillingAccount={
  user_id:string;plan_code:string;status:string;stripe_customer_id:string|null;
  stripe_subscription_id:string|null;current_period_end:string|null;included_minutes:number;
