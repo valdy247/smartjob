@@ -9,6 +9,17 @@ const colors={bg:"#0B1017",card:"#151E28",line:"#293846",text:"#F5F8FB",
  muted:"#94A4B1",accent:"#B9F37D",accentText:"#172011",red:"#FF9089"};
 const voice=new Voice();
 let listenersReady=false;
+let pushRegistryInit:Promise<void>|null=null;
+function ensurePushRegistry():Promise<void>{
+ if(Platform.OS!=="ios")return Promise.resolve();
+ if(!pushRegistryInit){
+   pushRegistryInit=voice.initializePushRegistry().catch((cause:unknown)=>{
+     pushRegistryInit=null;
+     throw cause;
+   });
+ }
+ return pushRegistryInit;
+}
 
 export default function App(){
  const [session,setSession]=useState<Session|null>(null);
@@ -53,6 +64,16 @@ export default function App(){
      const name=typeof e?.name==="string"?e.name.slice(0,80):"Error del SDK";
      setVoiceDiagnostic("Twilio SDK: "+name+" ("+code+").");
      setError("La conexión de voz tuvo un problema. Consulta el diagnóstico de voz.");
+   });
+ },[]);
+ useEffect(()=>{
+   // Register PushKit as soon as the app starts, not only when the user taps a button.
+   void ensurePushRegistry().then(()=>{
+     setVoiceDiagnostic(prev=>prev==="Sin diagnóstico de registro todavía."?
+       "PushKit inicializado al abrir la app. Pendiente de registrar el dispositivo con Twilio.":prev);
+   }).catch((cause:unknown)=>{
+     const reason=cause instanceof Error?cause.message:"Error desconocido";
+     setVoiceDiagnostic("PushKit no pudo inicializarse: "+reason.slice(0,160));
    });
  },[]);
  function connectCall(connected:Call){
@@ -154,7 +175,7 @@ export default function App(){
          throw new Error("Debes verificar tu número por SMS antes de hacer la prueba.");
        throw new Error("No pudimos iniciar la prueba. Servidor HTTP "+result.status+".");
      }
-     setStatus("Llamada enviada · revisa la pantalla de tu iPhone");
+     setStatus("Prueba solicitada a Twilio · entrega al iPhone pendiente de comprobar");
    }catch(e){setError(e instanceof Error?e.message:"No se pudo solicitar la llamada de prueba.");}
    finally{setTestBusy(false);}
  }
@@ -180,8 +201,8 @@ export default function App(){
        throw new Error("No se pudo registrar el teléfono (HTTP "+res.status+").");
      }
      if(typeof value.token!=="string")throw new Error("Token de llamadas inválido.");
-     setVoiceDiagnostic("Inicializando PushKit en iOS…");
-     await voice.initializePushRegistry();
+     setVoiceDiagnostic("Comprobando PushKit en iOS…");
+     await ensurePushRegistry();
      setVoiceDiagnostic("Registrando dispositivo con Twilio…");
      await voice.register(value.token);
      registeredAt.current=Date.now();setReady(true);
