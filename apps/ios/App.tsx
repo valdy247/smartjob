@@ -18,6 +18,7 @@ export default function App(){
  const [ready,setReady]=useState(false),[status,setStatus]=useState("Prepara la recepción de llamadas");
  const [invite,setInvite]=useState<CallInvite|null>(null),[call,setCall]=useState<Call|null>(null);
  const [error,setError]=useState("");
+ const [voiceDiagnostic,setVoiceDiagnostic]=useState("Sin diagnóstico de registro todavía.");
  const [phoneVerification,setPhoneVerification]=useState<{requestId:string;phone:string;verified:boolean;smsAvailable:boolean;requestStatus:string}|null>(null);
  const [smsCode,setSmsCode]=useState(""),[smsSent,setSmsSent]=useState(false);
  const [smsBusy,setSmsBusy]=useState(false),[verificationLoading,setVerificationLoading]=useState(false);
@@ -46,8 +47,12 @@ export default function App(){
        connectCall(accepted);
      });
    });
-   voice.on(Voice.Event.Error,()=>{
-     setError("La conexión de voz tuvo un problema. Revisa tu red e inténtalo nuevamente.");
+   voice.on(Voice.Event.Error,(event:unknown)=>{
+     const e=event as {code?:string|number;name?:string};
+     const code=typeof e?.code==="string"||typeof e?.code==="number"?String(e.code):"sin código";
+     const name=typeof e?.name==="string"?e.name.slice(0,80):"Error del SDK";
+     setVoiceDiagnostic("Twilio SDK: "+name+" ("+code+").");
+     setError("La conexión de voz tuvo un problema. Consulta el diagnóstico de voz.");
    });
  },[]);
  function connectCall(connected:Call){
@@ -156,7 +161,7 @@ export default function App(){
  async function registerPhone(){
    const client=supabase;
    if(!client||!sessionRef.current)return;
-   setRegistering(true);setError("");
+   setRegistering(true);setError("");setVoiceDiagnostic("Solicitando autorización de voz al servidor…");
    try{
      const {data}=await client.auth.getSession();
      if(!data.session)throw new Error("Tu sesión ha expirado. Vuelve a entrar.");
@@ -175,12 +180,17 @@ export default function App(){
        throw new Error("No se pudo registrar el teléfono (HTTP "+res.status+").");
      }
      if(typeof value.token!=="string")throw new Error("Token de llamadas inválido.");
+     setVoiceDiagnostic("Inicializando PushKit en iOS…");
      await voice.initializePushRegistry();
+     setVoiceDiagnostic("Registrando dispositivo con Twilio…");
      await voice.register(value.token);
      registeredAt.current=Date.now();setReady(true);
+     setVoiceDiagnostic("Registro aceptado por el SDK. La entrega APNs aún no está verificada.");
      setStatus(value.testOnly===true?"iPhone registrado para llamadas de prueba":"iPhone registrado para recibir llamadas");
    }catch(e){
      setReady(false);
+     const reason=e instanceof Error?e.message:"Error desconocido";
+     setVoiceDiagnostic("Fallo en registro: "+reason.slice(0,180));
      setError(e instanceof Error?e.message:"No fue posible activar la recepción.");
    }finally{setRegistering(false);}
  }
@@ -271,6 +281,7 @@ export default function App(){
              disabled={registering} onPress={()=>void registerPhone()}/>
            {ready?<Button label={testBusy?"Solicitando llamada…":"Probar llamada a mi iPhone"}
              secondary disabled={testBusy||registering} onPress={()=>void testIncomingCall()}/>:null}
+           <Text style={styles.helper}>Diagnóstico VoIP: {voiceDiagnostic}</Text>
            {ready?<Text style={styles.helper}>Llamada de prueba de Twilio: no cambia la configuración de tu número ni activa el desvío del operador. Máximo tres pruebas al día.</Text>:null}
          </>}
        </View>
