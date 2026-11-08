@@ -1,7 +1,7 @@
 import {NextRequest} from "next/server";
 import {baseUrl,bridgeSignature,bridgeTwiML,E164,liveReady,notReady,verifiedLiveRequest,validatedConfig,type RelayOptions} from "@/lib/twilio-live";
 import {findPhoneRoute,partnerSignature,reservePhoneSession,assignOutboundCall,updatePhoneSession,tenantsReady} from "@/lib/phone-routes";
-import {say,twiml} from "@/lib/twilio-pilot";
+import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
@@ -64,6 +64,31 @@ export async function POST(req:NextRequest){
     if(!validatedConfig(config)||!await reservePhoneSession(bridge,route)){
       return twiml(say("All interpreters are currently busy. Please try again later.","en-US")+"<Hangup/>");
     }
+  }
+  // On Render's free plan, waking the idle WebSocket host can take longer than
+  // Twilio's ConversationRelay handshake. Keep the caller on a bounded TwiML
+  // hold loop until /health confirms the audio server is actually ready.
+  // No outgoing PSTN leg or billable interpreter reservation is made while cold.
+  const attemptRaw=req.nextUrl.searchParams.get("warm");
+  const attempt=attemptRaw&&/^\\d$/.test(attemptRaw)?Number(attemptRaw):0;
+  const healthUrl=(process.env.SMARTJOB_LIVE_WS_URL||"").replace(/^wss:\\/\\//,"https://").replace(/\\/relay$/,"/health");
+  let bridgeReady=false;
+  try{
+    const health=await fetch(healthUrl,{cache:"no-store",signal:AbortSignal.timeout(1700)});
+    if(health.ok){
+      const body=await health.json().catch(()=>null);
+      bridgeReady=body?.ok===true&&body?.service==="smartjob-live-bridge";
+    }
+  }catch{}
+  if(!bridgeReady){
+    if(attempt>=8){
+      console.error("Smart Job bridge did not wake before call timeout");
+      return twiml(say("Our interpreter is temporarily unavailable. Please try again shortly.","en-US")+"<Hangup/>");
+    }
+    console.info("Smart Job waiting for audio bridge to wake",{attempt});
+    const retry=xmlEscape(baseUrl+"/api/twilio/live/voice?warm="+(attempt+1));
+    return twiml((attempt===0?say("Smart Job is connecting your interpreter. Please hold.","en-US"):"")+
+      '<Pause length="9"/><Redirect method="POST">'+retry+"</Redirect>");
   }
   const signature=tenantId?partnerSignature(bridge,tenantId,from):bridgeSignature(bridge);
   const partnerUrl=baseUrl+"/api/twilio/live/partner?bridge="+bridge+"&sig="+signature+
