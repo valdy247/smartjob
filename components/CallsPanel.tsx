@@ -111,6 +111,14 @@ export function CallsPanel({supabase,profile,apiStatus}:{supabase:SupabaseClient
           {error&&<div role="alert" className="notice danger" style={{marginBottom:13}}>{error}</div>}
           <button className="btn primary block" type="submit" disabled={busy}><Check size={16}/>{busy?"Guardando…":"Guardar preferencias"}</button>
         </form>
+        <section className="card" aria-labelledby="existing-number-title" style={{marginTop:20}}>
+          <div className="card-head"><h2 id="existing-number-title">Conserva tu número actual</h2><PhoneForwarded size={18} color="var(--lime)"/></div>
+          <p className="small muted">Tus clientes pueden seguir llamando al número que ya conocen. Podemos conectar esas llamadas a Smart Job mediante un desvío permitido por tu operador, sin cambiar tu número público.</p>
+          <div className="notice info" style={{marginTop:14}}>
+            <strong>Importante:</strong> si activas el desvío en el mismo teléfono al que Smart Job intenta devolver la llamada, se puede producir un bucle. Antes de activarlo, necesitamos otra línea para contestar o una opción de recepción en la aplicación.
+          </div>
+          <p className="small muted" style={{marginTop:14}}>Otra posibilidad es portar tu número a Twilio. Eso transfiere las llamadas y los SMS, por lo que requiere revisar primero las consecuencias con tu operador. Ninguna de las dos opciones está activada automáticamente.</p>
+        </section>
         <div className="card" style={{marginTop:20}}>
           <div className="card-head"><h2>Solicitar una línea</h2><PhoneForwarded size={18} color="var(--lime)"/></div>
           <p className="small muted">Podemos preparar un número Smart Job para recibir llamadas traducidas en el teléfono que indicaste. Debemos comprobar el número y los costos antes de activarlo.</p>
