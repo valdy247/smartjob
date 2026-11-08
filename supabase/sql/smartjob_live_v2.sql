@@ -74,3 +74,26 @@ create policy "smartjob_provisioning_owner_read" on public.smartjob_provisioning
 drop policy if exists "smartjob_provisioning_user_create" on public.smartjob_provisioning_requests;
 create policy "smartjob_provisioning_user_create" on public.smartjob_provisioning_requests
  for insert to authenticated with check(user_id=(select auth.uid()) and status='pending');
+
+
+-- Bring-your-existing-number onboarding preferences. A request DOES NOT prove
+-- phone ownership or authorize call forwarding / new number purchases.
+-- Never activate unverified routes: the incoming carrier call must reach a
+-- distinct, verified Smart Job receiver (mobile VoIP app or alternate line).
+alter table public.smartjob_provisioning_requests
+  add column if not exists carrier text not null default 'other',
+  add column if not exists connection_mode text not null default 'conditional',
+  add column if not exists answer_method text not null default 'app',
+  add column if not exists phone_verified_at timestamptz;
+alter table public.smartjob_provisioning_requests
+  drop constraint if exists smartjob_provision_carrier;
+alter table public.smartjob_provisioning_requests
+  add constraint smartjob_provision_carrier check(carrier in ('verizon','att','tmobile','other'));
+alter table public.smartjob_provisioning_requests
+  drop constraint if exists smartjob_provision_connection_mode;
+alter table public.smartjob_provisioning_requests
+  add constraint smartjob_provision_connection_mode check(connection_mode in ('conditional','all_calls','port'));
+alter table public.smartjob_provisioning_requests
+  drop constraint if exists smartjob_provision_answer_method;
+alter table public.smartjob_provisioning_requests
+  add constraint smartjob_provision_answer_method check(answer_method in ('app','separate_line'));
