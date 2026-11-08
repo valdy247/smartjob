@@ -75,10 +75,15 @@ export async function getPairedCallSids(bridge:string){
  const db=admin();
  if(!db||!sid.test(bridge))return null;
  const {data,error}=await db.from("smartjob_call_sessions")
-   .select("bridge_sid,outbound_sid,status").eq("bridge_sid",bridge).maybeSingle();
+   .select("bridge_sid,outbound_sid,status,reserved_minutes,billing_settled").eq("bridge_sid",bridge).maybeSingle();
  if(error){console.error("Smart Job paired call lookup failed",error.code||"unknown");return null;}
  if(!data)return null;
- return {outboundSid:typeof data.outbound_sid==="string"&&sid.test(data.outbound_sid)?data.outbound_sid:null,status:String(data.status||"")};
+ return {
+  outboundSid:typeof data.outbound_sid==="string"&&sid.test(data.outbound_sid)?data.outbound_sid:null,
+  status:String(data.status||""),
+  reservedMinutes:Number(data.reserved_minutes||0),
+  billingSettled:data.billing_settled===true
+ };
 }
 export async function updatePhoneSession(bridge:string,status:string,duration?:number){
   const db=admin();
