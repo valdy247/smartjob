@@ -43,13 +43,31 @@ export function verifyPartnerSignature(bridge:string,route:string,customer:strin
   const expected=Buffer.from(partnerSignature(bridge,route,customer),"hex"),actual=Buffer.from(signature,"hex");
   return expected.length===actual.length&&timingSafeEqual(expected,actual);
 }
-export async function addPhoneSession(bridge:string,route:ActivePhoneRoute,outbound:string){
+export async function reservePhoneSession(bridge:string,route:ActivePhoneRoute){
+  const db=admin();
+  if(!db||!sid.test(bridge))return false;
+  const old=new Date(Date.now()-20*60*1000).toISOString();
+  // Release abandoned reservations, but never preempt a legitimate ten-minute call.
+  await db.from("smartjob_call_sessions").update({status:"failed",completed_at:new Date().toISOString()})
+    .eq("owner_id",route.user_id).in("status",["initiated","ringing","in-progress"]).lt("started_at",old);
+  const today=new Date();today.setUTCHours(0,0,0,0);
+  const {count,error:counterror}=await db.from("smartjob_call_sessions")
+    .select("bridge_sid",{count:"exact",head:true}).eq("owner_id",route.user_id)
+    .gte("started_at",today.toISOString());
+  if(counterror||count===null||count>=60)return false;
+  // One outstanding reservation per owner enforced by a partial unique index.
+  const {error}=await db.from("smartjob_call_sessions").insert({
+    bridge_sid:bridge,owner_id:route.user_id,route_id:route.id,status:"initiated"
+  });
+  if(error){console.error("Smart Job reservation denied",error.code);return false;}
+  return true;
+}
+export async function assignOutboundCall(bridge:string,outbound:string){
   const db=admin();
   if(!db||!sid.test(bridge)||!sid.test(outbound))return false;
-  const {error}=await db.from("smartjob_call_sessions").insert({
-    bridge_sid:bridge,owner_id:route.user_id,route_id:route.id,outbound_sid:outbound,status:"initiated"
-  });
-  if(error){console.error("Smart Job session insert failed",error.code);return false;}
+  const {error}=await db.from("smartjob_call_sessions").update({outbound_sid:outbound,status:"ringing"})
+    .eq("bridge_sid",bridge).eq("status","initiated");
+  if(error){console.error("Smart Job session assign failed",error.code);return false;}
   return true;
 }
 export async function updatePhoneSession(bridge:string,status:string,duration?:number){
