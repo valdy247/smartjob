@@ -21,7 +21,7 @@ export async function POST(req:NextRequest){
   });
   // Both Twilio's status and the number must match this user's saved request.
   if(!checked.ok||checked.result.status!=="approved"||
-      checked.result.valid!==true||checked.result.to!==request.destination_phone){
+      checked.result.valid===false||checked.result.to!==request.destination_phone){
     return answer({error:checked.code===429?"too_many_attempts":"incorrect_or_expired_code"},checked.code===429?429:400);
   }
   const at=Math.floor(Date.now()/1000);
