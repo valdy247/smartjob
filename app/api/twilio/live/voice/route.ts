@@ -71,7 +71,7 @@ export async function POST(req:NextRequest){
   // No outgoing PSTN leg or billable interpreter reservation is made while cold.
   const attemptRaw=req.nextUrl.searchParams.get("warm");
   const attempt=attemptRaw&&/^\\d$/.test(attemptRaw)?Number(attemptRaw):0;
-  const healthUrl=(process.env.SMARTJOB_LIVE_WS_URL||"").replace(/^wss:\\/\\//,"https://").replace(/\\/relay$/,"/health");
+  const healthUrl="https://"+new URL(process.env.SMARTJOB_LIVE_WS_URL||"wss://invalid.example/relay").host+"/health";
   let bridgeReady=false;
   try{
     const health=await fetch(healthUrl,{cache:"no-store",signal:AbortSignal.timeout(1700)});
