@@ -25,6 +25,7 @@ export default function App(){
  const [session,setSession]=useState<Session|null>(null);
  const [activeTab,setActiveTab]=useState<"home"|"calls"|"live"|"settings">("home");
  const [image1Unavailable,setImage1Unavailable]=useState(false);
+ const [image2Unavailable,setImage2Unavailable]=useState(false);
  const [keyboardVisible,setKeyboardVisible]=useState(false),[forwardHelpOpen,setForwardHelpOpen]=useState(false);
  const [settingsPage,setSettingsPage]=useState<"menu"|"numbers"|"billing"|"history"|"security"|"profile"|"style"|"support"|"services">("menu");
  const [callHistory,setCallHistory]=useState<{bridge_sid:string;status:string;duration_seconds:number|null;started_at:string;call_mode:string}[]>([]);
@@ -502,15 +503,21 @@ export default function App(){
        </Pressable>
       </View>
 
-      <View style={[styles.homeFeatureCard,styles.homeTranslatorFeature]}>
-       <View style={styles.homeFeatureCopy}>
-        <Text style={styles.homeFeatureTitle}>Traductor IA</Text>
-        <Text style={styles.homeFeatureSub}>Texto · voz en web</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Abrir traductor" style={styles.homeSecondaryButton} onPress={()=>setActiveTab("live")}>
-         <Text style={styles.homeSecondaryText}>✧  Abrir  →</Text>
-        </Pressable>
+      <View style={[styles.homeFeatureCard,styles.homeTranslatorFeature,styles.homeTranslatorIllustrated]}>
+       <View style={styles.homeTranslatorIllustration}>
+        {image2Unavailable?<View style={[styles.homeImageSlot,styles.homeImageSlotSmall,styles.homePlaceholderWide]}>
+          <Text style={styles.homeImageLabel}>Imagen 2</Text>
+          <Text style={styles.homeImageDescription}>Traducción en persona</Text>
+         </View>:
+         <Image source={{uri:api.replace(/\/$/,"")+"/vmv/imagen-2.webp"}}
+          style={styles.homeTranslatorArtwork} resizeMode="contain"
+          accessibilityLabel="Un empleador y un trabajador se dan la mano mientras conversan, con un teléfono para traducir"
+          onError={()=>setImage2Unavailable(true)}/>}
        </View>
-       <View style={[styles.homeImageSlot,styles.homeImageSlotSmall]}><Text style={styles.homeImageLabel}>Imagen 2</Text><Text style={styles.homeImageDescription}>Traductor IA</Text></View>
+       <Pressable accessibilityRole="button" accessibilityLabel="Abrir traducción en persona"
+        style={styles.homeSecondaryButton} onPress={()=>setActiveTab("live")}>
+        <Text style={styles.homeSecondaryText}>✧  Traducción en persona  →</Text>
+       </Pressable>
       </View>
 
       <Text style={styles.sectionHeading}>Idiomas</Text>
@@ -695,12 +702,17 @@ const styles=StyleSheet.create({
  homeCallArtwork:{height:"100%",width:"100%"},
 
  homeTranslatorFeature:{backgroundColor:"#F3FFFB",minHeight:164},
+ homeTranslatorIllustrated:{flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:245,paddingHorizontal:17,paddingVertical:12},
+ homeTranslatorIllustration:{height:165,width:"100%",alignItems:"center",justifyContent:"center"},
+ homeTranslatorArtwork:{height:"100%",width:"100%"},
+ homePlaceholderWide:{flex:0,width:"100%",height:"100%",marginLeft:0},
+
  homeFeatureCopy:{flex:1.2,justifyContent:"space-between",paddingVertical:8,minWidth:0},
  homeFeatureTitle:{fontSize:26,lineHeight:29,fontWeight:"800",letterSpacing:-1.1,color:"#141B28"},
  homeFeatureSub:{color:"#687784",fontSize:13,lineHeight:18,marginTop:10},
  homePrimaryButton:{borderRadius:29,backgroundColor:"#00B496",paddingVertical:13,paddingHorizontal:18,marginTop:10,alignItems:"center",justifyContent:"center",minHeight:47,width:"100%",maxWidth:298},
  homePrimaryText:{color:"#FFFFFF",fontSize:15,fontWeight:"800"},
- homeSecondaryButton:{borderRadius:29,backgroundColor:"#BFF8E8",paddingVertical:12,paddingHorizontal:10,marginTop:18,alignItems:"center",justifyContent:"center",minHeight:44},
+ homeSecondaryButton:{borderRadius:29,backgroundColor:"#BFF8E8",paddingVertical:13,paddingHorizontal:15,marginTop:10,alignItems:"center",justifyContent:"center",minHeight:47,width:"100%",maxWidth:298},
  homeSecondaryText:{color:"#07674E",fontSize:14,fontWeight:"800"},
  homeImageSlot:{flex:.8,minWidth:100,borderWidth:1.5,borderStyle:"dashed",borderColor:"#51CDB4",borderRadius:19,backgroundColor:"#C9F8EA",alignItems:"center",justifyContent:"center",marginLeft:10,padding:7},
  homeImageSlotSmall:{backgroundColor:"#E1FFF6",borderColor:"#8DDECA"},

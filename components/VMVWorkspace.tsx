@@ -70,15 +70,11 @@ export default function VMVWorkspace({profile,supabase,status,onProfile,onLogout
      </button>
     </section>
 
-    <section className="vmv-feature-card vmv-feature-translate" aria-label="Traductor IA">
-     <div className="vmv-feature-content">
-      <h2>Traductor IA</h2>
-      <p>Texto y voz</p>
-      <button type="button" className="vmv-feature-button vmv-feature-button-translator" onClick={()=>changeTab("live")} aria-label="Abrir traductor">
-       <Sparkles size={20}/><span>Abrir</span><ArrowRight size={21}/>
-      </button>
-     </div>
+    <section className="vmv-feature-card vmv-feature-translate vmv-feature-person-illustrated" aria-label="Traducción en persona">
      <VMVImageSlot slot="imagen-2" className="vmv-feature-artwork"/>
+     <button type="button" className="vmv-feature-button vmv-feature-button-translator" onClick={()=>changeTab("live")} aria-label="Abrir traducción en persona">
+      <Languages size={21} strokeWidth={2.3}/><span>Traducción en persona</span><ArrowRight size={21}/>
+     </button>
     </section>
 
     <section className="vmv-home-languages" aria-label="Idiomas de traducción">
