@@ -18,7 +18,7 @@ export const topupPriceEnv=(plan:PlanCode):string=>
  process.env[{starter:"STRIPE_TOPUP_STARTER",pro:"STRIPE_TOPUP_PRO",
  premium:"STRIPE_TOPUP_PREMIUM"}[plan]]||"";
 export type BillingAccount={
- user_id:string;plan_code:string;status:string;stripe_customer_id:string|null;
+ user_id:string;plan_code:string;status:string;stripe_mode:"test"|"live";stripe_customer_id:string|null;
  stripe_subscription_id:string|null;current_period_end:string|null;included_minutes:number;
  used_minutes:number;reserved_minutes:number;rollover_minutes:number;topup_minutes:number;
  test_held_minutes:number;test_hold_until:string|null
@@ -48,7 +48,7 @@ export function billingAdmin(){
 export async function getBillingAccount(uid:string):Promise<BillingAccount|null>{
  const db=billingAdmin();if(!db)return null;
  const {data,error}=await db.from("smartjob_billing_accounts")
-  .select("user_id,plan_code,status,stripe_customer_id,stripe_subscription_id,current_period_end,included_minutes,used_minutes,reserved_minutes,rollover_minutes,topup_minutes,test_held_minutes,test_hold_until")
+  .select("user_id,plan_code,status,stripe_mode,stripe_customer_id,stripe_subscription_id,current_period_end,included_minutes,used_minutes,reserved_minutes,rollover_minutes,topup_minutes,test_held_minutes,test_hold_until")
   .eq("user_id",uid).maybeSingle();
  if(error){console.error("VMV billing account read",error.code);return null;}
  return data as BillingAccount|null;
