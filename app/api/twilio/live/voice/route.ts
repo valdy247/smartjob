@@ -3,7 +3,7 @@ import {baseUrl,bridgeSignature,bridgeTwiML,E164,liveReady,notReady,verifiedLive
 import {findPhoneRoute,partnerSignature,reservePhoneSession,assignOutboundCall,updatePhoneSession,tenantsReady} from "@/lib/phone-routes";
 import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 import {getPaidCallPreferences,selectedVoice} from "@/lib/vmv-voices";
-import {billingEnabledFor,claimCallMinutes,settleCallMinutes} from "@/lib/vmv-billing";
+import {billingEnabledFor,testCallCapSecondsFor,claimCallMinutes,settleCallMinutes} from "@/lib/vmv-billing";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
@@ -136,9 +136,13 @@ export async function POST(req:NextRequest){
       if(route)await updatePhoneSession(bridge,"canceled");
       return twiml("<Hangup/>");
     }
+    // A phone timeout and the minute-billing switch are distinct controls.
+    // Preview test calls must end at 60s even when charging is paused.
+    const previewCap=route?testCallCapSecondsFor(route.user_id):null;
+    const callLimit=Math.min(reservedMinutes>0?reservedMinutes*60:maxDuration,
+      previewCap||maxDuration);
     const outbound=await dial(sid,token,owner,to,partnerUrl,callback,
-      reservedMinutes>0?reservedMinutes*60:maxDuration,
-      route?.receive_method==="ios_app"?30:12);
+      callLimit,route?.receive_method==="ios_app"?30:12);
     if(!outbound){
       if(route)await updatePhoneSession(bridge,"failed");
       if(reservedMinutes)await settleCallMinutes(bridge,0);
