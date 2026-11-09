@@ -1,5 +1,6 @@
 import {NextRequest} from "next/server";
 import {answer,getVerificationContext} from "@/lib/phone-verification";
+import {paidServiceAllowed} from "@/lib/vmv-entitlements";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
@@ -10,6 +11,7 @@ export async function POST(req:NextRequest){
    return answer({error:"test_call_not_enabled"},403);
  const context=await getVerificationContext(req);
  if("response" in context)return context.response;
+ if(!await paidServiceAllowed(context.uid,"direct_call"))return answer({error:"active_paid_plan_required"},402);
  if(!context.request.phone_verified_at||context.request.status!=="pending")
    return answer({error:"phone_not_verified"},403);
  const sid=process.env.TWILIO_ACCOUNT_SID||"";
