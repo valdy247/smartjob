@@ -108,82 +108,57 @@ export function LivePanel({profile,supabase,apiStatus}:{profile:Profile,supabase
   };
   const submit=(e:FormEvent)=>{e.preventDefault();if(!text.trim())return;const input=text;setText("");void processText(input,speaker);};
   const clear=()=>{audio.current?.pause();window.speechSynthesis?.cancel();setTurns([]);setError("");};
-  return <div>
-    <div className="hero">
-      <div><h1>Traductor <em>Live.</em></h1></div>
-      <span className={"pill "+(apiStatus.ai?"":"warning")}><span className="dot"/>{apiStatus.ai?"IA conectada":"IA por conectar"}</span>
+  return <section className="vmv-translation-workspace" aria-label="Intérprete cara a cara">
+   <div className="vmv-compact-card vmv-translation-controls">
+    <div className="vmv-translation-languages">
+     <select className="field" aria-label="Tu idioma" value={ownerLang} onChange={e=>setOwnerLang(e.target.value)}>{Object.entries(langs).map(([code,label])=><option key={code} value={code}>{label}</option>)}</select>
+     <button type="button" aria-label="Intercambiar idiomas" className="vmv-swap" onClick={()=>{setOwnerLang(customerLang);setCustomerLang(ownerLang);}}><ArrowDownUp size={19}/></button>
+     <select className="field" aria-label="Idioma del cliente" value={customerLang} onChange={e=>setCustomerLang(e.target.value)}>{Object.entries(langs).map(([code,label])=><option key={code} value={code}>{label}</option>)}</select>
     </div>
-    <div className="gridmain">
-      <div>
-        <section className="card">
-          <div className="card-head"><h2 className="inline-icon"><Languages size={20} color="var(--lime)"/> Conversación</h2></div>
-          <div className="language-row">
-            <div><label className="label">Tu idioma</label><select className="field" aria-label="Idioma del profesional" value={ownerLang} onChange={e=>setOwnerLang(e.target.value)}>{Object.entries(langs).map(([code,label])=><option key={code} value={code}>{label}</option>)}</select></div>
-            <button className="swap" type="button" aria-label="Intercambiar idiomas" onClick={()=>{setOwnerLang(customerLang);setCustomerLang(ownerLang);}}><ArrowDownUp size={18}/></button>
-            <div><label className="label">Idioma del cliente</label><select className="field" aria-label="Idioma del cliente" value={customerLang} onChange={e=>setCustomerLang(e.target.value)}>{Object.entries(langs).map(([code,label])=><option key={code} value={code}>{label}</option>)}</select></div>
-          </div>
-          <div className="live-sides">
-            <div className={"talkbox "+(recording==="owner"?"recording":"")}>
-              <div className="pill">TÚ · PROFESIONAL</div>
-              <button type="button" disabled={Boolean(busy)||Boolean(recording&&recording!=="owner")} className="circle" onClick={()=>void startOrStop("owner")} aria-label={recording==="owner"?"Detener grabación":"Hablar como profesional"}>{recording==="owner"?<Square size={30} fill="currentColor"/>:<Mic size={34}/>}</button>
-              <strong>{recording==="owner"?"Detener":"Hablar"}</strong>
-              {recording==="owner"?<div className="wave"><span/><span/><span/><span/><span/></div>:null}
-            </div>
-            <div className={"talkbox customer "+(recording==="customer"?"recording":"")}>
-              <div className="pill" style={{background:"#49352d",borderColor:"#715143",color:"#ffc6ac"}}>CLIENTE</div>
-              <button type="button" disabled={Boolean(busy)||Boolean(recording&&recording!=="customer")} className="circle" onClick={()=>void startOrStop("customer")} aria-label={recording==="customer"?"Detener grabación":"Hablar como cliente"}>{recording==="customer"?<Square size={30} fill="currentColor"/>:<Mic size={34}/>}</button>
-              <strong>{recording==="customer"?"Detener":"Hablar"}</strong>
-              {recording==="customer"?<div className="wave"><span/><span/><span/><span/><span/></div>:null}
-            </div>
-          </div>
-          {busy&&<div className="notice info" style={{marginTop:14}}><AudioLines size={16} style={{verticalAlign:"middle",marginRight:8}}/>{busy}</div>}
-          <div className="divider"/>
-          <label className="label">Escribir mensaje</label>
-          <div className="tabs-sub" style={{marginBottom:11}}><button type="button" className={speaker==="owner"?"on":""} onClick={()=>setSpeaker("owner")}>Yo hablo</button><button type="button" className={speaker==="customer"?"on":""} onClick={()=>setSpeaker("customer")}>Cliente habla</button></div>
-          <form className="text-entry" onSubmit={submit}><input className="field" aria-label="Mensaje a traducir" value={text} onChange={e=>setText(e.target.value)} placeholder={speaker==="owner"?profile.assistant_name+", dile al cliente…":"My name is Nathan…"} maxLength={2400}/><button type="submit" className="btn primary" disabled={Boolean(busy)||!text.trim()} aria-label="Enviar mensaje"><Send size={18}/></button></form>
-          <div className="quick-row">
-            <button type="button" onClick={()=>{setSpeaker("owner");setText(profile.assistant_name+", dile al cliente que puedo instalar esta puerta por $150 más materiales.");}}>Explicar un precio</button>
-            <button type="button" onClick={()=>{setSpeaker("owner");setText(profile.assistant_name+", ¿cuánto me recomiendas cobrar por instalar esta puerta? Usa la ubicación y medidas del trabajo.");}}>Pedir asesoría</button>
-            <button type="button" onClick={()=>{setSpeaker("owner");setText(profile.assistant_name+", pregúntale al cliente cómo se llama.");}}>Pedir el nombre</button>
-          </div>
-          <div className="divider"/>
-          <label className="checkbox-label"><input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)}/><span>Acepto enviar audio y texto a los proveedores de IA e informaré a la otra persona. Smart Job no guarda el historial de esta sesión.</span></label>
-          {error&&<div role="alert" className="notice danger" style={{marginTop:14}}><AlertTriangle size={15} style={{verticalAlign:"middle",marginRight:7}}/>{error}</div>}
-        </section>
-        <section className="card">
-          <div className="card-head"><h2 className="inline-icon"><MessageSquareText size={20} color="var(--lime)"/> Conversación</h2><button className="btn smol ghost" onClick={clear} type="button" disabled={!turns.length}><Trash2 size={14}/>Limpiar</button></div>
-          {!turns.length?<div className="empty"><div className="orb" style={{height:76,width:76}}><AudioLines size={28}/></div><strong>Empieza a hablar</strong><span className="small">O escribe un mensaje.</span></div>:
-            <div className="history">{turns.slice().reverse().map(turn=><article key={turn.id} className={"turn "+(turn.actor==="customer"?"customer":"")}>
-              <div className="turnhead"><span>{turn.actor==="owner"?"Tú":"Cliente"} · {new Date(turn.timestamp).toLocaleTimeString("es-US",{hour:"2-digit",minute:"2-digit"})}</span><span className={"chip "+turn.mode}>{turn.mode==="advice"?"Consejo privado":turn.mode==="relay"?"Para el cliente":"Interpretación"}</span></div>
-              <div className="original">{turn.source}</div><div className="translated">{turn.output}</div>
-              {turn.warning&&<div className="notice danger" style={{marginTop:14}}>{turn.warning}</div>}
-              <div style={{marginTop:14}}><button type="button" className="btn ghost smol" disabled={Boolean(playing)} onClick={()=>void play(turn,true)}><Volume2 size={15}/>{turn.blocked?"Confirmé y quiero reproducir":playing===turn.id?"Reproduciendo…":"Escuchar de nuevo"}</button></div>
-            </article>)}</div>}
-        </section>
-      </div>
-      <aside>
-        <div className="card">
-          <div className="card-head"><h2 className="inline-icon"><ClipboardList size={20} color="var(--lime)"/> Contexto del trabajo</h2><button type="button" className="btn ghost smol" aria-label="Expandir contexto" onClick={()=>setContextOpen(!contextOpen)}><ChevronDown size={16}/></button></div>
-          
-          {contextOpen&&<div className="stack">
-            <div><label className="label">Tipo de trabajo</label><input className="field" value={context.job_type} onChange={e=>setContext({...context,job_type:e.target.value})} placeholder="Instalar puerta interior"/></div>
-            <div className="form-grid">
-              <div><label className="label">Ciudad</label><input className="field" value={context.city} onChange={e=>setContext({...context,city:e.target.value})} placeholder="Columbus"/></div>
-              <div><label className="label">Estado</label><input className="field" value={context.state} onChange={e=>setContext({...context,state:e.target.value})} placeholder="GA"/></div>
-            </div>
-            <div className="form-grid">
-              <div><label className="label">Código ZIP</label><input className="field" value={context.zip} onChange={e=>setContext({...context,zip:e.target.value})} placeholder="31909"/></div>
-              <div><label className="label">Cliente</label><input className="field" value={context.client_name} onChange={e=>setContext({...context,client_name:e.target.value})} placeholder="Nathan"/></div>
-            </div>
-            <div><label className="label">Medidas</label><input className="field" value={context.dimensions} onChange={e=>setContext({...context,dimensions:e.target.value})} placeholder="80 × 32 pulgadas"/></div>
-            <div><label className="label">Materiales</label><input className="field" value={context.materials} onChange={e=>setContext({...context,materials:e.target.value})} placeholder="Puerta precolgada, madera…"/></div>
-            <div><label className="label">Más detalles del trabajo</label><textarea className="field" value={context.details} onChange={e=>setContext({...context,details:e.target.value})} placeholder="Tipo de pared, estado del marco, retirada de puerta anterior…"/></div>
-            {contextSaved&&<p role="status" className="small" style={{color:"var(--lime)",margin:0}}>{contextSaved}</p>}
-            <button type="button" className="btn primary block" onClick={()=>void saveContext()}><Save size={16}/>Guardar contexto</button>
-          </div>}
-        </div>
-        <p className="muted tiny" style={{marginTop:12}}>Las estimaciones de IA son orientativas. Verifica medidas, precios y seguridad.</p>
-      </aside>
+    <div className="vmv-translation-speakers">
+     <div className={"vmv-translation-speaker "+(recording==="owner"?"recording":"")}>
+      <span className="vmv-speaker-label">Tú</span>
+      <button type="button" className="vmv-translation-mic" disabled={Boolean(busy)||Boolean(recording&&recording!=="owner")} onClick={()=>void startOrStop("owner")} aria-label={recording==="owner"?"Detener grabación":"Hablar como profesional"}>{recording==="owner"?<Square size={27} fill="currentColor"/>:<Mic size={29}/>}</button>
+      <span className="vmv-mic-hint">{recording==="owner"?"Detener":"Hablar"}</span>
+     </div>
+     <div className={"vmv-translation-speaker customer "+(recording==="customer"?"recording":"")}>
+      <span className="vmv-speaker-label">Cliente</span>
+      <button type="button" className="vmv-translation-mic" disabled={Boolean(busy)||Boolean(recording&&recording!=="customer")} onClick={()=>void startOrStop("customer")} aria-label={recording==="customer"?"Detener grabación":"Hablar como cliente"}>{recording==="customer"?<Square size={27} fill="currentColor"/>:<Mic size={29}/>}</button>
+      <span className="vmv-mic-hint">{recording==="customer"?"Detener":"Hablar"}</span>
+     </div>
     </div>
-  </div>;
+    <div className="vmv-translation-message">
+     <div className="vmv-translation-switch" role="group" aria-label="Quién habla">
+      <button type="button" className={speaker==="owner"?"selected":""} aria-pressed={speaker==="owner"} onClick={()=>setSpeaker("owner")}>Tú</button>
+      <button type="button" className={speaker==="customer"?"selected":""} aria-pressed={speaker==="customer"} onClick={()=>setSpeaker("customer")}>Cliente</button>
+     </div>
+     <form onSubmit={submit} className="vmv-translation-input"><input className="field" aria-label="Mensaje a traducir" value={text} onChange={e=>setText(e.target.value)} placeholder="Escribe un mensaje…" maxLength={2400}/><button className="vmv-send" type="submit" disabled={Boolean(busy)||!text.trim()} aria-label="Traducir mensaje"><Send size={19}/></button></form>
+    </div>
+    <label className="vmv-consent"><input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)}/><span>Acepto procesar audio y texto con IA e informar a la otra persona.</span></label>
+    {busy&&<div role="status" className="vmv-translation-status"><AudioLines size={16}/> {busy}</div>}
+    {error&&<p role="alert" className="notice danger vmv-inline-feedback">{error}</p>}
+   </div>
+   <div className="vmv-compact-card vmv-translation-history">
+    <div className="vmv-between"><h2>Conversación</h2><button type="button" className="vmv-icon-button" aria-label="Borrar conversación" title="Borrar" disabled={!turns.length} onClick={clear}><Trash2 size={18}/></button></div>
+    {!turns.length?<div className="vmv-empty-state"><MessageSquareText size={27}/><span>Empieza a hablar</span></div>:
+     <div className="vmv-turns">{turns.slice().reverse().map(turn=><article key={turn.id} className={"vmv-turn "+(turn.actor==="customer"?"customer":"")}>
+      <div className="vmv-between"><span className="vmv-turn-label">{turn.actor==="owner"?"Tú":"Cliente"} · {turn.mode==="advice"?"Privado":"Traducción"}</span><button type="button" className="vmv-replay" aria-label="Escuchar traducción" disabled={Boolean(playing)} onClick={()=>void play(turn,true)}><Volume2 size={17}/></button></div>
+      <p className="vmv-original">{turn.source}</p><p className="vmv-output">{turn.output}</p>
+      {turn.warning&&<p className="vmv-warning">{turn.warning}</p>}
+      {turn.blocked&&<p className="vmv-warning">Revisa antes de reproducir.</p>}
+     </article>)}</div>}
+   </div>
+   <details className="vmv-compact-card vmv-context-details">
+    <summary><ClipboardList size={18}/> Contexto profesional <ChevronDown size={17}/></summary>
+    <div className="vmv-context-fields">
+     <div><label className="label">Trabajo</label><input className="field" value={context.job_type} onChange={e=>setContext({...context,job_type:e.target.value})} placeholder="Tipo de trabajo"/></div>
+     <div className="form-grid"><div><label className="label">Ciudad</label><input className="field" value={context.city} onChange={e=>setContext({...context,city:e.target.value})}/></div><div><label className="label">Estado</label><input className="field" value={context.state} onChange={e=>setContext({...context,state:e.target.value})}/></div></div>
+     <div className="form-grid"><div><label className="label">ZIP</label><input className="field" value={context.zip} onChange={e=>setContext({...context,zip:e.target.value})}/></div><div><label className="label">Cliente</label><input className="field" value={context.client_name} onChange={e=>setContext({...context,client_name:e.target.value})}/></div></div>
+     <div className="form-grid"><div><label className="label">Medidas</label><input className="field" value={context.dimensions} onChange={e=>setContext({...context,dimensions:e.target.value})}/></div><div><label className="label">Materiales</label><input className="field" value={context.materials} onChange={e=>setContext({...context,materials:e.target.value})}/></div></div>
+     <div><label className="label">Detalles</label><textarea className="field" value={context.details} onChange={e=>setContext({...context,details:e.target.value})}/></div>
+     <button type="button" className="btn primary block" onClick={()=>void saveContext()}><Save size={16}/> Guardar</button>
+     {contextSaved&&<p role="status" className="vmv-muted">{contextSaved}</p>}
+    </div>
+   </details>
+  </section>;
 }
