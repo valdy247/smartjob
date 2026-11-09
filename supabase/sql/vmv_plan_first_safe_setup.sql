@@ -11,3 +11,6 @@ alter table public.smartjob_profiles add constraint vmv_preferred_plan_valid che
 comment on column public.smartjob_profiles.preferred_plan is 'UI plan selection, never entitlement';
 comment on column public.smartjob_profiles.line_setup_completed is 'User preference only, never activation authorization';
 comment on column public.smartjob_profiles.plan_prompt_seen is 'User preference only, never entitlement';
+alter table public.smartjob_profiles add column if not exists line_carrier text not null default 'other';
+alter table public.smartjob_profiles drop constraint if exists vmv_line_carrier_valid;
+alter table public.smartjob_profiles add constraint vmv_line_carrier_valid check(length(line_carrier) between 1 and 30);
