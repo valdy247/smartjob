@@ -61,7 +61,7 @@ export default function Home(){
         const initial:Profile={
           id:currentUser.id,first_name:first,last_name:last,phone,occupation,
           city:String(metadata.city||"").trim(),state:String(metadata.state||"").trim(),
-          country:"US",assistant_name:String(metadata.assistant_name||"Juan").trim()||"Juan",
+          country:String(metadata.country||"US").slice(0,2).toUpperCase(),assistant_name:String(metadata.assistant_name||"Juan").trim()||"Juan",
           owner_language:String(metadata.owner_language||"es"),
           customer_language:String(metadata.customer_language||"en"),
           // Store wizard choices only in the account holder's own profile (RLS enforced).
