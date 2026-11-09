@@ -10,7 +10,7 @@ La aplicación usa **dos imágenes**, ambas en la pantalla Inicio, para mantener
 ## Reglas para generarlas
 
 - **Formato final:** WebP transparente (RGBA/sRGB), para que el degradado de las tarjetas sea parte del diseño CSS.
-- **Imagen 1:** lienzo recomendado **1200 × 1200 px**; sujeto centrado y contenido dentro del 90 % del lienzo; peso ideal **menos de 350 KB**.
+- **Imagen 1:** archivo generado a **1200 × 800 px** (WebP RGBA transparente, ~118 KB); sujeto centrado y contenido dentro del 90 % del lienzo; peso ideal **menos de 350 KB**.
 - **Imagen 2:** lienzo recomendado **1000 × 900 px**; sujeto centrado, aire alrededor; peso ideal **menos de 250 KB**.
 - **Sin fondos blancos, sin marcas de agua, sin sombras cortadas, sin texto legible adicional**. La marca VMV Call se dibuja con código y no requiere tercera imagen.
 - Mantener el contraste en pantallas pequeñas: ondas y burbujas grandes, detalles sin saturación.
