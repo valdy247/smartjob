@@ -14,12 +14,12 @@ const carriers=[["verizon","Verizon"],["att","AT&T"],["tmobile","T-Mobile"],["xf
  ["boost","Boost Mobile"],["googlefi","Google Fi"],["visible","Visible"],["mint","Mint Mobile"],
  ["straighttalk","Straight Talk"],["other","Otro operador"]] as const;
 export function ActivationFlow({profile,supabase,onSaved,onExit}:{profile:Profile;supabase:SupabaseClient;onSaved:(p:Profile)=>void;onExit:()=>void}){
- const [phase,setPhase]=useState<Phase>(profile.plan_prompt_seen?"setup":"plans"),[step,setStep]=useState(0);
+ const [phase,setPhase]=useState<Phase>(profile.preferred_plan&&!profile.line_setup_completed?"setup":"plans"),[step,setStep]=useState(0);
  const [overview,setOverview]=useState<Overview|null>(null),[loading,setLoading]=useState(true);
  const [chosen,setChosen]=useState<PlanCode|null>(profile.preferred_plan||null);
  const [lineChoice,setLineChoice]=useState<"keep"|"new">(profile.line_choice||"keep");
  const [ownerLanguage,setOwnerLanguage]=useState(profile.owner_language==="en"?"en":"es");
- const [assistant,setAssistant]=useState(profile.assistant_name||"Juan"),[carrier,setCarrier]=useState("other");
+ const [assistant,setAssistant]=useState(profile.assistant_name||"Juan"),[carrier,setCarrier]=useState(profile.line_carrier||"other");
  const [confirmed,setConfirmed]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState("");
  const [savedProfile,setSavedProfile]=useState<Profile|null>(null);
  useEffect(()=>{
