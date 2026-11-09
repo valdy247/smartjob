@@ -71,6 +71,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
  const [complete,setComplete]=useState(false),[hasSession,setHasSession]=useState(false);
  const [first,setFirst]=useState(""),[last,setLast]=useState("");
  const [dialCountry,setDialCountry]=useState("US"),[nationalPhone,setNationalPhone]=useState("");
+ const [lineChoice,setLineChoice]=useState<"keep"|"new">("keep");
  const [smsEnabled,setSmsEnabled]=useState<boolean|null>(null),[smsBusy,setSmsBusy]=useState(false);
  const [smsSent,setSmsSent]=useState(false),[smsVerified,setSmsVerified]=useState(false);
  const [smsMessage,setSmsMessage]=useState(""),[smsCode,setSmsCode]=useState(""),[smsTicket,setSmsTicket]=useState("");
@@ -196,6 +197,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
    business_name:accountType==="business"?businessName.trim():"",
    website_url:websiteUrl,city:city.trim(),state:stateCode,country:dialCountry,
    assistant_name:"Juan",owner_language:ownerLanguage,customer_language:ownerLanguage==="es"?"en":"es",
+   line_choice:lineChoice,preferred_plan:null,plan_prompt_seen:false,line_setup_completed:false,
    theme_color:accent,font_scale:fontScale,appearance,reduce_motion:reduceMotion,
    signup_wizard_completed:true,email_verify_preference:emailAction
   };
@@ -275,6 +277,20 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
       </div>}
       {smsMessage&&<small className="vmv-signup-help" role="status">{smsMessage}</small>}
       {smsEnabled===false&&<small className="vmv-signup-help">La verificación por SMS está temporalmente deshabilitada.</small>}
+     </div>
+     <div className="vmv-signup-field">
+      <label>¿Cómo quieres recibir llamadas más adelante?</label>
+      <div className="vmv-signup-line-options" role="group" aria-label="Elegir tipo de línea">
+       <button type="button" aria-pressed={lineChoice==="keep"} className={lineChoice==="keep"?"selected":""} onClick={()=>setLineChoice("keep")}>
+        <Phone size={20}/><strong>Conservar mi número</strong>
+        <small>Conexión con tu operador, sin portarlo.</small>
+       </button>
+       <button type="button" aria-pressed={lineChoice==="new"} className={lineChoice==="new"?"selected":""} onClick={()=>setLineChoice("new")}>
+        <Phone size={20}/><strong>Un número nuevo</strong>
+        <small>Se solicita después del plan y la configuración.</small>
+       </button>
+      </div>
+      <small className="vmv-signup-help">Este teléfono es tu contacto. Elegir una opción no activa desvíos ni compra un número.</small>
      </div>
      <div className="vmv-signup-field">
       <label htmlFor="reg-email">Correo electrónico *</label>
