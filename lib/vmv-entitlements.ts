@@ -10,7 +10,7 @@ export function realBillingConfigured():boolean {
   process.env.SMARTJOB_PAID_SERVICES_ENABLED==="true";
 }
 export function confirmedSubscription(account:BillingAccount|null):boolean {
- return Boolean(account&&eligible(account)&&
+ return Boolean(account&&account.stripe_mode==="live"&&eligible(account)&&
   /^cus_[A-Za-z0-9]+$/.test(account.stripe_customer_id||"")&&
   /^sub_[A-Za-z0-9]+$/.test(account.stripe_subscription_id||"")&&
   ["starter","pro","premium"].includes(account.plan_code));
