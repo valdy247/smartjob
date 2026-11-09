@@ -451,3 +451,146 @@ body:has(.auth-wrap)::before,body:has(.shell)::before{background:radial-gradient
  .vmv-interpreter-header{min-height:50px}
 }
 @media(prefers-reduced-motion:reduce){.vmv-language-detected{animation:none}.vmv-one-mic.is-recording{transform:none}}
+
+
+/* Signup wizard: dedicated mobile-first onboarding, no artificial image assets. */
+.vmv-signup-shell{--reg-accent:#04b995;min-height:100dvh;background:#f7fcfa;color:#151e2b;display:flex;flex-direction:column;position:relative;isolation:isolate}
+.vmv-signup-shell:before{content:"";position:absolute;z-index:-1;inset:0;pointer-events:none;background:radial-gradient(ellipse 50vw 38vw at 90% -6%,#91f5df37,transparent 80%)}
+.vmv-signup-shell *{box-sizing:border-box}
+.vmv-signup-header{height:95px;width:min(1160px,100%);padding:22px 26px;display:flex;justify-content:space-between;align-items:center;margin:auto auto 0;flex-shrink:0}
+.vmv-signup-header .brandname{color:#18232e}
+.vmv-signup-header>button{border:0;background:transparent;color:#058468;font-size:13px;font-weight:800;cursor:pointer}
+.vmv-signup-layout{width:min(1160px,100%);padding:24px 26px 60px;display:grid;grid-template-columns:minmax(240px,.8fr) minmax(0,1.4fr);gap:28px;align-items:stretch;margin:0 auto auto}
+.vmv-signup-sidebar{border-radius:32px;padding:39px 31px;background:linear-gradient(150deg,#dcfff4,#d0f7eb 75%,#bbf3e2);min-height:590px;color:#10262b;position:relative;overflow:hidden}
+.vmv-signup-sidebar:before{content:"";position:absolute;right:-120px;bottom:-165px;border:2px solid #23d7aa2d;border-radius:50%;width:360px;height:360px;box-shadow:0 0 0 80px #13ca9b09}
+.vmv-signup-sidebar-icon{width:55px;height:55px;border-radius:19px;display:grid;place-items:center;background:#16d5af;color:#034e3b}
+.vmv-signup-sidebar h2{font-family:"Space Grotesk",sans-serif;font-size:clamp(28px,3.2vw,42px);line-height:1.05;letter-spacing:-1.6px;margin:44px 0 19px}
+.vmv-signup-sidebar h2 span{color:#08b98d}
+.vmv-signup-sidebar p{color:#526f69;line-height:1.65;font-size:14px;max-width:300px}
+.vmv-signup-sidebar ol{list-style:none;padding:0;margin:56px 0 0;display:grid;gap:21px;position:relative}
+.vmv-signup-sidebar li{display:flex;align-items:center;gap:13px;color:#789b93;font-size:14px}
+.vmv-signup-sidebar li span{width:32px;height:32px;border-radius:50%;background:#ffffffad;border:1px solid #bce7d9;display:grid;place-items:center;flex-shrink:0;font-weight:900}
+.vmv-signup-sidebar li.selected,.vmv-signup-sidebar li.complete{color:#07755c}
+.vmv-signup-sidebar li.selected span,.vmv-signup-sidebar li.complete span{background:#03c39e;color:#fff;border-color:#03c39e}
+.vmv-signup-card{background:#fff;border:1px solid #deece7;box-shadow:0 18px 55px #1a4b4112;border-radius:32px;padding:32px 37px 27px;min-width:0}
+.vmv-signup-progress-head{display:flex;justify-content:space-between;align-items:center;color:#84968e;font-size:12px;font-weight:800}
+.vmv-signup-progress{height:7px;border-radius:10px;background:#e6f6ee;margin:12px 0 27px;overflow:hidden}
+.vmv-signup-progress>span{display:block;height:100%;border-radius:10px;background:linear-gradient(90deg,#65efcc,#08b896);transition:width .2s ease}
+.vmv-signup-title>span{color:#07a784;font-size:11px;letter-spacing:2px;font-weight:900}
+.vmv-signup-title h1{margin:8px 0 6px;font-family:"Space Grotesk",sans-serif;font-size:clamp(26px,3vw,36px);line-height:1.12;color:#121e2b;letter-spacing:-1.2px}
+.vmv-signup-title p{color:#72818b;font-size:14px;margin:0 0 28px}
+.vmv-signup-fields{display:grid;gap:21px}
+.vmv-signup-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}
+.vmv-signup-field{position:relative;display:flex;flex-direction:column;gap:8px;min-width:0}
+.vmv-signup-field>label,.vmv-signup-label-line>label,.vmv-signup-code>label{font-size:13px;font-weight:800;color:#486273}
+.vmv-signup-field label em{font-style:normal;color:#90a1a5;font-size:11px;font-weight:600}
+.vmv-signup-field input,.vmv-signup-field select,.vmv-signup-password input,.vmv-signup-code input{display:block;min-width:0;width:100%;height:54px;padding:13px 15px;border:1px solid #d6e6e3;background:#fbfefd;color:#13232d;outline:0;border-radius:15px;font:inherit;font-size:15px;transition:border-color .15s ease,box-shadow .15s ease}
+.vmv-signup-field input:focus,.vmv-signup-field select:focus,.vmv-signup-code input:focus{border-color:#21d2ab;box-shadow:0 0 0 3px #21d2ab20}
+.vmv-signup-field input:disabled{opacity:.55}
+.vmv-signup-field input::placeholder{color:#9baaaa}
+.vmv-signup-help{color:#778d91;font-size:11px;line-height:1.45}
+.vmv-signup-phone{display:grid;grid-template-columns:minmax(130px,48%) minmax(0,1fr);gap:9px}
+.vmv-signup-phone select{padding:0 6px 0 11px;font-size:12px;cursor:pointer;appearance:auto;text-overflow:ellipsis}
+.vmv-signup-label-line{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.vmv-signup-success{display:inline-flex;align-items:center;gap:5px;border-radius:100px;color:#047c53;background:#e8fff4;padding:6px 9px;font-size:11px;font-weight:800;white-space:nowrap}
+.vmv-signup-sms-action{display:flex;align-items:center;gap:13px;flex-wrap:wrap}
+.vmv-signup-sms-action button{display:flex;align-items:center;gap:7px;border:0;background:#e4faf0;color:#048266;padding:9px 13px;border-radius:11px;font-size:12px;font-weight:800}
+.vmv-signup-sms-action button:disabled{opacity:.5;cursor:not-allowed}
+.vmv-signup-sms-action small,.vmv-signup-code small{font-size:11px;color:#748b8e}
+.vmv-signup-code{background:#f2fcf8;border:1px solid #dbefe8;border-radius:15px;padding:13px;display:grid;gap:9px}
+.vmv-signup-code>div{display:flex;gap:8px}
+.vmv-signup-code input{flex:1;height:46px;text-align:center;letter-spacing:3px;font-weight:700}
+.vmv-signup-code button{border:0;border-radius:10px;background:#12c9a5;color:#05382e;padding:0 14px;font-weight:800;font-size:12px}
+.vmv-signup-code button:disabled{opacity:.5}
+.vmv-signup-inline{display:flex;gap:9px;flex-wrap:wrap;margin-top:3px}
+.vmv-signup-inline button{display:flex;align-items:center;gap:7px;padding:9px 13px;border:1px solid #dcebe7;background:#fff;border-radius:12px;font-size:12px;font-weight:750;color:#607978}
+.vmv-signup-inline button.selected{border-color:#43d9b7;background:#e5fcf3;color:#087d62}
+.vmv-signup-account-type{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.vmv-signup-account-type button{display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-height:125px;border-radius:19px;border:1px solid #d9e9e4;background:#fbfefd;padding:18px;text-align:left;color:#1b2c34}
+.vmv-signup-account-type button.selected{border:2px solid #20cba8;background:#eafff7;padding:17px}
+.vmv-signup-account-type strong{font-size:15px}
+.vmv-signup-account-type small{font-size:11px;color:#79938b}
+.vmv-signup-chips,.vmv-signup-segments,.vmv-signup-lang-pair{display:flex;gap:9px;flex-wrap:wrap}
+.vmv-signup-chips button,.vmv-signup-segments button,.vmv-signup-lang-pair button{border:1px solid #dbe9e6;background:#fff;color:#56716e;border-radius:12px;padding:10px 13px;font-size:12px;font-weight:800}
+.vmv-signup-chips button.selected,.vmv-signup-segments button.selected,.vmv-signup-lang-pair button.selected{border-color:#26caa5;background:#e6fcf4;color:#047c5a}
+.vmv-signup-segments{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.vmv-signup-lang-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.vmv-signup-input-icon{position:relative;display:flex;align-items:center}
+.vmv-signup-input-icon>svg{position:absolute;left:15px;pointer-events:none;color:#74a49c}
+.vmv-signup-input-icon>input{padding-left:43px}
+.vmv-signup-suggestions{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:20;max-height:230px;overflow-y:auto;overscroll-behavior:contain;background:white;border:1px solid #cae7df;box-shadow:0 12px 28px #184d4226;border-radius:16px;padding:5px;display:grid;gap:2px}
+.vmv-signup-suggestions button{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;border:0;background:transparent;border-radius:10px;width:100%;min-height:38px;padding:10px;color:#1b3435;text-align:left;font-weight:700;font-size:12px}
+.vmv-signup-suggestions button.is-focused,.vmv-signup-suggestions button:hover{background:#eafff7}
+.vmv-signup-suggestions button small{color:#859999;font-size:10px;white-space:nowrap}
+.vmv-signup-colors{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.vmv-signup-colors button{display:flex;align-items:center;justify-content:center;gap:7px;padding:13px 6px;border-radius:13px;border:1px solid #dbe7e4;background:#fff;color:#304e50;font-weight:800;font-size:12px}
+.vmv-signup-colors button.selected{border-color:#16cda4;background:#edfff8}
+.vmv-signup-colors button>span{height:17px;width:17px;border-radius:50%}
+.vmv-signup-toggle{border:1px solid #dae8e6;border-radius:17px;background:#fafffd;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:15px;color:#2b4d4b}
+.vmv-signup-toggle>span{display:flex;flex-direction:column;gap:5px}
+.vmv-signup-toggle strong{font-size:13px}
+.vmv-signup-toggle small{font-size:11px;color:#829594}
+.vmv-signup-toggle input{accent-color:#11c9a4;width:22px;height:22px}
+.vmv-signup-preview{--pv-accent:#05b996;background:#e7fff7;border:1px solid #ccede1;padding:24px;border-radius:20px;display:flex;flex-direction:column;gap:7px;color:#1e3036}
+.vmv-signup-preview[data-color=blue]{--pv-accent:#4686eb}
+.vmv-signup-preview[data-color=violet]{--pv-accent:#895eea}
+.vmv-signup-preview[data-appearance=dark]{background:#17232b;color:#f4fffa;border-color:#31514e}
+.vmv-signup-preview>span{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:900;letter-spacing:1.5px;color:var(--pv-accent)}
+.vmv-signup-preview strong{font-size:24px;letter-spacing:-.6px}
+.vmv-signup-preview[data-text=small] strong{font-size:19px}
+.vmv-signup-preview[data-text=large] strong{font-size:31px}
+.vmv-signup-preview strong span{color:var(--pv-accent)}
+.vmv-signup-preview p{color:inherit;font-size:12px;margin:0;opacity:.68}
+.vmv-signup-password{position:relative}
+.vmv-signup-password input{padding-right:54px}
+.vmv-signup-password button{position:absolute;top:0;right:4px;height:54px;width:48px;background:transparent;border:0;color:#879f9a;display:grid;place-items:center}
+.vmv-signup-security{display:flex;align-items:center;gap:13px;border-radius:15px;background:#eefff8;padding:17px;font-size:12px;color:#3d6c61;line-height:1.5}
+.vmv-signup-security svg{flex-shrink:0;color:#0caf84}
+.vmv-signup-review{padding:16px 19px;background:#fafdfa;border:1px solid #e1efeb;border-radius:17px;display:grid;gap:12px}
+.vmv-signup-review p{display:flex;align-items:center;gap:9px;font-size:12px;color:#54736c;margin:0;overflow-wrap:anywhere}
+.vmv-signup-review svg{flex-shrink:0;color:#05b98d}
+.vmv-signup-error{margin-top:18px;border:1px solid #f1d2db;background:#fff2f4;color:#a83954;padding:12px 15px;border-radius:14px;font-size:12px;line-height:1.4}
+.vmv-signup-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:29px;padding-top:23px;border-top:1px solid #e6f0ed}
+.vmv-signup-actions>div{display:flex;align-items:center;gap:12px}
+.vmv-signup-back,.vmv-signup-skip{display:flex;align-items:center;gap:6px;border:0;background:transparent;color:#6b847e;padding:10px 7px;font-size:13px;font-weight:800}
+.vmv-signup-mainbtn{border:0;background:linear-gradient(105deg,#2cdfbc,#06bb97);color:#05352a;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:12px 23px;border-radius:15px;white-space:nowrap}
+.vmv-signup-mainbtn:disabled{opacity:.55}
+.vmv-signup-finish{width:min(500px,calc(100% - 28px));background:#fff;border:1px solid #e1eeeb;border-radius:30px;padding:35px;margin:auto;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;box-shadow:0 20px 60px #0c55451a}
+.vmv-signup-finish-icon{height:80px;width:80px;display:grid;place-items:center;background:#e1fff2;color:#08b990;border-radius:50%;margin-top:22px}
+.vmv-signup-finish h1{font-size:27px;letter-spacing:-1px;margin:0}
+.vmv-signup-finish p{color:#667e7d;line-height:1.55;font-size:13px}
+@media(max-width:850px){
+ .vmv-signup-layout{grid-template-columns:1fr;max-width:700px;gap:15px;padding:12px 18px 48px}
+ .vmv-signup-sidebar{min-height:0;padding:16px 20px;border-radius:23px}
+ .vmv-signup-sidebar h2,.vmv-signup-sidebar>p,.vmv-signup-sidebar-icon{display:none}
+ .vmv-signup-sidebar ol{margin:0;display:flex;align-items:center;justify-content:space-between;gap:4px}
+ .vmv-signup-sidebar li{flex:1;justify-content:center}
+ .vmv-signup-sidebar li strong{display:none}
+ .vmv-signup-header{height:76px;padding:14px 20px}
+ .vmv-signup-card{padding:26px 24px;border-radius:24px}
+}
+@media(max-width:480px){
+ .vmv-signup-header{height:68px;padding:12px 16px}
+ .vmv-signup-header .brandmark{height:43px;width:43px;border-radius:13px}
+ .vmv-signup-header .brandname{font-size:21px}
+ .vmv-signup-layout{padding:8px 12px calc(34px + env(safe-area-inset-bottom,0px));gap:11px}
+ .vmv-signup-sidebar{padding:11px 15px;border-radius:18px}
+ .vmv-signup-sidebar li span{width:28px;height:28px;font-size:11px}
+ .vmv-signup-card{border-radius:22px;padding:22px 17px 18px}
+ .vmv-signup-progress{margin:9px 0 22px}
+ .vmv-signup-title h1{font-size:26px}
+ .vmv-signup-title p{font-size:12px;margin-bottom:22px}
+ .vmv-signup-fields{gap:17px}
+ .vmv-signup-two{grid-template-columns:1fr;gap:16px}
+ .vmv-signup-phone{grid-template-columns:minmax(112px,43%) minmax(0,1fr)}
+ .vmv-signup-phone select{font-size:11px}
+ .vmv-signup-field input,.vmv-signup-field select{height:52px}
+ .vmv-signup-autocomplete .vmv-signup-suggestions{max-height:175px}
+ .vmv-signup-account-type button{padding:14px;min-height:112px}
+ .vmv-signup-account-type button.selected{padding:13px}
+ .vmv-signup-actions{padding-top:18px;margin-top:24px;align-items:flex-end}
+ .vmv-signup-actions>div{gap:6px}
+ .vmv-signup-mainbtn{font-size:13px;padding:10px 15px;min-height:46px}
+ .vmv-signup-back,.vmv-signup-skip{font-size:12px}
+}
+@media(prefers-reduced-motion:reduce){.vmv-signup-progress span{transition:none}}

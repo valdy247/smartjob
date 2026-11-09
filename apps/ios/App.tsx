@@ -454,6 +454,7 @@ export default function App(){
       <TextInput style={styles.field} secureTextEntry textContentType="password"
        placeholder="Contraseña" placeholderTextColor="#718D95" value={password} onChangeText={setPassword}/>
       <Button label="Entrar" onPress={()=>void login()} disabled={working||!email||!password}/>
+      <Button label="Crear cuenta" secondary onPress={()=>void Linking.openURL(api.replace(/\/$/,"")+"/registro").catch(()=>setError("No se pudo abrir el registro."))}/>
      </View>:
     <>
      {activeTab==="home"?<>
