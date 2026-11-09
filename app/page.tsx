@@ -63,7 +63,17 @@ export default function Home(){
           city:String(metadata.city||"").trim(),state:String(metadata.state||"").trim(),
           country:"US",assistant_name:String(metadata.assistant_name||"Juan").trim()||"Juan",
           owner_language:String(metadata.owner_language||"es"),
-          customer_language:String(metadata.customer_language||"en")
+          customer_language:String(metadata.customer_language||"en"),
+          // Store wizard choices only in the account holder's own profile (RLS enforced).
+          account_type:metadata.account_type==="personal"?"personal":"business",
+          occupation_code:String(metadata.occupation_code||"").slice(0,24)||null,
+          use_case:String(metadata.use_case||"").slice(0,50)||null,
+          business_name:String(metadata.business_name||"").trim().slice(0,120)||null,
+          website_url:String(metadata.website_url||"").trim().slice(0,250)||null,
+          theme_color:metadata.theme_color==="blue"||metadata.theme_color==="violet"?metadata.theme_color:"mint",
+          font_scale:metadata.font_scale==="small"||metadata.font_scale==="large"?metadata.font_scale:"normal",
+          appearance:metadata.appearance==="dark"||metadata.appearance==="system"?metadata.appearance:"light",
+          reduce_motion:metadata.reduce_motion===true
         };
         const {data:created,error:creationError}=await supabase!.from("smartjob_profiles")
           .upsert(initial,{onConflict:"id",ignoreDuplicates:true}).select("*").maybeSingle();
@@ -83,6 +93,41 @@ export default function Home(){
     }
     void loadOrCreateProfile();
     return()=>{alive=false;};
+  },[supabase,user?.id]);
+  // A verified SMS may predate the email-confirmation login. Redeem its short-lived
+  // one-time proof only after a real authenticated session exists.
+  useEffect(()=>{
+    if(!supabase||!user)return;
+    let cancelled=false;
+    const claim=async()=>{
+      let pending:{phone?:string;ticket?:string;createdAt?:number;email?:string};
+      try{
+        const raw=localStorage.getItem("vmv_signup_verified_phone");
+        if(!raw)return;
+        pending=JSON.parse(raw);
+        if(!pending||typeof pending!=="object")return;
+        if(typeof pending.createdAt!=="number"||Date.now()-pending.createdAt>7*86400000){
+          localStorage.removeItem("vmv_signup_verified_phone");return;
+        }
+        // Never send one signup's phone attestation as another account.
+        if(pending.email?.toLowerCase()!==user.email?.toLowerCase())return;
+        if(pending.phone!==user.user_metadata?.phone||!pending.ticket)return;
+      }catch{return;}
+      const {data}=await supabase.auth.getSession();
+      if(cancelled||!data.session)return;
+      try{
+        const res=await fetch("/api/signup/phone/claim",{
+          method:"POST",
+          headers:{"Content-Type":"application/json",Authorization:"Bearer "+data.session.access_token},
+          body:JSON.stringify({phone:pending.phone,ticket:pending.ticket})
+        });
+        if(!cancelled&&(res.ok||res.status===409)){
+          localStorage.removeItem("vmv_signup_verified_phone");
+        }
+      }catch{ /* Keep the one-time token until it expires or can be claimed. */ }
+    };
+    void claim();
+    return()=>{cancelled=true;};
   },[supabase,user?.id]);
   const signout=async()=>{await supabase?.auth.signOut();};
   if(splash||starting||checkingProfile)return <div className="splash"><div className="splash-inner"><span className="brandmark"><Headphones size={46} strokeWidth={2.3}/></span><h1>VMV<span style={{color:"var(--lime)"}}> Call</span></h1><p className="eyebrow" style={{color:"#b1c2b0"}}>Habla sin fronteras.</p><div className="splash-track"/></div></div>;
