@@ -20,7 +20,7 @@ export function SettingsPanel({profile,supabase,onChange}:{profile:Profile;supab
   <label className="label" htmlFor="vmv-profile-phone">Teléfono</label><input id="vmv-profile-phone" className="field" required type="tel" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/>
   <details className="vmv-profile-details">
    <summary><span>Datos profesionales</span><ChevronDown size={18}/></summary>
-   <label className="label" htmlFor="vmv-occupation">Ocupación</label><input id="vmv-occupation" className="field" required value={form.occupation} onChange={e=>setForm({...form,occupation:e.target.value})}/>
+   <label className="label" htmlFor="vmv-occupation">Ocupación</label><input id="vmv-occupation" className="field" value={form.occupation} onChange={e=>setForm({...form,occupation:e.target.value})}/>
    <div className="form-grid"><div><label className="label" htmlFor="vmv-city">Ciudad</label><input id="vmv-city" className="field" value={form.city} onChange={e=>setForm({...form,city:e.target.value})}/></div><div><label className="label" htmlFor="vmv-state">Estado</label><input id="vmv-state" className="field" value={form.state} onChange={e=>setForm({...form,state:e.target.value})}/></div></div>
    <label className="label" htmlFor="vmv-assistant">Asistente</label><input id="vmv-assistant" className="field" required maxLength={40} value={form.assistant_name} onChange={e=>setForm({...form,assistant_name:e.target.value})}/>
   </details>
