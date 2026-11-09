@@ -222,3 +222,38 @@ body:has(.vmv-app-shell)::before{background:radial-gradient(ellipse 50vw 40vw at
  .vmv-home-line-status{padding:7px}
 }
 @media(prefers-reduced-motion:reduce){.vmv-feature-button,.vmv-dock-item{transition:none}.vmv-feature-button:hover{transform:none}}
+
+/* Entry screens match the signed-in visual system; the call-screen preview stays dark. */
+body:has(.auth-wrap),body:has(.shell),body:has(.splash){background:#fafdfc;color:#141d2b}
+body:has(.auth-wrap)::before,body:has(.shell)::before{background:radial-gradient(ellipse at 100% 0,#d1fff42b,transparent 60%)}
+.auth-wrap{background:#fafdfc;color:#141d2b}
+.auth-side{background:linear-gradient(142deg,#effff9,#e4faf2 62%,#d3f8ee);border-right:1px solid #d7ede8;color:#121c2b}
+.auth-side::after{border-color:#1fb99b2e;box-shadow:0 0 0 80px #38e4c408,0 0 0 160px #38e4c407}
+.auth-side .brandmark,.shell .brandmark{background:linear-gradient(150deg,#52ffde,#04d5b5);color:#06443a;box-shadow:0 6px 18px #13bda529}
+.auth-side .brandname,.shell .brandname{color:#111827;text-transform:uppercase}
+.auth-side .brandname em,.shell .brandname em{color:#02ad8e}
+.auth-side .eyebrow,.shell .eyebrow{color:#089d80}
+.auth-side .auth-head,.auth-card h1,.shell h1{color:#151d2a}
+.auth-side .auth-head span{color:#05ae8d!important}
+.auth-right{background:#fafdfc}
+.auth-card,.shell .card{background:#fff;border:1px solid #e0ebe9;color:#17212d;box-shadow:0 12px 34px #184f4b12}
+.auth-card .field,.shell .field{background:#fbfefd;border-color:#d2e5e2;color:#1d2b36}
+.auth-card .field::placeholder,.shell .field::placeholder{color:#90a2a9}
+.auth-card .label,.shell .label{color:#65737f}
+.auth-card .muted,.shell .muted{color:#677884}
+.auth-card .linkbutton{color:#008a6d}
+.auth-card .btn.primary,.shell .btn.primary{background:linear-gradient(100deg,#31e5c5,#04b994);color:#07372d;border-color:transparent}
+.auth-card .notice{color:#286653;background:#eafff7;border-color:#b8e9da}
+.auth-card .notice.danger,.shell .notice.danger{color:#ac425c;background:#fff1f4;border-color:#f3d4dc}
+.auth-card .divider{background:#e1ede9}
+.splash{background:radial-gradient(circle at 50% 44%,#c5fff2,transparent 44%),#f9fdfb;color:#132130}
+.splash-inner .brandmark{background:linear-gradient(150deg,#52ffde,#04d5b5);color:#053c33}
+.splash-track{background:#def5ee}
+.splash-track::before{background:#06bd9a}
+@media(max-width:680px){
+ .auth-side{min-height:200px;padding:25px 22px 22px}
+ .auth-right{padding:20px 15px 42px}
+ .auth-card{padding:24px;border-radius:24px}
+ .auth-side .brandmark{width:46px;height:46px}
+ .auth-side .brandname{font-size:22px}
+}
