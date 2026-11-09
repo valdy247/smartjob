@@ -65,7 +65,10 @@ export function NativeActivation({session,profile,onComplete}:{session:Session;p
  return <Modal visible animationType="slide" presentationStyle="fullScreen" onRequestClose={()=>{}}>
   <SafeAreaView style={styles.safe}>
    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
-    <View style={styles.mark}><View style={styles.wave}><Text style={styles.waveText}>▌▏▌▏▌</Text></View>
+    <View style={styles.mark}><View style={styles.wave}>
+      {[13,24,32,24,13].map((height,index)=><View key={index}
+       style={{height,width:4,borderRadius:4,backgroundColor:"#063B32"}}/>)}
+     </View>
      <Text style={styles.brand}>VMV <Text style={{color:"#07B894"}}>CALL</Text></Text></View>
     {phase==="plans"?<>
      <Text style={styles.eyebrow}>PRIMER ACCESO</Text><Text style={styles.title}>Elige tu plan.</Text>
@@ -120,8 +123,8 @@ export function NativeActivation({session,profile,onComplete}:{session:Session;p
 const styles=StyleSheet.create({
  safe:{flex:1,backgroundColor:"#F7FCFA"},content:{paddingHorizontal:24,paddingTop:18,paddingBottom:65,maxWidth:660,width:"100%",alignSelf:"center"},
  mark:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:43},
- wave:{backgroundColor:"#27E7C4",width:46,height:46,borderRadius:15,justifyContent:"center",alignItems:"center"},
- waveText:{fontSize:21,color:"#004C3C",fontWeight:"900"},
+ wave:{backgroundColor:"#27E7C4",width:50,height:50,borderRadius:16,justifyContent:"center",alignItems:"center",flexDirection:"row",gap:3},
+ 
  brand:{fontSize:25,color:"#16222D",fontWeight:"900",letterSpacing:-1},
  eyebrow:{color:"#0DAA87",fontSize:11,letterSpacing:2,fontWeight:"800",marginBottom:12},
  title:{fontSize:34,fontWeight:"800",letterSpacing:-1.2,color:"#16222D",marginBottom:9},
