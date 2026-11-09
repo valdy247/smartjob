@@ -4,6 +4,7 @@ import {ActivityIndicator,Alert,AppState,KeyboardAvoidingView,Platform,Pressable
 import {Voice,Call,CallInvite} from "@twilio/voice-react-native-sdk";
 import type {Session} from "@supabase/supabase-js";
 import {api,supabase,configured} from "./session";
+import {InterpreterPanel} from "./InterpreterPanel";
 
 const colors={bg:"#F8FBFA",card:"#FFFFFF",line:"#DCE8E6",text:"#151D2A",
  muted:"#6D7784",accent:"#00B997",accentText:"#06392E",red:"#E25673"};
@@ -35,11 +36,6 @@ export default function App(){
  const [greetingEditable,setGreetingEditable]=useState(false);
  const [customizationBusy,setCustomizationBusy]=useState(false),[customizationMessage,setCustomizationMessage]=useState("");
  const [inboundLanguage,setInboundLanguage]=useState<"es"|"en"|"unknown">("unknown");
- const [translationText,setTranslationText]=useState("");
- const [translationActor,setTranslationActor]=useState<"owner"|"customer">("owner");
- const [translationConsent,setTranslationConsent]=useState(false);
- const [translationBusy,setTranslationBusy]=useState(false);
- const [translationResult,setTranslationResult]=useState<{source:string;say:string;blocked:boolean;warning:string;mode:string}|null>(null);
  const [email,setEmail]=useState(""),[password,setPassword]=useState("");
  const [working,setWorking]=useState(false),[registering,setRegistering]=useState(false);
 
@@ -334,33 +330,6 @@ export default function App(){
      void registerPhone();
    }
  },[session?.user.id,accountOverview?.connectedToApp]);
- async function translateText(){
-   const input=translationText.trim();
-   if(!input||translationBusy)return;
-   if(!translationConsent){setError("Acepta el aviso de privacidad antes de traducir.");return;}
-   const current=sessionRef.current;
-   if(!current){setError("Inicia sesión nuevamente.");return;}
-   setTranslationBusy(true);setError("");
-   try{
-     const {data}=await supabase!.auth.getSession();
-     if(!data.session)throw new Error("Tu sesión caducó.");
-     const language=String(current.user.user_metadata?.owner_language||"es");
-     const customer=String(current.user.user_metadata?.customer_language||"en");
-     const assistantName=String(current.user.user_metadata?.assistant_name||"Juan");
-     const message=translationActor==="owner"?assistantName+", dile al cliente: "+input:input;
-     const response=await fetch(api+"/api/assistant",{
-       method:"POST",headers:{Authorization:"Bearer "+data.session.access_token,"Content-Type":"application/json"},
-       body:JSON.stringify({text:message,actor:translationActor,ownerLanguage:language,
-         customerLanguage:customer,assistantName,context:{},history:[]})
-     });
-     const output=await response.json() as {say?:string;mode?:string;warning?:string;blocked?:boolean;error?:string};
-     if(!response.ok||!output.say)throw new Error(output.error||"No se pudo traducir.");
-     setTranslationResult({source:input,say:output.say,mode:output.mode||"interpret",
-       warning:output.warning||"",blocked:!!output.blocked});
-     setTranslationText("");
-   }catch(e){setError(e instanceof Error?e.message:"Error de traducción.");}
-   finally{setTranslationBusy(false);}
- }
  async function loadCustomization(){
   if(!supabase||!sessionRef.current)return;
   try{
@@ -465,7 +434,7 @@ export default function App(){
  return <SafeAreaView style={styles.safe}>
   <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
   <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":undefined}>
-   <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content,session&&{paddingBottom:130}]}>
+   <ScrollView scrollEnabled={activeTab!=="home"} keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content,session&&{paddingBottom:activeTab==="home"?96:130}]}>
     <View style={styles.brand}><View style={styles.brandMark}>
       <View style={styles.brandWave}>
        <View style={[styles.brandWaveBar,{height:13}]}/><View style={[styles.brandWaveBar,{height:24}]}/>
@@ -520,26 +489,6 @@ export default function App(){
        </Pressable>
       </View>
 
-      <Text style={styles.sectionHeading}>Idiomas</Text>
-      <View style={styles.langPair}>
-       <Pressable accessibilityRole="button" onPress={()=>{setActiveTab("settings");setSettingsPage("style");}} style={styles.langBox}>
-        <Text style={styles.homeFlag}>{String(session.user.user_metadata?.owner_language||"es").toLowerCase().startsWith("en")?"🇺🇸":"🇪🇸"}</Text>
-        <View><Text style={styles.langCode}>{String(session.user.user_metadata?.owner_language||"es").slice(0,2).toUpperCase()}</Text><Text style={styles.langSub}>Tú</Text></View>
-       </Pressable>
-       <Text style={styles.langSwap}>⇄</Text>
-       <Pressable accessibilityRole="button" onPress={()=>{setActiveTab("settings");setSettingsPage("style");}} style={styles.langBox}>
-        <Text style={styles.homeFlag}>{String(session.user.user_metadata?.customer_language||"en").toLowerCase().startsWith("en")?"🇺🇸":"🇪🇸"}</Text>
-        <View><Text style={styles.langCode}>{String(session.user.user_metadata?.customer_language||"en").slice(0,2).toUpperCase()}</Text><Text style={styles.langSub}>Cliente</Text></View>
-       </Pressable>
-      </View>
-      <Pressable style={styles.homeLineCard} accessibilityRole="button" onPress={()=>{setActiveTab("settings");setSettingsPage("numbers");}}>
-       <View style={styles.homeLineIcon}><Text style={styles.homeLineEmoji}>☎</Text></View>
-       <View style={{flex:1,minWidth:0}}><Text style={styles.homeLineTitle}>Mi línea</Text>
-        <Text style={styles.homeLineNumber}>{accountOverview?.publicPhone||accountOverview?.twilioPhone||"Configurar línea"}</Text>
-       </View>
-       <View style={styles.homeLineStatus}><Text style={styles.homeLineStatusText}>{ready?"iPhone listo":"Pendiente"}</Text></View>
-       <Text style={styles.settingChevron}>›</Text>
-      </Pressable>
      </>:null}
      {activeTab==="calls"?<>
       <Text style={styles.kicker}>TELÉFONO</Text><Text style={styles.heading}>Llamadas<Text style={{color:colors.accent}}>.</Text></Text>
@@ -556,19 +505,7 @@ export default function App(){
        <View style={styles.settingIcon}><Text style={styles.settingEmoji}>🕒</Text></View><Text style={styles.settingLabel}>Historial</Text><Text style={styles.settingChevron}>›</Text>
       </Pressable>
      </>:null}
-     {activeTab==="live"?<>
-      <Text style={styles.kicker}>CARA A CARA · TEXTO</Text><Text style={styles.heading}>Traductor<Text style={{color:colors.accent}}>.</Text></Text>
-      <View style={styles.langPair}><View style={styles.langBox}><Text style={styles.langCode}>{String(session.user.user_metadata?.owner_language||"es").toUpperCase()}</Text><Text style={styles.langSub}>Tú</Text></View><Text style={styles.langSwap}>⇄</Text><View style={styles.langBox}><Text style={styles.langCode}>{String(session.user.user_metadata?.customer_language||"en").toUpperCase()}</Text><Text style={styles.langSub}>Cliente</Text></View></View>
-      <View style={styles.speakerRow}><Pressable accessibilityRole="button" onPress={()=>setTranslationActor("owner")} style={[styles.speakerCard,translationActor==="owner"&&styles.speakerActive]}><Text style={styles.speakerEmoji}>👤</Text><Text style={styles.speakerText}>Tú</Text></Pressable><Pressable accessibilityRole="button" onPress={()=>setTranslationActor("customer")} style={[styles.speakerCard,translationActor==="customer"&&styles.speakerActive]}><Text style={styles.speakerEmoji}>👥</Text><Text style={styles.speakerText}>Cliente</Text></Pressable></View>
-      <View style={styles.card}><Text style={styles.cardTitle}>Traducir texto</Text>
-       <TextInput style={[styles.field,{height:110,textAlignVertical:"top",paddingTop:14}]} placeholder="Escribe aquí…" placeholderTextColor="#718D95" multiline value={translationText} onChangeText={setTranslationText} maxLength={2400}/>
-       <Pressable onPress={()=>setTranslationConsent(!translationConsent)} accessibilityRole="checkbox" accessibilityState={{checked:translationConsent}} style={styles.consentRow}><Text style={styles.consentCheck}>{translationConsent?"☑":"☐"}</Text><Text style={styles.consentText}>Acepto procesar mensajes con IA e informar a la otra persona.</Text></Pressable>
-       <Button label={translationBusy?"Traduciendo…":"Traducir →"} disabled={!translationText.trim()||translationBusy} onPress={()=>void translateText()}/>
-      </View>
-      {translationResult?<View style={styles.card}><Text style={styles.kicker}>{translationResult.mode==="advice"?"CONSEJO PRIVADO":"TRADUCCIÓN"}</Text><Text style={styles.resultOriginal}>{translationResult.source}</Text><Text style={styles.resultSay}>{translationResult.say}</Text>{translationResult.blocked?<Text style={styles.verifyMessage}>{translationResult.warning||"Verifica antes de usar esta traducción."}</Text>:null}</View>:
-      <View style={styles.emptyCard}><Text style={styles.emptyIcon}>◌</Text><Text style={styles.helper}>Tu traducción aparecerá aquí.</Text></View>}
-      <Text style={styles.helper}>Para traducir con voz, utiliza el Traductor de la versión web.</Text>
-     </>:null}
+     {activeTab==="live"?<InterpreterPanel session={session}/>:null}
      {activeTab==="settings"?<>
       {settingsPage==="menu"?<>
        <Text style={styles.kicker}>TU CUENTA</Text><Text style={styles.heading}>Ajustes<Text style={{color:colors.accent}}>.</Text></Text>
@@ -694,16 +631,16 @@ function Button({label,onPress,disabled,secondary,danger}:{label:string,onPress:
 }
 const styles=StyleSheet.create({
  // Mint cards use only two image placeholders; native image files can replace these later.
- homeSubtitle:{fontSize:16,color:"#727885",marginBottom:26,marginTop:-4},
+ homeSubtitle:{fontSize:15,color:"#727885",marginBottom:16,marginTop:-9},
  homeFeatureCard:{flexDirection:"row",alignItems:"stretch",borderRadius:26,padding:18,borderWidth:1,borderColor:"#D5EFEB",marginBottom:18,overflow:"hidden"},
  homeCallsFeature:{backgroundColor:"#E5FBF5",minHeight:226},
- homeCallsIllustrated:{flexDirection:"column",alignItems:"center",justifyContent:"center",paddingHorizontal:17,paddingVertical:12,minHeight:270},
- homeCallIllustration:{height:187,width:"100%",alignItems:"center",justifyContent:"center"},
+ homeCallsIllustrated:{flexDirection:"column",alignItems:"center",justifyContent:"center",paddingHorizontal:14,paddingVertical:9,minHeight:180},
+ homeCallIllustration:{height:116,width:"100%",alignItems:"center",justifyContent:"center"},
  homeCallArtwork:{height:"100%",width:"100%"},
 
  homeTranslatorFeature:{backgroundColor:"#F3FFFB",minHeight:164},
- homeTranslatorIllustrated:{flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:245,paddingHorizontal:17,paddingVertical:12},
- homeTranslatorIllustration:{height:165,width:"100%",alignItems:"center",justifyContent:"center"},
+ homeTranslatorIllustrated:{flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:162,paddingHorizontal:14,paddingVertical:9},
+ homeTranslatorIllustration:{height:103,width:"100%",alignItems:"center",justifyContent:"center"},
  homeTranslatorArtwork:{height:"100%",width:"100%"},
  homePlaceholderWide:{flex:0,width:"100%",height:"100%",marginLeft:0},
 
