@@ -61,7 +61,7 @@ export function bridgeTwiML(role:"customer"|"professional",bridge:string,config?
   const action=xmlEscape(PILOT_BASE+"/api/twilio/live/ended?bridge="+bridge+"&sig="+bridgeSignature(bridge));
   return twiml('<Connect action="'+action+'" method="POST"><ConversationRelay url="'+url+
     '" transcriptionLanguage="'+lang+'" ttsLanguage="'+lang+
-    '" ttsProvider="ElevenLabs"'+voiceAttribute+' welcomeGreeting="'+xmlEscape(greet)+
+    '" ttsProvider="ElevenLabs" applicationReconnect="true"'+voiceAttribute+' welcomeGreeting="'+xmlEscape(greet)+
     '" welcomeGreetingInterruptible="none" speechTimeout="650" interruptible="speech" interruptSensitivity="medium"'+
     '>'+tags+
     '</ConversationRelay></Connect><Hangup/>');
