@@ -42,10 +42,6 @@ export async function POST(req:NextRequest){
     console.info("Smart Job partner PSTN leg acknowledged");
     return bridgeTwiML("professional",bridge,config);
   }
-  // Never answer a legacy pilot on a shared number without subscriber metering.
+  // Calls without a tenant route have no payer to charge. Fail closed.
   return twiml("<Hangup/>");
-  /*   if(!verifiedBridge(bridge,sig)||from!==E164(process.env.TWILIO_NUMBER)||to!==E164(process.env.SMARTJOB_DUO_ES_PHONE))
-    return twiml("<Hangup/>",403);
-  return bridgeTwiML("professional",bridge);
-  */
 }
