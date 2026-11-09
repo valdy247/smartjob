@@ -91,6 +91,10 @@ export async function updatePhoneSession(bridge:string,status:string,duration?:n
   const values:Record<string,unknown>={status};
   if(["completed","busy","failed","no-answer","canceled"].includes(status))values.completed_at=new Date().toISOString();
   if(typeof duration==="number"&&Number.isInteger(duration)&&duration>0&&duration<=86400)values.duration_seconds=duration;
-  const {error}=await db.from("smartjob_call_sessions").update(values).eq("bridge_sid",bridge);
+  // A completed inbound leg does not mean the separate iOS client leg answered.
+  // Never let a later inbound completion overwrite "no-answer"/"busy"/"failed".
+  let query=db.from("smartjob_call_sessions").update(values).eq("bridge_sid",bridge);
+  if(status==="completed")query=query.in("status",["initiated","ringing","in-progress","completed"]);
+  const {error}=await query;
   if(error)console.error("Smart Job session update failed",error.code);
 }
