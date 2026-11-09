@@ -1,5 +1,6 @@
 import {NextRequest} from "next/server";
 import {answer,getVerificationContext,masked,twilioVerifyReady} from "@/lib/phone-verification";
+import {paidServiceAllowed} from "@/lib/vmv-entitlements";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export async function GET(req:NextRequest){
@@ -9,6 +10,6 @@ export async function GET(req:NextRequest){
  return answer({
   requestId:request.id,phone:masked(request.destination_phone),
   verified:!!request.phone_verified_at,requestStatus:request.status,
-  smsAvailable:twilioVerifyReady()
+  smsAvailable:twilioVerifyReady()&&await paidServiceAllowed(context.uid,"direct_call")
  });
 }
