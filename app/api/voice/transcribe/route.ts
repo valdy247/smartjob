@@ -10,7 +10,13 @@ export async function POST(req:NextRequest) {
     if(!await consumeCredit(req,"voice"))return NextResponse.json({error:"Límite de audio diario alcanzado o acceso denegado."},{status:429});
     const forward=new FormData();
     forward.append("model_id","scribe_v2");
-    forward.append("file",file,"audio.webm");
+    // Safari/iPhone commonly records audio/mp4, while Chromium prefers WebM.
+    // Preserve the proper extension for ElevenLabs speech recognition.
+    const kind=file.type.toLowerCase();
+    const fileName=kind.includes("mp4")||kind.includes("m4a")?"conversation.m4a":
+      kind.includes("mpeg")?"conversation.mp3":kind.includes("ogg")?"conversation.ogg":
+      kind.includes("wav")?"conversation.wav":"conversation.webm";
+    forward.append("file",file,fileName);
     const r=await fetch("https://api.elevenlabs.io/v1/speech-to-text",{
       method:"POST", headers:{"xi-api-key":process.env.ELEVENLABS_API_KEY},body:forward,signal:AbortSignal.timeout(30000)
     });
