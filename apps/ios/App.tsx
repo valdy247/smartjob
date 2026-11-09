@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState} from "react";
 import {ActivityIndicator,Alert,AppState,KeyboardAvoidingView,Platform,Pressable,
- SafeAreaView,ScrollView,StatusBar,StyleSheet,Text,TextInput,View,Modal} from "react-native";
+ SafeAreaView,ScrollView,StatusBar,StyleSheet,Text,TextInput,View,Modal,Keyboard,Linking} from "react-native";
 import {Voice,Call,CallInvite} from "@twilio/voice-react-native-sdk";
 import type {Session} from "@supabase/supabase-js";
 import {api,supabase,configured} from "./session";
@@ -24,6 +24,7 @@ function ensurePushRegistry():Promise<void>{
 export default function App(){
  const [session,setSession]=useState<Session|null>(null);
  const [activeTab,setActiveTab]=useState<"home"|"calls"|"live"|"settings">("home");
+ const [keyboardVisible,setKeyboardVisible]=useState(false),[forwardHelpOpen,setForwardHelpOpen]=useState(false);
  const [settingsPage,setSettingsPage]=useState<"menu"|"numbers"|"billing"|"history"|"security"|"profile"|"style"|"support"|"services">("menu");
  const [translationText,setTranslationText]=useState("");
  const [translationActor,setTranslationActor]=useState<"owner"|"customer">("owner");
@@ -51,6 +52,11 @@ export default function App(){
  const [smsCode,setSmsCode]=useState(""),[smsSent,setSmsSent]=useState(false);
  const [smsBusy,setSmsBusy]=useState(false),[verificationLoading,setVerificationLoading]=useState(false);
  const [verifyMessage,setVerifyMessage]=useState("");
+ useEffect(()=>{
+  const show=Keyboard.addListener(Platform.OS==="ios"?"keyboardWillShow":"keyboardDidShow",()=>setKeyboardVisible(true));
+  const hide=Keyboard.addListener(Platform.OS==="ios"?"keyboardWillHide":"keyboardDidHide",()=>setKeyboardVisible(false));
+  return()=>{show.remove();hide.remove();};
+ },[]);
  const registeredAt=useRef(0),inviteRef=useRef<CallInvite|null>(null),callRef=useRef<Call|null>(null);
  const sessionRef=useRef<Session|null>(null);
  useEffect(()=>{
@@ -397,33 +403,32 @@ export default function App(){
       <View style={styles.quickRow}><Pressable style={styles.quickButton} onPress={()=>setActiveTab("calls")}><Text style={styles.quickButtonText}>📞  Llamar</Text></Pressable><Pressable style={styles.quickButton} onPress={()=>setActiveTab("live")}><Text style={styles.quickButtonText}>🎙️  Traducir</Text></Pressable></View>
      </>:null}
      {activeTab==="calls"?<>
-      <Text style={styles.kicker}>TELEFONÍA</Text><Text style={styles.heading}>Llamadas<Text style={{color:colors.accent}}>.</Text></Text>
-      <View style={styles.card}>
-       <Text style={styles.cardTitle}>Recepción de llamadas</Text>
-       <View style={styles.statusRow}><View style={[styles.dot,{backgroundColor:ready?colors.accent:colors.red}]}/><Text style={styles.statusText}>{ready?"iPhone conectado":"Recepción pendiente"}</Text></View>
-       <Text style={styles.helper}>{status}</Text>
-       <Button label={registering?"Conectando…":ready?"Actualizar conexión":"Preparar mi iPhone"} disabled={registering} onPress={()=>void registerPhone()}/>
-       <Button label="Mi número" secondary onPress={()=>{setActiveTab("settings");setSettingsPage("numbers");}}/>
-      </View>
-      <View style={styles.card}><Text style={styles.cardTitle}>Mi línea</Text>
+      <Text style={styles.kicker}>TELÉFONO</Text><Text style={styles.heading}>Llamadas<Text style={{color:colors.accent}}>.</Text></Text>
+      <View style={[styles.card,styles.featureCard]}>
+       <View style={styles.compactBetween}><Text style={styles.featureLabel}>☎  Recepción</Text><Text style={[styles.stateTag,{color:ready?colors.accent:"#F6CC83"}]}>{ready?"CONECTADA":"PENDIENTE"}</Text></View>
        <Text style={styles.featureNumber}>{accountOverview?.twilioPhone||"Sin asignar"}</Text>
-       <Text style={styles.helper}>{accountOverview?.verified?"✓ Número verificado":"Verificación pendiente"} · {accountOverview?.connectedToApp?"Conectada":"En preparación"}</Text>
-       <Button label={overviewBusy?"Actualizando…":"Actualizar estado"} secondary disabled={overviewBusy} onPress={()=>void refreshAccountOverview()}/>
+       <Text style={styles.featureMuted}>{ready?"Tu iPhone está registrado":"Conecta tu iPhone para recibir"}</Text>
+       <Button label={registering?"Conectando…":ready?"Actualizar conexión":"Conectar iPhone"} disabled={registering} onPress={()=>void registerPhone()}/>
       </View>
-      <View style={styles.notice}><Text style={styles.noticeBody}>El desvío de tu operador no se activa desde esta pantalla.</Text></View>
+      <Pressable accessibilityRole="button" style={styles.settingRow} onPress={()=>{setActiveTab("settings");setSettingsPage("numbers");}}>
+       <View style={styles.settingIcon}><Text style={styles.settingEmoji}>📱</Text></View><Text style={styles.settingLabel}>Número y verificación</Text><Text style={styles.settingChevron}>›</Text>
+      </Pressable>
+      <Pressable accessibilityRole="button" style={styles.settingRow} onPress={()=>{setActiveTab("settings");setSettingsPage("history");}}>
+       <View style={styles.settingIcon}><Text style={styles.settingEmoji}>🕒</Text></View><Text style={styles.settingLabel}>Historial</Text><Text style={styles.settingChevron}>›</Text>
+      </Pressable>
      </>:null}
      {activeTab==="live"?<>
-      <Text style={styles.kicker}>CARA A CARA</Text><Text style={styles.heading}>Traductor<Text style={{color:colors.accent}}>.</Text></Text>
+      <Text style={styles.kicker}>CARA A CARA · TEXTO</Text><Text style={styles.heading}>Traductor<Text style={{color:colors.accent}}>.</Text></Text>
       <View style={styles.langPair}><View style={styles.langBox}><Text style={styles.langCode}>{String(session.user.user_metadata?.owner_language||"es").toUpperCase()}</Text><Text style={styles.langSub}>Tú</Text></View><Text style={styles.langSwap}>⇄</Text><View style={styles.langBox}><Text style={styles.langCode}>{String(session.user.user_metadata?.customer_language||"en").toUpperCase()}</Text><Text style={styles.langSub}>Cliente</Text></View></View>
-      <View style={styles.speakerRow}><Pressable accessibilityRole="button" onPress={()=>setTranslationActor("owner")} style={[styles.speakerCard,translationActor==="owner"&&styles.speakerActive]}><Text style={styles.speakerEmoji}>🎙️</Text><Text style={styles.speakerText}>Tú</Text></Pressable><Pressable accessibilityRole="button" onPress={()=>setTranslationActor("customer")} style={[styles.speakerCard,translationActor==="customer"&&styles.speakerActive]}><Text style={styles.speakerEmoji}>🎙️</Text><Text style={styles.speakerText}>Cliente</Text></Pressable></View>
+      <View style={styles.speakerRow}><Pressable accessibilityRole="button" onPress={()=>setTranslationActor("owner")} style={[styles.speakerCard,translationActor==="owner"&&styles.speakerActive]}><Text style={styles.speakerEmoji}>👤</Text><Text style={styles.speakerText}>Tú</Text></Pressable><Pressable accessibilityRole="button" onPress={()=>setTranslationActor("customer")} style={[styles.speakerCard,translationActor==="customer"&&styles.speakerActive]}><Text style={styles.speakerEmoji}>👥</Text><Text style={styles.speakerText}>Cliente</Text></Pressable></View>
       <View style={styles.card}><Text style={styles.cardTitle}>Traducir texto</Text>
        <TextInput style={[styles.field,{height:110,textAlignVertical:"top",paddingTop:14}]} placeholder="Escribe aquí…" placeholderTextColor="#718D95" multiline value={translationText} onChangeText={setTranslationText} maxLength={2400}/>
        <Pressable onPress={()=>setTranslationConsent(!translationConsent)} accessibilityRole="checkbox" accessibilityState={{checked:translationConsent}} style={styles.consentRow}><Text style={styles.consentCheck}>{translationConsent?"☑":"☐"}</Text><Text style={styles.consentText}>Acepto procesar mensajes con IA e informar a la otra persona.</Text></Pressable>
        <Button label={translationBusy?"Traduciendo…":"Traducir →"} disabled={!translationText.trim()||translationBusy} onPress={()=>void translateText()}/>
       </View>
       {translationResult?<View style={styles.card}><Text style={styles.kicker}>{translationResult.mode==="advice"?"CONSEJO PRIVADO":"TRADUCCIÓN"}</Text><Text style={styles.resultOriginal}>{translationResult.source}</Text><Text style={styles.resultSay}>{translationResult.say}</Text>{translationResult.blocked?<Text style={styles.verifyMessage}>{translationResult.warning||"Verifica antes de usar esta traducción."}</Text>:null}</View>:
-      <View style={styles.emptyCard}><Text style={styles.emptyIcon}>◌</Text><Text style={styles.helper}>La conversación aparecerá aquí.</Text></View>}
-      <Text style={styles.helper}>La interpretación por micrófono está disponible en la versión web. Este modo nativo admite texto.</Text>
+      <View style={styles.emptyCard}><Text style={styles.emptyIcon}>◌</Text><Text style={styles.helper}>Tu traducción aparecerá aquí.</Text></View>}
+      <Text style={styles.helper}>Para traducir con voz, utiliza el Traductor de la versión web.</Text>
      </>:null}
      {activeTab==="settings"?<>
       {settingsPage==="menu"?<>
@@ -454,13 +459,21 @@ export default function App(){
           </>:<Button label="Consultar mi número" onPress={()=>void refreshPhoneVerification()}/>}
          {verifyMessage?<Text style={styles.verifyMessage}>{verifyMessage}</Text>:null}
         </View>
-        <View style={styles.card}><Text style={styles.cardTitle}>Desvío de llamadas</Text><Text style={styles.helper}>Número VMV: {accountOverview?.twilioPhone||"Pendiente"}</Text>
-         {accountOverview?.forwardingReady&&accountOverview?.twilioPhone?
-          <><Text style={styles.helper}>Primero verifica una llamada real con este iPhone bloqueado.</Text><Text style={styles.helper}>Verizon: *72 + {accountOverview.twilioPhone.slice(2)} para activar el desvío. *73 para desactivarlo.</Text><Text style={styles.helper}>No desvíes de Twilio de vuelta a Verizon; causaría un bucle.</Text></>:
-          <Text style={styles.helper}>No actives *72 hasta confirmar verificación, autorización y recepción.</Text>}
+        <View style={styles.card}><Text style={styles.cardTitle}>Desvío</Text>
+         <Text style={styles.featureNumber}>{accountOverview?.twilioPhone||"Pendiente"}</Text>
+         <Text style={styles.helper}>No actives el desvío antes de comprobar una llamada real con el iPhone bloqueado.</Text>
+         <Pressable accessibilityRole="button" accessibilityState={{expanded:forwardHelpOpen}} onPress={()=>setForwardHelpOpen(!forwardHelpOpen)} style={styles.settingRow}>
+          <Text style={styles.settingLabel}>Instrucciones del operador</Text><Text style={styles.settingChevron}>{forwardHelpOpen?"⌄":"›"}</Text>
+         </Pressable>
+         {forwardHelpOpen?<View style={{marginTop:15}}>
+          {accountOverview?.forwardingReady&&accountOverview?.twilioPhone?
+           <><Text style={styles.helper}>Verizon: *72 + {accountOverview.twilioPhone.slice(2)} para activar; *73 para desactivar. Comprueba la recepción primero.</Text>
+            <Text style={styles.helper}>No desvíes llamadas de Twilio de vuelta a Verizon: crearías un bucle.</Text></>:
+           <Text style={styles.helper}>Primero completa la verificación y autorización. Aún no está habilitado.</Text>}
+         </View>:null}
         </View>
        </>:null}
-       {settingsPage==="billing"?<View style={styles.card}><Text style={styles.cardTitle}>Mi plan</Text><Text style={styles.statNumber}>{billingOverview?.minutes.available??"—"}</Text><Text style={styles.helper}>Minutos disponibles</Text><Text style={styles.statusText}>{billingOverview?.plan||"Sin suscripción"}</Text><Text style={styles.helper}>Uso: {billingOverview?.minutes.used??"—"} min · Incluidos: {billingOverview?.minutes.included??"—"}</Text><Text style={styles.helper}>Billing y facturas se administran en la web. No se activan cargos desde esta pantalla.</Text><Button label="Actualizar" secondary onPress={()=>void refreshAccountOverview()}/></View>:null}
+       {settingsPage==="billing"?<View style={styles.card}><Text style={styles.cardTitle}>Mi plan</Text><Text style={styles.statNumber}>{billingOverview?.minutes.available??"—"}</Text><Text style={styles.helper}>Minutos disponibles</Text><Text style={styles.statusText}>{billingOverview?.plan||"Sin suscripción"}</Text><Text style={styles.helper}>Uso: {billingOverview?.minutes.used??"—"} min · Incluidos: {billingOverview?.minutes.included??"—"}</Text><Text style={styles.helper}>Pagos en modo de prueba.</Text><Button label="Actualizar" secondary onPress={()=>void refreshAccountOverview()}/><Button label="Ver planes en la web" secondary onPress={()=>void Linking.openURL(api).catch(()=>setError("No se pudo abrir la web."))}/></View>:null}
        {settingsPage==="history"?<View style={styles.card}><Text style={styles.cardTitle}>Últimos 30 días</Text><Text style={styles.statNumber}>{accountOverview?.usage.calls??"—"}</Text><Text style={styles.helper}>Llamadas · {accountOverview?.usage.minutes??"—"} minutos</Text><Text style={styles.helper}>Historial individual pendiente.</Text></View>:null}
        {settingsPage==="profile"?<View style={styles.card}><Text style={styles.cardTitle}>Mi cuenta</Text><Text style={styles.helper}>{session.user.email}</Text><Text style={styles.helper}>Los datos del perfil pueden editarse en la web.</Text></View>:null}
        {settingsPage==="security"?<View style={styles.card}><Text style={styles.cardTitle}>Acceso seguro</Text><Text style={styles.helper}>No compartas tu contraseña ni códigos de verificación.</Text><Button label="Cerrar sesión" danger onPress={()=>void logout()}/></View>:null}
@@ -473,7 +486,7 @@ export default function App(){
     {error?<View accessibilityRole="alert" style={styles.alert}><Text style={styles.alertText}>{error}</Text></View>:null}
     {working?<ActivityIndicator style={{marginTop:12}} color={colors.accent}/>:null}
    </ScrollView>
-   {session?<View style={styles.bottomDock}>{([{id:"home",emoji:"🏠",label:"Inicio"},{id:"calls",emoji:"📞",label:"Llamar"},{id:"live",emoji:"🎙️",label:"Traductor"},{id:"settings",emoji:"⚙️",label:"Ajustes"}] as const).map(item=><Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected:activeTab===item.id}} onPress={()=>{setActiveTab(item.id);if(item.id==="settings")setSettingsPage("menu");}} style={styles.bottomItem}><View style={[styles.bottomOrb,activeTab===item.id&&styles.bottomOrbActive]}><Text style={styles.bottomEmoji}>{item.emoji}</Text></View><Text style={[styles.bottomLabel,activeTab===item.id&&styles.bottomLabelActive]}>{item.label}</Text></Pressable>)}</View>:null}
+   {session&&!keyboardVisible?<View style={styles.bottomDock}>{([{id:"home",emoji:"🏠",label:"Inicio"},{id:"calls",emoji:"📞",label:"Llamadas"},{id:"live",emoji:"🎙️",label:"Traductor"},{id:"settings",emoji:"⚙️",label:"Ajustes"}] as const).map(item=><Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected:activeTab===item.id}} onPress={()=>{setActiveTab(item.id);if(item.id==="settings")setSettingsPage("menu");}} style={styles.bottomItem}><View style={[styles.bottomOrb,activeTab===item.id&&styles.bottomOrbActive]}><Text style={styles.bottomEmoji}>{item.emoji}</Text></View><Text style={[styles.bottomLabel,activeTab===item.id&&styles.bottomLabelActive]}>{item.label}</Text></Pressable>)}</View>:null}
   </KeyboardAvoidingView>
   <Modal visible={!!invite||!!call} animationType="fade" presentationStyle="fullScreen" onRequestClose={()=>{}}>
    <View style={styles.incomingRoot}><StatusBar barStyle="light-content" backgroundColor="#0C3A37"/>
@@ -577,9 +590,9 @@ const styles=StyleSheet.create({
  backRow:{paddingBottom:20},
  backText:{color:colors.accent,fontSize:15,fontWeight:"700"},
  speakerRow:{flexDirection:"row",gap:12,marginBottom:15},
- speakerCard:{flex:1,backgroundColor:"#112832",borderWidth:1,borderColor:"#30545E",borderRadius:20,padding:23,alignItems:"center"},
+ speakerCard:{flex:1,backgroundColor:"#112832",borderWidth:1,borderColor:"#30545E",borderRadius:16,padding:13,alignItems:"center"},
  speakerActive:{backgroundColor:"#19564B",borderColor:"#56EACF"},
- speakerEmoji:{fontSize:35,marginBottom:12},
+ speakerEmoji:{fontSize:25,marginBottom:6},
  speakerText:{color:colors.text,fontSize:15,fontWeight:"800"},
  consentRow:{flexDirection:"row",gap:10,alignItems:"center",paddingVertical:10},
  consentCheck:{fontSize:22,color:colors.accent},
