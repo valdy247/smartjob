@@ -32,7 +32,10 @@ export function CountryDialPicker({value,onChange}:{value:string;onChange:(code:
  },[opened]);
  useEffect(()=>{setActive(0);},[query]);
  const close=()=>{
-  setOpened(false);setQuery("");setActive(0);trigger.current?.focus();
+  setOpened(false);setQuery("");setActive(0);
+  // Close the native top-layer dialog before restoring focus to its trigger.
+  if(dialog.current?.open)dialog.current.close();
+  trigger.current?.focus();
  };
  const choose=(item:DialCountry)=>{
   onChange(item.country);close();
