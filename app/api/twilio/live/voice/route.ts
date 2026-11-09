@@ -4,7 +4,8 @@ import {findPhoneRoute,partnerSignature,reservePhoneSession,assignOutboundCall,u
 import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 import {getPaidCallPreferences,selectedVoice} from "@/lib/vmv-voices";
 import {languageMenuEnabled,ivrEligible,menuResponse,validSelectionSignature} from "@/lib/vmv-ivr";
-import {billingEnabledFor,testCallCapSecondsFor,claimCallMinutes,settleCallMinutes} from "@/lib/vmv-billing";
+import {testCallCapSecondsFor,claimCallMinutes,settleCallMinutes} from "@/lib/vmv-billing";
+import {paidServiceAllowed} from "@/lib/vmv-entitlements";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
@@ -59,12 +60,16 @@ export async function POST(req:NextRequest){
   let route:Awaited<ReturnType<typeof findPhoneRoute>>=null;
   // The menu runs only for activated iOS receiver routes and only when enabled.
   // Pilot calls keep the existing, tested path. Spanish never touches the relay.
+  // The shared legacy pilot has no subscriber entitlement to charge against.
+  if(pilot)return twiml("<Hangup/>");
   const ivr=languageMenuEnabled()&&!pilot&&tenantsReady();
   const chosenLanguage=req.nextUrl.searchParams.get("language")||"";
   if(ivr){
     route=await findPhoneRoute(to);
     if(!route)return twiml(say("This line is not active.","en-US")+"<Hangup/>");
     if(!ivrEligible(route))return twiml(say("Mobile reception is unavailable.","en-US")+"<Hangup/>");
+    // Even a direct Spanish call uses a paid Twilio leg. No plan = no menu or dial.
+    if(!await paidServiceAllowed(route.user_id,"direct_call"))return twiml("<Hangup/>");
     if(!chosenLanguage){
       const prefs=await getPaidCallPreferences(route.user_id);
       return menuResponse(prefs?.greeting_customer||undefined);
@@ -80,6 +85,7 @@ export async function POST(req:NextRequest){
     if(!tenantsReady())return twiml(say("This telephone number is not yet enabled.","en-US")+"<Hangup/>");
     route=route||await findPhoneRoute(to);
     if(!route)return twiml(say("This telephone number is not yet enabled.","en-US")+"<Hangup/>");
+    if(!await paidServiceAllowed(route.user_id,"translated_call"))return twiml("<Hangup/>");
     // The original forwarded Verizon number must never be dialed again.
     // Only provisioned, enabled routes can ring the native Twilio Voice client.
     if(route.receive_method==="ios_app"){
@@ -141,7 +147,7 @@ export async function POST(req:NextRequest){
     return twiml(say("All interpreters are currently busy. Please try again later.","en-US")+"<Hangup/>");
   }
   let reservedMinutes=0;
-  if(route&&billingEnabledFor(route.user_id)){
+  if(route){
     reservedMinutes=await claimCallMinutes(bridge,route.user_id,Math.min(30,Math.ceil(maxDuration/60)));
     if(reservedMinutes<1){
       await updatePhoneSession(bridge,"failed");
