@@ -70,3 +70,17 @@ Webhook **test** registrado y conectado a `/api/billing/webhook` (endpoint `we_1
 - No dar minutos gratis al activar un perfil: los saldos proceden de eventos Stripe firmados o ajustes administrativos auditados.
 - No activar créditos/cobros en producción hasta verificar cumplimiento fiscal y uso de Apple.
 - No guardar audio/transcripciones salvo consentimiento, necesidad operativa y políticas de privacidad apropiadas.
+
+
+## Rediseño de interfaz VMV Call 0.2.0
+- Web e iOS: pestañas Inicio / Llamadas / Traductor / Ajustes, con selección expansiva.
+- Llamadas: exclusivamente recepción y estado; historial y configuración en Ajustes.
+- Billing, planes, minutos y voces: exclusivamente bajo Ajustes. Stripe permanece en TEST.
+- Traductor web: conserva micrófono, TTS, consentimientos y contexto profesional, que ahora se abre según necesidad.
+- Traductor iOS: modo texto verificado. No simular voz en iPhone hasta integrar captura nativa de micrófono.
+- Pantalla de llamada entrante: propia dentro de la app en primer plano. Con el teléfono bloqueado, Twilio/CallKit presenta la interfaz del sistema Apple; no puede personalizarse como una vista HTML.
+- Sin cambios en API Twilio, secretos, permisos Supabase, RLS ni desvíos del operador durante el rediseño.
+- Validaciones: `npm run typecheck` raíz y `apps/ios`, bundling iOS de Expo y Next.js en Vercel staging.
+- Versión iOS `0.2.0 (2)`. Se conserva bundle `com.valdy247.smartjob`, owner Expo y proyecto EAS para no perder la instalación previa.
+- Publicación interna iOS: `npm run ios:internal` desde la raíz tras iniciar sesión en Expo EAS. La sesión remota de ChatGPT no tiene autenticación Expo y por eso no puede distribuir el IPA directamente.
+- La versión web está en Vercel staging para revisión; no promover a producción sin probar de nuevo la recepción real de llamadas con el iPhone bloqueado.
