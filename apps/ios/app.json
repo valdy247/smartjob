@@ -3,7 +3,7 @@
     "name": "VMV Call",
     "slug": "smart-job",
     "scheme": "smartjob",
-    "version": "0.3.1",
+    "version": "0.4.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "ios": {
@@ -19,11 +19,18 @@
       "entitlements": {
         "aps-environment": "production"
       },
-      "buildNumber": "4"
+      "buildNumber": "5"
     },
     "plugins": [
       "@twilio/voice-react-native-sdk",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "VMV Call necesita acceso al micrófono para interpretar conversaciones en persona.",
+          "enableBackgroundRecording": false
+        }
+      ]
     ],
     "owner": "smart-job",
     "extra": {
