@@ -63,15 +63,11 @@ export default function VMVWorkspace({profile,supabase,status,onProfile,onLogout
      <p className="vmv-home-subtitle">Traducción en tiempo real</p>
     </div>
 
-    <section className="vmv-feature-card vmv-feature-call" aria-label="Llamadas en tiempo real">
-     <div className="vmv-feature-content">
-      <h2>Llamadas en<br/>tiempo real</h2>
-      <p>Traduce mientras hablas</p>
-      <button type="button" className="vmv-feature-button vmv-feature-button-call" onClick={()=>changeTab("calls")} aria-label="Abrir llamadas">
-       <Phone size={22} strokeWidth={2.4}/><span>Llamar</span><ArrowRight size={22}/>
-      </button>
-     </div>
+    <section className="vmv-feature-card vmv-feature-call vmv-feature-call-illustrated" aria-label="Llamadas traducidas">
      <VMVImageSlot slot="imagen-1" className="vmv-feature-artwork"/>
+     <button type="button" className="vmv-feature-button vmv-feature-button-call" onClick={()=>changeTab("calls")} aria-label="Abrir llamadas traducidas">
+      <Phone size={21} strokeWidth={2.4}/><span>Llamadas traducidas</span><ArrowRight size={21}/>
+     </button>
     </section>
 
     <section className="vmv-feature-card vmv-feature-translate" aria-label="Traductor IA">
