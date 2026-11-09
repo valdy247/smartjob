@@ -42,7 +42,7 @@ export async function POST(req:NextRequest){
   if(other&&other!==callbackSid&&terminal.includes(state)){
     const account=process.env.TWILIO_ACCOUNT_SID||p.get("AccountSid")||"";
     const token=process.env.TWILIO_AUTH_TOKEN||"";
-    if(/^AC[a-f\\d]{32}$/i.test(account)&&token){
+    if(/^AC[a-f\d]{32}$/i.test(account)&&token){
       try{
         const reply=await fetch("https://api.twilio.com/2010-04-01/Accounts/"+account+"/Calls/"+other+".json",{
           method:"POST",cache:"no-store",signal:AbortSignal.timeout(4500),
