@@ -6,6 +6,9 @@ export type Profile = {
   business_name?: string|null; website_url?: string|null;
   theme_color?: "mint"|"blue"|"violet"; font_scale?: "small"|"normal"|"large";
   appearance?: "light"|"dark"|"system"; reduce_motion?: boolean;
+  line_choice?: "keep"|"new"; line_carrier?: string;
+  preferred_plan?: "starter"|"pro"|"premium"|null;
+  plan_prompt_seen?: boolean; line_setup_completed?: boolean;
 };
 export type JobContext = {
   user_id?: string; job_type: string; city: string; state: string; zip: string;
