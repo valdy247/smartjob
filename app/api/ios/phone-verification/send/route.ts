@@ -1,10 +1,12 @@
 import {NextRequest} from "next/server";
 import {answer,getVerificationContext,twilioVerifyPost,twilioVerifyReady} from "@/lib/phone-verification";
+import {paidServiceAllowed} from "@/lib/vmv-entitlements";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export async function POST(req:NextRequest){
  const context=await getVerificationContext(req);
  if("response" in context)return context.response;
+ if(!await paidServiceAllowed(context.uid,"direct_call"))return answer({error:"live_paid_plan_required"},402);
  const request=context.request;
  let payload:unknown;
  try{payload=await req.json();}catch{return answer({error:"invalid_request"},400);}
