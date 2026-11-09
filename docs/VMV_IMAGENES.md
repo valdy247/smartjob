@@ -1,28 +1,29 @@
-# VMV CALL — imágenes aprobadas
+# VMV Call — las dos imágenes del Inicio
 
-## Imagen 1 — Llamadas traducidas (elegida por el usuario)
+El Inicio tiene **dos tarjetas ilustradas**. Ambas comparten la misma composición: imagen transparente a todo el ancho, degradado menta suave y un solo botón centrado. No agregaremos títulos ni párrafos encima de las ilustraciones.
 
-- **Archivo exacto:** `public/vmv/imagen-1.webp`
-- **Dónde:** primera tarjeta de Inicio, ilustración a ancho completo; único CTA: **Llamadas traducidas**.
-- **Contenido:** una mujer y un profesional de construcción conversando por teléfono, burbujas de español e inglés y flechas verdes de traducción.
-- **Exportación:** WebP RGBA con fondo transparente, 1200 × 675 px, aproximadamente 159 KB.
-- **Comportamiento:** la web busca ese archivo automáticamente y usa el placeholder Imagen 1 mientras no exista. La app iPhone solicitará la misma ruta al servidor web y mostrará el placeholder si no se puede cargar.
-- **Interacción:** el botón abre la pestaña Llamadas. La ilustración es decorativa, no activa desvíos ni llamadas salientes.
+| Imagen | Archivo exacto | Tarjeta | Botón |
+|---|---|---|---|
+| **Imagen 1** | `public/vmv/imagen-1.webp` | Dos personas en una llamada telefónica en diferentes idiomas | **Llamadas traducidas** → pestaña Llamadas |
+| **Imagen 2** | `public/vmv/imagen-2.webp` | Un empleador y un trabajador se dan la mano mientras conversan; el trabajador sostiene el teléfono | **Traducción en persona** → pestaña Traductor |
 
-## Imagen 2 — Traductor IA (pendiente)
+## Exportaciones aceptadas
 
-- **Archivo exacto:** `public/vmv/imagen-2.webp`
-- **Dónde:** segunda tarjeta de Inicio.
-- **Concepto previsto:** dos burbujas de conversación limpias, una verde menta con símbolo de traducción y otra blanca con onda de voz.
-- **Formato sugerido:** WebP transparente, aprox. 1000 × 900 px; tamaño ideal inferior a 250 KB.
-- **Estado:** placeholder Imagen 2 hasta que se apruebe.
+- **Imagen 1:** WebP RGBA, fondo transparente, 1200 × 675 px, 158 990 bytes (≈159 KB).
+- **Imagen 2:** WebP RGBA, fondo transparente, 1200 × 676 px, 102 588 bytes (≈103 KB).
+- Tamaño total: ≈262 KB. No utilizar versiones PNG pesadas en el proyecto.
+- La identidad visual, botones e iconos se dibujan con código; no se requieren más imágenes.
 
-## Publicar Imagen 1
+## Cómo incorporarlas a Git
 
-1. Descargar el WebP optimizado `imagen-1.webp` proporcionado en la conversación.
-2. Abrir el directorio `public/vmv` de la rama `feat/live-v2-production-foundations` en GitHub.
-3. Seleccionar **Add file → Upload files**, subir **imagen-1.webp** y realizar commit directamente en esa rama.
-4. Vercel publicará la imagen mediante su deploy de Preview de esa rama. No hay que modificar `components/VMVImageSlot.tsx`, que ya apunta a `/vmv/imagen-1.webp`.
-5. Para iOS: el código nativo la carga desde el servidor VMV Call, sin guardar otra copia del WebP en `apps/ios/assets`.
+Abrir [`public/vmv` en la rama de pruebas](https://github.com/valdy247/smartjob/tree/feat/live-v2-production-foundations/public/vmv). Elegir **Add file → Upload files**, subir los dos archivos WebP optimizados con esos nombres exactos y confirmar **Commit changes**. Los archivos deberán estar en el directorio `public/vmv/`, no en `apps/ios`.
 
-La marca, el logo y los iconos de pestañas están dibujados en código, sin imágenes adicionales.
+El componente `components/VMVImageSlot.tsx` ya utiliza las rutas `/vmv/imagen-1.webp` y `/vmv/imagen-2.webp`. **Mientras no estén subidas a GitHub, se verán los holders numerados**. Al publicar los WebP se mostrarán sin cambiar el código.
+
+La versión nativa iPhone carga las ilustraciones desde el servidor web configurado y dispone de los mismos holders si la imagen no se puede descargar. El rediseño no modifica el puente de llamadas ni sus tarifas.
+
+## Criterio de producto
+
+- La tarjeta 1 abre la recepción y configuración de llamadas existentes; no implica que se haya habilitado marcar llamadas salientes desde la web.
+- La tarjeta 2 abre Traductor. El modo de voz está implementado en web; la interfaz nativa tiene traducción de texto mientras se termina el micrófono nativo.
+- Las tarjetas son accesibles, con texto alternativo y un solo destino por botón.
