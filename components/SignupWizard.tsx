@@ -193,7 +193,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
    occupation_code:accountType==="business"?occupationCode:"",
    account_type:accountType,use_case:accountType==="personal"?useCase:"",
    business_name:accountType==="business"?businessName.trim():"",
-   website_url:websiteUrl,city:city.trim(),state:stateCode,country:"US",
+   website_url:websiteUrl,city:city.trim(),state:stateCode,country:dialCountry,
    assistant_name:"Juan",owner_language:ownerLanguage,customer_language:ownerLanguage==="es"?"en":"es",
    theme_color:accent,font_scale:fontScale,appearance,reduce_motion:reduceMotion,
    signup_wizard_completed:true,email_verify_preference:emailAction
