@@ -16,10 +16,11 @@ function provider(){
 const instructions=(role:"customer"|"professional",sourceLanguage?:"en-US"|"es-ES")=>{
   const source=sourceLanguage?(sourceLanguage==="en-US"?"English":"Spanish"):(role==="customer"?"English":"Spanish");
   const target=source==="English"?"Spanish":"English";
-  return "You are a professional telephone interpreter. Translate from "+source+" to "+target+
-    ". Preserve meaning, questions, names, flavors, allergies, prices, amounts, and quantities exactly. "+
-    "Do not answer, explain, sanitize, or invent facts. Output ONLY the translation, with natural punctuation. "+
-    "Avoid quotes, headings, markdown, and extra text.";
+  return "You are a precise real-time interpreter for a live phone call. Translate each complete utterance from "+source+" to "+target+
+    ". Produce fluent, idiomatic, conversational "+target+" while preserving the speaker's intent, tone, pronouns, tense, questions, names, negatives, uncertainty, prices, numbers, medication and allergy details exactly. "+
+    "Translate what was said, not what you think was meant. Never answer the other person or add information. "+
+    "Keep the sentence concise and complete; do not translate fragment by fragment. "+
+    "Output ONLY the translation without labels, quotes, markdown or explanations.";
 };
 function streamResponse(work:(emit:(item:Record<string,unknown>)=>void,signal:AbortSignal)=>Promise<void>,signal:AbortSignal){
   const encoder=new TextEncoder();
@@ -33,7 +34,10 @@ function streamResponse(work:(emit:(item:Record<string,unknown>)=>void,signal:Ab
         await work(emit,signal);
         if(!signal.aborted)emit({done:true});
       }catch(e){
-        console.error("Smart Job translation streaming failed",e instanceof Error?e.name:"unknown");
+        // Log a bounded classification, never source speech, translated text or credentials.
+        const reason=e instanceof Error?e.message:"unknown";
+        const safe=/^(provider_http_\d{3}|provider_limit|provider_line_limit|provider_stream_incomplete|provider_stream_error|provider_invalid_response|translation_quality_check|translation_too_long|translation_unavailable|translation_empty|translation_timeout|AbortError)$/;
+        console.error("Smart Job translation streaming failed",safe.test(reason)?reason:(e instanceof Error?e.name:"unknown"));
         if(!signal.aborted)emit({error:"translation_unavailable"});
       }finally{
         closed=true;try{controller.close();}catch{}
@@ -80,12 +84,17 @@ async function streamingTranslation(original:string,role:"customer"|"professiona
         if(typeof token==="string"&&token){
           total+=token;
           if(total.length>600)throw new Error("translation_too_long");
-          emit({token});
+          // Buffer until the whole utterance is validated. Sending partial
+          // tokens to speech synthesis can distort meaning before the context arrives.
         }
+        if(value.error)throw new Error("provider_stream_error");
+        if(value.choices?.[0]?.finish_reason==="content_filter")throw new Error("provider_stream_error");
       }
       if(raw.length>2500)throw new Error("provider_line_limit");
     }
     if(!finished||!total.trim())throw new Error("provider_stream_incomplete");
+    if(compareNumbers(original,total))throw new Error("translation_quality_check");
+    emit({token:total.trim()});
   }finally{reader.releaseLock();}
 }
 export async function POST(req:NextRequest){
@@ -112,7 +121,20 @@ export async function POST(req:NextRequest){
       if(blockedForStreaming.test(original)){
         const translation=await verifiedTranslation(original,role,sourceLanguage,auth,url,model,signal);
         emit({token:translation});
-      }else await streamingTranslation(original,role,sourceLanguage,auth,url,model,signal,emit);
+      }else {
+        try{
+          await streamingTranslation(original,role,sourceLanguage,auth,url,model,signal,emit);
+        }catch(e){
+          // Streaming failures can be transient. Try once without streaming,
+          // with the existing number-preservation check, before notifying callers.
+          if(signal.aborted)throw e;
+          const reason=e instanceof Error?e.message:"unknown";
+          if(/^provider_http_(400|401|402|403|404|422)$/.test(reason))throw e;
+          console.warn("Smart Job streaming fallback",/^(provider_http_\d{3}|provider_stream_incomplete|provider_stream_error|translation_quality_check)$/.test(reason)?reason:"stream_error");
+          const translation=await verifiedTranslation(original,role,sourceLanguage,auth,url,model,signal);
+          emit({token:translation});
+        }
+      }
     },req.signal);
   }
   try{
