@@ -4,11 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run bridge:test && next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "bridge:test": "node --check services/live-bridge/server.mjs && node --test services/live-bridge/relay-core.test.mjs"
   },
-  "engines": { "node": ">=20.9" },
+  "engines": {
+    "node": ">=20.9"
+  },
   "dependencies": {
     "@supabase/supabase-js": "2.80.0",
     "lucide-react": "0.468.0",

@@ -1,0 +1,25 @@
+{
+  "name": "smartjob-ios",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo run:ios",
+    "prebuild": "expo prebuild --platform ios",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.80.0",
+    "@twilio/voice-react-native-sdk": "1.8.1",
+    "expo": "~54.0.0",
+    "expo-secure-store": "~15.0.7",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-url-polyfill": "2.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.10",
+    "typescript": "~5.9.2"
+  }
+}
