@@ -9,9 +9,9 @@ export const dynamic="force-dynamic";
 
 const callSid=/^CA[a-f\d]{32}$/i,accountSid=/^AC[a-f\d]{32}$/i;
 const maxDuration=Math.min(1800,Math.max(60,Number(process.env.SMARTJOB_MAX_CALL_SECONDS||600)));
-async function dial(sid:string,token:string,to:string,from:string,url:string,callback:string,seconds=maxDuration){
+async function dial(sid:string,token:string,to:string,from:string,url:string,callback:string,seconds=maxDuration,ringTimeout=12){
   const payload=new URLSearchParams({
-    To:to,From:from,Url:url,Method:"POST",Timeout:"12",TimeLimit:String(Math.min(maxDuration,Math.max(60,seconds))),
+    To:to,From:from,Url:url,Method:"POST",Timeout:String(ringTimeout),TimeLimit:String(Math.min(maxDuration,Math.max(60,seconds))),
     StatusCallback:callback,StatusCallbackMethod:"POST",StatusCallbackEvent:"completed"
   });
   const res=await fetch("https://api.twilio.com/2010-04-01/Accounts/"+sid+"/Calls.json",{
@@ -137,7 +137,8 @@ export async function POST(req:NextRequest){
       return twiml("<Hangup/>");
     }
     const outbound=await dial(sid,token,owner,to,partnerUrl,callback,
-      reservedMinutes>0?reservedMinutes*60:maxDuration);
+      reservedMinutes>0?reservedMinutes*60:maxDuration,
+      route?.receive_method==="ios_app"?30:12);
     if(!outbound){
       if(route)await updatePhoneSession(bridge,"failed");
       if(reservedMinutes)await settleCallMinutes(bridge,0);
