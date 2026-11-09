@@ -200,7 +200,7 @@ export function InterpreterPanel({session}:{session:Session}){
      <View style={styles.contextOrb}><Text style={styles.contextIcon}>✦</Text></View>
      <Text style={styles.contextKicker}>CONTEXTO · {Math.min(answers.length+1,3)} DE 3</Text>
      <Text style={[styles.question,{color:mode==="voice"?"white":"#17242B"}]}>{currentQuestion}</Text>
-     <Text style={[styles.smallHint,{color:mode==="voice"?"#A9C4C0":"#66817B"}]}>Solo preguntarémos lo necesario.</Text>
+     <Text style={[styles.smallHint,{color:mode==="voice"?"#A9C4C0":"#66817B"}]}>Solo preguntaremos lo necesario.</Text>
      {mode==="voice"?<>
       <Pressable accessibilityRole="button" style={styles.listenButton} onPress={()=>speak(currentQuestion,ownerLanguage)}>
        <Text style={styles.listenText}>🔊 Escuchar pregunta</Text></Pressable>
@@ -276,7 +276,7 @@ export function InterpreterPanel({session}:{session:Session}){
 const styles=StyleSheet.create({
  entry:{paddingTop:10},
  eyebrow:{color:"#0C9E7F",fontSize:11,fontWeight:"800",letterSpacing:2,marginBottom:11},
- heading:{fontSize:25,fontWeight:"850",letterSpacing:-.6,color:"#172329",marginBottom:22},
+ heading:{fontSize:25,fontWeight:"800",letterSpacing:-.6,color:"#172329",marginBottom:22},
  choice:{flexDirection:"row",alignItems:"center",gap:14,backgroundColor:"#FFFFFF",borderRadius:23,borderWidth:1,borderColor:"#D8EDE6",padding:19,marginBottom:14},
  choiceIcon:{width:54,height:54,alignItems:"center",justifyContent:"center",backgroundColor:"#D9F9ED",borderRadius:17},
  choiceEmoji:{fontSize:25,color:"#09765B"},choiceCopy:{flex:1},
