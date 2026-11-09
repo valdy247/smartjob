@@ -60,7 +60,7 @@ export function LivePanel({profile,supabase,apiStatus}:{profile:Profile;supabase
   let mounted=true;
   supabase.from("smartjob_contexts").select("job_type,city,state,zip,client_name,dimensions,materials,details")
    .eq("user_id",profile.id).maybeSingle().then(({data})=>{
-    if(mounted&&data)setContext({...emptyContext,city:profile.city,state:profile.state,...data});
+    if(mounted&&data)setContext({...emptyContext,...data,city:data.city||profile.city,state:data.state||profile.state});
    });
   return()=>{mounted=false;};
  },[profile.id,supabase,profile.city,profile.state]);
@@ -170,7 +170,7 @@ export function LivePanel({profile,supabase,apiStatus}:{profile:Profile;supabase
     throw Error("No se detectó el idioma. Prueba otra frase.");
    const item:Translation={
     id:crypto.randomUUID(),original:input.trim(),translated:result.translation,
-    source:result.sourceLanguage,target:result.targetLanguage,
+    source:result.sourceLanguage as Language,target:result.targetLanguage as Language,
     blocked:Boolean(result.blocked),warning:result.warning||null
    };
    setTurns(prev=>[...prev.slice(-9),item]);
