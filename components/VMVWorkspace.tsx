@@ -15,15 +15,6 @@ type SettingsView="menu"|"profile"|"numbers"|"billing"|"history"|"security"|"sty
 type AccountOverview={verified:boolean;connectedToApp:boolean;forwardingReady:boolean;twilioPhone:string|null;publicPhone:string|null;usage:{calls:number;completed:number;minutes:number}};
 type PlanOverview={plan:string;status:string;minutes:{available:number;used:number;included:number}};
 const NAV=[{key:"home" as const,title:"Inicio",Icon:House},{key:"calls" as const,title:"Llamadas",Icon:Phone},{key:"live" as const,title:"Traductor",Icon:Languages},{key:"settings" as const,title:"Ajustes",Icon:SlidersHorizontal}];
-const languageMeta=(value:string)=>{
- const code=(value||"es").split("-")[0].toLowerCase();
- const options:Record<string,{code:string,flag:string,name:string}>={
-  es:{code:"ES",flag:"🇪🇸",name:"Español"},en:{code:"EN",flag:"🇺🇸",name:"English"},
-  fr:{code:"FR",flag:"🇫🇷",name:"Français"},pt:{code:"PT",flag:"🇧🇷",name:"Português"}
- };
- return options[code]||{code:code.toUpperCase(),flag:"🌐",name:code.toUpperCase()};
-};
-
 export default function VMVWorkspace({profile,supabase,status,onProfile,onLogout}:{profile:Profile;supabase:SupabaseClient;status:Record<string,boolean>;onProfile:(p:Profile)=>void;onLogout:()=>void}){
  const [tab,setTab]=useState<Tab>("home");
  const [settingsView,setSettingsView]=useState<SettingsView>("menu");
@@ -77,27 +68,6 @@ export default function VMVWorkspace({profile,supabase,status,onProfile,onLogout
      </button>
     </section>
 
-    <section className="vmv-home-languages" aria-label="Idiomas de traducción">
-     <h2>Idiomas</h2>
-     <div className="vmv-home-language-pair">
-      <button type="button" className="vmv-home-language" onClick={()=>goSettings("style")}>
-       <span className="vmv-flag" aria-hidden="true">{languageMeta(profile.owner_language).flag}</span>
-       <span><strong>{languageMeta(profile.owner_language).code}</strong><small>Tú</small></span>
-      </button>
-      <span className="vmv-language-exchange" aria-hidden="true">⇄</span>
-      <button type="button" className="vmv-home-language" onClick={()=>goSettings("style")}>
-       <span className="vmv-flag" aria-hidden="true">{languageMeta(profile.customer_language).flag}</span>
-       <span><strong>{languageMeta(profile.customer_language).code}</strong><small>Cliente</small></span>
-      </button>
-     </div>
-    </section>
-
-    <button type="button" className="vmv-home-line" onClick={()=>goSettings("numbers")}>
-     <span className="vmv-home-line-icon"><PhoneCall size={25}/></span>
-     <span className="vmv-home-line-details"><strong>Mi línea</strong><small>{overview?.publicPhone||overview?.twilioPhone||"Configurar número"}</small></span>
-     <span className={"vmv-home-line-status "+(overview?.connectedToApp?"ready":"pending")}><span className="vmv-status-dot"/>{overview?.connectedToApp?"iPhone listo":"Pendiente"}</span>
-     <ChevronRight size={22} className="vmv-home-line-chevron"/>
-    </button>
    </div>}
    {tab==="calls"&&<div className="vmv-context"><div className="vmv-view-heading"><p className="vmv-eyebrow">TELÉFONO</p><h1 className="vmv-title">Llamadas<span className="vmv-accent">.</span></h1></div><CallsPanel mode="dial" onNavigate={goSettings} profile={profile} supabase={supabase} apiStatus={status}/></div>}
    {tab==="live"&&<div className="vmv-context vmv-interpreter"><div className="vmv-view-heading"><p className="vmv-eyebrow">CARA A CARA</p><h1 className="vmv-title">Traductor<span className="vmv-accent">.</span></h1></div><LivePanel profile={profile} supabase={supabase} apiStatus={status}/></div>}
