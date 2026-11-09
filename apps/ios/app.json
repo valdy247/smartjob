@@ -3,7 +3,7 @@
     "name": "VMV Call",
     "slug": "smart-job",
     "scheme": "smartjob",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "ios": {
@@ -19,7 +19,7 @@
       "entitlements": {
         "aps-environment": "production"
       },
-      "buildNumber": "3"
+      "buildNumber": "4"
     },
     "plugins": [
       "@twilio/voice-react-native-sdk",
