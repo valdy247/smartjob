@@ -5,6 +5,7 @@ import {Voice,Call,CallInvite} from "@twilio/voice-react-native-sdk";
 import type {Session} from "@supabase/supabase-js";
 import {api,supabase,configured} from "./session";
 import {InterpreterPanel} from "./InterpreterPanel";
+import {NativeActivation,type NativeProfile} from "./NativeActivation";
 
 const colors={bg:"#F8FBFA",card:"#FFFFFF",line:"#DCE8E6",text:"#151D2A",
  muted:"#6D7784",accent:"#00B997",accentText:"#06392E",red:"#E25673"};
@@ -25,6 +26,7 @@ function ensurePushRegistry():Promise<void>{
 export default function App(){
  const {height:screenHeight}=useWindowDimensions();
  const [session,setSession]=useState<Session|null>(null);
+ const [activationProfile,setActivationProfile]=useState<NativeProfile|null>(null);
  const [activeTab,setActiveTab]=useState<"home"|"calls"|"live"|"settings">("home");
  const [image1Unavailable,setImage1Unavailable]=useState(false);
  const [image2Unavailable,setImage2Unavailable]=useState(false);
@@ -47,7 +49,7 @@ export default function App(){
  const [accountOverview,setAccountOverview]=useState<{
   verified:boolean;connectedToApp:boolean;forwardingReady:boolean;twilioPhone:string|null;
   publicPhone:string|null;carrier:string|null;menuPrepared?:boolean;menuVerifiedByRealCall?:boolean;forwardingReported?:boolean;usage:{calls:number;completed:number;minutes:number;periodDays:number;directCalls?:number;translatedCalls?:number};
-  billing:{enabled:boolean;message:string};
+  billing:{enabled:boolean;active?:boolean;message:string};
  }|null>(null);
  const [overviewBusy,setOverviewBusy]=useState(false);
  const [billingOverview,setBillingOverview]=useState<{
@@ -77,6 +79,32 @@ export default function App(){
    });
    return()=>{mounted=false;data.subscription.unsubscribe();};
  },[]);
+ useEffect(()=>{
+  const client=supabase;
+  if(!session?.user.id||!client){setActivationProfile(null);return;}
+  let alive=true;
+  (async()=>{
+   try{
+    const {data:existing}=await client.from("smartjob_profiles")
+     .select("id,first_name,phone,owner_language,assistant_name,line_choice,line_carrier,preferred_plan,plan_prompt_seen,line_setup_completed")
+     .eq("id",session.user.id).maybeSingle();
+    if(!alive)return;
+    if(existing){setActivationProfile(existing as NativeProfile);return;}
+    const m=session.user.user_metadata||{};
+    if(!m.first_name||!m.last_name||!m.phone||!m.occupation)return;
+    const {data:created}=await client.from("smartjob_profiles").upsert({
+     id:session.user.id,first_name:String(m.first_name),last_name:String(m.last_name),
+     phone:String(m.phone),occupation:String(m.occupation),
+     city:String(m.city||""),state:String(m.state||""),country:String(m.country||"US"),
+     owner_language:String(m.owner_language||"es"),customer_language:String(m.customer_language||"en"),
+     assistant_name:String(m.assistant_name||"Juan"),line_choice:m.line_choice==="new"?"new":"keep",
+     line_carrier:"other",plan_prompt_seen:false,line_setup_completed:false
+    },{onConflict:"id",ignoreDuplicates:true}).select("*").maybeSingle();
+    if(alive&&created)setActivationProfile(created as NativeProfile);
+   }catch{if(alive)setActivationProfile(null);}
+  })();
+  return()=>{alive=false;};
+ },[session?.user.id]);
  useEffect(()=>{
    if(listenersReady)return;
    listenersReady=true;
@@ -498,7 +526,8 @@ export default function App(){
        <View style={styles.compactBetween}><Text style={styles.featureLabel}>☎  Recepción</Text><Text style={[styles.stateTag,{color:ready?colors.accent:"#F6CC83"}]}>{ready?"CONECTADA":"PENDIENTE"}</Text></View>
        <Text style={styles.featureNumber}>{accountOverview?.twilioPhone||"Sin asignar"}</Text>
        <Text style={styles.featureMuted}>{ready?"Tu iPhone está registrado":"Conecta tu iPhone para recibir"}</Text>
-       <Button label={registering?"Conectando…":ready?"Actualizar conexión":"Conectar iPhone"} disabled={registering} onPress={()=>void registerPhone()}/>
+       <Button label={accountOverview?.billing?.active===true?(registering?"Conectando…":ready?"Actualizar conexión":"Conectar iPhone"):"Se necesita plan activo"}
+        disabled={registering} onPress={()=>accountOverview?.billing?.active===true?void registerPhone(): (setActiveTab("settings"),setSettingsPage("billing"))}/>
       </View>
       <Pressable accessibilityRole="button" style={styles.settingRow} onPress={()=>{setActiveTab("settings");setSettingsPage("numbers");}}>
        <View style={styles.settingIcon}><Text style={styles.settingEmoji}>📱</Text></View><Text style={styles.settingLabel}>Número y verificación</Text><Text style={styles.settingChevron}>›</Text>
@@ -553,7 +582,12 @@ export default function App(){
          </View>:null}
         </View>
        </>:null}
-       {settingsPage==="billing"?<View style={styles.card}><Text style={styles.cardTitle}>Mi plan</Text><Text style={styles.statNumber}>{billingOverview?.minutes.available??"—"}</Text><Text style={styles.helper}>Minutos disponibles</Text><Text style={styles.statusText}>{billingOverview?.plan||"Sin suscripción"}</Text><Text style={styles.helper}>Uso: {billingOverview?.minutes.used??"—"} min · Incluidos: {billingOverview?.minutes.included??"—"}</Text><Text style={styles.helper}>Pagos en modo de prueba.</Text><Button label="Actualizar" secondary onPress={()=>void refreshAccountOverview()}/><Button label="Ver planes en la web" secondary onPress={()=>void Linking.openURL(api).catch(()=>setError("No se pudo abrir la web."))}/></View>:null}
+       {settingsPage==="billing"?<View style={styles.card}><Text style={styles.cardTitle}>Mi plan</Text><Text style={styles.statNumber}>{billingOverview?.minutes.available??"—"}</Text><Text style={styles.helper}>Minutos disponibles</Text><Text style={styles.statusText}>{billingOverview?.plan||"Sin suscripción"}</Text><Text style={styles.helper}>Uso: {billingOverview?.minutes.used??"—"} min · Incluidos: {billingOverview?.minutes.included??"—"}</Text><Text style={styles.helper}>Los pagos de prueba no activan las llamadas reales.</Text><Button label="Actualizar" secondary onPress={()=>void refreshAccountOverview()}/><Button label="Elegir plan y configurar" secondary onPress={()=>{if(!activationProfile||!supabase)return;void (async()=>{
+         const {data}=await supabase.from("smartjob_profiles").update({
+          plan_prompt_seen:false,line_setup_completed:false,preferred_plan:null,updated_at:new Date().toISOString()
+         }).eq("id",activationProfile.id).select("*").single();
+         if(data)setActivationProfile(data as NativeProfile);
+        })();}}/></View>:null}
        {settingsPage==="history"?<View style={styles.card}>
          <View style={styles.compactBetween}><Text style={styles.cardTitle}>Llamadas</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Actualizar historial" onPress={()=>void refreshCallHistory()} style={styles.historyRefresh}><Text style={styles.historyRefreshText}>{historyBusy?"…":"↻"}</Text></Pressable>
@@ -601,6 +635,8 @@ export default function App(){
    </ScrollView>
    {session&&!keyboardVisible?<View style={styles.bottomDock}>{([{id:"home",emoji:"🏠",label:"Inicio"},{id:"calls",emoji:"📞",label:"Llamadas"},{id:"live",emoji:"🎙️",label:"Traductor"},{id:"settings",emoji:"⚙️",label:"Ajustes"}] as const).map(item=><Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected:activeTab===item.id}} onPress={()=>{setError("");setActiveTab(item.id);if(item.id==="settings")setSettingsPage("menu");}} style={styles.bottomItem}><View style={[styles.bottomOrb,activeTab===item.id&&styles.bottomOrbActive]}><Text style={styles.bottomEmoji}>{item.emoji}</Text></View><Text style={[styles.bottomLabel,activeTab===item.id&&styles.bottomLabelActive]}>{item.label}</Text></Pressable>)}</View>:null}
   </KeyboardAvoidingView>
+  {session&&activationProfile&&!activationProfile.plan_prompt_seen?
+   <NativeActivation session={session} profile={activationProfile} onComplete={setActivationProfile}/>:null}
   <Modal visible={!!invite||!!call} animationType="fade" presentationStyle="fullScreen" onRequestClose={()=>{}}>
    <View style={styles.incomingRoot}><StatusBar barStyle="light-content" backgroundColor="#0C3A37"/>
     <View style={styles.incomingGlow}/><View style={styles.incomingCard}>
