@@ -9,7 +9,7 @@ type CallRecord={bridge_sid:string;status:string;duration_seconds:number|null;st
 type ProvisionRequest={id:string;status:string;created_at:string;destination_phone:string;carrier:string;connection_mode:string;answer_method:string};
 type Mode="dial"|"numbers"|"history"|"preferences";
 type Navigate=(screen:"numbers"|"history"|"support")=>void;
-type Account={forwardingReady:boolean;verified:boolean;connectedToApp?:boolean;twilioPhone:string|null;usage:{calls:number;completed:number;minutes:number}};
+type Account={forwardingReady:boolean;verified:boolean;connectedToApp?:boolean;menuPrepared?:boolean;menuVerifiedByRealCall?:boolean;twilioPhone:string|null;usage:{calls:number;completed:number;minutes:number;directCalls?:number;translatedCalls?:number}};
 const carriers=[
  ["verizon","Verizon"],["att","AT&T"],["tmobile","T-Mobile"],["xfinity","Xfinity Mobile"],
  ["spectrum","Spectrum Mobile"],["cricket","Cricket Wireless"],["metro","Metro by T-Mobile"],
@@ -54,6 +54,7 @@ export function CallsPanel({supabase,profile,apiStatus,mode="dial",onNavigate}:{
  };
  useEffect(()=>{void refresh();},[supabase,profile.id]);
  const active=Boolean(route?.enabled);
+ const lockedRequest=Boolean(request&&["pending","approved","activated"].includes(request.status));
  const verified=Boolean(account?.verified);
  const connected=Boolean(account?.connectedToApp);
  const line=route?.public_number||route?.twilio_number||account?.twilioPhone||"Sin asignar";
@@ -144,6 +145,7 @@ export function CallsPanel({supabase,profile,apiStatus,mode="dial",onNavigate}:{
     <div><b>1</b> Verificar el número <span>{verified?"✓":"Pendiente"}</span></div>
     <div><b>2</b> Recibir en iPhone <span>{connected?"✓":"Pendiente"}</span></div>
     <div><b>3</b> Probar llamada real <span>Sin confirmar</span></div>
+    <div><b>4</b> Menú bilingüe <span>{account?.menuPrepared?"Listo para probar":"No habilitado"}</span></div>
    </div>
    <button className="vmv-secondary-cta" onClick={()=>void refresh()} disabled={loading}>{loading?"Cargando…":"Actualizar"}</button>
   </div>
@@ -151,12 +153,13 @@ export function CallsPanel({supabase,profile,apiStatus,mode="dial",onNavigate}:{
   <div className="vmv-compact-card vmv-number-request">
    <h2>Conexión con tu operador</h2><p className="vmv-muted vmv-carrier-explanation">Conservas tu número. VMV Call recibe la llamada solo después de configurar el desvío.</p>
    <div className="form-grid">
-    <div><label className="label" htmlFor="vmv-carrier">Operador</label><select id="vmv-carrier" className="field" value={carrier} onChange={e=>setCarrier(e.target.value)} disabled={request?.status==="pending"}>{carriers.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></div>
+    <div><label className="label" htmlFor="vmv-carrier">Operador</label><select id="vmv-carrier" className="field" value={carrier} onChange={e=>setCarrier(e.target.value)} disabled={lockedRequest}>{carriers.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></div>
     <div><label className="label" htmlFor="vmv-connection">Desvío</label><select id="vmv-connection" className="field" value={connectionMode} onChange={e=>setConnectionMode(e.target.value)} disabled={request?.status==="pending"}><option value="conditional">Condicional</option><option value="all_calls">Todas</option><option value="port">Portabilidad (consulta)</option></select></div>
    </div>
    <label className="label" htmlFor="vmv-answer">Recibir en</label><select id="vmv-answer" className="field" value={answerMethod} onChange={e=>setAnswerMethod(e.target.value)} disabled={request?.status==="pending"}><option value="app">App de iPhone</option><option value="separate_line" disabled>Otra línea (próximamente)</option></select>
    {request&&<div className="vmv-request-status">Solicitud: {requestLabels[request.status]||request.status}</div>}
-   <button type="button" className="btn primary block" disabled={requestBusy||active||request?.status==="pending"||loading} onClick={()=>void submitRequest()}><ArrowRight size={16}/>{requestBusy?"Enviando…":active?"Línea asignada":request?.status==="pending"?"En revisión":"Solicitar conexión"}</button>
+   {lockedRequest&&<p className="vmv-tiny-disclaimer">Para cambiar operador o número después de solicitarlo, contacta soporte y vuelve a verificar.</p>}
+   <button type="button" className="btn primary block" disabled={requestBusy||active||lockedRequest||loading} onClick={()=>void submitRequest()}><ArrowRight size={16}/>{requestBusy?"Enviando…":active?"Línea asignada":lockedRequest?"Solicitud en revisión":"Solicitar conexión"}</button>
    <p className="vmv-tiny-disclaimer">Solo la prueba real confirma que tu número habitual llega a VMV Call.</p><details className="vmv-safety-details"><summary><Info size={15}/> Desvío y seguridad</summary>
     <p>Guardar o solicitar no compra números ni activa el desvío. Verifica tu número y comprueba llamadas reales con el iPhone bloqueado antes de modificar Verizon u otro operador.</p>
     <p>No desvíes llamadas de vuelta al mismo número: puede crear un bucle. La portabilidad puede afectar las llamadas y SMS del operador.</p>
@@ -167,7 +170,7 @@ export function CallsPanel({supabase,profile,apiStatus,mode="dial",onNavigate}:{
     <h2>Al recibir una llamada</h2>
     <div><span>🇪🇸 Español</span><strong>Directo · sin minutos IA</strong></div>
     <div><span>🇺🇸 English</span><strong>Traductor · con minutos IA</strong></div>
-    <p className="vmv-tiny-disclaimer">El menú se habilita tras las pruebas. Los costes de telefonía del operador se aplican por separado.</p>
+    <p className="vmv-tiny-disclaimer">El menú y el desvío necesitan pruebas reales antes de activarse. Pueden existir costes de telefonía externos.</p>
    </div>
   {feedback}
  </section>;
