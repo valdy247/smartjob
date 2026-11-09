@@ -618,7 +618,7 @@ export default function App(){
      <Text style={styles.incomingKicker}>VMV CALL · {call?"EN LLAMADA":"LLAMADA ENTRANTE"}</Text>
      <Text style={styles.incomingSymbol}>◉</Text>
      <Text style={styles.incomingName}>{call?"Conectado":"Cliente"}</Text>
-     <Text style={styles.incomingLang}>Español ⇄ English</Text>
+     <Text style={styles.incomingLang}>{inboundLanguage==="es"?"Español · directo":inboundLanguage==="en"?"English ⇄ Español":"VMV Call"}</Text>
      <Text style={styles.incomingStatus}>{call?status:"Traducción telefónica"}</Text>
      <View style={styles.incomingActions}>
       {invite?<><Pressable style={[styles.incomingRound,{backgroundColor:"#AD3F56"}]} accessibilityLabel="Rechazar llamada" onPress={()=>void reject()}><Text style={styles.incomingActionIcon}>✕</Text><Text style={styles.incomingActionText}>Rechazar</Text></Pressable>
