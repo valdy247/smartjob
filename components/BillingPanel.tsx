@@ -68,7 +68,7 @@ export function BillingPanel({supabase,userId,mode="full"}:{supabase:SupabaseCli
    {overview?.hasPortal&&<button type="button" className="vmv-secondary-cta" disabled={busy} onClick={()=>void action("/api/billing/portal")}>Gestionar suscripción <ArrowRight size={15}/></button>}
    {overview?.topup&&<button type="button" className="vmv-secondary-cta" disabled={busy||!overview.topup.available} onClick={()=>void action("/api/billing/topup",overview.topup!.plan)}>Recargar {overview.topup.minutes} min · ${(overview.topup.priceCents/100).toFixed(2)}</button>}
   </div></>}
-  <details open={mode==="greetings"?true:undefined} className="vmv-compact-card vmv-voice-prefs">
+  {mode==="greetings"&&<details open className="vmv-compact-card vmv-voice-prefs">
    <summary><Volume2 size={19}/> Voces y saludos <ChevronDown size={17}/></summary>
    <p className="vmv-muted vmv-greeting-explainer">Todos los planes incluyen selección de idioma. El saludo personalizado se reproduce antes del menú.</p>
    {prefs?<><div className="form-grid">
@@ -80,7 +80,7 @@ export function BillingPanel({supabase,userId,mode="full"}:{supabase:SupabaseCli
    <button type="button" className="btn primary block" disabled={!prefs.editable||busy} onClick={()=>void save()}><Check size={16}/> Guardar</button>
    {!prefs.editable&&<p className="vmv-tiny-disclaimer">Personalización disponible en Pro y Premium activos.</p>}
    </>:<p className="vmv-muted">No disponible.</p>}
-  </details>
+  </details>}
   {message&&<p role="status" className="notice info vmv-inline-feedback">{message}</p>}
  </div>;
 }
