@@ -44,7 +44,7 @@ export function verifyPartnerSignature(bridge:string,route:string,customer:strin
   const expected=Buffer.from(partnerSignature(bridge,route,customer),"hex"),actual=Buffer.from(signature,"hex");
   return expected.length===actual.length&&timingSafeEqual(expected,actual);
 }
-export async function reservePhoneSession(bridge:string,route:ActivePhoneRoute){
+export async function reservePhoneSession(bridge:string,route:ActivePhoneRoute,mode:"direct"|"translated"="translated"){
   const db=admin();
   if(!db||!sid.test(bridge))return false;
   const old=new Date(Date.now()-20*60*1000).toISOString();
@@ -58,7 +58,7 @@ export async function reservePhoneSession(bridge:string,route:ActivePhoneRoute){
   if(counterror||count===null||count>=60)return false;
   // One outstanding reservation per owner enforced by a partial unique index.
   const {error}=await db.from("smartjob_call_sessions").insert({
-    bridge_sid:bridge,owner_id:route.user_id,route_id:route.id,status:"initiated"
+    bridge_sid:bridge,owner_id:route.user_id,route_id:route.id,status:"initiated",call_mode:mode
   });
   if(error){console.error("Smart Job reservation denied",error.code);return false;}
   return true;

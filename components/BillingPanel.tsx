@@ -6,7 +6,7 @@ type Plan={id:"starter"|"pro"|"premium";name:string;priceCents:number;minutes:nu
 type Overview={plans:Plan[];plan:string;status:string;subscriptionActive:boolean;periodEnd:string|null;minutes:{included:number;used:number;available:number;rollover:number;topup:number;reserved:number;temporaryHold:number;holdUntil:string|null};topup:{plan:string;minutes:number;priceCents:number;available:boolean}|null;billingMode:string;canCheckout:boolean;hasPortal:boolean;note:string};
 type Preferences={editable:boolean;settings:{voice_customer:string;voice_owner:string;greeting_customer:string;greeting_owner:string}};
 const defaultPrefs={voice_customer:"default",voice_owner:"default",greeting_customer:"",greeting_owner:""};
-export function BillingPanel({supabase,userId}:{supabase:SupabaseClient;userId:string}){
+export function BillingPanel({supabase,userId,mode="full"}:{supabase:SupabaseClient;userId:string;mode?:"full"|"greetings"}){
  const [overview,setOverview]=useState<Overview|null>(null),[prefs,setPrefs]=useState<Preferences|null>(null);
  const [edit,setEdit]=useState(defaultPrefs),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
  const [message,setMessage]=useState(""),[showPlans,setShowPlans]=useState(false);
@@ -47,7 +47,7 @@ export function BillingPanel({supabase,userId}:{supabase:SupabaseClient;userId:s
   finally{setBusy(false);}
  };
  return <div className="vmv-billing">
-  <div className="vmv-compact-card">
+  {mode==="full"&&<><div className="vmv-compact-card">
    <div className="vmv-between"><span className="vmv-small-label"><CreditCard size={19}/> Mi plan</span><span className="vmv-tag is-pending">{overview?.status==="active"?"Activo":"Prueba"}</span></div>
    <div className="vmv-billing-top"><div><strong>{overview?.plan==="none"?"Sin plan":overview?.plan?.toUpperCase()||"—"}</strong><small>Plan actual</small></div><div><strong>{overview?overview.minutes.available:"—"}</strong><small>Minutos restantes</small></div></div>
    <div className="vmv-billing-minutes"><span>Usados: {overview?overview.minutes.used:"—"}</span><span>Incluidos: {overview?overview.minutes.included:"—"}</span></div>
@@ -67,19 +67,20 @@ export function BillingPanel({supabase,userId}:{supabase:SupabaseClient;userId:s
    </div>}
    {overview?.hasPortal&&<button type="button" className="vmv-secondary-cta" disabled={busy} onClick={()=>void action("/api/billing/portal")}>Gestionar suscripción <ArrowRight size={15}/></button>}
    {overview?.topup&&<button type="button" className="vmv-secondary-cta" disabled={busy||!overview.topup.available} onClick={()=>void action("/api/billing/topup",overview.topup!.plan)}>Recargar {overview.topup.minutes} min · ${(overview.topup.priceCents/100).toFixed(2)}</button>}
-  </div>
-  <details className="vmv-compact-card vmv-voice-prefs">
+  </div></>}
+  {mode==="greetings"&&<details open className="vmv-compact-card vmv-voice-prefs">
    <summary><Volume2 size={19}/> Voces y saludos <ChevronDown size={17}/></summary>
+   <p className="vmv-muted vmv-greeting-explainer">Todos los planes incluyen selección de idioma. El saludo personalizado se reproduce antes del menú.</p>
    {prefs?<><div className="form-grid">
     <div><label className="label" htmlFor="vmv-voice-owner">Tu voz</label><select id="vmv-voice-owner" className="field" value={edit.voice_owner} disabled={!prefs.editable||busy} onChange={e=>setEdit({...edit,voice_owner:e.target.value})}><option value="default">Estándar</option><option value="bright">Clara</option><option value="calm">Serena</option></select></div>
     <div><label className="label" htmlFor="vmv-voice-customer">Voz del cliente</label><select id="vmv-voice-customer" className="field" value={edit.voice_customer} disabled={!prefs.editable||busy} onChange={e=>setEdit({...edit,voice_customer:e.target.value})}><option value="default">Estándar</option><option value="bright">Clara</option><option value="calm">Serena</option></select></div>
    </div>
-   <label className="label" htmlFor="vmv-greeting-owner">Saludo para ti</label><input id="vmv-greeting-owner" className="field" maxLength={180} value={edit.greeting_owner} disabled={!prefs.editable||busy} onChange={e=>setEdit({...edit,greeting_owner:e.target.value})}/>
-   <label className="label" htmlFor="vmv-greeting-customer">Saludo al cliente</label><input id="vmv-greeting-customer" className="field" maxLength={180} value={edit.greeting_customer} disabled={!prefs.editable||busy} onChange={e=>setEdit({...edit,greeting_customer:e.target.value})}/>
+   <label className="label" htmlFor="vmv-greeting-owner">Mensaje para ti al traducir</label><textarea id="vmv-greeting-owner" className="field" rows={2} maxLength={180} value={edit.greeting_owner} disabled={!prefs.editable||busy} onChange={e=>setEdit({...edit,greeting_owner:e.target.value})}/>
+   <label className="label" htmlFor="vmv-greeting-customer">Saludo inicial (antes de elegir idioma)</label><textarea id="vmv-greeting-customer" className="field" rows={3} maxLength={180} placeholder="Gracias por llamar. Para continuar..." value={edit.greeting_customer} disabled={!prefs.editable||busy} onChange={e=>setEdit({...edit,greeting_customer:e.target.value})}/><p className="vmv-tiny-disclaimer">{edit.greeting_customer.length}/180 caracteres</p>
    <button type="button" className="btn primary block" disabled={!prefs.editable||busy} onClick={()=>void save()}><Check size={16}/> Guardar</button>
-   {!prefs.editable&&<p className="vmv-tiny-disclaimer">Disponible en Pro y Premium.</p>}
+   {!prefs.editable&&<p className="vmv-tiny-disclaimer">Personalización disponible en Pro y Premium activos.</p>}
    </>:<p className="vmv-muted">No disponible.</p>}
-  </details>
+  </details>}
   {message&&<p role="status" className="notice info vmv-inline-feedback">{message}</p>}
  </div>;
 }

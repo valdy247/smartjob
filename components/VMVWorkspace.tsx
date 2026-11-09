@@ -42,7 +42,7 @@ export default function VMVWorkspace({profile,supabase,status,onProfile,onLogout
   {title:"CUENTA",items:[{id:"profile",label:"Mi perfil",desc:"",Icon:BookUser},{id:"security",label:"Seguridad",desc:"",Icon:LockKeyhole}]},
   {title:"LLAMADAS",items:[{id:"numbers",label:"Números y verificación",desc:"",Icon:PhoneCall},{id:"history",label:"Historial",desc:"",Icon:History}]},
   {title:"PAGOS",items:[{id:"billing",label:"Plan y pagos",desc:"",Icon:CreditCard}]},
-  {title:"MÁS",items:[{id:"style",label:"Idiomas, voz y estilo",desc:"",Icon:Languages},{id:"services",label:"Otros servicios",desc:"",Icon:Sparkles},{id:"support",label:"Soporte",desc:"",Icon:Headphones}]}
+  {title:"MÁS",items:[{id:"style",label:"Idiomas y asistente",desc:"",Icon:Languages},{id:"services",label:"Otros servicios",desc:"",Icon:Sparkles},{id:"support",label:"Soporte",desc:"",Icon:Headphones}]}
  ];
  return <div className="vmv-app-shell">
   <header className="vmv-topbar"><button type="button" onClick={()=>changeTab("home")} className="vmv-logo-button"><Brand/></button><button type="button" className="vmv-profile-circle" aria-label="Abrir ajustes" onClick={()=>goSettings("menu")}>{profile.first_name.slice(0,1).toUpperCase()}</button></header>
@@ -72,13 +72,13 @@ export default function VMVWorkspace({profile,supabase,status,onProfile,onLogout
      <button className="vmv-logout" onClick={onLogout}><LogOut size={17}/> Cerrar sesión</button>
     </>:<>
      <button className="vmv-back" onClick={()=>setSettingsView("menu")}><ArrowLeft size={18}/> Ajustes</button>
-     <h1 className="vmv-subtitle">{({profile:"Mi perfil",numbers:"Mi línea",billing:"Plan y pagos",history:"Historial",security:"Seguridad",style:"Personalización",support:"Soporte",services:"Otros servicios",menu:"Ajustes"} as Record<SettingsView,string>)[settingsView]}</h1>
+     <h1 className="vmv-subtitle">{({profile:"Mi perfil",numbers:"Mi línea",billing:"Plan y pagos",history:"Historial",security:"Seguridad",style:"Idiomas y asistente",support:"Soporte",services:"Otros servicios",menu:"Ajustes"} as Record<SettingsView,string>)[settingsView]}</h1>
      {settingsView==="profile"&&<SettingsPanel key={profile.id} profile={profile} supabase={supabase} onChange={onProfile} status={status} onLogout={onLogout}/>}
      {settingsView==="numbers"&&<CallsPanel mode="numbers" profile={profile} supabase={supabase} apiStatus={status}/>}
      {settingsView==="billing"&&<BillingPanel supabase={supabase} userId={profile.id}/>}
      {settingsView==="history"&&<CallsPanel mode="history" profile={profile} supabase={supabase} apiStatus={status}/>}
      {settingsView==="security"&&<section className="vmv-compact-card"><ShieldCheck size={26}/><h2>Acceso seguro</h2><p className="vmv-muted">Protege tus códigos y contraseña.</p><button className="vmv-secondary-cta" onClick={onLogout}>Cerrar sesión</button></section>}
-     {settingsView==="style"&&<section className="vmv-compact-card"><Languages size={26}/><h2>Idiomas y voces</h2><p className="vmv-muted">{profile.owner_language.toUpperCase()} ⇄ {profile.customer_language.toUpperCase()}</p><button className="vmv-secondary-cta" onClick={()=>setSettingsView("profile")}>Cambiar idiomas</button><button className="vmv-secondary-cta" onClick={()=>setSettingsView("billing")}>Configurar voces y saludos</button><a className="vmv-secondary-cta" style={{textAlign:"center",textDecoration:"none"}} href="/vista-llamada">Ver pantalla de llamada entrante ↗</a></section>}
+     {settingsView==="style"&&<><CallsPanel mode="preferences" profile={profile} supabase={supabase} apiStatus={status}/><BillingPanel mode="greetings" supabase={supabase} userId={profile.id}/></>}
      {settingsView==="support"&&<section className="vmv-compact-card"><Headphones size={26}/><h2>Centro de ayuda</h2><p className="vmv-muted">Si una llamada no conecta, revisa la verificación y el registro de voz en la app del iPhone.</p><button className="vmv-secondary-cta" onClick={()=>setSettingsView("numbers")}>Ver mi línea</button></section>}
      {settingsView==="services"&&<section className="vmv-compact-card"><Sparkles size={26}/><h2>Más herramientas</h2><p className="vmv-muted">Intérprete en persona y asistente privado disponibles en Traductor.</p><button className="vmv-secondary-cta" onClick={()=>changeTab("live")}>Abrir traductor</button></section>}
     </>}

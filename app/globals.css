@@ -435,3 +435,25 @@ body:before{background:radial-gradient(ellipse 58vw 35vw at 80% -15%,#52e6cd13,t
  .vmv-number-form .form-grid,.vmv-number-request .form-grid,.vmv-profile-form .form-grid{grid-template-columns:1fr;gap:0}
  .vmv-call-quick-links button{font-size:12px;gap:5px}
 }
+
+
+/* Bilingual routing: keep setup honest and readable at phone widths */
+.vmv-route-check{margin:18px 0 6px;display:flex;flex-direction:column;border-radius:14px;overflow:hidden;border:1px solid #31515a;background:#112932}
+.vmv-route-check>div{display:flex;align-items:center;gap:11px;min-height:43px;padding:10px 13px;border-bottom:1px solid #2b464d;font-size:12px;font-weight:600;color:#e3f3ef}
+.vmv-route-check>div:last-child{border-bottom:0}
+.vmv-route-check b{font-size:11px;width:22px;height:22px;flex-shrink:0;display:grid;place-items:center;background:#29534e;border-radius:50%;color:#7af9dd}
+.vmv-route-check span{margin-left:auto;font-size:11px;color:#a7c5cc;font-weight:700;text-align:right}
+.vmv-carrier-explanation{margin:9px 0 18px;font-size:12px;line-height:1.6}
+.vmv-setup-warning{margin:12px 0;padding:12px 14px;border:1px solid #665133;border-radius:12px;background:#382d1e;color:#ffe2aa;font-size:12px;line-height:1.6}
+.vmv-language-explainer{display:grid;gap:13px}
+.vmv-language-explainer>div{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#dbeee9;font-size:13px}
+.vmv-language-explainer strong{color:#72ead1;font-size:12px;text-align:right}
+.vmv-greeting-explainer{font-size:12px;margin:0 0 20px}
+.vmv-voice-prefs textarea.field{height:auto;min-height:86px;resize:vertical;line-height:1.5}
+.vmv-number-settings .vmv-number-form .vmv-tiny-disclaimer{margin:8px 0 0}
+@media(max-width:440px){
+ .vmv-route-check>div{font-size:11px}
+ .vmv-route-check span{font-size:10px}
+ .vmv-language-explainer>div{font-size:12px}
+ .vmv-language-explainer strong{font-size:11px}
+}

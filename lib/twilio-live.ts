@@ -41,10 +41,10 @@ export function validatedConfig(config:RelayOptions){
 }
 export function bridgeTwiML(role:"customer"|"professional",bridge:string,config?:RelayOptions){
   const lang=role==="customer"?(config?.customerLanguage||"en-US"):(config?.ownerLanguage||"es-ES");
-  const name=(config?.assistantName||"Mayuli").replace(/[^\p{L}\p{N} .'-]/gu,"").slice(0,35);
+  const name=(config?.assistantName||"tu contacto").replace(/[^\p{L}\p{N} .'-]/gu,"").slice(0,35);
   const standardGreeting=lang==="en-US"
-    ?"Welcome to Smart Job. This call uses live AI interpretation. We are connecting you with "+name+". Please speak English."
-    :"Bienvenido a Smart Job. Esta llamada utiliza interpretación en vivo con inteligencia artificial. Habla español con normalidad.";
+    ?"VMV Call. Live interpretation is on. Connecting you with "+name+". Speak English."
+    :"VMV Call. Traducción activa. Puedes hablar español.";
   const customGreeting=role==="customer"?config?.greetingCustomer:config?.greetingOwner;
   const greet=customGreeting&&customGreeting.length<=180?customGreeting:standardGreeting;
   const chosenVoice=role==="customer"?config?.voiceCustomer:config?.voiceOwner;
@@ -70,6 +70,6 @@ export async function verifiedLiveRequest(req:NextRequest,expectedTo?:string|nul
   return authenticTwilio(req,expectedTo);
 }
 export function notReady(){
-  return twiml(say("Smart Job. El modo de traducción en vivo está en preparación.")+"<Hangup/>");
+  return twiml(say("VMV Call. El servicio de traducción no está disponible.")+"<Hangup/>");
 }
 export const baseUrl=PILOT_BASE;

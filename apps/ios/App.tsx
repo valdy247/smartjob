@@ -26,8 +26,13 @@ export default function App(){
  const [activeTab,setActiveTab]=useState<"home"|"calls"|"live"|"settings">("home");
  const [keyboardVisible,setKeyboardVisible]=useState(false),[forwardHelpOpen,setForwardHelpOpen]=useState(false);
  const [settingsPage,setSettingsPage]=useState<"menu"|"numbers"|"billing"|"history"|"security"|"profile"|"style"|"support"|"services">("menu");
- const [callHistory,setCallHistory]=useState<{bridge_sid:string;status:string;duration_seconds:number|null;started_at:string}[]>([]);
+ const [callHistory,setCallHistory]=useState<{bridge_sid:string;status:string;duration_seconds:number|null;started_at:string;call_mode:string}[]>([]);
  const [historyBusy,setHistoryBusy]=useState(false);
+ const [assistantPrefs,setAssistantPrefs]=useState({existing_phone:"",desired_language:"es",caller_language:"en",assistant_name:""});
+ const [greetingPrefs,setGreetingPrefs]=useState({voice_customer:"default",voice_owner:"default",greeting_customer:"",greeting_owner:""});
+ const [greetingEditable,setGreetingEditable]=useState(false);
+ const [customizationBusy,setCustomizationBusy]=useState(false),[customizationMessage,setCustomizationMessage]=useState("");
+ const [inboundLanguage,setInboundLanguage]=useState<"es"|"en"|"unknown">("unknown");
  const [translationText,setTranslationText]=useState("");
  const [translationActor,setTranslationActor]=useState<"owner"|"customer">("owner");
  const [translationConsent,setTranslationConsent]=useState(false);
@@ -42,7 +47,7 @@ export default function App(){
  const [voiceDiagnostic,setVoiceDiagnostic]=useState("Sin diagnóstico de registro todavía.");
  const [accountOverview,setAccountOverview]=useState<{
   verified:boolean;connectedToApp:boolean;forwardingReady:boolean;twilioPhone:string|null;
-  publicPhone:string|null;carrier:string|null;usage:{calls:number;completed:number;minutes:number;periodDays:number};
+  publicPhone:string|null;carrier:string|null;menuPrepared?:boolean;menuVerifiedByRealCall?:boolean;forwardingReported?:boolean;usage:{calls:number;completed:number;minutes:number;periodDays:number;directCalls?:number;translatedCalls?:number};
   billing:{enabled:boolean;message:string};
  }|null>(null);
  const [overviewBusy,setOverviewBusy]=useState(false);
@@ -78,11 +83,14 @@ export default function App(){
    listenersReady=true;
    voice.on(Voice.Event.CallInvite,(incoming:CallInvite)=>{
      inviteRef.current=incoming;setInvite(incoming);
-     setStatus("Llamada entrante · interpretación disponible");
+     setStatus("Llamada entrante");
+     const details=(incoming as unknown as {customParameters?:Map<string,string>|Record<string,string>}).customParameters;
+     const language=details instanceof Map?details.get("vmv_language"):details?.vmv_language;
+     setInboundLanguage(language==="es"?"es":language==="en"?"en":"unknown");
      const dismissInvite=()=>{
        if(inviteRef.current!==incoming)return;
        inviteRef.current=null;setInvite(null);
-       setStatus("La llamada terminó antes de contestar");
+       setInboundLanguage("unknown");setStatus("La llamada terminó antes de contestar");
        setVoiceDiagnostic("Twilio canceló la invitación antes de contestar.");
      };
      incoming.on(CallInvite.Event.Cancelled,dismissInvite);
@@ -263,7 +271,7 @@ export default function App(){
   setHistoryBusy(true);
   try{
    const {data,error:historyError}=await supabase.from("smartjob_call_sessions")
-     .select("bridge_sid,status,duration_seconds,started_at")
+     .select("bridge_sid,status,duration_seconds,started_at,call_mode")
      .eq("owner_id",sessionRef.current.user.id).order("started_at",{ascending:false}).limit(25);
    if(historyError)throw historyError;
    setCallHistory(data||[]);
@@ -350,6 +358,72 @@ export default function App(){
      setTranslationText("");
    }catch(e){setError(e instanceof Error?e.message:"Error de traducción.");}
    finally{setTranslationBusy(false);}
+ }
+ async function loadCustomization(){
+  if(!supabase||!sessionRef.current)return;
+  try{
+    const {data:settings}=await supabase.from("smartjob_call_settings")
+      .select("existing_phone,desired_language,caller_language,assistant_name")
+      .eq("user_id",sessionRef.current.user.id).maybeSingle();
+    if(settings)setAssistantPrefs({
+      existing_phone:settings.existing_phone||"",desired_language:settings.desired_language||"es",
+      caller_language:settings.caller_language||"en",assistant_name:settings.assistant_name||"Juan"
+    });
+    else setAssistantPrefs({existing_phone:"",desired_language:"es",caller_language:"en",assistant_name:"Juan"});
+    const {data}=await supabase.auth.getSession();
+    if(!data.session)return;
+    const response=await fetch(api+"/api/billing/preferences",{headers:{Authorization:"Bearer "+data.session.access_token}});
+    if(response.ok){
+      const info=await response.json() as {editable?:boolean;settings?:typeof greetingPrefs};
+      setGreetingEditable(info.editable===true);
+      if(info.settings)setGreetingPrefs(info.settings);
+    }
+  }catch{setCustomizationMessage("No se pudieron cargar todos los ajustes.");}
+ }
+ useEffect(()=>{
+  if(session?.user.id&&activeTab==="settings"&&(settingsPage==="style"||settingsPage==="profile"))void loadCustomization();
+ },[session?.user.id,activeTab,settingsPage]);
+ async function saveAssistantPrefs(){
+  if(!supabase||!sessionRef.current)return;
+  if(assistantPrefs.desired_language===assistantPrefs.caller_language){
+    setCustomizationMessage("Elige dos idiomas diferentes.");return;
+  }
+  const phone=assistantPrefs.existing_phone.replace(/[ ()-]/g,"");
+  if(!/^\+[1-9]\d{7,14}$/.test(phone)){
+    setCustomizationMessage("Escribe un teléfono válido con código de país.");return;
+  }
+  const assistant=assistantPrefs.assistant_name.trim();
+  if(!assistant||assistant.length>40){setCustomizationMessage("Escribe el nombre del asistente.");return;}
+  setCustomizationBusy(true);setCustomizationMessage("");
+  try{
+    const {error:saveError}=await supabase.from("smartjob_call_settings").upsert({
+      user_id:sessionRef.current.user.id,existing_phone:phone,forwarding_enabled:false,
+      desired_language:assistantPrefs.desired_language,caller_language:assistantPrefs.caller_language,
+      assistant_name:assistant,updated_at:new Date().toISOString()
+    });
+    if(saveError)throw saveError;
+    setCustomizationMessage("Preferencias guardadas. Los cambios en la línea activa requieren verificación.");
+  }catch{setCustomizationMessage("No se pudieron guardar las preferencias.");}
+  finally{setCustomizationBusy(false);}
+ }
+ async function saveGreetingPrefs(){
+  if(!greetingEditable||!supabase)return;
+  setCustomizationBusy(true);setCustomizationMessage("");
+  try{
+    const {data}=await supabase.auth.getSession();
+    if(!data.session)throw Error("session");
+    const response=await fetch(api+"/api/billing/preferences",{
+      method:"POST",headers:{Authorization:"Bearer "+data.session.access_token,
+        "Content-Type":"application/json"},
+      body:JSON.stringify({...greetingPrefs,
+        greeting_customer:greetingPrefs.greeting_customer.replace(/[\r\n]+/g," "),
+        greeting_owner:greetingPrefs.greeting_owner.replace(/[\r\n]+/g," ")})
+    });
+    if(!response.ok)throw Error("not_saved");
+    setCustomizationMessage("Saludo guardado para nuevas llamadas.");
+    await loadCustomization();
+  }catch{setCustomizationMessage("No se pudo guardar el saludo.");}
+  finally{setCustomizationBusy(false);}
  }
  async function login(){
    if(!supabase)return;
@@ -459,13 +533,13 @@ export default function App(){
        <Text style={styles.groupTitle}>SUSCRIPCIÓN</Text>
        <SettingRow emoji="💎" label="Plan y minutos" onPress={()=>setSettingsPage("billing")}/>
        <Text style={styles.groupTitle}>MÁS</Text>
-       <SettingRow emoji="🌐" label="Idiomas, voz y estilo" onPress={()=>setSettingsPage("style")}/>
+       <SettingRow emoji="🌐" label="Idiomas y asistente" onPress={()=>setSettingsPage("style")}/>
        <SettingRow emoji="✨" label="Otros servicios" onPress={()=>setSettingsPage("services")}/>
        <SettingRow emoji="🎧" label="Soporte" onPress={()=>setSettingsPage("support")}/>
        <Pressable style={styles.signout} onPress={()=>void logout()}><Text style={styles.signoutText}>Cerrar sesión</Text></Pressable>
       </>:<>
        <Pressable style={styles.backRow} onPress={()=>setSettingsPage("menu")}><Text style={styles.backText}>‹  Ajustes</Text></Pressable>
-       <Text style={styles.heading}>{({numbers:"Mi línea",billing:"Plan y billing",history:"Historial",security:"Seguridad",profile:"Perfil",style:"Personalización",support:"Soporte",services:"Otros servicios",menu:"Ajustes"} as Record<typeof settingsPage,string>)[settingsPage]}</Text>
+       <Text style={styles.heading}>{({numbers:"Mi línea",billing:"Plan y billing",history:"Historial",security:"Seguridad",profile:"Perfil",style:"Idiomas y asistente",support:"Soporte",services:"Otros servicios",menu:"Ajustes"} as Record<typeof settingsPage,string>)[settingsPage]}</Text>
        {settingsPage==="numbers"?<>
         <View style={styles.card}><Text style={styles.cardTitle}>Verificación SMS</Text>
          {verificationLoading?<ActivityIndicator color={colors.accent}/>:phoneVerification?
@@ -476,9 +550,11 @@ export default function App(){
           </>:<Button label="Consultar mi número" onPress={()=>void refreshPhoneVerification()}/>}
          {verifyMessage?<Text style={styles.verifyMessage}>{verifyMessage}</Text>:null}
         </View>
-        <View style={styles.card}><Text style={styles.cardTitle}>Desvío</Text>
+        <View style={styles.card}><Text style={styles.cardTitle}>Conexión con el operador</Text>
+         <Text style={styles.helper}>Operador: {accountOverview?.carrier?accountOverview.carrier.replace("att","AT&T").replace("tmobile","T-Mobile").replace(/^./,v=>v.toUpperCase()):"Pendiente"}</Text>
          <Text style={styles.featureNumber}>{accountOverview?.twilioPhone||"Pendiente"}</Text>
-         <Text style={styles.helper}>No actives el desvío antes de comprobar una llamada real con el iPhone bloqueado.</Text>
+         <Text style={styles.helper}>Menú bilingüe: {accountOverview?.menuPrepared?"Preparado para pruebas":"Pendiente"}</Text>
+         <Text style={styles.helper}>Desvío con tu número: sin confirmar. Requiere una llamada real desde otro teléfono.</Text>
          <Pressable accessibilityRole="button" accessibilityState={{expanded:forwardHelpOpen}} onPress={()=>setForwardHelpOpen(!forwardHelpOpen)} style={styles.settingRow}>
           <Text style={styles.settingLabel}>Instrucciones del operador</Text><Text style={styles.settingChevron}>{forwardHelpOpen?"⌄":"›"}</Text>
          </Pressable>
@@ -504,7 +580,30 @@ export default function App(){
         </View>:null}
        {settingsPage==="profile"?<View style={styles.card}><Text style={styles.cardTitle}>Mi cuenta</Text><Text style={styles.helper}>{session.user.email}</Text><Text style={styles.helper}>Los datos del perfil pueden editarse en la web.</Text></View>:null}
        {settingsPage==="security"?<View style={styles.card}><Text style={styles.cardTitle}>Acceso seguro</Text><Text style={styles.helper}>No compartas tu contraseña ni códigos de verificación.</Text><Button label="Cerrar sesión" danger onPress={()=>void logout()}/></View>:null}
-       {settingsPage==="style"?<View style={styles.card}><Text style={styles.cardTitle}>Idiomas y voces</Text><Text style={styles.helper}>{String(session.user.user_metadata?.owner_language||"es").toUpperCase()} ⇄ {String(session.user.user_metadata?.customer_language||"en").toUpperCase()}</Text><Text style={styles.helper}>Personaliza voces y saludos desde billing en la web.</Text></View>:null}
+       {settingsPage==="style"?<>
+         <View style={styles.card}>
+          <Text style={styles.cardTitle}>Idiomas</Text>
+          <Text style={styles.helper}>Tu idioma</Text>
+          <View style={styles.languageChoice}><Pressable style={[styles.languageOption,assistantPrefs.desired_language==="es"&&styles.languageSelected]} onPress={()=>setAssistantPrefs({...assistantPrefs,desired_language:"es",caller_language:"en"})}><Text style={styles.languageOptionText}>Español</Text></Pressable><Pressable style={[styles.languageOption,assistantPrefs.desired_language==="en"&&styles.languageSelected]} onPress={()=>setAssistantPrefs({...assistantPrefs,desired_language:"en",caller_language:"es"})}><Text style={styles.languageOptionText}>English</Text></Pressable></View>
+          <Text style={styles.helper}>Cliente: {assistantPrefs.caller_language==="en"?"English":"Español"}</Text>
+          <Text style={styles.cardTitle}>Asistente</Text>
+          <TextInput style={styles.field} placeholder="Nombre de tu asistente" placeholderTextColor="#718D95" maxLength={40} value={assistantPrefs.assistant_name} onChangeText={v=>setAssistantPrefs({...assistantPrefs,assistant_name:v})}/>
+          <Text style={styles.helper}>Tu número actual</Text>
+          <TextInput style={styles.field} keyboardType="phone-pad" placeholder="+17060000000" placeholderTextColor="#718D95" value={assistantPrefs.existing_phone} onChangeText={v=>setAssistantPrefs({...assistantPrefs,existing_phone:v})}/>
+          <Button label={customizationBusy?"Guardando…":"Guardar preferencias"} disabled={customizationBusy} onPress={()=>void saveAssistantPrefs()}/>
+         </View>
+         <View style={styles.card}>
+          <Text style={styles.cardTitle}>Saludo de llamadas</Text>
+          <Text style={styles.helper}>Todos los planes preguntan español o inglés. Personaliza la introducción con Pro o Premium activo.</Text>
+          <TextInput style={[styles.field,styles.greetingEditor]} multiline textAlignVertical="top" maxLength={180} editable={greetingEditable&&!customizationBusy}
+           placeholder="Gracias por llamar..." placeholderTextColor="#718D95"
+           value={greetingPrefs.greeting_customer} onChangeText={v=>setGreetingPrefs({...greetingPrefs,greeting_customer:v})}/>
+          <Text style={styles.helper}>{greetingPrefs.greeting_customer.length}/180 caracteres</Text>
+          <Button label={customizationBusy?"Guardando…":"Guardar saludo"} disabled={customizationBusy||!greetingEditable} onPress={()=>void saveGreetingPrefs()}/>
+          {!greetingEditable?<Text style={styles.helper}>Requiere un plan Pro o Premium activo.</Text>:null}
+         </View>
+         {customizationMessage?<Text style={styles.helper}>{customizationMessage}</Text>:null}
+        </>:null}
        {settingsPage==="support"?<View style={styles.card}><Text style={styles.cardTitle}>Diagnóstico de voz</Text><Text style={styles.helper}>{voiceDiagnostic}</Text><Text style={styles.helper}>{status}</Text><Button label="Actualizar conexión" onPress={()=>void registerPhone()} disabled={registering}/></View>:null}
        {settingsPage==="services"?<View style={styles.card}><Text style={styles.cardTitle}>Intérprete en persona</Text><Text style={styles.helper}>Traduce mensajes sin hacer una llamada.</Text><Button label="Abrir traductor" onPress={()=>setActiveTab("live")}/></View>:null}
       </>}
@@ -521,7 +620,7 @@ export default function App(){
      <Text style={styles.incomingKicker}>VMV CALL · {call?"EN LLAMADA":"LLAMADA ENTRANTE"}</Text>
      <Text style={styles.incomingSymbol}>◉</Text>
      <Text style={styles.incomingName}>{call?"Conectado":"Cliente"}</Text>
-     <Text style={styles.incomingLang}>Español ⇄ English</Text>
+     <Text style={styles.incomingLang}>{inboundLanguage==="es"?"Español · directo":inboundLanguage==="en"?"English ⇄ Español":"VMV Call"}</Text>
      <Text style={styles.incomingStatus}>{call?status:"Traducción telefónica"}</Text>
      <View style={styles.incomingActions}>
       {invite?<><Pressable style={[styles.incomingRound,{backgroundColor:"#AD3F56"}]} accessibilityLabel="Rechazar llamada" onPress={()=>void reject()}><Text style={styles.incomingActionIcon}>✕</Text><Text style={styles.incomingActionText}>Rechazar</Text></Pressable>
@@ -609,6 +708,12 @@ const styles=StyleSheet.create({
  bottomLabel:{color:"#839CA4",fontSize:10,fontWeight:"700",marginTop:1},
  bottomLabelActive:{color:"#FFFFFF",marginTop:-4},
  groupTitle:{color:colors.accent,fontSize:11,fontWeight:"800",letterSpacing:1.7,marginTop:20,marginBottom:8},
+ languageChoice:{flexDirection:"row",gap:10,marginVertical:11},
+ languageOption:{flex:1,alignItems:"center",justifyContent:"center",padding:13,backgroundColor:"#1C3941",borderRadius:12,borderWidth:1,borderColor:"#29474E"},
+ languageSelected:{borderColor:colors.accent,backgroundColor:"#194F45"},
+ languageOptionText:{fontSize:14,fontWeight:"700",color:colors.text},
+ greetingEditor:{height:105,paddingTop:12},
+
 
  historyRefresh:{width:38,height:38,borderRadius:12,backgroundColor:"#21414A",alignItems:"center",justifyContent:"center"},
  historyRefreshText:{fontSize:25,color:colors.accent},
