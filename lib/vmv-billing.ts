@@ -31,6 +31,16 @@ export const billingEnabledFor=(userId:string)=>Boolean(
  /^[a-f0-9-]{36}$/i.test(process.env.SMARTJOB_BILLING_TEST_OWNER_ID||"")&&
  process.env.SMARTJOB_BILLING_TEST_OWNER_ID===userId
 );
+// Preview-only phone timeout for a single whitelisted sandbox account.
+// This does not change the user's paid balance or enable billing enforcement.
+export const testCallCapSecondsFor=(userId:string):number|null=>{
+ const raw=Number(process.env.SMARTJOB_TEST_CALL_CAP_SECONDS||0);
+ return process.env.VERCEL_ENV==="preview"&&
+   process.env.SMARTJOB_STRIPE_MODE==="test"&&
+   process.env.SMARTJOB_BILLING_TEST_OWNER_ID===userId&&
+   /^[a-f0-9-]{36}$/i.test(userId)&&
+   Number.isInteger(raw)&&raw>=60&&raw<=1800?raw:null;
+};
 export function billingAdmin(){
  const url=process.env.NEXT_PUBLIC_SUPABASE_URL,secret=process.env.SUPABASE_SECRET_KEY;
  return url&&secret?createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}}):null;
