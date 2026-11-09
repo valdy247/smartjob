@@ -1,0 +1,224 @@
+/* VMV Call / Mint 2026 — visual layer only; no telephony or billing changes. */
+html:has(.vmv-app-shell){color-scheme:light}
+body:has(.vmv-app-shell){background:#fafdfc;color:#121827}
+body:has(.vmv-app-shell)::before{background:radial-gradient(ellipse 50vw 40vw at 93% -14%,#63e9d41a,transparent 82%),radial-gradient(ellipse 60vw 35vw at -15% 94%,#e4fbf7c2,transparent 90%)}
+.vmv-app-shell{
+ --bg:#f8fbfa;--panel:#ffffff;--panel2:#f3fbf9;--line:#dde9e8;
+ --sub:#69717f;--lime:#00bb98;--white:#151c2c;--coral:#db6782;
+ background:transparent;color:#111827;color-scheme:light;
+ min-height:100dvh;max-width:1050px;padding:0 25px calc(132px + env(safe-area-inset-bottom,0px))
+}
+.vmv-topbar{height:100px;border:0;padding:9px 0 11px;gap:18px}
+.vmv-logo-button{display:inline-flex;align-items:center;background:transparent;border:0;color:#101827}
+.vmv-topbar .brand{gap:13px}
+.vmv-topbar .brandmark{width:57px;height:57px;border-radius:17px;color:#052822;background:linear-gradient(150deg,#5effe1,#02d8b2 85%);box-shadow:0 8px 20px #00cda824}
+.vmv-topbar .brandmark svg{width:31px;height:31px;stroke-width:2.8}
+.vmv-topbar .brandname{color:#111827;font-size:clamp(22px,4vw,31px);font-family:"Space Grotesk",sans-serif;font-weight:700;letter-spacing:-1.2px;text-transform:uppercase}
+.vmv-topbar .brandname em{color:#00ad8c}
+.vmv-profile-circle{width:50px;height:50px;background:linear-gradient(135deg,#c5f9ef,#a9f4e5);border:0;border-radius:50%;color:#056347;font-size:18px;font-weight:800;box-shadow:none}
+.vmv-main{max-width:900px;padding:20px 0 0}
+.vmv-home{max-width:900px}
+.vmv-home-intro{margin:0 12px 28px}
+.vmv-eyebrow{font-size:12px;letter-spacing:3.2px;color:#08a784;font-weight:800;margin:0 0 12px}
+.vmv-title{font-family:"Space Grotesk",sans-serif;font-weight:700;letter-spacing:-2.3px;font-size:clamp(35px,6vw,50px);line-height:1.13;color:#121826;margin:0 0 6px}
+.vmv-accent{color:#00ad8d}
+.vmv-home-subtitle{color:#707481;font-size:clamp(15px,2.4vw,21px);font-weight:500;margin:0}
+.vmv-feature-card{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.06fr) minmax(0,.94fr);align-items:center;gap:14px;border:1px solid #e5f3f0;border-radius:30px;padding:28px 30px 28px 35px;background:linear-gradient(112deg,#edfcf9 0%,#f0fffb 43%,#d7faf3 100%);box-shadow:0 13px 28px #0a4e4720,0 2px 3px #1f555509}
+.vmv-feature-card::after{content:"";position:absolute;z-index:-1;width:350px;height:350px;right:-150px;top:-120px;border-radius:50%;background:radial-gradient(circle,#61ecce44,transparent 75%);pointer-events:none}
+.vmv-feature-call{min-height:318px}
+.vmv-feature-translate{min-height:226px;margin-top:23px;background:linear-gradient(120deg,#fff 4%,#f8fffd 50%,#e9fcf7 100%);box-shadow:0 12px 27px #0a4e4715,0 1px 3px #1f555506;border-color:#e7f0ef}
+.vmv-feature-content{position:relative;z-index:2;min-width:0}
+.vmv-feature-card h2{font-family:"Space Grotesk",sans-serif;font-size:clamp(26px,4vw,40px);line-height:1.09;letter-spacing:-1.6px;font-weight:700;color:#101827;margin:0 0 14px}
+.vmv-feature-translate h2{font-size:clamp(24px,3.5vw,33px)}
+.vmv-feature-card p{font-size:clamp(14px,2vw,18px);font-weight:500;color:#6b7380;margin:0}
+.vmv-feature-button{display:inline-flex;align-items:center;justify-content:space-between;gap:15px;border:0;border-radius:100px;min-height:58px;min-width:225px;padding:12px 21px;color:#fff;font-size:18px;font-weight:800;margin-top:35px;box-shadow:none;transition:transform .16s ease,box-shadow .16s ease}
+.vmv-feature-button:hover{transform:translateY(-2px);box-shadow:0 12px 22px #007d6b29}
+.vmv-feature-button-call{background:linear-gradient(100deg,#00b99a,#009f81)}
+.vmv-feature-button-translator{min-width:183px;margin-top:28px;background:linear-gradient(105deg,#d3fff2,#b7f6e8);color:#067153}
+.vmv-feature-button-translator:hover{box-shadow:0 9px 20px #5cdec21b}
+.vmv-artwork{width:100%;height:100%;min-height:130px;display:grid;place-items:center}
+.vmv-feature-artwork{min-width:0}
+.vmv-artwork img{width:100%;height:100%;max-height:325px;display:block;object-fit:contain;object-position:center;filter:drop-shadow(0 12px 15px #124b481d)}
+.vmv-artwork-hidden{display:none!important}
+.vmv-artwork-placeholder{width:min(100%,280px);height:100%;min-height:170px;max-height:262px;border:2px dashed #2ecbb25a;border-radius:26px;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;background:linear-gradient(142deg,#d9fff6ab,#a7f9e4a3);text-align:center;color:#087c6a;padding:18px}
+.vmv-artwork-number{font-size:clamp(18px,2.5vw,26px);font-weight:900;letter-spacing:.7px}
+.vmv-artwork-placeholder small{font-size:12px;line-height:1.5;color:#428f83}
+.vmv-feature-translate .vmv-artwork-placeholder{max-height:172px;min-height:150px;background:linear-gradient(142deg,#e4fff7,#c5fbef);border-color:#5bdac4aa}
+.vmv-home-languages{margin-top:31px}
+.vmv-home-languages h2{font-family:"Space Grotesk",sans-serif;font-size:25px;letter-spacing:-.8px;margin:0 0 16px;color:#131b28}
+.vmv-home-language-pair{display:grid;grid-template-columns:minmax(0,1fr) 56px minmax(0,1fr);align-items:center;gap:12px}
+.vmv-home-language{min-height:86px;display:flex;align-items:center;gap:15px;border-radius:25px;border:1px solid #dce8e9;background:linear-gradient(115deg,#fff,#e9fcf7);text-align:left;padding:15px 22px;color:#101827;box-shadow:0 3px 0 #fff}
+.vmv-home-language:hover{border-color:#9be4d5}
+.vmv-home-language strong,.vmv-home-language small{display:block}
+.vmv-home-language strong{font-size:24px;line-height:1.05;font-weight:800}
+.vmv-home-language small{margin-top:7px;font-size:13px;color:#69717f}
+.vmv-flag{display:grid;place-items:center;flex-shrink:0;width:49px;height:49px;border-radius:50%;background:#fff;box-shadow:0 3px 10px #4c85851b;font-size:32px;overflow:hidden}
+.vmv-language-exchange{color:#00ac88;font-size:33px;font-weight:700;line-height:1;text-align:center}
+.vmv-home-line{display:flex;align-items:center;gap:17px;width:100%;text-align:left;background:#fff;border:1px solid #e6eeee;border-radius:26px;padding:19px 24px;margin-top:28px;min-height:94px;color:#111827;box-shadow:0 9px 23px #12444313}
+.vmv-home-line:hover{border-color:#a8e8dd}
+.vmv-home-line-icon{flex-shrink:0;width:58px;height:58px;border-radius:20px;display:grid;place-items:center;background:linear-gradient(135deg,#d9fff1,#b9f9e7);color:#00694d}
+.vmv-home-line-details{flex:1;min-width:0}
+.vmv-home-line-details strong{font-size:20px;font-weight:800;display:block}
+.vmv-home-line-details small{display:block;margin-top:4px;font-size:16px;color:#696f7c;overflow-wrap:anywhere}
+.vmv-home-line-status{display:inline-flex;align-items:center;gap:9px;border-radius:100px;padding:11px 14px;font-size:14px;white-space:nowrap;font-weight:800}
+.vmv-home-line-status.ready{background:#e9fff1;color:#076935}
+.vmv-home-line-status.pending{background:#fff6e7;color:#86570f}
+.vmv-status-dot{width:10px;height:10px;flex-shrink:0;border-radius:50%;background:#c18b2c}
+.vmv-home-line-status.ready .vmv-status-dot{background:#27c965}
+.vmv-home-line-chevron{color:#616773;flex-shrink:0}
+
+/* Navigation: selected area grows as a rounded mint tile, not a floating badge. */
+.vmv-dock{width:min(490px,calc(100% - 30px));height:87px;background:#ffffffef;border:1px solid #ebf1f1;box-shadow:0 13px 35px #1c484526;border-radius:30px;padding:8px 9px 9px;bottom:calc(15px + env(safe-area-inset-bottom,0px));gap:5px;backdrop-filter:blur(15px)}
+.vmv-dock-item{flex:1;border-radius:24px;color:#6b737f;font-size:12px;gap:1px;font-weight:650;min-height:70px;transition:background .17s ease,color .17s ease}
+.vmv-dock-item.selected{background:linear-gradient(135deg,#d6fff5,#b5f9e8);color:#036949;font-weight:800}
+.vmv-dock-orb{width:36px;height:37px;border:0;background:transparent;transition:none}
+.vmv-dock-item.selected .vmv-dock-orb{background:transparent;transform:none;box-shadow:none;border:0}
+.vmv-dock-caption{position:static;font-size:12px}
+.vmv-dock-item:hover:not(.selected){background:#f3faf7}
+
+/* Inner navigation and feature workspaces */
+.vmv-context,.vmv-settings{color:#161e2a}
+.vmv-view-heading{margin:7px 0 23px}
+.vmv-context .vmv-view-heading{margin-bottom:23px}
+.vmv-context .vmv-title,.vmv-settings .vmv-title{color:#111827}
+.vmv-app-shell :is(.vmv-compact-card,.card,.vmv-settings-list,.vmv-call-entry,.vmv-call-focus,.vmv-billing-plan){background:#fff;color:#111827;border-color:#e0ecea;box-shadow:0 6px 21px #1e554809}
+.vmv-app-shell :is(.vmv-compact-card,.card){border-radius:23px}
+.vmv-app-shell .vmv-settings-list{overflow:hidden;border-radius:20px}
+.vmv-app-shell .vmv-settings-section h2{color:#0c9e80}
+.vmv-app-shell .vmv-settings-row{color:#18202c;border-bottom-color:#e9f0f0;background:#fff}
+.vmv-app-shell .vmv-settings-row:hover{background:#f1faf7}
+.vmv-app-shell .vmv-settings-copy b{color:#131c29}
+.vmv-app-shell .vmv-settings-copy small{color:#78818d}
+.vmv-app-shell .vmv-settings-icon{background:#e5fbf3;color:#038264}
+.vmv-app-shell .vmv-settings-row>svg{color:#78858b}
+.vmv-app-shell .vmv-logout{background:#fff3f3;color:#a83a54;border-color:#f4d8dd}
+.vmv-app-shell .vmv-back{color:#098b6d}
+.vmv-app-shell .vmv-subtitle{color:#131b26}
+.vmv-app-shell .vmv-muted,.vmv-app-shell .muted,.vmv-app-shell .helper{color:#697986}
+.vmv-app-shell .vmv-tiny-disclaimer{color:#76838b}
+.vmv-app-shell :is(.label){color:#576777}
+.vmv-app-shell :is(.field,input.field,select.field,textarea.field){background:#fbfefd;color:#17202c;border-color:#d4e4e1}
+.vmv-app-shell .field::placeholder{color:#8697a3}
+.vmv-app-shell .field:focus{border-color:#20caa9;box-shadow:0 0 0 3px #9eeadd45}
+.vmv-app-shell .btn{background:#e8f7f3;border-color:#d5e9e5;color:#12664f}
+.vmv-app-shell .btn.primary{background:linear-gradient(100deg,#29dfc0,#06b99b);color:#05372d;border-color:transparent}
+.vmv-app-shell .btn.ghost{color:#306459;border-color:#d9eae6}
+.vmv-app-shell .btn.danger{background:#fae4e8;color:#a74153;border-color:#f3ced7}
+.vmv-app-shell .notice{background:#e7faf4;color:#216354;border-color:#b4e9dc}
+.vmv-app-shell .notice.danger{background:#fff2f4;border-color:#f1d0d7;color:#ab3c58}
+.vmv-app-shell .pill{background:#dcfff3;color:#097b56;border-color:#b9f5df}
+.vmv-app-shell .pill.warning{background:#fff2de;color:#91651d;border-color:#f1dfbf}
+.vmv-app-shell .pill.off{background:#f2f5f5;color:#73808a;border-color:#dce6e5}
+.vmv-app-shell .vmv-big-cta{background:linear-gradient(110deg,#23dcc0,#00b594);color:#06342b}
+.vmv-app-shell .vmv-secondary-cta{background:#effbf8;border:1px solid #cfece2;color:#087b62}
+.vmv-app-shell .vmv-call-focus{background:linear-gradient(135deg,#ecfff8,#d8f8ef);border:1px solid #c5eee3;box-shadow:0 9px 25px #0a4f3f12}
+.vmv-app-shell .vmv-small-label{color:#245a51}
+.vmv-app-shell .vmv-call-large-number,.vmv-app-shell .vmv-number-value{color:#13202a}
+.vmv-app-shell .vmv-tag.is-live{color:#087c56;background:#d5fbe9}
+.vmv-app-shell .vmv-tag.is-pending{color:#865e22;background:#fff0d5}
+.vmv-app-shell .vmv-call-refresh,.vmv-app-shell .vmv-icon-button{color:#0b9f81;background:#e9f9f4;border:1px solid #c9ebe2}
+.vmv-app-shell .vmv-call-quick-links button{color:#1d2a36;border:1px solid #e0eeec;background:#fff}
+.vmv-app-shell .vmv-call-quick-links svg:last-child{color:#849396}
+.vmv-app-shell .vmv-call-quick-links svg:first-child{color:#099a7d}
+.vmv-app-shell .vmv-route-check{background:#f7fcfa;border-color:#d7ebe5}
+.vmv-app-shell .vmv-route-check>div{color:#24343a;border-bottom-color:#e5f0ec}
+.vmv-app-shell .vmv-route-check b{background:#dcf9eb;color:#047d5b}
+.vmv-app-shell .vmv-route-check span{color:#677e81}
+.vmv-app-shell .vmv-language-explainer>div{color:#29353b}
+.vmv-app-shell .vmv-language-explainer strong{color:#0b9c7b}
+.vmv-app-shell .vmv-request-status{color:#0c9777}
+.vmv-app-shell .vmv-setup-warning{background:#fff7e9;color:#92631b;border-color:#efdcbd}
+.vmv-app-shell .vmv-safety-details{border-top-color:#e5edec;color:#718088}
+.vmv-app-shell .vmv-safety-details summary{color:#34424c}
+.vmv-app-shell .vmv-profile-details summary{background:#f7fbfa;border-color:#e1eeea;color:#233440}
+.vmv-app-shell .vmv-billing-top strong{color:#10202b}
+.vmv-app-shell .vmv-billing-top small,.vmv-app-shell .vmv-billing-minutes{color:#71828c}
+.vmv-app-shell .vmv-billing-plan{background:#f8fdfb;border-color:#deeeea}
+.vmv-app-shell .vmv-billing-plan p,.vmv-app-shell .vmv-billing-plan small{color:#74858b}
+.vmv-app-shell .vmv-accordion-trigger{color:#17222d}
+.vmv-app-shell .vmv-voice-prefs summary{color:#23303a}
+.vmv-app-shell .vmv-call-entry{background:#fff;border-bottom-color:#e8eeee;box-shadow:none}
+.vmv-app-shell .vmv-entry-duration{color:#0f9877}
+.vmv-app-shell .vmv-empty-state{color:#798b90}
+.vmv-app-shell .vmv-translation-languages .field{background:#fbfffe;color:#17232e}
+.vmv-app-shell .vmv-swap{background:#e9fbf5;color:#0a997b;border-color:#bfe9dd}
+.vmv-app-shell .vmv-translation-speaker{background:linear-gradient(145deg,#dcfff4,#b7f8e7);border-color:#b2ecdd}
+.vmv-app-shell .vmv-translation-speaker.customer{background:linear-gradient(145deg,#fff4f7,#fce6ee);border-color:#f0dbe4}
+.vmv-app-shell .vmv-translation-speaker.recording{box-shadow:0 0 0 3px #2fcda944}
+.vmv-app-shell .vmv-speaker-label{color:#152a2a}
+.vmv-app-shell .vmv-translation-mic{color:#064b3a;background:linear-gradient(125deg,#55edca,#22d6ae);box-shadow:0 9px 16px #12b8962b}
+.vmv-app-shell .vmv-translation-speaker.customer .vmv-translation-mic{color:#773046;background:#ffc2d2;box-shadow:0 9px 16px #dd8ea536}
+.vmv-app-shell .vmv-mic-hint{color:#517b74}
+.vmv-app-shell .vmv-translation-switch{background:#ecf8f5}
+.vmv-app-shell .vmv-translation-switch button{color:#526d67}
+.vmv-app-shell .vmv-translation-switch button.selected{color:#007e61;background:#c9f7e8}
+.vmv-app-shell .vmv-send{background:#2edbb8;color:#073a2c}
+.vmv-app-shell .vmv-consent{color:#637782}
+.vmv-app-shell .vmv-translation-history .vmv-turn{background:#f5fdfb;border-color:#d4ede5}
+.vmv-app-shell .vmv-translation-history .vmv-turn.customer{background:#fff6f8;border-color:#efdee5}
+.vmv-app-shell .vmv-turn-label{color:#0c9f7f}
+.vmv-app-shell .vmv-turn.customer .vmv-turn-label{color:#ba667e}
+.vmv-app-shell .vmv-original{color:#71818b}
+.vmv-app-shell .vmv-output{color:#192631}
+.vmv-app-shell .vmv-replay{background:#dbfaef;color:#087f61}
+.vmv-app-shell .vmv-context-details summary{color:#1d2b35}
+.vmv-app-shell .vmv-translation-status{color:#0c8e74}
+.vmv-app-shell .vmv-empty-state svg{color:#00b995}
+.vmv-app-shell .vmv-language-exchange{user-select:none}
+.vmv-app-shell :is(button,input,select,textarea,summary):focus-visible{outline:3px solid #14b899;outline-offset:2px}
+@media(min-width:900px){.vmv-main{padding-top:13px}.vmv-feature-call{min-height:335px}.vmv-feature-translate{min-height:240px}}
+@media(max-width:620px){
+ .vmv-app-shell{padding:0 16px calc(128px + env(safe-area-inset-bottom,0px))}
+ .vmv-topbar{height:82px;padding:8px 0}
+ .vmv-topbar .brandmark{width:49px;height:49px;border-radius:16px}
+ .vmv-topbar .brandmark svg{width:27px;height:27px}
+ .vmv-topbar .brandname{font-size:24px}
+ .vmv-profile-circle{width:43px;height:43px}
+ .vmv-main{padding:13px 0 0}
+ .vmv-home-intro{margin:0 7px 26px}
+ .vmv-eyebrow{font-size:11px;letter-spacing:2.7px}
+ .vmv-title{font-size:39px;letter-spacing:-1.9px}
+ .vmv-home-subtitle{font-size:15px}
+ .vmv-feature-card{grid-template-columns:minmax(0,1.13fr) minmax(0,.87fr);gap:5px;border-radius:24px;padding:21px 14px 21px 20px}
+ .vmv-feature-call{min-height:257px}
+ .vmv-feature-translate{min-height:188px;margin-top:17px}
+ .vmv-feature-card h2{font-size:clamp(22px,6.4vw,31px);letter-spacing:-1.2px;line-height:1.12}
+ .vmv-feature-translate h2{font-size:clamp(23px,6.4vw,28px)}
+ .vmv-feature-card p{font-size:14px;line-height:1.3}
+ .vmv-feature-button{min-width:0;width:100%;min-height:50px;padding:10px 13px;font-size:15px;margin-top:28px;gap:7px}
+ .vmv-feature-button svg{width:18px}
+ .vmv-feature-button-translator{margin-top:22px}
+ .vmv-artwork-placeholder{border-radius:18px;min-height:160px;padding:6px;gap:6px}
+ .vmv-feature-translate .vmv-artwork-placeholder{min-height:118px;max-height:150px}
+ .vmv-artwork-number{font-size:19px}
+ .vmv-artwork-placeholder small{font-size:10px}
+ .vmv-home-languages{margin-top:26px}
+ .vmv-home-languages h2{font-size:23px}
+ .vmv-home-language-pair{grid-template-columns:minmax(0,1fr) 35px minmax(0,1fr);gap:5px}
+ .vmv-home-language{min-height:78px;border-radius:21px;padding:12px 9px;gap:9px}
+ .vmv-home-language strong{font-size:22px}
+ .vmv-home-language small{font-size:12px}
+ .vmv-flag{width:38px;height:38px;font-size:25px}
+ .vmv-language-exchange{font-size:28px}
+ .vmv-home-line{gap:10px;margin-top:22px;padding:16px 13px;border-radius:23px;min-height:81px}
+ .vmv-home-line-icon{width:47px;height:47px;border-radius:15px}
+ .vmv-home-line-icon svg{width:21px}
+ .vmv-home-line-details strong{font-size:17px}
+ .vmv-home-line-details small{font-size:12px}
+ .vmv-home-line-status{font-size:10px;padding:8px 9px;gap:5px}
+ .vmv-home-line-status .vmv-status-dot{width:7px;height:7px}
+ .vmv-home-line-chevron{width:18px}
+ .vmv-dock{width:calc(100% - 24px);height:81px;bottom:calc(9px + env(safe-area-inset-bottom,0px));border-radius:26px;padding:7px}
+ .vmv-dock-item{min-height:64px;gap:0;font-size:10px;border-radius:20px}
+ .vmv-dock-orb{height:37px}
+ .vmv-dock-orb svg{width:23px;height:23px}
+ .vmv-dock-caption{font-size:11px}
+}
+@media(max-width:360px){
+ .vmv-topbar .brandname{font-size:20px}
+ .vmv-feature-card{padding:18px 11px 18px 15px}
+ .vmv-feature-card h2{font-size:21px}
+ .vmv-feature-button{font-size:14px}
+ .vmv-home-line-status{padding:7px}
+}
+@media(prefers-reduced-motion:reduce){.vmv-feature-button,.vmv-dock-item{transition:none}.vmv-feature-button:hover{transform:none}}
