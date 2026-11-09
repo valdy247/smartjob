@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Smart Job",
+    "name": "VMV Call",
     "slug": "smart-job",
     "scheme": "smartjob",
     "version": "0.1.0",
@@ -10,7 +10,7 @@
       "bundleIdentifier": "com.valdy247.smartjob",
       "supportsTablet": false,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Smart Job necesita el micrófono para interpretar llamadas de voz en vivo.",
+        "NSMicrophoneUsageDescription": "VMV Call necesita el micrófono para interpretar llamadas de voz en vivo.",
         "UIBackgroundModes": [
           "audio",
           "voip"
