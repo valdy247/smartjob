@@ -21,7 +21,19 @@ export async function POST(req:NextRequest){
   const state=p.get("CallStatus")||"";
   const seconds=Number(p.get("CallDuration")||"");
   const terminal=["completed","busy","failed","no-answer","canceled"];
-  console.info("Smart Job paired leg callback",{isInbound:callbackSid===bridge,status:state,duration:Number.isFinite(seconds)?seconds:null});
+  // ConversationRelay <Connect action> callbacks include session diagnostics
+  // even when the phone leg itself reports CallStatus=in-progress. No PII.
+  const sessionStatus=p.get("SessionStatus")||"";
+  const sessionErrorCode=p.get("ErrorCode")||"";
+  const sessionDuration=p.get("SessionDuration")||"";
+  console.info("Smart Job paired leg callback",{
+    isInbound:callbackSid===bridge,
+    status:state,
+    duration:Number.isFinite(seconds)?seconds:null,
+    relayStatus:/^(ended|completed|failed)$/.test(sessionStatus)?sessionStatus:null,
+    relayError:/^\d{5}$/.test(sessionErrorCode)?sessionErrorCode:null,
+    relaySeconds:/^\d{1,5}$/.test(sessionDuration)?Number(sessionDuration):null
+  });
   if(terminal.includes(state)||callbackSid===bridge){
     await updatePhoneSession(bridge,terminal.includes(state)?state:"completed",
       Number.isInteger(seconds)&&seconds>=0?seconds:undefined);
