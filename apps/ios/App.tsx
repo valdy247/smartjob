@@ -5,8 +5,8 @@ import {Voice,Call,CallInvite} from "@twilio/voice-react-native-sdk";
 import type {Session} from "@supabase/supabase-js";
 import {api,supabase,configured} from "./session";
 
-const colors={bg:"#09141A",card:"#12242B",line:"#29424A",text:"#F6FAFB",
- muted:"#9AB5BE",accent:"#52E6CD",accentText:"#062721",red:"#FF8198"};
+const colors={bg:"#F8FBFA",card:"#FFFFFF",line:"#DCE8E6",text:"#151D2A",
+ muted:"#6D7784",accent:"#00B997",accentText:"#06392E",red:"#E25673"};
 const voice=new Voice();
 let listenersReady=false;
 let pushRegistryInit:Promise<void>|null=null;
@@ -461,12 +461,18 @@ export default function App(){
    setStatus("Sesión cerrada");
  }
  return <SafeAreaView style={styles.safe}>
-  <StatusBar barStyle="light-content" backgroundColor={colors.bg}/>
+  <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
   <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":undefined}>
    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content,session&&{paddingBottom:130}]}>
-    <View style={styles.brand}><View style={styles.brandMark}><Text style={styles.brandIcon}>V</Text></View>
-     <Text style={styles.brandText}>VMV<Text style={{color:colors.accent}}> Call</Text></Text>
-     {session?<Pressable accessibilityRole="button" accessibilityLabel="Abrir ajustes" onPress={()=>{setActiveTab("settings");setSettingsPage("menu");}} style={styles.headerAvatar}><Text style={styles.headerAvatarText}>⚙️</Text></Pressable>:null}
+    <View style={styles.brand}><View style={styles.brandMark}>
+      <View style={styles.brandWave}>
+       <View style={[styles.brandWaveBar,{height:13}]}/><View style={[styles.brandWaveBar,{height:24}]}/>
+       <View style={[styles.brandWaveBar,{height:32}]}/><View style={[styles.brandWaveBar,{height:24}]}/>
+       <View style={[styles.brandWaveBar,{height:13}]}/>
+      </View>
+     </View>
+     <Text style={styles.brandText}>VMV<Text style={{color:"#00AD8D"}}> CALL</Text></Text>
+     {session?<Pressable accessibilityRole="button" accessibilityLabel="Abrir ajustes" onPress={()=>{setActiveTab("settings");setSettingsPage("menu");}} style={styles.headerAvatar}><Text style={styles.headerAvatarText}>{String(session.user.user_metadata?.first_name||"V").charAt(0).toUpperCase()}</Text></Pressable>:null}
     </View>
     {!configured?<View style={styles.alert}><Text style={styles.alertText}>Configura el acceso de la app para iniciar sesión.</Text></View>:
     !session?<View style={styles.card}>
@@ -479,19 +485,52 @@ export default function App(){
      </View>:
     <>
      {activeTab==="home"?<>
-      <Text style={styles.kicker}>TU ESPACIO</Text><Text style={styles.heading}>Bienvenido<Text style={{color:colors.accent}}>.</Text></Text>
-      <View style={[styles.card,styles.featureCard]}>
-       <View style={styles.compactBetween}><Text style={styles.featureLabel}>☎  Mi línea</Text>
-        <Text style={[styles.stateTag,{color:ready?colors.accent:"#F6CC83"}]}>{ready?"CONECTADA":"PENDIENTE"}</Text></View>
-       <Text style={styles.featureNumber}>{accountOverview?.publicPhone||accountOverview?.twilioPhone||"VMV Call"}</Text>
-       <Text style={styles.featureMuted}>{accountOverview?.connectedToApp?"Recepción configurada":"Configura la recepción en iPhone"}</Text>
-       <Button label={ready?"Ver mi línea":"Preparar mi iPhone"} onPress={()=>{setActiveTab("calls");}}/>
+      <Text style={styles.kicker}>TU ESPACIO</Text>
+      <Text style={styles.heading}>Hola, {String(session.user.user_metadata?.first_name||"").trim()||"bienvenido"}<Text style={{color:colors.accent}}>.</Text></Text>
+      <Text style={styles.homeSubtitle}>Traducción en tiempo real</Text>
+
+      <View style={[styles.homeFeatureCard,styles.homeCallsFeature]}>
+       <View style={styles.homeFeatureCopy}>
+        <Text style={styles.homeFeatureTitle}>Llamadas en{"\n"}tiempo real</Text>
+        <Text style={styles.homeFeatureSub}>Traduce mientras hablas</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Abrir llamadas" style={styles.homePrimaryButton} onPress={()=>setActiveTab("calls")}>
+         <Text style={styles.homePrimaryText}>☎  Llamar  →</Text>
+        </Pressable>
+       </View>
+       <View style={styles.homeImageSlot}><Text style={styles.homeImageLabel}>Imagen 1</Text><Text style={styles.homeImageDescription}>Pantalla de llamada</Text></View>
       </View>
+
+      <View style={[styles.homeFeatureCard,styles.homeTranslatorFeature]}>
+       <View style={styles.homeFeatureCopy}>
+        <Text style={styles.homeFeatureTitle}>Traductor IA</Text>
+        <Text style={styles.homeFeatureSub}>Texto · voz en web</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Abrir traductor" style={styles.homeSecondaryButton} onPress={()=>setActiveTab("live")}>
+         <Text style={styles.homeSecondaryText}>✧  Abrir  →</Text>
+        </Pressable>
+       </View>
+       <View style={[styles.homeImageSlot,styles.homeImageSlotSmall]}><Text style={styles.homeImageLabel}>Imagen 2</Text><Text style={styles.homeImageDescription}>Traductor IA</Text></View>
+      </View>
+
       <Text style={styles.sectionHeading}>Idiomas</Text>
-      <View style={styles.langPair}><View style={styles.langBox}><Text style={styles.langCode}>{String(session.user.user_metadata?.owner_language||"es").toUpperCase()}</Text><Text style={styles.langSub}>Tu idioma</Text></View><Text style={styles.langSwap}>⇄</Text><View style={styles.langBox}><Text style={styles.langCode}>{String(session.user.user_metadata?.customer_language||"en").toUpperCase()}</Text><Text style={styles.langSub}>Cliente</Text></View></View>
-      <View style={styles.statRow}><Pressable accessibilityRole="button" onPress={()=>{setActiveTab("settings");setSettingsPage("billing");}} style={styles.statCard}><Text style={styles.statEmoji}>💎</Text><Text style={styles.statNumber}>{billingOverview?.minutes.available??"—"}</Text><Text style={styles.statLabel}>Minutos</Text></Pressable>
-       <Pressable accessibilityRole="button" onPress={()=>{setActiveTab("settings");setSettingsPage("history");}} style={styles.statCard}><Text style={styles.statEmoji}>🕒</Text><Text style={styles.statNumber}>{accountOverview?.usage.calls??"—"}</Text><Text style={styles.statLabel}>Llamadas · 30 días</Text></Pressable></View>
-      <View style={styles.quickRow}><Pressable style={styles.quickButton} onPress={()=>setActiveTab("calls")}><Text style={styles.quickButtonText}>📞  Llamar</Text></Pressable><Pressable style={styles.quickButton} onPress={()=>setActiveTab("live")}><Text style={styles.quickButtonText}>🎙️  Traducir</Text></Pressable></View>
+      <View style={styles.langPair}>
+       <Pressable accessibilityRole="button" onPress={()=>{setActiveTab("settings");setSettingsPage("style");}} style={styles.langBox}>
+        <Text style={styles.homeFlag}>{String(session.user.user_metadata?.owner_language||"es").toLowerCase().startsWith("en")?"🇺🇸":"🇪🇸"}</Text>
+        <View><Text style={styles.langCode}>{String(session.user.user_metadata?.owner_language||"es").slice(0,2).toUpperCase()}</Text><Text style={styles.langSub}>Tú</Text></View>
+       </Pressable>
+       <Text style={styles.langSwap}>⇄</Text>
+       <Pressable accessibilityRole="button" onPress={()=>{setActiveTab("settings");setSettingsPage("style");}} style={styles.langBox}>
+        <Text style={styles.homeFlag}>{String(session.user.user_metadata?.customer_language||"en").toLowerCase().startsWith("en")?"🇺🇸":"🇪🇸"}</Text>
+        <View><Text style={styles.langCode}>{String(session.user.user_metadata?.customer_language||"en").slice(0,2).toUpperCase()}</Text><Text style={styles.langSub}>Cliente</Text></View>
+       </Pressable>
+      </View>
+      <Pressable style={styles.homeLineCard} accessibilityRole="button" onPress={()=>{setActiveTab("settings");setSettingsPage("numbers");}}>
+       <View style={styles.homeLineIcon}><Text style={styles.homeLineEmoji}>☎</Text></View>
+       <View style={{flex:1,minWidth:0}}><Text style={styles.homeLineTitle}>Mi línea</Text>
+        <Text style={styles.homeLineNumber}>{accountOverview?.publicPhone||accountOverview?.twilioPhone||"Configurar línea"}</Text>
+       </View>
+       <View style={styles.homeLineStatus}><Text style={styles.homeLineStatusText}>{ready?"iPhone listo":"Pendiente"}</Text></View>
+       <Text style={styles.settingChevron}>›</Text>
+      </Pressable>
      </>:null}
      {activeTab==="calls"?<>
       <Text style={styles.kicker}>TELÉFONO</Text><Text style={styles.heading}>Llamadas<Text style={{color:colors.accent}}>.</Text></Text>
@@ -645,53 +684,80 @@ function Button({label,onPress,disabled,secondary,danger}:{label:string,onPress:
  </Pressable>;
 }
 const styles=StyleSheet.create({
+ // Mint cards use only two image placeholders; native image files can replace these later.
+ homeSubtitle:{fontSize:16,color:"#727885",marginBottom:26,marginTop:-4},
+ homeFeatureCard:{flexDirection:"row",alignItems:"stretch",borderRadius:26,padding:18,borderWidth:1,borderColor:"#D5EFEB",marginBottom:18,overflow:"hidden"},
+ homeCallsFeature:{backgroundColor:"#E5FBF5",minHeight:226},
+ homeTranslatorFeature:{backgroundColor:"#F3FFFB",minHeight:164},
+ homeFeatureCopy:{flex:1.2,justifyContent:"space-between",paddingVertical:8,minWidth:0},
+ homeFeatureTitle:{fontSize:26,lineHeight:29,fontWeight:"800",letterSpacing:-1.1,color:"#141B28"},
+ homeFeatureSub:{color:"#687784",fontSize:13,lineHeight:18,marginTop:10},
+ homePrimaryButton:{borderRadius:29,backgroundColor:"#00B496",paddingVertical:13,paddingHorizontal:13,marginTop:19,alignItems:"center",justifyContent:"center",minHeight:46},
+ homePrimaryText:{color:"#FFFFFF",fontSize:15,fontWeight:"800"},
+ homeSecondaryButton:{borderRadius:29,backgroundColor:"#BFF8E8",paddingVertical:12,paddingHorizontal:10,marginTop:18,alignItems:"center",justifyContent:"center",minHeight:44},
+ homeSecondaryText:{color:"#07674E",fontSize:14,fontWeight:"800"},
+ homeImageSlot:{flex:.8,minWidth:100,borderWidth:1.5,borderStyle:"dashed",borderColor:"#51CDB4",borderRadius:19,backgroundColor:"#C9F8EA",alignItems:"center",justifyContent:"center",marginLeft:10,padding:7},
+ homeImageSlotSmall:{backgroundColor:"#E1FFF6",borderColor:"#8DDECA"},
+ homeImageLabel:{fontSize:18,fontWeight:"900",color:"#05735D",textAlign:"center"},
+ homeImageDescription:{fontSize:10,color:"#5F8E84",textAlign:"center",marginTop:8},
+ homeFlag:{fontSize:30,marginRight:8},
+ homeLineCard:{flexDirection:"row",alignItems:"center",gap:10,minHeight:88,backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#E0EDE9",borderRadius:23,padding:13,marginTop:12,marginBottom:18},
+ homeLineIcon:{width:45,height:45,borderRadius:15,alignItems:"center",justifyContent:"center",backgroundColor:"#CBFBEA"},
+ homeLineEmoji:{fontSize:24,color:"#087B61"},
+ homeLineTitle:{fontSize:17,fontWeight:"800",color:"#111827"},
+ homeLineNumber:{fontSize:11,color:"#6F7B84",marginTop:5},
+ homeLineStatus:{borderRadius:22,backgroundColor:"#E3FFF0",paddingVertical:8,paddingHorizontal:8},
+ homeLineStatusText:{fontSize:10,fontWeight:"800",color:"#147750"},
+ brandWave:{flexDirection:"row",alignItems:"center",justifyContent:"center",gap:3,height:35},
+ brandWaveBar:{width:4,borderRadius:4,backgroundColor:"#063B32"},
+
  safe:{flex:1,backgroundColor:colors.bg},
  content:{flexGrow:1,paddingHorizontal:22,paddingTop:22,paddingBottom:46,maxWidth:620,width:"100%",alignSelf:"center"},
- brand:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:38},
- brandMark:{width:42,height:42,borderRadius:14,backgroundColor:colors.accent,alignItems:"center",justifyContent:"center"},
+ brand:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:30},
+ brandMark:{width:50,height:50,borderRadius:16,backgroundColor:"#1CE0BC",alignItems:"center",justifyContent:"center"},
  brandIcon:{fontSize:23,fontWeight:"900",color:colors.accentText},
- brandText:{color:colors.text,fontSize:25,fontWeight:"900",letterSpacing:-1.4},
- kicker:{color:colors.accent,fontSize:11,fontWeight:"800",letterSpacing:2.2,marginBottom:12},
- heading:{color:colors.text,fontSize:42,fontWeight:"800",lineHeight:46,letterSpacing:-1.7,marginBottom:16},
+ brandText:{color:colors.text,fontSize:24,fontWeight:"900",letterSpacing:-1.3},
+ kicker:{color:"#06A887",fontSize:11,fontWeight:"800",letterSpacing:2.6,marginBottom:12},
+ heading:{color:colors.text,fontSize:39,fontWeight:"800",lineHeight:45,letterSpacing:-1.7,marginBottom:16},
  description:{color:colors.muted,fontSize:15,lineHeight:24,marginBottom:25},
  card:{backgroundColor:colors.card,borderWidth:1,borderColor:colors.line,borderRadius:23,padding:21,marginBottom:18},
  cardTitle:{color:colors.text,fontSize:21,fontWeight:"800",marginBottom:8},
  helper:{color:colors.muted,fontSize:13,lineHeight:21,marginBottom:17},
- field:{height:53,borderRadius:13,borderWidth:1,borderColor:"#344552",backgroundColor:colors.bg,
+ field:{height:53,borderRadius:13,borderWidth:1,borderColor:"#D0E3E1",backgroundColor:"#FCFFFE",
    paddingHorizontal:15,color:colors.text,fontSize:16,marginBottom:13},
  btn:{backgroundColor:colors.accent,minHeight:52,borderRadius:13,alignItems:"center",justifyContent:"center",padding:13,marginTop:12},
  btnText:{fontSize:15,fontWeight:"800",color:colors.accentText},
- secondary:{backgroundColor:"#29343F"},
- danger:{backgroundColor:"#813E42"},
+ secondary:{backgroundColor:"#E4F8F1"},
+ danger:{backgroundColor:"#F5D7DD"},
  statusRow:{flexDirection:"row",alignItems:"center",gap:10,marginTop:12,marginBottom:12},
  dot:{width:9,height:9,borderRadius:5},
  statusText:{flex:1,fontSize:14,color:colors.text,fontWeight:"700"},
  callLabel:{fontSize:11,fontWeight:"800",color:colors.accent,letterSpacing:1.8},
  bigCall:{fontSize:27,fontWeight:"800",color:colors.text,marginVertical:12},
- notice:{backgroundColor:"#1A2831",borderRadius:17,borderWidth:1,borderColor:"#38505B",padding:17},
+ notice:{backgroundColor:"#F2FCF8",borderRadius:17,borderWidth:1,borderColor:"#D4EAE4",padding:17},
  noticeTitle:{fontSize:14,fontWeight:"800",color:colors.text,marginBottom:7},
  noticeBody:{fontSize:13,color:colors.muted,lineHeight:21},
  signout:{alignSelf:"center",padding:15,marginTop:13},
  signoutText:{fontSize:13,fontWeight:"700",color:colors.muted},
- alert:{borderWidth:1,borderColor:"#9D5454",backgroundColor:"#342426",borderRadius:13,padding:15,marginBottom:16},
- alertText:{fontSize:13,color:"#FFD0CE",lineHeight:20},
+ alert:{borderWidth:1,borderColor:"#EFB7C5",backgroundColor:"#FFF2F5",borderRadius:13,padding:15,marginBottom:16},
+ alertText:{fontSize:13,color:"#AD4160",lineHeight:20},
  success:{fontSize:14,color:colors.accent,lineHeight:22,fontWeight:"700"},
  verifyMessage:{fontSize:13,color:colors.text,lineHeight:21,marginTop:13},
  footer:{color:"#617380",fontSize:10,fontWeight:"700",letterSpacing:1.4,alignSelf:"center",marginTop:26},
- headerAvatar:{marginLeft:"auto",width:39,height:39,borderRadius:20,alignItems:"center",justifyContent:"center",backgroundColor:"#1B3B41"},
- headerAvatarText:{fontSize:19},
- featureCard:{backgroundColor:"#16483E",borderColor:"#367C6B",padding:21},
+ headerAvatar:{marginLeft:"auto",width:43,height:43,borderRadius:23,alignItems:"center",justifyContent:"center",backgroundColor:"#BDF3E7"},
+ headerAvatarText:{fontSize:17,color:"#006746",fontWeight:"800"},
+ featureCard:{backgroundColor:"#E5FBF3",borderColor:"#C7EDE0",padding:21},
  compactBetween:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
  featureLabel:{fontSize:13,color:colors.text,fontWeight:"800"},
  stateTag:{fontSize:11,fontWeight:"800",letterSpacing:.5},
  featureNumber:{fontSize:24,color:colors.text,fontWeight:"800",marginTop:26,letterSpacing:-.6},
- featureMuted:{fontSize:12,color:"#A6CAC3",marginTop:6},
- sectionHeading:{fontSize:18,color:colors.text,fontWeight:"800",marginTop:12,marginBottom:13},
- langPair:{flexDirection:"row",gap:9,alignItems:"center",marginBottom:17},
- langBox:{flex:1,backgroundColor:"#122832",borderWidth:1,borderColor:"#30525A",borderRadius:17,padding:17},
+ featureMuted:{fontSize:12,color:"#72867E",marginTop:6},
+ sectionHeading:{fontSize:23,color:colors.text,fontWeight:"800",marginTop:13,marginBottom:15},
+ langPair:{flexDirection:"row",gap:8,alignItems:"center",marginBottom:18},
+ langBox:{flex:1,flexDirection:"row",alignItems:"center",backgroundColor:"#F1FFFA",borderWidth:1,borderColor:"#D2EAE5",borderRadius:19,padding:12},
  langCode:{fontSize:23,color:colors.text,fontWeight:"800"},
  langSub:{fontSize:11,color:colors.muted,marginTop:4},
- langSwap:{fontSize:26,color:colors.accent},
+ langSwap:{fontSize:25,color:colors.accent},
  statRow:{flexDirection:"row",gap:11,marginBottom:15},
  statCard:{flex:1,borderWidth:1,borderColor:colors.line,borderRadius:18,backgroundColor:colors.card,padding:17},
  statEmoji:{fontSize:21,marginBottom:12},
@@ -700,17 +766,17 @@ const styles=StyleSheet.create({
  quickRow:{flexDirection:"row",gap:10,marginVertical:10},
  quickButton:{flex:1,borderRadius:14,padding:15,backgroundColor:"#1A363E",alignItems:"center"},
  quickButtonText:{color:colors.text,fontSize:14,fontWeight:"800"},
- bottomDock:{position:"absolute",bottom:5,left:12,right:12,height:77,backgroundColor:"#0A131A",borderRadius:21,borderWidth:1,borderColor:"#2A454D",flexDirection:"row",alignItems:"center",justifyContent:"space-around",paddingHorizontal:5},
+ bottomDock:{position:"absolute",bottom:5,left:12,right:12,height:78,backgroundColor:"#FFFFFF",borderRadius:27,borderWidth:1,borderColor:"#E4EEEE",flexDirection:"row",alignItems:"center",justifyContent:"space-around",paddingHorizontal:6},
  bottomItem:{flex:1,alignItems:"center",justifyContent:"center",height:74},
  bottomOrb:{width:42,height:42,borderRadius:24,alignItems:"center",justifyContent:"center"},
- bottomOrbActive:{backgroundColor:"#F3619E",width:52,height:52,borderRadius:28,transform:[{translateY:-10}],borderWidth:3,borderColor:"#0A131A"},
+ bottomOrbActive:{backgroundColor:"#C5F9E9",width:49,height:43,borderRadius:18,borderWidth:0},
  bottomEmoji:{fontSize:22},
- bottomLabel:{color:"#839CA4",fontSize:10,fontWeight:"700",marginTop:1},
- bottomLabelActive:{color:"#FFFFFF",marginTop:-4},
- groupTitle:{color:colors.accent,fontSize:11,fontWeight:"800",letterSpacing:1.7,marginTop:20,marginBottom:8},
+ bottomLabel:{color:"#6C7582",fontSize:10,fontWeight:"700",marginTop:1},
+ bottomLabelActive:{color:"#0A7658",marginTop:0},
+ groupTitle:{color:"#06A886",fontSize:11,fontWeight:"800",letterSpacing:1.7,marginTop:20,marginBottom:8},
  languageChoice:{flexDirection:"row",gap:10,marginVertical:11},
- languageOption:{flex:1,alignItems:"center",justifyContent:"center",padding:13,backgroundColor:"#1C3941",borderRadius:12,borderWidth:1,borderColor:"#29474E"},
- languageSelected:{borderColor:colors.accent,backgroundColor:"#194F45"},
+ languageOption:{flex:1,alignItems:"center",justifyContent:"center",padding:13,backgroundColor:"#F0FDF9",borderRadius:12,borderWidth:1,borderColor:"#CEEAE4"},
+ languageSelected:{borderColor:colors.accent,backgroundColor:"#D6FAED"},
  languageOptionText:{fontSize:14,fontWeight:"700",color:colors.text},
  greetingEditor:{height:105,paddingTop:12},
 
@@ -722,16 +788,16 @@ const styles=StyleSheet.create({
  historyStatus:{fontSize:11,color:colors.muted,marginTop:4},
  historyMinutes:{fontSize:12,color:colors.accent,fontWeight:"700"},
 
- settingRow:{flexDirection:"row",alignItems:"center",gap:12,paddingVertical:12,borderBottomWidth:1,borderBottomColor:"#284149"},
- settingIcon:{width:39,height:39,alignItems:"center",justifyContent:"center",borderRadius:12,backgroundColor:"#1D3940"},
+ settingRow:{flexDirection:"row",alignItems:"center",gap:12,paddingVertical:15,borderBottomWidth:1,borderBottomColor:"#E3EEEB"},
+ settingIcon:{width:39,height:39,alignItems:"center",justifyContent:"center",borderRadius:12,backgroundColor:"#E3FAF2"},
  settingEmoji:{fontSize:19},
  settingLabel:{flex:1,color:colors.text,fontWeight:"700",fontSize:14},
- settingChevron:{fontSize:24,color:"#7BA2A9"},
+ settingChevron:{fontSize:24,color:"#83959A"},
  backRow:{paddingBottom:20},
  backText:{color:colors.accent,fontSize:15,fontWeight:"700"},
  speakerRow:{flexDirection:"row",gap:12,marginBottom:15},
- speakerCard:{flex:1,backgroundColor:"#112832",borderWidth:1,borderColor:"#30545E",borderRadius:16,padding:13,alignItems:"center"},
- speakerActive:{backgroundColor:"#19564B",borderColor:"#56EACF"},
+ speakerCard:{flex:1,backgroundColor:"#E1FAF2",borderWidth:1,borderColor:"#BDECDD",borderRadius:16,padding:13,alignItems:"center"},
+ speakerActive:{backgroundColor:"#C3F9E8",borderColor:"#20C9A7"},
  speakerEmoji:{fontSize:25,marginBottom:6},
  speakerText:{color:colors.text,fontSize:15,fontWeight:"800"},
  consentRow:{flexDirection:"row",gap:10,alignItems:"center",paddingVertical:10},
@@ -746,7 +812,7 @@ const styles=StyleSheet.create({
  incomingCard:{flex:1,backgroundColor:"#093632",borderWidth:1,borderColor:"#327568",borderRadius:28,marginVertical:20,padding:22,alignItems:"center"},
  incomingKicker:{color:"#B8E8D9",letterSpacing:1.5,fontSize:11,fontWeight:"800",marginTop:28},
  incomingSymbol:{fontSize:61,color:colors.accent,marginTop:85},
- incomingName:{fontSize:36,fontWeight:"700",color:colors.text,marginTop:30},
+ incomingName:{fontSize:36,fontWeight:"700",color:"#FFFFFF",marginTop:30},
  incomingLang:{color:"#A8E1D2",fontSize:14,marginTop:11},
  incomingStatus:{color:"#B5DAD3",fontSize:12,marginTop:24},
  incomingActions:{flexDirection:"row",justifyContent:"space-around",alignItems:"center",marginTop:"auto",width:"100%",marginBottom:60},
