@@ -8,6 +8,12 @@ const uuid=/^[a-f\d-]{36}$/i;
 const phone=/^\+[1-9]\d{7,14}$/;
 export type LanguageChoice="en"|"es";
 export const languageMenuEnabled=()=>process.env.SMARTJOB_LANGUAGE_IVR_ENABLED==="true";
+export function languageDecision(digit:string,attempt=0):"direct"|"translate"|"retry"|"hangup"{
+ if(digit==="1")return "translate";
+ if(digit==="2"||digit==="")return "direct";
+ return attempt>0?"hangup":"retry";
+}
+
 export const ivrEligible=(route:ActivePhoneRoute)=>Boolean(route.enabled&&route.receive_method==="ios_app"&&
   process.env.SMARTJOB_IOS_VOICE_ENABLED==="true"&&
   Boolean(process.env.TWILIO_IOS_PUSH_CREDENTIAL_SID));
