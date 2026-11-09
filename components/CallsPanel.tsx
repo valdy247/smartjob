@@ -5,11 +5,18 @@ import type {SupabaseClient} from "@supabase/supabase-js";
 import type {Profile,CallSettings} from "@/lib/types";
 
 type PhoneRoute={id:string;twilio_number:string;destination_phone:string;public_number:string|null;forwarding_mode:string;customer_language:string;owner_language:string;enabled:boolean;receive_method:"pstn"|"ios_app";assistant_name:string};
-type CallRecord={bridge_sid:string;status:string;duration_seconds:number|null;started_at:string};
+type CallRecord={bridge_sid:string;status:string;duration_seconds:number|null;started_at:string;call_mode:"direct"|"translated"};
 type ProvisionRequest={id:string;status:string;created_at:string;destination_phone:string;carrier:string;connection_mode:string;answer_method:string};
-type Mode="dial"|"numbers"|"history";
+type Mode="dial"|"numbers"|"history"|"preferences";
 type Navigate=(screen:"numbers"|"history"|"support")=>void;
 type Account={forwardingReady:boolean;verified:boolean;connectedToApp?:boolean;twilioPhone:string|null;usage:{calls:number;completed:number;minutes:number}};
+const carriers=[
+ ["verizon","Verizon"],["att","AT&T"],["tmobile","T-Mobile"],["xfinity","Xfinity Mobile"],
+ ["spectrum","Spectrum Mobile"],["cricket","Cricket Wireless"],["metro","Metro by T-Mobile"],
+ ["boost","Boost Mobile"],["uscellular","US Cellular"],["googlefi","Google Fi"],
+ ["visible","Visible"],["mint","Mint Mobile"],["straighttalk","Straight Talk"],
+ ["consumer","Consumer Cellular"],["usmobile","US Mobile"],["other","Otro operador"]
+] as const;
 const blank:CallSettings={existing_phone:"",forwarding_enabled:false,desired_language:"es",caller_language:"en",assistant_name:"Juan"};
 const statusLabel:Record<string,string>={"initiated":"Iniciando","ringing":"Sonando","in-progress":"En curso","completed":"Finalizada","busy":"Ocupada","no-answer":"Sin respuesta","canceled":"Cancelada","failed":"Fallida"};
 const requestLabels:Record<string,string>={pending:"En revisión",contacted:"En contacto",approved:"Aprobada",rejected:"No aprobada",activated:"Activada"};
@@ -19,14 +26,14 @@ export function CallsPanel({supabase,profile,apiStatus,mode="dial",onNavigate}:{
  const [account,setAccount]=useState<Account|null>(null);
  const [carrier,setCarrier]=useState("other"),[connectionMode,setConnectionMode]=useState("conditional"),[answerMethod,setAnswerMethod]=useState("app");
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[requestBusy,setRequestBusy]=useState(false);
- const [message,setMessage]=useState(""),[error,setError]=useState(""),[advanced,setAdvanced]=useState(false);
+ const [message,setMessage]=useState(""),[error,setError]=useState("");
  const refresh=async()=>{
   setLoading(true);setError("");
   try{
    const [settings,routing,calls,requests,session]=await Promise.all([
     supabase.from("smartjob_call_settings").select("*").eq("user_id",profile.id).maybeSingle(),
     supabase.from("smartjob_phone_routes").select("id,twilio_number,destination_phone,public_number,forwarding_mode,receive_method,customer_language,owner_language,enabled,assistant_name").eq("user_id",profile.id).limit(1).maybeSingle(),
-    supabase.from("smartjob_call_sessions").select("bridge_sid,status,duration_seconds,started_at").eq("owner_id",profile.id).order("started_at",{ascending:false}).limit(25),
+    supabase.from("smartjob_call_sessions").select("bridge_sid,status,duration_seconds,started_at,call_mode").eq("owner_id",profile.id).order("started_at",{ascending:false}).limit(25),
     supabase.from("smartjob_provisioning_requests").select("id,status,created_at,destination_phone,carrier,connection_mode,answer_method").eq("user_id",profile.id).order("created_at",{ascending:false}).limit(1).maybeSingle(),
     supabase.auth.getSession()
    ]);
@@ -66,6 +73,7 @@ export function CallsPanel({supabase,profile,apiStatus,mode="dial",onNavigate}:{
   setError("");setMessage("");
   const destination=form.existing_phone.trim().replace(/[ ()-]/g,"");
   if(!/^\+[1-9]\d{7,14}$/.test(destination)){setError("Escribe el número con código de país, por ejemplo +17060000000.");return;}
+  if(answerMethod!=="app"){setError("La recepción en otra línea necesita verificación adicional.");return;}
   if(form.desired_language===form.caller_language){setError("Selecciona dos idiomas diferentes.");return;}
   const name=form.assistant_name.trim();
   if(!name||name.length>40){setError("Revisa el nombre del asistente.");return;}
@@ -105,20 +113,14 @@ export function CallsPanel({supabase,profile,apiStatus,mode="dial",onNavigate}:{
   <div className="vmv-between vmv-history-head"><span className="vmv-muted">{history.length?history.length+" registros":"Sin llamadas"}</span><button type="button" onClick={()=>void refresh()} disabled={loading} className="vmv-icon-button" aria-label="Actualizar historial"><RefreshCw size={18}/></button></div>
   {history.length?<div className="vmv-settings-list">{history.map(item=><div className="vmv-call-entry" key={item.bridge_sid}>
    <span className="vmv-settings-icon"><PhoneCall size={18}/></span>
-   <div className="vmv-settings-copy"><b>{new Date(item.started_at).toLocaleString("es-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}</b><small>{statusLabel[item.status]||"Llamada"}</small></div>
+   <div className="vmv-settings-copy"><b>{new Date(item.started_at).toLocaleString("es-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}</b><small>{item.call_mode==="direct"?"Directa · Español":"Con IA · Inglés"} · {statusLabel[item.status]||"Llamada"}</small></div>
    <span className="vmv-entry-duration">{item.duration_seconds==null?"—":Math.ceil(item.duration_seconds/60)+" min"}</span>
   </div>)}</div>:
   <div className="vmv-empty-state"><Clock3 size={26}/><span>Sin llamadas todavía</span></div>}
   {feedback}
  </section>;
- return <section className="vmv-number-settings" aria-label="Número y verificación">
-  <div className="vmv-compact-card">
-   <div className="vmv-between"><span className="vmv-small-label"><PhoneCall size={18}/> Mi línea</span><span className={"vmv-tag "+(active?"is-live":"is-pending")}>{active?"Asignada":"Pendiente"}</span></div>
-   <div className="vmv-number-value">{line}</div>
-   <div className="vmv-number-statuses"><span><ShieldCheck size={15}/>{verified?"Verificado":"Sin verificar"}</span><span><PhoneCall size={15}/>{connected?"iPhone conectado":"iPhone pendiente"}</span></div>
-   <button className="vmv-secondary-cta" onClick={()=>void refresh()} disabled={loading}>{loading?"Cargando…":"Actualizar"}</button>
-  </div>
-  <form className="vmv-compact-card vmv-number-form" onSubmit={save}>
+ if(mode==="preferences")return <section className="vmv-number-settings" aria-label="Idiomas y asistente">
+    <form className="vmv-compact-card vmv-number-form" onSubmit={save}>
    <h2>Preferencias</h2>
    <label className="label" htmlFor="vmv-owned-phone">Tu número actual</label>
    <input id="vmv-owned-phone" className="field" type="tel" required maxLength={25} value={form.existing_phone} onChange={e=>setForm({...form,existing_phone:e.target.value})} placeholder="+17060000000"/>
@@ -131,21 +133,42 @@ export function CallsPanel({supabase,profile,apiStatus,mode="dial",onNavigate}:{
    <button className="btn primary block" type="submit" disabled={busy}><Check size={16}/>{busy?"Guardando…":"Guardar"}</button>
    {active&&<p className="vmv-tiny-disclaimer">Cambiar preferencias no modifica una línea ya autorizada.</p>}
   </form>
+  {feedback}
+ </section>;
+ return <section className="vmv-number-settings" aria-label="Número y verificación">
+  <div className="vmv-compact-card">
+   <div className="vmv-between"><span className="vmv-small-label"><PhoneCall size={18}/> Mi línea</span><span className={"vmv-tag "+(active?"is-live":"is-pending")}>{active?"Asignada":"Pendiente"}</span></div>
+   <div className="vmv-number-value">{line}</div>
+   <div className="vmv-number-statuses"><span><ShieldCheck size={15}/>{verified?"Verificado":"Sin verificar"}</span><span><PhoneCall size={15}/>{connected?"iPhone enlazado":"iPhone pendiente"}</span></div>
+   <div className="vmv-route-check">
+    <div><b>1</b> Verificar el número <span>{verified?"✓":"Pendiente"}</span></div>
+    <div><b>2</b> Recibir en iPhone <span>{connected?"✓":"Pendiente"}</span></div>
+    <div><b>3</b> Probar llamada real <span>Sin confirmar</span></div>
+   </div>
+   <button className="vmv-secondary-cta" onClick={()=>void refresh()} disabled={loading}>{loading?"Cargando…":"Actualizar"}</button>
+  </div>
+
   <div className="vmv-compact-card vmv-number-request">
-   <h2>Conectar número</h2>
+   <h2>Conexión con tu operador</h2><p className="vmv-muted vmv-carrier-explanation">Conservas tu número. VMV Call recibe la llamada solo después de configurar el desvío.</p>
    <div className="form-grid">
-    <div><label className="label" htmlFor="vmv-carrier">Operador</label><select id="vmv-carrier" className="field" value={carrier} onChange={e=>setCarrier(e.target.value)} disabled={request?.status==="pending"}><option value="other">Otro</option><option value="verizon">Verizon</option><option value="att">AT&amp;T</option><option value="tmobile">T-Mobile</option></select></div>
+    <div><label className="label" htmlFor="vmv-carrier">Operador</label><select id="vmv-carrier" className="field" value={carrier} onChange={e=>setCarrier(e.target.value)} disabled={request?.status==="pending"}>{carriers.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></div>
     <div><label className="label" htmlFor="vmv-connection">Desvío</label><select id="vmv-connection" className="field" value={connectionMode} onChange={e=>setConnectionMode(e.target.value)} disabled={request?.status==="pending"}><option value="conditional">Condicional</option><option value="all_calls">Todas</option><option value="port">Portabilidad (consulta)</option></select></div>
    </div>
-   <label className="label" htmlFor="vmv-answer">Recibir en</label><select id="vmv-answer" className="field" value={answerMethod} onChange={e=>setAnswerMethod(e.target.value)} disabled={request?.status==="pending"}><option value="app">App de iPhone</option><option value="separate_line">Otra línea</option></select>
+   <label className="label" htmlFor="vmv-answer">Recibir en</label><select id="vmv-answer" className="field" value={answerMethod} onChange={e=>setAnswerMethod(e.target.value)} disabled={request?.status==="pending"}><option value="app">App de iPhone</option><option value="separate_line" disabled>Otra línea (próximamente)</option></select>
    {request&&<div className="vmv-request-status">Solicitud: {requestLabels[request.status]||request.status}</div>}
    <button type="button" className="btn primary block" disabled={requestBusy||active||request?.status==="pending"||loading} onClick={()=>void submitRequest()}><ArrowRight size={16}/>{requestBusy?"Enviando…":active?"Línea asignada":request?.status==="pending"?"En revisión":"Solicitar conexión"}</button>
-   <p className="vmv-tiny-disclaimer">Esta solicitud no activa desvíos ni cargos.</p><details className="vmv-safety-details"><summary><Info size={15}/> Desvío y seguridad</summary>
+   <p className="vmv-tiny-disclaimer">Solo la prueba real confirma que tu número habitual llega a VMV Call.</p><details className="vmv-safety-details"><summary><Info size={15}/> Desvío y seguridad</summary>
     <p>Guardar o solicitar no compra números ni activa el desvío. Verifica tu número y comprueba llamadas reales con el iPhone bloqueado antes de modificar Verizon u otro operador.</p>
     <p>No desvíes llamadas de vuelta al mismo número: puede crear un bucle. La portabilidad puede afectar las llamadas y SMS del operador.</p>
-    {account?.forwardingReady&&route?.twilio_number&&<p>Para Verizon, confirma primero la recepción: *72 para activar el desvío completo y *73 para desactivarlo. Sigue las instrucciones del operador.</p>}
+    {account?.forwardingReady&&route?.twilio_number&&<p>Los códigos de desvío dependen del operador. Para Verizon, el desvío completo suele usar *72 y su cancelación *73; confirma con Verizon antes de marcar.</p>}
    </details>
   </div>
+  <div className="vmv-compact-card vmv-language-explainer">
+    <h2>Al recibir una llamada</h2>
+    <div><span>🇪🇸 Español</span><strong>Directo · sin minutos IA</strong></div>
+    <div><span>🇺🇸 English</span><strong>Traductor · con minutos IA</strong></div>
+    <p className="vmv-tiny-disclaimer">El menú se habilita tras las pruebas. Los costes de telefonía del operador se aplican por separado.</p>
+   </div>
   {feedback}
  </section>;
 }
