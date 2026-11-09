@@ -257,3 +257,38 @@ body:has(.auth-wrap)::before,body:has(.shell)::before{background:radial-gradient
  .auth-side .brandmark{width:46px;height:46px}
  .auth-side .brandname{font-size:22px}
 }
+
+
+/* Illustration-led call card: only one functional CTA below the uploaded art. */
+.vmv-feature-call-illustrated{
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:10px;padding:14px 30px 22px;min-height:390px;
+ background:linear-gradient(135deg,#f3fffc,#dcfbf1);
+}
+.vmv-feature-call-illustrated .vmv-feature-artwork{
+ width:100%;max-width:760px;height:305px;min-height:0;flex:none;
+}
+.vmv-feature-call-illustrated .vmv-artwork img{
+ width:100%;height:100%;max-height:none;object-fit:contain;
+}
+.vmv-feature-call-illustrated .vmv-artwork-placeholder{
+ width:100%;max-width:570px;max-height:290px;min-height:0;height:100%;
+}
+.vmv-feature-call-illustrated .vmv-feature-button-call{
+ width:min(100%,360px);min-width:0;min-height:56px;margin:0;
+ justify-content:space-between;gap:12px;
+}
+.vmv-feature-call-illustrated .vmv-feature-button-call span{white-space:nowrap}
+@media(max-width:620px){
+ .vmv-feature-call-illustrated{min-height:0;gap:11px;padding:12px 18px 18px}
+ .vmv-feature-call-illustrated .vmv-feature-artwork{height:clamp(165px,50vw,230px)}
+ .vmv-feature-call-illustrated .vmv-feature-button-call{
+  width:min(100%,285px);min-height:47px;font-size:15px;padding:10px 18px;
+ }
+ .vmv-feature-call-illustrated .vmv-artwork-placeholder{min-height:0;max-height:none}
+}
+@media(max-width:360px){
+ .vmv-feature-call-illustrated{padding:11px 12px 15px}
+ .vmv-feature-call-illustrated .vmv-feature-artwork{height:165px}
+ .vmv-feature-call-illustrated .vmv-feature-button-call{font-size:14px}
+}
