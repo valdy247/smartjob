@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
+import {paidServiceAllowed} from "@/lib/vmv-entitlements";
 
 // The Supabase Auth pool is shared with other apps for now.
 // An authenticated identity MUST have a Smart Job profile before it can spend AI credits.
@@ -25,6 +26,8 @@ export async function authenticatedUser(req: NextRequest): Promise<string | null
 // Quotas are enforced atomically inside Supabase using the caller's JWT.
 // Users of other applications on the shared Supabase Auth pool cannot use these credits.
 export async function consumeCredit(req: NextRequest, kind: "ai" | "voice"): Promise<boolean> {
+  const owner=await authenticatedUser(req);
+  if(!owner||!await paidServiceAllowed(owner,"ai"))return false;
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
