@@ -4,6 +4,7 @@ import type {SupabaseClient} from "@supabase/supabase-js";
 import {ArrowLeft,ArrowRight,BriefcaseBusiness,Check,CheckCircle2,ChevronRight,Eye,EyeOff,
  Globe2,Mail,Palette,Phone,Search,ShieldCheck,UserRound} from "lucide-react";
 import {Brand} from "./Brand";
+import {CountryDialPicker} from "./CountryDialPicker";
 import {DIAL_COUNTRIES,US_STATES,OCCUPATION_ALIASES,normalize} from "@/lib/registration/options";
 
 type AccountType="personal"|"business";
@@ -255,9 +256,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
        {smsVerified&&<span className="vmv-signup-success"><CheckCircle2 size={17}/> Verificado</span>}
       </div>
       <div className="vmv-signup-phone">
-       <select aria-label="Prefijo internacional" value={dialCountry} onChange={e=>{setDialCountry(e.target.value);clearVerification();}}>
-        {DIAL_COUNTRIES.map(c=><option value={c.country} key={c.country}>{c.flag} {c.code} · {c.name}</option>)}
-       </select>
+       <CountryDialPicker value={dialCountry} onChange={country=>{if(country!==dialCountry){setDialCountry(country);clearVerification();}}}/>
        <input id="reg-phone" type="tel" autoComplete="tel-national" inputMode="tel"
         maxLength={22} placeholder="Tu número" value={nationalPhone} onChange={e=>{setNationalPhone(e.target.value);clearVerification();}}/>
       </div>
