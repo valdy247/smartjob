@@ -64,6 +64,14 @@ export default function App(){
    voice.on(Voice.Event.CallInvite,(incoming:CallInvite)=>{
      inviteRef.current=incoming;setInvite(incoming);
      setStatus("Llamada entrante · interpretación disponible");
+     const dismissInvite=()=>{
+       if(inviteRef.current!==incoming)return;
+       inviteRef.current=null;setInvite(null);
+       setStatus("La llamada terminó antes de contestar");
+       setVoiceDiagnostic("Twilio canceló la invitación antes de contestar.");
+     };
+     incoming.on(CallInvite.Event.Cancelled,dismissInvite);
+     incoming.on(CallInvite.Event.Rejected,dismissInvite);
      incoming.on(CallInvite.Event.Accepted,(accepted:Call)=>{
        connectCall(accepted);
      });
@@ -86,14 +94,63 @@ export default function App(){
      setVoiceDiagnostic("PushKit no pudo inicializarse: "+reason.slice(0,160));
    });
  },[]);
- function connectCall(connected:Call){
-   callRef.current=connected;setCall(connected);setInvite(null);inviteRef.current=null;
-   setStatus("Interpretación conectada");
-   connected.addListener(Call.Event.Connected,()=>setStatus("En llamada con interpretación"));
-   connected.addListener(Call.Event.Disconnected,()=>{
-     callRef.current=null;setCall(null);setStatus("Llamada finalizada");
-   });
+ function clearCallState(connected:Call,message="Llamada finalizada"){
+   if(callRef.current!==connected)return;
+   callRef.current=null;setCall(null);setStatus(message);
  }
+ function connectCall(connected:Call){
+   if(callRef.current===connected)return;
+   callRef.current=connected;setCall(connected);setInvite(null);inviteRef.current=null;
+   setStatus("Conectando interpretación…");
+   connected.addListener(Call.Event.Connected,()=>{
+     if(callRef.current===connected)setStatus("En llamada con interpretación");
+   });
+   connected.addListener(Call.Event.ConnectFailure,(cause:unknown)=>{
+     const e=cause as {code?:number|string;message?:string}|null;
+     setVoiceDiagnostic("Twilio no pudo conectar la llamada ("+String(e?.code||"sin código")+").");
+     clearCallState(connected,"No se pudo conectar la llamada");
+   });
+   connected.addListener(Call.Event.Disconnected,(cause:unknown)=>{
+     const e=cause as {code?:number|string}|null;
+     if(e?.code)setVoiceDiagnostic("Llamada desconectada: código Twilio "+String(e.code));
+     clearCallState(connected);
+   });
+   if(connected.getState()===Call.State.Disconnected)clearCallState(connected);
+ }
+ async function reconcileCurrentCall(){
+   const current=callRef.current,uid=sessionRef.current?.user.id;
+   if(!current||!uid||!supabase)return;
+   if(current.getState()===Call.State.Disconnected){
+     clearCallState(current);return;
+   }
+   const sid=current.getSid();
+   if(!sid||!/^CA[a-f0-9]{32}$/i.test(sid))return;
+   // Only this account's exact Twilio leg: Supabase RLS rejects other users.
+   const {data,error:lookupError}=await supabase.from("smartjob_call_sessions")
+     .select("status").eq("owner_id",uid).eq("outbound_sid",sid).maybeSingle();
+   if(lookupError){
+     setVoiceDiagnostic("No se pudo verificar el estado remoto de la llamada.");
+     return;
+   }
+   if(data&&["completed","no-answer","busy","failed","canceled"].includes(data.status)
+     &&callRef.current===current){
+     try{await current.disconnect();}catch{}
+     clearCallState(current,"Llamada finalizada · confirmada por servidor");
+     setVoiceDiagnostic("Twilio confirmó el cierre. La pantalla se sincronizó.");
+   }
+ }
+ useEffect(()=>{
+   if(!call)return;
+   const interval=setInterval(()=>{void reconcileCurrentCall()},12000);
+   void reconcileCurrentCall();
+   return()=>clearInterval(interval);
+ },[call]);
+ useEffect(()=>{
+   const sub=AppState.addEventListener("change",next=>{
+     if(next==="active")void reconcileCurrentCall();
+   });
+   return()=>sub.remove();
+ },[]);
  async function phoneApi(path:string,body?:Record<string,unknown>):Promise<Record<string,unknown>>{
    const client=supabase;
    if(!client)throw new Error("Inicia sesión primero.");
@@ -225,11 +282,18 @@ export default function App(){
  useEffect(()=>{
    if(!session||!ready)return;
    const sub=AppState.addEventListener("change",next=>{
-     if(next==="active"&&Date.now()-registeredAt.current>30*60*1000)
-       void registerPhone();
+     if(next==="active"&&Date.now()-registeredAt.current>10*60*1000
+       &&!callRef.current&&!inviteRef.current)void registerPhone();
    });
    return()=>sub.remove();
  },[ready,session?.user.id]);
+ useEffect(()=>{
+   // Re-register on app launch only for an activated iOS phone route.
+   // Twilio PushKit bindings may be stale after app restarts or network changes.
+   if(session?.user.id&&accountOverview?.connectedToApp&&!ready&&!registering){
+     void registerPhone();
+   }
+ },[session?.user.id,accountOverview?.connectedToApp]);
  async function login(){
    if(!supabase)return;
    setWorking(true);setError("");
