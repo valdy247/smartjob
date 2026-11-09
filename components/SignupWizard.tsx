@@ -83,7 +83,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
  const [accent,setAccent]=useState<Accent>("mint"),[fontScale,setFontScale]=useState<FontScale>("normal");
  const [appearance,setAppearance]=useState<Appearance>("light"),[reduceMotion,setReduceMotion]=useState(false);
  const [password,setPassword]=useState(""),[repeatPassword,setRepeatPassword]=useState(""),[showPassword,setShowPassword]=useState(false);
- const scrollRef=useRef<HTMLDivElement>(null);
+ const scrollRef=useRef<HTMLElement>(null);
  const selectedCountry=DIAL_COUNTRIES.find(x=>x.country===dialCountry)||DIAL_COUNTRIES[0];
  const digits=nationalPhone.replace(/\D/g,"");
  const phone=selectedCountry.code+digits;
@@ -204,9 +204,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
     options:{emailRedirectTo:window.location.origin,data:values}
    });
    if(authError)throw authError;
-   if(smsVerified&&smsTicket&&data.user&&!data.user.identities?.length){
-    // Supabase may obfuscate accounts already registered. Never attach a phone ticket to an unknown account.
-   }else if(smsVerified&&smsTicket&&data.user){
+   if(smsVerified&&smsTicket&&data.user){
     const pending={phone,ticket:smsTicket,createdAt:Date.now(),email:email.trim().toLowerCase()};
     try{localStorage.setItem("vmv_signup_verified_phone",JSON.stringify(pending));}catch{}
     if(data.session){
