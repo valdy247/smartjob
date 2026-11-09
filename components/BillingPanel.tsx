@@ -11,8 +11,8 @@ export function BillingPanel({supabase,userId}:{supabase:SupabaseClient;userId:s
  const [edit,setEdit]=useState(defaultPrefs),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
  const [message,setMessage]=useState(""),[showPlans,setShowPlans]=useState(false);
  const authHeaders=async()=>{const {data}=await supabase.auth.getSession();return data.session?{Authorization:"Bearer "+data.session.access_token}:null;};
- const refresh=async()=>{
-  setLoading(true);setMessage("");
+ const refresh=async(preserveMessage=false)=>{
+  setLoading(true);if(!preserveMessage)setMessage("");
   try{
    const h=await authHeaders();if(!h)throw new Error("Inicia sesión de nuevo.");
    const [a,b]=await Promise.all([
@@ -42,7 +42,7 @@ export function BillingPanel({supabase,userId}:{supabase:SupabaseClient;userId:s
    const h=await authHeaders();if(!h)throw new Error("Inicia sesión de nuevo.");
    const r=await fetch("/api/billing/preferences",{method:"POST",headers:{...h,"Content-Type":"application/json"},body:JSON.stringify(edit)});
    if(!r.ok)throw new Error("No se pudo guardar.");
-   setMessage("Guardado.");await refresh();
+   await refresh(true);setMessage("Guardado.");
   }catch(e){setMessage(e instanceof Error?e.message:"No disponible.");}
   finally{setBusy(false);}
  };
