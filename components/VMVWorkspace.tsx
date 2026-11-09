@@ -36,11 +36,9 @@ export default function VMVWorkspace({profile,supabase,status,onProfile,onLogout
   }catch{}finally{setRefreshing(false);}
  };
  useEffect(()=>{void load();},[profile.id]);
- const changeTab=(next:Tab)=>{setTab(next);if(next==="settings")setSettingsView("menu");window.scrollTo({top:0,behavior:"instant"});};
- const goSettings=(next:SettingsView)=>{setTab("settings");setSettingsView(next);window.scrollTo({top:0,behavior:"instant"});};
- const entries:[
-   {title:string;items:{id:SettingsView;label:string;desc:string;Icon:typeof House}[]}
- ]=[
+ const changeTab=(next:Tab)=>{setTab(next);if(next==="settings")setSettingsView("menu");window.scrollTo({top:0,behavior:"auto"});};
+ const goSettings=(next:SettingsView)=>{setTab("settings");setSettingsView(next);window.scrollTo({top:0,behavior:"auto"});};
+ const entries:{title:string;items:{id:SettingsView;label:string;desc:string;Icon:typeof House}[]}[]=[
   {title:"CUENTA",items:[{id:"profile",label:"Mi perfil",desc:"Datos personales",Icon:BookUser},{id:"security",label:"Seguridad",desc:"Acceso y privacidad",Icon:LockKeyhole}]},
   {title:"LLAMADAS",items:[{id:"numbers",label:"Números y verificación",desc:"Mi línea y desvío",Icon:PhoneCall},{id:"history",label:"Historial",desc:"Actividad telefónica",Icon:History}]},
   {title:"PAGOS",items:[{id:"billing",label:"Plan, minutos y billing",desc:"Suscripción y facturas",Icon:CreditCard}]},
