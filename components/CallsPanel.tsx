@@ -24,7 +24,7 @@ export function CallsPanel({supabase,profile,apiStatus,mode="dial",onNavigate}:{
  const [form,setForm]=useState<CallSettings>(blank),[route,setRoute]=useState<PhoneRoute|null>(null);
  const [history,setHistory]=useState<CallRecord[]>([]),[request,setRequest]=useState<ProvisionRequest|null>(null);
  const [account,setAccount]=useState<Account|null>(null);
- const [carrier,setCarrier]=useState("other"),[connectionMode,setConnectionMode]=useState("conditional"),[answerMethod,setAnswerMethod]=useState("app");
+ const [carrier,setCarrier]=useState("other"),[connectionMode,setConnectionMode]=useState("all_calls"),[answerMethod,setAnswerMethod]=useState("app");
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[requestBusy,setRequestBusy]=useState(false);
  const [message,setMessage]=useState(""),[error,setError]=useState("");
  const refresh=async()=>{
@@ -154,11 +154,13 @@ export function CallsPanel({supabase,profile,apiStatus,mode="dial",onNavigate}:{
    <h2>Conexión con tu operador</h2><p className="vmv-muted vmv-carrier-explanation">Conservas tu número. VMV Call recibe la llamada solo después de configurar el desvío.</p>
    <div className="form-grid">
     <div><label className="label" htmlFor="vmv-carrier">Operador</label><select id="vmv-carrier" className="field" value={carrier} onChange={e=>setCarrier(e.target.value)} disabled={lockedRequest}>{carriers.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></div>
-    <div><label className="label" htmlFor="vmv-connection">Desvío</label><select id="vmv-connection" className="field" value={connectionMode} onChange={e=>setConnectionMode(e.target.value)} disabled={request?.status==="pending"}><option value="conditional">Condicional</option><option value="all_calls">Todas</option><option value="port">Portabilidad (consulta)</option></select></div>
+    <div><label className="label" htmlFor="vmv-connection">Desvío</label><select id="vmv-connection" className="field" value={connectionMode} onChange={e=>setConnectionMode(e.target.value)} disabled={request?.status==="pending"}><option value="all_calls">Todas las llamadas</option><option value="conditional">Solo no contestadas</option><option value="port">Portabilidad (consulta)</option></select></div>
    </div>
+   <p className="vmv-muted vmv-carrier-explanation">{connectionMode==="all_calls"?"Todas las llamadas pasarán por el menú bilingüe una vez habilitado el desvío.":connectionMode==="conditional"?"El menú solo contestará las llamadas que tu operador desvíe por ocupación o falta de respuesta.":"Portar tu número necesita autorización y puede afectar llamadas y SMS."}</p>
    <label className="label" htmlFor="vmv-answer">Recibir en</label><select id="vmv-answer" className="field" value={answerMethod} onChange={e=>setAnswerMethod(e.target.value)} disabled={request?.status==="pending"}><option value="app">App de iPhone</option><option value="separate_line" disabled>Otra línea (próximamente)</option></select>
    {request&&<div className="vmv-request-status">Solicitud: {requestLabels[request.status]||request.status}</div>}
    {lockedRequest&&<p className="vmv-tiny-disclaimer">Para cambiar operador o número después de solicitarlo, contacta soporte y vuelve a verificar.</p>}
+   {request?.connection_mode==="conditional"&&<p className="vmv-setup-warning">Tu configuración actual es condicional: el menú no aparece si contestas normalmente en tu línea móvil.</p>}
    <button type="button" className="btn primary block" disabled={requestBusy||active||lockedRequest||loading} onClick={()=>void submitRequest()}><ArrowRight size={16}/>{requestBusy?"Enviando…":active?"Línea asignada":lockedRequest?"Solicitud en revisión":"Solicitar conexión"}</button>
    <p className="vmv-tiny-disclaimer">Solo la prueba real confirma que tu número habitual llega a VMV Call.</p><details className="vmv-safety-details"><summary><Info size={15}/> Desvío y seguridad</summary>
     <p>Guardar o solicitar no compra números ni activa el desvío. Verifica tu número y comprueba llamadas reales con el iPhone bloqueado antes de modificar Verizon u otro operador.</p>
