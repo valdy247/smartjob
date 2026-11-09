@@ -8,7 +8,10 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "bridge:test": "node --check services/live-bridge/server.mjs && node --test services/live-bridge/relay-core.test.mjs",
-    "ios:internal": "cd apps/ios && npx eas-cli build --platform ios --profile preview"
+    "ios:internal": "cd apps/ios && npx eas-cli build --platform ios --profile preview",
+    "catalog:sync": "node scripts/sync-registration-data.mjs",
+    "prebuild": "npm run catalog:sync",
+    "predev": "npm run catalog:sync"
   },
   "engines": {
     "node": ">=20.9"
