@@ -36,6 +36,12 @@ export default function VMVWorkspace({profile,supabase,status,onProfile,onLogout
   }catch{}
  };
  useEffect(()=>{void load();},[profile.id]);
+ const startPlanSetup=async(plan:"starter"|"pro"|"premium")=>{
+  const {data,error}=await supabase.from("smartjob_profiles").update({
+    preferred_plan:plan,plan_prompt_seen:false,line_setup_completed:false,updated_at:new Date().toISOString()
+  }).eq("id",profile.id).select("*").single();
+  if(!error&&data)onProfile(data as Profile);
+ };
  const changeTab=(next:Tab)=>{setTab(next);if(next==="settings")setSettingsView("menu");window.scrollTo({top:0,behavior:"auto"});};
  const goSettings=(next:SettingsView)=>{setTab("settings");setSettingsView(next);window.scrollTo({top:0,behavior:"auto"});};
  const entries:{title:string;items:{id:SettingsView;label:string;desc:string;Icon:typeof House}[]}[]=[
@@ -80,7 +86,7 @@ export default function VMVWorkspace({profile,supabase,status,onProfile,onLogout
      <h1 className="vmv-subtitle">{({profile:"Mi perfil",numbers:"Mi línea",billing:"Plan y pagos",history:"Historial",security:"Seguridad",style:"Idiomas y asistente",support:"Soporte",services:"Otros servicios",menu:"Ajustes"} as Record<SettingsView,string>)[settingsView]}</h1>
      {settingsView==="profile"&&<SettingsPanel key={profile.id} profile={profile} supabase={supabase} onChange={onProfile} status={status} onLogout={onLogout}/>}
      {settingsView==="numbers"&&<CallsPanel mode="numbers" profile={profile} supabase={supabase} apiStatus={status}/>}
-     {settingsView==="billing"&&<BillingPanel supabase={supabase} userId={profile.id}/>}
+     {settingsView==="billing"&&<BillingPanel supabase={supabase} userId={profile.id} onChoosePlan={plan=>void startPlanSetup(plan)}/>}
      {settingsView==="history"&&<CallsPanel mode="history" profile={profile} supabase={supabase} apiStatus={status}/>}
      {settingsView==="security"&&<section className="vmv-compact-card"><ShieldCheck size={26}/><h2>Acceso seguro</h2><p className="vmv-muted">Protege tus códigos y contraseña.</p><button className="vmv-secondary-cta" onClick={onLogout}>Cerrar sesión</button></section>}
      {settingsView==="style"&&<><CallsPanel mode="preferences" profile={profile} supabase={supabase} apiStatus={status}/><BillingPanel mode="greetings" supabase={supabase} userId={profile.id}/></>}

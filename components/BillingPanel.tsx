@@ -3,10 +3,10 @@ import {useEffect,useState} from "react";
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {ArrowRight,Check,ChevronDown,CreditCard,RefreshCw,Volume2} from "lucide-react";
 type Plan={id:"starter"|"pro"|"premium";name:string;priceCents:number;minutes:number;topupCentsPerMinute:number;rolloverCap:number;customVoice:boolean;customGreeting:boolean};
-type Overview={plans:Plan[];plan:string;status:string;subscriptionActive:boolean;periodEnd:string|null;minutes:{included:number;used:number;available:number;rollover:number;topup:number;reserved:number;temporaryHold:number;holdUntil:string|null};topup:{plan:string;minutes:number;priceCents:number;available:boolean}|null;billingMode:string;canCheckout:boolean;hasPortal:boolean;note:string};
+type Overview={plans:Plan[];plan:string;status:string;subscriptionActive:boolean;testSubscriptionActive?:boolean;phoneServiceReady?:boolean;periodEnd:string|null;minutes:{included:number;used:number;available:number;rollover:number;topup:number;reserved:number;temporaryHold:number;holdUntil:string|null};topup:{plan:string;minutes:number;priceCents:number;available:boolean}|null;billingMode:string;canCheckout:boolean;hasPortal:boolean;note:string};
 type Preferences={editable:boolean;settings:{voice_customer:string;voice_owner:string;greeting_customer:string;greeting_owner:string}};
 const defaultPrefs={voice_customer:"default",voice_owner:"default",greeting_customer:"",greeting_owner:""};
-export function BillingPanel({supabase,userId,mode="full"}:{supabase:SupabaseClient;userId:string;mode?:"full"|"greetings"}){
+export function BillingPanel({supabase,userId,mode="full",onChoosePlan}:{supabase:SupabaseClient;userId:string;mode?:"full"|"greetings";onChoosePlan?:(plan:"starter"|"pro"|"premium")=>void}){
  const [overview,setOverview]=useState<Overview|null>(null),[prefs,setPrefs]=useState<Preferences|null>(null);
  const [edit,setEdit]=useState(defaultPrefs),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
  const [message,setMessage]=useState(""),[showPlans,setShowPlans]=useState(false);
@@ -48,7 +48,7 @@ export function BillingPanel({supabase,userId,mode="full"}:{supabase:SupabaseCli
  };
  return <div className="vmv-billing">
   {mode==="full"&&<><div className="vmv-compact-card">
-   <div className="vmv-between"><span className="vmv-small-label"><CreditCard size={19}/> Mi plan</span><span className="vmv-tag is-pending">{overview?.status==="active"?"Activo":"Prueba"}</span></div>
+   <div className="vmv-between"><span className="vmv-small-label"><CreditCard size={19}/> Mi plan</span><span className="vmv-tag is-pending">{overview?.subscriptionActive?"Activo":overview?.testSubscriptionActive?"Solo prueba":"Sin activar"}</span></div>
    <div className="vmv-billing-top"><div><strong>{overview?.plan==="none"?"Sin plan":overview?.plan?.toUpperCase()||"—"}</strong><small>Plan actual</small></div><div><strong>{overview?overview.minutes.available:"—"}</strong><small>Minutos restantes</small></div></div>
    <div className="vmv-billing-minutes"><span>Usados: {overview?overview.minutes.used:"—"}</span><span>Incluidos: {overview?overview.minutes.included:"—"}</span></div>
    <button className="vmv-secondary-cta" type="button" onClick={()=>void refresh()} disabled={loading}><RefreshCw size={15}/> {loading?"Cargando…":"Actualizar"}</button>
@@ -59,11 +59,11 @@ export function BillingPanel({supabase,userId,mode="full"}:{supabase:SupabaseCli
     {overview?.plans.map(plan=><div key={plan.id} className="vmv-billing-plan">
       <div className="vmv-between"><strong>{plan.name}</strong><strong>${(plan.priceCents/100).toFixed(2)} <small>/mes</small></strong></div>
       <p>{plan.minutes} min incluidos</p>
-      <button className="vmv-secondary-cta" type="button" disabled={busy||!overview.canCheckout||overview.subscriptionActive} onClick={()=>void action("/api/billing/checkout",plan.id)}>
-       {overview.subscriptionActive?"Plan vigente":overview.canCheckout?"Probar plan":"No disponible"} <ArrowRight size={15}/>
+      <button className="vmv-secondary-cta" type="button" disabled={busy||overview.subscriptionActive||(!onChoosePlan&&!overview.canCheckout)} onClick={()=>onChoosePlan?onChoosePlan(plan.id):void action("/api/billing/checkout",plan.id)}>
+       {overview.subscriptionActive?"Plan vigente":onChoosePlan?"Elegir y configurar":overview.canCheckout?"Simular pago":"No disponible"} <ArrowRight size={15}/>
       </button>
     </div>)}
-    <p className="vmv-tiny-disclaimer">Stripe en modo de prueba. Sin cargos reales.</p>
+    <p className="vmv-tiny-disclaimer">Stripe TEST: sin cargos reales. Las llamadas siguen bloqueadas hasta un pago real validado.</p>
    </div>}
    {overview?.hasPortal&&<button type="button" className="vmv-secondary-cta" disabled={busy} onClick={()=>void action("/api/billing/portal")}>Gestionar suscripción <ArrowRight size={15}/></button>}
    {overview?.topup&&<button type="button" className="vmv-secondary-cta" disabled={busy||!overview.topup.available} onClick={()=>void action("/api/billing/topup",overview.topup!.plan)}>Recargar {overview.topup.minutes} min · ${(overview.topup.priceCents/100).toFixed(2)}</button>}

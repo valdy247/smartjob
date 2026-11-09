@@ -1,10 +1,12 @@
 import {createHmac,timingSafeEqual} from "node:crypto";
 import {NextRequest,NextResponse} from "next/server";
 import {compareNumbers} from "@/lib/qa";
+import {billingAdmin} from "@/lib/vmv-billing";
+import {paidServiceAllowed} from "@/lib/vmv-entitlements";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
-type TranslationRequest={original?:unknown;role?:unknown;sourceLanguage?:unknown;stream?:unknown};
+type TranslationRequest={original?:unknown;role?:unknown;sourceLanguage?:unknown;bridge?:unknown;stream?:unknown};
 const blockedForStreaming=/[$€£%]|\d|(?<![\p{L}\d])(?:alérgic[oa]s?|alergias?|sesenta|setenta|ochenta|noventa|cuarenta|cincuenta|treinta|cientos?|millones?|millions?|hundreds?|date|fecha|tomorrow|mañana|yesterday|ayer|today|hoy|monday|tuesday|wednesday|thursday|friday|saturday|sunday|lunes|martes|miércoles|jueves|viernes|sábado|domingo|january|february|march|april|may|june|july|august|september|october|november|december|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|allerg(?:y|ies|ic|ia|ias)|peanut|nuts?|gluten|milk|dairy|egg|huevo|leche|nuez|cacahuate|maní|precio|price|cost|dollar|dólar|dólares|pesos?|euros?|cent|kilos?|kilograms?|pounds?|libras?|grams?|gramos?|ounces?|onzas?|veinte|twenty|one|two|three|four|five|six|seven|eight|nine|ten|hundred|thousand|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|cien|mil|half|quarter|medio|media|hora|hour|minute|minuto)(?![\p{L}\d])/iu;
 
 function provider(){
@@ -108,8 +110,21 @@ export async function POST(req:NextRequest){
   if(!timingSafeEqual(digest,Buffer.from(signature,"hex")))return NextResponse.json({error:"unauthorized"},{status:403});
   let item:TranslationRequest;
   try{item=JSON.parse(body);}catch{return NextResponse.json({error:"invalid_json"},{status:400});}
-  if((item.role!=="customer"&&item.role!=="professional")||typeof item.original!=="string"||item.original.length>400||!item.original.trim())
+  if((item.role!=="customer"&&item.role!=="professional")||typeof item.original!=="string"||item.original.length>400||!item.original.trim()||
+     typeof item.bridge!=="string"||!/^CA[a-f\d]{32}$/i.test(item.bridge))
     return NextResponse.json({error:"invalid_input"},{status:400});
+  // A valid relay signature is not a subscription. Bind each AI call to a
+  // reserved, active, paid tenant bridge before invoking the provider.
+  const db=billingAdmin();
+  if(!db)return NextResponse.json({error:"billing_unavailable"},{status:503});
+  const {data:call,error:lookupError}=await db.from("smartjob_call_sessions")
+    .select("owner_id,status,reserved_minutes,call_mode,billing_settled")
+    .eq("bridge_sid",item.bridge).maybeSingle();
+  if(lookupError||!call||call.call_mode==="direct"||
+     !["initiated","ringing","in-progress"].includes(call.status)||
+     call.billing_settled===true||Number(call.reserved_minutes||0)<1||
+     !await paidServiceAllowed(call.owner_id,"translated_call"))
+    return NextResponse.json({error:"paid_call_required"},{status:403});
   const {auth:configuredAuth,url,model}=provider();
   const auth=configuredAuth||req.headers.get("x-vercel-oidc-token");
   if(!auth)return NextResponse.json({error:"translation_not_configured"},{status:503});

@@ -9,7 +9,7 @@ type CallRecord={bridge_sid:string;status:string;duration_seconds:number|null;st
 type ProvisionRequest={id:string;status:string;created_at:string;destination_phone:string;carrier:string;connection_mode:string;answer_method:string};
 type Mode="dial"|"numbers"|"history"|"preferences";
 type Navigate=(screen:"numbers"|"history"|"support")=>void;
-type Account={forwardingReady:boolean;verified:boolean;connectedToApp?:boolean;menuPrepared?:boolean;menuVerifiedByRealCall?:boolean;twilioPhone:string|null;usage:{calls:number;completed:number;minutes:number;directCalls?:number;translatedCalls?:number}};
+type Account={forwardingReady:boolean;verified:boolean;connectedToApp?:boolean;menuPrepared?:boolean;menuVerifiedByRealCall?:boolean;twilioPhone:string|null;billing?:{active:boolean;message:string};usage:{calls:number;completed:number;minutes:number;directCalls?:number;translatedCalls?:number}};
 const carriers=[
  ["verizon","Verizon"],["att","AT&T"],["tmobile","T-Mobile"],["xfinity","Xfinity Mobile"],
  ["spectrum","Spectrum Mobile"],["cricket","Cricket Wireless"],["metro","Metro by T-Mobile"],
@@ -53,7 +53,8 @@ export function CallsPanel({supabase,profile,apiStatus,mode="dial",onNavigate}:{
   finally{setLoading(false);}
  };
  useEffect(()=>{void refresh();},[supabase,profile.id]);
- const active=Boolean(route?.enabled);
+ const paid=account?.billing?.active===true;
+ const active=Boolean(route?.enabled&&paid);
  const lockedRequest=Boolean(request&&["pending","approved","activated"].includes(request.status));
  const verified=Boolean(account?.verified);
  const connected=Boolean(account?.connectedToApp);
@@ -80,14 +81,21 @@ export function CallsPanel({supabase,profile,apiStatus,mode="dial",onNavigate}:{
   if(!name||name.length>40){setError("Revisa el nombre del asistente.");return;}
   setRequestBusy(true);
   try{
-   const {data,error:saveError}=await supabase.from("smartjob_provisioning_requests").insert({
-    user_id:profile.id,destination_phone:destination,
-    customer_language:form.caller_language==="es"?"es-ES":"en-US",
-    owner_language:form.desired_language==="es"?"es-ES":"en-US",
-    assistant_name:name,carrier,connection_mode:connectionMode,answer_method:answerMethod
-   }).select("id,status,created_at,destination_phone,carrier,connection_mode,answer_method").single();
-   if(saveError){setError(saveError.code==="23505"?"Ya existe una solicitud pendiente.":"No se pudo enviar la solicitud.");}
-   else{setRequest(data as ProvisionRequest);setMessage("Solicitud enviada. Tu operador y desvío no cambiaron.");}
+   const {data:session}=await supabase.auth.getSession();
+   if(!session.session)throw Error("Inicia sesión para continuar.");
+   const response=await fetch("/api/line/request",{
+    method:"POST",headers:{"Authorization":"Bearer "+session.session.access_token,"Content-Type":"application/json"},
+    body:JSON.stringify({destination_phone:destination,
+      customer_language:form.caller_language==="es"?"es-ES":"en-US",
+      owner_language:form.desired_language==="es"?"es-ES":"en-US",
+      assistant_name:name,carrier,connection_mode:connectionMode,answer_method:answerMethod})
+   });
+   const result=await response.json();
+   if(!response.ok){
+    setError(result.error==="live_paid_plan_required"?"Primero necesitas un plan pagado y confirmado.":
+      result.error==="request_already_exists"?"Ya tienes una solicitud en revisión.":
+      "No se pudo enviar la solicitud.");
+   }else{setRequest(result.request as ProvisionRequest);setMessage("Solicitud en revisión. No hemos comprado ni activado un número.");}
   }catch{setError("No se pudo enviar la solicitud.");}
   finally{setRequestBusy(false);}
  };
@@ -97,7 +105,7 @@ export function CallsPanel({supabase,profile,apiStatus,mode="dial",onNavigate}:{
    <div className="vmv-between"><span className="vmv-small-label"><PhoneCall size={18}/> Recepción</span>
     <span className={"vmv-tag "+(active&&connected?"is-live":"is-pending")}>{loading?"Cargando":active&&connected?"Conectada":"Pendiente"}</span></div>
    <div className="vmv-call-large-number">{line}</div>
-   <p className="vmv-muted">{active&&connected?"Recibe llamadas en tu iPhone":"Activa tu línea en la app de iPhone"}</p>
+   <p className="vmv-muted">{!paid?"Recepción bloqueada hasta confirmar tu plan.":active&&connected?"Recibe llamadas en tu iPhone":"Configura tu línea en la app de iPhone"}</p>
    <div className="vmv-call-focus-actions">
     <button className="vmv-big-cta" onClick={()=>onNavigate?.("numbers")}>Mi línea <ChevronRight size={19}/></button>
     <button className="vmv-call-refresh" onClick={()=>void refresh()} disabled={loading} aria-label="Actualizar estado"><RefreshCw size={18}/></button>
@@ -161,7 +169,8 @@ export function CallsPanel({supabase,profile,apiStatus,mode="dial",onNavigate}:{
    {request&&<div className="vmv-request-status">Solicitud: {requestLabels[request.status]||request.status}</div>}
    {lockedRequest&&<p className="vmv-tiny-disclaimer">Para cambiar operador o número después de solicitarlo, contacta soporte y vuelve a verificar.</p>}
    {request?.connection_mode==="conditional"&&<p className="vmv-setup-warning">Tu configuración actual es condicional: el menú no aparece si contestas normalmente en tu línea móvil.</p>}
-   <button type="button" className="btn primary block" disabled={requestBusy||active||lockedRequest||loading} onClick={()=>void submitRequest()}><ArrowRight size={16}/>{requestBusy?"Enviando…":active?"Línea asignada":lockedRequest?"Solicitud en revisión":"Solicitar conexión"}</button>
+   {!paid&&<p className="vmv-tiny-disclaimer">Para solicitar conexión necesitas un plan con pago real confirmado. Puedes guardar preferencias sin activar la línea.</p>}
+   <button type="button" className="btn primary block" disabled={!paid||requestBusy||active||lockedRequest||loading} onClick={()=>void submitRequest()}><ArrowRight size={16}/>{requestBusy?"Enviando…":active?"Línea asignada":lockedRequest?"Solicitud en revisión":"Solicitar conexión"}</button>
    <p className="vmv-tiny-disclaimer">Solo la prueba real confirma que tu número habitual llega a VMV Call.</p><details className="vmv-safety-details"><summary><Info size={15}/> Desvío y seguridad</summary>
     <p>Guardar o solicitar no compra números ni activa el desvío. Verifica tu número y comprueba llamadas reales con el iPhone bloqueado antes de modificar Verizon u otro operador.</p>
     <p>No desvíes llamadas de vuelta al mismo número: puede crear un bucle. La portabilidad puede afectar las llamadas y SMS del operador.</p>
