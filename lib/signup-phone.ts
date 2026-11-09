@@ -1,15 +1,16 @@
 import {createHmac,createHash,randomBytes} from "node:crypto";
 import {NextRequest,NextResponse} from "next/server";
 import {billingAdmin} from "@/lib/vmv-billing";
-import {twilioVerifyPost,twilioVerifyReady} from "@/lib/phone-verification";
+import {twilioVerifyPost} from "@/lib/phone-verification";
 
 export const noStore={"Cache-Control":"no-store"};
 export const response=(value:Record<string,unknown>,status=200)=>
  NextResponse.json(value,{status,headers:noStore});
 export const validPhone=(value:unknown):value is string=>
  typeof value==="string"&&/^\+[1-9][0-9]{7,14}$/.test(value);
-export const smsReady=()=>process.env.VMV_SIGNUP_SMS_ENABLED==="true"&&twilioVerifyReady()&&
- /^[a-f0-9]{64}$/i.test(process.env.SMARTJOB_PHONE_VERIFY_PROOF_KEY||"")&&Boolean(billingAdmin());
+// Pre-account SMS incurs provider charges without a payer. Allow only after a confirmed paid plan.
+// Registration may continue without sending a billable code.
+export const smsReady=()=>false;
 export const originOk=(req:NextRequest)=>{
  const origin=req.headers.get("origin");
  return !origin||origin===req.nextUrl.origin;
