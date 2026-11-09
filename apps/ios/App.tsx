@@ -47,7 +47,7 @@ export default function App(){
  const [voiceDiagnostic,setVoiceDiagnostic]=useState("Sin diagnóstico de registro todavía.");
  const [accountOverview,setAccountOverview]=useState<{
   verified:boolean;connectedToApp:boolean;forwardingReady:boolean;twilioPhone:string|null;
-  publicPhone:string|null;carrier:string|null;usage:{calls:number;completed:number;minutes:number;periodDays:number};
+  publicPhone:string|null;carrier:string|null;menuPrepared?:boolean;menuVerifiedByRealCall?:boolean;forwardingReported?:boolean;usage:{calls:number;completed:number;minutes:number;periodDays:number;directCalls?:number;translatedCalls?:number};
   billing:{enabled:boolean;message:string};
  }|null>(null);
  const [overviewBusy,setOverviewBusy]=useState(false);
@@ -550,9 +550,11 @@ export default function App(){
           </>:<Button label="Consultar mi número" onPress={()=>void refreshPhoneVerification()}/>}
          {verifyMessage?<Text style={styles.verifyMessage}>{verifyMessage}</Text>:null}
         </View>
-        <View style={styles.card}><Text style={styles.cardTitle}>Desvío</Text>
+        <View style={styles.card}><Text style={styles.cardTitle}>Conexión con el operador</Text>
+         <Text style={styles.helper}>Operador: {accountOverview?.carrier?accountOverview.carrier.replace("att","AT&T").replace("tmobile","T-Mobile").replace(/^./,v=>v.toUpperCase()):"Pendiente"}</Text>
          <Text style={styles.featureNumber}>{accountOverview?.twilioPhone||"Pendiente"}</Text>
-         <Text style={styles.helper}>No actives el desvío antes de comprobar una llamada real con el iPhone bloqueado.</Text>
+         <Text style={styles.helper}>Menú bilingüe: {accountOverview?.menuPrepared?"Preparado para pruebas":"Pendiente"}</Text>
+         <Text style={styles.helper}>Desvío con tu número: sin confirmar. Requiere una llamada real desde otro teléfono.</Text>
          <Pressable accessibilityRole="button" accessibilityState={{expanded:forwardHelpOpen}} onPress={()=>setForwardHelpOpen(!forwardHelpOpen)} style={styles.settingRow}>
           <Text style={styles.settingLabel}>Instrucciones del operador</Text><Text style={styles.settingChevron}>{forwardHelpOpen?"⌄":"›"}</Text>
          </Pressable>
