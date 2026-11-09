@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState} from "react";
 import {ActivityIndicator,Alert,AppState,KeyboardAvoidingView,Platform,Pressable,
- SafeAreaView,ScrollView,StatusBar,StyleSheet,Text,TextInput,View,Modal,Keyboard,Linking,Image} from "react-native";
+ SafeAreaView,ScrollView,StatusBar,StyleSheet,Text,TextInput,View,Modal,Keyboard,Linking,Image,useWindowDimensions} from "react-native";
 import {Voice,Call,CallInvite} from "@twilio/voice-react-native-sdk";
 import type {Session} from "@supabase/supabase-js";
 import {api,supabase,configured} from "./session";
@@ -23,6 +23,7 @@ function ensurePushRegistry():Promise<void>{
 }
 
 export default function App(){
+ const {height:screenHeight}=useWindowDimensions();
  const [session,setSession]=useState<Session|null>(null);
  const [activeTab,setActiveTab]=useState<"home"|"calls"|"live"|"settings">("home");
  const [image1Unavailable,setImage1Unavailable]=useState(false);
@@ -434,7 +435,7 @@ export default function App(){
  return <SafeAreaView style={styles.safe}>
   <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
   <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":undefined}>
-   <ScrollView scrollEnabled={activeTab!=="home"} keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content,session&&{paddingBottom:activeTab==="home"?96:130}]}>
+   <ScrollView scrollEnabled={activeTab!=="home"||screenHeight<720} keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content,session&&{paddingBottom:activeTab==="home"?96:130}]}>
     <View style={styles.brand}><View style={styles.brandMark}>
       <View style={styles.brandWave}>
        <View style={[styles.brandWaveBar,{height:13}]}/><View style={[styles.brandWaveBar,{height:24}]}/>
