@@ -21,6 +21,7 @@ export function ActivationFlow({profile,supabase,onSaved,onExit}:{profile:Profil
  const [ownerLanguage,setOwnerLanguage]=useState(profile.owner_language==="en"?"en":"es");
  const [assistant,setAssistant]=useState(profile.assistant_name||"Juan"),[carrier,setCarrier]=useState("other");
  const [confirmed,setConfirmed]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState("");
+ const [savedProfile,setSavedProfile]=useState<Profile|null>(null);
  useEffect(()=>{
   let alive=true;
   (async()=>{
@@ -39,11 +40,11 @@ export function ActivationFlow({profile,supabase,onSaved,onExit}:{profile:Profil
   const {data,error:saveError}=await supabase.from("smartjob_profiles")
    .update({...values,updated_at:new Date().toISOString()}).eq("id",profile.id).select("*").single();
   if(saveError||!data)throw Error("No se pudo guardar. Intenta otra vez.");
-  onSaved(data as Profile);return data as Profile;
+  setSavedProfile(data as Profile);return data as Profile;
  };
  const skip=async()=>{
   if(busy)return;setBusy(true);setError("");
-  try{await persist({plan_prompt_seen:true,preferred_plan:null,line_setup_completed:false});onExit();}
+  try{const saved=await persist({plan_prompt_seen:true,preferred_plan:null,line_setup_completed:false});onSaved(saved);onExit();}
   catch(e){setError(e instanceof Error?e.message:"No se pudo omitir.");}finally{setBusy(false);}
  };
  const finish=async()=>{
@@ -60,7 +61,7 @@ export function ActivationFlow({profile,supabase,onSaved,onExit}:{profile:Profil
    },{onConflict:"user_id"});
    if(settingsError)throw Error("No pudimos guardar las preferencias de llamadas.");
    await persist({line_choice:lineChoice,preferred_plan:chosen,plan_prompt_seen:true,
-    line_setup_completed:true,assistant_name:assistant.trim(),owner_language:ownerLanguage,
+    line_setup_completed:true,line_carrier:lineChoice==="keep"?carrier:"other",assistant_name:assistant.trim(),owner_language:ownerLanguage,
     customer_language:ownerLanguage==="es"?"en":"es"});
    setPhase("done");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo guardar.");}
@@ -150,7 +151,7 @@ export function ActivationFlow({profile,supabase,onSaved,onExit}:{profile:Profil
      <p>Elegiste {planName}. La línea sigue desactivada hasta verificar un pago real.</p>
      {overview?.canCheckout&&<button type="button" className="vmv-activation-primary" onClick={()=>void checkout()} disabled={busy}>
       {busy?"Abriendo…":"Simular pago con Stripe TEST"} <ArrowRight size={17}/></button>}
-     <button type="button" className="vmv-activation-skip" onClick={onExit}>Ir a mi espacio <ArrowRight size={17}/></button>
+     <button type="button" className="vmv-activation-skip" onClick={()=>{if(savedProfile)onSaved(savedProfile);onExit();}}>Ir a mi espacio <ArrowRight size={17}/></button>
     </div>
    </>}
    {error&&<p role="alert" className="vmv-activation-error">{error}</p>}
