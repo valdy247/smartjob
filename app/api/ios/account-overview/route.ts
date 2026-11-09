@@ -3,6 +3,7 @@ import {createClient} from "@supabase/supabase-js";
 import {authenticatedUser} from "@/lib/auth-server";
 import {getBillingAccount,billingEnabledFor,balance,eligible as billingEligible} from "@/lib/vmv-billing";
 import {languageMenuEnabled} from "@/lib/vmv-ivr";
+import {allowSpendWithAccount} from "@/lib/vmv-entitlements";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const headers={"Cache-Control":"no-store"};
@@ -28,26 +29,26 @@ export async function GET(req:NextRequest){
    &&route.twilio_number!==route.destination_phone;
  const duration=(calls.data||[]).reduce((sum,c)=>sum+Math.max(0,Math.min(86400,c.duration_seconds||0)),0);
  const billingAccount=await getBillingAccount(uid);
+ const paid=allowSpendWithAccount(billingAccount,"direct_call");
  const count=(calls.data||[]).length;
  const completed=(calls.data||[]).filter(c=>c.status==="completed").length;
  const directCalls=(calls.data||[]).filter(c=>c.call_mode==="direct").length;
  const translatedCalls=(calls.data||[]).filter(c=>c.call_mode!=="direct").length;
  const translatedSeconds=(calls.data||[]).filter(c=>c.call_mode!=="direct").reduce((sum,c)=>sum+Math.max(0,Math.min(86400,c.duration_seconds||0)),0);
- const menuPrepared=Boolean(eligible&&languageMenuEnabled()&&process.env.SMARTJOB_IOS_VOICE_ENABLED==="true");
+ const menuPrepared=Boolean(eligible&&paid&&languageMenuEnabled()&&process.env.SMARTJOB_IOS_VOICE_ENABLED==="true");
 
  return NextResponse.json({
-  verified,connectedToApp:route?.receive_method==="ios_app"&&route.enabled===true,
-  forwardingReady:eligible,
+  verified,connectedToApp:Boolean(paid&&route?.receive_method==="ios_app"&&route.enabled===true),
+  forwardingReady:Boolean(eligible&&paid),
   menuPrepared,menuVerifiedByRealCall:false,
-  publicPhone:eligible?route?.destination_phone:null,
+  publicPhone:paid&&eligible?route?.destination_phone:null,
   twilioPhone:route?.twilio_number||null,
   carrier:verification.data?.carrier||null,
   forwardingReported:route?.forwarding_mode!=="none"&&Boolean(route?.forwarding_mode),
   usage:{periodDays:30,calls:count,completed,directCalls,translatedCalls,seconds:duration,minutes:Math.ceil(duration/60),translatedMinutes:Math.ceil(translatedSeconds/60),metering:"indicative"},
-  billing:{enabled:billingEnabledFor(uid),active:billingEligible(billingAccount),
+  billing:{enabled:true,active:paid,
     plan:billingAccount?.plan_code||"none",availableMinutes:balance(billingAccount),
-    message:billingEnabledFor(uid)?"Las llamadas requieren minutos de un plan activo.":
-      "El control automático de minutos aún está en preparación."},
-  nextAction:eligible?"Activar manualmente el desvío en el operador y confirmar con una llamada real.":"Verificar el número y activar primero la recepción iOS."
+    message:paid?"Plan real validado.":"Recepción bloqueada hasta confirmar un pago real y completar la activación."},
+  nextAction:paid&&eligible?"Verificar desvío con tu operador y realizar prueba de recepción.":"Elegir un plan, completar configuración y esperar activación tras pago real."
  },{headers});
 }
