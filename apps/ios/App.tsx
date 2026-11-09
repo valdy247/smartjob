@@ -26,6 +26,8 @@ export default function App(){
  const [activeTab,setActiveTab]=useState<"home"|"calls"|"live"|"settings">("home");
  const [keyboardVisible,setKeyboardVisible]=useState(false),[forwardHelpOpen,setForwardHelpOpen]=useState(false);
  const [settingsPage,setSettingsPage]=useState<"menu"|"numbers"|"billing"|"history"|"security"|"profile"|"style"|"support"|"services">("menu");
+ const [callHistory,setCallHistory]=useState<{bridge_sid:string;status:string;duration_seconds:number|null;started_at:string}[]>([]);
+ const [historyBusy,setHistoryBusy]=useState(false);
  const [translationText,setTranslationText]=useState("");
  const [translationActor,setTranslationActor]=useState<"owner"|"customer">("owner");
  const [translationConsent,setTranslationConsent]=useState(false);
@@ -256,6 +258,21 @@ export default function App(){
   if(!session?.user.id){setAccountOverview(null);return;}
   void refreshAccountOverview();
  },[session?.user.id]);
+ async function refreshCallHistory(){
+  if(!supabase||!sessionRef.current)return;
+  setHistoryBusy(true);
+  try{
+   const {data,error:historyError}=await supabase.from("smartjob_call_sessions")
+     .select("bridge_sid,status,duration_seconds,started_at")
+     .eq("owner_id",sessionRef.current.user.id).order("started_at",{ascending:false}).limit(25);
+   if(historyError)throw historyError;
+   setCallHistory(data||[]);
+  }catch{setError("No se pudo cargar el historial.");}
+  finally{setHistoryBusy(false);}
+ }
+ useEffect(()=>{
+  if(session?.user.id&&activeTab==="settings"&&settingsPage==="history")void refreshCallHistory();
+ },[session?.user.id,activeTab,settingsPage]);
  async function registerPhone(){
    const client=supabase;
    if(!client||!sessionRef.current)return;
@@ -474,7 +491,17 @@ export default function App(){
         </View>
        </>:null}
        {settingsPage==="billing"?<View style={styles.card}><Text style={styles.cardTitle}>Mi plan</Text><Text style={styles.statNumber}>{billingOverview?.minutes.available??"—"}</Text><Text style={styles.helper}>Minutos disponibles</Text><Text style={styles.statusText}>{billingOverview?.plan||"Sin suscripción"}</Text><Text style={styles.helper}>Uso: {billingOverview?.minutes.used??"—"} min · Incluidos: {billingOverview?.minutes.included??"—"}</Text><Text style={styles.helper}>Pagos en modo de prueba.</Text><Button label="Actualizar" secondary onPress={()=>void refreshAccountOverview()}/><Button label="Ver planes en la web" secondary onPress={()=>void Linking.openURL(api).catch(()=>setError("No se pudo abrir la web."))}/></View>:null}
-       {settingsPage==="history"?<View style={styles.card}><Text style={styles.cardTitle}>Últimos 30 días</Text><Text style={styles.statNumber}>{accountOverview?.usage.calls??"—"}</Text><Text style={styles.helper}>Llamadas · {accountOverview?.usage.minutes??"—"} minutos</Text><Text style={styles.helper}>Historial individual pendiente.</Text></View>:null}
+       {settingsPage==="history"?<View style={styles.card}>
+         <View style={styles.compactBetween}><Text style={styles.cardTitle}>Llamadas</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Actualizar historial" onPress={()=>void refreshCallHistory()} style={styles.historyRefresh}><Text style={styles.historyRefreshText}>{historyBusy?"…":"↻"}</Text></Pressable>
+         </View>
+         {historyBusy?<ActivityIndicator color={colors.accent}/>:callHistory.length?
+          callHistory.map(item=><View key={item.bridge_sid} style={styles.historyRow}>
+           <View style={{flex:1}}><Text style={styles.historyDate}>{new Date(item.started_at).toLocaleDateString("es-US",{month:"short",day:"numeric"})} · {new Date(item.started_at).toLocaleTimeString("es-US",{hour:"numeric",minute:"2-digit"})}</Text>
+           <Text style={styles.historyStatus}>{({"completed":"Finalizada","no-answer":"Sin respuesta","busy":"Ocupada","ringing":"Sonando","failed":"Fallida","canceled":"Cancelada"} as Record<string,string>)[item.status]||"Llamada"}</Text></View>
+           <Text style={styles.historyMinutes}>{item.duration_seconds==null?"—":Math.ceil(item.duration_seconds/60)+" min"}</Text>
+          </View>):<Text style={styles.helper}>Aún no hay llamadas.</Text>}
+        </View>:null}
        {settingsPage==="profile"?<View style={styles.card}><Text style={styles.cardTitle}>Mi cuenta</Text><Text style={styles.helper}>{session.user.email}</Text><Text style={styles.helper}>Los datos del perfil pueden editarse en la web.</Text></View>:null}
        {settingsPage==="security"?<View style={styles.card}><Text style={styles.cardTitle}>Acceso seguro</Text><Text style={styles.helper}>No compartas tu contraseña ni códigos de verificación.</Text><Button label="Cerrar sesión" danger onPress={()=>void logout()}/></View>:null}
        {settingsPage==="style"?<View style={styles.card}><Text style={styles.cardTitle}>Idiomas y voces</Text><Text style={styles.helper}>{String(session.user.user_metadata?.owner_language||"es").toUpperCase()} ⇄ {String(session.user.user_metadata?.customer_language||"en").toUpperCase()}</Text><Text style={styles.helper}>Personaliza voces y saludos desde billing en la web.</Text></View>:null}
@@ -582,6 +609,14 @@ const styles=StyleSheet.create({
  bottomLabel:{color:"#839CA4",fontSize:10,fontWeight:"700",marginTop:1},
  bottomLabelActive:{color:"#FFFFFF",marginTop:-4},
  groupTitle:{color:colors.accent,fontSize:11,fontWeight:"800",letterSpacing:1.7,marginTop:20,marginBottom:8},
+
+ historyRefresh:{width:38,height:38,borderRadius:12,backgroundColor:"#21414A",alignItems:"center",justifyContent:"center"},
+ historyRefreshText:{fontSize:25,color:colors.accent},
+ historyRow:{flexDirection:"row",alignItems:"center",borderBottomWidth:1,borderBottomColor:colors.line,paddingVertical:14,gap:12},
+ historyDate:{fontSize:13,color:colors.text,fontWeight:"700"},
+ historyStatus:{fontSize:11,color:colors.muted,marginTop:4},
+ historyMinutes:{fontSize:12,color:colors.accent,fontWeight:"700"},
+
  settingRow:{flexDirection:"row",alignItems:"center",gap:12,paddingVertical:12,borderBottomWidth:1,borderBottomColor:"#284149"},
  settingIcon:{width:39,height:39,alignItems:"center",justifyContent:"center",borderRadius:12,backgroundColor:"#1D3940"},
  settingEmoji:{fontSize:19},
