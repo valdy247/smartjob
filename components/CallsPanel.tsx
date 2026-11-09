@@ -140,7 +140,7 @@ export function CallsPanel({supabase,profile,apiStatus,mode="dial",onNavigate}:{
    <label className="label" htmlFor="vmv-answer">Recibir en</label><select id="vmv-answer" className="field" value={answerMethod} onChange={e=>setAnswerMethod(e.target.value)} disabled={request?.status==="pending"}><option value="app">App de iPhone</option><option value="separate_line">Otra línea</option></select>
    {request&&<div className="vmv-request-status">Solicitud: {requestLabels[request.status]||request.status}</div>}
    <button type="button" className="btn primary block" disabled={requestBusy||active||request?.status==="pending"||loading} onClick={()=>void submitRequest()}><ArrowRight size={16}/>{requestBusy?"Enviando…":active?"Línea asignada":request?.status==="pending"?"En revisión":"Solicitar conexión"}</button>
-   <details className="vmv-safety-details"><summary><Info size={15}/> Desvío y seguridad</summary>
+   <p className="vmv-tiny-disclaimer">Esta solicitud no activa desvíos ni cargos.</p><details className="vmv-safety-details"><summary><Info size={15}/> Desvío y seguridad</summary>
     <p>Guardar o solicitar no compra números ni activa el desvío. Verifica tu número y comprueba llamadas reales con el iPhone bloqueado antes de modificar Verizon u otro operador.</p>
     <p>No desvíes llamadas de vuelta al mismo número: puede crear un bucle. La portabilidad puede afectar las llamadas y SMS del operador.</p>
     {account?.forwardingReady&&route?.twilio_number&&<p>Para Verizon, confirma primero la recepción: *72 para activar el desvío completo y *73 para desactivarlo. Sigue las instrucciones del operador.</p>}
