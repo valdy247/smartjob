@@ -41,8 +41,8 @@ export function AuthPanel({supabase}:{supabase:SupabaseClient}) {
     <section className="auth-side">
       <Brand/>
       <div style={{position:"relative",zIndex:1,marginTop:50}}>
-        <p className="eyebrow">SMART JOB</p>
-        <h1 className="auth-head">Habla sin límites.<br/><span style={{color:"var(--lime)"}}>Trabaja mejor.</span></h1>
+        <p className="eyebrow">VMV CALL</p>
+        <h1 className="auth-head">Habla sin fronteras.<br/><span style={{color:"var(--lime)"}}>Conecta mejor.</span></h1>
         
 
       </div>
@@ -69,7 +69,7 @@ export function AuthPanel({supabase}:{supabase:SupabaseClient}) {
         <button className="btn primary block" disabled={busy} type="submit">{busy?"Procesando…":mode==="signup"?"Crear mi cuenta":mode==="forgot"?"Enviar enlace":"Iniciar sesión"}<ArrowRight size={17}/></button>
         <div className="divider"/>
         <div className="small muted" style={{textAlign:"center"}}>
-          {mode==="signup"?"¿Ya tienes cuenta?":mode==="login"?"¿Nuevo en Smart Job?":"¿Recordaste tu contraseña?"}{" "}
+          {mode==="signup"?"¿Ya tienes cuenta?":mode==="login"?"¿Nuevo en VMV Call?":"¿Recordaste tu contraseña?"}{" "}
           <button type="button" className="linkbutton" onClick={()=>{setMode(mode==="signup"||mode==="forgot"?"login":"signup");setError("");setSuccess("");}}>
             {mode==="signup"||mode==="forgot"?"Inicia sesión":"Crear una cuenta"}
           </button>
