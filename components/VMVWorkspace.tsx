@@ -74,7 +74,7 @@ export default function VMVWorkspace({profile,supabase,status,onProfile,onLogout
      <button className="vmv-back" onClick={()=>setSettingsView("menu")}><ArrowLeft size={18}/> Ajustes</button>
      <h1 className="vmv-subtitle">{({profile:"Mi perfil",numbers:"Mi línea",billing:"Plan y pagos",history:"Historial",security:"Seguridad",style:"Personalización",support:"Soporte",services:"Otros servicios",menu:"Ajustes"} as Record<SettingsView,string>)[settingsView]}</h1>
      {settingsView==="profile"&&<SettingsPanel key={profile.id} profile={profile} supabase={supabase} onChange={onProfile} status={status} onLogout={onLogout}/>}
-     {settingsView==="numbers"&&<CallsPanel profile={profile} supabase={supabase} apiStatus={status}/>}
+     {settingsView==="numbers"&&<CallsPanel mode="numbers" profile={profile} supabase={supabase} apiStatus={status}/>}
      {settingsView==="billing"&&<BillingPanel supabase={supabase} userId={profile.id}/>}
      {settingsView==="history"&&<CallsPanel mode="history" profile={profile} supabase={supabase} apiStatus={status}/>}
      {settingsView==="security"&&<section className="vmv-compact-card"><ShieldCheck size={26}/><h2>Acceso seguro</h2><p className="vmv-muted">Protege tus códigos y contraseña.</p><button className="vmv-secondary-cta" onClick={onLogout}>Cerrar sesión</button></section>}
