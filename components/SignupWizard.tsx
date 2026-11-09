@@ -262,7 +262,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
        <input id="reg-phone" type="tel" autoComplete="tel-national" inputMode="tel"
         maxLength={22} placeholder="Tu número" value={nationalPhone} onChange={e=>{setNationalPhone(e.target.value);clearVerification();}}/>
       </div>
-      {!smsVerified&&<div className="vmv-signup-sms-action">
+      {!smsVerified&&smsEnabled===true&&<div className="vmv-signup-sms-action">
        <button type="button" disabled={smsBusy||smsEnabled===false} onClick={()=>void requestSMS()}>
         <Phone size={16}/>{smsBusy?"Enviando…":smsSent?"Reenviar código":"Enviar código"}
        </button>
@@ -276,7 +276,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
        <small>iPhone puede sugerir automáticamente el código recibido.</small>
       </div>}
       {smsMessage&&<small className="vmv-signup-help" role="status">{smsMessage}</small>}
-      {smsEnabled===false&&<small className="vmv-signup-help">La verificación por SMS está temporalmente deshabilitada.</small>}
+      {smsEnabled===false&&<small className="vmv-signup-help">Verificaremos tu número cuando tengas un plan pagado y estés configurando la línea.</small>}
      </div>
      <div className="vmv-signup-field">
       <label>¿Cómo quieres recibir llamadas más adelante?</label>
