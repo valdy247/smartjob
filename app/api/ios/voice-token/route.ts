@@ -2,6 +2,7 @@ import {createHmac,randomUUID} from "node:crypto";
 import {NextRequest,NextResponse} from "next/server";
 import {createClient} from "@supabase/supabase-js";
 import {authenticatedUser} from "@/lib/auth-server";
+import {paidServiceAllowed} from "@/lib/vmv-entitlements";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -33,6 +34,7 @@ export async function POST(req:NextRequest){
     return NextResponse.json({error:"mobile_voice_not_enabled"},{status:503,headers:noStore});
   const userId=await authenticatedUser(req);
   if(!userId)return NextResponse.json({error:"unauthorized"},{status:401,headers:noStore});
+  if(!await paidServiceAllowed(userId,"direct_call"))return NextResponse.json({error:"active_paid_plan_required"},{status:402,headers:noStore});
   const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
   const publishable=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
   const authorization=req.headers.get("authorization")||"";
