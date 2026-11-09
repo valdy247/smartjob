@@ -263,7 +263,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
         maxLength={22} placeholder="Tu número" value={nationalPhone} onChange={e=>{setNationalPhone(e.target.value);clearVerification();}}/>
       </div>
       {!smsVerified&&smsEnabled===true&&<div className="vmv-signup-sms-action">
-       <button type="button" disabled={smsBusy||smsEnabled===false} onClick={()=>void requestSMS()}>
+       <button type="button" disabled={smsBusy} onClick={()=>void requestSMS()}>
         <Phone size={16}/>{smsBusy?"Enviando…":smsSent?"Reenviar código":"Enviar código"}
        </button>
        <small>Opcional · Puedes continuar sin verificarlo</small>
