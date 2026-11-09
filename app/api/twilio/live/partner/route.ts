@@ -23,15 +23,16 @@ export async function POST(req:NextRequest){
       console.error("Smart Job partner receiver mismatch",{receiverMatches:to===receiver,method:route.receive_method});
       return twiml("<Hangup/>",403);
     }
+    const selectedEnglish=req.nextUrl.searchParams.get("ivr")==="en";
     const config:RelayOptions={
       customer:caller,twilio:route.twilio_number,owner:receiver,
-      customerLanguage:route.customer_language,ownerLanguage:route.owner_language,
+      customerLanguage:selectedEnglish?"en-US":route.customer_language,ownerLanguage:selectedEnglish?"es-ES":route.owner_language,
       assistantName:route.assistant_name
     };
     if(!validatedConfig(config)){console.error("Smart Job partner config invalid");return twiml("<Hangup/>",403);}
     const prefs=await getPaidCallPreferences(route.user_id);
     if(prefs){
-      config.greetingCustomer=prefs.greeting_customer||undefined;
+      config.greetingCustomer=selectedEnglish?undefined:(prefs.greeting_customer||undefined);
       config.greetingOwner=prefs.greeting_owner||undefined;
       config.voiceCustomer=selectedVoice(prefs.voice_customer,route.customer_language)||undefined;
       config.voiceOwner=selectedVoice(prefs.voice_owner,route.owner_language)||undefined;
