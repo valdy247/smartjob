@@ -27,12 +27,7 @@ export async function POST(req:NextRequest){
  // A new-number preference is only a REQUEST, never an automatic number purchase.
  // Require that the account's destination phone is the verified contact number.
  if(profile.phone!==destination)return reply({error:"phone_mismatch"},409);
- const {data:proof}=await db.from("vmv_signup_phone_verified").select("phone").eq("user_id",uid).maybeSingle();
- const {data:existingVerified}=await db.from("smartjob_provisioning_requests")
-   .select("phone_verified_at").eq("user_id",uid).eq("destination_phone",destination)
-   .not("phone_verified_at","is",null).limit(1).maybeSingle();
- if(proof?.phone!==destination&&!existingVerified?.phone_verified_at)return reply({error:"phone_verification_required"},403);
- const {data:pending,error:pendingError}=await db.from("smartjob_provisioning_requests")
+ // A pending request permits subsequent SMS verification. It never provisions or routes a call.\n const {data:pending,error:pendingError}=await db.from("smartjob_provisioning_requests")
    .select("id,status").eq("user_id",uid).in("status",["pending","contacted","approved","activated"]).limit(1).maybeSingle();
  if(pendingError)return reply({error:"review_unavailable"},503);
  if(pending)return reply({error:"request_already_exists"},409);
