@@ -3,6 +3,7 @@ import {bridgeTwiML,E164,liveReady,notReady,verifiedBridge,verifiedLiveRequest,v
 import {findPhoneRouteById,tenantsReady,verifyPartnerSignature} from "@/lib/phone-routes";
 import {twiml} from "@/lib/twilio-pilot";
 import {getPaidCallPreferences,selectedVoice} from "@/lib/vmv-voices";
+import {paidServiceAllowed} from "@/lib/vmv-entitlements";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
@@ -17,6 +18,7 @@ export async function POST(req:NextRequest){
     if(!tenantsReady()||!verifyPartnerSignature(bridge,id,caller,sig)){console.error("Smart Job partner tenant auth rejected");return twiml("<Hangup/>",403);}
     const route=await findPhoneRouteById(id);
     if(!route||from!==route.twilio_number){console.error("Smart Job partner route mismatch",{routeFound:Boolean(route),fromMatches:route?from===route.twilio_number:false});return twiml("<Hangup/>",403);}
+    if(!await paidServiceAllowed(route.user_id,"translated_call"))return twiml("<Hangup/>");
     const receiver=route.receive_method==="ios_app"
       ?"client:sj_"+route.user_id.replaceAll("-",""):route.destination_phone;
     if(to!==receiver||(route.receive_method==="ios_app"&&process.env.SMARTJOB_IOS_VOICE_ENABLED!=="true")){
@@ -40,7 +42,10 @@ export async function POST(req:NextRequest){
     console.info("Smart Job partner PSTN leg acknowledged");
     return bridgeTwiML("professional",bridge,config);
   }
-  if(!verifiedBridge(bridge,sig)||from!==E164(process.env.TWILIO_NUMBER)||to!==E164(process.env.SMARTJOB_DUO_ES_PHONE))
+  // Never answer a legacy pilot on a shared number without subscriber metering.
+  return twiml("<Hangup/>");
+  /*   if(!verifiedBridge(bridge,sig)||from!==E164(process.env.TWILIO_NUMBER)||to!==E164(process.env.SMARTJOB_DUO_ES_PHONE))
     return twiml("<Hangup/>",403);
   return bridgeTwiML("professional",bridge);
+  */
 }
