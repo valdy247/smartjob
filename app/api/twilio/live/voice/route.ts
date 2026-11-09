@@ -3,6 +3,7 @@ import {baseUrl,bridgeSignature,bridgeTwiML,E164,liveReady,notReady,verifiedLive
 import {findPhoneRoute,partnerSignature,reservePhoneSession,assignOutboundCall,updatePhoneSession,tenantsReady} from "@/lib/phone-routes";
 import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 import {getPaidCallPreferences,selectedVoice} from "@/lib/vmv-voices";
+import {languageMenuEnabled,ivrEligible,menuResponse,validSelectionSignature} from "@/lib/vmv-ivr";
 import {billingEnabledFor,testCallCapSecondsFor,claimCallMinutes,settleCallMinutes} from "@/lib/vmv-billing";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -46,7 +47,6 @@ async function inboundAlive(sid:string,token:string,bridge:string){
 export async function POST(req:NextRequest){
   const fields=await verifiedLiveRequest(req,null);
   if(!fields)return twiml(say("Unauthenticated call.","en-US")+"<Hangup/>",403);
-  if(!liveReady())return notReady();
   const from=fields.get("From")||"",to=fields.get("To")||"",bridge=fields.get("CallSid")||"",
     sid=fields.get("AccountSid")||"",token=process.env.TWILIO_AUTH_TOKEN||"";
   if(!callSid.test(bridge)||!accountSid.test(sid)||!token)return twiml("<Hangup/>",403);
@@ -57,10 +57,28 @@ export async function POST(req:NextRequest){
   let owner=E164(process.env.SMARTJOB_DUO_ES_PHONE),config:RelayOptions|undefined;
   let tenantId:string|undefined;
   let route:Awaited<ReturnType<typeof findPhoneRoute>>=null;
+  // The menu runs only for activated iOS receiver routes and only when enabled.
+  // Pilot calls keep the existing, tested path. Spanish never touches the relay.
+  const ivr=languageMenuEnabled()&&!pilot&&tenantsReady();
+  const chosenLanguage=req.nextUrl.searchParams.get("language")||"";
+  if(ivr){
+    route=await findPhoneRoute(to);
+    if(!route)return twiml(say("This line is not active.","en-US")+"<Hangup/>");
+    if(!ivrEligible(route))return twiml(say("Mobile reception is unavailable.","en-US")+"<Hangup/>");
+    if(!chosenLanguage){
+      const prefs=await getPaidCallPreferences(route.user_id);
+      return menuResponse(prefs?.greeting_customer||undefined);
+    }
+    if(chosenLanguage!=="en"||!validSelectionSignature(bridge,route.id,from,"en",
+      req.nextUrl.searchParams.get("proof")||"")){
+      return twiml("<Hangup/>",403);
+    }
+  }
+  if(!liveReady())return notReady();
   if(!pilot){
     // Public multi-tenant routing is gated separately from the known-good pilot.
     if(!tenantsReady())return twiml(say("This telephone number is not yet enabled.","en-US")+"<Hangup/>");
-    route=await findPhoneRoute(to);
+    route=route||await findPhoneRoute(to);
     if(!route)return twiml(say("This telephone number is not yet enabled.","en-US")+"<Hangup/>");
     // The original forwarded Verizon number must never be dialed again.
     // Only provisioned, enabled routes can ring the native Twilio Voice client.
@@ -75,7 +93,7 @@ export async function POST(req:NextRequest){
     tenantId=route.id;
     config={
       customer:from,twilio:to,owner,
-      customerLanguage:route.customer_language,ownerLanguage:route.owner_language,
+      customerLanguage:ivr?"en-US":route.customer_language,ownerLanguage:ivr?"es-ES":route.owner_language,
       assistantName:route.assistant_name
     };
     if(!validatedConfig(config)){
@@ -83,7 +101,7 @@ export async function POST(req:NextRequest){
     }
     const prefs=await getPaidCallPreferences(route.user_id);
     if(prefs){
-      config.greetingCustomer=prefs.greeting_customer||undefined;
+      config.greetingCustomer=ivr?undefined:(prefs.greeting_customer||undefined);
       config.greetingOwner=prefs.greeting_owner||undefined;
       config.voiceCustomer=selectedVoice(prefs.voice_customer,route.customer_language)||undefined;
       config.voiceOwner=selectedVoice(prefs.voice_owner,route.owner_language)||undefined;
@@ -111,7 +129,8 @@ export async function POST(req:NextRequest){
       return twiml(say("Our interpreter is temporarily unavailable. Please try again shortly.","en-US")+"<Hangup/>");
     }
     console.info("Smart Job waiting for audio bridge to wake",{attempt});
-    const retry=xmlEscape(baseUrl+"/api/twilio/live/voice?warm="+(attempt+1));
+    const ivrContinuation=ivr?"&language=en&proof="+encodeURIComponent(req.nextUrl.searchParams.get("proof")||""):"";
+    const retry=xmlEscape(baseUrl+"/api/twilio/live/voice?warm="+(attempt+1)+ivrContinuation);
     return twiml((attempt===0?say("Smart Job is connecting your interpreter. Please hold.","en-US"):"")+
       '<Pause length="9"/><Redirect method="POST">'+retry+"</Redirect>");
   }
@@ -130,7 +149,7 @@ export async function POST(req:NextRequest){
     }
   }
   const signature=tenantId?partnerSignature(bridge,tenantId,from):bridgeSignature(bridge);
-  const partnerUrl=baseUrl+"/api/twilio/live/partner?bridge="+bridge+"&sig="+signature+
+  const partnerUrl=baseUrl+"/api/twilio/live/partner?bridge="+bridge+"&sig="+signature+(ivr?"&ivr=en":"")+
     (tenantId?"&route="+encodeURIComponent(tenantId)+"&caller="+encodeURIComponent(from):"");
   const callback=baseUrl+"/api/twilio/live/ended?bridge="+bridge+"&sig="+bridgeSignature(bridge);
   try{
