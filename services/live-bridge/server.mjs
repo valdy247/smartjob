@@ -131,8 +131,8 @@ async function verifyDisconnectedLeg(id,role,sid){
   }catch(e){console.error("Live Bridge disconnect status check",e?.name||"error");}
 }
 
-async function interpret(source,role,sourceLanguage,signal,onToken){
-  const body=JSON.stringify({original:source,role,sourceLanguage,stream:true});
+async function interpret(source,role,sourceLanguage,bridge,signal,onToken){
+  const body=JSON.stringify({original:source,role,sourceLanguage,bridge,stream:true});
   const stamp=String(Math.floor(Date.now()/1000));
   const sig=createHmac("sha256",AUTH).update("smartjob-bridge-v1\n"+stamp+"\n"+body).digest("hex");
   const response=await fetch(WEB_API,{method:"POST",headers:{"Content-Type":"application/json","x-smartjob-timestamp":stamp,"x-smartjob-signature":sig},
@@ -189,7 +189,7 @@ function pumpTranslation(room,role){
   });
   void (async()=>{
     try{
-      await interpret(speech,role,role==="customer"?ctx.customerLanguage:ctx.ownerLanguage,controller.signal,token=>stream.next(token));
+      await interpret(speech,role,role==="customer"?ctx.customerLanguage:ctx.ownerLanguage,ctx.bridge,controller.signal,token=>stream.next(token));
       if(!controller.signal.aborted&&room.jobs[role]===controller){
         const count=stream.finish();
         if(!count)throw new Error("translation_empty");
