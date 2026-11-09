@@ -1,7 +1,7 @@
 import {NextRequest} from "next/server";
 import {verifiedLiveRequest,E164,baseUrl} from "@/lib/twilio-live";
 import {findPhoneRoute,tenantsReady,reservePhoneSession} from "@/lib/phone-routes";
-import {languageMenuEnabled,ivrEligible,menuResponse,selectionSignature,directClientTwiml} from "@/lib/vmv-ivr";
+import {languageMenuEnabled,ivrEligible,menuResponse,selectionSignature,directClientTwiml,languageDecision} from "@/lib/vmv-ivr";
 import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -16,10 +16,11 @@ export async function POST(req:NextRequest){
  if(!route||!ivrEligible(route))return twiml(say("This line is not ready.","en-US")+"<Hangup/>");
  const digit=(fields.get("Digits")||"").trim();
  const attempt=req.nextUrl.searchParams.get("attempt")==="1"?1:0;
- if(digit&&digit!=="1"&&digit!=="2"){
-  return attempt?twiml(say("Invalid selection. Goodbye.","en-US")+"<Hangup/>"):menuResponse(undefined,1);
- }
- if(digit==="1"){
+
+ const decision=languageDecision(digit,attempt);
+ if(decision==="retry")return menuResponse(undefined,1);
+ if(decision==="hangup")return twiml(say("Invalid selection. Goodbye.","en-US")+"<Hangup/>");
+ if(decision==="translate"){
   const proof=selectionSignature(bridge,route.id,from,"en");
   const url=xmlEscape(baseUrl+"/api/twilio/live/voice?language=en&proof="+proof);
   return twiml('<Redirect method="POST">'+url+"</Redirect>");
