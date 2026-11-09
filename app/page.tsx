@@ -1,12 +1,13 @@
 "use client";
 import { useEffect,useState } from "react";
 import type { SupabaseClient,User } from "@supabase/supabase-js";
-import { ArrowLeft,Headphones,Languages,LoaderCircle,PhoneCall,Settings2 } from "lucide-react";
+import { ArrowLeft,Languages,LoaderCircle,PhoneCall,Settings2 } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 import type { Profile } from "@/lib/types";
 import { Brand } from "@/components/Brand";
 import { AuthPanel } from "@/components/AuthPanel";
 import { Onboarding } from "@/components/Onboarding";
+import { ActivationFlow } from "@/components/ActivationFlow";
 import { LivePanel } from "@/components/LivePanel";
 import { CallsPanel } from "@/components/CallsPanel";
 import { SettingsPanel } from "@/components/SettingsPanel";
@@ -73,7 +74,9 @@ export default function Home(){
           theme_color:metadata.theme_color==="blue"||metadata.theme_color==="violet"?metadata.theme_color:"mint",
           font_scale:metadata.font_scale==="small"||metadata.font_scale==="large"?metadata.font_scale:"normal",
           appearance:metadata.appearance==="dark"||metadata.appearance==="system"?metadata.appearance:"light",
-          reduce_motion:metadata.reduce_motion===true
+          reduce_motion:metadata.reduce_motion===true,
+          line_choice:metadata.line_choice==="new"?"new":"keep",
+          line_carrier:"other",preferred_plan:null,plan_prompt_seen:false,line_setup_completed:false
         };
         const {data:created,error:creationError}=await supabase!.from("smartjob_profiles")
           .upsert(initial,{onConflict:"id",ignoreDuplicates:true}).select("*").maybeSingle();
@@ -130,10 +133,11 @@ export default function Home(){
     return()=>{cancelled=true;};
   },[supabase,user?.id]);
   const signout=async()=>{await supabase?.auth.signOut();};
-  if(splash||starting||checkingProfile)return <div className="splash"><div className="splash-inner"><span className="brandmark"><Headphones size={46} strokeWidth={2.3}/></span><h1>VMV<span style={{color:"var(--lime)"}}> Call</span></h1><p className="eyebrow" style={{color:"#b1c2b0"}}>Habla sin fronteras.</p><div className="splash-track"/></div></div>;
+  if(splash||starting||checkingProfile)return <div className="splash"><div className="splash-inner"><Brand/><p className="eyebrow" style={{color:"#b1c2b0"}}>Habla sin fronteras.</p><div className="splash-track"/></div></div>;
   if(!supabase)return <main className="shell" style={{maxWidth:690,paddingTop:45}}><Brand/><div className="card" style={{marginTop:50}}><h1>Configura VMV Call</h1><p className="muted">Para crear cuentas necesitamos conectar el proyecto Supabase con las variables públicas de Vercel. El diseño está listo pero el acceso no está habilitado.</p><code>NEXT_PUBLIC_SUPABASE_URL</code><br/><code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code></div></main>;
   if(!user)return <AuthPanel supabase={supabase}/>;
   if(passwordRecovery)return <div className="shell" style={{maxWidth:520,paddingTop:55}}><Brand/><form className="card" style={{marginTop:40}} onSubmit={async e=>{e.preventDefault();const r=await supabase.auth.updateUser({password});setPasswordMsg(r.error?.message||"Contraseña actualizada.");if(!r.error){setPasswordRecovery(false);setPassword("");}}}><h1>Nueva contraseña</h1><p className="muted">Crea una contraseña segura para tu cuenta de VMV Call.</p><input className="field" type="password" minLength={8} required value={password} onChange={e=>setPassword(e.target.value)} autoComplete="new-password"/><button type="submit" className="btn primary block" style={{marginTop:16}}>Guardar contraseña</button>{passwordMsg&&<p className="small">{passwordMsg}</p>}</form></div>;
   if(!profile)return <Onboarding user={user} supabase={supabase} onSaved={setProfile}/>;
+  if(!profile.plan_prompt_seen)return <ActivationFlow profile={profile} supabase={supabase} onSaved={setProfile} onExit={()=>{}}/>;
   return <VMVWorkspace profile={profile} supabase={supabase} status={status} onProfile={setProfile} onLogout={()=>void signout()}/>;
 }
