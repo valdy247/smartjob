@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState} from "react";
 import {ActivityIndicator,Alert,AppState,KeyboardAvoidingView,Platform,Pressable,
- SafeAreaView,ScrollView,StatusBar,StyleSheet,Text,TextInput,View,Modal,Keyboard,Linking} from "react-native";
+ SafeAreaView,ScrollView,StatusBar,StyleSheet,Text,TextInput,View,Modal,Keyboard,Linking,Image} from "react-native";
 import {Voice,Call,CallInvite} from "@twilio/voice-react-native-sdk";
 import type {Session} from "@supabase/supabase-js";
 import {api,supabase,configured} from "./session";
@@ -24,6 +24,7 @@ function ensurePushRegistry():Promise<void>{
 export default function App(){
  const [session,setSession]=useState<Session|null>(null);
  const [activeTab,setActiveTab]=useState<"home"|"calls"|"live"|"settings">("home");
+ const [image1Unavailable,setImage1Unavailable]=useState(false);
  const [keyboardVisible,setKeyboardVisible]=useState(false),[forwardHelpOpen,setForwardHelpOpen]=useState(false);
  const [settingsPage,setSettingsPage]=useState<"menu"|"numbers"|"billing"|"history"|"security"|"profile"|"style"|"support"|"services">("menu");
  const [callHistory,setCallHistory]=useState<{bridge_sid:string;status:string;duration_seconds:number|null;started_at:string;call_mode:string}[]>([]);
@@ -489,15 +490,16 @@ export default function App(){
       <Text style={styles.heading}>Hola, {String(session.user.user_metadata?.first_name||"").trim()||"bienvenido"}<Text style={{color:colors.accent}}>.</Text></Text>
       <Text style={styles.homeSubtitle}>Traducción en tiempo real</Text>
 
-      <View style={[styles.homeFeatureCard,styles.homeCallsFeature]}>
-       <View style={styles.homeFeatureCopy}>
-        <Text style={styles.homeFeatureTitle}>Llamadas en{"\n"}tiempo real</Text>
-        <Text style={styles.homeFeatureSub}>Traduce mientras hablas</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Abrir llamadas" style={styles.homePrimaryButton} onPress={()=>setActiveTab("calls")}>
-         <Text style={styles.homePrimaryText}>☎  Llamar  →</Text>
-        </Pressable>
+      <View style={[styles.homeFeatureCard,styles.homeCallsFeature,styles.homeCallsIllustrated]}>
+       <View style={styles.homeCallIllustration}>
+        {image1Unavailable?<View style={styles.homeImageSlot}><Text style={styles.homeImageLabel}>Imagen 1</Text><Text style={styles.homeImageDescription}>Llamadas traducidas</Text></View>:
+         <Image source={{uri:api.replace(/\/$/,"")+"/vmv/imagen-1.webp"}} style={styles.homeCallArtwork} resizeMode="contain"
+          accessibilityLabel="Dos personas conversando en distintos idiomas mediante traducción telefónica"
+          onError={()=>setImage1Unavailable(true)}/>}
        </View>
-       <View style={styles.homeImageSlot}><Text style={styles.homeImageLabel}>Imagen 1</Text><Text style={styles.homeImageDescription}>Pantalla de llamada</Text></View>
+       <Pressable accessibilityRole="button" accessibilityLabel="Abrir llamadas traducidas" style={styles.homePrimaryButton} onPress={()=>setActiveTab("calls")}>
+        <Text style={styles.homePrimaryText}>☎  Llamadas traducidas  →</Text>
+       </Pressable>
       </View>
 
       <View style={[styles.homeFeatureCard,styles.homeTranslatorFeature]}>
@@ -688,11 +690,15 @@ const styles=StyleSheet.create({
  homeSubtitle:{fontSize:16,color:"#727885",marginBottom:26,marginTop:-4},
  homeFeatureCard:{flexDirection:"row",alignItems:"stretch",borderRadius:26,padding:18,borderWidth:1,borderColor:"#D5EFEB",marginBottom:18,overflow:"hidden"},
  homeCallsFeature:{backgroundColor:"#E5FBF5",minHeight:226},
+ homeCallsIllustrated:{flexDirection:"column",alignItems:"center",justifyContent:"center",paddingHorizontal:17,paddingVertical:12,minHeight:270},
+ homeCallIllustration:{height:187,width:"100%",alignItems:"center",justifyContent:"center"},
+ homeCallArtwork:{height:"100%",width:"100%"},
+
  homeTranslatorFeature:{backgroundColor:"#F3FFFB",minHeight:164},
  homeFeatureCopy:{flex:1.2,justifyContent:"space-between",paddingVertical:8,minWidth:0},
  homeFeatureTitle:{fontSize:26,lineHeight:29,fontWeight:"800",letterSpacing:-1.1,color:"#141B28"},
  homeFeatureSub:{color:"#687784",fontSize:13,lineHeight:18,marginTop:10},
- homePrimaryButton:{borderRadius:29,backgroundColor:"#00B496",paddingVertical:13,paddingHorizontal:13,marginTop:19,alignItems:"center",justifyContent:"center",minHeight:46},
+ homePrimaryButton:{borderRadius:29,backgroundColor:"#00B496",paddingVertical:13,paddingHorizontal:18,marginTop:10,alignItems:"center",justifyContent:"center",minHeight:47,width:"100%",maxWidth:298},
  homePrimaryText:{color:"#FFFFFF",fontSize:15,fontWeight:"800"},
  homeSecondaryButton:{borderRadius:29,backgroundColor:"#BFF8E8",paddingVertical:12,paddingHorizontal:10,marginTop:18,alignItems:"center",justifyContent:"center",minHeight:44},
  homeSecondaryText:{color:"#07674E",fontSize:14,fontWeight:"800"},

@@ -1,12 +1,11 @@
 "use client";
-import type {CSSProperties} from "react";
 
 /**
- * Single image registry. Replace src:null with the committed WebP path when ready.
+ * Single image registry. Imagen 1 uses an uploaded WebP; fallback appears until the file is committed.
  * The home layout remains stable without an asset or after a failed image load.
  */
 export const VMV_IMAGE_SLOTS={
- "imagen-1":{label:"Imagen 1",description:"Llamada traducida",src:null as string|null,alt:"Teléfono en una llamada con traducción español e inglés"},
+ "imagen-1":{label:"Imagen 1",description:"Llamadas traducidas",src:"/vmv/imagen-1.webp" as string|null,alt:"Dos personas hablando por teléfono en diferentes idiomas, conectadas por traducción español e inglés"},
  "imagen-2":{label:"Imagen 2",description:"Traductor IA",src:null as string|null,alt:"Burbujas de conversación con iconos de traducción"}
 } as const;
 export type VMVImageKey=keyof typeof VMV_IMAGE_SLOTS;
