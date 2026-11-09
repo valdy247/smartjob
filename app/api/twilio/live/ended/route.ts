@@ -21,6 +21,12 @@ export async function POST(req:NextRequest){
   const state=p.get("CallStatus")||"";
   const seconds=Number(p.get("CallDuration")||"");
   const terminal=["completed","busy","failed","no-answer","canceled"];
+  // Twilio issues non-terminal progress callbacks when the iPhone starts
+  // ringing. They must never be treated as a call hangup or close the bridge.
+  if(callbackSid!==bridge&&["initiated","ringing","in-progress","answered","queued"].includes(state)){
+    console.info("Smart Job iOS outbound progress",{state});
+    return twiml("<Hangup/>");
+  }
   // ConversationRelay <Connect action> callbacks include session diagnostics
   // even when the phone leg itself reports CallStatus=in-progress. No PII.
   const sessionStatus=p.get("SessionStatus")||"";
