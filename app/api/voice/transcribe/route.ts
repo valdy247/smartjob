@@ -1,13 +1,14 @@
 import {NextRequest,NextResponse} from "next/server";
 import {experimental_transcribe as transcribe} from "ai";
-import {gateway} from "@ai-sdk/gateway";
+import {createGateway} from "@ai-sdk/gateway";
 import {authenticatedUser,consumeCredit} from "@/lib/auth-server";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export async function POST(req:NextRequest){
  if(!await authenticatedUser(req))return NextResponse.json({error:"Inicia sesión."},{status:401});
  const hasEleven=Boolean(process.env.ELEVENLABS_API_KEY);
- const hasGateway=Boolean(process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN);
+ const gatewayToken=process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN||req.headers.get("x-vercel-oidc-token")||"";
+ const hasGateway=Boolean(gatewayToken);
  if(!hasEleven&&!hasGateway)return NextResponse.json({error:"No hay servicio de transcripción configurado."},{status:503});
  try{
   const form=await req.formData(),file=form.get("audio");
@@ -32,8 +33,9 @@ export async function POST(req:NextRequest){
    return NextResponse.json({text:String(data.text||"").trim(),language:data.language_code||null});
   }
   // Preview needs no production ElevenLabs key: use the project's own Vercel AI Gateway.
+  const transcriptionGateway=createGateway({apiKey:gatewayToken});
   const result=await transcribe({
-   model:gateway.transcriptionModel("openai/gpt-4o-mini-transcribe"),
+   model:transcriptionGateway.transcriptionModel("openai/gpt-4o-mini-transcribe"),
    audio:new Uint8Array(await file.arrayBuffer())
   });
   return NextResponse.json({text:String(result.text||"").trim(),language:result.language||null});
