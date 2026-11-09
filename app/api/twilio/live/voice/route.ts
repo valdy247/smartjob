@@ -12,8 +12,12 @@ const maxDuration=Math.min(1800,Math.max(60,Number(process.env.SMARTJOB_MAX_CALL
 async function dial(sid:string,token:string,to:string,from:string,url:string,callback:string,seconds=maxDuration,ringTimeout=12){
   const payload=new URLSearchParams({
     To:to,From:from,Url:url,Method:"POST",Timeout:String(ringTimeout),TimeLimit:String(Math.min(maxDuration,Math.max(60,seconds))),
-    StatusCallback:callback,StatusCallbackMethod:"POST",StatusCallbackEvent:"completed"
+    StatusCallback:callback,StatusCallbackMethod:"POST"
   });
+  // Record all call-progress milestones to identify APNs/PushKit delivery
+  // failures without recording phone numbers or speech transcripts.
+  for(const event of ["initiated","ringing","answered","completed"])
+    payload.append("StatusCallbackEvent",event);
   const res=await fetch("https://api.twilio.com/2010-04-01/Accounts/"+sid+"/Calls.json",{
     method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded",Authorization:"Basic "+Buffer.from(sid+":"+token).toString("base64")},
     body:payload.toString(),signal:AbortSignal.timeout(4500),cache:"no-store"
