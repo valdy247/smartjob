@@ -9,6 +9,7 @@ import {pcm24ToMulaw8,safePcm24Chunk,decodeMulaw} from "./media-codec.mjs";
 import {queueInput,flushInput} from "./input-flow.mjs";
 import {pcm16Level} from "./audio-levels.mjs";
 import {translationSessionUpdate} from "./translation-session.mjs";
+import {compactOutputAudio,createOutputState} from "./output-audio.mjs";
 
 const AUTH=process.env.TWILIO_AUTH_TOKEN||"";
 const ACCOUNT=process.env.TWILIO_ACCOUNT_SID||"";
@@ -26,10 +27,11 @@ const MAX_TWILIO_BUFFER=512000;
 // One-service controlled A/B test: forward raw voice to verify Twilio playback.
 // Turn off after the test; normal operation always uses AI translation.
 const DIAGNOSTIC_DIRECT_AUDIO=process.env.SMARTJOB_AUDIO_DIAGNOSTIC_PASSTHROUGH==="true";
+const TRIM_TRANSLATED_SILENCE=process.env.SMARTJOB_TRIM_TRANSLATED_SILENCE==="true";
 const SILENCE_200MS=Buffer.alloc(1600,0xff);
 const rooms=new Map();
 // Aggregate counters only: never log audio, transcripts, phone numbers or identifiers.
-function freshStats(){return {incomingPackets:0,nonSilentInputPackets:0,appendedFrames:0,outputAudioDeltas:0,nonSilentOpenAiDeltas:0,openAiOutputBytes:0,peakOpenAiPcmAmplitude:0,formatWarnings:0,outputTranscriptDeltas:0,playbackPackets:0,nonSilentPlaybackPackets:0,marksSent:0,marksAcked:0,playbackDrops:0};}
+function freshStats(){return {incomingPackets:0,nonSilentInputPackets:0,appendedFrames:0,outputAudioDeltas:0,nonSilentOpenAiDeltas:0,openAiOutputBytes:0,peakOpenAiPcmAmplitude:0,formatWarnings:0,outputTranscriptDeltas:0,translatedSilenceSuppressedMs:0,playbackPackets:0,nonSilentPlaybackPackets:0,marksSent:0,marksAcked:0,playbackDrops:0};}
 function containsSignal(samples){
   // Privacy-safe energy check on a small sample; counts only, never captures speech.
   if(!samples?.length)return false;
@@ -176,7 +178,14 @@ function sendAudioToPeer(room,role,event){
   if(!usable)return;
   let mu;
   try{mu=pcm24ToMulaw8(joined.subarray(0,usable));}catch{void finishRoom(room.id,"audio_codec_failed");return;}
-  // Twilio buffers packets and plays them in sequence. Avoid unbounded queueing.
+  // Preserve the continuous input stream to OpenAI. Only omit near-digital
+  // silence in *translated output*, preventing extra queued Twilio playback.
+  // The conservative voice gate keeps 40 ms on both sides of each phrase.
+  if(TRIM_TRANSLATED_SILENCE){
+    const optimized=compactOutputAudio(mu,ai.outputCompactor);
+    mu=optimized.audio;
+    stats.translatedSilenceSuppressedMs+=optimized.suppressedMs;
+  }
   for(let offset=0;offset<mu.length;offset+=1600){
     const portion=mu.subarray(offset,offset+1600);
     if(!sendToLeg(room,peer(role),portion)){
@@ -224,7 +233,8 @@ function startAi(room,side){
   const target=side==="customer"?ctx.ownerLanguage:ctx.customerLanguage;
   const language=target==="es-ES"?"es":"en";
   const ai={ws:null,ready:false,pending:Buffer.alloc(0),outRemainder:Buffer.alloc(0),
-    drainTimer:null,droppedInputBytes:0,lastDropWarnAt:0,firstOutputObserved:false};
+    drainTimer:null,droppedInputBytes:0,lastDropWarnAt:0,firstOutputObserved:false,
+    outputCompactor:createOutputState()};
   room.ai[side]=ai;
   const ws=new WebSocket(
     "wss://api.openai.com/v1/realtime/translations?model=gpt-realtime-translate",
@@ -271,7 +281,7 @@ function maybeStart(room){
   }else{
     startAi(room,"customer");
     startAi(room,"professional");
-    console.info("VMV Realtime sessions initiated");
+    console.info("VMV Realtime sessions initiated",{trimTranslatedSilence:TRIM_TRANSLATED_SILENCE});
   }
   room.diagnosticTimer=setInterval(()=>{
     if(!room.closing)console.info("VMV Realtime audio diagnostics",diagSummary(room));
