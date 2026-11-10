@@ -72,10 +72,15 @@ export async function claimCallMinutes(bridge:string,uid:string,maxMinutes=10){
 }
 export async function settleCallMinutes(bridge:string,seconds:number){
  const db=billingAdmin();if(!db)return false;
- const {error}=await db.rpc("smartjob_settle_call_quota",{
+ const {data,error}=await db.rpc("smartjob_settle_call_quota",{
   p_bridge_sid:bridge,p_seconds:Math.max(0,Math.min(86400,Math.floor(seconds)))
  });
- if(error){console.error("VMV call settlement unavailable",error.code);return false;}
+ // The SQL function returns -1 for invalid or unknown call sessions.
+ // A successful RPC transport does not mean billing was settled.
+ if(error||typeof data!=="number"||!Number.isInteger(data)||data<0){
+  console.error("VMV call settlement unavailable",error?.code||"invalid_settlement_result");
+  return false;
+ }
  return true;
 }
 export const priceEnv=(plan:PlanCode):string=>{
