@@ -49,7 +49,7 @@ export default function App(){
  const [accountOverview,setAccountOverview]=useState<{
   verified:boolean;connectedToApp:boolean;forwardingReady:boolean;twilioPhone:string|null;
   publicPhone:string|null;carrier:string|null;menuPrepared?:boolean;menuVerifiedByRealCall?:boolean;forwardingReported?:boolean;usage:{calls:number;completed:number;minutes:number;periodDays:number;directCalls?:number;translatedCalls?:number};
-  billing:{enabled:boolean;active?:boolean;message:string};
+  billing:{enabled:boolean;active?:boolean;pilot?:boolean;message:string;availableMinutes?:number};
  }|null>(null);
  const [overviewBusy,setOverviewBusy]=useState(false);
  const [billingOverview,setBillingOverview]=useState<{
@@ -525,7 +525,8 @@ export default function App(){
       <View style={[styles.card,styles.featureCard]}>
        <View style={styles.compactBetween}><Text style={styles.featureLabel}>☎  Recepción</Text><Text style={[styles.stateTag,{color:ready?colors.accent:"#F6CC83"}]}>{ready?"CONECTADA":"PENDIENTE"}</Text></View>
        <Text style={styles.featureNumber}>{accountOverview?.twilioPhone||"Sin asignar"}</Text>
-       <Text style={styles.featureMuted}>{ready?"Tu iPhone está registrado":"Conecta tu iPhone para recibir"}</Text>
+       <Text style={styles.featureMuted}>{ready?"Tu iPhone está registrado y listo para sonar":"Conecta tu iPhone para recibir"}</Text>
+        {accountOverview?.billing?.pilot?<View style={styles.previewPilotCard}><Text style={styles.previewPilotLabel}>✦ PRUEBA PRIVADA · OPENAI REALTIME</Text><Text style={styles.previewPilotCopy}>Tus minutos VMV están habilitados solo para tu cuenta. Llama desde otro teléfono a este número, marca 1 para traducir y contesta aquí.</Text><Text style={styles.previewPilotMinutes}>Saldo: {accountOverview.billing.availableMinutes??billingOverview?.minutes.available??0} minutos</Text></View>:null}
        <Button label={accountOverview?.billing?.active===true?(registering?"Conectando…":ready?"Actualizar conexión":"Conectar iPhone"):"Se necesita plan activo"}
         disabled={registering} onPress={()=>accountOverview?.billing?.active===true?void registerPhone(): (setActiveTab("settings"),setSettingsPage("billing"))}/>
       </View>
@@ -638,13 +639,14 @@ export default function App(){
   {session&&activationProfile&&!activationProfile.plan_prompt_seen?
    <NativeActivation session={session} profile={activationProfile} onComplete={setActivationProfile}/>:null}
   <Modal visible={!!invite||!!call} animationType="fade" presentationStyle="fullScreen" onRequestClose={()=>{}}>
-   <View style={styles.incomingRoot}><StatusBar barStyle="light-content" backgroundColor="#0C3A37"/>
+   <View style={styles.incomingRoot}><StatusBar barStyle="dark-content" backgroundColor="#EBF8F5"/>
     <View style={styles.incomingGlow}/><View style={styles.incomingCard}>
      <Text style={styles.incomingKicker}>VMV CALL · {call?"EN LLAMADA":"LLAMADA ENTRANTE"}</Text>
      <Text style={styles.incomingSymbol}>◉</Text>
-     <Text style={styles.incomingName}>{call?"Conectado":"Cliente"}</Text>
+     <Text style={styles.incomingName}>{call?"Estás conectado":"Llamada de cliente"}</Text>
      <Text style={styles.incomingLang}>{inboundLanguage==="es"?"Español · directo":inboundLanguage==="en"?"English ⇄ Español":"VMV Call"}</Text>
-     <Text style={styles.incomingStatus}>{call?status:"Traducción telefónica"}</Text>
+     <Text style={styles.incomingStatus}>{call?status:"Toca Aceptar para iniciar la conversación"}</Text>
+      {inboundLanguage==="en"?<View style={styles.incomingTranslationPill}><Text style={styles.incomingTranslationText}>✧ Traducción en vivo · OpenAI</Text></View>:null}
      <View style={styles.incomingActions}>
       {invite?<><Pressable style={[styles.incomingRound,{backgroundColor:"#AD3F56"}]} accessibilityLabel="Rechazar llamada" onPress={()=>void reject()}><Text style={styles.incomingActionIcon}>✕</Text><Text style={styles.incomingActionText}>Rechazar</Text></Pressable>
        <Pressable style={[styles.incomingRound,{backgroundColor:"#248E71"}]} accessibilityLabel="Contestar llamada" disabled={working} onPress={()=>void accept()}><Text style={styles.incomingActionIcon}>☎</Text><Text style={styles.incomingActionText}>Aceptar</Text></Pressable></>:
@@ -800,15 +802,21 @@ const styles=StyleSheet.create({
  resultSay:{color:colors.text,fontSize:21,lineHeight:30,fontWeight:"700"},
  emptyCard:{borderWidth:1,borderColor:colors.line,borderRadius:17,padding:22,alignItems:"center",marginBottom:16},
  emptyIcon:{color:colors.accent,fontSize:30},
- incomingRoot:{flex:1,backgroundColor:"#092B2A",justifyContent:"center",padding:18},
- incomingGlow:{position:"absolute",left:-80,right:-60,top:-120,height:400,borderRadius:240,backgroundColor:"#236C60",opacity:.5},
- incomingCard:{flex:1,backgroundColor:"#093632",borderWidth:1,borderColor:"#327568",borderRadius:28,marginVertical:20,padding:22,alignItems:"center"},
- incomingKicker:{color:"#B8E8D9",letterSpacing:1.5,fontSize:11,fontWeight:"800",marginTop:28},
+ incomingRoot:{flex:1,backgroundColor:"#EBF8F5",justifyContent:"center",padding:18},
+ incomingGlow:{position:"absolute",left:-80,right:-60,top:-120,height:400,borderRadius:240,backgroundColor:"#BBF3E5",opacity:.5},
+ incomingCard:{flex:1,backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#D1EAE2",borderRadius:28,marginVertical:20,padding:22,alignItems:"center"},
+ incomingKicker:{color:"#357B6B",letterSpacing:1.5,fontSize:11,fontWeight:"800",marginTop:28},
  incomingSymbol:{fontSize:61,color:colors.accent,marginTop:85},
- incomingName:{fontSize:36,fontWeight:"700",color:"#FFFFFF",marginTop:30},
- incomingLang:{color:"#A8E1D2",fontSize:14,marginTop:11},
- incomingStatus:{color:"#B5DAD3",fontSize:12,marginTop:24},
+ incomingName:{fontSize:32,fontWeight:"800",color:colors.text,marginTop:30,textAlign:"center"},
+ incomingLang:{color:"#4D726B",fontSize:14,marginTop:11},
+ incomingStatus:{color:"#607C76",fontSize:12,marginTop:24,textAlign:"center"},
  incomingActions:{flexDirection:"row",justifyContent:"space-around",alignItems:"center",marginTop:"auto",width:"100%",marginBottom:60},
+ previewPilotCard:{backgroundColor:"#E8FAF4",borderWidth:1,borderColor:"#B3EBDA",borderRadius:16,padding:14,marginTop:16,marginBottom:10,gap:8},
+ previewPilotLabel:{color:"#08765C",fontSize:11,fontWeight:"900",letterSpacing:0.7},
+ previewPilotCopy:{color:"#244F44",fontSize:13,lineHeight:20},
+ previewPilotMinutes:{color:"#026D56",fontSize:16,fontWeight:"800"},
+ incomingTranslationPill:{marginTop:24,backgroundColor:"#E2F9F1",borderRadius:40,paddingHorizontal:18,paddingVertical:12,borderWidth:1,borderColor:"#BAEBDD"},
+ incomingTranslationText:{color:"#067D63",fontSize:12,fontWeight:"800"},
  incomingRound:{width:104,height:100,borderRadius:52,alignItems:"center",justifyContent:"center",marginHorizontal:9},
  incomingActionIcon:{color:"#FFFFFF",fontSize:28,fontWeight:"700"},
  incomingActionText:{color:"#FFFFFF",fontSize:12,marginTop:5,fontWeight:"700"}
