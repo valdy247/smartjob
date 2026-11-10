@@ -40,9 +40,14 @@ export async function POST(req:NextRequest){
     relayError:/^\d{5}$/.test(sessionErrorCode)?sessionErrorCode:null,
     relaySeconds:/^\d{1,5}$/.test(sessionDuration)?Number(sessionDuration):null
   });
+  // Only the outbound (answered owner) leg represents billable translation.
+  // The inbound caller may wait on an IVR/hold for a long time without an
+  // interpreter. Never overwrite the session's billed duration with that wait.
+  const pair=await getPairedCallSids(bridge);
+  const ownerLeg=Boolean(pair?.outboundSid&&callbackSid===pair.outboundSid);
   if(terminal.includes(state)||callbackSid===bridge){
     await updatePhoneSession(bridge,terminal.includes(state)?state:"completed",
-      Number.isInteger(seconds)&&seconds>=0?seconds:undefined);
+      ownerLeg&&Number.isInteger(seconds)&&seconds>0?seconds:undefined);
   }
   // Twilio can send an early completed callback with CallDuration=0 and
   // a later completed callback with the true duration. Never settle that
@@ -50,7 +55,6 @@ export async function POST(req:NextRequest){
   // recording actual usage. The existing 5-minute DB reaper releases a
   // zero-duration completed call if no positive duration ever follows.
   // Other terminal failure states are settled with zero immediately.
-  const pair=await getPairedCallSids(bridge);
   if(pair&&pair.reservedMinutes>0&&!pair.billingSettled&&
      callbackSid===pair.outboundSid&&terminal.includes(state)){
     const measured=Number.isInteger(seconds)&&seconds>0?seconds:0;
