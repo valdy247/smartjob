@@ -29,15 +29,20 @@ export async function POST(req:NextRequest){
      item.original.length>500||!langs.includes(item.sourceLanguage as "en-US"|"es-ES")||
      !langs.includes(item.targetLanguage as "en-US"|"es-ES")||
      item.sourceLanguage===item.targetLanguage)return fail("invalid_input",400);
-  const key=process.env.OPENAI_API_KEY||"";
-  if(!/^sk-/.test(key))return fail("translation_not_configured",503);
+  // Prefer direct OpenAI when configured; otherwise use Vercel AI Gateway's
+  // project-scoped OIDC token (the original working translation path).
+  const direct=/^sk-/.test(process.env.OPENAI_API_KEY||"");
+  const auth=direct?process.env.OPENAI_API_KEY:
+    (process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN);
+  if(!auth)return fail("translation_not_configured",503);
   const source=item.sourceLanguage==="en-US"?"English":"Spanish";
   const target=item.targetLanguage==="en-US"?"English":"Spanish";
   try{
-    const res=await fetch("https://api.openai.com/v1/chat/completions",{
+    const res=await fetch(direct?"https://api.openai.com/v1/chat/completions":
+      "https://ai-gateway.vercel.sh/v1/chat/completions",{
       method:"POST",
-      headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
-      body:JSON.stringify({model:"gpt-4.1-mini",temperature:0,max_tokens:260,
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+auth},
+      body:JSON.stringify({model:direct?"gpt-4.1-mini":"openai/gpt-4.1-mini",temperature:0,max_tokens:260,
         response_format:{type:"json_object"},
         messages:[
           {role:"system",content:"You are a professional live telephone interpreter. Translate accurately from "+
