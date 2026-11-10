@@ -52,6 +52,8 @@ export default function App(){
   billing:{enabled:boolean;active?:boolean;pilot?:boolean;message:string;availableMinutes?:number};
  }|null>(null);
  const [overviewBusy,setOverviewBusy]=useState(false);
+ const [pilotChecking,setPilotChecking]=useState(false);
+ const [pilotReadiness,setPilotReadiness]=useState<{lineReady:boolean;engineReady:boolean;webhookChecked:boolean;webhookReady:boolean;webhookPost:boolean;pushConfigured:boolean;nextStep:string}|null>(null);
  const [billingOverview,setBillingOverview]=useState<{
   plan:string;status:string;minutes:{included:number;used:number;available:number;rollover:number;topup:number};
   note:string
@@ -308,6 +310,21 @@ export default function App(){
  useEffect(()=>{
   if(session?.user.id&&activeTab==="settings"&&settingsPage==="history")void refreshCallHistory();
  },[session?.user.id,activeTab,settingsPage]);
+ async function checkPilotReadiness(){
+  if(!supabase||pilotChecking)return;
+  setPilotChecking(true);
+  try{
+    const {data}=await supabase.auth.getSession();
+    if(!data.session)throw new Error("Inicia sesión nuevamente.");
+    const res=await fetch(api+"/api/ios/pilot-readiness",{
+      headers:{Authorization:"Bearer "+data.session.access_token}
+    });
+    if(!res.ok)throw new Error("No pudimos verificar la conexión (HTTP "+res.status+").");
+    const info=await res.json();
+    setPilotReadiness(info);
+  }catch(e){setPilotReadiness(null);setError(e instanceof Error?e.message:"Diagnóstico no disponible");}
+  finally{setPilotChecking(false);}
+ }
  async function registerPhone(){
    const client=supabase;
    if(!client||!sessionRef.current)return;
@@ -526,7 +543,7 @@ export default function App(){
        <View style={styles.compactBetween}><Text style={styles.featureLabel}>☎  Recepción</Text><Text style={[styles.stateTag,{color:ready?colors.accent:"#F6CC83"}]}>{ready?"CONECTADA":"PENDIENTE"}</Text></View>
        <Text style={styles.featureNumber}>{accountOverview?.twilioPhone||"Sin asignar"}</Text>
        <Text style={styles.featureMuted}>{ready?"Tu iPhone está registrado y listo para sonar":"Conecta tu iPhone para recibir"}</Text>
-        {accountOverview?.billing?.pilot?<View style={styles.previewPilotCard}><Text style={styles.previewPilotLabel}>✦ PRUEBA PRIVADA · OPENAI REALTIME</Text><Text style={styles.previewPilotCopy}>Tus minutos VMV están habilitados solo para tu cuenta. Llama desde otro teléfono a este número, marca 1 para traducir y contesta aquí.</Text><Text style={styles.previewPilotMinutes}>Saldo: {accountOverview.billing.availableMinutes??billingOverview?.minutes.available??0} minutos</Text></View>:null}
+        {accountOverview?.billing?.pilot?<View style={styles.previewPilotCard}><Text style={styles.previewPilotLabel}>✦ PRUEBA PRIVADA · OPENAI REALTIME</Text><Text style={styles.previewPilotCopy}>Tus minutos VMV están habilitados solo para tu cuenta. Llama desde otro teléfono a este número, marca 1 para traducir y contesta aquí.</Text><Text style={styles.previewPilotMinutes}>Saldo: {accountOverview.billing.availableMinutes??billingOverview?.minutes.available??0} minutos</Text><Button label={pilotChecking?"Comprobando…":"Verificar motor y número"} disabled={pilotChecking} onPress={()=>void checkPilotReadiness()}/>{pilotReadiness?<><Text style={styles.previewPilotCopy}>Motor OpenAI: {pilotReadiness.engineReady?"✓ Listo":"○ Pendiente"} · Webhook Twilio: {pilotReadiness.webhookReady&&pilotReadiness.webhookPost?"✓ Conectado":"○ Revisar"}</Text><Text style={styles.previewPilotCopy}>{pilotReadiness.nextStep}</Text></>:null}</View>:null>
        <Button label={accountOverview?.billing?.active===true?(registering?"Conectando…":ready?"Actualizar conexión":"Conectar iPhone"):"Se necesita plan activo"}
         disabled={registering} onPress={()=>accountOverview?.billing?.active===true?void registerPhone(): (setActiveTab("settings"),setSettingsPage("billing"))}/>
       </View>
