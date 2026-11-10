@@ -1,6 +1,7 @@
-// Fail-closed guard for anything that spends on Twilio or a paid AI provider.
-// Preview Stripe checkouts use TEST currency and are never proof of real payment.
-import {balance,eligible,getBillingAccount,type BillingAccount} from "@/lib/vmv-billing";
+// Production billing is fail-closed. A single owner-specific Preview pilot may use
+// their existing TEST minute balance only when explicitly enabled on the server.
+// Neither Stripe TEST subscriptions nor user metadata can unlock public production.
+import {balance,eligible,getBillingAccount,billingEnabledFor,type BillingAccount} from "@/lib/vmv-billing";
 
 export type PaidCapability="direct_call"|"translated_call"|"ai";
 
@@ -15,11 +16,27 @@ export function confirmedSubscription(account:BillingAccount|null):boolean {
   /^sub_[A-Za-z0-9]+$/.test(account.stripe_subscription_id||"")&&
   ["starter","pro","premium"].includes(account.plan_code));
 }
+// This pilot is scoped by deployment environment AND an explicit user UUID,
+// never by a spoofable request header, profile field, or client-supplied flag.
+export function ownerPreviewPilot(account:BillingAccount|null):boolean {
+ return Boolean(account&&
+  process.env.VERCEL_ENV==="preview"&&
+  process.env.SMARTJOB_REALTIME_PILOT_ENABLED==="true"&&
+  billingEnabledFor(account.user_id)&&
+  account.stripe_mode==="test"&&eligible(account)&&
+  ["starter","pro","premium"].includes(account.plan_code)&&
+  balance(account)>0);
+}
 export function allowSpendWithAccount(account:BillingAccount|null,capability:PaidCapability):boolean {
+ if(ownerPreviewPilot(account))return balance(account)>0;
  if(!realBillingConfigured()||!confirmedSubscription(account))return false;
  return capability==="direct_call"||balance(account)>0;
 }
 export async function paidServiceAllowed(uid:string,capability:PaidCapability):Promise<boolean> {
- if(!realBillingConfigured()||!/^[a-f\d-]{36}$/i.test(uid))return false;
+ if(!/^[a-f\d-]{36}$/i.test(uid))return false;
+ if(!realBillingConfigured()&&!(
+  process.env.VERCEL_ENV==="preview"&&
+  process.env.SMARTJOB_REALTIME_PILOT_ENABLED==="true"&&
+  billingEnabledFor(uid)))return false;
  return allowSpendWithAccount(await getBillingAccount(uid),capability);
 }
