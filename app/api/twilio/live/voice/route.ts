@@ -56,15 +56,12 @@ export async function POST(req:NextRequest){
   if(process.env.TWILIO_ACCOUNT_SID&&sid!==process.env.TWILIO_ACCOUNT_SID)return twiml("<Hangup/>",403);
   if(!E164(from)||!E164(to))return twiml(say("Unsupported telephone number.","en-US")+"<Hangup/>");
 
-  const pilot=to===E164(process.env.TWILIO_NUMBER)&&from===E164(process.env.SMARTJOB_DUO_EN_PHONE);
-  let owner=E164(process.env.SMARTJOB_DUO_ES_PHONE),config:RelayOptions|undefined;
+  let owner="",config:RelayOptions|undefined;
   let tenantId:string|undefined;
   let route:Awaited<ReturnType<typeof findPhoneRoute>>=null;
-  // The menu runs only for activated iOS receiver routes and only when enabled.
-  // Pilot calls keep the existing, tested path. Spanish never touches the relay.
-  // The shared legacy pilot has no subscriber entitlement to charge against.
-  if(pilot)return twiml("<Hangup/>");
-  const ivr=languageMenuEnabled()&&!pilot&&tenantsReady();
+  // Every caller, including former pilot phone numbers, must resolve to an
+  // entitled tenant route. Never hang up based solely on the caller number.
+  const ivr=languageMenuEnabled()&&tenantsReady();
   const chosenLanguage=req.nextUrl.searchParams.get("language")||"";
   if(ivr){
     route=await findPhoneRoute(to);
@@ -82,8 +79,8 @@ export async function POST(req:NextRequest){
     }
   }
   if(!liveReady())return notReady();
-  if(!pilot){
-    // Public multi-tenant routing is gated separately from the known-good pilot.
+  {
+    // Only authenticated active tenants can initiate billable calls.
     if(!tenantsReady())return twiml(say("This telephone number is not yet enabled.","en-US")+"<Hangup/>");
     route=route||await findPhoneRoute(to);
     if(!route)return twiml(say("This telephone number is not yet enabled.","en-US")+"<Hangup/>");
@@ -156,9 +153,10 @@ export async function POST(req:NextRequest){
       return twiml(say("Your available translated minutes have been used. Please renew or recharge your plan.","en-US")+"<Hangup/>");
     }
   }
-  const signature=tenantId?partnerSignature(bridge,tenantId,from):bridgeSignature(bridge);
+  if(!tenantId||!config)return twiml("<Hangup/>",403);
+  const signature=partnerSignature(bridge,tenantId,from);
   const partnerUrl=baseUrl+"/api/twilio/live/partner?bridge="+bridge+"&sig="+signature+(ivr?"&ivr=en":"")+
-    (tenantId?"&route="+encodeURIComponent(tenantId)+"&caller="+encodeURIComponent(from):"");
+    "&route="+encodeURIComponent(tenantId)+"&caller="+encodeURIComponent(from);
   const callback=baseUrl+"/api/twilio/live/ended?bridge="+bridge+"&sig="+bridgeSignature(bridge);
   try{
     if(!await inboundAlive(sid,token,bridge)){
@@ -185,7 +183,7 @@ export async function POST(req:NextRequest){
       if(reservedMinutes)await settleCallMinutes(bridge,0);
       return twiml(say("Unable to connect. Please call again.","en-US")+"<Hangup/>");
     }
-    console.info("Smart Job live outbound call accepted",route?"tenant":"pilot");
+    console.info("Smart Job live outbound call accepted","tenant");
     return bridgeTwiML("customer",bridge,config);
   }catch(e){
     if(route)await updatePhoneSession(bridge,"failed");

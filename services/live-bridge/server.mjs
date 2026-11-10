@@ -1,315 +1,161 @@
-// VMV CALL: Twilio Media Streams <-> OpenAI Realtime Translate.
-// Each paid, signed two-leg call owns two isolated OpenAI translation sessions.
-// Incoming media is G.711 mu-law 8k; OpenAI accepts/returns PCM16LE 24k.
+// VMV CALL — two Twilio ConversationRelay legs with GPT-4.1 mini text translation.
+// Twilio performs speech-to-text and text-to-speech; OpenAI Realtime is not used.
+// There is exactly one signed translation bridge per paired, paid telephone call.
 import {createHmac,timingSafeEqual} from "node:crypto";
 import {createServer} from "node:http";
 import {WebSocketServer,WebSocket} from "ws";
-import {accountSid,callSid,e164,validReceiver,matchesRouteSignature} from "./relay-core.mjs";
-import {pcm24ToMulaw8,safePcm24Chunk,decodeMulaw} from "./media-codec.mjs";
-import {queueInput,flushInput} from "./input-flow.mjs";
-import {pcm16Level} from "./audio-levels.mjs";
-import {translationSessionUpdate} from "./translation-session.mjs";
-import {compactOutputAudio,createOutputState} from "./output-audio.mjs";
+import {accountSid,callSid} from "./relay-core.mjs";
+import {verifiedSetup,cleanPrompt,peerRole,textMessage} from "./conversation-relay.mjs";
 
 const AUTH=process.env.TWILIO_AUTH_TOKEN||"";
 const ACCOUNT=process.env.TWILIO_ACCOUNT_SID||"";
 const WSS_URL=process.env.PUBLIC_WS_URL||"";
-const API_KEY=process.env.OPENAI_API_KEY||"";
+const TRANSLATE_URL=process.env.SMARTJOB_TRANSLATE_URL||"";
+const ENABLED=process.env.SMARTJOB_CONVERSATION_RELAY_ENABLED==="true";
 const PORT=Number(process.env.PORT||3001);
-const ENABLED=process.env.SMARTJOB_REALTIME_TRANSLATE_ENABLED==="true";
-const maxEnv=(s,floor,low,high)=>{
-  const v=Number(s);
-  return Number.isInteger(v)?Math.max(low,Math.min(high,v)):floor;
+const bounded=(v,fallback,low,high)=>{
+  const num=Number(v);
+  return Number.isInteger(num)&&num>=low&&num<=high?num:fallback;
 };
-const MAX_ROOMS=maxEnv(process.env.SMARTJOB_MAX_CONCURRENT_CALLS,1,1,30);
-const MAX_SECONDS=maxEnv(process.env.SMARTJOB_MAX_CALL_SECONDS,14400,60,14400);
-const MAX_TWILIO_BUFFER=512000;
-// One-service controlled A/B test: forward raw voice to verify Twilio playback.
-// Turn off after the test; normal operation always uses AI translation.
-const DIAGNOSTIC_DIRECT_AUDIO=process.env.SMARTJOB_AUDIO_DIAGNOSTIC_PASSTHROUGH==="true";
-const TRIM_TRANSLATED_SILENCE=process.env.SMARTJOB_TRIM_TRANSLATED_SILENCE==="true";
-const SILENCE_200MS=Buffer.alloc(1600,0xff);
+const MAX_ROOMS=bounded(process.env.SMARTJOB_MAX_CONCURRENT_CALLS,1,1,30);
+const MAX_SECONDS=bounded(process.env.SMARTJOB_MAX_CALL_SECONDS,14400,60,14400);
+const validUrl=()=>/^https:\/\/[a-z0-9.-]+(?:\/[a-zA-Z0-9/_-]+)?\/api\/twilio\/live\/translate$/i.test(TRANSLATE_URL);
+const ready=()=>ENABLED&&validUrl();
 const rooms=new Map();
-// Aggregate counters only: never log audio, transcripts, phone numbers or identifiers.
-function freshStats(){return {incomingPackets:0,nonSilentInputPackets:0,appendedFrames:0,outputAudioDeltas:0,nonSilentOpenAiDeltas:0,openAiOutputBytes:0,peakOpenAiPcmAmplitude:0,formatWarnings:0,outputTranscriptDeltas:0,translatedSilenceSuppressedMs:0,playbackPackets:0,nonSilentPlaybackPackets:0,marksSent:0,marksAcked:0,playbackDrops:0};}
-function containsSignal(samples){
-  // Privacy-safe energy check on a small sample; counts only, never captures speech.
-  if(!samples?.length)return false;
-  let sum=0,n=0;
-  for(let i=0;i<samples.length;i+=8){sum+=Math.abs(decodeMulaw(samples[i]));n++;}
-  return n>0&&sum/n>250;
-}
-function diagSummary(room){
-  const result={};
-  for(const side of ["customer","professional"]){
-    result[side]={ready:room.ai[side]?.ready===true,...room.stats[side],queuedBytes:room.ai[side]?.pending.length||0};
-  }
-  return result;
-}
-const ready=()=>ENABLED&&/^sk-/.test(API_KEY);
-const isOpen=ws=>ws?.readyState===WebSocket.OPEN;
+const open=ws=>ws?.readyState===WebSocket.OPEN;
+const MAX_BUFFERED_BYTES=128000;
 
 if(!AUTH||!accountSid(ACCOUNT)||!/^wss:\/\/[a-z0-9.-]+(?::443)?\/relay$/i.test(WSS_URL)){
-  console.error("Invalid Twilio WebSocket configuration");
+  console.error("VMV ConversationRelay configuration is invalid");
   process.exit(1);
 }
-
-function validSignature(provided,expected){
-  if(typeof provided!=="string"||!/^[a-f0-9]{64}$/i.test(provided))return false;
-  const a=Buffer.from(provided,"hex"),b=Buffer.from(expected,"hex");
-  return a.length===b.length&&timingSafeEqual(a,b);
+function send(ws,message){
+  if(!open(ws)||ws.bufferedAmount>MAX_BUFFERED_BYTES)return false;
+  try{ws.send(JSON.stringify(message));return true;}catch{return false;}
 }
-function verifyUpgrade(req){
-  const provided=req.headers["x-twilio-signature"];
-  if(typeof provided!=="string")return false;
-  const expected=createHmac("sha1",AUTH).update(WSS_URL).digest();
-  let received;
-  try{received=Buffer.from(provided,"base64");}catch{return false;}
-  return received.length===expected.length&&timingSafeEqual(expected,received);
+function sayTo(ws,text){return send(ws,textMessage(text));}
+function authenticatedUpgrade(req){
+  const signature=req.headers["x-twilio-signature"];
+  if(typeof signature!=="string")return false;
+  const digest=createHmac("sha1",AUTH).update(WSS_URL).digest();
+  let actual;
+  try{actual=Buffer.from(signature,"base64");}catch{return false;}
+  return actual.length===digest.length&&timingSafeEqual(actual,digest);
 }
-function configureStart(packet){
-  const s=packet?.start,p=s?.customParameters||{};
-  if(!s||!callSid(s.callSid)||s.accountSid!==ACCOUNT||
-     !/^MZ[a-f0-9]{32}$/i.test(s.streamSid||"")||
-     !["customer","professional"].includes(p.role)||!callSid(p.bridge))return null;
-  // No unsigned pilot/caller shortcuts: only a paid tenant's signed route is accepted.
-  const route={bridge:p.bridge,customer:p.customer,twilio:p.twilio,owner:p.owner,
-    customerLanguage:p.customerLanguage,ownerLanguage:p.ownerLanguage};
-  if(!e164(route.customer)||!e164(route.twilio)||!validReceiver(route.owner)||
-     !["en-US","es-ES"].includes(route.customerLanguage)||
-     !["en-US","es-ES"].includes(route.ownerLanguage)||
-     route.customerLanguage===route.ownerLanguage||
-     !matchesRouteSignature(AUTH,route,p.routeSignature))return null;
-  if(p.role==="customer"&&s.callSid!==p.bridge)return null;
-  if(p.role==="professional"&&s.callSid===p.bridge)return null;
-  return {role:p.role,bridge:p.bridge,callSid:s.callSid,streamSid:s.streamSid,
-    customerLanguage:route.customerLanguage,ownerLanguage:route.ownerLanguage,
-    safetyId:createHmac("sha256",AUTH).update(route.owner).digest("hex")};
+function authenticatedEnd(stamp,sig,body){
+  if(!/^1\d{9}$/.test(stamp)||Math.abs(Date.now()/1000-Number(stamp))>30||
+     !/^[a-f\d]{64}$/i.test(sig)||!callSid(body))return false;
+  const digest=createHmac("sha256",AUTH)
+    .update("smartjob-end-v1\n"+stamp+"\n"+body).digest();
+  const actual=Buffer.from(sig,"hex");
+  return actual.length===digest.length&&timingSafeEqual(actual,digest);
 }
-function peer(role){return role==="customer"?"professional":"customer";}
-function sendTwilio(ws,packet){
-  if(!isOpen(ws)||ws.bufferedAmount>MAX_TWILIO_BUFFER)return false;
-  ws.send(JSON.stringify(packet));return true;
+async function terminateTwilio(sid){
+  try{
+    await fetch("https://api.twilio.com/2010-04-01/Accounts/"+ACCOUNT+"/Calls/"+sid+".json",{
+      method:"POST",
+      headers:{Authorization:"Basic "+Buffer.from(ACCOUNT+":"+AUTH).toString("base64"),
+        "Content-Type":"application/x-www-form-urlencoded"},
+      body:"Status=completed",signal:AbortSignal.timeout(4500),cache:"no-store"
+    });
+  }catch{console.error("VMV Twilio leg cleanup request failed");}
 }
-async function callApi(sid,form){
-  return fetch("https://api.twilio.com/2010-04-01/Accounts/"+ACCOUNT+"/Calls/"+sid+".json",{
-    method:form?"POST":"GET",
-    headers:form?{Authorization:"Basic "+Buffer.from(ACCOUNT+":"+AUTH).toString("base64"),
-      "Content-Type":"application/x-www-form-urlencoded"}:
-      {Authorization:"Basic "+Buffer.from(ACCOUNT+":"+AUTH).toString("base64")},
-    body:form?new URLSearchParams(form).toString():undefined,
-    signal:AbortSignal.timeout(4500),cache:"no-store"
-  });
-}
-async function finishRoom(id,why){
+async function finishRoom(id,reason){
   const room=rooms.get(id);
   if(!room||room.closing)return;
   room.closing=true;
-  if(room.diagnosticTimer)clearInterval(room.diagnosticTimer);
-  console.info("VMV Realtime bridge finished",{reason:why,seconds:Math.floor((Date.now()-room.createdAt)/1000),stats:diagSummary(room)});
-  for(const side of ["customer","professional"]){
-    const ai=room.ai[side];
-    if(ai?.drainTimer)clearInterval(ai.drainTimer);
-    if(isOpen(ai?.ws)){
-      try{ai.ws.send(JSON.stringify({type:"session.close"}));}catch{}
-    }
-    if(ai?.ws)try{ai.ws.close();}catch{}
-    if(isOpen(room.legs[side]?.ws))try{room.legs[side].ws.close();}catch{}
-  }
   rooms.delete(id);
-  await Promise.allSettled(
-    [room.legs.customer?.callSid,room.legs.professional?.callSid]
-      .filter(callSid).map(sid=>callApi(sid,{Status:"completed"}))
-  );
+  console.info("VMV ConversationRelay call ended",{
+    reason,seconds:Math.floor((Date.now()-room.created)/1000),
+    customerPrompts:room.metrics.customer,professionalPrompts:room.metrics.professional,
+    translations:room.metrics.translations,failures:room.metrics.failures
+  });
+  const connected=["customer","professional"].map(role=>room.legs[role]).filter(Boolean);
+  for(const ctx of connected){ctx.queue.length=0;try{ctx.ws.close();}catch{}}
+  // Close BOTH legs so a silent/orphaned call cannot keep consuming minutes.
+  await Promise.allSettled(connected.map(ctx=>terminateTwilio(ctx.callSid)));
 }
-function noRoomYet(id){
+function createRoom(id){
   if(rooms.has(id))return rooms.get(id);
   if(rooms.size>=MAX_ROOMS)return null;
-  const room={id,createdAt:Date.now(),closing:false,legs:{customer:null,professional:null},
-    ai:{customer:null,professional:null},starting:false,diagnosticTimer:null,
-    stats:{customer:freshStats(),professional:freshStats()},
-    marks:{customer:new Set(),professional:new Set()}};
+  const room={id,created:Date.now(),closing:false,
+    legs:{customer:null,professional:null},
+    metrics:{customer:0,professional:0,translations:0,failures:0}};
   rooms.set(id,room);return room;
 }
-function sendToLeg(room,targetRole,samples){
-  const target=room.legs[targetRole];
-  if(!target||!isOpen(target.ws)||room.closing)return false;
-  const payload=samples.toString("base64");
-  if(!sendTwilio(target.ws,{event:"media",streamSid:target.streamSid,media:{payload}})){
-    room.stats[targetRole].playbackDrops++;
-    return false;
-  }
-  const stats=room.stats[targetRole];
-  stats.playbackPackets++;
-  if(containsSignal(samples))stats.nonSilentPlaybackPackets++;
-  // Twilio replies with a mark once previous packets have played on the call.
-  if(stats.playbackPackets%50===0){
-    const marker="vmv-"+targetRole+"-"+stats.playbackPackets;
-    room.marks[targetRole].add(marker);
-    if(sendTwilio(target.ws,{event:"mark",streamSid:target.streamSid,mark:{name:marker}})){
-      stats.marksSent++;
-    }else{room.marks[targetRole].delete(marker);}
-  }
-  return true;
-}
-function sendAudioToPeer(room,role,event){
-  const target=room.legs[peer(role)];
-  const ai=room.ai[role];
-  if(!target||!isOpen(target.ws)||!ai||room.closing)return;
-  let pcm;
-  try{pcm=safePcm24Chunk(Buffer.from(event.delta,"base64"));}catch{void finishRoom(room.id,"bad_openai_audio");return;}
-  const stats=room.stats[role];
-  stats.openAiOutputBytes+=pcm.length;
-  const level=pcm16Level(pcm);
-  if(level.meanAbs>250)stats.nonSilentOpenAiDeltas++;
-  stats.peakOpenAiPcmAmplitude=Math.max(stats.peakOpenAiPcmAmplitude,level.peak);
-  const sampleRate=event.sample_rate??24000,channels=event.channels??1,format=event.format??"pcm16";
-  if(sampleRate!==24000||channels!==1||format!=="pcm16")stats.formatWarnings++;
-  if(!ai.firstOutputObserved){
-    ai.firstOutputObserved=true;
-    console.info("VMV Realtime first output format",{
-      side:role,sampleRate,channels,format,pcmBytes:pcm.length,
-      pcmMeanAmplitude:level.meanAbs,pcmPeakAmplitude:level.peak
+async function translate(original,sourceLanguage,targetLanguage){
+  const body=JSON.stringify({original,sourceLanguage,targetLanguage});
+  const stamp=String(Math.floor(Date.now()/1000));
+  const sig=createHmac("sha256",AUTH)
+    .update("vmv-conversationrelay-translate-v1\n"+stamp+"\n"+body).digest("hex");
+  try{
+    const response=await fetch(TRANSLATE_URL,{
+      method:"POST",headers:{"Content-Type":"application/json",
+        "x-smartjob-timestamp":stamp,"x-smartjob-signature":sig},
+      body,signal:AbortSignal.timeout(7500),cache:"no-store"
     });
-  }
-  const joined=ai.outRemainder.length?Buffer.concat([ai.outRemainder,pcm]):pcm;
-  const usable=Math.floor(joined.length/6)*6;
-  ai.outRemainder=Buffer.from(joined.subarray(usable));
-  if(!usable)return;
-  let mu;
-  try{mu=pcm24ToMulaw8(joined.subarray(0,usable));}catch{void finishRoom(room.id,"audio_codec_failed");return;}
-  // Preserve the continuous input stream to OpenAI. Only omit near-digital
-  // silence in *translated output*, preventing extra queued Twilio playback.
-  // The conservative voice gate keeps 40 ms on both sides of each phrase.
-  if(TRIM_TRANSLATED_SILENCE){
-    const optimized=compactOutputAudio(mu,ai.outputCompactor);
-    mu=optimized.audio;
-    stats.translatedSilenceSuppressedMs+=optimized.suppressedMs;
-  }
-  for(let offset=0;offset<mu.length;offset+=1600){
-    const portion=mu.subarray(offset,offset+1600);
-    if(!sendToLeg(room,peer(role),portion)){
-      void finishRoom(room.id,"twilio_audio_backpressure");return;
+    if(!response.ok){
+      console.error("VMV text interpretation unavailable",{status:response.status});
+      return null;
     }
+    const parsed=await response.json();
+    return typeof parsed.translation==="string"&&parsed.translation.trim()&&
+      parsed.translation.length<=700?parsed.translation.trim():null;
+  }catch(err){
+    console.error("VMV text interpretation failed",err instanceof Error?err.name:"unknown");
+    return null;
   }
 }
-function flushInputSafe(room,side){
-  const ai=room.ai[side];
-  if(!ai||room.closing)return;
-  try{room.stats[side].appendedFrames+=flushInput(ai);}
-  catch(e){
-    console.error("VMV Realtime input send failure",e instanceof Error?e.name:"unknown");
-    void finishRoom(room.id,"openai_send_failure");
-  }
-}
-function pushInput(room,side,packet){
-  if(room.closing||typeof packet?.media?.payload!=="string")return;
-  let samples;
-  try{samples=Buffer.from(packet.media.payload,"base64");}catch{return;}
-  if(!samples.length||samples.length>3200)return;
-  room.stats[side].incomingPackets++;
-  if(containsSignal(samples))room.stats[side].nonSilentInputPackets++;
-  if(DIAGNOSTIC_DIRECT_AUDIO){
-    sendToLeg(room,peer(side),samples);
-    return;
-  }
-  const ai=room.ai[side];
-  if(!ai)return;
-  const dropped=queueInput(ai,samples);
-  if(dropped){
-    ai.droppedInputBytes+=dropped;
-    if(Date.now()-ai.lastDropWarnAt>15000){
-      console.warn("VMV Realtime input delayed; trimmed oldest buffered audio",{
-        side,droppedMs:Math.round(ai.droppedInputBytes/8)
-      });
-      ai.droppedInputBytes=0;
-      ai.lastDropWarnAt=Date.now();
+async function consume(room,ctx){
+  if(ctx.processing||room.closing)return;
+  ctx.processing=true;
+  try{
+    while(ctx.queue.length&&!room.closing){
+      const utterance=ctx.queue.shift();
+      const peer=room.legs[peerRole(ctx.role)];
+      if(!peer||!open(peer.ws)){
+        sayTo(ctx.ws,ctx.sourceLanguage==="es-ES"
+          ?"La otra persona todavía no está conectada.":"The other person is not connected yet.");
+        continue;
+      }
+      const spoken=await translate(utterance,ctx.sourceLanguage,ctx.targetLanguage);
+      if(room.closing||rooms.get(room.id)!==room)break;
+      if(!spoken){
+        room.metrics.failures++;
+        if(!sayTo(ctx.ws,ctx.sourceLanguage==="es-ES"
+          ?"No se pudo traducir. Por favor, repite la frase."
+          :"Translation failed. Please repeat.")){
+          void finishRoom(room.id,"notification_backpressure");break;
+        }
+      }else{
+        room.metrics.translations++;
+        if(!sayTo(peer.ws,spoken)){
+          void finishRoom(room.id,"translated_playback_unavailable");break;
+        }
+      }
     }
-  }
-  flushInputSafe(room,side);
-}
-function startAi(room,side){
-  const ctx=room.legs[side];
-  const target=side==="customer"?ctx.ownerLanguage:ctx.customerLanguage;
-  const language=target==="es-ES"?"es":"en";
-  const ai={ws:null,ready:false,pending:Buffer.alloc(0),outRemainder:Buffer.alloc(0),
-    drainTimer:null,droppedInputBytes:0,lastDropWarnAt:0,firstOutputObserved:false,
-    outputCompactor:createOutputState()};
-  room.ai[side]=ai;
-  const ws=new WebSocket(
-    "wss://api.openai.com/v1/realtime/translations?model=gpt-realtime-translate",
-    {headers:{Authorization:"Bearer "+API_KEY,
-      "OpenAI-Safety-Identifier":ctx.safetyId},handshakeTimeout:10000,maxPayload:2000000,
-      perMessageDeflate:false}
-  );
-  ai.ws=ws;
-  ai.drainTimer=setInterval(()=>flushInputSafe(room,side),40);
-  ai.drainTimer.unref();
-  ws.on("message",raw=>{
-    if(room.closing)return;
-    let event;
-    try{event=JSON.parse(raw.toString());}catch{void finishRoom(room.id,"openai_invalid_json");return;}
-    if(event.type==="session.created"){
-      console.info("VMV Realtime translation session created",{side,language});
-      ws.send(JSON.stringify(translationSessionUpdate(language)));
-    }else if(event.type==="session.updated"){
-      ai.ready=true;
-      const effectiveReduction=event.session?.audio?.input?.noise_reduction;
-      console.info("VMV Realtime translation session ready",{
-        side,language,noiseReduction:effectiveReduction===null?"disabled":effectiveReduction?.type||"unknown"
-      });
-      flushInputSafe(room,side);
-    }else if(event.type==="session.output_audio.delta"&&typeof event.delta==="string"){
-      room.stats[side].outputAudioDeltas++;
-      sendAudioToPeer(room,side,event);
-    }else if(event.type==="session.output_transcript.delta"){
-      room.stats[side].outputTranscriptDeltas++;
-    }else if(event.type==="error"){
-      // Never print audio, transcript or API secrets.
-      console.error("VMV Realtime error",String(event.error?.code||"provider_error").slice(0,70));
-      void finishRoom(room.id,"openai_provider_error");
-    }
-  });
-  ws.on("error",()=>void finishRoom(room.id,"openai_socket_error"));
-  ws.on("close",()=>{if(!room.closing)void finishRoom(room.id,"openai_disconnected");});
-}
-function maybeStart(room){
-  if(room.starting||room.closing||!room.legs.customer||!room.legs.professional)return;
-  room.starting=true;
-  if(DIAGNOSTIC_DIRECT_AUDIO){
-    console.warn("VMV pilot audio diagnostic: ORIGINAL VOICE direct passthrough; AI translation bypassed");
-  }else{
-    startAi(room,"customer");
-    startAi(room,"professional");
-    console.info("VMV Realtime sessions initiated",{trimTranslatedSilence:TRIM_TRANSLATED_SILENCE});
-  }
-  room.diagnosticTimer=setInterval(()=>{
-    if(!room.closing)console.info("VMV Realtime audio diagnostics",diagSummary(room));
-  },15000);
-  room.diagnosticTimer.unref();
+  }finally{ctx.processing=false;}
 }
 const app=createServer((req,res)=>{
-  const route=new URL(req.url||"/","http://localhost").pathname;
-  if(["GET","HEAD"].includes(req.method)&&["/","/health"].includes(route)){
+  const path=new URL(req.url||"/","http://localhost").pathname;
+  if(["GET","HEAD"].includes(req.method)&&["/","/health"].includes(path)){
     res.writeHead(ready()?200:503,{"content-type":"application/json","cache-control":"no-store"});
-    return res.end(req.method==="HEAD"?"":JSON.stringify({ok:ready(),
-      service:"smartjob-live-bridge",engine:"openai-realtime-translate",
+    return res.end(req.method==="HEAD"?"":JSON.stringify({
+      ok:ready(),service:"smartjob-live-bridge",engine:"twilio-conversationrelay",
       bridges:rooms.size,capacity:MAX_ROOMS,accepting:ready()&&rooms.size<MAX_ROOMS,
-      reason:ready()?undefined:"not_configured",version:4}));
+      reason:ready()?undefined:"not_configured",version:5
+    }));
   }
-  if(req.method==="POST"&&route==="/internal/end"){
+  if(req.method==="POST"&&path==="/internal/end"){
     const stamp=String(req.headers["x-smartjob-timestamp"]||"");
     const sig=String(req.headers["x-smartjob-signature"]||"");
-    if(!/^1\d{9}$/.test(stamp)||Math.abs(Date.now()/1000-Number(stamp))>30){
-      res.writeHead(403).end();return;
-    }
     let body="";
-    req.on("data",b=>{body+=b;if(body.length>100)req.destroy();});
+    req.on("data",part=>{
+      body+=part;
+      if(body.length>100)req.destroy();
+    });
     req.on("end",()=>{
-      const expected=createHmac("sha256",AUTH).update("smartjob-end-v1\n"+stamp+"\n"+body).digest("hex");
-      if(!callSid(body)||!validSignature(sig,expected)){
-        res.writeHead(403).end();return;
-      }
+      if(!authenticatedEnd(stamp,sig,body)){res.writeHead(403).end();return;}
       void finishRoom(body,"twilio_callback");
       res.writeHead(204).end();
     });
@@ -317,56 +163,72 @@ const app=createServer((req,res)=>{
   }
   res.writeHead(404).end();
 });
-const wss=new WebSocketServer({noServer:true,maxPayload:16000,perMessageDeflate:false});
+const wss=new WebSocketServer({noServer:true,maxPayload:20000,perMessageDeflate:false});
 app.on("upgrade",(req,socket,head)=>{
-  if(req.url!=="/relay"||!ready()||!verifyUpgrade(req)){
-    socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");socket.destroy();return;
+  if(req.url!=="/relay"||!ready()||!authenticatedUpgrade(req)){
+    socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
+    socket.destroy();return;
   }
   wss.handleUpgrade(req,socket,head,ws=>wss.emit("connection",ws,req));
 });
 wss.on("connection",ws=>{
-  let ctx=null,packetCount=0;
+  let ctx=null,count=0;
   ws.on("message",raw=>{
-    if(++packetCount>MAX_SECONDS*80+200){ws.close(1008,"message_limit");return;}
-    let p;
-    try{p=JSON.parse(raw.toString());}catch{ws.close(1008,"invalid_json");return;}
-    if(p.event==="connected")return;
-    if(p.event==="start"){
-      if(ctx){ws.close(1008,"duplicate_start");return;}
-      ctx=configureStart(p);
-      if(!ctx){ws.close(1008,"route_auth_failed");return;}
-      const room=noRoomYet(ctx.bridge);
-      if(!room||room.closing||room.legs[ctx.role]){
-        ws.close(1013,"no_capacity");return;
+    if(++count>MAX_SECONDS*4+100){ws.close(1008,"message_limit");return;}
+    let message;
+    try{message=JSON.parse(raw.toString());}catch{ws.close(1008,"invalid_json");return;}
+    if(message.type==="setup"){
+      if(ctx){ws.close(1008,"duplicate_setup");return;}
+      const setup=verifiedSetup(message,ACCOUNT,AUTH);
+      if(!setup){ws.close(1008,"unauthorized_setup");return;}
+      const room=createRoom(setup.bridge);
+      if(!room||room.closing||room.legs[setup.role]){
+        ws.close(1013,"bridge_unavailable");return;
       }
-      room.legs[ctx.role]={...ctx,ws};
-      maybeStart(room);
+      ctx={...setup,ws,queue:[],processing:false};
+      room.legs[setup.role]=ctx;
+      console.info("VMV ConversationRelay leg connected",{role:ctx.role});
+      if(room.legs.customer&&room.legs.professional){
+        sayTo(room.legs.customer.ws,room.legs.customer.sourceLanguage==="es-ES"
+          ?"El intérprete está conectado. Puedes hablar normalmente."
+          :"The interpreter is connected. You can speak normally.");
+        sayTo(room.legs.professional.ws,room.legs.professional.sourceLanguage==="es-ES"
+          ?"El intérprete está conectado. Puedes hablar normalmente."
+          :"The interpreter is connected. You can speak normally.");
+      }
       return;
     }
-    if(!ctx)return ws.close(1008,"missing_start");
+    if(!ctx){ws.close(1008,"missing_setup");return;}
     const room=rooms.get(ctx.bridge);
-    if(!room||room.closing||room.legs[ctx.role]?.ws!==ws)return;
-    if(p.event==="mark"){
-      if(p.streamSid===ctx.streamSid&&typeof p.mark?.name==="string"&&
-         room.marks[ctx.role].delete(p.mark.name))room.stats[ctx.role].marksAcked++;
-    }else if(p.event==="media"){
-      if(p.streamSid!==ctx.streamSid)return;
-      pushInput(room,ctx.role,p);
-    }else if(p.event==="stop"){
-      void finishRoom(ctx.bridge,"twilio_stop");
+    if(!room||room.closing||room.legs[ctx.role]!==ctx)return;
+    if(message.type==="error"){
+      // Never log transcripts or phone identifiers.
+      console.error("VMV ConversationRelay error",String(message.description||"provider_error").slice(0,90));
+      void finishRoom(room.id,"twilio_relay_error");return;
     }
+    if(message.type!=="prompt")return;
+    const utterance=cleanPrompt(message);
+    if(!utterance)return;
+    room.metrics[ctx.role]++;
+    if(ctx.queue.length>=4){
+      room.metrics.failures++;
+      sayTo(ctx.ws,ctx.sourceLanguage==="es-ES"
+        ?"Un momento, por favor. Habla un poco más despacio."
+        :"Please speak a little more slowly.");
+      return;
+    }
+    ctx.queue.push(utterance);
+    void consume(room,ctx);
   });
-  ws.on("close",()=>{
-    if(ctx)void finishRoom(ctx.bridge,"twilio_disconnect");
-  });
-  ws.on("error",()=>{if(ctx)void finishRoom(ctx.bridge,"twilio_socket_error");});
+  ws.on("close",()=>{if(ctx)void finishRoom(ctx.bridge,"relay_disconnected");});
+  ws.on("error",()=>{if(ctx)void finishRoom(ctx.bridge,"relay_socket_error");});
 });
 setInterval(()=>{
   for(const [id,room] of rooms){
-    const age=Date.now()-room.createdAt;
+    const age=Date.now()-room.created;
     if(age>MAX_SECONDS*1000)void finishRoom(id,"duration_limit");
     else if(age>30000&&(!room.legs.customer||!room.legs.professional))
-      void finishRoom(id,"second_leg_timeout");
+      void finishRoom(id,"partner_connection_timeout");
   }
 },2000).unref();
-app.listen(PORT,"0.0.0.0",()=>console.info("VMV OpenAI Realtime Media Bridge listening",PORT));
+app.listen(PORT,"0.0.0.0",()=>console.info("VMV ConversationRelay bridge listening",PORT));

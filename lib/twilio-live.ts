@@ -39,10 +39,20 @@ export function validatedConfig(config:RelayOptions){
     ["en-US","es-ES"].includes(config.ownerLanguage)&&
     config.customerLanguage!==config.ownerLanguage);
 }
-// Two independently authenticated bidirectional Media Streams, one per phone leg.
-// Twilio only provides PSTN/Voice SDK transport; OpenAI handles all STT, MT and TTS.
+// Each person has an independent ConversationRelay: Twilio provides STT/TTS,
+// and our signed WebSocket bridge forwards text through GPT-4.1 mini.
 export function bridgeTwiML(role:"customer"|"professional",bridge:string,config?:RelayOptions){
-  if(!config||!validatedConfig(config))return twiml("<Hangup/>",403);
+  if(!config||!validatedConfig(config)||!/^CA[a-f\d]{32}$/i.test(bridge))return twiml("<Hangup/>",403);
+  const locale=role==="customer"?config.customerLanguage:config.ownerLanguage;
+  const defaultGreeting=locale==="es-ES"
+    ?"VMV Call. Estamos conectando la traducción. Un momento, por favor."
+    :"VMV Call. We are connecting your interpreter. One moment, please.";
+  const customGreeting=role==="customer"?config.greetingCustomer:config.greetingOwner;
+  const greeting=(customGreeting&&customGreeting.length<=180)?customGreeting:defaultGreeting;
+  const chosenVoice=role==="customer"?config.voiceCustomer:config.voiceOwner;
+  // Allowed voice ids come from our own fixed catalogue (never from the webhook).
+  const voice=chosenVoice&&/^[A-Za-z0-9_-]{20,100}$/.test(chosenVoice)
+    ?' voice="'+xmlEscape(chosenVoice)+'"':"";
   const params:[string,string][]=[
     ["bridge",bridge],["role",role],
     ["customer",config.customer],["twilio",config.twilio],["owner",config.owner],
@@ -52,9 +62,14 @@ export function bridgeTwiML(role:"customer"|"professional",bridge:string,config?
   const tags=params.map(([key,value])=>
     '<Parameter name="'+key+'" value="'+xmlEscape(value)+'"/>').join("");
   const url=xmlEscape(process.env.SMARTJOB_LIVE_WS_URL||"");
-  const action=xmlEscape(PILOT_BASE+"/api/twilio/live/ended?bridge="+bridge+"&sig="+bridgeSignature(bridge));
-  return twiml('<Connect action="'+action+'" method="POST"><Stream url="'+url+
-    '">'+tags+'</Stream></Connect><Hangup/>');
+  const action=xmlEscape(PILOT_BASE+"/api/twilio/live/ended?bridge="+bridge+
+    "&sig="+bridgeSignature(bridge));
+  return twiml('<Connect action="'+action+'" method="POST">'+
+    '<ConversationRelay url="'+url+'" ttsLanguage="'+locale+
+    '" transcriptionLanguage="'+locale+'" ttsProvider="ElevenLabs"'+voice+
+    ' speechTimeout="800" interruptible="none" reportInputDuringAgentSpeech="speech"'+
+    ' welcomeGreeting="'+xmlEscape(greeting)+'" welcomeGreetingInterruptible="none">'+
+    tags+'</ConversationRelay></Connect><Hangup/>');
 }
 export async function verifiedLiveRequest(req:NextRequest,expectedTo?:string|null){
   return authenticTwilio(req,expectedTo);
