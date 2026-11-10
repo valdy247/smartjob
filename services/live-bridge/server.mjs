@@ -5,7 +5,7 @@ import {createHmac,timingSafeEqual} from "node:crypto";
 import {createServer} from "node:http";
 import {WebSocketServer,WebSocket} from "ws";
 import {accountSid,callSid,e164,validReceiver,matchesRouteSignature} from "./relay-core.mjs";
-import {pcm24ToMulaw8,safePcm24Chunk} from "./media-codec.mjs";
+import {pcm24ToMulaw8,safePcm24Chunk,decodeMulaw} from "./media-codec.mjs";
 import {queueInput,flushInput} from "./input-flow.mjs";
 
 const AUTH=process.env.TWILIO_AUTH_TOKEN||"";
@@ -21,10 +21,20 @@ const maxEnv=(s,floor,low,high)=>{
 const MAX_ROOMS=maxEnv(process.env.SMARTJOB_MAX_CONCURRENT_CALLS,1,1,30);
 const MAX_SECONDS=maxEnv(process.env.SMARTJOB_MAX_CALL_SECONDS,14400,60,14400);
 const MAX_TWILIO_BUFFER=512000;
+// One-service controlled A/B test: forward raw voice to verify Twilio playback.
+// Turn off after the test; normal operation always uses AI translation.
+const DIAGNOSTIC_DIRECT_AUDIO=process.env.SMARTJOB_AUDIO_DIAGNOSTIC_PASSTHROUGH==="true";
 const SILENCE_200MS=Buffer.alloc(1600,0xff);
 const rooms=new Map();
 // Aggregate counters only: never log audio, transcripts, phone numbers or identifiers.
-function freshStats(){return {incomingPackets:0,appendedFrames:0,outputAudioDeltas:0,outputTranscriptDeltas:0,playbackPackets:0};}
+function freshStats(){return {incomingPackets:0,nonSilentInputPackets:0,appendedFrames:0,outputAudioDeltas:0,outputTranscriptDeltas:0,playbackPackets:0,nonSilentPlaybackPackets:0,marksSent:0,marksAcked:0,playbackDrops:0};}
+function containsSignal(samples){
+  // Privacy-safe energy check on a small sample; counts only, never captures speech.
+  if(!samples?.length)return false;
+  let sum=0,n=0;
+  for(let i=0;i<samples.length;i+=8){sum+=Math.abs(decodeMulaw(samples[i]));n++;}
+  return n>0&&sum/n>250;
+}
 function diagSummary(room){
   const result={};
   for(const side of ["customer","professional"]){
@@ -113,8 +123,30 @@ function noRoomYet(id){
   if(rooms.size>=MAX_ROOMS)return null;
   const room={id,createdAt:Date.now(),closing:false,legs:{customer:null,professional:null},
     ai:{customer:null,professional:null},starting:false,diagnosticTimer:null,
-    stats:{customer:freshStats(),professional:freshStats()}};
+    stats:{customer:freshStats(),professional:freshStats()},
+    marks:{customer:new Set(),professional:new Set()}};
   rooms.set(id,room);return room;
+}
+function sendToLeg(room,targetRole,samples){
+  const target=room.legs[targetRole];
+  if(!target||!isOpen(target.ws)||room.closing)return false;
+  const payload=samples.toString("base64");
+  if(!sendTwilio(target.ws,{event:"media",streamSid:target.streamSid,media:{payload}})){
+    room.stats[targetRole].playbackDrops++;
+    return false;
+  }
+  const stats=room.stats[targetRole];
+  stats.playbackPackets++;
+  if(containsSignal(samples))stats.nonSilentPlaybackPackets++;
+  // Twilio replies with a mark once previous packets have played on the call.
+  if(stats.playbackPackets%50===0){
+    const marker="vmv-"+targetRole+"-"+stats.playbackPackets;
+    room.marks[targetRole].add(marker);
+    if(sendTwilio(target.ws,{event:"mark",streamSid:target.streamSid,mark:{name:marker}})){
+      stats.marksSent++;
+    }else{room.marks[targetRole].delete(marker);}
+  }
+  return true;
 }
 function sendAudioToPeer(room,role,base64){
   const target=room.legs[peer(role)];
@@ -131,11 +163,9 @@ function sendAudioToPeer(room,role,base64){
   // Twilio buffers packets and plays them in sequence. Avoid unbounded queueing.
   for(let offset=0;offset<mu.length;offset+=1600){
     const portion=mu.subarray(offset,offset+1600);
-    if(!sendTwilio(target.ws,{event:"media",streamSid:target.streamSid,
-      media:{payload:portion.toString("base64")}})){
+    if(!sendToLeg(room,peer(role),portion)){
       void finishRoom(room.id,"twilio_audio_backpressure");return;
     }
-    room.stats[peer(role)].playbackPackets++;
   }
 }
 function flushInputSafe(room,side){
@@ -148,12 +178,18 @@ function flushInputSafe(room,side){
   }
 }
 function pushInput(room,side,packet){
-  const ai=room.ai[side];
-  if(!ai||room.closing||typeof packet?.media?.payload!=="string")return;
+  if(room.closing||typeof packet?.media?.payload!=="string")return;
   let samples;
   try{samples=Buffer.from(packet.media.payload,"base64");}catch{return;}
   if(!samples.length||samples.length>3200)return;
   room.stats[side].incomingPackets++;
+  if(containsSignal(samples))room.stats[side].nonSilentInputPackets++;
+  if(DIAGNOSTIC_DIRECT_AUDIO){
+    sendToLeg(room,peer(side),samples);
+    return;
+  }
+  const ai=room.ai[side];
+  if(!ai)return;
   const dropped=queueInput(ai,samples);
   if(dropped){
     ai.droppedInputBytes+=dropped;
@@ -211,9 +247,13 @@ function startAi(room,side){
 function maybeStart(room){
   if(room.starting||room.closing||!room.legs.customer||!room.legs.professional)return;
   room.starting=true;
-  startAi(room,"customer");
-  startAi(room,"professional");
-  console.info("VMV Realtime sessions initiated");
+  if(DIAGNOSTIC_DIRECT_AUDIO){
+    console.warn("VMV pilot audio diagnostic: ORIGINAL VOICE direct passthrough; AI translation bypassed");
+  }else{
+    startAi(room,"customer");
+    startAi(room,"professional");
+    console.info("VMV Realtime sessions initiated");
+  }
   room.diagnosticTimer=setInterval(()=>{
     if(!room.closing)console.info("VMV Realtime audio diagnostics",diagSummary(room));
   },15000);
@@ -277,7 +317,10 @@ wss.on("connection",ws=>{
     if(!ctx)return ws.close(1008,"missing_start");
     const room=rooms.get(ctx.bridge);
     if(!room||room.closing||room.legs[ctx.role]?.ws!==ws)return;
-    if(p.event==="media"){
+    if(p.event==="mark"){
+      if(p.streamSid===ctx.streamSid&&typeof p.mark?.name==="string"&&
+         room.marks[ctx.role].delete(p.mark.name))room.stats[ctx.role].marksAcked++;
+    }else if(p.event==="media"){
       if(p.streamSid!==ctx.streamSid)return;
       pushInput(room,ctx.role,p);
     }else if(p.event==="stop"){
