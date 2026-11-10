@@ -44,15 +44,16 @@ export async function POST(req:NextRequest){
     await updatePhoneSession(bridge,terminal.includes(state)?state:"completed",
       Number.isInteger(seconds)&&seconds>=0?seconds:undefined);
   }
-  // Always settle an already-reserved call even if the test feature toggle
-  // changes while the call is connected. Ignore extra Twilio zero callbacks,
-  // and rely on the atomic database settlement for replay protection.
+  // Settle only the exact outbound Twilio leg against its reserved minutes.
+  // A completed call with CallDuration=0 MUST release the whole reservation:
+  // otherwise the remaining minutes stay locked and block every new call.
+  // Settlement is atomic/idempotent; duplicate Twilio callbacks are safe.
   const pair=await getPairedCallSids(bridge);
   if(pair&&pair.reservedMinutes>0&&!pair.billingSettled&&
-     callbackSid!==bridge&&terminal.includes(state)){
-    if(Number.isInteger(seconds)&&seconds>0)await settleCallMinutes(bridge,seconds);
-    else if(["failed","busy","no-answer","canceled"].includes(state))
-      await settleCallMinutes(bridge,0);
+     callbackSid===pair.outboundSid&&terminal.includes(state)){
+    const duration=Number.isInteger(seconds)&&seconds>0?seconds:0;
+    if(!await settleCallMinutes(bridge,duration))
+      console.error("VMV completed call minute settlement failed",{status:state});
   }
   // A caller hanging up must immediately cancel the separately-created
   // outbound phone call. Render's WebSocket room may not exist yet.
