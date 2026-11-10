@@ -8,6 +8,7 @@ import {accountSid,callSid,e164,validReceiver,matchesRouteSignature} from "./rel
 import {pcm24ToMulaw8,safePcm24Chunk,decodeMulaw} from "./media-codec.mjs";
 import {queueInput,flushInput} from "./input-flow.mjs";
 import {pcm16Level} from "./audio-levels.mjs";
+import {translationSessionUpdate} from "./translation-session.mjs";
 
 const AUTH=process.env.TWILIO_AUTH_TOKEN||"";
 const ACCOUNT=process.env.TWILIO_ACCOUNT_SID||"";
@@ -240,10 +241,13 @@ function startAi(room,side){
     try{event=JSON.parse(raw.toString());}catch{void finishRoom(room.id,"openai_invalid_json");return;}
     if(event.type==="session.created"){
       console.info("VMV Realtime translation session created",{side,language});
-      ws.send(JSON.stringify({type:"session.update",session:{audio:{output:{language}}}}));
+      ws.send(JSON.stringify(translationSessionUpdate(language)));
     }else if(event.type==="session.updated"){
       ai.ready=true;
-      console.info("VMV Realtime translation session ready",{side,language});
+      const effectiveReduction=event.session?.audio?.input?.noise_reduction;
+      console.info("VMV Realtime translation session ready",{
+        side,language,noiseReduction:effectiveReduction===null?"disabled":effectiveReduction?.type||"unknown"
+      });
       flushInputSafe(room,side);
     }else if(event.type==="session.output_audio.delta"&&typeof event.delta==="string"){
       room.stats[side].outputAudioDeltas++;
