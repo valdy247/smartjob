@@ -44,16 +44,22 @@ export async function POST(req:NextRequest){
     await updatePhoneSession(bridge,terminal.includes(state)?state:"completed",
       Number.isInteger(seconds)&&seconds>=0?seconds:undefined);
   }
-  // Settle only the exact outbound Twilio leg against its reserved minutes.
-  // A completed call with CallDuration=0 MUST release the whole reservation:
-  // otherwise the remaining minutes stay locked and block every new call.
-  // Settlement is atomic/idempotent; duplicate Twilio callbacks are safe.
+  // Twilio can send an early completed callback with CallDuration=0 and
+  // a later completed callback with the true duration. Never settle that
+  // first zero prematurely: it would release all paid minutes without
+  // recording actual usage. The existing 5-minute DB reaper releases a
+  // zero-duration completed call if no positive duration ever follows.
+  // Other terminal failure states are settled with zero immediately.
   const pair=await getPairedCallSids(bridge);
   if(pair&&pair.reservedMinutes>0&&!pair.billingSettled&&
      callbackSid===pair.outboundSid&&terminal.includes(state)){
-    const duration=Number.isInteger(seconds)&&seconds>0?seconds:0;
-    if(!await settleCallMinutes(bridge,duration))
-      console.error("VMV completed call minute settlement failed",{status:state});
+    const measured=Number.isInteger(seconds)&&seconds>0?seconds:0;
+    if(measured>0||state!=="completed"){
+      if(!await settleCallMinutes(bridge,measured))
+        console.error("VMV completed call minute settlement failed",{status:state});
+    }else{
+      console.info("VMV awaiting final Twilio duration to settle reserved call");
+    }
   }
   // A caller hanging up must immediately cancel the separately-created
   // outbound phone call. Render's WebSocket room may not exist yet.
