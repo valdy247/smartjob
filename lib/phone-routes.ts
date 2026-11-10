@@ -68,9 +68,14 @@ export async function reservePhoneSession(bridge:string,route:ActivePhoneRoute,m
 export async function assignOutboundCall(bridge:string,outbound:string){
   const db=admin();
   if(!db||!sid.test(bridge)||!sid.test(outbound))return false;
-  const {error}=await db.from("smartjob_call_sessions").update({outbound_sid:outbound,status:"ringing"})
-    .eq("bridge_sid",bridge).eq("status","initiated");
-  if(error){console.error("Smart Job session assign failed",error.code);return false;}
+  const {data,error}=await db.from("smartjob_call_sessions")
+    .update({outbound_sid:outbound,status:"ringing"})
+    .eq("bridge_sid",bridge).eq("status","initiated")
+    .select("bridge_sid");
+  if(error||!data||data.length!==1){
+    console.error("Smart Job session assign failed",error?.code||"no_matching_reservation");
+    return false;
+  }
   return true;
 }
 // The outbound leg must consume the paid minutes reserved before dialing.
