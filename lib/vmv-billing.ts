@@ -39,7 +39,7 @@ export const testCallCapSecondsFor=(userId:string):number|null=>{
    process.env.SMARTJOB_STRIPE_MODE==="test"&&
    process.env.SMARTJOB_BILLING_TEST_OWNER_ID===userId&&
    /^[a-f0-9-]{36}$/i.test(userId)&&
-   Number.isInteger(raw)&&raw>=60&&raw<=1800?raw:null;
+   Number.isInteger(raw)&&raw>=60&&raw<=14400?raw:null;
 };
 export function billingAdmin(){
  const url=process.env.NEXT_PUBLIC_SUPABASE_URL,secret=process.env.SUPABASE_SECRET_KEY;

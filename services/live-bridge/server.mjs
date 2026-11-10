@@ -5,7 +5,8 @@ import {createHmac,timingSafeEqual} from "node:crypto";
 import {createServer} from "node:http";
 import {WebSocketServer,WebSocket} from "ws";
 import {accountSid,callSid,e164,validReceiver,matchesRouteSignature} from "./relay-core.mjs";
-import {mulaw8ToPcm24,pcm24ToMulaw8,safePcm24Chunk} from "./media-codec.mjs";
+import {pcm24ToMulaw8,safePcm24Chunk} from "./media-codec.mjs";
+import {queueInput,flushInput} from "./input-flow.mjs";
 
 const AUTH=process.env.TWILIO_AUTH_TOKEN||"";
 const ACCOUNT=process.env.TWILIO_ACCOUNT_SID||"";
@@ -18,8 +19,7 @@ const maxEnv=(s,floor,low,high)=>{
   return Number.isInteger(v)?Math.max(low,Math.min(high,v)):floor;
 };
 const MAX_ROOMS=maxEnv(process.env.SMARTJOB_MAX_CONCURRENT_CALLS,1,1,30);
-const MAX_SECONDS=maxEnv(process.env.SMARTJOB_MAX_CALL_SECONDS,600,60,1800);
-const MAX_AI_BUFFER=40000;
+const MAX_SECONDS=maxEnv(process.env.SMARTJOB_MAX_CALL_SECONDS,14400,60,14400);
 const MAX_TWILIO_BUFFER=512000;
 const SILENCE_200MS=Buffer.alloc(1600,0xff);
 const rooms=new Map();
@@ -85,6 +85,7 @@ async function finishRoom(id,why){
   console.info("VMV Realtime bridge finished",why);
   for(const side of ["customer","professional"]){
     const ai=room.ai[side];
+    if(ai?.drainTimer)clearInterval(ai.drainTimer);
     if(isOpen(ai?.ws)){
       try{ai.ws.send(JSON.stringify({type:"session.close"}));}catch{}
     }
@@ -125,14 +126,13 @@ function sendAudioToPeer(room,role,base64){
     }
   }
 }
-function flushInput(ai){
-  if(!ai.ready||!isOpen(ai.ws))return;
-  while(ai.pending.length>=1600){
-    const chunk=ai.pending.subarray(0,1600);
-    ai.pending=Buffer.from(ai.pending.subarray(1600));
-    const pcm=mulaw8ToPcm24(chunk);
-    if(ai.ws.bufferedAmount>MAX_AI_BUFFER)throw new Error("openai_audio_backpressure");
-    ai.ws.send(JSON.stringify({type:"session.input_audio_buffer.append",audio:pcm.toString("base64")}));
+function flushInputSafe(room,side){
+  const ai=room.ai[side];
+  if(!ai||room.closing)return;
+  try{flushInput(ai);}
+  catch(e){
+    console.error("VMV Realtime input send failure",e instanceof Error?e.name:"unknown");
+    void finishRoom(room.id,"openai_send_failure");
   }
 }
 function pushInput(room,side,packet){
@@ -141,16 +141,25 @@ function pushInput(room,side,packet){
   let samples;
   try{samples=Buffer.from(packet.media.payload,"base64");}catch{return;}
   if(!samples.length||samples.length>3200)return;
-  // 200 ms input frames. Preserve silence from the carrier, even between phrases.
-  ai.pending=Buffer.concat([ai.pending,samples]);
-  if(ai.pending.length>16000)ai.pending=Buffer.from(ai.pending.subarray(-16000));
-  try{flushInput(ai);}catch{void finishRoom(room.id,"openai_input_overflow");}
+  const dropped=queueInput(ai,samples);
+  if(dropped){
+    ai.droppedInputBytes+=dropped;
+    if(Date.now()-ai.lastDropWarnAt>15000){
+      console.warn("VMV Realtime input delayed; trimmed oldest buffered audio",{
+        side,droppedMs:Math.round(ai.droppedInputBytes/8)
+      });
+      ai.droppedInputBytes=0;
+      ai.lastDropWarnAt=Date.now();
+    }
+  }
+  flushInputSafe(room,side);
 }
 function startAi(room,side){
   const ctx=room.legs[side];
   const target=side==="customer"?ctx.ownerLanguage:ctx.customerLanguage;
   const language=target==="es-ES"?"es":"en";
-  const ai={ws:null,ready:false,pending:Buffer.alloc(0),outRemainder:Buffer.alloc(0)};
+  const ai={ws:null,ready:false,pending:Buffer.alloc(0),outRemainder:Buffer.alloc(0),
+    drainTimer:null,droppedInputBytes:0,lastDropWarnAt:0};
   room.ai[side]=ai;
   const ws=new WebSocket(
     "wss://api.openai.com/v1/realtime/translations?model=gpt-realtime-translate",
@@ -159,6 +168,8 @@ function startAi(room,side){
       perMessageDeflate:false}
   );
   ai.ws=ws;
+  ai.drainTimer=setInterval(()=>flushInputSafe(room,side),40);
+  ai.drainTimer.unref();
   ws.on("message",raw=>{
     if(room.closing)return;
     let event;
@@ -167,7 +178,7 @@ function startAi(room,side){
       ws.send(JSON.stringify({type:"session.update",session:{audio:{output:{language}}}}));
     }else if(event.type==="session.updated"){
       ai.ready=true;
-      try{flushInput(ai);}catch{void finishRoom(room.id,"openai_input_overflow");}
+      flushInputSafe(room,side);
     }else if(event.type==="session.output_audio.delta"&&typeof event.delta==="string"){
       sendAudioToPeer(room,side,event.delta);
     }else if(event.type==="error"){

@@ -10,7 +10,9 @@ export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
 const callSid=/^CA[a-f\d]{32}$/i,accountSid=/^AC[a-f\d]{32}$/i;
-const maxDuration=Math.min(1800,Math.max(60,Number(process.env.SMARTJOB_MAX_CALL_SECONDS||600)));
+const configuredCallSeconds=Number(process.env.SMARTJOB_MAX_CALL_SECONDS||14400);
+const maxDuration=Number.isFinite(configuredCallSeconds)?
+  Math.min(14400,Math.max(60,Math.floor(configuredCallSeconds))):14400;
 async function dial(sid:string,token:string,to:string,from:string,url:string,callback:string,seconds=maxDuration,ringTimeout=12){
   const payload=new URLSearchParams({
     To:to,From:from,Url:url,Method:"POST",Timeout:String(ringTimeout),TimeLimit:String(Math.min(maxDuration,Math.max(60,seconds))),
@@ -148,7 +150,7 @@ export async function POST(req:NextRequest){
   }
   let reservedMinutes=0;
   if(route){
-    reservedMinutes=await claimCallMinutes(bridge,route.user_id,Math.min(30,Math.ceil(maxDuration/60)));
+    reservedMinutes=await claimCallMinutes(bridge,route.user_id,Math.min(240,Math.ceil(maxDuration/60)));
     if(reservedMinutes<1){
       await updatePhoneSession(bridge,"failed");
       return twiml(say("Your available translated minutes have been used. Please renew or recharge your plan.","en-US")+"<Hangup/>");

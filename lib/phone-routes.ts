@@ -49,8 +49,8 @@ export async function reservePhoneSession(bridge:string,route:ActivePhoneRoute,m
   const db=admin();
   if(!db||!sid.test(bridge))return false;
   if(!await paidServiceAllowed(route.user_id,mode==="direct"?"direct_call":"translated_call"))return false;
-  const old=new Date(Date.now()-20*60*1000).toISOString();
-  // Release abandoned reservations, but never preempt a legitimate ten-minute call.
+  const old=new Date(Date.now()-250*60*1000).toISOString();
+  // Do not preempt a valid four-hour call when removing abandoned reservations.
   await db.from("smartjob_call_sessions").update({status:"failed",completed_at:new Date().toISOString()})
     .eq("owner_id",route.user_id).in("status",["initiated","ringing","in-progress"]).lt("started_at",old);
   const today=new Date();today.setUTCHours(0,0,0,0);

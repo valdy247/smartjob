@@ -20,7 +20,7 @@ Normal Spanish calls use the direct Twilio Voice SDK and do not incur OpenAI tra
 - Existing `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`.
 - **Add secret** `OPENAI_API_KEY` in the Render dashboard (never in GitHub or ChatGPT).
 - Set `SMARTJOB_REALTIME_TRANSLATE_ENABLED=true` on Render only when the correct key and updated code are present.
-- For first call set `SMARTJOB_MAX_CONCURRENT_CALLS=1` and `SMARTJOB_MAX_CALL_SECONDS=180` (or a smaller per-call cap).
+- For an extended pilot use `SMARTJOB_MAX_CONCURRENT_CALLS=1` and `SMARTJOB_MAX_CALL_SECONDS=14400`. The actual call duration is limited by paid minutes reserved for that call and Twilio account limits.
 - `/health` returns HTTP 503 when the translation engine is not configured; the Vercel API refuses to create the telephone bridge in this state.
 
 ## Vercel Preview test gate (not public billing)
@@ -29,7 +29,7 @@ The one test owner is identified **only** by the existing encrypted `SMARTJOB_BI
 - `SMARTJOB_REALTIME_PILOT_ENABLED=true`
 - `SMARTJOB_BILLING_ENFORCEMENT_ENABLED=true`
 - `SMARTJOB_STRIPE_MODE=test`
-- `SMARTJOB_TEST_CALL_CAP_SECONDS=180`
+- `SMARTJOB_TEST_CALL_CAP_SECONDS=14400`
 - `TWILIO_WEBHOOK_BASE_URL` must exactly match the deployed **preview** webhook origin used by Twilio (important for signature validation and callbacks)
 - `SMARTJOB_LIVE_WS_URL` is `PUBLIC_WS_URL`.
 - `SMARTJOB_IOS_VOICE_ENABLED=true`, `SMARTJOB_MULTI_TENANT_ENABLED=true`, and the iOS Push Credential must match the installed signed iOS build.
@@ -50,7 +50,7 @@ Only the whitelisted user with a valid TEST subscription **and a positive VMV mi
 - No AI API key in browser or app; it lives on Render.
 - Twilio's signed WebSocket upgrade and signed call route parameters are verified before OpenAI sessions start.
 - No caller speech, translation or transcripts are logged/stored by the bridge.
-- One concurrent interpreted call and 3-minute hard cap for pilot; no unbounded buffering.
+- One concurrent interpreted call and a four-hour Twilio ceiling, further restricted by available paid minutes; input audio buffers remain bounded to two seconds. Temporary provider socket congestion queues audio instead of hanging up; prolonged congestion trims the oldest queued audio and is logged without transcripts.
 - If either phone leg disconnects, terminate OpenAI sessions and hang up both phone legs.
 - The WebSocket service is **stateful and single-instance**. Do not horizontally scale before implementing room affinity/coordination.
 - All production paid gates remain fail-closed. Twilio may still charge for number rental/inbound attempts and the owner is responsible for provider-side budgets.
