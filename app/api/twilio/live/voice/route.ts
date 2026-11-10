@@ -3,7 +3,7 @@ import {baseUrl,bridgeSignature,bridgeTwiML,E164,liveReady,notReady,verifiedLive
 import {findPhoneRoute,partnerSignature,reservePhoneSession,assignOutboundCall,updatePhoneSession,tenantsReady} from "@/lib/phone-routes";
 import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 import {getPaidCallPreferences,selectedVoice} from "@/lib/vmv-voices";
-import {languageMenuEnabled,ivrEligible,menuResponse,validSelectionSignature} from "@/lib/vmv-ivr";
+import {languageMenuEnabled,ivrEligible,menuResponse,validSelectionSignature,interpretedLanguagesFor,testSpanishToEnglishFor} from "@/lib/vmv-ivr";
 import {testCallCapSecondsFor,claimCallMinutes,settleCallMinutes} from "@/lib/vmv-billing";
 import {paidServiceAllowed} from "@/lib/vmv-entitlements";
 export const runtime="nodejs";
@@ -74,7 +74,7 @@ export async function POST(req:NextRequest){
     if(!await paidServiceAllowed(route.user_id,"direct_call"))return twiml("<Hangup/>");
     if(!chosenLanguage){
       const prefs=await getPaidCallPreferences(route.user_id);
-      return menuResponse(prefs?.greeting_customer||undefined);
+      return menuResponse(prefs?.greeting_customer||undefined,0,testSpanishToEnglishFor(route.user_id));
     }
     if(chosenLanguage!=="en"||!validSelectionSignature(bridge,route.id,from,"en",
       req.nextUrl.searchParams.get("proof")||"")){
@@ -101,7 +101,7 @@ export async function POST(req:NextRequest){
     tenantId=route.id;
     config={
       customer:from,twilio:to,owner,
-      customerLanguage:ivr?"en-US":route.customer_language,ownerLanguage:ivr?"es-ES":route.owner_language,
+      ...interpretedLanguagesFor(route,ivr),
       assistantName:route.assistant_name
     };
     if(!validatedConfig(config)){
@@ -111,8 +111,8 @@ export async function POST(req:NextRequest){
     if(prefs){
       config.greetingCustomer=ivr?undefined:(prefs.greeting_customer||undefined);
       config.greetingOwner=prefs.greeting_owner||undefined;
-      config.voiceCustomer=selectedVoice(prefs.voice_customer,route.customer_language)||undefined;
-      config.voiceOwner=selectedVoice(prefs.voice_owner,route.owner_language)||undefined;
+      config.voiceCustomer=selectedVoice(prefs.voice_customer,config.customerLanguage)||undefined;
+      config.voiceOwner=selectedVoice(prefs.voice_owner,config.ownerLanguage)||undefined;
     }
   }
   // On Render's free plan, waking the idle WebSocket host can take longer than

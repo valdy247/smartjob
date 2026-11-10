@@ -1,7 +1,7 @@
 import {NextRequest} from "next/server";
 import {verifiedLiveRequest,E164,baseUrl} from "@/lib/twilio-live";
 import {findPhoneRoute,tenantsReady,reservePhoneSession} from "@/lib/phone-routes";
-import {languageMenuEnabled,ivrEligible,menuResponse,selectionSignature,directClientTwiml,languageDecision} from "@/lib/vmv-ivr";
+import {languageMenuEnabled,ivrEligible,menuResponse,selectionSignature,directClientTwiml,languageDecision,testSpanishToEnglishFor} from "@/lib/vmv-ivr";
 import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 import {paidServiceAllowed} from "@/lib/vmv-entitlements";
 export const runtime="nodejs";
@@ -20,7 +20,7 @@ export async function POST(req:NextRequest){
  const attempt=req.nextUrl.searchParams.get("attempt")==="1"?1:0;
 
  const decision=languageDecision(digit,attempt);
- if(decision==="retry")return menuResponse(undefined,1);
+ if(decision==="retry")return menuResponse(undefined,1,testSpanishToEnglishFor(route.user_id));
  if(decision==="hangup")return twiml(say("Invalid selection. Goodbye.","en-US")+"<Hangup/>");
  if(decision==="translate"){
   if(!await paidServiceAllowed(route.user_id,"translated_call"))return twiml("<Hangup/>");

@@ -3,6 +3,7 @@ import {bridgeTwiML,E164,liveReady,notReady,verifiedBridge,verifiedLiveRequest,v
 import {findPhoneRouteById,hasReservedPartnerCall,tenantsReady,verifyPartnerSignature} from "@/lib/phone-routes";
 import {twiml} from "@/lib/twilio-pilot";
 import {getPaidCallPreferences,selectedVoice} from "@/lib/vmv-voices";
+import {interpretedLanguagesFor} from "@/lib/vmv-ivr";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
@@ -30,7 +31,7 @@ export async function POST(req:NextRequest){
     const selectedEnglish=req.nextUrl.searchParams.get("ivr")==="en";
     const config:RelayOptions={
       customer:caller,twilio:route.twilio_number,owner:receiver,
-      customerLanguage:selectedEnglish?"en-US":route.customer_language,ownerLanguage:selectedEnglish?"es-ES":route.owner_language,
+      ...interpretedLanguagesFor(route,selectedEnglish),
       assistantName:route.assistant_name
     };
     if(!validatedConfig(config)){console.error("Smart Job partner config invalid");return twiml("<Hangup/>",403);}
@@ -38,8 +39,8 @@ export async function POST(req:NextRequest){
     if(prefs){
       config.greetingCustomer=selectedEnglish?undefined:(prefs.greeting_customer||undefined);
       config.greetingOwner=prefs.greeting_owner||undefined;
-      config.voiceCustomer=selectedVoice(prefs.voice_customer,route.customer_language)||undefined;
-      config.voiceOwner=selectedVoice(prefs.voice_owner,route.owner_language)||undefined;
+      config.voiceCustomer=selectedVoice(prefs.voice_customer,config.customerLanguage)||undefined;
+      config.voiceOwner=selectedVoice(prefs.voice_owner,config.ownerLanguage)||undefined;
     }
     console.info("Smart Job partner PSTN leg acknowledged");
     return bridgeTwiML("professional",bridge,config);
