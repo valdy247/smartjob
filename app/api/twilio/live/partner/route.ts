@@ -1,9 +1,8 @@
 import {NextRequest} from "next/server";
 import {bridgeTwiML,E164,liveReady,notReady,verifiedBridge,verifiedLiveRequest,validatedConfig,type RelayOptions} from "@/lib/twilio-live";
-import {findPhoneRouteById,tenantsReady,verifyPartnerSignature} from "@/lib/phone-routes";
+import {findPhoneRouteById,hasReservedPartnerCall,tenantsReady,verifyPartnerSignature} from "@/lib/phone-routes";
 import {twiml} from "@/lib/twilio-pilot";
 import {getPaidCallPreferences,selectedVoice} from "@/lib/vmv-voices";
-import {paidServiceAllowed} from "@/lib/vmv-entitlements";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
@@ -18,7 +17,10 @@ export async function POST(req:NextRequest){
     if(!tenantsReady()||!verifyPartnerSignature(bridge,id,caller,sig)){console.error("Smart Job partner tenant auth rejected");return twiml("<Hangup/>",403);}
     const route=await findPhoneRouteById(id);
     if(!route||from!==route.twilio_number){console.error("Smart Job partner route mismatch",{routeFound:Boolean(route),fromMatches:route?from===route.twilio_number:false});return twiml("<Hangup/>",403);}
-    if(!await paidServiceAllowed(route.user_id,"translated_call"))return twiml("<Hangup/>");
+    if(!await hasReservedPartnerCall(bridge,fields.get("CallSid")||"",route)){
+      console.error("Smart Job partner reservation invalid for this outbound leg");
+      return twiml("<Hangup/>",403);
+    }
     const receiver=route.receive_method==="ios_app"
       ?"client:sj_"+route.user_id.replaceAll("-",""):route.destination_phone;
     if(to!==receiver||(route.receive_method==="ios_app"&&process.env.SMARTJOB_IOS_VOICE_ENABLED!=="true")){

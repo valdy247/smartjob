@@ -73,6 +73,29 @@ export async function assignOutboundCall(bridge:string,outbound:string){
   if(error){console.error("Smart Job session assign failed",error.code);return false;}
   return true;
 }
+// The outbound leg must consume the paid minutes reserved before dialing.
+// Rechecking the unreserved balance here would reject calls that reserved
+// their full balance, so authorize the exact Twilio leg against its session.
+export async function hasReservedPartnerCall(bridge:string,outbound:string,route:ActivePhoneRoute){
+  const db=admin();
+  if(!db||!sid.test(bridge)||!sid.test(outbound))return false;
+  const {data,error}=await db.from("smartjob_call_sessions")
+    .select("bridge_sid")
+    .eq("bridge_sid",bridge)
+    .eq("outbound_sid",outbound)
+    .eq("owner_id",route.user_id)
+    .eq("route_id",route.id)
+    .eq("call_mode","translated")
+    .in("status",["ringing","in-progress"])
+    .gt("reserved_minutes",0)
+    .eq("billing_settled",false)
+    .maybeSingle();
+  if(error){
+    console.error("Smart Job partner reserved session unavailable",error.code||"unknown");
+    return false;
+  }
+  return Boolean(data);
+}
 export async function getPairedCallSids(bridge:string){
  const db=admin();
  if(!db||!sid.test(bridge))return null;
