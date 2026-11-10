@@ -1,42 +1,61 @@
-# Smart Job Live Bridge (pilot)
+# VMV Call — OpenAI Realtime Translate media bridge (private pilot)
 
-Separate Node.js WebSocket server for **two isolated Twilio Conversation Relay legs**. This is experimental; do not use with real customers before testing, consent and operational hardening.
+This service **replaces Twilio ConversationRelay**, preserving Twilio solely for phone transport and Twilio Voice SDK. Speech recognition, translation and synthesized speech are handled by OpenAI `gpt-realtime-translate`.
 
-## Hosting
+## End-to-end incoming call
 
-Deploy as an always-running Web Service (for example, Render), not a Vercel Function.
+Caller → VMV Twilio number → Twilio IVR (press **1** for English) → phone routing and quota validation in Vercel Preview → Twilio calls the owner **iOS SDK client** → owner answers → separate `<Connect><Stream>` on each call leg → this WebSocket bridge → **two isolated OpenAI realtime translation sessions** (en→es and es→en) → translated audio sent back to the opposite phone leg.
 
-- Repository: `valdy247/smartjob`
-- Root directory: `services/live-bridge`
+Normal Spanish calls use the direct Twilio Voice SDK and do not incur OpenAI translation costs.
+
+## Hosting: Render web service
+
+- Repository: `valdy247/smartjob` branch `feat/live-v2-production-foundations` **after the reviewed PR is merged**
+- Root: `services/live-bridge`
 - Build: `npm install`
 - Start: `npm start`
-- Health: `/health`
-- Instance count: 1 (state lives in process memory; no horizontal scaling)
+- Health check: `/health`
+- Deploy manually to this **existing Render service**; the GitHub push by itself does **not** deploy Render because `autoDeployTrigger: off`.
+- Existing `PUBLIC_WS_URL` must match public `wss://<render-host>/relay`.
+- Existing `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`.
+- **Add secret** `OPENAI_API_KEY` in the Render dashboard (never in GitHub or ChatGPT).
+- Set `SMARTJOB_REALTIME_TRANSLATE_ENABLED=true` on Render only when the correct key and updated code are present.
+- For first call set `SMARTJOB_MAX_CONCURRENT_CALLS=1` and `SMARTJOB_MAX_CALL_SECONDS=180` (or a smaller per-call cap).
+- `/health` returns HTTP 503 when the translation engine is not configured; the Vercel API refuses to create the telephone bridge in this state.
 
-Set these server-side environment variables **only in the hosting provider**:
+## Vercel Preview test gate (not public billing)
 
-- `TWILIO_ACCOUNT_SID`: your Twilio account SID
-- `TWILIO_AUTH_TOKEN`: your secret Twilio auth token
-- `TWILIO_NUMBER`: Smart Job's Twilio number as E.164
-- `SMARTJOB_DUO_EN_PHONE`: English-speaking pilot caller number (E.164)
-- `SMARTJOB_DUO_ES_PHONE`: Mayuli's Spanish-speaking pilot number (E.164)
-- `PUBLIC_WS_URL`: public `wss://YOUR-APP.onrender.com/relay`
-- `SMARTJOB_TRANSLATE_URL` (optional): defaults to `https://smartjob-xi.vercel.app/api/twilio/live/translate`
-- `PORT` (optional; hosting supplies it)
+The one test owner is identified **only** by the existing encrypted `SMARTJOB_BILLING_TEST_OWNER_ID`. In the branch-specific Preview environment, configure:
+- `SMARTJOB_REALTIME_PILOT_ENABLED=true`
+- `SMARTJOB_BILLING_ENFORCEMENT_ENABLED=true`
+- `SMARTJOB_STRIPE_MODE=test`
+- `SMARTJOB_TEST_CALL_CAP_SECONDS=180`
+- `TWILIO_WEBHOOK_BASE_URL` must exactly match the deployed **preview** webhook origin used by Twilio (important for signature validation and callbacks)
+- `SMARTJOB_LIVE_WS_URL` is `PUBLIC_WS_URL`.
+- `SMARTJOB_IOS_VOICE_ENABLED=true`, `SMARTJOB_MULTI_TENANT_ENABLED=true`, and the iOS Push Credential must match the installed signed iOS build.
 
-Never put secrets in repository files or NEXT_PUBLIC variables. The server authenticates Twilio's initial WebSocket upgrade with the exact WSS URL and auth token. Each Conversation Relay `setup` must have a matching account and caller/receiver number.
+Only the whitelisted user with a valid TEST subscription **and a positive VMV minute balance** can make test calls. The incoming-only Twilio Voice SDK token is limited to the authenticated user. Public and production calls remain blocked without a validated Stripe LIVE subscription. Test user minutes are reserved and settled using existing `smartjob_call_sessions` RPCs.
 
-## Vercel configuration
+## Twilio number webhook and iPhone
 
-Separately, in the Smart Job project's Production env vars:
+1. In Twilio Console, configure the test Twilio number's **A CALL COMES IN** webhook as HTTP POST to the preview origin `/api/twilio/live/voice`. Do not point it to an old production endpoint.
+2. The same Preview origin must be `TWILIO_WEBHOOK_BASE_URL`. Be aware a Vercel deployment URL may change; use a verified stable alias if possible.
+3. The test owner's enabled `smartjob_phone_routes` row must match that Twilio number and have `receive_method=ios_app`.
+4. Build/sign the Expo app with `EXPO_PUBLIC_SMARTJOB_API=<same Preview origin>` and correct APNs/Twilio credential; install on a physical iPhone. Expo Go cannot run Twilio Voice.
+5. Open VMV Call → **Llamadas** → **Conectar iPhone** (verify `CONECTADA`). From another number call the VMV Twilio number → press 1 (English) → accept the incoming call. Speak English on the caller side; the VMV owner should hear Spanish, and reply Spanish to translate to English.
+6. Verify first-audio latency, bidirectional clarity, disconnected calls, charging and remaining VMV minutes. Do not advertise production readiness without real tests.
 
-- `SMARTJOB_LIVE_WS_URL`: the same `PUBLIC_WS_URL`
-- `SMARTJOB_LIVE_ENABLED`: set to `true` **only after the WebSocket host has been deployed and tested**
+## Security and operational limits
 
-The new inbound webhook endpoint is `https://smartjob-xi.vercel.app/api/twilio/live/voice` (HTTP POST). It dials the allowlisted professional number via the Twilio Voice REST API, and both call legs use `<ConversationRelay>` with a shared bridge ID.
+- No AI API key in browser or app; it lives on Render.
+- Twilio's signed WebSocket upgrade and signed call route parameters are verified before OpenAI sessions start.
+- No caller speech, translation or transcripts are logged/stored by the bridge.
+- One concurrent interpreted call and 3-minute hard cap for pilot; no unbounded buffering.
+- If either phone leg disconnects, terminate OpenAI sessions and hang up both phone legs.
+- The WebSocket service is **stateful and single-instance**. Do not horizontally scale before implementing room affinity/coordination.
+- All production paid gates remain fail-closed. Twilio may still charge for number rental/inbound attempts and the owner is responsible for provider-side budgets.
+- iOS CallKit PushKit and voice testing need a real device; server unit tests cannot simulate carrier/Apple delivery.
 
-**Do not change the existing phone number webhook until testing and validation are complete.**
+## Tests
 
-## Current pilot limitations
-
-This is a single-conversation proof-of-concept, not a finished low-latency interpreter. It uses separate voice transcription/synthesis legs. Translation is performed by the server-side Vercel AI Gateway API route; Twilio handles STT and voice playback. The design intentionally does not mix raw speech; each participant hears the translated synthesized speech. Only one two-person conversation is supported at once. No recordings or transcripts are stored. It has no Redis persistence, production account management, advanced interruption handling, call termination synchronization or billing controls. Test both languages, disconnections, silence, provider failure, content safety and delay before exposing to customers.
+Run `node --test services/live-bridge/*.test.mjs`, `npm run typecheck`, and a Next.js build. Review in Preview before enabling the Twilio number webhook.

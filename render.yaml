@@ -23,3 +23,11 @@ services:
         sync: false
       - key: PUBLIC_WS_URL
         sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SMARTJOB_REALTIME_TRANSLATE_ENABLED
+        value: "false"
+      - key: SMARTJOB_MAX_CONCURRENT_CALLS
+        value: "1"
+      - key: SMARTJOB_MAX_CALL_SECONDS
+        value: "180"
