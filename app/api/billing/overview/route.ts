@@ -3,7 +3,7 @@ import {authenticatedUser} from "@/lib/auth-server";
 import {PLAN_CATALOG,TOPUP_CATALOG,topupPriceEnv,getBillingAccount,balance,testMinutesHeld,eligible,priceEnv,stripeTestReady,
  type PlanCode} from "@/lib/vmv-billing";
 import {noStore} from "@/lib/vmv-stripe";
-import {allowSpendWithAccount,confirmedSubscription,realBillingConfigured} from "@/lib/vmv-entitlements";
+import {allowSpendWithAccount,confirmedSubscription,realBillingConfigured,ownerPreviewPilot} from "@/lib/vmv-entitlements";
 const isPlanCode=(x:string):x is PlanCode=>x==="starter"||x==="pro"||x==="premium";
 export const runtime="nodejs";export const dynamic="force-dynamic";
 export async function GET(req:NextRequest){
@@ -22,7 +22,7 @@ export async function GET(req:NextRequest){
   (Object.keys(PLAN_CATALOG) as PlanCode[]).every(p=>/^price_/.test(priceEnv(p)));
  return NextResponse.json({
   plans,plan:account?.plan_code||"none",status:account?.status||"inactive",
-  subscriptionActive:allowSpendWithAccount(account,"direct_call"),testSubscriptionActive:!realBillingConfigured()&&eligible(account)&&confirmedSubscription(account),
+  subscriptionActive:allowSpendWithAccount(account,"direct_call"),previewPilotActive:ownerPreviewPilot(account),testSubscriptionActive:!realBillingConfigured()&&eligible(account)&&confirmedSubscription(account),
   periodEnd:account?.current_period_end||null,
   minutes:{included:account?.included_minutes||0,used:account?.used_minutes||0,
    reserved:account?.reserved_minutes||0,rollover:account?.rollover_minutes||0,
@@ -32,7 +32,7 @@ export async function GET(req:NextRequest){
     available:eligible(account)&&stripeTestReady()&&taxReady&&
       /^price_[a-zA-Z0-9]+$/.test(topupPriceEnv(selected as PlanCode))}:null,
   billingMode:realBillingConfigured()?"live":"test",phoneServiceReady:realBillingConfigured(),canCheckout,hasPortal:Boolean(account?.stripe_customer_id)&&stripeTestReady(),
-  note:canCheckout?"Solo simulación de pago con Stripe TEST. Las llamadas requieren un pago real confirmado y aún no se activan.":
+  note:ownerPreviewPilot(account)?"Prueba privada de minutos existentes: solo esta cuenta, solo Preview, con límites de llamadas. Stripe TEST no activa líneas públicas.":canCheckout?"Solo simulación de pago con Stripe TEST. Las llamadas requieren un pago real confirmado y aún no se activan.":
    "Precios de referencia. No hay cobros reales ni activación telefónica hasta habilitar pagos de producción."
  },{headers:noStore});
 }
