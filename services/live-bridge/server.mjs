@@ -7,6 +7,7 @@ import {WebSocketServer,WebSocket} from "ws";
 import {accountSid,callSid,e164,validReceiver,matchesRouteSignature} from "./relay-core.mjs";
 import {pcm24ToMulaw8,safePcm24Chunk,decodeMulaw} from "./media-codec.mjs";
 import {queueInput,flushInput} from "./input-flow.mjs";
+import {pcm16Level} from "./audio-levels.mjs";
 
 const AUTH=process.env.TWILIO_AUTH_TOKEN||"";
 const ACCOUNT=process.env.TWILIO_ACCOUNT_SID||"";
@@ -27,7 +28,7 @@ const DIAGNOSTIC_DIRECT_AUDIO=process.env.SMARTJOB_AUDIO_DIAGNOSTIC_PASSTHROUGH=
 const SILENCE_200MS=Buffer.alloc(1600,0xff);
 const rooms=new Map();
 // Aggregate counters only: never log audio, transcripts, phone numbers or identifiers.
-function freshStats(){return {incomingPackets:0,nonSilentInputPackets:0,appendedFrames:0,outputAudioDeltas:0,outputTranscriptDeltas:0,playbackPackets:0,nonSilentPlaybackPackets:0,marksSent:0,marksAcked:0,playbackDrops:0};}
+function freshStats(){return {incomingPackets:0,nonSilentInputPackets:0,appendedFrames:0,outputAudioDeltas:0,nonSilentOpenAiDeltas:0,openAiOutputBytes:0,peakOpenAiPcmAmplitude:0,formatWarnings:0,outputTranscriptDeltas:0,playbackPackets:0,nonSilentPlaybackPackets:0,marksSent:0,marksAcked:0,playbackDrops:0};}
 function containsSignal(samples){
   // Privacy-safe energy check on a small sample; counts only, never captures speech.
   if(!samples?.length)return false;
@@ -148,12 +149,26 @@ function sendToLeg(room,targetRole,samples){
   }
   return true;
 }
-function sendAudioToPeer(room,role,base64){
+function sendAudioToPeer(room,role,event){
   const target=room.legs[peer(role)];
   const ai=room.ai[role];
   if(!target||!isOpen(target.ws)||!ai||room.closing)return;
   let pcm;
-  try{pcm=safePcm24Chunk(Buffer.from(base64,"base64"));}catch{void finishRoom(room.id,"bad_openai_audio");return;}
+  try{pcm=safePcm24Chunk(Buffer.from(event.delta,"base64"));}catch{void finishRoom(room.id,"bad_openai_audio");return;}
+  const stats=room.stats[role];
+  stats.openAiOutputBytes+=pcm.length;
+  const level=pcm16Level(pcm);
+  if(level.meanAbs>250)stats.nonSilentOpenAiDeltas++;
+  stats.peakOpenAiPcmAmplitude=Math.max(stats.peakOpenAiPcmAmplitude,level.peak);
+  const sampleRate=event.sample_rate??24000,channels=event.channels??1,format=event.format??"pcm16";
+  if(sampleRate!==24000||channels!==1||format!=="pcm16")stats.formatWarnings++;
+  if(!ai.firstOutputObserved){
+    ai.firstOutputObserved=true;
+    console.info("VMV Realtime first output format",{
+      side:role,sampleRate,channels,format,pcmBytes:pcm.length,
+      pcmMeanAmplitude:level.meanAbs,pcmPeakAmplitude:level.peak
+    });
+  }
   const joined=ai.outRemainder.length?Buffer.concat([ai.outRemainder,pcm]):pcm;
   const usable=Math.floor(joined.length/6)*6;
   ai.outRemainder=Buffer.from(joined.subarray(usable));
@@ -208,7 +223,7 @@ function startAi(room,side){
   const target=side==="customer"?ctx.ownerLanguage:ctx.customerLanguage;
   const language=target==="es-ES"?"es":"en";
   const ai={ws:null,ready:false,pending:Buffer.alloc(0),outRemainder:Buffer.alloc(0),
-    drainTimer:null,droppedInputBytes:0,lastDropWarnAt:0};
+    drainTimer:null,droppedInputBytes:0,lastDropWarnAt:0,firstOutputObserved:false};
   room.ai[side]=ai;
   const ws=new WebSocket(
     "wss://api.openai.com/v1/realtime/translations?model=gpt-realtime-translate",
@@ -232,7 +247,7 @@ function startAi(room,side){
       flushInputSafe(room,side);
     }else if(event.type==="session.output_audio.delta"&&typeof event.delta==="string"){
       room.stats[side].outputAudioDeltas++;
-      sendAudioToPeer(room,side,event.delta);
+      sendAudioToPeer(room,side,event);
     }else if(event.type==="session.output_transcript.delta"){
       room.stats[side].outputTranscriptDeltas++;
     }else if(event.type==="error"){
