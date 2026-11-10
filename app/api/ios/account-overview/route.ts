@@ -3,7 +3,7 @@ import {createClient} from "@supabase/supabase-js";
 import {authenticatedUser} from "@/lib/auth-server";
 import {getBillingAccount,billingEnabledFor,balance,eligible as billingEligible} from "@/lib/vmv-billing";
 import {languageMenuEnabled} from "@/lib/vmv-ivr";
-import {allowSpendWithAccount} from "@/lib/vmv-entitlements";
+import {allowSpendWithAccount,ownerPreviewPilot} from "@/lib/vmv-entitlements";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const headers={"Cache-Control":"no-store"};
@@ -30,6 +30,7 @@ export async function GET(req:NextRequest){
  const duration=(calls.data||[]).reduce((sum,c)=>sum+Math.max(0,Math.min(86400,c.duration_seconds||0)),0);
  const billingAccount=await getBillingAccount(uid);
  const paid=allowSpendWithAccount(billingAccount,"direct_call");
+ const pilot=ownerPreviewPilot(billingAccount);
  const count=(calls.data||[]).length;
  const completed=(calls.data||[]).filter(c=>c.status==="completed").length;
  const directCalls=(calls.data||[]).filter(c=>c.call_mode==="direct").length;
@@ -46,9 +47,9 @@ export async function GET(req:NextRequest){
   carrier:verification.data?.carrier||null,
   forwardingReported:route?.forwarding_mode!=="none"&&Boolean(route?.forwarding_mode),
   usage:{periodDays:30,calls:count,completed,directCalls,translatedCalls,seconds:duration,minutes:Math.ceil(duration/60),translatedMinutes:Math.ceil(translatedSeconds/60),metering:"indicative"},
-  billing:{enabled:true,active:paid,
+  billing:{enabled:true,active:paid,pilot,
     plan:billingAccount?.plan_code||"none",availableMinutes:balance(billingAccount),
-    message:paid?"Plan real validado.":"Recepción bloqueada hasta confirmar un pago real y completar la activación."},
-  nextAction:paid&&eligible?"Verificar desvío con tu operador y realizar prueba de recepción.":"Elegir un plan, completar configuración y esperar activación tras pago real."
+    message:pilot?"Prueba privada: minutos VMV activados y limitados.":paid?"Suscripción real verificada.":"Recepción bloqueada hasta confirmar un pago real y completar la activación."},
+  nextAction:pilot?"Conectar iPhone y llamar a tu número VMV; marca 1 para traducción.":paid&&eligible?"Conecta tu iPhone y prueba la recepción.":"Elegir un plan, completar configuración y esperar activación tras pago real."
  },{headers});
 }
