@@ -23,6 +23,15 @@ const MAX_SECONDS=maxEnv(process.env.SMARTJOB_MAX_CALL_SECONDS,14400,60,14400);
 const MAX_TWILIO_BUFFER=512000;
 const SILENCE_200MS=Buffer.alloc(1600,0xff);
 const rooms=new Map();
+// Aggregate counters only: never log audio, transcripts, phone numbers or identifiers.
+function freshStats(){return {incomingPackets:0,appendedFrames:0,outputAudioDeltas:0,outputTranscriptDeltas:0,playbackPackets:0};}
+function diagSummary(room){
+  const result={};
+  for(const side of ["customer","professional"]){
+    result[side]={ready:room.ai[side]?.ready===true,...room.stats[side],queuedBytes:room.ai[side]?.pending.length||0};
+  }
+  return result;
+}
 const ready=()=>ENABLED&&/^sk-/.test(API_KEY);
 const isOpen=ws=>ws?.readyState===WebSocket.OPEN;
 
@@ -82,7 +91,8 @@ async function finishRoom(id,why){
   const room=rooms.get(id);
   if(!room||room.closing)return;
   room.closing=true;
-  console.info("VMV Realtime bridge finished",why);
+  if(room.diagnosticTimer)clearInterval(room.diagnosticTimer);
+  console.info("VMV Realtime bridge finished",{reason:why,seconds:Math.floor((Date.now()-room.createdAt)/1000),stats:diagSummary(room)});
   for(const side of ["customer","professional"]){
     const ai=room.ai[side];
     if(ai?.drainTimer)clearInterval(ai.drainTimer);
@@ -102,7 +112,8 @@ function noRoomYet(id){
   if(rooms.has(id))return rooms.get(id);
   if(rooms.size>=MAX_ROOMS)return null;
   const room={id,createdAt:Date.now(),closing:false,legs:{customer:null,professional:null},
-    ai:{customer:null,professional:null},starting:false};
+    ai:{customer:null,professional:null},starting:false,diagnosticTimer:null,
+    stats:{customer:freshStats(),professional:freshStats()}};
   rooms.set(id,room);return room;
 }
 function sendAudioToPeer(room,role,base64){
@@ -124,12 +135,13 @@ function sendAudioToPeer(room,role,base64){
       media:{payload:portion.toString("base64")}})){
       void finishRoom(room.id,"twilio_audio_backpressure");return;
     }
+    room.stats[peer(role)].playbackPackets++;
   }
 }
 function flushInputSafe(room,side){
   const ai=room.ai[side];
   if(!ai||room.closing)return;
-  try{flushInput(ai);}
+  try{room.stats[side].appendedFrames+=flushInput(ai);}
   catch(e){
     console.error("VMV Realtime input send failure",e instanceof Error?e.name:"unknown");
     void finishRoom(room.id,"openai_send_failure");
@@ -141,6 +153,7 @@ function pushInput(room,side,packet){
   let samples;
   try{samples=Buffer.from(packet.media.payload,"base64");}catch{return;}
   if(!samples.length||samples.length>3200)return;
+  room.stats[side].incomingPackets++;
   const dropped=queueInput(ai,samples);
   if(dropped){
     ai.droppedInputBytes+=dropped;
@@ -175,12 +188,17 @@ function startAi(room,side){
     let event;
     try{event=JSON.parse(raw.toString());}catch{void finishRoom(room.id,"openai_invalid_json");return;}
     if(event.type==="session.created"){
+      console.info("VMV Realtime translation session created",{side,language});
       ws.send(JSON.stringify({type:"session.update",session:{audio:{output:{language}}}}));
     }else if(event.type==="session.updated"){
       ai.ready=true;
+      console.info("VMV Realtime translation session ready",{side,language});
       flushInputSafe(room,side);
     }else if(event.type==="session.output_audio.delta"&&typeof event.delta==="string"){
+      room.stats[side].outputAudioDeltas++;
       sendAudioToPeer(room,side,event.delta);
+    }else if(event.type==="session.output_transcript.delta"){
+      room.stats[side].outputTranscriptDeltas++;
     }else if(event.type==="error"){
       // Never print audio, transcript or API secrets.
       console.error("VMV Realtime error",String(event.error?.code||"provider_error").slice(0,70));
@@ -196,6 +214,10 @@ function maybeStart(room){
   startAi(room,"customer");
   startAi(room,"professional");
   console.info("VMV Realtime sessions initiated");
+  room.diagnosticTimer=setInterval(()=>{
+    if(!room.closing)console.info("VMV Realtime audio diagnostics",diagSummary(room));
+  },15000);
+  room.diagnosticTimer.unref();
 }
 const app=createServer((req,res)=>{
   const route=new URL(req.url||"/","http://localhost").pathname;
