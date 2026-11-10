@@ -17,6 +17,7 @@ const colors={mint:"#18D3AF",dark:"#182631",muted:"#6D8681"};
 export function NativeActivation({session,profile,onComplete}:{session:Session;profile:NativeProfile;onComplete:(value:NativeProfile)=>void}){
  const [phase,setPhase]=useState<Step>(profile.preferred_plan&&!profile.line_setup_completed?"configure":"plans");
  const [step,setStep]=useState(0),[plans,setPlans]=useState<Plan[]>([]),[loading,setLoading]=useState(true);
+ const [pilotActive,setPilotActive]=useState(false);
  const [plan,setPlan]=useState<Plan["id"]|null>(profile.preferred_plan||null);
  const [line,setLine]=useState<"keep"|"new">(profile.line_choice||"keep");
  const [language,setLanguage]=useState(profile.owner_language==="en"?"en":"es");
@@ -26,7 +27,7 @@ export function NativeActivation({session,profile,onComplete}:{session:Session;p
   let mounted=true;
   fetch(api+"/api/billing/overview",{headers:{Authorization:"Bearer "+session.access_token}})
    .then(r=>{if(!r.ok)throw Error("Planes no disponibles");return r.json();})
-   .then(r=>{if(mounted)setPlans(Array.isArray(r.plans)?r.plans:[]);})
+   .then(r=>{if(!mounted)return;setPilotActive(r.previewPilotActive===true);const items=Array.isArray(r.plans)?r.plans:[];setPlans(items);if(!items.length)setError("El servidor no devolvió los planes. Comprueba la conexión y vuelve a entrar.");})
    .catch(()=>{if(mounted)setError("No se pudieron cargar los planes. Puedes omitir.");})
    .finally(()=>{if(mounted)setLoading(false);});
   return()=>{mounted=false;};
@@ -41,7 +42,7 @@ export function NativeActivation({session,profile,onComplete}:{session:Session;p
  };
  const skip=async()=>{
   if(busy)return;setBusy(true);setError("");
-  try{await persist({plan_prompt_seen:true,preferred_plan:null,line_setup_completed:false});}
+  try{await persist(pilotActive?{plan_prompt_seen:true}:{plan_prompt_seen:true,preferred_plan:null,line_setup_completed:false});}
   catch(e){setError(e instanceof Error?e.message:"Error al guardar.");}
   finally{setBusy(false);}
  };
@@ -72,16 +73,16 @@ export function NativeActivation({session,profile,onComplete}:{session:Session;p
      <Text style={styles.brand}>VMV <Text style={{color:"#07B894"}}>CALL</Text></Text></View>
     {phase==="plans"?<>
      <Text style={styles.eyebrow}>PRIMER ACCESO</Text><Text style={styles.title}>Elige tu plan.</Text>
-     <Text style={styles.subtitle}>Puedes decidirlo después. Sin un pago real, no recibirás llamadas.</Text>
+     <Text style={styles.subtitle}>{pilotActive?"Tu plan de prueba ya está activo. No necesitas comprar otro para probar OpenAI Realtime.":"Puedes decidirlo después. No se cobrarán planes hasta habilitar pagos reales."}</Text>
      {loading?<ActivityIndicator color={colors.mint}/>:plans.map(p=><Pressable key={p.id}
       accessibilityRole="button" style={styles.plan} onPress={()=>{setPlan(p.id);setPhase("configure");setStep(0);setError("");}}>
       <View style={styles.between}><Text style={styles.planTitle}>{p.name}</Text>
        <Text style={styles.price}>{"$"}{(p.priceCents/100).toFixed(2)}/mes</Text></View>
       <Text style={styles.details}>{p.minutes} minutos traducidos · Configurar →</Text>
      </Pressable>)}
-     <Text style={styles.warning}>Los planes son precios de referencia. Los pagos de prueba no activan llamadas.</Text>
+     {pilotActive?<Text style={styles.pilotNotice}>✓ Prueba privada activa. Entra a Llamadas para conectar tu iPhone y consultar tus minutos VMV.</Text>:<Text style={styles.warning}>Estos precios son de referencia. Los cobros reales aún no están habilitados.</Text>}
      <Pressable accessibilityRole="button" style={styles.secondary} onPress={()=>void skip()} disabled={busy}>
-      <Text style={styles.secondaryText}>{busy?"Guardando…":"Omitir por ahora →"}</Text></Pressable>
+      <Text style={styles.secondaryText}>{busy?"Guardando…":pilotActive?"Continuar a VMV Call →":"Omitir por ahora →"}</Text></Pressable>
     </>:<>
      <Text style={styles.eyebrow}>CONFIGURACIÓN · {step+1} DE 3</Text>
      {step===0?<><Text style={styles.title}>Mi número.</Text>
@@ -134,6 +135,7 @@ const styles=StyleSheet.create({
  planTitle:{fontSize:19,color:"#16222D",fontWeight:"800"},price:{fontSize:15,color:"#08765F",fontWeight:"800"},
  details:{fontSize:12,lineHeight:18,color:"#68847C",marginTop:7},
  warning:{fontSize:12,lineHeight:20,color:"#9B7144",backgroundColor:"#FFF6E8",borderRadius:13,padding:13,marginVertical:12},
+ pilotNotice:{fontSize:12,lineHeight:20,color:"#08765F",backgroundColor:"#E6FAF1",borderRadius:13,padding:13,marginVertical:12},
  option:{borderRadius:18,borderWidth:1,borderColor:"#D6EAE2",backgroundColor:"#FFF",padding:18,marginBottom:12},
  selected:{borderWidth:2,borderColor:"#16CC9F",backgroundColor:"#E9FFF6"},
  optionTitle:{fontSize:15,color:"#18352F",fontWeight:"800"},

@@ -42,8 +42,12 @@ const storage={
 export const configured=Boolean(url&&key);
 // Internal Preview talks only to the isolated pilot API. Production builds keep their configured URL.
 const pilotApi="https://smartjob-git-feat-live-v2-produ-44ed8c-valdys-projects-b97fc7a6.vercel.app";
-export const api=process.env.EXPO_PUBLIC_SMARTJOB_API||
-  (process.env.EXPO_PUBLIC_SMARTJOB_PREVIEW==="true"?pilotApi:"https://smartjob-xi.vercel.app");
+// Safety: Preview builds must never fall back to the unrelated production API.
+// EAS development environment can carry a production EXPO_PUBLIC_SMARTJOB_API;
+// explicit pilot selection wins to preserve correct assets, billing and phone routing.
+export const api=process.env.EXPO_PUBLIC_SMARTJOB_PREVIEW==="true"
+  ?pilotApi
+  :(process.env.EXPO_PUBLIC_SMARTJOB_API||"https://smartjob-xi.vercel.app");
 export const supabase=configured?createClient(url,key,{
   auth:{storage,autoRefreshToken:true,persistSession:true,detectSessionInUrl:false}
 }):null;

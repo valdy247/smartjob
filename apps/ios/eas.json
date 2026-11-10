@@ -18,7 +18,8 @@
       "developmentClient": false,
       "environment": "development",
       "env": {
-        "EXPO_PUBLIC_SMARTJOB_PREVIEW": "true"
+        "EXPO_PUBLIC_SMARTJOB_PREVIEW": "true",
+        "EXPO_PUBLIC_SMARTJOB_API": "https://smartjob-git-feat-live-v2-produ-44ed8c-valdys-projects-b97fc7a6.vercel.app"
       }
     },
     "production": {

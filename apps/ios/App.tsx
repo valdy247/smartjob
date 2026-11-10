@@ -55,7 +55,7 @@ export default function App(){
  const [pilotChecking,setPilotChecking]=useState(false);
  const [pilotReadiness,setPilotReadiness]=useState<{lineReady:boolean;engineReady:boolean;webhookChecked:boolean;webhookReady:boolean;webhookPost:boolean;pushConfigured:boolean;nextStep:string}|null>(null);
  const [billingOverview,setBillingOverview]=useState<{
-  plan:string;status:string;minutes:{included:number;used:number;available:number;rollover:number;topup:number};
+  plan:string;status:string;previewPilotActive?:boolean;minutes:{included:number;used:number;available:number;rollover:number;topup:number};
   note:string
  }|null>(null);
  const [phoneVerification,setPhoneVerification]=useState<{requestId:string;phone:string;verified:boolean;smsAvailable:boolean;requestStatus:string}|null>(null);
@@ -288,11 +288,12 @@ export default function App(){
        headers:{"Authorization":"Bearer "+data.session.access_token}
      }).catch(()=>null);
      if(billing?.ok)setBillingOverview(await billing.json());
+    else{setBillingOverview(null);setError("No pudimos consultar tu suscripción VMV. Comprueba la conexión y pulsa Actualizar.");}
    }catch(e){setError(e instanceof Error?e.message:"Error de conexión.");}
    finally{setOverviewBusy(false);}
  }
  useEffect(()=>{
-  if(!session?.user.id){setAccountOverview(null);return;}
+  if(!session?.user.id){setAccountOverview(null);setBillingOverview(null);return;}
   void refreshAccountOverview();
  },[session?.user.id]);
  async function refreshCallHistory(){
@@ -600,9 +601,9 @@ export default function App(){
          </View>:null}
         </View>
        </>:null}
-       {settingsPage==="billing"?<View style={styles.card}><Text style={styles.cardTitle}>Mi plan</Text><Text style={styles.statNumber}>{billingOverview?.minutes.available??"—"}</Text><Text style={styles.helper}>Minutos disponibles</Text><Text style={styles.statusText}>{billingOverview?.plan||"Sin suscripción"}</Text><Text style={styles.helper}>Uso: {billingOverview?.minutes.used??"—"} min · Incluidos: {billingOverview?.minutes.included??"—"}</Text><Text style={styles.helper}>Los pagos de prueba no activan las llamadas reales.</Text><Button label="Actualizar" secondary onPress={()=>void refreshAccountOverview()}/><Button label="Elegir plan y configurar" secondary onPress={()=>{if(!activationProfile||!supabase)return;void (async()=>{
+       {settingsPage==="billing"?<View style={styles.card}><Text style={styles.cardTitle}>Mi plan</Text><Text style={styles.statNumber}>{billingOverview?.minutes.available??"—"}</Text><Text style={styles.helper}>Minutos disponibles</Text><Text style={styles.statusText}>{billingOverview?billingOverview.plan==="none"?"Sin suscripción":billingOverview.plan.toUpperCase():"Estado no disponible"}</Text><Text style={styles.helper}>Uso: {billingOverview?.minutes.used??"—"} min · Incluidos: {billingOverview?.minutes.included??"—"}</Text><Text style={styles.helper}>{billingOverview?.previewPilotActive?"✓ Prueba privada activa: usa tus minutos VMV. No hace falta otra compra.":"Los planes de referencia no activan llamadas reales hasta habilitar pagos de producción."}</Text><Button label="Actualizar" secondary onPress={()=>void refreshAccountOverview()}/><Button label="Elegir plan y configurar" secondary onPress={()=>{if(!activationProfile||!supabase)return;void (async()=>{
          const {data}=await supabase.from("smartjob_profiles").update({
-          plan_prompt_seen:false,line_setup_completed:false,preferred_plan:null,updated_at:new Date().toISOString()
+          plan_prompt_seen:false,updated_at:new Date().toISOString()
          }).eq("id",activationProfile.id).select("*").single();
          if(data)setActivationProfile(data as NativeProfile);
         })();}}/></View>:null}
