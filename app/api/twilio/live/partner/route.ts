@@ -18,7 +18,15 @@ export async function POST(req:NextRequest){
     if(!tenantsReady()||!verifyPartnerSignature(bridge,id,caller,sig)){console.error("Smart Job partner tenant auth rejected");return twiml("<Hangup/>",403);}
     const route=await findPhoneRouteById(id);
     if(!route||from!==route.twilio_number){console.error("Smart Job partner route mismatch",{routeFound:Boolean(route),fromMatches:route?from===route.twilio_number:false});return twiml("<Hangup/>",403);}
-    if(!await hasReservedPartnerCall(bridge,fields.get("CallSid")||"",route)){
+    // Twilio may reach this webhook before the outbound CallSid update finishes
+    // writing to Supabase. Retry briefly, without weakening the signed checks.
+    let reserved=false;
+    for(let attempt=0;attempt<5;attempt++){
+      reserved=await hasReservedPartnerCall(bridge,fields.get("CallSid")||"",route);
+      if(reserved)break;
+      if(attempt<4)await new Promise(resolve=>setTimeout(resolve,200));
+    }
+    if(!reserved){
       console.error("Smart Job partner reservation invalid for this outbound leg");
       return twiml("<Hangup/>",403);
     }
