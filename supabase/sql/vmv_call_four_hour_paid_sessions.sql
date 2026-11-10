@@ -29,3 +29,16 @@ BEGIN
   END IF;
 END
 $vmv_long_calls$;
+
+-- The claim function can grant up to 240 minutes, so per-session checks
+-- must allow that maximum as well. The old 30-minute checks caused
+-- PostgreSQL 23514 and blocked calls before the iPhone rang.
+ALTER TABLE public.smartjob_call_sessions
+  DROP CONSTRAINT IF EXISTS smartjob_call_sessions_reserved_minutes_check,
+  ADD CONSTRAINT smartjob_call_sessions_reserved_minutes_check
+  CHECK (reserved_minutes >= 0 AND reserved_minutes <= 240);
+
+ALTER TABLE public.smartjob_call_sessions
+  DROP CONSTRAINT IF EXISTS smartjob_call_sessions_billed_minutes_check,
+  ADD CONSTRAINT smartjob_call_sessions_billed_minutes_check
+  CHECK (billed_minutes >= 0 AND billed_minutes <= 240);
