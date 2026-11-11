@@ -77,3 +77,14 @@ test("callback refusal stops streaming; caller can end the Twilio room",async()=
   });
   assert.equal(res.translation,null);assert.equal(res.reason,"voice_unavailable");
 });
+
+test("interrupted voice stream discards unfinished words and finishes once",()=>{
+  const tokens=[],buffer=createVoiceChunks((token,last)=>{tokens.push({token,last});return true;});
+  buffer.push("Hola, ¿cómo estás? Espero que");
+  assert.ok(buffer.sent>0);
+  assert.equal(buffer.abortWith(" Disculpa, repite la frase."),true);
+  assert.equal(tokens.at(-1).last,true);
+  assert.equal(tokens.at(-1).token," Disculpa, repite la frase.");
+  assert.equal(buffer.finish(),false);
+  assert.equal(tokens.filter(t=>t.last).length,1);
+});
