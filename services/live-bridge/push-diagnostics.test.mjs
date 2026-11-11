@@ -54,7 +54,7 @@ test("audit discovers only Preview Push Credential when Render has no SID",async
         ?{credentials:[{sid:"CR"+"0".repeat(32),type:"apn",sandbox:false},
                        {sid:matchingSid,type:"apn",sandbox:"true"}]}
         :{alerts:[{error_code:"52134",log_level:"error",date_created:"2026-11-11T00:17:00Z"}]}
-    })}
+    })
   });
   assert.equal(result.push.credentialFound,true);
   assert.equal(result.push.sandbox,true);
