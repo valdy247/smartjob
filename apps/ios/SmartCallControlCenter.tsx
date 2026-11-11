@@ -34,8 +34,8 @@ function ChoiceRow<T extends string>({value,options,onChange,disabled=false}:{
   <Text style={[s.choiceText,value===option.id&&s.selectedText]}>{option.label}</Text>
  </Pressable>)}</View>;
 }
-export function SmartCallControlCenter({session,onOpenCalls}:{
- session:Session;onOpenCalls:()=>void
+export function SmartCallControlCenter({session,onOpenCalls,onSettingsSaved}:{
+ session:Session;onOpenCalls:()=>void;onSettingsSaved?:()=>void
 }){
  const uid=session.user.id;
  const [section,setSection]=useState<Section>("overview");
@@ -120,6 +120,7 @@ export function SmartCallControlCenter({session,onOpenCalls}:{
     assistant_name:assistant,updated_at:new Date().toISOString()
    }).eq("user_id",uid).select("user_id").maybeSingle();
    if(error||!data)throw new Error("No se pudieron guardar los cambios.");
+   onSettingsSaved?.();
    setNotice("Preferencias guardadas. Los cambios de una línea activa requieren verificación.");
   }catch(e){setNotice(e instanceof Error?e.message:"Error guardando preferencias.");}
   finally{setSaving(false);}
@@ -140,8 +141,8 @@ export function SmartCallControlCenter({session,onOpenCalls}:{
     body:JSON.stringify(prefs)
    });
    if(!response.ok)throw new Error(response.status===403?"Necesitas un plan Pro o Premium activo.":"No se pudieron guardar las voces y saludos.");
-   setNotice("Voces y saludos guardados para las próximas llamadas.");
    await refresh();
+   setNotice("Voces y saludos guardados para las próximas llamadas.");
   }catch(e){setNotice(e instanceof Error?e.message:"Error guardando saludos.");}
   finally{setSaving(false);}
  }
