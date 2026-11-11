@@ -197,3 +197,10 @@
 .dialerKey:focus-visible,.dialerCall:focus-visible,.dialerDelete:focus-visible{outline:3px solid #08ad85;outline-offset:3px}
 @media(max-width:360px){.dialerKeys{gap:10px 12px}.dialerKey{width:70px;height:70px}.dialer{padding:8px 4px 29px}.dialerCall{width:65px;height:65px;margin-top:17px}}
 @media(prefers-reduced-motion:reduce){.dialerKey,.dialerCall{transition:none}}
+
+/* Digit-only dialer: centered 0, delete in bottom-right, no letter legends. */
+.dialerKey{font-size:32px;font-weight:560;line-height:1;letter-spacing:-.05em}
+.dialerDelete{width:min(100%,76px);height:76px;border-radius:50%;border:0;background:transparent;color:#7b998a;display:grid;place-items:center;cursor:pointer}
+.dialerDelete:hover:not(:disabled){background:#edf6f0;color:#196b50}
+.dialerDelete:disabled{opacity:.35;cursor:default}
+@media(max-width:360px){.dialerDelete{width:70px;height:70px}}
