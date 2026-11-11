@@ -917,19 +917,20 @@ export default function App(){
         <View style={styles.card}>
          <Text style={styles.cardTitle}>Llamadas normales</Text>
          <Text style={styles.billingBigText}>{accountOverview?.billing.active?"Incluidas con tu plan":"Acceso no disponible"}</Text>
-         <Text style={styles.helper}>Las llamadas sin traducción no utilizan tus minutos de interpretación. Este servicio todavía no tiene una bolsa de minutos propia.</Text>
+         
          <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Llamadas · 30 días</Text><Text style={styles.callsInfoValue}>{accountOverview?.usage.directCalls??"—"}</Text></View>
-         <Text style={styles.helper}>No hay paquetes independientes de recarga para llamadas normales configurados.</Text>
+         
         </View>
         <View style={styles.card}>
          <Text style={styles.cardTitle}>Llamadas con traducción</Text>
          <Text style={styles.statNumber}>{billingOverview?.minutes.available??"—"}</Text>
-         <Text style={styles.helper}>Minutos para traducir llamadas</Text>
+         <Text style={styles.helper}>Minutos disponibles</Text>
          <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Incluidos en el plan</Text><Text style={styles.callsInfoValue}>{billingOverview?.minutes.included??"—"} min</Text></View>
          <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Consumidos</Text><Text style={styles.callsInfoValue}>{billingOverview?.minutes.used??"—"} min</Text></View>
          <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Recargas</Text><Text style={styles.callsInfoValue}>{billingOverview?.minutes.topup??"—"} min</Text></View>
-         <Text style={styles.helper}>{billingOverview?.previewPilotActive?"Saldo de prueba privada. Las recargas deben confirmarse en el sistema de pagos TEST.":"Los pagos todavía no habilitan el servicio de producción en este piloto."}</Text>
+         <Text style={styles.helper}>{billingOverview?.previewPilotActive?"Cuenta de prueba · TEST":""}</Text>
          <Button label="Actualizar saldos" secondary onPress={()=>void refreshAccountOverview()}/>
+         <Button label="Ver planes ↗" secondary onPress={()=>void Linking.openURL("https://vmv-business-design-git-feat-vm-073e13-valdys-projects-b97fc7a6.vercel.app/es/planes/").catch(()=>setError("No pudimos abrir los planes."))}/>
          <Button label="Gestionar plan" secondary onPress={()=>{if(!activationProfile||!supabase)return;void (async()=>{
           const {data}=await supabase.from("smartjob_profiles").update({
            plan_prompt_seen:false,updated_at:new Date().toISOString()
