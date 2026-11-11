@@ -124,7 +124,11 @@ export async function streamTranslation(text,sourceLanguage,targetLanguage,{
     return {translation:accumulated,reason:null,firstTokenMs,
       totalMs:Math.round(performance.now()-began),started};
   }catch(e){
-    return {translation:null,reason:e instanceof Error?e.name==="TimeoutError"?"timeout":e.message.slice(0,48):"stream_error",
+    const known=new Set(["voice_unavailable","oversize_sse_frame","invalid_stream_json",
+      "provider_stream_error","oversize_translation"]);
+    const reason=e instanceof Error&&e.name==="TimeoutError"?"timeout":
+      e instanceof Error&&known.has(e.message)?e.message:"stream_error";
+    return {translation:null,reason,
       firstTokenMs,totalMs:Math.round(performance.now()-began),started};
   }finally{try{await reader?.cancel();}catch{}}
 }
