@@ -66,8 +66,8 @@ export default function VMVMobilePreview(){
  const account=useSmartCallAccount();
  const {client,user,phase,profile,settings,route,provisioning,calls,summary,preferences,setPreferences,
   loading,working,error,notice,setError,setNotice,refresh,signIn,signOut,saveBasic,savePremium}=account;
- const [tab,setTab]=useState<Tab>("services");
- const [open,setOpen]=useState(true);
+ const [tab,setTab]=useState<Tab>("home");
+ const [open,setOpen]=useState(false);
  const [panel,setPanel]=useState<Panel>("overview");
  const [callsView,setCallsView]=useState<"dial"|"history"|"contacts">("dial");
  const [callFilter,setCallFilter]=useState<"all"|"direct"|"translated">("all");
@@ -256,17 +256,63 @@ export default function VMVMobilePreview(){
        <p>{loading?"Consultando tu perfil y tu saldo.":error||"Completa tu registro de Smart Call para continuar."}</p>
        {!loading?<><button className={styles.mainAction} onClick={()=>void refresh()}>Reintentar</button><a className={styles.registerLink} href="/registro">Completar registro</a><button className={styles.logoutLink} onClick={()=>void signOut()}>Cerrar sesión</button></>:null}
       </div>:null}
-      {ready&&tab==="home"?<div className={styles.screen}>
-       <span className={styles.screenEyebrow}>TU ESPACIO</span><h2>Hola, {name}<span className={styles.mint}>.</span></h2><p className={styles.screenLead}>{business} · Tus herramientas en un solo lugar.</p>
-       <button className={styles.homeHero} onClick={()=>showCall("minutes")}><span className={styles.tileEyebrow}>TRADUCCIÓN DE LLAMADAS</span><strong>{num(available)} min</strong><small>Para llamadas traducidas · {billing?.plan?.toUpperCase()||"Plan no disponible"}</small><span className={styles.tileArrow}><ArrowUpRight size={22}/></span></button>
-       <div className={styles.homeGrid}>
-        <button onClick={()=>go("calls")}><PhoneCall size={24}/><strong>Llamadas</strong><small>{line?.usage.calls??"—"} en 30 días</small></button>
-        <button onClick={()=>go("translator")}><Languages size={24}/><strong>Traductor</strong><small>Conversación en persona</small></button>
+      {ready&&tab==="home"?<div className={`${styles.screen} ${styles.homeV2}`}>
+       <div className={styles.homeWelcome}>
+        <button type="button" className={styles.homeProfile} onClick={()=>go("account")} aria-label="Abrir mi cuenta">
+         <span className={styles.homeProfileAvatar}><UserRound size={21}/></span>
+         <span><small>BIENVENIDO A VMV</small><strong>Hola, {name}</strong></span>
+        </button>
+        <span className={styles.homeBrandPill}>BUSINESS <span>✦</span></span>
        </div>
-       <span className={styles.groupTitle}>ACCIONES RÁPIDAS</span>
-       <button className={styles.listEntry} onClick={()=>showCall("settings")}><Settings2 size={19}/><div><strong>Configurar Smart Call</strong><small>Idiomas, voces y saludos</small></div><span>›</span></button>
-       <button className={styles.listEntry} onClick={()=>openContacts()}><ContactRound size={19}/><div><strong>Mis contactos</strong><small>Agenda privada de tu negocio</small></div><span>›</span></button>
-       <button className={styles.listEntry} onClick={()=>showCall("activity")}><Clock3 size={19}/><div><strong>Actividad reciente</strong><small>Últimas llamadas</small></div><span>›</span></button>
+       <button type="button" className={styles.homeSpotlight} onClick={()=>showCall("overview")}
+        aria-label="Abrir Smart Call">
+        <span className={styles.homeSpotlightKicker}>SMART CALL <span>● EN PILOTO</span></span>
+        <strong>Tu negocio,<br/>siempre conectado<span>.</span></strong>
+        <small>Llamadas y traducción</small>
+        <span className={styles.homeSpotlightMinutes}>{num(available)} min <span>para traducir</span></span>
+        <span className={styles.homeSpotlightArt} aria-hidden="true">
+         <span className={styles.homeArtRingOne}></span>
+         <span className={styles.homeArtRingTwo}></span>
+         <span className={styles.homeArtPhone}><PhoneCall size={37}/></span>
+         <span className={styles.homeArtSpark}>✦</span>
+        </span>
+        <span className={styles.homeSpotlightGo}><ArrowUpRight size={20}/></span>
+       </button>
+       <div className={styles.homeSectionHeading}>
+        <h3>Destacados<span>.</span></h3>
+        <button type="button" onClick={()=>go("services")}>Ver todos <ArrowUpRight size={15}/></button>
+       </div>
+       <div className={styles.homeProductsGrid}>
+        <button className={`${styles.homeProductCard} ${styles.homeProductMint}`}
+         onClick={()=>go("translator")} aria-label="Abrir traductor en persona">
+         <span className={styles.homeProductIcon}><Languages size={27}/></span>
+         <span className={styles.homeProductBody}><strong>Traductor</strong><small>En persona</small></span>
+         <span className={styles.homeProductArrow}>↗</span>
+        </button>
+        <div className={`${styles.homeProductCard} ${styles.homeProductYellow}`}>
+         <span className={styles.homeProductIcon}><Globe size={27}/></span>
+         <span className={styles.homeProductBody}><strong>Web Services</strong><small>Próximamente</small></span>
+         <span className={styles.homeProductDeco} aria-hidden="true">✳</span>
+        </div>
+        <div className={`${styles.homeProductCard} ${styles.homeProductSky}`}>
+         <span className={styles.homeProductIcon}><Bot size={27}/></span>
+         <span className={styles.homeProductBody}><strong>AI Agents</strong><small>Próximamente</small></span>
+         <span className={styles.homeProductDeco} aria-hidden="true">✦</span>
+        </div>
+        <div className={`${styles.homeProductCard} ${styles.homeProductPink}`}>
+         <span className={styles.homeProductIcon}><BarChart3 size={27}/></span>
+         <span className={styles.homeProductBody}><strong>Marketing</strong><small>Próximamente</small></span>
+         <span className={styles.homeProductDeco} aria-hidden="true">✳</span>
+        </div>
+       </div>
+       <button className={styles.homeExplore} type="button" onClick={()=>go("services")}>
+        <span className={styles.homeExploreCopy}>
+         <small>VMV BUSINESS</small>
+         <strong>Descubre lo que<br/>viene después.</strong>
+         <span>Explorar servicios <ArrowUpRight size={15}/></span>
+        </span>
+        <span className={styles.homeExploreGraphic} aria-hidden="true">✦</span>
+       </button>
       </div>:null}
       {ready&&tab==="services"&&!open?<div className={styles.screen}>
        <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>Mis servicios<span className={styles.mint}>.</span></h2>
@@ -434,7 +480,7 @@ export default function VMVMobilePreview(){
       </div>:null}
      </div>
      {ready?<nav className={styles.bottomNav} aria-label="Navegación de VMV Business">
-      {nav.map(([id,label,Icon])=><button key={id} className={tab===id?styles.activeNav:""} onClick={()=>go(id)} aria-pressed={tab===id}><span><Icon size={22}/></span><small>{label}</small></button>)}
+      {nav.map(([id,label,Icon])=><button key={id} className={[tab===id?styles.activeNav:"",id==="calls"?styles.navCallAction:""].filter(Boolean).join(" ")} onClick={()=>go(id)} aria-label={label} title={label} aria-pressed={tab===id}><span><Icon size={id==="calls"?25:21}/></span><small>{label}</small></button>)}
      </nav>:null}
     </div>
    </div>
