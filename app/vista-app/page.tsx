@@ -84,7 +84,7 @@ export default function VMVMobilePreview(){
  const [callbackConfirmSid,setCallbackConfirmSid]=useState<string|null>(null);
  const [lookupBusy,setLookupBusy]=useState<string|null>(null);
  const [callbackMessage,setCallbackMessage]=useState("");
- useEffect(()=>{setDraft(settings?{...settings}:null);},[settings]);
+ useEffect(()=>{setDraft(settings?{...settings,caller_language:settings.desired_language===settings.caller_language?(settings.desired_language==="en"?"es":"en"):settings.caller_language}:null);},[settings]);
  const ready=phase==="signed_in"&&!!profile;
  useEffect(()=>{
   if(!ready)return;
@@ -352,8 +352,8 @@ export default function VMVMobilePreview(){
        </>:null}
        {panel==="settings"?<>
         <form className={styles.smartCard} onSubmit={saveSettings}><span className={styles.smallKicker}>CONFIGURACIÓN DE TU CUENTA</span><h3>Idiomas y asistente</h3>
-         <SegmentedSelect label="Tu idioma" value={draft?.desired_language||"es"} options={[{value:"es",label:"Español"},{value:"en",label:"English"}]} disabled={!draft||working} onChange={value=>setDraft(v=>v?{...v,desired_language:value}:null)}/>
-         <SegmentedSelect label="Idioma del cliente" value={draft?.caller_language||"en"} options={[{value:"en",label:"English"},{value:"es",label:"Español"}]} disabled={!draft||working} onChange={value=>setDraft(v=>v?{...v,caller_language:value}:null)}/>
+         <SegmentedSelect label="Tu idioma" value={draft?.desired_language||"es"} options={[{value:"es",label:"Español"},{value:"en",label:"English"}]} disabled={!draft||working} onChange={value=>setDraft(v=>v?{...v,desired_language:value,caller_language:value==="es"?"en":"es"}:null)}/>
+         <SegmentedSelect label="Idioma del cliente" value={draft?.caller_language||"en"} options={[{value:"en",label:"English"},{value:"es",label:"Español"}]} disabled={!draft||working} onChange={value=>setDraft(v=>v?{...v,caller_language:value,desired_language:value==="es"?"en":"es"}:null)}/>
          <label htmlFor="my-assistant">Nombre del asistente</label><input id="my-assistant" disabled={!draft||working} maxLength={40} required value={draft?.assistant_name||""} onChange={e=>setDraft(v=>v?{...v,assistant_name:e.target.value}:null)}/>
          
          {!draft?<div className={styles.testNote}>Primero completa la activación de tu línea para crear la configuración inicial.</div>:null}
