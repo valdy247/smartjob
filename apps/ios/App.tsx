@@ -8,6 +8,7 @@ import {api,supabase,configured} from "./session";
 import {InterpreterPanel} from "./InterpreterPanel";
 import {CallScreen} from "./CallScreen";
 import {SmartCallControlCenter} from "./SmartCallControlCenter";
+import {BusinessServicesPanel} from "./BusinessServicesPanel";
 import {ContactsPanel} from "./ContactsPanel";
 import {DialPad} from "./DialPad";
 import {NativeActivation,type NativeProfile} from "./NativeActivation";
@@ -851,6 +852,7 @@ export default function App(){
          <View style={styles.servicesSpotlightLink}><Text style={styles.servicesSpotlightLinkText}>Abrir servicio  ↗</Text></View>
          <Text style={styles.servicesSpotlightStar}>✦</Text>
         </Pressable>
+        <BusinessServicesPanel session={session}/>
         <View style={styles.servicesSectionHead}>
          <Text style={styles.servicesSectionTitle}>Explora más<Text style={{color:"#9867E4"}}>.</Text></Text>
          <Text style={styles.servicesSectionHint}>PRÓXIMAMENTE</Text>
