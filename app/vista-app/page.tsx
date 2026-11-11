@@ -161,26 +161,32 @@ export default function VMVMobilePreview(){
         {refreshButton}
        </>:null}
        {panel==="minutes"?<>
-        <div className={styles.minuteHero}><span className={styles.smallKicker}>MINUTOS DISPONIBLES</span><strong>{num(available)}<small> min</small></strong>
-         <p>{billing?.plan?.toUpperCase()||"Plan no disponible"} · {billing?.status||"Sin estado"}</p>
-         <div className={styles.minuteTrack}><span style={{width:minuteData?.included&&available!=null?Math.max(0,Math.min(100,available/minuteData.included*100))+"%":"0%"}}/></div>
-         <small>Saldo real calculado por el servidor del piloto.</small>
+        <div className={styles.minuteHero}>
+         <span className={styles.smallKicker}>TE QUEDAN</span>
+         <strong>{num(available)}<small> minutos</small></strong>
+         <p>{available===0?"Has agotado los minutos disponibles.":available==null?"No se pudo consultar tu saldo.":"Para tus próximas llamadas"}</p>
         </div>
-        <div className={styles.smartCard}><span className={styles.smallKicker}>DESGLOSE DE CONSUMO</span><h3>Plan y minutos</h3>
-         <Row label="Incluidos" value={num(minuteData?.included)+" min"}/>
-         <Row label="Consumidos" value={num(minuteData?.used)+" min"}/>
-         <Row label="Reservados" value={num(minuteData?.reserved)+" min"}/>
-         <Row label="Transferidos" value={num(minuteData?.rollover)+" min"}/>
-         <Row label="Recargas" value={num(minuteData?.topup)+" min"}/>
-         <Row label="Retención temporal" value={num(minuteData?.temporaryHold)+" min"}/>
-         <Row label="Disponibles" value={num(available)+" min"}/>
-         <Row label="Fin del periodo" value={date(billing?.periodEnd)}/>
-         <div className={styles.rule}/><p>{billing?.note||"Información de facturación no disponible."}</p>
-         {billing?.billingMode==="test"?<div className={styles.testNote}>MODO TEST · Este saldo pertenece al piloto y no es una suscripción de producción.</div>:null}
+        <div className={styles.smartCard}>
+         <span className={styles.smallKicker}>TU PLAN</span>
+         <h3>{billing?.plan?billing.plan.charAt(0).toUpperCase()+billing.plan.slice(1):"No disponible"}</h3>
+         <Row label="Minutos usados" value={num(minuteData?.used)+" min"}/>
+         <Row label="Fin de este período" value={date(billing?.periodEnd)}/>
+         {billing?.billingMode==="test"?<p className={styles.testNote}>Cuenta de prueba. Este saldo no representa una suscripción de producción.</p>:null}
+         <details className={styles.minuteDetails}>
+          <summary>Ver detalle del consumo</summary>
+          <div className={styles.minuteBreakdown}>
+           <Row label="Incluidos en el plan" value={num(minuteData?.included)+" min"}/>
+           <Row label="Recargas" value={num(minuteData?.topup)+" min"}/>
+           <Row label="Minutos transferidos" value={num(minuteData?.rollover)+" min"}/>
+           <Row label="Reservados para llamadas" value={num(minuteData?.reserved)+" min"}/>
+           <Row label="Retención temporal" value={num(minuteData?.temporaryHold)+" min"}/>
+           <p className={styles.minuteExplanation}>El saldo disponible ya descuenta los minutos usados y los reservados para llamadas en curso.</p>
+           {billing?.note?<p className={styles.minuteExplanation}>{billing.note}</p>:null}
+           {billing?.topup?<p className={styles.minuteExplanation}>Recarga de referencia: {billing.topup.minutes} minutos por {"$"+(billing.topup.priceCents/100).toFixed(2)} USD. {billing.topup.available?"Disponible en el sistema de prueba.":"No habilitada."}</p>:null}
+          </div>
+         </details>
          {refreshButton}
         </div>
-        {billing?.topup?<div className={styles.smartCard}><span className={styles.smallKicker}>RECARGAS</span>
-         <h3>{billing.topup.minutes} minutos adicionales</h3><p>Referencia de precio: {"$"+(billing.topup.priceCents/100).toFixed(2)} USD. {billing.topup.available?"Disponible en el sistema de pagos de prueba.":"No habilitada en este despliegue."}</p></div>:null}
        </>:null}
        {panel==="settings"?<>
         <form className={styles.smartCard} onSubmit={saveSettings}><span className={styles.smallKicker}>CONFIGURACIÓN DE TU CUENTA</span><h3>Idiomas y asistente</h3>
