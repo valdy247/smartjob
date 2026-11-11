@@ -5,6 +5,7 @@ import {House,LayoutGrid,PhoneCall,Languages,UserRound,ArrowUpRight,ChevronLeft,
  RefreshCw,Settings2,LoaderCircle,LogOut,LockKeyhole,PhoneForwarded} from "lucide-react";
 import {LivePanel} from "@/components/LivePanel";
 import ContactBook from "./ContactBook";
+import DialPad from "./DialPad";
 import {useSmartCallAccount,type Tab,type Panel,type CallSettings,type CallRecord,type Voice} from "./useSmartCallAccount";
 import styles from "./vista-app.module.css";
 
@@ -68,9 +69,8 @@ export default function VMVMobilePreview(){
  const [tab,setTab]=useState<Tab>("services");
  const [open,setOpen]=useState(true);
  const [panel,setPanel]=useState<Panel>("overview");
- const [callsView,setCallsView]=useState<"summary"|"history">("summary");
+ const [callsView,setCallsView]=useState<"dial"|"history"|"contacts">("dial");
  const [callFilter,setCallFilter]=useState<"all"|"direct"|"translated">("all");
- const [contactsOpen,setContactsOpen]=useState(false);
  const [contactStartForm,setContactStartForm]=useState(false);
  const [contactPhone,setContactPhone]=useState("");
  const [draft,setDraft]=useState<CallSettings|null>(null);
@@ -118,9 +118,9 @@ export default function VMVMobilePreview(){
  const business=profile?.business_name?.trim()||profile?.first_name||"Mi negocio";
  const lineNumber=line?.twilioPhone||route?.twilio_number||"Sin número asignado";
  const lineState=line?.connectedToApp?"Ruta iPhone configurada":line?.verified?"Número verificado":route?.enabled?"Ruta registrada":"Pendiente de activación";
- const go=(next:Tab)=>{setCallbackConfirmSid(null);setTab(next);setContactsOpen(false);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("summary");setCallFilter("all");}setError("");setNotice("");};
- const showCall=(next:Panel="overview")=>{setTab("services");setContactsOpen(false);setOpen(true);setPanel(next);setError("");setNotice("");};
- const openContacts=(number="",startInForm=false)=>{setContactPhone(number);setContactStartForm(startInForm);setContactsOpen(true);setTab("calls");setError("");setNotice("");};
+ const go=(next:Tab)=>{setCallbackConfirmSid(null);setTab(next);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("dial");setCallFilter("all");}setError("");setNotice("");};
+ const showCall=(next:Panel="overview")=>{setTab("services");setOpen(true);setPanel(next);setError("");setNotice("");};
+ const openContacts=(number="",startInForm=false)=>{setContactPhone(number);setContactStartForm(startInForm);setCallsView("contacts");setTab("calls");setError("");setNotice("");};
  async function login(e:FormEvent<HTMLFormElement>){e.preventDefault();await signIn(email,password);setPassword("");}
  async function saveSettings(e:FormEvent<HTMLFormElement>){e.preventDefault();if(draft)await saveBasic(draft);}
  async function saveVoices(e:FormEvent<HTMLFormElement>){e.preventDefault();await savePremium(preferences);}
@@ -381,46 +381,36 @@ export default function VMVMobilePreview(){
         {callbackMessage?<p className={styles.callbackFeedback} role="status">{callbackMessage}</p>:null}{refreshButton}
        </div>:null}
       </div>:null}
-      {ready&&tab==="calls"&&contactsOpen&&client&&user?<div className={styles.screen}><ContactBook key={user.id+":"+contactPhone+":"+contactStartForm} client={client} ownerId={user.id} initialPhone={contactPhone} startInForm={contactStartForm} onClose={()=>setContactsOpen(false)}/></div>:null}
-      {ready&&tab==="calls"&&!contactsOpen?<section className={styles.screen}>
-       <span className={styles.screenEyebrow}>SMART CALL</span>
-       <div className={styles.callTop}><h2>Llamadas<span className={styles.mint}>.</span></h2>
-        <button type="button" className={styles.contactsAccess} onClick={()=>openContacts()}><ContactRound size={16}/> Contactos</button></div>
+      {ready&&tab==="calls"?<section className={styles.screen}>
        <div className={styles.callViewTabs} role="tablist" aria-label="Secciones de llamadas">
-        <button type="button" role="tab" aria-selected={callsView==="summary"} className={callsView==="summary"?styles.callViewTabActive:styles.callViewTab} onClick={()=>setCallsView("summary")}>Resumen</button>
-        <button type="button" role="tab" aria-selected={callsView==="history"} className={callsView==="history"?styles.callViewTabActive:styles.callViewTab} onClick={()=>setCallsView("history")}>Historial</button>
+        {([{id:"dial",emoji:"⌨️",label:"Teclado"},{id:"history",emoji:"🕘",label:"Historial"},{id:"contacts",emoji:"👥",label:"Contactos"}] as const).map(item=>
+         <button type="button" key={item.id} role="tab" aria-label={item.label} title={item.label}
+          aria-selected={callsView===item.id}
+          className={callsView===item.id?styles.callViewTabActive:styles.callViewTab}
+          onClick={()=>{setCallsView(item.id);if(item.id==="contacts"){setContactPhone("");setContactStartForm(false);}}}>
+          <span className={styles.callTabEmoji} aria-hidden="true">{item.emoji}</span>
+         </button>)}
        </div>
-       {callsView==="summary"?<div role="tabpanel" aria-label="Resumen de llamadas">
-        <div className={styles.smartCard}>
-         <span className={styles.smallKicker}>TU TELÉFONO</span>
-         <h3>{lineNumber}</h3>
-         <p>{line?.connectedToApp?"Configurado para recibir llamadas en tu iPhone.":"Revisa la conexión para recibir llamadas en tu iPhone."}</p>
-         <div className={styles.rule}/>
-         <Row label="Recepción en iPhone" value={line?.connectedToApp?"Ruta configurada":"Pendiente"}/>
-         <Row label="Minutos para traducir" value={num(available)+" disponibles"}/>
-         <Row label="Directas · 30 días" value={num(line?.usage.directCalls)}/>
-         <Row label="Traducidas · 30 días" value={num(line?.usage.translatedCalls)}/>
-         <button type="button" className={styles.mainAction} onClick={()=>showCall("minutes")}>Ver plan y minutos →</button>
-        </div>
-        <div className={styles.callSummaryFooter}>
-         <PhoneForwarded size={17}/><span>Las llamadas entrantes se responden en la app iPhone. Aquí consultas su actividad.</span>
-        </div>
-       </div>:<div role="tabpanel" aria-label="Historial de llamadas">
-        <div className={styles.callHistoryHeader}>
-         <div><span className={styles.smallKicker}>ACTIVIDAD RECIENTE</span><h3>Tu historial</h3></div>
+       {callsView==="dial"&&client&&user?<DialPad client={client} ownerId={user.id}/>:null}
+       {callsView==="history"?<div role="tabpanel" aria-label="Historial de llamadas">
+        <div className={styles.callHistoryToolbar}>
+         <div className={styles.callFilters} role="group" aria-label="Filtrar llamadas">
+          {([{id:"all",label:"Todas"},{id:"direct",label:"Directas"},{id:"translated",label:"Traducidas"}] as const).map(item=><button key={item.id} type="button" aria-pressed={callFilter===item.id} className={callFilter===item.id?styles.callFilterActive:styles.callFilter} onClick={()=>setCallFilter(item.id)}>{item.label}</button>)}
+         </div>
          <button type="button" className={styles.callRefresh} disabled={loading||working} aria-label="Actualizar historial" onClick={()=>void refresh()}><RefreshCw size={17}/></button>
-        </div>
-        <div className={styles.callFilters} role="group" aria-label="Filtrar llamadas">
-         {([{id:"all",label:"Todas"},{id:"direct",label:"Directas"},{id:"translated",label:"Traducidas"}] as const).map(item=><button key={item.id} type="button" aria-pressed={callFilter===item.id} className={callFilter===item.id?styles.callFilterActive:styles.callFilter} onClick={()=>setCallFilter(item.id)}>{item.label}</button>)}
         </div>
         <div className={styles.smartCard}>
          <History calls={filteredCalls} onSave={phone=>openContacts(phone,true)}
-          onCallBack={sid=>void returnBusinessCall(sid)} onLookup={sid=>void lookupCustomer(sid)}
+          onCallBack={sid=>setCallbackConfirmSid(sid)} onLookup={sid=>void lookupCustomer(sid)}
           canCallBack={callbackAvailable} callingSid={callbackBusy} lookupSid={lookupBusy}/>
          {callbackMessage?<p className={styles.callbackFeedback} role="status">{callbackMessage}</p>:null}
-         <p className={styles.callHistoryLimit}>Mostrando hasta 25 llamadas recientes de tu cuenta.</p>
         </div>
-       </div>}
+       </div>:null}
+       {callsView==="contacts"&&client&&user?<div role="tabpanel" aria-label="Agenda de contactos">
+        <ContactBook key={user.id+":"+contactPhone+":"+contactStartForm}
+         client={client} ownerId={user.id} initialPhone={contactPhone}
+         startInForm={contactStartForm} embedded onClose={()=>setCallsView("dial")}/>
+       </div>:null}
       </section>:null}
       {ready&&tab==="translator"?<div className={styles.screen}><span className={styles.screenEyebrow}>CONVERSACIÓN EN PERSONA</span><h2>Traductor<span className={styles.mint}>.</span></h2>
        <p className={styles.screenLead}>Usa el traductor web cuando el servicio esté disponible. La traducción de llamadas sigue en tu iPhone.</p>
