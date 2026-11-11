@@ -1,7 +1,7 @@
 "use client";
-import {useEffect,useRef,useState} from "react";
+import {useEffect,useState} from "react";
 import type {SupabaseClient} from "@supabase/supabase-js";
-import {Phone,Delete,ShieldCheck,X} from "lucide-react";
+import {Phone,Delete} from "lucide-react";
 import styles from "./vista-app.module.css";
 
 const keys=[
@@ -26,7 +26,6 @@ export default function DialPad({client,ownerId}:{client:SupabaseClient;ownerId:
  const [busy,setBusy]=useState(false);
  const [notice,setNotice]=useState("");
  const [isError,setIsError]=useState(false);
- const input=useRef<HTMLInputElement>(null);
  useEffect(()=>{
   let mounted=true;
   void (async()=>{
@@ -50,7 +49,6 @@ export default function DialPad({client,ownerId}:{client:SupabaseClient;ownerId:
   if(digit==="*"||digit==="#")return;
   setPhone(previous=>previous.length<20?previous+digit:previous);
   setNotice("");
-  input.current?.focus({preventScroll:true});
  };
  async function startCall(){
   if(!client||!formatted||!available||busy)return;
@@ -88,7 +86,7 @@ export default function DialPad({client,ownerId}:{client:SupabaseClient;ownerId:
  }
  return <div className={styles.dialer} role="tabpanel" aria-label="Teclado para realizar llamadas">
   <div className={styles.dialerNumber}>
-   <input ref={input} type="tel" inputMode="tel" autoComplete="tel" aria-label="Número de teléfono"
+   <input type="tel" inputMode="tel" autoComplete="tel" aria-label="Número de teléfono"
     value={phone} onChange={event=>{setPhone(event.target.value.slice(0,20));setNotice("");}}
     placeholder="+1 (000) 000-0000" disabled={busy} maxLength={20}/>
    {phone?<button type="button" title="Borrar último dígito" aria-label="Borrar último dígito"
