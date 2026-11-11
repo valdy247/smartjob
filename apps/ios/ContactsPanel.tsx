@@ -17,8 +17,8 @@ const errorText=(error:unknown)=>{
  if(e?.code==="23514")return "Comprueba los datos del contacto.";
  return "No pudimos guardar el contacto. Revisa la conexión y vuelve a intentarlo.";
 };
-export function ContactsPanel({session,onBack,initialPhone="",startInForm=false}:{
- session:Session;onBack:()=>void;initialPhone?:string;startInForm?:boolean
+export function ContactsPanel({session,onBack,initialPhone="",startInForm=false,embedded=false}:{
+ session:Session;onBack:()=>void;initialPhone?:string;startInForm?:boolean;embedded?:boolean
 }){
  const owner=session.user.id;
  const [contacts,setContacts]=useState<Contact[]>([]);
@@ -109,9 +109,11 @@ export function ContactsPanel({session,onBack,initialPhone="",startInForm=false}
   finally{setBusy(false);}
  }
  return <View style={styles.root}>
-  <Pressable accessibilityRole="button" onPress={onBack} style={styles.back}><Text style={styles.backText}>‹  Volver a llamadas</Text></Pressable>
-  <View style={styles.titleRow}><View style={{flex:1}}><Text style={styles.kicker}>SMART CALL / AGENDA</Text><Text style={styles.title}>Contactos<Text style={{color:"#00BB91"}}>.</Text></Text>
-   <Text style={styles.caption}>{contacts.length} contactos guardados en VMV</Text></View>
+  {!embedded?<Pressable accessibilityRole="button" onPress={onBack} style={styles.back}><Text style={styles.backText}>‹  Volver a llamadas</Text></Pressable>:null}
+  <View style={embedded?styles.compactTitleRow:styles.titleRow}>
+   {embedded?<Text style={styles.compactCount}>{contacts.length} contacto{contacts.length===1?"":"s"}</Text>:
+   <View style={{flex:1}}><Text style={styles.kicker}>SMART CALL / AGENDA</Text><Text style={styles.title}>Contactos<Text style={{color:"#00BB91"}}>.</Text></Text>
+   <Text style={styles.caption}>{contacts.length} contactos guardados en VMV</Text></View>}
    {!formOpen?<Pressable accessibilityRole="button" accessibilityLabel="Nuevo contacto" onPress={newContact} style={styles.plus}><Text style={styles.plusText}>+</Text></Pressable>:null}
   </View>
   {formOpen?<View style={styles.card}>
@@ -157,6 +159,8 @@ export function ContactsPanel({session,onBack,initialPhone="",startInForm=false}
 }
 const styles=StyleSheet.create({
  root:{paddingBottom:22},back:{marginBottom:16,paddingVertical:6},backText:{fontSize:13,color:"#0E9270",fontWeight:"800"},
+ compactTitleRow:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",minHeight:45,marginBottom:15},
+ compactCount:{fontSize:12,color:"#739085",fontWeight:"800"},
  titleRow:{flexDirection:"row",alignItems:"center",gap:12,marginBottom:19},
  kicker:{fontSize:10,letterSpacing:1.6,fontWeight:"900",color:"#08A781"},
  title:{fontSize:34,letterSpacing:-1.4,fontWeight:"900",color:"#193D32",marginTop:8},
