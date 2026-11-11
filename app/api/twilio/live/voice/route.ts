@@ -142,7 +142,7 @@ export async function POST(req:NextRequest){
   if(atCapacity){
     return twiml(say("All interpreters are currently busy. Please try again shortly.","en-US")+"<Hangup/>");
   }
-  if(route&&!await reservePhoneSession(bridge,route)){
+  if(route&&!await reservePhoneSession(bridge,route,"translated",from)){
     return twiml(say("All interpreters are currently busy. Please try again later.","en-US")+"<Hangup/>");
   }
   let reservedMinutes=0;
