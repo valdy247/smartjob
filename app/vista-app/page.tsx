@@ -46,11 +46,14 @@ function SegmentedSelect<T extends string>({label,value,options,onChange,disable
   </div>
  </div>;
 }
-function History({calls,onSave}:{calls:CallRecord[];onSave?:(phone:string)=>void}){
+function History({calls,onSave,onCallBack,canCallBack=false,callingSid=null}:{calls:CallRecord[];onSave?:(phone:string)=>void;onCallBack?:(sid:string)=>void;canCallBack?:boolean;callingSid?:string|null}){
  return calls.length?<div className={styles.realHistory}>{calls.map(item=><div key={item.bridge_sid} className={styles.historyItem}>
   <PhoneCall size={16}/><div><strong>{item.call_mode==="translated"?"Llamada traducida":"Llamada directa"}</strong>
-  <small>{new Date(item.started_at).toLocaleString("es-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})} · {statuses[item.status]||item.status}</small></div>
+  <small>{new Date(item.started_at).toLocaleString("es-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})} · {statuses[item.status]||item.status}</small>{item.caller_phone?<small>{item.caller_phone}</small>:null}</div>
   <span className={styles.historySide}><span className={styles.historyDuration}>{item.duration_seconds===null?"—":Math.ceil(Math.max(0,item.duration_seconds)/60)+" min"}</span>
+  {onCallBack&&item.caller_phone?<button className={styles.callBackAction} type="button"
+   disabled={!canCallBack||Boolean(callingSid)} title={!canCallBack?"Devolución no disponible en esta cuenta":undefined}
+   onClick={()=>onCallBack(item.bridge_sid)}><PhoneCall size={13}/>{callingSid===item.bridge_sid?"Conectando…":"Devolver llamada"}</button>:null}
   {onSave?<button className={styles.saveFromCall} type="button" onClick={()=>onSave(item.caller_phone||"")}>
    <UserRoundPlus size={13}/>{item.caller_phone?"Guardar contacto":"Añadir contacto"}</button>:null}</span>
  </div>)}</div>:<div className={styles.emptyHistory}><Clock3 size={28}/><strong>Sin llamadas registradas</strong><p>Tu actividad aparecerá aquí después de las primeras llamadas.</p></div>;
@@ -73,6 +76,9 @@ export default function VMVMobilePreview(){
  const [apiStatus,setApiStatus]=useState<Record<string,boolean>>({});
  const [topupBusy,setTopupBusy]=useState(false);
  const [topupMessage,setTopupMessage]=useState("");
+ const [callbackAvailable,setCallbackAvailable]=useState(false);
+ const [callbackBusy,setCallbackBusy]=useState<string|null>(null);
+ const [callbackMessage,setCallbackMessage]=useState("");
  useEffect(()=>{setDraft(settings?{...settings}:null);},[settings]);
  const ready=phase==="signed_in"&&!!profile;
  useEffect(()=>{
@@ -82,6 +88,22 @@ export default function VMVMobilePreview(){
    .then(data=>{if(mounted)setApiStatus(data as Record<string,boolean>);}).catch(()=>{});
   return()=>{mounted=false;};
  },[ready]);
+ useEffect(()=>{
+  if(!ready||!client||!user){setCallbackAvailable(false);return;}
+  let mounted=true;
+  void (async()=>{
+   try{
+    const {data:session}=await client.auth.getSession();
+    if(!session.session||session.session.user.id!==user.id)return;
+    const response=await fetch("/api/vista-app/callback",{
+     method:"GET",cache:"no-store",headers:{Authorization:"Bearer "+session.session.access_token}
+    });
+    const result=await response.json().catch(()=>null);
+    if(mounted)setCallbackAvailable(response.ok&&result?.available===true);
+   }catch{if(mounted)setCallbackAvailable(false);}
+  })();
+  return()=>{mounted=false;};
+ },[ready,user?.id,client]);
  const billing=summary?.billing.ok?summary.billing.data:null;
  const line=summary?.line.ok?summary.line.data:null;
  const premium=summary?.preferences.ok?summary.preferences.data:null;
@@ -119,6 +141,37 @@ export default function VMVMobilePreview(){
     throw new Error("No pudimos confirmar el enlace seguro de Stripe.");
    window.location.assign(url.href);
   }catch(e){setTopupMessage(e instanceof Error?e.message:"Error al iniciar la recarga.");setTopupBusy(false);}
+ }
+ async function returnBusinessCall(sid:string){
+  if(!client||!user||!callbackAvailable||callbackBusy)return;
+  const entry=calls.find(item=>item.bridge_sid===sid);
+  if(!entry?.caller_phone)return;
+  if(!window.confirm("VMV llamará primero a tu iPhone. Cuando contestes, conectará con "+
+      entry.caller_phone+" usando tu número empresarial. Será una llamada normal, sin traducción. ¿Continuar?"))return;
+  setCallbackBusy(sid);setCallbackMessage("");
+  try{
+   const {data:identity}=await client.auth.getUser();
+   const {data:session}=await client.auth.getSession();
+   if(identity.user?.id!==user.id||!session.session)throw Error("Vuelve a iniciar sesión.");
+   const response=await fetch("/api/vista-app/callback",{
+    method:"POST",cache:"no-store",
+    headers:{Authorization:"Bearer "+session.session.access_token,"Content-Type":"application/json"},
+    body:JSON.stringify({bridgeSid:sid})
+   });
+   const result=await response.json().catch(()=>null);
+   if(!response.ok||result?.started!==true){
+    const messages:Record<string,string>={
+     callback_in_progress:"Ya tienes una devolución en curso.",
+     callback_rate_limited:"Has alcanzado el límite de devoluciones de prueba.",
+     verified_caller_or_line_missing:"Esta llamada no tiene un número verificado o la línea no está lista.",
+     callback_not_enabled:"La devolución todavía no está habilitada en el piloto.",
+     active_plan_required:"Necesitas tener habilitado Smart Call."
+    };
+    throw Error(messages[result?.error]||"No se pudo iniciar la devolución. Inténtalo más tarde.");
+   }
+   setCallbackMessage("VMV está llamando a tu iPhone. Contesta para conectar con "+entry.caller_phone+".");
+  }catch(e){setCallbackMessage(e instanceof Error?e.message:"Error al conectar la devolución.");}
+  finally{setCallbackBusy(null);}
  }
  const filteredCalls=callFilter==="all"?calls:calls.filter(item=>item.call_mode===callFilter);
  const refreshButton=<button className={styles.secondaryAction} disabled={loading||working}
@@ -292,7 +345,8 @@ export default function VMVMobilePreview(){
        </>:null}
        {panel==="activity"?<div className={styles.smartCard}><span className={styles.smallKicker}>HISTORIAL REAL</span><h3>Llamadas recientes</h3>
         <p>{line?.usage.calls??"—"} llamadas en los últimos 30 días · {line?.usage.translatedCalls??"—"} traducidas.</p>
-        <History calls={calls}/>{refreshButton}
+        <History calls={calls} onSave={phone=>openContacts(phone,true)} onCallBack={sid=>void returnBusinessCall(sid)} canCallBack={callbackAvailable} callingSid={callbackBusy}/>
+        {callbackMessage?<p className={styles.callbackFeedback} role="status">{callbackMessage}</p>:null}{refreshButton}
        </div>:null}
       </div>:null}
       {ready&&tab==="calls"&&contactsOpen&&client&&user?<div className={styles.screen}><ContactBook key={user.id+":"+contactPhone+":"+contactStartForm} client={client} ownerId={user.id} initialPhone={contactPhone} startInForm={contactStartForm} onClose={()=>setContactsOpen(false)}/></div>:null}
@@ -328,7 +382,9 @@ export default function VMVMobilePreview(){
          {([{id:"all",label:"Todas"},{id:"direct",label:"Directas"},{id:"translated",label:"Traducidas"}] as const).map(item=><button key={item.id} type="button" aria-pressed={callFilter===item.id} className={callFilter===item.id?styles.callFilterActive:styles.callFilter} onClick={()=>setCallFilter(item.id)}>{item.label}</button>)}
         </div>
         <div className={styles.smartCard}>
-         <History calls={filteredCalls} onSave={phone=>openContacts(phone,true)}/>
+         <History calls={filteredCalls} onSave={phone=>openContacts(phone,true)}
+          onCallBack={sid=>void returnBusinessCall(sid)} canCallBack={callbackAvailable} callingSid={callbackBusy}/>
+         {callbackMessage?<p className={styles.callbackFeedback} role="status">{callbackMessage}</p>:null}
          <p className={styles.callHistoryLimit}>Mostrando hasta 25 llamadas recientes de tu cuenta.</p>
         </div>
        </div>}
