@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {auditTwilioPush} from "./push-diagnostics.mjs";
+import {auditTwilioPush,expectedPushSuffix} from "./push-diagnostics.mjs";
 
 const sid="AC"+"a".repeat(32),pushSid="CR"+"b".repeat(32),token="secret-only-for-test";
 const fakeLogger=()=>{
@@ -13,7 +13,7 @@ const fakeLogger=()=>{
 };
 test("rejects missing Twilio push credential without making requests",async()=>{
   let calls=0;const {events,log}=fakeLogger();
-  const result=await auditTwilioPush({sid,token,pushSid:"",logger:log,
+  const result=await auditTwilioPush({sid:"",token,pushSid:"",logger:log,
     fetcher:async()=>{calls++;throw Error("unexpected")}});
   assert.equal(result.ok,false);
   assert.equal(calls,0);
@@ -43,4 +43,21 @@ test("recognizes production APNs credential and no error events",async()=>{
   assert.equal(result.push.sandbox,false);
   assert.equal(result.alerts.length,0);
   assert.equal(events.some(e=>e.payload?.result==="production_compatible"),true);
+});
+
+test("audit discovers only Preview Push Credential when Render has no SID",async()=>{
+  const {events,log}=fakeLogger();
+  const matchingSid="CR"+"a".repeat(24)+expectedPushSuffix;
+  const result=await auditTwilioPush({sid,token,pushSid:"",logger:log,
+    fetcher:async url=>({ok:true,json:async()=>
+      url.includes("Credentials")
+        ?{credentials:[{sid:"CR"+"0".repeat(32),type:"apn",sandbox:false},
+                       {sid:matchingSid,type:"apn",sandbox:"true"}]}
+        :{alerts:[{error_code:"52134",log_level:"error",date_created:"2026-11-11T00:17:00Z"}]}
+    })
+  });
+  assert.equal(result.push.credentialFound,true);
+  assert.equal(result.push.sandbox,true);
+  assert.equal(result.alerts[0].errorCode,"52134");
+  assert.equal(JSON.stringify(events).includes(matchingSid),false);
 });
