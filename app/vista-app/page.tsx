@@ -468,10 +468,6 @@ export default function VMVMobilePreview(){
        </div>:null}
       </section>:null}
       {ready&&tab==="translator"?<div className={`${styles.screen} ${styles.translatorV3}`}>
-       <div className={styles.translatorWelcome}><span className={styles.translatorWelcomeIcon}><Languages size={27}/></span>
-        <div><span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>Traductor<span className={styles.mint}>.</span></h2></div>
-        <span className={styles.translatorSpark} aria-hidden="true">✦</span>
-       </div>
        {client&&profile?<div className={styles.interpreterWrap}><LivePanel supabase={client} profile={profile} apiStatus={apiStatus}/></div>:null}
       </div>:null}
       {ready&&tab==="account"?<div className={`${styles.screen} ${styles.accountV3}`}>
