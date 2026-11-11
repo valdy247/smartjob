@@ -79,4 +79,7 @@ test("translated text uses documented Twilio ConversationRelay text messages",()
   assert.deepEqual(textMessage("Hola"),{
     type:"text",token:"Hola",last:true,interruptible:false,preemptible:false
   });
+  assert.deepEqual(textMessage("Buenos ",false),{
+    type:"text",token:"Buenos ",last:false,interruptible:false,preemptible:false
+  });
 });
