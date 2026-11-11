@@ -7,6 +7,7 @@ import {api,supabase,configured} from "./session";
 import {InterpreterPanel} from "./InterpreterPanel";
 import {CallScreen} from "./CallScreen";
 import {SmartCallControlCenter} from "./SmartCallControlCenter";
+import {ContactsPanel} from "./ContactsPanel";
 import {NativeActivation,type NativeProfile} from "./NativeActivation";
 import {FALLBACK_MODULES,loadBusinessModules,openBusinessWorkspace,type BusinessModule} from "./businessWorkspace";
 
@@ -33,13 +34,16 @@ export default function App(){
   const [callsView,setCallsView]=useState<"summary"|"history">("summary");
   const [callTypeFilter,setCallTypeFilter]=useState<"all"|"direct"|"translated">("all");
   const [callsTechnicalOpen,setCallsTechnicalOpen]=useState(false);
+  const [contactsOpen,setContactsOpen]=useState(false);
+  const [contactsPhone,setContactsPhone]=useState("");
+  const [contactsFromHistory,setContactsFromHistory]=useState(false);
  const [businessModules,setBusinessModules]=useState<BusinessModule[]>(FALLBACK_MODULES);
  const [activeModule,setActiveModule]=useState<string|null>(null);
  const [image1Unavailable,setImage1Unavailable]=useState(false);
  const [image2Unavailable,setImage2Unavailable]=useState(false);
  const [keyboardVisible,setKeyboardVisible]=useState(false),[forwardHelpOpen,setForwardHelpOpen]=useState(false);
  const [settingsPage,setSettingsPage]=useState<"menu"|"numbers"|"billing"|"history"|"security"|"profile"|"style"|"support"|"services">("menu");
- const [callHistory,setCallHistory]=useState<{bridge_sid:string;status:string;duration_seconds:number|null;started_at:string;call_mode:string}[]>([]);
+ const [callHistory,setCallHistory]=useState<{bridge_sid:string;status:string;duration_seconds:number|null;started_at:string;call_mode:string;caller_phone:string|null}[]>([]);
  const [historyBusy,setHistoryBusy]=useState(false);
  const [assistantPrefs,setAssistantPrefs]=useState({existing_phone:"",desired_language:"es",caller_language:"en",assistant_name:""});
  const [greetingPrefs,setGreetingPrefs]=useState({voice_customer:"default",voice_owner:"default",greeting_customer:"",greeting_owner:""});
@@ -141,7 +145,7 @@ export default function App(){
    const {data}=client.auth.onAuthStateChange((_event,next)=>{
      if(!mounted)return;
      setSession(next);sessionRef.current=next;
-     if(!next){setReady(false);setPhoneVerification(null);setSmsCode("");setSmsSent(false);setStatus("Inicia sesión para recibir llamadas");setCallHistory([]);setCallsView("summary");setCallTypeFilter("all");}
+     if(!next){setReady(false);setPhoneVerification(null);setSmsCode("");setSmsSent(false);setStatus("Inicia sesión para recibir llamadas");setCallHistory([]);setCallsView("summary");setCallTypeFilter("all");setContactsOpen(false);setContactsPhone("");}
    });
    return()=>{mounted=false;data.subscription.unsubscribe();};
  },[]);
@@ -381,7 +385,7 @@ export default function App(){
   setHistoryBusy(true);
   try{
    const {data,error:historyError}=await supabase.from("smartjob_call_sessions")
-     .select("bridge_sid,status,duration_seconds,started_at,call_mode")
+     .select("bridge_sid,status,duration_seconds,started_at,call_mode,caller_phone")
      .eq("owner_id",sessionRef.current.user.id).order("started_at",{ascending:false}).limit(25);
    if(historyError)throw historyError;
    setCallHistory(data||[]);
@@ -641,9 +645,15 @@ export default function App(){
       </View>
 
      </>:null}
-     {activeTab==="calls"?<>
+     {activeTab==="calls"&&contactsOpen?<ContactsPanel key={session.user.id+":"+contactsPhone+":"+contactsFromHistory}
+        session={session} initialPhone={contactsPhone} startInForm={contactsFromHistory}
+        onBack={()=>setContactsOpen(false)}/>:null}
+      {activeTab==="calls"&&!contactsOpen?<>
        <Text style={styles.kicker}>SMART CALL</Text>
-       <Text style={styles.heading}>Llamadas<Text style={{color:colors.accent}}>.</Text></Text>
+       <View style={styles.callsHeadingRow}><Text style={styles.heading}>Llamadas<Text style={{color:colors.accent}}>.</Text></Text>
+        <Pressable accessibilityRole="button" style={styles.contactsEntry} onPress={()=>{
+         setContactsPhone("");setContactsFromHistory(false);setContactsOpen(true);
+        }}><Text style={styles.contactsEntryText}>◎ Contactos</Text></Pressable></View>
        <View style={styles.callsTabs}>
         {([{id:"summary",label:"Resumen"},{id:"history",label:"Historial"}] as const).map(item=>
          <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected:callsView===item.id}}
@@ -714,7 +724,12 @@ export default function App(){
               <Text style={styles.historyStatus}>{new Date(item.started_at).toLocaleDateString("es-US",{month:"short",day:"numeric"})} · {new Date(item.started_at).toLocaleTimeString("es-US",{hour:"numeric",minute:"2-digit"})}</Text>
               <Text style={styles.historyStatus}>{({"completed":"Finalizada","in-progress":"En curso","no-answer":"Sin respuesta","busy":"Ocupada","ringing":"Sonando","initiated":"Iniciando","failed":"Fallida","canceled":"Cancelada"} as Record<string,string>)[item.status]||item.status}</Text>
              </View>
-             <Text style={styles.historyMinutes}>{item.duration_seconds==null?"—":Math.ceil(Math.max(0,item.duration_seconds)/60)+" min"}</Text>
+             <View style={{alignItems:"flex-end",gap:7}}>
+              <Text style={styles.historyMinutes}>{item.duration_seconds==null?"—":Math.ceil(Math.max(0,item.duration_seconds)/60)+" min"}</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Guardar contacto desde esta llamada" onPress={()=>{
+               setContactsPhone(item.caller_phone||"");setContactsFromHistory(true);setContactsOpen(true);
+              }}><Text style={styles.historySaveContact}>{item.caller_phone?"Guardar contacto":"Añadir contacto"}</Text></Pressable>
+             </View>
             </View>):
            <Text style={styles.helper}>No hay llamadas de este tipo en el historial reciente.</Text>}
          <Text style={styles.callsHistoryFoot}>Últimas 25 llamadas registradas.</Text>
@@ -990,6 +1005,10 @@ const styles=StyleSheet.create({
  greetingEditor:{height:105,paddingTop:12},
 
 
+ callsHeadingRow:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:8},
+ contactsEntry:{borderWidth:1,borderColor:"#B8E9D3",backgroundColor:"#E9FAF1",paddingVertical:10,paddingHorizontal:12,borderRadius:12,marginBottom:10},
+ contactsEntryText:{fontSize:12,color:"#0A8867",fontWeight:"800"},
+ historySaveContact:{fontSize:11,color:"#0B936F",fontWeight:"800",paddingVertical:5},
  callsTabs:{flexDirection:"row",backgroundColor:"#EAF5EE",borderWidth:1,borderColor:"#D4EADB",padding:5,borderRadius:18,marginBottom:18,gap:5},
  callsTab:{flex:1,minHeight:47,borderRadius:13,alignItems:"center",justifyContent:"center"},
  callsTabActive:{backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#B7E9D0"},
