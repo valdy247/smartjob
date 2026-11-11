@@ -36,6 +36,12 @@ export function createVoiceChunks(send){
       if(!send(token,true))throw Error("voice_unavailable");
       sent++;pending="";return true;
     },
+    abortWith(message){
+      if(closed||sent===0||typeof message!=="string"||!message)return false;
+      closed=true;pending="";
+      if(!send(message,true))throw Error("voice_unavailable");
+      sent++;return true;
+    },
     get sent(){return sent;},
     get buffered(){return pending.length;},
   };
