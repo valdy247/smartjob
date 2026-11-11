@@ -105,7 +105,7 @@ export async function getMessages(session:Session,id:string):Promise<AgentMessag
   return (data||[]) as AgentMessage[];
 }
 export async function simulateAgent(session:Session,agentId:string,conversationId:string,message:string):Promise<string>{
-  const response=await fetch(api+"/api/vmv/ai-agents/simulate",{
+  // A dedicated preview URL avoids silently calling the live Smart Call backend.\n  const agentApi=process.env.EXPO_PUBLIC_VMV_AI_API||api;\n  const response=await fetch(agentApi+"/api/vmv/ai-agents/simulate",{
     method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
     body:JSON.stringify({agentId,conversationId,message})
   });
