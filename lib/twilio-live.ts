@@ -61,13 +61,20 @@ export function bridgeTwiML(role:"customer"|"professional",bridge:string,config?
   ];
   const tags=params.map(([key,value])=>
     '<Parameter name="'+key+'" value="'+xmlEscape(value)+'"/>').join("");
+  // Flux detects meaningful end-of-turn instead of waiting for fixed silence.
+  // Can be disabled without editing code if live-call recognition regresses.
+  const fluxEnabled=process.env.SMARTJOB_RELAY_FLUX_ENABLED!=="false";
+  const recognition=fluxEnabled
+    ?' transcriptionProvider="Deepgram" speechModel="flux" eotThreshold="0.8"'+
+      ' speechTimeout="3000" ignoreBackchannel="true" echoPromptFiltering="true"'
+    :' speechTimeout="800"';
   const url=xmlEscape(process.env.SMARTJOB_LIVE_WS_URL||"");
   const action=xmlEscape(PILOT_BASE+"/api/twilio/live/ended?bridge="+bridge+
     "&sig="+bridgeSignature(bridge));
   return twiml('<Connect action="'+action+'" method="POST">'+
     '<ConversationRelay url="'+url+'" ttsLanguage="'+locale+
     '" transcriptionLanguage="'+locale+'" ttsProvider="ElevenLabs"'+voice+
-    ' speechTimeout="800" interruptible="none" reportInputDuringAgentSpeech="speech"'+
+    recognition+' events="speaker-events" interruptible="none" reportInputDuringAgentSpeech="speech"'+
     ' welcomeGreeting="'+xmlEscape(greeting)+'" welcomeGreetingInterruptible="none">'+
     tags+'</ConversationRelay></Connect><Hangup/>');
 }
