@@ -9,7 +9,10 @@
  */
 import {Linking} from "react-native";
 
-export const BUSINESS_WEB_ORIGIN="https://vmv-business-design.vercel.app";
+// Internal builds use the matching VMV Business preview; released builds retain the stable domain.
+export const BUSINESS_WEB_ORIGIN=process.env.EXPO_PUBLIC_SMARTJOB_PREVIEW==="true"
+  ?"https://vmv-business-design-git-feat-vm-073e13-valdys-projects-b97fc7a6.vercel.app"
+  :"https://vmv-business-design.vercel.app";
 const catalogUrl=BUSINESS_WEB_ORIGIN+"/service-catalog.json";
 
 export type BusinessModule={
