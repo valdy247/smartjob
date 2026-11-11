@@ -272,3 +272,14 @@ button.homeProductCard:hover{transform:translateY(-2px)}
 @media(prefers-reduced-motion:reduce){button.homeProductCard:hover{transform:none}}
 
 .homeTopHidden{display:none}
+
+
+/* Compact navigation: five accessible icons, no captions. */
+.bottomNav{height:66px;padding:7px 10px;margin-bottom:12px;align-items:center}
+.bottomNav button{height:52px;min-height:52px;gap:0;align-items:center;justify-content:center}
+.bottomNav button>span{width:45px;height:45px;border-radius:50%;display:grid;place-items:center}
+.bottomNav button.activeNav>span{border-radius:50%}
+.bottomNav .navCallAction{transform:translateY(-5px);gap:0}
+.bottomNav .navCallAction>span{width:53px;height:53px;border-radius:50%;border:2px solid #dfcaff;background:linear-gradient(145deg,#a778fc,#7648d7);box-shadow:0 5px 12px #27134842}
+.bottomNav .navCallAction.activeNav>span{border:2px solid #e9d9ff;background:linear-gradient(145deg,#ae80ff,#7847d7);box-shadow:0 0 0 1px #ffffff22,0 5px 13px #27134848}
+@media(max-width:360px){.bottomNav{padding-inline:8px}.bottomNav .navCallAction>span{width:51px;height:51px}}
