@@ -13,7 +13,7 @@ type CallRow={bridge_sid:string;status:string;call_mode:string;started_at:string
 type Billing={plan_code:string;status:string;included_minutes:number;used_minutes:number;topup_minutes:number};
 const initialSettings:CallSettings={desired_language:"es",caller_language:"en",assistant_name:""};
 const initialPrefs:Preferences={voice_customer:"default",voice_owner:"default",greeting_customer:"",greeting_owner:""};
-const palette={ink:"#14232A",muted:"#6D8185",mint:"#04B58F",pale:"#E9F9F3",line:"#DCECE7",white:"#FFFFFF"};
+const palette={ink:"#29223E",muted:"#82768D",mint:"#8E5DE5",pale:"#F0E8FF",line:"#EBE4F2",white:"#FFFFFF"};
 const validLanguage=(v:unknown):v is Language=>v==="en"||v==="es";
 const validChoice=(v:unknown):v is Choice=>v==="default"||v==="bright"||v==="calm";
 const readableLanguage=(v:Language)=>v==="es"?"Español":"English";
@@ -234,18 +234,18 @@ export function SmartCallControlCenter({session,onOpenCalls,onSettingsSaved}:{
  </View>;
 }
 const s=StyleSheet.create({
- root:{paddingBottom:16},hero:{backgroundColor:"#15322F",padding:23,borderRadius:25,marginBottom:14},
- eyebrow:{color:"#8CD5C3",fontSize:10,fontWeight:"800",letterSpacing:1.7},
+ root:{paddingBottom:16},hero:{backgroundColor:"#6E47B7",padding:23,borderRadius:25,marginBottom:14,shadowColor:"#50317C",shadowOpacity:.14,shadowRadius:13,shadowOffset:{width:0,height:7},elevation:3},
+ eyebrow:{color:"#DEC9FF",fontSize:10,fontWeight:"800",letterSpacing:1.7},
  title:{color:"#FFFFFF",fontSize:36,fontWeight:"900",letterSpacing:-1.6,marginTop:8},
- subtitle:{color:"#C5DFD6",fontSize:13,lineHeight:21,marginTop:6},
+ subtitle:{color:"#E3D6F8",fontSize:12,lineHeight:19,marginTop:6},
  statusPill:{flexDirection:"row",alignItems:"center",marginTop:22,alignSelf:"flex-start",borderRadius:30,
-  paddingHorizontal:12,paddingVertical:9,backgroundColor:"#285047"},
- statusDot:{width:8,height:8,borderRadius:4,marginRight:8},statusText:{fontSize:11,fontWeight:"700",color:"#E7FFF6"},
- tabs:{flexDirection:"row",backgroundColor:"#E9F2EF",borderRadius:16,padding:4,marginBottom:18},
- tab:{flex:1,alignItems:"center",paddingVertical:12,borderRadius:12},activeTab:{backgroundColor:"#FFFFFF"},
- tabText:{fontSize:12,fontWeight:"700",color:"#667D7B"},activeTabText:{color:"#153E36"},
+  paddingHorizontal:12,paddingVertical:9,backgroundColor:"#FFFFFF25"},
+ statusDot:{width:8,height:8,borderRadius:4,marginRight:8},statusText:{fontSize:11,fontWeight:"700",color:"#FFFFFF"},
+ tabs:{flexDirection:"row",backgroundColor:"#EEE7F9",borderRadius:18,padding:5,marginBottom:18},
+ tab:{flex:1,alignItems:"center",paddingVertical:12,borderRadius:14},activeTab:{backgroundColor:"#FFFFFF"},
+ tabText:{fontSize:12,fontWeight:"700",color:"#917EA9"},activeTabText:{color:"#734DBA"},
  card:{backgroundColor:palette.white,borderWidth:1,borderColor:palette.line,borderRadius:23,padding:20,marginBottom:15},
- sectionLabel:{fontSize:10,fontWeight:"900",letterSpacing:1.5,color:"#168C71",marginBottom:10},
+ sectionLabel:{fontSize:10,fontWeight:"800",letterSpacing:1.5,color:"#8963C8",marginBottom:10},
  cardTitle:{fontSize:21,fontWeight:"800",color:palette.ink,marginBottom:14},
  number:{color:palette.ink,fontSize:25,fontWeight:"800",letterSpacing:-.5,marginBottom:8},
  helper:{fontSize:12,lineHeight:19,color:palette.muted,marginTop:7},
@@ -254,26 +254,26 @@ const s=StyleSheet.create({
  infoLabel:{color:palette.muted,fontSize:12,flex:1},
  infoValue:{color:palette.ink,fontSize:12,fontWeight:"700",textAlign:"right",flex:1},
  metricRow:{flexDirection:"row",gap:10},
- metric:{flex:1,borderColor:palette.line,borderWidth:1,backgroundColor:"#F3FBF8",borderRadius:18,padding:15,marginBottom:15},
+ metric:{flex:1,borderColor:"#DFD3F3",borderWidth:1,backgroundColor:"#F1EAFF",borderRadius:20,padding:15,marginBottom:15},
  metricValue:{fontSize:27,fontWeight:"900",color:palette.ink},
  metricLabel:{fontSize:11,color:palette.muted,marginTop:6},
- action:{backgroundColor:palette.mint,borderRadius:14,minHeight:49,paddingHorizontal:16,
+ action:{backgroundColor:palette.mint,borderRadius:16,minHeight:49,paddingHorizontal:16,
   alignItems:"center",justifyContent:"center",marginTop:14},
  actionSecondary:{backgroundColor:palette.pale},
- actionText:{fontSize:14,fontWeight:"800",color:"#06392E"},
+ actionText:{fontSize:14,fontWeight:"800",color:"#FFFFFF"},
  choices:{flexDirection:"row",gap:7,marginBottom:9,flexWrap:"wrap"},
- choice:{flex:1,minWidth:75,backgroundColor:"#F5FAF8",borderColor:palette.line,borderWidth:1,
-  paddingVertical:12,paddingHorizontal:9,borderRadius:12,alignItems:"center"},
+ choice:{flex:1,minWidth:75,backgroundColor:"#F7F2FD",borderColor:palette.line,borderWidth:1,
+  paddingVertical:12,paddingHorizontal:9,borderRadius:14,alignItems:"center"},
  selected:{borderColor:palette.mint,backgroundColor:palette.pale},
  choiceText:{color:palette.muted,fontSize:12,fontWeight:"700"},
- selectedText:{color:"#076E58"},
+ selectedText:{color:"#6A45B5"},
  inputLabel:{fontSize:12,fontWeight:"700",color:palette.ink,marginTop:14,marginBottom:9},
  field:{borderWidth:1,borderColor:palette.line,borderRadius:12,paddingHorizontal:13,
-  backgroundColor:"#FCFFFE",minHeight:49,fontSize:15,color:palette.ink},
+  backgroundColor:"#FFFFFF",minHeight:49,fontSize:15,color:palette.ink},
  multiline:{minHeight:88,paddingTop:12},
  history:{flexDirection:"row",gap:10,alignItems:"center",borderBottomWidth:1,borderBottomColor:palette.line,paddingVertical:12},
  historyTitle:{fontSize:13,fontWeight:"800",color:palette.ink},
  historyMinutes:{fontSize:12,fontWeight:"800",color:"#078469"},
- message:{backgroundColor:"#E6F8F0",borderColor:"#B5EAD7",borderWidth:1,padding:14,borderRadius:13,marginTop:12},
- messageText:{color:"#16684F",fontSize:12,lineHeight:18}
+ message:{backgroundColor:"#F0E8FF",borderColor:"#DBCAF8",borderWidth:1,padding:14,borderRadius:15,marginTop:12},
+ messageText:{color:"#65449E",fontSize:12,lineHeight:18}
 });
