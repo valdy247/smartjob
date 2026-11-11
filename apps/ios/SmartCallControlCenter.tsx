@@ -46,6 +46,7 @@ export function SmartCallControlCenter({session,onOpenCalls,onSettingsSaved}:{
  const [hasSettings,setHasSettings]=useState(false);
  const [route,setRoute]=useState<Route|null>(null);
  const [billing,setBilling]=useState<Billing|null>(null);
+ const [availableMinutes,setAvailableMinutes]=useState<number|null>(null);
  const [calls,setCalls]=useState<CallRow[]>([]);
  const [prefs,setPrefs]=useState<Preferences>(initialPrefs);
  const [prefEditable,setPrefEditable]=useState(false);
@@ -81,9 +82,15 @@ export function SmartCallControlCenter({session,onOpenCalls,onSettingsSaved}:{
    else setSettings(initialSettings);
    setRoute((routeResult.data?.[0] as Route|undefined)||null);
    setBilling((billingResult.data as Billing|null)||null);
+   setAvailableMinutes(null);
    setCalls((historyResult.data as CallRow[]|null)||[]);
    const token=authResult.data.session?.access_token;
    if(!token)throw new Error("La sesión ha expirado.");
+   try{
+    const usage=await fetch(api+"/api/billing/overview",{headers:{Authorization:"Bearer "+token}});
+    if(usage.ok){const overview=await usage.json() as {minutes?:{available?:number}};
+      setAvailableMinutes(typeof overview.minutes?.available==="number"?overview.minutes.available:null);}
+   }catch{setAvailableMinutes(null);}
    try{
     const response=await fetch(api+"/api/billing/preferences",{headers:{Authorization:"Bearer "+token}});
     if(!response.ok)throw new Error("Preferencias de voz no disponibles.");
@@ -148,7 +155,7 @@ export function SmartCallControlCenter({session,onOpenCalls,onSettingsSaved}:{
   }catch(e){setNotice(e instanceof Error?e.message:"Error guardando saludos.");}
   finally{setSaving(false);}
  }
- const minutes=billing?Math.max(0,(billing.included_minutes||0)+(billing.topup_minutes||0)-(billing.used_minutes||0)):null;
+ const minutes=availableMinutes;
  return <View style={s.root}>
   <View style={s.hero}><Text style={s.eyebrow}>VMV BUSINESS / COMUNICACIÓN</Text>
    <Text style={s.title}>Smart Call<Text style={{color:palette.mint}}>.</Text></Text>
@@ -170,7 +177,7 @@ export function SmartCallControlCenter({session,onOpenCalls,onSettingsSaved}:{
     <View style={s.infoRow}><Text style={s.infoLabel}>Idioma del cliente</Text><Text style={s.infoValue}>{readableLanguage(settings.caller_language)}</Text></View>
     <View style={s.infoRow}><Text style={s.infoLabel}>Tu idioma</Text><Text style={s.infoValue}>{readableLanguage(settings.desired_language)}</Text></View>
     <View style={s.infoRow}><Text style={s.infoLabel}>Asistente</Text><Text style={s.infoValue}>{settings.assistant_name||"Sin configurar"}</Text></View>
-    <View style={s.infoRow}><Text style={s.infoLabel}>Minutos del plan</Text><Text style={s.infoValue}>{minutes===null?"No disponible":String(minutes)}</Text></View>
+    <View style={s.infoRow}><Text style={s.infoLabel}>Minutos disponibles</Text><Text style={s.infoValue}>{minutes===null?"No disponible":String(minutes)}</Text></View>
     <Action label="Ir a llamadas" onPress={onOpenCalls}/>
    </View>
    <View style={s.metricRow}><View style={s.metric}><Text style={s.metricValue}>{calls.length}</Text><Text style={s.metricLabel}>Llamadas recientes</Text></View>
