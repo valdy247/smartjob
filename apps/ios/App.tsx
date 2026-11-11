@@ -84,6 +84,32 @@ export default function App(){
  const registeredAt=useRef(0),inviteRef=useRef<CallInvite|null>(null),callRef=useRef<Call|null>(null);
  const registrationInFlight=useRef(false);
  const sessionRef=useRef<Session|null>(null);
+ const pendingBusinessLink=useRef<"calls"|"services"|null>(null);
+ useEffect(()=>{
+   const processLink=(url:string|null)=>{
+     if(!url)return;
+     // Only accept these two fixed routes. Never parse auth tokens from links.
+     const route=/^smartjob:\/\/(calls|services)\/?$/.exec(url);
+     if(!route)return;
+     const target=route[1] as "calls"|"services";
+     pendingBusinessLink.current=target;
+     if(sessionRef.current?.user){
+       setActiveTab(target==="calls"?"calls":"settings");
+       if(target==="services")setSettingsPage("services");
+       pendingBusinessLink.current=null;
+     }
+   };
+   const subscription=Linking.addEventListener("url",event=>processLink(event.url));
+   void Linking.getInitialURL().then(processLink).catch(()=>{});
+   return()=>subscription.remove();
+ },[]);
+ useEffect(()=>{
+   if(!session?.user.id||!pendingBusinessLink.current)return;
+   const target=pendingBusinessLink.current;
+   pendingBusinessLink.current=null;
+   setActiveTab(target==="calls"?"calls":"settings");
+   if(target==="services")setSettingsPage("services");
+ },[session?.user.id]);
  // Pilot-only diagnostic events; no recordings, transcripts, phone numbers or tokens.
  // A signed Supabase session and active iOS route are required by database RLS.
  function voiceTelemetry(event_type:
