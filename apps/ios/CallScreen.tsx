@@ -66,6 +66,7 @@ export function CallScreen({
     setControlError("");setElapsed(0);cursor.current=0;connectedAt.current=null;
     setCaptionLanguage(ownerLanguage);
     if(!call)return;
+    setMuted(call.isMuted()===true);
     const connected=()=>{
       if(connectedAt.current===null)connectedAt.current=Date.now();
     };
@@ -151,7 +152,7 @@ export function CallScreen({
     if(!call||audioBusy)return;
     setAudioBusy(true);setControlError("");
     try{
-      const confirmed=await call.mute(!muted);
+      const confirmed=await call.mute(!(call.isMuted()??muted));
       setMuted(confirmed);
     }catch{setControlError("No se pudo cambiar el micrófono.");}
     finally{setAudioBusy(false);}
