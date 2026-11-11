@@ -71,6 +71,8 @@ export default function VMVMobilePreview(){
  const [email,setEmail]=useState("");
  const [password,setPassword]=useState("");
  const [apiStatus,setApiStatus]=useState<Record<string,boolean>>({});
+ const [topupBusy,setTopupBusy]=useState(false);
+ const [topupMessage,setTopupMessage]=useState("");
  useEffect(()=>{setDraft(settings?{...settings}:null);},[settings]);
  const ready=phase==="signed_in"&&!!profile;
  useEffect(()=>{
@@ -95,6 +97,29 @@ export default function VMVMobilePreview(){
  async function login(e:FormEvent<HTMLFormElement>){e.preventDefault();await signIn(email,password);setPassword("");}
  async function saveSettings(e:FormEvent<HTMLFormElement>){e.preventDefault();if(draft)await saveBasic(draft);}
  async function saveVoices(e:FormEvent<HTMLFormElement>){e.preventDefault();await savePremium(preferences);}
+ async function requestTranslationTopup(){
+  if(!client||!user||!billing||billing.billingMode!=="test"||
+    !billing.topup?.available||billing.topup.plan!==billing.plan||topupBusy)return;
+  setTopupBusy(true);setTopupMessage("");
+  try{
+   const {data:identity,error:authError}=await client.auth.getUser();
+   const {data:session}=await client.auth.getSession();
+   if(authError||identity.user?.id!==user.id||!session.session||session.session.user.id!==user.id)
+    throw new Error("Tu sesión expiró. Inicia sesión de nuevo.");
+   const response=await fetch("/api/vista-app/topup",{
+    method:"POST",cache:"no-store",
+    headers:{Authorization:"Bearer "+session.session.access_token,"Content-Type":"application/json"},
+    body:JSON.stringify({service:"translated",plan:billing.plan})
+   });
+   const result=await response.json().catch(()=>null);
+   if(!response.ok||result?.mode!=="test")
+    throw new Error(response.status===403?"Tu plan ya no permite esta recarga. Actualiza los datos.":"La recarga no está disponible por ahora.");
+   const url=new URL(String(result.url||""));
+   if(url.protocol!=="https:"||url.hostname!=="checkout.stripe.com")
+    throw new Error("No pudimos confirmar el enlace seguro de Stripe.");
+   window.location.assign(url.href);
+  }catch(e){setTopupMessage(e instanceof Error?e.message:"Error al iniciar la recarga.");setTopupBusy(false);}
+ }
  const filteredCalls=callFilter==="all"?calls:calls.filter(item=>item.call_mode===callFilter);
  const refreshButton=<button className={styles.secondaryAction} disabled={loading||working}
   onClick={()=>void refresh()}><RefreshCw size={15}/>{loading?"Actualizando…":"Actualizar datos"}</button>;
@@ -194,29 +219,50 @@ export default function VMVMobilePreview(){
         {refreshButton}
        </>:null}
        {panel==="minutes"?<>
-        <div className={styles.minuteHero}>
-         <span className={styles.smallKicker}>TRADUCCIÓN DE LLAMADAS</span>
-         <strong>{num(available)}<small> minutos</small></strong>
-         <p>{available===0?"Has agotado tus minutos para traducir llamadas.":available==null?"No se pudo consultar tu saldo de traducción.":"Disponibles para llamadas con traducción."}</p>
+        <div className={styles.balanceIntro}>
+         <span className={styles.smallKicker}>TU PLAN {billing?.plan&&billing.plan!=="none"?"· "+billing.plan.toUpperCase():""}</span>
+         <h3>Dos servicios. Información clara.</h3>
+         <p>Las llamadas normales y las traducidas tienen reglas de uso diferentes.</p>
         </div>
         <div className={styles.smartCard}>
-         <p className={styles.minuteExplanation}>Este saldo es para traducir llamadas telefónicas; no es el tiempo total de llamadas entrantes ni del traductor en persona.</p>
-         <span className={styles.smallKicker}>TU PLAN</span>
-         <h3>{billing?.plan?billing.plan.charAt(0).toUpperCase()+billing.plan.slice(1):"No disponible"}</h3>
-         <Row label="Minutos de traducción usados" value={num(minuteData?.used)+" min"}/>
-         <Row label="Fin de este período" value={date(billing?.periodEnd)}/>
-         {billing?.billingMode==="test"?<p className={styles.testNote}>Cuenta de prueba. Este saldo no representa una suscripción de producción.</p>:null}
+         <div className={styles.balanceTitle}><span className={styles.balanceServiceIcon}><PhoneCall size={19}/></span>
+          <div><span className={styles.smallKicker}>01 / LLAMADAS NORMALES</span><h3>Sin traducción</h3></div></div>
+         <strong className={styles.directServiceStatus}>{billing?.subscriptionActive?"Incluidas con tu plan":"Acceso no disponible"}</strong>
+         <p>Este servicio no tiene actualmente un saldo propio de minutos. No consume tus minutos de traducción.</p>
+         <Row label="Llamadas normales · 30 días" value={num(line?.usage.directCalls)}/>
+         <Row label="Fin del período" value={date(billing?.periodEnd)}/>
+         <details className={styles.minuteDetails}><summary>¿Y las recargas de llamadas normales?</summary>
+          <p className={styles.minuteExplanation}>Actualmente no existen paquetes ni precios de minutos normales configurados. Para activar recargas independientes primero debemos incorporar una bolsa y un precio para este servicio, sin modificar la traducción.</p>
+         </details>
+        </div>
+        <div className={styles.minuteHero}>
+         <span className={styles.smallKicker}>02 / LLAMADAS CON TRADUCCIÓN</span>
+         <strong>{num(available)}<small> min</small></strong>
+         <p>{available==null?"Saldo temporalmente no disponible":available===0?"Has agotado tus minutos para traducir llamadas.":"Para traducir llamadas telefónicas."}</p>
+        </div>
+        <div className={styles.smartCard}>
+         <span className={styles.smallKicker}>TU SALDO DE TRADUCCIÓN</span>
+         <Row label="Incluidos en tu plan" value={num(minuteData?.included)+" min"}/>
+         <Row label="Consumidos" value={num(minuteData?.used)+" min"}/>
+         <Row label="Fin del período" value={date(billing?.periodEnd)}/>
+         {billing?.billingMode==="test"?<p className={styles.testNote}>Modo de prueba. Esta recarga usa Stripe TEST; no representa un cobro real.</p>:null}
+         {billing?.topup&&billing?.billingMode==="test"?<div className={styles.topupOffer}>
+          <span className={styles.smallKicker}>RECARGA SOLO PARA TRADUCCIÓN</span>
+          <div className={styles.topupOfferLine}><strong>+{billing.topup.minutes} min</strong><span>{"$"+(billing.topup.priceCents/100).toFixed(2)} USD · TEST</span></div>
+          {billing.topup.available?
+           <button type="button" className={styles.mainAction} disabled={topupBusy}
+            onClick={()=>void requestTranslationTopup()}>{topupBusy?"Abriendo Stripe…":"Probar recarga de traducción →"}</button>:
+           <p className={styles.minuteExplanation}>Esta recarga todavía no está habilitada en Stripe TEST para tu cuenta. No se realizará ningún cobro.</p>}
+          {topupMessage?<p role="alert" className={styles.errorText}>{topupMessage}</p>:null}
+         </div>:<p className={styles.minuteExplanation}>No hay una recarga habilitada para esta cuenta. Los nuevos minutos se añadirán solo después de que el servidor confirme el pago correspondiente.</p>}
          <details className={styles.minuteDetails}>
           <summary>Ver detalle del consumo</summary>
           <div className={styles.minuteBreakdown}>
-           <Row label="Incluidos en el plan" value={num(minuteData?.included)+" min"}/>
-           <Row label="Recargas" value={num(minuteData?.topup)+" min"}/>
+           <Row label="Minutos adicionales por recargas" value={num(minuteData?.topup)+" min"}/>
            <Row label="Minutos transferidos" value={num(minuteData?.rollover)+" min"}/>
            <Row label="Reservados para llamadas" value={num(minuteData?.reserved)+" min"}/>
            <Row label="Retención temporal" value={num(minuteData?.temporaryHold)+" min"}/>
-           <p className={styles.minuteExplanation}>El saldo disponible ya descuenta los minutos usados y los reservados para llamadas en curso.</p>
-           {billing?.note?<p className={styles.minuteExplanation}>{billing.note}</p>:null}
-           {billing?.topup?<p className={styles.minuteExplanation}>Recarga de referencia: {billing.topup.minutes} minutos por {"$"+(billing.topup.priceCents/100).toFixed(2)} USD. {billing.topup.available?"Disponible en el sistema de prueba.":"No habilitada."}</p>:null}
+           <p className={styles.minuteExplanation}>El saldo de traducción descuenta el tiempo utilizado y el reservado para llamadas traducidas en curso.</p>
           </div>
          </details>
          {refreshButton}
