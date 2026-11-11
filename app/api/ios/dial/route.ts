@@ -109,3 +109,19 @@ export async function POST(req:NextRequest){
   return json({error:"twilio_unavailable"},503);
  }
 }
+
+export async function GET(req:NextRequest){
+ const uid=await authenticatedUser(req);
+ if(!uid)return json({available:false,error:"unauthorized"},401);
+ if(!callbackEnabled()||!callbackBase()||process.env.SMARTJOB_DIALER_ENABLED!=="true")
+  return json({available:false});
+ const db=callbackDb();
+ if(!db)return json({available:false});
+ const [route,eligible]=await Promise.all([
+  db.from("smartjob_phone_routes").select("twilio_number").eq("user_id",uid)
+   .eq("enabled",true).eq("receive_method","ios_app").limit(1).maybeSingle(),
+  paidServiceAllowed(uid,"direct_call")
+ ]);
+ return json({available:Boolean(!route.error&&callerPhone(route.data?.twilio_number)&&
+  route.data?.twilio_number===process.env.TWILIO_NUMBER&&eligible)});
+}
