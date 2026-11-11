@@ -130,3 +130,19 @@
 .screenReaderOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .contactsPage .successText{display:flex;align-items:center;gap:6px}
 @media(max-width:360px){.contactsAccess{font-size:10px;padding-inline:8px}.callTop h2{font-size:28px}}
+
+/* Two genuinely separate service areas: direct calls use subscription
+   access; only translated calls currently have a purchased-minute ledger. */
+.balanceIntro{margin:1px 0 17px;padding:1px 2px}
+.balanceIntro h3{font-size:23px;letter-spacing:-.055em;color:#173f32;line-height:1.15;margin:9px 0 7px}
+.balanceIntro p{font-size:12px;line-height:1.65;color:#80978a;margin:0}
+.balanceTitle{display:flex;align-items:center;gap:11px;margin-bottom:19px}
+.balanceTitle h3{font-size:19px;letter-spacing:-.05em;margin:5px 0 0}
+.balanceServiceIcon{display:grid;place-items:center;width:41px;height:41px;border-radius:14px;background:#e6f7ee;color:#088966;flex-shrink:0}
+.directServiceStatus{display:block;font-size:23px;letter-spacing:-.055em;font-weight:850;color:#127b5b;line-height:1.2;margin-bottom:7px}
+.topupOffer{border-radius:15px;background:#effaf3;border:1px solid #c9ebd9;margin-top:19px;padding:16px}
+.topupOfferLine{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:9px}
+.topupOfferLine strong{font-size:22px;color:#124434;letter-spacing:-.05em}
+.topupOfferLine span{font-size:10px;font-weight:800;color:#648b77;text-align:right}
+.topupOffer .mainAction{margin-top:14px}
+.topupOffer .minuteExplanation{margin-bottom:0}
