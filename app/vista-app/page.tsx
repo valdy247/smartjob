@@ -324,6 +324,7 @@ export default function VMVMobilePreview(){
         </div>
         <div className={styles.smartCard}>
          <Row label="Plan" value={billing?.plan&&billing.plan!=="none"?billing.plan.charAt(0).toUpperCase()+billing.plan.slice(1):"—"}/>
+         <a className={styles.plansLink} href="https://vmv-business-design-git-feat-vm-073e13-valdys-projects-b97fc7a6.vercel.app/es/planes/" target="_blank" rel="noopener noreferrer">Ver planes <ArrowUpRight size={15}/></a>
          <Row label="Incluidos" value={num(minuteData?.included)+" min"}/>
          <Row label="Usados" value={num(minuteData?.used)+" min"}/>
          <Row label="Renovación" value={date(billing?.periodEnd)}/>
