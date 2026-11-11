@@ -232,7 +232,7 @@ export default function VMVMobilePreview(){
    <div className={styles.phoneFrame}>
     <div className={styles.device}>
      <div className={styles.statusBar}><span>VMV</span><div className={styles.dynamicIsland}/><span>◢ ▰</span></div>
-     <div className={styles.appTop}><div className={styles.appLogo}><span className={styles.mark}>▥</span><b>VMV<span> BUSINESS</span></b></div>
+     <div className={ready&&tab==="home"?styles.homeTopHidden:styles.appTop}><div className={styles.appLogo}><span className={styles.mark}>▥</span><b>VMV<span> BUSINESS</span></b></div>
       {user?<button aria-label="Ir a mi cuenta" onClick={()=>go("account")}><UserRound size={18}/></button>:<LockKeyhole size={18}/>}
      </div>
      <div className={styles.scrollArea} key={ready?tab+(open?"details":"list"):"login"}>
