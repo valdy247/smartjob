@@ -8,6 +8,7 @@ import {accountSid,callSid} from "./relay-core.mjs";
 import {verifiedSetup,cleanPrompt,peerRole,textMessage} from "./conversation-relay.mjs";
 import {directTranslationReady,translateDirect} from "./direct-translate.mjs";
 import {auditTwilioPush} from "./push-diagnostics.mjs";
+import {appendOwnerTranscript,verifyTranscriptRequest,snapshotOwnerTranscript} from "./live-transcript.mjs";
 
 const AUTH=process.env.TWILIO_AUTH_TOKEN||"";
 const ACCOUNT=process.env.TWILIO_ACCOUNT_SID||"";
@@ -89,6 +90,7 @@ async function finishRoom(id,reason){
   if(!room||room.closing)return;
   room.closing=true;
   rooms.delete(id);
+  room.transcript.length=0; // Wipe temporary captions on hangup.
   console.info("VMV ConversationRelay call ended",{
     reason,seconds:Math.floor((Date.now()-room.created)/1000),
     customerPrompts:room.metrics.customer,professionalPrompts:room.metrics.professional,
@@ -104,7 +106,8 @@ function createRoom(id){
   if(rooms.size>=MAX_ROOMS)return null;
   const room={id,created:Date.now(),closing:false,
     legs:{customer:null,professional:null},
-    metrics:{customer:0,professional:0,translations:0,failures:0}};
+    metrics:{customer:0,professional:0,translations:0,failures:0},
+    transcript:[],nextTranscriptSequence:0};
   rooms.set(id,room);return room;
 }
 async function translate(original,sourceLanguage,targetLanguage){
@@ -132,6 +135,10 @@ async function consume(room,ctx){
       if(room.closing||rooms.get(room.id)!==room)break;
       if(!spoken){
         room.metrics.failures++;
+        appendOwnerTranscript(room,{role:ctx.role,
+          text:room.legs.professional?.sourceLanguage==="es-ES"
+            ?"No se pudo traducir esta intervención.":"This utterance could not be translated.",
+          failed:true});
         if(!sayTo(ctx.ws,ctx.sourceLanguage==="es-ES"
           ?"No se pudo traducir. Por favor, repite la frase."
           :"Translation failed. Please repeat.")){
@@ -142,6 +149,8 @@ async function consume(room,ctx){
         if(!sayTo(peer.ws,spoken)){
           void finishRoom(room.id,"translated_playback_unavailable");break;
         }
+        appendOwnerTranscript(room,{role:ctx.role,
+          text:ctx.role==="customer"?spoken:utterance});
       }
     }
   }finally{ctx.processing=false;}
@@ -156,6 +165,24 @@ const app=createServer((req,res)=>{
       translationProviderVerified:translatorVerified,
       reason:ready()?undefined:"not_configured",version:5
     }));
+  }
+  if(req.method==="GET"&&path==="/internal/transcript"){
+    // Only signed owner-bound requests from our Next.js proxy can read captions.
+    const u=new URL(req.url||"/","http://localhost");
+    const bridge=u.searchParams.get("bridge")||"";
+    const outbound=u.searchParams.get("outbound")||"";
+    const stamp=String(req.headers["x-smartjob-timestamp"]||"");
+    const signature=String(req.headers["x-smartjob-signature"]||"");
+    const after=Number(u.searchParams.get("after")||"0");
+    const authorized=verifyTranscriptRequest(AUTH,{stamp,bridge,outbound,signature});
+    const room=authorized?rooms.get(bridge):null;
+    const snapshot=room&&Number.isSafeInteger(after)&&after>=0
+      ?snapshotOwnerTranscript(room,outbound,after):null;
+    res.writeHead(snapshot?200:403,{
+      "content-type":"application/json; charset=utf-8","cache-control":"no-store",
+      "x-content-type-options":"nosniff"
+    });
+    return res.end(JSON.stringify(snapshot||{error:"not_authorized"}));
   }
   if(req.method==="POST"&&path==="/internal/end"){
     const stamp=String(req.headers["x-smartjob-timestamp"]||"");
