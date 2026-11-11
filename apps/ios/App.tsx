@@ -454,7 +454,7 @@ export default function App(){
   const to=item.caller_phone;
   Alert.alert("Devolver llamada con VMV",
    "Twilio llamará primero a tu iPhone. Cuando contestes, conectará con "+to+
-   " mostrando tu número VMV. Será una llamada normal, sin traducción. ¿Continuar?",[
+   " mostrando tu número VMV. Será una llamada normal, sin traducción. Twilio puede generar cargos de voz. ¿Continuar?",[
     {text:"Cancelar",style:"cancel"},
     {text:"Devolver llamada",onPress:()=>{void (async()=>{
      if(!supabase||!sessionRef.current)return;
