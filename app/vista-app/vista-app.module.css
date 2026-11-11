@@ -204,3 +204,69 @@
 .dialerDelete:hover:not(:disabled){background:#edf6f0;color:#196b50}
 .dialerDelete:disabled{opacity:.35;cursor:default}
 @media(max-width:360px){.dialerDelete{width:70px;height:70px}}
+
+
+/* VMV home refresh — editorial lavender + vivid product tiles, restrained copy. */
+.scrollArea:has(.homeV2){background:#fbfaff}
+.homeV2{min-height:100%;background:#fbfaff;padding:18px 17px 43px}
+.homeWelcome{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 23px}
+.homeProfile{display:flex;align-items:center;gap:11px;border:0;background:transparent;text-align:left;color:#211c37;cursor:pointer;min-width:0;padding:0}
+.homeProfileAvatar{display:grid;place-items:center;width:45px;height:45px;flex:0 0 45px;border-radius:16px;color:#643cc5;background:linear-gradient(135deg,#f4ceff,#c9b6ff);box-shadow:0 4px 12px #7d57bf1a}
+.homeProfile>span:last-child{display:flex;flex-direction:column;gap:4px;min-width:0}
+.homeProfile small{color:#9d94b0;font-size:9px;font-weight:850;letter-spacing:.1em}
+.homeProfile strong{font-size:17px;font-weight:850;letter-spacing:-.045em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:195px}
+.homeBrandPill{display:inline-flex;align-items:center;gap:7px;border-radius:50px;padding:10px 11px;background:#eee8ff;color:#6943c4;font-size:9px;font-weight:850;letter-spacing:.075em;white-space:nowrap}
+.homeBrandPill span{font-size:16px;line-height:0}
+.homeSpotlight{position:relative;isolation:isolate;display:flex;flex-direction:column;align-items:flex-start;width:100%;min-height:204px;padding:20px 19px 19px;background:linear-gradient(125deg,#7950df 0%,#9d6af8 55%,#b78dff 100%);border:0;border-radius:24px;color:#fff;text-align:left;overflow:hidden;cursor:pointer;box-shadow:0 12px 28px #8156db3a}
+.homeSpotlightKicker{position:relative;z-index:2;color:#f2e8ff;font-size:10px;font-weight:850;letter-spacing:.1em}
+.homeSpotlightKicker span{font-size:8px;font-weight:700;letter-spacing:.04em;margin-left:6px;color:#e7d9ff}
+.homeSpotlight>strong{position:relative;z-index:2;font-size:clamp(23px,6.9vw,29px);font-weight:870;line-height:1.09;letter-spacing:-.062em;margin:21px 0 7px}
+.homeSpotlight>strong span{color:#fae676}
+.homeSpotlight>small{position:relative;z-index:2;font-size:12px;color:#ece4ff}
+.homeSpotlightMinutes{position:relative;z-index:2;margin-top:18px;border:1px solid #ffffff52;background:#ffffff25;border-radius:100px;padding:7px 11px;font-size:12px;font-weight:850;backdrop-filter:blur(6px)}
+.homeSpotlightMinutes span{font-size:9px;font-weight:650;color:#f2e6ff}
+.homeSpotlightArt{position:absolute;right:-15px;top:34px;width:151px;height:155px;display:grid;place-items:center;z-index:1;pointer-events:none}
+.homeArtRingOne,.homeArtRingTwo{position:absolute;display:block;border-radius:50%;transform:rotate(-24deg);border:19px solid #d8bbff7b;width:130px;height:130px}
+.homeArtRingTwo{width:95px;height:95px;border:13px solid #f5ccff80;transform:translate(16px,13px) rotate(22deg)}
+.homeArtPhone{position:relative;display:grid;place-items:center;width:82px;height:82px;background:linear-gradient(140deg,#ffdf83,#ff9c66);color:#5f2c9a;border-radius:25px;transform:rotate(-15deg);box-shadow:0 13px 19px #51359e55}
+.homeArtSpark{position:absolute;right:13px;top:1px;color:#fbe57c;font-size:31px}
+.homeSpotlightGo{position:absolute;right:16px;bottom:16px;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#ffffff40;z-index:3}
+.homeSectionHeading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:25px 0 14px}
+.homeSectionHeading h3{color:#201b32;letter-spacing:-.065em;font-size:23px;font-weight:850;margin:0}
+.homeSectionHeading h3 span{color:#8659e3}
+.homeSectionHeading button{display:inline-flex;align-items:center;gap:4px;border:0;background:transparent;color:#8865d4;font-size:11px;font-weight:800;cursor:pointer;padding:7px 0}
+.homeProductsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.homeProductCard{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;min-height:147px;min-width:0;overflow:hidden;border:0;border-radius:20px;padding:16px 14px;text-align:left;color:#302b40}
+button.homeProductCard{cursor:pointer}
+button.homeProductCard:hover{transform:translateY(-2px)}
+.homeProductMint{background:#b6efdb;color:#104a39}
+.homeProductYellow{background:#ffdf79;color:#644218}
+.homeProductSky{background:#b9e2ff;color:#244b78}
+.homeProductPink{background:#ffd2e7;color:#804364}
+.homeProductIcon{display:grid;place-items:center;height:45px;width:45px;border-radius:15px;background:#ffffff78;position:relative;z-index:2}
+.homeProductBody{display:flex;flex-direction:column;gap:4px;z-index:2;margin-top:17px}
+.homeProductBody strong{font-size:17px;font-weight:850;letter-spacing:-.055em}
+.homeProductBody small{font-size:10px;font-weight:650;opacity:.69}
+.homeProductArrow{position:absolute;top:15px;right:16px;font-size:18px;font-weight:850}
+.homeProductDeco{position:absolute;font-size:100px;line-height:1;right:-30px;top:-28px;opacity:.17;transform:rotate(12deg);pointer-events:none}
+.homeExplore{display:flex;align-items:center;justify-content:space-between;gap:6px;position:relative;width:100%;min-height:152px;overflow:hidden;border-radius:22px;border:0;margin:15px 0 5px;padding:21px;background:linear-gradient(120deg,#ffb753,#ffd37b);text-align:left;color:#4a2c28;cursor:pointer}
+.homeExploreCopy{position:relative;z-index:2;display:flex;align-items:flex-start;flex-direction:column;gap:8px}
+.homeExploreCopy small{font-size:9px;font-weight:850;letter-spacing:.11em;opacity:.75}
+.homeExploreCopy strong{font-size:23px;line-height:1.11;letter-spacing:-.06em;font-weight:840}
+.homeExploreCopy>span{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:850;background:#fff7;border-radius:20px;padding:8px 10px;margin-top:3px}
+.homeExploreGraphic{font-size:112px;line-height:1;color:#fff7;transform:rotate(-22deg);position:absolute;right:-6px;top:3px}
+.homeV2 :is(button,a):focus-visible{outline:3px solid #6b43c7;outline-offset:3px}
+/* Shared floating dock: dark as reference one, purple raised Call control as reference two. */
+.bottomNav{position:relative;z-index:9;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));flex:0 0 auto;height:74px;gap:1px;margin:0 12px 11px;padding:9px 9px 7px;border-radius:30px;border:1px solid #ffffff1c;background:#1c1a2b;box-shadow:0 13px 25px #26223d30}
+.bottomNav button{color:#a9a9be;gap:3px;min-height:50px;border-radius:18px}
+.bottomNav button>span{width:44px;height:35px;border-radius:17px;color:inherit}
+.bottomNav button small{font-size:9px;letter-spacing:-.02em;font-weight:760}
+.bottomNav button.activeNav{color:#fff}
+.bottomNav button.activeNav>span{background:#fff;color:#25203c}
+.bottomNav .navCallAction{transform:translateY(-13px);overflow:visible;gap:4px}
+.bottomNav .navCallAction>span{width:57px;height:57px;border-radius:50%;background:linear-gradient(140deg,#a869ff,#7946d9);color:#fff;box-shadow:0 8px 16px #27134848;border:4px solid #fbfaff}
+.bottomNav .navCallAction.activeNav>span{background:linear-gradient(140deg,#ac77ff,#7240d4);color:#fff;box-shadow:0 0 0 2px #b9a0ff,0 8px 18px #27134866}
+.bottomNav .navCallAction small{color:#d9caef;margin-top:-1px}
+.bottomNav button:focus-visible{outline:2px solid #caa9ff;outline-offset:-2px}
+@media(max-width:360px){.homeV2{padding:15px 13px 38px}.homeSpotlight{padding:19px 16px}.homeSpotlightArt{right:-31px;opacity:.8}.homeProductCard{padding:13px;min-height:139px}.homeProductBody strong{font-size:15px}.homeProfile strong{max-width:165px}.bottomNav{margin-inline:9px;padding-inline:6px}}
+@media(prefers-reduced-motion:reduce){button.homeProductCard:hover{transform:none}}
