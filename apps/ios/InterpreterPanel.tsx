@@ -30,7 +30,7 @@ function predictedLanguage(text:string):Language|null{
  return es>en?"es":"en";
 }
 const interfaceColors={dark:"#292040",mint:"#9F72EA"};
-export function InterpreterPanel({session}:{session:Session}){
+export function InterpreterPanel({session: _session}:{session:Session}){
  const [mode,setMode]=useState<Mode|null>(null);
  const [accepted,setAccepted]=useState(false);
  const [draft,setDraft]=useState("");
