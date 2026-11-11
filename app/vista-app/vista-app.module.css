@@ -159,3 +159,7 @@
 .callbackConfirmCard p{font-size:13px;line-height:1.7;color:#6d8776;margin:0 0 16px}
 .callbackConfirmCard strong{display:block;font-size:23px;color:#098060;margin:6px 0 16px;letter-spacing:-.035em}
 .callbackConfirmCard .secondaryAction{display:block;width:100%;margin-top:10px}
+
+.plansLink{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;font:inherit;font-size:12px;font-weight:800;color:#087d60;text-decoration:none;border-bottom:1px solid #80d2ad;padding:5px 0;margin:5px 0 13px}
+.plansLink:hover{color:#065e47;border-color:#065e47}
+.plansLink:focus-visible{outline:2px solid #0ab78e;outline-offset:4px}
