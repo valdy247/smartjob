@@ -46,11 +46,14 @@ function SegmentedSelect<T extends string>({label,value,options,onChange,disable
   </div>
  </div>;
 }
-function History({calls,onSave,onCallBack,canCallBack=false,callingSid=null}:{calls:CallRecord[];onSave?:(phone:string)=>void;onCallBack?:(sid:string)=>void;canCallBack?:boolean;callingSid?:string|null}){
+function History({calls,onSave,onCallBack,onLookup,canCallBack=false,callingSid=null,lookupSid=null}:{calls:CallRecord[];onSave?:(phone:string)=>void;onCallBack?:(sid:string)=>void;onLookup?:(sid:string)=>void;canCallBack?:boolean;callingSid?:string|null;lookupSid?:string|null}){
  return calls.length?<div className={styles.realHistory}>{calls.map(item=><div key={item.bridge_sid} className={styles.historyItem}>
   <PhoneCall size={16}/><div><strong>{item.call_mode==="translated"?"Llamada traducida":"Llamada directa"}</strong>
   <small>{new Date(item.started_at).toLocaleString("es-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})} · {statuses[item.status]||item.status}</small>{item.caller_phone?<small>{item.caller_phone}</small>:null}</div>
   <span className={styles.historySide}><span className={styles.historyDuration}>{item.duration_seconds===null?"—":Math.ceil(Math.max(0,item.duration_seconds)/60)+" min"}</span>
+  {onLookup&&!item.caller_phone?<button className={styles.saveFromCall} type="button"
+   disabled={!canCallBack||Boolean(lookupSid)} onClick={()=>onLookup(item.bridge_sid)}>
+   <PhoneCall size={13}/>{lookupSid===item.bridge_sid?"Buscando…":"Recuperar número"}</button>:null}
   {onCallBack&&item.caller_phone?<button className={styles.callBackAction} type="button"
    disabled={!canCallBack||Boolean(callingSid)} title={!canCallBack?"Devolución no disponible en esta cuenta":undefined}
    onClick={()=>onCallBack(item.bridge_sid)}><PhoneCall size={13}/>{callingSid===item.bridge_sid?"Conectando…":"Devolver llamada"}</button>:null}
@@ -78,6 +81,7 @@ export default function VMVMobilePreview(){
  const [topupMessage,setTopupMessage]=useState("");
  const [callbackAvailable,setCallbackAvailable]=useState(false);
  const [callbackBusy,setCallbackBusy]=useState<string|null>(null);
+ const [lookupBusy,setLookupBusy]=useState<string|null>(null);
  const [callbackMessage,setCallbackMessage]=useState("");
  useEffect(()=>{setDraft(settings?{...settings}:null);},[settings]);
  const ready=phase==="signed_in"&&!!profile;
@@ -141,6 +145,25 @@ export default function VMVMobilePreview(){
     throw new Error("No pudimos confirmar el enlace seguro de Stripe.");
    window.location.assign(url.href);
   }catch(e){setTopupMessage(e instanceof Error?e.message:"Error al iniciar la recarga.");setTopupBusy(false);}
+ }
+ async function lookupCustomer(sid:string){
+  if(!client||!user||!callbackAvailable||lookupBusy)return;
+  setLookupBusy(sid);setCallbackMessage("");
+  try{
+   const {data:identity}=await client.auth.getUser();
+   const {data:session}=await client.auth.getSession();
+   if(identity.user?.id!==user.id||!session.session)throw Error("Vuelve a iniciar sesión.");
+   const response=await fetch("/api/vista-app/callback/lookup",{
+    method:"POST",cache:"no-store",
+    headers:{Authorization:"Bearer "+session.session.access_token,"Content-Type":"application/json"},
+    body:JSON.stringify({bridgeSid:sid})
+   });
+   const data=await response.json().catch(()=>null);
+   if(!response.ok||data?.verified!==true)throw Error("Twilio no tiene un número verificable para esta llamada.");
+   await refresh();
+   setCallbackMessage("Número recuperado de Twilio: "+data.phone+". Ya puedes pulsar Devolver llamada.");
+  }catch(e){setCallbackMessage(e instanceof Error?e.message:"No se pudo recuperar el número.");}
+  finally{setLookupBusy(null);}
  }
  async function returnBusinessCall(sid:string){
   if(!client||!user||!callbackAvailable||callbackBusy)return;
@@ -345,7 +368,8 @@ export default function VMVMobilePreview(){
        </>:null}
        {panel==="activity"?<div className={styles.smartCard}><span className={styles.smallKicker}>HISTORIAL REAL</span><h3>Llamadas recientes</h3>
         <p>{line?.usage.calls??"—"} llamadas en los últimos 30 días · {line?.usage.translatedCalls??"—"} traducidas.</p>
-        <History calls={calls} onSave={phone=>openContacts(phone,true)} onCallBack={sid=>void returnBusinessCall(sid)} canCallBack={callbackAvailable} callingSid={callbackBusy}/>
+        <History calls={calls} onSave={phone=>openContacts(phone,true)} onCallBack={sid=>void returnBusinessCall(sid)} onLookup={sid=>void lookupCustomer(sid)}
+         canCallBack={callbackAvailable} callingSid={callbackBusy} lookupSid={lookupBusy}/>
         {callbackMessage?<p className={styles.callbackFeedback} role="status">{callbackMessage}</p>:null}{refreshButton}
        </div>:null}
       </div>:null}
