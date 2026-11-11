@@ -50,7 +50,7 @@ export const FALLBACK_MODULES:BusinessModule[]=allowedIds.map(id=>({
   } as Record<BusinessModuleId,string>)[id],
   state:id==="smart-call"?"pilot-separate":"planned",
   publicPath:"/"+id+"/",
-  workspacePath:"/workspace/?service="+id
+  workspacePath:id==="smart-call"?"/workspace/smart-call/":"/workspace/?service="+id
 }));
 
 const isAllowed=(id:string):id is BusinessModuleId=>
@@ -71,7 +71,7 @@ export async function loadBusinessModules():Promise<BusinessModule[]> {
       if(typeof value.id!=="string"||!isAllowed(value.id))continue;
       // Ignore unexpected paths/names/statuses from remote metadata.
       if(value.publicPath!=="/"+value.id+"/"||
-         value.workspacePath!=="/workspace/?service="+value.id)continue;
+         value.workspacePath!==(value.id==="smart-call"?"/workspace/smart-call/":"/workspace/?service="+value.id))continue;
       if(value.state!=="planned"&&value.state!=="pilot-separate")continue;
       fromWeb.set(value.id,{
         id:value.id,
@@ -91,7 +91,7 @@ export async function loadBusinessModules():Promise<BusinessModule[]> {
 
 export async function openBusinessWorkspace(serviceId?:string):Promise<void> {
   const allowed=serviceId && isAllowed(serviceId)?serviceId:null;
-  const path="/es/workspace/"+(allowed?"?service="+encodeURIComponent(allowed):"");
+  const path=allowed==="smart-call"?"/es/workspace/smart-call/":"/es/workspace/"+(allowed?"?service="+encodeURIComponent(allowed):"");
   // Browser independently verifies the user's Supabase session and RLS.
   // Native SecureStore tokens are NEVER transported across app/browser.
   await Linking.openURL(BUSINESS_WEB_ORIGIN+path);
