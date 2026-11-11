@@ -31,3 +31,20 @@ export async function POST(req:NextRequest){
    message:"VMV está llamando a tu iPhone. Contesta para conectar con el cliente."},{status:202,headers});
  }catch{return NextResponse.json({error:"callback_unavailable"},{status:503,headers});}
 }
+
+export async function GET(req:NextRequest){
+ const uid=await authenticatedUser(req);
+ if(!uid)return NextResponse.json({available:false,error:"unauthorized"},{status:401,headers});
+ const bearer=req.headers.get("authorization")||"";
+ if(!/^Bearer\s+[A-Za-z0-9._~+/-]+$/i.test(bearer))
+  return NextResponse.json({available:false,error:"unauthorized"},{status:401,headers});
+ try{
+  const upstream=await fetch(origin+"/api/ios/callback",{
+   method:"GET",cache:"no-store",redirect:"error",signal:AbortSignal.timeout(9000),
+   headers:{Authorization:bearer}
+  });
+  if(!upstream.ok)return NextResponse.json({available:false},{headers});
+  const result=await upstream.json().catch(()=>null);
+  return NextResponse.json({available:result?.available===true},{headers});
+ }catch{return NextResponse.json({available:false},{headers});}
+}
