@@ -1,8 +1,9 @@
 import React,{useEffect,useRef,useState} from "react";
 import {ActivityIndicator,Alert,AppState,KeyboardAvoidingView,Platform,Pressable,
- SafeAreaView,ScrollView,StatusBar,StyleSheet,Text,TextInput,View,Modal,Keyboard,Linking,Image,useWindowDimensions} from "react-native";
+ SafeAreaView,ScrollView,StatusBar,StyleSheet,Text,TextInput,View,Modal,Keyboard,Linking} from "react-native";
 import {Voice,Call,CallInvite} from "@twilio/voice-react-native-sdk";
 import type {Session} from "@supabase/supabase-js";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import {api,supabase,configured} from "./session";
 import {InterpreterPanel} from "./InterpreterPanel";
 import {CallScreen} from "./CallScreen";
@@ -28,7 +29,6 @@ function ensurePushRegistry():Promise<void>{
 }
 
 export default function App(){
- const {height:screenHeight}=useWindowDimensions();
  const [session,setSession]=useState<Session|null>(null);
  const [activationProfile,setActivationProfile]=useState<NativeProfile|null>(null);
  const [activeTab,setActiveTab]=useState<"home"|"services"|"calls"|"live"|"settings">("home");
@@ -38,8 +38,6 @@ export default function App(){
   const [contactsFromHistory,setContactsFromHistory]=useState(false);
  const [businessModules,setBusinessModules]=useState<BusinessModule[]>(FALLBACK_MODULES);
  const [activeModule,setActiveModule]=useState<string|null>(null);
- const [image1Unavailable,setImage1Unavailable]=useState(false);
- const [image2Unavailable,setImage2Unavailable]=useState(false);
  const [keyboardVisible,setKeyboardVisible]=useState(false),[forwardHelpOpen,setForwardHelpOpen]=useState(false);
  const [settingsPage,setSettingsPage]=useState<"menu"|"numbers"|"billing"|"history"|"security"|"profile"|"style"|"support"|"services">("menu");
  const [callHistory,setCallHistory]=useState<{bridge_sid:string;status:string;duration_seconds:number|null;started_at:string;call_mode:string;caller_phone:string|null}[]>([]);
@@ -673,7 +671,7 @@ export default function App(){
  return <SafeAreaView style={styles.safe}>
   <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
   <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":undefined}>
-   <ScrollView scrollEnabled={activeTab!=="home"||screenHeight<720} keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content,session&&{paddingBottom:activeTab==="home"?96:130}]}>
+   <ScrollView style={activeTab==="home"?styles.homeScrollSurface:undefined} scrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content,session&&{paddingBottom:150}]}>
     <View style={styles.brand}><View style={styles.brandMark}>
       <View style={styles.brandWave}>
        <View style={[styles.brandWaveBar,{height:13}]}/><View style={[styles.brandWaveBar,{height:24}]}/>
@@ -696,47 +694,68 @@ export default function App(){
      </View>:
     <>
      {activeTab==="home"?<>
-      <Text style={styles.kicker}>TU ESPACIO</Text>
-      <Text style={styles.heading}>Hola, {String(session.user.user_metadata?.first_name||"").trim()||"bienvenido"}<Text style={{color:colors.accent}}>.</Text></Text>
-      <Text style={styles.homeSubtitle}>Tu negocio, conectado en un solo lugar</Text>
-       <Pressable accessibilityRole="button" accessibilityLabel="Abrir centro de control Smart Call"
-        style={[styles.homeLineCard,{borderColor:"#A9E8D8",backgroundColor:"#EEFFF8"}]}
-        onPress={()=>{setActiveModule("smart-call");setActiveTab("services");}}>
-        <View style={styles.homeLineIcon}><Text style={styles.homeLineEmoji}>☎</Text></View>
-        <View style={{flex:1}}><Text style={styles.homeLineTitle}>Smart Call · Centro de control</Text>
-         <Text style={styles.homeLineNumber}>Idiomas, voces, saludos, línea y actividad</Text></View>
-        <Text style={styles.settingChevron}>›</Text>
+      <View style={styles.homeWelcomeV2}>
+       <Pressable accessibilityRole="button" accessibilityLabel="Abrir cuenta"
+        onPress={()=>{setSettingsPage("menu");setActiveTab("settings");}} style={styles.homeUser}>
+        <View style={styles.homeAvatar}><Ionicons name="person-outline" size={23} color="#754BD0"/></View>
+        <View style={{flex:1}}>
+         <Text style={styles.homeEyebrow}>BIENVENIDO A VMV</Text>
+         <Text style={styles.homeGreeting} numberOfLines={1}>Hola, {String(session.user.user_metadata?.first_name||"").trim()||"bienvenido"}</Text>
+        </View>
        </Pressable>
-
-      <View style={[styles.homeFeatureCard,styles.homeCallsFeature,styles.homeCallsIllustrated]}>
-       <View style={styles.homeCallIllustration}>
-        {image1Unavailable?<View style={styles.homeImageSlot}><Text style={styles.homeImageLabel}>Imagen 1</Text><Text style={styles.homeImageDescription}>Llamadas traducidas</Text></View>:
-         <Image source={{uri:api.replace(/\/$/,"")+"/vmv/imagen-1.webp"}} style={styles.homeCallArtwork} resizeMode="contain"
-          accessibilityLabel="Dos personas conversando en distintos idiomas mediante traducción telefónica"
-          onError={()=>setImage1Unavailable(true)}/>}
+       <View style={styles.homeBrandBadge}><Text style={styles.homeBrandBadgeText}>BUSINESS ✦</Text></View>
+      </View>
+      <Pressable accessibilityRole="button" accessibilityLabel="Abrir Smart Call"
+       style={styles.homeSpotlightV2} onPress={()=>{setActiveModule("smart-call");setActiveTab("services");}}>
+       <View style={styles.homeSpotlightRingOuter}/>
+       <View style={styles.homeSpotlightRingInner}/>
+       <View style={styles.homeSpotlightPhone}><Ionicons name="call" size={34} color="#64339F"/></View>
+       <Text style={styles.homeSpotlightSpark}>✦</Text>
+       <Text style={styles.homeSpotlightKicker}>SMART CALL  ·  EN PILOTO</Text>
+       <Text style={styles.homeSpotlightHeadline}>Tu negocio,{"\n"}siempre conectado<Text style={{color:"#F9E28A"}}>.</Text></Text>
+       <Text style={styles.homeSpotlightCaption}>Llamadas y traducción</Text>
+       <View style={styles.homeSpotlightMinutes}>
+        <Text style={styles.homeSpotlightMinutesText}>{billingOverview?.minutes?.available??"—"} min  <Text style={{fontSize:10,fontWeight:"600"}}>para traducir</Text></Text>
        </View>
-       <Pressable accessibilityRole="button" accessibilityLabel="Abrir llamadas traducidas" style={styles.homePrimaryButton} onPress={()=>setActiveTab("calls")}>
-        <Text style={styles.homePrimaryText}>☎  Llamadas traducidas  →</Text>
+       <View style={styles.homeSpotlightArrow}><Ionicons name="arrow-up-outline" size={20} color="#FFFFFF"/></View>
+      </Pressable>
+      <View style={styles.homeSectionHead}>
+       <Text style={styles.homeSectionTitle}>Destacados<Text style={{color:"#8959EB"}}>.</Text></Text>
+       <Pressable accessibilityRole="button" accessibilityLabel="Ver todos los servicios" style={styles.homeSeeAll}
+        onPress={()=>{setActiveModule(null);setActiveTab("services");}}>
+        <Text style={styles.homeSeeAllText}>Ver todos</Text><Ionicons name="arrow-up-outline" size={15} color="#8960D4"/>
        </Pressable>
       </View>
-
-      <View style={[styles.homeFeatureCard,styles.homeTranslatorFeature,styles.homeTranslatorIllustrated]}>
-       <View style={styles.homeTranslatorIllustration}>
-        {image2Unavailable?<View style={[styles.homeImageSlot,styles.homeImageSlotSmall,styles.homePlaceholderWide]}>
-          <Text style={styles.homeImageLabel}>Imagen 2</Text>
-          <Text style={styles.homeImageDescription}>Traducción en persona</Text>
-         </View>:
-         <Image source={{uri:api.replace(/\/$/,"")+"/vmv/imagen-2.webp"}}
-          style={styles.homeTranslatorArtwork} resizeMode="contain"
-          accessibilityLabel="Un empleador y un trabajador se dan la mano mientras conversan, con un teléfono para traducir"
-          onError={()=>setImage2Unavailable(true)}/>}
-       </View>
-       <Pressable accessibilityRole="button" accessibilityLabel="Abrir traducción en persona"
-        style={styles.homeSecondaryButton} onPress={()=>setActiveTab("live")}>
-        <Text style={styles.homeSecondaryText}>✧  Traducción en persona  →</Text>
+      <View style={styles.homeProductGrid}>
+       <Pressable accessibilityRole="button" accessibilityLabel="Abrir traductor"
+        style={[styles.homeProductTile,styles.homeProductMint]} onPress={()=>setActiveTab("live")}>
+        <View style={styles.homeProductIconV2}><Ionicons name="language-outline" size={28} color="#105744"/></View>
+        <View><Text style={[styles.homeProductTitle,{color:"#104A39"}]}>Traductor</Text>
+         <Text style={[styles.homeProductSub,{color:"#367E6A"}]}>En persona</Text></View>
        </Pressable>
+       <View style={[styles.homeProductTile,styles.homeProductYellow]}>
+        <View style={styles.homeProductIconV2}><Ionicons name="globe-outline" size={28} color="#69471D"/></View>
+        <View><Text style={[styles.homeProductTitle,{color:"#63451B"}]}>Web Services</Text>
+         <Text style={[styles.homeProductSub,{color:"#916F3C"}]}>Próximamente</Text></View>
+       </View>
+       <View style={[styles.homeProductTile,styles.homeProductSky]}>
+        <View style={styles.homeProductIconV2}><Ionicons name="sparkles-outline" size={28} color="#305D8B"/></View>
+        <View><Text style={[styles.homeProductTitle,{color:"#294C78"}]}>AI Agents</Text>
+         <Text style={[styles.homeProductSub,{color:"#547DA0"}]}>Próximamente</Text></View>
+       </View>
+       <View style={[styles.homeProductTile,styles.homeProductPink]}>
+        <View style={styles.homeProductIconV2}><Ionicons name="stats-chart-outline" size={28} color="#914B74"/></View>
+        <View><Text style={[styles.homeProductTitle,{color:"#82425F"}]}>Marketing</Text>
+         <Text style={[styles.homeProductSub,{color:"#AD7692"}]}>Próximamente</Text></View>
+       </View>
       </View>
-
+      <Pressable accessibilityRole="button" accessibilityLabel="Explorar otros servicios"
+       onPress={()=>{setActiveModule(null);setActiveTab("services");}} style={styles.homeExploreV2}>
+       <Text style={styles.homeExploreSpark} accessible={false}>✦</Text>
+       <Text style={styles.homeExploreEyebrow}>VMV BUSINESS</Text>
+       <Text style={styles.homeExploreTitle}>Descubre lo que{"\n"}viene después.</Text>
+       <View style={styles.homeExploreAction}><Text style={styles.homeExploreActionText}>Explorar servicios  ↗</Text></View>
+      </Pressable>
      </>:null}
      {activeTab==="calls"?<>
        <View style={styles.callsTabs}>
@@ -962,7 +981,23 @@ export default function App(){
     {error?<View accessibilityRole="alert" style={styles.alert}><Text style={styles.alertText}>{error}</Text></View>:null}
     {working?<ActivityIndicator style={{marginTop:12}} color={colors.accent}/>:null}
    </ScrollView>
-   {session&&!keyboardVisible?<View style={styles.bottomDock}>{([{id:"home",emoji:"⌂",label:"Inicio"},{id:"services",emoji:"▦",label:"Servicios"},{id:"calls",emoji:"☎",label:"Llamadas"},{id:"live",emoji:"◈",label:"Traductor"},{id:"settings",emoji:"⚙",label:"Cuenta"}] as const).map(item=><Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected:activeTab===item.id}} onPress={()=>{setError("");setActiveTab(item.id);if(item.id==="settings")setSettingsPage("menu");}} style={styles.bottomItem}><View style={[styles.bottomOrb,activeTab===item.id&&styles.bottomOrbActive]}><Text style={styles.bottomEmoji}>{item.emoji}</Text></View><Text style={[styles.bottomLabel,activeTab===item.id&&styles.bottomLabelActive]}>{item.label}</Text></Pressable>)}</View>:null}
+   {session&&!keyboardVisible?<View style={styles.bottomDock}>
+     {([{id:"home",icon:"home-outline",label:"Inicio"},{id:"services",icon:"grid-outline",label:"Servicios"},
+       {id:"calls",icon:"call-outline",label:"Llamadas"},{id:"live",icon:"language-outline",label:"Traductor"},
+       {id:"settings",icon:"person-outline",label:"Cuenta"}] as const).map(item=>
+       <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={item.label}
+        accessibilityState={{selected:activeTab===item.id}}
+        onPress={()=>{setError("");setActiveTab(item.id);if(item.id==="settings")setSettingsPage("menu");}}
+        style={[styles.bottomItem,item.id==="calls"&&styles.bottomItemCenter]}>
+        <View style={[styles.bottomOrb,activeTab===item.id&&styles.bottomOrbActive,item.id==="calls"&&styles.bottomOrbCenter,
+          item.id==="calls"&&activeTab===item.id&&styles.bottomOrbCenterActive]}>
+         <Ionicons name={item.icon} size={item.id==="calls"?25:22}
+          color={item.id==="calls"?"#FFFFFF":activeTab===item.id?"#211D36":"#B7B4CA"}/>
+        </View>
+        <Text style={[styles.bottomLabel,activeTab===item.id&&styles.bottomLabelActive,
+          item.id==="calls"&&styles.bottomLabelCenter]}>{item.label}</Text>
+       </Pressable>)}
+    </View>:null}
   </KeyboardAvoidingView>
   {session&&activationProfile&&!activationProfile.plan_prompt_seen?
    <NativeActivation session={session} profile={activationProfile} onComplete={setActivationProfile}/>:null}
