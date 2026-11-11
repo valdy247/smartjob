@@ -45,6 +45,7 @@ export function useSmartCallAccount(){
  const [notice,setNotice]=useState("");
  const [error,setError]=useState("");
  const requestId=useRef(0);
+ const identityId=useRef<string|null>(null);
  useEffect(()=>{
   let mounted=true;
   const instance=getSupabase();
@@ -55,15 +56,23 @@ export function useSmartCallAccount(){
     const {data,error:authError}=await instance.auth.getUser();
     if(!mounted)return;
     if(authError||!data.user||data.user.is_anonymous){
-     setUser(null);setPhase("signed_out");
+     identityId.current=null;requestId.current++;
+     setUser(null);setProfile(null);setSettings(null);setRoute(null);
+     setProvisioning(null);setCalls([]);setSummary(null);setPreferences(defaults);
+     setPhase("signed_out");
     }else{
+     if(identityId.current!==data.user.id){
+      identityId.current=data.user.id;requestId.current++;
+      setProfile(null);setSettings(null);setRoute(null);setProvisioning(null);
+      setCalls([]);setSummary(null);setPreferences(defaults);
+     }
      setUser(data.user);setPhase("signed_in");
     }
    }catch{if(mounted){setUser(null);setPhase("signed_out");setError("No se pudo verificar tu sesión. Revisa tu conexión.");}}
   };
   const {data:listener}=instance.auth.onAuthStateChange(event=>{
    if(event==="SIGNED_OUT"){
-    requestId.current++;setUser(null);setPhase("signed_out");setProfile(null);
+    identityId.current=null;requestId.current++;setUser(null);setPhase("signed_out");setProfile(null);
     setSettings(null);setSummary(null);setRoute(null);setCalls([]);setProvisioning(null);
     setPreferences(defaults);setNotice("");setError("");
    }else if(event==="SIGNED_IN"||event==="INITIAL_SESSION"||event==="TOKEN_REFRESHED"){
@@ -128,6 +137,7 @@ export function useSmartCallAccount(){
  // becomes visible again; do not overwrite unsaved form edits automatically.
  const updateActivity=useCallback(async()=>{
   if(!client||!user)return;
+  const revision=requestId.current;
   try{
    const {data:session}=await client.auth.getSession();
    if(!session.session||session.session.user.id!==user.id)return;
@@ -136,8 +146,9 @@ export function useSmartCallAccount(){
       .eq("owner_id",user.id).order("started_at",{ascending:false}).limit(25),
     fetch("/api/vista-app/smart-call",{cache:"no-store",headers:{Authorization:"Bearer "+session.session.access_token}})
    ]);
-   if(latest.error||!remote.ok)return;
+   if(latest.error||!remote.ok||revision!==requestId.current)return;
    const data=await remote.json() as Summary;
+   if(revision!==requestId.current)return;
    if(data.billing.ok||data.line.ok){setSummary(previous=>previous?{
     ...previous,billing:data.billing,line:data.line
    }:data);}
