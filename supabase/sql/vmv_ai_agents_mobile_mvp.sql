@@ -16,7 +16,7 @@ create table if not exists public.vmv_ai_agents (
   business_id uuid not null references public.vmv_ai_businesses(id) on delete cascade,
   owner_id uuid not null references auth.users(id) on delete cascade,
   name text not null check(char_length(name) between 1 and 80),
-  kind text not null check(kind in ('support','sales','bookings','inventory','operations','custom')),
+  kind text not null check(kind in ('calls','support','sales','bookings','inventory','operations','custom')),
   purpose text not null default '' check(char_length(purpose)<=240),
   personality text not null default 'amable' check(char_length(personality)<=60),
   language text not null default 'es' check(language in ('es','en','both')),
