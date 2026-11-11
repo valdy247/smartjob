@@ -6,6 +6,7 @@ import type {Session} from "@supabase/supabase-js";
 import {api,supabase,configured} from "./session";
 import {InterpreterPanel} from "./InterpreterPanel";
 import {CallScreen} from "./CallScreen";
+import {SmartCallControlCenter} from "./SmartCallControlCenter";
 import {NativeActivation,type NativeProfile} from "./NativeActivation";
 import {FALLBACK_MODULES,loadBusinessModules,openBusinessWorkspace,type BusinessModule} from "./businessWorkspace";
 
@@ -28,8 +29,9 @@ export default function App(){
  const {height:screenHeight}=useWindowDimensions();
  const [session,setSession]=useState<Session|null>(null);
  const [activationProfile,setActivationProfile]=useState<NativeProfile|null>(null);
- const [activeTab,setActiveTab]=useState<"home"|"calls"|"live"|"settings">("home");
+ const [activeTab,setActiveTab]=useState<"home"|"services"|"calls"|"live"|"settings">("home");
  const [businessModules,setBusinessModules]=useState<BusinessModule[]>(FALLBACK_MODULES);
+ const [activeModule,setActiveModule]=useState<string|null>(null);
  const [image1Unavailable,setImage1Unavailable]=useState(false);
  const [image2Unavailable,setImage2Unavailable]=useState(false);
  const [keyboardVisible,setKeyboardVisible]=useState(false),[forwardHelpOpen,setForwardHelpOpen]=useState(false);
@@ -43,7 +45,7 @@ export default function App(){
  const [inboundLanguage,setInboundLanguage]=useState<"es"|"en"|"unknown">("unknown");
  // Public catalog metadata, never a source of subscriptions or permissions.
  useEffect(()=>{
-   if(!session?.user.id||activeTab!=="settings"||settingsPage!=="services")return;
+   if(!session?.user.id||!(activeTab==="services"||(activeTab==="settings"&&settingsPage==="services")))return;
    let mounted=true;
    void loadBusinessModules().then(modules=>{if(mounted)setBusinessModules(modules);});
    return()=>{mounted=false;};
@@ -94,8 +96,8 @@ export default function App(){
      const target=route[1] as "calls"|"services";
      pendingBusinessLink.current=target;
      if(sessionRef.current?.user){
-       setActiveTab(target==="calls"?"calls":"settings");
-       if(target==="services")setSettingsPage("services");
+       setActiveTab(target==="calls"?"calls":"services");
+       if(target==="services")setActiveModule(null);
        pendingBusinessLink.current=null;
      }
    };
@@ -107,8 +109,8 @@ export default function App(){
    if(!session?.user.id||!pendingBusinessLink.current)return;
    const target=pendingBusinessLink.current;
    pendingBusinessLink.current=null;
-   setActiveTab(target==="calls"?"calls":"settings");
-   if(target==="services")setSettingsPage("services");
+   setActiveTab(target==="calls"?"calls":"services");
+   if(target==="services")setActiveModule(null);
  },[session?.user.id]);
  // Pilot-only diagnostic events; no recordings, transcripts, phone numbers or tokens.
  // A signed Supabase session and active iOS route are required by database RLS.
@@ -579,7 +581,7 @@ export default function App(){
        <View style={[styles.brandWaveBar,{height:13}]}/>
       </View>
      </View>
-     <Text style={styles.brandText}>VMV<Text style={{color:"#00AD8D"}}> CALL</Text></Text>
+     <Text style={styles.brandText}>VMV<Text style={{color:"#00AD8D"}}> BUSINESS</Text></Text>
      {session?<Pressable accessibilityRole="button" accessibilityLabel="Abrir ajustes" onPress={()=>{setActiveTab("settings");setSettingsPage("menu");}} style={styles.headerAvatar}><Text style={styles.headerAvatarText}>{String(session.user.user_metadata?.first_name||"V").charAt(0).toUpperCase()}</Text></Pressable>:null}
     </View>
     {!configured?<View style={styles.alert}><Text style={styles.alertText}>Configura el acceso de la app para iniciar sesión.</Text></View>:
@@ -596,7 +598,15 @@ export default function App(){
      {activeTab==="home"?<>
       <Text style={styles.kicker}>TU ESPACIO</Text>
       <Text style={styles.heading}>Hola, {String(session.user.user_metadata?.first_name||"").trim()||"bienvenido"}<Text style={{color:colors.accent}}>.</Text></Text>
-      <Text style={styles.homeSubtitle}>Traducción en tiempo real</Text>
+      <Text style={styles.homeSubtitle}>Tu negocio, conectado en un solo lugar</Text>
+       <Pressable accessibilityRole="button" accessibilityLabel="Abrir centro de control Smart Call"
+        style={[styles.homeLineCard,{borderColor:"#A9E8D8",backgroundColor:"#EEFFF8"}]}
+        onPress={()=>{setActiveModule("smart-call");setActiveTab("services");}}>
+        <View style={styles.homeLineIcon}><Text style={styles.homeLineEmoji}>☎</Text></View>
+        <View style={{flex:1}}><Text style={styles.homeLineTitle}>Smart Call · Centro de control</Text>
+         <Text style={styles.homeLineNumber}>Idiomas, voces, saludos, línea y actividad</Text></View>
+        <Text style={styles.settingChevron}>›</Text>
+       </Pressable>
 
       <View style={[styles.homeFeatureCard,styles.homeCallsFeature,styles.homeCallsIllustrated]}>
        <View style={styles.homeCallIllustration}>
@@ -649,6 +659,31 @@ export default function App(){
       </Pressable>
      </>:null}
      {activeTab==="live"?<InterpreterPanel session={session}/>:null}
+      {activeTab==="services"?<>
+       {activeModule==="smart-call"?<>
+        <Pressable accessibilityRole="button" style={styles.backRow} onPress={()=>setActiveModule(null)}>
+         <Text style={styles.backText}>‹ Todos los servicios</Text>
+        </Pressable>
+        <SmartCallControlCenter session={session} onOpenCalls={()=>setActiveTab("calls")}/>
+       </>:<>
+        <Text style={styles.kicker}>VMV BUSINESS</Text>
+        <Text style={styles.heading}>Mis servicios<Text style={{color:colors.accent}}>.</Text></Text>
+        <Text style={styles.description}>Controla tus herramientas desde la app. Los módulos en desarrollo no muestran ajustes que todavía no funcionan.</Text>
+        <Pressable accessibilityRole="button" onPress={()=>setActiveModule("smart-call")}
+         style={[styles.card,{backgroundColor:"#E7FBF3",borderColor:"#AEE9D5"}]}>
+         <Text style={styles.kicker}>COMUNICACIÓN · PILOTO</Text>
+         <Text style={styles.cardTitle}>☎  Smart Call</Text>
+         <Text style={styles.helper}>Línea, idiomas, asistente, voces, saludos y actividad. Configuración real de tu cuenta.</Text>
+         <Text style={styles.backText}>Abrir centro de control  →</Text>
+        </Pressable>
+        <Text style={styles.groupTitle}>PRÓXIMAMENTE</Text>
+        {businessModules.filter(module=>module.id!=="smart-call").map(module=><View key={module.id} style={styles.settingRow}>
+         <View style={styles.settingIcon}><Text style={styles.settingEmoji}>▦</Text></View>
+         <View style={{flex:1}}><Text style={styles.settingLabel}>{module.name}</Text>
+          <Text style={styles.helper}>En desarrollo · sin configuración activa</Text></View>
+        </View>)}
+       </>}
+      </>:null}
      {activeTab==="settings"?<>
       {settingsPage==="menu"?<>
        <Text style={styles.kicker}>TU CUENTA</Text><Text style={styles.heading}>Ajustes<Text style={{color:colors.accent}}>.</Text></Text>
@@ -662,14 +697,14 @@ export default function App(){
        <SettingRow emoji="💎" label="Plan y minutos" onPress={()=>setSettingsPage("billing")}/>
        <Text style={styles.groupTitle}>VMV BUSINESS</Text>
        <SettingRow emoji="🖥️" label="Plataforma web" onPress={()=>void openBusinessWeb("smart-call")}/>
-       <SettingRow emoji="🧩" label="Catálogo de servicios" onPress={()=>setSettingsPage("services")}/>
+       <SettingRow emoji="🧩" label="Mis servicios" onPress={()=>{setActiveModule(null);setActiveTab("services");}}/>
        <Text style={styles.groupTitle}>MÁS</Text>
        <SettingRow emoji="🌐" label="Idiomas y asistente" onPress={()=>setSettingsPage("style")}/>
        <SettingRow emoji="🎧" label="Soporte" onPress={()=>setSettingsPage("support")}/>
        <Pressable style={styles.signout} onPress={()=>void logout()}><Text style={styles.signoutText}>Cerrar sesión</Text></Pressable>
       </>:<>
        <Pressable style={styles.backRow} onPress={()=>setSettingsPage("menu")}><Text style={styles.backText}>‹  Ajustes</Text></Pressable>
-       <Text style={styles.heading}>{({numbers:"Mi línea",billing:"Plan y billing",history:"Historial",security:"Seguridad",profile:"Perfil",style:"Idiomas y asistente",support:"Soporte",services:"Otros servicios",menu:"Ajustes"} as Record<typeof settingsPage,string>)[settingsPage]}</Text>
+       <Text style={styles.heading}>{({numbers:"Mi línea",billing:"Plan y minutos",history:"Historial",security:"Seguridad",profile:"Perfil",style:"Idiomas y asistente",support:"Soporte",services:"Otros servicios",menu:"Ajustes"} as Record<typeof settingsPage,string>)[settingsPage]}</Text>
        {settingsPage==="numbers"?<>
         <View style={styles.card}><Text style={styles.cardTitle}>Verificación SMS</Text>
          {verificationLoading?<ActivityIndicator color={colors.accent}/>:phoneVerification?
@@ -761,7 +796,7 @@ export default function App(){
     {error?<View accessibilityRole="alert" style={styles.alert}><Text style={styles.alertText}>{error}</Text></View>:null}
     {working?<ActivityIndicator style={{marginTop:12}} color={colors.accent}/>:null}
    </ScrollView>
-   {session&&!keyboardVisible?<View style={styles.bottomDock}>{([{id:"home",emoji:"🏠",label:"Inicio"},{id:"calls",emoji:"📞",label:"Llamadas"},{id:"live",emoji:"🎙️",label:"Traductor"},{id:"settings",emoji:"⚙️",label:"Ajustes"}] as const).map(item=><Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected:activeTab===item.id}} onPress={()=>{setError("");setActiveTab(item.id);if(item.id==="settings")setSettingsPage("menu");}} style={styles.bottomItem}><View style={[styles.bottomOrb,activeTab===item.id&&styles.bottomOrbActive]}><Text style={styles.bottomEmoji}>{item.emoji}</Text></View><Text style={[styles.bottomLabel,activeTab===item.id&&styles.bottomLabelActive]}>{item.label}</Text></Pressable>)}</View>:null}
+   {session&&!keyboardVisible?<View style={styles.bottomDock}>{([{id:"home",emoji:"⌂",label:"Inicio"},{id:"services",emoji:"▦",label:"Servicios"},{id:"calls",emoji:"☎",label:"Llamadas"},{id:"live",emoji:"◈",label:"Traductor"},{id:"settings",emoji:"⚙",label:"Cuenta"}] as const).map(item=><Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected:activeTab===item.id}} onPress={()=>{setError("");setActiveTab(item.id);if(item.id==="settings")setSettingsPage("menu");}} style={styles.bottomItem}><View style={[styles.bottomOrb,activeTab===item.id&&styles.bottomOrbActive]}><Text style={styles.bottomEmoji}>{item.emoji}</Text></View><Text style={[styles.bottomLabel,activeTab===item.id&&styles.bottomLabelActive]}>{item.label}</Text></Pressable>)}</View>:null}
   </KeyboardAvoidingView>
   {session&&activationProfile&&!activationProfile.plan_prompt_seen?
    <NativeActivation session={session} profile={activationProfile} onComplete={setActivationProfile}/>:null}
@@ -881,7 +916,7 @@ const styles=StyleSheet.create({
  bottomItem:{flex:1,alignItems:"center",justifyContent:"center",height:74},
  bottomOrb:{width:42,height:42,borderRadius:24,alignItems:"center",justifyContent:"center"},
  bottomOrbActive:{backgroundColor:"#C5F9E9",width:49,height:43,borderRadius:18,borderWidth:0},
- bottomEmoji:{fontSize:22},
+ bottomEmoji:{fontSize:24,fontWeight:"800",color:"#167D67"},
  bottomLabel:{color:"#6C7582",fontSize:10,fontWeight:"700",marginTop:1},
  bottomLabelActive:{color:"#0A7658",marginTop:0},
  groupTitle:{color:"#06A886",fontSize:11,fontWeight:"800",letterSpacing:1.7,marginTop:20,marginBottom:8},
