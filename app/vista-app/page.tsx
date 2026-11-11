@@ -315,6 +315,7 @@ export default function VMVMobilePreview(){
           <div><h3>Llamadas normales</h3></div>
          </div>
          <strong className={styles.directServiceStatus}>{billing?.subscriptionActive?"Incluidas en tu plan":"No disponibles"}</strong>
+         {billing?.plan==="starter"?<Row label="Starter · plan previsto" value="150 min nacionales"/>:null}
          <Row label="Llamadas · 30 días" value={num(line?.usage.directCalls)}/>
         </div>
         <div className={styles.minuteHero}>
