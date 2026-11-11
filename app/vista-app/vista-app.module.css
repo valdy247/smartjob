@@ -270,3 +270,5 @@ button.homeProductCard:hover{transform:translateY(-2px)}
 .bottomNav button:focus-visible{outline:2px solid #caa9ff;outline-offset:-2px}
 @media(max-width:360px){.homeV2{padding:15px 13px 38px}.homeSpotlight{padding:19px 16px}.homeSpotlightArt{right:-31px;opacity:.8}.homeProductCard{padding:13px;min-height:139px}.homeProductBody strong{font-size:15px}.homeProfile strong{max-width:165px}.bottomNav{margin-inline:9px;padding-inline:6px}}
 @media(prefers-reduced-motion:reduce){button.homeProductCard:hover{transform:none}}
+
+.homeTopHidden{display:none}
