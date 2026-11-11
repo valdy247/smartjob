@@ -664,7 +664,7 @@ export default function App(){
         <Pressable accessibilityRole="button" style={styles.backRow} onPress={()=>setActiveModule(null)}>
          <Text style={styles.backText}>‹ Todos los servicios</Text>
         </Pressable>
-        <SmartCallControlCenter session={session} onOpenCalls={()=>setActiveTab("calls")}/>
+        <SmartCallControlCenter session={session} onOpenCalls={()=>setActiveTab("calls")} onSettingsSaved={()=>void loadCustomization()}/>
        </>:<>
         <Text style={styles.kicker}>VMV BUSINESS</Text>
         <Text style={styles.heading}>Mis servicios<Text style={{color:colors.accent}}>.</Text></Text>
