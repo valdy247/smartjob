@@ -31,6 +31,20 @@ const choices:{value:Voice;label:string}[]=[
 function Row({label,value}:{label:string;value:string}){
  return <div className={styles.setting}><div><strong>{label}</strong></div><span>{value}</span></div>;
 }
+type SegmentedOption<T extends string>={value:T;label:string};
+function SegmentedSelect<T extends string>({label,value,options,onChange,disabled=false}:{
+ label:string;value:T;options:SegmentedOption<T>[];onChange:(next:T)=>void;disabled?:boolean;
+}){
+ return <div className={styles.segmentedField}>
+  <span className={styles.segmentedLabel}>{label}</span>
+  <div className={styles.segmentedTrack} role="group" aria-label={label}>
+   {options.map(option=><button key={option.value} type="button"
+    className={option.value===value?styles.segmentedActive:styles.segmentedOption}
+    aria-pressed={option.value===value} disabled={disabled}
+    onClick={()=>onChange(option.value)}>{option.label}</button>)}
+  </div>
+ </div>;
+}
 function History({calls}:{calls:CallRecord[]}){
  return calls.length?<div className={styles.realHistory}>{calls.map(item=><div key={item.bridge_sid} className={styles.historyItem}>
   <PhoneCall size={16}/><div><strong>{item.call_mode==="translated"?"Llamada traducida":"Llamada directa"}</strong>
@@ -198,8 +212,8 @@ export default function VMVMobilePreview(){
        </>:null}
        {panel==="settings"?<>
         <form className={styles.smartCard} onSubmit={saveSettings}><span className={styles.smallKicker}>CONFIGURACIÓN DE TU CUENTA</span><h3>Idiomas y asistente</h3>
-         <label htmlFor="my-language">Tu idioma</label><select id="my-language" disabled={!draft||working} value={draft?.desired_language||"es"} onChange={e=>setDraft(v=>v?{...v,desired_language:e.target.value}:null)}><option value="es">Español</option><option value="en">English</option></select>
-         <label htmlFor="client-language">Idioma del cliente</label><select id="client-language" disabled={!draft||working} value={draft?.caller_language||"en"} onChange={e=>setDraft(v=>v?{...v,caller_language:e.target.value}:null)}><option value="en">English</option><option value="es">Español</option></select>
+         <SegmentedSelect label="Tu idioma" value={draft?.desired_language||"es"} options={[{value:"es",label:"Español"},{value:"en",label:"English"}]} disabled={!draft||working} onChange={value=>setDraft(v=>v?{...v,desired_language:value}:null)}/>
+         <SegmentedSelect label="Idioma del cliente" value={draft?.caller_language||"en"} options={[{value:"en",label:"English"},{value:"es",label:"Español"}]} disabled={!draft||working} onChange={value=>setDraft(v=>v?{...v,caller_language:value}:null)}/>
          <label htmlFor="my-assistant">Nombre del asistente</label><input id="my-assistant" disabled={!draft||working} maxLength={40} required value={draft?.assistant_name||""} onChange={e=>setDraft(v=>v?{...v,assistant_name:e.target.value}:null)}/>
          <p>Los cambios se guardan en tu cuenta. No modifican desvíos ni rutas de llamadas.</p>
          {!draft?<div className={styles.testNote}>Primero completa la activación de tu línea para crear la configuración inicial.</div>:null}
@@ -208,8 +222,8 @@ export default function VMVMobilePreview(){
         <form className={styles.smartCard} onSubmit={saveVoices}><span className={styles.smallKicker}>PERSONALIZACIÓN</span><h3>Voces y saludos</h3>
          <p>{premium?.message||"Sin conexión con la personalización. Requiere Pro o Premium activo."}</p>
          <fieldset className={styles.voiceFields} disabled={premium?.editable!==true||working}>
-          <label htmlFor="voice-customer">Voz para cliente</label><select id="voice-customer" value={preferences.voice_customer} onChange={e=>setPreferences({...preferences,voice_customer:e.target.value as Voice})}>{choices.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select>
-          <label htmlFor="voice-owner">Voz del propietario</label><select id="voice-owner" value={preferences.voice_owner} onChange={e=>setPreferences({...preferences,voice_owner:e.target.value as Voice})}>{choices.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select>
+          <SegmentedSelect label="Voz para cliente" value={preferences.voice_customer} options={choices} disabled={premium?.editable!==true||working} onChange={value=>setPreferences({...preferences,voice_customer:value})}/>
+          <SegmentedSelect label="Tu voz" value={preferences.voice_owner} options={choices} disabled={premium?.editable!==true||working} onChange={value=>setPreferences({...preferences,voice_owner:value})}/>
           <label htmlFor="greeting-customer">Saludo para cliente</label><textarea id="greeting-customer" maxLength={180} rows={3} value={preferences.greeting_customer} onChange={e=>setPreferences({...preferences,greeting_customer:e.target.value})} placeholder="Gracias por llamar…"/>
           <label htmlFor="greeting-owner">Saludo para ti</label><textarea id="greeting-owner" maxLength={180} rows={3} value={preferences.greeting_owner} onChange={e=>setPreferences({...preferences,greeting_owner:e.target.value})} placeholder="Tienes una llamada entrante…"/>
          </fieldset>
