@@ -38,6 +38,10 @@ async function preflightTranslator(){
    if(result.translation){
      translatorVerified=true;
      console.info("VMV GPT-4.1 mini translation preflight passed");
+     if(process.env.SMARTJOB_RELAY_STREAM_TRANSLATION_ENABLED==="false"){
+       console.info("VMV low-latency stream disabled by configuration");
+       return;
+     }
      const streamed=await streamTranslation("Good morning, how are you?",
        "en-US","es-ES",{onDelta:()=>{}});
      streamingVerified=Boolean(streamed.translation);
