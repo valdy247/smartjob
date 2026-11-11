@@ -283,3 +283,107 @@ button.homeProductCard:hover{transform:translateY(-2px)}
 .bottomNav .navCallAction>span{width:53px;height:53px;border-radius:50%;border:2px solid #dfcaff;background:linear-gradient(145deg,#a778fc,#7648d7);box-shadow:0 5px 12px #27134842}
 .bottomNav .navCallAction.activeNav>span{border:2px solid #e9d9ff;background:linear-gradient(145deg,#ae80ff,#7847d7);box-shadow:0 0 0 1px #ffffff22,0 5px 13px #27134848}
 @media(max-width:360px){.bottomNav{padding-inline:8px}.bottomNav .navCallAction>span{width:51px;height:51px}}
+
+
+/* VMV visual system v3 · shared across Services, Smart Call, Calls, Translator and Account.
+   Lavender surfaces, minimal ink typography, soft product colors and dark dock. */
+.scrollArea:has(.servicesV3),.scrollArea:has(.translatorV3),.scrollArea:has(.accountV3),.scrollArea:has(.smartScreen),.scrollArea:has(.callViewTabs){background:#fbfaff}
+.screenEyebrow,.groupTitle,.smallKicker{color:#865bca}
+.screen h2{color:#252039;letter-spacing:-.07em}
+.screen .mint,.smartScreen .mint{color:#9862e5}
+.servicesV3{padding:23px 17px 42px;min-height:100%}
+.servicesV3 h2{margin:10px 0 20px}
+.servicesV3 .serviceHero{position:relative;isolation:isolate;min-height:213px;padding:19px 20px;display:flex;flex-direction:column;align-items:flex-start;background:linear-gradient(130deg,#7b51db,#aa7bf3);border:0;border-radius:24px;color:#fff;overflow:hidden;box-shadow:0 12px 26px #8154d22a}
+.servicesV3 .serviceHeroTop{display:flex;align-items:flex-start;justify-content:space-between;align-self:stretch;gap:15px;position:relative;z-index:2}
+.servicesV3 .serviceHeroIcon{width:53px;height:53px;border-radius:17px;color:#7748ba;background:linear-gradient(145deg,#ffdf9a,#ffb17b);margin:0;box-shadow:0 7px 14px #412b7b33}
+.servicesV3 .serviceHeroStatus{border:1px solid #ffffff4f;border-radius:99px;background:#ffffff27;color:#fff;padding:8px 10px;font-size:9px;font-weight:800;letter-spacing:.065em}
+.servicesV3 .serviceHero>strong{z-index:2;margin:13px 0 4px;font-size:30px;line-height:1.06;color:#fff;font-weight:850;letter-spacing:-.07em}
+.servicesV3 .serviceHero>strong span{color:#ffe499}
+.servicesV3 .serviceHero>small{z-index:2;color:#eee1ff;font-size:12px}
+.servicesV3 .serviceLink{z-index:2;margin-top:20px;display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:9px 12px;background:#ffffff2d;color:#fff;font-size:11px;font-weight:850}
+.servicesV3 .serviceHeroDecoration{position:absolute;right:-12px;bottom:11px;font-size:125px;line-height:1;color:#e6d3ff5e;pointer-events:none;transform:rotate(-24deg)}
+.serviceGridHeading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:26px 0 15px}
+.serviceGridHeading h3{font-size:23px;letter-spacing:-.07em;color:#262039;font-weight:850;margin:0}
+.serviceGridHeading h3 span{color:#9761e5}
+.serviceGridHeading>span{font-size:9px;color:#9c91b3;font-weight:800;letter-spacing:.07em}
+.serviceModuleGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.serviceModuleTile{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;min-height:149px;padding:16px 15px;border-radius:20px;position:relative;overflow:hidden;color:#2b2540}
+.serviceModuleIcon{display:grid;place-items:center;width:46px;height:46px;border-radius:15px;background:#ffffff88;z-index:2}
+.serviceModuleBottom{display:flex;flex-direction:column;gap:5px;z-index:2}
+.serviceModuleBottom strong{font-size:15px;line-height:1.18;letter-spacing:-.055em;font-weight:850;overflow-wrap:anywhere}
+.serviceModuleBottom small{font-size:10px;font-weight:650;opacity:.68}
+.serviceTileSky{background:#bde5ff;color:#2a517a}
+.serviceTileYellow{background:#ffdf87;color:#6d501f}
+.serviceTilePink{background:#ffd1e5;color:#824763}
+.serviceTileMint{background:#b8eedb;color:#185946}
+.serviceTileLavender{background:#ddd0ff;color:#6746a0}
+.serviceTilePeach{background:#ffd3b3;color:#7f5033}
+/* Smart Call: same visual identity while maintaining exact account data. */
+.smartScreen{background:#fbfaff;min-height:100%;padding:23px 17px 44px}
+.smartScreen .back{color:#8155cc;font-weight:800;margin-bottom:17px}
+.smartScreen .smartHero{background:linear-gradient(125deg,#28223f,#6d43b0);border-radius:24px;box-shadow:0 11px 25px #3c245b26;padding:22px}
+.smartScreen .smartHero>span{color:#cdb2ff}
+.smartScreen .smartBadge{background:#ffffff22;border-color:#ffffff3b;color:#f3e7ff}
+.smartScreen .switcher{background:#eee7fb;border:1px solid #e7dafa;border-radius:18px;padding:5px;gap:4px}
+.smartScreen .switcher button{border-radius:13px;color:#8d7da5;min-height:43px}
+.smartScreen .switcher button.selected{background:white;color:#6f45b6;box-shadow:0 3px 12px #4c2b8217}
+.smartScreen .smartCard{border-color:#ebe6f0;border-radius:23px;box-shadow:0 4px 16px #3321480b}
+.smartScreen .smartCard h3{color:#29223c}
+.smartScreen .minuteHero{background:linear-gradient(135deg,#8053da,#b182f4);box-shadow:0 11px 23px #7e4fc82b}
+.smartScreen .minuteHero .smallKicker{color:#efe1ff}
+.smartScreen .miniCards>div{border-color:#ded5f1;background:#efe9ff}
+.smartScreen .mainAction,.accountV3 .mainAction{background:#8d5de5;color:#fff;border-radius:15px;box-shadow:0 5px 13px #8056cd23}
+.smartScreen .mainAction:hover,.accountV3 .mainAction:hover{background:#794acd}
+.smartScreen .secondaryAction,.accountV3 .secondaryAction{background:#f0e9ff;border-color:#ded0f9;color:#7449bb}
+.smartScreen .segmentedTrack{background:#f1ecfa;border-color:#e2d5f4;border-radius:17px}
+.smartScreen .segmentedActive{color:#6a42b3;border-color:#ded0f5}
+.smartScreen input,.smartScreen textarea,.accountV3 input{border-color:#e2dbea;border-radius:15px}
+.smartScreen input:focus-visible,.smartScreen textarea:focus-visible{outline:2px solid #9f74ee;outline-offset:1px}
+/* Calls, contacts and history retain their functional affordances with softer controls. */
+.screen:has(.callViewTabs){padding:22px 16px 44px;background:#fbfaff;min-height:100%}
+.callViewTabs{background:#eee8f8;border-color:#e4d6f7;border-radius:19px}
+.callViewTab,.callViewTabActive{border-radius:15px}
+.callViewTabActive{border-color:#e4d5f8;color:#7448c6;box-shadow:0 3px 9px #754fb321}
+.callViewTab:hover{background:#e6daf8;color:#653db3}
+.callFilters{gap:6px}
+.callFilter,.callFilterActive{border-radius:13px}
+.callFilterActive{background:#e9dcff;border-color:#d6beff;color:#7652be}
+.screen:has(.callViewTabs) .smartCard{border-color:#e9e3f0;border-radius:22px}
+.screen:has(.callViewTabs) .contactAvatar{background:#ece2ff;color:#794cbd}
+.screen:has(.callViewTabs) .contactAdd{background:#e9ddff;border-color:#d9c4fd;color:#7446c1}
+.screen:has(.callViewTabs) .contactSearch{border-color:#e3d9f2}
+.screen:has(.callViewTabs) .contactSearch:focus-within{outline-color:#9767e6}
+.screen:has(.callViewTabs) .dialerKey{background:#f2edf9;border-color:#e8ddf5;color:#28203d}
+.screen:has(.callViewTabs) .dialerKey:hover:not(:disabled){background:#e8dcfa}
+.screen:has(.callViewTabs) .dialerCall{background:#905ee5;box-shadow:0 9px 23px #7044c63b}
+.screen:has(.callViewTabs) .dialerCall:hover:not(:disabled){background:#7549ca}
+/* Interpreter header is short; the live translation engine is untouched. */
+.translatorV3{padding:23px 16px 40px;min-height:100%}
+.translatorWelcome{position:relative;display:flex;align-items:center;gap:13px;min-height:108px;margin-bottom:16px;background:linear-gradient(130deg,#dcd0ff,#f2e9ff);border-radius:22px;padding:18px;overflow:hidden}
+.translatorWelcomeIcon{width:53px;height:53px;display:grid;place-items:center;border-radius:17px;background:#ffffffad;color:#784bc6;flex-shrink:0}
+.translatorWelcome .screenEyebrow{font-size:9px;color:#8065b1}
+.translatorWelcome h2{font-size:28px;line-height:1;margin:9px 0 0;color:#29203e}
+.translatorSpark{position:absolute;right:8px;top:-25px;color:#ffffff99;font-size:105px;transform:rotate(-14deg)}
+.translatorV3 .interpreterWrap{margin:0 -5px}
+/* Account tiles & profile, based on the exact same palette as Home. */
+.accountV3{padding:23px 17px 46px;min-height:100%}
+.accountV3 h2{margin-bottom:18px}
+.accountHero{background:linear-gradient(125deg,#dbceff,#f4eaff);border-radius:23px;padding:20px 17px;display:flex;align-items:center;gap:12px;overflow:hidden;position:relative;min-height:111px}
+.accountHeroAvatar{flex:0 0 55px;height:55px;border-radius:19px;background:#ffffffab;color:#744ac3;display:grid;place-items:center;z-index:2}
+.accountHeroInfo{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0;z-index:2}
+.accountHeroInfo strong{color:#31254e;font-size:18px;letter-spacing:-.05em;overflow-wrap:anywhere}
+.accountHeroInfo small{color:#7d6a99;font-size:10px;overflow-wrap:anywhere}
+.accountHeroSpark{position:absolute;right:-1px;top:-27px;font-size:114px;color:#ffffff83;pointer-events:none}
+.accountStatGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin:13px 0}
+.accountStatTile{display:flex;flex-direction:column;align-items:flex-start;gap:7px;background:#ffe18d;border:0;border-radius:20px;min-height:124px;padding:16px;text-align:left;cursor:pointer}
+.accountStatTile:nth-child(2){background:#bde5ff}
+.accountStatTile>span{color:#684d29;display:grid;place-items:center;width:34px;height:34px;background:#ffffff80;border-radius:12px}
+.accountStatTile:nth-child(2)>span{color:#3d6d96}
+.accountStatTile strong{font-size:20px;font-weight:850;line-height:1.1;color:#292039;max-width:100%;overflow-wrap:anywhere}
+.accountStatTile small{font-size:11px;color:#77643e}
+.accountStatTile:nth-child(2) small{color:#50718c}
+.accountV3 .smartCard{border-color:#ece6f3;border-radius:22px;text-align:left}
+.accountV3 .logoutLink{margin:20px auto;color:#9479b6}
+/* Generic tap & reduced-motion safety across redesigned views. */
+.servicesV3 button:focus-visible,.accountV3 button:focus-visible,.smartScreen button:focus-visible,.translatorV3 button:focus-visible{outline:3px solid #a577ed;outline-offset:2px}
+@media(max-width:360px){.servicesV3,.accountV3{padding-inline:13px}.serviceModuleTile{padding:13px;min-height:136px}.serviceModuleBottom strong{font-size:14px}.servicesV3 .serviceHero{min-height:198px}}
