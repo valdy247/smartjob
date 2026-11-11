@@ -59,3 +59,27 @@ Without forwarding or porting, an ordinary app cannot automatically join a call 
 ## Launch limitations
 
 The iPhone application is source code only. It has not been built, signed, installed or tested on an actual iPhone. Apple VoIP certificate, Push Credentials, user provisioning, and live translation integration validation are required. Android is not implemented in this milestone. Do not switch the existing production Twilio webhook to this staging version without an agreed test plan.
+
+## Call screen (build 9)
+
+The in-call experience is deliberately minimal and familiar: **Silencio**, **Teclado**, **Altavoz**, **Transcripción** and **Finalizar llamada**. The native Twilio Voice SDK controls are wired to real operations:
+- Mute/unmute: `Call.mute(boolean)` with the SDK's confirmed return value.
+- DTMF keypad: `Call.sendDigits(digit)` during the current call.
+- Speaker toggle: `Voice.getAudioDevices()`, then `AudioDevice.select()`. Selection errors are displayed; there is no fake UI switch.
+- Tapping Transcripción blurs the active screen and shows a growing chat in the account's owner language: the translated customer speech and the owner's original recognized speech. Opening the panel later fetches earlier turns of that active call.
+- Transcript text is **only in Render RAM** for the duration of the paired call, never written to Supabase, audio files or logs. Render clears the buffer when either leg ends. The owner-only proxy validates the Supabase session, pilot account, route and exact outbound CallSid, then signs a 25-second HMAC authorization to the live bridge. Never send the Render secret to iOS.
+
+This feature is **test-owner only** behind `SMARTJOB_BILLING_TEST_OWNER_ID`; it remains unavailable to other tenants. Both participants should be informed that translation includes temporary on-screen text. It is not a saved transcript or recording.
+
+### Acceptance test on a physical iPhone
+
+1. Build and install a signed **0.4.4 (9)** iOS preview from the branch containing the feature. An Expo Go session or JavaScript-only update cannot enable a new `expo-blur` native dependency.
+2. Verify PushKit/CallKit delivery; open VMV CALL via the notification, then answer. Keep an eye on the existing Supabase pilot diagnostic events.
+3. Silencio on/off: remote caller must stop and resume hearing the owner.
+4. Altavoz on/off: verify iPhone acoustic output changes and status reflects actual selected device.
+5. Teclado: send e.g. 1, 2, # over in-call DTMF; verify the receiving IVR or Twilio diagnostics.
+6. With two speakers in different languages, open Transcripción. Verify each chat turn is in the owner's language and labeled correctly, including turns spoken **before** opening it.
+7. Close chat, return to call, hang up and verify both legs close, billing is settled and no chat text is accessible afterwards.
+8. Attempt another user's token, a forged outbound SID and unsigned bridge request; they must return only error codes without transcript text.
+
+**Not verified until a real signed iPhone build and actual bilingual call pass.** The app package must be signed with Apple/EAS credentials accessible to the build account.
