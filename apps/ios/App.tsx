@@ -8,6 +8,7 @@ import {InterpreterPanel} from "./InterpreterPanel";
 import {CallScreen} from "./CallScreen";
 import {SmartCallControlCenter} from "./SmartCallControlCenter";
 import {ContactsPanel} from "./ContactsPanel";
+import {DialPad} from "./DialPad";
 import {NativeActivation,type NativeProfile} from "./NativeActivation";
 import {FALLBACK_MODULES,loadBusinessModules,openBusinessWorkspace,type BusinessModule} from "./businessWorkspace";
 
@@ -31,10 +32,8 @@ export default function App(){
  const [session,setSession]=useState<Session|null>(null);
  const [activationProfile,setActivationProfile]=useState<NativeProfile|null>(null);
  const [activeTab,setActiveTab]=useState<"home"|"services"|"calls"|"live"|"settings">("home");
-  const [callsView,setCallsView]=useState<"summary"|"history">("summary");
+  const [callsView,setCallsView]=useState<"dial"|"history"|"contacts">("dial");
   const [callTypeFilter,setCallTypeFilter]=useState<"all"|"direct"|"translated">("all");
-  const [callsTechnicalOpen,setCallsTechnicalOpen]=useState(false);
-  const [contactsOpen,setContactsOpen]=useState(false);
   const [contactsPhone,setContactsPhone]=useState("");
   const [contactsFromHistory,setContactsFromHistory]=useState(false);
  const [businessModules,setBusinessModules]=useState<BusinessModule[]>(FALLBACK_MODULES);
@@ -151,7 +150,7 @@ export default function App(){
    const {data}=client.auth.onAuthStateChange((_event,next)=>{
      if(!mounted)return;
      setSession(next);sessionRef.current=next;
-     if(!next){setReady(false);setPhoneVerification(null);setSmsCode("");setSmsSent(false);setStatus("Inicia sesión para recibir llamadas");setCallHistory([]);setCallsView("summary");setCallTypeFilter("all");setContactsOpen(false);setContactsPhone("");}
+     if(!next){setReady(false);setPhoneVerification(null);setSmsCode("");setSmsSent(false);setStatus("Inicia sesión para recibir llamadas");setCallHistory([]);setCallsView("dial");setCallTypeFilter("all");setContactsPhone("");}
    });
    return()=>{mounted=false;data.subscription.unsubscribe();};
  },[]);
