@@ -48,7 +48,7 @@ function SegmentedSelect<T extends string>({label,value,options,onChange,disable
 function History({calls}:{calls:CallRecord[]}){
  return calls.length?<div className={styles.realHistory}>{calls.map(item=><div key={item.bridge_sid} className={styles.historyItem}>
   <PhoneCall size={16}/><div><strong>{item.call_mode==="translated"?"Llamada traducida":"Llamada directa"}</strong>
-  <small>{date(item.started_at)} · {statuses[item.status]||item.status}</small></div>
+  <small>{new Date(item.started_at).toLocaleString("es-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})} · {statuses[item.status]||item.status}</small></div>
   <span className={styles.historyDuration}>{item.duration_seconds===null?"—":Math.ceil(Math.max(0,item.duration_seconds)/60)+" min"}</span>
  </div>)}</div>:<div className={styles.emptyHistory}><Clock3 size={28}/><strong>Sin llamadas registradas</strong><p>Tu actividad aparecerá aquí después de las primeras llamadas.</p></div>;
 }
