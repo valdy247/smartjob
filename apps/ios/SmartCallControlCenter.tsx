@@ -89,11 +89,13 @@ export function SmartCallControlCenter({session,onOpenCalls,onSettingsSaved}:{
     if(!response.ok)throw new Error("Preferencias de voz no disponibles.");
     const result=await response.json() as {editable?:boolean;message?:string;settings?:Partial<Preferences>};
     const saved=result.settings;
+    const customerVoice=saved?.voice_customer;
+    const ownerVoice=saved?.voice_owner;
     setPrefEditable(result.editable===true);
     setPrefMessage(String(result.message||""));
     setPrefs({
-     voice_customer:validChoice(saved?.voice_customer)?saved!.voice_customer:"default",
-     voice_owner:validChoice(saved?.voice_owner)?saved!.voice_owner:"default",
+     voice_customer:validChoice(customerVoice)?customerVoice:"default",
+     voice_owner:validChoice(ownerVoice)?ownerVoice:"default",
      greeting_customer:String(saved?.greeting_customer||""),
      greeting_owner:String(saved?.greeting_owner||"")
     });
