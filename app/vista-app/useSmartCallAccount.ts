@@ -101,9 +101,13 @@ export function useSmartCallAccount(){
     client.from("smartjob_call_sessions").select("bridge_sid,started_at,status,call_mode,duration_seconds").eq("owner_id",uid).order("started_at",{ascending:false}).limit(25),
     fetch("/api/vista-app/smart-call",{cache:"no-store",headers:{Authorization:"Bearer "+session.session.access_token}})
       .then(async response=>{
-       if(!response.ok)throw new Error(response.status===401?"Sesión sin permiso de Smart Call.":"No se pudo consultar el saldo y el plan.");
+       if(!response.ok)throw new Error("pilot_unavailable");
        return response.json() as Promise<Summary>;
       })
+      .catch(()=>({
+       billing:{ok:false,data:null,status:503},line:{ok:false,data:null,status:503},
+       preferences:{ok:false,data:null,status:503}
+      } as Summary))
    ]);
    if(revision!==requestId.current)return;
    if(profileRes.error||!profileRes.data||profileRes.data.id!==uid)throw new Error("Esta cuenta no tiene un perfil de Smart Call. Completa el registro primero.");
