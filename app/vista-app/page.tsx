@@ -142,20 +142,28 @@ export default function VMVMobilePreview(){
        <div className={styles.smartHero}><span>VMV BUSINESS / COMUNICACIÓN</span><h2>Smart Call<span>.</span></h2><p>Tu línea, minutos y llamadas desde un solo lugar.</p><div className={styles.smartBadge}><span/>{lineState}</div></div>
        <div className={styles.switcher}>{([{id:"overview",label:"Resumen"},{id:"minutes",label:"Minutos"},{id:"settings",label:"Ajustes"},{id:"activity",label:"Actividad"}] as const).map(item=><button key={item.id} onClick={()=>setPanel(item.id)} className={panel===item.id?styles.selected:""}>{item.label}</button>)}</div>
        {panel==="overview"?<>
-        <div className={styles.smartCard}><span className={styles.smallKicker}>MI LÍNEA VMV</span><h3>{lineNumber}</h3><p>{line?.nextAction||"Comprueba el estado de activación. Una ruta en la base de datos no confirma una llamada real."}</p>
+        <div className={styles.smartCard}>
+         <span className={styles.smallKicker}>TU NÚMERO VMV</span>
+         <h3>{lineNumber}</h3>
+         <p>{line?.connectedToApp?"Configurado para recibir llamadas en tu iPhone.":line?.verified?"Tu número está verificado. Comprueba la conexión con el iPhone.":"La configuración de tu línea está pendiente."}</p>
          <div className={styles.rule}/>
-         <Row label="Número conectado" value={line?.publicPhone||"Pendiente"}/>
-         <Row label="Número verificado" value={line?.verified?"Sí":"No confirmado"}/>
-         <Row label="Recepción en iPhone" value={line?.connectedToApp?"Ruta habilitada":"Pendiente"}/>
-         <Row label="Operador" value={line?.carrier||provisioning?.carrier||"No disponible"}/>
-         <Row label="Estado de solicitud" value={provisioning?.status||"Sin solicitud"}/>
-         <Row label="Modo de recepción" value={route?.receive_method==="ios_app"?"App iPhone":route?.receive_method==="pstn"?"Otra línea":"No disponible"}/>
-         <Row label="Desvío configurado" value={route?.forwarding_mode==="none"?"No":route?.forwarding_mode==="conditional"?"Condicional":route?.forwarding_mode==="all_calls"?"Todas las llamadas":"No disponible"}/>
-         <Row label="Menú bilingüe" value={line?.menuPrepared?"Preparado para pruebas":"No verificado"}/>
-         <Row label="Tu idioma" value={lang(settings?.desired_language)}/>
-         <Row label="Idioma del cliente" value={lang(settings?.caller_language)}/>
-         <Row label="Asistente" value={settings?.assistant_name||"Sin configurar"}/>
-         <button className={styles.mainAction} onClick={()=>setPanel("settings")}>Administrar Smart Call →</button>
+         <Row label="Idiomas" value={lang(settings?.caller_language)+" → "+lang(settings?.desired_language)}/>
+         <Row label="Tu asistente" value={settings?.assistant_name||"Sin configurar"}/>
+         <button className={styles.mainAction} onClick={()=>setPanel("settings")}>Cambiar configuración →</button>
+         <details className={styles.minuteDetails}>
+          <summary>Ver detalles de la línea</summary>
+          <div className={styles.minuteBreakdown}>
+           <Row label="Estado de la línea" value={lineState}/>
+           <Row label="Número verificado" value={line?.verified?"Sí":"Pendiente"}/>
+           <Row label="Número de contacto" value={line?.publicPhone||"No configurado"}/>
+           <Row label="Operador" value={(!line?.carrier||line.carrier==="other")&&(!provisioning?.carrier||provisioning.carrier==="other")?"No especificado":line?.carrier||provisioning?.carrier||"No especificado"}/>
+           <Row label="Solicitud" value={({activated:"Activada",approved:"Aprobada",pending:"Pendiente",contacted:"En revisión",rejected:"Rechazada"} as Record<string,string>)[provisioning?.status||""]||"Sin solicitud"}/>
+           <Row label="Recepción" value={route?.receive_method==="ios_app"?"App iPhone":route?.receive_method==="pstn"?"Otra línea":"Sin configurar"}/>
+           <Row label="Desvío" value={route?.forwarding_mode==="none"?"No configurado":route?.forwarding_mode==="conditional"?"Condicional":route?.forwarding_mode==="all_calls"?"Todas las llamadas":"No disponible"}/>
+           <Row label="Menú bilingüe" value={line?.menuPrepared?"Preparado para pruebas":"No verificado"}/>
+           <p className={styles.minuteExplanation}>El estado de configuración no garantiza la recepción. Confírmala con una llamada real.</p>
+          </div>
+         </details>
         </div>
         <div className={styles.miniCards}><div><strong>{num(available)}</strong><small>Minutos disponibles</small></div><div><strong>{line?.usage.calls??"—"}</strong><small>Llamadas · 30 días</small></div></div>
         {refreshButton}
