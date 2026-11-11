@@ -82,7 +82,7 @@ export function DialPad({session,onStarted}:{session:Session;onStarted:()=>void}
  return <View style={s.root}>
   <View style={s.numberRow}>
    <TextInput style={s.number} accessibilityLabel="Número para llamar"
-    placeholder="+1 (000) 000-0000" placeholderTextColor="#A9C1B3"
+    placeholder="+1 (000) 000-0000" placeholderTextColor="#B3A0C9"
     keyboardType="phone-pad" showSoftInputOnFocus={false} maxLength={20} value={phone}
     onChangeText={text=>{setPhone(text.slice(0,20));setNotice("");}} editable={!working}/>
   </View>
@@ -117,17 +117,17 @@ export function DialPad({session,onStarted}:{session:Session;onStarted:()=>void}
 const s=StyleSheet.create({
  root:{alignItems:"center",paddingHorizontal:6,paddingTop:12,paddingBottom:30},
  numberRow:{width:"100%",maxWidth:340,flexDirection:"row",alignItems:"center",minHeight:74,marginBottom:10},
- number:{flex:1,minWidth:0,color:"#173A2C",fontSize:27,fontWeight:"600",textAlign:"center",letterSpacing:-.8,paddingVertical:12},
+ number:{flex:1,minWidth:0,color:"#29223E",fontSize:27,fontWeight:"600",textAlign:"center",letterSpacing:-.8,paddingVertical:12},
  backspace:{borderWidth:0,backgroundColor:"transparent"},
  backspaceDisabled:{opacity:.35},
- backspaceText:{fontSize:30,color:"#779587"},
+ backspaceText:{fontSize:30,color:"#8874A1"},
  keys:{width:285,flexDirection:"row",flexWrap:"wrap",alignItems:"center",justifyContent:"space-between",rowGap:12},
- key:{width:77,height:77,borderRadius:40,borderWidth:1,borderColor:"#E0EDE5",backgroundColor:"#F0F8F3",alignItems:"center",justifyContent:"center"},
- keyPressed:{backgroundColor:"#C9F0D8"},keySpacer:{width:77,height:77},
- digit:{fontSize:33,fontWeight:"500",lineHeight:40,color:"#15382B"},
- call:{width:72,height:72,borderRadius:36,backgroundColor:"#06B98C",alignItems:"center",justifyContent:"center",marginTop:24},
+ key:{width:77,height:77,borderRadius:40,borderWidth:1,borderColor:"#E7DAF2",backgroundColor:"#F3EDFC",alignItems:"center",justifyContent:"center"},
+ keyPressed:{backgroundColor:"#E1D0FA"},keySpacer:{width:77,height:77},
+ digit:{fontSize:33,fontWeight:"500",lineHeight:40,color:"#2B2341"},
+ call:{width:72,height:72,borderRadius:36,backgroundColor:"#9361E5",alignItems:"center",justifyContent:"center",marginTop:24},
  callDisabled:{opacity:.45},callIcon:{fontSize:35,fontWeight:"700",color:"white",lineHeight:42},
- hint:{fontSize:11,color:"#829C8C",marginTop:14,textAlign:"center"},
- notice:{fontSize:12,color:"#078260",backgroundColor:"#E4F9ED",borderRadius:12,overflow:"hidden",padding:12,marginTop:16,textAlign:"center",lineHeight:19},
+ hint:{fontSize:11,color:"#907F9D",marginTop:14,textAlign:"center"},
+ notice:{fontSize:12,color:"#7751B3",backgroundColor:"#EFE7FF",borderRadius:12,overflow:"hidden",padding:12,marginTop:16,textAlign:"center",lineHeight:19},
  error:{color:"#AD4E59",backgroundColor:"#FFF0F3"}
 });
