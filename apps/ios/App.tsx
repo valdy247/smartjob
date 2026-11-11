@@ -577,7 +577,7 @@ export default function App(){
       .eq("user_id",sessionRef.current.user.id).maybeSingle();
     if(settings)setAssistantPrefs({
       existing_phone:settings.existing_phone||"",desired_language:settings.desired_language||"es",
-      caller_language:settings.caller_language||"en",assistant_name:settings.assistant_name||"Juan"
+      caller_language:settings.caller_language===settings.desired_language?(settings.desired_language==="en"?"es":"en"):(settings.caller_language||"en"),assistant_name:settings.assistant_name||"Juan"
     });
     else setAssistantPrefs({existing_phone:"",desired_language:"es",caller_language:"en",assistant_name:"Juan"});
     const {data}=await supabase.auth.getSession();
