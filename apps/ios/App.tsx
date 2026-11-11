@@ -30,6 +30,9 @@ export default function App(){
  const [session,setSession]=useState<Session|null>(null);
  const [activationProfile,setActivationProfile]=useState<NativeProfile|null>(null);
  const [activeTab,setActiveTab]=useState<"home"|"services"|"calls"|"live"|"settings">("home");
+  const [callsView,setCallsView]=useState<"summary"|"history">("summary");
+  const [callTypeFilter,setCallTypeFilter]=useState<"all"|"direct"|"translated">("all");
+  const [callsTechnicalOpen,setCallsTechnicalOpen]=useState(false);
  const [businessModules,setBusinessModules]=useState<BusinessModule[]>(FALLBACK_MODULES);
  const [activeModule,setActiveModule]=useState<string|null>(null);
  const [image1Unavailable,setImage1Unavailable]=useState(false);
@@ -386,8 +389,8 @@ export default function App(){
   finally{setHistoryBusy(false);}
  }
  useEffect(()=>{
-  if(session?.user.id&&activeTab==="settings"&&settingsPage==="history")void refreshCallHistory();
- },[session?.user.id,activeTab,settingsPage]);
+  if(session?.user.id&&((activeTab==="settings"&&settingsPage==="history")||(activeTab==="calls"&&callsView==="history")))void refreshCallHistory();
+ },[session?.user.id,activeTab,settingsPage,callsView]);
  async function checkPilotReadiness(){
   if(!supabase||pilotChecking)return;
   setPilotChecking(true);
