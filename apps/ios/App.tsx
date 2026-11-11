@@ -709,10 +709,14 @@ export default function App(){
        style={styles.homeSpotlightV2} onPress={()=>{setActiveModule("smart-call");setActiveTab("services");}}>
        <View style={styles.homeSpotlightRingOuter}/>
        <View style={styles.homeSpotlightRingInner}/>
-       <View style={styles.homeSpotlightPhone}><Ionicons name="call" size={34} color="#64339F"/></View>
+       <View style={styles.homeSpotlightPhone}>
+        <View style={styles.homeSpotlightPhoneShine}/>
+        <Ionicons name="call" size={29} color="#64339F"/>
+       </View>
+       <View style={styles.homeSpotlightMiniBubble}><Ionicons name="language-outline" size={17} color="#367E72"/></View>
        <Text style={styles.homeSpotlightSpark}>✦</Text>
        <Text style={styles.homeSpotlightKicker}>SMART CALL  ·  EN PILOTO</Text>
-       <Text style={styles.homeSpotlightHeadline}>Tu negocio,{"\n"}siempre conectado<Text style={{color:"#F9E28A"}}>.</Text></Text>
+       <Text style={styles.homeSpotlightHeadline}>Tu negocio,{"\n"}conectado<Text style={{color:"#F9E28A"}}>.</Text></Text>
        <Text style={styles.homeSpotlightCaption}>Llamadas y traducción</Text>
        <View style={styles.homeSpotlightMinutes}>
         <Text style={styles.homeSpotlightMinutesText}>{billingOverview?.minutes?.available??"—"} min  <Text style={{fontSize:10,fontWeight:"600"}}>para traducir</Text></Text>
@@ -730,21 +734,25 @@ export default function App(){
        <Pressable accessibilityRole="button" accessibilityLabel="Abrir traductor"
         style={[styles.homeProductTile,styles.homeProductMint]} onPress={()=>setActiveTab("live")}>
         <View style={styles.homeProductIconV2}><Ionicons name="language-outline" size={28} color="#105744"/></View>
+        <Ionicons name="chatbubbles-outline" size={73} color="#105744" style={styles.homeProductArt} accessible={false}/>
         <View><Text style={[styles.homeProductTitle,{color:"#104A39"}]}>Traductor</Text>
          <Text style={[styles.homeProductSub,{color:"#367E6A"}]}>En persona</Text></View>
        </Pressable>
        <View style={[styles.homeProductTile,styles.homeProductYellow]}>
         <View style={styles.homeProductIconV2}><Ionicons name="globe-outline" size={28} color="#69471D"/></View>
+        <Ionicons name="browsers-outline" size={75} color="#69471D" style={styles.homeProductArt} accessible={false}/>
         <View><Text style={[styles.homeProductTitle,{color:"#63451B"}]}>Web Services</Text>
          <Text style={[styles.homeProductSub,{color:"#916F3C"}]}>Próximamente</Text></View>
        </View>
        <View style={[styles.homeProductTile,styles.homeProductSky]}>
         <View style={styles.homeProductIconV2}><Ionicons name="sparkles-outline" size={28} color="#305D8B"/></View>
+        <Ionicons name="hardware-chip-outline" size={73} color="#294C78" style={styles.homeProductArt} accessible={false}/>
         <View><Text style={[styles.homeProductTitle,{color:"#294C78"}]}>AI Agents</Text>
          <Text style={[styles.homeProductSub,{color:"#547DA0"}]}>Próximamente</Text></View>
        </View>
        <View style={[styles.homeProductTile,styles.homeProductPink]}>
-        <View style={styles.homeProductIconV2}><Ionicons name="stats-chart-outline" size={28} color="#914B74"/></View>
+        <View style={styles.homeProductIconV2}><Ionicons name="trending-up-outline" size={28} color="#914B74"/></View>
+        <Ionicons name="stats-chart-outline" size={73} color="#82425F" style={styles.homeProductArt} accessible={false}/>
         <View><Text style={[styles.homeProductTitle,{color:"#82425F"}]}>Marketing</Text>
          <Text style={[styles.homeProductSub,{color:"#AD7692"}]}>Próximamente</Text></View>
        </View>
