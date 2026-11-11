@@ -6,11 +6,12 @@ import {createServer} from "node:http";
 import {WebSocketServer,WebSocket} from "ws";
 import {accountSid,callSid} from "./relay-core.mjs";
 import {verifiedSetup,cleanPrompt,peerRole,textMessage} from "./conversation-relay.mjs";
+import {directTranslationReady,translateDirect} from "./direct-translate.mjs";
 
 const AUTH=process.env.TWILIO_AUTH_TOKEN||"";
 const ACCOUNT=process.env.TWILIO_ACCOUNT_SID||"";
 const WSS_URL=process.env.PUBLIC_WS_URL||"";
-const TRANSLATE_URL=process.env.SMARTJOB_TRANSLATE_URL||"";
+// Interpret directly on Render using its existing OpenAI key. No Vercel proxy.
 const ENABLED=process.env.SMARTJOB_CONVERSATION_RELAY_ENABLED==="true";
 const PORT=Number(process.env.PORT||3001);
 const bounded=(v,fallback,low,high)=>{
@@ -19,8 +20,7 @@ const bounded=(v,fallback,low,high)=>{
 };
 const MAX_ROOMS=bounded(process.env.SMARTJOB_MAX_CONCURRENT_CALLS,1,1,30);
 const MAX_SECONDS=bounded(process.env.SMARTJOB_MAX_CALL_SECONDS,14400,60,14400);
-const validUrl=()=>/^https:\/\/[a-z0-9.-]+(?:\/[a-zA-Z0-9/_-]+)?\/api\/twilio\/live\/translate$/i.test(TRANSLATE_URL);
-const ready=()=>ENABLED&&validUrl();
+const ready=()=>ENABLED&&directTranslationReady();
 const rooms=new Map();
 const open=ws=>ws?.readyState===WebSocket.OPEN;
 const MAX_BUFFERED_BYTES=128000;
@@ -84,27 +84,13 @@ function createRoom(id){
   rooms.set(id,room);return room;
 }
 async function translate(original,sourceLanguage,targetLanguage){
-  const body=JSON.stringify({original,sourceLanguage,targetLanguage});
-  const stamp=String(Math.floor(Date.now()/1000));
-  const sig=createHmac("sha256",AUTH)
-    .update("vmv-conversationrelay-translate-v1\n"+stamp+"\n"+body).digest("hex");
-  try{
-    const response=await fetch(TRANSLATE_URL,{
-      method:"POST",headers:{"Content-Type":"application/json",
-        "x-smartjob-timestamp":stamp,"x-smartjob-signature":sig},
-      body,signal:AbortSignal.timeout(7500),cache:"no-store"
-    });
-    if(!response.ok){
-      console.error("VMV text interpretation unavailable",{status:response.status});
-      return null;
-    }
-    const parsed=await response.json();
-    return typeof parsed.translation==="string"&&parsed.translation.trim()&&
-      parsed.translation.length<=700?parsed.translation.trim():null;
-  }catch(err){
-    console.error("VMV text interpretation failed",err instanceof Error?err.name:"unknown");
+  const {translation,reason}=await translateDirect(original,sourceLanguage,targetLanguage);
+  if(!translation){
+    // Reason codes only. Never log the speech or translated text.
+    console.error("VMV direct interpreter failed",{reason});
     return null;
   }
+  return translation;
 }
 async function consume(room,ctx){
   if(ctx.processing||room.closing)return;
