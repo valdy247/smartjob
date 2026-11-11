@@ -13,8 +13,8 @@ import {DialPad} from "./DialPad";
 import {NativeActivation,type NativeProfile} from "./NativeActivation";
 import {FALLBACK_MODULES,loadBusinessModules,openBusinessWorkspace,type BusinessModule} from "./businessWorkspace";
 
-const colors={bg:"#F8FBFA",card:"#FFFFFF",line:"#DCE8E6",text:"#151D2A",
- muted:"#6D7784",accent:"#00B997",accentText:"#06392E",red:"#E25673"};
+const colors={bg:"#FBFAFF",card:"#FFFFFF",line:"#ECE6F3",text:"#28223C",
+ muted:"#827991",accent:"#8D5EE6",accentText:"#FFFFFF",red:"#E25673"};
 const voice=new Voice();
 let pushRegistryInit:Promise<void>|null=null;
 function ensurePushRegistry():Promise<void>{
@@ -832,20 +832,36 @@ export default function App(){
        </>:<>
         <Text style={styles.kicker}>VMV BUSINESS</Text>
         <Text style={styles.heading}>Mis servicios<Text style={{color:colors.accent}}>.</Text></Text>
-        <Text style={styles.description}>Controla tus herramientas desde la app. Los módulos en desarrollo no muestran ajustes que todavía no funcionan.</Text>
         <Pressable accessibilityRole="button" onPress={()=>setActiveModule("smart-call")}
-         style={[styles.card,{backgroundColor:"#E7FBF3",borderColor:"#AEE9D5"}]}>
-         <Text style={styles.kicker}>COMUNICACIÓN · PILOTO</Text>
-         <Text style={styles.cardTitle}>☎  Smart Call</Text>
-         <Text style={styles.helper}>Línea, idiomas, asistente, voces, saludos y actividad. Configuración real de tu cuenta.</Text>
-         <Text style={styles.backText}>Abrir centro de control  →</Text>
+         style={styles.servicesSpotlight}>
+         <View style={styles.servicesSpotlightTop}>
+          <View style={styles.servicesSpotlightIcon}><Ionicons name="call" size={27} color="#6B409E"/></View>
+          <Text style={styles.servicesPilot}>EN PILOTO</Text>
+         </View>
+         <Text style={styles.servicesSpotlightTitle}>Smart Call<Text style={{color:"#FFE59D"}}>.</Text></Text>
+         <Text style={styles.servicesSpotlightNote}>{billingOverview?.minutes?.available??"—"} min para traducir</Text>
+         <View style={styles.servicesSpotlightLink}><Text style={styles.servicesSpotlightLinkText}>Abrir servicio  ↗</Text></View>
+         <Text style={styles.servicesSpotlightStar}>✦</Text>
         </Pressable>
-        <Text style={styles.groupTitle}>PRÓXIMAMENTE</Text>
-        {businessModules.filter(module=>module.id!=="smart-call").map(module=><View key={module.id} style={styles.settingRow}>
-         <View style={styles.settingIcon}><Text style={styles.settingEmoji}>▦</Text></View>
-         <View style={{flex:1}}><Text style={styles.settingLabel}>{module.name}</Text>
-          <Text style={styles.helper}>En desarrollo · sin configuración activa</Text></View>
-        </View>)}
+        <View style={styles.servicesSectionHead}>
+         <Text style={styles.servicesSectionTitle}>Explora más<Text style={{color:"#9867E4"}}>.</Text></Text>
+         <Text style={styles.servicesSectionHint}>PRÓXIMAMENTE</Text>
+        </View>
+        <View style={styles.servicesProductGrid}>
+         {businessModules.filter(module=>module.id!=="smart-call").map((module,index)=>
+          <View key={module.id} style={[styles.servicesProductTile,
+           [styles.servicesTileBlue,styles.servicesTileYellow,styles.servicesTilePink,
+            styles.servicesTileMint,styles.servicesTileLavender,styles.servicesTilePeach][index%6]]}>
+           <View style={styles.servicesTileIcon}>
+            <Ionicons name={(["sparkles-outline","cube-outline","calendar-outline","people-outline","globe-outline","business-outline","megaphone-outline","flash-outline"] as const)[index%8]}
+             size={26} color="#46365A"/>
+           </View>
+           <View>
+            <Text style={styles.servicesTileTitle}>{module.name}</Text>
+            <Text style={styles.servicesTileCaption}>Próximamente</Text>
+           </View>
+          </View>)}
+        </View>
        </>}
       </>:null}
      {activeTab==="settings"?<>
