@@ -57,3 +57,7 @@ Do not activate public billing with test subscriptions. Production remains fail-
 ## Confirmed 503 incident (2026-11-11 UTC)
 
 A 50-second interpreted call connected both Twilio ConversationRelay legs, recognized 7 utterances but produced 0 translated responses because the Vercel translator returned HTTP 503 (no configured OpenAI/Gateway token). This patch removes the Vercel proxy from the critical path. Render now fails health checks when the existing server-side OpenAI key is missing; provider status errors are logged without recording speech text. The operator must confirm Render health, then complete one consented real iPhone call and reconcile billed minutes.
+
+## Provider readiness gate
+
+On every Render boot, the bridge makes one small, synthetic GPT-4.1 mini translation call using its server-side OpenAI key (up to 3 attempts). Until the call succeeds, `/health` returns HTTP 503 and `translationProviderVerified:false`. After success, it reports `translationProviderVerified:true`, and the normal ConversationRelay traffic may enter. This avoids billing interpreted minutes for calls when the text-translation backend is misconfigured or inaccessible. It does **not** replace tests of Twilio speech recognition, iOS connection and billing.
