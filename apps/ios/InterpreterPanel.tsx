@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState} from "react";
 import {ActivityIndicator,KeyboardAvoidingView,Modal,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
 import {AudioModule,RecordingPresets,setAudioModeAsync,useAudioRecorder} from "expo-audio";
 import * as Speech from "expo-speech";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import type {Session} from "@supabase/supabase-js";
 import {api,supabase} from "./session";
 
@@ -30,7 +31,7 @@ function predictedLanguage(text:string):Language|null{
  if(Math.max(es,en)<2||es===en)return null;
  return es>en?"es":"en";
 }
-const interfaceColors={dark:"#152329",mint:"#2DD6B0"};
+const interfaceColors={dark:"#292040",mint:"#9F72EA"};
 export function InterpreterPanel({session}:{session:Session}){
  const ownerLanguage:Language=session.user.user_metadata?.owner_language==="en"?"en":"es";
  const firstName=String(session.user.user_metadata?.first_name||"").trim();
@@ -172,26 +173,36 @@ export function InterpreterPanel({session}:{session:Session}){
  const latest=turns[turns.length-1];
  const estimated=predictedLanguage(draft);
  return <View style={styles.entry}>
-  <Text style={styles.eyebrow}>TRADUCCIÓN EN PERSONA</Text>
-  <Text style={styles.heading}>¿Cómo conversarán?</Text>
-  <Pressable style={styles.choice} accessibilityRole="button" onPress={()=>open("voice")}>
-   <View style={styles.choiceIcon}><Text style={styles.choiceEmoji}>🎙</Text></View>
-   <View style={styles.choiceCopy}><Text style={styles.choiceName}>Iniciar conversación hablada</Text>
-    <Text style={styles.choiceDetails}>Habla, suelta y escucha la traducción</Text></View>
-   <Text style={styles.chevron}>›</Text>
-  </Pressable>
-  <Pressable style={styles.choice} accessibilityRole="button" onPress={()=>open("text")}>
-   <View style={styles.choiceIcon}><Text style={styles.choiceEmoji}>⌨</Text></View>
-   <View style={styles.choiceCopy}><Text style={styles.choiceName}>Escribir mensajes</Text>
-    <Text style={styles.choiceDetails}>Idioma detectado automáticamente</Text></View>
-   <Text style={styles.chevron}>›</Text>
-  </Pressable>
+  <View style={styles.translatorBanner}>
+   <Text style={styles.translatorBannerEyebrow}>VMV BUSINESS / TRADUCTOR</Text>
+   <Text style={styles.translatorBannerTitle}>Dos idiomas.{"\n"}<Text style={styles.translatorBannerHighlight}>Una conversación.</Text></Text>
+   <View style={styles.translatorLanguages}>
+    <Text style={styles.translatorLanguagesText}>🇪🇸 Español  ⇄  🇺🇸 English</Text>
+   </View>
+   <View style={styles.translatorArtRing}/>
+   <View style={styles.translatorArtRingInner}/>
+   <View style={styles.translatorArtIcon}><Ionicons name="language-outline" size={34} color="#7246BB"/></View>
+   <Text style={styles.translatorArtSpark}>✦</Text>
+  </View>
+  <Text style={styles.translatorModeTitle}>Elige cómo conversar<Text style={{color:"#9463E6"}}>.</Text></Text>
+  <View style={styles.translatorModeGrid}>
+   <Pressable accessibilityRole="button" accessibilityLabel="Comenzar conversación por voz"
+    style={[styles.translatorModeTile,styles.translatorVoiceTile]} onPress={()=>open("voice")}>
+    <View style={styles.translatorModeIcon}><Ionicons name="mic-outline" size={29} color="#278A72"/></View>
+    <View><Text style={styles.translatorModeName}>Hablar</Text><Text style={styles.translatorModeDetail}>Voz en tiempo real</Text></View>
+   </Pressable>
+   <Pressable accessibilityRole="button" accessibilityLabel="Comenzar conversación escrita"
+    style={[styles.translatorModeTile,styles.translatorTextTile]} onPress={()=>open("text")}>
+    <View style={styles.translatorModeIcon}><Ionicons name="keypad-outline" size={29} color="#A56D38"/></View>
+    <View><Text style={styles.translatorModeName}>Escribir</Text><Text style={styles.translatorModeDetail}>Mensajes traducidos</Text></View>
+   </Pressable>
+  </View>
   <Modal visible={mode!==null} animationType="slide" presentationStyle="fullScreen" onRequestClose={close}>
-   <KeyboardAvoidingView style={[styles.modal,{backgroundColor:mode==="voice"?interfaceColors.dark:"#F7FCFB"}]}
+   <KeyboardAvoidingView style={[styles.modal,{backgroundColor:mode==="voice"?interfaceColors.dark:"#FBFAFF"}]}
     behavior={Platform.OS==="ios"?"padding":undefined}>
     <View style={styles.top}>
      <Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={close}><Text style={styles.back}>‹</Text></Pressable>
-     <View style={styles.topTitle}><Text style={[styles.title,{color:mode==="voice"?"#F4FBF8":"#152229"}]}>{stage==="context"?"Antes de comenzar":mode==="voice"?"Conversación hablada":"Conversación escrita"}</Text>
+     <View style={styles.topTitle}><Text style={[styles.title,{color:mode==="voice"?"#FFFFFF":"#29223D"}]}>{stage==="context"?"Antes de comenzar":mode==="voice"?"Conversación hablada":"Conversación escrita"}</Text>
       <Text style={styles.topLanguages}>🇺🇸 English ⇄ 🇪🇸 Español</Text></View>
      {stage==="context"?<Pressable accessibilityRole="button" onPress={skip}><Text style={styles.skip}>Omitir</Text></Pressable>:
       <Pressable accessibilityRole="button" onPress={()=>{setTurns([]);setMessage("");}}><Text style={styles.skip}>Limpiar</Text></Pressable>}
@@ -274,7 +285,29 @@ export function InterpreterPanel({session}:{session:Session}){
  </View>;
 }
 const styles=StyleSheet.create({
- entry:{paddingTop:10},
+ entry:{paddingTop:5,paddingBottom:35},
+ translatorBanner:{minHeight:226,backgroundColor:"#8353E2",borderRadius:25,padding:20,overflow:"hidden",position:"relative",
+  shadowColor:"#6B42BD",shadowOpacity:.18,shadowRadius:14,shadowOffset:{width:0,height:8},elevation:4},
+ translatorBannerEyebrow:{color:"#F0E5FF",fontSize:10,fontWeight:"800",letterSpacing:1.0,zIndex:2},
+ translatorBannerTitle:{color:"#FFFFFF",fontSize:29,lineHeight:33,fontWeight:"800",letterSpacing:-1.5,marginTop:28,zIndex:2,maxWidth:"81%"},
+ translatorBannerHighlight:{color:"#FFE298"},
+ translatorLanguages:{alignSelf:"flex-start",marginTop:19,borderRadius:23,paddingHorizontal:12,paddingVertical:10,
+  backgroundColor:"#FFFFFF2B",borderWidth:1,borderColor:"#FFFFFF58",zIndex:2},
+ translatorLanguagesText:{fontSize:11,color:"#FFFFFF",fontWeight:"800"},
+ translatorArtRing:{position:"absolute",right:-31,top:35,height:159,width:159,borderRadius:80,borderWidth:20,borderColor:"#D8B9FF80"},
+ translatorArtRingInner:{position:"absolute",right:-2,top:75,height:112,width:112,borderRadius:57,borderWidth:14,borderColor:"#F5D1FF85"},
+ translatorArtIcon:{position:"absolute",right:21,top:74,height:78,width:78,borderRadius:24,backgroundColor:"#FFCA86",justifyContent:"center",alignItems:"center",
+   transform:[{rotate:"-14deg"}]},
+ translatorArtSpark:{position:"absolute",top:18,right:30,fontSize:31,color:"#FFE080"},
+ translatorModeTitle:{fontSize:24,color:"#2C2341",fontWeight:"800",letterSpacing:-1.2,marginTop:26,marginBottom:15},
+ translatorModeGrid:{flexDirection:"row",justifyContent:"space-between",gap:12},
+ translatorModeTile:{flex:1,minHeight:171,borderRadius:22,padding:16,alignItems:"flex-start",justifyContent:"space-between"},
+ translatorVoiceTile:{backgroundColor:"#BCEBD9"},
+ translatorTextTile:{backgroundColor:"#FFE08C"},
+ translatorModeIcon:{width:50,height:50,borderRadius:17,backgroundColor:"#FFFFFF9C",alignItems:"center",justifyContent:"center"},
+ translatorModeName:{fontSize:20,fontWeight:"800",color:"#2F2840",letterSpacing:-.8},
+ translatorModeDetail:{fontSize:11,fontWeight:"700",color:"#6F657B",marginTop:6},
+
  eyebrow:{color:"#0C9E7F",fontSize:11,fontWeight:"800",letterSpacing:2,marginBottom:11},
  heading:{fontSize:25,fontWeight:"800",letterSpacing:-.6,color:"#172329",marginBottom:22},
  choice:{flexDirection:"row",alignItems:"center",gap:14,backgroundColor:"#FFFFFF",borderRadius:23,borderWidth:1,borderColor:"#D8EDE6",padding:19,marginBottom:14},
