@@ -1,9 +1,10 @@
 "use client";
 import {useEffect,useState,type FormEvent} from "react";
-import {House,LayoutGrid,PhoneCall,Languages,UserRound,ArrowUpRight,ChevronLeft,Clock3,
+import {House,LayoutGrid,PhoneCall,Languages,UserRound,ArrowUpRight,ChevronLeft,Clock3,ContactRound,UserRoundPlus,
  ShieldCheck,Mic,Package,CalendarDays,Users,BarChart3,Workflow,Globe,Bot,
  RefreshCw,Settings2,LoaderCircle,LogOut,LockKeyhole,PhoneForwarded} from "lucide-react";
 import {LivePanel} from "@/components/LivePanel";
+import ContactBook from "./ContactBook";
 import {useSmartCallAccount,type Tab,type Panel,type CallSettings,type CallRecord,type Voice} from "./useSmartCallAccount";
 import styles from "./vista-app.module.css";
 
@@ -45,11 +46,13 @@ function SegmentedSelect<T extends string>({label,value,options,onChange,disable
   </div>
  </div>;
 }
-function History({calls}:{calls:CallRecord[]}){
+function History({calls,onSave}:{calls:CallRecord[];onSave?:(phone:string)=>void}){
  return calls.length?<div className={styles.realHistory}>{calls.map(item=><div key={item.bridge_sid} className={styles.historyItem}>
   <PhoneCall size={16}/><div><strong>{item.call_mode==="translated"?"Llamada traducida":"Llamada directa"}</strong>
   <small>{new Date(item.started_at).toLocaleString("es-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})} · {statuses[item.status]||item.status}</small></div>
-  <span className={styles.historyDuration}>{item.duration_seconds===null?"—":Math.ceil(Math.max(0,item.duration_seconds)/60)+" min"}</span>
+  <span className={styles.historySide}><span className={styles.historyDuration}>{item.duration_seconds===null?"—":Math.ceil(Math.max(0,item.duration_seconds)/60)+" min"}</span>
+  {onSave?<button className={styles.saveFromCall} type="button" onClick={()=>onSave(item.caller_phone||"")}>
+   <UserRoundPlus size={13}/>{item.caller_phone?"Guardar contacto":"Añadir contacto"}</button>:null}</span>
  </div>)}</div>:<div className={styles.emptyHistory}><Clock3 size={28}/><strong>Sin llamadas registradas</strong><p>Tu actividad aparecerá aquí después de las primeras llamadas.</p></div>;
 }
 export default function VMVMobilePreview(){
@@ -61,6 +64,9 @@ export default function VMVMobilePreview(){
  const [panel,setPanel]=useState<Panel>("overview");
  const [callsView,setCallsView]=useState<"summary"|"history">("summary");
  const [callFilter,setCallFilter]=useState<"all"|"direct"|"translated">("all");
+ const [contactsOpen,setContactsOpen]=useState(false);
+ const [contactStartForm,setContactStartForm]=useState(false);
+ const [contactPhone,setContactPhone]=useState("");
  const [draft,setDraft]=useState<CallSettings|null>(null);
  const [email,setEmail]=useState("");
  const [password,setPassword]=useState("");
@@ -83,8 +89,9 @@ export default function VMVMobilePreview(){
  const business=profile?.business_name?.trim()||profile?.first_name||"Mi negocio";
  const lineNumber=line?.twilioPhone||route?.twilio_number||"Sin número asignado";
  const lineState=line?.connectedToApp?"Ruta iPhone configurada":line?.verified?"Número verificado":route?.enabled?"Ruta registrada":"Pendiente de activación";
- const go=(next:Tab)=>{setTab(next);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("summary");setCallFilter("all");}setError("");setNotice("");};
- const showCall=(next:Panel="overview")=>{setTab("services");setOpen(true);setPanel(next);setError("");setNotice("");};
+ const go=(next:Tab)=>{setTab(next);setContactsOpen(false);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("summary");setCallFilter("all");}setError("");setNotice("");};
+ const showCall=(next:Panel="overview")=>{setTab("services");setContactsOpen(false);setOpen(true);setPanel(next);setError("");setNotice("");};
+ const openContacts=(number="",startInForm=false)=>{setContactPhone(number);setContactStartForm(startInForm);setContactsOpen(true);setTab("calls");setError("");setNotice("");};
  async function login(e:FormEvent<HTMLFormElement>){e.preventDefault();await signIn(email,password);setPassword("");}
  async function saveSettings(e:FormEvent<HTMLFormElement>){e.preventDefault();if(draft)await saveBasic(draft);}
  async function saveVoices(e:FormEvent<HTMLFormElement>){e.preventDefault();await savePremium(preferences);}
@@ -143,6 +150,7 @@ export default function VMVMobilePreview(){
        </div>
        <span className={styles.groupTitle}>ACCIONES RÁPIDAS</span>
        <button className={styles.listEntry} onClick={()=>showCall("settings")}><Settings2 size={19}/><div><strong>Configurar Smart Call</strong><small>Idiomas, voces y saludos</small></div><span>›</span></button>
+       <button className={styles.listEntry} onClick={()=>openContacts()}><ContactRound size={19}/><div><strong>Mis contactos</strong><small>Agenda privada de tu negocio</small></div><span>›</span></button>
        <button className={styles.listEntry} onClick={()=>showCall("activity")}><Clock3 size={19}/><div><strong>Actividad reciente</strong><small>Últimas llamadas</small></div><span>›</span></button>
       </div>:null}
       {ready&&tab==="services"&&!open?<div className={styles.screen}>
@@ -241,9 +249,11 @@ export default function VMVMobilePreview(){
         <History calls={calls}/>{refreshButton}
        </div>:null}
       </div>:null}
-      {ready&&tab==="calls"?<section className={styles.screen}>
+      {ready&&tab==="calls"&&contactsOpen&&client&&user?<div className={styles.screen}><ContactBook key={user.id+":"+contactPhone+":"+contactStartForm} client={client} ownerId={user.id} initialPhone={contactPhone} startInForm={contactStartForm} onClose={()=>setContactsOpen(false)}/></div>:null}
+      {ready&&tab==="calls"&&!contactsOpen?<section className={styles.screen}>
        <span className={styles.screenEyebrow}>SMART CALL</span>
-       <h2>Llamadas<span className={styles.mint}>.</span></h2>
+       <div className={styles.callTop}><h2>Llamadas<span className={styles.mint}>.</span></h2>
+        <button type="button" className={styles.contactsAccess} onClick={()=>openContacts()}><ContactRound size={16}/> Contactos</button></div>
        <div className={styles.callViewTabs} role="tablist" aria-label="Secciones de llamadas">
         <button type="button" role="tab" aria-selected={callsView==="summary"} className={callsView==="summary"?styles.callViewTabActive:styles.callViewTab} onClick={()=>setCallsView("summary")}>Resumen</button>
         <button type="button" role="tab" aria-selected={callsView==="history"} className={callsView==="history"?styles.callViewTabActive:styles.callViewTab} onClick={()=>setCallsView("history")}>Historial</button>
@@ -272,7 +282,7 @@ export default function VMVMobilePreview(){
          {([{id:"all",label:"Todas"},{id:"direct",label:"Directas"},{id:"translated",label:"Traducidas"}] as const).map(item=><button key={item.id} type="button" aria-pressed={callFilter===item.id} className={callFilter===item.id?styles.callFilterActive:styles.callFilter} onClick={()=>setCallFilter(item.id)}>{item.label}</button>)}
         </div>
         <div className={styles.smartCard}>
-         <History calls={filteredCalls}/>
+         <History calls={filteredCalls} onSave={phone=>openContacts(phone,true)}/>
          <p className={styles.callHistoryLimit}>Mostrando hasta 25 llamadas recientes de tu cuenta.</p>
         </div>
        </div>}
