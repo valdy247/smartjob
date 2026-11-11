@@ -76,7 +76,7 @@ export function SmartCallControlCenter({session,onOpenCalls,onSettingsSaved}:{
    setHasSettings(!!item);
    if(item)setSettings({
     desired_language:validLanguage(item.desired_language)?item.desired_language:"es",
-    caller_language:validLanguage(item.caller_language)?item.caller_language:"en",
+    caller_language:validLanguage(item.caller_language)&&item.caller_language!==item.desired_language?item.caller_language:(item.desired_language==="en"?"es":"en"),
     assistant_name:String(item.assistant_name||"")
    });
    else setSettings(initialSettings);
@@ -190,10 +190,10 @@ export function SmartCallControlCenter({session,onOpenCalls,onSettingsSaved}:{
     <Text style={s.cardTitle}>Idiomas y asistente</Text>
     <Text style={s.inputLabel}>Idioma en el que atiendes</Text>
     <ChoiceRow value={settings.desired_language} options={[{id:"es",label:"Español"},{id:"en",label:"English"}]}
-     onChange={desired_language=>setSettings(v=>({...v,desired_language}))} disabled={!hasSettings||saving}/>
+     onChange={desired_language=>setSettings(v=>({...v,desired_language,caller_language:desired_language==="es"?"en":"es"}))} disabled={!hasSettings||saving}/>
     <Text style={s.inputLabel}>Idioma del cliente</Text>
     <ChoiceRow value={settings.caller_language} options={[{id:"en",label:"English"},{id:"es",label:"Español"}]}
-     onChange={caller_language=>setSettings(v=>({...v,caller_language}))} disabled={!hasSettings||saving}/>
+     onChange={caller_language=>setSettings(v=>({...v,caller_language,desired_language:caller_language==="es"?"en":"es"}))} disabled={!hasSettings||saving}/>
     <Text style={s.inputLabel}>Nombre del asistente</Text>
     <TextInput style={s.field} value={settings.assistant_name} onChangeText={assistant_name=>setSettings(v=>({...v,assistant_name}))}
      maxLength={40} placeholder="Nombre del asistente" editable={hasSettings&&!saving} autoCorrect={false}/>
