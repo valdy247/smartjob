@@ -98,8 +98,8 @@ export default function VMVMobilePreview(){
    <aside className={styles.intro}>
     <span className={styles.kicker}>VMV BUSINESS / SMART CALL</span>
     <h1>Tu negocio.<br/><em>En tu bolsillo.</em></h1>
-    <p>Entra con tu cuenta y descubre la experiencia de Smart Call con tu saldo de minutos, plan, historial, idiomas, asistente, voces y saludos auténticos.</p>
-    <div className={styles.feature}><span>01</span><div><strong>Saldo autorizado por el servidor</strong><small>Minutos incluidos, consumidos, reservados y recargados; exactamente como el piloto de iPhone.</small></div></div>
+    <p>Entra con tu cuenta y descubre la experiencia de Smart Call con tus minutos de traducción telefónica, plan, historial, idiomas, asistente, voces y saludos auténticos.</p>
+    <div className={styles.feature}><span>01</span><div><strong>Minutos para traducir llamadas</strong><small>Un saldo específico para las llamadas con interpretación, distinto del contador de llamadas recibidas.</small></div></div>
     <div className={styles.feature}><span>02</span><div><strong>Configuración sincronizada</strong><small>Guarda los idiomas, el nombre del asistente y la personalización habilitada por tu plan.</small></div></div>
     <div className={styles.feature}><span>03</span><div><strong>Tu línea y llamadas reales</strong><small>Consulta el estado de activación y tu historial sin simular llamadas ni clientes.</small></div></div>
     <div className={styles.disclaimer}><ShieldCheck size={17}/><span>La vista del navegador permite controlar Smart Call con tu cuenta. Las llamadas telefónicas entrantes siguen funcionando en la app iPhone, no aquí. No modificamos desvíos ni números.</span></div>
@@ -133,7 +133,7 @@ export default function VMVMobilePreview(){
       </div>:null}
       {ready&&tab==="home"?<div className={styles.screen}>
        <span className={styles.screenEyebrow}>TU ESPACIO</span><h2>Hola, {name}<span className={styles.mint}>.</span></h2><p className={styles.screenLead}>{business} · Tus herramientas en un solo lugar.</p>
-       <button className={styles.homeHero} onClick={()=>showCall("minutes")}><span className={styles.tileEyebrow}>SMART CALL / MI SALDO</span><strong>{num(available)} min</strong><small>Disponibles · {billing?.plan?.toUpperCase()||"Plan no disponible"}</small><span className={styles.tileArrow}><ArrowUpRight size={22}/></span></button>
+       <button className={styles.homeHero} onClick={()=>showCall("minutes")}><span className={styles.tileEyebrow}>TRADUCCIÓN DE LLAMADAS</span><strong>{num(available)} min</strong><small>Para llamadas traducidas · {billing?.plan?.toUpperCase()||"Plan no disponible"}</small><span className={styles.tileArrow}><ArrowUpRight size={22}/></span></button>
        <div className={styles.homeGrid}>
         <button onClick={()=>go("calls")}><PhoneCall size={24}/><strong>Llamadas</strong><small>{line?.usage.calls??"—"} en 30 días</small></button>
         <button onClick={()=>go("translator")}><Languages size={24}/><strong>Traductor</strong><small>Conversación en persona</small></button>
@@ -179,19 +179,20 @@ export default function VMVMobilePreview(){
           </div>
          </details>
         </div>
-        <div className={styles.miniCards}><div><strong>{num(available)}</strong><small>Minutos disponibles</small></div><div><strong>{line?.usage.calls??"—"}</strong><small>Llamadas · 30 días</small></div></div>
+        <div className={styles.miniCards}><div><strong>{num(available)}</strong><small>Minutos para traducir</small></div><div><strong>{line?.usage.calls??"—"}</strong><small>Llamadas registradas · 30 días</small></div></div>
         {refreshButton}
        </>:null}
        {panel==="minutes"?<>
         <div className={styles.minuteHero}>
-         <span className={styles.smallKicker}>TE QUEDAN</span>
+         <span className={styles.smallKicker}>TRADUCCIÓN DE LLAMADAS</span>
          <strong>{num(available)}<small> minutos</small></strong>
-         <p>{available===0?"Has agotado los minutos disponibles.":available==null?"No se pudo consultar tu saldo.":"Para tus próximas llamadas"}</p>
+         <p>{available===0?"Has agotado tus minutos para traducir llamadas.":available==null?"No se pudo consultar tu saldo de traducción.":"Disponibles para llamadas con traducción."}</p>
         </div>
         <div className={styles.smartCard}>
+         <p className={styles.minuteExplanation}>Este saldo es para traducir llamadas telefónicas; no es el tiempo total de llamadas entrantes ni del traductor en persona.</p>
          <span className={styles.smallKicker}>TU PLAN</span>
          <h3>{billing?.plan?billing.plan.charAt(0).toUpperCase()+billing.plan.slice(1):"No disponible"}</h3>
-         <Row label="Minutos usados" value={num(minuteData?.used)+" min"}/>
+         <Row label="Minutos de traducción usados" value={num(minuteData?.used)+" min"}/>
          <Row label="Fin de este período" value={date(billing?.periodEnd)}/>
          {billing?.billingMode==="test"?<p className={styles.testNote}>Cuenta de prueba. Este saldo no representa una suscripción de producción.</p>:null}
          <details className={styles.minuteDetails}>
@@ -239,9 +240,9 @@ export default function VMVMobilePreview(){
       </div>:null}
       {ready&&tab==="calls"?<div className={styles.screen}><span className={styles.screenEyebrow}>SMART CALL</span><h2>Llamadas<span className={styles.mint}>.</span></h2>
        <p className={styles.screenLead}>La recepción real continúa en el iPhone. Aquí puedes consultar el servicio y el historial.</p>
-       <div className={styles.smartCard}><span className={styles.smallKicker}>TU TELÉFONO</span><h3>{lineNumber}</h3><p>{line?.billing.message||lineState}</p>
+       <div className={styles.smartCard}><span className={styles.smallKicker}>TU TELÉFONO</span><h3>{lineNumber}</h3><p>{line?.billing.message||lineState}</p><p>Los minutos de traducción se muestran aparte de las llamadas entrantes normales.</p>
         <Row label="Recepción en iPhone" value={line?.connectedToApp?"Ruta configurada":"Pendiente"}/>
-        <Row label="Minutos" value={num(available)+" disponibles"}/>
+        <Row label="Para llamadas traducidas" value={num(available)+" min disponibles"}/>
         <Row label="Llamadas directas · 30 días" value={num(line?.usage.directCalls)}/>
         <Row label="Llamadas traducidas · 30 días" value={num(line?.usage.translatedCalls)}/>
         <button className={styles.mainAction} onClick={()=>showCall("minutes")}>Plan y minutos →</button>
@@ -256,7 +257,7 @@ export default function VMVMobilePreview(){
       {ready&&tab==="account"?<div className={styles.screen}><span className={styles.screenEyebrow}>MI CUENTA VMV</span><h2>Cuenta<span className={styles.mint}>.</span></h2><p className={styles.screenLead}>Tus datos reales, plan y seguridad.</p>
        <div className={styles.smartCard}><div className={styles.bigCircle}><UserRound size={32}/></div><h3>{business}</h3>
         <Row label="Correo" value={user?.email||"—"}/><Row label="Plan" value={billing?.plan?.toUpperCase()||"—"}/>
-        <Row label="Estado" value={billing?.status||"—"}/><Row label="Minutos disponibles" value={num(available)}/>
+        <Row label="Estado" value={billing?.status||"—"}/><Row label="Minutos para traducir llamadas" value={num(available)}/>
         <Row label="Mi teléfono" value={profile?.phone||"—"}/>
         <button className={styles.mainAction} onClick={()=>showCall("minutes")}>Ver mi saldo →</button>
         {refreshButton}
