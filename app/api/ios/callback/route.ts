@@ -97,6 +97,17 @@ export async function POST(req:NextRequest){
 export async function GET(req:NextRequest){
  const uid=await authenticatedUser(req);
  if(!uid)return json({error:"unauthorized"},401);
+ const legSid=req.nextUrl.searchParams.get("legSid");
+ if(legSid!==null){
+  if(!validCallSid(legSid))return json({isCallback:false,error:"invalid_sid"},400);
+  if(!callbackEnabled())return json({isCallback:false});
+  const db=callbackDb();
+  if(!db)return json({isCallback:false});
+  const {data}=await db.from("smartjob_callback_requests").select("id")
+   .eq("owner_id",uid).eq("twilio_leg_sid",legSid)
+   .in("status",["pending","ringing","bridged","completed"]).limit(1).maybeSingle();
+  return json({isCallback:Boolean(data)});
+ }
  const db=callbackDb();
  if(!db||!callbackEnabled()||!callbackBase())
   return json({available:false,reason:"callback_not_enabled"});
