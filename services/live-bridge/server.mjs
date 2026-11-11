@@ -24,6 +24,7 @@ const bounded=(v,fallback,low,high)=>{
 const MAX_ROOMS=bounded(process.env.SMARTJOB_MAX_CONCURRENT_CALLS,1,1,30);
 const MAX_SECONDS=bounded(process.env.SMARTJOB_MAX_CALL_SECONDS,14400,60,14400);
 let translatorVerified=false;
+let streamingVerified=false;
 // Verify the OpenAI key AND the actual model once at deployment; a key-shaped
 // string alone cannot prove the service can translate. No live speech is sent.
 const ready=()=>ENABLED&&directTranslationReady()&&translatorVerified;
@@ -37,6 +38,12 @@ async function preflightTranslator(){
    if(result.translation){
      translatorVerified=true;
      console.info("VMV GPT-4.1 mini translation preflight passed");
+     const streamed=await streamTranslation("Good morning, how are you?",
+       "en-US","es-ES",{onDelta:()=>{}});
+     streamingVerified=Boolean(streamed.translation);
+     console.info("VMV low-latency translation preflight",{
+       enabled:streamingVerified,reason:streamingVerified?undefined:streamed.reason
+     });
      return;
    }
    console.error("VMV translator preflight failed",{attempt,reason:result.reason});
@@ -147,7 +154,7 @@ async function consume(room,ctx){
       };
       // Only ordinary text can begin speaking before the model finishes.
       // Numbers, dates, allergens, prices etc. use the strict full-response lane.
-      if(canStreamTranslation(utterance)){
+      if(streamingVerified&&canStreamTranslation(utterance)){
         mode="stream";
         const chunks=createVoiceChunks(deliver);
         const result=await streamTranslation(utterance,ctx.sourceLanguage,ctx.targetLanguage,{
