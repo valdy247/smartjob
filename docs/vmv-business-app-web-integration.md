@@ -36,3 +36,12 @@ The VMV Business `workspace/` website now supports existing-account email/passwo
 - The web summary is read-only and existing rows are access-protected by owner RLS.
 - Future business/employee multi-tenancy, permission grants, active module subscriptions and editing phone/AI configurations require reviewed server-side authorization and migrations.
 - No billing values, Twilio settings or secrets should be modified or replicated by this feature branch.
+
+## Verification results — 2026-11-11
+
+- Existing Next.js web build on Vercel: READY on feature branch; the build pipeline includes `npm run bridge:test`.
+- VMV Business website: READY with authenticated Supabase workspace and owner-RLS read-only summaries.
+- EAS iOS internal preview build requested: `3dbe30ea-beef-4bbd-b654-332e61c75e08`. **ERRORED before app compilation** during EAS credential setup.
+- Explicit Expo cause: connected actor lacks permission to READ the configured iOS AppleAppIdentifierEntity / remote signing credentials. This is a permissions restriction, not evidence of a TypeScript or SDK failure.
+- **Do not change signing certificates or Apple identifiers in source to work around this.** An appropriately permitted Expo account owner must authorize/build the internal preview, then test on a physical iPhone.
+- Native TypeScript check and end-to-end app handoff remain outstanding. Draft PR #26 must remain unmerged until the pilot checks pass.
