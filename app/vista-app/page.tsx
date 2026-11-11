@@ -267,13 +267,14 @@ export default function VMVMobilePreview(){
        <button type="button" className={styles.homeSpotlight} onClick={()=>showCall("overview")}
         aria-label="Abrir Smart Call">
         <span className={styles.homeSpotlightKicker}>SMART CALL <span>● EN PILOTO</span></span>
-        <strong>Tu negocio,<br/>siempre conectado<span>.</span></strong>
+        <strong>Tu negocio,<br/>conectado<span>.</span></strong>
         <small>Llamadas y traducción</small>
         <span className={styles.homeSpotlightMinutes}>{num(available)} min <span>para traducir</span></span>
         <span className={styles.homeSpotlightArt} aria-hidden="true">
          <span className={styles.homeArtRingOne}></span>
          <span className={styles.homeArtRingTwo}></span>
-         <span className={styles.homeArtPhone}><PhoneCall size={37}/></span>
+         <span className={styles.homeArtPhone}><PhoneCall size={30} strokeWidth={2.2}/></span>
+         <span className={styles.homeArtMiniBubble}><Languages size={17}/></span>
          <span className={styles.homeArtSpark}>✦</span>
         </span>
         <span className={styles.homeSpotlightGo}><ArrowUpRight size={20}/></span>
@@ -286,23 +287,24 @@ export default function VMVMobilePreview(){
         <button className={`${styles.homeProductCard} ${styles.homeProductMint}`}
          onClick={()=>go("translator")} aria-label="Abrir traductor en persona">
          <span className={styles.homeProductIcon}><Languages size={27}/></span>
+         <span className={styles.homeProductDecor} aria-hidden="true"><Languages size={75} strokeWidth={1.5}/></span>
          <span className={styles.homeProductBody}><strong>Traductor</strong><small>En persona</small></span>
          <span className={styles.homeProductArrow}>↗</span>
         </button>
         <div className={`${styles.homeProductCard} ${styles.homeProductYellow}`}>
          <span className={styles.homeProductIcon}><Globe size={27}/></span>
          <span className={styles.homeProductBody}><strong>Web Services</strong><small>Próximamente</small></span>
-         <span className={styles.homeProductDeco} aria-hidden="true">✳</span>
+         <span className={styles.homeProductDecor} aria-hidden="true"><Globe size={83} strokeWidth={1.25}/></span>
         </div>
         <div className={`${styles.homeProductCard} ${styles.homeProductSky}`}>
          <span className={styles.homeProductIcon}><Bot size={27}/></span>
          <span className={styles.homeProductBody}><strong>AI Agents</strong><small>Próximamente</small></span>
-         <span className={styles.homeProductDeco} aria-hidden="true">✦</span>
+         <span className={styles.homeProductDecor} aria-hidden="true"><Bot size={79} strokeWidth={1.3}/></span>
         </div>
         <div className={`${styles.homeProductCard} ${styles.homeProductPink}`}>
          <span className={styles.homeProductIcon}><BarChart3 size={27}/></span>
          <span className={styles.homeProductBody}><strong>Marketing</strong><small>Próximamente</small></span>
-         <span className={styles.homeProductDeco} aria-hidden="true">✳</span>
+         <span className={styles.homeProductDecor} aria-hidden="true"><BarChart3 size={82} strokeWidth={1.3}/></span>
         </div>
        </div>
        <button className={styles.homeExplore} type="button" onClick={()=>go("services")}>
