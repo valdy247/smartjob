@@ -260,13 +260,33 @@ export function LivePanel({profile,supabase,apiStatus}:{profile:Profile;supabase
   <input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)}/>
   <span>Ambos sabemos que se procesará audio o texto con IA.</span>
  </label>;
- if(stage==="choose")return <section className="vmv-interpreter-choice" aria-label="Traductor en persona">
-  <h2>¿Cómo quieres conversar?</h2>
+ if(stage==="choose")return <section className="vmv-interpreter-choice vmv-translator-v4" aria-label="Traductor en persona">
+  <div className="vmv-translator-banner">
+   <div className="vmv-translator-banner-copy">
+    <span className="vmv-translator-banner-eyebrow">VMV BUSINESS / TRADUCTOR</span>
+    <h2>Dos idiomas.<br/><em>Una conversación.</em></h2>
+    <span className="vmv-translator-language-pill"><span>🇪🇸 Español</span><span aria-hidden="true">⇄</span><span>🇺🇸 English</span></span>
+   </div>
+   <div className="vmv-translator-banner-art" aria-hidden="true">
+    <span className="vmv-translator-orbit vmv-translator-orbit-one"></span>
+    <span className="vmv-translator-orbit vmv-translator-orbit-two"></span>
+    <span className="vmv-translator-bubble vmv-translator-bubble-one"><Languages size={35}/></span>
+    <span className="vmv-translator-bubble vmv-translator-bubble-two"><AudioLines size={28}/></span>
+    <span className="vmv-translator-spark">✦</span>
+   </div>
+  </div>
+  <div className="vmv-translator-mode-header"><h3>Elige cómo conversar<span>.</span></h3></div>
   <div className="vmv-interpreter-methods">
-   <button type="button" onClick={()=>start("voice")}><span className="vmv-method-icon"><Mic size={32}/></span>
-    <strong>Iniciar conversación hablada</strong><small>Habla, suelta y escucha la traducción.</small><ChevronRight size={20}/></button>
-   <button type="button" onClick={()=>start("text")}><span className="vmv-method-icon"><Keyboard size={32}/></span>
-    <strong>Escribir mensajes</strong><small>Detectamos el idioma automáticamente.</small><ChevronRight size={20}/></button>
+   <button type="button" className="vmv-voice-choice" onClick={()=>start("voice")} aria-label="Comenzar conversación hablada">
+    <span className="vmv-method-icon"><Mic size={29}/></span>
+    <span className="vmv-method-title"><strong>Hablar</strong><small>Voz en tiempo real</small></span>
+    <span className="vmv-method-arrow" aria-hidden="true"><ChevronRight size={20}/></span>
+   </button>
+   <button type="button" className="vmv-text-choice" onClick={()=>start("text")} aria-label="Comenzar conversación escrita">
+    <span className="vmv-method-icon"><Keyboard size={29}/></span>
+    <span className="vmv-method-title"><strong>Escribir</strong><small>Mensajes traducidos</small></span>
+    <span className="vmv-method-arrow" aria-hidden="true"><ChevronRight size={20}/></span>
+   </button>
   </div>
  </section>;
 
