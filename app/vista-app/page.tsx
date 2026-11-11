@@ -148,6 +148,10 @@ export default function VMVMobilePreview(){
          <Row label="Número verificado" value={line?.verified?"Sí":"No confirmado"}/>
          <Row label="Recepción en iPhone" value={line?.connectedToApp?"Ruta habilitada":"Pendiente"}/>
          <Row label="Operador" value={line?.carrier||provisioning?.carrier||"No disponible"}/>
+         <Row label="Estado de solicitud" value={provisioning?.status||"Sin solicitud"}/>
+         <Row label="Modo de recepción" value={route?.receive_method==="ios_app"?"App iPhone":route?.receive_method==="pstn"?"Otra línea":"No disponible"}/>
+         <Row label="Desvío configurado" value={route?.forwarding_mode==="none"?"No":route?.forwarding_mode==="conditional"?"Condicional":route?.forwarding_mode==="all_calls"?"Todas las llamadas":"No disponible"}/>
+         <Row label="Menú bilingüe" value={line?.menuPrepared?"Preparado para pruebas":"No verificado"}/>
          <Row label="Tu idioma" value={lang(settings?.desired_language)}/>
          <Row label="Idioma del cliente" value={lang(settings?.caller_language)}/>
          <Row label="Asistente" value={settings?.assistant_name||"Sin configurar"}/>
