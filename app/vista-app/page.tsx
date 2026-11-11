@@ -314,14 +314,23 @@ export default function VMVMobilePreview(){
         <span className={styles.homeExploreGraphic} aria-hidden="true">✦</span>
        </button>
       </div>:null}
-      {ready&&tab==="services"&&!open?<div className={styles.screen}>
+      {ready&&tab==="services"&&!open?<div className={`${styles.screen} ${styles.servicesV3}`}>
        <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>Mis servicios<span className={styles.mint}>.</span></h2>
-       <button className={styles.serviceHero} onClick={()=>showCall()}><div className={styles.serviceHeroIcon}><PhoneCall size={24}/></div>
-        <span className={styles.tileEyebrow}>SERVICIO EN PILOTO</span><strong>Smart Call</strong>
-        <small>{num(available)} min disponibles · {lineState}</small><span className={styles.serviceLink}>Abrir servicio →</span>
+       <button type="button" className={styles.serviceHero} onClick={()=>showCall()} aria-label="Abrir Smart Call">
+        <span className={styles.serviceHeroTop}><span className={styles.serviceHeroIcon}><PhoneCall size={26}/></span><span className={styles.serviceHeroStatus}>EN PILOTO</span></span>
+        <strong>Smart Call<span>.</span></strong>
+        <small>{num(available)} min para traducir</small>
+        <span className={styles.serviceLink}>Abrir servicio <ArrowUpRight size={17}/></span>
+        <span className={styles.serviceHeroDecoration} aria-hidden="true">✦</span>
        </button>
-       <span className={styles.groupTitle}>EN DESARROLLO</span>
-       {modules.map(({name:moduleName,Icon})=><div key={moduleName} className={styles.moduleRow}><div className={styles.moduleIcon}><Icon size={17}/></div><div><strong>{moduleName}</strong><small>Próximamente</small></div><span className={styles.pending}>Pendiente</span></div>)}
+       <div className={styles.serviceGridHeading}><h3>Explora más<span>.</span></h3><span>PRÓXIMAMENTE</span></div>
+       <div className={styles.serviceModuleGrid}>
+        {modules.map(({name:moduleName,Icon},index)=><div key={moduleName}
+         className={[styles.serviceModuleTile,[styles.serviceTileSky,styles.serviceTileYellow,styles.serviceTilePink,styles.serviceTileMint,styles.serviceTileLavender,styles.serviceTilePeach][index%6]].join(" ")}>
+         <div className={styles.serviceModuleIcon}><Icon size={25}/></div>
+         <div className={styles.serviceModuleBottom}><strong>{moduleName}</strong><small>Próximamente</small></div>
+        </div>)}
+       </div>
       </div>:null}
       {ready&&tab==="services"&&open?<div className={styles.smartScreen}>
        <button className={styles.back} onClick={()=>setOpen(false)}><ChevronLeft size={17}/> Todos los servicios</button>
@@ -458,20 +467,33 @@ export default function VMVMobilePreview(){
          startInForm={contactStartForm} embedded onClose={()=>setCallsView("dial")}/>
        </div>:null}
       </section>:null}
-      {ready&&tab==="translator"?<div className={styles.screen}><span className={styles.screenEyebrow}>CONVERSACIÓN EN PERSONA</span><h2>Traductor<span className={styles.mint}>.</span></h2>
-       <p className={styles.screenLead}>Usa el traductor web cuando el servicio esté disponible. La traducción de llamadas sigue en tu iPhone.</p>
+      {ready&&tab==="translator"?<div className={`${styles.screen} ${styles.translatorV3}`}>
+       <div className={styles.translatorWelcome}><span className={styles.translatorWelcomeIcon}><Languages size={27}/></span>
+        <div><span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>Traductor<span className={styles.mint}>.</span></h2></div>
+        <span className={styles.translatorSpark} aria-hidden="true">✦</span>
+       </div>
        {client&&profile?<div className={styles.interpreterWrap}><LivePanel supabase={client} profile={profile} apiStatus={apiStatus}/></div>:null}
       </div>:null}
-      {ready&&tab==="account"?<div className={styles.screen}><span className={styles.screenEyebrow}>MI CUENTA VMV</span><h2>Cuenta<span className={styles.mint}>.</span></h2><p className={styles.screenLead}>Tus datos reales, plan y seguridad.</p>
-       <div className={styles.smartCard}><div className={styles.bigCircle}><UserRound size={32}/></div><h3>{business}</h3>
-        <Row label="Correo" value={user?.email||"—"}/><Row label="Plan" value={billing?.plan?.toUpperCase()||"—"}/>
-        <Row label="Estado" value={billing?.status||"—"}/><Row label="Minutos para traducir llamadas" value={num(available)}/>
-        <Row label="Mi teléfono" value={profile?.phone||"—"}/>
-        <button className={styles.mainAction} onClick={()=>showCall("minutes")}>Ver mi saldo →</button>
-        {refreshButton}
-        <button className={styles.logoutLink} disabled={working} onClick={()=>void signOut()}><LogOut size={15}/> Cerrar sesión</button>
+      {ready&&tab==="account"?<div className={`${styles.screen} ${styles.accountV3}`}>
+       <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>Mi cuenta<span className={styles.mint}>.</span></h2>
+       <div className={styles.accountHero}><span className={styles.accountHeroAvatar}><UserRound size={29}/></span>
+        <span className={styles.accountHeroInfo}><strong>{business}</strong><small>{user?.email||"—"}</small></span>
+        <span className={styles.accountHeroSpark} aria-hidden="true">✦</span>
        </div>
-       <div className={styles.privacyNote}><ShieldCheck size={17}/><span>La app web y el iPhone comparten tu cuenta Supabase pero mantienen sus sesiones separadas.</span></div>
+       <div className={styles.accountStatGrid}>
+        <button type="button" className={styles.accountStatTile} onClick={()=>showCall("minutes")}>
+         <span><Clock3 size={19}/></span><strong>{num(available)} min</strong><small>Traducción</small>
+        </button>
+        <button type="button" className={styles.accountStatTile} onClick={()=>showCall("minutes")}>
+         <span><ShieldCheck size={19}/></span><strong>{billing?.plan?.toUpperCase()||"—"}</strong><small>Tu plan</small>
+        </button>
+       </div>
+       <div className={styles.smartCard}>
+        <Row label="Estado" value={billing?.status||"—"}/><Row label="Mi teléfono" value={profile?.phone||"—"}/>
+        <button className={styles.mainAction} onClick={()=>showCall("minutes")}>Ver mi plan <ArrowUpRight size={16}/></button>
+        {refreshButton}
+       </div>
+       <button className={styles.logoutLink} disabled={working} onClick={()=>void signOut()}><LogOut size={15}/> Cerrar sesión</button>
       </div>:null}
       {ready&&(error||notice||summary&&!summary.billing.ok)?<div className={styles.feedbackArea} aria-live="polite" role="status">
        {error?<p className={styles.errorText}>{error}</p>:null}
