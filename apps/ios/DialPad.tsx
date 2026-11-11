@@ -1,12 +1,9 @@
-import React,{useEffect,useRef,useState} from "react";
+import React,{useEffect,useState} from "react";
 import {ActivityIndicator,Alert,Pressable,StyleSheet,Text,TextInput,View} from "react-native";
 import type {Session} from "@supabase/supabase-js";
 import {api,supabase} from "./session";
 
-const KEYS=[
- ["1",""],["2","ABC"],["3","DEF"],["4","GHI"],["5","JKL"],["6","MNO"],
- ["7","PQRS"],["8","TUV"],["9","WXYZ"],["*",""],["0","+"],["#",""]
-] as const;
+const KEYS=["1","2","3","4","5","6","7","8","9"] as const;
 function normalizedPhone(v:string){
  const raw=v.trim().replace(/[().\s-]/g,"");
  if(!/^\+?[0-9]+$/.test(raw))return null;
@@ -21,7 +18,6 @@ export function DialPad({session,onStarted}:{session:Session;onStarted:()=>void}
  const [working,setWorking]=useState(false);
  const [notice,setNotice]=useState("");
  const [failed,setFailed]=useState(false);
- const input=useRef<TextInput>(null);
  useEffect(()=>{
   let mounted=true;
   void (async()=>{
@@ -42,7 +38,7 @@ export function DialPad({session,onStarted}:{session:Session;onStarted:()=>void}
  },[session.user.id]);
  const normalized=normalizedPhone(phone);
  const addDigit=(digit:string)=>{
-  if(working||digit==="*"||digit==="#")return;
+  if(working)return;
   setPhone(v=>v.length>=20?v:v+digit);
   setNotice("");
  };
@@ -85,21 +81,28 @@ export function DialPad({session,onStarted}:{session:Session;onStarted:()=>void}
  }
  return <View style={s.root}>
   <View style={s.numberRow}>
-   <TextInput ref={input} style={s.number} accessibilityLabel="Número para llamar"
+   <TextInput style={s.number} accessibilityLabel="Número para llamar"
     placeholder="+1 (000) 000-0000" placeholderTextColor="#A9C1B3"
     keyboardType="phone-pad" showSoftInputOnFocus={false} maxLength={20} value={phone}
     onChangeText={text=>{setPhone(text.slice(0,20));setNotice("");}} editable={!working}/>
-   {phone?<Pressable accessibilityRole="button" accessibilityLabel="Borrar último dígito"
-    onPress={()=>setPhone(v=>v.slice(0,-1))} style={s.backspace}><Text style={s.backspaceText}>⌫</Text></Pressable>:null}
   </View>
   <View style={s.keys}>
-   {KEYS.map(([digit,letters])=><Pressable key={digit} accessibilityRole="button"
-    accessibilityLabel={digit==="*"?"Asterisco":digit==="#"?"Numeral":digit}
-    disabled={working||digit==="*"||digit==="#"} style={({pressed})=>
-     [s.key,pressed&&s.keyPressed,(digit==="*"||digit==="#")&&s.keyInactive]}
+   {KEYS.map(digit=><Pressable key={digit} accessibilityRole="button"
+    accessibilityLabel={digit} disabled={working}
+    style={({pressed})=>[s.key,pressed&&s.keyPressed]}
     onPress={()=>addDigit(digit)}>
-     <Text style={s.digit}>{digit}</Text><Text style={s.letters}>{letters||" "}</Text>
+     <Text style={s.digit}>{digit}</Text>
     </Pressable>)}
+   <View style={s.keySpacer} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"/>
+   <Pressable accessibilityRole="button" accessibilityLabel="0" disabled={working}
+    style={({pressed})=>[s.key,pressed&&s.keyPressed]} onPress={()=>addDigit("0")}>
+    <Text style={s.digit}>0</Text>
+   </Pressable>
+   <Pressable accessibilityRole="button" accessibilityLabel="Borrar último dígito"
+    disabled={working||!phone} onPress={()=>{setPhone(v=>v.slice(0,-1));setNotice("");}}
+    style={[s.key,s.backspace,(!phone||working)&&s.backspaceDisabled]}>
+    <Text style={s.backspaceText}>⌫</Text>
+   </Pressable>
   </View>
   <Pressable accessibilityRole="button" accessibilityLabel="Llamar desde VMV"
    disabled={working||checking||!available||!normalized}
@@ -115,13 +118,13 @@ const s=StyleSheet.create({
  root:{alignItems:"center",paddingHorizontal:6,paddingTop:12,paddingBottom:30},
  numberRow:{width:"100%",maxWidth:340,flexDirection:"row",alignItems:"center",minHeight:74,marginBottom:10},
  number:{flex:1,minWidth:0,color:"#173A2C",fontSize:27,fontWeight:"600",textAlign:"center",letterSpacing:-.8,paddingVertical:12},
- backspace:{padding:8,alignItems:"center",justifyContent:"center"},
- backspaceText:{fontSize:25,color:"#779587"},
+ backspace:{borderWidth:0,backgroundColor:"transparent"},
+ backspaceDisabled:{opacity:.35},
+ backspaceText:{fontSize:30,color:"#779587"},
  keys:{width:285,flexDirection:"row",flexWrap:"wrap",alignItems:"center",justifyContent:"space-between",rowGap:12},
  key:{width:77,height:77,borderRadius:40,borderWidth:1,borderColor:"#E0EDE5",backgroundColor:"#F0F8F3",alignItems:"center",justifyContent:"center"},
- keyPressed:{backgroundColor:"#C9F0D8"},keyInactive:{opacity:.6},
- digit:{fontSize:29,fontWeight:"500",lineHeight:35,color:"#15382B"},
- letters:{fontSize:9,letterSpacing:1.5,fontWeight:"800",color:"#779288",marginTop:0,minHeight:12},
+ keyPressed:{backgroundColor:"#C9F0D8"},keySpacer:{width:77,height:77},
+ digit:{fontSize:33,fontWeight:"500",lineHeight:40,color:"#15382B"},
  call:{width:72,height:72,borderRadius:36,backgroundColor:"#06B98C",alignItems:"center",justifyContent:"center",marginTop:24},
  callDisabled:{opacity:.45},callIcon:{fontSize:35,fontWeight:"700",color:"white",lineHeight:42},
  hint:{fontSize:11,color:"#829C8C",marginTop:14,textAlign:"center"},
