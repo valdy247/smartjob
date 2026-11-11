@@ -917,7 +917,7 @@ export default function App(){
         <View style={styles.card}>
          <Text style={styles.cardTitle}>Llamadas normales</Text>
          <Text style={styles.billingBigText}>{accountOverview?.billing.active?"Incluidas con tu plan":"Acceso no disponible"}</Text>
-         
+         {billingOverview?.plan==="starter"?<View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Starter · plan previsto</Text><Text style={styles.callsInfoValue}>150 min nacionales</Text></View>:null}
          <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Llamadas · 30 días</Text><Text style={styles.callsInfoValue}>{accountOverview?.usage.directCalls??"—"}</Text></View>
          
         </View>
