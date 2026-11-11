@@ -70,6 +70,24 @@ export default function App(){
  const registeredAt=useRef(0),inviteRef=useRef<CallInvite|null>(null),callRef=useRef<Call|null>(null);
  const registrationInFlight=useRef(false);
  const sessionRef=useRef<Session|null>(null);
+ // Pilot-only diagnostic events; no recordings, transcripts, phone numbers or tokens.
+ // A signed Supabase session and active iOS route are required by database RLS.
+ function voiceTelemetry(event_type:
+   "app_open"|"pushkit_ok"|"pushkit_error"|"register_attempt"|"register_ok"|
+   "register_error"|"sdk_error"|"invite_received"|"invite_canceled"|
+   "invite_accepted"|"call_connected"|"call_failed"|"call_disconnected"|"call_ended",
+   code?:string|number){
+   const user_id=sessionRef.current?.user.id;
+   if(!user_id||!supabase)return;
+   const raw=code===undefined?"":String(code);
+   const error_code=/^[A-Za-z0-9_-]{1,32}$/.test(raw)?raw:null;
+   void supabase.from("smartjob_ios_voice_events").insert({
+     user_id,event_type,error_code,app_build:"0.4.3-8"
+   }).then(({error:uploadError})=>{
+     if(uploadError)console.warn("VMV voice diagnostic delivery failed",uploadError.code);
+   });
+ }
+ useEffect(()=>{if(session?.user.id)voiceTelemetry("app_open");},[session?.user.id]);
  useEffect(()=>{
    const client=supabase;
    if(!client)return;
@@ -113,6 +131,7 @@ export default function App(){
    // After a screen reload that stale callback can swallow CallInvite events.
    const onInvite=(incoming:CallInvite)=>{
      setVoiceDiagnostic("Twilio entregó una invitación de llamada al iPhone.");
+     voiceTelemetry("invite_received");
      inviteRef.current=incoming;setInvite(incoming);
      setStatus("Llamada entrante");
      const details=(incoming as unknown as {customParameters?:Map<string,string>|Record<string,string>}).customParameters;
@@ -123,10 +142,12 @@ export default function App(){
        inviteRef.current=null;setInvite(null);
        setInboundLanguage("unknown");setStatus("La llamada terminó antes de contestar");
        setVoiceDiagnostic("Twilio canceló la invitación antes de contestar.");
+       voiceTelemetry("invite_canceled");
      };
      incoming.on(CallInvite.Event.Cancelled,dismissInvite);
      incoming.on(CallInvite.Event.Rejected,dismissInvite);
      incoming.on(CallInvite.Event.Accepted,(accepted:Call)=>{
+       voiceTelemetry("invite_accepted");
        connectCall(accepted);
      });
    };
@@ -135,6 +156,7 @@ export default function App(){
      const code=typeof e?.code==="string"||typeof e?.code==="number"?String(e.code):"sin código";
      const name=typeof e?.name==="string"?e.name.slice(0,80):"Error del SDK";
      setVoiceDiagnostic("Twilio SDK: "+name+" ("+code+").");
+     voiceTelemetry("sdk_error",code);
      setError("La conexión de voz tuvo un problema. Consulta el diagnóstico de voz.");
    };
    voice.on(Voice.Event.CallInvite,onInvite);
@@ -147,11 +169,13 @@ export default function App(){
  useEffect(()=>{
    // Register PushKit as soon as the app starts, not only when the user taps a button.
    void ensurePushRegistry().then(()=>{
-     setVoiceDiagnostic(prev=>prev==="Sin diagnóstico de registro todavía."?
-       "PushKit inicializado al abrir la app. Pendiente de registrar el dispositivo con Twilio.":prev);
+     voiceTelemetry("pushkit_ok");
+     setVoiceDiagnostic(prev=>prev==="Esperando registro PushKit/Twilio."?
+       "PushKit inicializado. Pendiente de registrar el dispositivo con Twilio.":prev);
    }).catch((cause:unknown)=>{
      const reason=cause instanceof Error?cause.message:"Error desconocido";
      setVoiceDiagnostic("PushKit no pudo inicializarse: "+reason.slice(0,160));
+     voiceTelemetry("pushkit_error",cause instanceof Error?cause.name:"unknown");
    });
  },[]);
  function clearCallState(connected:Call,message="Llamada finalizada"){
@@ -164,15 +188,18 @@ export default function App(){
    setStatus("Conectando interpretación…");
    connected.addListener(Call.Event.Connected,()=>{
      if(callRef.current===connected)setStatus("En llamada con interpretación");
+     voiceTelemetry("call_connected");
    });
    connected.addListener(Call.Event.ConnectFailure,(cause:unknown)=>{
      const e=cause as {code?:number|string;message?:string}|null;
      setVoiceDiagnostic("Twilio no pudo conectar la llamada ("+String(e?.code||"sin código")+").");
+     voiceTelemetry("call_failed",e?.code||"unknown");
      clearCallState(connected,"No se pudo conectar la llamada");
    });
    connected.addListener(Call.Event.Disconnected,(cause:unknown)=>{
      const e=cause as {code?:number|string}|null;
      if(e?.code)setVoiceDiagnostic("Llamada desconectada: código Twilio "+String(e.code));
+     voiceTelemetry("call_disconnected",e?.code||"none");
      clearCallState(connected);
    });
    if(connected.getState()===Call.State.Disconnected)clearCallState(connected);
@@ -344,9 +371,11 @@ export default function App(){
      setReady(false);
      setVoiceDiagnostic("No se pudo iniciar el registro: abre tu sesión de VMV CALL e inténtalo nuevamente.");
      setError("No hay sesión activa para registrar este iPhone.");
+     voiceTelemetry("register_error","no_session");
      return;
    }
    registrationInFlight.current=true;
+   voiceTelemetry("register_attempt");
    setRegistering(true);setError("");setVoiceDiagnostic("Solicitando autorización de voz al servidor…");
    try{
      const {data}=await client.auth.getSession();
@@ -371,12 +400,14 @@ export default function App(){
      setVoiceDiagnostic("Registrando dispositivo con Twilio…");
      await voice.register(value.token);
      registeredAt.current=Date.now();setReady(true);
+     voiceTelemetry("register_ok");
      setVoiceDiagnostic("Registro de Twilio aceptado a las "+new Date().toLocaleTimeString()+". Todavía debemos verificar la entrega VoIP con una llamada.");
      setStatus(value.testOnly===true?"iPhone registrado para llamadas de prueba":"iPhone registrado para recibir llamadas");
    }catch(e){
      setReady(false);
      const reason=e instanceof Error?e.message:"Error desconocido";
      setVoiceDiagnostic("Fallo en registro: "+reason.slice(0,180));
+     voiceTelemetry("register_error",(e as {code?:string|number}|null)?.code|| (e instanceof Error?e.name:"unknown"));
      setError(e instanceof Error?e.message:"No fue posible activar la recepción.");
    }finally{registrationInFlight.current=false;setRegistering(false);}
  }
@@ -490,6 +521,7 @@ export default function App(){
    if(!callRef.current)return;
    try{await callRef.current.disconnect();}catch{}
    callRef.current=null;setCall(null);setStatus("Llamada finalizada");
+   voiceTelemetry("call_ended");
  }
  async function logout(){
    if(supabase)await supabase.auth.signOut();
