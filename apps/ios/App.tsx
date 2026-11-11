@@ -672,7 +672,7 @@ export default function App(){
   <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
   <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":undefined}>
    <ScrollView style={activeTab==="home"?styles.homeScrollSurface:undefined} scrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content,session&&{paddingBottom:150}]}>
-    <View style={styles.brand}><View style={styles.brandMark}>
+    {session&&activeTab==="home"?null:<View style={styles.brand}><View style={styles.brandMark}>
       <View style={styles.brandWave}>
        <View style={[styles.brandWaveBar,{height:13}]}/><View style={[styles.brandWaveBar,{height:24}]}/>
        <View style={[styles.brandWaveBar,{height:32}]}/><View style={[styles.brandWaveBar,{height:24}]}/>
@@ -681,7 +681,7 @@ export default function App(){
      </View>
      <Text style={styles.brandText}>VMV<Text style={{color:"#00AD8D"}}> BUSINESS</Text></Text>
      {session?<Pressable accessibilityRole="button" accessibilityLabel="Abrir ajustes" onPress={()=>{setActiveTab("settings");setSettingsPage("menu");}} style={styles.headerAvatar}><Text style={styles.headerAvatarText}>{String(session.user.user_metadata?.first_name||"V").charAt(0).toUpperCase()}</Text></Pressable>:null}
-    </View>
+    </View>}
     {!configured?<View style={styles.alert}><Text style={styles.alertText}>Configura el acceso de la app para iniciar sesión.</Text></View>:
     !session?<View style={styles.card}>
       <Text style={styles.kicker}>BIENVENIDO</Text><Text style={styles.heading}>Habla sin{"\n"}fronteras<Text style={{color:colors.accent}}>.</Text></Text>
