@@ -2,6 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {paidServiceAllowed} from "@/lib/vmv-entitlements";
 import {callbackBase,callbackDb,callbackEnabled,callerPhone,validCallSid,validUuid} from "@/lib/vmv-callback";
+import {resolveOriginalCaller} from "@/lib/vmv-caller-lookup";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -30,8 +31,9 @@ export async function POST(req:NextRequest){
     .limit(1).maybeSingle()
  ]);
  if(source.error||routeResult.error)return json({error:"lookup_unavailable"},503);
- const customer=source.data?.caller_phone;
  const business=routeResult.data?.twilio_number;
+ const customer=callerPhone(source.data?.caller_phone)?source.data.caller_phone:
+  callerPhone(business)?await resolveOriginalCaller(db,uid,sourceSid,business):null;
  if(!callerPhone(customer)||!callerPhone(business)||
   customer===business||business!==process.env.TWILIO_NUMBER)
   return json({error:"verified_caller_or_line_missing"},422);
