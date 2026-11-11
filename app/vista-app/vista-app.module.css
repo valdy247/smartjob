@@ -387,3 +387,50 @@ button.homeProductCard:hover{transform:translateY(-2px)}
 /* Generic tap & reduced-motion safety across redesigned views. */
 .servicesV3 button:focus-visible,.accountV3 button:focus-visible,.smartScreen button:focus-visible,.translatorV3 button:focus-visible{outline:3px solid #a577ed;outline-offset:2px}
 @media(max-width:360px){.servicesV3,.accountV3{padding-inline:13px}.serviceModuleTile{padding:13px;min-height:136px}.serviceModuleBottom strong{font-size:14px}.servicesV3 .serviceHero{min-height:198px}}
+
+
+/* Home finesse v4 — preserve VMV palette, fix title/art collision at 320px. */
+.homeWelcome{margin-bottom:17px}
+.homeSpotlight{min-height:211px;padding:19px 18px 18px;border-radius:24px;box-shadow:0 10px 24px #7848d92c}
+.homeSpotlight>strong{max-width:57%;font-size:clamp(23px,6.5vw,27px);line-height:1.06;letter-spacing:-.057em;margin:22px 0 8px;overflow-wrap:normal}
+.homeSpotlight>small{font-size:11px}
+.homeSpotlightMinutes{margin-top:17px;padding:7px 10px}
+.homeSpotlightArt{top:57px;right:17px;width:115px;height:121px}
+.homeArtRingOne,.homeArtRingTwo{position:absolute;display:block;transform:none;box-sizing:border-box}
+.homeArtRingOne{width:116px;height:116px;left:0;top:2px;border:13px solid #eedaff56;box-shadow:0 0 0 4px #ffffff0d}
+.homeArtRingTwo{width:91px;height:91px;left:14px;top:15px;border:9px solid #f7daff91}
+.homeArtPhone{position:relative;z-index:2;width:74px;height:74px;border-radius:50%;transform:rotate(-12deg);background:radial-gradient(circle at 29% 23%,#ffeab1 0%,#ffc47e 45%,#fd9b72 100%);color:#6935a5;border:2px solid #ffe8abbb;box-shadow:inset -7px -9px 14px #cc665531,inset 6px 6px 14px #fff8e36e,0 11px 19px #58349855}
+.homeArtPhone:before{content:"";position:absolute;width:31px;height:12px;top:11px;left:12px;border-radius:50%;transform:rotate(-19deg);background:#ffffff75;filter:blur(5px)}
+.homeArtMiniBubble{position:absolute;z-index:3;left:3px;bottom:1px;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:linear-gradient(145deg,#d5fce8,#a6e4da);color:#337c73;border:2px solid #e7fff5;box-shadow:0 5px 11px #50309f42}
+.homeArtSpark{top:-8px;right:4px;font-size:25px;color:#ffe58d}
+.homeSpotlightGo{width:31px;height:31px;right:15px;bottom:15px;background:#ffffff3a}
+.homeSectionHeading{margin:21px 0 13px}
+.homeProductsGrid{gap:12px}
+.homeProductCard{min-height:148px;border-radius:21px;padding:15px}
+.homeProductIcon{height:45px;width:45px}
+.homeProductDecor{position:absolute;right:-10px;top:-9px;z-index:1;color:currentColor;opacity:.16;transform:rotate(-13deg);pointer-events:none}
+.homeProductMint .homeProductDecor{right:-13px;top:-4px;transform:rotate(15deg)}
+.homeProductYellow .homeProductDecor{right:-12px;top:-12px;transform:rotate(12deg)}
+.homeProductSky .homeProductDecor{right:-12px;top:-10px;transform:rotate(-10deg)}
+.homeProductPink .homeProductDecor{right:-14px;top:-13px;transform:rotate(8deg)}
+.homeProductBody{position:relative;z-index:2;margin-top:16px}
+.homeExplore{margin-top:13px}
+.bottomNav{height:64px;border-radius:32px;padding:7px 10px;margin-bottom:12px;box-shadow:0 9px 20px #26223d27}
+.bottomNav button{height:50px;min-height:50px}
+.bottomNav .navCallAction{transform:translateY(-1px)}
+.bottomNav .navCallAction>span{width:49px;height:49px;border:1.5px solid #e0cfff;background:linear-gradient(145deg,#ac80fa,#8552e0);box-shadow:0 4px 10px #30175030}
+.bottomNav .navCallAction.activeNav>span{border:1.5px solid #f2e8ff;box-shadow:0 0 0 1px #c7a7ff65,0 4px 10px #30175039}
+.homeV2 :is(.homeSpotlight,.homeProductCard,.homeExplore):focus-visible{outline:3px solid #7048ba;outline-offset:3px}
+@media(max-width:360px){
+ .homeWelcome{margin-bottom:15px}
+ .homeSpotlight{padding:17px 15px;min-height:203px}
+ .homeSpotlight>strong{max-width:58%;font-size:23px;margin-top:21px}
+ .homeSpotlightArt{width:101px;height:110px;top:64px;right:11px;opacity:1}
+ .homeArtRingOne{width:104px;height:104px;border-width:11px}
+ .homeArtRingTwo{width:81px;height:81px;border-width:8px;left:13px;top:14px}
+ .homeArtPhone{width:65px;height:65px}
+ .homeArtMiniBubble{width:29px;height:29px}
+ .homeProductCard{padding:13px}
+ .bottomNav .navCallAction>span{width:47px;height:47px}
+}
+@media(prefers-reduced-motion:reduce){.homeProductCard,.homeSpotlight,.bottomNav .navCallAction{transition:none}}
