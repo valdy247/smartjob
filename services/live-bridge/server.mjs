@@ -7,6 +7,7 @@ import {WebSocketServer,WebSocket} from "ws";
 import {accountSid,callSid} from "./relay-core.mjs";
 import {verifiedSetup,cleanPrompt,peerRole,textMessage} from "./conversation-relay.mjs";
 import {directTranslationReady,translateDirect} from "./direct-translate.mjs";
+import {auditTwilioPush} from "./push-diagnostics.mjs";
 
 const AUTH=process.env.TWILIO_AUTH_TOKEN||"";
 const ACCOUNT=process.env.TWILIO_ACCOUNT_SID||"";
@@ -42,6 +43,8 @@ async function preflightTranslator(){
  // Fail closed instead of charging for answered calls with no translation.
 }
 void preflightTranslator();
+// Diagnostic-only: runs asynchronously and never gates active calls.
+void auditTwilioPush();
 const rooms=new Map();
 const open=ws=>ws?.readyState===WebSocket.OPEN;
 const MAX_BUFFERED_BYTES=128000;
