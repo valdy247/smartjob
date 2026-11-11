@@ -81,6 +81,7 @@ export default function VMVMobilePreview(){
  const [topupMessage,setTopupMessage]=useState("");
  const [callbackAvailable,setCallbackAvailable]=useState(false);
  const [callbackBusy,setCallbackBusy]=useState<string|null>(null);
+ const [callbackConfirmSid,setCallbackConfirmSid]=useState<string|null>(null);
  const [lookupBusy,setLookupBusy]=useState<string|null>(null);
  const [callbackMessage,setCallbackMessage]=useState("");
  useEffect(()=>{setDraft(settings?{...settings}:null);},[settings]);
@@ -117,7 +118,7 @@ export default function VMVMobilePreview(){
  const business=profile?.business_name?.trim()||profile?.first_name||"Mi negocio";
  const lineNumber=line?.twilioPhone||route?.twilio_number||"Sin número asignado";
  const lineState=line?.connectedToApp?"Ruta iPhone configurada":line?.verified?"Número verificado":route?.enabled?"Ruta registrada":"Pendiente de activación";
- const go=(next:Tab)=>{setTab(next);setContactsOpen(false);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("summary");setCallFilter("all");}setError("");setNotice("");};
+ const go=(next:Tab)=>{setCallbackConfirmSid(null);setTab(next);setContactsOpen(false);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("summary");setCallFilter("all");}setError("");setNotice("");};
  const showCall=(next:Panel="overview")=>{setTab("services");setContactsOpen(false);setOpen(true);setPanel(next);setError("");setNotice("");};
  const openContacts=(number="",startInForm=false)=>{setContactPhone(number);setContactStartForm(startInForm);setContactsOpen(true);setTab("calls");setError("");setNotice("");};
  async function login(e:FormEvent<HTMLFormElement>){e.preventDefault();await signIn(email,password);setPassword("");}
@@ -169,8 +170,7 @@ export default function VMVMobilePreview(){
   if(!client||!user||!callbackAvailable||callbackBusy)return;
   const entry=calls.find(item=>item.bridge_sid===sid);
   if(!entry?.caller_phone)return;
-  if(!window.confirm("VMV llamará primero a tu iPhone. Cuando contestes, conectará con "+
-      entry.caller_phone+" usando tu número empresarial. Será una llamada normal, sin traducción. Twilio puede generar cargos de voz. ¿Continuar?"))return;
+  
   setCallbackBusy(sid);setCallbackMessage("");
   try{
    const {data:identity}=await client.auth.getUser();
@@ -199,7 +199,21 @@ export default function VMVMobilePreview(){
  const filteredCalls=callFilter==="all"?calls:calls.filter(item=>item.call_mode===callFilter);
  const refreshButton=<button className={styles.secondaryAction} disabled={loading||working}
   onClick={()=>void refresh()}><RefreshCw size={15}/>{loading?"Actualizando…":"Actualizar datos"}</button>;
+ const confirmingEntry=callbackConfirmSid?calls.find(item=>item.bridge_sid===callbackConfirmSid):null;
  return <main className={styles.stage}>
+  {ready&&confirmingEntry?.caller_phone?<div className={styles.callbackConfirmBackdrop}>
+   <div className={styles.callbackConfirmCard} role="dialog" aria-modal="true" aria-labelledby="callback-confirm-title">
+    <span className={styles.smallKicker}>LLAMADA EMPRESARIAL</span>
+    <h3 id="callback-confirm-title">Devolver llamada</h3>
+    <p>VMV llamará primero a tu iPhone. Cuando contestes, conectará con:</p>
+    <strong>{confirmingEntry.caller_phone}</strong>
+    <p>El cliente verá tu número Twilio empresarial. Esta llamada será normal, sin traducción, y puede generar cargos de voz de Twilio.</p>
+    <button type="button" className={styles.mainAction} onClick={()=>{
+      const sid=confirmingEntry.bridge_sid;setCallbackConfirmSid(null);void returnBusinessCall(sid);
+    }}>Devolver con VMV →</button>
+    <button type="button" className={styles.secondaryAction} onClick={()=>setCallbackConfirmSid(null)}>Cancelar</button>
+   </div>
+  </div>:null}
   <header className={styles.pageHeader}>
    <a href="/" className={styles.wordmark}>VMV<span> BUSINESS</span></a>
    <span className={styles.previewTag}>SMART CALL · DATOS DE TU CUENTA</span>
@@ -368,7 +382,7 @@ export default function VMVMobilePreview(){
        </>:null}
        {panel==="activity"?<div className={styles.smartCard}><span className={styles.smallKicker}>HISTORIAL REAL</span><h3>Llamadas recientes</h3>
         <p>{line?.usage.calls??"—"} llamadas en los últimos 30 días · {line?.usage.translatedCalls??"—"} traducidas.</p>
-        <History calls={calls} onSave={phone=>openContacts(phone,true)} onCallBack={sid=>void returnBusinessCall(sid)} onLookup={sid=>void lookupCustomer(sid)}
+        <History calls={calls} onSave={phone=>openContacts(phone,true)} onCallBack={sid=>setCallbackConfirmSid(sid)} onLookup={sid=>void lookupCustomer(sid)}
          canCallBack={callbackAvailable} callingSid={callbackBusy} lookupSid={lookupBusy}/>
         {callbackMessage?<p className={styles.callbackFeedback} role="status">{callbackMessage}</p>:null}{refreshButton}
        </div>:null}
