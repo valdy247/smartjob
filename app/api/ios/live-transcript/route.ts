@@ -13,6 +13,10 @@ export async function GET(req:NextRequest){
   // This endpoint never exposes the Render signing secret or the caller's audio.
   const ownerId=await authenticatedUser(req);
   if(!ownerId)return response({error:"unauthorized"},401);
+  // Pilot-only: the feature must not expose captions for other tenants yet.
+  if(!process.env.SMARTJOB_BILLING_TEST_OWNER_ID||
+     ownerId!==process.env.SMARTJOB_BILLING_TEST_OWNER_ID)
+    return response({error:"not_enabled_for_account"},403);
   const outbound=req.nextUrl.searchParams.get("callSid")||"";
   const after=Number(req.nextUrl.searchParams.get("after")||"0");
   if(!callSid.test(outbound)||!Number.isSafeInteger(after)||after<0||after>100000)
