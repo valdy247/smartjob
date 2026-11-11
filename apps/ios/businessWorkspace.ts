@@ -91,7 +91,7 @@ export async function loadBusinessModules():Promise<BusinessModule[]> {
 
 export async function openBusinessWorkspace(serviceId?:string):Promise<void> {
   const allowed=serviceId && isAllowed(serviceId)?serviceId:null;
-  const path="/workspace/"+(allowed?"?service="+encodeURIComponent(allowed):"");
+  const path="/es/workspace/"+(allowed?"?service="+encodeURIComponent(allowed):"");
   // Browser independently verifies the user's Supabase session and RLS.
   // Native SecureStore tokens are NEVER transported across app/browser.
   await Linking.openURL(BUSINESS_WEB_ORIGIN+path);
