@@ -7,6 +7,7 @@ import {WebSocketServer,WebSocket} from "ws";
 import {accountSid,callSid} from "./relay-core.mjs";
 import {verifiedSetup,cleanPrompt,peerRole,textMessage} from "./conversation-relay.mjs";
 import {directTranslationReady,translateDirect} from "./direct-translate.mjs";
+import {canStreamTranslation,createVoiceChunks,streamTranslation} from "./translate-stream.mjs";
 import {auditTwilioPush} from "./push-diagnostics.mjs";
 import {appendOwnerTranscript,verifyTranscriptRequest,snapshotOwnerTranscript} from "./live-transcript.mjs";
 
@@ -23,6 +24,7 @@ const bounded=(v,fallback,low,high)=>{
 const MAX_ROOMS=bounded(process.env.SMARTJOB_MAX_CONCURRENT_CALLS,1,1,30);
 const MAX_SECONDS=bounded(process.env.SMARTJOB_MAX_CALL_SECONDS,14400,60,14400);
 let translatorVerified=false;
+let streamingVerified=false;
 // Verify the OpenAI key AND the actual model once at deployment; a key-shaped
 // string alone cannot prove the service can translate. No live speech is sent.
 const ready=()=>ENABLED&&directTranslationReady()&&translatorVerified;
@@ -36,6 +38,16 @@ async function preflightTranslator(){
    if(result.translation){
      translatorVerified=true;
      console.info("VMV GPT-4.1 mini translation preflight passed");
+     if(process.env.SMARTJOB_RELAY_STREAM_TRANSLATION_ENABLED==="false"){
+       console.info("VMV low-latency stream disabled by configuration");
+       return;
+     }
+     const streamed=await streamTranslation("Good morning, how are you?",
+       "en-US","es-ES",{onDelta:()=>{}});
+     streamingVerified=Boolean(streamed.translation);
+     console.info("VMV low-latency translation preflight",{
+       enabled:streamingVerified,reason:streamingVerified?undefined:streamed.reason
+     });
      return;
    }
    console.error("VMV translator preflight failed",{attempt,reason:result.reason});
@@ -124,37 +136,106 @@ async function consume(room,ctx){
   ctx.processing=true;
   try{
     while(ctx.queue.length&&!room.closing){
-      const utterance=ctx.queue.shift();
+      const queued=ctx.queue.shift();
+      const utterance=queued.text;
       const peer=room.legs[peerRole(ctx.role)];
       if(!peer||!open(peer.ws)){
         sayTo(ctx.ws,ctx.sourceLanguage==="es-ES"
-          ?"La otra persona todavía no está conectada.":"The other person is not connected yet.");
+          ?"La otra persona todavía no está conectada."
+          :"The other person is not connected yet.");
         continue;
       }
-      const spoken=await translate(utterance,ctx.sourceLanguage,ctx.targetLanguage);
+      const started=performance.now();
+      const queueMs=Math.round(started-queued.receivedAt);
+      let firstSendMs=null,modelMs=0;
+      let mode="verified",spoken=null,delivered=false;
+      const deliver=(token,last)=>{
+        if(room.closing||rooms.get(room.id)!==room)return false;
+        const accepted=send(peer.ws,textMessage(token,last));
+        if(accepted&&firstSendMs===null)
+          firstSendMs=Math.round(performance.now()-queued.receivedAt);
+        return accepted;
+      };
+      // Only ordinary text can begin speaking before the model finishes.
+      // Numbers, dates, allergens, prices etc. use the strict full-response lane.
+      if(streamingVerified&&canStreamTranslation(utterance)){
+        mode="stream";
+        const chunks=createVoiceChunks(deliver);
+        const result=await streamTranslation(utterance,ctx.sourceLanguage,ctx.targetLanguage,{
+          onDelta:delta=>chunks.push(delta)
+        });
+        modelMs=result.totalMs;
+        if(room.closing||rooms.get(room.id)!==room)break;
+        if(result.translation){
+          spoken=result.translation;
+          try{
+            if(!chunks.finish())throw Error("voice_unavailable");
+            delivered=true;
+          }catch{void finishRoom(room.id,"voice_stream_unavailable");break;}
+        }else if(chunks.sent>0){
+          // A partial TTS cycle must end with last:true. Do not continue an
+          // incomplete or misleading translation without explaining the failure.
+          const notice=ctx.targetLanguage==="es-ES"
+            ?" Disculpa, la traducción se interrumpió. Repite, por favor."
+            :" Sorry, translation was interrupted. Please repeat.";
+          try{
+            if(!chunks.abortWith(notice))throw Error("voice_unavailable");
+          }catch{void finishRoom(room.id,"voice_stream_unavailable");break;}
+          room.metrics.failures++;
+          appendOwnerTranscript(room,{role:ctx.role,
+            text:room.legs.professional?.sourceLanguage==="es-ES"
+              ?"La traducción de esta intervención se interrumpió."
+              :"Translation of this utterance was interrupted.",failed:true});
+          console.warn("VMV interpreter streaming interrupted",{
+            role:ctx.role,reason:result.reason,queueMs,
+            firstSendMs,modelMs
+          });
+          continue;
+        }else{
+          // Nothing audible has been sent yet: the verified complete-response
+          // translator is safe to use as a fallback.
+          mode="fallback";
+          const verifiedAt=performance.now();
+          spoken=await translate(utterance,ctx.sourceLanguage,ctx.targetLanguage);
+          modelMs+=Math.round(performance.now()-verifiedAt);
+        }
+      }else{
+        const verifiedAt=performance.now();
+        spoken=await translate(utterance,ctx.sourceLanguage,ctx.targetLanguage);
+        modelMs=Math.round(performance.now()-verifiedAt);
+      }
       if(room.closing||rooms.get(room.id)!==room)break;
       if(!spoken){
         room.metrics.failures++;
         appendOwnerTranscript(room,{role:ctx.role,
           text:room.legs.professional?.sourceLanguage==="es-ES"
-            ?"No se pudo traducir esta intervención.":"This utterance could not be translated.",
-          failed:true});
+            ?"No se pudo traducir esta intervención."
+            :"This utterance could not be translated.",failed:true});
         if(!sayTo(ctx.ws,ctx.sourceLanguage==="es-ES"
           ?"No se pudo traducir. Por favor, repite la frase."
           :"Translation failed. Please repeat.")){
           void finishRoom(room.id,"notification_backpressure");break;
         }
       }else{
-        room.metrics.translations++;
-        if(!sayTo(peer.ws,spoken)){
+        if(!delivered&&!deliver(spoken,true)){
           void finishRoom(room.id,"translated_playback_unavailable");break;
         }
+        room.metrics.translations++;
         appendOwnerTranscript(room,{role:ctx.role,
           text:ctx.role==="customer"?spoken:utterance});
+        // No caller identity, speech, numbers, token content, or keys in logs.
+        // firstSendMs starts at Twilio's final ASR prompt, NOT at the speaker's
+        // last phoneme, and does not include TTS playback start.
+        console.info("VMV interpreter timing",{
+          role:ctx.role,mode,queueMs,modelMs,
+          promptToFirstTextMs:firstSendMs,
+          promptToLastTextMs:Math.round(performance.now()-queued.receivedAt)
+        });
       }
     }
   }finally{ctx.processing=false;}
 }
+
 const app=createServer((req,res)=>{
   const path=new URL(req.url||"/","http://localhost").pathname;
   if(["GET","HEAD"].includes(req.method)&&["/","/health"].includes(path)){
@@ -255,7 +336,7 @@ wss.on("connection",ws=>{
         :"Please speak a little more slowly.");
       return;
     }
-    ctx.queue.push(utterance);
+    ctx.queue.push({text:utterance,receivedAt:performance.now()});
     void consume(room,ctx);
   });
   ws.on("close",()=>{if(ctx)void finishRoom(ctx.bridge,"relay_disconnected");});

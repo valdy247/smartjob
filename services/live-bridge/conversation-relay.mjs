@@ -36,6 +36,7 @@ export function cleanPrompt(message){
   return result||null;
 }
 export function peerRole(role){return role==="customer"?"professional":"customer";}
-export function textMessage(token){
-  return {type:"text",token,last:true,interruptible:false,preemptible:false};
+export function textMessage(token,last=true){
+  // Multiple packets form one TTS talk cycle. Only the final packet closes it.
+  return {type:"text",token,last,interruptible:false,preemptible:false};
 }
