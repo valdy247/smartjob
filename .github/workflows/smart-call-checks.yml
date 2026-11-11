@@ -1,0 +1,40 @@
+name: Smart Call control center checks
+
+on:
+  push:
+    branches:
+      - feat/vmv-smart-call-control-center
+  pull_request:
+    paths:
+      - "apps/ios/**"
+      - "app/api/billing/preferences/route.ts"
+      - ".github/workflows/smart-call-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Bridge and Next.js types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9e
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+      - run: npm run bridge:test
+      - run: npm run typecheck
+
+  ios:
+    name: iOS TypeScript (no signing)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9e
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - working-directory: apps/ios
+        run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+      - working-directory: apps/ios
+        run: npm run typecheck
