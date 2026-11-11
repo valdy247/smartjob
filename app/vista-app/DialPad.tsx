@@ -4,12 +4,7 @@ import type {SupabaseClient} from "@supabase/supabase-js";
 import {Phone,Delete} from "lucide-react";
 import styles from "./vista-app.module.css";
 
-const keys=[
- ["1",""],["2","ABC"],["3","DEF"],
- ["4","GHI"],["5","JKL"],["6","MNO"],
- ["7","PQRS"],["8","TUV"],["9","WXYZ"],
- ["*",""],["0","+"],["#",""]
-] as const;
+const keys=["1","2","3","4","5","6","7","8","9"] as const;
 function normalize(input:string){
  const compact=input.trim().replace(/[\s().-]/g,"");
  if(!/^\+?[0-9]+$/.test(compact))return null;
@@ -46,7 +41,6 @@ export default function DialPad({client,ownerId}:{client:SupabaseClient;ownerId:
  const formatted=normalize(phone);
  const add=(digit:string)=>{
   if(busy)return;
-  if(digit==="*"||digit==="#")return;
   setPhone(previous=>previous.length<20?previous+digit:previous);
   setNotice("");
  };
@@ -89,15 +83,18 @@ export default function DialPad({client,ownerId}:{client:SupabaseClient;ownerId:
    <input type="tel" inputMode="tel" autoComplete="tel" aria-label="Número de teléfono"
     value={phone} onChange={event=>{setPhone(event.target.value.slice(0,20));setNotice("");}}
     placeholder="+1 (000) 000-0000" disabled={busy} maxLength={20}/>
-   {phone?<button type="button" title="Borrar último dígito" aria-label="Borrar último dígito"
-     className={styles.dialerDelete} disabled={busy}
-     onClick={()=>{setPhone(value=>value.slice(0,-1));setNotice("");}}><Delete size={21}/></button>:null}
   </div>
   <div className={styles.dialerKeys} role="group" aria-label="Teclado numérico">
-   {keys.map(([digit,letters])=><button key={digit} type="button"
-    className={styles.dialerKey} aria-label={digit==="*"?"Asterisco":digit==="#"?"Numeral":digit}
-    disabled={busy||digit==="*"||digit==="#"}
-    onClick={()=>add(digit)}><strong>{digit}</strong><small>{letters||"\u00a0"}</small></button>)}
+   {keys.map(digit=><button key={digit} type="button" className={styles.dialerKey}
+    aria-label={digit} disabled={busy} onClick={()=>add(digit)}>{digit}</button>)}
+   <span aria-hidden="true"/>
+   <button type="button" className={styles.dialerKey} aria-label="0"
+    disabled={busy} onClick={()=>add("0")}>0</button>
+   <button type="button" className={styles.dialerDelete} title="Borrar último dígito"
+    aria-label="Borrar último dígito" disabled={busy||!phone}
+    onClick={()=>{setPhone(value=>value.slice(0,-1));setNotice("");}}>
+    <Delete size={25}/>
+   </button>
   </div>
   <button className={styles.dialerCall} type="button" aria-label="Llamar desde VMV"
    onClick={()=>{if(formatted)setConfirm(true);}}
