@@ -92,3 +92,41 @@
 .callFilterActive{background:#e2f8ec;border-color:#a5e4c5;color:#087d5a}
 .callHistoryLimit{font-size:10px!important;color:#82998a!important;line-height:1.5;text-align:center;margin-top:14px!important}
 @media(prefers-reduced-motion:reduce){.callViewTab,.callViewTabActive{transition:none}}
+
+/* Contact book — VMV primary communication workflow */
+.callTop{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:15px}
+.callTop h2{margin:0}
+.contactsAccess{border:1px solid #bee6d1;background:#edfaf2;color:#078261;min-height:39px;border-radius:12px;display:flex;align-items:center;gap:6px;padding:8px 10px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
+.contactsAccess:hover,.contactAdd:hover{background:#def6e8}
+.historySide{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:86px}
+.saveFromCall{border:0;background:none;color:#078668;font:inherit;font-size:10px;font-weight:750;display:flex;align-items:center;justify-content:flex-end;gap:4px;padding:4px 0;cursor:pointer;text-align:right}
+.saveFromCall:hover{text-decoration:underline}
+.contactsPage{min-width:0}
+.contactsHeader{display:flex;align-items:center;justify-content:space-between;gap:13px;margin-bottom:21px}
+.contactsHeader h2{font-size:33px;font-weight:850;letter-spacing:-.075em;margin:9px 0 7px;color:#183d30}
+.contactsHeader p{font-size:11px;color:#879a8e;margin:0}
+.contactAdd{background:#e3f8eb;border:1px solid #b9e7cd;border-radius:14px;width:46px;height:46px;display:grid;place-items:center;color:#078366;cursor:pointer;flex-shrink:0}
+.contactFormTitle{display:flex;gap:12px;align-items:center;border-bottom:1px solid #e5eee8;padding:0 0 15px;margin-bottom:15px}
+.contactFormTitle>div{flex:1}
+.contactFormTitle h3{font-size:20px;margin:6px 0 0;color:#163a2c}
+.contactClose{appearance:none;border:0;background:#edf7ef;color:#4d8671;border-radius:50%;width:32px;height:32px;display:grid;place-items:center;cursor:pointer}
+.contactSearch{display:flex;align-items:center;gap:9px;padding:0 12px;border:1px solid #cee7d8;border-radius:14px;background:white;color:#179772;margin-bottom:15px}
+.contactSearch input{border:0;outline:0;min-height:47px;padding:11px 2px;flex:1;min-width:0;font-size:13px;background:transparent;color:#173b2e}
+.contactSearch:focus-within{outline:2px solid #29bd93;outline-offset:2px}
+.contactList{overflow:hidden;border:1px solid #e0ece4;border-radius:18px;background:white}
+.contactRow{display:flex;align-items:center;gap:12px;min-height:70px;border:0;border-bottom:1px solid #e9f1eb;background:transparent;padding:11px 13px;width:100%;font:inherit;text-align:left;cursor:pointer}
+.contactRow:last-child{border-bottom:0}
+.contactRow:hover{background:#f1fbf5}
+.contactAvatar{display:grid;place-items:center;width:43px;height:43px;flex:0 0 43px;border-radius:15px;background:#e1f9ee;color:#078f68}
+.contactInfo{min-width:0;flex:1;display:flex;flex-direction:column;gap:5px}
+.contactInfo strong{font-weight:800;color:#153c30;font-size:13px;overflow-wrap:anywhere}
+.contactInfo small{font-size:11px;color:#81958c;overflow-wrap:anywhere}
+.contactChevron{font-size:21px;color:#8aa99b}
+.contactDanger{margin:13px 0 5px;text-align:center}
+.contactDanger>button,.contactDanger>div button{border:0;background:none;padding:10px;color:#a44a5d;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.contactDanger>button{display:inline-flex;align-items:center;gap:7px}
+.contactDanger p{font-size:12px;color:#a44a5d}
+.contactHelper{font-size:11px;color:#84988f;line-height:1.6;margin:10px 0}
+.screenReaderOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.contactsPage .successText{display:flex;align-items:center;gap:6px}
+@media(max-width:360px){.contactsAccess{font-size:10px;padding-inline:8px}.callTop h2{font-size:28px}}
