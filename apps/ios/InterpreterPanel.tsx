@@ -7,10 +7,8 @@ import type {Session} from "@supabase/supabase-js";
 import {api,supabase} from "./session";
 
 type Mode="voice"|"text";
-type Stage="context"|"active";
 type Language="es"|"en";
 type Context={job_type:string;client_name:string;details:string;city:string;state:string;zip:string;dimensions:string;materials:string};
-type Answer={question:string;answer:string};
 type Turn={source:string;target:string;language:Language;translatedTo:Language;blocked:boolean;warning?:string};
 const initial:Context={job_type:"",client_name:"",details:"",city:"",state:"",zip:"",dimensions:"",materials:""};
 const flag=(value:Language)=>value==="es"?"🇪🇸":"🇺🇸";
@@ -33,37 +31,22 @@ function predictedLanguage(text:string):Language|null{
 }
 const interfaceColors={dark:"#292040",mint:"#9F72EA"};
 export function InterpreterPanel({session}:{session:Session}){
- const ownerLanguage:Language=session.user.user_metadata?.owner_language==="en"?"en":"es";
- const firstName=String(session.user.user_metadata?.first_name||"").trim();
- const [mode,setMode]=useState<Mode|null>(null),[stage,setStage]=useState<Stage>("context");
- const [accepted,setAccepted]=useState(false),[question,setQuestion]=useState("");
- const [answers,setAnswers]=useState<Answer[]>([]),[answerText,setAnswerText]=useState("");
- const [draft,setDraft]=useState(""),[context,setContext]=useState<Context>(initial);
+ const [mode,setMode]=useState<Mode|null>(null);
+ const [accepted,setAccepted]=useState(false);
+ const [draft,setDraft]=useState("");
+ const context=initial;
  const [turns,setTurns]=useState<Turn[]>([]),[recording,setRecording]=useState(false);
  const [working,setWorking]=useState(false),[message,setMessage]=useState("");
  const recorder=useAudioRecorder(RecordingPresets.HIGH_QUALITY);
  const pressed=useRef(false),recordingRef=useRef(false),lock=useRef(false);
  const viewRef=useRef<ScrollView|null>(null);
- const firstQuestion=ownerLanguage==="es"?"Hola"+(firstName?", "+firstName:"")+", ¿con quién vas a conversar y de qué van a hablar?":
-  "Hi"+(firstName?", "+firstName:"")+", who are you meeting and what will you discuss?";
- const currentQuestion=question||firstQuestion;
- useEffect(()=>{
-  let mounted=true;
-  if(supabase)void supabase.from("smartjob_contexts").select("job_type,client_name,details,city,state,zip,dimensions,materials")
-   .eq("user_id",session.user.id).maybeSingle().then(({data})=>{
-    if(mounted&&data)setContext({...initial,...data});
-   });
-  return()=>{mounted=false;};
- },[session.user.id]);
  useEffect(()=>()=>{Speech.stop();},[]);
  const speak=(value:string,language:Language)=>{
   void Speech.stop();
   Speech.speak(value,{language:language==="es"?"es-ES":"en-US",rate:.93,pitch:1});
  };
  const open=(selected:Mode)=>{
-  setMode(selected);setStage("context");setAccepted(false);setQuestion("");
-  setAnswers([]);setAnswerText("");setDraft("");setTurns([]);setMessage("");
-  if(selected==="voice")speak(firstQuestion,ownerLanguage);
+  setMode(selected);setAccepted(false);setDraft("");setTurns([]);setMessage("");
  };
  const close=()=>{
   pressed.current=false;
@@ -83,35 +66,6 @@ export function InterpreterPanel({session}:{session:Session}){
   if(!r.ok)throw Error(value.error||"No fue posible completar la solicitud.");
   return value as Record<string,unknown>;
  };
- const persist=async(next:Context)=>{
-  if(!supabase)return;
-  const {error}=await supabase.from("smartjob_contexts").upsert({...next,user_id:session.user.id,updated_at:new Date().toISOString()});
-  if(error)setMessage("El contexto se usará en esta sesión, pero no pudo guardarse.");
- };
- const skip=()=>{Speech.stop();setStage("active");setMessage("");};
- const submitContext=async(value:string)=>{
-  if(!value.trim()||lock.current)return;
-  if(!accepted){setMessage("Confirma el consentimiento antes de continuar.");return;}
-  const next=[...answers,{question:currentQuestion,answer:value.trim().slice(0,550)}];
-  setAnswers(next);setAnswerText("");setMessage("");setWorking(true);lock.current=true;
-  try{
-   const result=await call("/api/interpreter",{action:"context",answers:next,ownerLanguage});
-   if(result.done===true||next.length>=3){
-    const data=(result.context||{}) as Partial<Context>;
-    const merged={...context,job_type:data.job_type||context.job_type,
-     client_name:data.client_name||context.client_name,
-     details:data.details||next.map(v=>v.answer).join(" · ").slice(0,650)};
-    setContext(merged);void persist(merged);
-    setStage("active");Speech.stop();
-   }else{
-    const nextQuestion=String(result.question||"").trim();
-    if(!nextQuestion){setStage("active");return;}
-    setQuestion(nextQuestion);
-    if(mode==="voice")speak(nextQuestion,ownerLanguage);
-   }
-  }catch(e){setMessage(e instanceof Error?e.message:"No se pudo preparar el contexto. Puedes omitirlo.");}
-  finally{setWorking(false);lock.current=false;}
- };
  const translate=async(value:string)=>{
   if(!value.trim()||lock.current)return;
   if(!accepted){setMessage("Confirma que ambos conocen el uso del traductor.");return;}
@@ -128,7 +82,6 @@ export function InterpreterPanel({session}:{session:Session}){
   }catch(e){setMessage(e instanceof Error?e.message:"No se pudo traducir.");}
   finally{setWorking(false);lock.current=false;}
  };
- const input=(value:string)=>stage==="context"?submitContext(value):translate(value);
  const stopRecording=async()=>{
   pressed.current=false;
   if(!recordingRef.current)return;
@@ -150,7 +103,7 @@ export function InterpreterPanel({session}:{session:Session}){
    const spoken=String(decoded.text||"").trim();
    if(!spoken)throw Error("No se detectó voz. Inténtalo de nuevo.");
    lock.current=false;setWorking(false);
-   await input(spoken);
+   await translate(spoken);
   }catch(e){setMessage(e instanceof Error?e.message:"No se pudo procesar el audio.");}
   finally{lock.current=false;setWorking(false);}
  };
@@ -202,36 +155,11 @@ export function InterpreterPanel({session}:{session:Session}){
     behavior={Platform.OS==="ios"?"padding":undefined}>
     <View style={styles.top}>
      <Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={close}><Text style={styles.back}>‹</Text></Pressable>
-     <View style={styles.topTitle}><Text style={[styles.title,{color:mode==="voice"?"#FFFFFF":"#29223D"}]}>{stage==="context"?"Antes de comenzar":mode==="voice"?"Conversación hablada":"Conversación escrita"}</Text>
+     <View style={styles.topTitle}><Text style={[styles.title,{color:mode==="voice"?"#FFFFFF":"#29223D"}]}>{mode==="voice"?"Conversación hablada":"Conversación escrita"}</Text>
       <Text style={styles.topLanguages}>🇺🇸 English ⇄ 🇪🇸 Español</Text></View>
-     {stage==="context"?<Pressable accessibilityRole="button" onPress={skip}><Text style={styles.skip}>Omitir</Text></Pressable>:
-      <Pressable accessibilityRole="button" onPress={()=>{setTurns([]);setMessage("");}}><Text style={styles.skip}>Limpiar</Text></Pressable>}
+     <Pressable accessibilityRole="button" onPress={()=>{setTurns([]);setMessage("");}}><Text style={styles.skip}>Limpiar</Text></Pressable>
     </View>
-    {stage==="context"?<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.contextBody}>
-     <View style={styles.contextOrb}><Text style={styles.contextIcon}>✦</Text></View>
-     <Text style={styles.contextKicker}>CONTEXTO · {Math.min(answers.length+1,3)} DE 3</Text>
-     <Text style={[styles.question,{color:mode==="voice"?"white":"#17242B"}]}>{currentQuestion}</Text>
-     <Text style={[styles.smallHint,{color:mode==="voice"?"#DAC9ED":"#837094"}]}>Solo preguntaremos lo necesario.</Text>
-     {mode==="voice"?<>
-      <Pressable accessibilityRole="button" style={styles.listenButton} onPress={()=>speak(currentQuestion,ownerLanguage)}>
-       <Text style={styles.listenText}>🔊 Escuchar pregunta</Text></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Mantener pulsado para responder"
-       onPressIn={()=>void startRecording()} onPressOut={()=>void stopRecording()} disabled={working}
-       style={[styles.micButton,recording&&styles.recording]}>
-       <Text style={styles.flags}>🇺🇸  🇪🇸</Text><Text style={styles.micIcon}>🎙</Text>
-       <Text style={styles.micLabel}>{recording?"Escuchando…":"Responder"}</Text>
-      </Pressable>
-     </>:<View style={styles.contextComposer}>
-      <TextInput multiline numberOfLines={3} style={styles.textField} placeholder="Cuéntame brevemente…"
-       placeholderTextColor="#8D9FA0" value={answerText} onChangeText={setAnswerText} maxLength={550}/>
-      <Pressable style={styles.primary} onPress={()=>void submitContext(answerText)} disabled={working||!answerText.trim()}>
-       <Text style={styles.primaryText}>Continuar →</Text></Pressable>
-     </View>}
-     <Pressable onPress={()=>setAccepted(!accepted)} accessibilityRole="checkbox" accessibilityState={{checked:accepted}} style={styles.consent}>
-      <Text style={styles.consentTick}>{accepted?"☑":"☐"}</Text>
-      <Text style={[styles.consentCopy,{color:mode==="voice"?"#B4D1CB":"#57796F"}]}>Ambos aceptamos procesar la conversación con IA.</Text>
-     </Pressable>
-    </ScrollView>:mode==="voice"?<View style={styles.voiceBody}>
+    {mode==="voice"?<View style={styles.voiceBody}>
      <ScrollView ref={viewRef} contentContainerStyle={styles.transcript}>
       {latest?<View style={styles.transcriptBlock}>
        <Text style={styles.transcriptLang}>{flag(latest.language)} {label(latest.language)}</Text>
