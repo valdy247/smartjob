@@ -269,7 +269,7 @@ export default function VMVMobilePreview(){
        <button className={styles.listEntry} onClick={()=>showCall("activity")}><Clock3 size={19}/><div><strong>Actividad reciente</strong><small>Últimas llamadas</small></div><span>›</span></button>
       </div>:null}
       {ready&&tab==="services"&&!open?<div className={styles.screen}>
-       <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>Mis servicios<span className={styles.mint}>.</span></h2><p className={styles.screenLead}>Administra tus herramientas desde el teléfono.</p>
+       <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>Mis servicios<span className={styles.mint}>.</span></h2>
        <button className={styles.serviceHero} onClick={()=>showCall()}><div className={styles.serviceHeroIcon}><PhoneCall size={24}/></div>
         <span className={styles.tileEyebrow}>SERVICIO EN PILOTO</span><strong>Smart Call</strong>
         <small>{num(available)} min disponibles · {lineState}</small><span className={styles.serviceLink}>Abrir servicio →</span>
@@ -279,7 +279,7 @@ export default function VMVMobilePreview(){
       </div>:null}
       {ready&&tab==="services"&&open?<div className={styles.smartScreen}>
        <button className={styles.back} onClick={()=>setOpen(false)}><ChevronLeft size={17}/> Todos los servicios</button>
-       <div className={styles.smartHero}><span>VMV BUSINESS / COMUNICACIÓN</span><h2>Smart Call<span>.</span></h2><p>Tu línea, minutos y llamadas desde un solo lugar.</p><div className={styles.smartBadge}><span/>{lineState}</div></div>
+       <div className={styles.smartHero}><span>VMV BUSINESS / COMUNICACIÓN</span><h2>Smart Call<span>.</span></h2><div className={styles.smartBadge}><span/>{lineState}</div></div>
        <div className={styles.switcher}>{([{id:"overview",label:"Resumen"},{id:"minutes",label:"Minutos"},{id:"settings",label:"Ajustes"},{id:"activity",label:"Actividad"}] as const).map(item=><button key={item.id} onClick={()=>setPanel(item.id)} className={panel===item.id?styles.selected:""}>{item.label}</button>)}</div>
        {panel==="overview"?<>
         <div className={styles.smartCard}>
@@ -301,7 +301,7 @@ export default function VMVMobilePreview(){
            <Row label="Recepción" value={route?.receive_method==="ios_app"?"App iPhone":route?.receive_method==="pstn"?"Otra línea":"Sin configurar"}/>
            <Row label="Desvío" value={route?.forwarding_mode==="none"?"No configurado":route?.forwarding_mode==="conditional"?"Condicional":route?.forwarding_mode==="all_calls"?"Todas las llamadas":"No disponible"}/>
            <Row label="Menú bilingüe" value={line?.menuPrepared?"Preparado para pruebas":"No verificado"}/>
-           <p className={styles.minuteExplanation}>El estado de configuración no garantiza la recepción. Confírmala con una llamada real.</p>
+           
           </div>
          </details>
         </div>
@@ -355,7 +355,7 @@ export default function VMVMobilePreview(){
          <SegmentedSelect label="Tu idioma" value={draft?.desired_language||"es"} options={[{value:"es",label:"Español"},{value:"en",label:"English"}]} disabled={!draft||working} onChange={value=>setDraft(v=>v?{...v,desired_language:value}:null)}/>
          <SegmentedSelect label="Idioma del cliente" value={draft?.caller_language||"en"} options={[{value:"en",label:"English"},{value:"es",label:"Español"}]} disabled={!draft||working} onChange={value=>setDraft(v=>v?{...v,caller_language:value}:null)}/>
          <label htmlFor="my-assistant">Nombre del asistente</label><input id="my-assistant" disabled={!draft||working} maxLength={40} required value={draft?.assistant_name||""} onChange={e=>setDraft(v=>v?{...v,assistant_name:e.target.value}:null)}/>
-         <p>Los cambios se guardan en tu cuenta. No modifican desvíos ni rutas de llamadas.</p>
+         
          {!draft?<div className={styles.testNote}>Primero completa la activación de tu línea para crear la configuración inicial.</div>:null}
          <button type="submit" disabled={!draft||working} className={styles.mainAction}>{working?"Guardando…":"Guardar preferencias"} →</button>
         </form>
@@ -373,7 +373,7 @@ export default function VMVMobilePreview(){
         </form>
        </>:null}
        {panel==="activity"?<div className={styles.smartCard}><span className={styles.smallKicker}>HISTORIAL REAL</span><h3>Llamadas recientes</h3>
-        <p>{line?.usage.calls??"—"} llamadas en los últimos 30 días · {line?.usage.translatedCalls??"—"} traducidas.</p>
+        
         <History calls={calls} onSave={phone=>openContacts(phone,true)} onCallBack={sid=>setCallbackConfirmSid(sid)} onLookup={sid=>void lookupCustomer(sid)}
          canCallBack={callbackAvailable} callingSid={callbackBusy} lookupSid={lookupBusy}/>
         {callbackMessage?<p className={styles.callbackFeedback} role="status">{callbackMessage}</p>:null}{refreshButton}
