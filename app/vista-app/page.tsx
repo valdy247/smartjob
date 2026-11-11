@@ -6,6 +6,7 @@ import {House,LayoutGrid,PhoneCall,Languages,UserRound,ArrowUpRight,ChevronLeft,
 import {LivePanel} from "@/components/LivePanel";
 import ContactBook from "./ContactBook";
 import DialPad from "./DialPad";
+import BusinessServicesPreview from "./BusinessServicesPreview";
 import {useSmartCallAccount,type Tab,type Panel,type CallSettings,type CallRecord,type Voice} from "./useSmartCallAccount";
 import styles from "./vista-app.module.css";
 
@@ -325,14 +326,7 @@ export default function VMVMobilePreview(){
         <span className={styles.serviceLink}>Abrir servicio <ArrowUpRight size={17}/></span>
         <span className={styles.serviceHeroDecoration} aria-hidden="true">✦</span>
        </button>
-       <div className={styles.serviceGridHeading}><h3>Explora más<span>.</span></h3><span>PRÓXIMAMENTE</span></div>
-       <div className={styles.serviceModuleGrid}>
-        {modules.map(({name:moduleName,Icon},index)=><div key={moduleName}
-         className={[styles.serviceModuleTile,[styles.serviceTileSky,styles.serviceTileYellow,styles.serviceTilePink,styles.serviceTileMint,styles.serviceTileLavender,styles.serviceTilePeach][index%6]].join(" ")}>
-         <div className={styles.serviceModuleIcon}><Icon size={25}/></div>
-         <div className={styles.serviceModuleBottom}><strong>{moduleName}</strong><small>Próximamente</small></div>
-        </div>)}
-       </div>
+       {user?<BusinessServicesPreview userId={user.id}/>:null}
       </div>:null}
       {ready&&tab==="services"&&open?<div className={styles.smartScreen}>
        <button className={styles.back} onClick={()=>setOpen(false)}><ChevronLeft size={17}/> Todos los servicios</button>
