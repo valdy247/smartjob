@@ -16,15 +16,15 @@ const EMPTY:ProfileDraft={
 };
 const fields:{key:Exclude<keyof ProfileDraft,"authorized">;label:string;max:number;lines?:boolean;keyboard?:"email-address"|"phone-pad"|"url"}[]=[
   {key:"business",label:"Nombre del negocio *",max:100},
-  {key:"category",label:"Categoría *",max:120},
-  {key:"phone",label:"Teléfono",max:32,keyboard:"phone-pad"},
-  {key:"website",label:"Sitio web",max:220,keyboard:"url"},
-  {key:"address",label:"Dirección",max:250},
-  {key:"area",label:"Zona de servicio",max:220},
-  {key:"hours",label:"Horarios",max:280,lines:true},
-  {key:"description",label:"Descripción",max:600,lines:true},
-  {key:"googleEmail",label:"Correo de Google *",max:254,keyboard:"email-address"},
-  {key:"assets",label:"Logo / fotos (enlace)",max:400,keyboard:"url"}
+  {key:"category",label:"Categoría *",max:80},
+  {key:"phone",label:"Teléfono",max:24,keyboard:"phone-pad"},
+  {key:"website",label:"Sitio web",max:150,keyboard:"url"},
+  {key:"address",label:"Dirección",max:180},
+  {key:"area",label:"Zona de servicio",max:120},
+  {key:"hours",label:"Horarios",max:150,lines:true},
+  {key:"description",label:"Descripción",max:300,lines:true},
+  {key:"googleEmail",label:"Correo de Google *",max:150,keyboard:"email-address"},
+  {key:"assets",label:"Logo / fotos (enlace)",max:150,keyboard:"url"}
 ];
 
 const colors={ink:"#29213D",muted:"#8E83A1",accent:"#895DE4",line:"#E7DFF2",bg:"#FBFAFF"};
