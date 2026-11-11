@@ -994,8 +994,6 @@ export default function App(){
          <Ionicons name={item.icon} size={item.id==="calls"?25:22}
           color={item.id==="calls"?"#FFFFFF":activeTab===item.id?"#211D36":"#B7B4CA"}/>
         </View>
-        <Text style={[styles.bottomLabel,activeTab===item.id&&styles.bottomLabelActive,
-          item.id==="calls"&&styles.bottomLabelCenter]}>{item.label}</Text>
        </Pressable>)}
     </View>:null}
   </KeyboardAvoidingView>
@@ -1152,13 +1150,13 @@ const styles=StyleSheet.create({
  quickRow:{flexDirection:"row",gap:10,marginVertical:10},
  quickButton:{flex:1,borderRadius:14,padding:15,backgroundColor:"#1A363E",alignItems:"center"},
  quickButtonText:{color:colors.text,fontSize:14,fontWeight:"800"},
- bottomDock:{position:"absolute",bottom:12,left:15,right:15,height:77,backgroundColor:"#1C1A2B",borderRadius:30,borderWidth:1,borderColor:"#333048",flexDirection:"row",alignItems:"center",justifyContent:"space-around",paddingHorizontal:7,shadowColor:"#171326",shadowOpacity:.23,shadowRadius:13,shadowOffset:{width:0,height:9},elevation:8},
- bottomItem:{flex:1,alignItems:"center",justifyContent:"center",height:62},
- bottomItemCenter:{transform:[{translateY:-13}]},
- bottomOrb:{width:43,height:36,borderRadius:17,alignItems:"center",justifyContent:"center"},
+ bottomDock:{position:"absolute",bottom:13,left:15,right:15,height:66,backgroundColor:"#1C1A2B",borderRadius:33,borderWidth:1,borderColor:"#333048",flexDirection:"row",alignItems:"center",justifyContent:"space-around",paddingHorizontal:9,shadowColor:"#171326",shadowOpacity:.2,shadowRadius:11,shadowOffset:{width:0,height:7},elevation:7},
+ bottomItem:{flex:1,alignItems:"center",justifyContent:"center",height:58},
+ bottomItemCenter:{transform:[{translateY:-5}]},
+ bottomOrb:{width:45,height:45,borderRadius:23,alignItems:"center",justifyContent:"center"},
  bottomOrbActive:{backgroundColor:"#FFFFFF"},
- bottomOrbCenter:{width:57,height:57,borderRadius:29,backgroundColor:"#8853EA",borderColor:"#FBFAFF",borderWidth:4,shadowColor:"#442A91",shadowOpacity:.4,shadowRadius:8,shadowOffset:{width:0,height:6},elevation:6},
- bottomOrbCenterActive:{backgroundColor:"#A06EFF",borderColor:"#E4D4FF"},
+ bottomOrbCenter:{width:53,height:53,borderRadius:27,backgroundColor:"#8853EA",borderColor:"#DFCAFF",borderWidth:2,shadowColor:"#442A91",shadowOpacity:.28,shadowRadius:7,shadowOffset:{width:0,height:4},elevation:4},
+ bottomOrbCenterActive:{backgroundColor:"#A06EFF",borderColor:"#E9D9FF"},
  bottomLabel:{color:"#AFA9C3",fontSize:9,fontWeight:"700",marginTop:2},
  bottomLabelActive:{color:"#FFFFFF"},
  bottomLabelCenter:{color:"#E1D4F5",marginTop:0},
