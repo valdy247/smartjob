@@ -7,6 +7,7 @@ import {api,supabase,configured} from "./session";
 import {InterpreterPanel} from "./InterpreterPanel";
 import {CallScreen} from "./CallScreen";
 import {NativeActivation,type NativeProfile} from "./NativeActivation";
+import {FALLBACK_MODULES,loadBusinessModules,openBusinessWorkspace,type BusinessModule} from "./businessWorkspace";
 
 const colors={bg:"#F8FBFA",card:"#FFFFFF",line:"#DCE8E6",text:"#151D2A",
  muted:"#6D7784",accent:"#00B997",accentText:"#06392E",red:"#E25673"};
@@ -28,6 +29,7 @@ export default function App(){
  const [session,setSession]=useState<Session|null>(null);
  const [activationProfile,setActivationProfile]=useState<NativeProfile|null>(null);
  const [activeTab,setActiveTab]=useState<"home"|"calls"|"live"|"settings">("home");
+ const [businessModules,setBusinessModules]=useState<BusinessModule[]>(FALLBACK_MODULES);
  const [image1Unavailable,setImage1Unavailable]=useState(false);
  const [image2Unavailable,setImage2Unavailable]=useState(false);
  const [keyboardVisible,setKeyboardVisible]=useState(false),[forwardHelpOpen,setForwardHelpOpen]=useState(false);
@@ -39,7 +41,18 @@ export default function App(){
  const [greetingEditable,setGreetingEditable]=useState(false);
  const [customizationBusy,setCustomizationBusy]=useState(false),[customizationMessage,setCustomizationMessage]=useState("");
  const [inboundLanguage,setInboundLanguage]=useState<"es"|"en"|"unknown">("unknown");
- const [email,setEmail]=useState(""),[password,setPassword]=useState("");
+ // Public catalog metadata, never a source of subscriptions or permissions.
+ useEffect(()=>{
+   if(!session?.user.id||activeTab!=="settings"||settingsPage!=="services")return;
+   let mounted=true;
+   void loadBusinessModules().then(modules=>{if(mounted)setBusinessModules(modules);});
+   return()=>{mounted=false;};
+ },[session?.user.id,activeTab,settingsPage]);
+ async function openBusinessWeb(serviceId?:string){
+   try{await openBusinessWorkspace(serviceId);}
+   catch{Alert.alert("No se pudo abrir la web","Revisa tu conexión e inténtalo nuevamente.");}
+ }
+  const [email,setEmail]=useState(""),[password,setPassword]=useState("");
  const [working,setWorking]=useState(false),[registering,setRegistering]=useState(false);
 
  const [ready,setReady]=useState(false),[status,setStatus]=useState("Prepara la recepción de llamadas");
@@ -71,6 +84,32 @@ export default function App(){
  const registeredAt=useRef(0),inviteRef=useRef<CallInvite|null>(null),callRef=useRef<Call|null>(null);
  const registrationInFlight=useRef(false);
  const sessionRef=useRef<Session|null>(null);
+ const pendingBusinessLink=useRef<"calls"|"services"|null>(null);
+ useEffect(()=>{
+   const processLink=(url:string|null)=>{
+     if(!url)return;
+     // Only accept these two fixed routes. Never parse auth tokens from links.
+     const route=/^smartjob:\/\/(calls|services)\/?$/.exec(url);
+     if(!route)return;
+     const target=route[1] as "calls"|"services";
+     pendingBusinessLink.current=target;
+     if(sessionRef.current?.user){
+       setActiveTab(target==="calls"?"calls":"settings");
+       if(target==="services")setSettingsPage("services");
+       pendingBusinessLink.current=null;
+     }
+   };
+   const subscription=Linking.addEventListener("url",event=>processLink(event.url));
+   void Linking.getInitialURL().then(processLink).catch(()=>{});
+   return()=>subscription.remove();
+ },[]);
+ useEffect(()=>{
+   if(!session?.user.id||!pendingBusinessLink.current)return;
+   const target=pendingBusinessLink.current;
+   pendingBusinessLink.current=null;
+   setActiveTab(target==="calls"?"calls":"settings");
+   if(target==="services")setSettingsPage("services");
+ },[session?.user.id]);
  // Pilot-only diagnostic events; no recordings, transcripts, phone numbers or tokens.
  // A signed Supabase session and active iOS route are required by database RLS.
  function voiceTelemetry(event_type:
@@ -621,9 +660,11 @@ export default function App(){
        <SettingRow emoji="🕒" label="Historial" onPress={()=>setSettingsPage("history")}/>
        <Text style={styles.groupTitle}>SUSCRIPCIÓN</Text>
        <SettingRow emoji="💎" label="Plan y minutos" onPress={()=>setSettingsPage("billing")}/>
+       <Text style={styles.groupTitle}>VMV BUSINESS</Text>
+       <SettingRow emoji="🖥️" label="Plataforma web" onPress={()=>void openBusinessWeb("smart-call")}/>
+       <SettingRow emoji="🧩" label="Catálogo de servicios" onPress={()=>setSettingsPage("services")}/>
        <Text style={styles.groupTitle}>MÁS</Text>
        <SettingRow emoji="🌐" label="Idiomas y asistente" onPress={()=>setSettingsPage("style")}/>
-       <SettingRow emoji="✨" label="Otros servicios" onPress={()=>setSettingsPage("services")}/>
        <SettingRow emoji="🎧" label="Soporte" onPress={()=>setSettingsPage("support")}/>
        <Pressable style={styles.signout} onPress={()=>void logout()}><Text style={styles.signoutText}>Cerrar sesión</Text></Pressable>
       </>:<>
@@ -699,7 +740,21 @@ export default function App(){
          {customizationMessage?<Text style={styles.helper}>{customizationMessage}</Text>:null}
         </>:null}
        {settingsPage==="support"?<View style={styles.card}><Text style={styles.cardTitle}>Diagnóstico de voz · iPhone</Text><Text style={styles.helper}>Registro: {registering?"En progreso":ready?"Aceptado por Twilio":"No confirmado"}</Text><Text style={styles.helper}>Último intento: {lastVoiceAttempt}</Text><Text style={styles.helper}>{voiceDiagnostic||"Aún no llegó respuesta del SDK."}</Text><Text style={styles.helper}>{status}</Text><Button label={registering?"Comprobando conexión…":"Actualizar conexión"} onPress={()=>void registerPhone()} disabled={registering}/></View>:null}
-       {settingsPage==="services"?<View style={styles.card}><Text style={styles.cardTitle}>Intérprete en persona</Text><Text style={styles.helper}>Traduce mensajes sin hacer una llamada.</Text><Button label="Abrir traductor" onPress={()=>setActiveTab("live")}/></View>:null}
+       {settingsPage==="services"?<View style={styles.card}>
+         <Text style={styles.cardTitle}>Servicios de VMV Business</Text>
+         <Text style={styles.helper}>Usa Smart Call desde esta app. Los demás servicios y las opciones avanzadas estarán en la plataforma web. Se utiliza la misma cuenta de Supabase, pero el navegador conserva su propia sesión.</Text>
+         {businessModules.map(module=><Pressable key={module.id}
+           accessibilityRole="button" accessibilityLabel={"Abrir "+module.name+" en la plataforma web"}
+           onPress={()=>void openBusinessWeb(module.id)} style={styles.settingRow}>
+           <View style={styles.settingIcon}><Text style={styles.settingEmoji}>{module.id==="smart-call"?"☎️":"▦"}</Text></View>
+           <View style={{flex:1}}>
+             <Text style={styles.settingLabel}>{module.name}</Text>
+             <Text style={styles.helper}>{module.state==="pilot-separate"?"Servicio telefónico en pruebas":"Producto previsto / en desarrollo"}</Text>
+           </View>
+           <Text style={styles.settingChevron}>↗</Text>
+         </Pressable>)}
+         <Button label="Abrir plataforma web" secondary onPress={()=>void openBusinessWeb()}/>
+       </View>:null}
       </>}
      </>:null}
     </>}
