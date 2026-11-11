@@ -642,26 +642,86 @@ export default function App(){
 
      </>:null}
      {activeTab==="calls"?<>
-      <Text style={styles.kicker}>TELÉFONO</Text><Text style={styles.heading}>Llamadas<Text style={{color:colors.accent}}>.</Text></Text>
-      <View style={[styles.card,styles.featureCard]}>
-       <View style={styles.compactBetween}><Text style={styles.featureLabel}>☎  Recepción</Text><Text style={[styles.stateTag,{color:ready?colors.accent:"#F6CC83"}]}>{ready?"CONECTADA":"PENDIENTE"}</Text></View>
-       <Text style={styles.featureNumber}>{accountOverview?.twilioPhone||"Sin asignar"}</Text>
-       <Text style={styles.featureMuted}>{ready?"Tu iPhone está registrado y listo para sonar":"Conecta tu iPhone para recibir"}</Text>
-        {accountOverview?.billing?.pilot?<View style={styles.previewPilotCard}><Text style={styles.previewPilotLabel}>✦ PRUEBA PRIVADA · OPENAI REALTIME</Text><Text style={styles.previewPilotCopy}>Tus minutos VMV están habilitados solo para tu cuenta. Llama desde otro teléfono a este número, marca 1 para traducir y contesta aquí.</Text><Text style={styles.previewPilotMinutes}>Saldo: {accountOverview.billing.availableMinutes??billingOverview?.minutes.available??0} minutos</Text><Button label={pilotChecking?"Comprobando…":"Verificar motor y número"} disabled={pilotChecking} onPress={()=>void checkPilotReadiness()}/>{pilotReadiness?<><Text style={styles.previewPilotCopy}>Motor OpenAI: {pilotReadiness.engineReady?"✓ Listo":"○ Pendiente"} · Webhook Twilio: {pilotReadiness.webhookReady&&pilotReadiness.webhookPost?"✓ Conectado":"○ Revisar"}</Text><Text style={styles.previewPilotCopy}>{pilotReadiness.nextStep}</Text></>:null}</View>:null}
-       <Button label={accountOverview?.billing?.active===true?(registering?"Conectando…":ready?"Actualizar conexión":"Conectar iPhone"):"Se necesita plan activo"}
-        disabled={registering} onPress={()=>accountOverview?.billing?.active===true?void registerPhone(): (setActiveTab("settings"),setSettingsPage("billing"))}/>
-       <Text style={styles.helper}>Recepción iPhone: {registering?"Registrando…":ready?"Registrado con Twilio":"No registrado"}</Text>
-       <Text style={styles.helper} accessibilityRole="text">{voiceDiagnostic||"Sin respuesta del SDK"}</Text>
-       <Text style={styles.helper}>Último intento: {lastVoiceAttempt}</Text>
-      </View>
-      <Pressable accessibilityRole="button" style={styles.settingRow} onPress={()=>{setActiveTab("settings");setSettingsPage("numbers");}}>
-       <View style={styles.settingIcon}><Text style={styles.settingEmoji}>📱</Text></View><Text style={styles.settingLabel}>Número y verificación</Text><Text style={styles.settingChevron}>›</Text>
-      </Pressable>
-      <Pressable accessibilityRole="button" style={styles.settingRow} onPress={()=>{setActiveTab("settings");setSettingsPage("history");}}>
-       <View style={styles.settingIcon}><Text style={styles.settingEmoji}>🕒</Text></View><Text style={styles.settingLabel}>Historial</Text><Text style={styles.settingChevron}>›</Text>
-      </Pressable>
-     </>:null}
-     {activeTab==="live"?<InterpreterPanel session={session}/>:null}
+       <Text style={styles.kicker}>SMART CALL</Text>
+       <Text style={styles.heading}>Llamadas<Text style={{color:colors.accent}}>.</Text></Text>
+       <View style={styles.callsTabs}>
+        {([{id:"summary",label:"Resumen"},{id:"history",label:"Historial"}] as const).map(item=>
+         <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected:callsView===item.id}}
+          style={[styles.callsTab,callsView===item.id&&styles.callsTabActive]}
+          onPress={()=>{setCallsView(item.id);if(item.id==="history")setCallTypeFilter("all");}}>
+          <Text style={[styles.callsTabText,callsView===item.id&&styles.callsTabTextActive]}>{item.label}</Text>
+         </Pressable>)}
+       </View>
+       {callsView==="summary"?<>
+        <View style={[styles.card,styles.featureCard]}>
+         <View style={styles.compactBetween}>
+          <Text style={styles.featureLabel}>☎  Tu teléfono</Text>
+          <Text style={[styles.stateTag,{color:ready?colors.accent:"#B46E25"}]}>{ready?"CONECTADO":"PENDIENTE"}</Text>
+         </View>
+         <Text style={styles.featureNumber}>{accountOverview?.twilioPhone||"Sin asignar"}</Text>
+         <Text style={styles.featureMuted}>{ready?"Configurado para recibir llamadas en tu iPhone.":"Conecta tu iPhone para recibir llamadas."}</Text>
+         <View style={styles.callsDivider}/>
+         <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Recepción en iPhone</Text><Text style={styles.callsInfoValue}>{ready?"Ruta configurada":"Pendiente"}</Text></View>
+         <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Minutos para traducir</Text><Text style={styles.callsInfoValue}>{billingOverview?.minutes.available??accountOverview?.billing?.availableMinutes??"—"} disponibles</Text></View>
+         <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Directas · 30 días</Text><Text style={styles.callsInfoValue}>{accountOverview?.usage.directCalls??"—"}</Text></View>
+         <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Traducidas · 30 días</Text><Text style={styles.callsInfoValue}>{accountOverview?.usage.translatedCalls??"—"}</Text></View>
+         <Button label="Ver plan y minutos →" secondary onPress={()=>{setActiveTab("settings");setSettingsPage("billing");}}/>
+         <Button label={accountOverview?.billing?.active===true?(registering?"Conectando…":ready?"Actualizar conexión":"Conectar iPhone"):"Se necesita plan activo"}
+          disabled={registering} onPress={()=>accountOverview?.billing?.active===true?void registerPhone(): (setActiveTab("settings"),setSettingsPage("billing"))}/>
+        </View>
+        <Pressable accessibilityRole="button" style={styles.settingRow} onPress={()=>{setActiveTab("settings");setSettingsPage("numbers");}}>
+         <View style={styles.settingIcon}><Text style={styles.settingEmoji}>📱</Text></View><Text style={styles.settingLabel}>Número y verificación</Text><Text style={styles.settingChevron}>›</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityState={{expanded:callsTechnicalOpen}}
+         style={styles.settingRow} onPress={()=>setCallsTechnicalOpen(v=>!v)}>
+         <View style={styles.settingIcon}><Text style={styles.settingEmoji}>⚙</Text></View>
+         <Text style={styles.settingLabel}>Diagnóstico de conexión</Text><Text style={styles.settingChevron}>{callsTechnicalOpen?"⌄":"›"}</Text>
+        </Pressable>
+        {callsTechnicalOpen?<View style={styles.card}>
+         <Text style={styles.helper}>Recepción iPhone: {registering?"Registrando…":ready?"Registrado con Twilio":"No registrado"}</Text>
+         <Text style={styles.helper}>{voiceDiagnostic||"Sin respuesta del SDK"}</Text>
+         <Text style={styles.helper}>Último intento: {lastVoiceAttempt}</Text>
+         {accountOverview?.billing?.pilot?<View style={styles.previewPilotCard}>
+          <Text style={styles.previewPilotLabel}>PRUEBA PRIVADA · OPENAI REALTIME</Text>
+          <Text style={styles.previewPilotCopy}>Marca 1 para traducir cuando llames desde otro teléfono.</Text>
+          <Button label={pilotChecking?"Comprobando…":"Verificar motor y número"} disabled={pilotChecking} onPress={()=>void checkPilotReadiness()}/>
+          {pilotReadiness?<Text style={styles.previewPilotCopy}>{pilotReadiness.nextStep}</Text>:null}
+         </View>:null}
+        </View>:null}
+       </>:<>
+        <View style={styles.callsHistoryHeader}>
+         <View><Text style={styles.kicker}>ACTIVIDAD RECIENTE</Text><Text style={styles.sectionHeading}>Tu historial</Text></View>
+         <Pressable accessibilityRole="button" accessibilityLabel="Actualizar historial" disabled={historyBusy}
+          style={styles.historyRefresh} onPress={()=>void refreshCallHistory()}>
+          <Text style={styles.historyRefreshText}>{historyBusy?"…":"↻"}</Text>
+         </Pressable>
+        </View>
+        <View style={styles.callsFilters}>
+         {([{id:"all",label:"Todas"},{id:"direct",label:"Directas"},{id:"translated",label:"Traducidas"}] as const).map(item=>
+          <Pressable key={item.id} accessibilityRole="button" accessibilityState={{selected:callTypeFilter===item.id}}
+           style={[styles.callsFilter,callTypeFilter===item.id&&styles.callsFilterActive]}
+           onPress={()=>setCallTypeFilter(item.id)}>
+           <Text style={[styles.callsFilterText,callTypeFilter===item.id&&styles.callsFilterTextActive]}>{item.label}</Text>
+          </Pressable>)}
+        </View>
+        <View style={styles.card}>
+         {historyBusy?<ActivityIndicator color={colors.accent}/>:
+          callHistory.filter(item=>callTypeFilter==="all"||item.call_mode===callTypeFilter).length?
+           callHistory.filter(item=>callTypeFilter==="all"||item.call_mode===callTypeFilter).map(item=>
+            <View key={item.bridge_sid} style={styles.historyRow}>
+             <View style={{flex:1}}>
+              <Text style={styles.historyDate}>{item.call_mode==="translated"?"Llamada traducida":"Llamada directa"}</Text>
+              <Text style={styles.historyStatus}>{new Date(item.started_at).toLocaleDateString("es-US",{month:"short",day:"numeric"})} · {new Date(item.started_at).toLocaleTimeString("es-US",{hour:"numeric",minute:"2-digit"})}</Text>
+              <Text style={styles.historyStatus}>{({"completed":"Finalizada","in-progress":"En curso","no-answer":"Sin respuesta","busy":"Ocupada","ringing":"Sonando","initiated":"Iniciando","failed":"Fallida","canceled":"Cancelada"} as Record<string,string>)[item.status]||item.status}</Text>
+             </View>
+             <Text style={styles.historyMinutes}>{item.duration_seconds==null?"—":Math.ceil(Math.max(0,item.duration_seconds)/60)+" min"}</Text>
+            </View>):
+           <Text style={styles.helper}>No hay llamadas de este tipo en el historial reciente.</Text>}
+         <Text style={styles.callsHistoryFoot}>Últimas 25 llamadas registradas.</Text>
+        </View>
+       </>}
+      </>:null}
+      {activeTab==="live"?<InterpreterPanel session={session}/>:null}
       {activeTab==="services"?<>
        {activeModule==="smart-call"?<>
         <Pressable accessibilityRole="button" style={styles.backRow} onPress={()=>setActiveModule(null)}>
