@@ -809,12 +809,32 @@ export default function App(){
          </View>:null}
         </View>
        </>:null}
-       {settingsPage==="billing"?<View style={styles.card}><Text style={styles.cardTitle}>Mi plan</Text><Text style={styles.statNumber}>{billingOverview?.minutes.available??"—"}</Text><Text style={styles.helper}>Minutos disponibles</Text><Text style={styles.statusText}>{billingOverview?billingOverview.plan==="none"?"Sin suscripción":billingOverview.plan.toUpperCase():"Estado no disponible"}</Text><Text style={styles.helper}>Uso: {billingOverview?.minutes.used??"—"} min · Incluidos: {billingOverview?.minutes.included??"—"}</Text><Text style={styles.helper}>{billingOverview?.previewPilotActive?"✓ Prueba privada activa: usa tus minutos VMV. No hace falta otra compra.":"Los planes de referencia no activan llamadas reales hasta habilitar pagos de producción."}</Text><Button label="Actualizar" secondary onPress={()=>void refreshAccountOverview()}/><Button label="Elegir plan y configurar" secondary onPress={()=>{if(!activationProfile||!supabase)return;void (async()=>{
-         const {data}=await supabase.from("smartjob_profiles").update({
-          plan_prompt_seen:false,updated_at:new Date().toISOString()
-         }).eq("id",activationProfile.id).select("*").single();
-         if(data)setActivationProfile(data as NativeProfile);
-        })();}}/></View>:null}
+       {settingsPage==="billing"?<>
+        <Text style={styles.kicker}>TU PLAN {billingOverview?.plan&&billingOverview.plan!=="none"?"· "+billingOverview.plan.toUpperCase():""}</Text>
+        <View style={styles.card}>
+         <Text style={styles.cardTitle}>Llamadas normales</Text>
+         <Text style={styles.billingBigText}>{accountOverview?.billing.active?"Incluidas con tu plan":"Acceso no disponible"}</Text>
+         <Text style={styles.helper}>Las llamadas sin traducción no utilizan tus minutos de interpretación. Este servicio todavía no tiene una bolsa de minutos propia.</Text>
+         <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Llamadas · 30 días</Text><Text style={styles.callsInfoValue}>{accountOverview?.usage.directCalls??"—"}</Text></View>
+         <Text style={styles.helper}>No hay paquetes independientes de recarga para llamadas normales configurados.</Text>
+        </View>
+        <View style={styles.card}>
+         <Text style={styles.cardTitle}>Llamadas con traducción</Text>
+         <Text style={styles.statNumber}>{billingOverview?.minutes.available??"—"}</Text>
+         <Text style={styles.helper}>Minutos para traducir llamadas</Text>
+         <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Incluidos en el plan</Text><Text style={styles.callsInfoValue}>{billingOverview?.minutes.included??"—"} min</Text></View>
+         <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Consumidos</Text><Text style={styles.callsInfoValue}>{billingOverview?.minutes.used??"—"} min</Text></View>
+         <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Recargas</Text><Text style={styles.callsInfoValue}>{billingOverview?.minutes.topup??"—"} min</Text></View>
+         <Text style={styles.helper}>{billingOverview?.previewPilotActive?"Saldo de prueba privada. Las recargas deben confirmarse en el sistema de pagos TEST.":"Los pagos todavía no habilitan el servicio de producción en este piloto."}</Text>
+         <Button label="Actualizar saldos" secondary onPress={()=>void refreshAccountOverview()}/>
+         <Button label="Gestionar plan" secondary onPress={()=>{if(!activationProfile||!supabase)return;void (async()=>{
+          const {data}=await supabase.from("smartjob_profiles").update({
+           plan_prompt_seen:false,updated_at:new Date().toISOString()
+          }).eq("id",activationProfile.id).select("*").single();
+          if(data)setActivationProfile(data as NativeProfile);
+         })();}}/>
+        </View>
+       </>:null}
        {settingsPage==="history"?<View style={styles.card}>
          <View style={styles.compactBetween}><Text style={styles.cardTitle}>Llamadas</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Actualizar historial" onPress={()=>void refreshCallHistory()} style={styles.historyRefresh}><Text style={styles.historyRefreshText}>{historyBusy?"…":"↻"}</Text></Pressable>
@@ -1009,6 +1029,7 @@ const styles=StyleSheet.create({
  contactsEntry:{borderWidth:1,borderColor:"#B8E9D3",backgroundColor:"#E9FAF1",paddingVertical:10,paddingHorizontal:12,borderRadius:12,marginBottom:10},
  contactsEntryText:{fontSize:12,color:"#0A8867",fontWeight:"800"},
  historySaveContact:{fontSize:11,color:"#0B936F",fontWeight:"800",paddingVertical:5},
+ billingBigText:{fontSize:21,fontWeight:"800",color:"#0A8365",marginBottom:10},
  callsTabs:{flexDirection:"row",backgroundColor:"#EAF5EE",borderWidth:1,borderColor:"#D4EADB",padding:5,borderRadius:18,marginBottom:18,gap:5},
  callsTab:{flex:1,minHeight:47,borderRadius:13,alignItems:"center",justifyContent:"center"},
  callsTabActive:{backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#B7E9D0"},
