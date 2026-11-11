@@ -407,7 +407,8 @@ export default function VMVMobilePreview(){
         </div>
         <div className={styles.smartCard}>
          <History calls={filteredCalls} onSave={phone=>openContacts(phone,true)}
-          onCallBack={sid=>void returnBusinessCall(sid)} canCallBack={callbackAvailable} callingSid={callbackBusy}/>
+          onCallBack={sid=>void returnBusinessCall(sid)} onLookup={sid=>void lookupCustomer(sid)}
+          canCallBack={callbackAvailable} callingSid={callbackBusy} lookupSid={lookupBusy}/>
          {callbackMessage?<p className={styles.callbackFeedback} role="status">{callbackMessage}</p>:null}
          <p className={styles.callHistoryLimit}>Mostrando hasta 25 llamadas recientes de tu cuenta.</p>
         </div>
