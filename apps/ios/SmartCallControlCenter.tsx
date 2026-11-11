@@ -159,7 +159,7 @@ export function SmartCallControlCenter({session,onOpenCalls,onSettingsSaved}:{
  return <View style={s.root}>
   <View style={s.hero}><Text style={s.eyebrow}>VMV BUSINESS / COMUNICACIÓN</Text>
    <Text style={s.title}>Smart Call<Text style={{color:palette.mint}}>.</Text></Text>
-   <Text style={s.subtitle}>Tu línea, tus idiomas y la actividad del negocio, en un solo lugar.</Text>
+   <Text style={s.subtitle}>Tu línea, minutos para llamadas traducidas y actividad del negocio, en un solo lugar.</Text>
    <View style={s.statusPill}><View style={[s.statusDot,{backgroundColor:route?.enabled?"#0DB58D":"#E6A94A"}]}/>
     <Text style={s.statusText}>{route?.enabled?"Línea configurada":"Línea pendiente"} · {billing?.plan_code?.toUpperCase()||"SIN PLAN"}</Text>
    </View>
@@ -177,10 +177,11 @@ export function SmartCallControlCenter({session,onOpenCalls,onSettingsSaved}:{
     <View style={s.infoRow}><Text style={s.infoLabel}>Idioma del cliente</Text><Text style={s.infoValue}>{readableLanguage(settings.caller_language)}</Text></View>
     <View style={s.infoRow}><Text style={s.infoLabel}>Tu idioma</Text><Text style={s.infoValue}>{readableLanguage(settings.desired_language)}</Text></View>
     <View style={s.infoRow}><Text style={s.infoLabel}>Asistente</Text><Text style={s.infoValue}>{settings.assistant_name||"Sin configurar"}</Text></View>
-    <View style={s.infoRow}><Text style={s.infoLabel}>Minutos disponibles</Text><Text style={s.infoValue}>{minutes===null?"No disponible":String(minutes)}</Text></View>
+    <View style={s.infoRow}><Text style={s.infoLabel}>Minutos para traducir llamadas</Text><Text style={s.infoValue}>{minutes===null?"No disponible":String(minutes)+" min"}</Text></View>
+    <Text style={s.helper}>Este saldo se usa para llamadas con traducción. No es el tiempo total de llamadas entrantes ni el del traductor en persona.</Text>
     <Action label="Ir a llamadas" onPress={onOpenCalls}/>
    </View>
-   <View style={s.metricRow}><View style={s.metric}><Text style={s.metricValue}>{calls.length}</Text><Text style={s.metricLabel}>Llamadas recientes</Text></View>
+   <View style={s.metricRow}><View style={s.metric}><Text style={s.metricValue}>{calls.length}</Text><Text style={s.metricLabel}>Llamadas registradas</Text></View>
     <View style={s.metric}><Text style={s.metricValue}>{calls.filter(x=>x.call_mode==="translated").length}</Text><Text style={s.metricLabel}>Traducidas (últimas 15)</Text></View></View>
    <Action label="Actualizar información" secondary onPress={()=>void refresh()}/>
   </>:null}
