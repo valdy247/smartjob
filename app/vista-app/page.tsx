@@ -1,83 +1,246 @@
 "use client";
-import {useState} from "react";
-import {House,LayoutGrid,PhoneCall,Languages,UserRound,ArrowUpRight,ChevronLeft,
- Settings2,Bell,Clock3,ShieldCheck,Mic,Package,CalendarDays,Users,BarChart3,Workflow,Globe,Bot,RefreshCw} from "lucide-react";
+import {useEffect,useState,type FormEvent} from "react";
+import {House,LayoutGrid,PhoneCall,Languages,UserRound,ArrowUpRight,ChevronLeft,Clock3,
+ ShieldCheck,Mic,Package,CalendarDays,Users,BarChart3,Workflow,Globe,Bot,
+ RefreshCw,Settings2,LoaderCircle,LogOut,LockKeyhole,PhoneForwarded} from "lucide-react";
+import {LivePanel} from "@/components/LivePanel";
+import {useSmartCallAccount,type Tab,type Panel,type CallSettings,type CallRecord,type Voice} from "./useSmartCallAccount";
 import styles from "./vista-app.module.css";
 
-type Tab="home"|"services"|"calls"|"translator"|"account";
-type Panel="overview"|"settings"|"activity";
 const modules=[
- {id:"ai",name:"AI Agents",sub:"Agentes inteligentes",Icon:Bot},
- {id:"inventory",name:"Inventory",sub:"Productos y existencias",Icon:Package},
- {id:"schedule",name:"Scheduling",sub:"Calendario de citas",Icon:CalendarDays},
- {id:"crm",name:"CRM & Leads",sub:"Clientes y seguimientos",Icon:Users},
- {id:"web",name:"Web Services",sub:"Tu presencia digital",Icon:Globe},
- {id:"business",name:"Business Management",sub:"Operaciones del negocio",Icon:Settings2},
- {id:"marketing",name:"Marketing & Analytics",sub:"Resultados y campañas",Icon:BarChart3},
- {id:"automations",name:"Automations",sub:"Flujos de trabajo",Icon:Workflow}
+ {name:"AI Agents",Icon:Bot},{name:"Inventory",Icon:Package},
+ {name:"Scheduling",Icon:CalendarDays},{name:"CRM & Leads",Icon:Users},
+ {name:"Web Services",Icon:Globe},{name:"Business Management",Icon:Settings2},
+ {name:"Marketing & Analytics",Icon:BarChart3},{name:"Automations",Icon:Workflow}
 ];
 const nav:[Tab,string,typeof House][]=[
- ["home","Inicio",House],["services","Servicios",LayoutGrid],["calls","Llamadas",PhoneCall],
- ["translator","Traductor",Languages],["account","Cuenta",UserRound]
+ ["home","Inicio",House],["services","Servicios",LayoutGrid],
+ ["calls","Llamadas",PhoneCall],["translator","Traductor",Languages],["account","Cuenta",UserRound]
 ];
-function Setting({label,value,detail}:{label:string;value:string;detail?:string}){
- return <div className={styles.setting}><div><strong>{label}</strong>{detail?<small>{detail}</small>:null}</div><span>{value}</span></div>;
+const lang=(value:string|null|undefined)=>value==="es"?"Español":value==="en"?"English":value||"—";
+const num=(value:number|null|undefined)=>typeof value==="number"&&Number.isFinite(value)?value.toLocaleString("es-US"):"—";
+const date=(value:string|null|undefined)=>value&&Number.isFinite(Date.parse(value))?
+ new Date(value).toLocaleDateString("es-US",{year:"numeric",month:"short",day:"numeric"}):"—";
+const statuses:Record<string,string>={
+ completed:"Finalizada","in-progress":"En curso",ringing:"Sonando",initiated:"Iniciando",
+ failed:"Fallida",busy:"Ocupada","no-answer":"Sin respuesta",canceled:"Cancelada"
+};
+const choices:{value:Voice;label:string}[]=[
+ {value:"default",label:"Estándar"},{value:"bright",label:"Clara"},{value:"calm",label:"Serena"}
+];
+function Row({label,value}:{label:string;value:string}){
+ return <div className={styles.setting}><div><strong>{label}</strong></div><span>{value}</span></div>;
+}
+function History({calls}:{calls:CallRecord[]}){
+ return calls.length?<div className={styles.realHistory}>{calls.map(item=><div key={item.bridge_sid} className={styles.historyItem}>
+  <PhoneCall size={16}/><div><strong>{item.call_mode==="translated"?"Llamada traducida":"Llamada directa"}</strong>
+  <small>{date(item.started_at)} · {statuses[item.status]||item.status}</small></div>
+  <span className={styles.historyDuration}>{item.duration_seconds===null?"—":Math.ceil(Math.max(0,item.duration_seconds)/60)+" min"}</span>
+ </div>)}</div>:<div className={styles.emptyHistory}><Clock3 size={28}/><strong>Sin llamadas registradas</strong><p>Tu actividad aparecerá aquí después de las primeras llamadas.</p></div>;
 }
 export default function VMVMobilePreview(){
+ const account=useSmartCallAccount();
+ const {client,user,phase,profile,settings,route,provisioning,calls,summary,preferences,setPreferences,
+  loading,working,error,notice,setError,setNotice,refresh,signIn,signOut,saveBasic,savePremium}=account;
  const [tab,setTab]=useState<Tab>("services");
  const [open,setOpen]=useState(true);
  const [panel,setPanel]=useState<Panel>("overview");
- const [language,setLanguage]=useState("Español");
- const [customer,setCustomer]=useState("English");
- const [assistant,setAssistant]=useState("Asistente VMV");
- const [note,setNote]=useState("");
- const go=(next:Tab)=>{setTab(next);if(next!=="services")setOpen(false);setNote("");};
- const showSmartCall=()=>{setTab("services");setOpen(true);setPanel("overview");setNote("");};
+ const [draft,setDraft]=useState<CallSettings|null>(null);
+ const [email,setEmail]=useState("");
+ const [password,setPassword]=useState("");
+ const [apiStatus,setApiStatus]=useState<Record<string,boolean>>({});
+ useEffect(()=>{setDraft(settings?{...settings}:null);},[settings]);
+ const ready=phase==="signed_in"&&!!profile;
+ useEffect(()=>{
+  if(!ready)return;
+  let mounted=true;
+  fetch("/api/status",{cache:"no-store"}).then(r=>r.json())
+   .then(data=>{if(mounted)setApiStatus(data as Record<string,boolean>);}).catch(()=>{});
+  return()=>{mounted=false;};
+ },[ready]);
+ const billing=summary?.billing.ok?summary.billing.data:null;
+ const line=summary?.line.ok?summary.line.data:null;
+ const premium=summary?.preferences.ok?summary.preferences.data:null;
+ const minuteData=billing?.minutes;
+ const available=minuteData?.available;
+ const name=profile?.first_name||"bienvenido";
+ const business=profile?.business_name?.trim()||profile?.first_name||"Mi negocio";
+ const lineNumber=line?.twilioPhone||route?.twilio_number||"Sin número asignado";
+ const lineState=line?.connectedToApp?"Ruta iPhone configurada":line?.verified?"Número verificado":route?.enabled?"Ruta registrada":"Pendiente de activación";
+ const go=(next:Tab)=>{setTab(next);if(next!=="services")setOpen(false);setError("");setNotice("");};
+ const showCall=(next:Panel="overview")=>{setTab("services");setOpen(true);setPanel(next);setError("");setNotice("");};
+ async function login(e:FormEvent<HTMLFormElement>){e.preventDefault();await signIn(email,password);setPassword("");}
+ async function saveSettings(e:FormEvent<HTMLFormElement>){e.preventDefault();if(draft)await saveBasic(draft);}
+ async function saveVoices(e:FormEvent<HTMLFormElement>){e.preventDefault();await savePremium(preferences);}
+ const refreshButton=<button className={styles.secondaryAction} disabled={loading||working}
+  onClick={()=>void refresh()}><RefreshCw size={15}/>{loading?"Actualizando…":"Actualizar datos"}</button>;
  return <main className={styles.stage}>
   <header className={styles.pageHeader}>
    <a href="/" className={styles.wordmark}>VMV<span> BUSINESS</span></a>
-   <span className={styles.previewTag}>VISTA PREVIA DE DISEÑO · SIN DATOS REALES</span>
+   <span className={styles.previewTag}>SMART CALL · DATOS DE TU CUENTA</span>
    <a className={styles.webLink} href="https://vmv-business-design-git-feat-vm-073e13-valdys-projects-b97fc7a6.vercel.app/es/workspace/smart-call/" target="_blank" rel="noopener noreferrer">Panel web <ArrowUpRight size={15}/></a>
   </header>
   <div className={styles.layout}>
    <aside className={styles.intro}>
-    <span className={styles.kicker}>NUEVA EXPERIENCIA VMV</span>
+    <span className={styles.kicker}>VMV BUSINESS / SMART CALL</span>
     <h1>Tu negocio.<br/><em>En tu bolsillo.</em></h1>
-    <p>Una sola app para trabajar con tus servicios de VMV. Smart Call se convierte en un módulo nativo con su propio centro de control, sin perder las llamadas ni el traductor.</p>
-    <div className={styles.feature}><span>01</span><div><strong>Cinco secciones principales</strong><small>Inicio, Servicios, Llamadas, Traductor y Cuenta.</small></div></div>
-    <div className={styles.feature}><span>02</span><div><strong>Smart Call dentro de la app</strong><small>Resumen, ajustes, actividad y acciones rápidas.</small></div></div>
-    <div className={styles.feature}><span>03</span><div><strong>Datos compartidos con la web</strong><small>Los controles reales requieren iniciar sesión en la app nativa.</small></div></div>
-    <div className={styles.disclaimer}><ShieldCheck size={17}/><span>Esta es una demostración navegable del diseño. Sus controles no guardan ajustes, no llaman ni graban voz.</span></div>
+    <p>Entra con tu cuenta y descubre la experiencia de Smart Call con tu saldo de minutos, plan, historial, idiomas, asistente, voces y saludos auténticos.</p>
+    <div className={styles.feature}><span>01</span><div><strong>Saldo autorizado por el servidor</strong><small>Minutos incluidos, consumidos, reservados y recargados; exactamente como el piloto de iPhone.</small></div></div>
+    <div className={styles.feature}><span>02</span><div><strong>Configuración sincronizada</strong><small>Guarda los idiomas, el nombre del asistente y la personalización habilitada por tu plan.</small></div></div>
+    <div className={styles.feature}><span>03</span><div><strong>Tu línea y llamadas reales</strong><small>Consulta el estado de activación y tu historial sin simular llamadas ni clientes.</small></div></div>
+    <div className={styles.disclaimer}><ShieldCheck size={17}/><span>La vista del navegador permite controlar Smart Call con tu cuenta. Las llamadas telefónicas entrantes siguen funcionando en la app iPhone, no aquí. No modificamos desvíos ni números.</span></div>
    </aside>
-   <div className={styles.phoneFrame} aria-label="Prototipo interactivo de la aplicación VMV Business">
+   <div className={styles.phoneFrame}>
     <div className={styles.device}>
-     <div className={styles.statusBar}><span>9:41</span><div className={styles.dynamicIsland}/><span>◢ ▰</span></div>
-     <div className={styles.appTop}><div className={styles.appLogo}><span className={styles.mark}>▥</span><b>VMV<span> BUSINESS</span></b></div><button aria-label="Abrir cuenta" onClick={()=>go("account")}><UserRound size={18}/></button></div>
-     <div className={styles.scrollArea} key={tab+(open?"smart":"list")}>
-      {tab==="home"?<div className={styles.screen}>
-       <span className={styles.screenEyebrow}>TU ESPACIO</span><h2>Hola, bienvenido<span className={styles.mint}>.</span></h2><p className={styles.screenLead}>Todas tus herramientas. Un solo lugar.</p>
-       <button className={styles.homeHero} onClick={showSmartCall}><span className={styles.tileEyebrow}>COMUNICACIÓN / PILOTO</span><strong>Smart Call</strong><small>Línea, idiomas, voces y saludos.</small><span className={styles.tileArrow}><ArrowUpRight size={22}/></span></button>
-       <div className={styles.homeGrid}><button onClick={()=>go("calls")}><PhoneCall size={24}/><strong>Llamadas</strong><small>Recepción y actividad</small></button><button onClick={()=>go("translator")}><Languages size={24}/><strong>Traductor</strong><small>Conversación en vivo</small></button></div>
-       <span className={styles.groupTitle}>ACCIONES RECOMENDADAS</span><button className={styles.listEntry} onClick={showSmartCall}><Settings2 size={19}/><div><strong>Configurar Smart Call</strong><small>Preferencias importantes</small></div><span>›</span></button>
-      </div>:null}
-      {tab==="services"&&!open?<div className={styles.screen}>
-       <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>Mis servicios<span className={styles.mint}>.</span></h2><p className={styles.screenLead}>Tus herramientas desde el teléfono.</p>
-       <button className={styles.serviceHero} onClick={showSmartCall}><div className={styles.serviceHeroIcon}><PhoneCall size={24}/></div><span className={styles.tileEyebrow}>SERVICIO EN PILOTO</span><strong>Smart Call</strong><small>Configuración y actividad real desde la app</small><span className={styles.serviceLink}>Abrir servicio →</span></button>
-       <span className={styles.groupTitle}>EN DESARROLLO</span>{modules.map(({id,name,sub,Icon})=><div key={id} className={styles.moduleRow}><div className={styles.moduleIcon}><Icon size={17}/></div><div><strong>{name}</strong><small>{sub}</small></div><span className={styles.pending}>Próximamente</span></div>)}
-      </div>:null}
-      {tab==="services"&&open?<div className={styles.smartScreen}>
-       <button className={styles.back} onClick={()=>{setOpen(false);setNote("");}}><ChevronLeft size={17}/> Todos los servicios</button>
-       <div className={styles.smartHero}><span>VMV BUSINESS / COMUNICACIÓN</span><h2>Smart Call<span>.</span></h2><p>Tu línea, tus idiomas y la actividad del negocio, en un solo lugar.</p><div className={styles.smartBadge}><span/> Estado de ejemplo · PILOTO</div></div>
-       <div className={styles.switcher}>{(["overview","settings","activity"] as Panel[]).map((p,i)=><button key={p} className={panel===p?styles.selected:""} onClick={()=>{setPanel(p);setNote("");}}>{["Resumen","Ajustes","Actividad"][i]}</button>)}</div>
-       {panel==="overview"?<><div className={styles.smartCard}><span className={styles.smallKicker}>TU LÍNEA DE NEGOCIO</span><h3>Sin número real</h3><p>Los datos de la línea aparecerán al iniciar sesión en la aplicación.</p><div className={styles.rule}/><Setting label="Idioma del cliente" value={customer}/><Setting label="Tu idioma" value={language}/><Setting label="Asistente" value={assistant}/><Setting label="Plan" value="Ejemplo"/><button className={styles.mainAction} onClick={()=>go("calls")}>Ir a llamadas →</button></div><div className={styles.miniCards}><div><strong>—</strong><small>Llamadas recientes</small></div><div><strong>—</strong><small>Minutos disponibles</small></div></div></>:null}
-       {panel==="settings"?<><div className={styles.smartCard}><span className={styles.smallKicker}>CONFIGURACIÓN ESENCIAL</span><h3>Idiomas y asistente</h3><label htmlFor="preview-owner">Tu idioma</label><select id="preview-owner" value={language} onChange={e=>setLanguage(e.target.value)}><option>Español</option><option>English</option></select><label htmlFor="preview-customer">Idioma del cliente</label><select id="preview-customer" value={customer} onChange={e=>setCustomer(e.target.value)}><option>English</option><option>Español</option></select><label htmlFor="preview-assistant">Nombre del asistente</label><input id="preview-assistant" value={assistant} maxLength={40} onChange={e=>setAssistant(e.target.value)}/><p>Este prototipo cambia valores solo en pantalla. Los ajustes reales usan tu cuenta protegida.</p><button className={styles.mainAction} onClick={()=>setNote("Vista de diseño: no se ha guardado ningún cambio.")}>Ver cómo se guarda →</button>{note?<div role="status" className={styles.demoNote}>{note}</div>:null}</div><div className={styles.smartCard}><span className={styles.smallKicker}>PERSONALIZACIÓN PREMIUM</span><h3>Voces y saludos</h3><p>En la app real, las opciones se habilitan únicamente con Pro o Premium activo.</p><div className={styles.voicePills}><span>Estándar</span><span>Clara</span><span>Serena</span></div></div></>:null}
-       {panel==="activity"?<div className={styles.smartCard}><span className={styles.smallKicker}>REGISTRO DE LLAMADAS</span><h3>Actividad reciente</h3><div className={styles.emptyHistory}><Clock3 size={28}/><strong>Tu historial, siempre a mano</strong><p>Las llamadas reales aparecerán aquí cuando inicies sesión en el iPhone.</p></div><button className={styles.mainAction} onClick={()=>setNote("Solo demostración visual. No se consultaron datos reales.")}><RefreshCw size={15}/> Actualizar</button>{note?<div className={styles.demoNote}>{note}</div>:null}</div>:null}
-      </div>:null}
-      {tab==="calls"?<div className={styles.screen}><span className={styles.screenEyebrow}>TELÉFONO</span><h2>Llamadas<span className={styles.mint}>.</span></h2><p className={styles.screenLead}>La recepción nativa y la pantalla de llamada permanecen como funciones principales.</p><div className={styles.smartCard}><div className={styles.bigCircle}><PhoneCall size={35}/></div><h3>Llamadas en tu iPhone</h3><p>El piloto real usa Twilio Voice y la interfaz CallKit. Esta vista web no recibe llamadas.</p><button className={styles.mainAction} onClick={showSmartCall}>Configurar Smart Call →</button></div></div>:null}
-      {tab==="translator"?<div className={styles.screen}><span className={styles.screenEyebrow}>TRADUCCIÓN EN VIVO</span><h2>Traductor<span className={styles.mint}>.</span></h2><p className={styles.screenLead}>Interpretación en persona, siempre a un toque.</p><div className={styles.smartCard}><div className={styles.bigCircle}><Mic size={35}/></div><h3>Habla sin fronteras.</h3><p>La app iOS conserva el panel de interpretación existente. El micrófono no está activo en esta demostración.</p></div></div>:null}
-      {tab==="account"?<div className={styles.screen}><span className={styles.screenEyebrow}>MI PERFIL</span><h2>Cuenta<span className={styles.mint}>.</span></h2><p className={styles.screenLead}>Preferencias del negocio, suscripción y seguridad.</p><div className={styles.smartCard}><div className={styles.bigCircle}><UserRound size={32}/></div><h3>Una identidad VMV</h3><p>La app nativa y el panel web comparten el proveedor de autenticación, pero mantienen sesiones independientes.</p><button className={styles.mainAction} onClick={showSmartCall}>Mis servicios →</button></div></div>:null}
+     <div className={styles.statusBar}><span>VMV</span><div className={styles.dynamicIsland}/><span>◢ ▰</span></div>
+     <div className={styles.appTop}><div className={styles.appLogo}><span className={styles.mark}>▥</span><b>VMV<span> BUSINESS</span></b></div>
+      {user?<button aria-label="Ir a mi cuenta" onClick={()=>go("account")}><UserRound size={18}/></button>:<LockKeyhole size={18}/>}
      </div>
-     <nav className={styles.bottomNav} aria-label="Navegación de la aplicación de muestra">{nav.map(([id,label,Icon])=><button key={id} className={tab===id?styles.activeNav:""} onClick={()=>go(id)} aria-pressed={tab===id}><span><Icon size={22}/></span><small>{label}</small></button>)}</nav>
+     <div className={styles.scrollArea} key={ready?tab+(open?"details":"list"):"login"}>
+      {phase==="checking"?<div className={styles.loadingScreen}><LoaderCircle className={styles.spin}/><p>Verificando tu sesión…</p></div>:null}
+      {phase==="unconfigured"?<div className={styles.loadingScreen}><LockKeyhole/><p>Falta configurar la conexión pública de Supabase en este deploy.</p></div>:null}
+      {phase==="signed_out"?<div className={styles.signinScreen}>
+       <span className={styles.screenEyebrow}>ACCESO SEGURO</span><h2>Bienvenido<span className={styles.mint}>.</span></h2>
+       <p className={styles.screenLead}>Inicia sesión con la misma cuenta que usas en Smart Call. No se creará otra cuenta.</p>
+       <form className={styles.signinForm} onSubmit={login}>
+        <label htmlFor="login-email">Correo electrónico</label><input required type="email" id="login-email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="tu@empresa.com"/>
+        <label htmlFor="login-password">Contraseña</label><input required type="password" id="login-password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Tu contraseña"/>
+        <button type="submit" className={styles.mainAction} disabled={working}>{working?"Entrando…":"Entrar a mi cuenta"} <ArrowUpRight size={16}/></button>
+       </form>
+       <div className={styles.privacyNote}><ShieldCheck size={16}/><span>Sesión protegida por Supabase. Nadie puede ver tu balance o tus llamadas sin autenticarse.</span></div>
+       <a href="/registro" className={styles.registerLink}>¿No tienes cuenta? Abrir registro ↗</a>
+       {error?<p className={styles.errorText} role="alert">{error}</p>:null}
+      </div>:null}
+      {phase==="signed_in"&&!profile?<div className={styles.loadingScreen}>
+       {loading?<LoaderCircle className={styles.spin}/>:<LockKeyhole/>}
+       <h3>{loading?"Cargando Smart Call…":"No se pudo abrir tu cuenta"}</h3>
+       <p>{loading?"Consultando tu perfil y tu saldo.":error||"Completa tu registro de Smart Call para continuar."}</p>
+       {!loading?<><button className={styles.mainAction} onClick={()=>void refresh()}>Reintentar</button><a className={styles.registerLink} href="/registro">Completar registro</a><button className={styles.logoutLink} onClick={()=>void signOut()}>Cerrar sesión</button></>:null}
+      </div>:null}
+      {ready&&tab==="home"?<div className={styles.screen}>
+       <span className={styles.screenEyebrow}>TU ESPACIO</span><h2>Hola, {name}<span className={styles.mint}>.</span></h2><p className={styles.screenLead}>{business} · Tus herramientas en un solo lugar.</p>
+       <button className={styles.homeHero} onClick={()=>showCall("minutes")}><span className={styles.tileEyebrow}>SMART CALL / MI SALDO</span><strong>{num(available)} min</strong><small>Disponibles · {billing?.plan?.toUpperCase()||"Plan no disponible"}</small><span className={styles.tileArrow}><ArrowUpRight size={22}/></span></button>
+       <div className={styles.homeGrid}>
+        <button onClick={()=>go("calls")}><PhoneCall size={24}/><strong>Llamadas</strong><small>{line?.usage.calls??"—"} en 30 días</small></button>
+        <button onClick={()=>go("translator")}><Languages size={24}/><strong>Traductor</strong><small>Conversación en persona</small></button>
+       </div>
+       <span className={styles.groupTitle}>ACCIONES RÁPIDAS</span>
+       <button className={styles.listEntry} onClick={()=>showCall("settings")}><Settings2 size={19}/><div><strong>Configurar Smart Call</strong><small>Idiomas, voces y saludos</small></div><span>›</span></button>
+       <button className={styles.listEntry} onClick={()=>showCall("activity")}><Clock3 size={19}/><div><strong>Actividad reciente</strong><small>Últimas llamadas</small></div><span>›</span></button>
+      </div>:null}
+      {ready&&tab==="services"&&!open?<div className={styles.screen}>
+       <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>Mis servicios<span className={styles.mint}>.</span></h2><p className={styles.screenLead}>Administra tus herramientas desde el teléfono.</p>
+       <button className={styles.serviceHero} onClick={()=>showCall()}><div className={styles.serviceHeroIcon}><PhoneCall size={24}/></div>
+        <span className={styles.tileEyebrow}>SERVICIO EN PILOTO</span><strong>Smart Call</strong>
+        <small>{num(available)} min disponibles · {lineState}</small><span className={styles.serviceLink}>Abrir servicio →</span>
+       </button>
+       <span className={styles.groupTitle}>EN DESARROLLO</span>
+       {modules.map(({name:moduleName,Icon})=><div key={moduleName} className={styles.moduleRow}><div className={styles.moduleIcon}><Icon size={17}/></div><div><strong>{moduleName}</strong><small>Próximamente</small></div><span className={styles.pending}>Pendiente</span></div>)}
+      </div>:null}
+      {ready&&tab==="services"&&open?<div className={styles.smartScreen}>
+       <button className={styles.back} onClick={()=>setOpen(false)}><ChevronLeft size={17}/> Todos los servicios</button>
+       <div className={styles.smartHero}><span>VMV BUSINESS / COMUNICACIÓN</span><h2>Smart Call<span>.</span></h2><p>Tu línea, minutos y llamadas desde un solo lugar.</p><div className={styles.smartBadge}><span/>{lineState}</div></div>
+       <div className={styles.switcher}>{([{id:"overview",label:"Resumen"},{id:"minutes",label:"Minutos"},{id:"settings",label:"Ajustes"},{id:"activity",label:"Actividad"}] as const).map(item=><button key={item.id} onClick={()=>setPanel(item.id)} className={panel===item.id?styles.selected:""}>{item.label}</button>)}</div>
+       {panel==="overview"?<>
+        <div className={styles.smartCard}><span className={styles.smallKicker}>MI LÍNEA VMV</span><h3>{lineNumber}</h3><p>{line?.nextAction||"Comprueba el estado de activación. Una ruta en la base de datos no confirma una llamada real."}</p>
+         <div className={styles.rule}/>
+         <Row label="Número conectado" value={line?.publicPhone||"Pendiente"}/>
+         <Row label="Número verificado" value={line?.verified?"Sí":"No confirmado"}/>
+         <Row label="Recepción en iPhone" value={line?.connectedToApp?"Ruta habilitada":"Pendiente"}/>
+         <Row label="Operador" value={line?.carrier||provisioning?.carrier||"No disponible"}/>
+         <Row label="Tu idioma" value={lang(settings?.desired_language)}/>
+         <Row label="Idioma del cliente" value={lang(settings?.caller_language)}/>
+         <Row label="Asistente" value={settings?.assistant_name||"Sin configurar"}/>
+         <button className={styles.mainAction} onClick={()=>setPanel("settings")}>Administrar Smart Call →</button>
+        </div>
+        <div className={styles.miniCards}><div><strong>{num(available)}</strong><small>Minutos disponibles</small></div><div><strong>{line?.usage.calls??"—"}</strong><small>Llamadas · 30 días</small></div></div>
+        {refreshButton}
+       </>:null}
+       {panel==="minutes"?<>
+        <div className={styles.minuteHero}><span className={styles.smallKicker}>MINUTOS DISPONIBLES</span><strong>{num(available)}<small> min</small></strong>
+         <p>{billing?.plan?.toUpperCase()||"Plan no disponible"} · {billing?.status||"Sin estado"}</p>
+         <div className={styles.minuteTrack}><span style={{width:minuteData?.included&&available!=null?Math.max(0,Math.min(100,available/minuteData.included*100))+"%":"0%"}}/></div>
+         <small>Saldo real calculado por el servidor del piloto.</small>
+        </div>
+        <div className={styles.smartCard}><span className={styles.smallKicker}>DESGLOSE DE CONSUMO</span><h3>Plan y minutos</h3>
+         <Row label="Incluidos" value={num(minuteData?.included)+" min"}/>
+         <Row label="Consumidos" value={num(minuteData?.used)+" min"}/>
+         <Row label="Reservados" value={num(minuteData?.reserved)+" min"}/>
+         <Row label="Transferidos" value={num(minuteData?.rollover)+" min"}/>
+         <Row label="Recargas" value={num(minuteData?.topup)+" min"}/>
+         <Row label="Retención temporal" value={num(minuteData?.temporaryHold)+" min"}/>
+         <Row label="Disponibles" value={num(available)+" min"}/>
+         <Row label="Fin del periodo" value={date(billing?.periodEnd)}/>
+         <div className={styles.rule}/><p>{billing?.note||"Información de facturación no disponible."}</p>
+         {billing?.billingMode==="test"?<div className={styles.testNote}>MODO TEST · Este saldo pertenece al piloto y no es una suscripción de producción.</div>:null}
+         {refreshButton}
+        </div>
+        {billing?.topup?<div className={styles.smartCard}><span className={styles.smallKicker}>RECARGAS</span>
+         <h3>{billing.topup.minutes} minutos adicionales</h3><p>Referencia de precio: {"$"+(billing.topup.priceCents/100).toFixed(2)} USD. {billing.topup.available?"Disponible en el sistema de pagos de prueba.":"No habilitada en este despliegue."}</p></div>:null}
+       </>:null}
+       {panel==="settings"?<>
+        <form className={styles.smartCard} onSubmit={saveSettings}><span className={styles.smallKicker}>CONFIGURACIÓN DE TU CUENTA</span><h3>Idiomas y asistente</h3>
+         <label htmlFor="my-language">Tu idioma</label><select id="my-language" disabled={!draft||working} value={draft?.desired_language||"es"} onChange={e=>setDraft(v=>v?{...v,desired_language:e.target.value}:null)}><option value="es">Español</option><option value="en">English</option></select>
+         <label htmlFor="client-language">Idioma del cliente</label><select id="client-language" disabled={!draft||working} value={draft?.caller_language||"en"} onChange={e=>setDraft(v=>v?{...v,caller_language:e.target.value}:null)}><option value="en">English</option><option value="es">Español</option></select>
+         <label htmlFor="my-assistant">Nombre del asistente</label><input id="my-assistant" disabled={!draft||working} maxLength={40} required value={draft?.assistant_name||""} onChange={e=>setDraft(v=>v?{...v,assistant_name:e.target.value}:null)}/>
+         <p>Los cambios se guardan en tu cuenta. No modifican desvíos ni rutas de llamadas.</p>
+         {!draft?<div className={styles.testNote}>Primero completa la activación de tu línea para crear la configuración inicial.</div>:null}
+         <button type="submit" disabled={!draft||working} className={styles.mainAction}>{working?"Guardando…":"Guardar preferencias"} →</button>
+        </form>
+        <form className={styles.smartCard} onSubmit={saveVoices}><span className={styles.smallKicker}>PERSONALIZACIÓN</span><h3>Voces y saludos</h3>
+         <p>{premium?.message||"Sin conexión con la personalización. Requiere Pro o Premium activo."}</p>
+         <fieldset className={styles.voiceFields} disabled={premium?.editable!==true||working}>
+          <label htmlFor="voice-customer">Voz para cliente</label><select id="voice-customer" value={preferences.voice_customer} onChange={e=>setPreferences({...preferences,voice_customer:e.target.value as Voice})}>{choices.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select>
+          <label htmlFor="voice-owner">Voz del propietario</label><select id="voice-owner" value={preferences.voice_owner} onChange={e=>setPreferences({...preferences,voice_owner:e.target.value as Voice})}>{choices.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select>
+          <label htmlFor="greeting-customer">Saludo para cliente</label><textarea id="greeting-customer" maxLength={180} rows={3} value={preferences.greeting_customer} onChange={e=>setPreferences({...preferences,greeting_customer:e.target.value})} placeholder="Gracias por llamar…"/>
+          <label htmlFor="greeting-owner">Saludo para ti</label><textarea id="greeting-owner" maxLength={180} rows={3} value={preferences.greeting_owner} onChange={e=>setPreferences({...preferences,greeting_owner:e.target.value})} placeholder="Tienes una llamada entrante…"/>
+         </fieldset>
+         <p>{preferences.greeting_customer.length}/180 · {preferences.greeting_owner.length}/180 caracteres</p>
+         <button type="submit" disabled={premium?.editable!==true||working} className={styles.mainAction}>{working?"Guardando…":"Guardar voces y saludos"} →</button>
+         {premium?.editable!==true?<div className={styles.testNote}>Se necesita un plan Pro o Premium activo para editar estos controles.</div>:null}
+        </form>
+       </>:null}
+       {panel==="activity"?<div className={styles.smartCard}><span className={styles.smallKicker}>HISTORIAL REAL</span><h3>Llamadas recientes</h3>
+        <p>{line?.usage.calls??"—"} llamadas en los últimos 30 días · {line?.usage.translatedCalls??"—"} traducidas.</p>
+        <History calls={calls}/>{refreshButton}
+       </div>:null}
+      </div>:null}
+      {ready&&tab==="calls"?<div className={styles.screen}><span className={styles.screenEyebrow}>SMART CALL</span><h2>Llamadas<span className={styles.mint}>.</span></h2>
+       <p className={styles.screenLead}>La recepción real continúa en el iPhone. Aquí puedes consultar el servicio y el historial.</p>
+       <div className={styles.smartCard}><span className={styles.smallKicker}>TU TELÉFONO</span><h3>{lineNumber}</h3><p>{line?.billing.message||lineState}</p>
+        <Row label="Recepción en iPhone" value={line?.connectedToApp?"Ruta configurada":"Pendiente"}/>
+        <Row label="Minutos" value={num(available)+" disponibles"}/>
+        <Row label="Llamadas directas · 30 días" value={num(line?.usage.directCalls)}/>
+        <Row label="Llamadas traducidas · 30 días" value={num(line?.usage.translatedCalls)}/>
+        <button className={styles.mainAction} onClick={()=>showCall("minutes")}>Plan y minutos →</button>
+       </div>
+       <div className={styles.smartCard}><span className={styles.smallKicker}>ACTIVIDAD</span><h3>Últimas llamadas</h3><History calls={calls.slice(0,7)}/><button className={styles.secondaryAction} onClick={()=>showCall("activity")}>Ver historial →</button></div>
+       <div className={styles.privacyNote}><PhoneForwarded size={17}/><span>El navegador no puede registrar PushKit o CallKit. Para recibir llamadas debes utilizar la app iOS.</span></div>
+      </div>:null}
+      {ready&&tab==="translator"?<div className={styles.screen}><span className={styles.screenEyebrow}>CONVERSACIÓN EN PERSONA</span><h2>Traductor<span className={styles.mint}>.</span></h2>
+       <p className={styles.screenLead}>Usa el traductor web cuando el servicio esté disponible. La traducción de llamadas sigue en tu iPhone.</p>
+       {client&&profile?<div className={styles.interpreterWrap}><LivePanel supabase={client} profile={profile} apiStatus={apiStatus}/></div>:null}
+      </div>:null}
+      {ready&&tab==="account"?<div className={styles.screen}><span className={styles.screenEyebrow}>MI CUENTA VMV</span><h2>Cuenta<span className={styles.mint}>.</span></h2><p className={styles.screenLead}>Tus datos reales, plan y seguridad.</p>
+       <div className={styles.smartCard}><div className={styles.bigCircle}><UserRound size={32}/></div><h3>{business}</h3>
+        <Row label="Correo" value={user?.email||"—"}/><Row label="Plan" value={billing?.plan?.toUpperCase()||"—"}/>
+        <Row label="Estado" value={billing?.status||"—"}/><Row label="Minutos disponibles" value={num(available)}/>
+        <Row label="Mi teléfono" value={profile?.phone||"—"}/>
+        <button className={styles.mainAction} onClick={()=>showCall("minutes")}>Ver mi saldo →</button>
+        {refreshButton}
+        <button className={styles.logoutLink} disabled={working} onClick={()=>void signOut()}><LogOut size={15}/> Cerrar sesión</button>
+       </div>
+       <div className={styles.privacyNote}><ShieldCheck size={17}/><span>La app web y el iPhone comparten tu cuenta Supabase pero mantienen sus sesiones separadas.</span></div>
+      </div>:null}
+      {ready&&(error||notice||summary&&!summary.billing.ok)?<div className={styles.feedbackArea} aria-live="polite" role="status">
+       {error?<p className={styles.errorText}>{error}</p>:null}
+       {notice?<p className={styles.successText}>{notice}</p>:null}
+       {summary&&!summary.billing.ok?<p className={styles.errorText}>El balance está temporalmente no disponible. No se muestra un saldo simulado.</p>:null}
+      </div>:null}
+     </div>
+     {ready?<nav className={styles.bottomNav} aria-label="Navegación de VMV Business">
+      {nav.map(([id,label,Icon])=><button key={id} className={tab===id?styles.activeNav:""} onClick={()=>go(id)} aria-pressed={tab===id}><span><Icon size={22}/></span><small>{label}</small></button>)}
+     </nav>:null}
     </div>
    </div>
   </div>
