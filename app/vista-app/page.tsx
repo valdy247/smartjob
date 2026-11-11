@@ -170,7 +170,7 @@ export default function VMVMobilePreview(){
   const entry=calls.find(item=>item.bridge_sid===sid);
   if(!entry?.caller_phone)return;
   if(!window.confirm("VMV llamará primero a tu iPhone. Cuando contestes, conectará con "+
-      entry.caller_phone+" usando tu número empresarial. Será una llamada normal, sin traducción. ¿Continuar?"))return;
+      entry.caller_phone+" usando tu número empresarial. Será una llamada normal, sin traducción. Twilio puede generar cargos de voz. ¿Continuar?"))return;
   setCallbackBusy(sid);setCallbackMessage("");
   try{
    const {data:identity}=await client.auth.getUser();
