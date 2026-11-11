@@ -309,50 +309,42 @@ export default function VMVMobilePreview(){
         {refreshButton}
        </>:null}
        {panel==="minutes"?<>
-        <div className={styles.balanceIntro}>
-         <span className={styles.smallKicker}>TU PLAN {billing?.plan&&billing.plan!=="none"?"· "+billing.plan.toUpperCase():""}</span>
-         <h3>Dos servicios. Información clara.</h3>
-         <p>Las llamadas normales y las traducidas tienen reglas de uso diferentes.</p>
-        </div>
         <div className={styles.smartCard}>
-         <div className={styles.balanceTitle}><span className={styles.balanceServiceIcon}><PhoneCall size={19}/></span>
-          <div><span className={styles.smallKicker}>01 / LLAMADAS NORMALES</span><h3>Sin traducción</h3></div></div>
-         <strong className={styles.directServiceStatus}>{billing?.subscriptionActive?"Incluidas con tu plan":"Acceso no disponible"}</strong>
-         <p>Este servicio no tiene actualmente un saldo propio de minutos. No consume tus minutos de traducción.</p>
-         <Row label="Llamadas normales · 30 días" value={num(line?.usage.directCalls)}/>
-         <Row label="Fin del período" value={date(billing?.periodEnd)}/>
-         <details className={styles.minuteDetails}><summary>¿Y las recargas de llamadas normales?</summary>
-          <p className={styles.minuteExplanation}>Actualmente no existen paquetes ni precios de minutos normales configurados. Para activar recargas independientes primero debemos incorporar una bolsa y un precio para este servicio, sin modificar la traducción.</p>
-         </details>
+         <div className={styles.balanceTitle}>
+          <span className={styles.balanceServiceIcon}><PhoneCall size={19}/></span>
+          <div><h3>Llamadas normales</h3></div>
+         </div>
+         <strong className={styles.directServiceStatus}>{billing?.subscriptionActive?"Incluidas en tu plan":"No disponibles"}</strong>
+         <Row label="Llamadas · 30 días" value={num(line?.usage.directCalls)}/>
         </div>
         <div className={styles.minuteHero}>
-         <span className={styles.smallKicker}>02 / LLAMADAS CON TRADUCCIÓN</span>
+         <span className={styles.smallKicker}>LLAMADAS CON TRADUCCIÓN</span>
          <strong>{num(available)}<small> min</small></strong>
-         <p>{available==null?"Saldo temporalmente no disponible":available===0?"Has agotado tus minutos para traducir llamadas.":"Para traducir llamadas telefónicas."}</p>
+         <p>{available==null?"Saldo no disponible":available===0?"Sin minutos disponibles":"Disponibles"}</p>
         </div>
         <div className={styles.smartCard}>
-         <span className={styles.smallKicker}>TU SALDO DE TRADUCCIÓN</span>
-         <Row label="Incluidos en tu plan" value={num(minuteData?.included)+" min"}/>
-         <Row label="Consumidos" value={num(minuteData?.used)+" min"}/>
-         <Row label="Fin del período" value={date(billing?.periodEnd)}/>
-         {billing?.billingMode==="test"?<p className={styles.testNote}>Modo de prueba. Esta recarga usa Stripe TEST; no representa un cobro real.</p>:null}
-         {billing?.topup&&billing?.billingMode==="test"?<div className={styles.topupOffer}>
-          <span className={styles.smallKicker}>RECARGA SOLO PARA TRADUCCIÓN</span>
-          <div className={styles.topupOfferLine}><strong>+{billing.topup.minutes} min</strong><span>{"$"+(billing.topup.priceCents/100).toFixed(2)} USD · TEST</span></div>
-          {billing.topup.available?
-           <button type="button" className={styles.mainAction} disabled={topupBusy}
-            onClick={()=>void requestTranslationTopup()}>{topupBusy?"Abriendo Stripe…":"Probar recarga de traducción →"}</button>:
-           <p className={styles.minuteExplanation}>Esta recarga todavía no está habilitada en Stripe TEST para tu cuenta. No se realizará ningún cobro.</p>}
+         <Row label="Plan" value={billing?.plan&&billing.plan!=="none"?billing.plan.charAt(0).toUpperCase()+billing.plan.slice(1):"—"}/>
+         <Row label="Incluidos" value={num(minuteData?.included)+" min"}/>
+         <Row label="Usados" value={num(minuteData?.used)+" min"}/>
+         <Row label="Renovación" value={date(billing?.periodEnd)}/>
+         {billing?.topup?.available&&billing.billingMode==="test"?<div className={styles.topupOffer}>
+          <div className={styles.topupOfferLine}>
+           <strong>+{billing.topup.minutes} min</strong>
+           <span>{"$"+(billing.topup.priceCents/100).toFixed(2)} USD · TEST</span>
+          </div>
+          <button type="button" className={styles.mainAction} disabled={topupBusy}
+           onClick={()=>void requestTranslationTopup()}>{topupBusy?"Abriendo Stripe…":"Recargar traducción →"}</button>
+          <p className={styles.minuteExplanation}>Pago de prueba · Sin cargo real</p>
           {topupMessage?<p role="alert" className={styles.errorText}>{topupMessage}</p>:null}
-         </div>:<p className={styles.minuteExplanation}>No hay una recarga habilitada para esta cuenta. Los nuevos minutos se añadirán solo después de que el servidor confirme el pago correspondiente.</p>}
+         </div>:null}
+         {billing?.billingMode==="test"&&!billing.topup?.available?<p className={styles.testNote}>Cuenta de prueba</p>:null}
          <details className={styles.minuteDetails}>
-          <summary>Ver detalle del consumo</summary>
+          <summary>Detalle del consumo</summary>
           <div className={styles.minuteBreakdown}>
-           <Row label="Minutos adicionales por recargas" value={num(minuteData?.topup)+" min"}/>
-           <Row label="Minutos transferidos" value={num(minuteData?.rollover)+" min"}/>
-           <Row label="Reservados para llamadas" value={num(minuteData?.reserved)+" min"}/>
+           <Row label="Recargas" value={num(minuteData?.topup)+" min"}/>
+           <Row label="Transferidos" value={num(minuteData?.rollover)+" min"}/>
+           <Row label="Reservados" value={num(minuteData?.reserved)+" min"}/>
            <Row label="Retención temporal" value={num(minuteData?.temporaryHold)+" min"}/>
-           <p className={styles.minuteExplanation}>El saldo de traducción descuenta el tiempo utilizado y el reservado para llamadas traducidas en curso.</p>
           </div>
          </details>
          {refreshButton}
