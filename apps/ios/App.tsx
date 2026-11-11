@@ -5,6 +5,7 @@ import {Voice,Call,CallInvite} from "@twilio/voice-react-native-sdk";
 import type {Session} from "@supabase/supabase-js";
 import {api,supabase,configured} from "./session";
 import {InterpreterPanel} from "./InterpreterPanel";
+import {CallScreen} from "./CallScreen";
 import {NativeActivation,type NativeProfile} from "./NativeActivation";
 
 const colors={bg:"#F8FBFA",card:"#FFFFFF",line:"#DCE8E6",text:"#151D2A",
@@ -709,22 +710,11 @@ export default function App(){
   </KeyboardAvoidingView>
   {session&&activationProfile&&!activationProfile.plan_prompt_seen?
    <NativeActivation session={session} profile={activationProfile} onComplete={setActivationProfile}/>:null}
-  <Modal visible={!!invite||!!call} animationType="fade" presentationStyle="fullScreen" onRequestClose={()=>{}}>
-   <View style={styles.incomingRoot}><StatusBar barStyle="dark-content" backgroundColor="#EBF8F5"/>
-    <View style={styles.incomingGlow}/><View style={styles.incomingCard}>
-     <Text style={styles.incomingKicker}>VMV CALL · {call?"EN LLAMADA":"LLAMADA ENTRANTE"}</Text>
-     <Text style={styles.incomingSymbol}>◉</Text>
-     <Text style={styles.incomingName}>{call?"Estás conectado":"Llamada de cliente"}</Text>
-     <Text style={styles.incomingLang}>{inboundLanguage==="es"?"Español · directo":inboundLanguage==="en"?"English ⇄ Español":"VMV Call"}</Text>
-     <Text style={styles.incomingStatus}>{call?status:"Toca Aceptar para iniciar la conversación"}</Text>
-      {inboundLanguage==="en"?<View style={styles.incomingTranslationPill}><Text style={styles.incomingTranslationText}>✧ Traducción en vivo · OpenAI</Text></View>:null}
-     <View style={styles.incomingActions}>
-      {invite?<><Pressable style={[styles.incomingRound,{backgroundColor:"#AD3F56"}]} accessibilityLabel="Rechazar llamada" onPress={()=>void reject()}><Text style={styles.incomingActionIcon}>✕</Text><Text style={styles.incomingActionText}>Rechazar</Text></Pressable>
-       <Pressable style={[styles.incomingRound,{backgroundColor:"#248E71"}]} accessibilityLabel="Contestar llamada" disabled={working} onPress={()=>void accept()}><Text style={styles.incomingActionIcon}>☎</Text><Text style={styles.incomingActionText}>Aceptar</Text></Pressable></>:
-       <Pressable style={[styles.incomingRound,{backgroundColor:"#AD3F56"}]} accessibilityLabel="Finalizar llamada" onPress={()=>void end()}><Text style={styles.incomingActionIcon}>☎</Text><Text style={styles.incomingActionText}>Finalizar</Text></Pressable>}
-     </View>
-    </View>
-   </View>
+  <Modal visible={!!invite||!!call} animationType="fade" presentationStyle="fullScreen"
+    onRequestClose={()=>{}}>
+    <CallScreen voice={voice} invite={invite} call={call} busy={working} status={status}
+      ownerLanguage={assistantPrefs.desired_language==="en"?"en-US":"es-ES"}
+      onAccept={()=>void accept()} onReject={()=>void reject()} onEnd={()=>void end()}/>
   </Modal>
  </SafeAreaView>;
 }
