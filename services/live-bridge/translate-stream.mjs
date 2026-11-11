@@ -83,12 +83,14 @@ export async function streamTranslation(text,sourceLanguage,targetLanguage,{
     let buffer="";
     outer:while(true){
       const {done,value}=await reader.read();
-      buffer+=decoder.decode(value||new Uint8Array(),{stream:!done}).replace(/\r\n/g,"\n");
+      buffer+=decoder.decode(value||new Uint8Array(),{stream:!done});
       if(buffer.length>16000)throw Error("oversize_sse_frame");
-      while(buffer.includes("\n\n")){
-        const idx=buffer.indexOf("\n\n");
-        const frame=buffer.slice(0,idx);buffer=buffer.slice(idx+2);
-        const data=frame.split("\n").filter(line=>line.startsWith("data:"))
+      while(true){
+        const boundary=/\r?\n\r?\n/.exec(buffer);
+        if(!boundary)break;
+        const idx=boundary.index;
+        const frame=buffer.slice(0,idx);buffer=buffer.slice(idx+boundary[0].length);
+        const data=frame.split(/\r?\n/).filter(line=>line.startsWith("data:"))
           .map(line=>line.slice(5).trimStart()).join("\n");
         if(!data)continue;
         if(data==="[DONE]"){finished=true;break outer;}
