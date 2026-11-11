@@ -59,6 +59,8 @@ export default function VMVMobilePreview(){
  const [tab,setTab]=useState<Tab>("services");
  const [open,setOpen]=useState(true);
  const [panel,setPanel]=useState<Panel>("overview");
+ const [callsView,setCallsView]=useState<"summary"|"history">("summary");
+ const [callFilter,setCallFilter]=useState<"all"|"direct"|"translated">("all");
  const [draft,setDraft]=useState<CallSettings|null>(null);
  const [email,setEmail]=useState("");
  const [password,setPassword]=useState("");
@@ -81,11 +83,12 @@ export default function VMVMobilePreview(){
  const business=profile?.business_name?.trim()||profile?.first_name||"Mi negocio";
  const lineNumber=line?.twilioPhone||route?.twilio_number||"Sin número asignado";
  const lineState=line?.connectedToApp?"Ruta iPhone configurada":line?.verified?"Número verificado":route?.enabled?"Ruta registrada":"Pendiente de activación";
- const go=(next:Tab)=>{setTab(next);if(next!=="services")setOpen(false);setError("");setNotice("");};
+ const go=(next:Tab)=>{setTab(next);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("summary");setCallFilter("all");}setError("");setNotice("");};
  const showCall=(next:Panel="overview")=>{setTab("services");setOpen(true);setPanel(next);setError("");setNotice("");};
  async function login(e:FormEvent<HTMLFormElement>){e.preventDefault();await signIn(email,password);setPassword("");}
  async function saveSettings(e:FormEvent<HTMLFormElement>){e.preventDefault();if(draft)await saveBasic(draft);}
  async function saveVoices(e:FormEvent<HTMLFormElement>){e.preventDefault();await savePremium(preferences);}
+ const filteredCalls=callFilter==="all"?calls:calls.filter(item=>item.call_mode===callFilter);
  const refreshButton=<button className={styles.secondaryAction} disabled={loading||working}
   onClick={()=>void refresh()}><RefreshCw size={15}/>{loading?"Actualizando…":"Actualizar datos"}</button>;
  return <main className={styles.stage}>
@@ -238,18 +241,42 @@ export default function VMVMobilePreview(){
         <History calls={calls}/>{refreshButton}
        </div>:null}
       </div>:null}
-      {ready&&tab==="calls"?<div className={styles.screen}><span className={styles.screenEyebrow}>SMART CALL</span><h2>Llamadas<span className={styles.mint}>.</span></h2>
-       <p className={styles.screenLead}>La recepción real continúa en el iPhone. Aquí puedes consultar el servicio y el historial.</p>
-       <div className={styles.smartCard}><span className={styles.smallKicker}>TU TELÉFONO</span><h3>{lineNumber}</h3><p>{line?.billing.message||lineState}</p><p>Los minutos de traducción se muestran aparte de las llamadas entrantes normales.</p>
-        <Row label="Recepción en iPhone" value={line?.connectedToApp?"Ruta configurada":"Pendiente"}/>
-        <Row label="Para llamadas traducidas" value={num(available)+" min disponibles"}/>
-        <Row label="Llamadas directas · 30 días" value={num(line?.usage.directCalls)}/>
-        <Row label="Llamadas traducidas · 30 días" value={num(line?.usage.translatedCalls)}/>
-        <button className={styles.mainAction} onClick={()=>showCall("minutes")}>Plan y minutos →</button>
+      {ready&&tab==="calls"?<section className={styles.screen}>
+       <span className={styles.screenEyebrow}>SMART CALL</span>
+       <h2>Llamadas<span className={styles.mint}>.</span></h2>
+       <div className={styles.callViewTabs} role="tablist" aria-label="Secciones de llamadas">
+        <button type="button" role="tab" aria-selected={callsView==="summary"} className={callsView==="summary"?styles.callViewTabActive:styles.callViewTab} onClick={()=>setCallsView("summary")}>Resumen</button>
+        <button type="button" role="tab" aria-selected={callsView==="history"} className={callsView==="history"?styles.callViewTabActive:styles.callViewTab} onClick={()=>setCallsView("history")}>Historial</button>
        </div>
-       <div className={styles.smartCard}><span className={styles.smallKicker}>ACTIVIDAD</span><h3>Últimas llamadas</h3><History calls={calls.slice(0,7)}/><button className={styles.secondaryAction} onClick={()=>showCall("activity")}>Ver historial →</button></div>
-       <div className={styles.privacyNote}><PhoneForwarded size={17}/><span>El navegador no puede registrar PushKit o CallKit. Para recibir llamadas debes utilizar la app iOS.</span></div>
-      </div>:null}
+       {callsView==="summary"?<div role="tabpanel" aria-label="Resumen de llamadas">
+        <div className={styles.smartCard}>
+         <span className={styles.smallKicker}>TU TELÉFONO</span>
+         <h3>{lineNumber}</h3>
+         <p>{line?.connectedToApp?"Configurado para recibir llamadas en tu iPhone.":"Revisa la conexión para recibir llamadas en tu iPhone."}</p>
+         <div className={styles.rule}/>
+         <Row label="Recepción en iPhone" value={line?.connectedToApp?"Ruta configurada":"Pendiente"}/>
+         <Row label="Minutos para traducir" value={num(available)+" disponibles"}/>
+         <Row label="Directas · 30 días" value={num(line?.usage.directCalls)}/>
+         <Row label="Traducidas · 30 días" value={num(line?.usage.translatedCalls)}/>
+         <button type="button" className={styles.mainAction} onClick={()=>showCall("minutes")}>Ver plan y minutos →</button>
+        </div>
+        <div className={styles.callSummaryFooter}>
+         <PhoneForwarded size={17}/><span>Las llamadas entrantes se responden en la app iPhone. Aquí consultas su actividad.</span>
+        </div>
+       </div>:<div role="tabpanel" aria-label="Historial de llamadas">
+        <div className={styles.callHistoryHeader}>
+         <div><span className={styles.smallKicker}>ACTIVIDAD RECIENTE</span><h3>Tu historial</h3></div>
+         <button type="button" className={styles.callRefresh} disabled={loading||working} aria-label="Actualizar historial" onClick={()=>void refresh()}><RefreshCw size={17}/></button>
+        </div>
+        <div className={styles.callFilters} role="group" aria-label="Filtrar llamadas">
+         {([{id:"all",label:"Todas"},{id:"direct",label:"Directas"},{id:"translated",label:"Traducidas"}] as const).map(item=><button key={item.id} type="button" aria-pressed={callFilter===item.id} className={callFilter===item.id?styles.callFilterActive:styles.callFilter} onClick={()=>setCallFilter(item.id)}>{item.label}</button>)}
+        </div>
+        <div className={styles.smartCard}>
+         <History calls={filteredCalls}/>
+         <p className={styles.callHistoryLimit}>Mostrando hasta 25 llamadas recientes de tu cuenta.</p>
+        </div>
+       </div>}
+      </section>:null}
       {ready&&tab==="translator"?<div className={styles.screen}><span className={styles.screenEyebrow}>CONVERSACIÓN EN PERSONA</span><h2>Traductor<span className={styles.mint}>.</span></h2>
        <p className={styles.screenLead}>Usa el traductor web cuando el servicio esté disponible. La traducción de llamadas sigue en tu iPhone.</p>
        {client&&profile?<div className={styles.interpreterWrap}><LivePanel supabase={client} profile={profile} apiStatus={apiStatus}/></div>:null}
