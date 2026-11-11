@@ -480,7 +480,7 @@ export default function VMVMobilePreview(){
       </div>:null}
      </div>
      {ready?<nav className={styles.bottomNav} aria-label="Navegación de VMV Business">
-      {nav.map(([id,label,Icon])=><button key={id} className={[tab===id?styles.activeNav:"",id==="calls"?styles.navCallAction:""].filter(Boolean).join(" ")} onClick={()=>go(id)} aria-label={label} title={label} aria-pressed={tab===id}><span><Icon size={id==="calls"?25:21}/></span><small>{label}</small></button>)}
+      {nav.map(([id,label,Icon])=><button key={id} className={[tab===id?styles.activeNav:"",id==="calls"?styles.navCallAction:""].filter(Boolean).join(" ")} onClick={()=>go(id)} aria-label={label} title={label} aria-pressed={tab===id}><span aria-hidden="true"><Icon size={id==="calls"?25:22}/></span></button>)}
      </nav>:null}
     </div>
    </div>
