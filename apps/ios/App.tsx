@@ -10,7 +10,6 @@ import {NativeActivation,type NativeProfile} from "./NativeActivation";
 const colors={bg:"#F8FBFA",card:"#FFFFFF",line:"#DCE8E6",text:"#151D2A",
  muted:"#6D7784",accent:"#00B997",accentText:"#06392E",red:"#E25673"};
 const voice=new Voice();
-let listenersReady=false;
 let pushRegistryInit:Promise<void>|null=null;
 function ensurePushRegistry():Promise<void>{
  if(Platform.OS!=="ios")return Promise.resolve();
@@ -45,7 +44,8 @@ export default function App(){
  const [ready,setReady]=useState(false),[status,setStatus]=useState("Prepara la recepción de llamadas");
  const [invite,setInvite]=useState<CallInvite|null>(null),[call,setCall]=useState<Call|null>(null);
  const [error,setError]=useState("");
- const [voiceDiagnostic,setVoiceDiagnostic]=useState("Sin diagnóstico de registro todavía.");
+ const [voiceDiagnostic,setVoiceDiagnostic]=useState("Esperando registro PushKit/Twilio.");
+ const [lastVoiceAttempt,setLastVoiceAttempt]=useState("Aún no se ha intentado");
  const [accountOverview,setAccountOverview]=useState<{
   verified:boolean;connectedToApp:boolean;forwardingReady:boolean;twilioPhone:string|null;
   publicPhone:string|null;carrier:string|null;menuPrepared?:boolean;menuVerifiedByRealCall?:boolean;forwardingReported?:boolean;usage:{calls:number;completed:number;minutes:number;periodDays:number;directCalls?:number;translatedCalls?:number};
@@ -68,6 +68,7 @@ export default function App(){
   return()=>{show.remove();hide.remove();};
  },[]);
  const registeredAt=useRef(0),inviteRef=useRef<CallInvite|null>(null),callRef=useRef<Call|null>(null);
+ const registrationInFlight=useRef(false);
  const sessionRef=useRef<Session|null>(null);
  useEffect(()=>{
    const client=supabase;
@@ -108,9 +109,10 @@ export default function App(){
   return()=>{alive=false;};
  },[session?.user.id]);
  useEffect(()=>{
-   if(listenersReady)return;
-   listenersReady=true;
-   voice.on(Voice.Event.CallInvite,(incoming:CallInvite)=>{
+   // Do not keep a module-global listener bound to a previous React mount.
+   // After a screen reload that stale callback can swallow CallInvite events.
+   const onInvite=(incoming:CallInvite)=>{
+     setVoiceDiagnostic("Twilio entregó una invitación de llamada al iPhone.");
      inviteRef.current=incoming;setInvite(incoming);
      setStatus("Llamada entrante");
      const details=(incoming as unknown as {customParameters?:Map<string,string>|Record<string,string>}).customParameters;
@@ -127,14 +129,20 @@ export default function App(){
      incoming.on(CallInvite.Event.Accepted,(accepted:Call)=>{
        connectCall(accepted);
      });
-   });
-   voice.on(Voice.Event.Error,(event:unknown)=>{
+   };
+   const onVoiceError=(event:unknown)=>{
      const e=event as {code?:string|number;name?:string};
      const code=typeof e?.code==="string"||typeof e?.code==="number"?String(e.code):"sin código";
      const name=typeof e?.name==="string"?e.name.slice(0,80):"Error del SDK";
      setVoiceDiagnostic("Twilio SDK: "+name+" ("+code+").");
      setError("La conexión de voz tuvo un problema. Consulta el diagnóstico de voz.");
-   });
+   };
+   voice.on(Voice.Event.CallInvite,onInvite);
+   voice.on(Voice.Event.Error,onVoiceError);
+   return()=>{
+     voice.off(Voice.Event.CallInvite,onInvite);
+     voice.off(Voice.Event.Error,onVoiceError);
+   };
  },[]);
  useEffect(()=>{
    // Register PushKit as soon as the app starts, not only when the user taps a button.
@@ -327,8 +335,18 @@ export default function App(){
   finally{setPilotChecking(false);}
  }
  async function registerPhone(){
+   setLastVoiceAttempt(new Date().toLocaleString());
+   if(registrationInFlight.current){
+     setVoiceDiagnostic("Ya se está actualizando la conexión. Espera el resultado.");return;
+   }
    const client=supabase;
-   if(!client||!sessionRef.current)return;
+   if(!client||!sessionRef.current){
+     setReady(false);
+     setVoiceDiagnostic("No se pudo iniciar el registro: abre tu sesión de VMV CALL e inténtalo nuevamente.");
+     setError("No hay sesión activa para registrar este iPhone.");
+     return;
+   }
+   registrationInFlight.current=true;
    setRegistering(true);setError("");setVoiceDiagnostic("Solicitando autorización de voz al servidor…");
    try{
      const {data}=await client.auth.getSession();
@@ -353,19 +371,19 @@ export default function App(){
      setVoiceDiagnostic("Registrando dispositivo con Twilio…");
      await voice.register(value.token);
      registeredAt.current=Date.now();setReady(true);
-     setVoiceDiagnostic("Registro de voz aceptado. Comprueba la entrega con una llamada real.");
+     setVoiceDiagnostic("Registro de Twilio aceptado a las "+new Date().toLocaleTimeString()+". Todavía debemos verificar la entrega VoIP con una llamada.");
      setStatus(value.testOnly===true?"iPhone registrado para llamadas de prueba":"iPhone registrado para recibir llamadas");
    }catch(e){
      setReady(false);
      const reason=e instanceof Error?e.message:"Error desconocido";
      setVoiceDiagnostic("Fallo en registro: "+reason.slice(0,180));
      setError(e instanceof Error?e.message:"No fue posible activar la recepción.");
-   }finally{setRegistering(false);}
+   }finally{registrationInFlight.current=false;setRegistering(false);}
  }
  useEffect(()=>{
    if(!session||!ready)return;
    const sub=AppState.addEventListener("change",next=>{
-     if(next==="active"&&Date.now()-registeredAt.current>10*60*1000
+     if(next==="active"&&Date.now()-registeredAt.current>2*60*1000
        &&!callRef.current&&!inviteRef.current)void registerPhone();
    });
    return()=>sub.remove();
@@ -547,6 +565,9 @@ export default function App(){
         {accountOverview?.billing?.pilot?<View style={styles.previewPilotCard}><Text style={styles.previewPilotLabel}>✦ PRUEBA PRIVADA · OPENAI REALTIME</Text><Text style={styles.previewPilotCopy}>Tus minutos VMV están habilitados solo para tu cuenta. Llama desde otro teléfono a este número, marca 1 para traducir y contesta aquí.</Text><Text style={styles.previewPilotMinutes}>Saldo: {accountOverview.billing.availableMinutes??billingOverview?.minutes.available??0} minutos</Text><Button label={pilotChecking?"Comprobando…":"Verificar motor y número"} disabled={pilotChecking} onPress={()=>void checkPilotReadiness()}/>{pilotReadiness?<><Text style={styles.previewPilotCopy}>Motor OpenAI: {pilotReadiness.engineReady?"✓ Listo":"○ Pendiente"} · Webhook Twilio: {pilotReadiness.webhookReady&&pilotReadiness.webhookPost?"✓ Conectado":"○ Revisar"}</Text><Text style={styles.previewPilotCopy}>{pilotReadiness.nextStep}</Text></>:null}</View>:null}
        <Button label={accountOverview?.billing?.active===true?(registering?"Conectando…":ready?"Actualizar conexión":"Conectar iPhone"):"Se necesita plan activo"}
         disabled={registering} onPress={()=>accountOverview?.billing?.active===true?void registerPhone(): (setActiveTab("settings"),setSettingsPage("billing"))}/>
+       <Text style={styles.helper}>Recepción iPhone: {registering?"Registrando…":ready?"Registrado con Twilio":"No registrado"}</Text>
+       <Text style={styles.helper} accessibilityRole="text">{voiceDiagnostic||"Sin respuesta del SDK"}</Text>
+       <Text style={styles.helper}>Último intento: {lastVoiceAttempt}</Text>
       </View>
       <Pressable accessibilityRole="button" style={styles.settingRow} onPress={()=>{setActiveTab("settings");setSettingsPage("numbers");}}>
        <View style={styles.settingIcon}><Text style={styles.settingEmoji}>📱</Text></View><Text style={styles.settingLabel}>Número y verificación</Text><Text style={styles.settingChevron}>›</Text>
@@ -644,7 +665,7 @@ export default function App(){
          </View>
          {customizationMessage?<Text style={styles.helper}>{customizationMessage}</Text>:null}
         </>:null}
-       {settingsPage==="support"?<View style={styles.card}><Text style={styles.cardTitle}>Diagnóstico de voz</Text><Text style={styles.helper}>{voiceDiagnostic}</Text><Text style={styles.helper}>{status}</Text><Button label="Actualizar conexión" onPress={()=>void registerPhone()} disabled={registering}/></View>:null}
+       {settingsPage==="support"?<View style={styles.card}><Text style={styles.cardTitle}>Diagnóstico de voz · iPhone</Text><Text style={styles.helper}>Registro: {registering?"En progreso":ready?"Aceptado por Twilio":"No confirmado"}</Text><Text style={styles.helper}>Último intento: {lastVoiceAttempt}</Text><Text style={styles.helper}>{voiceDiagnostic||"Aún no llegó respuesta del SDK."}</Text><Text style={styles.helper}>{status}</Text><Button label={registering?"Comprobando conexión…":"Actualizar conexión"} onPress={()=>void registerPhone()} disabled={registering}/></View>:null}
        {settingsPage==="services"?<View style={styles.card}><Text style={styles.cardTitle}>Intérprete en persona</Text><Text style={styles.helper}>Traduce mensajes sin hacer una llamada.</Text><Button label="Abrir traductor" onPress={()=>setActiveTab("live")}/></View>:null}
       </>}
      </>:null}
