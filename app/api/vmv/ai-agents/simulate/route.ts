@@ -42,15 +42,15 @@ export async function POST(req:NextRequest){
     .eq("id",agent.business_id).eq("owner_id",userId).maybeSingle();
   if(!business)return fail("Negocio no autorizado.",403);
 
-  const {data:quota,error:quotaError}=await db.rpc("vmv_ai_reserve_simulation",{p_agent_id:agentId});
-  if(quotaError)return fail("Límites de AI Agents sin configurar.",503);
-  if(quota!==true)return fail("Límite de 25 simulaciones diarias alcanzado.",429);
-
   const key=process.env.OPENAI_API_KEY;
   const gatewayKey=process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN;
   const throughGateway=!key;
   const bearer=key||gatewayKey;
   if(!bearer)return fail("Proveedor de IA no configurado.",503);
+
+  const {data:quota,error:quotaError}=await db.rpc("vmv_ai_reserve_simulation",{p_agent_id:agentId});
+  if(quotaError)return fail("Límites de AI Agents sin configurar.",503);
+  if(quota!==true)return fail("Límite de 25 simulaciones diarias alcanzado.",429);
   const {data:prior,error:historyError}=await db.from("vmv_ai_messages")
     .select("role,content").eq("conversation_id",conversationId).eq("owner_id",userId)
     .order("created_at",{ascending:false}).limit(10);
@@ -65,6 +65,7 @@ export async function POST(req:NextRequest){
   if(writeError)return fail("No se pudo guardar la pregunta.",503);
 
   const roleGuide:Record<string,string>={
+    calls:"Simula atención telefónica sin contestar llamadas reales ni controlar Twilio. Pide revisión humana cuando sea necesario.",
     support:"Responde preguntas sobre la empresa y deriva lo desconocido a una persona.",
     sales:"Explica servicios y productos confirmados; identifica interés sin inventar ofertas ni cerrar pagos.",
     bookings:"Informa sobre reservas, pero nunca confirma citas sin un calendario conectado y autorizado.",
