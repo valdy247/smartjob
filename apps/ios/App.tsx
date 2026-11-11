@@ -45,6 +45,9 @@ export default function App(){
  const [settingsPage,setSettingsPage]=useState<"menu"|"numbers"|"billing"|"history"|"security"|"profile"|"style"|"support"|"services">("menu");
  const [callHistory,setCallHistory]=useState<{bridge_sid:string;status:string;duration_seconds:number|null;started_at:string;call_mode:string;caller_phone:string|null}[]>([]);
  const [historyBusy,setHistoryBusy]=useState(false);
+ const [callbackBusy,setCallbackBusy]=useState<string|null>(null);
+ const [callbackNotice,setCallbackNotice]=useState("");
+ const [directCallbackActive,setDirectCallbackActive]=useState(false);
  const [assistantPrefs,setAssistantPrefs]=useState({existing_phone:"",desired_language:"es",caller_language:"en",assistant_name:""});
  const [greetingPrefs,setGreetingPrefs]=useState({voice_customer:"default",voice_owner:"default",greeting_customer:"",greeting_owner:""});
  const [greetingEditable,setGreetingEditable]=useState(false);
@@ -92,6 +95,8 @@ export default function App(){
  },[]);
  const registeredAt=useRef(0),inviteRef=useRef<CallInvite|null>(null),callRef=useRef<Call|null>(null);
  const registrationInFlight=useRef(false);
+ const callbackRequestedAt=useRef(0);
+ const directCallbackRef=useRef(false);
  const sessionRef=useRef<Session|null>(null);
  const pendingBusinessLink=useRef<"calls"|"services"|null>(null);
  useEffect(()=>{
@@ -179,6 +184,10 @@ export default function App(){
    // Do not keep a module-global listener bound to a previous React mount.
    // After a screen reload that stale callback can swallow CallInvite events.
    const onInvite=(incoming:CallInvite)=>{
+      const callbackExpected=callbackRequestedAt.current>0&&
+       Date.now()-callbackRequestedAt.current<60000;
+      directCallbackRef.current=callbackExpected;
+      setDirectCallbackActive(callbackExpected);
      setVoiceDiagnostic("Twilio entregó una invitación de llamada al iPhone.");
      voiceTelemetry("invite_received");
      inviteRef.current=incoming;setInvite(incoming);
@@ -190,6 +199,7 @@ export default function App(){
        if(inviteRef.current!==incoming)return;
        inviteRef.current=null;setInvite(null);
        setInboundLanguage("unknown");setStatus("La llamada terminó antes de contestar");
+        directCallbackRef.current=false;setDirectCallbackActive(false);callbackRequestedAt.current=0;
        setVoiceDiagnostic("Twilio canceló la invitación antes de contestar.");
        voiceTelemetry("invite_canceled");
      };
@@ -230,13 +240,14 @@ export default function App(){
  function clearCallState(connected:Call,message="Llamada finalizada"){
    if(callRef.current!==connected)return;
    callRef.current=null;setCall(null);setStatus(message);
+    directCallbackRef.current=false;setDirectCallbackActive(false);callbackRequestedAt.current=0;
  }
  function connectCall(connected:Call){
    if(callRef.current===connected)return;
    callRef.current=connected;setCall(connected);setInvite(null);inviteRef.current=null;
-   setStatus("Conectando interpretación…");
+    setStatus(directCallbackRef.current?"Conectando con el cliente…":"Conectando interpretación…");
    connected.addListener(Call.Event.Connected,()=>{
-     if(callRef.current===connected)setStatus("En llamada con interpretación");
+     if(callRef.current===connected)setStatus(directCallbackRef.current?"En llamada normal":"En llamada con interpretación");
      voiceTelemetry("call_connected");
    });
    connected.addListener(Call.Event.ConnectFailure,(cause:unknown)=>{
@@ -395,6 +406,49 @@ export default function App(){
  useEffect(()=>{
   if(session?.user.id&&((activeTab==="settings"&&settingsPage==="history")||(activeTab==="calls"&&callsView==="history")))void refreshCallHistory();
  },[session?.user.id,activeTab,settingsPage,callsView]);
+ async function returnCustomerCall(item:{bridge_sid:string;caller_phone:string|null}){
+  if(!item.caller_phone||!supabase||!sessionRef.current||callbackBusy)return;
+  if(callRef.current||inviteRef.current){
+   Alert.alert("Llamada en curso","Finaliza la llamada actual antes de devolver otra.");return;
+  }
+  const to=item.caller_phone;
+  Alert.alert("Devolver llamada con VMV",
+   "Twilio llamará primero a tu iPhone. Cuando contestes, conectará con "+to+
+   " mostrando tu número VMV. Será una llamada normal, sin traducción. ¿Continuar?",[
+    {text:"Cancelar",style:"cancel"},
+    {text:"Devolver llamada",onPress:()=>{void (async()=>{
+     if(!supabase||!sessionRef.current)return;
+     setCallbackBusy(item.bridge_sid);setCallbackNotice("");setError("");
+     try{
+      const {data:identity}=await supabase.auth.getUser();
+      const {data:session}=await supabase.auth.getSession();
+      if(identity.user?.id!==sessionRef.current?.user.id||
+       !session.session||session.session.user.id!==identity.user.id)
+       throw Error("Tu sesión expiró. Vuelve a entrar.");
+      const response=await fetch(api+"/api/ios/callback",{
+       method:"POST",
+       headers:{Authorization:"Bearer "+session.session.access_token,
+        "Content-Type":"application/json"},
+       body:JSON.stringify({bridgeSid:item.bridge_sid,mode:"direct"})
+      });
+      const result=await response.json().catch(()=>null);
+      if(!response.ok||result?.started!==true){
+       const errors:Record<string,string>={
+        callback_not_enabled:"La devolución no está habilitada todavía en este piloto.",
+        callback_rate_limited:"Se alcanzó el límite de devoluciones de prueba.",
+        callback_in_progress:"Ya hay una devolución en curso.",
+        verified_caller_or_line_missing:"No se pudo verificar el número del cliente o la línea VMV.",
+        active_plan_required:"Necesitas tener Smart Call habilitado."
+       };
+       throw Error(errors[result?.error]||"No se pudo conectar con Twilio. Inténtalo nuevamente.");
+      }
+      callbackRequestedAt.current=Date.now();
+      setCallbackNotice("Twilio está llamando a tu iPhone. Contesta para hablar con "+to+".");
+     }catch(e){setCallbackNotice(e instanceof Error?e.message:"Devolución no disponible.");}
+     finally{setCallbackBusy(null);}
+    })();}}
+   ]);
+ }
  async function checkPilotReadiness(){
   if(!supabase||pilotChecking)return;
   setPilotChecking(true);
@@ -726,12 +780,17 @@ export default function App(){
              </View>
              <View style={{alignItems:"flex-end",gap:7}}>
               <Text style={styles.historyMinutes}>{item.duration_seconds==null?"—":Math.ceil(Math.max(0,item.duration_seconds)/60)+" min"}</Text>
+              {item.caller_phone?<Pressable accessibilityRole="button" accessibilityLabel="Devolver llamada con el número VMV"
+               disabled={Boolean(callbackBusy)} onPress={()=>void returnCustomerCall(item)}>
+                <Text style={styles.historyCallback}>{callbackBusy===item.bridge_sid?"Conectando…":"☎ Devolver llamada"}</Text>
+               </Pressable>:null}
               <Pressable accessibilityRole="button" accessibilityLabel="Guardar contacto desde esta llamada" onPress={()=>{
                setContactsPhone(item.caller_phone||"");setContactsFromHistory(true);setContactsOpen(true);
               }}><Text style={styles.historySaveContact}>{item.caller_phone?"Guardar contacto":"Añadir contacto"}</Text></Pressable>
              </View>
             </View>):
            <Text style={styles.helper}>No hay llamadas de este tipo en el historial reciente.</Text>}
+         {callbackNotice?<Text style={styles.callbackNotice}>{callbackNotice}</Text>:null}
          <Text style={styles.callsHistoryFoot}>Últimas 25 llamadas registradas.</Text>
         </View>
        </>}
@@ -902,7 +961,7 @@ export default function App(){
     onRequestClose={()=>{}}>
     <CallScreen voice={voice} invite={invite} call={call} busy={working} status={status}
       ownerLanguage={assistantPrefs.desired_language==="en"?"en-US":"es-ES"}
-      onAccept={()=>void accept()} onReject={()=>void reject()} onEnd={()=>void end()}/>
+      onAccept={()=>void accept()} onReject={()=>void reject()} onEnd={()=>void end()} directCall={directCallbackActive}/>
   </Modal>
  </SafeAreaView>;
 }
@@ -1030,6 +1089,8 @@ const styles=StyleSheet.create({
  contactsEntryText:{fontSize:12,color:"#0A8867",fontWeight:"800"},
  historySaveContact:{fontSize:11,color:"#0B936F",fontWeight:"800",paddingVertical:5},
  billingBigText:{fontSize:21,fontWeight:"800",color:"#0A8365",marginBottom:10},
+ historyCallback:{fontSize:11,color:"#0C8B65",fontWeight:"900",paddingVertical:5},
+ callbackNotice:{fontSize:12,color:"#127C5C",lineHeight:19,backgroundColor:"#E7F9EE",padding:12,borderRadius:11,marginTop:14},
  callsTabs:{flexDirection:"row",backgroundColor:"#EAF5EE",borderWidth:1,borderColor:"#D4EADB",padding:5,borderRadius:18,marginBottom:18,gap:5},
  callsTab:{flex:1,minHeight:47,borderRadius:13,alignItems:"center",justifyContent:"center"},
  callsTabActive:{backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#B7E9D0"},
