@@ -52,3 +52,13 @@
 @keyframes vmv-spin{to{transform:rotate(360deg)}}
 @media(max-width:570px){.minuteHero>strong{font-size:55px}.signinScreen,.loadingScreen{padding:30px 18px}.interpreterWrap{margin:0 -7px}}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
+
+/* Keep the standard account view simple; technical accounting is optional. */
+.minuteDetails{border-top:1px solid #e4eee8;margin-top:18px;padding-top:15px}
+.minuteDetails summary{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;color:#0a8769;font-size:12px;font-weight:800;list-style:none;padding:4px 0;min-height:32px}
+.minuteDetails summary::-webkit-details-marker{display:none}
+.minuteDetails summary::after{content:"+";font-size:18px;line-height:1;color:#0b896b}
+.minuteDetails[open] summary::after{content:"−"}
+.minuteDetails summary:focus-visible{outline:2px solid #10ab82;outline-offset:4px;border-radius:5px}
+.minuteBreakdown{padding:12px 0 2px}
+.minuteExplanation{font-size:11px;line-height:1.6;color:#718a7c;margin:14px 0 4px}
