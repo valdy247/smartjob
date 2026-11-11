@@ -46,7 +46,7 @@ export function bridgeTwiML(role:"customer"|"professional",bridge:string,config?
   const locale=role==="customer"?config.customerLanguage:config.ownerLanguage;
   const defaultGreeting=locale==="es-ES"
     ?"VMV Call. Estamos conectando la traducción. Un momento, por favor."
-    :"VMV Call. We are connecting your interpreter. One moment, please.";
+    :"Welcome to VMV Call! For a smoother conversation, please speak clearly and allow a few seconds to hear the translated response. We\'re connecting you now.";
   const customGreeting=role==="customer"?config.greetingCustomer:config.greetingOwner;
   const greeting=(customGreeting&&customGreeting.length<=180)?customGreeting:defaultGreeting;
   const chosenVoice=role==="customer"?config.voiceCustomer:config.voiceOwner;
