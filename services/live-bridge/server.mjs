@@ -20,7 +20,28 @@ const bounded=(v,fallback,low,high)=>{
 };
 const MAX_ROOMS=bounded(process.env.SMARTJOB_MAX_CONCURRENT_CALLS,1,1,30);
 const MAX_SECONDS=bounded(process.env.SMARTJOB_MAX_CALL_SECONDS,14400,60,14400);
-const ready=()=>ENABLED&&directTranslationReady();
+let translatorVerified=false;
+// Verify the OpenAI key AND the actual model once at deployment; a key-shaped
+// string alone cannot prove the service can translate. No live speech is sent.
+const ready=()=>ENABLED&&directTranslationReady()&&translatorVerified;
+async function preflightTranslator(){
+ if(!ENABLED||!directTranslationReady()){
+   console.error("VMV translator startup blocked",{reason:"missing_configuration"});
+   return;
+ }
+ for(let attempt=1;attempt<=3;attempt++){
+   const result=await translateDirect("Hello, good morning.","en-US","es-ES");
+   if(result.translation){
+     translatorVerified=true;
+     console.info("VMV GPT-4.1 mini translation preflight passed");
+     return;
+   }
+   console.error("VMV translator preflight failed",{attempt,reason:result.reason});
+   if(attempt<3)await new Promise(resolve=>setTimeout(resolve,6000*attempt));
+ }
+ // Fail closed instead of charging for answered calls with no translation.
+}
+void preflightTranslator();
 const rooms=new Map();
 const open=ws=>ws?.readyState===WebSocket.OPEN;
 const MAX_BUFFERED_BYTES=128000;
@@ -129,6 +150,7 @@ const app=createServer((req,res)=>{
     return res.end(req.method==="HEAD"?"":JSON.stringify({
       ok:ready(),service:"smartjob-live-bridge",engine:"twilio-conversationrelay",
       bridges:rooms.size,capacity:MAX_ROOMS,accepting:ready()&&rooms.size<MAX_ROOMS,
+      translationProviderVerified:translatorVerified,
       reason:ready()?undefined:"not_configured",version:5
     }));
   }
