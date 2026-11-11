@@ -738,74 +738,37 @@ export default function App(){
       </View>
 
      </>:null}
-     {activeTab==="calls"&&contactsOpen?<ContactsPanel key={session.user.id+":"+contactsPhone+":"+contactsFromHistory}
-        session={session} initialPhone={contactsPhone} startInForm={contactsFromHistory}
-        onBack={()=>setContactsOpen(false)}/>:null}
-      {activeTab==="calls"&&!contactsOpen?<>
-       <Text style={styles.kicker}>SMART CALL</Text>
-       <View style={styles.callsHeadingRow}><Text style={styles.heading}>Llamadas<Text style={{color:colors.accent}}>.</Text></Text>
-        <Pressable accessibilityRole="button" style={styles.contactsEntry} onPress={()=>{
-         setContactsPhone("");setContactsFromHistory(false);setContactsOpen(true);
-        }}><Text style={styles.contactsEntryText}>◎ Contactos</Text></Pressable></View>
+     {activeTab==="calls"?<>
        <View style={styles.callsTabs}>
-        {([{id:"summary",label:"Resumen"},{id:"history",label:"Historial"}] as const).map(item=>
-         <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected:callsView===item.id}}
+        {([{id:"dial",emoji:"⌨️",label:"Teclado"},{id:"history",emoji:"🕘",label:"Historial"},{id:"contacts",emoji:"👥",label:"Contactos"}] as const).map(item=>
+         <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={item.label}
+          accessibilityState={{selected:callsView===item.id}}
           style={[styles.callsTab,callsView===item.id&&styles.callsTabActive]}
-          onPress={()=>{setCallsView(item.id);if(item.id==="history")setCallTypeFilter("all");}}>
-          <Text style={[styles.callsTabText,callsView===item.id&&styles.callsTabTextActive]}>{item.label}</Text>
+          onPress={()=>{
+           setCallsView(item.id);
+           if(item.id==="contacts"){setContactsPhone("");setContactsFromHistory(false);}
+           if(item.id==="history")setCallTypeFilter("all");
+          }}>
+          <Text style={styles.callsTabEmoji}>{item.emoji}</Text>
          </Pressable>)}
        </View>
-       {callsView==="summary"?<>
-        <View style={[styles.card,styles.featureCard]}>
-         <View style={styles.compactBetween}>
-          <Text style={styles.featureLabel}>☎  Tu teléfono</Text>
-          <Text style={[styles.stateTag,{color:ready?colors.accent:"#B46E25"}]}>{ready?"CONECTADO":"PENDIENTE"}</Text>
+       {callsView==="dial"?<DialPad session={session} onStarted={()=>{
+        callbackRequestedAt.current=Date.now();
+       }}/>:null}
+       {callsView==="history"?<>
+        <View style={styles.callsHistoryToolbar}>
+         <View style={styles.callsFilters}>
+          {([{id:"all",label:"Todas"},{id:"direct",label:"Directas"},{id:"translated",label:"Traducidas"}] as const).map(item=>
+           <Pressable key={item.id} accessibilityRole="button" accessibilityState={{selected:callTypeFilter===item.id}}
+            style={[styles.callsFilter,callTypeFilter===item.id&&styles.callsFilterActive]}
+            onPress={()=>setCallTypeFilter(item.id)}>
+            <Text style={[styles.callsFilterText,callTypeFilter===item.id&&styles.callsFilterTextActive]}>{item.label}</Text>
+           </Pressable>)}
          </View>
-         <Text style={styles.featureNumber}>{accountOverview?.twilioPhone||"Sin asignar"}</Text>
-         <Text style={styles.featureMuted}>{ready?"Configurado para recibir llamadas en tu iPhone.":"Conecta tu iPhone para recibir llamadas."}</Text>
-         <View style={styles.callsDivider}/>
-         <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Recepción en iPhone</Text><Text style={styles.callsInfoValue}>{ready?"Ruta configurada":"Pendiente"}</Text></View>
-         <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Minutos para traducir</Text><Text style={styles.callsInfoValue}>{billingOverview?.minutes.available??accountOverview?.billing?.availableMinutes??"—"} disponibles</Text></View>
-         <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Directas · 30 días</Text><Text style={styles.callsInfoValue}>{accountOverview?.usage.directCalls??"—"}</Text></View>
-         <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Traducidas · 30 días</Text><Text style={styles.callsInfoValue}>{accountOverview?.usage.translatedCalls??"—"}</Text></View>
-         <Button label="Ver plan y minutos →" secondary onPress={()=>{setActiveTab("settings");setSettingsPage("billing");}}/>
-         <Button label={accountOverview?.billing?.active===true?(registering?"Conectando…":ready?"Actualizar conexión":"Conectar iPhone"):"Se necesita plan activo"}
-          disabled={registering} onPress={()=>accountOverview?.billing?.active===true?void registerPhone(): (setActiveTab("settings"),setSettingsPage("billing"))}/>
-        </View>
-        <Pressable accessibilityRole="button" style={styles.settingRow} onPress={()=>{setActiveTab("settings");setSettingsPage("numbers");}}>
-         <View style={styles.settingIcon}><Text style={styles.settingEmoji}>📱</Text></View><Text style={styles.settingLabel}>Número y verificación</Text><Text style={styles.settingChevron}>›</Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" accessibilityState={{expanded:callsTechnicalOpen}}
-         style={styles.settingRow} onPress={()=>setCallsTechnicalOpen(v=>!v)}>
-         <View style={styles.settingIcon}><Text style={styles.settingEmoji}>⚙</Text></View>
-         <Text style={styles.settingLabel}>Diagnóstico de conexión</Text><Text style={styles.settingChevron}>{callsTechnicalOpen?"⌄":"›"}</Text>
-        </Pressable>
-        {callsTechnicalOpen?<View style={styles.card}>
-         <Text style={styles.helper}>Recepción iPhone: {registering?"Registrando…":ready?"Registrado con Twilio":"No registrado"}</Text>
-         <Text style={styles.helper}>{voiceDiagnostic||"Sin respuesta del SDK"}</Text>
-         <Text style={styles.helper}>Último intento: {lastVoiceAttempt}</Text>
-         {accountOverview?.billing?.pilot?<View style={styles.previewPilotCard}>
-          <Text style={styles.previewPilotLabel}>PRUEBA PRIVADA · OPENAI REALTIME</Text>
-          <Text style={styles.previewPilotCopy}>Marca 1 para traducir cuando llames desde otro teléfono.</Text>
-          <Button label={pilotChecking?"Comprobando…":"Verificar motor y número"} disabled={pilotChecking} onPress={()=>void checkPilotReadiness()}/>
-          {pilotReadiness?<Text style={styles.previewPilotCopy}>{pilotReadiness.nextStep}</Text>:null}
-         </View>:null}
-        </View>:null}
-       </>:<>
-        <View style={styles.callsHistoryHeader}>
-         <View><Text style={styles.kicker}>ACTIVIDAD RECIENTE</Text><Text style={styles.sectionHeading}>Tu historial</Text></View>
          <Pressable accessibilityRole="button" accessibilityLabel="Actualizar historial" disabled={historyBusy}
           style={styles.historyRefresh} onPress={()=>void refreshCallHistory()}>
           <Text style={styles.historyRefreshText}>{historyBusy?"…":"↻"}</Text>
          </Pressable>
-        </View>
-        <View style={styles.callsFilters}>
-         {([{id:"all",label:"Todas"},{id:"direct",label:"Directas"},{id:"translated",label:"Traducidas"}] as const).map(item=>
-          <Pressable key={item.id} accessibilityRole="button" accessibilityState={{selected:callTypeFilter===item.id}}
-           style={[styles.callsFilter,callTypeFilter===item.id&&styles.callsFilterActive]}
-           onPress={()=>setCallTypeFilter(item.id)}>
-           <Text style={[styles.callsFilterText,callTypeFilter===item.id&&styles.callsFilterTextActive]}>{item.label}</Text>
-          </Pressable>)}
         </View>
         <View style={styles.card}>
          {historyBusy?<ActivityIndicator color={colors.accent}/>:
@@ -828,15 +791,17 @@ export default function App(){
                 <Text style={styles.historyCallback}>{callbackBusy===item.bridge_sid?"Conectando…":"☎ Devolver llamada"}</Text>
                </Pressable>:null}
               <Pressable accessibilityRole="button" accessibilityLabel="Guardar contacto desde esta llamada" onPress={()=>{
-               setContactsPhone(item.caller_phone||"");setContactsFromHistory(true);setContactsOpen(true);
+               setContactsPhone(item.caller_phone||"");setContactsFromHistory(true);setCallsView("contacts");
               }}><Text style={styles.historySaveContact}>{item.caller_phone?"Guardar contacto":"Añadir contacto"}</Text></Pressable>
              </View>
             </View>):
-           <Text style={styles.helper}>No hay llamadas de este tipo en el historial reciente.</Text>}
+           <Text style={styles.helper}>No hay llamadas de este tipo.</Text>}
          {callbackNotice?<Text style={styles.callbackNotice}>{callbackNotice}</Text>:null}
-         <Text style={styles.callsHistoryFoot}>Últimas 25 llamadas registradas.</Text>
         </View>
-       </>}
+       </>:null}
+       {callsView==="contacts"?<ContactsPanel key={session.user.id+":"+contactsPhone+":"+contactsFromHistory}
+        session={session} initialPhone={contactsPhone} startInForm={contactsFromHistory}
+        embedded onBack={()=>setCallsView("dial")}/>:null}
       </>:null}
       {activeTab==="live"?<InterpreterPanel session={session}/>:null}
       {activeTab==="services"?<>
@@ -1135,8 +1100,10 @@ const styles=StyleSheet.create({
  billingBigText:{fontSize:21,fontWeight:"800",color:"#0A8365",marginBottom:10},
  historyCallback:{fontSize:11,color:"#0C8B65",fontWeight:"900",paddingVertical:5},
  callbackNotice:{fontSize:12,color:"#127C5C",lineHeight:19,backgroundColor:"#E7F9EE",padding:12,borderRadius:11,marginTop:14},
+ callsTabEmoji:{fontSize:25,lineHeight:34,textAlign:"center"},
+ callsHistoryToolbar:{flexDirection:"row",alignItems:"center",gap:8,marginBottom:14},
  callsTabs:{flexDirection:"row",backgroundColor:"#EAF5EE",borderWidth:1,borderColor:"#D4EADB",padding:5,borderRadius:18,marginBottom:18,gap:5},
- callsTab:{flex:1,minHeight:47,borderRadius:13,alignItems:"center",justifyContent:"center"},
+ callsTab:{flex:1,minHeight:54,borderRadius:13,alignItems:"center",justifyContent:"center"},
  callsTabActive:{backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#B7E9D0"},
  callsTabText:{fontSize:14,fontWeight:"700",color:"#758B81"},
  callsTabTextActive:{color:"#08795B",fontWeight:"800"},
@@ -1145,7 +1112,7 @@ const styles=StyleSheet.create({
  callsInfoLabel:{fontSize:12,color:"#648176",flex:1,fontWeight:"600"},
  callsInfoValue:{fontSize:12,color:"#193C30",flex:1,textAlign:"right",fontWeight:"800"},
  callsHistoryHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:14},
- callsFilters:{flexDirection:"row",gap:8,marginBottom:15},
+ callsFilters:{flex:1,flexDirection:"row",gap:8,marginBottom:0},
  callsFilter:{flex:1,minHeight:42,borderRadius:12,borderWidth:1,borderColor:"#D6EADF",backgroundColor:"#FFFFFF",alignItems:"center",justifyContent:"center",paddingHorizontal:5},
  callsFilterActive:{backgroundColor:"#E0F9ED",borderColor:"#99DFC0"},
  callsFilterText:{fontSize:12,fontWeight:"700",color:"#6C867A"},
