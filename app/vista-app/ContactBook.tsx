@@ -21,8 +21,8 @@ function messageFor(error:unknown){
  if(data?.code==="23514")return "Comprueba los datos del contacto.";
  return "No se pudieron guardar los datos. Revisa tu conexión e inténtalo nuevamente.";
 }
-export default function ContactBook({client,ownerId,initialPhone="",onClose}:{
- client:SupabaseClient;ownerId:string;initialPhone?:string;onClose:()=>void
+export default function ContactBook({client,ownerId,initialPhone="",startInForm=false,onClose}:{
+ client:SupabaseClient;ownerId:string;initialPhone?:string;startInForm?:boolean;onClose:()=>void
 }){
  const [entries,setEntries]=useState<VMVContact[]>([]);
  const [loading,setLoading]=useState(true);
