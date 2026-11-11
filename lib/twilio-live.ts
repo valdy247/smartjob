@@ -66,7 +66,7 @@ export function bridgeTwiML(role:"customer"|"professional",bridge:string,config?
   const fluxEnabled=process.env.SMARTJOB_RELAY_FLUX_ENABLED!=="false";
   const recognition=fluxEnabled
     ?' transcriptionProvider="Deepgram" speechModel="flux" eotThreshold="0.8"'+
-      ' speechTimeout="3000" ignoreBackchannel="true" echoPromptFiltering="true"'
+      ' speechTimeout="1500" echoPromptFiltering="true"'
     :' speechTimeout="800"';
   const url=xmlEscape(process.env.SMARTJOB_LIVE_WS_URL||"");
   const action=xmlEscape(PILOT_BASE+"/api/twilio/live/ended?bridge="+bridge+
