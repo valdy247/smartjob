@@ -141,7 +141,7 @@ export default function App(){
    const {data}=client.auth.onAuthStateChange((_event,next)=>{
      if(!mounted)return;
      setSession(next);sessionRef.current=next;
-     if(!next){setReady(false);setPhoneVerification(null);setSmsCode("");setSmsSent(false);setStatus("Inicia sesión para recibir llamadas");}
+     if(!next){setReady(false);setPhoneVerification(null);setSmsCode("");setSmsSent(false);setStatus("Inicia sesión para recibir llamadas");setCallHistory([]);setCallsView("summary");setCallTypeFilter("all");}
    });
    return()=>{mounted=false;data.subscription.unsubscribe();};
  },[]);
