@@ -146,3 +146,9 @@
 .topupOfferLine span{font-size:10px;font-weight:800;color:#648b77;text-align:right}
 .topupOffer .mainAction{margin-top:14px}
 .topupOffer .minuteExplanation{margin-bottom:0}
+
+.callBackAction{display:flex;align-items:center;gap:5px;background:#e0f9ed;border:1px solid #9fdec0;border-radius:10px;color:#077856;font-size:10px;font-weight:850;cursor:pointer;padding:8px 9px;white-space:nowrap;text-align:center}
+.callBackAction:hover:not(:disabled){background:#c6efd9}
+.callBackAction:disabled{opacity:.45;cursor:not-allowed}
+.callBackAction:focus-visible{outline:2px solid #0b9471;outline-offset:2px}
+.callbackFeedback{border-radius:13px;padding:12px 13px;background:#effaf3;color:#207855;font-size:11px;line-height:1.65;margin:14px 0;border:1px solid #c6ebd6}
