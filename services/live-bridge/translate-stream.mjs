@@ -19,10 +19,10 @@ export function createVoiceChunks(send){
     push(delta){
       if(closed||typeof delta!=="string"||!delta)return;
       pending+=delta;
-      if(pending.length<22)return;
+      if(pending.length<16)return;
       // Never split inside a word or drop original whitespace.
       const ix=pending.lastIndexOf(" ",pending.length-2);
-      if(ix>=12){
+      if(ix>=8){
         const token=pending.slice(0,ix+1);
         if(!send(token,false))throw Error("voice_unavailable");
         sent++;pending=pending.slice(ix+1);
