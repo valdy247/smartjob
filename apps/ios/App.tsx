@@ -46,6 +46,7 @@ export default function App(){
  const [callHistory,setCallHistory]=useState<{bridge_sid:string;status:string;duration_seconds:number|null;started_at:string;call_mode:string;caller_phone:string|null}[]>([]);
  const [historyBusy,setHistoryBusy]=useState(false);
  const [callbackBusy,setCallbackBusy]=useState<string|null>(null);
+ const [callerLookupBusy,setCallerLookupBusy]=useState<string|null>(null);
  const [callbackNotice,setCallbackNotice]=useState("");
  const [directCallbackActive,setDirectCallbackActive]=useState(false);
  const [assistantPrefs,setAssistantPrefs]=useState({existing_phone:"",desired_language:"es",caller_language:"en",assistant_name:""});
@@ -242,12 +243,30 @@ export default function App(){
    callRef.current=null;setCall(null);setStatus(message);
     directCallbackRef.current=false;setDirectCallbackActive(false);callbackRequestedAt.current=0;
  }
+ async function detectDirectCallback(connected:Call){
+  if(!supabase||!sessionRef.current)return;
+  const sid=connected.getSid();
+  if(!sid||!/^CA[a-f\d]{32}$/i.test(sid))return;
+  try{
+   const {data:session}=await supabase.auth.getSession();
+   if(!session.session||session.session.user.id!==sessionRef.current.user.id)return;
+   const response=await fetch(api+"/api/ios/callback?legSid="+encodeURIComponent(sid),{
+    headers:{Authorization:"Bearer "+session.session.access_token}
+   });
+   const result=await response.json().catch(()=>null);
+   if(response.ok&&result?.isCallback===true&&callRef.current===connected){
+    directCallbackRef.current=true;setDirectCallbackActive(true);
+    setStatus("Llamada normal con cliente");
+   }
+  }catch{/* The live call is not interrupted by a diagnostic request. */}
+ }
  function connectCall(connected:Call){
    if(callRef.current===connected)return;
    callRef.current=connected;setCall(connected);setInvite(null);inviteRef.current=null;
     setStatus(directCallbackRef.current?"Conectando con el cliente…":"Conectando interpretación…");
    connected.addListener(Call.Event.Connected,()=>{
      if(callRef.current===connected)setStatus(directCallbackRef.current?"En llamada normal":"En llamada con interpretación");
+      void detectDirectCallback(connected);
      voiceTelemetry("call_connected");
    });
    connected.addListener(Call.Event.ConnectFailure,(cause:unknown)=>{
@@ -263,6 +282,7 @@ export default function App(){
      clearCallState(connected);
    });
    if(connected.getState()===Call.State.Disconnected)clearCallState(connected);
+    else if(connected.getState()===Call.State.Connected)void detectDirectCallback(connected);
  }
  async function reconcileCurrentCall(){
    const current=callRef.current,uid=sessionRef.current?.user.id;
@@ -406,6 +426,26 @@ export default function App(){
  useEffect(()=>{
   if(session?.user.id&&((activeTab==="settings"&&settingsPage==="history")||(activeTab==="calls"&&callsView==="history")))void refreshCallHistory();
  },[session?.user.id,activeTab,settingsPage,callsView]);
+ async function lookupOriginalCaller(item:{bridge_sid:string;caller_phone:string|null}){
+  if(!supabase||!sessionRef.current||callerLookupBusy)return;
+  setCallerLookupBusy(item.bridge_sid);setCallbackNotice("");
+  try{
+   const {data:identity}=await supabase.auth.getUser();
+   const {data:session}=await supabase.auth.getSession();
+   if(identity.user?.id!==sessionRef.current.user.id||!session.session||
+     session.session.user.id!==identity.user.id)throw Error("Tu sesión expiró.");
+   const response=await fetch(api+"/api/ios/callback/lookup",{
+    method:"POST",headers:{Authorization:"Bearer "+session.session.access_token,
+     "Content-Type":"application/json"},
+    body:JSON.stringify({bridgeSid:item.bridge_sid})
+   });
+   const info=await response.json().catch(()=>null);
+   if(!response.ok||info?.verified!==true)throw Error("Twilio no tiene un número verificable para esta llamada.");
+   await refreshCallHistory();
+   setCallbackNotice("Número verificado en Twilio: "+info.phone+". Ya puedes devolver la llamada.");
+  }catch(e){setCallbackNotice(e instanceof Error?e.message:"No se pudo recuperar el número.");}
+  finally{setCallerLookupBusy(null);}
+ }
  async function returnCustomerCall(item:{bridge_sid:string;caller_phone:string|null}){
   if(!item.caller_phone||!supabase||!sessionRef.current||callbackBusy)return;
   if(callRef.current||inviteRef.current){
@@ -780,6 +820,10 @@ export default function App(){
              </View>
              <View style={{alignItems:"flex-end",gap:7}}>
               <Text style={styles.historyMinutes}>{item.duration_seconds==null?"—":Math.ceil(Math.max(0,item.duration_seconds)/60)+" min"}</Text>
+              {!item.caller_phone?<Pressable accessibilityRole="button" accessibilityLabel="Recuperar número desde Twilio"
+               disabled={Boolean(callerLookupBusy)} onPress={()=>void lookupOriginalCaller(item)}>
+                <Text style={styles.historyCallback}>{callerLookupBusy===item.bridge_sid?"Buscando…":"Buscar número"}</Text>
+               </Pressable>:null}
               {item.caller_phone?<Pressable accessibilityRole="button" accessibilityLabel="Devolver llamada con el número VMV"
                disabled={Boolean(callbackBusy)} onPress={()=>void returnCustomerCall(item)}>
                 <Text style={styles.historyCallback}>{callbackBusy===item.bridge_sid?"Conectando…":"☎ Devolver llamada"}</Text>
