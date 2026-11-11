@@ -9,7 +9,7 @@ export type Panel="overview"|"settings"|"activity"|"minutes";
 export type CallSettings={user_id:string;existing_phone:string;desired_language:string;caller_language:string;assistant_name:string};
 export type Route={id:string;twilio_number:string;public_number:string|null;enabled:boolean;receive_method:string;forwarding_mode:string;destination_phone:string};
 export type Provisioning={status:string;carrier:string;answer_method:string;phone_verified_at:string|null};
-export type CallRecord={bridge_sid:string;started_at:string;status:string;call_mode:"direct"|"translated";duration_seconds:number|null};
+export type CallRecord={bridge_sid:string;started_at:string;status:string;call_mode:"direct"|"translated";duration_seconds:number|null;caller_phone:string|null};
 export type Voice="default"|"bright"|"calm";
 export type Preferences={voice_customer:Voice;voice_owner:Voice;greeting_customer:string;greeting_owner:string};
 export type Billing={
@@ -98,7 +98,7 @@ export function useSmartCallAccount(){
     client.from("smartjob_call_settings").select("user_id,existing_phone,desired_language,caller_language,assistant_name").eq("user_id",uid).maybeSingle(),
     client.from("smartjob_phone_routes").select("id,twilio_number,public_number,enabled,receive_method,forwarding_mode,destination_phone").eq("user_id",uid).order("created_at",{ascending:false}).limit(1),
     client.from("smartjob_provisioning_requests").select("status,carrier,answer_method,phone_verified_at").eq("user_id",uid).order("created_at",{ascending:false}).limit(1),
-    client.from("smartjob_call_sessions").select("bridge_sid,started_at,status,call_mode,duration_seconds").eq("owner_id",uid).order("started_at",{ascending:false}).limit(25),
+    client.from("smartjob_call_sessions").select("bridge_sid,started_at,status,call_mode,duration_seconds,caller_phone").eq("owner_id",uid).order("started_at",{ascending:false}).limit(25),
     fetch("/api/vista-app/smart-call",{cache:"no-store",headers:{Authorization:"Bearer "+session.session.access_token}})
       .then(async response=>{
        if(!response.ok)throw new Error("pilot_unavailable");
@@ -146,7 +146,7 @@ export function useSmartCallAccount(){
    const {data:session}=await client.auth.getSession();
    if(!session.session||session.session.user.id!==user.id)return;
    const [latest,remote]=await Promise.all([
-    client.from("smartjob_call_sessions").select("bridge_sid,started_at,status,call_mode,duration_seconds")
+    client.from("smartjob_call_sessions").select("bridge_sid,started_at,status,call_mode,duration_seconds,caller_phone")
       .eq("owner_id",user.id).order("started_at",{ascending:false}).limit(25),
     fetch("/api/vista-app/smart-call",{cache:"no-store",headers:{Authorization:"Bearer "+session.session.access_token}})
    ]);
