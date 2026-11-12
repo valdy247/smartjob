@@ -2,6 +2,8 @@
 import {useCallback,useEffect,useMemo,useState,type FormEvent} from "react";
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {ArrowLeft,Check,ContactRound,Search,Plus,Trash2,Save,UserRound,Phone,StickyNote,X} from "lucide-react";
+import {CountryDialPicker} from "@/components/CountryDialPicker";
+import {contactPhoneE164,splitContactPhone} from "@/lib/contact-phone";
 import styles from "./vista-app.module.css";
 
 export type VMVContact={
@@ -10,13 +12,6 @@ export type VMVContact={
 const MAX_CONTACTS=300;
 // Smart Call dialer supports US domestic destinations only; never invoke the native phone app.
 const canDialVMV=(number:string)=>/^\+1[2-9]\d{2}[2-9]\d{6}$/.test(number);
-const normalizePhone=(input:string):string|null=>{
- const compact=input.trim().replace(/[().\s-]/g,"");
- if(!/^\+?[0-9]+$/.test(compact))return null;
- const withPrefix=compact.startsWith("+")?compact:
-  compact.length===10?"+1"+compact:compact.length===11&&compact.startsWith("1")?"+"+compact:null;
- return withPrefix&&/^\+[1-9][0-9]{7,14}$/.test(withPrefix)?withPrefix:null;
-};
 function messageFor(error:unknown){
  const data=error as {code?:string;message?:string}|null;
  if(data?.code==="23505")return "Este teléfono ya está guardado en tu agenda.";
@@ -35,7 +30,8 @@ export default function ContactBook({client,ownerId,initialPhone="",startInForm=
  const [editing,setEditing]=useState<string|null>(null);
  const [formOpen,setFormOpen]=useState(Boolean(initialPhone)||startInForm);
  const [name,setName]=useState("");
- const [phone,setPhone]=useState(initialPhone);
+ const [country,setCountry]=useState(()=>splitContactPhone(initialPhone).country);
+ const [phone,setPhone]=useState(()=>splitContactPhone(initialPhone).phone);
  const [notes,setNotes]=useState("");
  const [confirmDelete,setConfirmDelete]=useState<string|null>(null);
 
@@ -59,21 +55,21 @@ export default function ContactBook({client,ownerId,initialPhone="",startInForm=
   return entries.filter(item=>item.name.toLocaleLowerCase("es-US").includes(q)||item.phone_e164.includes(q));
  },[entries,search]);
  function resetForm(){
-  setEditing(null);setName("");setPhone("");setNotes("");setFormOpen(false);setConfirmDelete(null);
+  setEditing(null);setName("");setCountry("US");setPhone("");setNotes("");setFormOpen(false);setConfirmDelete(null);
   setError("");setNotice("");
  }
  function startNew(){
-  setEditing(null);setName("");setPhone("");setNotes("");setFormOpen(true);setError("");setNotice("");
+  setEditing(null);setName("");setCountry("US");setPhone("");setNotes("");setFormOpen(true);setError("");setNotice("");
  }
  function openEdit(entry:VMVContact){
-  setEditing(entry.id);setName(entry.name);setPhone(entry.phone_e164);setNotes(entry.notes||"");
+  setEditing(entry.id);setName(entry.name);setCountry(splitContactPhone(entry.phone_e164).country);setPhone(splitContactPhone(entry.phone_e164).phone);setNotes(entry.notes||"");
   setFormOpen(true);setError("");setNotice("");
  }
  async function save(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(saving)return;
-  const normalized=normalizePhone(phone);
+  const normalized=contactPhoneE164(phone,country);
   if(name.trim().length<1||name.trim().length>80){setError("El nombre debe tener entre 1 y 80 caracteres.");return;}
-  if(!normalized){setError("Escribe un teléfono válido. Por ejemplo: +17060000000.");return;}
+  if(!normalized){setError("Escribe un teléfono válido.");return;}
   if(notes.length>600){setError("La nota no debe superar 600 caracteres.");return;}
   setSaving(true);setError("");setNotice("");
   try{
@@ -127,16 +123,24 @@ export default function ContactBook({client,ownerId,initialPhone="",startInForm=
    <input id="contact-name" autoComplete="name" required maxLength={80} value={name}
     onChange={e=>setName(e.target.value)} placeholder="Nombre y apellido"/>
    <label htmlFor="contact-phone">Teléfono *</label>
-   <input id="contact-phone" type="tel" inputMode="tel" autoComplete="tel" required maxLength={24} value={phone}
-    onChange={e=>setPhone(e.target.value)} placeholder="+1 (706) 000-0000"/>
+   <div className={styles.contactPhoneField}>
+    <CountryDialPicker value={country} onChange={setCountry}/>
+    <input id="contact-phone" type="tel" inputMode="tel" autoComplete="tel-national" required maxLength={24} value={phone}
+     onChange={e=>{
+      const value=e.target.value;
+      if(value.trim().startsWith("+")){
+       const parsed=splitContactPhone(value);setCountry(parsed.country);setPhone(parsed.phone);
+      }else setPhone(value);
+     }}/>
+   </div>
    <label htmlFor="contact-notes">Nota (opcional)</label>
    <textarea id="contact-notes" value={notes} maxLength={600} rows={3}
     onChange={e=>setNotes(e.target.value)} placeholder="Cliente frecuente, horario preferido…"/>
    <p>Guardaremos este contacto en tu cuenta VMV, no automáticamente en la agenda del teléfono.</p>
    <button type="submit" disabled={saving} className={styles.mainAction}><Save size={16}/>{saving?"Guardando…":editing?"Guardar cambios":"Guardar contacto"}</button>
    {editing&&onCall?<button type="button" className={styles.contactFormCall}
-    disabled={saving||!canDialVMV(phone)} title={!canDialVMV(phone)?"Por ahora, solo números de Estados Unidos":undefined}
-    onClick={()=>onCall(phone,name)}><Phone size={17}/> Preparar llamada con VMV</button>:null}
+    disabled={saving||!canDialVMV(contactPhoneE164(phone,country)||"")} title={!canDialVMV(contactPhoneE164(phone,country)||"")?"Por ahora, solo números de Estados Unidos":undefined}
+    onClick={()=>{const number=contactPhoneE164(phone,country);if(number)onCall(number,name);}}><Phone size={17}/> Preparar llamada con VMV</button>:null}
   </form>:<>
    <label className={styles.contactSearch}><Search size={17}/><span className={styles.screenReaderOnly}>Buscar contactos</span>
     <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nombre o número" autoComplete="off"/></label>
