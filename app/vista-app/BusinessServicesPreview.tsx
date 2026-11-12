@@ -32,7 +32,8 @@ const fields:{key:Exclude<keyof Draft,"authorized">;label:string;max:number;kind
  {key:"googleEmail",label:"Correo de Google *",max:150,kind:"email"},
  {key:"assets",label:"Logo / fotos (enlace)",max:150,kind:"url"}
 ];
-export default function BusinessServicesPreview({userId}:{userId:string}){
+const WEB_SERVICE_IDS=new Set(["site-care","local-seo","reviews","website-design","google-business-profile","seo-setup","domain-setup"]);
+export default function BusinessServicesPreview({userId,focus="all"}:{userId:string;focus?:"all"|"web"}){
  const [charge,setCharge]=useState<Charge>("subscription");
  const [editor,setEditor]=useState(false);
  const [draft,setDraft]=useState<Draft>({...empty});
@@ -89,13 +90,13 @@ export default function BusinessServicesPreview({userId}:{userId:string}){
    </form>
   </section>;
  return <section className={styles.root}>
-  <div className={styles.header}><h3>Servicios<span>.</span></h3><div className={styles.headerIcon}><PanelsTopLeft size={20}/></div></div>
+  <div className={styles.header}><h3>{focus==="web"?"Web Services":"Servicios"}<span>.</span></h3><div className={styles.headerIcon}><PanelsTopLeft size={20}/></div></div>
   <div className={styles.toggle} role="group" aria-label="Tipo de servicio">
    <button type="button" className={charge==="subscription"?styles.selected:""} aria-pressed={charge==="subscription"} onClick={()=>setCharge("subscription")}>En planes</button>
    <button type="button" className={charge==="one_time"?styles.selected:""} aria-pressed={charge==="one_time"} onClick={()=>setCharge("one_time")}>Pago único</button>
   </div>
   <div className={styles.grid}>
-   {offers.filter(o=>o.charge===charge).map(o=>{
+   {offers.filter(o=>o.charge===charge&&(focus!=="web"||WEB_SERVICE_IDS.has(o.id))).map(o=>{
     const inner=<><div className={styles.offerIcon}><o.Icon size={25}/></div>
      <div className={styles.offerBottom}><strong>{o.name}</strong><div className={styles.badges}>
       <small>{o.delivery==="automatic"?"Auto":"Asistido"}</small>
