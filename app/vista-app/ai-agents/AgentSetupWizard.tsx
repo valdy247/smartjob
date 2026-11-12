@@ -10,7 +10,7 @@ export type WizardDraft={
 };
 type Question={id:string;title:string;hint?:string;kind?:"text"|"textarea"|"choice"|"multi"|"state"|"hours";options?:string[];required?:boolean;when?:(a:Record<string,string>)=>boolean};
 type Section={title:string;subtitle:string;questions:Question[]};
-type Props={initial:WizardDraft;onSave:(updated:WizardDraft)=>void;onCancel:()=>void;isPreview?:boolean;initialStep?:0|1|2|3};
+type Props={initial:WizardDraft;onSave:(updated:WizardDraft)=>Promise<void>|void;onCancel:()=>void;isPreview?:boolean;initialStep?:0|1|2|3;saving?:boolean};
 const allRoles:AgentKind[]=["calls","support","sales","bookings","inventory","operations","custom"];
 const q=(id:string,title:string,options:string[],required=false,when?:Question["when"]):Question=>({id,title,kind:"choice",options,required,when});
 const t=(id:string,title:string,required=false,hint?:string):Question=>({id,title,required,hint,kind:"text"});
@@ -120,7 +120,7 @@ function sections(kind:AgentKind,answers:Record<string,string>):Section[]{
  ];
 }
 function inputValue(v:Record<string,string>,key:string){return v[key]||"";}
-export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=true,initialStep=0}:Props){
+export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=false,initialStep=0,saving=false}:Props){
  const [draft,setDraft]=useState<WizardDraft>(()=>({...initial,setup:{...(initial.setup||{})}}));
  const [step,setStep]=useState<number>(initialStep);
  const [error,setError]=useState("");
@@ -129,10 +129,16 @@ export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=true
  const shown=current.questions.filter(x=>!x.when||x.when(draft.setup));
  const value=(key:keyof WizardDraft,next:string)=>setDraft(d=>({...d,[key]:next}));
  const answer=(key:string,next:string)=>setDraft(d=>({...d,setup:{...d.setup,[key]:next}}));
- const next=()=>{
+ const next=async()=>{
   const missing=step===0?(!draft.name.trim()||!draft.purpose.trim()):shown.some(q=>q.required&&!inputValue(draft.setup,q.id).trim());
   if(missing){setError("Completa las preguntas obligatorias antes de continuar.");return;}
-  setError("");if(step===steps.length-1){onSave(draft);return;}setStep(x=>x+1);
+  setError("");if(step===steps.length-1){
+   if(saving)return;
+   try{await onSave(draft);}catch(e){
+    setError(e instanceof Error?e.message:"No se pudo guardar. Intenta de nuevo.");
+   }
+   return;
+  }setStep(x=>x+1);
  };
  const back=()=>{setError("");if(step===0)onCancel();else setStep(x=>x-1);};
  const yesCalendar=availableTools.calendar&&wants(draft.setup,"calendar_needed"),yesInventory=availableTools.inventory&&wants(draft.setup,"inventory_needed");
@@ -221,11 +227,11 @@ export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=true
     <div className={styles.reviewLine}><span>Inventario VMV</span><b>{yesInventory?"Solicitado · pendiente":"No solicitado"}</b></div>
     <div className={styles.reviewLine}><span>Supervisión</span><b>{draft.setup.human_review||"Humana"}</b></div>
     <div className={styles.reviewMessage}><ShieldCheck size={20}/><p>Tu agente comenzará como <strong>borrador</strong>. No responderá llamadas ni modificará reservas, inventario o pedidos.</p></div>
-    {isPreview?<p className={styles.previewNote}>Esta preview guarda el diseño solo mientras la página esté abierta. No introduzcas información confidencial.</p>:null}
+    {isPreview?<p className={styles.previewNote}>Esta es una vista previa; inicia sesión para guardar tu agente.</p>:<p className={styles.previewNote}>Tu agente se guardará en tu cuenta VMV. Podrás editarlo desde la web o el iPhone.</p>}
   </div>:null}
   {error?<p className={styles.error} role="alert">{error}</p>:null}
   <div className={styles.actions}><button type="button" className={styles.prev} onClick={back}><ArrowLeft size={17}/>{step===0?"Cancelar":"Atrás"}</button>
-   <button type="button" className={styles.next} onClick={next}>{step===steps.length-1?"Guardar diseño":"Continuar"}
+   <button type="button" disabled={saving} className={styles.next} onClick={()=>void next()}>{saving?"Guardando…":step===steps.length-1?"Guardar agente":"Continuar"}
    {step===steps.length-1?<Check size={17}/>:<ArrowRight size={17}/>}</button></div>
  </section>;
 }
