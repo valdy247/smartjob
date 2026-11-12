@@ -31,9 +31,17 @@ export async function generateMetadata({params}:Props):Promise<Metadata>{
  const result=await findPage(slug,part);
  if(!result)return {title:"Sitio no disponible",robots:{index:false,follow:false}};
  const data=result.page;
+ const rendered=normalizeBuilderDocument(data.document);
+ const image=rendered.content.find(item=>item.type==="Image");
+ const firstImage=typeof image?.props?.url==="string"?image.props.url:"";
  return {title:(data.title==="Inicio"?data.site_name:data.title+" · "+data.site_name),
   description:data.description||"Conoce "+data.site_name,
-  openGraph:{title:data.title==="Inicio"?data.site_name:data.title,description:data.description||data.site_name,type:"website"}
+  robots:{index:process.env.VERCEL_ENV==="production",follow:true},
+  openGraph:{title:data.title==="Inicio"?data.site_name:data.title,description:data.description||data.site_name,type:"website",
+   ...(firstImage?{images:[{url:firstImage,alt:data.site_name}]}:{})},
+  twitter:{card:firstImage?"summary_large_image":"summary",title:data.site_name,
+   description:data.description||data.site_name,
+   ...(firstImage?{images:[firstImage]}:{})}
  };
 }
 export default async function VMVPublishedPage({params}:Props){
