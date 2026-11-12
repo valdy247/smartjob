@@ -292,15 +292,20 @@ export default function WebBuilderWorkspace(){
   if(!page)throw new Error("Selecciona una página");
   const c=await authorized();
   const clean=normalizeBuilderDocument(value);
-  const pageTitle=title.trim().slice(0,100)||page.title;
+  const pageTitle=title.trim().slice(0,100);
   const desc=description.trim().slice(0,300);
+  if(!pageTitle)throw new Error("El título de la página no puede estar vacío.");
   const {data,error}=await c.from("smartjob_builder_pages")
    .update({draft:clean,title:pageTitle,description:desc,updated_at:new Date().toISOString(),revision:page.revision+1})
    .eq("id",page.id).eq("owner_id",userId).eq("revision",page.revision)
    .select("id,site_id,owner_id,slug,title,description,draft,revision,updated_at").maybeSingle();
   if(error||!data)throw new Error("Esta página se modificó en otra pestaña. Recarga para evitar sobrescribir cambios.");
   const updated=data as Page;
-  if(pageIdRef.current===updated.id)setPage(updated);
+  if(pageIdRef.current===updated.id){
+   setPage(updated);
+   if(titleRef.current===title)setTitle(pageTitle);
+   if(descriptionRef.current===description)setDescription(desc);
+  }
   setPages(current=>current.map(p=>p.id===updated.id?updated:p));
   const stillCurrent=JSON.stringify(normalizeBuilderDocument(documentRef.current))===JSON.stringify(clean)&&
    titleRef.current.trim().slice(0,100)===pageTitle&&descriptionRef.current.trim().slice(0,300)===desc;
