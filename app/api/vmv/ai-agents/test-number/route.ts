@@ -47,15 +47,35 @@ async function agentReady(number:string,account:string,ownerId:string){
     !(process.env.OPENAI_API_KEY||process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN))return false;
  if(!/^[a-f0-9-]{36}$/i.test(process.env.VMV_AI_TEST_OWNER_ID||"")||
     process.env.VMV_AI_TEST_OWNER_ID!==ownerId)return false;
+ // Preserve the pre-pilot Smart Call webhook before even considering enrollment.
+ if(!originalSmartCallUrl())return false;
  const db=billingAdmin();
  if(!db)return false;
- const {data:entry,error}=await db.from("vmv_ai_voice_routes")
-   .select("id,owner_id,agent_id,twilio_account_sid,enabled,verified_ownership,disclosure_approved,approved_at")
-   .eq("twilio_number",number)
-   .eq("twilio_account_sid",account)
-   .eq("owner_id",ownerId)
-   .eq("enabled",true).maybeSingle();
- if(error||!entry||!entry.verified_ownership||!entry.disclosure_approved||!entry.approved_at)return false;
+ const fields="id,owner_id,agent_id,twilio_account_sid,enabled,verified_ownership,disclosure_approved,approved_at";
+ const {data:existing,error:lookupError}=await db.from("vmv_ai_voice_routes")
+   .select(fields).eq("twilio_number",number).maybeSingle();
+ if(lookupError)return false;
+ let entry=existing;
+ if(!entry&&process.env.VMV_AI_VOICE_AUTO_ENROLL==="true"){
+   // A signature-verified Twilio call to the single enabled tenant number proves
+   // the current account/number pairing; only the named demo agent may be enrolled.
+   const {data:agent,error:agentError}=await db.from("vmv_ai_agents")
+     .select("id,configuration")
+     .eq("owner_id",ownerId).eq("name","Asistente VMV · Prueba")
+     .eq("kind","calls").eq("status","active").maybeSingle();
+   const cfg=agent?.configuration as Record<string,string>|undefined;
+   if(agentError||!agent||cfg?.call_disclosure!=="Sí")return false;
+   const {data:created,error:creationError}=await db.from("vmv_ai_voice_routes")
+     .insert({
+       owner_id:ownerId,agent_id:agent.id,twilio_number:number,
+       twilio_account_sid:account,enabled:true,verified_ownership:true,
+       disclosure_approved:true,approved_at:new Date().toISOString()
+     }).select(fields).single();
+   if(creationError||!created)return false;
+   entry=created;
+ }
+ if(!entry||entry.owner_id!==ownerId||entry.twilio_account_sid!==account||
+    !entry.enabled||!entry.verified_ownership||!entry.disclosure_approved||!entry.approved_at)return false;
  const {data:agent,error:agentError}=await db.from("vmv_ai_agents").select("id")
    .eq("id",entry.agent_id).eq("owner_id",ownerId).eq("status","active").maybeSingle();
  if(agentError||!agent)return false;
