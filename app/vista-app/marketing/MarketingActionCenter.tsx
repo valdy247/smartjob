@@ -355,11 +355,26 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     </div>:null}
     {wizardStep===2?<div className={styles.wizardBody}>
      <div className={styles.selectedServiceBanner}><span className={styles.selectedServiceIcon}>{(()=>{const Icon=serviceIcons[selected];return <Icon size={23}/>;})()}</span><span><small>ESTAMOS PREPARANDO</small><strong>{services.find(s=>s.id===selected)?.name}</strong></span></div>
-     <span className={styles.presetLabel}>Elige lo que más se parece a tu necesidad</span>
-     <div className={styles.goalPresets}>{suggestedGoals[selected].map(option=><button key={option} type="button" className={goal===option?styles.presetActive:styles.preset} aria-pressed={goal===option} onClick={()=>{setGoal(option);setWizardError("");}}>
+     {selected==="seo_improvement"?<div className={styles.specialTool}>
+      <strong>Analizar mi sitio</strong>
+      <p>{site.trim()||"Añade el enlace de tu web en el paso anterior."}</p>
+      <button type="button" className={styles.toolButton} disabled={auditPending||!safeSite(site)} onClick={()=>void analyzeSite()}>{auditPending?"Analizando…":"Analizar gratis"}</button>
+      {auditError?<p role="alert">{auditError}</p>:null}
+      {auditData?<div className={styles.auditSummary}><span>Velocidad {auditData.scores.performance??"—"}/100 · SEO {auditData.scores.seo??"—"}/100</span><strong>Tres mejoras prioritarias</strong>{auditData.recommendations.length?auditData.recommendations.map((v,i)=><p key={i}>{i+1}. {v}</p>):<p>No hay alertas en las comprobaciones prioritarias.</p>}<small>Auditoría técnica PageSpeed, no garantiza visitas ni ventas.</small></div>:null}
+     </div>:null}
+     {selected==="review_strategy"?<div className={styles.specialTool}>
+       <strong>¿Qué necesitas?</strong>
+       <div className={styles.goalPresets}><button type="button" className={styles.preset} onClick={()=>{setGoal("Quiero pedir reseñas honestas a mis clientes.");setReviewInput("");}}>Pedir reseñas</button><button type="button" className={styles.preset} onClick={()=>setGoal("Necesito responder una reseña.")}>Responder una reseña</button></div>
+       <label className={styles.goalLabel}>Pega una reseña (opcional)<textarea rows={3} maxLength={650} value={reviewInput} onChange={e=>setReviewInput(e.target.value)} placeholder="Texto de la reseña del cliente…"/></label>
+       {reviewInput.trim()?<div className={styles.auditSummary}><strong>Respuesta para revisar</strong><p>{answerReview}</p><div className={styles.goalPresets}><button type="button" className={styles.preset} onClick={()=>setReviewTone(reviewTone==="cordial"?"breve":"cordial")}>Cambiar tono</button><button type="button" className={styles.toolButton} onClick={()=>void navigator.clipboard?.writeText(answerReview)}>Copiar respuesta</button></div><small>Revisa antes de usarla. Nunca publicamos sin autorización.</small></div>:null}
+       {!reviewInput.trim()&&goal.includes("pedir reseñas")?<div className={styles.auditSummary}><p>{reviewRequestMessage}</p><button type="button" className={styles.toolButton} onClick={()=>void navigator.clipboard?.writeText(reviewRequestMessage)}>Copiar mensaje</button></div>:null}
+     </div>:null}
+     {selected==="google_profile"?<p className={styles.wizardHint}>Google puede requerir verificar que el negocio es tuyo. VMV te ayudará con ese proceso.</p>:null}
+     {selected!=="review_strategy"?<span className={styles.presetLabel}>Elige qué necesitas</span>:null}
+     <div className={styles.goalPresets}>{(selected==="review_strategy"?[]:suggestedGoals[selected]).map(option=><button key={option} type="button" className={goal===option?styles.presetActive:styles.preset} aria-pressed={goal===option} onClick={()=>{setGoal(option);setWizardError("");}}>
       <CheckCircle2 size={16}/>{option}
      </button>)}</div>
-     <label className={styles.goalLabel}>¿Quieres añadir algún detalle?
+     <label className={styles.goalLabel}>{selected==="review_strategy"?"¿Necesitas ayuda adicional?":"¿Quieres añadir algún detalle?"}
       <textarea value={goal} maxLength={1500} onChange={e=>{setGoal(e.target.value);setWizardError("");}} rows={5} placeholder="Ej. Mi negocio ya aparece, pero tiene el horario incorrecto. No quiero mostrar la dirección de mi casa."/>
       <small>{goal.length}/1500 caracteres · No compartas contraseñas ni información bancaria.</small>
      </label>
