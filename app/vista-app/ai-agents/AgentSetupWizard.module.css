@@ -48,3 +48,17 @@
 .prev{background:white;border:1px solid #e2d8eb;color:#68537c;min-width:98px}
 .next{flex:1;background:#8655e7;color:white;border:1px solid #8655e7}
 @media(prefers-reduced-motion:reduce){.progressBar{transition:none}}
+
+/* Business context and accessible structured opening-hours controls */
+.context{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:11px 12px;border-radius:15px;background:#eee7ff;color:#68459d;font-size:11px;line-height:1.5}
+.context strong{color:#462e71}
+.hours{display:flex;flex-direction:column;gap:12px;border:1px solid #e9e2f0;background:#faf7ff;border-radius:17px;padding:12px}
+.daySchedule{display:flex;flex-direction:column;gap:8px}
+.dayRow{display:flex;flex-wrap:wrap;align-items:center;column-gap:10px;row-gap:8px;background:#fff;border:1px solid #eee5f3;border-radius:12px;padding:10px}
+.dayRow>strong{font-size:11px;min-width:79px;color:#372944}
+.dayToggle{display:flex;align-items:center;gap:5px;font-size:11px;color:#67577b}
+.dayToggle input{accent-color:#8856e9}
+.dayTimes{display:flex;align-items:center;gap:6px;margin-left:auto}
+.dayTimes select{border:1px solid #e5dcec;border-radius:9px;background:#fff;padding:6px 4px;color:#41304f;font-size:11px;max-width:85px}
+.dayTimes span{font-size:10px;color:#817091}
+@media(max-width:420px){.dayTimes{margin-left:0;flex-basis:100%;justify-content:flex-end}}
