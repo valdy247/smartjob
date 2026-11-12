@@ -199,3 +199,12 @@
  .publicationBadge{font-size:9px;padding:6px 7px}
  .modeToolbar button{min-height:38px;padding:9px 13px}
 }
+
+
+/* Conversion configuration stays inside Content, away from publication controls. */
+.contactPanel{display:flex;flex-direction:column;gap:13px;padding:16px;margin:5px 0;border:1px solid #e7def5;border-radius:15px;background:#faf7ff}
+.contactPanelHeading{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:900;color:#6d4aa6}
+.contactPanel .field input,.contactPanel .field textarea,.contactPanel .field select{background:#fff}
+.contactFieldError{display:block;color:#a84667;font-size:11px;line-height:1.45}
+.previewChannel{display:inline-flex;align-items:center;gap:4px;margin-top:9px;color:var(--web-color);font-size:10px;font-weight:800}
+@container (max-width:719px){.contactPanel{padding:13px;gap:11px}}
