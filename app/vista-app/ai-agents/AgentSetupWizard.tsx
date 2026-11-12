@@ -128,7 +128,13 @@ export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=fals
  const current=steps[step];
  const shown=current.questions.filter(x=>!x.when||x.when(draft.setup));
  const value=(key:keyof WizardDraft,next:string)=>setDraft(d=>({...d,[key]:next}));
- const answer=(key:string,next:string)=>setDraft(d=>({...d,setup:{...d.setup,[key]:next}}));
+ const answer=(key:string,next:string)=>setDraft(d=>({
+  ...d,
+  // The reviewed language and personality must be what both web and iPhone save.
+  language:key==="language_rule"?next:d.language,
+  personality:key==="personality_rule"?next:d.personality,
+  setup:{...d.setup,[key]:next}
+ }));
  const next=async()=>{
   const missing=step===0?(!draft.name.trim()||!draft.purpose.trim()):shown.some(q=>q.required&&!inputValue(draft.setup,q.id).trim());
   if(missing){setError("Completa las preguntas obligatorias antes de continuar.");return;}
