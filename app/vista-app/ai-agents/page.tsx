@@ -43,15 +43,21 @@ export default function AIAgentsPreview(){
  const [busy,setBusy]=useState(false);
  const [authenticated,setAuthenticated]=useState(true);
  useEffect(()=>{let live=true;
-  void Promise.all([loadAgents(),loadPhoneSelection()])
-   .then(([list,selection])=>{if(!live)return;setAgents(list);setPhone(selection);setAuthenticated(true);})
+  // Phone enrollment is optional: a missing/unauthorized phone number must never
+  // prevent loading and saving agents from this account.
+  void loadAgents()
+   .then(list=>{if(!live)return;setAgents(list);setAuthenticated(true);
+     void loadPhoneSelection().then(selection=>{if(live)setPhone(selection);})
+       .catch(()=>{if(live)setPhone(null);});
+   })
    .catch(e=>{if(!live)return;setAuthenticated(false);setNotice(e instanceof Error?e.message:"Inicia sesión en VMV para comenzar.");})
    .finally(()=>{if(live)setLoading(false);});
   return ()=>{live=false;};
  },[]);
  async function reload(){
-  const [list,selection]=await Promise.all([loadAgents(),loadPhoneSelection()]);
-  setAgents(list);setPhone(selection);setAuthenticated(true);
+  const list=await loadAgents();
+  setAgents(list);setAuthenticated(true);
+  void loadPhoneSelection().then(setPhone).catch(()=>setPhone(null));
  }
  const [selected,setSelected]=useState<string|null>(null);
  const [message,setMessage]=useState("");
@@ -65,17 +71,24 @@ export default function AIAgentsPreview(){
   language:agent.language,instructions:agent.instructions,knowledge:agent.knowledge,setup:{...agent.setup}
  });setScreen("editor");};
  const save=async(nextDraft:AgentDraft=draft)=>{
-  if(busy)return;
-  if(!nextDraft.name.trim()){setNotice("Escribe el nombre del agente.");return;}
+  if(busy)throw Error("Ya estamos guardando tu agente.");
+  if(!nextDraft.name.trim())throw Error("Escribe el nombre del agente.");
   setBusy(true);
   try{
    const before=selected?agents.find(a=>a.id===selected):null;
-   await storeAgent(nextDraft,before?.revision?before:null);
-   await reload();
-   setNotice("Guardado en tu cuenta VMV. Tus cambios estarán disponibles en el iPhone.");
+   const saved=await storeAgent(nextDraft,before?.revision?before:null);
+   // The insert response confirms the write. A secondary phone lookup must not
+   // turn a successful save into a misleading failure.
+   setAgents(old=>[saved,...old.filter(a=>a.id!==saved.id)]);
+   setAuthenticated(true);
+   setNotice("Agente guardado en tu cuenta VMV. Puedes encontrarlo en Mis agentes.");
    setScreen("home");
-  }catch(e){setNotice(e instanceof Error?e.message:"No se pudo guardar el agente.");}
-  finally{setBusy(false);}
+   void reload().catch(()=>{/* saved record already returned by Supabase */});
+  }catch(e){
+   const message=e instanceof Error?e.message:"No se pudo guardar el agente.";
+   setNotice(message);
+   throw Error(message);
+  }finally{setBusy(false);}
  };
  const demo=()=>{
   const schedule=Object.fromEntries(["mon","tue","wed","thu","fri","sat","sun"].flatMap(day=>[
@@ -204,7 +217,8 @@ export default function AIAgentsPreview(){
       <div className={styles.disclaimer}><ShieldCheck size={16}/> Los agentes se guardan en tu cuenta. Elegir uno no conecta Twilio ni autoriza pagos. El ejemplo ficticio es temporal.</div>
      </>:null}
      {screen==="editor"?<AgentSetupWizard key={(selected||draft.kind)+"-"+editStep}
-      initial={draft} initialStep={editStep} onCancel={back} onSave={updated=>{setDraft(updated);void save(updated);}}/>:null}
+      initial={draft} initialStep={editStep} saving={busy} isPreview={false} onCancel={back}
+      onSave={async updated=>{setDraft(updated);await save(updated);}}/>:null}
      {screen==="quality"&&active?<AgentQualityLab agent={active} onClose={back} onEdit={step=>edit(active,step)}/>:null}
      {screen==="commerce"?<CommerceStudio agents={agents.filter(a=>a.revision>0)} onClose={back}/>:null}
      {screen==="test"&&active?<div className={styles.testing}>
