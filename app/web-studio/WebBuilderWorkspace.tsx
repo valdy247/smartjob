@@ -9,7 +9,7 @@ import {normalizeWebContent,type WebSiteContent} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
 import styles from "./WebBuilderWorkspace.module.css";
 
-type Site={id:string;owner_id:string;slug:string;name:string;category_id:string;inquiries_enabled:boolean};
+type Site={id:string;owner_id:string;slug:string;name:string;category_id:string;inquiries_enabled:boolean;legacy_source_slug:string|null};
 type Page={id:string;site_id:string;owner_id:string;slug:string;title:string;description:string;draft:unknown;revision:number;updated_at:string};
 type Revision={id:string;page_id:string;version:number;title:string;description:string;document:unknown;created_at:string};
 type Domain={id:string;hostname:string;state:string;last_error:string;verification:unknown;last_checked_at:string|null};
@@ -45,6 +45,7 @@ export default function WebBuilderWorkspace(){
  const [newSiteName,setNewSiteName]=useState("");
  const [newSiteCategory,setNewSiteCategory]=useState("");
  const [classicDraft,setClassicDraft]=useState<WebSiteContent|null>(null);
+ const [classicSlug,setClassicSlug]=useState<string|null>(null);
  const [newPageName,setNewPageName]=useState("");
  const [title,setTitle]=useState("");
  const [description,setDescription]=useState("");
@@ -89,19 +90,17 @@ export default function WebBuilderWorkspace(){
     const {data,error:authError}=await client.auth.getUser();
     if(authError||!data.user||data.user.is_anonymous)throw new Error("Inicia sesión en VMV Business para continuar");
     const {data:rows,error}=await client.from("smartjob_builder_sites")
-     .select("id,owner_id,slug,name,category_id,inquiries_enabled").eq("owner_id",data.user.id).order("created_at",{ascending:false});
+     .select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug").eq("owner_id",data.user.id).order("created_at",{ascending:false});
     if(error)throw new Error("No se pudieron cargar tus sitios");
     if(active){setUserId(data.user.id);setSites((rows||[]) as Site[]);}
     const pref=await client.from("smartjob_business_category_preferences")
      .select("category_id").eq("owner_id",data.user.id).maybeSingle();
     if(active&&pref.data?.category_id)setNewSiteCategory(pref.data.category_id);
-    if(!rows?.length){
-     const {data:classic}=await client.from("smartjob_web_sites")
-      .select("draft").eq("owner_id",data.user.id).maybeSingle();
-     if(classic?.draft&&active){
-      const old=normalizeWebContent(classic.draft);
-      if(old.business)setClassicDraft(old);
-     }
+    const {data:classic}=await client.from("smartjob_web_sites")
+     .select("slug,draft").eq("owner_id",data.user.id).maybeSingle();
+    if(classic?.draft&&active&&!rows?.some(row=>row.legacy_source_slug===classic.slug)){
+     const old=normalizeWebContent(classic.draft);
+     if(old.business){setClassicDraft(old);setClassicSlug(classic.slug);}
     }
    }catch(e){if(active)setError(e instanceof Error?e.message:"No disponible");}
    finally{if(active)setLoading(false);}
@@ -199,7 +198,7 @@ export default function WebBuilderWorkspace(){
    const generated=(slugify(name).slice(0,33)||"mi-negocio")+"-"+crypto.randomUUID().replace(/-/g,"").slice(0,8);
    const {data:created,error}=await c.from("smartjob_builder_sites").insert({
     owner_id:userId,slug:generated,name,category_id:newSiteCategory
-   }).select("id,owner_id,slug,name,category_id,inquiries_enabled").single();
+   }).select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug").single();
    if(error||!created)throw new Error("No se pudo crear el sitio");
    const siteCreated=created as Site;
    const {data:home,error:homeError}=await c.from("smartjob_builder_pages").insert({
@@ -216,7 +215,7 @@ export default function WebBuilderWorkspace(){
   finally{setBusy(false);}
  }
  async function importClassic(){
-  if(!classicDraft||busy||!userId)return;
+  if(!classicDraft||!classicSlug||busy||!userId)return;
   if(!window.confirm("Importar tu web anterior como un nuevo borrador visual. Tu web actual no será modificada."))return;
   setBusy(true);setError("");setNotice("");
   try{
@@ -224,8 +223,8 @@ export default function WebBuilderWorkspace(){
    const name=classicDraft.business.trim().slice(0,100);
    const slug=(slugify(name).slice(0,33)||"mi-negocio")+"-"+crypto.randomUUID().replace(/-/g,"").slice(0,8);
    const {data:created,error}=await c.from("smartjob_builder_sites").insert({
-    owner_id:userId,name,slug,category_id:classicDraft.categoryId
-   }).select("id,owner_id,slug,name,category_id,inquiries_enabled").single();
+    owner_id:userId,name,slug,category_id:classicDraft.categoryId,legacy_source_slug:classicSlug
+   }).select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug").single();
    if(error||!created)throw new Error("No se pudo crear el sitio nuevo");
    const doc=importLegacyBuilderDocument(classicDraft);
    const {data:home,error:pageError}=await c.from("smartjob_builder_pages").insert({
@@ -237,7 +236,7 @@ export default function WebBuilderWorkspace(){
    setSite(created as Site);setPages([home as Page]);setPage(home as Page);setPublishedIds([]);setPublishedSignatures({});
    setTitle(home.title);setDescription(home.description);
    openDraft(doc);setView("editor");
-   setClassicDraft(null);
+   setClassicDraft(null);setClassicSlug(null);
    setNotice("Tu web anterior quedó intacta. Revisa y publica esta nueva versión cuando quieras.");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo importar");}
   finally{setBusy(false);}
