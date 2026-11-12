@@ -4,6 +4,8 @@ import type {SupabaseClient} from "@supabase/supabase-js";
 import {ArrowLeft,ArrowRight,BriefcaseBusiness,Check,CheckCircle2,ChevronRight,Eye,EyeOff,
  Globe2,Mail,Palette,Phone,Search,ShieldCheck,UserRound} from "lucide-react";
 import {Brand} from "./Brand";
+import {InterfaceLanguagePicker} from "./InterfaceLanguagePicker";
+import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {CountryDialPicker} from "./CountryDialPicker";
 import {DIAL_COUNTRIES,US_STATES,OCCUPATION_ALIASES,normalize} from "@/lib/registration/options";
 
@@ -13,12 +15,6 @@ type FontScale="small"|"normal"|"large";
 type Appearance="light"|"dark"|"system";
 type Job={code:string;title:string};
 type PickOption={value:string;label:string;description?:string};
-const steps=[
- {tag:"PERSONAL",title:"Cuéntanos sobre ti",description:"Comencemos por lo esencial."},
- {tag:"TU MUNDO",title:"¿Cómo usarás VMV Call?",description:"Una experiencia hecha para ti."},
- {tag:"A TU GUSTO",title:"Personaliza tu espacio",description:"Configúralo como prefieras."},
- {tag:"SEGURIDAD",title:"Tu cuenta está casi lista",description:"Solo falta crear tu acceso."}
-];
 const smsErrors:Record<string,string>={
  sms_unavailable:"La verificación por SMS no está disponible ahora. Podrás hacerlo después.",
  sms_rate_limit:"Límite de intentos. Vuelve a probar más tarde.",
@@ -67,6 +63,14 @@ function Searchable({id,label,value,onChange,items,onSelect,placeholder,helper,d
  </div>;
 }
 export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:()=>void}){
+ const {language,translate}=useInterfaceLanguage();
+ const steps=[
+  {tag:translate("signup.personalTag"),title:translate("signup.personalTitle"),description:translate("signup.personalDesc")},
+  {tag:translate("signup.useTag"),title:translate("signup.useTitle"),description:translate("signup.useDesc")},
+  {tag:translate("signup.styleTag"),title:translate("signup.styleTitle"),description:translate("signup.styleDesc")},
+  {tag:translate("signup.securityTag"),title:translate("signup.securityTitle"),description:translate("signup.securityDesc")}
+ ];
+
  const [step,setStep]=useState(0),[busy,setBusy]=useState(false),[error,setError]=useState("");
  const [complete,setComplete]=useState(false),[hasSession,setHasSession]=useState(false);
  const [first,setFirst]=useState(""),[last,setLast]=useState("");
@@ -165,9 +169,9 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
  const validate=(current:number)=>{
   setError("");
   if(current===0){
-   if(!first.trim()||!last.trim()){setError("Escribe tu nombre y apellido.");return false;}
-   if(!validNumber){setError("Introduce un teléfono válido con su prefijo.");return false;}
-   if(!emailPattern.test(email.trim())){setError("Revisa tu correo electrónico.");return false;}
+   if(!first.trim()||!last.trim()){setError(translate("signup.firstError"));return false;}
+   if(!validNumber){setError(translate("signup.phoneError"));return false;}
+   if(!emailPattern.test(email.trim())){setError(translate("signup.emailError"));return false;}
   }
   if(current===1){
    if(state.trim()&&!stateCode){setError("Selecciona el estado de la lista.");return false;}
@@ -175,8 +179,8 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
     catch{setError("Revisa la dirección de tu página web.");return false;}}
   }
   if(current===3){
-   if(password.length<8){setError("Crea una contraseña de al menos ocho caracteres.");return false;}
-   if(password!==repeatPassword){setError("Las contraseñas no coinciden.");return false;}
+   if(password.length<8){setError(translate("signup.passwordError"));return false;}
+   if(password!==repeatPassword){setError(translate("signup.passwordMismatch"));return false;}
   }
   return true;
  };
@@ -199,7 +203,8 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
    assistant_name:"Juan",owner_language:ownerLanguage,customer_language:ownerLanguage==="es"?"en":"es",
    line_choice:lineChoice,preferred_plan:null,plan_prompt_seen:false,line_setup_completed:false,
    theme_color:accent,font_scale:fontScale,appearance,reduce_motion:reduceMotion,
-   signup_wizard_completed:true,email_verify_preference:emailAction
+   signup_wizard_completed:true,email_verify_preference:emailAction,
+   ui_language:language
   };
   try{
    const {data,error:authError}=await supabase.auth.signUp({
@@ -219,32 +224,32 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
     }
    }
    setHasSession(Boolean(data.session));setComplete(true);
-  }catch(e){setError(e instanceof Error?e.message:"No se pudo crear la cuenta.");}
+  }catch(e){setError(translate("signup.registerError"));}
   finally{setBusy(false);}
  };
  if(complete)return <main className="vmv-signup-shell"><section className="vmv-signup-finish">
   <Brand/><span className="vmv-signup-finish-icon"><CheckCircle2 size={44}/></span>
-  <h1>{hasSession?"¡Cuenta creada!":"¡Bienvenido a VMV Call!"}</h1>
-  <p>{hasSession?"Ya puedes comenzar a usar tu cuenta.":"Te enviamos un enlace de confirmación al correo. Puedes abrirlo ahora o más tarde, pero si Supabase requiere confirmación, tendrás que hacerlo antes de iniciar sesión."}</p>
+  <h1>{translate(hasSession?"signup.created":"signup.welcome")}</h1>
+  <p>{translate(hasSession?"signup.startNow":"signup.confirmEmail")}</p>
   {smsVerified&&<span className="vmv-signup-success"><Check size={17}/> Teléfono validado por SMS</span>}
-  <button type="button" className="vmv-signup-mainbtn" onClick={onBack}>Ir a iniciar sesión <ArrowRight size={18}/></button>
+  <button type="button" className="vmv-signup-mainbtn" onClick={onBack}>{translate("signup.goLogin")} <ArrowRight size={18}/></button>
  </section></main>;
  return <main className="vmv-signup-shell">
-  <header className="vmv-signup-header" ref={scrollRef}><Brand/>
-   <button type="button" onClick={onBack}>Ya tengo cuenta</button>
+  <header className="vmv-signup-header" ref={scrollRef}><Brand/><InterfaceLanguagePicker compact/>
+   <button type="button" onClick={onBack}>{translate("signup.haveAccount")}</button>
   </header>
   <div className="vmv-signup-layout">
    <aside className="vmv-signup-sidebar">
     <div className="vmv-signup-sidebar-icon"><ShieldCheck size={27}/></div>
-    <h2>Habla sin fronteras<span>.</span></h2>
-    <p>Solo lo esencial para crear tu espacio. Podrás cambiar tus preferencias después.</p>
+    <h2>{translate("auth.tagline")}</h2>
+    <p>{translate("signup.intro")}</p>
     <ol>{steps.map((item,index)=><li key={item.tag} className={step===index?"selected":step>index?"complete":""}>
      <span>{step>index?<Check size={15}/>:index+1}</span>
-     <strong>{["Tu información","Tu actividad","Tu estilo","Tu acceso"][index]}</strong>
+     <strong>{[translate("signup.yourInfo"),translate("signup.yourActivity"),translate("signup.yourStyle"),translate("signup.yourAccess")][index]}</strong>
     </li>)}</ol>
    </aside>
    <section className="vmv-signup-card">
-    <div className="vmv-signup-progress-head"><span>Paso {step+1} de 4</span><span>{Math.floor((step+1)*25)}%</span></div>
+    <div className="vmv-signup-progress-head"><span>{translate("signup.step",{step:step+1})}</span><span>{Math.floor((step+1)*25)}%</span></div>
     <div className="vmv-signup-progress"><span style={{width:(step+1)*25+"%"}}/></div>
     <div className="vmv-signup-title"><span>{steps[step].tag}</span><h1>{steps[step].title}</h1><p>{steps[step].description}</p></div>
 
@@ -335,29 +340,29 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
       <div className="vmv-signup-input-icon"><Globe2 size={17}/><input id="reg-website" type="text" inputMode="url" maxLength={250}
        value={website} onChange={e=>setWebsite(e.target.value)} placeholder="www.tunegocio.com"/></div>
      </div>
-     <div className="vmv-signup-field"><label>Tu idioma</label>
+     <div className="vmv-signup-field"><label>{translate("signup.spokenLanguage")}</label>
       <div className="vmv-signup-lang-pair">
        <button type="button" className={ownerLanguage==="es"?"selected":""} onClick={()=>setOwnerLanguage("es")}>🇪🇸 Español</button>
        <button type="button" className={ownerLanguage==="en"?"selected":""} onClick={()=>setOwnerLanguage("en")}>🇺🇸 English</button>
       </div>
-      <small className="vmv-signup-help">Idioma de tus clientes: {ownerLanguage==="es"?"🇺🇸 English":"🇪🇸 Español"} · Por ahora, una sola combinación.</small>
+      <small className="vmv-signup-help">{translate("signup.customerLanguage",{language:ownerLanguage==="es"?"English":"Español"})}</small>
      </div>
     </div>}
 
     {step===2&&<div className="vmv-signup-fields">
-     <div className="vmv-signup-field"><label>Color principal</label>
+     <div className="vmv-signup-field"><label>{translate("signup.styleColor")}</label>
       <div className="vmv-signup-colors">{colorChoices.map(([key,title,color])=><button type="button" key={key} aria-pressed={accent===key}
        className={accent===key?"selected":""} onClick={()=>setAccent(key)}><span style={{background:color}}/>{title}{accent===key&&<Check size={17}/>}</button>)}</div>
      </div>
-     <div className="vmv-signup-field"><label>Tamaño de fuente</label>
+     <div className="vmv-signup-field"><label>{translate("signup.styleText")}</label>
       <div className="vmv-signup-segments">{([["small","Pequeña"],["normal","Normal"],["large","Grande"]] as const).map(([key,title])=>
        <button type="button" key={key} aria-pressed={fontScale===key} className={fontScale===key?"selected":""} onClick={()=>setFontScale(key)}>{title}</button>)}</div>
      </div>
-     <div className="vmv-signup-field"><label>Apariencia</label>
+     <div className="vmv-signup-field"><label>{translate("signup.styleAppearance")}</label>
       <div className="vmv-signup-segments">{([["light","Claro"],["dark","Oscuro"],["system","Sistema"]] as const).map(([key,title])=>
        <button type="button" key={key} aria-pressed={appearance===key} className={appearance===key?"selected":""} onClick={()=>setAppearance(key)}>{title}</button>)}</div>
      </div>
-     <label className="vmv-signup-toggle"><span><strong>Reducir animaciones</strong><small>Para una experiencia más tranquila y accesible.</small></span>
+     <label className="vmv-signup-toggle"><span><strong>{translate("signup.reduceMotion")}</strong><small>{translate("signup.styleHint")}</small></span>
       <input type="checkbox" checked={reduceMotion} onChange={e=>setReduceMotion(e.target.checked)}/></label>
      <div className="vmv-signup-preview" data-color={accent} data-text={fontScale} data-appearance={appearance}>
       <span><Palette size={17}/> VISTA DE TU ESPACIO</span>
@@ -368,13 +373,13 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
 
     {step===3&&<form className="vmv-signup-fields" id="vmv-reg-final" onSubmit={submit}>
      <div className="vmv-signup-security"><ShieldCheck size={23}/><span>Tu cuenta estará protegida con contraseña. No compartas tus códigos.</span></div>
-     <div className="vmv-signup-field"><label htmlFor="reg-password">Contraseña *</label>
+     <div className="vmv-signup-field"><label htmlFor="reg-password">{translate("signup.wizardPassword")}</label>
       <div className="vmv-signup-password"><input id="reg-password" type={showPassword?"text":"password"}
-       autoComplete="new-password" minLength={8} maxLength={128} placeholder="Mínimo 8 caracteres" value={password} onChange={e=>setPassword(e.target.value)}/>
+       autoComplete="new-password" minLength={8} maxLength={128} placeholder={translate("signup.minPassword")} value={password} onChange={e=>setPassword(e.target.value)}/>
        <button type="button" aria-label={showPassword?"Ocultar contraseña":"Mostrar contraseña"} onClick={()=>setShowPassword(!showPassword)}>{showPassword?<EyeOff size={18}/>:<Eye size={18}/>}</button></div></div>
-     <div className="vmv-signup-field"><label htmlFor="reg-repeat">Confirmar contraseña *</label>
+     <div className="vmv-signup-field"><label htmlFor="reg-repeat">{translate("signup.passwordConfirm")}</label>
       <input id="reg-repeat" type={showPassword?"text":"password"} autoComplete="new-password" minLength={8} maxLength={128} value={repeatPassword}
-       placeholder="Repite tu contraseña" onChange={e=>setRepeatPassword(e.target.value)}/></div>
+       placeholder={translate("signup.passwordRepeat")} onChange={e=>setRepeatPassword(e.target.value)}/></div>
      <div className="vmv-signup-review">
       <p><CheckCircle2 size={17}/> {first||"Tu nombre"} {last}</p>
       <p><CheckCircle2 size={17}/> {accountType==="personal"?"Uso personal":"Uso para negocio"}</p>
@@ -383,10 +388,10 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
     </form>}
     {error&&<div role="alert" className="vmv-signup-error">{error}</div>}
     <footer className="vmv-signup-actions">
-     <button type="button" className="vmv-signup-back" onClick={back}><ArrowLeft size={17}/> Atrás</button>
-     <div>{(step===1||step===2)&&<button type="button" className="vmv-signup-skip" onClick={skip}>Omitir</button>}
-      {step<3?<button type="button" className="vmv-signup-mainbtn" onClick={next}>Siguiente <ArrowRight size={18}/></button>:
-       <button type="submit" form="vmv-reg-final" disabled={busy} className="vmv-signup-mainbtn">{busy?"Creando cuenta…":"Crear mi cuenta"} <ArrowRight size={18}/></button>}
+     <button type="button" className="vmv-signup-back" onClick={back}><ArrowLeft size={17}/> {translate("common.back")}</button>
+     <div>{(step===1||step===2)&&<button type="button" className="vmv-signup-skip" onClick={skip}>{translate("common.skip")}</button>}
+      {step<3?<button type="button" className="vmv-signup-mainbtn" onClick={next}>{translate("common.next")} <ArrowRight size={18}/></button>:
+       <button type="submit" form="vmv-reg-final" disabled={busy} className="vmv-signup-mainbtn">{translate(busy?"signup.creating":"signup.createMine")} <ArrowRight size={18}/></button>}
      </div>
     </footer>
    </section>
