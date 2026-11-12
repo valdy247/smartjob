@@ -1,7 +1,7 @@
 "use client";
-import {useCallback,useEffect,useMemo,useState} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import type {Data} from "@puckeditor/core";
-import {Puck} from "@puckeditor/core";
+import {Puck,Render} from "@puckeditor/core";
 import {ArrowLeft,ExternalLink,Globe,History,Layers,Plus,RefreshCw,Save,ShieldCheck,Trash2} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {builderConfig,normalizeBuilderDocument,starterBuilderDocument,importLegacyBuilderDocument} from "@/lib/web-builder-puck";
@@ -27,6 +27,8 @@ export default function WebBuilderWorkspace(){
  const [publishedIds,setPublishedIds]=useState<string[]>([]);
  const [page,setPage]=useState<Page|null>(null);
  const [document,setDocument]=useState<Data>(()=>starterBuilderDocument());
+ const [initialDocument,setInitialDocument]=useState<Data>(()=>starterBuilderDocument());
+ const [previewMode,setPreviewMode]=useState<"desktop"|"mobile"|null>(null);
  const [view,setView]=useState<View>("sites");
  const [newSiteName,setNewSiteName]=useState("");
  const [newSiteCategory,setNewSiteCategory]=useState("");
@@ -92,6 +94,13 @@ export default function WebBuilderWorkspace(){
   window.addEventListener("beforeunload",callback);
   return()=>window.removeEventListener("beforeunload",callback);
  },[dirty]);
+ function openDraft(draft:unknown){
+  const normalized=normalizeBuilderDocument(draft);
+  setInitialDocument(normalized);
+  setDocument(normalized);
+  setRefreshKey(value=>value+1);
+  setPreviewMode(null);
+ }
  const loadPages=useCallback(async(currentSite:Site)=>{
   const c=await authorized();
   const {data,error}=await c.from("smartjob_builder_pages")
@@ -103,7 +112,7 @@ export default function WebBuilderWorkspace(){
  function choosePage(target:Page){
   if(dirty&&!window.confirm("Hay cambios sin guardar. ¿Cambiar de página?"))return;
   setPage(target);setTitle(target.title);setDescription(target.description);
-  setDocument(normalizeBuilderDocument(target.draft));setRefreshKey(x=>x+1);
+  openDraft(target.draft);
   setView("editor");setError("");setNotice("");
  }
  async function selectSite(chosen:Site){
@@ -118,8 +127,8 @@ export default function WebBuilderWorkspace(){
    setPublishedIds((published||[]).map(row=>row.page_id));
    setSite(chosen);setPages(list);
    if(list.length){const home=list.find(p=>p.slug==="home")||list[0];setPage(home);
-    setTitle(home.title);setDescription(home.description);setDocument(normalizeBuilderDocument(home.draft));
-    setView("editor");setRefreshKey(x=>x+1);}
+    setTitle(home.title);setDescription(home.description);openDraft(home.draft);
+    setView("editor");}
    else{setPage(null);setView("sites");}
   }catch(e){setError(e instanceof Error?e.message:"No se pudo abrir");}
   finally{setBusy(false);}
@@ -144,8 +153,8 @@ export default function WebBuilderWorkspace(){
    if(homeError||!home)throw new Error("Sitio creado; vuelve a abrirlo para añadir la página");
    setSites(current=>[siteCreated,...current]);
    setSite(siteCreated);setPages([home as Page]);setPage(home as Page);setPublishedIds([]);
-   setDocument(normalizeBuilderDocument(home.draft));setTitle(home.title);setDescription("");
-   setNewSiteName("");setView("editor");setRefreshKey(v=>v+1);
+   openDraft(home.draft);setTitle(home.title);setDescription("");
+   setNewSiteName("");setView("editor");
    setNotice("Sitio creado. Personaliza tus bloques y publica cuando esté listo.");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo crear");}
   finally{setBusy(false);}
@@ -171,7 +180,7 @@ export default function WebBuilderWorkspace(){
    setSites(old=>[created as Site,...old]);
    setSite(created as Site);setPages([home as Page]);setPage(home as Page);setPublishedIds([]);
    setTitle(home.title);setDescription(home.description);
-   setDocument(normalizeBuilderDocument(doc));setRefreshKey(v=>v+1);setView("editor");
+   openDraft(doc);setView("editor");
    setClassicDraft(null);
    setNotice("Tu web anterior quedó intacta. Revisa y publica esta nueva versión cuando quieras.");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo importar");}
@@ -211,7 +220,7 @@ export default function WebBuilderWorkspace(){
    if(error||!data)throw new Error("No se pudo crear la página");
    const newPage=data as Page;
    setPages(old=>[...old,newPage]);setPage(newPage);setTitle(name);setDescription("");
-   setDocument(normalizeBuilderDocument(draft));setRefreshKey(v=>v+1);setNewPageName("");
+   openDraft(draft);setNewPageName("");
    setView("editor");setNotice("Nueva página creada");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo crear");}
   finally{setBusy(false);}
@@ -283,8 +292,7 @@ export default function WebBuilderWorkspace(){
    const restored=fresh as Page;
    setPage(restored);setPages(current=>current.map(p=>p.id===restored.id?restored:p));
    setTitle(restored.title);setDescription(restored.description);
-   setDocument(normalizeBuilderDocument(restored.draft));
-   setRefreshKey(x=>x+1);setView("editor");
+   openDraft(restored.draft);setView("editor");
    setNotice("Versión recuperada como borrador. La página pública sigue igual hasta que publiques.");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo recuperar");}
   finally{setBusy(false);}
@@ -441,12 +449,26 @@ export default function WebBuilderWorkspace(){
       </div>
       <div className={styles.actions}>
        <button type="button" disabled={busy} onClick={()=>void save()}><Save size={15}/> Guardar</button>
+       <button type="button" disabled={busy} onClick={()=>setPreviewMode("desktop")}>Vista previa</button>
        {publishedIds.includes(page.id)?<a href={pageUrl||"#"} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Página pública</a>:null}
       </div>
      </div>
-     <div className={styles.puckShell}>
+     {previewMode?<section className={styles.previewOverlay} aria-label="Vista previa del borrador">
+      <div className={styles.previewTop}>
+       <strong>Vista previa · Sin publicar</strong>
+       <div>
+        <button type="button" aria-pressed={previewMode==="desktop"} onClick={()=>setPreviewMode("desktop")}>Escritorio</button>
+        <button type="button" aria-pressed={previewMode==="mobile"} onClick={()=>setPreviewMode("mobile")}>Móvil</button>
+        <button type="button" onClick={()=>setPreviewMode(null)}>Volver al editor</button>
+       </div>
+      </div>
+      <div className={previewMode==="mobile"?styles.previewPhone:styles.previewDesktop}>
+       <Render config={builderConfig} data={normalizeBuilderDocument(document)}/>
+      </div>
+     </section>:null}
+     <div className={styles.puckShell} style={{display:previewMode?"none":undefined}}>
       <Puck key={page.id+"-"+refreshKey} config={builderConfig}
-       data={normalizeBuilderDocument(page.draft)} height="75vh"
+       data={initialDocument} height="75vh"
        onChange={data=>setDocument(data)}
        onPublish={data=>void publish(data)} />
      </div>
