@@ -1,17 +1,17 @@
 /* Scoped Web Studio — VMV mint-violet design without modifying shared app styles. */
-.studio{color:#2b223e;margin:12px 0 28px}
+.studio{color:#2b223e;margin:12px 0 28px;width:100%;min-width:0;container-type:inline-size}
 .studio *{box-sizing:border-box}
 .studio button{cursor:pointer}
 .studio button:disabled{opacity:.55;cursor:not-allowed}
 .studio button:focus-visible,.studio a:focus-visible,.studio input:focus-visible,.studio textarea:focus-visible{outline:3px solid #a17aef;outline-offset:2px}
 .back{display:flex;align-items:center;gap:7px;border:0;padding:8px 0;margin-bottom:16px;color:#8d59dc;font-size:13px;font-weight:800;background:transparent}
-.heading{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}
+.heading{min-width:0;display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}
 .heading span{font-size:10px;letter-spacing:1.8px;color:#8e65ce;font-weight:900}
 .heading h2{margin:5px 0 0;font-size:clamp(27px,4vw,37px);letter-spacing:-1.5px;font-weight:900;line-height:1.1}
 .heading h2 b{color:#8e59df}
 .heading>small{flex-shrink:0;font-size:10px;font-weight:850;background:#f0e7ff;color:#7450aa;border-radius:999px;padding:9px 12px}
-.workbench{display:grid;grid-template-columns:minmax(0,1fr);gap:13px}
-.editor,.visual{overflow:hidden;background:#fff;border:1px solid #e5ddf1;border-radius:22px}
+.workbench{display:grid;grid-template-columns:minmax(0,1fr);gap:13px;min-width:0}
+.editor,.visual{min-width:0;width:100%;overflow:hidden;background:#fff;border:1px solid #e5ddf1;border-radius:22px}
 .panelHead{height:58px;border-bottom:1px solid #eee8f7;display:flex;justify-content:space-between;align-items:center;padding:0 17px;gap:14px;background:#fff}
 .panelHead strong{font-size:14px;letter-spacing:-.3px}
 .panelHead small{font-size:10px;letter-spacing:1px;color:#9c90b0;font-weight:800}
@@ -64,5 +64,53 @@
 .url>a:first-of-type{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .url button,.url>a:last-child{display:grid;place-items:center;color:#7449be;flex-shrink:0;background:transparent;border:0;padding:4px}
 .notice{font-size:12px;font-weight:700;min-height:22px;color:#7450a6;margin:14px 0 0;display:flex;align-items:center;gap:6px}
-@media(min-width:950px){.workbench{grid-template-columns:minmax(220px,.75fr) minmax(0,1.3fr)}}
-@media(max-width:380px){.previewBg{padding:9px}.fields{padding:13px}.heading h2{font-size:27px}.heading>small{padding:7px 8px}.panelHead{padding:0 12px}}
+
+/* The app preview is a narrow phone inside a wide desktop viewport.
+   Breakpoints MUST follow the Web Studio container, never the browser window. */
+.switch{display:flex;align-items:center;gap:5px;background:#efe8fa;border-radius:15px;padding:5px;margin-bottom:14px}
+.switch button{display:flex;justify-content:center;align-items:center;gap:7px;flex:1;border:0;background:transparent;color:#75638f;border-radius:11px;padding:12px 5px;font-size:12px;font-weight:850}
+.switch .active{background:#fff;color:#7044bd;box-shadow:0 3px 8px #382a6816}
+.actions{margin:0 0 12px}
+.actions button{min-width:0;white-space:nowrap}
+.actions .publish{flex:1.2}
+.url{margin:0 0 12px}
+.notice{margin:7px 0 12px}
+@container (min-width:720px){
+ .workbench{grid-template-columns:minmax(0,.87fr) minmax(0,1.18fr)}
+ .switch{display:none}
+ .fields{max-height:570px;overflow:auto}
+}
+@container (max-width:719px){
+ .workbench[data-mode="edit"] .visual{display:none}
+ .workbench[data-mode="preview"] .editor{display:none}
+ .fields{max-height:none;overflow:visible;padding:15px}
+ .editor,.visual{border-radius:17px}
+ .panelHead{padding:0 13px;height:53px}
+ .panelHead strong{font-size:13px}
+ .previewBg{padding:12px;min-height:0}
+ .device,.mobile{width:100%;max-width:100%;min-width:0;min-height:350px;border-width:5px;border-radius:14px}
+ .bar{height:22px}
+ .site{min-height:300px}
+ .siteNav{min-height:49px;padding:12px 7%;gap:4px}
+ .siteNav strong{font-size:clamp(12px,4.6vw,17px);line-height:1.2;overflow-wrap:break-word;word-break:normal;min-width:0}
+ .siteNav small{font-size:7px;flex-shrink:0}
+ .hero{padding:34px 7%;min-height:220px}
+ .hero h3{font-size:clamp(25px,7vw,33px);line-height:1.05;letter-spacing:-.06em}
+ .serviceArea>div{grid-template-columns:1fr}
+ .serviceArea h4{font-size:17px}
+ .mobile{max-width:260px;min-width:0}
+ .mobile .hero h3{font-size:28px}
+ .heading{margin-bottom:13px}
+ .heading h2{font-size:27px}
+ .heading>small{font-size:9px;padding:8px}
+ .actions button{font-size:11px;padding:9px 8px;min-height:44px}
+ .url{font-size:10px}
+}
+@container (max-width:290px){
+ .siteNav{flex-direction:column;align-items:flex-start}
+ .heading h2{font-size:24px}
+ .panelHead{padding:0 9px}
+ .actions button{font-size:10px;gap:4px}
+ .previewBg{padding:7px}
+ .fields{padding:12px}
+}
