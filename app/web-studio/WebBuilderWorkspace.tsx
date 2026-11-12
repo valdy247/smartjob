@@ -4,7 +4,8 @@ import type {Data} from "@puckeditor/core";
 import {Puck} from "@puckeditor/core";
 import {ArrowLeft,ExternalLink,Globe,History,Layers,Plus,RefreshCw,Save,ShieldCheck,Trash2} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
-import {builderConfig,normalizeBuilderDocument,starterBuilderDocument} from "@/lib/web-builder-puck";
+import {builderConfig,normalizeBuilderDocument,starterBuilderDocument,importLegacyBuilderDocument} from "@/lib/web-builder-puck";
+import {normalizeWebContent,type WebSiteContent} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
 import styles from "./WebBuilderWorkspace.module.css";
 
@@ -28,6 +29,7 @@ export default function WebBuilderWorkspace(){
  const [view,setView]=useState<View>("sites");
  const [newSiteName,setNewSiteName]=useState("");
  const [newSiteCategory,setNewSiteCategory]=useState("");
+ const [classicDraft,setClassicDraft]=useState<WebSiteContent|null>(null);
  const [newPageName,setNewPageName]=useState("");
  const [title,setTitle]=useState("");
  const [description,setDescription]=useState("");
@@ -70,6 +72,14 @@ export default function WebBuilderWorkspace(){
     const pref=await client.from("smartjob_business_category_preferences")
      .select("category_id").eq("owner_id",data.user.id).maybeSingle();
     if(active&&pref.data?.category_id)setNewSiteCategory(pref.data.category_id);
+    if(!rows?.length){
+     const {data:classic}=await client.from("smartjob_web_sites")
+      .select("draft").eq("owner_id",data.user.id).maybeSingle();
+     if(classic?.draft&&active){
+      const old=normalizeWebContent(classic.draft);
+      if(old.business)setClassicDraft(old);
+     }
+    }
    }catch(e){if(active)setError(e instanceof Error?e.message:"No disponible");}
    finally{if(active)setLoading(false);}
   })();
@@ -132,6 +142,33 @@ export default function WebBuilderWorkspace(){
    setNewSiteName("");setView("editor");setRefreshKey(v=>v+1);
    setNotice("Sitio creado. Personaliza tus bloques y publica cuando esté listo.");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo crear");}
+  finally{setBusy(false);}
+ }
+ async function importClassic(){
+  if(!classicDraft||busy||!userId)return;
+  if(!window.confirm("Importar tu web anterior como un nuevo borrador visual. Tu web actual no será modificada."))return;
+  setBusy(true);setError("");setNotice("");
+  try{
+   const c=await authorized();
+   const name=classicDraft.business.trim().slice(0,100);
+   const slug=(slugify(name).slice(0,33)||"mi-negocio")+"-"+crypto.randomUUID().replace(/-/g,"").slice(0,8);
+   const {data:created,error}=await c.from("smartjob_builder_sites").insert({
+    owner_id:userId,name,slug,category_id:classicDraft.categoryId
+   }).select("id,owner_id,slug,name,category_id").single();
+   if(error||!created)throw new Error("No se pudo crear el sitio nuevo");
+   const doc=importLegacyBuilderDocument(classicDraft);
+   const {data:home,error:pageError}=await c.from("smartjob_builder_pages").insert({
+    owner_id:userId,site_id:created.id,slug:"home",title:"Inicio",
+    description:classicDraft.intro.slice(0,300),draft:doc
+   }).select("id,site_id,owner_id,slug,title,description,draft,revision,updated_at").single();
+   if(pageError||!home)throw new Error("Sitio creado; se requiere completar la migración de contenido");
+   setSites(old=>[created as Site,...old]);
+   setSite(created as Site);setPages([home as Page]);setPage(home as Page);
+   setTitle(home.title);setDescription(home.description);
+   setDocument(normalizeBuilderDocument(doc));setRefreshKey(v=>v+1);setView("editor");
+   setClassicDraft(null);
+   setNotice("Tu web anterior quedó intacta. Revisa y publica esta nueva versión cuando quieras.");
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo importar");}
   finally{setBusy(false);}
  }
  async function createPage(){
@@ -339,6 +376,8 @@ export default function WebBuilderWorkspace(){
      </optgroup>)}
     </select>
    </form>
+   {classicDraft?<button type="button" className={styles.importClassic} disabled={busy}
+    onClick={()=>void importClassic()}><Layers size={18}/> Importar mi web actual al editor visual</button>:null}
    <h2>Mis sitios</h2>
    <div className={styles.siteList}>
     {sites.map(s=><button type="button" key={s.id} className={styles.siteCard}
