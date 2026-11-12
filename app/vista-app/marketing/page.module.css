@@ -132,3 +132,75 @@
 .metricHelpSection button:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:900px){.sidebar{grid-auto-flow:column;grid-auto-columns:minmax(88px,1fr);grid-template-columns:none;overflow-x:auto;scrollbar-width:thin}.tab,.tabActive{min-height:67px}}
 @media(max-width:650px){.metricHelpGrid{grid-template-columns:1fr}.metricHelpBody{padding:12px}}
+
+
+/* Marketing UX mobile refinement: native-scale inputs, concise plans, visible actions. */
+.planSubtitle{font-size:12px;color:#8f7a92;line-height:1.55;margin:0 0 12px}
+.campaignTextarea{box-sizing:border-box;width:100%;min-height:132px;resize:vertical;background:#fff;border:1px solid #ead9e6;border-radius:12px;margin-top:10px;padding:13px;font:inherit;font-size:15px;line-height:1.55;color:#523f5a;outline:0}
+.campaignTextarea:focus{border-color:#a55a8a;box-shadow:0 0 0 3px #efd7e8}
+.campaignPreview{white-space:pre-line}
+.campaignQuickActions{display:grid;grid-template-columns:minmax(0,2fr) repeat(2,minmax(0,1fr));gap:9px;margin-top:15px}
+.campaignQuickActions button{min-width:0;min-height:46px;margin:0;padding:10px 12px}
+.detailsToggle{display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:14px;border:0;border-top:1px solid #eedeea;padding:15px 4px 2px;color:#865075;background:transparent;font-family:inherit;font-size:12px;font-weight:850;text-align:left;cursor:pointer}
+.campaignDetails{display:flex;flex-direction:column;align-items:flex-start;gap:12px;border-radius:13px;margin-top:12px;padding:14px;background:#fff;border:1px solid #efdfeb}
+.campaignDetails>div>strong{font-size:12px;color:#694569}
+.campaignDetails>div>p{margin:6px 0 0;font-size:12px;line-height:1.65;color:#8b798c}
+.campaignDetails .measure{margin:0;font-size:11px;align-items:flex-start}
+.campaignDetails .secondary{font-size:11px}
+.clampedMessage{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
+.previewToggle{border:0;background:transparent;color:#8f4e78;display:inline-flex;align-items:center;gap:5px;padding:9px 0 0;font-family:inherit;font-size:11px;font-weight:850;cursor:pointer}
+.followupActions{display:flex;flex-wrap:wrap;gap:9px;width:100%;margin-top:14px}
+.followupActions .primary,.followupActions .secondary{margin:0;flex:1}
+.previewToggle:focus-visible,.detailsToggle:focus-visible{outline:3px solid #bc79a2;outline-offset:3px}
+@media(max-width:900px){
+ .sidebar{grid-auto-flow:column;grid-auto-columns:minmax(96px,1fr);grid-template-columns:none;overflow-x:auto;scroll-snap-type:x proximity;overscroll-behavior-x:contain;scrollbar-width:none}
+ .sidebar::-webkit-scrollbar{display:none}
+ .sidebar .tab,.sidebar .tabActive{scroll-snap-align:start;min-width:0;min-height:60px}
+}
+@media(max-width:650px){
+ .page{padding:8px 8px calc(30px + env(safe-area-inset-bottom));overflow-x:clip}
+ .shell{min-width:0}
+ .header{margin:4px 3px 11px;gap:9px}
+ .back{font-size:11px;gap:6px}
+ .marker{padding:7px 9px;font-size:8px;letter-spacing:.2px}
+ .hero{min-height:0;padding:15px 16px;border-radius:18px;gap:0}
+ .hero h1{font-size:24px;line-height:1.17;letter-spacing:-.75px;margin:9px 0 0}
+ .hero p,.heroPills,.heroShape,.hero:after{display:none}
+ .eyebrow{font-size:9px;letter-spacing:.45px}
+ .noticeBand{margin:10px 0 12px;padding:10px 12px;border-radius:13px}
+ .noticeBand p{font-size:11px;line-height:1.5}
+ .workspace{gap:9px}
+ .sidebar{padding:7px;gap:5px;border-radius:15px}
+ .sidebar .tab,.sidebar .tabActive{padding:10px 7px;gap:6px;border-radius:11px}
+ .sidebar .tab strong,.sidebar .tabActive strong{font-size:10px}
+ .sidebar .tab svg:first-child,.sidebar .tabActive svg:first-child{width:18px;height:18px}
+ .content{padding:13px 12px;border-radius:16px;min-width:0;box-shadow:none}
+ .sectionTop{margin-bottom:15px}
+ .sectionTop h2{font-size:23px;margin:6px 0}
+ .sectionTop p{font-size:12px;line-height:1.55}
+ .formGrid{gap:13px}
+ .plan{padding:16px 13px;border-radius:17px;margin-top:15px}
+ .plan h3{font-size:19px;line-height:1.26;letter-spacing:-.45px;margin:10px 0 7px}
+ .planTag{font-size:9px;letter-spacing:.15px}
+ .message{padding:12px 13px;border-radius:12px}
+ .message p{font-size:13px;line-height:1.55}
+ .campaignQuickActions{grid-template-columns:minmax(0,1.5fr) repeat(2,minmax(0,1fr));gap:6px}
+ .campaignQuickActions button{gap:4px;font-size:11px;padding:9px 7px}
+ .campaignQuickActions button svg{width:14px;height:14px;flex-shrink:0}
+ .retentionCards article{padding:15px;border-radius:16px}
+ .retentionCards article>p{min-height:0}
+ .reviewShareOptions{gap:6px}
+ .reviewShareOptions>*{min-height:43px}
+ .toast{position:sticky;bottom:calc(14px + env(safe-area-inset-bottom));z-index:25;box-shadow:0 9px 28px #4528481c}
+ /* Safari zooms in on input focus when editable text is smaller than 16px. */
+ .page input:not([type="checkbox"]),.page select,.page textarea{font-size:16px!important;line-height:1.4}
+ .page input:not([type="checkbox"]),.page select{min-height:48px}
+ .page input:not([type="checkbox"]),.page textarea{scroll-margin-top:18vh;scroll-margin-bottom:34vh}
+ .footer{font-size:10px;line-height:1.4;margin-top:17px}
+}
+@media(max-width:360px){
+ .campaignQuickActions{grid-template-columns:1fr 1fr}
+ .campaignQuickActions .primary{grid-column:1/-1}
+ .page{padding-inline:6px}
+ .content{padding:12px 10px}
+}
