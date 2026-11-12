@@ -1,8 +1,10 @@
 "use client";
 import {useCallback,useEffect,useState,type CSSProperties} from "react";
-import {ArrowLeft,Check,Copy,ExternalLink,Globe,Save,Send,Trash2} from "lucide-react";
+import {ArrowLeft,Check,Copy,ExternalLink,Globe,Save,Send,Trash2,Plus,X,ArrowUp,ArrowDown} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
-import {defaultWebContent,normalizeWebContent,paletteStyles,webServices,type WebSiteContent,type WebPalette,type WebTemplate} from "@/lib/web-services-site";
+import {defaultWebContent,normalizeWebContent,paletteStyles,webServices,webCategory,type WebSiteContent,type WebPalette,type WebTemplate} from "@/lib/web-services-site";
+import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
+import WebStudioImages from "./WebStudioImages";
 import styles from "./WebServicesStudio.module.css";
 
 const palettes:{id:WebPalette;name:string}[]=[
@@ -13,13 +15,11 @@ const templates:{id:WebTemplate;name:string}[]=[
  {id:"editorial",name:"Editorial"},{id:"showcase",name:"Impacto"},
  {id:"minimal",name:"Minimal"}
 ];
-const fields:{id:Exclude<keyof WebSiteContent,"template"|"palette">;label:string;max:number;multi?:boolean;type?:"email"|"tel"}[]=[
+const fields:{id:Exclude<keyof WebSiteContent,"template"|"palette"|"categoryId"|"heroImage"|"gallery"|"services"|"eyebrow">;label:string;max:number;multi?:boolean;type?:"email"|"tel"}[]=[
  {id:"business",label:"Nombre del negocio",max:100},
  {id:"headline",label:"Título principal",max:180,multi:true},
- {id:"eyebrow",label:"Etiqueta",max:70},
  {id:"intro",label:"Presentación",max:400,multi:true},
  {id:"about",label:"Sobre nosotros",max:900,multi:true},
- {id:"services",label:"Servicios (uno por línea)",max:450,multi:true},
  {id:"email",label:"Correo",max:180,type:"email"},
  {id:"phone",label:"Teléfono",max:36,type:"tel"},
  {id:"address",label:"Dirección",max:250,multi:true},
@@ -40,6 +40,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
  const [status,setStatus]=useState("");
  const [mobile,setMobile]=useState(false);
  const [studioMode,setStudioMode]=useState<"edit"|"preview">("edit");
+ const [newService,setNewService]=useState("");
  const [origin,setOrigin]=useState("");
  useEffect(()=>{setOrigin(window.location.origin);},[]);
  const verify=useCallback(async()=>{
@@ -68,8 +69,20 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
   })();
   return()=>{active=false;};
  },[ownerId,verify]);
- const update=(key:Exclude<keyof WebSiteContent,"template"|"palette">,value:string)=>{
+ const update=(key:Exclude<keyof WebSiteContent,"template"|"palette"|"gallery"|"categoryId"|"heroImage"|"eyebrow"|"services">,value:string)=>{
   setContent(old=>({...old,[key]:value}));setStatus("");
+ };
+ const serviceItemsEditor=content.services?content.services.split(/\r?\n/).slice(0,6):[];
+ const mutateServices=(values:string[])=>{
+  setContent(old=>({...old,services:values.slice(0,6).join("\n")}));setStatus("");
+ };
+ const addService=()=>{
+  const value=newService.trim().replace(/[\r\n]+/g," ").slice(0,70);
+  if(!value||serviceItemsEditor.length>=6)return;
+  if(serviceItemsEditor.some(item=>item.trim().toLocaleLowerCase("es")===value.toLocaleLowerCase("es"))){
+   setStatus("Ese servicio ya está agregado");return;
+  }
+  mutateServices([...serviceItemsEditor,value]);setNewService("");
  };
  const validate=(next:WebSiteContent)=>{
   if(next.business.length<2||next.headline.length<3){setStatus("Completa el negocio y el título");return false;}
@@ -141,7 +154,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
     <button type="button" className={studioMode==="edit"?styles.active:""} aria-pressed={studioMode==="edit"}
      onClick={()=>setStudioMode("edit")}>Editar contenido</button>
     <button type="button" className={studioMode==="preview"?styles.active:""} aria-pressed={studioMode==="preview"}
-     onClick={()=>setStudioMode("preview")}>Vista previa</button>
+     onClick={()=>setStudioMode("preview")}>Diseño y vista previa</button>
    </div>
    <div className={styles.actions}>
     <button type="button" className={styles.save} disabled={busy} onClick={()=>void save()}><Save size={17}/> Guardar</button>
@@ -158,6 +171,15 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
     <div className={styles.editor}>
      <header className={styles.panelHead}><strong>Contenido</strong><small>EDITAR</small></header>
      <div className={styles.fields}>
+      <label className={styles.field}><span>Categoría de negocio</span>
+       <select value={content.categoryId} onChange={e=>{setContent(v=>({...v,categoryId:e.target.value}));setStatus("");}}
+        aria-label="Selecciona la categoría de tu negocio">
+        <option value="">Seleccionar categoría</option>
+        {CATEGORY_GROUPS.map(group=><optgroup key={group} label={group}>
+         {BUSINESS_CATEGORIES.filter(cat=>cat.group===group).map(cat=><option key={cat.id} value={cat.id}>{cat.label}</option>)}
+        </optgroup>)}
+       </select>
+      </label>
       {fields.map(f=><label key={f.id} className={styles.field}>
        <span>{f.label}</span>
        {f.multi?<textarea maxLength={f.max} rows={f.id==="services"?4:3} spellCheck={false} autoCorrect="off" autoCapitalize="none" autoComplete="off" value={content[f.id]}
@@ -165,18 +187,28 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
         <input type={f.type||"text"} maxLength={f.max} spellCheck={false} autoCorrect="off" autoCapitalize="none" autoComplete="off" value={content[f.id]}
           onChange={e=>update(f.id,e.target.value)} placeholder={f.label}/>}
       </label>)}
-      <span className={styles.fieldTitle}>Plantilla</span>
-      <div className={styles.options} role="group" aria-label="Plantilla">
-       {templates.map(t=><button type="button" key={t.id} aria-pressed={content.template===t.id}
-        className={content.template===t.id?styles.active:""}
-        onClick={()=>{setContent(v=>({...v,template:t.id}));setStatus("");}}>{t.name}</button>)}
+      <div className={styles.serviceEditor}>
+       <div className={styles.serviceHeader}><strong>Servicios</strong><span>{serviceItemsEditor.length}/6</span></div>
+       {serviceItemsEditor.map((name,i)=><div className={styles.serviceRow} key={i}>
+        <small>{String(i+1).padStart(2,"0")}</small>
+        <input aria-label={"Servicio "+(i+1)} type="text" spellCheck={false} autoComplete="off"
+         maxLength={70} value={name} onChange={e=>mutateServices(serviceItemsEditor.map((old,j)=>j===i?e.target.value.replace(/[\r\n]/g," "):old))}/>
+        <button type="button" disabled={i===0} aria-label={"Subir servicio "+(i+1)}
+         onClick={()=>{const next=[...serviceItemsEditor];[next[i-1],next[i]]=[next[i],next[i-1]];mutateServices(next);}}><ArrowUp size={13}/></button>
+        <button type="button" disabled={i===serviceItemsEditor.length-1} aria-label={"Bajar servicio "+(i+1)}
+         onClick={()=>{const next=[...serviceItemsEditor];[next[i+1],next[i]]=[next[i],next[i+1]];mutateServices(next);}}><ArrowDown size={13}/></button>
+        <button type="button" aria-label={"Eliminar servicio "+(i+1)}
+         onClick={()=>mutateServices(serviceItemsEditor.filter((_,j)=>j!==i))}><X size={15}/></button>
+       </div>)}
+       {serviceItemsEditor.length<6?<div className={styles.addService}>
+        <input aria-label="Nuevo servicio" spellCheck={false} autoComplete="off" placeholder="Añadir un servicio" maxLength={70}
+         value={newService} onChange={e=>setNewService(e.target.value)}
+         onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addService();}}}/>
+        <button type="button" disabled={!newService.trim()} onClick={addService} aria-label="Agregar servicio"><Plus size={17}/></button>
+       </div>:null}
       </div>
-      <span className={styles.fieldTitle}>Color</span>
-      <div className={styles.options} role="group" aria-label="Color">
-       {palettes.map(p=><button type="button" key={p.id} aria-pressed={content.palette===p.id}
-        className={content.palette===p.id?styles.active:""}
-        onClick={()=>{setContent(v=>({...v,palette:p.id}));setStatus("");}}>{p.name}</button>)}
-      </div>
+      <WebStudioImages ownerId={ownerId} busy={busy} content={content}
+       onMessage={setStatus} onChange={next=>{setContent(v=>({...v,...next}));setStatus("");}}/>
      </div>
     </div>
     <div className={styles.visual}>
@@ -190,16 +222,33 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
        <div className={styles.site}>
         <div className={styles.siteNav}><strong>{content.business||"Mi negocio"}<b>.</b></strong><small>Servicios　 Contacto</small></div>
         <div className={[styles.hero,content.template==="showcase"?styles.showcase:content.template==="minimal"?styles.minimal:""].join(" ")}>
-         <small>{content.eyebrow||"TU NEGOCIO · TU IDENTIDAD"}</small>
+         <small>{webCategory(content)}</small>
          <h3>{content.headline||"Tu próxima gran idea comienza aquí."}</h3>
          {content.intro?<p>{content.intro}</p>:null}
+         {content.heroImage?<img className={styles.heroImage} src={content.heroImage} alt="Portada del negocio"/>:null}
          <span className={styles.cta}>{content.action||"Contáctanos"} ↗</span>
         </div>
         <div className={styles.serviceArea}><h4>Lo que hacemos<b>.</b></h4>
          <div>{(serviceItems.length?serviceItems:["Tus servicios"]).map((name,i)=><span key={i}>{name} ↗</span>)}</div>
+         {content.gallery.length?<div className={styles.previewGallery}>{content.gallery.map(url=><img src={url} key={url} alt="Galería del negocio"/>)}</div>:null}
         </div>
        </div>
       </div>
+     </div>
+     <div className={styles.visualDesign}>
+            <span className={styles.fieldTitle}>Plantilla</span>
+      <div className={styles.options} role="group" aria-label="Plantilla">
+       {templates.map(t=><button type="button" key={t.id} aria-pressed={content.template===t.id}
+        className={content.template===t.id?styles.active:""}
+        onClick={()=>{setContent(v=>({...v,template:t.id}));setStatus("");}}>{t.name}</button>)}
+      </div>
+      <span className={styles.fieldTitle}>Color</span>
+      <div className={styles.options} role="group" aria-label="Color">
+       {palettes.map(p=><button type="button" key={p.id} aria-pressed={content.palette===p.id}
+        className={content.palette===p.id?styles.active:""}
+        onClick={()=>{setContent(v=>({...v,palette:p.id}));setStatus("");}}>{p.name}</button>)}
+      </div>
+
      </div>
     </div>
    </div>
