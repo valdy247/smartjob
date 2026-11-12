@@ -86,3 +86,5 @@
 @media(max-width:700px){.domainButtons{flex-direction:column;align-items:stretch}.domainButtons button{width:100%}}
 
 .createSite select{border:1px solid #e4d6f0;border-radius:12px;min-height:44px;padding:11px;background:#fff;color:#302341;font:inherit;font-size:13px;width:100%}
+
+.importClassic{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;max-width:850px;margin:0 0 30px;padding:16px;border:1px dashed #a986dd;border-radius:15px;background:#f0e7ff;color:#7644bf;font-size:13px;font-weight:900;cursor:pointer}.importClassic:hover{background:#e9dafa}.importClassic:disabled{opacity:.5}
