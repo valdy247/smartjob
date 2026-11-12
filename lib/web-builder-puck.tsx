@@ -1,4 +1,5 @@
 import type {Config,Data} from "@puckeditor/core";
+import type {CSSProperties} from "react";
 import {safeWebImageUrl} from "./web-services-site";
 
 type ButtonProps={label?:string;url?:string};
@@ -56,7 +57,11 @@ export function normalizeBuilderDocument(input:unknown):Data{
   if(kind==="Spacer"&&!["24","48","80"].includes(safe.height))safe.height="48";
   return [{type:kind,props:safe}];
  });
- return {content,root:{props:{}}} as Data;
+ const sourceRoot=raw.root&&typeof raw.root==="object"?raw.root as Record<string,unknown>:{};
+ const rawProps=sourceRoot.props&&typeof sourceRoot.props==="object"?sourceRoot.props as Record<string,unknown>:{};
+ const palette=["violet","mint","amber","ink"].includes(String(rawProps.palette))?String(rawProps.palette):"violet";
+ const font=["modern","editorial"].includes(String(rawProps.font))?String(rawProps.font):"modern";
+ return {content,root:{props:{palette,font}}} as Data;
 }
 export function starterBuilderDocument(name="Mi negocio"):Data{
  return normalizeBuilderDocument({content:[
@@ -68,7 +73,28 @@ export function starterBuilderDocument(name="Mi negocio"):Data{
 }
 const basicText={type:"text" as const};
 export const builderConfig:Config={
- root:{render:({children}:{children:React.ReactNode})=><div className="vmv-site vmv-site-editor-canvas">{children}</div>},
+ root:{
+  fields:{
+   palette:{type:"select",options:[
+    {label:"Lavanda",value:"violet"},{label:"Menta",value:"mint"},
+    {label:"Dorado",value:"amber"},{label:"Grafito",value:"ink"}
+   ]},
+   font:{type:"select",options:[{label:"Moderna",value:"modern"},{label:"Editorial",value:"editorial"}]}
+  },
+  defaultProps:{palette:"violet",font:"modern"},
+  render:({children,palette,font})=>{
+   const colors:Record<string,{accent:string,pale:string}>={
+    violet:{accent:"#8e5de4",pale:"#f0e9fd"},
+    mint:{accent:"#198d74",pale:"#e5f8f0"},
+    amber:{accent:"#a97b26",pale:"#fff4d8"},
+    ink:{accent:"#30283a",pale:"#eae8ed"}
+   };
+   const color=colors[palette]||colors.violet;
+   const style={"--vmv-accent":color.accent,"--vmv-pale":color.pale,
+    fontFamily:font==="editorial"?'Georgia, "Times New Roman", serif':'ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'} as CSSProperties;
+   return <div className="vmv-site vmv-site-editor-canvas" style={style}>{children}</div>;
+  }
+ },
  components:{
   Hero:{
    label:"Portada destacada",
