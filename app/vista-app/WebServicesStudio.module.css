@@ -114,3 +114,38 @@
  .previewBg{padding:7px}
  .fields{padding:12px}
 }
+
+
+/* Site structure controls — match narrow simulated phones without side-scrolling. */
+.field select{height:47px;border-radius:12px;border:1px solid #e5d9f1;background:#fcfbff;color:#29213d;font:inherit;font-size:13px;width:100%;min-width:0;padding:9px}
+.field select:focus-visible{outline:3px solid #9d73ec;outline-offset:1px}
+.field select option,.field select optgroup{color:#29213d}
+.serviceEditor{display:flex;flex-direction:column;gap:9px;border-top:1px solid #eee6f7;padding-top:17px;min-width:0}
+.serviceHeader{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#765493}
+.serviceHeader strong{font-weight:900}
+.serviceHeader span{font-size:10px;font-weight:800}
+.serviceRow{display:grid;grid-template-columns:18px minmax(0,1fr) repeat(3,24px);gap:3px;align-items:center;width:100%;min-width:0}
+.serviceRow small{font-size:10px;color:#9e89b1;font-weight:850}
+.serviceRow input,.addService input{width:100%;min-width:0;border:1px solid #e3d5f1;background:#fcfaff;color:#29213d;border-radius:10px;padding:9px;font-size:12px;height:41px}
+.serviceRow button{height:25px;width:24px;display:grid;place-items:center;padding:0;border:0;border-radius:7px;color:#784fbd;background:#f1e8ff}
+.serviceRow button:last-child{color:#b04766;background:#fff0f4}
+.serviceRow button:disabled{opacity:.3}
+.addService{display:grid;grid-template-columns:minmax(0,1fr) 41px;gap:8px;min-width:0}
+.addService button{height:41px;border:0;background:#8c5fe2;color:#fff;display:grid;place-items:center;border-radius:10px}
+.addService button:disabled{opacity:.45}
+.visualDesign{display:flex;flex-direction:column;gap:10px;padding:17px;border-top:1px solid #e9e0f3;background:#fff}
+.visualDesign .fieldTitle{color:#7051a0}
+.visualDesign .options{margin:0 0 7px}
+.visualDesign .options button{border-radius:12px;min-width:0;flex:1;min-height:40px;font-size:11px;padding:8px 5px}
+.visualDesign .options button.active{box-shadow:0 3px 10px #583f8526}
+.heroImage{width:100%;height:clamp(100px,22vw,240px);object-fit:cover;border-radius:10px;margin:14px 0 4px}
+.previewGallery{margin-top:15px;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px}
+.previewGallery img{width:100%;height:100px;object-fit:cover;border-radius:7px}
+@container (max-width:719px){
+ .visualDesign{padding:12px}
+ .visualDesign .options button{font-size:10px}
+ .heroImage{height:155px}
+ .serviceRow{grid-template-columns:16px minmax(0,1fr) repeat(3,23px);gap:2px}
+ .serviceRow button{width:23px}
+ .previewGallery img{height:85px}
+}
