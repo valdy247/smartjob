@@ -1,7 +1,7 @@
 -- INTERNAL SQL REGRESSION ONLY. Simulated provider responses, not a real Stripe payment.
 -- BEGIN/ROLLBACK ensures no fake paid order or merchant credentials persist.
 begin;
-do $
+do $$
 <<qa>>
 declare owner_user uuid;biz uuid;agent uuid;item uuid;order_id uuid;result text;
  price_cents integer; paid_status text; qty integer; attempt_state text; forbidden text;
