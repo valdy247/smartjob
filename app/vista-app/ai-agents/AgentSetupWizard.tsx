@@ -1,6 +1,6 @@
 "use client";
 import {useMemo,useState} from "react";
-import {ArrowLeft,ArrowRight,Check,CheckCircle2,Clock3,PlugZap,ShieldCheck,Sparkles} from "lucide-react";
+import {ArrowLeft,ArrowRight,CalendarDays,Check,CheckCircle2,Clock3,PlugZap,ShieldCheck,Sparkles} from "lucide-react";
 import styles from "./AgentSetupWizard.module.css";
 
 export type AgentKind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
@@ -11,7 +11,7 @@ export type WizardDraft={
 type Question={id:string;title:string;hint?:string;kind?:"text"|"textarea"|"choice"|"multi";options?:string[];required?:boolean;when?:(a:Record<string,string>)=>boolean};
 type Section={title:string;subtitle:string;questions:Question[]};
 type Props={initial:WizardDraft;onSave:(updated:WizardDraft)=>void;onCancel:()=>void;isPreview?:boolean};
-const allRoles=["calls","support","sales","bookings","inventory","operations","custom"];
+const allRoles:AgentKind[]=["calls","support","sales","bookings","inventory","operations","custom"];
 const q=(id:string,title:string,options:string[],required=false,when?:Question["when"]):Question=>({id,title,kind:"choice",options,required,when});
 const t=(id:string,title:string,required=false,hint?:string):Question=>({id,title,required,hint,kind:"text"});
 const a=(id:string,title:string,required=false,hint?:string):Question=>({id,title,required,hint,kind:"textarea"});
