@@ -74,6 +74,10 @@
 .agentMeta small{font-size:10px;color:#887b94}
 .agentState{border-radius:12px;color:#8555dd;background:#f1eaff;padding:6px 8px;font-size:9px;font-weight:900}
 .agent>p{font-size:11px;line-height:1.6;color:#82758f;margin:12px 0}
+.readinessMini{display:flex;align-items:center;gap:9px;margin:12px 0 4px}
+.readinessText{color:#856aab;font-size:10px;font-weight:800;flex-shrink:0}
+.readinessTrack{height:5px;flex:1;display:block;border-radius:20px;background:#eee9f4;overflow:hidden}
+.readinessTrack span{height:100%;display:block;border-radius:20px;background:#9569e9}
 .agentButtons{display:flex;flex-wrap:wrap;gap:6px}
 .buttonPrimary,.buttonSecondary,.saveButton{display:inline-flex;align-items:center;justify-content:center;
  gap:6px;border-radius:12px;padding:9px 12px;border:0;font-size:11px;font-weight:900}
