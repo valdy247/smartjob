@@ -69,3 +69,18 @@
 .loading{display:flex;align-items:center;justify-content:center;min-height:60vh;flex-direction:column;gap:14px;font-family:system-ui;color:#8763ac;padding:30px}
 .loading a{color:#8255cf}
 @media(max-width:700px){.topbar{min-height:58px;padding:12px 5%}.brand{font-size:18px}.landing,.main{padding:22px 5%}.welcome{margin-bottom:21px}.createSite{padding:15px;border-radius:16px}.createSite>div{flex-direction:column}.createSite button{width:100%}.siteHeading{align-items:flex-start}.sitePreview{font-size:10px;padding:10px 8px}.siteHeading h1{font-size:28px}.sections button{flex:1;justify-content:center;padding:11px 6px}.addPage input{font-size:12px}.addPage button{padding:8px}.editingHeader{padding:12px}.meta{grid-template-columns:1fr;min-width:100%}.actions{width:100%}.actions>*{flex:1}.puckShell{min-height:500px}.domainForm{flex-direction:column}}
+
+
+.domainQuote{display:flex;flex-direction:column;gap:12px}
+.domainQuote strong{font-size:12px;line-height:1.6}
+.domainButtons{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.domainButtons button,.verifyDomain{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#8655dc;color:#fff;border:0;border-radius:11px;padding:12px 14px;font-size:12px;font-weight:850}
+.domainButtons button:last-child{background:white;color:#7a50bf;border:1px solid #d9c8ee}
+.domainRequests{display:flex;flex-direction:column;gap:8px}
+.domainRequests h3{font-size:15px;color:#51367f;letter-spacing:-.03em;margin:8px 0}
+.domainRequests .domainRow{font-size:12px}
+.domainRow span{font-size:12px;overflow-wrap:anywhere}
+.domainRow small{color:#7652ad;background:#eee6fa;border-radius:99px;padding:6px 9px;font-size:10px}
+.domainRow button{color:#fff;background:#8d5bdf;border:0;border-radius:9px;padding:9px 11px;font-size:11px;font-weight:850}
+.verifyDomain{margin-top:7px}
+@media(max-width:700px){.domainButtons{flex-direction:column;align-items:stretch}.domainButtons button{width:100%}}
