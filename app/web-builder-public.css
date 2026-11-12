@@ -1,0 +1,46 @@
+/* Shared Puck block styles for public business sites and the editor canvas. */
+.vmv-site{--vmv-accent:#8e5de4;--vmv-text:#2c243c;--vmv-pale:#f0e9fd;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--vmv-text);background:#fff;min-height:100vh;max-width:100%;overflow-x:hidden}
+.vmv-site *{box-sizing:border-box}
+.vmv-site a{text-decoration:none}
+.vmv-site h1,.vmv-site h2,.vmv-site h3,.vmv-site p{overflow-wrap:anywhere}
+.vmv-site h1,.vmv-site h2{letter-spacing:-.067em}
+.vmv-site nav{display:flex;align-items:center;gap:19px;justify-content:flex-end;flex-wrap:wrap}
+.vmv-site-nav{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:22px clamp(20px,6vw,90px);background:#fff}
+.vmv-site-mark{font-size:23px;font-weight:920;letter-spacing:-.06em;color:var(--vmv-text);overflow-wrap:anywhere}
+.vmv-site-mark span{color:var(--vmv-accent)}
+.vmv-site-nav a:not(.vmv-site-mark){color:var(--vmv-text);font-size:12px;font-weight:750}
+.vmv-site-hero{padding:clamp(67px,10vw,137px) clamp(23px,8vw,120px);background:var(--vmv-pale);display:flex;align-items:flex-start;flex-direction:column;min-height:430px;justify-content:center;gap:17px}
+.vmv-site-kicker{color:var(--vmv-accent);font-weight:900;letter-spacing:.16em;font-size:11px}
+.vmv-site-hero h1{font-size:clamp(42px,7.8vw,110px);line-height:.96;margin:4px 0;max-width:1000px;font-weight:900}
+.vmv-site-hero p{font-size:clamp(15px,2vw,21px);max-width:690px;line-height:1.6;margin:0}
+.vmv-site-button{display:inline-flex;align-items:center;justify-content:center;gap:22px;padding:16px 23px;background:var(--vmv-accent);color:white!important;border-radius:99px;font-size:13px;font-weight:850;margin-top:16px}
+.vmv-site-button:focus-visible,.vmv-site a:focus-visible{outline:3px solid var(--vmv-accent);outline-offset:3px}
+.vmv-site-section{padding:clamp(53px,7vw,104px) clamp(23px,8vw,120px);max-width:1440px;margin:0 auto}
+.vmv-site-section h2{font-size:clamp(29px,5vw,66px);line-height:1.05;margin:0 0 27px;font-weight:870}
+.vmv-site-section p{font-size:clamp(15px,1.6vw,21px);line-height:1.65;white-space:pre-line}
+.vmv-site-heading p{max-width:800px;color:#686072}
+.vmv-site-copy p{max-width:900px}
+.vmv-site-services>div,.vmv-site-benefits>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+.vmv-site-services article,.vmv-site-benefits article{border-radius:22px;background:var(--vmv-pale);padding:27px;min-height:180px;display:flex;flex-direction:column;justify-content:space-between}
+.vmv-site-services small{color:var(--vmv-accent);font-weight:850}
+.vmv-site-services h3{font-size:clamp(18px,2.7vw,32px);letter-spacing:-.04em;line-height:1.15}
+.vmv-site-benefits article span{font-size:40px;color:var(--vmv-accent)}
+.vmv-site-benefits article p{font-weight:760}
+.vmv-site-image{margin:0 auto;max-width:1300px;padding:25px clamp(23px,8vw,120px)}
+.vmv-site-image>img{width:100%;height:auto;max-height:660px;object-fit:cover;border-radius:23px}
+.vmv-site-image-placeholder{display:grid;place-items:center;text-align:center;min-height:230px;border:2px dashed #d2b8ef;background:#f9f5ff;color:#8562b0;border-radius:15px}
+.vmv-site-image figcaption{font-size:12px;color:#80748d;margin-top:9px}
+.vmv-site-cta{display:flex;flex-direction:column;align-items:flex-start;padding:clamp(60px,8vw,120px) clamp(23px,8vw,120px);background:#282137;color:#fff;gap:15px}
+.vmv-site-cta h2{font-size:clamp(33px,5.6vw,75px);max-width:800px;margin:0}
+.vmv-site-cta p{line-height:1.5;max-width:650px}
+.vmv-site-quote{max-width:900px;margin:60px auto;padding:50px 25px;text-align:center}
+.vmv-site-quote p{font-size:clamp(25px,4vw,51px);line-height:1.25;font-weight:750;letter-spacing:-.055em}
+.vmv-site-quote footer{font-weight:850;color:var(--vmv-accent);font-size:13px}
+.vmv-site-faq details{border-top:1px solid #e7ddf1;padding:19px 0}
+.vmv-site-faq details:last-child{border-bottom:1px solid #e7ddf1}
+.vmv-site-faq summary{font-weight:800;cursor:pointer;font-size:17px}
+.vmv-site-faq details p{font-size:15px}
+.vmv-site-contact{background:#f7f4fb}
+.vmv-site-contact a{display:block;width:fit-content;margin:10px 0;color:var(--vmv-accent);font-size:clamp(16px,2.4vw,25px);font-weight:800;overflow-wrap:anywhere}
+.vmv-site-footer{display:flex;justify-content:space-between;align-items:center;gap:18px;border-top:1px solid #ece6f4;padding:28px clamp(23px,8vw,120px);font-size:13px;font-weight:800}
+@media(max-width:700px){.vmv-site-nav{padding:17px 6%;flex-direction:column;align-items:flex-start;gap:10px}.vmv-site-nav nav{justify-content:flex-start;gap:13px}.vmv-site-nav nav a{font-size:11px}.vmv-site-hero{padding:65px 6%;min-height:370px}.vmv-site-section{padding:59px 6%}.vmv-site-services>div,.vmv-site-benefits>div{grid-template-columns:1fr}.vmv-site-services article,.vmv-site-benefits article{min-height:120px;padding:21px}.vmv-site-image{padding:20px 6%}.vmv-site-cta{padding:64px 6%}.vmv-site-footer{padding:24px 6%}}
