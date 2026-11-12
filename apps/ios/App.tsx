@@ -81,6 +81,7 @@ export default function App(){
  const [pilotReadiness,setPilotReadiness]=useState<{lineReady:boolean;engineReady:boolean;webhookChecked:boolean;webhookReady:boolean;webhookPost:boolean;pushConfigured:boolean;nextStep:string}|null>(null);
  const [billingOverview,setBillingOverview]=useState<{
   plan:string;status:string;previewPilotActive?:boolean;minutes:{included:number;used:number;available:number;rollover:number;topup:number};
+  national?:{enabled:boolean;included:number;used:number;reserved:number;available:number;periodStart:string|null;periodEnd:string|null};
   note:string
  }|null>(null);
  const [phoneVerification,setPhoneVerification]=useState<{requestId:string;phone:string;verified:boolean;smsAvailable:boolean;requestStatus:string}|null>(null);
@@ -925,8 +926,16 @@ export default function App(){
         <Text style={styles.kicker}>TU PLAN {billingOverview?.plan&&billingOverview.plan!=="none"?"· "+billingOverview.plan.toUpperCase():""}</Text>
         <View style={styles.card}>
          <Text style={styles.cardTitle}>Llamadas normales</Text>
-         <Text style={styles.billingBigText}>{accountOverview?.billing.active?"Incluidas con tu plan":"Acceso no disponible"}</Text>
-         {billingOverview?.plan==="starter"?<View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Starter · plan previsto</Text><Text style={styles.callsInfoValue}>150 min nacionales</Text></View>:null}
+         {billingOverview?.national?.enabled?<>
+          <Text style={styles.statNumber}>{billingOverview.national.available}</Text>
+          <Text style={styles.helper}>Minutos disponibles</Text>
+          <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Incluidos</Text><Text style={styles.callsInfoValue}>{billingOverview.national.included} min</Text></View>
+          <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Usados</Text><Text style={styles.callsInfoValue}>{billingOverview.national.used} min</Text></View>
+          {billingOverview.national.reserved>0?<View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>En llamada</Text><Text style={styles.callsInfoValue}>{billingOverview.national.reserved} min</Text></View>:null}
+         </>:<>
+          <Text style={styles.billingBigText}>{accountOverview?.billing.active?"Incluidas con tu plan":"Acceso no disponible"}</Text>
+          {billingOverview?.plan==="starter"?<View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Starter · plan previsto</Text><Text style={styles.callsInfoValue}>150 min nacionales</Text></View>:null}
+         </>}
          <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Llamadas · 30 días</Text><Text style={styles.callsInfoValue}>{accountOverview?.usage.directCalls??"—"}</Text></View>
          
         </View>
