@@ -11,8 +11,10 @@ function normalizedPhone(v:string){
  if(raw.length===11&&raw.startsWith("1"))return "+"+raw;
  return /^\+1[0-9]{10}$/.test(raw)?raw:null;
 }
-export function DialPad({session,onStarted}:{session:Session;onStarted:()=>void}){
- const [phone,setPhone]=useState("");
+export function DialPad({session,onStarted,initialPhone="",contactName=""}:{
+ session:Session;onStarted:()=>void;initialPhone?:string;contactName?:string
+}){
+ const [phone,setPhone]=useState(initialPhone);
  const [available,setAvailable]=useState(false);
  const [checking,setChecking]=useState(true);
  const [working,setWorking]=useState(false);
@@ -37,6 +39,7 @@ export function DialPad({session,onStarted}:{session:Session;onStarted:()=>void}
   return()=>{mounted=false;};
  },[session.user.id]);
  const normalized=normalizedPhone(phone);
+ const selectedName=contactName&&phone===initialPhone?contactName:"";
  const addDigit=(digit:string)=>{
   if(working)return;
   setPhone(v=>v.length>=20?v:v+digit);
@@ -64,7 +67,8 @@ export function DialPad({session,onStarted}:{session:Session;onStarted:()=>void}
      call_in_progress:"Ya hay una llamada en curso.",
      dialer_rate_limited:"Límite de llamadas de prueba alcanzado.",
      line_not_ready:"La línea VMV no está lista.",
-     invalid_phone:"Revisa el número."
+     invalid_phone:"Revisa el número.",
+     national_minutes_exhausted:"Se agotaron los minutos nacionales de tu plan."
     };
     throw Error(messages[data?.error]||"No se pudo iniciar la llamada.");
    }
@@ -76,10 +80,11 @@ export function DialPad({session,onStarted}:{session:Session;onStarted:()=>void}
  function confirmCall(){
   if(!normalized||!available||working)return;
   Alert.alert("Llamar con VMV",
-   normalized+"\n\nEl cliente verá el número de tu negocio. Twilio puede generar cargos de voz.",
+   (selectedName?selectedName+"\n":"")+normalized+"\n\nEl cliente verá el número de tu negocio. Twilio puede generar cargos de voz.",
    [{text:"Cancelar",style:"cancel"},{text:"Llamar",onPress:()=>void makeCall(normalized)}]);
  }
  return <View style={s.root}>
+  {selectedName?<View style={s.contactBadge}><Text numberOfLines={1} style={s.contactBadgeText}>Llamar a {selectedName}</Text></View>:null}
   <View style={s.numberRow}>
    <TextInput style={s.number} accessibilityLabel="Número para llamar"
     placeholder="+1 (000) 000-0000" placeholderTextColor="#B3A0C9"
@@ -111,11 +116,15 @@ export function DialPad({session,onStarted}:{session:Session;onStarted:()=>void}
    {working?<ActivityIndicator color="#FFFFFF"/>:<Text style={s.callIcon}>☎</Text>}
   </Pressable>
   <Text style={s.hint}>{checking?"Comprobando línea…":available?"Llamada nacional · VMV":"Llamadas salientes no disponibles"}</Text>
+  {selectedName&&!normalized?<Text style={s.errorHint}>Este contacto necesita un número nacional válido.</Text>:null}
   {notice?<Text style={[s.notice,failed&&s.error]} accessibilityRole="text">{notice}</Text>:null}
  </View>;
 }
 const s=StyleSheet.create({
  root:{alignItems:"center",paddingHorizontal:6,paddingTop:12,paddingBottom:30},
+ contactBadge:{maxWidth:"100%",backgroundColor:"#F0E8FF",borderRadius:25,paddingHorizontal:13,paddingVertical:9,marginBottom:1},
+ contactBadgeText:{fontSize:12,fontWeight:"700",color:"#7445B8"},
+ errorHint:{fontSize:12,color:"#AD4E59",marginTop:10,textAlign:"center"},
  numberRow:{width:"100%",maxWidth:340,flexDirection:"row",alignItems:"center",minHeight:74,marginBottom:10},
  number:{flex:1,minWidth:0,color:"#29223E",fontSize:27,fontWeight:"600",textAlign:"center",letterSpacing:-.8,paddingVertical:12},
  backspace:{borderWidth:0,backgroundColor:"transparent"},
