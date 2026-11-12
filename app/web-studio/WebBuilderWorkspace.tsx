@@ -19,6 +19,9 @@ type View="sites"|"editor"|"history"|"domains";
 type SavePhase="saved"|"pending"|"saving"|"error";
 type LocalBackup={pageId:string;document:Data;title:string;description:string;savedAt:string;revision:number};
 function backupKey(ownerId:string,pageId:string){return "vmv.puck.local.v1."+ownerId+"."+pageId;}
+function publicationSignature(draft:unknown,title:string,description:string){
+ return JSON.stringify({draft:normalizeBuilderDocument(draft),title,description});
+}
 
 function slugify(input:string){
  return input.normalize("NFKD").toLowerCase().replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,49).replace(/-$/g,"");
@@ -29,6 +32,7 @@ export default function WebBuilderWorkspace(){
  const [site,setSite]=useState<Site|null>(null);
  const [pages,setPages]=useState<Page[]>([]);
  const [publishedIds,setPublishedIds]=useState<string[]>([]);
+ const [publishedSignatures,setPublishedSignatures]=useState<Record<string,string>>({});
  const [page,setPage]=useState<Page|null>(null);
  const pageIdRef=useRef<string|null>(null);
  const [document,setDocument]=useState<Data>(()=>starterBuilderDocument());
@@ -63,6 +67,9 @@ export default function WebBuilderWorkspace(){
  const [origin,setOrigin]=useState("");
  const dirty=page&&(JSON.stringify(normalizeBuilderDocument(document))!==JSON.stringify(normalizeBuilderDocument(page.draft))||
   title!==page.title||description!==page.description);
+ const publishedHere=Boolean(page&&publishedIds.includes(page.id));
+ const unpublishedEdits=Boolean(page&&publishedHere&&
+  publishedSignatures[page.id]!==publicationSignature(document,title,description));
  const siteUrl=site?origin+"/web/"+site.slug:null;
  const pageUrl=site&&page?siteUrl+(page.slug==="home"?"":"/"+page.slug):null;
  const client=useMemo(()=>getSupabase(),[]);
@@ -168,9 +175,12 @@ export default function WebBuilderWorkspace(){
    const list=await loadPages(chosen);
    const db=await authorized();
    const {data:published,error:publishedError}=await db.from("smartjob_builder_public_pages")
-    .select("page_id").eq("site_id",chosen.id).eq("owner_id",userId);
+    .select("page_id,document,title,description").eq("site_id",chosen.id).eq("owner_id",userId);
    if(publishedError)throw new Error("No se pudo verificar el estado de publicación");
    setPublishedIds((published||[]).map(row=>row.page_id));
+   setPublishedSignatures(Object.fromEntries((published||[]).map(row=>[
+    row.page_id,publicationSignature(row.document,row.title,row.description)
+   ])));
    setSite(chosen);setPages(list);
    if(list.length){const home=list.find(p=>p.slug==="home")||list[0];setPage(home);
     setTitle(home.title);setDescription(home.description);openDraft(home.draft);
@@ -198,7 +208,7 @@ export default function WebBuilderWorkspace(){
    }).select("id,site_id,owner_id,slug,title,description,draft,revision,updated_at").single();
    if(homeError||!home)throw new Error("Sitio creado; vuelve a abrirlo para añadir la página");
    setSites(current=>[siteCreated,...current]);
-   setSite(siteCreated);setPages([home as Page]);setPage(home as Page);setPublishedIds([]);
+   setSite(siteCreated);setPages([home as Page]);setPage(home as Page);setPublishedIds([]);setPublishedSignatures({});
    openDraft(home.draft);setTitle(home.title);setDescription("");
    setNewSiteName("");setView("editor");
    setNotice("Sitio creado. Personaliza tus bloques y publica cuando esté listo.");
@@ -224,7 +234,7 @@ export default function WebBuilderWorkspace(){
    }).select("id,site_id,owner_id,slug,title,description,draft,revision,updated_at").single();
    if(pageError||!home)throw new Error("Sitio creado; se requiere completar la migración de contenido");
    setSites(old=>[created as Site,...old]);
-   setSite(created as Site);setPages([home as Page]);setPage(home as Page);setPublishedIds([]);
+   setSite(created as Site);setPages([home as Page]);setPage(home as Page);setPublishedIds([]);setPublishedSignatures({});
    setTitle(home.title);setDescription(home.description);
    openDraft(doc);setView("editor");
    setClassicDraft(null);
@@ -341,6 +351,7 @@ export default function WebBuilderWorkspace(){
    const {data,error}=await c.rpc("smartjob_builder_publish_page",{p_page_id:updated.id});
    if(error||!data)throw new Error(error?.message||"No se pudo publicar");
    setPublishedIds(old=>old.includes(updated.id)?old:[...old,updated.id]);
+   setPublishedSignatures(old=>({...old,[updated.id]:publicationSignature(value,updated.title,updated.description)}));
    setNotice("Página publicada. Puedes abrirla con el enlace de arriba.");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo publicar");}
   finally{setBusy(false);}
@@ -481,7 +492,7 @@ export default function WebBuilderWorkspace(){
  }
  function back(){
   if(dirty&&!window.confirm("Hay cambios sin guardar. ¿Salir?"))return;
-  setSite(null);setPage(null);setPublishedIds([]);setView("sites");setError("");setNotice("");
+  setSite(null);setPage(null);setPublishedIds([]);setPublishedSignatures({});setView("sites");setError("");setNotice("");
  }
  if(loading)return <main className={styles.loading}>Cargando Web Studio…</main>;
  if(!userId)return <main className={styles.loading}><h2>Inicia sesión para crear tu web</h2>
@@ -554,6 +565,9 @@ export default function WebBuilderWorkspace(){
        <label>Descripción SEO<input value={description} maxLength={300} onChange={e=>setDescription(e.target.value)}/></label>
       </div>
       <div className={styles.actions}>
+       <span className={styles.publicationIndicator} data-pending={unpublishedEdits}>
+        {!publishedHere?"Sin publicar":unpublishedEdits?"Cambios sin publicar":"Publicado"}
+       </span>
        <span className={styles.saveIndicator} role="status" aria-live="polite">
         {savePhase==="saving"?"Guardando…":savePhase==="error"?"Error al guardar":dirty?"Sin guardar":"Borrador guardado"}
        </span>
