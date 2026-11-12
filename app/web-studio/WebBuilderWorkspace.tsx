@@ -30,6 +30,7 @@ export default function WebBuilderWorkspace(){
  const [pages,setPages]=useState<Page[]>([]);
  const [publishedIds,setPublishedIds]=useState<string[]>([]);
  const [page,setPage]=useState<Page|null>(null);
+ const pageIdRef=useRef<string|null>(null);
  const [document,setDocument]=useState<Data>(()=>starterBuilderDocument());
  const [initialDocument,setInitialDocument]=useState<Data>(()=>starterBuilderDocument());
  const [previewMode,setPreviewMode]=useState<"desktop"|"mobile"|null>(null);
@@ -47,6 +48,7 @@ export default function WebBuilderWorkspace(){
  const titleRef=useRef(title);
  const descriptionRef=useRef(description);
  documentRef.current=document;titleRef.current=title;descriptionRef.current=description;
+ pageIdRef.current=page?.id||null;
  const [revisions,setRevisions]=useState<Revision[]>([]);
  const [domains,setDomains]=useState<Domain[]>([]);
  const [domainRequests,setDomainRequests]=useState<DomainRequest[]>([]);
@@ -280,20 +282,59 @@ export default function WebBuilderWorkspace(){
    .eq("id",page.id).eq("owner_id",userId).eq("revision",page.revision)
    .select("id,site_id,owner_id,slug,title,description,draft,revision,updated_at").maybeSingle();
   if(error||!data)throw new Error("Esta página se modificó en otra pestaña. Recarga para evitar sobrescribir cambios.");
-  const updated=data as Page;setPage(updated);
+  const updated=data as Page;
+  if(pageIdRef.current===updated.id)setPage(updated);
   setPages(current=>current.map(p=>p.id===updated.id?updated:p));
+  const stillCurrent=JSON.stringify(normalizeBuilderDocument(documentRef.current))===JSON.stringify(clean)&&
+   titleRef.current.trim().slice(0,100)===pageTitle&&descriptionRef.current.trim().slice(0,300)===desc;
+  setSavePhase(stillCurrent?"saved":"pending");
+  if(stillCurrent){
+   try{window.localStorage.removeItem(backupKey(userId,updated.id));}catch{/* Storage may be blocked. */}
+  }
   return updated;
  }
+
+ // Save drafts after editing settles. Never publish from autosave.
+ useEffect(()=>{
+  if(!page||!userId||!dirty||busy||view!=="editor"||recovery)return;
+  const snapshot=JSON.stringify({
+   id:page.id,document:normalizeBuilderDocument(document),title:title.trim(),description:description.trim()
+  });
+  if(blockedAutosaveRef.current===snapshot)return;
+  setSavePhase("pending");
+  const timer=window.setTimeout(()=>{
+   setBusy(true);setSavePhase("saving");
+   void (async()=>{
+    try{
+     await saveDraft(document);
+     blockedAutosaveRef.current="";
+    }catch{
+     blockedAutosaveRef.current=snapshot;
+     setSavePhase("error");
+     setError("No se pudo guardar automáticamente. Tus cambios siguen en el navegador.");
+    }finally{setBusy(false);}
+   })();
+  },2100);
+  return()=>window.clearTimeout(timer);
+ },[page?.id,page?.revision,userId,document,title,description,dirty,busy,view,recovery]);
  async function save(){
   if(busy||!page)return;
   setBusy(true);setError("");setNotice("");
-  try{await saveDraft(document);setNotice("Borrador guardado");}
-  catch(e){setError(e instanceof Error?e.message:"No se pudo guardar");}
+  try{
+   blockedAutosaveRef.current="";
+   setSavePhase("saving");
+   await saveDraft(document);
+   setNotice("Borrador guardado");
+  }catch(e){
+   setSavePhase("error");
+   setError(e instanceof Error?e.message:"No se pudo guardar");
+  }
   finally{setBusy(false);}
  }
  async function publish(value:Data){
-  if(busy||!page)return;
-  setBusy(true);setError("");setNotice("");
+  if(!page)return;
+  if(busy){setNotice("Aún se está guardando. Pulsa Publicar nuevamente.");return;}
+  setBusy(true);setSavePhase("saving");setError("");setNotice("");
   try{
    const updated=await saveDraft(value);
    const c=await authorized();
