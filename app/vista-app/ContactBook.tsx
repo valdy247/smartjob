@@ -8,6 +8,8 @@ export type VMVContact={
  id:string;owner_id:string;name:string;phone_e164:string;notes:string;created_at:string;updated_at:string;
 };
 const MAX_CONTACTS=300;
+// Smart Call dialer supports US domestic destinations only; never invoke the native phone app.
+const canDialVMV=(number:string)=>/^\+1[2-9]\d{2}[2-9]\d{6}$/.test(number);
 const normalizePhone=(input:string):string|null=>{
  const compact=input.trim().replace(/[().\s-]/g,"");
  if(!/^\+?[0-9]+$/.test(compact))return null;
@@ -21,8 +23,8 @@ function messageFor(error:unknown){
  if(data?.code==="23514")return "Comprueba los datos del contacto.";
  return "No se pudieron guardar los datos. Revisa tu conexión e inténtalo nuevamente.";
 }
-export default function ContactBook({client,ownerId,initialPhone="",startInForm=false,embedded=false,onClose}:{
- client:SupabaseClient;ownerId:string;initialPhone?:string;startInForm?:boolean;embedded?:boolean;onClose:()=>void
+export default function ContactBook({client,ownerId,initialPhone="",startInForm=false,embedded=false,onClose,onCall}:{
+ client:SupabaseClient;ownerId:string;initialPhone?:string;startInForm?:boolean;embedded?:boolean;onClose:()=>void;onCall?:(phone:string,name:string)=>void
 }){
  const [entries,setEntries]=useState<VMVContact[]>([]);
  const [loading,setLoading]=useState(true);
@@ -132,15 +134,25 @@ export default function ContactBook({client,ownerId,initialPhone="",startInForm=
     onChange={e=>setNotes(e.target.value)} placeholder="Cliente frecuente, horario preferido…"/>
    <p>Guardaremos este contacto en tu cuenta VMV, no automáticamente en la agenda del teléfono.</p>
    <button type="submit" disabled={saving} className={styles.mainAction}><Save size={16}/>{saving?"Guardando…":editing?"Guardar cambios":"Guardar contacto"}</button>
+   {editing&&onCall?<button type="button" className={styles.contactFormCall}
+    disabled={saving||!canDialVMV(phone)} title={!canDialVMV(phone)?"Por ahora, solo números de Estados Unidos":undefined}
+    onClick={()=>onCall(phone,name)}><Phone size={17}/> Preparar llamada con VMV</button>:null}
   </form>:<>
    <label className={styles.contactSearch}><Search size={17}/><span className={styles.screenReaderOnly}>Buscar contactos</span>
     <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nombre o número" autoComplete="off"/></label>
    {loading?<div className={styles.emptyHistory}>Cargando contactos…</div>:filtered.length?
-    <div className={styles.contactList}>{filtered.map(item=><button type="button" key={item.id}
-     className={styles.contactRow} onClick={()=>openEdit(item)}>
-     <span className={styles.contactAvatar}><UserRound size={19}/></span>
-     <span className={styles.contactInfo}><strong>{item.name}</strong><small>{item.phone_e164}</small></span><span className={styles.contactChevron}>›</span>
-    </button>)}</div>:
+    <div className={styles.contactList}>{filtered.map(item=><div key={item.id} className={styles.contactRow}>
+     <button type="button" className={styles.contactRowMain} aria-label={"Editar "+item.name}
+      onClick={()=>openEdit(item)}>
+      <span className={styles.contactAvatar}><UserRound size={19}/></span>
+      <span className={styles.contactInfo}><strong>{item.name}</strong><small>{item.phone_e164}</small></span>
+     </button>
+     {onCall?<button type="button" className={styles.contactDialButton}
+      aria-label={"Llamar a "+item.name+" desde VMV"}
+      title={canDialVMV(item.phone_e164)?"Llamar con VMV":"Solo números de Estados Unidos"}
+      disabled={!canDialVMV(item.phone_e164)}
+      onClick={()=>onCall(item.phone_e164,item.name)}><Phone size={19}/></button>:null}
+    </div>)}</div>:
     <div className={styles.emptyHistory}><ContactRound size={26}/>
      <strong>{entries.length?"No encontramos coincidencias":"Tu agenda está vacía"}</strong>
      <p>{entries.length?"Prueba otro nombre o teléfono.":"Añade tu primer contacto para identificar a tus clientes."}</p>
