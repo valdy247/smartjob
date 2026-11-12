@@ -131,8 +131,8 @@ export function BusinessServicesPanel({session}:{session:Session}){
   <View style={styles.formCard}>
    {fields.map(field=><View key={field.key} style={styles.fieldWrap}>
     <Text style={styles.fieldLabel}>{field.label}</Text>
-    <TextInput accessibilityLabel={field.label} autoCapitalize={field.keyboard?"none":"sentences"}
-     autoCorrect={!field.keyboard} keyboardType={field.keyboard||"default"}
+    <TextInput accessibilityLabel={field.label} autoCapitalize="none"
+     autoCorrect={false} spellCheck={false} keyboardType={field.keyboard||"default"}
      placeholder={field.label.replace(" *","")} placeholderTextColor="#ACA1BC"
      value={draft[field.key]} maxLength={field.max} multiline={field.lines||false}
      textAlignVertical={field.lines?"top":"center"}
