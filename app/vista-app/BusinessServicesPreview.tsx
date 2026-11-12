@@ -81,10 +81,12 @@ export default function BusinessServicesPreview({userId,focus="all"}:{userId:str
     <div className={styles.editorIcon}><MapPin size={26}/></div>
     <div><h3>Google Business Profile</h3><span>Pago único · Asistido</span></div>
    </div>
-   <form className={styles.form} onSubmit={e=>{e.preventDefault();save();}}>
+   <form className={styles.form} autoComplete="off" spellCheck={false} onSubmit={e=>{e.preventDefault();save();}}>
     {fields.map(f=><label className={styles.field} key={f.key}>
-      <span>{f.label}</span>{f.multi?<textarea maxLength={f.max} value={draft[f.key]} onChange={e=>edit(f.key,e.target.value)} rows={3} placeholder={f.label.replace(" *","")}/>:
-      <input type={f.kind||"text"} maxLength={f.max} value={draft[f.key]} onChange={(e:ChangeEvent<HTMLInputElement>)=>edit(f.key,e.target.value)} placeholder={f.label.replace(" *","")}/>}
+      <span>{f.label}</span>{f.multi?<textarea maxLength={f.max} value={draft[f.key]} onChange={e=>edit(f.key,e.target.value)} rows={3} placeholder={f.label.replace(" *","")}
+       spellCheck={false} autoCorrect="off" autoCapitalize="none" autoComplete="off"/>:
+      <input type={f.kind||"text"} maxLength={f.max} value={draft[f.key]} onChange={(e:ChangeEvent<HTMLInputElement>)=>edit(f.key,e.target.value)} placeholder={f.label.replace(" *","")}
+       spellCheck={false} autoCorrect="off" autoCapitalize="none" autoComplete="off"/>}
     </label>)}
     <label className={styles.check}><input type="checkbox" checked={draft.authorized} onChange={e=>{setDraft(p=>({...p,authorized:e.target.checked}));setStatus("");}}/><span>Autorizo la gestión de mi perfil.</span></label>
     <button className={styles.save} type="submit"><Save size={17}/> Guardar borrador</button>
