@@ -64,10 +64,16 @@ export function normalizeBuilderDocument(input:unknown):Data{
  const font=["modern","editorial"].includes(String(rawProps.font))?String(rawProps.font):"modern";
  return {content,root:{props:{palette,font}}} as Data;
 }
-export function starterBuilderDocument(name="Mi negocio"):Data{
+export function starterBuilderDocument(name="Mi negocio",categoryId=""):Data{
+ const bakery=["bakery","catering","cafe","restaurant","food-truck"].includes(categoryId);
+ const home=["carpentry","general-contractor","home-builder","remodeling","smart-home","plumbing","electrical","roofing","landscaping","painting"].includes(categoryId);
+ const hero=bakery?"Momentos dulces que recordarás siempre.":home?"Construimos espacios para vivir mejor.":"Algo extraordinario empieza aquí.";
+ const services=bakery?["Pasteles personalizados","Eventos especiales","Pedidos a medida"]:
+  home?["Proyectos residenciales","Renovaciones","Atención personalizada"]:
+  ["Servicio principal","Atención personalizada","Calidad que inspira"];
  return normalizeBuilderDocument({content:[
-  {type:"Hero",props:{id:"hero-start",eyebrow:"BIENVENIDOS",title:"Algo extraordinario empieza aquí.",description:"Descubre lo que hace único a "+name+".",buttonText:"Contáctanos",buttonUrl:"#contacto"}},
-  {type:"Services",props:{id:"services-start",title:"Nuestros servicios",first:"Servicio principal",second:"Atención personalizada",third:"Calidad que inspira"}},
+  {type:"Hero",props:{id:"hero-start",eyebrow:"BIENVENIDOS",title:hero,description:"Descubre lo que hace único a "+name+".",buttonText:"Contáctanos",buttonUrl:"#contacto"}},
+  {type:"Services",props:{id:"services-start",title:"Nuestros servicios",first:services[0],second:services[1],third:services[2]}},
   {type:"Text",props:{id:"about-start",title:"Nuestra historia",body:"Cuenta tu historia y conecta con tus clientes."}},
   {type:"Contact",props:{id:"contact-start",title:"Hablemos",description:"Será un placer atenderte.",email:"",phone:"",address:""}}
  ]});
