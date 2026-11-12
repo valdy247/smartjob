@@ -112,6 +112,8 @@ function sections(kind:AgentKind,answers:Record<string,string>):Section[]{
    q("personality_rule","¿Qué estilo de comunicación prefieres?",["Amable y profesional","Cercano","Formal","Directo"],true),
    q("human_review","¿Qué hacer si no conoce la respuesta?",["Reconocerlo y derivar a un humano","Pedir datos y solicitar revisión humana"],true),
    q("data_scope","¿Qué datos personales puede solicitar?",["Solo nombre y medio de contacto con permiso","Ninguno"],true),
+   q("call_disclosure","¿Aceptas que el agente avise que es una inteligencia artificial?",["Sí","Todavía no"],true,
+    a=>a.channel==="Teléfono"||a.channel==="Teléfono y chat"),
    a("restrictions","¿Qué promesas o acciones debe evitar?",false,"No inventar precios, citas, disponibilidad...")
   ]},
   {title:"Revisar y preparar",subtitle:"Comprueba la información antes de crear tu agente.",questions:[]}
