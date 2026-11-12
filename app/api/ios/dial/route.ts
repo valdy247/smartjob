@@ -2,6 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {paidServiceAllowed} from "@/lib/vmv-entitlements";
 import {callbackBase,callbackDb,callbackEnabled,callerPhone,validCallSid,validUuid} from "@/lib/vmv-callback";
+import {claimNational,settleNational} from "@/lib/vmv-national-minutes";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -81,6 +82,13 @@ export async function POST(req:NextRequest){
  if(insertError)return json({error:insertError.code==="23505"?"call_in_progress":"dialer_unavailable"},
   insertError.code==="23505"?409:503);
  if(!validUuid(intent.id))return json({error:"dialer_unavailable"},503);
+ const granted=await claimNational(uid,"out:"+intent.id);
+ if(granted===0){
+  await db.from("smartjob_callback_requests")
+   .update({status:"failed",finished_at:new Date().toISOString()})
+   .eq("id",intent.id).eq("owner_id",uid).eq("status","pending");
+  return json({error:"national_minutes_exhausted"},403);
+ }
  const base=callbackBase();
  const params=new URLSearchParams({
   To:clientId(uid),From:business,
@@ -106,6 +114,8 @@ export async function POST(req:NextRequest){
   await db.from("smartjob_callback_requests").update({
    status:"failed",finished_at:new Date().toISOString()
   }).eq("id",intent.id).eq("owner_id",uid).eq("status","pending");
+  if(granted!==null&&!await settleNational("out:"+intent.id,0))
+   console.error("VMV dialer national release failed");
   return json({error:"twilio_unavailable"},503);
  }
 }
