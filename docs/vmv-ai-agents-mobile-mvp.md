@@ -73,3 +73,16 @@ The five isolated AI Agents module files were copied to `feat/vmv-smart-call-con
 - This is a responsive, isolated **visual showcase**, not the Expo bundle. It demonstrates role selection, form fields, in-memory draft cards and an explicitly illustrated test conversation; it does not save to the database, invoke models or send customer data.
 - It deliberately does not edit `app/vista-app/page.tsx` or iOS `apps/ios/App.tsx`, so the existing Home tiles still point to their earlier destinations until the Director coordinates a shared navigation change.
 - The live server simulator remains in `app/api/vmv/ai-agents/simulate/route.ts`, gated by the proposed Supabase schema. The schema is still **not applied**. No live business operation or channel integration is enabled.
+
+## Six-step agent wizard (November 12, 2026)
+The original two open text areas are replaced in both the isolated web showcase and native iPhone Studio by a role-aware guided setup:
+1. Identity: name, mission, agent type, language and tone.
+2. Business facts: company, industry, service area, opening hours, contact and approved policies.
+3. Role-specific questions: call greeting, after-hours rules and disclosure; customer FAQs; verified sales catalog and discount policy; appointment types, duration and confirmation; inventory categories and stock freshness; operational or custom guardrails.
+4. Integration needs: whether the owner wants VMV Scheduling, VMV Inventory and future lead capture. Ask intended read/use scope only. **Both connectors are unimplemented and explicitly marked NOT CONNECTED; an affirmative answer is not a connection or permission grant.**
+5. Security and human handoff: unknown answers, contact information consent, future channels and forbidden actions.
+6. Review: safe draft status, a read-back of important settings and a save button.
+
+**Implementation:** `apps/ios/AIAgentWizard.tsx` wired into `AIAgentsStudio.tsx`; `app/vista-app/ai-agents/AgentSetupWizard.tsx` with module-local CSS, wired into the isolated preview route. Native answers are retained as `configuration` JSON in the proposed `vmv_ai_agents` schema, constrained by owner-only RLS. The simulator includes bounded serialized configuration as untrusted business information in its model context. Web preview remains **in-memory only** and does not touch private company records, send messages to the model, or execute real operations.
+
+**Not implemented:** real detection of connected VMV Scheduling/Inventory per business, provider authorization, synchronizations, appointments, telephony AI call-answering, inventory changes or commerce. Require live verified module entitlements, scoped read permission and audit logging before enabling any of these. Keep shared Home/menu files unchanged; the Director will coordinate navigation integration.
