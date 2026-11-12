@@ -88,7 +88,7 @@ export function importLegacyBuilderDocument(legacy:WebSiteContent):Data{
   buttonUrl:webPrimaryContact(legacy).href
  });
  if(legacy.heroImage)add("Image","legacy-cover",{url:legacy.heroImage,alt:"Portada de "+legacy.business,caption:""});
- const services=legacy.services.split(/\\r?\\n/).map(s=>s.trim()).filter(Boolean);
+ const services=legacy.services.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
  for(let i=0;i<services.length;i+=3){
   add("Services","legacy-services-"+i,{
    title:i===0?"Nuestros servicios":"Más servicios",
