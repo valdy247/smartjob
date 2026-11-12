@@ -66,3 +66,24 @@ The actual add/verify/domain SSL activation needs **all**:
 4. Deploy reviewed Puck hosting to production only with explicit owner authorization.
 5. Configure restricted registrar token and Vercel team/project, then enable domain attachment and test a domain actually controlled by VMV.
 6. Integrate customer checkout for domain registration with a paid-order webhook and idempotent backend purchase. Do not register names before verified payment and explicit buyer confirmation of price, registrant information, renewal settings and terms.
+
+
+## Director milestone 1 — verified persistence loop (Nov 2026)
+
+**Customer path:** /web-studio → create site and home page atomically → edit with Puck selection and contextual properties → save automatically or press Guardar → view draft locally on desktop/mobile → press Publicar explicitly → open /web/{slug} → modify draft → republish → optional historical revision restore.
+
+**Correctness and safeguards:**
+- `smartjob_builder_create_site` creates a site and its homepage in one SECURITY INVOKER transaction; failed drafts cannot leave orphaned empty sites. The legacy importer uses the same atomic API with a unique `legacy_source_slug` marker and does not change the original live website.
+- Draft saves use optimistic page revision matching. They run after a 2.1s idle interval, never automatically update the public snapshot, and expose Guardando / Sin guardar / Borrador guardado / Error al guardar.
+- A per-owner, per-page browser recovery snapshot provides explicit Recuperar or Usar versión guardada after an interrupted edit. Stale backups do not silently overwrite a newer server revision. This is browser-local best effort and not a substitute for server backup.
+- Puck stays mounted when opening history/domain tabs, protecting its in-memory editing state. Separate preview renders current unsaved content without publishing.
+- Published vs pending changes are shown separately from draft save status. Public links appear only after a verified snapshot exists.
+- Direct `authenticated` INSERT/UPDATE/DELETE grants on published pages and write grants on immutable revisions have been revoked. Published snapshots and immutable revisions can only be created together through `smartjob_builder_publish_page`, which explicitly verifies `auth.uid()` and page ownership in the database. Its public SECURITY DEFINER designation is intentional; advisor warnings and future changes require human security review.
+- `smartjob_builder_restore_revision` restores content/title/description atomically as a *draft* under the owner's RLS policy; public content remains the last confirmed publication until explicitly republished.
+- Multi-page navigation uses separately persisted, published page slugs. Server rendering looks up the requested route independently for direct visits and reloads.
+
+**Automated database regression:** `supabase/tests/vmv_web_studio_roundtrip.sql`, executed successfully inside a rolled-back transaction on the shared Supabase project. Checks atomic create, two published URLs, draft isolation, republishing, three immutable history records, restoration without live mutation, anonymous public reads and cross-owner RLS. Also confirmed direct live editing and history insertion grants are absent. This is not a signed-in browser test.
+
+**Test limitations:** Full signed-in, real-browser E2E on iPhone and desktop, live upload/replace image, native media picker, screenshots and host-specific HTTP reloads still need manual QA. The shared preview requires the test account's own session. Mayuli Bakery's current website and domain were not changed, and no domain was registered or purchased.
+
+**Still not ready for sale:** paid registrar checkout/ownership and renewal workflow, credentialed DNS+HTTPS activation, spam-resistant customer notifications, full rollback/retention administration, billing entitlements, and AI usage charging. Keep these disabled or explicitly marked not yet available.
