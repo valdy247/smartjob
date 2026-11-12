@@ -2,7 +2,7 @@ import type {CSSProperties} from "react";
 import type {Metadata} from "next";
 import {notFound} from "next/navigation";
 import {createClient} from "@supabase/supabase-js";
-import {normalizeWebContent,paletteStyles,webEmail,webPhone,webServices,webCategory} from "@/lib/web-services-site";
+import {normalizeWebContent,paletteStyles,webEmail,webPhone,webServices,webCategory,webWhatsApp,webPrimaryContact} from "@/lib/web-services-site";
 import "./site.css";
 
 export const dynamic="force-dynamic";
@@ -38,6 +38,9 @@ export default async function PublishedBusinessWebsite({params}:Props){
  const services=webServices(page);
  const email=webEmail(page);
  const phone=webPhone(page);
+ const whatsapp=webWhatsApp(page);
+ const primaryContact=webPrimaryContact(page);
+ const whatsappLink=whatsapp?webPrimaryContact({...page,contactMethod:"whatsapp"}).href:null;
  return <div className={"ws-public ws-public--"+page.template} style={custom}>
   <header className="ws-public-nav">
    <a className="ws-public-mark" href="#inicio" aria-label={page.business}>{page.business}<span>.</span></a>
@@ -49,7 +52,7 @@ export default async function PublishedBusinessWebsite({params}:Props){
     <h1>{page.headline}</h1>
     {page.intro?<p>{page.intro}</p>:null}
     {page.heroImage?<img className="ws-public-hero-photo" src={page.heroImage} alt={"Imagen de "+page.business}/>:null}
-    <a className="ws-public-button" href="#contacto">{page.action||"Contáctanos"} <span aria-hidden="true">↗</span></a>
+    <a className="ws-public-button" href={primaryContact.href} target={primaryContact.external?"_blank":undefined} rel={primaryContact.external?"noopener noreferrer":undefined}>{page.action||"Contáctanos"} <span aria-hidden="true">↗</span></a>
     <div className="ws-public-graphic" aria-hidden="true">✳</div>
    </section>
    <section id="servicios" className="ws-public-section">
@@ -72,12 +75,14 @@ export default async function PublishedBusinessWebsite({params}:Props){
    <section id="contacto" className="ws-public-section ws-public-contact">
     <small>03 / CONTACTO</small><h2>Hablemos<span>.</span></h2>
     <div className="ws-public-contacts">
+     {whatsappLink?<a className="ws-public-whatsapp-link" href={whatsappLink} target="_blank" rel="noopener noreferrer">Escríbenos por WhatsApp <span aria-hidden="true">↗</span></a>:null}
      {email?<a href={"mailto:"+email}>{email}</a>:null}
      {phone?<a href={"tel:"+phone}>{page.phone}</a>:null}
      {page.address?<p>{page.address}</p>:null}
     </div>
    </section>
   </main>
+  {whatsappLink?<a className="ws-public-whatsapp-float" href={whatsappLink} target="_blank" rel="noopener noreferrer" aria-label="Escribir al negocio por WhatsApp"><span aria-hidden="true">✉</span> WhatsApp</a>:null}
   <footer className="ws-public-footer"><span>{page.business}</span><span>© {new Date().getUTCFullYear()}</span></footer>
  </div>;
 }
