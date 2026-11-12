@@ -120,7 +120,7 @@ function sections(kind:AgentKind,answers:Record<string,string>):Section[]{
 function inputValue(v:Record<string,string>,key:string){return v[key]||"";}
 export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=true,initialStep=0}:Props){
  const [draft,setDraft]=useState<WizardDraft>(()=>({...initial,setup:{...(initial.setup||{})}}));
- const [step,setStep]=useState(initialStep);
+ const [step,setStep]=useState<number>(initialStep);
  const [error,setError]=useState("");
  const steps=useMemo(()=>sections(draft.kind,draft.setup),[draft.kind,draft.setup]);
  const current=steps[step];
