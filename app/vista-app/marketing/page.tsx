@@ -325,7 +325,11 @@ export default function MarketingPage(){
           <small>Pega el enlace directo de tu perfil de reseñas para que el cliente llegue con un toque.</small>
           {!reviewLinkIsValid?<strong role="alert">Introduce un enlace https:// válido antes de compartir.</strong>:null}
          </label>
-         <div className={styles.message}><span>MENSAJE QUE RECIBIRÁ TU CLIENTE</span><p className={styles.reviewMessage}>{review}</p></div>
+         <div className={styles.message}><span>MENSAJE QUE RECIBIRÁ TU CLIENTE</span>
+          <p className={reviewPreviewOpen?styles.reviewMessage:styles.clampedMessage}>{review}</p>
+          <button type="button" className={styles.previewToggle} aria-expanded={reviewPreviewOpen}
+           onClick={()=>setReviewPreviewOpen(value=>!value)}>{reviewPreviewOpen?"Mostrar menos":"Leer mensaje completo"} {reviewPreviewOpen?<ChevronUp size={14}/>:<ChevronDown size={14}/>}</button>
+         </div>
          <div className={styles.reviewShare}>
           <button type="button" className={styles.primary} onClick={()=>void shareReview()} disabled={!reviewLinkIsValid}><Share2 size={16}/> Compartir solicitud</button>
           <div className={styles.reviewShareOptions} aria-label="Otras formas de compartir">
@@ -336,7 +340,15 @@ export default function MarketingPage(){
           <small>Tú eliges a quién enviarlo y confirmas el mensaje. No se envían solicitudes automáticamente.</small>
          </div>
         </article>
-       <article><span className={styles.iconCircle}><Megaphone size={22}/></span><h3>Reactivar con permiso</h3><p>Una invitación útil para personas que aceptaron recibir comunicaciones; respeta las bajas y reglas del canal.</p><div className={styles.message}><p>{followup}</p></div><button type="button" className={styles.secondary} onClick={()=>void copy(followup)}><ClipboardCopy size={15}/> Copiar mensaje</button></article>
+       <article><span className={styles.iconCircle}><Megaphone size={22}/></span><h3>Reactivar con permiso</h3><p>Una invitación útil para personas que aceptaron recibir comunicaciones; respeta las bajas y reglas del canal.</p><div className={styles.message}>
+        <p className={followupPreviewOpen?styles.reviewMessage:styles.clampedMessage}>{followup}</p>
+        <button type="button" className={styles.previewToggle} aria-expanded={followupPreviewOpen}
+         onClick={()=>setFollowupPreviewOpen(value=>!value)}>{followupPreviewOpen?"Mostrar menos":"Leer mensaje completo"} {followupPreviewOpen?<ChevronUp size={14}/>:<ChevronDown size={14}/>}</button>
+       </div>
+       <div className={styles.followupActions}>
+        <button type="button" className={styles.primary} onClick={()=>void shareText(followup,"Mensaje de "+business)}><Share2 size={15}/> Compartir</button>
+        <button type="button" className={styles.secondary} onClick={()=>void copy(followup)}><ClipboardCopy size={15}/> Copiar</button>
+       </div></article>
       </div>
       <div className={styles.insight}><Lightbulb size={21}/><div><strong>Experimento de 7 días</strong><p>Registra cuántos clientes aceptaron volver a recibir noticias, cuántos respondieron y cuántos regresaron. Compara la utilidad con el coste de conseguir clientes nuevos.</p></div></div>
      </>:null}
