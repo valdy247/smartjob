@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run bridge:test && next build",
+    "build": "npm run bridge:test && npm run i18n:check && npm run i18n:test && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "i18n:check": "node scripts/check-i18n.mjs",

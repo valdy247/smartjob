@@ -24,6 +24,8 @@ jobs:
           node-version: "22"
       - run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false
       - run: npm run bridge:test
+      - run: npm run i18n:check
+      - run: npm run i18n:test
       - run: npm run typecheck
 
   ios:
