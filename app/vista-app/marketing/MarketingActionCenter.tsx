@@ -142,6 +142,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const goNext=()=>{
   setWizardError("");
   if(wizardStep===1){
+   if(selected==="seo_improvement"&&!site.trim()){setWizardError("Indica la dirección de tu sitio web para analizarlo.");return;}
    if(name.trim().length<2||name.trim().length>150){setWizardError("Escribe el nombre comercial de tu negocio.");return;}
    if(site.trim()&&!safeSite(site)){setWizardError("Comprueba el enlace de tu web: debe comenzar con https://.");return;}
   }
@@ -226,6 +227,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(!client||!user){setWizardError("Inicia sesión en VMV Business para enviar tu solicitud.");return;}
   if(name.trim().length<2||name.trim().length>150){setWizardStep(1);setWizardError("Introduce el nombre comercial (2 a 150 caracteres).");return;}
   if((goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5))||goal.trim().length>1500){setWizardStep(2);setWizardError("Elige una necesidad o describe el resultado que buscas.");return;}
+  if(selected==="seo_improvement"&&!site.trim()){setWizardStep(1);setWizardError("Añade la web que deseas mejorar.");return;}
   if(site.trim()&&!safeSite(site)){setWizardStep(1);setWizardError("La web debe tener una URL válida.");return;}
   if(!consent){setWizardError("Marca la autorización para que podamos atender la solicitud.");return;}
   setBusy(true);
@@ -353,7 +355,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       <label className={styles.wizardField}><span>¿A qué se dedica?</span><select value={effectiveCategory} onChange={e=>setChosenCategory(e.target.value)}>
        {CATEGORY_GROUPS.map(group=><optgroup key={group} label={group}>{BUSINESS_CATEGORIES.filter(c=>c.group===group).map(c=><option value={c.id} key={c.id}>{c.label}</option>)}</optgroup>)}
       </select></label>
-      <label className={styles.wizardField}><span>Sitio web <em>Opcional</em></span><input type="url" inputMode="url" autoComplete="url" value={site} maxLength={500} onChange={e=>{setSite(e.target.value);setWizardError("");}} placeholder="https://tusitio.com"/></label>
+      <label className={styles.wizardField}><span>Sitio web <em>{selected==="seo_improvement"?"Necesario":"Opcional"}</em></span><input type="url" inputMode="url" autoComplete="url" value={site} maxLength={500} onChange={e=>{setSite(e.target.value);setWizardError("");}} placeholder="https://tusitio.com"/></label>
      </div>
      <p className={styles.wizardHint}><ShieldCheck size={15}/> Si ya registraste tu negocio en VMV, los datos disponibles aparecen automáticamente.</p>
     </div>:null}
