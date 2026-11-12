@@ -24,8 +24,9 @@ export async function nationalMinutes(uid:string,account?:BillingAccount|null):P
  const a=account===undefined?await getBillingAccount(uid):account;
  if(!a||a.plan_code!=="starter")return empty;
  const configured=nationalPilotFor(uid);
+ const previewReadOnly=process.env.VERCEL_ENV==="preview"&&a.stripe_mode==="test";
  if(!periodReady(a))return {...empty,periodEnd:a.current_period_end||null};
- if(!configured)return {
+ if(!configured&&!previewReadOnly)return {
   enabled:false,included:STARTER_NATIONAL_MINUTES,used:0,reserved:0,available:0,
   periodStart:a.current_period_start,periodEnd:a.current_period_end
  };
@@ -39,7 +40,7 @@ export async function nationalMinutes(uid:string,account?:BillingAccount|null):P
  const included=data?.included_minutes??STARTER_NATIONAL_MINUTES;
  const used=data?.used_minutes??0,reserved=data?.reserved_minutes??0;
  return {
-  enabled:true,included,used,reserved,
+  enabled:configured||Boolean(data),included,used,reserved,
   available:Math.max(0,included-used-reserved),
   periodStart:a.current_period_start,periodEnd:a.current_period_end
  };
