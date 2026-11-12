@@ -160,9 +160,9 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
      <div className={styles.fields}>
       {fields.map(f=><label key={f.id} className={styles.field}>
        <span>{f.label}</span>
-       {f.multi?<textarea maxLength={f.max} rows={f.id==="services"?4:3} value={content[f.id]}
+       {f.multi?<textarea maxLength={f.max} rows={f.id==="services"?4:3} spellCheck={false} autoCorrect="off" autoCapitalize="none" autoComplete="off" value={content[f.id]}
           onChange={e=>update(f.id,e.target.value)} placeholder={f.label}/>:
-        <input type={f.type||"text"} maxLength={f.max} value={content[f.id]}
+        <input type={f.type||"text"} maxLength={f.max} spellCheck={false} autoCorrect="off" autoCapitalize="none" autoComplete="off" value={content[f.id]}
           onChange={e=>update(f.id,e.target.value)} placeholder={f.label}/>}
       </label>)}
       <span className={styles.fieldTitle}>Plantilla</span>
