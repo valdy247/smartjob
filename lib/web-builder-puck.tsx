@@ -82,7 +82,7 @@ export const builderConfig:Config={
    font:{type:"select",options:[{label:"Moderna",value:"modern"},{label:"Editorial",value:"editorial"}]}
   },
   defaultProps:{palette:"violet",font:"modern"},
-  render:({children,palette,font})=>{
+  render:({children,palette,font}:{children:React.ReactNode;palette:string;font:string})=>{
    const colors:Record<string,{accent:string,pale:string}>={
     violet:{accent:"#8e5de4",pale:"#f0e9fd"},
     mint:{accent:"#198d74",pale:"#e5f8f0"},
