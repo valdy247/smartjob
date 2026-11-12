@@ -1,6 +1,7 @@
 import type {Config,Data} from "@puckeditor/core";
 import type {CSSProperties} from "react";
 import {safeWebImageUrl} from "./web-services-site";
+import BuilderImageField from "@/app/web-studio/BuilderImageField";
 
 type ButtonProps={label?:string;url?:string};
 function safeLink(value:unknown):string{
@@ -121,7 +122,7 @@ export const builderConfig:Config={
   },
   Image:{
    label:"Imagen",
-   fields:{url:basicText,alt:basicText,caption:basicText},
+   fields:{url:{type:"custom",render:({value,onChange})=><BuilderImageField value={typeof value==="string"?value:""} onChange={onChange}/>},alt:basicText,caption:basicText},
    defaultProps:{url:"",alt:"",caption:""},
    render:({url,alt,caption})=><figure className="vmv-site-image">
     {safeWebImageUrl(url)?<img src={safeWebImageUrl(url)||""} alt={alt||"Imagen del negocio"}/>:<div className="vmv-site-image-placeholder">Añade una imagen de tu biblioteca</div>}
