@@ -7,14 +7,14 @@ export type WebSiteContent={
  business:string;headline:string;eyebrow:string;intro:string;about:string;
  services:string;email:string;phone:string;address:string;action:string;
  categoryId:string;heroImage:string;gallery:string[];
- contactMethod:WebContactMethod;whatsapp:string;contactMessage:string;
+ contactMethod:WebContactMethod;whatsapp:string;contactMessage:string;inquiriesEnabled:boolean;
  palette:WebPalette;template:WebTemplate;
 };
 export const defaultWebContent:WebSiteContent={
  business:"",headline:"",eyebrow:"",intro:"",about:"",
  services:"",email:"",phone:"",address:"",action:"Contáctanos",
  categoryId:"",heroImage:"",gallery:[],
- contactMethod:"section",whatsapp:"",contactMessage:"",
+ contactMethod:"section",whatsapp:"",contactMessage:"",inquiriesEnabled:false,
  palette:"violet",template:"editorial"
 };
 const limits:Record<Exclude<keyof WebSiteContent,"palette"|"template"|"gallery"|"contactMethod">,number>={
@@ -47,6 +47,7 @@ export function normalizeWebContent(input:unknown):WebSiteContent{
  if(paletteValues.includes(source.palette as WebPalette))result.palette=source.palette as WebPalette;
  if(templateValues.includes(source.template as WebTemplate))result.template=source.template as WebTemplate;
  if(contactValues.includes(source.contactMethod as WebContactMethod))result.contactMethod=source.contactMethod as WebContactMethod;
+ result.inquiriesEnabled=source.inquiriesEnabled===true;
  return result;
 }
 export function webServices(content:WebSiteContent):string[]{
