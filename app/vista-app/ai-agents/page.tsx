@@ -1,17 +1,19 @@
 "use client";
 import {useState} from "react";
 import {
- ArrowLeft,ArrowUpRight,Bot,BookOpen,BriefcaseBusiness,CalendarDays,Check,
+ ArrowLeft,ArrowUpRight,Bot,BookOpen,BookCheck,BriefcaseBusiness,CalendarDays,Check,
  ChevronRight,ClipboardList,Headphones,MessageCircle,Package,PauseCircle,
  PhoneCall,PlayCircle,ShieldCheck,ShoppingBag,Sparkles,WandSparkles
 } from "lucide-react";
 import type {LucideIcon} from "lucide-react";
 import styles from "./page.module.css";
 import AgentSetupWizard,{type WizardDraft} from "./AgentSetupWizard";
+import AgentQualityLab from "./AgentQualityLab";
+import {inspectAgent} from "./agentQuality";
 
 type Kind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 type Status="draft"|"active"|"paused";
-type Screen="home"|"editor"|"test";
+type Screen="home"|"editor"|"test"|"quality";
 type AgentDraft=WizardDraft;
 type Agent=AgentDraft&{id:string;status:Status};
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
@@ -31,6 +33,7 @@ function blank(kind:Kind):AgentDraft{
 }
 export default function AIAgentsPreview(){
  const [screen,setScreen]=useState<Screen>("home");
+ const [editStep,setEditStep]=useState<0|1|2|3>(0);
  const [draft,setDraft]=useState<AgentDraft>(()=>blank("support"));
  const [agents,setAgents]=useState<Agent[]>([]);
  const [selected,setSelected]=useState<string|null>(null);
@@ -39,8 +42,8 @@ export default function AIAgentsPreview(){
  const [notice,setNotice]=useState("");
  const active=agents.find(a=>a.id===selected)||null;
  const typeInfo=(kind:Kind)=>types.find(t=>t.id===kind)||types[6];
- const start=(kind:Kind)=>{setDraft(blank(kind));setSelected(null);setScreen("editor");setNotice("");};
- const edit=(agent:Agent)=>{setSelected(agent.id);setDraft({
+ const start=(kind:Kind)=>{setDraft(blank(kind));setSelected(null);setEditStep(0);setScreen("editor");setNotice("");};
+ const edit=(agent:Agent,step:0|1|2|3=0)=>{setSelected(agent.id);setEditStep(step);setDraft({
   name:agent.name,kind:agent.kind,purpose:agent.purpose,personality:agent.personality,
   language:agent.language,instructions:agent.instructions,knowledge:agent.knowledge,setup:{...agent.setup}
  });setScreen("editor");};
@@ -56,6 +59,14 @@ export default function AIAgentsPreview(){
   setScreen("home");
  };
  const test=(agent:Agent)=>{setSelected(agent.id);setScreen("test");setMessage("");setMessageNotice("");};
+ const quality=(agent:Agent)=>{setSelected(agent.id);setScreen("quality");};
+ const toggleStatus=(agent:Agent)=>{
+  if(agent.status!=="active"&&!inspectAgent(agent).requiredPassed){
+   setNotice("Antes de activar en el estudio, completa los datos esenciales del agente.");
+   quality(agent);return;
+  }
+  setAgents(prev=>prev.map(a=>a.id===agent.id?{...a,status:a.status==="active"?"paused":"active"}:a));
+ };
  const back=()=>{setScreen("home");setMessageNotice("");};
  const patch=(key:keyof AgentDraft,value:string)=>setDraft(prev=>({...prev,[key]:value}));
  return <main className={styles.canvas}>
@@ -103,19 +114,25 @@ export default function AIAgentsPreview(){
          <span className={styles.agentState}>{a.status==="draft"?"Borrador":a.status==="active"?"Activo":"Pausado"}</span>
         </div>
         <p>{a.purpose}</p>
+        <div className={styles.readinessMini}>
+         <span className={styles.readinessText}>Configuración: {inspectAgent(a).percent}%</span>
+         <span className={styles.readinessTrack}><span style={{width:inspectAgent(a).percent+"%"}}/></span>
+        </div>
         <div className={styles.agentButtons}>
          <button type="button" className={styles.buttonPrimary} onClick={()=>test(a)}><MessageCircle size={15}/> Probar</button>
+         <button type="button" className={styles.buttonSecondary} onClick={()=>quality(a)}><BookCheck size={15}/> Calidad</button>
          <button type="button" className={styles.buttonSecondary} onClick={()=>edit(a)}><ClipboardList size={15}/> Editar</button>
-         <button type="button" className={styles.buttonSecondary} onClick={()=>setAgents(old=>old.map(x=>x.id===a.id?{...x,status:x.status==="active"?"paused":"active"}:x))}>
-          {a.status==="active"?<PauseCircle size={15}/>:<PlayCircle size={15}/>} {a.status==="active"?"Pausar":"Activar"}
+         <button type="button" className={styles.buttonSecondary} onClick={()=>toggleStatus(a)}>
+          {a.status==="active"?<PauseCircle size={15}/>:<PlayCircle size={15}/>} {a.status==="active"?"Pausar":"Activar en estudio"}
          </button>
         </div>
        </article>})}
       </div>}
       <div className={styles.disclaimer}><ShieldCheck size={16}/> Vista de diseño: los cambios no se guardan en Supabase ni ejecutan acciones reales.</div>
      </>:null}
-     {screen==="editor"?<AgentSetupWizard key={selected||draft.kind}
-      initial={draft} onCancel={back} onSave={updated=>{setDraft(updated);save(updated);}}/>:null}
+     {screen==="editor"?<AgentSetupWizard key={(selected||draft.kind)+"-"+editStep}
+      initial={draft} initialStep={editStep} onCancel={back} onSave={updated=>{setDraft(updated);save(updated);}}/>:null}
+     {screen==="quality"&&active?<AgentQualityLab agent={active} onClose={back} onEdit={step=>edit(active,step)}/>:null}
      {screen==="test"&&active?<div className={styles.testing}>
       <div className={styles.testAgent}><div className={styles.testAvatar}><Bot size={24}/></div><strong>{active.name}</strong>
        <small>Simulación privada · Vista de diseño</small></div>
