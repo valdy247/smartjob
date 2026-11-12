@@ -7,7 +7,6 @@ import {
  LockKeyhole,RefreshCw,Send,ShieldCheck,Wallet,Workflow,HandHeart
 } from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
-import {categoryLabel} from "@/lib/vmv-business-categories";
 import styles from "./MarketingActionCenter.module.css";
 
 export type ServiceCode="google_profile"|"apple_maps"|"bing_places"|"yelp_profile"|"search_console"|"seo_improvement"|"campaign_setup"|"review_strategy"|"other";
@@ -51,6 +50,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
 }){
  const [client,setClient]=useState<SupabaseClient|null>(null);
  const [user,setUser]=useState<User|null>(null);
+ const [savedCategory,setSavedCategory]=useState("");
  const [authState,setAuthState]=useState<"checking"|"ready"|"signed_out"|"unconfigured">("checking");
  const [staff,setStaff]=useState(false);
  const [requests,setRequests]=useState<RequestRow[]>([]);
@@ -99,13 +99,15 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   const load=async()=>{
    setLoading(true);setError("");
    try{
-    const [{data:profile},staffResult]=await Promise.all([
+    const [{data:profile},staffResult,{data:category}]=await Promise.all([
      client.from("smartjob_profiles").select("business_name,website_url").eq("id",user.id).maybeSingle(),
-     client.from("vmv_marketing_staff").select("role").eq("user_id",user.id).maybeSingle()
+     client.from("vmv_marketing_staff").select("role").eq("user_id",user.id).maybeSingle(),
+     client.from("smartjob_business_category_preferences").select("category_id").eq("owner_id",user.id).maybeSingle()
     ]);
     if(!alive)return;
     if(profile?.business_name)setName(prev=>prev||profile.business_name);
     if(profile?.website_url)setSite(prev=>prev||profile.website_url);
+    if(category?.category_id)setSavedCategory(category.category_id);
     if(staffResult.error)throw staffResult.error;
     setStaff(Boolean(staffResult.data));
     const [r,a]=await Promise.all([
@@ -150,7 +152,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    // The DB allows customers to insert only input fields, never quote, status or verification.
    const {data, error:insertError}=await client.from("vmv_marketing_requests").insert({
     owner_id:user.id,service_code:selected,business_name:name.trim(),
-    category_id:industryId||"other",website_url:safeSite(site),goal_text:goal.trim(),
+    category_id:industryId||savedCategory||"other",website_url:safeSite(site),goal_text:goal.trim(),
     agreed_to_contact:true
    }).select("id").single();
    if(insertError)throw insertError;
