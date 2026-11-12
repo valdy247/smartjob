@@ -99,3 +99,24 @@ export async function confirmTestOrder(id:string){
  const {data,error}=await db.rpc("vmv_ai_owner_test_confirm_order",{p_order_id:id});
  if(error||data!==true)throw Error("No fue posible registrar la aceptación de prueba. Comprueba que la reserva siga vigente.");
 }
+
+export type HumanRequest={
+ id:string;owner_id:string;agent_id:string;call_sid:string;
+ status:"new"|"reviewed"|"closed";summary:string;created_at:string;
+};
+export async function listHumanRequests():Promise<HumanRequest[]>{
+ const {db,owner}=await current();
+ const {data,error}=await db.from("vmv_ai_human_requests")
+  .select("id,owner_id,agent_id,call_sid,status,summary,created_at")
+  .eq("owner_id",owner).order("created_at",{ascending:false}).limit(30);
+ if(error)throw Error("No fue posible consultar las solicitudes humanas.");
+ return (data||[]) as HumanRequest[];
+}
+export async function updateHumanRequest(id:string,status:"reviewed"|"closed"){
+ const {db,owner}=await current();
+ if(!uuid.test(id))throw Error("Identificador inválido.");
+ const {data,error}=await db.from("vmv_ai_human_requests")
+  .update({status,updated_at:new Date().toISOString()})
+  .eq("id",id).eq("owner_id",owner).select("id").maybeSingle();
+ if(error||!data)throw Error("No se pudo actualizar la solicitud de atención.");
+}
