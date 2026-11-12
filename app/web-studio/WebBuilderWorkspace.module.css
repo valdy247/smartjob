@@ -1,0 +1,71 @@
+.workspace{--ws-accent:#8d5bdf;--ws-ink:#2a203b;font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;background:#faf8fd;color:var(--ws-ink);overflow-x:hidden}
+.workspace *{box-sizing:border-box}
+.workspace button,.workspace a{transition:background .18s,border-color .18s}
+.workspace button{cursor:pointer;font-family:inherit}
+.workspace button:disabled{opacity:.48;cursor:not-allowed}
+.workspace input{font:inherit;color:inherit;background:#fff}
+.workspace button:focus-visible,.workspace input:focus-visible,.workspace a:focus-visible{outline:3px solid var(--ws-accent);outline-offset:2px}
+.topbar{background:white;border-bottom:1px solid #e7def0;min-height:67px;display:flex;align-items:center;justify-content:space-between;gap:15px;padding:15px clamp(18px,4vw,75px)}
+.brand{text-decoration:none;color:#292037;font-size:20px;font-weight:950;letter-spacing:-.07em}
+.brand span{color:#8a59e0}
+.back{display:flex;gap:8px;align-items:center;border:0;background:#f0e8ff;color:#7751ba;border-radius:11px;font-size:12px;font-weight:850;min-height:38px;padding:9px 13px}
+.landing,.main{max-width:1380px;margin:0 auto;padding:clamp(23px,4vw,58px)}
+.welcome{max-width:840px;margin-bottom:30px}
+.welcome small,.siteHeading small{font-size:11px;color:#986acb;letter-spacing:.15em;font-weight:900}
+.welcome h1{font-size:clamp(37px,6vw,76px);letter-spacing:-.075em;line-height:1;margin:13px 0}
+.welcome h1 span{color:#8f59e8}
+.welcome p{font-size:clamp(14px,2vw,19px);color:#7a7087;line-height:1.5}
+.createSite{display:flex;flex-direction:column;gap:12px;padding:22px;background:#fff;border:1px solid #e8def2;border-radius:22px;max-width:850px;margin-bottom:42px}
+.createSite>label{font-size:12px;color:#80619e;font-weight:900}
+.createSite>div,.domainForm,.addPage{display:flex;gap:9px}
+.createSite input,.addPage input,.domainForm input,.meta input{border:1px solid #e4d6f0;border-radius:12px;min-height:44px;min-width:0;padding:12px;font-size:13px;flex:1}
+.createSite button,.addPage button,.domainForm button{display:flex;align-items:center;justify-content:center;gap:7px;border:0;border-radius:12px;padding:10px 18px;min-height:44px;font-size:12px;font-weight:900;color:#fff;background:#8d5bdf;white-space:nowrap}
+.landing h2{font-size:23px;letter-spacing:-.04em}
+.siteList{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:14px}
+.siteCard{text-align:left;display:flex;flex-direction:column;align-items:flex-start;min-height:190px;gap:12px;background:#fff;border:1px solid #e9dff4;border-radius:21px;padding:21px}
+.siteCard svg{color:#8d5bdf}
+.siteCard strong{font-size:21px;letter-spacing:-.04em;overflow-wrap:anywhere}
+.siteCard small{font-size:12px;color:#8c80a0;overflow-wrap:anywhere}
+.siteCard>span{font-size:12px;color:#8b54cf;font-weight:800;margin-top:auto}
+.siteCard:hover{border-color:#b59be2}
+.siteHeading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px}
+.siteHeading h1{font-size:clamp(28px,5vw,44px);line-height:1.1;letter-spacing:-.06em;margin:6px 0;overflow-wrap:anywhere}
+.sitePreview{display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;border-radius:12px;padding:12px 15px;background:#f0e5ff;color:#754bc0;font-size:12px;font-weight:850;white-space:nowrap}
+.sections{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:16px;padding:5px;background:#ece5f5;border-radius:15px}
+.sections button{display:inline-flex;align-items:center;gap:6px;padding:11px 17px;border:0;background:transparent;color:#77688a;border-radius:12px;font-size:12px;font-weight:850}
+.sections .selected{background:white;color:#8255c5;box-shadow:0 3px 10px #31184317}
+.editorSection{min-width:0}
+.pageTabs{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:thin}
+.pageTabs button{padding:10px 14px;border-radius:11px;background:white;border:1px solid #e7dcef;color:#78678d;font-size:12px;font-weight:800;white-space:nowrap}
+.pageTabs .selected{border-color:#9f74da;background:#8d5bdf;color:#fff}
+.addPage{margin-bottom:12px;max-width:480px}
+.editing{background:white;border:1px solid #e6dcec;border-radius:20px;overflow:hidden}
+.editingHeader{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:17px;border-bottom:1px solid #ede5f4}
+.meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;flex:1;min-width:260px;max-width:650px}
+.meta label{display:flex;flex-direction:column;gap:6px;color:#80699c;font-size:11px;font-weight:850;min-width:0}
+.meta input{min-height:38px;padding:9px 11px;background:#fdfbff}
+.actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.actions button,.actions a{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 12px;border-radius:11px;border:1px solid #ddcef2;background:#faf8ff;color:#7b4db9;text-decoration:none;font-size:12px;font-weight:850;min-height:38px}
+.puckShell{min-height:570px;max-width:100%;overflow:hidden;position:relative}
+.puckShell :global(.Puck){--puck-color-azure-01:#8d5bdf}
+.subPanel{background:white;border:1px solid #e5d9f1;padding:clamp(17px,3vw,26px);border-radius:22px;max-width:960px;display:flex;flex-direction:column;gap:14px}
+.panelTitle{display:flex;align-items:center;gap:11px;color:#8a55d2}
+.panelTitle h2{margin:0;color:#30243f;font-size:24px;letter-spacing:-.05em}
+.subPanel>p{font-size:13px;color:#6e637d;line-height:1.7;margin:0}
+.version,.domainRow{border:1px solid #e8dff2;border-radius:15px;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+.version span{display:flex;flex-direction:column;gap:6px}
+.version strong,.domainRow strong{font-size:14px}
+.version small{font-size:11px;color:#8b809b}
+.version button{display:inline-flex;align-items:center;gap:6px;border:1px solid #e0d2ee;border-radius:10px;padding:10px;background:#faf8ff;color:#7a51b7;font-size:11px;font-weight:850}
+.domainForm{max-width:680px}
+.domainForm input{flex:1}
+.domainQuote{padding:14px!important;border-radius:12px;background:#f0e8ff;color:#744db2!important;font-weight:800}
+.domainRow span{color:#8458c0;font-size:11px;font-weight:850;background:#f1eaff;border-radius:99px;padding:8px 10px}
+.domainNote{display:flex;align-items:start;gap:8px;max-width:700px}
+.domainNote svg{flex-shrink:0;color:#7d59ba;margin-top:3px}
+.error,.notice{max-width:1280px;margin:12px auto 0;padding:12px 16px;border-radius:12px;font-size:12px;font-weight:750;overflow-wrap:anywhere}
+.error{color:#a43e59;background:#fff0f2;border:1px solid #f2d7df}
+.notice{color:#6e4ea9;background:#f2eaff;border:1px solid #e6d8f5}
+.loading{display:flex;align-items:center;justify-content:center;min-height:60vh;flex-direction:column;gap:14px;font-family:system-ui;color:#8763ac;padding:30px}
+.loading a{color:#8255cf}
+@media(max-width:700px){.topbar{min-height:58px;padding:12px 5%}.brand{font-size:18px}.landing,.main{padding:22px 5%}.welcome{margin-bottom:21px}.createSite{padding:15px;border-radius:16px}.createSite>div{flex-direction:column}.createSite button{width:100%}.siteHeading{align-items:flex-start}.sitePreview{font-size:10px;padding:10px 8px}.siteHeading h1{font-size:28px}.sections button{flex:1;justify-content:center;padding:11px 6px}.addPage input{font-size:12px}.addPage button{padding:8px}.editingHeader{padding:12px}.meta{grid-template-columns:1fr;min-width:100%}.actions{width:100%}.actions>*{flex:1}.puckShell{min-height:500px}.domainForm{flex-direction:column}}
