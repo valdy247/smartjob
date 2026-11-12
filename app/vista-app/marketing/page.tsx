@@ -1,12 +1,13 @@
 "use client";
 import {useMemo,useState} from "react";
 import Link from "next/link";
-import {ArrowLeft,ArrowUpRight,BarChart3,CheckCircle2,ClipboardCopy,Globe2,HeartHandshake,Link2,Lightbulb,Mail,Megaphone,MessageCircle,Share2,ShieldCheck,Sparkles,Target,TrendingUp} from "lucide-react";
+import {ArrowLeft,ArrowUpRight,BarChart3,CheckCircle2,ClipboardCopy,Globe2,HeartHandshake,Workflow,Link2,Lightbulb,Mail,Megaphone,MessageCircle,Share2,ShieldCheck,Sparkles,Target,TrendingUp} from "lucide-react";
 import styles from "./page.module.css";
 import LocalVisibilityStudio from "./LocalVisibilityStudio";
+import MarketingActionCenter from "./MarketingActionCenter";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS,categoryLabel} from "@/lib/vmv-business-categories";
 
-type Section="strategy"|"presence"|"campaign"|"numbers"|"retention";
+type Section="strategy"|"actions"|"presence"|"campaign"|"numbers"|"retention";
 type Channel="social"|"search"|"local"|"referrals"|"email";
 type FormState={
  business:string;industry:string;audience:string;offer:string;cta:string;website:string;
@@ -20,6 +21,7 @@ const initial:FormState={
 };
 const tabs:{id:Section;label:string;description:string;Icon:typeof Target}[]=[
  {id:"strategy",label:"Diagnóstico",description:"Encuentra oportunidades",Icon:Target},
+ {id:"actions",label:"Acciones",description:"Solicita y realiza tareas",Icon:Workflow},
  {id:"presence",label:"Visibilidad local",description:"Directorios y SEO gratis",Icon:Globe2},
  {id:"campaign",label:"Campañas",description:"Crea un plan concreto",Icon:Megaphone},
  {id:"numbers",label:"Rentabilidad",description:"Mide lo que funciona",Icon:BarChart3},
@@ -227,6 +229,8 @@ export default function MarketingPage(){
        "Empieza por una sola oferta y un tipo de cliente. Hablar a todo el mundo suele dificultar medir qué funciona."}</p></div></div>
       <button type="button" className={styles.primary} onClick={()=>setSection("campaign")}>Diseñar campaña <ArrowUpRight size={16}/></button>
      </>:null}
+     {section==="actions"?<MarketingActionCenter businessName={form.business}
+      industryId={form.industry} website={form.website} onGoToVisibility={()=>{setSection("presence");setNotice("");}}/>:null}
      {section==="presence"?<LocalVisibilityStudio
       profile={{business:form.business,industry:industryName(form.industry),website:form.website,phone:form.phone,address:form.address,city:form.city,region:form.region,postal:form.postal,hours:form.hours,description:form.description}}
       onChange={(key,value)=>patch(key,value)}/>:null}
