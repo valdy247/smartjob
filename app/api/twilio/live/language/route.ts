@@ -1,10 +1,10 @@
 import {NextRequest} from "next/server";
 import {verifiedLiveRequest,E164,baseUrl} from "@/lib/twilio-live";
-import {findPhoneRoute,tenantsReady,reservePhoneSession} from "@/lib/phone-routes";
+import {findPhoneRoute,tenantsReady,reservePhoneSession,updatePhoneSession} from "@/lib/phone-routes";
 import {languageMenuEnabled,ivrEligible,menuResponse,selectionSignature,directClientTwiml,languageDecision,testSpanishToEnglishFor} from "@/lib/vmv-ivr";
 import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 import {paidServiceAllowed} from "@/lib/vmv-entitlements";
-import {claimNational,settleNational} from "@/lib/vmv-national-minutes";
+import {claimNational} from "@/lib/vmv-national-minutes";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export async function POST(req:NextRequest){
@@ -36,7 +36,7 @@ export async function POST(req:NextRequest){
   return twiml(say("En este momento no podemos completar su llamada.","es-ES")+"<Hangup/>");
  const granted=await claimNational(route.user_id,"in:"+bridge);
  if(granted===0){
-  await (await import("@/lib/phone-routes")).updatePhoneSession(bridge,"failed");
+  await updatePhoneSession(bridge,"failed");
   return twiml(say("Sus minutos de llamadas nacionales se han agotado.","es-ES")+"<Hangup/>");
  }
  return directClientTwiml(bridge,route,from,granted===null?600:granted*60);
