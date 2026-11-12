@@ -225,6 +225,21 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
       <div className={styles.devices}><button type="button" aria-pressed={!mobile} onClick={()=>setMobile(false)} className={!mobile?styles.active:""}>Web</button>
       <button type="button" aria-pressed={mobile} onClick={()=>setMobile(true)} className={mobile?styles.active:""}>Móvil</button></div>
      </header>
+     <div className={styles.visualDesign}>
+      <span className={styles.fieldTitle}>Plantilla</span>
+      <div className={styles.options} role="group" aria-label="Plantilla">
+       {templates.map(t=><button type="button" key={t.id} aria-pressed={content.template===t.id}
+        className={content.template===t.id?styles.active:""}
+        onClick={()=>{setContent(v=>({...v,template:t.id}));setStatus("");}}>{t.name}</button>)}
+      </div>
+      <span className={styles.fieldTitle}>Color</span>
+      <div className={styles.options} role="group" aria-label="Color">
+       {palettes.map(p=><button type="button" key={p.id} aria-pressed={content.palette===p.id}
+        className={content.palette===p.id?styles.active:""}
+        onClick={()=>{setContent(v=>({...v,palette:p.id}));setStatus("");}}><i aria-hidden="true" className={styles.paletteDot} style={{background:paletteStyles[p.id].accent}}/>{p.name}</button>)}
+      </div>
+
+     </div>
      <div className={styles.previewBg}>
       <div className={mobile?styles.mobile:styles.device} style={tokens}>
        <div className={styles.bar}><i/><i/><i/><span>{slug||"mi-negocio"}</span></div>
@@ -244,21 +259,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
        </div>
       </div>
      </div>
-     <div className={styles.visualDesign}>
-            <span className={styles.fieldTitle}>Plantilla</span>
-      <div className={styles.options} role="group" aria-label="Plantilla">
-       {templates.map(t=><button type="button" key={t.id} aria-pressed={content.template===t.id}
-        className={content.template===t.id?styles.active:""}
-        onClick={()=>{setContent(v=>({...v,template:t.id}));setStatus("");}}>{t.name}</button>)}
-      </div>
-      <span className={styles.fieldTitle}>Color</span>
-      <div className={styles.options} role="group" aria-label="Color">
-       {palettes.map(p=><button type="button" key={p.id} aria-pressed={content.palette===p.id}
-        className={content.palette===p.id?styles.active:""}
-        onClick={()=>{setContent(v=>({...v,palette:p.id}));setStatus("");}}>{p.name}</button>)}
-      </div>
 
-     </div>
     </div>
    </div>
 
