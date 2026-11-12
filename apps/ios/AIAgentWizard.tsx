@@ -136,7 +136,7 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false}:Props){
       placeholder="Explica la misión en una frase" placeholderTextColor="#AB9DB9"/>
     <Text style={styles.label}>Especialidad</Text>
     <View style={styles.choices}>{AI_AGENT_TEMPLATES.map(t=><Tag key={t.kind} title={t.title}
-      selected={draft.kind===t.kind} onPress={()=>setDraft(s=>({...s,kind:t.kind}))}/>)}</View>
+      selected={draft.kind===t.kind} onPress={()=>setDraft(s=>({...s,kind:t.kind,purpose:s.kind===t.kind?s.purpose:t.purpose}))}/>)}</View>
     <Text style={styles.label}>¿Cómo hablará?</Text>
     <View style={styles.choices}>{["Español","English","Bilingüe"].map(x=><Tag key={x} title={x}
       selected={(answers.agent_language||({es:"Español",en:"English",both:"Bilingüe"}[draft.language]))===x}
