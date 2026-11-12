@@ -15,7 +15,7 @@ const templates:{id:WebTemplate;name:string}[]=[
  {id:"editorial",name:"Editorial"},{id:"showcase",name:"Impacto"},
  {id:"minimal",name:"Minimal"}
 ];
-const fields:{id:Exclude<keyof WebSiteContent,"template"|"palette"|"categoryId"|"heroImage"|"gallery"|"services"|"eyebrow"|"contactMethod"|"whatsapp"|"contactMessage"|"action">;label:string;max:number;multi?:boolean;type?:"email"|"tel"}[]=[
+const fields:{id:Exclude<keyof WebSiteContent,"template"|"palette"|"categoryId"|"heroImage"|"gallery"|"services"|"eyebrow"|"contactMethod"|"whatsapp"|"contactMessage"|"action"|"inquiriesEnabled">;label:string;max:number;multi?:boolean;type?:"email"|"tel"}[]=[
  {id:"business",label:"Nombre del negocio",max:100},
  {id:"headline",label:"Título principal",max:180,multi:true},
  {id:"intro",label:"Presentación",max:400,multi:true},
@@ -129,7 +129,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
    }catch{/* Local backup is best effort. */}
   };
  },[recoveryKey]);
- const update=(key:Exclude<keyof WebSiteContent,"template"|"palette"|"gallery"|"categoryId"|"heroImage"|"eyebrow"|"services"|"contactMethod">,value:string)=>{
+ const update=(key:Exclude<keyof WebSiteContent,"template"|"palette"|"gallery"|"categoryId"|"heroImage"|"eyebrow"|"services"|"contactMethod"|"inquiriesEnabled">,value:string)=>{
   setContent(old=>({...old,[key]:value}));setStatus("");
  };
  const serviceItemsEditor=content.services?content.services.split(/\r?\n/).slice(0,6):[];
