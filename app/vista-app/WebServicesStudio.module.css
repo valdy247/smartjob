@@ -208,3 +208,12 @@
 .contactFieldError{display:block;color:#a84667;font-size:11px;line-height:1.45}
 .previewChannel{display:inline-flex;align-items:center;gap:4px;margin-top:9px;color:var(--web-color);font-size:10px;font-weight:800}
 @container (max-width:719px){.contactPanel{padding:13px;gap:11px}}
+
+
+/* Quiet autosave indicator; recovery appears only for a real interrupted draft. */
+.draftIndicator{flex-shrink:0;font-size:10px!important;letter-spacing:0!important;font-weight:850!important;color:#7c5bae!important;background:#f0e9fa;border-radius:999px;padding:7px 10px}
+.recovery{border:1px solid #e2d5f5;background:#f8f2ff;border-radius:14px;padding:12px 13px;margin-bottom:13px;display:flex;flex-direction:column;gap:11px;color:#5e477f;font-size:12px;font-weight:750}
+.recovery>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.recovery button{min-height:36px;border-radius:10px;border:1px solid #dbc9f2;background:#fff;color:#7442bc;font-size:11px;font-weight:850}
+.recovery button:first-child{background:#885ae2;color:#fff;border-color:#885ae2}
+@container (max-width:719px){.studio .heading{gap:5px}.draftIndicator{padding:6px 8px;font-size:9px!important}}
