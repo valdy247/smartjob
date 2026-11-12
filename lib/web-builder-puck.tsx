@@ -68,6 +68,7 @@ export function starterBuilderDocument(name="Mi negocio"):Data{
 }
 const basicText={type:"text" as const};
 export const builderConfig:Config={
+ root:{render:({children})=><div className="vmv-site vmv-site-editor-canvas">{children}</div>},
  components:{
   Hero:{
    label:"Portada destacada",
