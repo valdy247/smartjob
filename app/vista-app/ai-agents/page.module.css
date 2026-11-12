@@ -130,3 +130,11 @@
  padding:13px 15px;box-shadow:0 7px 18px #9b75df24}
 .demoButton:hover{background:#7445d4}
 .demoButton:focus-visible{outline:3px solid #baa2ee;outline-offset:3px}
+
+.commerceLaunch{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid #e8ddf4;
+ padding:14px;border-radius:17px;color:#8758cc;text-align:left;width:100%;margin-bottom:15px;
+ box-shadow:0 5px 14px #8658ca12}
+.commerceLaunch span{display:flex;flex-direction:column;gap:4px;flex:1}
+.commerceLaunch strong{font-size:12px;color:#2c2142;font-weight:900}
+.commerceLaunch small{font-size:10px;color:#8f80a0;font-weight:700}
+.commerceLaunch:focus-visible{outline:3px solid #b49ade;outline-offset:3px}
