@@ -305,11 +305,13 @@ export default function VMVMobilePreview(){
          <span className={styles.homeProductBody}><strong>AI Agents</strong><small>Próximamente</small></span>
          <span className={styles.homeProductDecor} aria-hidden="true"><Cpu size={79} strokeWidth={1.3}/></span>
         </div>
-        <div className={`${styles.homeProductCard} ${styles.homeProductPink}`}>
+        <button type="button" className={`${styles.homeProductCard} ${styles.homeProductPink}`}
+         onClick={()=>window.location.assign("/vista-app/marketing")} aria-label="Abrir Marketing Studio en beta">
          <span className={styles.homeProductIcon}><BarChart3 size={27}/></span>
-         <span className={styles.homeProductBody}><strong>Marketing</strong><small>Próximamente</small></span>
+         <span className={styles.homeProductBody}><strong>Marketing</strong><small>Explorar beta</small></span>
          <span className={styles.homeProductDecor} aria-hidden="true"><TrendingUp size={82} strokeWidth={1.3}/></span>
-        </div>
+         <span className={styles.homeProductArrow}>↗</span>
+        </button>
        </div>
        <button className={styles.homeExplore} type="button" onClick={()=>go("services")}>
         <span className={styles.homeExploreCopy}>
