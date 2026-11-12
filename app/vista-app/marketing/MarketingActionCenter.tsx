@@ -10,7 +10,7 @@ import {getSupabase} from "@/lib/supabase";
 import {categoryLabel} from "@/lib/vmv-business-categories";
 import styles from "./MarketingActionCenter.module.css";
 
-type ServiceCode="google_profile"|"apple_maps"|"bing_places"|"yelp_profile"|"search_console"|"seo_improvement"|"campaign_setup"|"review_strategy"|"other";
+export type ServiceCode="google_profile"|"apple_maps"|"bing_places"|"yelp_profile"|"search_console"|"seo_improvement"|"campaign_setup"|"review_strategy"|"other";
 type Status="received"|"quoted"|"approved"|"in_progress"|"needs_customer"|"verified"|"cancelled";
 type RequestRow={
  id:string;owner_id:string;service_code:ServiceCode;business_name:string;category_id:string;
@@ -46,8 +46,8 @@ const safeSite=(value:string)=>{
 };
 const errorMessage=(e:unknown,fallback:string)=>e instanceof Error?e.message:fallback;
 
-export default function MarketingActionCenter({businessName,industryId,website,onGoToVisibility}:{
- businessName:string;industryId:string;website:string;onGoToVisibility:()=>void
+export default function MarketingActionCenter({businessName,industryId,website,onGoToVisibility,preselectedService}:{
+ businessName:string;industryId:string;website:string;onGoToVisibility:()=>void;preselectedService?:ServiceCode
 }){
  const [client,setClient]=useState<SupabaseClient|null>(null);
  const [user,setUser]=useState<User|null>(null);
@@ -55,7 +55,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [staff,setStaff]=useState(false);
  const [requests,setRequests]=useState<RequestRow[]>([]);
  const [approvals,setApprovals]=useState<Acceptance[]>([]);
- const [selected,setSelected]=useState<ServiceCode>("google_profile");
+ const [selected,setSelected]=useState<ServiceCode>(preselectedService||"google_profile");
+ useEffect(()=>{if(preselectedService)setSelected(preselectedService);},[preselectedService]);
  const [name,setName]=useState(businessName);
  const [site,setSite]=useState(website);
  const [goal,setGoal]=useState("");
