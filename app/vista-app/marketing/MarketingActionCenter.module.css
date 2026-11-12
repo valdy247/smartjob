@@ -228,3 +228,18 @@
  .wizardPanel{margin-inline:0;padding:12px}
  .wizardFooter{margin-inline:-12px;padding-left:12px;padding-right:12px}
 }
+
+
+.catalogHeading{padding:4px 2px 0}
+.catalogHeading h2{font-size:clamp(23px,4vw,32px);letter-spacing:-.8px;margin:0;color:#382741}
+.catalogHeading p{font-size:12px;color:#917f95;margin:7px 0 0}
+.specialTool{border:1px solid #efe0e9;border-radius:15px;padding:15px;display:flex;flex-direction:column;align-items:stretch;gap:11px;background:#fffafd}
+.specialTool>strong{font-size:14px;color:#513854}
+.specialTool>p{margin:0;color:#826c81;font-size:12px;overflow-wrap:anywhere}
+.toolButton{background:#874478;border:0;border-radius:11px;color:#fff;min-height:43px;padding:10px 15px;font-weight:850;cursor:pointer}
+.toolButton:disabled{opacity:.5;cursor:not-allowed}
+.auditSummary{display:flex;flex-direction:column;gap:8px;padding:14px;background:#fff;border:1px solid #ecdfeb;border-radius:12px}
+.auditSummary>strong{font-size:13px;color:#523554}
+.auditSummary>span,.auditSummary>small{font-size:11px;color:#8e7690}
+.auditSummary>p{font-size:12px;color:#69546e;line-height:1.6;margin:0;overflow-wrap:anywhere}
+@media(max-width:700px){.catalogHeading h2{font-size:25px}.servicePicker{grid-template-columns:1fr}.serviceTile{flex-direction:row;min-height:94px;padding:14px;gap:12px}.serviceText{padding:0}.serviceText strong{font-size:14px}.serviceText small{font-size:11px}.serviceIcon{flex:0 0 42px}.wizardHeading p{display:none}}
