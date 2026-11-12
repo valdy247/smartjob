@@ -4,13 +4,15 @@ import {ActivityIndicator,Alert,KeyboardAvoidingView,Platform,Pressable,SafeArea
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type {Session} from "@supabase/supabase-js";
 import {AIAgentWizard} from "./AIAgentWizard";
+import {AIAgentQualityLab} from "./AIAgentQualityLab";
+import {inspectAgent} from "./aiAgentQuality";
 import {AI_AGENT_TEMPLATES,createConversation,emptyAgent,getAgents,getConversations,getMessages,
   saveAgent,simulateAgent,updateAgentStatus,type Agent,type AgentConversation,
   type AgentDraft,type AgentKind,type AgentMessage,type AgentStatus,type Language} from "./aiAgentsData";
 
 const C={bg:"#F9FAFC",paper:"#FFFFFF",ink:"#201C35",muted:"#817A91",
   purple:"#8959ED",purpleDark:"#7040C8",line:"#ECE8F3",pink:"#FCE4F0",mint:"#DDF8EE"};
-type Screen="home"|"edit"|"chat"|"history";
+type Screen="home"|"edit"|"chat"|"history"|"quality";
 type Props={session:Session;onBack:()=>void};
 type IconName=React.ComponentProps<typeof Ionicons>["name"];
 
@@ -53,6 +55,7 @@ function SectionTitle({title,caption}:{title:string;caption?:string}){
 
 export function AIAgentsStudio({session,onBack}:Props){
   const [screen,setScreen]=useState<Screen>("home");
+  const [editStep,setEditStep]=useState<0|1|2|3>(0);
   const [agents,setAgents]=useState<Agent[]>([]);
   const [selected,setSelected]=useState<Agent|null>(null);
   const [draft,setDraft]=useState<AgentDraft>(emptyAgent("support"));
@@ -74,10 +77,10 @@ export function AIAgentsStudio({session,onBack}:Props){
     setDraft(old=>({...old,[key]:value}));
   }
   function create(kind:AgentKind){
-    setSelected(null);setDraft(emptyAgent(kind));setScreen("edit");
+    setSelected(null);setEditStep(0);setDraft(emptyAgent(kind));setScreen("edit");
   }
-  function edit(agent:Agent){
-    setSelected(agent);
+  function edit(agent:Agent,step:0|1|2|3=0){
+    setSelected(agent);setEditStep(step);
     setDraft({name:agent.name,kind:agent.kind,purpose:agent.purpose,
       personality:agent.personality,language:agent.language,instructions:agent.instructions,
       knowledge:agent.knowledge,configuration:agent.configuration||{},status:agent.status});
@@ -95,14 +98,21 @@ export function AIAgentsStudio({session,onBack}:Props){
     finally{setBusy(false);}
   }
   async function toggleStatus(agent:Agent){
-    setBusy(true);
     const next:AgentStatus=agent.status==="active"?"paused":"active";
+    // Internal activation requires the owner's essential business facts.
+    if(next==="active"&&!inspectAgent(agent).requiredPassed){
+      setSelected(agent);setScreen("quality");return;
+    }
+    setBusy(true);
     try{
       const changed=await updateAgentStatus(session,agent,next);
       setAgents(current=>current.map(x=>x.id===changed.id?changed:x));
       if(selected?.id===changed.id)setSelected(changed);
     }catch(e){Alert.alert("Estado no actualizado",e instanceof Error?e.message:"Intenta nuevamente.");}
     finally{setBusy(false);}
+  }
+  function openQuality(agent:Agent){
+    setSelected(agent);setScreen("quality");
   }
   function openTest(agent:Agent){
     setSelected(agent);setConversationId(null);setMessages([]);setMessage("");setScreen("chat");
@@ -214,8 +224,15 @@ export function AIAgentsStudio({session,onBack}:Props){
                 </View>
               </View>
               <Text style={styles.agentPurpose} numberOfLines={2}>{agent.purpose}</Text>
+              <View style={styles.qualityMini}>
+                <Text style={styles.qualityMiniLabel}>Configuración {inspectAgent(agent).percent}%</Text>
+                <View style={styles.qualityTrack}>
+                  <View style={[styles.qualityFill,{width:(inspectAgent(agent).percent+"%") as `${number}%`}]}/>
+                </View>
+              </View>
               <View style={styles.agentActions}>
                 <Action label="Probar" icon="chatbubble-ellipses-outline" solid onPress={()=>openTest(agent)}/>
+                <Action label="Calidad" icon="shield-checkmark-outline" onPress={()=>openQuality(agent)}/>
                 <Action label="Editar" icon="create-outline" onPress={()=>edit(agent)}/>
                 <Action label="Historial" icon="time-outline" onPress={()=>void openHistory(agent)}/>
               </View>
@@ -229,9 +246,12 @@ export function AIAgentsStudio({session,onBack}:Props){
         <Text style={styles.footerNote}>Los agentes activos funcionan únicamente en el simulador. Llamadas, ventas, reservas e inventario real requieren conexiones autorizadas.</Text>
       </ScrollView>:null}
 
-      {screen==="edit"?<AIAgentWizard key={selected?.id||draft.kind} initial={draft} saving={busy}
+      {screen==="edit"?<AIAgentWizard key={(selected?.id||draft.kind)+"-"+editStep}
+        initial={draft} initialStep={editStep} saving={busy}
         onCancel={()=>setScreen("home")}
         onSave={next=>{setDraft(next);void save(next);}}/>:null}
+      {screen==="quality"&&selected?<AIAgentQualityLab
+        agent={selected} onClose={()=>setScreen("home")} onEdit={step=>edit(selected,step)}/>:null}
 
       {screen==="chat"&&selected?<View style={{flex:1}}>
         <View style={styles.chatBanner}>
@@ -323,6 +343,10 @@ const styles=StyleSheet.create({
   agentName:{fontSize:15,fontWeight:"900",color:C.ink},
   agentSubtitle:{fontSize:11,color:C.muted,marginTop:3},
   agentPurpose:{fontSize:12,color:C.muted,lineHeight:19,marginTop:13},
+  qualityMini:{flexDirection:"row",alignItems:"center",gap:10,marginTop:12},
+  qualityMiniLabel:{fontSize:11,fontWeight:"800",color:C.purpleDark},
+  qualityTrack:{height:6,backgroundColor:"#ECE6F5",borderRadius:10,overflow:"hidden",flex:1},
+  qualityFill:{height:6,backgroundColor:C.purple,borderRadius:10},
   stateBadge:{backgroundColor:"#F0EBFA",borderRadius:15,paddingHorizontal:9,paddingVertical:5},
   stateText:{color:C.purpleDark,fontWeight:"800",fontSize:10},
   agentActions:{flexDirection:"row",gap:7,marginTop:15,flexWrap:"wrap"},
