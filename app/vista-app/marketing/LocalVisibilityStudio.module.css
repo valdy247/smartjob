@@ -61,3 +61,8 @@
 .auditFallback .error{margin:0}
 .auditFallback a{display:inline-flex;align-items:center;gap:6px;border:1px solid #ead1e6;background:#fff9fc;border-radius:10px;padding:10px 12px;text-decoration:none;color:#864471;font-weight:800;font-size:11px}
 .auditFallback a:hover{background:#f6ecf5}
+
+
+.requestHelp{border:0;border-radius:10px;background:#7f416f;color:#fff;font-size:11px;font-weight:850;padding:11px 12px;cursor:pointer}
+.requestHelp:hover{background:#69355d}
+.requestHelp:focus-visible{outline:3px solid #be8aae;outline-offset:2px}
