@@ -304,7 +304,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   setQuoteNote(req.quote_note||"");setStageUpdate(req.staff_update||"");setEvidence(req.evidence_url||"");
  };
  return <div className={styles.root}>
-  {wizardStep===0?<header className={styles.catalogHeading}><h2>¿Qué quieres hacer hoy?</h2><p>Elige un servicio y te ayudamos paso a paso.</p></header>:null}
+  {wizardStep===0?<header className={styles.catalogHeading}><h2>¿Qué quieres hacer hoy?</h2><p>Elige un servicio y te ayudamos paso a paso.</p><a href="#vmv-marketing-history" className={styles.historyLink}><ClipboardList size={16}/> Mis solicitudes</a></header>:null}
   <section className={styles.wizardPanel} id="vmv-marketing-request" aria-label="Crear solicitud de marketing">
    {wizardStep===4?<div className={styles.wizardSuccess} role="status">
     <div className={styles.successIcon}><CheckCircle2 size={33}/></div>
@@ -365,7 +365,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
      {selected==="review_strategy"?<div className={styles.specialTool}>
        <strong>¿Qué necesitas?</strong>
        <div className={styles.goalPresets}><button type="button" className={styles.preset} onClick={()=>{setGoal("Quiero pedir reseñas honestas a mis clientes.");setReviewInput("");}}>Pedir reseñas</button><button type="button" className={styles.preset} onClick={()=>setGoal("Necesito responder una reseña.")}>Responder una reseña</button></div>
-       <label className={styles.goalLabel}>Pega una reseña (opcional)<textarea rows={3} maxLength={650} value={reviewInput} onChange={e=>setReviewInput(e.target.value)} placeholder="Texto de la reseña del cliente…"/></label>
+       <label className={styles.goalLabel}>Pega una reseña (opcional)<textarea rows={3} maxLength={650} value={reviewInput} onChange={e=>{setReviewInput(e.target.value);setGoal(e.target.value.trim()?"Necesito responder esta reseña y revisar la respuesta sugerida.":"");}} placeholder="Texto de la reseña del cliente…"/></label>
        {reviewInput.trim()?<div className={styles.auditSummary}><strong>Respuesta para revisar</strong><p>{answerReview}</p><div className={styles.goalPresets}><button type="button" className={styles.preset} onClick={()=>setReviewTone(reviewTone==="cordial"?"breve":"cordial")}>Cambiar tono</button><button type="button" className={styles.toolButton} onClick={()=>void navigator.clipboard?.writeText(answerReview)}>Copiar respuesta</button></div><small>Revisa antes de usarla. Nunca publicamos sin autorización.</small></div>:null}
        {!reviewInput.trim()&&goal.includes("pedir reseñas")?<div className={styles.auditSummary}><p>{reviewRequestMessage}</p><button type="button" className={styles.toolButton} onClick={()=>void navigator.clipboard?.writeText(reviewRequestMessage)}>Copiar mensaje</button></div>:null}
      </div>:null}
@@ -386,7 +386,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       <div className={styles.reviewItem}><span>Negocio</span><strong>{name.trim()}</strong><button type="button" onClick={()=>editWizardStep(1)}>Editar</button></div>
       <div className={styles.reviewItem}><span>Sector</span><strong>{categoryLabel(effectiveCategory,"No especificado")}</strong></div>
       {site.trim()?<div className={styles.reviewItem}><span>Sitio web</span><strong className={styles.wrapValue}>{site.trim()}</strong></div>:null}
-      <div className={styles.reviewGoal}><span>Qué necesitas</span><p>{goal.trim()}</p><button type="button" onClick={()=>editWizardStep(2)}>Modificar descripción</button></div>
+      <div className={styles.reviewGoal}><span>Qué necesitas</span><p>{selected==="review_strategy"&&reviewInput.trim()?("Reseña: "+reviewInput.trim()+" · Respuesta sugerida: "+answerReview):goal.trim()}</p><button type="button" onClick={()=>editWizardStep(2)}>Modificar descripción</button></div>
      </div>
      <div className={styles.costNote}><Wallet size={22}/><div><strong>Enviar la solicitud: $0</strong><p>El coste de un servicio, si corresponde, se cotizará después. Ningún pago ni publicación se ejecuta al enviar.</p></div></div>
      <label className={styles.permission}><input type="checkbox" checked={consent} onChange={e=>{setConsent(e.target.checked);setWizardError("");}}/>
