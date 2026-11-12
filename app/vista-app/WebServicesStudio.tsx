@@ -50,8 +50,10 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
  const unPublishedChanges=published&&publishedSnapshot!==currentSnapshot;
  const contentRef=useRef(content);
  const baselineRef=useRef(savedSnapshot);
+ const readyRef=useRef(ready);
  contentRef.current=content;
  baselineRef.current=savedSnapshot;
+ readyRef.current=ready;
  useEffect(()=>{setOrigin(window.location.origin);},[]);
  const verify=useCallback(async()=>{
   const client=getSupabase();
@@ -119,6 +121,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
  useEffect(()=>{
   return ()=>{
    try{
+    if(!readyRef.current)return;
     const latest=normalizeWebContent(contentRef.current);
     if(JSON.stringify(latest)!==baselineRef.current){
      window.localStorage.setItem(recoveryKey,JSON.stringify({version:1,savedAt:new Date().toISOString(),draft:latest}));
