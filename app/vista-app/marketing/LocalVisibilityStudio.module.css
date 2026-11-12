@@ -55,3 +55,9 @@
 @media(max-width:360px){.summary{grid-template-columns:1fr}.scores{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
 @media(prefers-reduced-motion:no-preference){.spin{animation:vmvRotate 1.3s linear infinite}@keyframes vmvRotate{to{transform:rotate(360deg)}}}
+
+
+.auditFallback{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.auditFallback .error{margin:0}
+.auditFallback a{display:inline-flex;align-items:center;gap:6px;border:1px solid #ead1e6;background:#fff9fc;border-radius:10px;padding:10px 12px;text-decoration:none;color:#864471;font-weight:800;font-size:11px}
+.auditFallback a:hover{background:#f6ecf5}
