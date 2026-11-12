@@ -86,3 +86,20 @@ The original two open text areas are replaced in both the isolated web showcase 
 **Implementation:** `apps/ios/AIAgentWizard.tsx` wired into `AIAgentsStudio.tsx`; `app/vista-app/ai-agents/AgentSetupWizard.tsx` with module-local CSS, wired into the isolated preview route. Native answers are retained as `configuration` JSON in the proposed `vmv_ai_agents` schema, constrained by owner-only RLS. The simulator includes bounded serialized configuration as untrusted business information in its model context. Web preview remains **in-memory only** and does not touch private company records, send messages to the model, or execute real operations.
 
 **Not implemented:** real detection of connected VMV Scheduling/Inventory per business, provider authorization, synchronizations, appointments, telephony AI call-answering, inventory changes or commerce. Require live verified module entitlements, scoped read permission and audit logging before enabling any of these. Keep shared Home/menu files unchanged; the Director will coordinate navigation integration.
+
+## Context-aware wizard improvements (Nov 12, 2026)
+- City and U.S. state are captured separately (e.g., Columbus + Georgia versus Columbus + Ohio), with country/other-region support.
+- Opening hours use preset schedules or independent day-specific open/closed toggles and time dropdowns. No free-text hours required.
+- Booking questions read the previously entered industry: taxi/transport owners choose trip types (local, airport, scheduled, hourly), while other businesses specify their own bookable service. The prior company and location are visibly repeated as context rather than re-asked.
+- Reservation and cancellation lead times use clearly labeled choices (immediate, 15 minutes, 30 minutes, 1 hour, etc.), with an optional custom value.
+- Staffing is asked in plain terms; additional employee/vehicle/location questions appear only for multiple operators, never for solo owners.
+- The disconnected inventory and scheduling integration page is completely hidden. Future integration prompts require **tenant-verified, enabled and authorized connectors**, not just product catalog metadata.
+- In both web and native, the wizard varies between five and more steps depending on verified capabilities. The web showcase still saves only in-memory.
+
+## Isolated inbound telephone AI pilot — CODE ONLY, NOT LIVE
+- New owned route: `app/api/vmv/ai-agents/voice/route.ts` (signed Twilio HTTP POST, speech gathering, authenticated tenant route, pilot quota and brief AI voice responses).
+- Proposed DB tables: `vmv_ai_voice_routes` and `vmv_ai_voice_calls`, plus dedicated server-only call/turn reservation methods. These are **not migrated or tested against production**.
+- Hard-gated to Vercel Preview by `VMV_AI_VOICE_PILOT_ENABLED=true`, and separately requires an approved, ownership-verified **dedicated Twilio number**, signed account ID, owner/billing eligibility, active agent, server OpenAI key, webhook-base URL and strict per-route quotas (5 calls/day, 8 turns/call, 4 minutes).
+- No outgoing calls, payments, appointment bookings, real-time stock, data modifications or call recording. A caller hears a disclosure that the assistant uses AI. No speech transcripts are stored by this pilot route; audio/speech is processed by Twilio and OpenAI under their terms.
+- It intentionally **does not modify or redirect** the Smart Call translation webhook `/api/twilio/live/voice` or any currently provisioned number. Voice is **not active** merely because the endpoint builds.
+- To test an actual call, the Director must authorize a distinct testing number, ownership-verification and webhook routing, a staged database migration and privacy/billing review; then validate real Twilio signatures, TwiML recognition, model latency, human handoff and cleanup. Leave the feature flag OFF and the existing voice number unchanged until those conditions are met.
