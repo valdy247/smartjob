@@ -145,6 +145,7 @@ export default function AIAgentsPreview(){
      <span className={styles.sparkleBadge}><Sparkles size={21}/></span>
     </div>
     <div className={styles.scroller}>
+     {screen!=="home"&&notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
      {screen==="home"?<>
       <div className={styles.hero}>
        <div className={styles.heroEyebrow}><span>TU EQUIPO INTELIGENTE</span><Sparkles size={22}/></div>
