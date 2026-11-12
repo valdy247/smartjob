@@ -103,6 +103,11 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [stageUpdate,setStageUpdate]=useState("");
  const [evidence,setEvidence]=useState("");
  const revealWizard=()=>document.getElementById("vmv-marketing-request")?.scrollIntoView({behavior:"smooth",block:"start"});
+ const closeKeyboard=()=>{
+  const active=document.activeElement;
+  if(active instanceof HTMLElement&&active.matches("input, textarea, select"))active.blur();
+ };
+ const editWizardStep=(step:WizardStep)=>{closeKeyboard();setWizardStep(step);setWizardError("");revealWizard();};
  const chooseService=(code:ServiceCode)=>{
   if(code!==selected){setGoal("");setConsent(false);}
   setSelected(code);setWizardStep(1);setWizardError("");setSubmittedId(null);revealWizard();
@@ -115,9 +120,9 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   }
   if(wizardStep===2&&goal.trim().length<12){setWizardError("Elige una opción o describe lo que necesitas en al menos 12 caracteres.");return;}
   if(wizardStep===2&&goal.trim().length>1500){setWizardError("El mensaje no debe superar 1500 caracteres.");return;}
-  if(wizardStep<3){setWizardStep((wizardStep+1) as WizardStep);revealWizard();}
+  if(wizardStep<3){closeKeyboard();setWizardStep((wizardStep+1) as WizardStep);revealWizard();}
  };
- const goBack=()=>{setWizardError("");if(wizardStep>0&&wizardStep<4){setWizardStep((wizardStep-1) as WizardStep);revealWizard();}};
+ const goBack=()=>{setWizardError("");if(wizardStep>0&&wizardStep<4)editWizardStep((wizardStep-1) as WizardStep);};
  const effectiveCategory=chosenCategory||industryId||savedCategory||"other";
  useEffect(()=>{
   let alive=true;
@@ -348,11 +353,11 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     {wizardStep===3?<div className={styles.wizardBody}>
      <div className={styles.reviewCard}>
       <div className={styles.reviewTop}><ClipboardList size={20}/><strong>Resumen de tu solicitud</strong></div>
-      <div className={styles.reviewItem}><span>Servicio</span><strong>{services.find(s=>s.id===selected)?.name}</strong><button type="button" onClick={()=>setWizardStep(0)}>Editar</button></div>
-      <div className={styles.reviewItem}><span>Negocio</span><strong>{name.trim()}</strong><button type="button" onClick={()=>setWizardStep(1)}>Editar</button></div>
+      <div className={styles.reviewItem}><span>Servicio</span><strong>{services.find(s=>s.id===selected)?.name}</strong><button type="button" onClick={()=>editWizardStep(0)}>Editar</button></div>
+      <div className={styles.reviewItem}><span>Negocio</span><strong>{name.trim()}</strong><button type="button" onClick={()=>editWizardStep(1)}>Editar</button></div>
       <div className={styles.reviewItem}><span>Sector</span><strong>{categoryLabel(effectiveCategory,"No especificado")}</strong></div>
       {site.trim()?<div className={styles.reviewItem}><span>Sitio web</span><strong className={styles.wrapValue}>{site.trim()}</strong></div>:null}
-      <div className={styles.reviewGoal}><span>Qué necesitas</span><p>{goal.trim()}</p><button type="button" onClick={()=>setWizardStep(2)}>Modificar descripción</button></div>
+      <div className={styles.reviewGoal}><span>Qué necesitas</span><p>{goal.trim()}</p><button type="button" onClick={()=>editWizardStep(2)}>Modificar descripción</button></div>
      </div>
      <div className={styles.costNote}><Wallet size={22}/><div><strong>Enviar la solicitud: $0</strong><p>El coste de un servicio, si corresponde, se cotizará después. Ningún pago ni publicación se ejecuta al enviar.</p></div></div>
      <label className={styles.permission}><input type="checkbox" checked={consent} onChange={e=>{setConsent(e.target.checked);setWizardError("");}}/>
