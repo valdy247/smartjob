@@ -3,11 +3,11 @@ import {useEffect,useState,type FormEvent} from "react";
 import {createClient} from "@supabase/supabase-js";
 import {inquiryFields,safeReferenceLink,type InquiryDetailKey} from "@/lib/web-services-inquiries";
 
-type Props={slug:string;categoryId:string;services:string[];business:string};
+type Props={slug:string;categoryId:string;services:string[];business:string;source?:"classic"|"builder"};
 type FormState={name:string;email:string;phone:string;service:string;message:string};
 const empty:FormState={name:"",email:"",phone:"",service:"",message:""};
 type Details=Partial<Record<InquiryDetailKey,string>>;
-export default function RequestForm({slug,categoryId,services,business}:Props){
+export default function RequestForm({slug,categoryId,services,business,source="classic"}:Props){
  const [form,setForm]=useState<FormState>({...empty});
  const [details,setDetails]=useState<Details>({});
  const [website,setWebsite]=useState("");
@@ -40,7 +40,7 @@ export default function RequestForm({slug,categoryId,services,business}:Props){
    const key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
    if(!url||!key)throw new Error("No disponible");
    const client=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
-   const {data,error:submitError}=await client.rpc("smartjob_web_submit_inquiry",{
+   const {data,error:submitError}=await client.rpc(source==="builder"?"smartjob_builder_submit_inquiry":"smartjob_web_submit_inquiry",{
     p_slug:slug,
     p_payload:{
      name:form.name.trim().slice(0,100),
