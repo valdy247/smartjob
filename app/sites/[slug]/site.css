@@ -68,3 +68,27 @@
 
 .ws-public-contacts .ws-public-map-link{display:inline-flex;align-items:center;gap:12px;margin-top:9px;padding:11px 17px;border:1px solid var(--ws-color);border-radius:99px;font-size:13px;font-weight:850;color:var(--ws-color)}
 .ws-public-map-link:focus-visible{outline:3px solid var(--ws-color);outline-offset:4px}
+
+
+/* Public request form: accessible, polished, and responsive on customer devices. */
+.ws-public-inquiry{background:#f9f7fc}
+.ws-public-inquiry h2{margin-bottom:32px}
+.ws-inquiry-form{display:flex;flex-direction:column;gap:19px;max-width:760px;padding:clamp(19px,4vw,35px);background:#fff;border:1px solid #e9e6ee;border-radius:22px;box-shadow:0 20px 60px #2320330a}
+.ws-inquiry-form label,.ws-inquiry-extra label{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ws-inquiry-form label>span{font-size:12px;font-weight:760;color:var(--ws-ink)}
+.ws-inquiry-form input,.ws-inquiry-form select,.ws-inquiry-form textarea{font:inherit;font-size:15px;color:var(--ws-ink);background:#fbfaff;border:1px solid #dcd8e3;border-radius:11px;padding:14px 15px;max-width:100%;min-width:0;width:100%;min-height:47px}
+.ws-inquiry-form textarea{resize:vertical;min-height:115px;line-height:1.55}
+.ws-inquiry-form input:focus-visible,.ws-inquiry-form select:focus-visible,.ws-inquiry-form textarea:focus-visible{outline:2px solid var(--ws-color);outline-offset:2px;border-color:var(--ws-color)}
+.ws-inquiry-field-row,.ws-inquiry-extra{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.ws-inquiry-extra{padding:16px 0 0;border-top:1px solid #eee9f3}
+.ws-inquiry-trap{position:absolute!important;left:-9999px!important;top:auto!important;width:1px!important;height:1px!important;overflow:hidden!important}
+.ws-inquiry-error{color:#a53255;background:#fff0f3;padding:11px 14px;border-radius:10px;font-size:13px;margin:0}
+.ws-inquiry-submit{display:flex;justify-content:center;align-items:center;gap:18px;background:var(--ws-color);color:#fff;border:0;border-radius:999px;padding:16px 21px;min-height:51px;font-size:14px;font-weight:850;cursor:pointer}
+.ws-inquiry-submit:disabled{opacity:.6;cursor:wait}
+.ws-inquiry-submit:focus-visible{outline:3px solid var(--ws-color);outline-offset:3px}
+.ws-inquiry-success{max-width:760px;border-radius:20px;padding:43px 28px;background:white;border:1px solid #e9e6ee;text-align:center}
+.ws-inquiry-success>span{display:grid;place-items:center;border-radius:50%;width:56px;height:56px;margin:0 auto 18px;background:var(--ws-surface);color:var(--ws-color);font-size:29px;font-weight:800}
+.ws-inquiry-success h3{font-size:clamp(24px,4vw,38px);letter-spacing:-.06em;margin:0 0 8px}
+.ws-inquiry-success p{font-size:14px;color:#605b69;line-height:1.7;margin:0 auto 21px;max-width:450px}
+.ws-inquiry-success button{font:inherit;border-radius:99px;padding:12px 20px;background:var(--ws-color);color:white;border:0;cursor:pointer}
+@media(max-width:650px){.ws-inquiry-field-row,.ws-inquiry-extra{grid-template-columns:1fr}.ws-public-inquiry{padding:55px 6%}.ws-inquiry-form{padding:19px;gap:16px;border-radius:17px}.ws-public-nav nav{flex-wrap:wrap}}
