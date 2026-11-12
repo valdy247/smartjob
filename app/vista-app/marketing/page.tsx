@@ -1,7 +1,7 @@
 "use client";
 import {useMemo,useState} from "react";
 import Link from "next/link";
-import {ArrowLeft,ArrowUpRight,BarChart3,CheckCircle2,ClipboardCopy,HeartHandshake,Lightbulb,Megaphone,ShieldCheck,Sparkles,Target,TrendingUp} from "lucide-react";
+import {ArrowLeft,ArrowUpRight,BarChart3,CheckCircle2,ClipboardCopy,HeartHandshake,Link2,Lightbulb,Mail,Megaphone,MessageCircle,Share2,ShieldCheck,Sparkles,Target,TrendingUp} from "lucide-react";
 import styles from "./page.module.css";
 
 type Section="strategy"|"campaign"|"numbers"|"retention";
@@ -31,6 +31,11 @@ const number=(raw:string)=>{const n=Number(raw);return raw.trim()!==""&&Number.i
 const money=(n:number|null)=>n===null?"—":n.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:2});
 const percent=(n:number|null)=>n===null?"—":n.toLocaleString("es-US",{maximumFractionDigits:1})+"%";
 const safe=(v:string,fallback:string)=>v.trim()||fallback;
+const validReviewUrl=(value:string)=>{
+ if(!value)return true;
+ try{const url=new URL(value);return url.protocol==="https:"&&Boolean(url.hostname);}
+ catch{return false;}
+};
 function Field({label,value,onChange,placeholder,type="text",hint,min,max}:{
  label:string;value:string;onChange:(v:string)=>void;placeholder?:string;
  type?:string;hint?:string;min?:number;max?:number;
@@ -43,6 +48,7 @@ export default function MarketingPage(){
  const [section,setSection]=useState<Section>("strategy");
  const [form,setForm]=useState<FormState>(initial);
  const [notice,setNotice]=useState("");
+ const [reviewUrl,setReviewUrl]=useState("");
  const patch=(key:keyof FormState,value:string)=>{setForm(prev=>({...prev,[key]:value}));setNotice("");};
  const spend=number(form.budget),ticket=number(form.ticket),margin=number(form.margin),
   leads=number(form.leads),sales=number(form.sales),enteredRevenue=number(form.revenue);
@@ -98,11 +104,25 @@ export default function MarketingPage(){
   };
   return {channel,...rows[form.channel]};
  },[form.channel,business,offer,audience,cta]);
- const review="Hola, gracias por elegir "+business+". Si tu experiencia fue buena o tienes sugerencias, nos ayudaría mucho recibir una reseña honesta. Tu opinión nos permite mejorar. ¡Gracias!";
+ const reviewLink=reviewUrl.trim();
+ const reviewLinkIsValid=validReviewUrl(reviewLink);
+ const review="¡Hola! Gracias por elegir "+business+". ¿Podrías contarnos cómo fue tu experiencia con una reseña honesta? Tu opinión nos ayuda a mejorar y orienta a otras personas."+(reviewLink&&reviewLinkIsValid?"\n\nPuedes dejar tu reseña aquí: "+reviewLink:"")+"\n\n¡Muchas gracias!";
+ const whatsappReviewUrl="https://wa.me/?text="+encodeURIComponent(review);
+ const emailReviewUrl="mailto:?subject="+encodeURIComponent("Tu opinión sobre "+business)+"&body="+encodeURIComponent(review);
  const followup="Hola, te saludamos de "+business+". Gracias por confiar en nosotros. ¿Hay algo en lo que podamos ayudarte de nuevo? "+cta+". Si prefieres no recibir estos mensajes, dínoslo y no volveremos a escribirte.";
  const copy=async(value:string)=>{
   try{await navigator.clipboard.writeText(value);setNotice("Texto copiado.");}
   catch{setNotice("No se pudo copiar automáticamente; selecciona el texto para copiarlo.");}
+ };
+ const shareReview=async()=>{
+  if(!reviewLinkIsValid){setNotice("Revisa el enlace de reseñas: debe comenzar con https:// y ser válido.");return;}
+  if(typeof navigator.share==="function"){
+   try{await navigator.share({text:review});setNotice("La solicitud se entregó a la opción elegida. Confirma el envío en esa aplicación.");}
+   catch(error){if((error as Error)?.name!=="AbortError")setNotice("No se pudo abrir Compartir. Puedes usar WhatsApp, Correo o copiar el mensaje.");}
+   return;
+  }
+  try{await navigator.clipboard.writeText(review);setNotice("La opción nativa no está disponible aquí. Copiamos el mensaje para que lo pegues.");}
+  catch{setNotice("La opción nativa no está disponible aquí. Prueba WhatsApp o Correo.");}
  };
  const report=[
   "VMV MARKETING · PLAN DE TRABAJO",
@@ -207,7 +227,24 @@ export default function MarketingPage(){
      {section==="retention"?<>
       <div className={styles.sectionTop}><span>PASO 04 · FIDELIZACIÓN</span><h2>El crecimiento también viene de quienes regresan</h2><p>Los clientes actuales pueden comprar otra vez, recomendarte y darte información útil para mejorar.</p></div>
       <div className={styles.retentionCards}>
-       <article><span className={styles.iconCircle}><HeartHandshake size={22}/></span><h3>Solicitar reseñas honestas</h3><p>Pide opiniones a tus clientes de forma neutral, sin recompensas ni selección solo de reseñas positivas.</p><div className={styles.message}><p>{review}</p></div><button type="button" className={styles.secondary} onClick={()=>void copy(review)}><ClipboardCopy size={15}/> Copiar mensaje</button></article>
+       <article><span className={styles.iconCircle}><HeartHandshake size={22}/></span><h3>Solicitar reseñas honestas</h3><p>Pide opiniones a tus clientes de forma neutral, sin recompensas ni selección solo de reseñas positivas.</p>
+         <label className={styles.reviewLinkField}>
+          <span><Link2 size={15}/> Enlace para dejar la reseña <small>Opcional</small></span>
+          <input type="url" inputMode="url" value={reviewUrl} onChange={e=>{setReviewUrl(e.target.value);setNotice("");}} maxLength={2048} placeholder="https://g.page/r/..." aria-invalid={!reviewLinkIsValid}/>
+          <small>Pega el enlace directo de tu perfil de reseñas para que el cliente llegue con un toque.</small>
+          {!reviewLinkIsValid?<strong role="alert">Introduce un enlace https:// válido antes de compartir.</strong>:null}
+         </label>
+         <div className={styles.message}><span>MENSAJE QUE RECIBIRÁ TU CLIENTE</span><p className={styles.reviewMessage}>{review}</p></div>
+         <div className={styles.reviewShare}>
+          <button type="button" className={styles.primary} onClick={()=>void shareReview()} disabled={!reviewLinkIsValid}><Share2 size={16}/> Compartir solicitud</button>
+          <div className={styles.reviewShareOptions} aria-label="Otras formas de compartir">
+           {reviewLinkIsValid?<a className={styles.shareOption} href={whatsappReviewUrl} target="_blank" rel="noopener noreferrer"><MessageCircle size={15}/> WhatsApp</a>:null}
+           {reviewLinkIsValid?<a className={styles.shareOption} href={emailReviewUrl}><Mail size={15}/> Correo</a>:null}
+           <button type="button" className={styles.shareOption} onClick={()=>void copy(review)} disabled={!reviewLinkIsValid}><ClipboardCopy size={15}/> Copiar</button>
+          </div>
+          <small>Tú eliges a quién enviarlo y confirmas el mensaje. No se envían solicitudes automáticamente.</small>
+         </div>
+        </article>
        <article><span className={styles.iconCircle}><Megaphone size={22}/></span><h3>Reactivar con permiso</h3><p>Una invitación útil para personas que aceptaron recibir comunicaciones; respeta las bajas y reglas del canal.</p><div className={styles.message}><p>{followup}</p></div><button type="button" className={styles.secondary} onClick={()=>void copy(followup)}><ClipboardCopy size={15}/> Copiar mensaje</button></article>
       </div>
       <div className={styles.insight}><Lightbulb size={21}/><div><strong>Experimento de 7 días</strong><p>Registra cuántos clientes aceptaron volver a recibir noticias, cuántos respondieron y cuántos regresaron. Compara la utilidad con el coste de conseguir clientes nuevos.</p></div></div>
