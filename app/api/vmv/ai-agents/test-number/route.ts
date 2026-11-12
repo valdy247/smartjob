@@ -2,7 +2,7 @@ import {NextRequest} from "next/server";
 import {authenticTwilio,say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 import {findPhoneRoute} from "@/lib/phone-routes";
 import {billingAdmin} from "@/lib/vmv-billing";
-import {paidServiceAllowed} from "@/lib/vmv-entitlements";
+
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -30,7 +30,9 @@ function smartCall(base:string){return redirect(base,currentSmartCall);}
 
 async function agentReady(number:string,account:string,ownerId:string){
  if(process.env.VERCEL_ENV!=="preview"||process.env.VMV_AI_VOICE_PILOT_ENABLED!=="true"||
-    !process.env.OPENAI_API_KEY)return false;
+    !(process.env.OPENAI_API_KEY||process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN))return false;
+ if(!/^[a-f0-9-]{36}$/i.test(process.env.VMV_AI_TEST_OWNER_ID||"")||
+    process.env.VMV_AI_TEST_OWNER_ID!==ownerId)return false;
  const db=billingAdmin();
  if(!db)return false;
  const {data:entry,error}=await db.from("vmv_ai_voice_routes")
@@ -43,7 +45,7 @@ async function agentReady(number:string,account:string,ownerId:string){
  const {data:agent,error:agentError}=await db.from("vmv_ai_agents").select("id")
    .eq("id",entry.agent_id).eq("owner_id",ownerId).eq("status","active").maybeSingle();
  if(agentError||!agent)return false;
- return paidServiceAllowed(ownerId,"ai");
+ return true; // Pilot billing is capped by the dedicated 5-calls/day RPC.
 }
 export async function POST(req:NextRequest){
  const signed=await authenticTwilio(req,null);
