@@ -42,3 +42,14 @@
 .ws-public-gallery>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .ws-public-gallery>div img{width:100%;height:clamp(190px,25vw,340px);object-fit:cover;display:block;border-radius:19px}
 @media(max-width:700px){.ws-public-gallery>div{grid-template-columns:1fr}.ws-public-gallery>div img{height:250px}.ws-public-hero-photo{height:215px;border-radius:15px}}
+
+
+/* Direct conversion links; present only when the owner configures WhatsApp. */
+.ws-public-contact .ws-public-whatsapp-link{display:inline-flex;align-items:center;justify-content:center;gap:15px;max-width:100%;padding:16px 20px;margin:0 0 12px;background:var(--ws-color);color:#fff;border-radius:999px;font-size:15px;letter-spacing:-.02em;box-shadow:0 7px 22px #00000015}
+.ws-public-whatsapp-float{position:fixed;right:25px;bottom:24px;z-index:8;display:inline-flex;align-items:center;gap:9px;padding:14px 19px;background:#168c66;color:#fff!important;text-decoration:none;font-size:13px;font-weight:850;border-radius:999px;box-shadow:0 12px 38px #162c2870}
+.ws-public-whatsapp-float:hover{filter:brightness(1.07);transform:translateY(-2px)}
+.ws-public-whatsapp-float:focus-visible,.ws-public-button:focus-visible{outline:3px solid var(--ws-color);outline-offset:4px}
+.ws-public-whatsapp-float span{font-size:17px;line-height:1}
+.ws-public:has(.ws-public-whatsapp-float) .ws-public-footer{padding-bottom:72px}
+@media(max-width:700px){.ws-public-whatsapp-float{bottom:16px;right:15px;padding:12px 15px;font-size:12px}.ws-public:has(.ws-public-whatsapp-float) .ws-public-footer{padding-bottom:78px}}
+@media(prefers-reduced-motion:reduce){.ws-public-whatsapp-float{transition:none}.ws-public-whatsapp-float:hover{transform:none}}
