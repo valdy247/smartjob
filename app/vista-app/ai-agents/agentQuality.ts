@@ -52,6 +52,10 @@ export function inspectAgent(agent:WizardDraft):ReadinessReport{
  add("escalation","Derivación a una persona","Decide qué hacer cuando la IA no conoce una respuesta.","required",3,has(s,"human_review")||has(s,"handoff"));
  add("privacy","Datos permitidos","Define qué información del cliente puede solicitar.","required",3,has(s,"data_scope")||has(s,"personal_data"));
  add("restrictions","Límites expresos","Especifica qué no debe prometer o hacer.","recommended",3,has(s,"restrictions")||has(s,"custom_limits"));
+ if(agent.kind!=="calls"&&(s.channel==="Teléfono"||s.channel==="Teléfono y chat")){
+  add("phone_disclosure","Aviso de asistente IA","Autoriza el aviso telefónico de inteligencia artificial antes de conectar.","required",3,
+    s.call_disclosure==="Sí"||s.call_consent==="Sí");
+ }
 
  switch(agent.kind){
   case "calls":
