@@ -5,6 +5,7 @@ import {Puck} from "@puckeditor/core";
 import {ArrowLeft,ExternalLink,Globe,History,Layers,Plus,RefreshCw,Save,ShieldCheck,Trash2} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {builderConfig,normalizeBuilderDocument,starterBuilderDocument} from "@/lib/web-builder-puck";
+import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
 import styles from "./WebBuilderWorkspace.module.css";
 
 type Site={id:string;owner_id:string;slug:string;name:string;category_id:string};
@@ -26,6 +27,7 @@ export default function WebBuilderWorkspace(){
  const [document,setDocument]=useState<Data>(()=>starterBuilderDocument());
  const [view,setView]=useState<View>("sites");
  const [newSiteName,setNewSiteName]=useState("");
+ const [newSiteCategory,setNewSiteCategory]=useState("");
  const [newPageName,setNewPageName]=useState("");
  const [title,setTitle]=useState("");
  const [description,setDescription]=useState("");
@@ -65,6 +67,9 @@ export default function WebBuilderWorkspace(){
      .select("id,owner_id,slug,name,category_id").eq("owner_id",data.user.id).order("created_at",{ascending:false});
     if(error)throw new Error("No se pudieron cargar tus sitios");
     if(active){setUserId(data.user.id);setSites((rows||[]) as Site[]);}
+    const pref=await client.from("smartjob_business_category_preferences")
+     .select("category_id").eq("owner_id",data.user.id).maybeSingle();
+    if(active&&pref.data?.category_id)setNewSiteCategory(pref.data.category_id);
    }catch(e){if(active)setError(e instanceof Error?e.message:"No disponible");}
    finally{if(active)setLoading(false);}
   })();
@@ -112,13 +117,13 @@ export default function WebBuilderWorkspace(){
    const c=await authorized();
    const generated=(slugify(name).slice(0,33)||"mi-negocio")+"-"+crypto.randomUUID().replace(/-/g,"").slice(0,8);
    const {data:created,error}=await c.from("smartjob_builder_sites").insert({
-    owner_id:userId,slug:generated,name,category_id:""
+    owner_id:userId,slug:generated,name,category_id:newSiteCategory
    }).select("id,owner_id,slug,name,category_id").single();
    if(error||!created)throw new Error("No se pudo crear el sitio");
    const siteCreated=created as Site;
    const {data:home,error:homeError}=await c.from("smartjob_builder_pages").insert({
     site_id:siteCreated.id,owner_id:userId,slug:"home",title:"Inicio",
-    description:"",draft:starterBuilderDocument(name)
+    description:"",draft:starterBuilderDocument(name,newSiteCategory)
    }).select("id,site_id,owner_id,slug,title,description,draft,revision,updated_at").single();
    if(homeError||!home)throw new Error("Sitio creado; vuelve a abrirlo para añadir la página");
    setSites(current=>[siteCreated,...current]);
@@ -140,7 +145,7 @@ export default function WebBuilderWorkspace(){
   setBusy(true);setError("");
   try{
    const c=await authorized();
-   const draft=starterBuilderDocument(name);
+   const draft=starterBuilderDocument(name,site.category_id);
    const {data,error}=await c.from("smartjob_builder_pages").insert({
     site_id:site.id,owner_id:userId,slug:requested,title:name,description:"",draft
    }).select("id,site_id,owner_id,slug,title,description,draft,revision,updated_at").single();
@@ -326,6 +331,13 @@ export default function WebBuilderWorkspace(){
     <div><input id="newSite" maxLength={100} placeholder="Nombre de tu negocio" spellCheck={false}
      value={newSiteName} onChange={e=>setNewSiteName(e.target.value)}/>
      <button type="submit" disabled={busy}><Plus size={17}/> Crear sitio</button></div>
+    <label htmlFor="newCategory">Categoría del negocio</label>
+    <select id="newCategory" value={newSiteCategory} onChange={e=>setNewSiteCategory(e.target.value)}>
+     <option value="">General</option>
+     {CATEGORY_GROUPS.map(group=><optgroup key={group} label={group}>
+      {BUSINESS_CATEGORIES.filter(item=>item.group===group).map(category=><option key={category.id} value={category.id}>{category.label}</option>)}
+     </optgroup>)}
+    </select>
    </form>
    <h2>Mis sitios</h2>
    <div className={styles.siteList}>
