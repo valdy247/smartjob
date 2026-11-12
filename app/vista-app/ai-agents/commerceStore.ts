@@ -120,3 +120,32 @@ export async function updateHumanRequest(id:string,status:"reviewed"|"closed"){
   .eq("id",id).eq("owner_id",owner).select("id").maybeSingle();
  if(error||!data)throw Error("No se pudo actualizar la solicitud de atención.");
 }
+
+export async function createTestCheckout(order:TestOrder):Promise<string>{
+ const {db,owner}=await current();
+ if(!uuid.test(order.id)||order.owner_id!==owner||order.mode!=="test"||
+   order.status!=="awaiting_payment")throw Error("Solo puede solicitar el cobro de un pedido de prueba aceptado.");
+ const {data:session,error:sessionError}=await db.auth.getSession();
+ if(sessionError||!session.session?.access_token)throw Error("Vuelve a iniciar sesión.");
+ const response=await fetch("/api/vmv/ai-agents/commerce/checkout",{
+  method:"POST",cache:"no-store",headers:{"Content-Type":"application/json",
+    Authorization:"Bearer "+session.session.access_token},
+  body:JSON.stringify({orderId:order.id})
+ });
+ let payload:{checkoutUrl?:string;error?:string;test?:boolean}={};
+ try{payload=await response.json();}catch{}
+ if(!response.ok)throw Error(payload.error||"El cobro de este negocio no está disponible.");
+ if(payload.test!==true||!/^https:\/\/checkout[.]stripe[.]com\//i.test(payload.checkoutUrl||""))
+  throw Error("La sesión de pago no pudo verificarse.");
+ return payload.checkoutUrl!;
+}
+export async function getTestCheckout(orderId:string):Promise<string|null>{
+ const {db,owner}=await current();
+ if(!uuid.test(orderId))return null;
+ const {data}=await db.from("vmv_ai_payment_attempts")
+  .select("checkout_url,state,mode").eq("order_id",orderId)
+  .eq("owner_id",owner).eq("mode","test").eq("state","pending")
+  .order("created_at",{ascending:false}).limit(1);
+ const url=data?.[0]?.checkout_url;
+ return typeof url==="string"&&/^https:\/\/checkout[.]stripe[.]com\//i.test(url)?url:null;
+}
