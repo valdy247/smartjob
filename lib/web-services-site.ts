@@ -104,3 +104,25 @@ export function webPrimaryContact(content:WebSiteContent):WebPrimaryContact{
  }
  return {href:"#contacto",external:false,kind:"section"};
 }
+
+
+/** A service tile leads to a relevant inquiry, never a dead decorative arrow. */
+export function webServiceContact(content:WebSiteContent,service:string):WebPrimaryContact{
+ const name=service.trim().slice(0,70);
+ if(content.contactMethod==="whatsapp"){
+  const digits=webWhatsApp(content);
+  if(digits){
+   const message=("Hola, quisiera información sobre "+name+" de "+(content.business||"su negocio")+".").slice(0,250);
+   return {href:"https://wa.me/"+digits+"?text="+encodeURIComponent(message),external:true,kind:"whatsapp"};
+  }
+ }
+ if(content.contactMethod==="email"){
+  const email=webEmail(content);
+  if(email)return {href:"mailto:"+email+"?subject="+encodeURIComponent("Consulta: "+name),external:false,kind:"email"};
+ }
+ if(content.contactMethod==="call"){
+  const phone=webPhone(content);
+  if(phone)return {href:"tel:"+phone,external:false,kind:"call"};
+ }
+ return {href:"#contacto",external:false,kind:"section"};
+}
