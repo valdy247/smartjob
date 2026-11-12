@@ -34,3 +34,15 @@ Supabase project `wrnlhjujsbigculndivs`:
 - The web app still needs manual signed-in end-to-end QA for image uploads, persistence, publication rendering and narrow-phone layout.
 - Native iOS Expo runtime/typecheck is not validated by the Vercel build; test independently.
 - No Home/Smart Call/Translator/Marketing code or shared navigation edited in this change.
+
+
+## Direct conversion and draft safety (follow-on)
+- Conversion settings are part of Web Services **Contenido** only: owner chooses the primary button label and destination (contact section, WhatsApp, telephone, or email). WhatsApp requires an explicitly entered international number; there is no inferred country.
+- Published hero button has a real link. WhatsApp adds a direct contact shortcut. Each service card is a real inquiry link, prefilled with that service name when the owner chooses WhatsApp. Business address provides a Google Maps directions link.
+- Publication page supports native Web Share where available, falling back to copying the URL. Hero image is included in Open Graph/Twitter metadata for sharing when provided.
+- Saving incomplete drafts is allowed; publication validates required category, business name, headline and selected contact method.
+- The editor keeps account-scoped unsaved changes in the browser until server save succeeds and offers explicit restore/discard if a newer local draft survives a reload. A browser close with unsaved changes prompts for confirmation where supported.
+- A 'Sin guardar' / 'Guardado' indicator differentiates edits from saved drafts. Publication also detects content that differs from the currently published revision.
+- Database schema continues to use the same owner-scoped `smartjob_web_sites` draft and `smartjob_web_publications` snapshot records; new contact fields are optional and normalizer defaults retain compatibility with older sites.
+- Preview build checks type safety, not whether a business WhatsApp number exists or responds. Manual QA should cover URL opens, optional fields, old published records, single-service links, native share, lost connection and local recovery.
+- No analytics, leads database, WhatsApp Business API or messaging automation is claimed. Links open the customer's own communication application.
