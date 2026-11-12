@@ -2,6 +2,7 @@
 import {useEffect,useState,type ChangeEvent} from "react";
 import {Bot,Globe,Search,Star,CalendarDays,PanelsTopLeft,MapPin,ChartNoAxesCombined,Link2,PhoneCall,ArrowUpRight,ChevronLeft,Save,Copy,Check} from "lucide-react";
 import styles from "./BusinessServicesPreview.module.css";
+import WebServicesStudio from "./WebServicesStudio";
 
 type Charge="subscription"|"one_time";
 type Fulfillment="automatic"|"assisted";
@@ -36,6 +37,7 @@ const WEB_SERVICE_IDS=new Set(["site-care","local-seo","reviews","website-design
 export default function BusinessServicesPreview({userId,focus="all"}:{userId:string;focus?:"all"|"web"}){
  const [charge,setCharge]=useState<Charge>("subscription");
  const [editor,setEditor]=useState(false);
+ const [siteEditor,setSiteEditor]=useState(false);
  const [draft,setDraft]=useState<Draft>({...empty});
  const [status,setStatus]=useState("");
  const key="vmv.gbp.web.draft.v1."+userId;
@@ -72,6 +74,7 @@ export default function BusinessServicesPreview({userId,focus="all"}:{userId:str
   try{await navigator.clipboard.writeText(message);setStatus("Ficha copiada");}
   catch{setStatus("No se pudo copiar");}
  };
+ if(siteEditor)return <WebServicesStudio ownerId={userId} onBack={()=>setSiteEditor(false)}/>;
  if(editor)return <section className={styles.root}>
    <button type="button" className={styles.back} onClick={()=>setEditor(false)}><ChevronLeft size={18}/> Servicios</button>
    <div className={styles.editorHero}>
@@ -91,6 +94,7 @@ export default function BusinessServicesPreview({userId,focus="all"}:{userId:str
   </section>;
  return <section className={styles.root}>
   <div className={styles.header}><h3>{focus==="web"?"Web Services":"Servicios"}<span>.</span></h3><div className={styles.headerIcon}><PanelsTopLeft size={20}/></div></div>
+  {focus==="web"?<button className={styles.primary} type="button" onClick={()=>setSiteEditor(true)} style={{width:"100%",marginBottom:16}}><PanelsTopLeft size={18}/> Crear mi web <ArrowUpRight size={16}/></button>:null}
   <div className={styles.toggle} role="group" aria-label="Tipo de servicio">
    <button type="button" className={charge==="subscription"?styles.selected:""} aria-pressed={charge==="subscription"} onClick={()=>setCharge("subscription")}>En planes</button>
    <button type="button" className={charge==="one_time"?styles.selected:""} aria-pressed={charge==="one_time"} onClick={()=>setCharge("one_time")}>Pago único</button>
@@ -104,6 +108,7 @@ export default function BusinessServicesPreview({userId,focus="all"}:{userId:str
      </div></div>{o.id==="google-business-profile"?<ArrowUpRight className={styles.arrow} size={17}/>:null}</>;
     return o.id==="google-business-profile"?
      <button type="button" key={o.id} className={styles.tile+" "+styles[o.color]} onClick={()=>setEditor(true)} aria-label="Preparar Google Business Profile">{inner}</button>:
+     o.id==="website-design"?<button type="button" key={o.id} className={styles.tile+" "+styles[o.color]} onClick={()=>setSiteEditor(true)} aria-label="Crear web">{inner}</button>:
      <div key={o.id} className={styles.tile+" "+styles[o.color]}>{inner}</div>;
    })}
   </div>
