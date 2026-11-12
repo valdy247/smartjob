@@ -1,5 +1,5 @@
 "use client";
-import {useState} from "react";
+import {useEffect,useState} from "react";
 import {
  ArrowLeft,ArrowUpRight,Bot,BookOpen,BookCheck,BriefcaseBusiness,CalendarDays,Check,
  ChevronRight,ClipboardList,Headphones,MessageCircle,Package,PauseCircle,
@@ -10,12 +10,13 @@ import styles from "./page.module.css";
 import AgentSetupWizard,{type WizardDraft} from "./AgentSetupWizard";
 import AgentQualityLab from "./AgentQualityLab";
 import {inspectAgent} from "./agentQuality";
+import {loadAgents,loadPhoneSelection,selectPhoneAgent,setStudyStatus,storeAgent,type PersistedAgent,type PhoneSelection} from "./agentStore";
 
 type Kind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 type Status="draft"|"active"|"paused";
 type Screen="home"|"editor"|"test"|"quality";
 type AgentDraft=WizardDraft;
-type Agent=AgentDraft&{id:string;status:Status};
+type Agent=PersistedAgent;
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
  {id:"calls",title:"Llamadas",sub:"Atención telefónica",Icon:PhoneCall,bg:"#ede2ff",fg:"#7143c7",purpose:"Orientar a quien llama y derivar a una persona cuando sea necesario."},
  {id:"support",title:"Clientes",sub:"Atención y consultas",Icon:Headphones,bg:"#c8f3e4",fg:"#17624f",purpose:"Responder preguntas habituales sobre productos, servicios y horarios."},
@@ -36,6 +37,21 @@ export default function AIAgentsPreview(){
  const [editStep,setEditStep]=useState<0|1|2|3>(0);
  const [draft,setDraft]=useState<AgentDraft>(()=>blank("support"));
  const [agents,setAgents]=useState<Agent[]>([]);
+ const [phone,setPhone]=useState<PhoneSelection|null>(null);
+ const [loading,setLoading]=useState(true);
+ const [busy,setBusy]=useState(false);
+ const [authenticated,setAuthenticated]=useState(true);
+ useEffect(()=>{let live=true;
+  void Promise.all([loadAgents(),loadPhoneSelection()])
+   .then(([list,selection])=>{if(!live)return;setAgents(list);setPhone(selection);setAuthenticated(true);})
+   .catch(e=>{if(!live)return;setAuthenticated(false);setNotice(e instanceof Error?e.message:"Inicia sesión en VMV para comenzar.");})
+   .finally(()=>{if(live)setLoading(false);});
+  return ()=>{live=false;};
+ },[]);
+ async function reload(){
+  const [list,selection]=await Promise.all([loadAgents(),loadPhoneSelection()]);
+  setAgents(list);setPhone(selection);setAuthenticated(true);
+ }
  const [selected,setSelected]=useState<string|null>(null);
  const [message,setMessage]=useState("");
  const [messageNotice,setMessageNotice]=useState("");
@@ -47,30 +63,24 @@ export default function AIAgentsPreview(){
   name:agent.name,kind:agent.kind,purpose:agent.purpose,personality:agent.personality,
   language:agent.language,instructions:agent.instructions,knowledge:agent.knowledge,setup:{...agent.setup}
  });setScreen("editor");};
- const save=(nextDraft:AgentDraft=draft)=>{
+ const save=async(nextDraft:AgentDraft=draft)=>{
+  if(busy)return;
   if(!nextDraft.name.trim()){setNotice("Escribe el nombre del agente.");return;}
-  const cleaned={...nextDraft,name:nextDraft.name.trim().slice(0,80)};
-  if(selected){
-   const incomplete=!inspectAgent(cleaned).requiredPassed;
-   const wasActive=agents.some(a=>a.id===selected&&a.status==="active");
-   setAgents(old=>old.map(a=>a.id===selected?
-    {...a,...cleaned,status:incomplete&&a.status==="active"?"paused":a.status}:a));
-   if(incomplete&&wasActive){
-    setNotice("Este agente se pausó en el estudio porque ahora faltan datos esenciales.");
-   }
-  }else{
-   setAgents(old=>[{...cleaned,id:String(Date.now()),status:"draft"},...old]);
-  }
-  if(!(selected&&agents.some(a=>a.id===selected&&a.status==="active")&&
-     !inspectAgent(cleaned).requiredPassed))
-   setNotice("Diseño guardado solo en esta vista temporal. Aún no se almacena en tu cuenta.");
-  setScreen("home");
+  setBusy(true);
+  try{
+   const before=selected?agents.find(a=>a.id===selected):null;
+   await storeAgent(nextDraft,before?.revision?before:null);
+   await reload();
+   setNotice("Guardado en tu cuenta VMV. Tus cambios estarán disponibles en el iPhone.");
+   setScreen("home");
+  }catch(e){setNotice(e instanceof Error?e.message:"No se pudo guardar el agente.");}
+  finally{setBusy(false);}
  };
  const demo=()=>{
   const schedule=Object.fromEntries(["mon","tue","wed","thu","fri","sat","sun"].flatMap(day=>[
    ["h_"+day+"_active","Sí"],["h_"+day+"_open","09:00"],["h_"+day+"_close","17:00"]]));
   const sample:Agent={
-   id:"example-taxi",status:"draft",name:"Luna · Ejemplo",kind:"bookings",
+   id:"example-taxi",revision:0,business_id:"",owner_id:"",updated_at:"",status:"draft",name:"Luna · Ejemplo",kind:"bookings",
    purpose:"Orientar sobre viajes y preparar solicitudes que un conductor confirmará.",
    personality:"Amable y profesional",language:"Español",instructions:"",
    knowledge:"",setup:{
@@ -90,12 +100,30 @@ export default function AIAgentsPreview(){
  };
  const test=(agent:Agent)=>{setSelected(agent.id);setScreen("test");setMessage("");setMessageNotice("");};
  const quality=(agent:Agent)=>{setSelected(agent.id);setScreen("quality");};
- const toggleStatus=(agent:Agent)=>{
+ const toggleStatus=async(agent:Agent)=>{
+  if(busy)return;
+  if(!agent.revision){setNotice("Guarda el ejemplo en tu cuenta antes de activarlo.");return;}
   if(agent.status!=="active"&&!inspectAgent(agent).requiredPassed){
-   setNotice("Antes de activar en el estudio, completa los datos esenciales del agente.");
-   quality(agent);return;
+   setNotice("Completa los requisitos antes de activar en estudio.");quality(agent);return;
   }
-  setAgents(prev=>prev.map(a=>a.id===agent.id?{...a,status:a.status==="active"?"paused":"active"}:a));
+  setBusy(true);
+  try{
+   await setStudyStatus(agent,agent.status==="active"?"paused":"active");
+   await reload();
+   setNotice("Estado de estudio guardado. Esto no cambia la recepción de llamadas.");
+  }catch(e){setNotice(e instanceof Error?e.message:"No fue posible cambiar el estado.");}
+  finally{setBusy(false);}
+ };
+ const select=async(agent:Agent|null)=>{
+  if(!phone||busy)return;
+  if(agent&&!agent.revision){setNotice("Guarda primero un agente real.");return;}
+  setBusy(true);
+  try{
+   await selectPhoneAgent(phone.routeId,agent);
+   await reload();
+   setNotice(agent?"Agente seleccionado para tu línea de prueba. La conexión con Twilio sigue pendiente de verificación.":"Selección telefónica retirada.");
+  }catch(e){setNotice(e instanceof Error?e.message:"No fue posible guardar el agente seleccionado.");}
+  finally{setBusy(false);}
  };
  const back=()=>{setScreen("home");setMessageNotice("");};
  const patch=(key:keyof AgentDraft,value:string)=>setDraft(prev=>({...prev,[key]:value}));
@@ -121,9 +149,16 @@ export default function AIAgentsPreview(){
        <div className={styles.heroEyebrow}><span>TU EQUIPO INTELIGENTE</span><Sparkles size={22}/></div>
        <h1>Crea agentes.<br/>Haz más con VMV.</h1>
        <p>Configúralos, enséñales tu negocio y pruébalos desde aquí.</p>
-       <div className={styles.heroPills}><span>{agents.length} agentes</span><span>{agents.filter(a=>a.status==="active").length} activos en estudio</span></div>
+       <div className={styles.heroPills}><span>{agents.length} agentes guardados</span><span>{agents.filter(a=>a.status==="active").length} activos en estudio</span></div>
       </div>
-      {notice?<div className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
+      {notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
+      {loading?<div className={styles.info}>Consultando tus agentes guardados…</div>:null}
+      {!authenticated?<div className={styles.info}>Inicia sesión en <a href="/vista-app">VMV Business</a> para guardar y seleccionar agentes.</div>:null}
+      {phone?<div className={styles.info}>
+       <PhoneCall size={17}/> Línea de prueba {phone.maskedNumber} ·
+       {phone.agentId?" Agente elegido. Falta validar Twilio.":" Sin agente seleccionado."}
+       {phone.agentId?<button type="button" className={styles.buttonSecondary} onClick={()=>void select(null)} disabled={busy}>Quitar selección</button>:null}
+      </div>:null}
       <div className={styles.sectionHeading}><div><h2>¿Qué quieres automatizar?</h2><p>Selecciona una función para tu agente.</p></div></div>
       <div className={styles.tiles}>
        {types.map(type=><button type="button" key={type.id} className={styles.tile}
@@ -142,7 +177,7 @@ export default function AIAgentsPreview(){
        {agents.map(a=>{const t=typeInfo(a.kind);return <article className={styles.agent} key={a.id}>
         <div className={styles.agentTop}><span style={{background:t.bg,color:t.fg}} className={styles.agentIcon}><t.Icon size={21}/></span>
          <span className={styles.agentMeta}><strong>{a.name}</strong><small>{t.title} · {a.language}</small></span>
-         <span className={styles.agentState}>{a.status==="draft"?"Borrador":a.status==="active"?"Activo":"Pausado"}</span>
+         <span className={styles.agentState}>{a.status==="paused"?"Pausado":phone?.agentId===a.id?"Seleccionado":a.status==="active"?"Activo en estudio":inspectAgent(a).requiredPassed?"Listo para configurar":"Borrador"}</span>
         </div>
         <p>{a.purpose}</p>
         <div className={styles.readinessMini}>
@@ -151,18 +186,20 @@ export default function AIAgentsPreview(){
         </div>
         <div className={styles.agentButtons}>
          <button type="button" className={styles.buttonPrimary} onClick={()=>test(a)}><MessageCircle size={15}/> Probar</button>
+         {phone&&a.revision>0?<button type="button" disabled={busy} className={styles.buttonSecondary}
+           onClick={()=>void select(a)}><PhoneCall size={15}/>{phone.agentId===a.id?"Elegido para la línea":"Elegir para teléfono"}</button>:null}
          <button type="button" className={styles.buttonSecondary} onClick={()=>quality(a)}><BookCheck size={15}/> Calidad</button>
          <button type="button" className={styles.buttonSecondary} onClick={()=>edit(a)}><ClipboardList size={15}/> Editar</button>
-         <button type="button" className={styles.buttonSecondary} onClick={()=>toggleStatus(a)}>
+         <button type="button" className={styles.buttonSecondary} onClick={()=>void toggleStatus(a)}>
           {a.status==="active"?<PauseCircle size={15}/>:<PlayCircle size={15}/>} {a.status==="active"?"Pausar":"Activar en estudio"}
          </button>
         </div>
        </article>})}
       </div>}
-      <div className={styles.disclaimer}><ShieldCheck size={16}/> Vista de diseño: los cambios no se guardan en Supabase ni ejecutan acciones reales.</div>
+      <div className={styles.disclaimer}><ShieldCheck size={16}/> Los agentes se guardan en tu cuenta. Elegir uno no conecta Twilio ni autoriza pagos. El ejemplo ficticio es temporal.</div>
      </>:null}
      {screen==="editor"?<AgentSetupWizard key={(selected||draft.kind)+"-"+editStep}
-      initial={draft} initialStep={editStep} onCancel={back} onSave={updated=>{setDraft(updated);save(updated);}}/>:null}
+      initial={draft} initialStep={editStep} onCancel={back} onSave={updated=>{setDraft(updated);void save(updated);}}/>:null}
      {screen==="quality"&&active?<AgentQualityLab agent={active} onClose={back} onEdit={step=>edit(active,step)}/>:null}
      {screen==="test"&&active?<div className={styles.testing}>
       <div className={styles.testAgent}><div className={styles.testAvatar}><Bot size={24}/></div><strong>{active.name}</strong>
