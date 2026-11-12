@@ -65,7 +65,8 @@ export function directClientTwiml(bridge:string,route:ActivePhoneRoute,caller:st
  const action=xmlEscape(baseUrl+"/api/twilio/live/direct-ended?bridge="+bridge+"&route="+route.id+
    "&caller="+encodeURIComponent(caller)+"&proof="+token);
  const client="sj_"+route.user_id.replaceAll("-","");
- // Direct calls never use the AI relay, minutes reservation or a PSTN leg back to the carrier.
+ // Direct calls avoid the AI relay and a second PSTN leg. The separate
+ // national-minute reservation is created before this TwiML is returned.
  return twiml(say("Le conectamos. Un momento por favor.","es-ES")+
   '<Dial answerOnBridge="true" timeout="30" timeLimit="'+String(Math.max(60,Math.min(600,Math.floor(limitSeconds))))+'" record="do-not-record" action="'+action+
   '" method="POST"><Client><Identity>'+xmlEscape(client)+'</Identity>'+
