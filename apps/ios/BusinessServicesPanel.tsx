@@ -98,7 +98,7 @@ export function BusinessServicesPanel({session}:{session:Session}){
   return()=>{live=false;};
  },[session.user.id]);
  const filteredCategories=BUSINESS_CATEGORIES.filter(cat=>
-  !categorySearch.trim()||((cat.label+" "+cat.group).normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("es").includes(categorySearch.normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("es"))).slice(0,12);
+  !categorySearch.trim()||((cat.label+" "+cat.group).normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("es").includes(categorySearch.normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("es")))).slice(0,12);
   const change=(key:Exclude<keyof ProfileDraft,"authorized">,value:string)=>{
   setDraft(current=>({...current,[key]:value}));setSaved(false);
  };

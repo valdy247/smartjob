@@ -4,6 +4,7 @@ import {ActivityIndicator,Alert,AppState,KeyboardAvoidingView,Platform,Pressable
 import {Voice,Call,CallInvite} from "@twilio/voice-react-native-sdk";
 import type {Session} from "@supabase/supabase-js";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import {initialAccountProfile} from "../../lib/account-profile";
 import {api,supabase,configured} from "./session";
 import {useNativeInterfaceLanguage} from "./useInterfaceLanguage";
 import {InterpreterPanel} from "./InterpreterPanel";
@@ -102,6 +103,8 @@ export default function App(){
  const callbackRequestedAt=useRef(0);
  const directCallbackRef=useRef(false);
  const sessionRef=useRef<Session|null>(null);
+ const overviewRequest=useRef(0);
+ const accountEpoch=useRef(0);
  const pendingBusinessLink=useRef<"calls"|"services"|null>(null);
  useEffect(()=>{
    const processLink=(url:string|null)=>{
@@ -153,6 +156,15 @@ export default function App(){
    client.auth.getSession().then(({data})=>{if(mounted){setSession(data.session);sessionRef.current=data.session;}}).catch(()=>{}).finally(()=>{if(mounted)setAuthBootstrapped(true);});
    const {data}=client.auth.onAuthStateChange((_event,next)=>{
      if(!mounted)return;
+     const changed=sessionRef.current?.user.id!==next?.user.id;
+     if(changed){
+       accountEpoch.current++;overviewRequest.current++;setOverviewBusy(false);setHistoryBusy(false);
+       setActivationProfile(null);setAccountOverview(null);setBillingOverview(null);
+       setPilotReadiness(null);setCallHistory([]);setCallbackNotice("");setError("");
+       setAssistantPrefs({existing_phone:"",desired_language:"es",caller_language:"en",assistant_name:""});
+       setGreetingPrefs({voice_customer:"default",voice_owner:"default",greeting_customer:"",greeting_owner:""});
+       setGreetingEditable(false);setCustomizationMessage("");setActiveModule(null);
+     }
      setSession(next);sessionRef.current=next;setAuthBootstrapped(true);
      if(!next){setReady(false);setPhoneVerification(null);setSmsCode("");setSmsSent(false);setStatus("Inicia sesión para recibir llamadas");setCallHistory([]);setCallsView("dial");setDialTarget(null);setCallTypeFilter("all");setContactsPhone("");}
    });
@@ -161,25 +173,26 @@ export default function App(){
  useEffect(()=>{
   const client=supabase;
   if(!session?.user.id||!client){setActivationProfile(null);return;}
+  setActivationProfile(null);
   let alive=true;
   (async()=>{
    try{
-    const {data:existing}=await client.from("smartjob_profiles")
+    const {data:existing,error}=await client.from("smartjob_profiles")
      .select("id,first_name,phone,owner_language,assistant_name,line_choice,line_carrier,preferred_plan,plan_prompt_seen,line_setup_completed")
      .eq("id",session.user.id).maybeSingle();
     if(!alive)return;
+    if(error)throw error;
     if(existing){setActivationProfile(existing as NativeProfile);return;}
-    const m=session.user.user_metadata||{};
-    if(!m.first_name||!m.last_name||!m.phone||!m.occupation)return;
-    const {data:created}=await client.from("smartjob_profiles").upsert({
-     id:session.user.id,first_name:String(m.first_name),last_name:String(m.last_name),
-     phone:String(m.phone),occupation:String(m.occupation),
-     city:String(m.city||""),state:String(m.state||""),country:String(m.country||"US"),
-     owner_language:String(m.owner_language||"es"),customer_language:String(m.customer_language||"en"),
-     assistant_name:String(m.assistant_name||"Juan"),line_choice:m.line_choice==="new"?"new":"keep",
-     line_carrier:"other",plan_prompt_seen:false,line_setup_completed:false
-    },{onConflict:"id",ignoreDuplicates:true}).select("*").maybeSingle();
-    if(alive&&created)setActivationProfile(created as NativeProfile);
+    const initial=initialAccountProfile(session.user.id,session.user.user_metadata||{});
+    if(!initial)return;
+    const {data:created,error:creationError}=await client.from("smartjob_profiles")
+      .upsert(initial,{onConflict:"id",ignoreDuplicates:true}).select("*").maybeSingle();
+    if(!alive)return;
+    if(creationError)throw creationError;
+    if(created){setActivationProfile(created as NativeProfile);return;}
+    // A web login may have inserted the shared profile concurrently.
+    const {data:concurrent}=await client.from("smartjob_profiles").select("*").eq("id",session.user.id).maybeSingle();
+    if(alive&&concurrent)setActivationProfile(concurrent as NativeProfile);
    }catch{if(alive)setActivationProfile(null);}
   })();
   return()=>{alive=false;};
@@ -393,38 +406,55 @@ export default function App(){
  }
  async function refreshAccountOverview(){
    if(!supabase||!sessionRef.current)return;
+   const owner=sessionRef.current.user.id;
+   const revision=++overviewRequest.current;
+   const current=()=>sessionRef.current?.user.id===owner&&revision===overviewRequest.current;
    setOverviewBusy(true);
    try{
      const {data}=await supabase.auth.getSession();
-     if(!data.session)return;
+     if(!data.session||data.session.user.id!==owner||!current())return;
      const result=await fetch(api+"/api/ios/account-overview",{
        headers:{"Authorization":"Bearer "+data.session.access_token}
      });
      if(!result.ok)throw new Error("No pudimos obtener tu centro de activación.");
-     setAccountOverview(await result.json());
+     const overview=await result.json();
+     if(!current())return;
+     setAccountOverview(overview);
      const billing=await fetch(api+"/api/billing/overview",{
        headers:{"Authorization":"Bearer "+data.session.access_token}
      }).catch(()=>null);
-     if(billing?.ok)setBillingOverview(await billing.json());
+     const billingData=billing?.ok?await billing.json():null;
+     if(!current())return;
+     if(billing?.ok)setBillingOverview(billingData);
     else{setBillingOverview(null);setError("No pudimos consultar tu suscripción VMV. Comprueba la conexión y pulsa Actualizar.");}
-   }catch(e){setError(e instanceof Error?e.message:"Error de conexión.");}
-   finally{setOverviewBusy(false);}
+   }catch(e){if(current())setError(e instanceof Error?e.message:"Error de conexión.");}
+   finally{if(current())setOverviewBusy(false);}
  }
  useEffect(()=>{
   if(!session?.user.id){setAccountOverview(null);setBillingOverview(null);return;}
   void refreshAccountOverview();
  },[session?.user.id]);
+ useEffect(()=>{
+  const listener=AppState.addEventListener("change",state=>{
+   if(state==="active"&&sessionRef.current)void refreshAccountOverview();
+  });
+  return()=>listener.remove();
+ },[]);
  async function refreshCallHistory(){
   if(!supabase||!sessionRef.current)return;
+  const owner=sessionRef.current.user.id;
+  const revision=accountEpoch.current;
+  const current=()=>sessionRef.current?.user.id===owner&&accountEpoch.current===revision;
   setHistoryBusy(true);
   try{
    const {data,error:historyError}=await supabase.from("smartjob_call_sessions")
      .select("bridge_sid,status,duration_seconds,started_at,call_mode,caller_phone")
-     .eq("owner_id",sessionRef.current.user.id).order("started_at",{ascending:false}).limit(25);
+     .eq("owner_id",owner).order("started_at",{ascending:false}).limit(25);
+   if(!current())return;
    if(historyError)throw historyError;
    setCallHistory(data||[]);
-  }catch{setError("No se pudo cargar el historial.");}
-  finally{setHistoryBusy(false);}
+  }catch{if(current())setError("No se pudo cargar el historial.");}
+  finally{if(current())setHistoryBusy(false);}
  }
  useEffect(()=>{
   if(session?.user.id&&((activeTab==="settings"&&settingsPage==="history")||(activeTab==="calls"&&callsView==="history")))void refreshCallHistory();
@@ -574,10 +604,14 @@ export default function App(){
  },[session?.user.id,accountOverview?.connectedToApp]);
  async function loadCustomization(){
   if(!supabase||!sessionRef.current)return;
+  const owner=sessionRef.current.user.id;
+  const revision=accountEpoch.current;
+  const current=()=>sessionRef.current?.user.id===owner&&accountEpoch.current===revision;
   try{
     const {data:settings}=await supabase.from("smartjob_call_settings")
       .select("existing_phone,desired_language,caller_language,assistant_name")
-      .eq("user_id",sessionRef.current.user.id).maybeSingle();
+      .eq("user_id",owner).maybeSingle();
+    if(!current())return;
     if(settings)setAssistantPrefs({
       existing_phone:settings.existing_phone||"",desired_language:settings.desired_language||"es",
       caller_language:settings.caller_language===settings.desired_language?(settings.desired_language==="en"?"es":"en"):(settings.caller_language||"en"),assistant_name:settings.assistant_name||"Juan"
@@ -585,13 +619,15 @@ export default function App(){
     else setAssistantPrefs({existing_phone:"",desired_language:"es",caller_language:"en",assistant_name:"Juan"});
     const {data}=await supabase.auth.getSession();
     if(!data.session)return;
+    if(data.session.user.id!==owner||!current())return;
     const response=await fetch(api+"/api/billing/preferences",{headers:{Authorization:"Bearer "+data.session.access_token}});
     if(response.ok){
       const info=await response.json() as {editable?:boolean;settings?:typeof greetingPrefs};
+      if(!current())return;
       setGreetingEditable(info.editable===true);
       if(info.settings)setGreetingPrefs(info.settings);
     }
-  }catch{setCustomizationMessage("No se pudieron cargar todos los ajustes.");}
+  }catch{if(current())setCustomizationMessage("No se pudieron cargar todos los ajustes.");}
  }
  useEffect(()=>{
   if(session?.user.id&&activeTab==="settings"&&(settingsPage==="style"||settingsPage==="profile"))void loadCustomization();
@@ -1054,7 +1090,7 @@ export default function App(){
        </Pressable>)}
     </View>:null}
   </KeyboardAvoidingView>
-  {session&&activationProfile&&!activationProfile.plan_prompt_seen?
+  {session&&activationProfile&&activationProfile.id===session.user.id&&!activationProfile.plan_prompt_seen?
    <NativeActivation session={session} profile={activationProfile} onComplete={setActivationProfile}/>:null}
   <Modal visible={!!invite||!!call} animationType="fade" presentationStyle="fullScreen"
     onRequestClose={()=>{}}>
