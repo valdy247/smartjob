@@ -3,6 +3,8 @@ import {useEffect,useState,type ChangeEvent} from "react";
 import {Bot,Globe,Search,Star,CalendarDays,PanelsTopLeft,MapPin,ChartNoAxesCombined,Link2,PhoneCall,ArrowUpRight,ChevronLeft,Save,Copy,Check} from "lucide-react";
 import styles from "./BusinessServicesPreview.module.css";
 import WebServicesStudio from "./WebServicesStudio";
+import {getSupabase} from "@/lib/supabase";
+import {BUSINESS_CATEGORIES,CATEGORY_GROUPS,categoryIdFromLabel,categoryLabel,categoryById} from "@/lib/vmv-business-categories";
 
 type Charge="subscription"|"one_time";
 type Fulfillment="automatic"|"assisted";
@@ -19,11 +21,10 @@ const offers:Item[]=[
  {id:"seo-setup",name:"SEO inicial",charge:"one_time",delivery:"assisted",state:"planned",color:"blue",Icon:ChartNoAxesCombined},
  {id:"domain-setup",name:"Dominio",charge:"one_time",delivery:"assisted",state:"planned",color:"mint",Icon:Link2}
 ];
-type Draft={business:string;category:string;phone:string;website:string;address:string;area:string;hours:string;description:string;googleEmail:string;assets:string;authorized:boolean};
-const empty:Draft={business:"",category:"",phone:"",website:"",address:"",area:"",hours:"",description:"",googleEmail:"",assets:"",authorized:false};
-const fields:{key:Exclude<keyof Draft,"authorized">;label:string;max:number;kind?:"email"|"tel"|"url";multi?:boolean}[]=[
+type Draft={business:string;category:string;categoryId:string;phone:string;website:string;address:string;area:string;hours:string;description:string;googleEmail:string;assets:string;authorized:boolean};
+const empty:Draft={business:"",category:"",categoryId:"",phone:"",website:"",address:"",area:"",hours:"",description:"",googleEmail:"",assets:"",authorized:false};
+const fields:{key:Exclude<keyof Draft,"authorized"|"category"|"categoryId">;label:string;max:number;kind?:"email"|"tel"|"url";multi?:boolean}[]=[
  {key:"business",label:"Nombre del negocio *",max:100},
- {key:"category",label:"Categoría *",max:80},
  {key:"phone",label:"Teléfono",max:24,kind:"tel"},
  {key:"website",label:"Sitio web",max:150,kind:"url"},
  {key:"address",label:"Dirección",max:180},
@@ -55,22 +56,49 @@ export default function BusinessServicesPreview({userId,focus="all"}:{userId:str
     const value=obj[field.key];
     if(typeof value==="string")next[field.key]=value.slice(0,field.max);
    }
+   next.categoryId=categoryById(String(obj.categoryId||""))?.id||categoryIdFromLabel(String(obj.category||""));
+   next.category=categoryLabel(next.categoryId,String(obj.category||""));
    next.authorized=obj.authorized===true;
    if(active)setDraft(next);
   }catch{/* Private browsing or malformed local draft. */}
   return()=>{active=false;};
  },[key]);
+ useEffect(()=>{
+  let live=true;
+  void (async()=>{
+   const client=getSupabase();if(!client)return;
+   const {data:user}=await client.auth.getUser();
+   if(user.user?.id!==userId)return;
+   const {data,error}=await client.from("smartjob_business_category_preferences").select("category_id").eq("owner_id",userId).maybeSingle();
+   if(!error&&live&&data?.category_id&&categoryById(data.category_id)){
+    setDraft(previous=>previous.categoryId?previous:{...previous,categoryId:data.category_id,category:categoryLabel(data.category_id)});
+   }
+  })();
+  return()=>{live=false;};
+ },[userId]);
  const edit=(field:Exclude<keyof Draft,"authorized">,value:string)=>{setDraft(prev=>({...prev,[field]:value}));setStatus("");};
- const save=()=>{
-  try{window.localStorage.setItem(key,JSON.stringify(draft));setStatus("Borrador guardado");}
-  catch{setStatus("No se pudo guardar");}
+ const save=async()=>{
+  try{
+   window.localStorage.setItem(key,JSON.stringify(draft));
+   if(draft.categoryId){
+    const client=getSupabase();
+    if(!client)throw new Error("Inicia sesión");
+    const {data:user}=await client.auth.getUser();
+    if(user.user?.id!==userId)throw new Error("Inicia sesión nuevamente");
+    const {error}=await client.from("smartjob_business_category_preferences").upsert({
+     owner_id:userId,category_id:draft.categoryId,updated_at:new Date().toISOString()
+    },{onConflict:"owner_id"});
+    if(error)throw new Error("Borrador local guardado, categoría sin sincronizar");
+   }
+   setStatus("Borrador guardado");
+  }catch(e){setStatus(e instanceof Error?e.message:"No se pudo guardar");}
  };
  const share=async()=>{
-  if(!draft.business.trim()||!draft.category.trim()||!(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.googleEmail.trim()))||!draft.address.trim()&&!draft.area.trim()){
+  if(!draft.business.trim()||!draft.categoryId.trim()||!(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.googleEmail.trim()))||!draft.address.trim()&&!draft.area.trim()){
    setStatus("Completa los campos obligatorios");return;
   }
   if(!draft.authorized){setStatus("Confirma la autorización");return;}
-  const message=["Google Business Profile",...fields.map(f=>f.label.replace(/ \*$/,"")+": "+(draft[f.key]||"—")),"Autorización: Sí"].join("\n");
+  const message=["Google Business Profile","Categoría: "+categoryLabel(draft.categoryId),...fields.map(f=>f.label.replace(/ \*$/,"")+": "+(draft[f.key]||"—")),"Autorización: Sí"].join("\n");
   try{await navigator.clipboard.writeText(message);setStatus("Ficha copiada");}
   catch{setStatus("No se pudo copiar");}
  };
@@ -81,7 +109,18 @@ export default function BusinessServicesPreview({userId,focus="all"}:{userId:str
     <div className={styles.editorIcon}><MapPin size={26}/></div>
     <div><h3>Google Business Profile</h3><span>Pago único · Asistido</span></div>
    </div>
-   <form className={styles.form} autoComplete="off" spellCheck={false} onSubmit={e=>{e.preventDefault();save();}}>
+   <form className={styles.form} autoComplete="off" spellCheck={false} onSubmit={e=>{e.preventDefault();void save();}}>
+    <label className={styles.field}><span>Categoría *</span>
+     <select value={draft.categoryId} onChange={e=>{
+      const id=e.target.value;
+      setDraft(d=>({...d,categoryId:id,category:categoryLabel(id)}));setStatus("");
+     }} aria-label="Categoría de negocio">
+      <option value="">Seleccionar categoría</option>
+      {CATEGORY_GROUPS.map(group=><optgroup key={group} label={group}>
+       {BUSINESS_CATEGORIES.filter(cat=>cat.group===group).map(cat=><option key={cat.id} value={cat.id}>{cat.label}</option>)}
+      </optgroup>)}
+     </select>
+    </label>
     {fields.map(f=><label className={styles.field} key={f.key}>
       <span>{f.label}</span>{f.multi?<textarea maxLength={f.max} value={draft[f.key]} onChange={e=>edit(f.key,e.target.value)} rows={3} placeholder={f.label.replace(" *","")}
        spellCheck={false} autoCorrect="off" autoCapitalize="none" autoComplete="off"/>:
