@@ -12,7 +12,7 @@ export type AgentDraft={
   language:Language;instructions:string;knowledge:string;configuration:Record<string,string>;status:AgentStatus;
 };
 export type Agent=AgentDraft&{
-  id:string;owner_id:string;business_id:string;created_at:string;updated_at:string;
+  id:string;owner_id:string;business_id:string;created_at:string;updated_at:string;revision:number;
 };
 export type AgentConversation={id:string;agent_id:string;owner_id:string;title:string;created_at:string};
 export type AgentMessage={id:string;role:"user"|"assistant";content:string;created_at:string};
@@ -59,7 +59,7 @@ async function ensureBusiness(session:Session):Promise<string>{
   if(concurrent?.id)return concurrent.id;
   throw new Error(insertError?.message?"No se pudo crear el espacio de tu negocio.":"No se pudo crear tu negocio.");
 }
-export async function saveAgent(session:Session,draft:AgentDraft,existingId?:string):Promise<Agent>{
+export async function saveAgent(session:Session,draft:AgentDraft,existingId?:string,expectedRevision?:number):Promise<Agent>{
   const normalized={name:draft.name.trim().slice(0,80),kind:draft.kind,
     purpose:draft.purpose.trim().slice(0,240),personality:draft.personality.trim().slice(0,60),
     language:draft.language,instructions:draft.instructions.trim().slice(0,2500),
@@ -68,8 +68,10 @@ export async function saveAgent(session:Session,draft:AgentDraft,existingId?:str
   if(!normalized.name)throw new Error("El agente necesita un nombre.");
   if(existingId){
     const {data,error}=await db().from("vmv_ai_agents").update(normalized)
-      .eq("id",existingId).eq("owner_id",session.user.id).select("*").single();
-    if(error||!data)throw new Error("No fue posible guardar este agente.");
+      .eq("id",existingId).eq("owner_id",session.user.id)
+      .eq("revision",expectedRevision??-1).select("*").maybeSingle();
+    if(error)throw new Error("No fue posible guardar este agente.");
+    if(!data)throw new Error("El agente cambió en otro dispositivo. Vuelve a cargar para evitar sobrescribir.");
     return data as Agent;
   }
   const business_id=await ensureBusiness(session);
@@ -79,9 +81,10 @@ export async function saveAgent(session:Session,draft:AgentDraft,existingId?:str
   return data as Agent;
 }
 export async function updateAgentStatus(session:Session,agent:Agent,status:AgentStatus):Promise<Agent>{
-  const {data,error}=await db().from("vmv_ai_agents").update({status,updated_at:new Date().toISOString()})
-    .eq("id",agent.id).eq("owner_id",session.user.id).select("*").single();
-  if(error||!data)throw new Error("No se pudo cambiar el estado del agente.");
+  const {data,error}=await db().from("vmv_ai_agents").update({status})
+    .eq("id",agent.id).eq("owner_id",session.user.id)
+    .eq("revision",agent.revision).select("*").maybeSingle();
+  if(error||!data)throw new Error("El estado no se pudo guardar o cambió en otro dispositivo. Actualiza la lista.");
   return data as Agent;
 }
 export async function getConversations(session:Session,agentId:string):Promise<AgentConversation[]>{
@@ -117,4 +120,41 @@ export async function simulateAgent(session:Session,agentId:string,conversationI
   if(!response.ok)throw new Error(payload.error||"El simulador no está disponible en este despliegue.");
   if(!payload.reply)throw new Error("El agente no devolvió una respuesta.");
   return payload.reply;
+}
+
+export type NativePhoneSelection={routeId:string;maskedNumber:string;agentId:string|null;prepared:boolean};
+export async function getPhoneSelection(session:Session):Promise<NativePhoneSelection|null>{
+ const {data:routes,error}=await db().from("smartjob_phone_routes")
+  .select("id,twilio_number").eq("user_id",session.user.id).eq("enabled",true).limit(2);
+ if(error||!routes?.length)return null;
+ if(routes.length!==1)throw new Error("Hay varias líneas; selecciona un número específico.");
+ const route=routes[0];
+ const {data:selected,error:pickError}=await db().from("vmv_ai_phone_selections")
+  .select("agent_id").eq("route_id",route.id).eq("owner_id",session.user.id).maybeSingle();
+ if(pickError)throw new Error("No fue posible leer tu elección telefónica.");
+ const {data:provisioned}=await db().from("vmv_ai_voice_routes")
+  .select("agent_id,enabled,verified_ownership").eq("owner_id",session.user.id)
+  .eq("twilio_number",route.twilio_number).maybeSingle();
+ return {routeId:route.id,maskedNumber:"••• "+String(route.twilio_number).slice(-4),
+  agentId:selected?.agent_id||null,
+  prepared:Boolean(provisioned?.enabled&&provisioned?.verified_ownership&&
+   provisioned.agent_id===selected?.agent_id)};
+}
+export async function choosePhoneAgent(session:Session,routeId:string,agent:Agent|null):Promise<void>{
+ const {data:route}=await db().from("smartjob_phone_routes").select("id")
+  .eq("id",routeId).eq("user_id",session.user.id).eq("enabled",true).maybeSingle();
+ if(!route)throw new Error("Línea no autorizada.");
+ if(!agent){
+  const {error}=await db().from("vmv_ai_phone_selections").delete()
+   .eq("route_id",routeId).eq("owner_id",session.user.id);
+  if(error)throw new Error("No se pudo retirar el agente telefónico.");return;
+ }
+ if(agent.owner_id!==session.user.id)throw new Error("Este agente no pertenece a tu cuenta.");
+ const {data:verified}=await db().from("vmv_ai_agents").select("id")
+  .eq("id",agent.id).eq("owner_id",session.user.id).maybeSingle();
+ if(!verified)throw new Error("Agente no autorizado.");
+ const {error}=await db().from("vmv_ai_phone_selections")
+  .upsert({route_id:routeId,owner_id:session.user.id,agent_id:agent.id,selected_at:new Date().toISOString()},
+   {onConflict:"route_id"});
+ if(error)throw new Error("No se pudo guardar la selección telefónica.");
 }
