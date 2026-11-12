@@ -36,3 +36,9 @@
 .ws-public--minimal .ws-public-service-grid article{background:white;border:1px solid #ddd;border-radius:4px}
 .ws-public--minimal .ws-public-button{border-radius:6px}
 @media(max-width:700px){.ws-public-nav{padding:20px 6%;flex-direction:column;align-items:flex-start}.ws-public-nav nav{gap:17px;font-size:11px}.ws-public-hero{min-height:440px;padding:65px 6%}.ws-public-hero h1{font-size:clamp(44px,11vw,70px)}.ws-public-section{padding:65px 6%}.ws-public-service-grid{grid-template-columns:1fr}.ws-public-service-grid article{min-height:125px;padding:21px}.ws-public-section h2{margin-bottom:22px}.ws-public-footer{padding:23px 6%}}
+
+.ws-public-hero-photo{display:block;width:min(100%,670px);height:clamp(190px,28vw,370px);object-fit:cover;border-radius:22px;margin:25px 0 0;box-shadow:0 14px 30px #16102022}
+.ws-public-gallery{background:#fff}
+.ws-public-gallery>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.ws-public-gallery>div img{width:100%;height:clamp(190px,25vw,340px);object-fit:cover;display:block;border-radius:19px}
+@media(max-width:700px){.ws-public-gallery>div{grid-template-columns:1fr}.ws-public-gallery>div img{height:250px}.ws-public-hero-photo{height:215px;border-radius:15px}}
