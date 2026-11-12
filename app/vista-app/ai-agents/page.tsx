@@ -51,11 +51,19 @@ export default function AIAgentsPreview(){
   if(!nextDraft.name.trim()){setNotice("Escribe el nombre del agente.");return;}
   const cleaned={...nextDraft,name:nextDraft.name.trim().slice(0,80)};
   if(selected){
-   setAgents(old=>old.map(a=>a.id===selected?{...a,...cleaned}:a));
+   const incomplete=!inspectAgent(cleaned).requiredPassed;
+   const wasActive=agents.some(a=>a.id===selected&&a.status==="active");
+   setAgents(old=>old.map(a=>a.id===selected?
+    {...a,...cleaned,status:incomplete&&a.status==="active"?"paused":a.status}:a));
+   if(incomplete&&wasActive){
+    setNotice("Este agente se pausó en el estudio porque ahora faltan datos esenciales.");
+   }
   }else{
    setAgents(old=>[{...cleaned,id:String(Date.now()),status:"draft"},...old]);
   }
-  setNotice("Diseño guardado solo en esta vista temporal. Aún no se almacena en tu cuenta.");
+  if(!(selected&&agents.some(a=>a.id===selected&&a.status==="active")&&
+     !inspectAgent(cleaned).requiredPassed))
+   setNotice("Diseño guardado solo en esta vista temporal. Aún no se almacena en tu cuenta.");
   setScreen("home");
  };
  const demo=()=>{
