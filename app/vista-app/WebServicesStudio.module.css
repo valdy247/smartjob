@@ -217,3 +217,18 @@
 .recovery button{min-height:36px;border-radius:10px;border:1px solid #dbc9f2;background:#fff;color:#7442bc;font-size:11px;font-weight:850}
 .recovery button:first-child{background:#885ae2;color:#fff;border-color:#885ae2}
 @container (max-width:719px){.studio .heading{gap:5px}.draftIndicator{padding:6px 8px;font-size:9px!important}}
+
+
+.inquiryToggle{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border-radius:12px;border:1px solid #e5dbf1;padding:13px;cursor:pointer}
+.inquiryToggle>span{display:flex;flex:1;flex-direction:column;gap:4px}
+.inquiryToggle strong{font-size:12px;color:#513871}
+.inquiryToggle small{font-size:10px;color:#9787ac}
+.inquiryToggle input{appearance:none;position:relative;flex:0 0 38px;width:38px;height:23px;background:#d6cce5;border:0;border-radius:99px;cursor:pointer;transition:background .15s}
+.inquiryToggle input:before{position:absolute;content:"";left:3px;top:3px;width:17px;height:17px;background:white;border-radius:50%;box-shadow:0 1px 3px #0002;transition:transform .15s}
+.inquiryToggle input:checked{background:#8c5fe2}
+.inquiryToggle input:checked:before{transform:translateX(15px)}
+.inquiryToggle input:focus-visible{outline:3px solid #905ede;outline-offset:3px}
+.previewInquiry{display:flex;flex-direction:column;gap:7px;margin-top:15px;border:1px solid #e4def0;border-radius:11px;padding:13px;color:var(--web-ink);background:white}
+.previewInquiry strong{font-size:12px;letter-spacing:-.3px}
+.previewInquiry span{color:#80768b;font-size:9px}
+.previewInquiry b{background:var(--web-color);color:white;border-radius:30px;padding:8px 10px;font-size:9px;font-weight:850;align-self:flex-start}
