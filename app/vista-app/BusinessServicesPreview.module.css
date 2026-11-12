@@ -41,3 +41,7 @@ button.tile:focus-visible,.toggle button:focus-visible,.back:focus-visible,.save
 .status{font-size:11px;color:#6a5b89;text-align:center;min-height:13px}
 @media(min-width:700px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:350px){.grid{gap:8px}.tile{padding:11px}.offerBottom strong{font-size:14px}.badges small{font-size:9px}}
+
+
+.field select{display:block;width:100%;min-height:49px;min-width:0;max-width:100%;padding:12px;border:1px solid #e6daf2;background:#fbfaff;color:#29213d;border-radius:12px;font-size:14px;font-family:inherit}
+.field select:focus-visible{outline:3px solid #9764e2;outline-offset:1px}
