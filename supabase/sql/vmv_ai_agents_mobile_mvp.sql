@@ -22,6 +22,9 @@ create table if not exists public.vmv_ai_agents (
   language text not null default 'es' check(language in ('es','en','both')),
   instructions text not null default '' check(char_length(instructions)<=2500),
   knowledge text not null default '' check(char_length(knowledge)<=8000),
+  -- Structured answers from the guided wizard, owned by the same business.
+  configuration jsonb not null default '{}'::jsonb,
+  constraint vmv_ai_agent_configuration_object check (jsonb_typeof(configuration)='object'),
   status text not null default 'draft' check(status in ('draft','active','paused')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
