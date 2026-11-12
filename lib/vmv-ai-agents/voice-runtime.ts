@@ -123,7 +123,8 @@ export async function handleAiVoice(req:NextRequest){
   !binding.disclosure_approved||!binding.approved_at)return refused();
  let session=await loadSession(db,sid);
  const turnRaw=req.nextUrl.searchParams.get("turn");
- if(!turnRaw){
+ const choosingLanguage=req.nextUrl.searchParams.get("choose_lang")==="1";
+ if(!turnRaw&&!choosingLanguage){
   // A new call must start with the agent explicitly selected by the owner.
   const {data:choice}=await db.from("vmv_ai_phone_selections").select("agent_id")
     .eq("owner_id",ownerRoute.user_id).eq("route_id",ownerRoute.id).maybeSingle();
@@ -155,6 +156,7 @@ export async function handleAiVoice(req:NextRequest){
   await db.rpc("vmv_ai_set_voice_lang",{p_call_sid:sid,p_lang:lang});
   return gather(greeting(session.agent_snapshot,lang),lang,1);
  }
+ if(!turnRaw)return refused();
  const turn=Number(turnRaw);
  if(!Number.isInteger(turn)||turn<1||turn>8)return refused();
  const speech=safe(signed.get("SpeechResult")).slice(0,900);
