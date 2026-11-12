@@ -1,10 +1,10 @@
 import React,{useMemo,useState} from "react";
-import {Pressable,ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
+import {Modal,Pressable,ScrollView,StyleSheet,Switch,Text,TextInput,View} from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type {AgentDraft,AgentKind,Language} from "./aiAgentsData";
 import {AI_AGENT_TEMPLATES} from "./aiAgentsData";
 
-type Question={id:string;label:string;type?:"text"|"paragraph"|"choice";options?:string[];required?:boolean;when?:(a:Record<string,string>)=>boolean};
+type Question={id:string;label:string;type?:"text"|"paragraph"|"choice"|"state"|"hours";options?:string[];required?:boolean;when?:(a:Record<string,string>)=>boolean};
 type Stage={title:string;description:string;items:Question[]};
 type Props={initial:AgentDraft;onSave:(next:AgentDraft)=>void;onCancel:()=>void;saving?:boolean};
 const text=(id:string,label:string,required=false):Question=>({id,label,required,type:"text"});
@@ -12,6 +12,31 @@ const para=(id:string,label:string,required=false):Question=>({id,label,required
 const pick=(id:string,label:string,options:string[],required=true,when?:Question["when"]):Question=>
   ({id,label,options,type:"choice",required,when});
 const yes=(v:Record<string,string>,id:string)=>v[id]==="Sí";
+const usStates=["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming","Washington D.C."];
+const days=[["mon","Lunes"],["tue","Martes"],["wed","Miércoles"],["thu","Jueves"],["fri","Viernes"],["sat","Sábado"],["sun","Domingo"]] as const;
+const slots=Array.from({length:49},(_,i)=>String(Math.floor(i/2)).padStart(2,"0")+":"+(i%2?"30":"00"));
+const taxi=(v:Record<string,string>)=>/taxi|taxista|transport|traslado|conductor|chofer|ch[oó]fer|uber|lyft|limo|ride.?share|car service/i.test(v.industry||"");
+function bookingQuestions(v:Record<string,string>):Question[]{
+ const isTaxi=taxi(v);
+ return [
+  ...(isTaxi?[
+   pick("booking_service_type","¿Qué viajes ofreces?",["Viajes dentro de la ciudad","Traslados al aeropuerto","Viajes programados","Servicio por horas","Otro"]),
+   {...text("booking_custom_service","¿Qué otro servicio ofreces?",true),when:(a:Record<string,string>)=>a.booking_service_type==="Otro"}
+  ]:[
+   text("bookings_services","¿Qué servicio puede reservarte el cliente?",true),
+   pick("booking_duration","¿Cuánto suele durar?",["15 minutos","30 minutos","1 hora","2 horas","Depende del cliente"])
+  ]),
+  pick("booking_lead","¿Con cuánto tiempo de anticipación aceptas reservas?",["De inmediato","15 minutos","30 minutos","1 hora","2 horas","24 horas","Otro"]),
+  {...text("booking_lead_other","¿Con cuánto tiempo exactamente?",true),when:(a:Record<string,string>)=>a.booking_lead==="Otro"},
+  pick("booking_cancel","¿Cuánto antes debe cancelar el cliente?",["En cualquier momento","30 minutos antes","1 hora antes","2 horas antes","24 horas antes","No permito cancelaciones","Otro"]),
+  {...text("booking_cancel_other","¿Cuál es tu regla de cancelación?",true),when:(a:Record<string,string>)=>a.booking_cancel==="Otro"},
+  pick("bookings_confirmation","¿Cuándo decimos que una reserva está confirmada?",["Cuando yo la confirme","Solo tras una agenda conectada y autorizada"]),
+  pick("bookings_staff",isTaxi?"¿Quién atenderá los viajes?":"¿Quién atenderá las reservas?",isTaxi?["Solo yo","Varios conductores"]:["Solo yo","Varias personas","Varias sucursales"]),
+  {...text("bookings_staff_details",isTaxi?"¿Cuántos conductores pueden trabajar?":"¿Qué personas o lugares atienden?",true),
+   when:(a:Record<string,string>)=>a.bookings_staff!=="Solo yo"}
+ ];
+}
+
 const scenarios:Record<AgentKind,Question[]>={
  calls:[
   pick("calls_goal","¿Qué debe hacer cuando contesten una llamada?",["Dar información","Tomar mensajes","Detectar oportunidades de venta","Recibir solicitudes de citas","Derivar a un humano"]),
@@ -31,12 +56,8 @@ const scenarios:Record<AgentKind,Question[]>={
   pick("sales_discount","¿Puede ofrecer descuentos?",["Nunca sin confirmación","Solo descuentos aprobados"]),
   pick("sales_payment","Si alguien quiere pagar, ¿qué debe hacer?",["Derivar a una persona","Tomar solicitud para revisión"])
  ],
- bookings:[
-  para("bookings_services","¿Qué servicios pueden reservarse? Indica duración y precio aprobado.",true),
-  pick("bookings_confirmation","¿Cuándo podría confirmar una cita?",["Tras confirmación humana","Solo con futura agenda autorizada"]),
-  pick("bookings_staff","¿Depende de empleados o sucursales?",["Sí","No"]),
-  para("bookings_rules","¿Qué reglas hay para cancelaciones o cambios?")
- ],
+ bookings:[],
+
  inventory:[
   pick("inventory_goal","¿Qué información necesita consultar?",["Catálogo","Existencias actuales","Precios y variantes","Reposición"]),
   para("inventory_categories","¿Qué productos y categorías podrá conocer?",true),
@@ -54,25 +75,23 @@ const scenarios:Record<AgentKind,Question[]>={
   para("custom_limits","¿Qué acciones están prohibidas?",true)
  ]
 };
-function stages(kind:AgentKind):Stage[]{
+function stages(kind:AgentKind,answers:Record<string,string>):Stage[]{
  return [
   {title:"Conoce a tu agente",description:"Su personalidad y misión.",items:[]},
   {title:"Tu negocio",description:"Información oficial para responder correctamente.",items:[
     text("business_name","¿Cómo se llama tu empresa?",true),
     text("industry","¿A qué se dedica tu empresa?",true),
-    text("location","¿En qué ciudades o zonas atiende?"),
-    text("hours","¿Cuál es el horario de atención?"),
-    text("contact","¿Cuál es el correo o teléfono comercial?"),
-    para("policies","¿Qué políticas importantes deben conocerse?")
+    pick("country","¿En qué país está el negocio?",["Estados Unidos","Otro país"]),
+    text("city","¿En qué ciudad atiendes?",true),
+    {...text("state","¿En qué estado de EE. UU.?",true),type:"state" as const,when:(a:Record<string,string>)=>a.country!=="Otro país"},
+    {...text("region_other","¿En qué estado o provincia?",true),when:(a:Record<string,string>)=>a.country==="Otro país"},
+    {...text("hours","¿Qué días y a qué horas atiendes?"),type:"hours" as const},
+    text("contact","¿Qué teléfono o correo comercial pueden usar los clientes?"),
+    pick("policy_type","¿Tienes reglas para cambios o cancelaciones?",["No, ninguna especial","Sí, tengo reglas","Prefiero confirmarlas personalmente"]),
+    {...para("policies","Explícanos esas reglas",true),when:(a:Record<string,string>)=>a.policy_type==="Sí, tengo reglas"}
   ]},
-  {title:"Su trabajo",description:"Preguntas adaptadas a la especialidad elegida.",items:scenarios[kind]},
-  {title:"Conectar con VMV",description:"Elige las herramientas que necesitará más adelante.",items:[
-    pick("calendar_needed","¿Necesitas consultar VMV Scheduling?",["Sí","No"]),
-    pick("calendar_scope","¿Para qué utilizará la agenda?",["Consultar disponibilidad","Preparar solicitudes de cita","Ambas"],true,a=>yes(a,"calendar_needed")),
-    pick("inventory_needed","¿Necesitas consultar VMV Inventory?",["Sí","No"]),
-    pick("inventory_scope","¿Qué debe consultar?",["Catálogo","Existencias","Ambas"],true,a=>yes(a,"inventory_needed")),
-    pick("leads_needed","¿Debe preparar oportunidades de venta o seguimiento?",["Sí","No"])
-  ]},
+  {title:"Su trabajo",description:"Preguntas adaptadas a la especialidad elegida.",items:kind==="bookings"?bookingQuestions(answers):scenarios[kind]},
+  // No unverified integrations: this step appears only once server-verified connectors exist.
   {title:"Reglas y supervisión",description:"Define límites y revisiones humanas.",items:[
     pick("handoff","¿Qué hacer si no conoce una respuesta?",["Reconocerlo y derivar a una persona","Solicitar datos y revisión humana"]),
     pick("personal_data","¿Qué información personal podrá solicitar?",["Ninguna","Solo nombre y contacto con consentimiento"]),
@@ -94,8 +113,9 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false}:Props){
  const [draft,setDraft]=useState<AgentDraft>(()=>({...initial,configuration:{...(initial.configuration||{})}}));
  const [step,setStep]=useState(0);
  const [error,setError]=useState("");
+ const [picker,setPicker]=useState<{key:string;title:string;values:string[]}|null>(null);
  const [answers,setAnswers]=useState<Record<string,string>>(()=>({...initial.configuration||{}}));
- const steps=useMemo(()=>stages(draft.kind),[draft.kind]);
+ const steps=useMemo(()=>stages(draft.kind,answers),[draft.kind,answers]);
  const curr=steps[step];
  const questions=curr.items.filter(q=>!q.when||q.when(answers));
  const update=(key:string,value:string)=>setAnswers(prev=>({...prev,[key]:value}));
@@ -112,7 +132,17 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false}:Props){
   }else setStep(i=>i+1);
  };
  const previous=()=>{setError("");if(step===0)onCancel();else setStep(i=>i-1);};
- const needsCalendar=yes(answers,"calendar_needed"),needsInventory=yes(answers,"inventory_needed");
+ const needsCalendar=false,needsInventory=false;
+ const setHours=(mode:string)=>{
+  const pairs:Record<string,string>={};
+  days.forEach(([key],i)=>{
+   pairs["h_"+key+"_active"]=mode==="24/7"||mode==="Todos los días · 9–5"||(mode==="Lunes a viernes · 9–5"&&i<5)?"Sí":"No";
+   pairs["h_"+key+"_open"]=mode==="24/7"?"00:00":"09:00";
+   pairs["h_"+key+"_close"]=mode==="24/7"?"24:00":"17:00";
+  });
+  setAnswers(prev=>({...prev,...(mode==="Personalizado"?{}:pairs),hours_mode:mode}));
+ };
+ const openPicker=(key:string,title:string,values:string[])=>setPicker({key,title,values});
  return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
   <View style={styles.headRow}><Text style={styles.kicker}>CONFIGURAR AGENTE</Text><Text style={styles.counter}>{step+1} / {steps.length}</Text></View>
   <View style={styles.progress}><View style={[styles.progressFill,{width:(((step+1)/steps.length*100)+"%") as `${number}%`}]}/></View>
@@ -148,9 +178,32 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false}:Props){
   </View>:null}
 
   {step>0&&step<steps.length-1?<View style={styles.fields}>
+    {step===2&&answers.industry?<View style={styles.contextBox}>
+      <Ionicons name="sparkles-outline" size={18} color={C.purple}/>
+      <Text style={styles.contextText}>Tu negocio: <Text style={{fontWeight:"900"}}>{answers.industry}</Text>. {answers.city}{answers.state?", "+answers.state:""}. No es necesario repetirlo.</Text>
+    </View>:null}
     {questions.map(item=><View key={item.id} style={styles.question}>
       <Text style={styles.label}>{item.label}{item.required?" *":""}</Text>
-      {item.type==="choice"?<View style={styles.choices}>
+      {item.type==="hours"?<View style={styles.hoursBox}>
+       <View style={styles.choices}>{["24/7","Lunes a viernes · 9–5","Todos los días · 9–5","Personalizado"].map(mode=>
+        <Tag key={mode} title={mode} selected={answers.hours_mode===mode} onPress={()=>setHours(mode)}/>)}</View>
+       {answers.hours_mode?days.map(([key,day])=><View key={key} style={styles.dayBox}>
+         <Text style={styles.dayLabel}>{day}</Text><Switch accessibilityLabel={day+" abierto"} value={answers["h_"+key+"_active"]==="Sí"}
+          onValueChange={v=>update("h_"+key+"_active",v?"Sí":"No")} trackColor={{true:"#C7ADEE"}} thumbColor="#8D58E8"/>
+         {answers["h_"+key+"_active"]==="Sí"?<View style={styles.dayTimes}>
+          <Pressable accessibilityRole="button" style={styles.timeButton} onPress={()=>openPicker("h_"+key+"_open",day+" · Apertura",slots.slice(0,48))}>
+           <Text style={styles.timeText}>{answers["h_"+key+"_open"]||"09:00"}</Text><Ionicons name="chevron-down" size={13} color="#725596"/>
+          </Pressable>
+          <Text style={styles.timeText}>a</Text>
+          <Pressable accessibilityRole="button" style={styles.timeButton} onPress={()=>openPicker("h_"+key+"_close",day+" · Cierre",slots.slice(1))}>
+           <Text style={styles.timeText}>{answers["h_"+key+"_close"]||"17:00"}</Text><Ionicons name="chevron-down" size={13} color="#725596"/>
+          </Pressable>
+         </View>:null}</View>):null}
+      </View>:item.type==="state"?<Pressable accessibilityRole="button" accessibilityLabel="Seleccionar estado" style={styles.selectField}
+        onPress={()=>openPicker("state","Elige el estado",usStates)}>
+        <Text style={styles.selectText}>{answers.state||"Selecciona el estado..."}</Text><Ionicons name="chevron-down" color="#8A62C3" size={18}/>
+      </Pressable>:
+      item.type==="choice"?<View style={styles.choices}>
         {(item.options||[]).map(x=><Tag key={x} title={x}
           selected={answers[item.id]===x} onPress={()=>update(item.id,x)}/>)}</View>:
         <TextInput accessibilityLabel={item.label}
@@ -161,7 +214,7 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false}:Props){
           placeholderTextColor="#AB9DB9" value={answers[item.id]||""}
           onChangeText={v=>update(item.id,v)}/>}
     </View>)}
-    {step===3?<View style={styles.connectionBox}>
+    {false?<View style={styles.connectionBox}>
       <View style={styles.connectionRow}><Ionicons name="calendar-outline" color={C.purple} size={22}/>
         <View style={{flex:1}}><Text style={styles.connectionTitle}>VMV Scheduling</Text>
           <Text style={styles.connectionDesc}>Conector todavía no disponible</Text></View>
@@ -182,6 +235,9 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false}:Props){
     {[
       ["Negocio",answers.business_name||"—"],
       ["Tipo de agente",AI_AGENT_TEMPLATES.find(t=>t.kind===draft.kind)?.title||"Personalizado"],
+      ["Ubicación",[answers.city,answers.country==="Otro país"?answers.region_other:answers.state,answers.country].filter(Boolean).join(", ")||"—"],
+      ["Horario",answers.hours_mode||"Sin definir"],
+      ...(draft.kind==="bookings"?[["Anticipación",answers.booking_lead||"—"]]:[]),
       ["Agenda VMV",needsCalendar?"Solicitada · pendiente":"No solicitada"],
       ["Inventario VMV",needsInventory?"Solicitado · pendiente":"No solicitado"],
       ["Revisión humana",answers.handoff||"Obligatoria"]
@@ -204,9 +260,38 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false}:Props){
       <Ionicons name={step===steps.length-1?"checkmark":"arrow-forward"} size={17} color="#FFF"/>
     </Pressable>
   </View>
+  <Modal visible={picker!==null} transparent animationType="slide" onRequestClose={()=>setPicker(null)}>
+    <View style={styles.modalBackdrop}><View style={styles.modalSheet}>
+      <View style={styles.modalHeading}><Text style={styles.modalTitle}>{picker?.title}</Text>
+        <Pressable onPress={()=>setPicker(null)} accessibilityLabel="Cerrar"><Ionicons name="close-circle" size={25} color="#8F76AC"/></Pressable></View>
+      <ScrollView keyboardShouldPersistTaps="handled">
+        {picker?.values.map(value=><Pressable key={value} accessibilityRole="button" style={styles.modalOption}
+          onPress={()=>{update(picker.key,value);setPicker(null);}}>
+          <Text style={styles.modalOptionText}>{value}</Text>
+          {answers[picker.key]===value?<Ionicons name="checkmark" size={20} color={C.purple}/>:null}
+        </Pressable>)}
+      </ScrollView>
+    </View></View>
+  </Modal>
  </ScrollView>;
 }
 const styles=StyleSheet.create({
+ contextBox:{backgroundColor:"#EFE8FF",padding:12,borderRadius:14,flexDirection:"row",alignItems:"flex-start",gap:8},
+ contextText:{color:"#684F91",fontSize:11,lineHeight:18,flex:1},
+ hoursBox:{backgroundColor:"#F6F0FD",padding:10,borderRadius:14,gap:10},
+ dayBox:{backgroundColor:"#FFF",borderRadius:12,padding:9,flexDirection:"row",alignItems:"center",flexWrap:"wrap",gap:8},
+ dayLabel:{color:"#342943",fontSize:11,fontWeight:"800",minWidth:77},
+ dayTimes:{flexDirection:"row",alignItems:"center",justifyContent:"flex-end",gap:5,flexBasis:"100%"},
+ timeButton:{borderWidth:1,borderColor:"#E4D9EC",padding:9,borderRadius:9,flexDirection:"row",alignItems:"center",gap:6},
+ timeText:{color:"#57416F",fontSize:12},
+ selectField:{borderWidth:1,borderColor:"#E4D9EC",backgroundColor:"#FFF",padding:14,borderRadius:13,flexDirection:"row",justifyContent:"space-between"},
+ selectText:{fontSize:13,color:"#614B79"},
+ modalBackdrop:{flex:1,backgroundColor:"#0008",justifyContent:"flex-end"},
+ modalSheet:{backgroundColor:"#FFF",borderTopLeftRadius:24,borderTopRightRadius:24,maxHeight:"78%",padding:20},
+ modalHeading:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",marginBottom:10},
+ modalTitle:{fontSize:18,fontWeight:"900",color:"#2B223D"},
+ modalOption:{borderBottomWidth:1,borderColor:"#EFE9F5",padding:14,flexDirection:"row",justifyContent:"space-between"},
+ modalOptionText:{fontSize:14,color:"#372946"},
  content:{padding:19,paddingBottom:90,backgroundColor:"#FBFAFD"},
  headRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
  kicker:{fontSize:10,fontWeight:"900",color:"#8969B1",letterSpacing:1.1},
