@@ -3,6 +3,7 @@ import {ActivityIndicator,Alert,KeyboardAvoidingView,Platform,Pressable,SafeArea
   ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type {Session} from "@supabase/supabase-js";
+import {AIAgentWizard} from "./AIAgentWizard";
 import {AI_AGENT_TEMPLATES,createConversation,emptyAgent,getAgents,getConversations,getMessages,
   saveAgent,simulateAgent,updateAgentStatus,type Agent,type AgentConversation,
   type AgentDraft,type AgentKind,type AgentMessage,type AgentStatus,type Language} from "./aiAgentsData";
@@ -79,14 +80,14 @@ export function AIAgentsStudio({session,onBack}:Props){
     setSelected(agent);
     setDraft({name:agent.name,kind:agent.kind,purpose:agent.purpose,
       personality:agent.personality,language:agent.language,instructions:agent.instructions,
-      knowledge:agent.knowledge,status:agent.status});
+      knowledge:agent.knowledge,configuration:agent.configuration||{},status:agent.status});
     setScreen("edit");
   }
-  async function save(){
+  async function save(nextDraft:AgentDraft=draft){
     if(busy)return;
     setBusy(true);
     try{
-      const item=await saveAgent(session,draft,selected?.id);
+      const item=await saveAgent(session,nextDraft,selected?.id);
       setSelected(item);
       await refresh();
       setScreen("home");
@@ -228,46 +229,9 @@ export function AIAgentsStudio({session,onBack}:Props){
         <Text style={styles.footerNote}>Los agentes activos funcionan únicamente en el simulador. Llamadas, ventas, reservas e inventario real requieren conexiones autorizadas.</Text>
       </ScrollView>:null}
 
-      {screen==="edit"?<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
-        <View style={styles.editTop}>
-          <View style={styles.sectionIcon}><Ionicons name="settings-outline" size={23} color={C.purple}/></View>
-          <Text style={styles.screenTitle}>{selected?"Configurar agente":"Nuevo agente"}</Text>
-          <Text style={styles.help}>Tu negocio, tus instrucciones y tu estilo.</Text>
-        </View>
-        <SectionTitle title="01 · Identidad"/>
-        <Field label="Nombre del agente" value={draft.name} onChangeText={v=>patch("name",v)} maxLength={80} placeholder="Ej. Asistente VMV"/>
-        <Field label="¿Qué hará?" value={draft.purpose} onChangeText={v=>patch("purpose",v)} maxLength={240} multiline placeholder="Describe el objetivo"/>
-        <Text style={styles.fieldLabel}>Especialidad</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.inlinePills}>
-          {templates.map(t=><SelectPill key={t.kind} label={t.title}
-            selected={draft.kind===t.kind} onPress={()=>patch("kind",t.kind)}/>)}
-        </ScrollView>
-        <SectionTitle title="02 · Personalidad e idioma"/>
-        <View style={styles.pillWrap}>
-          {["Amable y profesional","Cercano","Formal","Directo"].map(p=><SelectPill key={p} label={p}
-            selected={draft.personality===p} onPress={()=>patch("personality",p)}/>)}
-        </View>
-        <View style={[styles.pillWrap,{marginTop:8,marginBottom:18}]}>
-          {([{key:"es",label:"Español"},{key:"en",label:"English"},{key:"both",label:"Bilingüe"}] as {key:Language;label:string}[])
-            .map(l=><SelectPill key={l.key} label={l.label} selected={draft.language===l.key}
-              onPress={()=>patch("language",l.key)}/>)}
-        </View>
-        <SectionTitle title="03 · Conocimiento" caption="Solo información del negocio que tienes permiso de compartir."/>
-        <Field label="Información de la empresa" value={draft.knowledge} maxLength={8000}
-          onChangeText={v=>patch("knowledge",v)} multiline
-          placeholder="Servicios, precios confirmados, horarios, preguntas frecuentes, políticas..."/>
-        <Field label="Instrucciones adicionales" value={draft.instructions} maxLength={2500}
-          onChangeText={v=>patch("instructions",v)} multiline
-          placeholder="Qué debe decir, qué debe evitar y cuándo derivar a un humano..."/>
-        <View style={styles.warning}>
-          <Ionicons name="shield-checkmark-outline" size={21} color={C.purple}/>
-          <Text style={[styles.help,{flex:1}]}>El agente no ejecutará llamadas, pedidos, cobros, citas ni cambios de inventario.</Text>
-        </View>
-        <Action solid label={busy?"Guardando…":"Guardar agente"} icon="checkmark-circle-outline"
-          disabled={busy||!draft.name.trim()} onPress={()=>void save()}/>
-        {selected?<View style={{marginTop:10}}><Action label="Probar agente"
-          icon="chatbubble-outline" onPress={()=>openTest(selected)}/></View>:null}
-      </ScrollView>:null}
+      {screen==="edit"?<AIAgentWizard key={selected?.id||draft.kind} initial={draft} saving={busy}
+        onCancel={()=>setScreen("home")}
+        onSave={next=>{setDraft(next);void save(next);}}/>:null}
 
       {screen==="chat"&&selected?<View style={{flex:1}}>
         <View style={styles.chatBanner}>
