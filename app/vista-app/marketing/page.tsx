@@ -1,21 +1,25 @@
 "use client";
 import {useMemo,useState} from "react";
 import Link from "next/link";
-import {ArrowLeft,ArrowUpRight,BarChart3,CheckCircle2,ClipboardCopy,HeartHandshake,Link2,Lightbulb,Mail,Megaphone,MessageCircle,Share2,ShieldCheck,Sparkles,Target,TrendingUp} from "lucide-react";
+import {ArrowLeft,ArrowUpRight,BarChart3,CheckCircle2,ClipboardCopy,Globe2,HeartHandshake,Link2,Lightbulb,Mail,Megaphone,MessageCircle,Share2,ShieldCheck,Sparkles,Target,TrendingUp} from "lucide-react";
 import styles from "./page.module.css";
+import LocalVisibilityStudio from "./LocalVisibilityStudio";
 
-type Section="strategy"|"campaign"|"numbers"|"retention";
+type Section="strategy"|"presence"|"campaign"|"numbers"|"retention";
 type Channel="social"|"search"|"local"|"referrals"|"email";
 type FormState={
  business:string;industry:string;audience:string;offer:string;cta:string;website:string;
+ phone:string;address:string;city:string;region:string;postal:string;hours:string;description:string;
  channel:Channel;budget:string;ticket:string;margin:string;leads:string;sales:string;revenue:string;
 };
 const initial:FormState={
  business:"",industry:"",audience:"",offer:"",cta:"",website:"",
+ phone:"",address:"",city:"",region:"",postal:"",hours:"",description:"",
  channel:"social",budget:"",ticket:"",margin:"",leads:"",sales:"",revenue:""
 };
 const tabs:{id:Section;label:string;description:string;Icon:typeof Target}[]=[
  {id:"strategy",label:"Diagnóstico",description:"Encuentra oportunidades",Icon:Target},
+ {id:"presence",label:"Visibilidad local",description:"Directorios y SEO gratis",Icon:Globe2},
  {id:"campaign",label:"Campañas",description:"Crea un plan concreto",Icon:Megaphone},
  {id:"numbers",label:"Rentabilidad",description:"Mide lo que funciona",Icon:BarChart3},
  {id:"retention",label:"Clientes",description:"Haz que regresen",Icon:HeartHandshake}
@@ -31,6 +35,9 @@ const number=(raw:string)=>{const n=Number(raw);return raw.trim()!==""&&Number.i
 const money=(n:number|null)=>n===null?"—":n.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:2});
 const percent=(n:number|null)=>n===null?"—":n.toLocaleString("es-US",{maximumFractionDigits:1})+"%";
 const safe=(v:string,fallback:string)=>v.trim()||fallback;
+type IndustryGroup={label:string;options:{id:string;label:string}[]};
+const industryGroups:IndustryGroup[]=[{"label":"Comida y hospitalidad","options":[{"id":"bakery","label":"Repostería y panadería"},{"id":"restaurant","label":"Restaurantes y cafeterías"},{"id":"catering","label":"Catering y comida preparada"},{"id":"hotel","label":"Hoteles y alojamiento"}]},{"label":"Hogar y construcción","options":[{"id":"construction","label":"Construcción y remodelación"},{"id":"home_services","label":"Plomería, electricidad y climatización"},{"id":"cleaning","label":"Limpieza residencial y comercial"},{"id":"landscaping","label":"Jardinería y paisajismo"},{"id":"real_estate","label":"Bienes raíces"}]},{"label":"Comercio y servicios","options":[{"id":"retail","label":"Tiendas y comercio electrónico"},{"id":"beauty","label":"Belleza, barbería y estética"},{"id":"wellness","label":"Salud y bienestar"},{"id":"fitness","label":"Fitness y gimnasios"},{"id":"automotive","label":"Automotriz"},{"id":"pets","label":"Mascotas y veterinaria"},{"id":"events","label":"Eventos y entretenimiento"}]},{"label":"Profesionales y digitales","options":[{"id":"consulting","label":"Consultoría y servicios profesionales"},{"id":"technology","label":"Tecnología y desarrollo web"},{"id":"creative","label":"Marketing, diseño y fotografía"},{"id":"education","label":"Educación y formación"},{"id":"transport","label":"Transporte y logística"},{"id":"finance","label":"Contabilidad y finanzas"}]},{"label":"Otros","options":[{"id":"other","label":"Otro tipo de negocio"},{"id":"unsure","label":"No estoy seguro"}]}];
+const industryName=(id:string)=>industryGroups.flatMap(group=>group.options).find(option=>option.id===id)?.label||"Por definir";
 const validReviewUrl=(value:string)=>{
  if(!value)return true;
  try{const url=new URL(value);return url.protocol==="https:"&&Boolean(url.hostname);}
@@ -49,10 +56,20 @@ export default function MarketingPage(){
  const [form,setForm]=useState<FormState>(initial);
  const [notice,setNotice]=useState("");
  const [reviewUrl,setReviewUrl]=useState("");
+ const [showMetricHelp,setShowMetricHelp]=useState(false);
+ const [periodRevenue,setPeriodRevenue]=useState("");
+ const [periodOrders,setPeriodOrders]=useState("");
+ const [samplePrice,setSamplePrice]=useState("");
+ const [sampleCost,setSampleCost]=useState("");
  const patch=(key:keyof FormState,value:string)=>{setForm(prev=>({...prev,[key]:value}));setNotice("");};
  const spend=number(form.budget),ticket=number(form.ticket),margin=number(form.margin),
   leads=number(form.leads),sales=number(form.sales),enteredRevenue=number(form.revenue);
  const validMargin=margin!==null&&margin<=100?margin:null;
+ const revenueForTicket=number(periodRevenue),ordersForTicket=number(periodOrders);
+ const suggestedTicket=revenueForTicket!==null&&ordersForTicket!==null&&ordersForTicket>0?revenueForTicket/ordersForTicket:null;
+ const priceForMargin=number(samplePrice),costForMargin=number(sampleCost);
+ const suggestedMargin=priceForMargin!==null&&priceForMargin>0&&costForMargin!==null&&costForMargin<=priceForMargin?
+  (priceForMargin-costForMargin)/priceForMargin*100:null;
  const revenue=enteredRevenue!==null?enteredRevenue:sales!==null&&ticket!==null?sales*ticket:null;
  const estimatedRevenue=enteredRevenue===null&&revenue!==null;
  const metrics={
@@ -126,7 +143,7 @@ export default function MarketingPage(){
  };
  const report=[
   "VMV MARKETING · PLAN DE TRABAJO",
-  "Negocio: "+business,"Sector: "+safe(form.industry,"Por definir"),
+  "Negocio: "+business,"Sector: "+industryName(form.industry),
   "Audiencia: "+audience,"Oferta: "+offer,"Objetivo / CTA: "+cta,
   "Canal: "+campaign.channel,"Enfoque: "+campaign.angle,
   "Acción: "+campaign.execution,"Mensaje de partida: "+campaign.draft,
@@ -168,7 +185,12 @@ export default function MarketingPage(){
       <div className={styles.sectionTop}><span>PASO 01 · FUNDAMENTOS</span><h2>Entendamos tu negocio</h2><p>La mejor estrategia depende de quién compra, qué necesita y cuánto deja cada venta.</p></div>
       <div className={styles.formGrid}>
        <Field label="Nombre del negocio" value={form.business} onChange={v=>patch("business",v)} placeholder="Ej. Mi negocio"/>
-       <Field label="Industria o servicio" value={form.industry} onChange={v=>patch("industry",v)} placeholder="Ej. Repostería, limpieza, construcción"/>
+       <label className={styles.field}><span>Industria o servicio</span>
+        <select value={form.industry} onChange={e=>patch("industry",e.target.value)} aria-label="Selecciona la industria de tu negocio">
+         <option value="">Selecciona tu industria</option>
+         {industryGroups.map(group=><optgroup key={group.label} label={group.label}>{group.options.map(option=><option key={option.id} value={option.id}>{option.label}</option>)}</optgroup>)}
+        </select><small>Opciones estandarizadas para estrategias más consistentes.</small>
+       </label>
        <Field label="Cliente ideal" value={form.audience} onChange={v=>patch("audience",v)} placeholder="¿Quién suele comprar y por qué?"/>
        <Field label="Oferta principal" value={form.offer} onChange={v=>patch("offer",v)} placeholder="¿Qué vendes y qué problema resuelves?"/>
        <Field label="Ticket promedio ($)" type="number" min={0} value={form.ticket} onChange={v=>patch("ticket",v)} placeholder="Ej. 85"/>
@@ -180,6 +202,9 @@ export default function MarketingPage(){
        "Empieza por una sola oferta y un tipo de cliente. Hablar a todo el mundo suele dificultar medir qué funciona."}</p></div></div>
       <button type="button" className={styles.primary} onClick={()=>setSection("campaign")}>Diseñar campaña <ArrowUpRight size={16}/></button>
      </>:null}
+     {section==="presence"?<LocalVisibilityStudio
+      profile={{business:form.business,industry:industryName(form.industry),website:form.website,phone:form.phone,address:form.address,city:form.city,region:form.region,postal:form.postal,hours:form.hours,description:form.description}}
+      onChange={(key,value)=>patch(key,value)}/>:null}
      {section==="campaign"?<>
       <div className={styles.sectionTop}><span>PASO 02 · ADQUISICIÓN</span><h2>Diseña una campaña con propósito</h2><p>Elige dónde quieres alcanzar clientes. El borrador se adapta al canal, pero debes revisarlo antes de publicarlo.</p></div>
       <div className={styles.channelGrid}>{channels.map(item=><button type="button" key={item.id} aria-pressed={form.channel===item.id}
