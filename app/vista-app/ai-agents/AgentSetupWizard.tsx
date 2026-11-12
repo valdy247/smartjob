@@ -10,7 +10,7 @@ export type WizardDraft={
 };
 type Question={id:string;title:string;hint?:string;kind?:"text"|"textarea"|"choice"|"multi"|"state"|"hours";options?:string[];required?:boolean;when?:(a:Record<string,string>)=>boolean};
 type Section={title:string;subtitle:string;questions:Question[]};
-type Props={initial:WizardDraft;onSave:(updated:WizardDraft)=>void;onCancel:()=>void;isPreview?:boolean};
+type Props={initial:WizardDraft;onSave:(updated:WizardDraft)=>void;onCancel:()=>void;isPreview?:boolean;initialStep?:0|1|2|3};
 const allRoles:AgentKind[]=["calls","support","sales","bookings","inventory","operations","custom"];
 const q=(id:string,title:string,options:string[],required=false,when?:Question["when"]):Question=>({id,title,kind:"choice",options,required,when});
 const t=(id:string,title:string,required=false,hint?:string):Question=>({id,title,required,hint,kind:"text"});
@@ -118,9 +118,9 @@ function sections(kind:AgentKind,answers:Record<string,string>):Section[]{
  ];
 }
 function inputValue(v:Record<string,string>,key:string){return v[key]||"";}
-export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=true}:Props){
+export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=true,initialStep=0}:Props){
  const [draft,setDraft]=useState<WizardDraft>(()=>({...initial,setup:{...(initial.setup||{})}}));
- const [step,setStep]=useState(0);
+ const [step,setStep]=useState(initialStep);
  const [error,setError]=useState("");
  const steps=useMemo(()=>sections(draft.kind,draft.setup),[draft.kind,draft.setup]);
  const current=steps[step];
