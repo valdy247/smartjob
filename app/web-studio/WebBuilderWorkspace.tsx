@@ -16,6 +16,10 @@ type Domain={id:string;hostname:string;state:string;last_error:string;verificati
 type DomainRequest={id:string;hostname:string;intent:"buy"|"connect";status:string;years:number;auto_renew:boolean;created_at:string};
 type DomainQuote={domain:string;available:boolean;price:number|null;renewalPrice:number|null;years:number;priceDisplay:string;renewalDisplay:string;premium:boolean};
 type View="sites"|"editor"|"history"|"domains";
+type SavePhase="saved"|"pending"|"saving"|"error";
+type LocalBackup={pageId:string;document:Data;title:string;description:string;savedAt:string;revision:number};
+function backupKey(ownerId:string,pageId:string){return "vmv.puck.local.v1."+ownerId+"."+pageId;}
+
 function slugify(input:string){
  return input.normalize("NFKD").toLowerCase().replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,49).replace(/-$/g,"");
 }
@@ -29,6 +33,13 @@ export default function WebBuilderWorkspace(){
  const [document,setDocument]=useState<Data>(()=>starterBuilderDocument());
  const [initialDocument,setInitialDocument]=useState<Data>(()=>starterBuilderDocument());
  const [previewMode,setPreviewMode]=useState<"desktop"|"mobile"|null>(null);
+ const [savePhase,setSavePhase]=useState<SavePhase>("saved");
+ const [recovery,setRecovery]=useState<LocalBackup|null>(null);
+ const blockedAutosaveRef=useRef("");
+ const documentRef=useRef(document);
+ const titleRef=useRef(title);
+ const descriptionRef=useRef(description);
+ documentRef.current=document;titleRef.current=title;descriptionRef.current=description;
  const [view,setView]=useState<View>("sites");
  const [newSiteName,setNewSiteName]=useState("");
  const [newSiteCategory,setNewSiteCategory]=useState("");
@@ -95,12 +106,45 @@ export default function WebBuilderWorkspace(){
   return()=>window.removeEventListener("beforeunload",callback);
  },[dirty]);
  function openDraft(draft:unknown){
+  blockedAutosaveRef.current="";
+  setRecovery(null);setSavePhase("saved");
   const normalized=normalizeBuilderDocument(draft);
   setInitialDocument(normalized);
   setDocument(normalized);
   setRefreshKey(value=>value+1);
   setPreviewMode(null);
  }
+
+ // Restore a newer local copy only after the owner explicitly agrees.
+ useEffect(()=>{
+  if(!userId||!page)return;
+  try{
+   const raw=window.localStorage.getItem(backupKey(userId,page.id));
+   if(!raw)return;
+   if(raw.length>180000){window.localStorage.removeItem(backupKey(userId,page.id));return;}
+   const data=JSON.parse(raw) as Partial<LocalBackup>;
+   if(data.pageId!==page.id||typeof data.savedAt!=="string"||
+    !Number.isFinite(Date.parse(data.savedAt))||!data.document)return;
+   const backupDocument=normalizeBuilderDocument(data.document);
+   const same=JSON.stringify(backupDocument)===JSON.stringify(normalizeBuilderDocument(page.draft))&&
+    data.title===page.title&&data.description===page.description;
+   if(same){window.localStorage.removeItem(backupKey(userId,page.id));return;}
+   if(Date.parse(data.savedAt)>Date.parse(page.updated_at)){
+    setRecovery({pageId:page.id,document:backupDocument,title:String(data.title||page.title).slice(0,100),
+     description:String(data.description||"").slice(0,300),revision:Number(data.revision)||page.revision,savedAt:data.savedAt});
+   }
+  }catch{/* Local storage can be blocked or corrupt. */}
+ // Recheck when the selected page changes, not on every server save.
+ },[userId,page?.id]);
+
+ useEffect(()=>{
+  if(!userId||!page||!dirty||recovery)return;
+  try{
+   const snapshot:LocalBackup={pageId:page.id,document:normalizeBuilderDocument(document),
+    title,description,savedAt:new Date().toISOString(),revision:page.revision};
+   window.localStorage.setItem(backupKey(userId,page.id),JSON.stringify(snapshot));
+  }catch{/* Best-effort recovery copy; browser may deny storage. */}
+ },[userId,page?.id,page?.revision,document,title,description,dirty,recovery]);
  const loadPages=useCallback(async(currentSite:Site)=>{
   const c=await authorized();
   const {data,error}=await c.from("smartjob_builder_pages")
