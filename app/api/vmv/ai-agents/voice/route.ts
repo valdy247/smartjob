@@ -1,5 +1,6 @@
 import {NextRequest} from "next/server";
-import {authenticTwilio,say,twiml,xmlEscape} from "@/lib/twilio-pilot";
+import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
+import {verifyAiTestWebhook} from "@/lib/vmv-ai-agents/twilio-test";
 import {billingAdmin} from "@/lib/vmv-billing";
 import {findPhoneRoute} from "@/lib/phone-routes";
 
@@ -57,12 +58,12 @@ const fallback=(lang:"es-ES"|"en-US")=>lang==="en-US"
 export async function POST(req:NextRequest){
  if(process.env.VERCEL_ENV!=="preview"||process.env.VMV_AI_VOICE_PILOT_ENABLED!=="true")
    return voiceUnavailable();
- const signed=await authenticTwilio(req,null);
+ const signed=await verifyAiTestWebhook(req);
  if(!signed)return twiml("<Hangup/>",403);
  const callSid=signed.get("CallSid")||"",to=signed.get("To")||"";
  const fromAccount=signed.get("AccountSid")||"";
  if(!sidPattern.test(callSid)||!phonePattern.test(to))return voiceUnavailable();
- const base=process.env.TWILIO_WEBHOOK_BASE_URL||"";
+ const base=process.env.VMV_AI_TEST_BASE_URL||"";
  if(!/^https:\/\/[a-z0-9.-]+(?::\d+)?$/i.test(base)||!(process.env.OPENAI_API_KEY||process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN))
    return voiceUnavailable();
 
