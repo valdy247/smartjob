@@ -58,6 +58,28 @@ export default function AIAgentsPreview(){
   setNotice("Diseño guardado solo en esta vista temporal. Aún no se almacena en tu cuenta.");
   setScreen("home");
  };
+ const demo=()=>{
+  const schedule=Object.fromEntries(["mon","tue","wed","thu","fri","sat","sun"].flatMap(day=>[
+   ["h_"+day+"_active","Sí"],["h_"+day+"_open","09:00"],["h_"+day+"_close","17:00"]]));
+  const sample:Agent={
+   id:"example-taxi",status:"draft",name:"Luna · Ejemplo",kind:"bookings",
+   purpose:"Orientar sobre viajes y preparar solicitudes que un conductor confirmará.",
+   personality:"Amable y profesional",language:"Español",instructions:"",
+   knowledge:"",setup:{
+    business_name:"Taxi Aurora (empresa ficticia)",industry:"Servicio de taxi",
+    country:"Estados Unidos",city:"Columbus",state:"Georgia",hours_mode:"Todos los días · 9–5",
+    contact:"Contacto ficticio, sin línea activa",policy_type:"Sí, tengo reglas",
+    policies:"Cancelación hasta una hora antes; ningún viaje se confirma automáticamente.",
+    booking_service_type:"Viajes dentro de la ciudad",booking_lead:"1 hora",
+    booking_cancel:"1 hora antes",booking_confirmation:"Después de que yo la confirme",
+    booking_staff:"Solo yo",human_review:"Reconocerlo y derivar a un humano",
+    data_scope:"Ninguno",restrictions:"No cobrar, confirmar viajes ni dar precios no autorizados.",
+    ...schedule
+   }
+  };
+  setAgents(current=>current.some(a=>a.id===sample.id)?current:[sample,...current]);
+  setNotice("Ejemplo ficticio cargado solo en tu navegador. Puedes abrir Calidad y probar el diseño.");
+ };
  const test=(agent:Agent)=>{setSelected(agent.id);setScreen("test");setMessage("");setMessageNotice("");};
  const quality=(agent:Agent)=>{setSelected(agent.id);setScreen("quality");};
  const toggleStatus=(agent:Agent)=>{
@@ -107,6 +129,7 @@ export default function AIAgentsPreview(){
       {agents.length===0?<div className={styles.empty}>
        <Bot size={30}/><strong>Aquí vivirán tus agentes</strong>
        <p>Elige una tarjeta para crear el primero.</p>
+       <button type="button" className={styles.demoButton} onClick={demo}><Sparkles size={16}/> Explorar ejemplo de taxi</button>
       </div>:<div className={styles.agents}>
        {agents.map(a=>{const t=typeInfo(a.kind);return <article className={styles.agent} key={a.id}>
         <div className={styles.agentTop}><span style={{background:t.bg,color:t.fg}} className={styles.agentIcon}><t.Icon size={21}/></span>
