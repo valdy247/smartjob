@@ -2,7 +2,7 @@ import type {CSSProperties} from "react";
 import type {Metadata} from "next";
 import {notFound} from "next/navigation";
 import {createClient} from "@supabase/supabase-js";
-import {normalizeWebContent,paletteStyles,webEmail,webPhone,webServices,webCategory,webWhatsApp,webPrimaryContact,webServiceContact} from "@/lib/web-services-site";
+import {normalizeWebContent,paletteStyles,webEmail,webPhone,webServices,webCategory,webWhatsApp,webPrimaryContact,webServiceContact,webDirections} from "@/lib/web-services-site";
 import "./site.css";
 
 export const dynamic="force-dynamic";
@@ -43,6 +43,7 @@ export default async function PublishedBusinessWebsite({params}:Props){
  const email=webEmail(page);
  const phone=webPhone(page);
  const whatsapp=webWhatsApp(page);
+ const directions=webDirections(page);
  const primaryContact=webPrimaryContact(page);
  const whatsappLink=whatsapp?webPrimaryContact({...page,contactMethod:"whatsapp"}).href:null;
  return <div className={"ws-public ws-public--"+page.template} style={custom}>
@@ -90,6 +91,7 @@ export default async function PublishedBusinessWebsite({params}:Props){
      {email?<a href={"mailto:"+email}>{email}</a>:null}
      {phone?<a href={"tel:"+phone}>{page.phone}</a>:null}
      {page.address?<p>{page.address}</p>:null}
+     {directions?<a className="ws-public-map-link" href={directions} target="_blank" rel="noopener noreferrer">Cómo llegar <span aria-hidden="true">↗</span></a>:null}
     </div>
    </section>
   </main>
