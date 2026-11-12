@@ -1,6 +1,6 @@
 "use client";
 import {useState} from "react";
-import {ArrowUpRight,CheckCircle2,ClipboardCopy,ExternalLink,Globe2,MapPinned,RefreshCw,Search,ShieldCheck,TrendingUp} from "lucide-react";
+import {ArrowUpRight,CheckCircle2,ChevronDown,ClipboardCopy,ExternalLink,Globe2,MapPinned,RefreshCw,Search,ShieldCheck,TrendingUp} from "lucide-react";
 import styles from "./LocalVisibilityStudio.module.css";
 
 export type LocalProfile={
@@ -30,7 +30,7 @@ export default function LocalVisibilityStudio({profile,onChange,onRequestHelp}:{
  profile:LocalProfile;onChange:(key:EditableKey,value:string)=>void;
  onRequestHelp?:(service:"google_profile"|"bing_places"|"apple_maps"|"yelp_profile")=>void;
 }){
- const [hideAddress,setHideAddress]=useState(false);
+ const [hideAddress,setHideAddress]=useState(true);
  const [listingStatus,setListingStatus]=useState<Record<string,ListingStatus>>({});
  const [notice,setNotice]=useState("");
  const [audit,setAudit]=useState<Audit|null>(null);
@@ -90,13 +90,23 @@ export default function LocalVisibilityStudio({profile,onChange,onRequestHelp}:{
     <Field label="Teléfono de atención" value={profile.phone} onChange={v=>onChange("phone",v)} placeholder="+1 555 123 4567"/>
     <Field label="Ciudad" value={profile.city} onChange={v=>onChange("city",v)} placeholder="Ciudad donde operas"/>
     <Field label="Estado o región" value={profile.region} onChange={v=>onChange("region",v)} placeholder="Georgia"/>
-    <Field label="Código postal" value={profile.postal} onChange={v=>onChange("postal",v)} placeholder="31901"/>
-    {!hideAddress?<Field label="Dirección comercial pública (opcional)" value={profile.address} onChange={v=>onChange("address",v)} placeholder="Solo si atiendes clientes en esta dirección"/>:null}
-    <Field label="Horario de atención" value={profile.hours} onChange={v=>onChange("hours",v)} placeholder="Lun–Vie, 9 AM–5 PM"/>
-    <Field label="Sitio web" value={profile.website} onChange={v=>{onChange("website",v);setAudit(null);setAuditError("");}} placeholder="https://tusitio.com"/>
+    <Field label="Sitio web (opcional)" value={profile.website} onChange={v=>{onChange("website",v);setAudit(null);setAuditError("");}} placeholder="https://tusitio.com"/>
    </div>
-   <label className={styles.privacy}><input type="checkbox" checked={hideAddress} onChange={e=>setHideAddress(e.target.checked)}/><span>Trabajo a domicilio, por internet o desde una dirección privada. No incluir dirección en la ficha copiada.</span></label>
-   <label className={styles.description}><span>Descripción breve del negocio</span><textarea value={profile.description} onChange={e=>onChange("description",e.target.value)} maxLength={500} rows={3} placeholder="Explica qué ofreces, a quién ayudas y dónde atiendes."/><small>Describe servicios reales sin afirmaciones inventadas.</small></label>
+   <details className={styles.extras}>
+    <summary><span><strong>Horarios, dirección y descripción</strong><small>Detalles opcionales · puedes completarlos después</small></span><ChevronDown size={18}/></summary>
+    <div className={styles.extraBody}>
+     <Field label="Horario de atención" value={profile.hours} onChange={v=>onChange("hours",v)} placeholder="Ej. Lun–Vie 9:00–17:00"/>
+     <div className={styles.hoursPresets} aria-label="Horarios habituales">
+      {([
+       ["Lun–Vie","Lun–Vie 9:00–17:00"],["Todos los días","Lun–Dom 9:00–17:00"],["Con cita","Solo con cita previa"]
+      ] as const).map(([label,value])=><button type="button" key={label} onClick={()=>onChange("hours",value)} aria-pressed={profile.hours===value}>{label}</button>)}
+     </div>
+     <Field label="Código postal" value={profile.postal} onChange={v=>onChange("postal",v)} placeholder="31901"/>
+     <label className={styles.privacy}><input type="checkbox" checked={hideAddress} onChange={e=>setHideAddress(e.target.checked)}/><span>Mi dirección es privada. No incluirla en los datos copiados para directorios.</span></label>
+     {!hideAddress?<Field label="Dirección comercial pública" value={profile.address} onChange={v=>onChange("address",v)} placeholder="Solo si atiendes clientes en esta dirección"/>:null}
+     <label className={styles.description}><span>Descripción breve del negocio</span><textarea value={profile.description} onChange={e=>onChange("description",e.target.value)} maxLength={500} rows={3} placeholder="Qué ofreces, a quién ayudas y dónde atiendes"/><small>Describe servicios reales sin afirmaciones inventadas.</small></label>
+    </div>
+   </details>
    {notice?<p className={styles.notice} role="status">{notice}</p>:null}
   </section>
   <section className={styles.panel}>
