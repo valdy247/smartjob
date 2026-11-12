@@ -7,11 +7,12 @@ import {
 } from "lucide-react";
 import type {LucideIcon} from "lucide-react";
 import styles from "./page.module.css";
+import AgentSetupWizard,{type WizardDraft} from "./AgentSetupWizard";
 
 type Kind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 type Status="draft"|"active"|"paused";
 type Screen="home"|"editor"|"test";
-type AgentDraft={name:string;kind:Kind;purpose:string;personality:string;language:string;instructions:string;knowledge:string};
+type AgentDraft=WizardDraft;
 type Agent=AgentDraft&{id:string;status:Status};
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
  {id:"calls",title:"Llamadas",sub:"Atención telefónica",Icon:PhoneCall,bg:"#ede2ff",fg:"#7143c7",purpose:"Orientar a quien llama y derivar a una persona cuando sea necesario."},
@@ -26,7 +27,7 @@ function blank(kind:Kind):AgentDraft{
  const item=types.find(t=>t.id===kind)||types[6];
  return {kind,name:kind==="custom"?"Mi agente":"Agente de "+item.title,
   purpose:item.purpose,personality:"Amable y profesional",language:"Español",
-  instructions:"",knowledge:""};
+  instructions:"",knowledge:"",setup:{}};
 }
 export default function AIAgentsPreview(){
  const [screen,setScreen]=useState<Screen>("home");
@@ -41,11 +42,11 @@ export default function AIAgentsPreview(){
  const start=(kind:Kind)=>{setDraft(blank(kind));setSelected(null);setScreen("editor");setNotice("");};
  const edit=(agent:Agent)=>{setSelected(agent.id);setDraft({
   name:agent.name,kind:agent.kind,purpose:agent.purpose,personality:agent.personality,
-  language:agent.language,instructions:agent.instructions,knowledge:agent.knowledge
+  language:agent.language,instructions:agent.instructions,knowledge:agent.knowledge,setup:{...agent.setup}
  });setScreen("editor");};
- const save=()=>{
-  if(!draft.name.trim()){setNotice("Escribe el nombre del agente.");return;}
-  const cleaned={...draft,name:draft.name.trim().slice(0,80)};
+ const save=(nextDraft:AgentDraft=draft)=>{
+  if(!nextDraft.name.trim()){setNotice("Escribe el nombre del agente.");return;}
+  const cleaned={...nextDraft,name:nextDraft.name.trim().slice(0,80)};
   if(selected){
    setAgents(old=>old.map(a=>a.id===selected?{...a,...cleaned}:a));
   }else{
@@ -113,33 +114,8 @@ export default function AIAgentsPreview(){
       </div>}
       <div className={styles.disclaimer}><ShieldCheck size={16}/> Vista de diseño: los cambios no se guardan en Supabase ni ejecutan acciones reales.</div>
      </>:null}
-     {screen==="editor"?<>
-      <div className={styles.miniHeader}><div className={styles.miniIcon}><Bot size={24}/></div><h1>{selected?"Editar agente":"Nuevo agente"}</h1>
-       <p>Tu negocio, tus instrucciones y tu estilo.</p></div>
-      <div className={styles.formSection}><h2>01 · Identidad</h2>
-       <label className={styles.field}>Nombre del agente<input value={draft.name} maxLength={80} onChange={e=>patch("name",e.target.value)} placeholder="Ej. Asistente VMV"/></label>
-       <label className={styles.field}>¿Qué hará?<textarea value={draft.purpose} maxLength={240} onChange={e=>patch("purpose",e.target.value)} rows={3}/></label>
-       <label className={styles.field}>Especialidad</label>
-       <div className={styles.chips}>{types.map(t=><button type="button" key={t.id} onClick={()=>patch("kind",t.id)}
-        className={draft.kind===t.id?styles.chipSelected:styles.chip}>{t.title}</button>)}</div>
-      </div>
-      <div className={styles.formSection}><h2>02 · Personalidad e idioma</h2>
-       <div className={styles.chips}>{["Amable y profesional","Cercano","Formal","Directo"].map(v=><button type="button"
-        key={v} onClick={()=>patch("personality",v)} className={draft.personality===v?styles.chipSelected:styles.chip}>{v}</button>)}</div>
-       <div className={styles.chips}>{["Español","English","Bilingüe"].map(v=><button type="button"
-        key={v} onClick={()=>patch("language",v)} className={draft.language===v?styles.chipSelected:styles.chip}>{v}</button>)}</div>
-      </div>
-      <div className={styles.formSection}><h2>03 · Conocimiento</h2>
-       <p className={styles.muted}>Información que tienes permiso de compartir.</p>
-       <label className={styles.field}>Datos de la empresa<textarea value={draft.knowledge} rows={5} maxLength={8000}
-        onChange={e=>patch("knowledge",e.target.value)} placeholder="Horarios, servicios, precios confirmados, políticas..."/></label>
-       <label className={styles.field}>Instrucciones<textarea value={draft.instructions} rows={4} maxLength={2500}
-        onChange={e=>patch("instructions",e.target.value)} placeholder="Cómo debe responder y cuándo derivar a una persona..."/></label>
-      </div>
-      <div className={styles.info}><ShieldCheck size={18}/> El agente aún no puede realizar llamadas, compras ni reservas.</div>
-      <button type="button" className={styles.saveButton} onClick={save}><Check size={19}/> Guardar diseño</button>
-      <p className={styles.smallNote}>Vista temporal: no introduzcas información confidencial. Para guardar agentes reales falta habilitar la base de datos.</p>
-     </>:null}
+     {screen==="editor"?<AgentSetupWizard key={selected||draft.kind}
+      initial={draft} onCancel={back} onSave={updated=>{setDraft(updated);save(updated);}}/>:null}
      {screen==="test"&&active?<div className={styles.testing}>
       <div className={styles.testAgent}><div className={styles.testAvatar}><Bot size={24}/></div><strong>{active.name}</strong>
        <small>Simulación privada · Vista de diseño</small></div>
