@@ -193,8 +193,32 @@ export default function MarketingPage(){
        </label>
        <Field label="Cliente ideal" value={form.audience} onChange={v=>patch("audience",v)} placeholder="¿Quién suele comprar y por qué?"/>
        <Field label="Oferta principal" value={form.offer} onChange={v=>patch("offer",v)} placeholder="¿Qué vendes y qué problema resuelves?"/>
-       <Field label="Ticket promedio ($)" type="number" min={0} value={form.ticket} onChange={v=>patch("ticket",v)} placeholder="Ej. 85"/>
-       <Field label="Margen bruto estimado (%)" type="number" min={0} max={100} value={form.margin} onChange={v=>patch("margin",v)} placeholder="Ej. 45" hint="Ingreso menos costes directos, antes de publicidad"/>
+       <Field label="Ticket promedio ($) · opcional" type="number" min={0} value={form.ticket} onChange={v=>patch("ticket",v)} placeholder="Puedes dejarlo vacío" hint="Importe promedio de cada venta. Si no lo sabes, no necesitas inventarlo."/>
+       <Field label="Margen bruto (%) · opcional" type="number" min={0} max={100} value={form.margin} onChange={v=>patch("margin",v)} placeholder="Puedes dejarlo vacío" hint="Porcentaje de una venta tras costes directos. No incluye publicidad ni gastos fijos."/>
+      </div>
+      <div className={styles.metricHelp}>
+       <button type="button" className={styles.metricHelpToggle} onClick={()=>setShowMetricHelp(!showMetricHelp)} aria-expanded={showMetricHelp}>
+        <Lightbulb size={17}/> ¿No sabes estos números? <span>{showMetricHelp?"Ocultar ayuda":"Calculémoslos juntos"}</span>
+       </button>
+       {showMetricHelp?<div className={styles.metricHelpBody}>
+        <p>Estos datos son opcionales. Si tienes cifras reales, calcula una aproximación. Si no, continúa con tu campaña y podrás medirlos más adelante.</p>
+        <div className={styles.metricHelpGrid}>
+         <div className={styles.metricHelpSection}>
+          <strong>Ticket promedio</strong><small>Ventas totales ÷ número de pedidos del mismo período.</small>
+          <label>Ingresos del período ($)<input type="number" min={0} value={periodRevenue} onChange={e=>setPeriodRevenue(e.target.value)} placeholder="Ej. 1000"/></label>
+          <label>Pedidos del período<input type="number" min={1} value={periodOrders} onChange={e=>setPeriodOrders(e.target.value)} placeholder="Ej. 20"/></label>
+          <span>Resultado: {money(suggestedTicket)}</span>
+          <button type="button" disabled={suggestedTicket===null} onClick={()=>patch("ticket",String(Math.round((suggestedTicket??0)*100)/100))}>Usar ticket</button>
+         </div>
+         <div className={styles.metricHelpSection}>
+          <strong>Margen estimado de un producto</strong><small>Precio menos costes directos, dividido entre el precio. El margen del negocio completo puede ser diferente.</small>
+          <label>Precio de venta ($)<input type="number" min={0} value={samplePrice} onChange={e=>setSamplePrice(e.target.value)} placeholder="Ej. 50"/></label>
+          <label>Costes directos ($)<input type="number" min={0} value={sampleCost} onChange={e=>setSampleCost(e.target.value)} placeholder="Ej. 20"/></label>
+          <span>Resultado: {percent(suggestedMargin)}</span>
+          <button type="button" disabled={suggestedMargin===null} onClick={()=>patch("margin",String(Math.round((suggestedMargin??0)*100)/100))}>Usar estimación</button>
+         </div>
+        </div>
+       </div>:null}
       </div>
       {margin!==null&&validMargin===null?<p className={styles.warning}>El margen debe estar entre 0 y 100%.</p>:null}
       <div className={styles.insight}><Lightbulb size={21}/><div><strong>Primera oportunidad</strong><p>{form.offer.trim()&&form.audience.trim()?
