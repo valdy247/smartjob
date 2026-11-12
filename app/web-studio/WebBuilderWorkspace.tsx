@@ -24,6 +24,7 @@ export default function WebBuilderWorkspace(){
  const [sites,setSites]=useState<Site[]>([]);
  const [site,setSite]=useState<Site|null>(null);
  const [pages,setPages]=useState<Page[]>([]);
+ const [publishedIds,setPublishedIds]=useState<string[]>([]);
  const [page,setPage]=useState<Page|null>(null);
  const [document,setDocument]=useState<Data>(()=>starterBuilderDocument());
  const [view,setView]=useState<View>("sites");
@@ -110,6 +111,11 @@ export default function WebBuilderWorkspace(){
   setBusy(true);setError("");setNotice("");
   try{
    const list=await loadPages(chosen);
+   const db=await authorized();
+   const {data:published,error:publishedError}=await db.from("smartjob_builder_public_pages")
+    .select("page_id").eq("site_id",chosen.id).eq("owner_id",userId);
+   if(publishedError)throw new Error("No se pudo verificar el estado de publicación");
+   setPublishedIds((published||[]).map(row=>row.page_id));
    setSite(chosen);setPages(list);
    if(list.length){const home=list.find(p=>p.slug==="home")||list[0];setPage(home);
     setTitle(home.title);setDescription(home.description);setDocument(normalizeBuilderDocument(home.draft));
@@ -137,7 +143,7 @@ export default function WebBuilderWorkspace(){
    }).select("id,site_id,owner_id,slug,title,description,draft,revision,updated_at").single();
    if(homeError||!home)throw new Error("Sitio creado; vuelve a abrirlo para añadir la página");
    setSites(current=>[siteCreated,...current]);
-   setSite(siteCreated);setPages([home as Page]);setPage(home as Page);
+   setSite(siteCreated);setPages([home as Page]);setPage(home as Page);setPublishedIds([]);
    setDocument(normalizeBuilderDocument(home.draft));setTitle(home.title);setDescription("");
    setNewSiteName("");setView("editor");setRefreshKey(v=>v+1);
    setNotice("Sitio creado. Personaliza tus bloques y publica cuando esté listo.");
@@ -163,7 +169,7 @@ export default function WebBuilderWorkspace(){
    }).select("id,site_id,owner_id,slug,title,description,draft,revision,updated_at").single();
    if(pageError||!home)throw new Error("Sitio creado; se requiere completar la migración de contenido");
    setSites(old=>[created as Site,...old]);
-   setSite(created as Site);setPages([home as Page]);setPage(home as Page);
+   setSite(created as Site);setPages([home as Page]);setPage(home as Page);setPublishedIds([]);
    setTitle(home.title);setDescription(home.description);
    setDocument(normalizeBuilderDocument(doc));setRefreshKey(v=>v+1);setView("editor");
    setClassicDraft(null);
@@ -224,6 +230,7 @@ export default function WebBuilderWorkspace(){
    const c=await authorized();
    const {data,error}=await c.rpc("smartjob_builder_publish_page",{p_page_id:updated.id});
    if(error||!data)throw new Error(error?.message||"No se pudo publicar");
+   setPublishedIds(old=>old.includes(updated.id)?old:[...old,updated.id]);
    setNotice("Página publicada. Puedes abrirla con el enlace de arriba.");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo publicar");}
   finally{setBusy(false);}
@@ -348,7 +355,7 @@ export default function WebBuilderWorkspace(){
  }
  function back(){
   if(dirty&&!window.confirm("Hay cambios sin guardar. ¿Salir?"))return;
-  setSite(null);setPage(null);setView("sites");setError("");setNotice("");
+  setSite(null);setPage(null);setPublishedIds([]);setView("sites");setError("");setNotice("");
  }
  if(loading)return <main className={styles.loading}>Cargando Web Studio…</main>;
  if(!userId)return <main className={styles.loading}><h2>Inicia sesión para crear tu web</h2>
@@ -387,7 +394,7 @@ export default function WebBuilderWorkspace(){
   </main>:<main className={styles.main}>
    <div className={styles.siteHeading}>
     <div><small>SITIO WEB</small><h1>{site.name}</h1></div>
-    <a href={siteUrl||"#"} target="_blank" rel="noopener noreferrer" className={styles.sitePreview}><ExternalLink size={16}/> Ver sitio</a>
+    {pages.some(p=>p.slug==="home"&&publishedIds.includes(p.id))?<a href={siteUrl||"#"} target="_blank" rel="noopener noreferrer" className={styles.sitePreview}><ExternalLink size={16}/> Ver sitio</a>:<span className={styles.unpublished}>Sin publicar</span>}
    </div>
    <div className={styles.sections}>
     <button type="button" className={view==="editor"?styles.selected:""} onClick={()=>{setView("editor");setError("");}}>Editor</button>
@@ -409,7 +416,7 @@ export default function WebBuilderWorkspace(){
       </div>
       <div className={styles.actions}>
        <button type="button" disabled={busy} onClick={()=>void save()}><Save size={15}/> Guardar</button>
-       <a href={pageUrl||"#"} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Página pública</a>
+       {publishedIds.includes(page.id)?<a href={pageUrl||"#"} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Página pública</a>:null}
       </div>
      </div>
      <div className={styles.puckShell}>
