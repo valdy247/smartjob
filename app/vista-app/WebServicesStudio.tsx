@@ -39,7 +39,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
  const [ready,setReady]=useState(false);
  const [status,setStatus]=useState("");
  const [mobile,setMobile]=useState(false);
- const [studioMode,setStudioMode]=useState<"edit"|"preview">("edit");
+ const [studioMode,setStudioMode]=useState<"edit"|"preview"|"publish">("edit");
  const [newService,setNewService]=useState("");
  const [origin,setOrigin]=useState("");
  useEffect(()=>{setOrigin(window.location.origin);},[]);
@@ -154,30 +154,20 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
  const tokens={"--web-color":palette.accent,"--web-light":palette.light,"--web-ink":palette.ink} as CSSProperties;
  const serviceItems=webServices(content);
  return <section className={styles.studio} aria-label="Creador web">
-  <button type="button" className={styles.back} onClick={onBack}><ArrowLeft size={18}/> Web Services</button>
   <div className={styles.heading}><div><span>WEB STUDIO</span><h2>Crea tu web<b>.</b></h2></div>
-   <small>{loading?"Cargando":published?"Publicado":"Borrador"}</small>
   </div>
   {loading?<p className={styles.notice}>Cargando…</p>:!ready?<p className={styles.notice} role="alert">{status}</p>:<>
-   <div className={styles.switch} role="group" aria-label="Sección del estudio">
-    <button type="button" className={studioMode==="edit"?styles.active:""} aria-pressed={studioMode==="edit"}
-     onClick={()=>setStudioMode("edit")}>Editar contenido</button>
-    <button type="button" className={studioMode==="preview"?styles.active:""} aria-pressed={studioMode==="preview"}
-     onClick={()=>setStudioMode("preview")}>Diseño y vista previa</button>
+   <div className={styles.switch} role="tablist" aria-label="Etapas del estudio web">
+    <button type="button" role="tab" aria-selected={studioMode==="edit"} className={studioMode==="edit"?styles.active:""} onClick={()=>{setStudioMode("edit");setStatus("");}}>Contenido</button>
+    <button type="button" role="tab" aria-selected={studioMode==="preview"} className={studioMode==="preview"?styles.active:""} onClick={()=>{setStudioMode("preview");setStatus("");}}>Diseño</button>
+    <button type="button" role="tab" aria-selected={studioMode==="publish"} className={studioMode==="publish"?styles.active:""} onClick={()=>{setStudioMode("publish");setStatus("");}}>Publicación</button>
    </div>
-   <div className={styles.actions}>
-    <button type="button" className={styles.save} disabled={busy} onClick={()=>void save()}><Save size={17}/> Guardar</button>
-    <button type="button" className={styles.publish} disabled={busy} onClick={()=>void publish()}><Send size={17}/> {busy?"Guardando…":published?"Actualizar web":"Publicar web"}</button>
-    {published?<button type="button" className={styles.delete} disabled={busy} onClick={()=>void unpublish()} aria-label="Retirar web"><Trash2 size={18}/></button>:null}
-   </div>
-   {published&&link?<div className={styles.url}><Globe size={16}/>
-    <a href={link} target="_blank" rel="noopener noreferrer">{link.replace(/^https?:\/\//,"")}</a>
-    <button type="button" onClick={()=>void copy()} aria-label="Copiar enlace"><Copy size={16}/></button>
-    <a href={link} target="_blank" rel="noopener noreferrer" aria-label="Abrir web"><ExternalLink size={16}/></a>
+   {status?<p className={styles.notice} role="status" aria-live="polite">{status}</p>:null}
+   {studioMode!=="publish"?<div className={styles.modeToolbar}>
+    <button type="button" className={styles.save} disabled={busy} onClick={()=>void save()}><Save size={16}/> {busy?"Guardando…":"Guardar cambios"}</button>
    </div>:null}
-   <p className={styles.notice} role="status" aria-live="polite">{status?<><Check size={15}/>{status}</>:null}</p>
-   <div className={styles.workbench} data-mode={studioMode}>
-    <div className={styles.editor}>
+   {studioMode!=="publish"?<div className={styles.workbench} data-mode={studioMode}>
+    <div className={styles.editor} hidden={studioMode!=="edit"}>
      <header className={styles.panelHead}><strong>Contenido</strong><small>EDITAR</small></header>
      <div className={styles.fields}>
       <label className={styles.field}><span>Categoría de negocio</span>
@@ -220,7 +210,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
        onMessage={setStatus} onChange={next=>{setContent(v=>({...v,...next}));setStatus("Imágenes actualizadas. Guarda los cambios.");}}/>
      </div>
     </div>
-    <div className={styles.visual}>
+    <div className={styles.visual} hidden={studioMode!=="preview"}>
      <header className={styles.panelHead}><strong>Vista previa</strong>
       <div className={styles.devices}><button type="button" aria-pressed={!mobile} onClick={()=>setMobile(false)} className={!mobile?styles.active:""}>Web</button>
       <button type="button" aria-pressed={mobile} onClick={()=>setMobile(true)} className={mobile?styles.active:""}>Móvil</button></div>
@@ -261,8 +251,29 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
      </div>
 
     </div>
-   </div>
-
+   </div>:<section className={styles.publication} aria-label="Publicar y administrar la web">
+    <div className={styles.publicationHeader}>
+     <div className={styles.publicationIcon}><Globe size={23}/></div>
+     <div className={styles.publicationInfo}>
+      <span className={styles.publicationCaption}>ESTADO DE TU WEB</span>
+      <strong>{published?"Tu web está publicada":"Tu web está en borrador"}</strong>
+     </div>
+     <span className={styles.publicationBadge}>{published?"Activa":"Borrador"}</span>
+    </div>
+    <button type="button" className={styles.primaryPublish} disabled={busy} onClick={()=>void publish()}>
+     <Send size={17}/>{busy?"Procesando…":published?"Actualizar publicación":"Publicar web"}
+    </button>
+    {published&&link?<div className={styles.publicationLink}>
+     <span className={styles.publicationCaption}>TU SITIO PÚBLICO</span>
+     <div className={styles.publicationAddress}><Globe size={17}/><span>{slug}</span></div>
+     <div className={styles.publicationLinkActions}>
+      <a href={link} target="_blank" rel="noopener noreferrer"><ExternalLink size={16}/> Abrir sitio</a>
+      <button type="button" onClick={()=>void copy()}><Copy size={16}/> Copiar enlace</button>
+     </div>
+    </div>:null}
+    {published?<button type="button" className={styles.withdraw} disabled={busy} onClick={()=>void unpublish()}><Trash2 size={16}/> Retirar publicación</button>:null}
+    <button type="button" className={styles.closeStudio} onClick={onBack}><ArrowLeft size={15}/> Volver a Web Services</button>
+   </section>}
   </>}
  </section>;
 }
