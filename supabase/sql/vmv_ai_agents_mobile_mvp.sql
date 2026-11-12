@@ -130,7 +130,79 @@ create table if not exists public.vmv_ai_voice_routes (
  id uuid primary key default gen_random_uuid(),
  owner_id uuid not null references auth.users(id) on delete cascade,
  agent_id uuid not null references public.vmv_ai_agents(id) on delete cascade,
- twilio_number text not null unique check (twilio_number ~ '^\+[1-9][0-9]{7,14}),
+ twilio_number text not null unique check (twilio_number ~ '^\+[1-9][0-9]{7,14}
+ twilio_account_sid text not null check (twilio_account_sid ~ '^AC[a-fA-F0-9]{32}$'),
+ enabled boolean not null default false,
+ verified_ownership boolean not null default false,
+ disclosure_approved boolean not null default false,
+ approved_at timestamptz,
+ created_at timestamptz not null default now()
+);
+alter table public.vmv_ai_voice_routes enable row level security;
+create policy vmv_ai_voice_route_read on public.vmv_ai_voice_routes for select to authenticated
+ using (owner_id=(select auth.uid()) and exists
+ (select 1 from public.vmv_ai_agents a where a.id=agent_id and a.owner_id=(select auth.uid())));
+-- No authenticated INSERT/UPDATE/DELETE: only an audited server-side enrollment
+-- may attach a verified dedicated phone number after explicit owner approval.
+revoke all on public.vmv_ai_voice_routes from anon,authenticated;
+grant select on public.vmv_ai_voice_routes to authenticated;
+
+create table if not exists public.vmv_ai_voice_calls (
+ call_sid text primary key check (call_sid ~ '^CA[a-fA-F0-9]{32}$'),
+ route_id uuid not null references public.vmv_ai_voice_routes(id) on delete cascade,
+ owner_id uuid not null references auth.users(id) on delete cascade,
+ agent_id uuid not null references public.vmv_ai_agents(id) on delete cascade,
+ started_at timestamptz not null default now(),
+ expires_at timestamptz not null default (now()+interval '4 minutes'),
+ turn_count integer not null default 0 check (turn_count between 0 and 8)
+);
+create index if not exists vmv_ai_voice_daily on public.vmv_ai_voice_calls(route_id,started_at desc);
+alter table public.vmv_ai_voice_calls enable row level security;
+create policy vmv_ai_voice_calls_owner_read on public.vmv_ai_voice_calls for select to authenticated
+ using (owner_id=(select auth.uid()));
+revoke all on public.vmv_ai_voice_calls from anon,authenticated;
+grant select on public.vmv_ai_voice_calls to authenticated;
+
+-- Strictly server-only quota methods, absent from the public client grants.
+-- The webhook must additionally verify Twilio HMAC signature and billing.
+create or replace function public.vmv_ai_open_voice_call(p_route_id uuid,p_call_sid text)
+returns boolean language plpgsql security definer set search_path=public,pg_temp as $$
+declare r record;
+begin
+ if p_call_sid !~ '^CA[a-fA-F0-9]{32}$' then return false; end if;
+ perform pg_advisory_xact_lock(hashtext('vmv_ai_voice:'||p_route_id::text));
+ select v.id,v.owner_id,v.agent_id into r
+ from public.vmv_ai_voice_routes v
+ join public.vmv_ai_agents a on a.id=v.agent_id and a.owner_id=v.owner_id
+ join public.vmv_ai_businesses b on b.id=a.business_id and b.owner_id=v.owner_id
+ where v.id=p_route_id and v.enabled=true and v.verified_ownership=true
+  and v.disclosure_approved=true and v.approved_at is not null
+  and a.status='active';
+ if not found then return false; end if;
+ if exists(select 1 from public.vmv_ai_voice_calls c where c.call_sid=p_call_sid)
+ then return exists(select 1 from public.vmv_ai_voice_calls c where c.call_sid=p_call_sid and c.route_id=p_route_id); end if;
+ if (select count(*) from public.vmv_ai_voice_calls
+     where route_id=p_route_id and started_at>=date_trunc('day',now() at time zone 'UTC') at time zone 'UTC')>=5 then return false; end if;
+ insert into public.vmv_ai_voice_calls(call_sid,route_id,owner_id,agent_id)
+ values (p_call_sid,p_route_id,r.owner_id,r.agent_id);
+ return true;
+exception when unique_violation then return false;
+end $$;
+revoke all on function public.vmv_ai_open_voice_call(uuid,text) from public,anon,authenticated;
+grant execute on function public.vmv_ai_open_voice_call(uuid,text) to service_role;
+
+create or replace function public.vmv_ai_reserve_voice_turn(p_call_sid text)
+returns integer language plpgsql security definer set search_path=public,pg_temp as $$
+declare n integer;
+begin
+ update public.vmv_ai_voice_calls set turn_count=turn_count+1
+ where call_sid=p_call_sid and expires_at>now() and turn_count<8
+ returning turn_count into n;
+ return coalesce(n,0);
+end $$;
+revoke all on function public.vmv_ai_reserve_voice_turn(text) from public,anon,authenticated;
+grant execute on function public.vmv_ai_reserve_voice_turn(text) to service_role;
+),
  twilio_account_sid text not null check (twilio_account_sid ~ '^AC[a-fA-F0-9]{32}$'),
  enabled boolean not null default false,
  verified_ownership boolean not null default false,
