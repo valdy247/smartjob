@@ -69,6 +69,7 @@ export default function VMVMobilePreview(){
   loading,working,error,notice,setError,setNotice,refresh,signIn,signOut,saveBasic,savePremium}=account;
  const [tab,setTab]=useState<Tab>("home");
  const [open,setOpen]=useState(false);
+ const [serviceFocus,setServiceFocus]=useState<"all"|"web">("all");
  const [panel,setPanel]=useState<Panel>("overview");
  const [callsView,setCallsView]=useState<"dial"|"history"|"contacts">("dial");
  const [callFilter,setCallFilter]=useState<"all"|"direct"|"translated">("all");
@@ -119,7 +120,7 @@ export default function VMVMobilePreview(){
  const business=profile?.business_name?.trim()||profile?.first_name||"Mi negocio";
  const lineNumber=line?.twilioPhone||route?.twilio_number||"Sin número asignado";
  const lineState=line?.connectedToApp?"Ruta iPhone configurada":line?.verified?"Número verificado":route?.enabled?"Ruta registrada":"Pendiente de activación";
- const go=(next:Tab)=>{setCallbackConfirmSid(null);setTab(next);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("dial");setCallFilter("all");}setError("");setNotice("");};
+ const go=(next:Tab)=>{setServiceFocus("all");setCallbackConfirmSid(null);setTab(next);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("dial");setCallFilter("all");}setError("");setNotice("");};
  const showCall=(next:Panel="overview")=>{setTab("services");setOpen(true);setPanel(next);setError("");setNotice("");};
  const openContacts=(number="",startInForm=false)=>{setContactPhone(number);setContactStartForm(startInForm);setCallsView("contacts");setTab("calls");setError("");setNotice("");};
  async function login(e:FormEvent<HTMLFormElement>){e.preventDefault();await signIn(email,password);setPassword("");}
@@ -292,11 +293,13 @@ export default function VMVMobilePreview(){
          <span className={styles.homeProductBody}><strong>Traductor</strong><small>En persona</small></span>
          <span className={styles.homeProductArrow}>↗</span>
         </button>
-        <div className={`${styles.homeProductCard} ${styles.homeProductYellow}`}>
+        <button type="button" className={`${styles.homeProductCard} ${styles.homeProductYellow}`}
+          onClick={()=>{setOpen(false);setServiceFocus("web");setTab("services");}} aria-label="Abrir Web Services">
          <span className={styles.homeProductIcon}><Globe size={27}/></span>
-         <span className={styles.homeProductBody}><strong>Web Services</strong><small>Próximamente</small></span>
+         <span className={styles.homeProductBody}><strong>Web Services</strong><small>Explorar</small></span>
          <span className={styles.homeProductDecor} aria-hidden="true"><Monitor size={83} strokeWidth={1.25}/></span>
-        </div>
+         <span className={styles.homeProductArrow}>↗</span>
+        </button>
         <div className={`${styles.homeProductCard} ${styles.homeProductSky}`}>
          <span className={styles.homeProductIcon}><Bot size={27}/></span>
          <span className={styles.homeProductBody}><strong>AI Agents</strong><small>Próximamente</small></span>
@@ -318,6 +321,10 @@ export default function VMVMobilePreview(){
        </button>
       </div>:null}
       {ready&&tab==="services"&&!open?<div className={`${styles.screen} ${styles.servicesV3}`}>
+       {serviceFocus==="web"?<>
+        <button type="button" className={styles.back} onClick={()=>setServiceFocus("all")}><ChevronLeft size={17}/> Todos los servicios</button>
+        {user?<BusinessServicesPreview userId={user.id} focus="web"/>:null}
+       </>:<>
        <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>Mis servicios<span className={styles.mint}>.</span></h2>
        <button type="button" className={styles.serviceHero} onClick={()=>showCall()} aria-label="Abrir Smart Call">
         <span className={styles.serviceHeroTop}><span className={styles.serviceHeroIcon}><PhoneCall size={26}/></span><span className={styles.serviceHeroStatus}>EN PILOTO</span></span>
@@ -327,6 +334,7 @@ export default function VMVMobilePreview(){
         <span className={styles.serviceHeroDecoration} aria-hidden="true">✦</span>
        </button>
        {user?<BusinessServicesPreview userId={user.id}/>:null}
+       </>}
       </div>:null}
       {ready&&tab==="services"&&open?<div className={styles.smartScreen}>
        <button className={styles.back} onClick={()=>setOpen(false)}><ChevronLeft size={17}/> Todos los servicios</button>
