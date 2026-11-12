@@ -3,6 +3,7 @@ import type {Metadata} from "next";
 import {notFound} from "next/navigation";
 import {createClient} from "@supabase/supabase-js";
 import {normalizeWebContent,paletteStyles,webEmail,webPhone,webServices,webCategory,webWhatsApp,webPrimaryContact,webServiceContact,webDirections} from "@/lib/web-services-site";
+import RequestForm from "./RequestForm";
 import "./site.css";
 
 export const dynamic="force-dynamic";
@@ -49,7 +50,7 @@ export default async function PublishedBusinessWebsite({params}:Props){
  return <div className={"ws-public ws-public--"+page.template} style={custom}>
   <header className="ws-public-nav">
    <a className="ws-public-mark" href="#inicio" aria-label={page.business}>{page.business}<span>.</span></a>
-   <nav aria-label="Navegación"><a href="#servicios">Servicios</a><a href="#nosotros">Nosotros</a><a href="#contacto">Contacto</a></nav>
+   <nav aria-label="Navegación"><a href="#servicios">Servicios</a><a href="#nosotros">Nosotros</a>{page.inquiriesEnabled?<a href="#solicitud">Solicitar</a>:null}<a href="#contacto">Contacto</a></nav>
   </header>
   <main>
    <section id="inicio" className="ws-public-hero">
@@ -65,7 +66,7 @@ export default async function PublishedBusinessWebsite({params}:Props){
     <h2>Lo que hacemos<span>.</span></h2>
     <div className="ws-public-service-grid">
      {services.length?services.map((name,i)=>{
-      const contact=webServiceContact(page,name);
+      const contact=page.inquiriesEnabled?{href:"/sites/"+encodeURIComponent(slug)+"?service="+encodeURIComponent(name)+"#solicitud",external:false}:webServiceContact(page,name);
       return <article key={i}>
        <a className="ws-public-service-action" href={contact.href}
         target={contact.external?"_blank":undefined} rel={contact.external?"noopener noreferrer":undefined}
@@ -84,6 +85,10 @@ export default async function PublishedBusinessWebsite({params}:Props){
     <small>02 / NOSOTROS</small><h2>Conócenos<span>.</span></h2>
     <p>{page.about||page.intro||page.headline}</p>
    </section>
+   {page.inquiriesEnabled?<section id="solicitud" className="ws-public-section ws-public-inquiry">
+    <small>CONSULTAS</small><h2>Cuéntanos tu idea<span>.</span></h2>
+    <RequestForm slug={slug} categoryId={page.categoryId} services={services} business={page.business}/>
+   </section>:null}
    <section id="contacto" className="ws-public-section ws-public-contact">
     <small>03 / CONTACTO</small><h2>Hablemos<span>.</span></h2>
     <div className="ws-public-contacts">
