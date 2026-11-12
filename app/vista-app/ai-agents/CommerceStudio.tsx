@@ -1,9 +1,9 @@
 "use client";
 import {useEffect,useState} from "react";
-import {ArrowLeft,CheckCircle2,ClipboardList,Package,Plus,ReceiptText,ShieldCheck,ShoppingBag} from "lucide-react";
+import {ArrowLeft,CheckCircle2,ClipboardList,Package,Plus,ReceiptText,ShieldCheck,ShoppingBag,UserRoundCheck} from "lucide-react";
 import type {PersistedAgent} from "./agentStore";
-import {confirmTestOrder,formatUsd,listCatalog,listTestOrders,prepareTestOrder,saveCatalogItem,
- type CatalogItem,type TestOrder} from "./commerceStore";
+import {confirmTestOrder,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,prepareTestOrder,saveCatalogItem,
+ type CatalogItem,type TestOrder,type HumanRequest} from "./commerceStore";
 import styles from "./CommerceStudio.module.css";
 
 type Form={
@@ -15,6 +15,7 @@ const empty:Form={name:"",sku:"",description:"",price:"",stock_mode:"manual",ava
 export default function CommerceStudio({agents,onClose}:{agents:PersistedAgent[];onClose:()=>void}){
  const [items,setItems]=useState<CatalogItem[]>([]);
  const [orders,setOrders]=useState<TestOrder[]>([]);
+ const [human,setHuman]=useState<HumanRequest[]>([]);
  const [editing,setEditing]=useState<CatalogItem|null>(null);
  const [form,setForm]=useState<Form>(empty);
  const [agentId,setAgentId]=useState("");
@@ -23,14 +24,14 @@ export default function CommerceStudio({agents,onClose}:{agents:PersistedAgent[]
  const [busy,setBusy]=useState(false);
  const [loading,setLoading]=useState(true);
  const [notice,setNotice]=useState("");
- const [tab,setTab]=useState<"catalog"|"orders">("catalog");
+ const [tab,setTab]=useState<"catalog"|"orders"|"human">("catalog");
  const refresh=async()=>{
-  const [catalog,history]=await Promise.all([listCatalog(),listTestOrders()]);
-  setItems(catalog);setOrders(history);
+  const [catalog,history,requests]=await Promise.all([listCatalog(),listTestOrders(),listHumanRequests()]);
+  setItems(catalog);setOrders(history);setHuman(requests);
  };
  useEffect(()=>{let live=true;
-  void Promise.all([listCatalog(),listTestOrders()])
-   .then(([cat,history])=>{if(live){setItems(cat);setOrders(history);}})
+  void Promise.all([listCatalog(),listTestOrders(),listHumanRequests()])
+   .then(([cat,history,requests])=>{if(live){setItems(cat);setOrders(history);setHuman(requests);}})
    .catch(e=>{if(live)setNotice(e instanceof Error?e.message:"Inicia sesión para consultar tu negocio.");})
    .finally(()=>{if(live)setLoading(false);});
   return()=>{live=false;};
@@ -64,6 +65,14 @@ export default function CommerceStudio({agents,onClose}:{agents:PersistedAgent[]
   catch(e){setNotice(e instanceof Error?e.message:"No se pudo registrar la aceptación.");}
   finally{setBusy(false);}
  };
+ const markHuman=async(request:HumanRequest,status:"reviewed"|"closed")=>{
+  if(busy)return;
+  setBusy(true);try{
+   await updateHumanRequest(request.id,status);await refresh();
+   setNotice("Solicitud de atención actualizada; no se ha enviado ningún mensaje al cliente.");
+  }catch(e){setNotice(e instanceof Error?e.message:"No se pudo actualizar.");}
+  finally{setBusy(false);}
+ };
  const approved=items.filter(x=>x.active&&x.approved&&x.stock_mode!=="manual"&&!x.variants.length&&!x.extras.length);
  return <div className={styles.root}>
   <button type="button" onClick={onClose} className={styles.back}><ArrowLeft size={17}/> AI Agents</button>
@@ -77,6 +86,7 @@ export default function CommerceStudio({agents,onClose}:{agents:PersistedAgent[]
   <div className={styles.tabs}>
    <button type="button" className={tab==="catalog"?styles.on:styles.off} onClick={()=>setTab("catalog")}><Package size={15}/> Catálogo ({items.length})</button>
    <button type="button" className={tab==="orders"?styles.on:styles.off} onClick={()=>setTab("orders")}><ReceiptText size={15}/> Pedidos ({orders.length})</button>
+   <button type="button" className={tab==="human"?styles.on:styles.off} onClick={()=>setTab("human")}><UserRoundCheck size={15}/> Humano ({human.filter(x=>x.status==="new").length})</button>
   </div>
   {tab==="catalog"?<>
    <div className={styles.heading}><h2>{editing?"Editar producto":"Añadir producto"}</h2>
@@ -120,7 +130,7 @@ export default function CommerceStudio({agents,onClose}:{agents:PersistedAgent[]
       onClick={()=>void quote()}><ClipboardList size={17}/> Preparar cotización de prueba</button>
     <p className={styles.hint}>El total se calcula en Supabase usando el precio aprobado, no desde la interfaz ni el modelo de IA.</p>
    </div>
-  </>:<>
+  </>:tab==="orders"?<>
    <h2 className={styles.ordersTitle}>Historial de prueba</h2>
    {orders.length===0?<div className={styles.empty}><ReceiptText size={26}/><p>Todavía no hay pedidos de prueba.</p></div>:
     <div className={styles.items}>{orders.map(order=><div className={styles.item} key={order.id}>
@@ -131,6 +141,16 @@ export default function CommerceStudio({agents,onClose}:{agents:PersistedAgent[]
       <CheckCircle2 size={14}/> Simular aceptación</button>:null}
     </div>)}</div>}
    <div className={styles.warning}><ShieldCheck size={17}/><p>No se ofrece un enlace de pago hasta conectar y verificar una cuenta del negocio distinta de la facturación de VMV.</p></div>
+  </>:<>
+   <h2 className={styles.ordersTitle}>Solicitudes de atención humana</h2>
+   <p className={styles.hint}>Registro de llamadas que pidieron una persona. No contiene grabaciones ni confirma que se realizó una transferencia.</p>
+   {human.length===0?<div className={styles.empty}><UserRoundCheck size={26}/><p>No hay solicitudes pendientes del agente telefónico.</p></div>:
+    <div className={styles.items}>{human.map(req=><article className={styles.item} key={req.id}>
+      <div><strong>Solicitud del agente</strong><small>{new Date(req.created_at).toLocaleString("es-US")} · {req.status==="new"?"Nueva":req.status==="reviewed"?"Revisada":"Cerrada"}</small>
+       <small>{req.summary}</small></div>
+      {req.status==="new"?<button type="button" disabled={busy} onClick={()=>void markHuman(req,"reviewed")}>Revisar</button>:req.status==="reviewed"?
+       <button type="button" disabled={busy} onClick={()=>void markHuman(req,"closed")}>Cerrar</button>:null}
+     </article>)}</div>}
   </>}
  </div>;
 }
