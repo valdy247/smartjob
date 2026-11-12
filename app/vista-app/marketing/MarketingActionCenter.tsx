@@ -24,14 +24,14 @@ type RequestRow={
 type Acceptance={id:string;request_id:string;owner_id:string;quote_revision:number;quoted_price_cents:number;accepted_at:string};
 type Service={id:ServiceCode;name:string;why:string;mode:string};
 const services:Service[]=[
- {id:"google_profile",name:"Google Search y Maps",why:"Crear, reclamar o mejorar tu perfil empresarial.",mode:"Solicitud con verificación"},
+ {id:"google_profile",name:"Aparecer en Google",why:"Crea o mejora tu perfil de negocio.",mode:"Solicitud con verificación"},
  {id:"apple_maps",name:"Apple Maps",why:"Registrar o corregir la presencia de tu negocio.",mode:"Portal oficial + ayuda"},
  {id:"bing_places",name:"Bing Places",why:"Preparar la ficha y gestionar su verificación.",mode:"Portal oficial + ayuda"},
  {id:"yelp_profile",name:"Yelp",why:"Reclamar o actualizar la información del negocio.",mode:"Portal oficial + ayuda"},
  {id:"search_console",name:"Search Console",why:"Configurar el acceso para descubrir búsquedas reales.",mode:"Conexión autorizada pendiente"},
- {id:"seo_improvement",name:"Mejorar el SEO de mi web",why:"Detectar problemas y solicitar correcciones técnicas.",mode:"Auditoría + ayuda"},
+ {id:"seo_improvement",name:"Mejorar mi web",why:"Descubre mejoras para tu sitio.",mode:"Auditoría + ayuda"},
  {id:"campaign_setup",name:"Crear una campaña",why:"Diseñar y preparar una campaña con presupuesto aprobado.",mode:"Con aprobación previa"},
- {id:"review_strategy",name:"Conseguir reseñas honestas",why:"Preparar una solicitud ética y fácil de compartir.",mode:"Herramientas y asistencia"},
+ {id:"review_strategy",name:"Gestionar reseñas",why:"Responde reseñas y pide opiniones.",mode:"Herramientas y asistencia"},
  {id:"other",name:"Otra necesidad de marketing",why:"Explica el resultado que deseas conseguir.",mode:"Evaluación individual"}
 ];
 type WizardStep=0|1|2|3|4;
@@ -281,15 +281,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   setQuoteNote(req.quote_note||"");setStageUpdate(req.staff_update||"");setEvidence(req.evidence_url||"");
  };
  return <div className={styles.root}>
-  <header className={styles.hero}>
-   <span><Workflow size={16}/> CENTRO DE ACCIONES · BETA</span>
-   <h2>Dinos qué necesitas. VMV organiza cómo hacerlo.</h2>
-   <p>Automatizamos lo que tiene una integración segura; si falta una API o una verificación, podrás solicitar asistencia dentro de VMV.</p>
-  </header>
-  <div className={styles.quickActions}>
-   <button type="button" onClick={onGoToVisibility}><Globe2 size={19}/><strong>Analizar mi web gratis</strong><small>Auditoría técnica y herramientas de presencia local</small><ArrowUpRight size={16}/></button>
-   <button type="button" onClick={()=>chooseService("google_profile")}><FileCheck2 size={19}/><strong>Aparecer en Google Maps</strong><small>Solicitud guiada con asistencia y verificación</small><ArrowUpRight size={16}/></button>
-  </div>
+  {wizardStep===0?<header className={styles.catalogHeading}><h2>¿Qué quieres hacer hoy?</h2><p>Elige un servicio y te ayudamos paso a paso.</p></header>:null}
   <section className={styles.wizardPanel} id="vmv-marketing-request" aria-label="Crear solicitud de marketing">
    {wizardStep===4?<div className={styles.wizardSuccess} role="status">
     <div className={styles.successIcon}><CheckCircle2 size={33}/></div>
@@ -315,9 +307,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
      </li>)}
     </ol>
     {wizardStep===0?<div className={styles.wizardBody}>
-     <div className={styles.serviceIntro}><strong>Elige lo que necesitas</strong><span>Después podrás añadir detalles, sin formularios interminables.</span></div>
      <div className={styles.servicePicker}>
-      {services.map(service=>{
+      {services.filter(service=>["google_profile","seo_improvement","review_strategy"].includes(service.id)).map(service=>{
        const ServiceIcon=serviceIcons[service.id];
        return <button type="button" key={service.id} onClick={()=>chooseService(service.id)} className={styles.serviceTile} aria-label={"Elegir "+service.name}>
         <span className={styles.serviceIcon}><ServiceIcon size={23} strokeWidth={1.8}/></span>
