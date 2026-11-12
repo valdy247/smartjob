@@ -36,10 +36,6 @@ export default function WebBuilderWorkspace(){
  const [savePhase,setSavePhase]=useState<SavePhase>("saved");
  const [recovery,setRecovery]=useState<LocalBackup|null>(null);
  const blockedAutosaveRef=useRef("");
- const documentRef=useRef(document);
- const titleRef=useRef(title);
- const descriptionRef=useRef(description);
- documentRef.current=document;titleRef.current=title;descriptionRef.current=description;
  const [view,setView]=useState<View>("sites");
  const [newSiteName,setNewSiteName]=useState("");
  const [newSiteCategory,setNewSiteCategory]=useState("");
@@ -47,6 +43,10 @@ export default function WebBuilderWorkspace(){
  const [newPageName,setNewPageName]=useState("");
  const [title,setTitle]=useState("");
  const [description,setDescription]=useState("");
+ const documentRef=useRef(document);
+ const titleRef=useRef(title);
+ const descriptionRef=useRef(description);
+ documentRef.current=document;titleRef.current=title;descriptionRef.current=description;
  const [revisions,setRevisions]=useState<Revision[]>([]);
  const [domains,setDomains]=useState<Domain[]>([]);
  const [domainRequests,setDomainRequests]=useState<DomainRequest[]>([]);
