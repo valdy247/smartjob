@@ -4,7 +4,7 @@ import Link from "next/link";
 import {ArrowLeft,ArrowUpRight,BarChart3,CheckCircle2,ClipboardCopy,Globe2,HeartHandshake,Workflow,Link2,Lightbulb,Mail,Megaphone,MessageCircle,Share2,ShieldCheck,Sparkles,Target,TrendingUp} from "lucide-react";
 import styles from "./page.module.css";
 import LocalVisibilityStudio from "./LocalVisibilityStudio";
-import MarketingActionCenter from "./MarketingActionCenter";
+import MarketingActionCenter, {type ServiceCode} from "./MarketingActionCenter";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS,categoryLabel} from "@/lib/vmv-business-categories";
 
 type Section="strategy"|"actions"|"presence"|"campaign"|"numbers"|"retention";
@@ -55,6 +55,7 @@ function Field({label,value,onChange,placeholder,type="text",hint,min,max}:{
 }
 export default function MarketingPage(){
  const [section,setSection]=useState<Section>("strategy");
+ const [requestedService,setRequestedService]=useState<ServiceCode>("google_profile");
  const [form,setForm]=useState<FormState>(initial);
  const [notice,setNotice]=useState("");
  const [reviewUrl,setReviewUrl]=useState("");
@@ -230,10 +231,12 @@ export default function MarketingPage(){
       <button type="button" className={styles.primary} onClick={()=>setSection("campaign")}>Diseñar campaña <ArrowUpRight size={16}/></button>
      </>:null}
      {section==="actions"?<MarketingActionCenter businessName={form.business}
-      industryId={form.industry} website={form.website} onGoToVisibility={()=>{setSection("presence");setNotice("");}}/>:null}
+      industryId={form.industry} website={form.website} preselectedService={requestedService}
+      onGoToVisibility={()=>{setSection("presence");setNotice("");}}/>:null}
      {section==="presence"?<LocalVisibilityStudio
       profile={{business:form.business,industry:industryName(form.industry),website:form.website,phone:form.phone,address:form.address,city:form.city,region:form.region,postal:form.postal,hours:form.hours,description:form.description}}
-      onChange={(key,value)=>patch(key,value)}/>:null}
+      onChange={(key,value)=>patch(key,value)}
+      onRequestHelp={(service)=>{setRequestedService(service);setSection("actions");setNotice("");}}/>:null}
      {section==="campaign"?<>
       <div className={styles.sectionTop}><span>PASO 02 · ADQUISICIÓN</span><h2>Diseña una campaña con propósito</h2><p>Elige dónde quieres alcanzar clientes. El borrador se adapta al canal, pero debes revisarlo antes de publicarlo.</p></div>
       <div className={styles.channelGrid}>{channels.map(item=><button type="button" key={item.id} aria-pressed={form.channel===item.id}
