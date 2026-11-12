@@ -58,7 +58,7 @@ async function agentReady(number:string,account:string,ownerId:string){
  const {data:choice}=await db.from("vmv_ai_phone_selections").select("agent_id")
    .eq("route_id",phone.id).eq("owner_id",ownerId).maybeSingle();
  if(!choice?.agent_id)return false;
- const {data:chosen}=await db.from("vmv_ai_agents").select("id,status,configuration")
+ const {data:chosen}=await db.from("vmv_ai_agents").select("id,kind,status,configuration")
    .eq("id",choice.agent_id).eq("owner_id",ownerId).maybeSingle();
  if(!chosen||chosen.status!=="active")return false;
  const fields="id,owner_id,agent_id,twilio_account_sid,enabled,verified_ownership,disclosure_approved,approved_at";
@@ -67,9 +67,10 @@ async function agentReady(number:string,account:string,ownerId:string){
  if(lookupError)return false;
  let entry=existing;
  const config=chosen.configuration as Record<string,string>|null;
- const disclosed=config?.call_disclosure==="Sí"||config?.call_consent==="Sí"||
-    config?.data_scope!==undefined||config?.personal_data!==undefined;
- if(!disclosed)return false;
+ const disclosed=config?.call_disclosure==="Sí"||config?.call_consent==="Sí";
+ const phoneChannel=config?.channel==="Teléfono"||config?.channel==="Teléfono y chat"||
+   (!config?.channel&&chosen.kind==="calls");
+ if(!disclosed||!phoneChannel)return false;
  // The owner can change which agent handles FUTURE calls. Running calls keep
  // the immutable version pinned in vmv_ai_voice_calls.
  if(entry&&entry.agent_id!==choice.agent_id&&process.env.VMV_AI_VOICE_AUTO_ENROLL==="true"){
