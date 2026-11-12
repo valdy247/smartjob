@@ -1,5 +1,6 @@
 import {NextRequest} from "next/server";
-import {authenticTwilio,say,twiml,xmlEscape} from "@/lib/twilio-pilot";
+import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
+import {verifyAiTestWebhook} from "@/lib/vmv-ai-agents/twilio-test";
 import {findPhoneRoute} from "@/lib/phone-routes";
 import {billingAdmin} from "@/lib/vmv-billing";
 
@@ -11,14 +12,14 @@ export const dynamic="force-dynamic";
 // Once explicitly approved, Twilio can POST its test number to this endpoint.
 // The default/fallback always hands the call back to the unmodified Smart Call route.
 const path="/api/vmv/ai-agents/test-number";
-const currentSmartCall="/api/twilio/live/voice";
+
 const agentVoice="/api/vmv/ai-agents/voice";
 const callSid=/^CA[a-f\d]{32}$/i;
 const accountSid=/^AC[a-f\d]{32}$/i;
 const e164=/^\+[1-9]\d{7,14}$/;
 
 function configuredBase(){
- const base=process.env.TWILIO_WEBHOOK_BASE_URL||"";
+ const base=process.env.VMV_AI_TEST_BASE_URL||"";
  if(!/^https:\/\/[a-z0-9.-]+(?::\d+)?$/i.test(base))return null;
  return base;
 }
@@ -26,7 +27,20 @@ function redirect(base:string,destination:string){
  const target=xmlEscape(base+destination);
  return twiml('<Redirect method="POST">'+target+'</Redirect>');
 }
-function smartCall(base:string){return redirect(base,currentSmartCall);}
+function originalSmartCallUrl(){
+ const raw=process.env.VMV_AI_ORIGINAL_VOICE_WEBHOOK||"";
+ try{
+   const url=new URL(raw);
+   if(url.protocol!=="https:"||!url.hostname||url.username||url.password)return null;
+   if(url.pathname==="/api/vmv/ai-agents/test-number")return null;
+   return url.toString();
+ }catch{return null;}
+}
+function smartCall(){
+ const original=originalSmartCallUrl();
+ return original?twiml('<Redirect method="POST">'+xmlEscape(original)+'</Redirect>'):
+   twiml("<Hangup/>",503);
+}
 
 async function agentReady(number:string,account:string,ownerId:string){
  if(process.env.VERCEL_ENV!=="preview"||process.env.VMV_AI_VOICE_PILOT_ENABLED!=="true"||
@@ -48,7 +62,7 @@ async function agentReady(number:string,account:string,ownerId:string){
  return true; // Pilot billing is capped by the dedicated 5-calls/day RPC.
 }
 export async function POST(req:NextRequest){
- const signed=await authenticTwilio(req,null);
+ const signed=await verifyAiTestWebhook(req);
  if(!signed)return twiml("<Hangup/>",403);
  const base=configuredBase();
  if(!base)return twiml("<Hangup/>",503);
@@ -62,14 +76,14 @@ export async function POST(req:NextRequest){
  // This can only share a number provisioned for Smart Call and its owner.
  if(!route||!route.enabled)return twiml("<Hangup/>",403);
  const available=await agentReady(to,account,route.user_id);
- if(!available)return smartCall(base);
+ if(!available)return smartCall();
 
  const choice=req.nextUrl.searchParams.get("selection");
  if(choice==="menu"){
    const digits=signed.get("Digits")||"";
    if(digits==="2")return redirect(base,agentVoice);
    // Any other choice or a DTMF timeout retains the original voice service.
-   return smartCall(base);
+   return smartCall();
  }
  // Dial 1 for the original Smart Call experience; dial 2 for AI Agents.
  const action=xmlEscape(base+path+"?selection=menu");
@@ -78,6 +92,6 @@ export async function POST(req:NextRequest){
     say("Bienvenido a VMV. Para Smart Call y traducción, marca uno. Para hablar con el agente de inteligencia artificial, marca dos.","es-ES")+
     say("For Smart Call and translation, press one. To speak with our AI assistant, press two.","en-US")+
   '</Gather>'+
-  '<Redirect method="POST">'+xmlEscape(base+currentSmartCall)+'</Redirect>'
+  (originalSmartCallUrl()?'<Redirect method="POST">'+xmlEscape(originalSmartCallUrl()!)+'</Redirect>':'<Hangup/>')
  );
 }
