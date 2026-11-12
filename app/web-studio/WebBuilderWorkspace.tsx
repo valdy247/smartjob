@@ -9,7 +9,7 @@ import {normalizeWebContent,type WebSiteContent} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
 import styles from "./WebBuilderWorkspace.module.css";
 
-type Site={id:string;owner_id:string;slug:string;name:string;category_id:string};
+type Site={id:string;owner_id:string;slug:string;name:string;category_id:string;inquiries_enabled:boolean};
 type Page={id:string;site_id:string;owner_id:string;slug:string;title:string;description:string;draft:unknown;revision:number;updated_at:string};
 type Revision={id:string;page_id:string;version:number;title:string;description:string;document:unknown;created_at:string};
 type Domain={id:string;hostname:string;state:string;last_error:string;verification:unknown;last_checked_at:string|null};
@@ -67,7 +67,7 @@ export default function WebBuilderWorkspace(){
     const {data,error:authError}=await client.auth.getUser();
     if(authError||!data.user||data.user.is_anonymous)throw new Error("Inicia sesión en VMV Business para continuar");
     const {data:rows,error}=await client.from("smartjob_builder_sites")
-     .select("id,owner_id,slug,name,category_id").eq("owner_id",data.user.id).order("created_at",{ascending:false});
+     .select("id,owner_id,slug,name,category_id,inquiries_enabled").eq("owner_id",data.user.id).order("created_at",{ascending:false});
     if(error)throw new Error("No se pudieron cargar tus sitios");
     if(active){setUserId(data.user.id);setSites((rows||[]) as Site[]);}
     const pref=await client.from("smartjob_business_category_preferences")
@@ -134,7 +134,7 @@ export default function WebBuilderWorkspace(){
    const generated=(slugify(name).slice(0,33)||"mi-negocio")+"-"+crypto.randomUUID().replace(/-/g,"").slice(0,8);
    const {data:created,error}=await c.from("smartjob_builder_sites").insert({
     owner_id:userId,slug:generated,name,category_id:newSiteCategory
-   }).select("id,owner_id,slug,name,category_id").single();
+   }).select("id,owner_id,slug,name,category_id,inquiries_enabled").single();
    if(error||!created)throw new Error("No se pudo crear el sitio");
    const siteCreated=created as Site;
    const {data:home,error:homeError}=await c.from("smartjob_builder_pages").insert({
@@ -160,7 +160,7 @@ export default function WebBuilderWorkspace(){
    const slug=(slugify(name).slice(0,33)||"mi-negocio")+"-"+crypto.randomUUID().replace(/-/g,"").slice(0,8);
    const {data:created,error}=await c.from("smartjob_builder_sites").insert({
     owner_id:userId,name,slug,category_id:classicDraft.categoryId
-   }).select("id,owner_id,slug,name,category_id").single();
+   }).select("id,owner_id,slug,name,category_id,inquiries_enabled").single();
    if(error||!created)throw new Error("No se pudo crear el sitio nuevo");
    const doc=importLegacyBuilderDocument(classicDraft);
    const {data:home,error:pageError}=await c.from("smartjob_builder_pages").insert({
@@ -175,6 +175,22 @@ export default function WebBuilderWorkspace(){
    setClassicDraft(null);
    setNotice("Tu web anterior quedó intacta. Revisa y publica esta nueva versión cuando quieras.");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo importar");}
+  finally{setBusy(false);}
+ }
+ async function toggleRequests(enabled:boolean){
+  if(!site||busy)return;
+  setBusy(true);setError("");setNotice("");
+  try{
+   const db=await authorized();
+   const {data,error}=await db.from("smartjob_builder_sites")
+    .update({inquiries_enabled:enabled,updated_at:new Date().toISOString()})
+    .eq("id",site.id).eq("owner_id",userId)
+    .select("id,inquiries_enabled").single();
+   if(error||!data)throw new Error("No se pudo cambiar la configuración");
+   setSite(old=>old?{...old,inquiries_enabled:enabled}:null);
+   setSites(old=>old.map(s=>s.id===site.id?{...s,inquiries_enabled:enabled}:s));
+   setNotice("Configuración guardada. Publica la página Inicio para aplicar el cambio.");
+  }catch(e){setError(e instanceof Error?e.message:"Error al guardar");}
   finally{setBusy(false);}
  }
  async function createPage(){
@@ -396,6 +412,11 @@ export default function WebBuilderWorkspace(){
     <div><small>SITIO WEB</small><h1>{site.name}</h1></div>
     {pages.some(p=>p.slug==="home"&&publishedIds.includes(p.id))?<a href={siteUrl||"#"} target="_blank" rel="noopener noreferrer" className={styles.sitePreview}><ExternalLink size={16}/> Ver sitio</a>:<span className={styles.unpublished}>Sin publicar</span>}
    </div>
+   <label className={styles.siteLeadsSwitch}>
+    <span><strong>Recibir solicitudes</strong><small>Se activa al publicar Inicio</small></span>
+    <input type="checkbox" role="switch" checked={site.inquiries_enabled}
+     disabled={busy} onChange={e=>void toggleRequests(e.target.checked)}/>
+   </label>
    <div className={styles.sections}>
     <button type="button" className={view==="editor"?styles.selected:""} onClick={()=>{setView("editor");setError("");}}>Editor</button>
     <button type="button" className={view==="history"?styles.selected:""} onClick={()=>void openHistory()}><History size={14}/> Historial</button>
