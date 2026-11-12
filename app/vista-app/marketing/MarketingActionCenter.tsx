@@ -82,7 +82,10 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [submittedId,setSubmittedId]=useState<string|null>(null);
  const [chosenCategory,setChosenCategory]=useState("");
  useEffect(()=>{
-  if(preselectedService){setSelected(preselectedService);setWizardStep(1);setWizardError("");setSubmittedId(null);}
+  if(preselectedService){
+   setSelected(current=>{if(current!==preselectedService)setGoal("");return preselectedService;});
+   setWizardStep(1);setWizardError("");setSubmittedId(null);
+  }
  },[preselectedService]);
  const [name,setName]=useState(businessName);
  const [site,setSite]=useState(website);
@@ -101,6 +104,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [evidence,setEvidence]=useState("");
  const revealWizard=()=>document.getElementById("vmv-marketing-request")?.scrollIntoView({behavior:"smooth",block:"start"});
  const chooseService=(code:ServiceCode)=>{
+  if(code!==selected){setGoal("");setConsent(false);}
   setSelected(code);setWizardStep(1);setWizardError("");setSubmittedId(null);revealWizard();
  };
  const goNext=()=>{
