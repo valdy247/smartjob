@@ -301,6 +301,11 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
        {content.contactMethod==="call"&&!webPhone(content)?<small className={styles.contactFieldError}>Agrega un teléfono válido arriba</small>:null}
        {content.contactMethod==="email"&&!webEmail(content)?<small className={styles.contactFieldError}>Agrega un correo válido arriba</small>:null}
        {content.contactMethod==="whatsapp"&&!webWhatsApp(content)?<small className={styles.contactFieldError}>Incluye el código de país, por ejemplo +1</small>:null}
+       <label className={styles.inquiryToggle}>
+        <span><strong>Recibir solicitudes en la web</strong><small>Formulario para nuevos clientes</small></span>
+        <input type="checkbox" role="switch" checked={content.inquiriesEnabled}
+         onChange={e=>{setContent(v=>({...v,inquiriesEnabled:e.target.checked}));setStatus("");}}/>
+       </label>
       </section>
       <div className={styles.serviceEditor}>
        <div className={styles.serviceHeader}><strong>Servicios</strong><span>{serviceItemsEditor.length}/6</span></div>
@@ -362,6 +367,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
         <div className={styles.serviceArea}><h4>Lo que hacemos<b>.</b></h4>
          <div>{(serviceItems.length?serviceItems:["Tus servicios"]).map((name,i)=><span key={i}>{name} ↗</span>)}</div>
          {content.gallery.length?<div className={styles.previewGallery}>{content.gallery.map(url=><img src={url} key={url} alt="Galería del negocio"/>)}</div>:null}
+         {content.inquiriesEnabled?<div className={styles.previewInquiry}><strong>Solicitud de servicio</strong><span>Nombre · Contacto · Detalles</span><b>Enviar solicitud ↗</b></div>:null}
         </div>
        </div>
       </div>
