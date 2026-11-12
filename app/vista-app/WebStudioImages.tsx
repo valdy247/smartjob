@@ -39,10 +39,19 @@ export default function WebStudioImages({ownerId,content,busy,onChange,onMessage
  const [aiAvailable,setAiAvailable]=useState(false);
  useEffect(()=>{
   let active=true;
-  void fetch("/api/web-services/generate-image",{cache:"no-store"}).then(r=>r.json())
-   .then(data=>{if(active)setAiAvailable(data?.enabled===true);}).catch(()=>{});
+  void (async()=>{
+   const client=getSupabase();
+   if(!client)return;
+   const {data:{session}}=await client.auth.getSession();
+   if(!session?.access_token||session.user.id!==ownerId)return;
+   const response=await fetch("/api/web-services/generate-image",{
+    cache:"no-store",headers:{authorization:"Bearer "+session.access_token}
+   });
+   const payload=await response.json();
+   if(active)setAiAvailable(response.ok&&payload?.enabled===true);
+  })().catch(()=>{});
   return()=>{active=false;};
- },[]);
+ },[ownerId]);
  async function uploadFile(file:File,target:Target){
   if(uploading||busy)return;
   if(target==="gallery"&&content.gallery.length>=4){onMessage("Máximo 4 imágenes");return;}
