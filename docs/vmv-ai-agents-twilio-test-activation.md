@@ -31,3 +31,17 @@ Only deploy on `feat/vmv-smart-call-control-center` Preview; do not promote to p
 - No live purchases, appointment booking, calendar access, personal inventory, call recording or autonomous mutations.
 - This is a read-only informational voice agent. All AI voice activity is short-lived and requires an owner-bound test route, Twilio signature validation, server-side daily cap and explicit enablement. Vercel Gateway automatically supplies OIDC in server deployments when available.
 - Twilio number settings themselves are **not accessible** from the presently connected apps in ChatGPT; do not assert the number has been switched or call tests have passed. There is no connected Twilio management tool.
+
+## First-call automatic enrollment (implemented; disabled)
+The signed menu endpoint can now provision `vmv_ai_voice_routes` for the one already enabled test-line owner **only when ALL of these are true**:
+- `VERCEL_ENV=preview`, `VMV_AI_VOICE_PILOT_ENABLED=true`, `VMV_AI_VOICE_AUTO_ENROLL=true`, and exact configured `VMV_AI_TEST_OWNER_ID`.
+- Incoming Twilio HMAC request verified with server-only `TWILIO_AUTH_TOKEN`; `To` matches the branch's approved `TWILIO_NUMBER`, and account SID from the signature is accepted (optionally matched to `TWILIO_ACCOUNT_SID`).
+- The previously recorded `VMV_AI_ORIGINAL_VOICE_WEBHOOK` is a valid HTTPS URL and does not redirect back to the AI menu.
+- `SUPABASE_SECRET_KEY` is configured server-side for the enrolled business and quota actions, and a single existing named test agent is active with AI disclosure enabled.
+- `VERCEL_OIDC_TOKEN` or another approved model credential is available; the backend remains no-tools and subject to a five-call daily limit.
+
+After validation, the very first genuine signed incoming request auto-enrolls the demo agent using the provider's actual `AC...` account SID and the existing owner-mapped Twilio number. A conflicting route is never overwritten. This removes the need to invent or manually provide a provider SID in database SQL.
+
+**Still required:** copy the protected Twilio auth token and Supabase server key into the shared branch's **Preview** environment using the secure Vercel UI (never paste into chat); record the current original voice webhook in the same branch Preview environment. `TWILIO_ACCOUNT_SID` is recommended for an additional account match. Only then can the owner or Director turn on both preview pilot flags, redeploy, and switch the number to the signed menu endpoint. None of these steps changes production configuration by itself.
+
+This signed first-call registration does not change the Twilio number's incoming webhook. Provider routing is a separate action in the Twilio account, and is **not possible from this chat's currently connected tools**.
