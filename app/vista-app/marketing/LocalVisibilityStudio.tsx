@@ -120,7 +120,9 @@ export default function LocalVisibilityStudio({profile,onChange}:{
    <div className={styles.sectionHeader}><div><span>03 · API GRATUITA</span><h3>Auditoría técnica de tu sitio web</h3></div><span className={styles.apiTag}><Globe2 size={14}/> PageSpeed Insights</span></div>
    <p className={styles.muted}>Analizamos la web para detectar oportunidades técnicas de SEO y velocidad móvil usando la API pública de Google. Las puntuaciones no representan visitas ni ventas.</p>
    <button type="button" className={styles.auditButton} disabled={auditing} onClick={()=>void auditSite()}><Search size={17}/>{auditing?"Analizando sitio…":"Analizar mi sitio gratis"}{auditing?<RefreshCw className={styles.spin} size={15}/>:<ArrowUpRight size={15}/>}</button>
-   {auditError?<p className={styles.error} role="alert">{auditError}</p>:null}
+   {auditError?<div className={styles.auditFallback} role="alert"><p className={styles.error}>{auditError}</p>
+    <a href="https://pagespeed.web.dev/" target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Abrir PageSpeed gratuito en Google</a>
+   </div>:null}
    {audit?<div className={styles.auditResult}>
     <div className={styles.scores}>
      {([["Velocidad móvil",audit.scores.performance],["SEO técnico",audit.scores.seo],["Accesibilidad",audit.scores.accessibility]] as const).map(([label,value])=><div key={label}><strong>{value===null?"—":value+"/100"}</strong><span>{label}</span><small>{resultTone(value)}</small></div>)}
