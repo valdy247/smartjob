@@ -65,7 +65,7 @@ export function safeWebImageUrl(value:string):string|null{
   const path="/storage/v1/object/public/smartjob-web-images/";
   if(!url.pathname.startsWith(path))return null;
   const asset=url.pathname.slice(path.length);
-  if(!/^[a-f0-9-]{36}\\/[a-f0-9-]{36}\\.(jpg|png|webp)$/.test(asset))return null;
+  if(!/^[a-f0-9-]{36}\/[a-f0-9-]{36}\.(jpg|png|webp)$/.test(asset))return null;
   return url.toString();
  }catch{return null;}
 }
