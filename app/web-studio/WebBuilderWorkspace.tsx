@@ -329,7 +329,7 @@ export default function WebBuilderWorkspace(){
    void (async()=>{
     try{
      await saveDraft(document);
-     blockedAutosaveRef.current="";
+     blockedAutosaveRef.current="";setError("");
     }catch{
      blockedAutosaveRef.current=snapshot;
      setSavePhase("error");
@@ -605,7 +605,7 @@ export default function WebBuilderWorkspace(){
       <Puck key={page.id+"-"+refreshKey} config={builderConfig}
        data={initialDocument} height="75vh"
        onChange={data=>setDocument(data)}
-       onPublish={data=>void publish(data)} />
+       onPublish={publish} />
      </div>
     </div>:<p>Selecciona o crea una página.</p>}
    </section>:null}
