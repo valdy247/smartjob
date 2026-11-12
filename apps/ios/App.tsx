@@ -5,6 +5,7 @@ import {Voice,Call,CallInvite} from "@twilio/voice-react-native-sdk";
 import type {Session} from "@supabase/supabase-js";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {api,supabase,configured} from "./session";
+import {useNativeInterfaceLanguage} from "./useInterfaceLanguage";
 import {InterpreterPanel} from "./InterpreterPanel";
 import {CallScreen} from "./CallScreen";
 import {SmartCallControlCenter} from "./SmartCallControlCenter";
@@ -31,6 +32,8 @@ function ensurePushRegistry():Promise<void>{
 
 export default function App(){
  const [session,setSession]=useState<Session|null>(null);
+ const [authBootstrapped,setAuthBootstrapped]=useState(false);
+ const {language:uiLanguage,ready:uiLanguageReady,saving:languageSaving,changeLanguage,translate:tr}=useNativeInterfaceLanguage(session,authBootstrapped);
  const [activationProfile,setActivationProfile]=useState<NativeProfile|null>(null);
  const [activeTab,setActiveTab]=useState<"home"|"services"|"calls"|"live"|"settings">("home");
   const [callsView,setCallsView]=useState<"dial"|"history"|"contacts">("dial");
@@ -145,12 +148,12 @@ export default function App(){
  useEffect(()=>{if(session?.user.id)voiceTelemetry("app_open");},[session?.user.id]);
  useEffect(()=>{
    const client=supabase;
-   if(!client)return;
+   if(!client){setAuthBootstrapped(true);return;}
    let mounted=true;
-   client.auth.getSession().then(({data})=>{if(mounted){setSession(data.session);sessionRef.current=data.session;}});
+   client.auth.getSession().then(({data})=>{if(mounted){setSession(data.session);sessionRef.current=data.session;}}).catch(()=>{}).finally(()=>{if(mounted)setAuthBootstrapped(true);});
    const {data}=client.auth.onAuthStateChange((_event,next)=>{
      if(!mounted)return;
-     setSession(next);sessionRef.current=next;
+     setSession(next);sessionRef.current=next;setAuthBootstrapped(true);
      if(!next){setReady(false);setPhoneVerification(null);setSmsCode("");setSmsSent(false);setStatus("Inicia sesión para recibir llamadas");setCallHistory([]);setCallsView("dial");setDialTarget(null);setCallTypeFilter("all");setContactsPhone("");}
    });
    return()=>{mounted=false;data.subscription.unsubscribe();};
@@ -640,10 +643,10 @@ export default function App(){
    setWorking(true);setError("");
    try{
      const {error:authError}=await supabase.auth.signInWithPassword({email:email.trim(),password});
-     if(authError)throw new Error(authError.message);
+     if(authError)throw new Error(tr("common.loginError"));
      setPassword("");
      setStatus("Sesión iniciada. Activa la recepción de llamadas.");
-   }catch(e){setError(e instanceof Error?e.message:"No se pudo iniciar sesión.");}
+   }catch(e){setError(e instanceof Error?e.message:tr("common.loginError"));}
    finally{setWorking(false);}
  }
  async function accept(){
@@ -671,6 +674,20 @@ export default function App(){
    setReady(false);setInvite(null);setCall(null);
    setStatus("Sesión cerrada");
  }
+ const localePicker=<View style={styles.card}>
+  <Text style={styles.cardTitle}>{tr("common.language")}</Text>
+  <Text style={styles.helper}>{tr("common.languageHint")}</Text>
+  <View style={styles.languageChoice}>
+   {(["es","en"] as const).map(next=><Pressable key={next} accessibilityRole="button"
+     accessibilityLabel={next==="es"?"Español":"English"}
+     accessibilityState={{selected:uiLanguage===next,disabled:languageSaving}} disabled={languageSaving}
+     style={[styles.languageOption,uiLanguage===next&&styles.languageSelected]}
+     onPress={()=>{void changeLanguage(next).catch(()=>Alert.alert(tr("common.saveError")));}}>
+     <Text style={styles.languageOptionText}>{next==="es"?"Español":"English"}</Text>
+    </Pressable>)}
+  </View>
+ </View>;
+ if(!uiLanguageReady)return <SafeAreaView style={styles.safe}><ActivityIndicator style={{marginTop:64}} color={colors.accent}/></SafeAreaView>;
  return <SafeAreaView style={styles.safe}>
   <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
   <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":undefined}>
@@ -683,27 +700,28 @@ export default function App(){
       </View>
      </View>
      <Text style={styles.brandText}>VMV<Text style={{color:"#00AD8D"}}> BUSINESS</Text></Text>
-     {session?<Pressable accessibilityRole="button" accessibilityLabel="Abrir ajustes" onPress={()=>{setActiveTab("settings");setSettingsPage("menu");}} style={styles.headerAvatar}><Text style={styles.headerAvatarText}>{String(session.user.user_metadata?.first_name||"V").charAt(0).toUpperCase()}</Text></Pressable>:null}
+     {session?<Pressable accessibilityRole="button" accessibilityLabel={tr("home.openSettings")} onPress={()=>{setActiveTab("settings");setSettingsPage("menu");}} style={styles.headerAvatar}><Text style={styles.headerAvatarText}>{String(session.user.user_metadata?.first_name||"V").charAt(0).toUpperCase()}</Text></Pressable>:null}
     </View>}
     {!configured?<View style={styles.alert}><Text style={styles.alertText}>Configura el acceso de la app para iniciar sesión.</Text></View>:
     !session?<View style={styles.card}>
-      <Text style={styles.kicker}>BIENVENIDO</Text><Text style={styles.heading}>Habla sin{"\n"}fronteras<Text style={{color:colors.accent}}>.</Text></Text>
+      <Text style={styles.kicker}>{tr("native.welcome")}</Text><Text style={styles.heading}>{tr("auth.tagline")}<Text style={{color:colors.accent}}>.</Text></Text>
       <TextInput style={styles.field} autoCapitalize="none" autoCorrect={false} keyboardType="email-address"
-       textContentType="emailAddress" placeholder="Correo electrónico" placeholderTextColor="#718D95" value={email} onChangeText={setEmail}/>
+       textContentType="emailAddress" placeholder={tr("common.email")} placeholderTextColor="#718D95" value={email} onChangeText={setEmail}/>
       <TextInput style={styles.field} secureTextEntry textContentType="password"
-       placeholder="Contraseña" placeholderTextColor="#718D95" value={password} onChangeText={setPassword}/>
-      <Button label="Entrar" onPress={()=>void login()} disabled={working||!email||!password}/>
-      <Button label="Crear cuenta" secondary onPress={()=>void Linking.openURL(api.replace(/\/$/,"")+"/registro").catch(()=>setError("No se pudo abrir el registro."))}/>
+       placeholder={tr("common.password")} placeholderTextColor="#718D95" value={password} onChangeText={setPassword}/>
+      <Button label={tr("native.enter")} onPress={()=>void login()} disabled={working||!email||!password}/>
+      <Button label={tr("auth.createAccount")} secondary onPress={()=>void Linking.openURL(api.replace(/\/$/,"")+"/registro?lang="+uiLanguage).catch(()=>setError(tr("native.openSignUp")))}/>
+      {localePicker}
      </View>:
     <>
      {activeTab==="home"?<>
       <View style={styles.homeWelcomeV2}>
-       <Pressable accessibilityRole="button" accessibilityLabel="Abrir cuenta"
+       <Pressable accessibilityRole="button" accessibilityLabel={tr("home.viewAccount")}
         onPress={()=>{setSettingsPage("menu");setActiveTab("settings");}} style={styles.homeUser}>
         <View style={styles.homeAvatar}><Ionicons name="person-outline" size={23} color="#754BD0"/></View>
         <View style={{flex:1}}>
-         <Text style={styles.homeEyebrow}>BIENVENIDO A VMV</Text>
-         <Text style={styles.homeGreeting} numberOfLines={1}>Hola, {String(session.user.user_metadata?.first_name||"").trim()||"bienvenido"}</Text>
+         <Text style={styles.homeEyebrow}>{tr("auth.welcomeBack")}</Text>
+         <Text style={styles.homeGreeting} numberOfLines={1}>{tr("home.hello",{name:String(session.user.user_metadata?.first_name||"").trim()||"VMV"})}</Text>
         </View>
        </Pressable>
        <View style={styles.homeBrandBadge}><Text style={styles.homeBrandBadgeText}>BUSINESS ✦</Text></View>
@@ -718,19 +736,19 @@ export default function App(){
        </View>
        <View style={styles.homeSpotlightMiniBubble}><Ionicons name="language-outline" size={17} color="#367E72"/></View>
        <Text style={styles.homeSpotlightSpark}>✦</Text>
-       <Text style={styles.homeSpotlightKicker}>SMART CALL  ·  EN PILOTO</Text>
-       <Text style={styles.homeSpotlightHeadline}>Tu negocio,{"\n"}conectado<Text style={{color:"#F9E28A"}}>.</Text></Text>
-       <Text style={styles.homeSpotlightCaption}>Llamadas y traducción</Text>
+       <Text style={styles.homeSpotlightKicker}>Smart Call · {tr("home.pilot")}</Text>
+       <Text style={styles.homeSpotlightHeadline}>{tr("home.businessConnected")}<Text style={{color:"#F9E28A"}}>.</Text></Text>
+       <Text style={styles.homeSpotlightCaption}>{tr("home.callsAndTranslation")}</Text>
        <View style={styles.homeSpotlightMinutes}>
-        <Text style={styles.homeSpotlightMinutesText}>{billingOverview?.minutes?.available??"—"} min  <Text style={{fontSize:10,fontWeight:"600"}}>para traducir</Text></Text>
+        <Text style={styles.homeSpotlightMinutesText}>{billingOverview?.minutes?.available??"—"} min  <Text style={{fontSize:10,fontWeight:"600"}}>{tr("home.minutesToTranslate")}</Text></Text>
        </View>
        <View style={styles.homeSpotlightArrow}><Ionicons name="arrow-up-outline" size={20} color="#FFFFFF"/></View>
       </Pressable>
       <View style={styles.homeSectionHead}>
-       <Text style={styles.homeSectionTitle}>Destacados<Text style={{color:"#8959EB"}}>.</Text></Text>
+       <Text style={styles.homeSectionTitle}>{tr("home.featured")}<Text style={{color:"#8959EB"}}>.</Text></Text>
        <Pressable accessibilityRole="button" accessibilityLabel="Ver todos los servicios" style={styles.homeSeeAll}
         onPress={()=>{setActiveModule(null);setActiveTab("services");}}>
-        <Text style={styles.homeSeeAllText}>Ver todos</Text><Ionicons name="arrow-up-outline" size={15} color="#8960D4"/>
+        <Text style={styles.homeSeeAllText}>{tr("home.seeAll")}</Text><Ionicons name="arrow-up-outline" size={15} color="#8960D4"/>
        </Pressable>
       </View>
       <View style={styles.homeProductGrid}>
@@ -738,26 +756,26 @@ export default function App(){
         style={[styles.homeProductTile,styles.homeProductMint]} onPress={()=>setActiveTab("live")}>
         <View style={styles.homeProductIconV2}><Ionicons name="language-outline" size={28} color="#105744"/></View>
         <Ionicons name="chatbubbles-outline" size={73} color="#105744" style={styles.homeProductArt} accessible={false}/>
-        <View><Text style={[styles.homeProductTitle,{color:"#104A39"}]}>Traductor</Text>
-         <Text style={[styles.homeProductSub,{color:"#367E6A"}]}>En persona</Text></View>
+        <View><Text style={[styles.homeProductTitle,{color:"#104A39"}]}>{tr("common.translator")}</Text>
+         <Text style={[styles.homeProductSub,{color:"#367E6A"}]}>{tr("home.inPerson")}</Text></View>
        </Pressable>
        <View style={[styles.homeProductTile,styles.homeProductYellow]}>
         <View style={styles.homeProductIconV2}><Ionicons name="globe-outline" size={28} color="#69471D"/></View>
         <Ionicons name="browsers-outline" size={75} color="#69471D" style={styles.homeProductArt} accessible={false}/>
         <View><Text style={[styles.homeProductTitle,{color:"#63451B"}]}>Web Services</Text>
-         <Text style={[styles.homeProductSub,{color:"#916F3C"}]}>Próximamente</Text></View>
+         <Text style={[styles.homeProductSub,{color:"#916F3C"}]}>{tr("home.comingSoon")}</Text></View>
        </View>
        <View style={[styles.homeProductTile,styles.homeProductSky]}>
         <View style={styles.homeProductIconV2}><Ionicons name="sparkles-outline" size={28} color="#305D8B"/></View>
         <Ionicons name="hardware-chip-outline" size={73} color="#294C78" style={styles.homeProductArt} accessible={false}/>
         <View><Text style={[styles.homeProductTitle,{color:"#294C78"}]}>AI Agents</Text>
-         <Text style={[styles.homeProductSub,{color:"#547DA0"}]}>Próximamente</Text></View>
+         <Text style={[styles.homeProductSub,{color:"#547DA0"}]}>{tr("home.comingSoon")}</Text></View>
        </View>
        <View style={[styles.homeProductTile,styles.homeProductPink]}>
         <View style={styles.homeProductIconV2}><Ionicons name="trending-up-outline" size={28} color="#914B74"/></View>
         <Ionicons name="stats-chart-outline" size={73} color="#82425F" style={styles.homeProductArt} accessible={false}/>
         <View><Text style={[styles.homeProductTitle,{color:"#82425F"}]}>Marketing</Text>
-         <Text style={[styles.homeProductSub,{color:"#AD7692"}]}>Próximamente</Text></View>
+         <Text style={[styles.homeProductSub,{color:"#AD7692"}]}>{tr("home.comingSoon")}</Text></View>
        </View>
       </View>
       <Pressable accessibilityRole="button" accessibilityLabel="Explorar otros servicios"
@@ -765,7 +783,7 @@ export default function App(){
        <Text style={styles.homeExploreSpark} accessible={false}>✦</Text>
        <Text style={styles.homeExploreEyebrow}>VMV BUSINESS</Text>
        <Text style={styles.homeExploreTitle}>Descubre lo que{"\n"}viene después.</Text>
-       <View style={styles.homeExploreAction}><Text style={styles.homeExploreActionText}>Explorar servicios  ↗</Text></View>
+       <View style={styles.homeExploreAction}><Text style={styles.homeExploreActionText}>{tr("home.explore")} ↗</Text></View>
       </Pressable>
      </>:null}
      {activeTab==="calls"?<>
@@ -872,7 +890,7 @@ export default function App(){
            </View>
            <View>
             <Text style={styles.servicesTileTitle}>{module.name}</Text>
-            <Text style={styles.servicesTileCaption}>Próximamente</Text>
+            <Text style={styles.servicesTileCaption}>{tr("home.comingSoon")}</Text>
            </View>
           </View>)}
         </View>
@@ -880,24 +898,25 @@ export default function App(){
       </>:null}
      {activeTab==="settings"?<>
       {settingsPage==="menu"?<>
-       <Text style={styles.kicker}>TU CUENTA</Text><Text style={styles.heading}>Ajustes<Text style={{color:colors.accent}}>.</Text></Text>
-       <Text style={styles.groupTitle}>CUENTA</Text>
-       <SettingRow emoji="👤" label="Perfil" onPress={()=>setSettingsPage("profile")}/>
-       <SettingRow emoji="🔒" label="Seguridad" onPress={()=>setSettingsPage("security")}/>
-       <Text style={styles.groupTitle}>LLAMADAS</Text>
-       <SettingRow emoji="📱" label="Número y verificación" onPress={()=>setSettingsPage("numbers")}/>
-       <SettingRow emoji="🕒" label="Historial" onPress={()=>setSettingsPage("history")}/>
+       <Text style={styles.kicker}>TU CUENTA</Text><Text style={styles.heading}>{tr("common.settings")}<Text style={{color:colors.accent}}>.</Text></Text>
+       <Text style={styles.groupTitle}>{tr("settings.accountGroup")}</Text>
+       <SettingRow emoji="👤" label={tr("common.profile")} onPress={()=>setSettingsPage("profile")}/>
+       <SettingRow emoji="🔒" label={tr("common.security")} onPress={()=>setSettingsPage("security")}/>
+       <Text style={styles.groupTitle}>{tr("settings.callsGroup")}</Text>
+       <SettingRow emoji="📱" label={tr("settings.phoneAndVerification")} onPress={()=>setSettingsPage("numbers")}/>
+       <SettingRow emoji="🕒" label={tr("common.history")} onPress={()=>setSettingsPage("history")}/>
        <Text style={styles.groupTitle}>SUSCRIPCIÓN</Text>
        <SettingRow emoji="💎" label="Plan y minutos" onPress={()=>setSettingsPage("billing")}/>
        <Text style={styles.groupTitle}>VMV BUSINESS</Text>
        <SettingRow emoji="🖥️" label="Plataforma web" onPress={()=>void openBusinessWeb("smart-call")}/>
        <SettingRow emoji="🧩" label="Mis servicios" onPress={()=>{setActiveModule(null);setActiveTab("services");}}/>
-       <Text style={styles.groupTitle}>MÁS</Text>
-       <SettingRow emoji="🌐" label="Idiomas y asistente" onPress={()=>setSettingsPage("style")}/>
-       <SettingRow emoji="🎧" label="Soporte" onPress={()=>setSettingsPage("support")}/>
-       <Pressable style={styles.signout} onPress={()=>void logout()}><Text style={styles.signoutText}>Cerrar sesión</Text></Pressable>
+       <Text style={styles.groupTitle}>{tr("settings.moreGroup")}</Text>
+       <SettingRow emoji="🌐" label={tr("settings.languagesAssistant")} onPress={()=>setSettingsPage("style")}/>
+       <SettingRow emoji="🎧" label={tr("common.support")} onPress={()=>setSettingsPage("support")}/>
+       {localePicker}
+       <Pressable style={styles.signout} onPress={()=>void logout()}><Text style={styles.signoutText}>{tr("common.signOut")}</Text></Pressable>
       </>:<>
-       <Pressable style={styles.backRow} onPress={()=>setSettingsPage("menu")}><Text style={styles.backText}>‹  Ajustes</Text></Pressable>
+       <Pressable style={styles.backRow} onPress={()=>setSettingsPage("menu")}><Text style={styles.backText}>‹  {tr("common.settings")}</Text></Pressable>
        <Text style={styles.heading}>{({numbers:"Mi línea",billing:"Plan y minutos",history:"Historial",security:"Seguridad",profile:"Perfil",style:"Idiomas y asistente",support:"Soporte",services:"Otros servicios",menu:"Ajustes"} as Record<typeof settingsPage,string>)[settingsPage]}</Text>
        {settingsPage==="numbers"?<>
         <View style={styles.card}><Text style={styles.cardTitle}>Verificación SMS</Text>
@@ -971,8 +990,8 @@ export default function App(){
            <Text style={styles.historyMinutes}>{item.duration_seconds==null?"—":Math.ceil(item.duration_seconds/60)+" min"}</Text>
           </View>):<Text style={styles.helper}>Aún no hay llamadas.</Text>}
         </View>:null}
-       {settingsPage==="profile"?<View style={styles.card}><Text style={styles.cardTitle}>Mi cuenta</Text><Text style={styles.helper}>{session.user.email}</Text><Text style={styles.helper}>Los datos del perfil pueden editarse en la web.</Text></View>:null}
-       {settingsPage==="security"?<View style={styles.card}><Text style={styles.cardTitle}>Acceso seguro</Text><Text style={styles.helper}>No compartas tu contraseña ni códigos de verificación.</Text><Button label="Cerrar sesión" danger onPress={()=>void logout()}/></View>:null}
+       {settingsPage==="profile"?<View style={styles.card}><Text style={styles.cardTitle}>Mi cuenta</Text><Text style={styles.helper}>{session.user.email}</Text><Text style={styles.helper}>{tr("native.profileHint")}</Text></View>:null}
+       {settingsPage==="security"?<View style={styles.card}><Text style={styles.cardTitle}>{tr("settings.secureAccess")}</Text><Text style={styles.helper}>No compartas tu contraseña ni códigos de verificación.</Text><Button label={tr("common.signOut")} danger onPress={()=>void logout()}/></View>:null}
        {settingsPage==="style"?<>
          <View style={styles.card}>
           <Text style={styles.cardTitle}>Idiomas</Text>
@@ -1020,9 +1039,9 @@ export default function App(){
     {working?<ActivityIndicator style={{marginTop:12}} color={colors.accent}/>:null}
    </ScrollView>
    {session&&!keyboardVisible?<View style={styles.bottomDock}>
-     {([{id:"home",icon:"home-outline",label:"Inicio"},{id:"services",icon:"grid-outline",label:"Servicios"},
-       {id:"calls",icon:"call-outline",label:"Llamadas"},{id:"live",icon:"language-outline",label:"Traductor"},
-       {id:"settings",icon:"person-outline",label:"Cuenta"}] as const).map(item=>
+     {([{id:"home",icon:"home-outline",label:tr("common.home")},{id:"services",icon:"grid-outline",label:tr("common.services")},
+       {id:"calls",icon:"call-outline",label:tr("common.calls")},{id:"live",icon:"language-outline",label:tr("common.translator")},
+       {id:"settings",icon:"person-outline",label:tr("common.account")}] as const).map(item=>
        <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={item.label}
         accessibilityState={{selected:activeTab===item.id}}
         onPress={()=>{setError("");setActiveTab(item.id);if(item.id==="settings")setSettingsPage("menu");}}
