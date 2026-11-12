@@ -1,7 +1,7 @@
 "use client";
 import {useMemo,useState} from "react";
 import Link from "next/link";
-import {ArrowLeft,ArrowUpRight,BarChart3,CheckCircle2,ClipboardCopy,Globe2,HeartHandshake,Workflow,Link2,Lightbulb,Mail,Megaphone,MessageCircle,Share2,ShieldCheck,Sparkles,Target,TrendingUp} from "lucide-react";
+import {ArrowLeft,ArrowUpRight,BarChart3,CheckCircle2,ChevronDown,ChevronUp,ClipboardCopy,Globe2,HeartHandshake,Workflow,Link2,Lightbulb,Mail,Megaphone,MessageCircle,Share2,ShieldCheck,Sparkles,Target,TrendingUp} from "lucide-react";
 import styles from "./page.module.css";
 import LocalVisibilityStudio from "./LocalVisibilityStudio";
 import MarketingActionCenter, {type ServiceCode} from "./MarketingActionCenter";
@@ -59,6 +59,11 @@ export default function MarketingPage(){
  const [form,setForm]=useState<FormState>(initial);
  const [notice,setNotice]=useState("");
  const [reviewUrl,setReviewUrl]=useState("");
+ const [campaignDetailsOpen,setCampaignDetailsOpen]=useState(false);
+ const [campaignEditing,setCampaignEditing]=useState(false);
+ const [campaignEditedText,setCampaignEditedText]=useState<string|null>(null);
+ const [reviewPreviewOpen,setReviewPreviewOpen]=useState(false);
+ const [followupPreviewOpen,setFollowupPreviewOpen]=useState(false);
  const [showMetricHelp,setShowMetricHelp]=useState(false);
  const [periodRevenue,setPeriodRevenue]=useState("");
  const [periodOrders,setPeriodOrders]=useState("");
@@ -124,6 +129,7 @@ export default function MarketingPage(){
   };
   return {channel,...rows[form.channel]};
  },[form.channel,business,offer,audience,cta]);
+ const activeCampaignDraft=campaignEditedText??campaign.draft;
  const reviewLink=reviewUrl.trim();
  const reviewLinkIsValid=validReviewUrl(reviewLink);
  const review="¡Hola! Gracias por elegir "+business+". ¿Podrías contarnos cómo fue tu experiencia con una reseña honesta? Tu opinión nos ayuda a mejorar y orienta a otras personas."+(reviewLink&&reviewLinkIsValid?"\n\nPuedes dejar tu reseña aquí: "+reviewLink:"")+"\n\n¡Muchas gracias!";
@@ -133,6 +139,15 @@ export default function MarketingPage(){
  const copy=async(value:string)=>{
   try{await navigator.clipboard.writeText(value);setNotice("Texto copiado.");}
   catch{setNotice("No se pudo copiar automáticamente; selecciona el texto para copiarlo.");}
+ };
+ const shareText=async(value:string,title:string)=>{
+  if(typeof navigator.share==="function"){
+   try{await navigator.share({title,text:value});setNotice("Elige la aplicación y confirma el envío.");}
+   catch(error){if((error as Error)?.name!=="AbortError")setNotice("No se pudo abrir Compartir. Puedes copiar el mensaje.");}
+   return;
+  }
+  try{await navigator.clipboard.writeText(value);setNotice("El mensaje se copió para que puedas compartirlo.");}
+  catch{setNotice("No se pudo compartir ni copiar automáticamente.");}
  };
  const shareReview=async()=>{
   if(!reviewLinkIsValid){setNotice("Revisa el enlace de reseñas: debe comenzar con https:// y ser válido.");return;}
@@ -149,7 +164,7 @@ export default function MarketingPage(){
   "Negocio: "+business,"Sector: "+industryName(form.industry),
   "Audiencia: "+audience,"Oferta: "+offer,"Objetivo / CTA: "+cta,
   "Canal: "+campaign.channel,"Enfoque: "+campaign.angle,
-  "Acción: "+campaign.execution,"Mensaje de partida: "+campaign.draft,
+  "Acción: "+campaign.execution,"Mensaje de partida: "+activeCampaignDraft,
   "Indicador: "+campaign.measure,
   "Inversión introducida: "+money(spend),
   "Leads introducidos: "+(leads===null?"No indicados":String(leads)),
@@ -174,7 +189,7 @@ export default function MarketingPage(){
     </div>
     <div className={styles.heroShape}><div><Target size={38}/><strong>Tu siguiente cliente</strong><span>Comienza con una estrategia clara</span></div></div>
    </section>
-   <div className={styles.noticeBand}><ShieldCheck size={18}/><p><strong>Herramientas de planificación.</strong> Puedes crear mensajes y calcular resultados con tus propios números. No se han conectado cuentas publicitarias, publicado campañas ni guardado datos en servidores.</p></div>
+   {section!=="actions"?<div className={styles.noticeBand}><ShieldCheck size={18}/><p><strong>Planificación local.</strong> Los borradores y cálculos de esta pantalla no se guardan en servidores. Las solicitudes enviadas desde Acciones sí quedan registradas en tu cuenta; no publicamos campañas ni hacemos cargos automáticamente.</p></div>:null}
    <div className={styles.workspace}>
     <aside className={styles.sidebar}>
      <span className={styles.sidebarLabel}>CENTRO DE CRECIMIENTO</span>
