@@ -20,8 +20,8 @@ const initial:FormState={
  channel:"social",budget:"",ticket:"",margin:"",leads:"",sales:"",revenue:""
 };
 const tabs:{id:Section;label:string;description:string;Icon:typeof Target}[]=[
- {id:"strategy",label:"Diagnóstico",description:"Encuentra oportunidades",Icon:Target},
  {id:"actions",label:"Acciones",description:"Solicita y realiza tareas",Icon:Workflow},
+ {id:"strategy",label:"Diagnóstico",description:"Encuentra oportunidades",Icon:Target},
  {id:"presence",label:"Visibilidad local",description:"Directorios y SEO gratis",Icon:Globe2},
  {id:"campaign",label:"Campañas",description:"Crea un plan concreto",Icon:Megaphone},
  {id:"numbers",label:"Rentabilidad",description:"Mide lo que funciona",Icon:BarChart3},
@@ -54,7 +54,7 @@ function Field({label,value,onChange,placeholder,type="text",hint,min,max}:{
   {hint?<small>{hint}</small>:null}</label>;
 }
 export default function MarketingPage(){
- const [section,setSection]=useState<Section>("strategy");
+ const [section,setSection]=useState<Section>("actions");
  const [requestedService,setRequestedService]=useState<ServiceCode>("google_profile");
  const [form,setForm]=useState<FormState>(initial);
  const [notice,setNotice]=useState("");
