@@ -83,14 +83,14 @@ export const builderConfig:Config={
    font:{type:"select",options:[{label:"Moderna",value:"modern"},{label:"Editorial",value:"editorial"}]}
   },
   defaultProps:{palette:"violet",font:"modern"},
-  render:({children,palette,font}:{children:React.ReactNode;palette:string;font:string})=>{
+  render:({children,palette,font}:{children?:React.ReactNode;palette?:string;font?:string})=>{
    const colors:Record<string,{accent:string,pale:string}>={
     violet:{accent:"#8e5de4",pale:"#f0e9fd"},
     mint:{accent:"#198d74",pale:"#e5f8f0"},
     amber:{accent:"#a97b26",pale:"#fff4d8"},
     ink:{accent:"#30283a",pale:"#eae8ed"}
    };
-   const color=colors[palette]||colors.violet;
+   const color=colors[palette||"violet"]||colors.violet;
    const style={"--vmv-accent":color.accent,"--vmv-pale":color.pale,
     fontFamily:font==="editorial"?'Georgia, "Times New Roman", serif':'ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'} as CSSProperties;
    return <div className="vmv-site vmv-site-editor-canvas" style={style}>{children}</div>;
