@@ -39,6 +39,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
  const [ready,setReady]=useState(false);
  const [status,setStatus]=useState("");
  const [mobile,setMobile]=useState(false);
+ const [studioMode,setStudioMode]=useState<"edit"|"preview">("edit");
  const [origin,setOrigin]=useState("");
  useEffect(()=>{setOrigin(window.location.origin);},[]);
  const verify=useCallback(async()=>{
@@ -136,7 +137,24 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
    <small>{loading?"Cargando":published?"Publicado":"Borrador"}</small>
   </div>
   {loading?<p className={styles.notice}>Cargando…</p>:!ready?<p className={styles.notice} role="alert">{status}</p>:<>
-   <div className={styles.workbench}>
+   <div className={styles.switch} role="group" aria-label="Sección del estudio">
+    <button type="button" className={studioMode==="edit"?styles.active:""} aria-pressed={studioMode==="edit"}
+     onClick={()=>setStudioMode("edit")}>Editar contenido</button>
+    <button type="button" className={studioMode==="preview"?styles.active:""} aria-pressed={studioMode==="preview"}
+     onClick={()=>setStudioMode("preview")}>Vista previa</button>
+   </div>
+   <div className={styles.actions}>
+    <button type="button" className={styles.save} disabled={busy} onClick={()=>void save()}><Save size={17}/> Guardar</button>
+    <button type="button" className={styles.publish} disabled={busy} onClick={()=>void publish()}><Send size={17}/> {busy?"Guardando…":published?"Actualizar web":"Publicar web"}</button>
+    {published?<button type="button" className={styles.delete} disabled={busy} onClick={()=>void unpublish()} aria-label="Retirar web"><Trash2 size={18}/></button>:null}
+   </div>
+   {published&&link?<div className={styles.url}><Globe size={16}/>
+    <a href={link} target="_blank" rel="noopener noreferrer">{link.replace(/^https?:\/\//,"")}</a>
+    <button type="button" onClick={()=>void copy()} aria-label="Copiar enlace"><Copy size={16}/></button>
+    <a href={link} target="_blank" rel="noopener noreferrer" aria-label="Abrir web"><ExternalLink size={16}/></a>
+   </div>:null}
+   <p className={styles.notice} role="status" aria-live="polite">{status?<><Check size={15}/>{status}</>:null}</p>
+   <div className={styles.workbench} data-mode={studioMode}>
     <div className={styles.editor}>
      <header className={styles.panelHead}><strong>Contenido</strong><small>EDITAR</small></header>
      <div className={styles.fields}>
@@ -185,17 +203,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
      </div>
     </div>
    </div>
-   <div className={styles.actions}>
-    <button type="button" className={styles.save} disabled={busy} onClick={()=>void save()}><Save size={17}/> Guardar</button>
-    <button type="button" className={styles.publish} disabled={busy} onClick={()=>void publish()}><Send size={17}/> {busy?"Guardando…":published?"Actualizar web":"Publicar web"}</button>
-    {published?<button type="button" className={styles.delete} disabled={busy} onClick={()=>void unpublish()} aria-label="Retirar web"><Trash2 size={18}/></button>:null}
-   </div>
-   {published&&link?<div className={styles.url}><Globe size={16}/>
-    <a href={link} target="_blank" rel="noopener noreferrer">{link.replace(/^https?:\/\//,"")}</a>
-    <button type="button" onClick={()=>void copy()} aria-label="Copiar enlace"><Copy size={16}/></button>
-    <a href={link} target="_blank" rel="noopener noreferrer" aria-label="Abrir web"><ExternalLink size={16}/></a>
-   </div>:null}
-   <p className={styles.notice} role="status" aria-live="polite">{status?<><Check size={15}/>{status}</>:null}</p>
+
   </>}
  </section>;
 }
