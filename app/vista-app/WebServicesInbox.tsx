@@ -24,6 +24,7 @@ function formatTime(date:string){
 }
 export default function WebServicesInbox({ownerId,onBack}:{ownerId:string;onBack:()=>void}){
  const [items,setItems]=useState<Inquiry[]>([]);
+ const [counts,setCounts]=useState({new:0,total:0});
  const [loading,setLoading]=useState(true);
  const [busyId,setBusyId]=useState<string|null>(null);
  const [error,setError]=useState("");
@@ -36,11 +37,16 @@ export default function WebServicesInbox({ownerId,onBack}:{ownerId:string;onBack
    const {data,error:authError}=await client.auth.getUser();
    if(authError||!data.user||data.user.id!==ownerId||data.user.is_anonymous)
     throw new Error("Inicia sesión nuevamente");
-   const result=await client.from("smartjob_web_inquiries")
-    .select("id,visitor_name,visitor_email,visitor_phone,service,message,details,status,created_at,site_slug")
-    .eq("owner_id",ownerId).order("created_at",{ascending:false}).limit(100);
-   if(result.error)throw new Error("No se pudieron cargar las solicitudes");
+   const [result,totalResult,newResult]=await Promise.all([
+    client.from("smartjob_web_inquiries")
+     .select("id,visitor_name,visitor_email,visitor_phone,service,message,details,status,created_at,site_slug")
+     .eq("owner_id",ownerId).order("created_at",{ascending:false}).limit(100),
+    client.from("smartjob_web_inquiries").select("id",{count:"exact",head:true}).eq("owner_id",ownerId),
+    client.from("smartjob_web_inquiries").select("id",{count:"exact",head:true}).eq("owner_id",ownerId).eq("status","new")
+   ]);
+   if(result.error||totalResult.error||newResult.error)throw new Error("No se pudieron cargar las solicitudes");
    setItems((result.data||[]) as Inquiry[]);
+   setCounts({new:newResult.count||0,total:totalResult.count||0});
   }catch(e){setError(e instanceof Error?e.message:"No disponible");}
   finally{setLoading(false);}
  },[ownerId]);
@@ -58,12 +64,16 @@ export default function WebServicesInbox({ownerId,onBack}:{ownerId:string;onBack
     .update({status,updated_at:new Date().toISOString()})
     .eq("id",id).eq("owner_id",ownerId).select("id,status").single();
    if(result.error||!result.data)throw new Error("No se pudo actualizar");
+   const before=items.find(item=>item.id===id);
    setItems(previous=>previous.map(item=>item.id===id?{...item,status}:item));
+   if(before&&(before.status==="new")!==(status==="new")){
+    setCounts(previous=>({...previous,new:Math.max(0,previous.new+(status==="new"?1:-1))}));
+   }
   }catch(e){setError(e instanceof Error?e.message:"Error al actualizar");}
   finally{setBusyId(null);}
  }
  const visible=filter==="new"?items.filter(item=>item.status==="new"):items;
- const newCount=items.filter(item=>item.status==="new").length;
+ const newCount=counts.new;
  return <section className={styles.root} aria-label="Bandeja de solicitudes web">
   <button type="button" className={styles.back} onClick={onBack}><ArrowLeft size={16}/> Web Services</button>
   <div className={styles.heading}>
@@ -72,7 +82,7 @@ export default function WebServicesInbox({ownerId,onBack}:{ownerId:string;onBack
   </div>
   <div className={styles.stats}>
    <div><span>Nuevas</span><strong>{newCount}</strong></div>
-   <div><span>Recientes</span><strong>{items.length}</strong></div>
+   <div><span>Recibidas</span><strong>{counts.total}</strong></div>
   </div>
   <div className={styles.filters} role="group" aria-label="Filtrar solicitudes">
    <button type="button" aria-pressed={filter==="new"} className={filter==="new"?styles.active:""} onClick={()=>setFilter("new")}>Nuevas</button>
