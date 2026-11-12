@@ -3,6 +3,7 @@ import {authenticatedUser} from "@/lib/auth-server";
 import {paidServiceAllowed} from "@/lib/vmv-entitlements";
 import {callbackBase,callbackDb,callbackEnabled,callerPhone,validCallSid,validUuid} from "@/lib/vmv-callback";
 import {resolveOriginalCaller} from "@/lib/vmv-caller-lookup";
+import {claimNational,nationalPilotFor,settleNational} from "@/lib/vmv-national-minutes";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -63,6 +64,13 @@ export async function POST(req:NextRequest){
   .select("id").single();
  if(insertError)return json({error:insertError.code==="23505"?"callback_in_progress":"callback_unavailable"},insertError.code==="23505"?409:503);
  if(!validUuid(intent.id))return json({error:"callback_unavailable"},503);
+ const granted=await claimNational(uid,"out:"+intent.id);
+ if(granted===0){
+  await db.from("smartjob_callback_requests")
+   .update({status:"failed",finished_at:new Date().toISOString()})
+   .eq("id",intent.id).eq("owner_id",uid).eq("status","pending");
+  return json({error:"national_minutes_exhausted"},403);
+ }
  const base=callbackBase();
  const sid=process.env.TWILIO_ACCOUNT_SID||"",token=process.env.TWILIO_AUTH_TOKEN||"";
  const params=new URLSearchParams({
@@ -90,6 +98,8 @@ export async function POST(req:NextRequest){
   await db.from("smartjob_callback_requests").update({
    status:"failed",finished_at:new Date().toISOString()
   }).eq("id",intent.id).eq("owner_id",uid).eq("status","pending");
+  if(granted!==null&&!await settleNational("out:"+intent.id,0))
+   console.error("VMV national call release failed");
   return json({error:"twilio_connection_unavailable"},503);
  }
 }
