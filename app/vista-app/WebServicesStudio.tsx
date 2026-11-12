@@ -1,5 +1,5 @@
 "use client";
-import {useCallback,useEffect,useState,type CSSProperties} from "react";
+import {useCallback,useEffect,useRef,useState,type CSSProperties} from "react";
 import {ArrowLeft,Check,Copy,ExternalLink,Globe,Save,Send,Trash2,Plus,X,ArrowUp,ArrowDown,MessageCircle,Phone,Mail} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {defaultWebContent,normalizeWebContent,paletteStyles,webServices,webCategory,webPrimaryContact,webWhatsApp,webPhone,webEmail,type WebSiteContent,type WebPalette,type WebTemplate,type WebContactMethod} from "@/lib/web-services-site";
@@ -40,7 +40,18 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
  const [mobile,setMobile]=useState(false);
  const [studioMode,setStudioMode]=useState<"edit"|"preview"|"publish">("edit");
  const [newService,setNewService]=useState("");
+ const [savedSnapshot,setSavedSnapshot]=useState("");
+ const [publishedSnapshot,setPublishedSnapshot]=useState<string|null>(null);
+ const [recovery,setRecovery]=useState<WebSiteContent|null>(null);
  const [origin,setOrigin]=useState("");
+ const recoveryKey="vmv.web-studio.recovery.v1."+ownerId;
+ const currentSnapshot=JSON.stringify(normalizeWebContent(content));
+ const dirty=ready&&currentSnapshot!==savedSnapshot;
+ const unPublishedChanges=published&&publishedSnapshot!==currentSnapshot;
+ const contentRef=useRef(content);
+ const baselineRef=useRef(savedSnapshot);
+ contentRef.current=content;
+ baselineRef.current=savedSnapshot;
  useEffect(()=>{setOrigin(window.location.origin);},[]);
  const verify=useCallback(async()=>{
   const client=getSupabase();
@@ -52,12 +63,13 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
  useEffect(()=>{
   let active=true;
   setLoading(true);setReady(false);setStatus("");setContent({...defaultWebContent});setPublished(false);setSlug(null);
+  setRecovery(null);setSavedSnapshot("");setPublishedSnapshot(null);
   void (async()=>{
    try{
     const client=await verify();
     const [own,publicSite,categoryPreference]=await Promise.all([
-     client.from("smartjob_web_sites").select("slug,draft").eq("owner_id",ownerId).maybeSingle(),
-     client.from("smartjob_web_publications").select("slug").eq("owner_id",ownerId).maybeSingle(),
+     client.from("smartjob_web_sites").select("slug,draft,updated_at").eq("owner_id",ownerId).maybeSingle(),
+     client.from("smartjob_web_publications").select("slug,content").eq("owner_id",ownerId).maybeSingle(),
      client.from("smartjob_business_category_preferences").select("category_id").eq("owner_id",ownerId).maybeSingle()
     ]);
     if(own.error||publicSite.error||categoryPreference.error)throw new Error("No se pudo cargar tu web");
@@ -65,13 +77,55 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
     const websiteDraft=own.data?normalizeWebContent(own.data.draft):{...defaultWebContent};
     if(!websiteDraft.categoryId&&typeof categoryPreference.data?.category_id==="string")websiteDraft.categoryId=categoryPreference.data.category_id;
     setContent(websiteDraft);
+    const remoteJson=JSON.stringify(normalizeWebContent(websiteDraft));
+    setSavedSnapshot(remoteJson);
     if(own.data)setSlug(own.data.slug as string);
-    setPublished(Boolean(publicSite.data));setReady(true);
+    setPublished(Boolean(publicSite.data));
+    setPublishedSnapshot(publicSite.data?JSON.stringify(normalizeWebContent(publicSite.data.content)):null);
+    try{
+     const raw=window.localStorage.getItem(recoveryKey);
+     if(raw){
+      const backup=JSON.parse(raw) as {version?:unknown;savedAt?:unknown;draft?:unknown};
+      const backupTime=typeof backup.savedAt==="string"?Date.parse(backup.savedAt):NaN;
+      const remoteTime=own.data?.updated_at?Date.parse(String(own.data.updated_at)):0;
+      const backupContent=normalizeWebContent(backup.draft);
+      if(backup.version===1&&Number.isFinite(backupTime)&&backupTime>remoteTime&&
+         JSON.stringify(backupContent)!==remoteJson){
+       setRecovery(backupContent);
+      }else window.localStorage.removeItem(recoveryKey);
+     }
+    }catch{/* Private browsing, storage access denied or corrupt backup. */}
+    setReady(true);
    }catch(error){if(active)setStatus(error instanceof Error?error.message:"No disponible");}
    finally{if(active)setLoading(false);}
   })();
   return()=>{active=false;};
- },[ownerId,verify]);
+ },[ownerId,verify,recoveryKey]);
+ // Keep an account-isolated recovery copy without writing unapproved changes to the public site.
+ useEffect(()=>{
+  if(!dirty||recovery)return;
+  try{
+   window.localStorage.setItem(recoveryKey,JSON.stringify({
+    version:1,savedAt:new Date().toISOString(),draft:normalizeWebContent(content)
+   }));
+  }catch{/* Browser storage may be unavailable. */}
+ },[dirty,recovery,recoveryKey,content]);
+ useEffect(()=>{
+  if(!dirty)return;
+  const warn=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue="";};
+  window.addEventListener("beforeunload",warn);
+  return()=>window.removeEventListener("beforeunload",warn);
+ },[dirty]);
+ useEffect(()=>{
+  return ()=>{
+   try{
+    const latest=normalizeWebContent(contentRef.current);
+    if(JSON.stringify(latest)!==baselineRef.current){
+     window.localStorage.setItem(recoveryKey,JSON.stringify({version:1,savedAt:new Date().toISOString(),draft:latest}));
+    }
+   }catch{/* Local backup is best effort. */}
+  };
+ },[recoveryKey]);
  const update=(key:Exclude<keyof WebSiteContent,"template"|"palette"|"gallery"|"categoryId"|"heroImage"|"eyebrow"|"services"|"contactMethod">,value:string)=>{
   setContent(old=>({...old,[key]:value}));setStatus("");
  };
@@ -115,7 +169,12 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
   const next=normalizeWebContent(content);
   if(!validate(next))return;
   setBusy(true);setStatus("");
-  try{await store(next);setStatus("Borrador guardado");}
+  try{
+   await store(next);setSavedSnapshot(JSON.stringify(next));setStatus("Borrador guardado");
+   if(JSON.stringify(normalizeWebContent(contentRef.current))===JSON.stringify(next)){
+    try{window.localStorage.removeItem(recoveryKey);}catch{/* ignore */}
+   }
+  }
   catch(e){setStatus(e instanceof Error?e.message:"No se pudo guardar");}
   finally{setBusy(false);}
  };
@@ -126,12 +185,16 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
   setBusy(true);setStatus("");
   try{
    const currentSlug=await store(next);
+   setSavedSnapshot(JSON.stringify(next));
+   if(JSON.stringify(normalizeWebContent(contentRef.current))===JSON.stringify(next)){
+    try{window.localStorage.removeItem(recoveryKey);}catch{/* ignore */}
+   }
    const client=await verify();
    const {data,error}=await client.from("smartjob_web_publications").upsert({
     owner_id:ownerId,slug:currentSlug,content:next,published_at:new Date().toISOString()
    },{onConflict:"owner_id"}).select("slug").single();
    if(error||!data)throw new Error("No se pudo publicar");
-   setPublished(true);setStatus("Sitio publicado");
+   setPublished(true);setPublishedSnapshot(JSON.stringify(next));setStatus("Sitio publicado");
   }catch(e){setStatus(e instanceof Error?e.message:"No se pudo publicar");}
   finally{setBusy(false);}
  };
@@ -143,7 +206,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
    const {data,error}=await client.from("smartjob_web_publications").delete()
     .eq("owner_id",ownerId).select("owner_id");
    if(error||!data?.length)throw new Error("No se pudo retirar");
-   setPublished(false);setStatus("Página retirada");
+   setPublished(false);setPublishedSnapshot(null);setStatus("Página retirada");
   }catch(e){setStatus(e instanceof Error?e.message:"No se pudo retirar");}
   finally{setBusy(false);}
  };
@@ -158,8 +221,16 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
  const serviceItems=webServices(content);
  return <section className={styles.studio} aria-label="Creador web">
   <div className={styles.heading}><div><span>WEB STUDIO</span><h2>Crea tu web<b>.</b></h2></div>
+   {!loading&&ready?<span className={styles.draftIndicator}>{dirty?"Sin guardar":"Guardado"}</span>:null}
   </div>
   {loading?<p className={styles.notice}>Cargando…</p>:!ready?<p className={styles.notice} role="alert">{status}</p>:<>
+   {recovery?<div className={styles.recovery} role="status">
+    <span>Encontramos cambios sin guardar.</span>
+    <div>
+     <button type="button" onClick={()=>{setContent(recovery);setRecovery(null);setStatus("Cambios recuperados");}}>Recuperar</button>
+     <button type="button" onClick={()=>{setRecovery(null);try{window.localStorage.removeItem(recoveryKey);}catch{/* ignore */}}}>Descartar</button>
+    </div>
+   </div>:null}
    <div className={styles.switch} role="tablist" aria-label="Etapas del estudio web">
     <button type="button" role="tab" aria-selected={studioMode==="edit"} className={studioMode==="edit"?styles.active:""} onClick={()=>{setStudioMode("edit");setStatus("");}}>Contenido</button>
     <button type="button" role="tab" aria-selected={studioMode==="preview"} className={studioMode==="preview"?styles.active:""} onClick={()=>{setStudioMode("preview");setStatus("");}}>Diseño</button>
@@ -289,9 +360,9 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
      <div className={styles.publicationIcon}><Globe size={23}/></div>
      <div className={styles.publicationInfo}>
       <span className={styles.publicationCaption}>ESTADO DE TU WEB</span>
-      <strong>{published?"Tu web está publicada":"Tu web está en borrador"}</strong>
+      <strong>{unPublishedChanges?"Tienes cambios por publicar":published?"Tu web está publicada":"Tu web está en borrador"}</strong>
      </div>
-     <span className={styles.publicationBadge}>{published?"Activa":"Borrador"}</span>
+     <span className={styles.publicationBadge}>{unPublishedChanges?"Por actualizar":published?"Activa":"Borrador"}</span>
     </div>
     <button type="button" className={styles.primaryPublish} disabled={busy} onClick={()=>void publish()}>
      <Send size={17}/>{busy?"Procesando…":published?"Actualizar publicación":"Publicar web"}
