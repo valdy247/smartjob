@@ -6,7 +6,7 @@ returns boolean language plpgsql security definer set search_path=public,pg_temp
 declare o record; c record;
 begin
  if p_account !~ '^acct_[A-Za-z0-9]+$' or p_session !~ '^cs_test_[A-Za-z0-9_]+$'
-    or p_url !~ '^https://checkout\\.stripe\\.com/' or
+    or p_url !~ '^https://checkout[.]stripe[.]com/' or
     p_expires<=now() or p_expires>now()+interval '40 minutes' then return false; end if;
  select * into o from public.vmv_ai_orders where id=p_order and owner_id=p_owner and
     mode='test' and status='awaiting_payment' for update;
