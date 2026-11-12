@@ -92,3 +92,5 @@
 .ws-inquiry-success p{font-size:14px;color:#605b69;line-height:1.7;margin:0 auto 21px;max-width:450px}
 .ws-inquiry-success button{font:inherit;border-radius:99px;padding:12px 20px;background:var(--ws-color);color:white;border:0;cursor:pointer}
 @media(max-width:650px){.ws-inquiry-field-row,.ws-inquiry-extra{grid-template-columns:1fr}.ws-public-inquiry{padding:55px 6%}.ws-inquiry-form{padding:19px;gap:16px;border-radius:17px}.ws-public-nav nav{flex-wrap:wrap}}
+
+.ws-inquiry-privacy{font-size:11px;line-height:1.6;color:#79727e;margin:-4px 0 0}
