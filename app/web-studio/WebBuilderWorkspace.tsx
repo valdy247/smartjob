@@ -188,6 +188,19 @@ export default function WebBuilderWorkspace(){
   }catch(e){setError(e instanceof Error?e.message:"No se pudo abrir");}
   finally{setBusy(false);}
  }
+ async function loadCreatedSite(c:NonNullable<ReturnType<typeof getSupabase>>,ids:{siteId:string;pageId:string}){
+  const [siteResult,pageResult]=await Promise.all([
+   c.from("smartjob_builder_sites").select(
+    "id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug"
+   ).eq("id",ids.siteId).eq("owner_id",userId).single(),
+   c.from("smartjob_builder_pages").select(
+    "id,site_id,owner_id,slug,title,description,draft,revision,updated_at"
+   ).eq("id",ids.pageId).eq("owner_id",userId).single()
+  ]);
+  if(siteResult.error||pageResult.error||!siteResult.data||!pageResult.data)
+   throw new Error("Sitio creado, pero no pudo abrirse. Recarga Mis sitios.");
+  return {created:siteResult.data as Site,home:pageResult.data as Page};
+ }
  async function createSite(){
   if(busy||!userId)return;
   const name=newSiteName.trim().slice(0,100);
@@ -196,16 +209,13 @@ export default function WebBuilderWorkspace(){
   try{
    const c=await authorized();
    const generated=(slugify(name).slice(0,33)||"mi-negocio")+"-"+crypto.randomUUID().replace(/-/g,"").slice(0,8);
-   const {data:created,error}=await c.from("smartjob_builder_sites").insert({
-    owner_id:userId,slug:generated,name,category_id:newSiteCategory
-   }).select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug").single();
-   if(error||!created)throw new Error("No se pudo crear el sitio");
-   const siteCreated=created as Site;
-   const {data:home,error:homeError}=await c.from("smartjob_builder_pages").insert({
-    site_id:siteCreated.id,owner_id:userId,slug:"home",title:"Inicio",
-    description:"",draft:starterBuilderDocument(name,newSiteCategory)
-   }).select("id,site_id,owner_id,slug,title,description,draft,revision,updated_at").single();
-   if(homeError||!home)throw new Error("Sitio creado; vuelve a abrirlo para añadir la página");
+   const {data:ids,error:rpcError}=await c.rpc("smartjob_builder_create_site",{
+    p_name:name,p_slug:generated,p_category_id:newSiteCategory,
+    p_home_draft:starterBuilderDocument(name,newSiteCategory),
+    p_home_description:"",p_legacy_source_slug:null
+   });
+   if(rpcError||!ids?.siteId||!ids?.pageId)throw new Error("No se pudo crear el sitio. Revisa el límite de sitios.");
+   const {created:siteCreated,home}=await loadCreatedSite(c,ids);
    setSites(current=>[siteCreated,...current]);
    setSite(siteCreated);setPages([home as Page]);setPage(home as Page);setPublishedIds([]);setPublishedSignatures({});
    openDraft(home.draft);setTitle(home.title);setDescription("");
@@ -222,16 +232,14 @@ export default function WebBuilderWorkspace(){
    const c=await authorized();
    const name=classicDraft.business.trim().slice(0,100);
    const slug=(slugify(name).slice(0,33)||"mi-negocio")+"-"+crypto.randomUUID().replace(/-/g,"").slice(0,8);
-   const {data:created,error}=await c.from("smartjob_builder_sites").insert({
-    owner_id:userId,name,slug,category_id:classicDraft.categoryId,legacy_source_slug:classicSlug
-   }).select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug").single();
-   if(error||!created)throw new Error("No se pudo crear el sitio nuevo");
    const doc=importLegacyBuilderDocument(classicDraft);
-   const {data:home,error:pageError}=await c.from("smartjob_builder_pages").insert({
-    owner_id:userId,site_id:created.id,slug:"home",title:"Inicio",
-    description:classicDraft.intro.slice(0,300),draft:doc
-   }).select("id,site_id,owner_id,slug,title,description,draft,revision,updated_at").single();
-   if(pageError||!home)throw new Error("Sitio creado; se requiere completar la migración de contenido");
+   const {data:ids,error:rpcError}=await c.rpc("smartjob_builder_create_site",{
+    p_name:name,p_slug:slug,p_category_id:classicDraft.categoryId,
+    p_home_draft:doc,p_home_description:classicDraft.intro.slice(0,300),
+    p_legacy_source_slug:classicSlug
+   });
+   if(rpcError||!ids?.siteId||!ids?.pageId)throw new Error("No se pudo importar. La web anterior sigue intacta.");
+   const {created,home}=await loadCreatedSite(c,ids);
    setSites(old=>[created as Site,...old]);
    setSite(created as Site);setPages([home as Page]);setPage(home as Page);setPublishedIds([]);setPublishedSignatures({});
    setTitle(home.title);setDescription(home.description);
