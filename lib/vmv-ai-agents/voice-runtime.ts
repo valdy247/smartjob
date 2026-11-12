@@ -38,7 +38,10 @@ function greeting(snapshot:Record<string,unknown>,l:Lang){
 function trained(snapshot:Record<string,unknown>){
  const c=(snapshot.configuration||{}) as Record<string,unknown>;
  const has=(k:string)=>safe(c[k]).length>0;
- return Boolean(safe(snapshot.name)&&safe(snapshot.purpose)&&has("business_name")&&
+ const disclosure=c.call_disclosure==="Sí"||c.call_consent==="Sí";
+ const phoneAllowed=c.channel==="Teléfono"||c.channel==="Teléfono y chat"||
+   (!c.channel&&snapshot.kind==="calls");
+ return Boolean(disclosure&&phoneAllowed&&safe(snapshot.name)&&safe(snapshot.purpose)&&has("business_name")&&
   has("industry")&&has("country")&&has("city")&&
   (c.country==="Otro país"?has("region_other"):has("state"))&&
   (has("human_review")||has("handoff"))&&(has("data_scope")||has("personal_data")));
