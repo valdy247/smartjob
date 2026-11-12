@@ -118,7 +118,7 @@ export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=true
    <label className={styles.field}>¿Cuál será su misión?<textarea maxLength={240} rows={3} value={draft.purpose} onChange={e=>value("purpose",e.target.value)} placeholder="¿Qué debe lograr para tu negocio?"/></label>
    <p className={styles.fieldTitle}>¿Cuál será su especialidad?</p>
    <div className={styles.roles}>{allRoles.map(r=><button type="button" key={r} className={draft.kind===r?styles.choiceActive:styles.choice}
-    onClick={()=>value("kind",r)}>
+    onClick={()=>setDraft(d=>({...d,kind:r,purpose:d.kind===r?d.purpose:({calls:"Orientar a las personas que llaman.",support:"Responder preguntas de clientes.",sales:"Informar y calificar oportunidades comerciales.",bookings:"Recibir solicitudes de citas y explicar las políticas.",inventory:"Consultar información autorizada de productos.",operations:"Organizar solicitudes administrativas.",custom:"Cumplir una misión definida por el negocio."} as Record<AgentKind,string>)[r]}))}>
     {{calls:"Llamadas",support:"Clientes",sales:"Ventas",bookings:"Reservas",inventory:"Inventario",operations:"Administración",custom:"Personalizado"}[r]}</button>)}</div>
   </div>:null}
   {step>0&&step<steps.length-1?<div className={styles.fields}>{shown.map(question=><div className={styles.question} key={question.id}>
