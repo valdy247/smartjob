@@ -115,3 +115,14 @@
 .previewPhone{width:100%;max-width:390px;margin:0 auto;border-radius:26px;border:7px solid #32273d;max-height:690px;overflow-y:auto}
 .previewPhone :global(.vmv-site){max-width:390px}
 @media(max-width:600px){.previewOverlay{padding:10px}.previewPhone{max-width:340px}.previewTop button{padding:8px 9px;font-size:10px}}
+
+
+.saveIndicator{display:inline-flex;align-items:center;white-space:nowrap;font-size:11px;font-weight:850;color:#79569c;background:#f3edfb;padding:9px 11px;border-radius:10px}
+.recoveryBanner{display:flex;align-items:center;justify-content:space-between;gap:13px;flex-wrap:wrap;padding:14px 17px;background:#f7efff;border-bottom:1px solid #dcc8f0}
+.recoveryBanner>div:first-child{display:flex;flex-direction:column;gap:6px;max-width:500px}
+.recoveryBanner strong{font-size:13px;color:#604386}
+.recoveryBanner span{font-size:11px;color:#816c96;line-height:1.5}
+.recoveryActions{display:flex;gap:8px;flex-wrap:wrap}
+.recoveryActions button{font-weight:850;font-size:11px;background:#8b5bde;color:white;border:1px solid #8b5bde;border-radius:10px;min-height:39px;padding:9px 13px}
+.recoveryActions button:last-child{background:#fff;color:#7950b7;border-color:#e0d0ee}
+@media(max-width:650px){.recoveryBanner{padding:12px}.recoveryActions{width:100%}.recoveryActions button{flex:1}.saveIndicator{padding:7px;font-size:10px}}
