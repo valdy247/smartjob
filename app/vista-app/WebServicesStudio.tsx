@@ -214,11 +214,6 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
   finally{setBusy(false);}
  };
  const link=origin&&slug?origin+"/sites/"+encodeURIComponent(slug):null;
- const copy=async()=>{
-  if(!link||!published)return;
-  try{await navigator.clipboard.writeText(link);setStatus("Enlace copiado");}
-  catch{setStatus("No se pudo copiar");}
- };
  const shareSite=async()=>{
   if(!published||!link)return;
   try{
