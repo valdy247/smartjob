@@ -34,7 +34,7 @@ const services:Service[]=[
 const statusNames:Record<Status,string>={
  received:"Solicitud recibida",quoted:"Presupuesto disponible",approved:"Presupuesto aprobado",
  in_progress:"Trabajo en proceso",needs_customer:"Necesitamos tu ayuda",
- verified:"Resultado verificado",cancelled:"Cancelada"
+ verified:"Completado con evidencia",cancelled:"Cancelada"
 };
 const money=(cents:number)=>new Intl.NumberFormat("es-US",{style:"currency",currency:"USD"}).format(cents/100);
 const date=(v:string)=>new Intl.DateTimeFormat("es-US",{dateStyle:"medium"}).format(new Date(v));
@@ -277,7 +277,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
         req.owner_id===user.id&&req.status==="quoted"?
          <button type="button" disabled={busy} onClick={()=>void accept(req)}>Aprobar {money(req.quoted_price_cents)}</button>:null}
       </div>:<p className={styles.notQuoted}>El equipo todavía no ha emitido un presupuesto. Ningún trabajo de pago ha comenzado.</p>}
-      {req.status==="verified"&&req.evidence_url?<a className={styles.evidence} href={req.evidence_url} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Ver evidencia del resultado</a>:null}
+      {req.status==="verified"&&req.evidence_url?<><a className={styles.evidence} href={req.evidence_url} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Ver evidencia aportada por el equipo</a><p className={styles.notQuoted}>La evidencia fue registrada por VMV; no representa una confirmación independiente del directorio.</p></>:null}
       {staff&&teamView?<div className={styles.staffControls}>
        <button type="button" onClick={()=>activeStaffId===req.id?setActiveStaffId(null):openStaff(req)}>{activeStaffId===req.id?"Cerrar controles":"Gestionar como equipo"}</button>
        {activeStaffId===req.id?<div className={styles.staffForm}>
