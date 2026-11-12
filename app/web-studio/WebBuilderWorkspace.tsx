@@ -305,7 +305,7 @@ export default function WebBuilderWorkspace(){
 
  // Save drafts after editing settles. Never publish from autosave.
  useEffect(()=>{
-  if(!page||!userId||!dirty||busy||view!=="editor"||recovery)return;
+  if(!page||!userId||!dirty||busy||recovery)return;
   const snapshot=JSON.stringify({
    id:page.id,document:normalizeBuilderDocument(document),title:title.trim(),description:description.trim()
   });
@@ -542,7 +542,7 @@ export default function WebBuilderWorkspace(){
     <button type="button" className={view==="history"?styles.selected:""} onClick={()=>void openHistory()}><History size={14}/> Historial</button>
     <button type="button" className={view==="domains"?styles.selected:""} onClick={()=>void openDomains()}><Globe size={14}/> Dominios</button>
    </div>
-   {view==="editor"?<section className={styles.editorSection}>
+   {page?<section className={styles.editorSection} style={{display:view==="editor"?undefined:"none"}}>
     <div className={styles.pageTabs}>{pages.map(p=><button type="button" key={p.id}
      className={page?.id===p.id?styles.selected:""} onClick={()=>choosePage(p)}>{p.slug==="home"?"Inicio":p.title}</button>)}</div>
     <form className={styles.addPage} onSubmit={e=>{e.preventDefault();void createPage();}}>
