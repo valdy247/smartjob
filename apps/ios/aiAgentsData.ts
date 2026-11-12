@@ -2,6 +2,7 @@ import type {Session} from "@supabase/supabase-js";
 import type React from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {api,supabase} from "./session";
+import {inspectAgent} from "./aiAgentQuality";
 
 export type AgentKind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 export type AgentStatus="draft"|"active"|"paused";
@@ -62,7 +63,7 @@ export async function saveAgent(session:Session,draft:AgentDraft,existingId?:str
   const normalized={name:draft.name.trim().slice(0,80),kind:draft.kind,
     purpose:draft.purpose.trim().slice(0,240),personality:draft.personality.trim().slice(0,60),
     language:draft.language,instructions:draft.instructions.trim().slice(0,2500),
-    knowledge:draft.knowledge.trim().slice(0,8000),configuration:Object.fromEntries(Object.entries(draft.configuration||{}).filter(([key,val])=>key.length<=50&&typeof val==="string").slice(0,60).map(([key,val])=>[key,val.slice(0,500)])),status:draft.status,
+    knowledge:draft.knowledge.trim().slice(0,8000),configuration:Object.fromEntries(Object.entries(draft.configuration||{}).filter(([key,val])=>key.length<=50&&typeof val==="string").slice(0,60).map(([key,val])=>[key,val.slice(0,500)])),status:draft.status==="active"&&!inspectAgent(draft).requiredPassed?"paused":draft.status,
     updated_at:new Date().toISOString()};
   if(!normalized.name)throw new Error("El agente necesita un nombre.");
   if(existingId){
