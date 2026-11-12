@@ -190,3 +190,41 @@
 }
 @media(prefers-reduced-motion:reduce){.wizardBody{animation:none}.serviceTile{transition:none}}
 @media(prefers-reduced-motion:no-preference){@keyframes vmv-wizard-in{from{opacity:.6;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}}
+
+
+/* iPhone wizard: compact header, safe-area-aware actions and keyboard-friendly focus. */
+@media(max-width:700px){
+ .root{gap:12px;min-width:0}
+ .hero{padding:17px;border-radius:17px;box-shadow:none}
+ .hero>span{font-size:9px;letter-spacing:.55px}
+ .hero h2{font-size:21px;letter-spacing:-.55px;margin:8px 0;line-height:1.2}
+ .hero p{font-size:11px;line-height:1.5}
+ .quickActions{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .quickActions button{min-height:116px;border-radius:13px;padding:12px 10px;gap:7px}
+ .quickActions button strong{font-size:11px;line-height:1.35}
+ .quickActions button small{font-size:10px;line-height:1.35}
+ .quickActions button>svg:first-child{height:18px;width:18px}
+ .quickActions button>svg:last-child{width:13px;height:13px;right:9px;top:9px}
+ .wizardPanel{overflow:visible;border-radius:17px;padding:15px;scroll-margin-top:15px;box-shadow:none}
+ .wizardHeading h3{font-size:23px}
+ .wizardHeading p{font-size:11px;line-height:1.5}
+ .wizardBody{gap:14px}
+ .wizardField input,.wizardField select,.goalLabel textarea,.staffForm input,.staffForm textarea,.staffForm select{font-size:16px;line-height:1.45;min-height:50px}
+ .wizardFooter{position:sticky;bottom:0;z-index:12;display:flex;align-items:center;margin:18px -15px -15px;padding:12px 15px calc(12px + env(safe-area-inset-bottom));border-top:1px solid #eddce8;background:rgba(255,252,255,.96);box-shadow:0 -8px 24px rgba(63,29,67,.075);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+ /* iOS keyboard: don't keep an action bar over an input being edited. */
+ .wizardPanel:has(input:focus,textarea:focus,select:focus) .wizardFooter{position:static;box-shadow:none;backdrop-filter:none}
+ .wizardPanel input,.wizardPanel select,.wizardPanel textarea{scroll-margin-top:15vh;scroll-margin-bottom:32vh}
+ .wizardPrimary,.wizardBack{min-height:49px;touch-action:manipulation}
+ .serviceTile{border-radius:14px}
+ .serviceText small{line-height:1.4}
+ .selectedServiceBanner{padding:11px;border-radius:13px}
+ .stepper{margin-top:15px}
+ .stepper li{padding:8px 2px;gap:4px}
+ .reviewCard{border-radius:13px}
+ .costNote{padding:12px}
+ .permission{font-size:11px;line-height:1.55;padding:11px}
+}
+@media(max-width:380px){
+ .wizardPanel{margin-inline:0;padding:12px}
+ .wizardFooter{margin-inline:-12px;padding-left:12px;padding-right:12px}
+}
