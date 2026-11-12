@@ -9,12 +9,13 @@ import type {LucideIcon} from "lucide-react";
 import styles from "./page.module.css";
 import AgentSetupWizard,{type WizardDraft} from "./AgentSetupWizard";
 import AgentQualityLab from "./AgentQualityLab";
+import CommerceStudio from "./CommerceStudio";
 import {inspectAgent} from "./agentQuality";
 import {loadAgents,loadPhoneSelection,selectPhoneAgent,setStudyStatus,storeAgent,type PersistedAgent,type PhoneSelection} from "./agentStore";
 
 type Kind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 type Status="draft"|"active"|"paused";
-type Screen="home"|"editor"|"test"|"quality";
+type Screen="home"|"editor"|"test"|"quality"|"commerce";
 type AgentDraft=WizardDraft;
 type Agent=PersistedAgent;
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
@@ -154,6 +155,9 @@ export default function AIAgentsPreview(){
       {notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
       {loading?<div className={styles.info}>Consultando tus agentes guardados…</div>:null}
       {!authenticated?<div className={styles.info}>Inicia sesión en <a href="/vista-app">VMV Business</a> para guardar y seleccionar agentes.</div>:null}
+      {authenticated&&agents.length>0?<button type="button" className={styles.commerceLaunch} onClick={()=>setScreen("commerce")}>
+       <ShoppingBag size={21}/><span><strong>Catálogo y pedidos</strong><small>Precios aprobados, pedidos y pruebas comerciales</small></span><ArrowUpRight size={19}/>
+      </button>:null}
       {phone?<div className={styles.info}>
        <PhoneCall size={17}/> Línea de prueba {phone.maskedNumber} ·
        {phone.agentId?" Agente elegido. Falta validar Twilio.":" Sin agente seleccionado."}
@@ -201,6 +205,7 @@ export default function AIAgentsPreview(){
      {screen==="editor"?<AgentSetupWizard key={(selected||draft.kind)+"-"+editStep}
       initial={draft} initialStep={editStep} onCancel={back} onSave={updated=>{setDraft(updated);void save(updated);}}/>:null}
      {screen==="quality"&&active?<AgentQualityLab agent={active} onClose={back} onEdit={step=>edit(active,step)}/>:null}
+     {screen==="commerce"?<CommerceStudio agents={agents.filter(a=>a.revision>0)} onClose={back}/>:null}
      {screen==="test"&&active?<div className={styles.testing}>
       <div className={styles.testAgent}><div className={styles.testAvatar}><Bot size={24}/></div><strong>{active.name}</strong>
        <small>Simulación privada · Vista de diseño</small></div>
