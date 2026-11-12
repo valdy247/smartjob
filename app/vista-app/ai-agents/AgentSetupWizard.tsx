@@ -1,5 +1,5 @@
 "use client";
-import {useMemo,useState} from "react";
+import {useEffect,useMemo,useState} from "react";
 import {ArrowLeft,ArrowRight,CalendarDays,Check,CheckCircle2,Clock3,PlugZap,ShieldCheck,Sparkles} from "lucide-react";
 import styles from "./AgentSetupWizard.module.css";
 
@@ -10,7 +10,7 @@ export type WizardDraft={
 };
 type Question={id:string;title:string;hint?:string;kind?:"text"|"textarea"|"choice"|"multi"|"state"|"hours";options?:string[];required?:boolean;when?:(a:Record<string,string>)=>boolean};
 type Section={title:string;subtitle:string;questions:Question[]};
-type Props={initial:WizardDraft;onSave:(updated:WizardDraft)=>Promise<void>|void;onCancel:()=>void;isPreview?:boolean;initialStep?:0|1|2|3;saving?:boolean};
+type Props={initial:WizardDraft;onSave:(updated:WizardDraft)=>Promise<void>|void;onCancel:()=>void;isPreview?:boolean;initialStep?:0|1|2|3;saving?:boolean;authRequired?:boolean;recoverDraft?:boolean};
 const allRoles:AgentKind[]=["calls","support","sales","bookings","inventory","operations","custom"];
 const q=(id:string,title:string,options:string[],required=false,when?:Question["when"]):Question=>({id,title,kind:"choice",options,required,when});
 const t=(id:string,title:string,required=false,hint?:string):Question=>({id,title,required,hint,kind:"text"});
@@ -120,9 +120,37 @@ function sections(kind:AgentKind,answers:Record<string,string>):Section[]{
  ];
 }
 function inputValue(v:Record<string,string>,key:string){return v[key]||"";}
-export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=false,initialStep=0,saving=false}:Props){
+export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=false,initialStep=0,saving=false,authRequired=false,recoverDraft=false}:Props){
  const [draft,setDraft]=useState<WizardDraft>(()=>({...initial,setup:{...(initial.setup||{})}}));
  const [step,setStep]=useState<number>(initialStep);
+ const [recoveryReady,setRecoveryReady]=useState(false);
+ const [draftRestored,setDraftRestored]=useState(false);
+ // This temporary recovery is per browser tab, never a published agent or server save.
+ useEffect(()=>{
+  if(recoverDraft){
+   try{
+    const raw=sessionStorage.getItem("vmv-ai-unsaved-wizard-v1");
+    if(raw){
+     const saved=JSON.parse(raw) as {at?:number;draft?:WizardDraft;step?:number};
+     const candidate=saved.draft;
+     if(typeof saved.at==="number"&&Date.now()-saved.at<86400000&&
+        candidate&&candidate.kind===initial.kind&&typeof candidate.name==="string"&&
+        typeof candidate.purpose==="string"&&candidate.setup&&typeof candidate.setup==="object"&&
+        !Array.isArray(candidate.setup)){
+       setDraft({...candidate,setup:{...candidate.setup}});
+       setStep(Math.min(3,Math.max(0,Number(saved.step)||0)));
+       setDraftRestored(true);
+     }
+    }
+   }catch{/* Browser storage can be restricted. Never prevent editing. */}
+  }
+  setRecoveryReady(true);
+ },[initial.kind,recoverDraft]);
+ useEffect(()=>{
+  if(!recoverDraft||!recoveryReady)return;
+  try{sessionStorage.setItem("vmv-ai-unsaved-wizard-v1",
+   JSON.stringify({at:Date.now(),draft,step}));}catch{/* Session-only backup is optional. */}
+ },[draft,step,recoverDraft,recoveryReady]);
  const [error,setError]=useState("");
  const steps=useMemo(()=>sections(draft.kind,draft.setup),[draft.kind,draft.setup]);
  const current=steps[step];
@@ -163,6 +191,11 @@ export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=fals
     {i<step?<Check size={13}/>:i+1}</button>)}</div>
   <div className={styles.titleGroup}><span className={styles.eyebrow}><Sparkles size={14}/> PASO {step+1}</span>
    <h1>{current.title}</h1><p>{current.subtitle}</p></div>
+  {draftRestored?<p className={styles.reviewMessage} role="status">Recuperé el borrador temporal de esta pestaña. Todavía debes guardarlo en tu cuenta.</p>:null}
+  {authRequired?<div className={styles.reviewMessage} role="alert">
+   <ShieldCheck size={18}/><p>Para guardar este agente debes iniciar sesión en VMV.
+   Tu borrador se conservará temporalmente en esta pestaña. <a href="/vista-app">Iniciar sesión</a></p>
+  </div>:null}
   {step===0?<div className={styles.fields}>
    <label className={styles.field}>¿Cómo se llamará tu agente?<input maxLength={80} value={draft.name} onChange={e=>value("name",e.target.value)} placeholder="Ej. Luna, asistente de ventas"/></label>
    <label className={styles.field}>¿Cuál será su misión?<textarea maxLength={240} rows={3} value={draft.purpose} onChange={e=>value("purpose",e.target.value)} placeholder="¿Qué debe lograr para tu negocio?"/></label>
