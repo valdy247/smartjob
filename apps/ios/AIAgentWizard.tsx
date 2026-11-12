@@ -167,6 +167,20 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false,initialStep=
     <Text style={styles.label}>Especialidad</Text>
     <View style={styles.choices}>{AI_AGENT_TEMPLATES.map(t=><Tag key={t.kind} title={t.title}
       selected={draft.kind===t.kind} onPress={()=>setDraft(s=>({...s,kind:t.kind,purpose:s.kind===t.kind?s.purpose:t.purpose}))}/>)}</View>
+    <Text style={styles.label}>¿En qué canal trabajará?</Text>
+    <View style={styles.choices}>{["Teléfono","Chat","Teléfono y chat"].map(x=><Tag key={x} title={x}
+      selected={(answers.channel||"Chat")===x} onPress={()=>update("channel",x)}/>)}</View>
+    <Text style={styles.label}>¿Qué tareas podrá realizar?</Text>
+    <View style={styles.choices}>{([["cap_attend","Atender clientes"],["cap_sales","Vender"],["cap_bookings","Reservas"],["cap_catalog","Consultar catálogo"]] as const).map(([key,label])=>
+      <Tag key={key} title={label} selected={answers[key]==="Sí"}
+        onPress={()=>update(key,answers[key]==="Sí"?"No":"Sí")}/>)}</View>
+    {answers.cap_sales==="Sí"?<>
+      <Text style={styles.label}>Permisos comerciales</Text>
+      <View style={styles.choices}>{([["perm_prepare_order","Preparar pedidos"],["perm_confirm_order","Confirmar con aceptación"],["perm_payment_link","Enlace de pago verificado"]] as const).map(([key,label])=>
+       <Tag key={key} title={label} selected={answers[key]==="Sí"}
+        onPress={()=>update(key,answers[key]==="Sí"?"No":"Sí")}/>)}</View>
+      <Text style={styles.subtitle}>Nunca aceptará números de tarjeta durante la llamada.</Text>
+    </>:null}
     <Text style={styles.label}>¿Cómo hablará?</Text>
     <View style={styles.choices}>{["Español","English","Bilingüe"].map(x=><Tag key={x} title={x}
       selected={(answers.agent_language||({es:"Español",en:"English",both:"Bilingüe"}[draft.language]))===x}
