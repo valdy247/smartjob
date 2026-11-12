@@ -53,3 +53,14 @@
 .ws-public:has(.ws-public-whatsapp-float) .ws-public-footer{padding-bottom:72px}
 @media(max-width:700px){.ws-public-whatsapp-float{bottom:16px;right:15px;padding:12px 15px;font-size:12px}.ws-public:has(.ws-public-whatsapp-float) .ws-public-footer{padding-bottom:78px}}
 @media(prefers-reduced-motion:reduce){.ws-public-whatsapp-float{transition:none}.ws-public-whatsapp-float:hover{transform:none}}
+
+
+/* Service cards are real inquiry links with explicit keyboard focus. */
+.ws-public-service-grid article:has(.ws-public-service-action){padding:0;overflow:hidden}
+.ws-public-service-action{display:flex;flex-direction:column;gap:16px;min-height:195px;height:100%;padding:24px;color:inherit;text-decoration:none;border-radius:19px}
+.ws-public-service-action>span:first-child{font-size:12px;font-weight:800;color:var(--ws-color)}
+.ws-public-service-action h3{font-size:clamp(18px,2.4vw,30px);letter-spacing:-.05em;line-height:1.15;overflow-wrap:anywhere;margin:auto 0}
+.ws-public-service-action>span:last-child{align-self:flex-end;font-size:22px;color:var(--ws-color)}
+.ws-public-service-action:hover{box-shadow:inset 0 0 0 2px var(--ws-color)}
+.ws-public-service-action:focus-visible{outline:3px solid var(--ws-color);outline-offset:-4px}
+@media(max-width:700px){.ws-public-service-action{min-height:125px;padding:21px}}
