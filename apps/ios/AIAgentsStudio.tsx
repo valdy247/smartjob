@@ -7,7 +7,7 @@ import {AIAgentWizard} from "./AIAgentWizard";
 import {AIAgentQualityLab} from "./AIAgentQualityLab";
 import {inspectAgent} from "./aiAgentQuality";
 import {AI_AGENT_TEMPLATES,createConversation,emptyAgent,getAgents,getConversations,getMessages,
-  saveAgent,simulateAgent,updateAgentStatus,type Agent,type AgentConversation,
+  choosePhoneAgent,getPhoneSelection,saveAgent,simulateAgent,updateAgentStatus,type NativePhoneSelection,type Agent,type AgentConversation,
   type AgentDraft,type AgentKind,type AgentMessage,type AgentStatus,type Language} from "./aiAgentsData";
 
 const C={bg:"#F9FAFC",paper:"#FFFFFF",ink:"#201C35",muted:"#817A91",
@@ -57,6 +57,7 @@ export function AIAgentsStudio({session,onBack}:Props){
   const [screen,setScreen]=useState<Screen>("home");
   const [editStep,setEditStep]=useState<0|1|2|3>(0);
   const [agents,setAgents]=useState<Agent[]>([]);
+  const [phone,setPhone]=useState<NativePhoneSelection|null>(null);
   const [selected,setSelected]=useState<Agent|null>(null);
   const [draft,setDraft]=useState<AgentDraft>(emptyAgent("support"));
   const [busy,setBusy]=useState(false);
@@ -68,7 +69,8 @@ export function AIAgentsStudio({session,onBack}:Props){
   const [message,setMessage]=useState("");
 
   const refresh=useCallback(async()=>{
-    try{const list=await getAgents(session);setAgents(list);setNotice("");}
+    try{const [list,selection]=await Promise.all([getAgents(session),getPhoneSelection(session)]);
+      setAgents(list);setPhone(selection);setNotice("");}
     catch(e){setNotice(e instanceof Error?e.message:"No se pudo cargar AI Agents.");}
     finally{setLoading(false);}
   },[session.user.id,session.access_token]);
@@ -90,7 +92,7 @@ export function AIAgentsStudio({session,onBack}:Props){
     if(busy)return;
     setBusy(true);
     try{
-      const item=await saveAgent(session,nextDraft,selected?.id);
+      const item=await saveAgent(session,nextDraft,selected?.id,selected?.revision);
       setSelected(item);
       await refresh();
       setScreen("home");
@@ -109,6 +111,19 @@ export function AIAgentsStudio({session,onBack}:Props){
       setAgents(current=>current.map(x=>x.id===changed.id?changed:x));
       if(selected?.id===changed.id)setSelected(changed);
     }catch(e){Alert.alert("Estado no actualizado",e instanceof Error?e.message:"Intenta nuevamente.");}
+    finally{setBusy(false);}
+  }
+  async function choose(agent:Agent|null){
+    if(!phone||busy)return;
+    setBusy(true);
+    try{
+      await choosePhoneAgent(session,phone.routeId,agent);
+      const updated=await getPhoneSelection(session);
+      setPhone(updated);
+      Alert.alert("Línea de prueba",agent?
+       "Agente elegido y guardado. La llamada no se redirigirá hasta verificar Twilio.":
+       "Se retiró el agente seleccionado.");
+    }catch(e){Alert.alert("No se pudo elegir",e instanceof Error?e.message:"Vuelve a intentarlo.");}
     finally{setBusy(false);}
   }
   function openQuality(agent:Agent){
@@ -182,6 +197,12 @@ export function AIAgentsStudio({session,onBack}:Props){
             <Text style={styles.heroStat}>{activeCount} activos en estudio</Text>
           </View>
         </View>
+        {phone?<View style={styles.warning}>
+          <Ionicons name="call-outline" size={18} color={C.purple}/>
+          <Text style={[styles.help,{flex:1}]}>Línea {phone.maskedNumber}: {
+            phone.agentId?"Agente elegido · pendiente de conexión Twilio":"Sin agente elegido"}</Text>
+          {phone.agentId?<Action label="Quitar" icon="close-outline" onPress={()=>void choose(null)} disabled={busy}/>:null}
+         </View>:null}
         {notice?<View style={styles.warning}><Ionicons name="information-circle-outline" size={18} color="#76559C"/>
           <Text style={[styles.help,{flex:1}]}>{notice}</Text></View>:null}
         <SectionTitle title="¿Qué quieres automatizar?" caption="Selecciona una función para preparar tu agente."/>
@@ -219,7 +240,7 @@ export function AIAgentsStudio({session,onBack}:Props){
                 </View>
                 <View style={[styles.stateBadge,agent.status==="active"?{backgroundColor:"#E2F7E9"}:null]}>
                   <Text style={[styles.stateText,agent.status==="active"?{color:"#237C55"}:null]}>
-                    {agent.status==="active"?"Activo":agent.status==="paused"?"Pausado":"Borrador"}
+                    {agent.status==="paused"?"Pausado":phone?.agentId===agent.id?"Seleccionado":agent.status==="active"?"Estudio activo":"Borrador"}
                   </Text>
                 </View>
               </View>
@@ -232,6 +253,8 @@ export function AIAgentsStudio({session,onBack}:Props){
               </View>
               <View style={styles.agentActions}>
                 <Action label="Probar" icon="chatbubble-ellipses-outline" solid onPress={()=>openTest(agent)}/>
+                {phone?<Action label={phone.agentId===agent.id?"Elegido":"Elegir línea"}
+                  icon="call-outline" disabled={busy} onPress={()=>void choose(agent)}/>:null}
                 <Action label="Calidad" icon="shield-checkmark-outline" onPress={()=>openQuality(agent)}/>
                 <Action label="Editar" icon="create-outline" onPress={()=>edit(agent)}/>
                 <Action label="Historial" icon="time-outline" onPress={()=>void openHistory(agent)}/>
@@ -243,7 +266,7 @@ export function AIAgentsStudio({session,onBack}:Props){
               </Pressable>
             </View>;
           })}
-        <Text style={styles.footerNote}>Los agentes activos funcionan únicamente en el simulador. Llamadas, ventas, reservas e inventario real requieren conexiones autorizadas.</Text>
+        <Text style={styles.footerNote}>Los agentes se guardan en tu cuenta. Elegir uno para la línea no cambia el webhook de Twilio, ni confirma ventas o pagos.</Text>
       </ScrollView>:null}
 
       {screen==="edit"?<AIAgentWizard key={(selected?.id||draft.kind)+"-"+editStep}
