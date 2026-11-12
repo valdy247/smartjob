@@ -6,7 +6,7 @@ import {AI_AGENT_TEMPLATES} from "./aiAgentsData";
 
 type Question={id:string;label:string;type?:"text"|"paragraph"|"choice"|"state"|"hours";options?:string[];required?:boolean;when?:(a:Record<string,string>)=>boolean};
 type Stage={title:string;description:string;items:Question[]};
-type Props={initial:AgentDraft;onSave:(next:AgentDraft)=>void;onCancel:()=>void;saving?:boolean};
+type Props={initial:AgentDraft;onSave:(next:AgentDraft)=>void;onCancel:()=>void;saving?:boolean;initialStep?:0|1|2|3};
 const text=(id:string,label:string,required=false):Question=>({id,label,required,type:"text"});
 const para=(id:string,label:string,required=false):Question=>({id,label,required,type:"paragraph"});
 const pick=(id:string,label:string,options:string[],required=true,when?:Question["when"]):Question=>
@@ -109,9 +109,9 @@ function Tag({title,selected,onPress}:{title:string;selected:boolean;onPress:()=
   <Text style={[styles.tagText,selected&&{color:"#764CCB"}]}>{title}</Text>
  </Pressable>;
 }
-export function AIAgentWizard({initial,onSave,onCancel,saving=false}:Props){
+export function AIAgentWizard({initial,onSave,onCancel,saving=false,initialStep=0}:Props){
  const [draft,setDraft]=useState<AgentDraft>(()=>({...initial,configuration:{...(initial.configuration||{})}}));
- const [step,setStep]=useState(0);
+ const [step,setStep]=useState(initialStep);
  const [error,setError]=useState("");
  const [picker,setPicker]=useState<{key:string;title:string;values:string[]}|null>(null);
  const [answers,setAnswers]=useState<Record<string,string>>(()=>({...initial.configuration||{}}));
