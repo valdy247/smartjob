@@ -94,7 +94,7 @@ The original two open text areas are replaced in both the isolated web showcase 
 - Reservation and cancellation lead times use clearly labeled choices (immediate, 15 minutes, 30 minutes, 1 hour, etc.), with an optional custom value.
 - Staffing is asked in plain terms; additional employee/vehicle/location questions appear only for multiple operators, never for solo owners.
 - The disconnected inventory and scheduling integration page is completely hidden. Future integration prompts require **tenant-verified, enabled and authorized connectors**, not just product catalog metadata.
-- In both web and native, the wizard varies between five and more steps depending on verified capabilities. The web showcase still saves only in-memory.
+- Both web and native currently show five focused steps; additional integration steps must remain hidden until business-scoped connectors can be verified. The web showcase still saves only in-memory.
 
 ## Isolated inbound telephone AI pilot — CODE ONLY, NOT LIVE
 - New owned route: `app/api/vmv/ai-agents/voice/route.ts` (signed Twilio HTTP POST, speech gathering, authenticated tenant route, pilot quota and brief AI voice responses).
