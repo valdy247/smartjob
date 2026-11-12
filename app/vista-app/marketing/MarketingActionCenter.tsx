@@ -83,7 +83,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [chosenCategory,setChosenCategory]=useState("");
  useEffect(()=>{
   if(preselectedService){
-   setSelected(current=>{if(current!==preselectedService)setGoal("");return preselectedService;});
+   setSelected(preselectedService);setGoal("");setConsent(false);
    setWizardStep(1);setWizardError("");setSubmittedId(null);
   }
  },[preselectedService]);
