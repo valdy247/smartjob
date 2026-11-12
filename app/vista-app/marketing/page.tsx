@@ -55,7 +55,7 @@ function Field({label,value,onChange,placeholder,type="text",hint,min,max}:{
 }
 export default function MarketingPage(){
  const [section,setSection]=useState<Section>("actions");
- const [requestedService,setRequestedService]=useState<ServiceCode>("google_profile");
+ const [requestedService,setRequestedService]=useState<ServiceCode|null>(null);
  const [form,setForm]=useState<FormState>(initial);
  const [notice,setNotice]=useState("");
  const [reviewUrl,setReviewUrl]=useState("");
@@ -231,7 +231,7 @@ export default function MarketingPage(){
       <button type="button" className={styles.primary} onClick={()=>setSection("campaign")}>Diseñar campaña <ArrowUpRight size={16}/></button>
      </>:null}
      {section==="actions"?<MarketingActionCenter businessName={form.business}
-      industryId={form.industry} website={form.website} preselectedService={requestedService}
+      industryId={form.industry} website={form.website} preselectedService={requestedService||undefined}
       onGoToVisibility={()=>{setSection("presence");setNotice("");}}/>:null}
      {section==="presence"?<LocalVisibilityStudio
       profile={{business:form.business,industry:industryName(form.industry),website:form.website,phone:form.phone,address:form.address,city:form.city,region:form.region,postal:form.postal,hours:form.hours,description:form.description}}
