@@ -180,7 +180,7 @@ export default function MarketingPage(){
     <Link href="/vista-app" className={styles.back}><ArrowLeft size={17}/> VMV Business</Link>
     <span className={styles.marker}><Sparkles size={14}/> MARKETING STUDIO · BETA</span>
    </header>
-   <section className={styles.hero}>
+   {section!=="actions"?<section className={styles.hero}>
     <div className={styles.heroIntro}>
      <span className={styles.eyebrow}><TrendingUp size={16}/> MÁS CLIENTES. MEJORES DECISIONES.</span>
      <h1>Marketing que se convierte en <em>crecimiento.</em></h1>
@@ -188,17 +188,17 @@ export default function MarketingPage(){
      <div className={styles.heroPills}><span>Sin métricas inventadas</span><span>Orientado a resultados</span><span>Listo para pequeños negocios</span></div>
     </div>
     <div className={styles.heroShape}><div><Target size={38}/><strong>Tu siguiente cliente</strong><span>Comienza con una estrategia clara</span></div></div>
-   </section>
+   </section>:null}
    {section!=="actions"?<div className={styles.noticeBand}><ShieldCheck size={18}/><p><strong>Planificación local.</strong> Los borradores y cálculos de esta pantalla no se guardan en servidores. Las solicitudes enviadas desde Acciones sí quedan registradas en tu cuenta; no publicamos campañas ni hacemos cargos automáticamente.</p></div>:null}
-   <div className={styles.workspace}>
-    <aside className={styles.sidebar}>
+   <div className={section==="actions"?styles.catalogWorkspace:styles.workspace}>
+    {section!=="actions"?<aside className={styles.sidebar}>
      <span className={styles.sidebarLabel}>CENTRO DE CRECIMIENTO</span>
      {tabs.map(tab=><button type="button" key={tab.id} onClick={()=>{setSection(tab.id);setNotice("");}}
       className={section===tab.id?styles.tabActive:styles.tab} aria-current={section===tab.id?"page":undefined}>
        <tab.Icon size={20}/><span><strong>{tab.label}</strong><small>{tab.description}</small></span><ArrowUpRight size={14}/></button>)}
      <div className={styles.sidebarNote}><Lightbulb size={19}/><strong>Regla del crecimiento</strong><p>Una campaña no es un éxito por sus vistas. Importan clientes, margen y recurrencia.</p></div>
-    </aside>
-    <div className={styles.content}>
+    </aside>:null}
+    <div className={section==="actions"?styles.catalogContent:styles.content}>
      {section==="strategy"?<>
       <div className={styles.sectionTop}><span>PASO 01 · FUNDAMENTOS</span><h2>Entendamos tu negocio</h2><p>La mejor estrategia depende de quién compra, qué necesita y cuánto deja cada venta.</p></div>
       <div className={styles.formGrid}>
@@ -352,6 +352,7 @@ export default function MarketingPage(){
       </div>
       <div className={styles.insight}><Lightbulb size={21}/><div><strong>Experimento de 7 días</strong><p>Registra cuántos clientes aceptaron volver a recibir noticias, cuántos respondieron y cuántos regresaron. Compara la utilidad con el coste de conseguir clientes nuevos.</p></div></div>
      </>:null}
+     {section==="actions"?<details className={styles.advancedTools}><summary>Más herramientas de marketing</summary><div className={styles.advancedLinks}>{tabs.filter(t=>t.id!=="actions").map(tab=><button key={tab.id} type="button" onClick={()=>setSection(tab.id)}><tab.Icon size={17}/>{tab.label}<ArrowUpRight size={14}/></button>)}</div></details>:null}
      {notice?<p role="status" className={styles.toast}>{notice}</p>:null}
     </div>
    </div>
