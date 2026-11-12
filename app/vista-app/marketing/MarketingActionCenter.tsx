@@ -321,18 +321,18 @@ export default function MarketingActionCenter({businessName,industryId,website,o
      <button type="button" className={styles.wizardPrimary} onClick={()=>document.getElementById("vmv-marketing-history")?.scrollIntoView({behavior:"smooth",block:"start"})}>Ver seguimiento <ArrowRight size={16}/></button>
     </div>
    </div>:<>
-    <div className={styles.wizardHeading}>
+    {wizardStep>0?<div className={styles.wizardHeading}>
      <div><span className={styles.overline}><LayoutGrid size={15}/> ASISTENTE DE MARKETING</span>
       <h3>{wizardStep===0?"¿En qué te ayudamos hoy?":wizardStep===1?"Primero, tu negocio":wizardStep===2?"¿Qué necesitas conseguir?":"Confirma tu solicitud"}</h3>
       <p>{wizardStep===0?"Elige una opción para comenzar. Te guiaremos paso a paso.":wizardStep===1?"Usaremos los datos que ya conocemos para ahorrarte trabajo.":wizardStep===2?"Toca una sugerencia o cuéntanos brevemente qué necesitas.":"Revisa todo antes de enviarlo. No se realizará ningún cambio externo."}</p>
      </div>
      <span className={styles.stepCount}>{wizardStep+1} / 4</span>
-    </div>
-    <ol className={styles.stepper} aria-label="Progreso de la solicitud">
+    </div>:null}
+    {wizardStep>0?<ol className={styles.stepper} aria-label="Progreso de la solicitud">
      {wizardTitles.map((label,index)=><li key={label} className={index===wizardStep?styles.stepCurrent:index<wizardStep?styles.stepDone:styles.stepPending} aria-current={index===wizardStep?"step":undefined}>
       <span className={styles.stepBubble}>{index<wizardStep?<Check size={14}/>:index+1}</span><span>{label}</span>
      </li>)}
-    </ol>
+    </ol>:null}
     {wizardStep===0?<div className={styles.wizardBody}>
      <div className={styles.servicePicker}>
       {services.filter(service=>["google_profile","seo_improvement","review_strategy"].includes(service.id)).map(service=>{
