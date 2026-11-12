@@ -4,6 +4,7 @@ import Link from "next/link";
 import {ArrowLeft,ArrowUpRight,BarChart3,CheckCircle2,ClipboardCopy,Globe2,HeartHandshake,Link2,Lightbulb,Mail,Megaphone,MessageCircle,Share2,ShieldCheck,Sparkles,Target,TrendingUp} from "lucide-react";
 import styles from "./page.module.css";
 import LocalVisibilityStudio from "./LocalVisibilityStudio";
+import {BUSINESS_CATEGORIES,CATEGORY_GROUPS,categoryLabel} from "@/lib/vmv-business-categories";
 
 type Section="strategy"|"presence"|"campaign"|"numbers"|"retention";
 type Channel="social"|"search"|"local"|"referrals"|"email";
@@ -33,11 +34,9 @@ const channels:{id:Channel;label:string;desc:string}[]=[
 ];
 const number=(raw:string)=>{const n=Number(raw);return raw.trim()!==""&&Number.isFinite(n)&&n>=0?n:null;};
 const money=(n:number|null)=>n===null?"—":n.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:2});
-const percent=(n:number|null)=>n===null?"—":n.toLocaleString("es-US",{maximumFractionDigits:1})+"%";
-const safe=(v:string,fallback:string)=>v.trim()||fallback;
-type IndustryGroup={label:string;options:{id:string;label:string}[]};
-const industryGroups:IndustryGroup[]=[{"label":"Comida y hospitalidad","options":[{"id":"bakery","label":"Repostería y panadería"},{"id":"restaurant","label":"Restaurantes y cafeterías"},{"id":"catering","label":"Catering y comida preparada"},{"id":"hotel","label":"Hoteles y alojamiento"}]},{"label":"Hogar y construcción","options":[{"id":"construction","label":"Construcción y remodelación"},{"id":"home_services","label":"Plomería, electricidad y climatización"},{"id":"cleaning","label":"Limpieza residencial y comercial"},{"id":"landscaping","label":"Jardinería y paisajismo"},{"id":"real_estate","label":"Bienes raíces"}]},{"label":"Comercio y servicios","options":[{"id":"retail","label":"Tiendas y comercio electrónico"},{"id":"beauty","label":"Belleza, barbería y estética"},{"id":"wellness","label":"Salud y bienestar"},{"id":"fitness","label":"Fitness y gimnasios"},{"id":"automotive","label":"Automotriz"},{"id":"pets","label":"Mascotas y veterinaria"},{"id":"events","label":"Eventos y entretenimiento"}]},{"label":"Profesionales y digitales","options":[{"id":"consulting","label":"Consultoría y servicios profesionales"},{"id":"technology","label":"Tecnología y desarrollo web"},{"id":"creative","label":"Marketing, diseño y fotografía"},{"id":"education","label":"Educación y formación"},{"id":"transport","label":"Transporte y logística"},{"id":"finance","label":"Contabilidad y finanzas"}]},{"label":"Otros","options":[{"id":"other","label":"Otro tipo de negocio"},{"id":"unsure","label":"No estoy seguro"}]}];
-const industryName=(id:string)=>industryGroups.flatMap(group=>group.options).find(option=>option.id===id)?.label||"Por definir";
+const percent=(n:number|null)=>n===null?"—":n.toLocaleString("e// Shared taxonomy from Web Services. Keep IDs consistent across VMV Business.
+const industryName=(id:string)=>id==="unsure"?"No estoy seguro":categoryLabel(id,"Por definir");
+industryGroups.flatMap(group=>group.options).find(option=>option.id===id)?.label||"Por definir";
 const validReviewUrl=(value:string)=>{
  if(!value)return true;
  try{const url=new URL(value);return url.protocol==="https:"&&Boolean(url.hostname);}
@@ -188,7 +187,8 @@ export default function MarketingPage(){
        <label className={styles.field}><span>Industria o servicio</span>
         <select value={form.industry} onChange={e=>patch("industry",e.target.value)} aria-label="Selecciona la industria de tu negocio">
          <option value="">Selecciona tu industria</option>
-         {industryGroups.map(group=><optgroup key={group.label} label={group.label}>{group.options.map(option=><option key={option.id} value={option.id}>{option.label}</option>)}</optgroup>)}
+         {CATEGORY_GROUPS.map(group=><optgroup key={group} label={group}>{BUSINESS_CATEGORIES.filter(option=>option.group===group).map(option=><option key={option.id} value={option.id}>{option.label}</option>)}</optgroup>)}
+         <option value="unsure">No estoy seguro</option>
         </select><small>Opciones estandarizadas para estrategias más consistentes.</small>
        </label>
        <Field label="Cliente ideal" value={form.audience} onChange={v=>patch("audience",v)} placeholder="¿Quién suele comprar y por qué?"/>
