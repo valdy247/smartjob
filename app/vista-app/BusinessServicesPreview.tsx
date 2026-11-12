@@ -3,6 +3,7 @@ import {useEffect,useState,type ChangeEvent} from "react";
 import {Bot,Globe,Search,Star,CalendarDays,PanelsTopLeft,MapPin,ChartNoAxesCombined,Link2,PhoneCall,ArrowUpRight,ChevronLeft,Save,Copy,Check} from "lucide-react";
 import styles from "./BusinessServicesPreview.module.css";
 import WebServicesStudio from "./WebServicesStudio";
+import WebServicesInbox from "./WebServicesInbox";
 import {getSupabase} from "@/lib/supabase";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS,categoryIdFromLabel,categoryLabel,categoryById} from "@/lib/vmv-business-categories";
 
@@ -39,6 +40,7 @@ export default function BusinessServicesPreview({userId,focus="all"}:{userId:str
  const [charge,setCharge]=useState<Charge>("subscription");
  const [editor,setEditor]=useState(false);
  const [siteEditor,setSiteEditor]=useState(false);
+ const [inboxOpen,setInboxOpen]=useState(false);
  const [draft,setDraft]=useState<Draft>({...empty});
  const [status,setStatus]=useState("");
  const key="vmv.gbp.web.draft.v1."+userId;
@@ -103,6 +105,7 @@ export default function BusinessServicesPreview({userId,focus="all"}:{userId:str
   catch{setStatus("No se pudo copiar");}
  };
  if(siteEditor)return <WebServicesStudio ownerId={userId} onBack={()=>setSiteEditor(false)}/>;
+ if(inboxOpen)return <WebServicesInbox ownerId={userId} onBack={()=>setInboxOpen(false)}/>;
  if(editor)return <section className={styles.root}>
    <button type="button" className={styles.back} onClick={()=>setEditor(false)}><ChevronLeft size={18}/> Servicios</button>
    <div className={styles.editorHero}>
@@ -135,7 +138,10 @@ export default function BusinessServicesPreview({userId,focus="all"}:{userId:str
   </section>;
  return <section className={styles.root}>
   <div className={styles.header}><h3>{focus==="web"?"Web Services":"Servicios"}<span>.</span></h3><div className={styles.headerIcon}><PanelsTopLeft size={20}/></div></div>
-  {focus==="web"?<button className={styles.primary} type="button" onClick={()=>setSiteEditor(true)} style={{width:"100%",marginBottom:16}}><PanelsTopLeft size={18}/> Crear mi web <ArrowUpRight size={16}/></button>:null}
+  {focus==="web"?<div className={styles.webActions}>
+    <button className={styles.primary} type="button" onClick={()=>setSiteEditor(true)}><PanelsTopLeft size={18}/> Crear mi web <ArrowUpRight size={16}/></button>
+    <button className={styles.webActionSecondary} type="button" onClick={()=>setInboxOpen(true)}><Mail size={17}/> Solicitudes</button>
+   </div>:null}
   <div className={styles.toggle} role="group" aria-label="Tipo de servicio">
    <button type="button" className={charge==="subscription"?styles.selected:""} aria-pressed={charge==="subscription"} onClick={()=>setCharge("subscription")}>En planes</button>
    <button type="button" className={charge==="one_time"?styles.selected:""} aria-pressed={charge==="one_time"} onClick={()=>setCharge("one_time")}>Pago único</button>
