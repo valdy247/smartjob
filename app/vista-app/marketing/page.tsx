@@ -34,9 +34,10 @@ const channels:{id:Channel;label:string;desc:string}[]=[
 ];
 const number=(raw:string)=>{const n=Number(raw);return raw.trim()!==""&&Number.isFinite(n)&&n>=0?n:null;};
 const money=(n:number|null)=>n===null?"—":n.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:2});
-const percent=(n:number|null)=>n===null?"—":n.toLocaleString("e// Shared taxonomy from Web Services. Keep IDs consistent across VMV Business.
+const percent=(n:number|null)=>n===null?"—":n.toLocaleString("es-US",{maximumFractionDigits:1})+"%";
+const safe=(v:string,fallback:string)=>v.trim()||fallback;
+// Shared taxonomy maintained by Web Services; IDs are reused across VMV Business.
 const industryName=(id:string)=>id==="unsure"?"No estoy seguro":categoryLabel(id,"Por definir");
-industryGroups.flatMap(group=>group.options).find(option=>option.id===id)?.label||"Por definir";
 const validReviewUrl=(value:string)=>{
  if(!value)return true;
  try{const url=new URL(value);return url.protocol==="https:"&&Boolean(url.hostname);}
