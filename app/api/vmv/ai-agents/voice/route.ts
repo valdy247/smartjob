@@ -1,7 +1,7 @@
 import {NextRequest} from "next/server";
 import {authenticTwilio,say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 import {billingAdmin} from "@/lib/vmv-billing";
-import {paidServiceAllowed} from "@/lib/vmv-entitlements";
+import {findPhoneRoute} from "@/lib/phone-routes";
 
 // Dedicated, server-side AI voice pilot. NEVER reuse or change Smart Call webhooks.
 // The endpoint stays fail-closed until explicitly enabled on preview with
@@ -44,6 +44,12 @@ function hasMinimumVoiceTraining(agent:Agent){
  return filled("calls_goal")&&(filled("call_forward")||filled("call_escalation"))&&
   (c.call_consent==="Sí"||c.call_disclosure==="Sí");
 }
+function previewOwnerAllowed(uid:string){
+ return process.env.VERCEL_ENV==="preview"&&
+  process.env.VMV_AI_VOICE_PILOT_ENABLED==="true"&&
+  /^[a-f0-9-]{36}$/i.test(process.env.VMV_AI_TEST_OWNER_ID||"")&&
+  process.env.VMV_AI_TEST_OWNER_ID===uid;
+}
 const fallback=(lang:"es-ES"|"en-US")=>lang==="en-US"
   ?"I could not confirm that information. Please contact the business directly."
   :"No pude confirmar esa información. Comunícate directamente con el negocio.";
@@ -57,16 +63,18 @@ export async function POST(req:NextRequest){
  const fromAccount=signed.get("AccountSid")||"";
  if(!sidPattern.test(callSid)||!phonePattern.test(to))return voiceUnavailable();
  const base=process.env.TWILIO_WEBHOOK_BASE_URL||"";
- if(!/^https:\/\/[a-z0-9.-]+(?::\d+)?$/i.test(base)||!process.env.OPENAI_API_KEY)
+ if(!/^https:\/\/[a-z0-9.-]+(?::\d+)?$/i.test(base)||!(process.env.OPENAI_API_KEY||process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN))
    return voiceUnavailable();
 
  const db=billingAdmin();
  if(!db)return voiceUnavailable();
+ const existing=await findPhoneRoute(to);
+ if(!existing||!existing.enabled||!previewOwnerAllowed(existing.user_id))return voiceUnavailable();
  const {data:route,error:routeError}=await db.from("vmv_ai_voice_routes")
    .select("id,owner_id,agent_id,twilio_number,twilio_account_sid,enabled,verified_ownership,disclosure_approved,approved_at")
    .eq("twilio_number",to).eq("twilio_account_sid",fromAccount).eq("enabled",true).maybeSingle();
  const binding=route as Binding|null;
- if(routeError||!binding||!binding.verified_ownership||!binding.disclosure_approved||!binding.approved_at)
+ if(routeError||!binding||binding.owner_id!==existing.user_id||!binding.verified_ownership||!binding.disclosure_approved||!binding.approved_at)
    return voiceUnavailable();
  const {data:agentRow,error:agentError}=await db.from("vmv_ai_agents")
    .select("id,business_id,owner_id,status,name,kind,language,purpose,instructions,knowledge,personality,configuration")
@@ -75,7 +83,7 @@ export async function POST(req:NextRequest){
  if(agentError||!agent||!hasMinimumVoiceTraining(agent))return voiceUnavailable();
  const {data:business}=await db.from("vmv_ai_businesses").select("id,name")
    .eq("id",agent.business_id).eq("owner_id",agent.owner_id).maybeSingle();
- if(!business||!await paidServiceAllowed(binding.owner_id,"ai"))return voiceUnavailable();
+ if(!business)return voiceUnavailable();
  const lang=locale(agent.language);
  const step=req.nextUrl.searchParams.get("turn");
  if(step===null){
@@ -111,10 +119,13 @@ export async function POST(req:NextRequest){
  ].join("\n");
  let reply=fallback(lang);
  try{
+  const direct=Boolean(process.env.OPENAI_API_KEY);
   const model=process.env.VMV_AI_VOICE_MODEL||"gpt-4.1-mini";
-  const response=await fetch("https://api.openai.com/v1/chat/completions",{
-   method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+process.env.OPENAI_API_KEY},
-   body:JSON.stringify({model,messages:[{role:"system",content:system},{role:"user",content:spoken}],
+  const endpoint=direct?"https://api.openai.com/v1/chat/completions":"https://ai-gateway.vercel.sh/v1/chat/completions";
+  const bearer=process.env.OPENAI_API_KEY||process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN;
+  const response=await fetch(endpoint,{
+   method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+bearer},
+   body:JSON.stringify({model:direct?model:"openai/"+model,messages:[{role:"system",content:system},{role:"user",content:spoken}],
     max_tokens:160,temperature:0.2,store:false}),
    signal:AbortSignal.timeout(6500),cache:"no-store"
   });
