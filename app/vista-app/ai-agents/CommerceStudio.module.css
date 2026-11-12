@@ -1,0 +1,36 @@
+.root{display:flex;flex-direction:column;gap:14px;padding-bottom:28px;color:#2b223b}
+.back{display:flex;align-items:center;gap:8px;color:#7f55c3;border:0;background:transparent;font-weight:800;padding:5px 0;width:fit-content;font-size:12px}
+.hero{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px;border-radius:24px;background:linear-gradient(128deg,#8551df,#ba88fa);color:#fff}
+.hero small{font-size:10px;font-weight:900;letter-spacing:.8px;color:#f5eaff}
+.hero h1{font-size:24px;font-weight:900;letter-spacing:-.7px;line-height:1.2;color:#fff;margin:10px 0 7px}
+.hero p{color:#f7ecff;font-size:11px;line-height:1.5;margin:0}
+.hero>svg{flex-shrink:0}
+.warning{display:flex;align-items:flex-start;gap:9px;background:#f1e9ff;border-radius:14px;padding:12px;color:#675182}
+.warning svg{flex-shrink:0;color:#875bd5}
+.warning p{margin:0;font-size:11px;line-height:1.6}
+.notice{padding:12px;background:#e9f7ed;color:#396d56;font-size:11px;line-height:1.6;border-radius:12px}
+.tabs{display:flex;gap:6px;background:#f1ebfa;padding:4px;border-radius:14px}
+.tabs button{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;font-size:11px;font-weight:900;border:0;border-radius:10px;padding:10px 4px}
+.on{background:#fff;color:#8355d8}.off{background:transparent;color:#88779a}
+.heading{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+.heading h2,.ordersTitle{font-size:17px;color:#30253e;margin:0;font-weight:900}
+.heading button,.item button{border:1px solid #e4d8f2;color:#8058bc;background:#fff;border-radius:10px;padding:8px;font-size:10px;font-weight:850}
+.form{background:#fff;border:1px solid #ece4f4;border-radius:19px;padding:15px;display:flex;flex-direction:column;gap:13px}
+.form label{display:flex;flex-direction:column;gap:7px;font-weight:800;color:#453354;font-size:11px}
+.form label input,.form label select,.form label textarea{width:100%;font:500 12px system-ui,sans-serif;color:#30233e;border:1px solid #e8ddf2;background:#fff;border-radius:12px;padding:12px;outline:none;resize:vertical}
+.form label input:focus,.form label select:focus,.form label textarea:focus{border-color:#a679e7;box-shadow:0 0 0 3px #b99cf032}
+.form label.check{flex-direction:row;gap:8px;align-items:flex-start;color:#685a74;font-weight:650;line-height:1.6}
+.form label.check input{width:17px;height:17px;padding:0;accent-color:#8455d7;flex-shrink:0}
+.primary{border:0;color:#fff;background:#8555db;font-size:12px;font-weight:900;border-radius:13px;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px}
+.primary:disabled{opacity:.5;cursor:not-allowed}
+.hint{font-size:11px;color:#877a92;line-height:1.6;margin:0}
+.empty{padding:25px;background:#fff;border:1px solid #ede4f4;border-radius:18px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:9px;color:#986ccf}
+.empty p{color:#8c7d9b;margin:0;font-size:11px;line-height:1.5}
+.items{display:flex;flex-direction:column;gap:9px}
+.item{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fff;border:1px solid #e9e3f0;border-radius:15px;padding:12px}
+.item>div{min-width:0;display:flex;flex-direction:column;gap:4px}
+.item strong{font-size:13px;color:#30263c}
+.item small{font-size:10px;line-height:1.45;color:#8a7b99}
+.item button{white-space:nowrap;display:flex;gap:5px;align-items:center;justify-content:center}
+.ordersTitle{margin-top:8px}
+button:focus-visible{outline:3px solid #ad86ec;outline-offset:2px}
