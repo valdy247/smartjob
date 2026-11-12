@@ -149,7 +149,7 @@ export async function handleAiVoice(req:NextRequest){
   }
   return gather(greeting(session.agent_snapshot,lang),lang,1);
  }
- if(!session||session.owner_id!==ownerRoute.user_id||session.agent_id!==binding.agent_id||
+ if(!session||session.owner_id!==ownerRoute.user_id||session.route_id!==binding.id||
     Date.parse(session.expires_at)<=Date.now())return refused();
  const {data:liveAgent}=await db.from("vmv_ai_agents").select("status")
    .eq("id",session.agent_id).eq("owner_id",session.owner_id).maybeSingle();
