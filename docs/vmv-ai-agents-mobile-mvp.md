@@ -116,3 +116,42 @@ The single enabled `smartjob_phone_routes` row in the current Supabase project i
 7. No production promotion, no live inventory, bookings, payments or autonomous admin actions. The prototype answers short informational questions using Twilio speech-to-text, server OpenAI and Twilio `<Say>`, one turn at a time. It is **not a real-time streaming speech agent**.
 
 Current preview anchor: `https://smartjob-git-feat-vmv-smart-cal-fcbaa4-valdys-projects-b97fc7a6.vercel.app`.
+
+## Agent Quality Lab — config review before customer contact
+
+**Scope:** Isolated AI Agents code only. This ships an interactive **document-completeness** checker, NOT model-quality certification or live phone activation.
+
+Files:
+- Web `app/vista-app/ai-agents/agentQuality.ts`, `AgentQualityLab.tsx`, `AgentQualityLab.module.css`
+- Native iPhone `apps/ios/aiAgentQuality.ts`, `AIAgentQualityLab.tsx`
+- Existing owned Studio and wizard entry points updated with minimal patches.
+
+Business capabilities:
+1. Premium, mobile-first percentage of answered configuration checks, with **required** and **recommended** criteria for every role (calls, support, sales, bookings, inventory, operations, custom).
+2. Highlight specific missing facts (company, city + state, hours, handoff, privacy, catalog or booking terms) with a one-tap deep link to the relevant wizard step.
+3. Create a role-aware test deck (e.g. taxis: airport transfer/booking confirmation/cancellation; calls: IA disclosure; sales: unsafe discounts; stock: unverified availability).
+4. Reveal an **expected business behavior** for each suggested test question; never claim these have been run through a model or prove accuracy.
+5. Generate and export a training brief from business answers. Web preview offers user-initiated clipboard copy; iPhone offers native Share sheet. No automatic data egress.
+6. Web demonstration includes an explicitly fictional taxi agent; the example lives **in-memory only**. It cannot contact people or persist to Supabase.
+7. Native Studio adds **Calidad** and a completeness indicator to each agent card, blocks internal activation when *required* fields are missing, and opens the correct wizard step.
+8. In the isolated phone pilot handler, a further server-side guard now checks owner-provided business, location, privacy, escalation and (for phone agents) AI-disclosure inputs before accepting a call. This remains inactive while the voice pilot feature flag is off.
+
+### Safety boundaries and limitations
+
+- Completeness percentage is computed locally from available configured facts. **100% is not approval** for public launch or phone routing.
+- No new payments, automation, stock/calendar connections, Twilio rewiring or production DB operations.
+- Native build / physical-device QA and staged RLS setup are still required; web `READY` confirms Next.js build only, not an Expo/TestFlight build.
+- Browser demo and configured agents on the web still vanish after page reload. No private credentials or customer information should be entered in the design preview.
+- All sensitive actions and final launch require verified tenant permissions, real model/voice tests, spending caps, consent/privacy review and explicit owner authorization.
+
+### Suggested QA cases
+
+| Fixture | Expected |
+| --- | --- |
+| New empty sales agent | Missing company, location, catalog, human handoff and privacy policy; cannot activate |
+| Taxi in Columbus, Georgia | City/state are distinct; suggested cancellation and appointment confirmation test prompts |
+| Full setup with a missing phone AI disclosure | Voice quality check remains required; voice route stays fail-closed |
+| Inventory agent without real inventory integration | Expected test refuses to claim current stock |
+| Full example with fictional details | Shows completed *configuration* only, never a claim that a phone call or actual AI test succeeded |
+| Public preview reloaded | Example is gone; no browser draft is claimed persistent |
+| User A vs User B in staging | Owner RLS must prevent cross-business access (not yet executed) |
