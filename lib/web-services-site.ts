@@ -126,3 +126,10 @@ export function webServiceContact(content:WebSiteContent,service:string):WebPrim
  }
  return {href:"#contacto",external:false,kind:"section"};
 }
+
+
+/** Clear directions link from the address already supplied by the business. */
+export function webDirections(content:WebSiteContent):string|null{
+ const address=content.address.trim().slice(0,250);
+ return address?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(address):null;
+}
