@@ -169,8 +169,8 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
  };
  const save=async()=>{
   if(busy||!ready)return;
+  // A draft may be incomplete; validation is required only when publishing.
   const next=normalizeWebContent(content);
-  if(!validate(next))return;
   setBusy(true);setStatus("");
   try{
    await store(next);setSavedSnapshot(JSON.stringify(next));setStatus("Borrador guardado");
