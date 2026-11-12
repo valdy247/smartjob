@@ -37,6 +37,7 @@ export default function App(){
   const [callTypeFilter,setCallTypeFilter]=useState<"all"|"direct"|"translated">("all");
   const [contactsPhone,setContactsPhone]=useState("");
   const [contactsFromHistory,setContactsFromHistory]=useState(false);
+  const [dialTarget,setDialTarget]=useState<{phone:string;name:string}|null>(null);
  const [businessModules,setBusinessModules]=useState<BusinessModule[]>(FALLBACK_MODULES);
  const [activeModule,setActiveModule]=useState<string|null>(null);
  const [keyboardVisible,setKeyboardVisible]=useState(false),[forwardHelpOpen,setForwardHelpOpen]=useState(false);
@@ -150,7 +151,7 @@ export default function App(){
    const {data}=client.auth.onAuthStateChange((_event,next)=>{
      if(!mounted)return;
      setSession(next);sessionRef.current=next;
-     if(!next){setReady(false);setPhoneVerification(null);setSmsCode("");setSmsSent(false);setStatus("Inicia sesión para recibir llamadas");setCallHistory([]);setCallsView("dial");setCallTypeFilter("all");setContactsPhone("");}
+     if(!next){setReady(false);setPhoneVerification(null);setSmsCode("");setSmsSent(false);setStatus("Inicia sesión para recibir llamadas");setCallHistory([]);setCallsView("dial");setDialTarget(null);setCallTypeFilter("all");setContactsPhone("");}
    });
    return()=>{mounted=false;data.subscription.unsubscribe();};
  },[]);
@@ -776,12 +777,13 @@ export default function App(){
           onPress={()=>{
            setCallsView(item.id);
            if(item.id==="contacts"){setContactsPhone("");setContactsFromHistory(false);}
+           if(item.id==="dial")setDialTarget(null);
            if(item.id==="history")setCallTypeFilter("all");
           }}>
           <Text style={styles.callsTabEmoji}>{item.emoji}</Text>
          </Pressable>)}
        </View>
-       {callsView==="dial"?<DialPad session={session} onStarted={()=>{
+       {callsView==="dial"?<DialPad session={session} initialPhone={dialTarget?.phone||""} contactName={dialTarget?.name||""} onStarted={()=>{
         callbackRequestedAt.current=Date.now();
        }}/>:null}
        {callsView==="history"?<>
@@ -830,7 +832,8 @@ export default function App(){
        </>:null}
        {callsView==="contacts"?<ContactsPanel key={session.user.id+":"+contactsPhone+":"+contactsFromHistory}
         session={session} initialPhone={contactsPhone} startInForm={contactsFromHistory}
-        embedded onBack={()=>setCallsView("dial")}/>:null}
+        embedded onCall={(phone,name)=>{setDialTarget({phone,name});setContactsPhone("");setContactsFromHistory(false);setCallsView("dial");}}
+        onBack={()=>setCallsView("dial")}/>:null}
       </>:null}
       {activeTab==="live"?<InterpreterPanel session={session}/>:null}
       {activeTab==="services"?<>
