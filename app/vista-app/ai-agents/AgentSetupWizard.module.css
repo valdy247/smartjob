@@ -1,0 +1,50 @@
+.root{display:flex;flex-direction:column;min-height:100%;color:#292039;padding-bottom:22px}
+.progressHead{display:flex;justify-content:space-between;align-items:center;color:#8b6cb5;font-size:10px;letter-spacing:1px;font-weight:900;margin-bottom:10px}
+.progressHead strong{font-size:12px;color:#7850cd}
+.progressTrack{height:6px;border-radius:99px;background:#ebe4f5;overflow:hidden;margin-bottom:14px}
+.progressBar{height:100%;border-radius:99px;background:linear-gradient(90deg,#8050df,#b38cff);transition:width .2s}
+.stepDots{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:28px}
+.stepDot,.stepActive,.stepDone{height:27px;width:27px;border-radius:50%;border:1px solid #e2d9f0;display:grid;place-items:center;font-weight:800;font-size:11px;background:#fff;color:#9b8aaf}
+.stepActive{background:#8a5de8;border-color:#8a5de8;color:#fff}
+.stepDone{background:#dbf6e8;border-color:#dbf6e8;color:#297b60}
+.titleGroup{margin-bottom:22px}
+.eyebrow{color:#8653db;font-size:10px;font-weight:900;display:flex;align-items:center;gap:7px;letter-spacing:.7px;margin-bottom:11px}
+.titleGroup h1{font-size:26px;line-height:1.12;letter-spacing:-.9px;font-weight:900;margin:0 0 8px;color:#27203a}
+.titleGroup p{color:#8c809a;font-size:12px;line-height:1.5;margin:0}
+.fields{display:flex;flex-direction:column;gap:17px}
+.question{display:flex;flex-direction:column;gap:8px}
+.field{display:flex;flex-direction:column;gap:8px;font-size:12px;color:#322541;font-weight:800}
+.fieldTitle{font-size:12px;font-weight:850;color:#362848;margin:0}
+.hint{color:#94889f;margin:0;font-size:11px;line-height:1.5}
+.required{color:#8056d0}
+.field input,.field textarea,.input{background:#fff;width:100%;border:1px solid #e4d9ee;border-radius:15px;padding:12px 13px;color:#322840;font:500 13px "DM Sans",system-ui,sans-serif;min-height:46px;outline:none}
+.field textarea,.input:is(textarea){min-height:99px;resize:vertical}
+.field input:focus,.field textarea:focus,.input:focus{border-color:#a97dee;box-shadow:0 0 0 3px #a97dee28}
+.roles,.choices{display:flex;gap:8px;flex-wrap:wrap}
+.choice,.choiceActive{display:inline-flex;align-items:center;gap:7px;border:1px solid #e8ddf0;border-radius:13px;background:#fff;color:#75667f;padding:10px 12px;font-size:11px;line-height:1.4;font-weight:750;text-align:left}
+.choice:hover{border-color:#b59bdf}
+.choiceActive{background:#eee4ff;border-color:#b796ed;color:#6e42bd}
+.connections{background:#f8f5fc;border:1px solid #ece4f5;border-radius:19px;padding:12px;margin-top:5px;display:flex;flex-direction:column;gap:11px}
+.connection{display:flex;align-items:center;gap:9px;color:#8a5bda;background:white;border:1px solid #e9e2ee;padding:11px;border-radius:13px}
+.connection span{flex:1;display:flex;flex-direction:column;min-width:0;gap:4px}
+.connection strong{font-size:11px;color:#322643}
+.connection small{font-size:10px;color:#8c8295}
+.connection b{color:#947d9c;background:#f6f2fa;border-radius:11px;padding:6px 7px;font-size:8px;white-space:nowrap}
+.connectionNote{font-size:11px;color:#786588;margin:3px 2px;line-height:1.6}
+.review{display:flex;flex-direction:column;gap:10px}
+.reviewCard{display:flex;flex-direction:column;gap:8px;background:#efe4ff;border-radius:20px;padding:19px}
+.reviewCard strong{font-size:19px;color:#6e43c2;line-height:1.2}
+.reviewCard span{font-size:12px;color:#6f6184;line-height:1.6}
+.reviewLine{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;padding:10px 0;border-bottom:1px solid #efe8f5}
+.reviewLine span{font-size:11px;color:#8c8099}
+.reviewLine b{font-size:11px;color:#4b3a62;text-align:right;max-width:60%}
+.reviewMessage{background:#eaf9f1;border-radius:15px;display:flex;gap:10px;padding:13px;color:#28735b;align-items:flex-start;margin-top:9px}
+.reviewMessage svg{flex-shrink:0}
+.reviewMessage p{margin:0;font-size:11px;line-height:1.5}
+.previewNote{font-size:10px;line-height:1.6;color:#988ba4}
+.error{color:#a83b60;font-size:12px;font-weight:700;margin-top:12px}
+.actions{display:flex;gap:9px;justify-content:space-between;align-items:center;margin-top:28px}
+.prev,.next{display:flex;align-items:center;justify-content:center;gap:7px;border-radius:15px;padding:14px 15px;font-size:12px;font-weight:850}
+.prev{background:white;border:1px solid #e2d8eb;color:#68537c;min-width:98px}
+.next{flex:1;background:#8655e7;color:white;border:1px solid #8655e7}
+@media(prefers-reduced-motion:reduce){.progressBar{transition:none}}
