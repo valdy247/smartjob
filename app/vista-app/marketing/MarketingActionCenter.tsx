@@ -90,6 +90,29 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [name,setName]=useState(businessName);
  const [site,setSite]=useState(website);
  const [goal,setGoal]=useState("");
+ const [reviewInput,setReviewInput]=useState("");
+ const [reviewTone,setReviewTone]=useState<"cordial"|"breve">("cordial");
+ const [auditData,setAuditData]=useState<{scores:{performance:number|null;seo:number|null;accessibility:number|null};recommendations:string[]}|null>(null);
+ const [auditPending,setAuditPending]=useState(false);
+ const [auditError,setAuditError]=useState("");
+ const answerReview=reviewInput.trim()?reviewTone==="breve"?
+  "Gracias por compartir tu experiencia. En "+name+" valoramos tu opinión y la tendremos en cuenta para mejorar.":
+  "¡Gracias por compartir tu experiencia! En "+name+" valoramos tus comentarios. Los revisaremos para seguir mejorando. Esperamos atenderte nuevamente.":"";
+ const analyzeSite=async()=>{
+  if(!safeSite(site)){setAuditError("Añade un enlace válido en el paso anterior.");return;}
+  setAuditPending(true);setAuditError("");setAuditData(null);
+  try{
+   const response=await fetch("/api/marketing/site-audit?url="+encodeURIComponent(safeSite(site)||""));
+   const result=await response.json();
+   if(!response.ok)throw new Error(result.error||"No se pudo analizar la web.");
+   const recommendations=(result.recommendations||[]).slice(0,3) as string[];
+   setAuditData({scores:result.scores,recommendations});
+   setGoal(("Solicito ayuda para mejorar mi web. Auditoría PageSpeed: velocidad "+(result.scores?.performance??"sin dato")+"/100; SEO "+(result.scores?.seo??"sin dato")+"/100; accesibilidad "+(result.scores?.accessibility??"sin dato")+"/100. Mejoras: "+recommendations.join("; ")).slice(0,1500));
+  }catch(error){setAuditError(errorMessage(error,"No se pudo analizar la web."));}
+  finally{setAuditPending(false);}
+ };
+ const reviewRequestMessage="¡Hola! Gracias por elegir "+name+". ¿Podrías compartir una reseña honesta sobre tu experiencia? Tu opinión nos ayuda a mejorar.";
+
  const [consent,setConsent]=useState(false);
  const [busy,setBusy]=useState(false);
  const [loading,setLoading]=useState(false);
@@ -109,7 +132,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  };
  const editWizardStep=(step:WizardStep)=>{closeKeyboard();setWizardStep(step);setWizardError("");revealWizard();};
  const chooseService=(code:ServiceCode)=>{
-  if(code!==selected){setGoal("");setConsent(false);}
+  if(code!==selected){setGoal("");setConsent(false);setReviewInput("");setAuditData(null);setAuditError("");}
   setSelected(code);setWizardStep(1);setWizardError("");setSubmittedId(null);revealWizard();
  };
  const goNext=()=>{
@@ -118,7 +141,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(name.trim().length<2||name.trim().length>150){setWizardError("Escribe el nombre comercial de tu negocio.");return;}
    if(site.trim()&&!safeSite(site)){setWizardError("Comprueba el enlace de tu web: debe comenzar con https://.");return;}
   }
-  if(wizardStep===2&&goal.trim().length<12){setWizardError("Elige una opción o describe lo que necesitas en al menos 12 caracteres.");return;}
+  if(wizardStep===2&&goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5)){setWizardError("Elige una opción o describe lo que necesitas en al menos 12 caracteres.");return;}
   if(wizardStep===2&&goal.trim().length>1500){setWizardError("El mensaje no debe superar 1500 caracteres.");return;}
   if(wizardStep<3){closeKeyboard();setWizardStep((wizardStep+1) as WizardStep);revealWizard();}
  };
@@ -198,7 +221,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(wizardStep!==3)return;
   if(!client||!user){setWizardError("Inicia sesión en VMV Business para enviar tu solicitud.");return;}
   if(name.trim().length<2||name.trim().length>150){setWizardStep(1);setWizardError("Introduce el nombre comercial (2 a 150 caracteres).");return;}
-  if(goal.trim().length<12||goal.trim().length>1500){setWizardStep(2);setWizardError("Elige una necesidad o describe el resultado que buscas.");return;}
+  if((goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5))||goal.trim().length>1500){setWizardStep(2);setWizardError("Elige una necesidad o describe el resultado que buscas.");return;}
   if(site.trim()&&!safeSite(site)){setWizardStep(1);setWizardError("La web debe tener una URL válida.");return;}
   if(!consent){setWizardError("Marca la autorización para que podamos atender la solicitud.");return;}
   setBusy(true);
@@ -206,7 +229,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    // The DB allows customers to insert only input fields, never quote, status or verification.
    const {data, error:insertError}=await client.from("vmv_marketing_requests").insert({
     owner_id:user.id,service_code:selected,business_name:name.trim(),
-    category_id:effectiveCategory,website_url:safeSite(site),goal_text:goal.trim(),
+    category_id:effectiveCategory,website_url:safeSite(site),goal_text:(selected==="review_strategy"&&reviewInput.trim()?("Reseña: "+reviewInput.trim().slice(0,650)+" | Respuesta sugerida, pendiente de revisión: "+answerReview).slice(0,1500):goal.trim()),
     agreed_to_contact:true
    }).select("id").single();
    if(insertError)throw insertError;
