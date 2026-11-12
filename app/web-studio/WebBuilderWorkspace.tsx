@@ -11,6 +11,8 @@ type Site={id:string;owner_id:string;slug:string;name:string;category_id:string}
 type Page={id:string;site_id:string;owner_id:string;slug:string;title:string;description:string;draft:unknown;revision:number;updated_at:string};
 type Revision={id:string;page_id:string;version:number;title:string;description:string;document:unknown;created_at:string};
 type Domain={id:string;hostname:string;state:string;last_error:string;verification:unknown;last_checked_at:string|null};
+type DomainRequest={id:string;hostname:string;intent:"buy"|"connect";status:string;years:number;auto_renew:boolean;created_at:string};
+type DomainQuote={domain:string;available:boolean;price:number|null;renewalPrice:number|null;years:number;priceDisplay:string;renewalDisplay:string;premium:boolean};
 type View="sites"|"editor"|"history"|"domains";
 function slugify(input:string){
  return input.normalize("NFKD").toLowerCase().replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,49).replace(/-$/g,"");
@@ -29,6 +31,8 @@ export default function WebBuilderWorkspace(){
  const [description,setDescription]=useState("");
  const [revisions,setRevisions]=useState<Revision[]>([]);
  const [domains,setDomains]=useState<Domain[]>([]);
+ const [domainRequests,setDomainRequests]=useState<DomainRequest[]>([]);
+ const [domainQuote,setDomainQuote]=useState<DomainQuote|null>(null);
  const [domainInput,setDomainInput]=useState("");
  const [quote,setQuote]=useState("");
  const [busy,setBusy]=useState(false);
@@ -221,11 +225,17 @@ export default function WebBuilderWorkspace(){
   setBusy(true);setError("");
   try{
    const c=await authorized();
-   const {data,error}=await c.from("smartjob_builder_domains")
-    .select("id,hostname,state,last_error,verification,last_checked_at")
-    .eq("site_id",site.id).eq("owner_id",userId).order("created_at",{ascending:false});
-   if(error)throw new Error("No se pudieron consultar los dominios");
-   setDomains((data||[]) as Domain[]);
+   const [result,requests]=await Promise.all([
+    c.from("smartjob_builder_domains")
+     .select("id,hostname,state,last_error,verification,last_checked_at")
+     .eq("site_id",site.id).eq("owner_id",userId).order("created_at",{ascending:false}),
+    c.from("smartjob_builder_domain_requests")
+     .select("id,hostname,intent,status,years,auto_renew,created_at")
+     .eq("site_id",site.id).eq("owner_id",userId).order("created_at",{ascending:false})
+   ]);
+   if(result.error||requests.error)throw new Error("No se pudieron consultar los dominios");
+   setDomains((result.data||[]) as Domain[]);
+   setDomainRequests((requests.data||[]) as DomainRequest[]);
    setView("domains");
   }catch(e){setError(e instanceof Error?e.message:"No se pudieron cargar");}
   finally{setBusy(false);}
@@ -233,7 +243,7 @@ export default function WebBuilderWorkspace(){
  async function checkDomain(){
   const domain=domainInput.toLowerCase().trim();
   if(!/^(?:[a-z0-9-]+\.)+[a-z]{2,24}$/.test(domain)){setError("Escribe un dominio válido, por ejemplo minombre.com");return;}
-  setBusy(true);setQuote("");setError("");
+  setBusy(true);setQuote("");setDomainQuote(null);setError("");
   try{
    const auth=await authorized();
    const {data:sessionData}=await auth.auth.getSession();
@@ -244,10 +254,54 @@ export default function WebBuilderWorkspace(){
    });
    const data=await res.json();
    if(!res.ok)throw new Error(data.error||"No se pudo consultar");
+   setDomainQuote(data as DomainQuote);
    setQuote(data.available?
     domain+" disponible. Registro: "+data.priceDisplay+" / "+data.years+" año(s). Renovación: "+data.renewalDisplay+". Precio del registrador; impuestos y comisiones pueden aplicar.":
     data.available===false?domain+" no está disponible para registrar.":"Consulta no disponible ahora.");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo consultar");}
+  finally{setBusy(false);}
+ }
+ async function submitDomainRequest(intent:"buy"|"connect"){
+  if(!site||!userId||busy)return;
+  const domain=(domainQuote?.domain||domainInput).trim().toLowerCase();
+  if(!/^(?:[a-z0-9-]+\.)+[a-z]{2,24}$/.test(domain)){setError("Dominio inválido");return;}
+  if(intent==="buy"&&(!domainQuote?.available||domainQuote.domain!==domain)){
+   setError("Primero consulta la disponibilidad y el precio real");return;
+  }
+  if(domainRequests.some(item=>item.hostname===domain&&item.intent===intent)){
+   setNotice("Ya existe una solicitud para este dominio");return;
+  }
+  setBusy(true);setError("");setNotice("");
+  try{
+   const db=await authorized();
+   const {data,error}=await db.from("smartjob_builder_domain_requests").insert({
+    owner_id:userId,site_id:site.id,hostname:domain,intent,years:domainQuote?.years||1,
+    auto_renew:false,status:"requested"
+   }).select("id,hostname,intent,status,years,auto_renew,created_at").single();
+   if(error||!data)throw new Error("No se pudo guardar la solicitud");
+   setDomainRequests(old=>[data as DomainRequest,...old]);
+   setNotice(intent==="buy"?
+    "Solicitud de compra guardada. No se realizó ningún cobro ni registro. VMV deberá confirmar el precio final y los datos del titular.":
+    "Solicitud de conexión guardada. La verificación DNS es necesaria antes de activar el dominio.");
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo guardar");}
+  finally{setBusy(false);}
+ }
+ async function requestDomainVerification(hostname:string,action:"connect"|"verify"){
+  if(!site||!userId||busy)return;
+  setBusy(true);setError("");setNotice("");
+  try{
+   const db=await authorized();
+   const {data:{session}}=await db.auth.getSession();
+   if(!session?.access_token)throw new Error("Inicia sesión nuevamente");
+   const res=await fetch("/api/web-services/domain-connect",{
+    method:"POST",headers:{"Authorization":"Bearer "+session.access_token,"Content-Type":"application/json"},
+    body:JSON.stringify({siteId:site.id,domain:hostname,action})
+   });
+   const result=await res.json();
+   if(!res.ok)throw new Error(result.error||"No se pudo verificar");
+   setNotice(result.connected?"El dominio está conectado y activo.":"Faltan datos DNS. Revisa los registros de verificación.");
+   await openDomains();
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo verificar");}
   finally{setBusy(false);}
  }
  function back(){
@@ -328,11 +382,26 @@ export default function WebBuilderWorkspace(){
     <div className={styles.domainForm}><input placeholder="minegocio.com" value={domainInput} onChange={e=>{setDomainInput(e.target.value);setQuote("");}}
      spellCheck={false} autoComplete="off" maxLength={253}/>
      <button type="button" disabled={busy} onClick={()=>void checkDomain()}>Consultar</button></div>
-    {quote?<p className={styles.domainQuote}>{quote}</p>:null}
+    {quote?<div className={styles.domainQuote}><strong>{quote}</strong>
+     {domainQuote?.available?<div className={styles.domainButtons}>
+      <button type="button" disabled={busy} onClick={()=>void submitDomainRequest("buy")}>Solicitar compra con VMV</button>
+      <button type="button" disabled={busy} onClick={()=>void submitDomainRequest("connect")}>Ya tengo este dominio</button>
+     </div>:null}
+     </div>:null}
+    {domainRequests.length?<div className={styles.domainRequests}><h3>Mis solicitudes</h3>
+     {domainRequests.map(r=><div className={styles.domainRow} key={r.id}>
+      <span><strong>{r.hostname}</strong> · {r.intent==="buy"?"Compra":"Conexión"}</span>
+      <small>{r.status==="requested"?"Recibida":r.status}</small>
+      {r.intent==="connect"?<button type="button" disabled={busy} onClick={()=>void requestDomainVerification(r.hostname,"connect")}>Vincular</button>:null}
+     </div>)}
+    </div>:null}
     {domains.map(d=><article key={d.id} className={styles.domainRow}>
      <strong>{d.hostname}</strong><span>{d.state==="active"?"Conectado":d.state==="verifying"?"Pendiente de DNS":"Pendiente"}</span>
     </article>)}
-    <p className={styles.domainNote}><ShieldCheck size={16}/> Ningún dominio se compra automáticamente ni se carga a tu tarjeta sin autorización.</p>
+    {domains.map(d=>d.state==="verifying"?<button key={"verify-"+d.id} type="button"
+     className={styles.verifyDomain} disabled={busy}
+     onClick={()=>void requestDomainVerification(d.hostname,"verify")}>Comprobar DNS de {d.hostname}</button>:null)}
+    <p className={styles.domainNote}><ShieldCheck size={16}/> Las solicitudes de compra no generan cargos. La conexión definitiva requiere autorización y verificación DNS.</p>
    </section>:null}
   </main>}
  </div>;
