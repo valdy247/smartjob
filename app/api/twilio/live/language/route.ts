@@ -4,6 +4,7 @@ import {findPhoneRoute,tenantsReady,reservePhoneSession} from "@/lib/phone-route
 import {languageMenuEnabled,ivrEligible,menuResponse,selectionSignature,directClientTwiml,languageDecision,testSpanishToEnglishFor} from "@/lib/vmv-ivr";
 import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 import {paidServiceAllowed} from "@/lib/vmv-entitlements";
+import {claimNational,settleNational} from "@/lib/vmv-national-minutes";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export async function POST(req:NextRequest){
@@ -15,7 +16,9 @@ export async function POST(req:NextRequest){
  if(!from||!to||!/^CA[a-f\d]{32}$/i.test(bridge))return twiml("<Hangup/>",403);
  const route=await findPhoneRoute(to);
  if(!route||!ivrEligible(route))return twiml(say("This line is not ready.","en-US")+"<Hangup/>");
- if(!await paidServiceAllowed(route.user_id,"direct_call"))return twiml("<Hangup/>");
+ // Let callers choose translation even when their separate national bucket is empty.
+ if(!await paidServiceAllowed(route.user_id,"direct_call")&&
+    !await paidServiceAllowed(route.user_id,"translated_call"))return twiml("<Hangup/>");
  const digit=(fields.get("Digits")||"").trim();
  const attempt=req.nextUrl.searchParams.get("attempt")==="1"?1:0;
 
@@ -29,7 +32,12 @@ export async function POST(req:NextRequest){
   return twiml('<Redirect method="POST">'+url+"</Redirect>");
  }
  // 2, or no input, is a direct Spanish call. It cannot spend translated minutes.
- if(!await reservePhoneSession(bridge,route,"direct"))
+ if(!await reservePhoneSession(bridge,route,"direct",from))
   return twiml(say("En este momento no podemos completar su llamada.","es-ES")+"<Hangup/>");
- return directClientTwiml(bridge,route,from);
+ const granted=await claimNational(route.user_id,"in:"+bridge);
+ if(granted===0){
+  await (await import("@/lib/phone-routes")).updatePhoneSession(bridge,"failed");
+  return twiml(say("Sus minutos de llamadas nacionales se han agotado.","es-ES")+"<Hangup/>");
+ }
+ return directClientTwiml(bridge,route,from,granted===null?600:granted*60);
 }
