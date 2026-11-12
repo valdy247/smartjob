@@ -66,3 +66,27 @@
 .requestHelp{border:0;border-radius:10px;background:#7f416f;color:#fff;font-size:11px;font-weight:850;padding:11px 12px;cursor:pointer}
 .requestHelp:hover{background:#69355d}
 .requestHelp:focus-visible{outline:3px solid #be8aae;outline-offset:2px}
+
+
+/* Progressive disclosure keeps lengthy directory forms manageable on mobile. */
+.extras{background:#fffafd;border:1px solid #eadce9;border-radius:14px;overflow:hidden}
+.extras summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:9px;cursor:pointer;padding:14px;color:#6f456a}
+.extras summary::-webkit-details-marker{display:none}
+.extras summary>span{display:flex;flex-direction:column;gap:4px;min-width:0}
+.extras summary strong{font-size:12px}
+.extras summary small{font-size:10px;color:#9d899a}
+.extras summary>svg{flex-shrink:0;transition:transform .18s}
+.extras[open] summary>svg{transform:rotate(180deg)}
+.extraBody{border-top:1px solid #f0e4ef;padding:15px;display:flex;flex-direction:column;gap:13px}
+.hoursPresets{display:flex;flex-wrap:wrap;gap:7px}
+.hoursPresets button{min-height:40px;border-radius:99px;border:1px solid #e4d0df;color:#845678;background:#fff;padding:9px 12px;font:inherit;font-size:11px;font-weight:750;cursor:pointer}
+.hoursPresets button[aria-pressed="true"]{background:#fae5f2;color:#793960;border-color:#b879a1}
+.extras summary:focus-visible,.hoursPresets button:focus-visible{outline:3px solid #ba78a1;outline-offset:3px}
+@media(max-width:710px){
+ .extras{border-radius:12px}
+ .extraBody{padding:12px}
+ .hoursPresets button{font-size:12px}
+ .sectionHeader{align-items:start}
+ .directory{padding:13px}
+}
+@media(prefers-reduced-motion:reduce){.extras summary>svg{transition:none}}
