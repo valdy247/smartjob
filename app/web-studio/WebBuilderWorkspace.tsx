@@ -235,10 +235,17 @@ export default function WebBuilderWorkspace(){
   if(!/^(?:[a-z0-9-]+\.)+[a-z]{2,24}$/.test(domain)){setError("Escribe un dominio válido, por ejemplo minombre.com");return;}
   setBusy(true);setQuote("");setError("");
   try{
-   const res=await fetch("/api/web-services/domain-search?domain="+encodeURIComponent(domain),{cache:"no-store"});
+   const auth=await authorized();
+   const {data:sessionData}=await auth.auth.getSession();
+   const token=sessionData.session?.access_token;
+   if(!token)throw new Error("Inicia sesión nuevamente");
+   const res=await fetch("/api/web-services/domain-search?domain="+encodeURIComponent(domain),{
+    cache:"no-store",headers:{"Authorization":"Bearer "+token}
+   });
    const data=await res.json();
    if(!res.ok)throw new Error(data.error||"No se pudo consultar");
-   setQuote(data.available?domain+" está disponible. Registro desde "+data.priceDisplay:
+   setQuote(data.available?
+    domain+" disponible. Registro: "+data.priceDisplay+" / "+data.years+" año(s). Renovación: "+data.renewalDisplay+". Precio del registrador; impuestos y comisiones pueden aplicar.":
     data.available===false?domain+" no está disponible para registrar.":"Consulta no disponible ahora.");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo consultar");}
   finally{setBusy(false);}
