@@ -26,7 +26,11 @@ export async function generateMetadata({params}:Props):Promise<Metadata>{
   title:content.business||"Mi negocio",
   description:content.intro||content.headline||content.business,
   robots:{index:true,follow:true},
-  openGraph:{title:content.business,description:content.intro||content.headline,type:"website"}
+  openGraph:{title:content.business,description:content.intro||content.headline,type:"website",
+   ...(content.heroImage?{images:[{url:content.heroImage,alt:"Imagen de "+content.business}]}:{})},
+  twitter:{card:content.heroImage?"summary_large_image":"summary",title:content.business,
+   description:content.intro||content.headline,
+   ...(content.heroImage?{images:[content.heroImage]}:{})}
  };
 }
 export default async function PublishedBusinessWebsite({params}:Props){
