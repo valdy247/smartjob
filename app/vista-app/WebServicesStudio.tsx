@@ -1,8 +1,8 @@
 "use client";
 import {useCallback,useEffect,useState,type CSSProperties} from "react";
-import {ArrowLeft,Check,Copy,ExternalLink,Globe,Save,Send,Trash2,Plus,X,ArrowUp,ArrowDown} from "lucide-react";
+import {ArrowLeft,Check,Copy,ExternalLink,Globe,Save,Send,Trash2,Plus,X,ArrowUp,ArrowDown,MessageCircle,Phone,Mail} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
-import {defaultWebContent,normalizeWebContent,paletteStyles,webServices,webCategory,type WebSiteContent,type WebPalette,type WebTemplate} from "@/lib/web-services-site";
+import {defaultWebContent,normalizeWebContent,paletteStyles,webServices,webCategory,webPrimaryContact,webWhatsApp,webPhone,webEmail,type WebSiteContent,type WebPalette,type WebTemplate,type WebContactMethod} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
 import WebStudioImages from "./WebStudioImages";
 import styles from "./WebServicesStudio.module.css";
@@ -15,7 +15,7 @@ const templates:{id:WebTemplate;name:string}[]=[
  {id:"editorial",name:"Editorial"},{id:"showcase",name:"Impacto"},
  {id:"minimal",name:"Minimal"}
 ];
-const fields:{id:Exclude<keyof WebSiteContent,"template"|"palette"|"categoryId"|"heroImage"|"gallery"|"services"|"eyebrow">;label:string;max:number;multi?:boolean;type?:"email"|"tel"}[]=[
+const fields:{id:Exclude<keyof WebSiteContent,"template"|"palette"|"categoryId"|"heroImage"|"gallery"|"services"|"eyebrow"|"contactMethod"|"whatsapp"|"contactMessage"|"action">;label:string;max:number;multi?:boolean;type?:"email"|"tel"}[]=[
  {id:"business",label:"Nombre del negocio",max:100},
  {id:"headline",label:"Título principal",max:180,multi:true},
  {id:"intro",label:"Presentación",max:400,multi:true},
@@ -23,7 +23,6 @@ const fields:{id:Exclude<keyof WebSiteContent,"template"|"palette"|"categoryId"|
  {id:"email",label:"Correo",max:180,type:"email"},
  {id:"phone",label:"Teléfono",max:36,type:"tel"},
  {id:"address",label:"Dirección",max:250,multi:true},
- {id:"action",label:"Botón",max:45}
 ];
 function siteSlug(brand:string):string{
  const name=brand.normalize("NFKD").toLowerCase().replace(/[\u0300-\u036f]/g,"")
@@ -73,7 +72,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
   })();
   return()=>{active=false;};
  },[ownerId,verify]);
- const update=(key:Exclude<keyof WebSiteContent,"template"|"palette"|"gallery"|"categoryId"|"heroImage"|"eyebrow"|"services">,value:string)=>{
+ const update=(key:Exclude<keyof WebSiteContent,"template"|"palette"|"gallery"|"categoryId"|"heroImage"|"eyebrow"|"services"|"contactMethod">,value:string)=>{
   setContent(old=>({...old,[key]:value}));setStatus("");
  };
  const serviceItemsEditor=content.services?content.services.split(/\r?\n/).slice(0,6):[];
@@ -90,7 +89,11 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
  };
  const validate=(next:WebSiteContent)=>{
   if(next.business.length<2||next.headline.length<3){setStatus("Completa el negocio y el título");return false;}
-  if(!next.categoryId){setStatus("Selecciona la categoría del negocio");return false;}
+  if(!next.categoryId){setStatus("Selecciona la categoría del negocio");setStudioMode("edit");return false;}
+  if(next.contactMethod!=="section"&&webPrimaryContact(next).kind==="section"){
+   setStatus(next.contactMethod==="whatsapp"?"Indica WhatsApp con código de país (+1...)":next.contactMethod==="call"?"Indica un teléfono válido":"Indica un correo válido");
+   setStudioMode("edit");return false;
+  }
   return true;
  };
  const store=async(next:WebSiteContent):Promise<string>=>{
@@ -186,6 +189,35 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
         <input type={f.type||"text"} maxLength={f.max} spellCheck={false} autoCorrect="off" autoCapitalize="none" autoComplete="off" value={content[f.id]}
           onChange={e=>update(f.id,e.target.value)} placeholder={f.label}/>}
       </label>)}
+      <section className={styles.contactPanel} aria-label="Contacto directo del sitio">
+       <div className={styles.contactPanelHeading}><MessageCircle size={16}/><strong>Conseguir clientes</strong></div>
+       <label className={styles.field}><span>Texto del botón principal</span>
+        <input maxLength={45} type="text" spellCheck={false} autoCorrect="off" value={content.action} placeholder="Hacer un pedido"
+         onChange={e=>update("action",e.target.value)}/>
+       </label>
+       <label className={styles.field}><span>Al pulsar el botón</span>
+        <select value={content.contactMethod} onChange={e=>{setContent(v=>({...v,contactMethod:e.target.value as WebContactMethod}));setStatus("");}}
+         aria-label="Acción del botón principal">
+         <option value="section">Ver contacto</option>
+         <option value="whatsapp">Abrir WhatsApp</option>
+         <option value="call">Llamar al negocio</option>
+         <option value="email">Enviar correo</option>
+        </select>
+       </label>
+       {content.contactMethod==="whatsapp"?<>
+        <label className={styles.field}><span>WhatsApp empresarial</span>
+         <input type="tel" inputMode="tel" spellCheck={false} autoCorrect="off" maxLength={32}
+          placeholder="+1 239 406 1146" value={content.whatsapp} onChange={e=>update("whatsapp",e.target.value)}/>
+        </label>
+        <label className={styles.field}><span>Mensaje inicial</span>
+         <textarea rows={2} maxLength={250} spellCheck={false} autoCorrect="off" autoCapitalize="none"
+          placeholder="Hola, quisiera hacer un pedido" value={content.contactMessage} onChange={e=>update("contactMessage",e.target.value)}/>
+        </label>
+       </>:null}
+       {content.contactMethod==="call"&&!webPhone(content)?<small className={styles.contactFieldError}>Agrega un teléfono válido arriba</small>:null}
+       {content.contactMethod==="email"&&!webEmail(content)?<small className={styles.contactFieldError}>Agrega un correo válido arriba</small>:null}
+       {content.contactMethod==="whatsapp"&&!webWhatsApp(content)?<small className={styles.contactFieldError}>Incluye el código de país, por ejemplo +1</small>:null}
+      </section>
       <div className={styles.serviceEditor}>
        <div className={styles.serviceHeader}><strong>Servicios</strong><span>{serviceItemsEditor.length}/6</span></div>
        {serviceItemsEditor.map((name,i)=><div className={styles.serviceRow} key={i}>
@@ -241,6 +273,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
          {content.intro?<p>{content.intro}</p>:null}
          {content.heroImage?<img className={styles.heroImage} src={content.heroImage} alt="Portada del negocio"/>:null}
          <span className={styles.cta}>{content.action||"Contáctanos"} ↗</span>
+         {content.contactMethod==="whatsapp"&&webWhatsApp(content)?<small className={styles.previewChannel}><MessageCircle size={11}/> WhatsApp</small>:null}
         </div>
         <div className={styles.serviceArea}><h4>Lo que hacemos<b>.</b></h4>
          <div>{(serviceItems.length?serviceItems:["Tus servicios"]).map((name,i)=><span key={i}>{name} ↗</span>)}</div>
