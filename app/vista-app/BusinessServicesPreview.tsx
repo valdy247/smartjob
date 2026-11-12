@@ -139,7 +139,8 @@ export default function BusinessServicesPreview({userId,focus="all"}:{userId:str
  return <section className={styles.root}>
   <div className={styles.header}><h3>{focus==="web"?"Web Services":"Servicios"}<span>.</span></h3><div className={styles.headerIcon}><PanelsTopLeft size={20}/></div></div>
   {focus==="web"?<div className={styles.webActions}>
-    <button className={styles.primary} type="button" onClick={()=>setSiteEditor(true)}><PanelsTopLeft size={18}/> Crear mi web <ArrowUpRight size={16}/></button>
+    <a className={styles.primary} href="/web-studio"><PanelsTopLeft size={18}/> Editor visual 2.0 <ArrowUpRight size={16}/></a>
+    <button className={styles.webActionSecondary} type="button" onClick={()=>setSiteEditor(true)}>Editor clásico</button>
     <button className={styles.webActionSecondary} type="button" onClick={()=>setInboxOpen(true)}><Mail size={17}/> Solicitudes</button>
    </div>:null}
   <div className={styles.toggle} role="group" aria-label="Tipo de servicio">
