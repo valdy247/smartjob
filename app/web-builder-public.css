@@ -44,3 +44,24 @@
 .vmv-site-contact a{display:block;width:fit-content;margin:10px 0;color:var(--vmv-accent);font-size:clamp(16px,2.4vw,25px);font-weight:800;overflow-wrap:anywhere}
 .vmv-site-footer{display:flex;justify-content:space-between;align-items:center;gap:18px;border-top:1px solid #ece6f4;padding:28px clamp(23px,8vw,120px);font-size:13px;font-weight:800}
 @media(max-width:700px){.vmv-site-nav{padding:17px 6%;flex-direction:column;align-items:flex-start;gap:10px}.vmv-site-nav nav{justify-content:flex-start;gap:13px}.vmv-site-nav nav a{font-size:11px}.vmv-site-hero{padding:65px 6%;min-height:370px}.vmv-site-section{padding:59px 6%}.vmv-site-services>div,.vmv-site-benefits>div{grid-template-columns:1fr}.vmv-site-services article,.vmv-site-benefits article{min-height:120px;padding:21px}.vmv-site-image{padding:20px 6%}.vmv-site-cta{padding:64px 6%}.vmv-site-footer{padding:24px 6%}}
+
+
+.vmv-site-inquiry{max-width:1440px;margin:0 auto;padding:clamp(52px,7vw,100px) clamp(23px,8vw,120px);background:#faf7fd}
+.vmv-site-inquiry>small{font-size:11px;font-weight:900;letter-spacing:.16em;color:var(--vmv-accent)}
+.vmv-site-inquiry>h2{font-size:clamp(33px,5vw,62px);letter-spacing:-.07em;line-height:1.07;margin:17px 0 28px}
+.vmv-site-inquiry .ws-inquiry-form{display:flex;flex-direction:column;gap:18px;max-width:750px;padding:clamp(18px,4vw,35px);background:#fff;border:1px solid #e9e3f0;border-radius:21px;box-shadow:0 18px 54px #1710270b}
+.vmv-site-inquiry .ws-inquiry-form label{display:flex;flex-direction:column;gap:7px;min-width:0}
+.vmv-site-inquiry .ws-inquiry-form label>span{font-size:12px;font-weight:780}
+.vmv-site-inquiry .ws-inquiry-form input,.vmv-site-inquiry .ws-inquiry-form select,.vmv-site-inquiry .ws-inquiry-form textarea{font:inherit;font-size:15px;border-radius:11px;padding:12px 14px;max-width:100%;width:100%;min-height:46px;border:1px solid #ded4eb;background:#fdfbff;color:#282037}
+.vmv-site-inquiry .ws-inquiry-form textarea{min-height:110px;resize:vertical}
+.vmv-site-inquiry .ws-inquiry-field-row,.vmv-site-inquiry .ws-inquiry-extra{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.vmv-site-inquiry .ws-inquiry-extra{padding:14px 0;border-top:1px solid #e9e4ee}
+.vmv-site-inquiry .ws-inquiry-trap{position:absolute!important;left:-9999px!important;width:1px!important;height:1px!important;overflow:hidden!important}
+.vmv-site-inquiry .ws-inquiry-error{background:#fff0f4;padding:11px;border-radius:10px;color:#a83e61;font-size:12px}
+.vmv-site-inquiry .ws-inquiry-privacy{font-size:11px;line-height:1.5;color:#7e758b}
+.vmv-site-inquiry .ws-inquiry-submit,.vmv-site-inquiry .ws-inquiry-success button{border:0;background:var(--vmv-accent);color:white;border-radius:999px;padding:14px 19px;min-height:46px;cursor:pointer;font-weight:850;font-size:13px}
+.vmv-site-inquiry .ws-inquiry-submit:disabled{opacity:.5;cursor:wait}
+.vmv-site-inquiry .ws-inquiry-success{max-width:750px;background:#fff;border-radius:20px;border:1px solid #e8def1;padding:25px}
+.vmv-site-inquiry .ws-inquiry-success>span{font-size:25px;color:var(--vmv-accent)}
+.vmv-site-inquiry .ws-inquiry-success h3{font-size:25px}
+@media(max-width:650px){.vmv-site-inquiry{padding:57px 6%}.vmv-site-inquiry .ws-inquiry-form{padding:18px}.vmv-site-inquiry .ws-inquiry-field-row,.vmv-site-inquiry .ws-inquiry-extra{grid-template-columns:1fr}}
