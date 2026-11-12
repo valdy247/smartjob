@@ -2,7 +2,7 @@ import type {CSSProperties} from "react";
 import type {Metadata} from "next";
 import {notFound} from "next/navigation";
 import {createClient} from "@supabase/supabase-js";
-import {normalizeWebContent,paletteStyles,webEmail,webPhone,webServices} from "@/lib/web-services-site";
+import {normalizeWebContent,paletteStyles,webEmail,webPhone,webServices,webCategory} from "@/lib/web-services-site";
 import "./site.css";
 
 export const dynamic="force-dynamic";
@@ -45,9 +45,10 @@ export default async function PublishedBusinessWebsite({params}:Props){
   </header>
   <main>
    <section id="inicio" className="ws-public-hero">
-    <span className="ws-public-eyebrow">{page.eyebrow||"SERVICIOS · EXPERIENCIAS"}</span>
+    <span className="ws-public-eyebrow">{webCategory(page)}</span>
     <h1>{page.headline}</h1>
     {page.intro?<p>{page.intro}</p>:null}
+    {page.heroImage?<img className="ws-public-hero-photo" src={page.heroImage} alt={"Imagen de "+page.business}/>:null}
     <a className="ws-public-button" href="#contacto">{page.action||"Contáctanos"} <span aria-hidden="true">↗</span></a>
     <div className="ws-public-graphic" aria-hidden="true">✳</div>
    </section>
@@ -60,6 +61,10 @@ export default async function PublishedBusinessWebsite({params}:Props){
       </article>):<article><h3>{page.business}</h3></article>}
     </div>
    </section>
+   {page.gallery.length?<section className="ws-public-section ws-public-gallery" aria-label="Galería">
+    <small>IMÁGENES</small><h2>Galería<span>.</span></h2>
+    <div>{page.gallery.map((src,i)=><img key={src} src={src} alt={"Imagen "+(i+1)+" de "+page.business}/>)}</div>
+   </section>:null}
    <section id="nosotros" className="ws-public-section ws-public-about">
     <small>02 / NOSOTROS</small><h2>Conócenos<span>.</span></h2>
     <p>{page.about||page.intro||page.headline}</p>
