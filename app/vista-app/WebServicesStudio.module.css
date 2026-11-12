@@ -149,3 +149,15 @@
  .serviceRow button{width:23px}
  .previewGallery img{height:85px}
 }
+
+
+/* Templates and swatches remain visible while the preview updates below. */
+.visualDesign{padding:12px 14px 8px;gap:6px}
+.visualDesign .options{margin:0 0 4px}
+.visualDesign .options button{display:flex;align-items:center;justify-content:center;gap:5px;min-height:36px}
+.paletteDot{display:inline-block;width:13px;height:13px;flex:0 0 13px;border:2px solid #ffffffb3;border-radius:50%;box-shadow:0 0 0 1px #3d304938}
+@container (max-width:719px){
+ .visualDesign{padding:10px 12px 7px;gap:5px}
+ .visualDesign .options button{min-height:36px;font-size:10px;padding:6px 4px}
+ .paletteDot{width:11px;height:11px;flex-basis:11px}
+}
