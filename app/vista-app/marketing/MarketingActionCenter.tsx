@@ -3,10 +3,13 @@
 import {useEffect,useMemo,useState} from "react";
 import type {SupabaseClient,User} from "@supabase/supabase-js";
 import {
- ArrowUpRight,CheckCircle2,ClipboardList,ExternalLink,FileCheck2,Globe2,
- LockKeyhole,RefreshCw,Send,ShieldCheck,Wallet,Workflow,HandHeart
+ ArrowLeft,ArrowRight,ArrowUpRight,Apple,Check,CheckCircle2,ClipboardList,ExternalLink,
+ FileCheck2,Gauge,Globe2,HandHeart,LayoutGrid,LockKeyhole,MapPinned,
+ Megaphone,MessageSquareHeart,Navigation,RefreshCw,Search,Send,ShieldCheck,
+ Sparkles,Star,Wallet,Workflow
 } from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
+import {BUSINESS_CATEGORIES,CATEGORY_GROUPS,categoryLabel} from "@/lib/vmv-business-categories";
 import styles from "./MarketingActionCenter.module.css";
 
 export type ServiceCode="google_profile"|"apple_maps"|"bing_places"|"yelp_profile"|"search_console"|"seo_improvement"|"campaign_setup"|"review_strategy"|"other";
@@ -31,6 +34,24 @@ const services:Service[]=[
  {id:"review_strategy",name:"Conseguir reseñas honestas",why:"Preparar una solicitud ética y fácil de compartir.",mode:"Herramientas y asistencia"},
  {id:"other",name:"Otra necesidad de marketing",why:"Explica el resultado que deseas conseguir.",mode:"Evaluación individual"}
 ];
+type WizardStep=0|1|2|3|4;
+const wizardTitles=["Servicio","Tu negocio","Tu objetivo","Confirmar"] as const;
+const serviceIcons:Record<ServiceCode,typeof MapPinned>={
+ google_profile:MapPinned,apple_maps:Apple,bing_places:Navigation,yelp_profile:Star,
+ search_console:Search,seo_improvement:Gauge,campaign_setup:Megaphone,
+ review_strategy:MessageSquareHeart,other:Sparkles
+};
+const suggestedGoals:Record<ServiceCode,string[]>={
+ google_profile:["Quiero que mi negocio aparezca en Google Maps.","Quiero reclamar mi ficha empresarial existente.","Necesito corregir los datos de mi negocio en Google."],
+ apple_maps:["Quiero registrar mi negocio en Apple Maps.","Necesito reclamar o corregir mi ficha de Apple Maps."],
+ bing_places:["Quiero que mi negocio aparezca en Bing Maps.","Necesito reclamar o actualizar mi ficha en Bing Places."],
+ yelp_profile:["Quiero reclamar el perfil de mi negocio en Yelp.","Necesito actualizar la información de mi negocio en Yelp."],
+ search_console:["Quiero conocer qué búsquedas llevan personas a mi web.","Necesito ayuda para configurar Google Search Console."],
+ seo_improvement:["Quiero mejorar la velocidad y el SEO de mi sitio web.","Necesito identificar y solucionar problemas de posicionamiento."],
+ campaign_setup:["Quiero preparar una campaña para conseguir clientes.","Necesito ayuda para definir una oferta y un presupuesto publicitario."],
+ review_strategy:["Quiero pedir reseñas auténticas a mis clientes.","Necesito mejorar la forma en que respondo a mis reseñas."],
+ other:["Quiero explicar una necesidad de marketing para mi negocio.","Necesito ayuda para conseguir más clientes de manera medible."]
+};
 const statusNames:Record<Status,string>={
  received:"Solicitud recibida",quoted:"Presupuesto disponible",approved:"Presupuesto aprobado",
  in_progress:"Trabajo en proceso",needs_customer:"Necesitamos tu ayuda",
@@ -56,7 +77,13 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [requests,setRequests]=useState<RequestRow[]>([]);
  const [approvals,setApprovals]=useState<Acceptance[]>([]);
  const [selected,setSelected]=useState<ServiceCode>(preselectedService||"google_profile");
- useEffect(()=>{if(preselectedService)setSelected(preselectedService);},[preselectedService]);
+ const [wizardStep,setWizardStep]=useState<WizardStep>(preselectedService?1:0);
+ const [wizardError,setWizardError]=useState("");
+ const [submittedId,setSubmittedId]=useState<string|null>(null);
+ const [chosenCategory,setChosenCategory]=useState("");
+ useEffect(()=>{
+  if(preselectedService){setSelected(preselectedService);setWizardStep(1);setWizardError("");setSubmittedId(null);}
+ },[preselectedService]);
  const [name,setName]=useState(businessName);
  const [site,setSite]=useState(website);
  const [goal,setGoal]=useState("");
@@ -72,6 +99,22 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [stage,setStage]=useState<Status>("received");
  const [stageUpdate,setStageUpdate]=useState("");
  const [evidence,setEvidence]=useState("");
+ const revealWizard=()=>document.getElementById("vmv-marketing-request")?.scrollIntoView({behavior:"smooth",block:"start"});
+ const chooseService=(code:ServiceCode)=>{
+  setSelected(code);setWizardStep(1);setWizardError("");setSubmittedId(null);revealWizard();
+ };
+ const goNext=()=>{
+  setWizardError("");
+  if(wizardStep===1){
+   if(name.trim().length<2||name.trim().length>150){setWizardError("Escribe el nombre comercial de tu negocio.");return;}
+   if(site.trim()&&!safeSite(site)){setWizardError("Comprueba el enlace de tu web: debe comenzar con https://.");return;}
+  }
+  if(wizardStep===2&&goal.trim().length<12){setWizardError("Elige una opción o describe lo que necesitas en al menos 12 caracteres.");return;}
+  if(wizardStep===2&&goal.trim().length>1500){setWizardError("El mensaje no debe superar 1500 caracteres.");return;}
+  if(wizardStep<3){setWizardStep((wizardStep+1) as WizardStep);revealWizard();}
+ };
+ const goBack=()=>{setWizardError("");if(wizardStep>0&&wizardStep<4){setWizardStep((wizardStep-1) as WizardStep);revealWizard();}};
+ const effectiveCategory=chosenCategory||industryId||savedCategory||"other";
  useEffect(()=>{
   let alive=true;
   const instance=getSupabase();
@@ -142,24 +185,28 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const isAccepted=(req:RequestRow)=>approvals.some(a=>a.request_id===req.id&&a.quote_revision===req.quote_revision&&a.quoted_price_cents===req.quoted_price_cents);
  const submit=async()=>{
   setError("");setMessage("");
-  if(!client||!user){setError("Inicia sesión en VMV Business antes de crear una solicitud.");return;}
-  if(name.trim().length<2||name.trim().length>150){setError("Introduce el nombre comercial (2 a 150 caracteres).");return;}
-  if(goal.trim().length<12||goal.trim().length>1500){setError("Explica el resultado que necesitas en al menos 12 caracteres.");return;}
-  if(site.trim()&&!safeSite(site)){setError("La web debe ser una URL pública válida, por ejemplo https://minegocio.com.");return;}
-  if(!consent){setError("Confirma que autorizas a VMV a usar los datos de esta solicitud para responderte.");return;}
+  setWizardError("");
+  if(wizardStep!==3)return;
+  if(!client||!user){setWizardError("Inicia sesión en VMV Business para enviar tu solicitud.");return;}
+  if(name.trim().length<2||name.trim().length>150){setWizardStep(1);setWizardError("Introduce el nombre comercial (2 a 150 caracteres).");return;}
+  if(goal.trim().length<12||goal.trim().length>1500){setWizardStep(2);setWizardError("Elige una necesidad o describe el resultado que buscas.");return;}
+  if(site.trim()&&!safeSite(site)){setWizardStep(1);setWizardError("La web debe tener una URL válida.");return;}
+  if(!consent){setWizardError("Marca la autorización para que podamos atender la solicitud.");return;}
   setBusy(true);
   try{
    // The DB allows customers to insert only input fields, never quote, status or verification.
    const {data, error:insertError}=await client.from("vmv_marketing_requests").insert({
     owner_id:user.id,service_code:selected,business_name:name.trim(),
-    category_id:industryId||savedCategory||"other",website_url:safeSite(site),goal_text:goal.trim(),
+    category_id:effectiveCategory,website_url:safeSite(site),goal_text:goal.trim(),
     agreed_to_contact:true
    }).select("id").single();
    if(insertError)throw insertError;
-   setMessage("Solicitud registrada ("+String(data.id).slice(0,8)+"). El equipo la evaluará y te informará si requiere presupuesto. No hemos publicado nada ni cobrado.");
+   const requestId=String(data.id).slice(0,8);
+   setSubmittedId(requestId);setWizardStep(4);
+   setMessage("Solicitud #"+requestId+" registrada correctamente. Sin pagos ni publicaciones automáticas.");
    setGoal("");setConsent(false);
    await refresh();
-  }catch(e){setError("No se pudo registrar la solicitud. "+errorMessage(e,"Vuelve a intentarlo."));}
+  }catch(e){setWizardError("No se pudo registrar la solicitud. "+errorMessage(e,"Vuelve a intentarlo."));}
   finally{setBusy(false);}
  };
  const accept=async(req:RequestRow)=>{
@@ -231,34 +278,94 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    <p>Automatizamos lo que tiene una integración segura; si falta una API o una verificación, podrás solicitar asistencia dentro de VMV.</p>
   </header>
   <div className={styles.quickActions}>
-   <button type="button" onClick={onGoToVisibility}><Globe2 size={19}/><strong>Analizar mi web</strong><small>Auditoría técnica automática y herramientas de directorios</small><ArrowUpRight size={16}/></button>
-   <button type="button" onClick={()=>{setSelected("google_profile");document.getElementById("vmv-marketing-request")?.scrollIntoView({behavior:"smooth",block:"start"});}}><FileCheck2 size={19}/><strong>Registrar mi negocio</strong><small>Google y directorios con ayuda y verificación</small><ArrowUpRight size={16}/></button>
+   <button type="button" onClick={onGoToVisibility}><Globe2 size={19}/><strong>Analizar mi web gratis</strong><small>Auditoría técnica y herramientas de presencia local</small><ArrowUpRight size={16}/></button>
+   <button type="button" onClick={()=>chooseService("google_profile")}><FileCheck2 size={19}/><strong>Aparecer en Google Maps</strong><small>Solicitud guiada con asistencia y verificación</small><ArrowUpRight size={16}/></button>
   </div>
-  <section className={styles.panel} id="vmv-marketing-request">
-   <div className={styles.panelTop}><div><span>01 · SOLICITAR UN RESULTADO</span><h3>¿Qué quieres que hagamos?</h3></div><ShieldCheck size={22}/></div>
-   <div className={styles.services}>
-    {services.map(s=><button type="button" key={s.id} onClick={()=>setSelected(s.id)} className={selected===s.id?styles.serviceActive:styles.service} aria-pressed={selected===s.id}>
-     <strong>{s.name}</strong><small>{s.why}</small><em>{s.mode}</em>
-    </button>)}
-   </div>
-   <div className={styles.formGrid}>
-    <label>Nombre comercial<input value={name} maxLength={150} onChange={e=>setName(e.target.value)} placeholder="Tu empresa"/></label>
-    <label>Sitio web (opcional)<input value={site} maxLength={500} onChange={e=>setSite(e.target.value)} placeholder="https://minegocio.com" inputMode="url"/></label>
-   </div>
-   <label className={styles.goalLabel}>¿Qué resultado necesitas?
-    <textarea value={goal} maxLength={1500} onChange={e=>setGoal(e.target.value)} rows={4} placeholder="Ej. Tengo un negocio de repostería y quiero que aparezca correctamente en Google Maps. Mi dirección es privada y atiendo por encargo."/>
-    <small>{goal.length}/1500 caracteres. Cuéntanos qué esperas conseguir; no compartas contraseñas ni datos bancarios.</small>
-   </label>
-   <label className={styles.permission}><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/>
-    <span>Autorizo a VMV a utilizar estos datos para gestionar y responder a esta solicitud. <strong>No autorizo publicaciones, pagos ni cambios externos sin una aprobación aparte.</strong></span>
-   </label>
-   {authState==="checking"?<p className={styles.muted}>Verificando tu cuenta…</p>:
-    authState!=="ready"?<div className={styles.signIn}><LockKeyhole size={19}/><p>{authState==="unconfigured"?"El inicio de sesión aún no está configurado en este entorno.":"Inicia sesión en VMV Business para guardar y seguir tus solicitudes."}</p><a href="/vista-app">Acceder a VMV Business <ArrowUpRight size={15}/></a></div>:
-    <button type="button" className={styles.submit} disabled={busy||loading} onClick={()=>void submit()}><Send size={16}/> {busy?"Registrando…":"Enviar solicitud a VMV"}</button>
-   }
-   <p className={styles.disclaimer}>No hay cargos por enviar una solicitud. Si el trabajo tiene coste, recibirás un presupuesto y deberás aprobarlo antes de que comience.</p>
+  <section className={styles.wizardPanel} id="vmv-marketing-request" aria-label="Crear solicitud de marketing">
+   {wizardStep===4?<div className={styles.wizardSuccess} role="status">
+    <div className={styles.successIcon}><CheckCircle2 size={33}/></div>
+    <span className={styles.overline}>SOLICITUD RECIBIDA</span>
+    <h3>¡Listo! Ya tenemos tu solicitud.</h3>
+    <p>Referencia <strong>#{submittedId}</strong>. La revisaremos y verás aquí si hace falta un presupuesto o alguna información adicional.</p>
+    <div className={styles.successReminder}><ShieldCheck size={17}/> No hemos cobrado ni publicado nada. Cualquier coste necesitará tu aprobación.</div>
+    <div className={styles.wizardButtons}>
+     <button type="button" className={styles.wizardBack} onClick={()=>{setWizardStep(0);setSubmittedId(null);setWizardError("");revealWizard();}}>Crear otra solicitud</button>
+     <button type="button" className={styles.wizardPrimary} onClick={()=>document.getElementById("vmv-marketing-history")?.scrollIntoView({behavior:"smooth",block:"start"})}>Ver seguimiento <ArrowRight size={16}/></button>
+    </div>
+   </div>:<>
+    <div className={styles.wizardHeading}>
+     <div><span className={styles.overline}><LayoutGrid size={15}/> ASISTENTE DE MARKETING</span>
+      <h3>{wizardStep===0?"¿En qué te ayudamos hoy?":wizardStep===1?"Primero, tu negocio":wizardStep===2?"¿Qué necesitas conseguir?":"Confirma tu solicitud"}</h3>
+      <p>{wizardStep===0?"Elige una opción para comenzar. Te guiaremos paso a paso.":wizardStep===1?"Usaremos los datos que ya conocemos para ahorrarte trabajo.":wizardStep===2?"Toca una sugerencia o cuéntanos brevemente qué necesitas.":"Revisa todo antes de enviarlo. No se realizará ningún cambio externo."}</p>
+     </div>
+     <span className={styles.stepCount}>{wizardStep+1} / 4</span>
+    </div>
+    <ol className={styles.stepper} aria-label="Progreso de la solicitud">
+     {wizardTitles.map((label,index)=><li key={label} className={index===wizardStep?styles.stepCurrent:index<wizardStep?styles.stepDone:styles.stepPending} aria-current={index===wizardStep?"step":undefined}>
+      <span className={styles.stepBubble}>{index<wizardStep?<Check size={14}/>:index+1}</span><span>{label}</span>
+     </li>)}
+    </ol>
+    {wizardStep===0?<div className={styles.wizardBody}>
+     <div className={styles.serviceIntro}><strong>Elige lo que necesitas</strong><span>Después podrás añadir detalles, sin formularios interminables.</span></div>
+     <div className={styles.servicePicker}>
+      {services.map(service=>{
+       const ServiceIcon=serviceIcons[service.id];
+       return <button type="button" key={service.id} onClick={()=>chooseService(service.id)} className={styles.serviceTile} aria-label={"Elegir "+service.name}>
+        <span className={styles.serviceIcon}><ServiceIcon size={23} strokeWidth={1.8}/></span>
+        <span className={styles.serviceText}><strong>{service.name}</strong><small>{service.why}</small></span>
+        <ArrowUpRight size={16} className={styles.tileArrow}/>
+       </button>;
+      })}
+     </div>
+     <p className={styles.wizardHint}><ShieldCheck size={15}/> El envío de solicitudes es gratis. Si un servicio cuesta dinero, conocerás el precio antes de aprobarlo.</p>
+    </div>:null}
+    {wizardStep===1?<div className={styles.wizardBody}>
+     <div className={styles.selectedServiceBanner}><span className={styles.selectedServiceIcon}>{(()=>{const Icon=serviceIcons[selected];return <Icon size={23}/>;})()}</span><span><small>SERVICIO ELEGIDO</small><strong>{services.find(s=>s.id===selected)?.name}</strong></span><button type="button" onClick={()=>{setWizardStep(0);setWizardError("");}}>Cambiar</button></div>
+     <div className={styles.wizardFields}>
+      <label className={styles.wizardField}><span>Nombre de tu negocio <em>Obligatorio</em></span><input type="text" autoComplete="organization" value={name} maxLength={150} onChange={e=>{setName(e.target.value);setWizardError("");}} placeholder="Ej. Mi negocio" /></label>
+      <label className={styles.wizardField}><span>¿A qué se dedica?</span><select value={effectiveCategory} onChange={e=>setChosenCategory(e.target.value)}>
+       {CATEGORY_GROUPS.map(group=><optgroup key={group} label={group}>{BUSINESS_CATEGORIES.filter(c=>c.group===group).map(c=><option value={c.id} key={c.id}>{c.label}</option>)}</optgroup>)}
+      </select></label>
+      <label className={styles.wizardField}><span>Sitio web <em>Opcional</em></span><input type="url" inputMode="url" autoComplete="url" value={site} maxLength={500} onChange={e=>{setSite(e.target.value);setWizardError("");}} placeholder="https://tusitio.com"/></label>
+     </div>
+     <p className={styles.wizardHint}><ShieldCheck size={15}/> Si ya registraste tu negocio en VMV, los datos disponibles aparecen automáticamente.</p>
+    </div>:null}
+    {wizardStep===2?<div className={styles.wizardBody}>
+     <div className={styles.selectedServiceBanner}><span className={styles.selectedServiceIcon}>{(()=>{const Icon=serviceIcons[selected];return <Icon size={23}/>;})()}</span><span><small>ESTAMOS PREPARANDO</small><strong>{services.find(s=>s.id===selected)?.name}</strong></span></div>
+     <span className={styles.presetLabel}>Elige lo que más se parece a tu necesidad</span>
+     <div className={styles.goalPresets}>{suggestedGoals[selected].map(option=><button key={option} type="button" className={goal===option?styles.presetActive:styles.preset} aria-pressed={goal===option} onClick={()=>{setGoal(option);setWizardError("");}}>
+      <CheckCircle2 size={16}/>{option}
+     </button>)}</div>
+     <label className={styles.goalLabel}>¿Quieres añadir algún detalle?
+      <textarea value={goal} maxLength={1500} onChange={e=>{setGoal(e.target.value);setWizardError("");}} rows={5} placeholder="Ej. Mi negocio ya aparece, pero tiene el horario incorrecto. No quiero mostrar la dirección de mi casa."/>
+      <small>{goal.length}/1500 caracteres · No compartas contraseñas ni información bancaria.</small>
+     </label>
+    </div>:null}
+    {wizardStep===3?<div className={styles.wizardBody}>
+     <div className={styles.reviewCard}>
+      <div className={styles.reviewTop}><ClipboardList size={20}/><strong>Resumen de tu solicitud</strong></div>
+      <div className={styles.reviewItem}><span>Servicio</span><strong>{services.find(s=>s.id===selected)?.name}</strong><button type="button" onClick={()=>setWizardStep(0)}>Editar</button></div>
+      <div className={styles.reviewItem}><span>Negocio</span><strong>{name.trim()}</strong><button type="button" onClick={()=>setWizardStep(1)}>Editar</button></div>
+      <div className={styles.reviewItem}><span>Sector</span><strong>{categoryLabel(effectiveCategory,"No especificado")}</strong></div>
+      {site.trim()?<div className={styles.reviewItem}><span>Sitio web</span><strong className={styles.wrapValue}>{site.trim()}</strong></div>:null}
+      <div className={styles.reviewGoal}><span>Qué necesitas</span><p>{goal.trim()}</p><button type="button" onClick={()=>setWizardStep(2)}>Modificar descripción</button></div>
+     </div>
+     <div className={styles.costNote}><Wallet size={22}/><div><strong>Enviar la solicitud: $0</strong><p>El coste de un servicio, si corresponde, se cotizará después. Ningún pago ni publicación se ejecuta al enviar.</p></div></div>
+     <label className={styles.permission}><input type="checkbox" checked={consent} onChange={e=>{setConsent(e.target.checked);setWizardError("");}}/>
+      <span>Autorizo a VMV a utilizar estos datos para gestionar y responder a mi solicitud. <strong>Publicaciones, pagos y cambios externos necesitarán aprobación adicional.</strong></span>
+     </label>
+     {authState==="checking"?<p className={styles.muted}>Verificando tu cuenta…</p>:
+      authState!=="ready"?<div className={styles.signIn}><LockKeyhole size={19}/><p>{authState==="unconfigured"?"El inicio de sesión no está configurado en este entorno.":"Inicia sesión en VMV Business para guardar tu solicitud."}</p><a href="/vista-app">Entrar a VMV Business <ArrowUpRight size={15}/></a></div>:null}
+    </div>:null}
+    {wizardError?<p role="alert" className={styles.wizardError}>{wizardError}</p>:null}
+    {wizardStep>0?<div className={styles.wizardFooter}>
+     <button type="button" className={styles.wizardBack} onClick={goBack} disabled={busy}><ArrowLeft size={16}/> Anterior</button>
+     {wizardStep===3?<button type="button" className={styles.wizardPrimary} disabled={busy||loading||authState!=="ready"} onClick={()=>void submit()}><Send size={16}/>{busy?"Enviando…":"Enviar solicitud"}</button>:
+      <button type="button" className={styles.wizardPrimary} onClick={goNext}>Continuar <ArrowRight size={16}/></button>}
+    </div>:null}
+   </>}
   </section>
-  <section className={styles.panel}>
+  <section className={styles.panel} id="vmv-marketing-history">
    <div className={styles.panelTop}><div><span>02 · SEGUIMIENTO REAL</span><h3>Mis solicitudes</h3></div><button type="button" onClick={()=>void refresh()} disabled={loading||!user} className={styles.refresh}><RefreshCw size={16}/> Actualizar</button></div>
    {staff?<div className={styles.viewToggle}><button type="button" aria-pressed={!teamView} onClick={()=>setTeamView(false)}>Mis solicitudes</button><button type="button" aria-pressed={teamView} onClick={()=>setTeamView(true)}>Bandeja del equipo</button></div>:null}
    {!user?<p className={styles.muted}>Tus solicitudes aparecerán aquí cuando inicies sesión.</p>:loading?<p className={styles.muted}>Cargando solicitudes…</p>:
