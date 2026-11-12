@@ -17,7 +17,7 @@ export const defaultWebContent:WebSiteContent={
  contactMethod:"section",whatsapp:"",contactMessage:"",inquiriesEnabled:false,
  palette:"violet",template:"editorial"
 };
-const limits:Record<Exclude<keyof WebSiteContent,"palette"|"template"|"gallery"|"contactMethod">,number>={
+const limits:Record<Exclude<keyof WebSiteContent,"palette"|"template"|"gallery"|"contactMethod"|"inquiriesEnabled">,number>={
  business:100,headline:180,eyebrow:70,intro:400,about:900,services:450,email:180,
  phone:36,address:250,action:45,categoryId:65,heroImage:450,
  whatsapp:32,contactMessage:250
