@@ -75,6 +75,7 @@ export default function VMVMobilePreview(){
  const [callFilter,setCallFilter]=useState<"all"|"direct"|"translated">("all");
  const [contactStartForm,setContactStartForm]=useState(false);
  const [contactPhone,setContactPhone]=useState("");
+ const [dialTarget,setDialTarget]=useState<{phone:string;name:string}|null>(null);
  const [draft,setDraft]=useState<CallSettings|null>(null);
  const [email,setEmail]=useState("");
  const [password,setPassword]=useState("");
@@ -120,9 +121,10 @@ export default function VMVMobilePreview(){
  const business=profile?.business_name?.trim()||profile?.first_name||"Mi negocio";
  const lineNumber=line?.twilioPhone||route?.twilio_number||"Sin número asignado";
  const lineState=line?.connectedToApp?"Ruta iPhone configurada":line?.verified?"Número verificado":route?.enabled?"Ruta registrada":"Pendiente de activación";
- const go=(next:Tab)=>{setServiceFocus("all");setCallbackConfirmSid(null);setTab(next);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("dial");setCallFilter("all");}setError("");setNotice("");};
+ const go=(next:Tab)=>{setServiceFocus("all");setCallbackConfirmSid(null);setTab(next);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("dial");setDialTarget(null);setCallFilter("all");}setError("");setNotice("");};
  const showCall=(next:Panel="overview")=>{setTab("services");setOpen(true);setPanel(next);setError("");setNotice("");};
  const openContacts=(number="",startInForm=false)=>{setContactPhone(number);setContactStartForm(startInForm);setCallsView("contacts");setTab("calls");setError("");setNotice("");};
+ const dialContact=(phone:string,name:string)=>{setDialTarget({phone,name});setCallsView("dial");setContactPhone("");setContactStartForm(false);setTab("calls");};
  async function login(e:FormEvent<HTMLFormElement>){e.preventDefault();await signIn(email,password);setPassword("");}
  async function saveSettings(e:FormEvent<HTMLFormElement>){e.preventDefault();if(draft)await saveBasic(draft);}
  async function saveVoices(e:FormEvent<HTMLFormElement>){e.preventDefault();await savePremium(preferences);}
@@ -458,11 +460,11 @@ export default function VMVMobilePreview(){
          <button type="button" key={item.id} role="tab" aria-label={item.label} title={item.label}
           aria-selected={callsView===item.id}
           className={callsView===item.id?styles.callViewTabActive:styles.callViewTab}
-          onClick={()=>{setCallsView(item.id);if(item.id==="contacts"){setContactPhone("");setContactStartForm(false);}}}>
+          onClick={()=>{setCallsView(item.id);if(item.id==="contacts"){setContactPhone("");setContactStartForm(false);}if(item.id==="dial")setDialTarget(null);}}>
           <span className={styles.callTabEmoji} aria-hidden="true">{item.emoji}</span>
          </button>)}
        </div>
-       {callsView==="dial"&&client&&user?<DialPad client={client} ownerId={user.id}/>:null}
+       {callsView==="dial"&&client&&user?<DialPad client={client} ownerId={user.id} initialPhone={dialTarget?.phone||""} contactName={dialTarget?.name||""}/>:null}
        {callsView==="history"?<div role="tabpanel" aria-label="Historial de llamadas">
         <div className={styles.callHistoryToolbar}>
          <div className={styles.callFilters} role="group" aria-label="Filtrar llamadas">
@@ -480,7 +482,7 @@ export default function VMVMobilePreview(){
        {callsView==="contacts"&&client&&user?<div role="tabpanel" aria-label="Agenda de contactos">
         <ContactBook key={user.id+":"+contactPhone+":"+contactStartForm}
          client={client} ownerId={user.id} initialPhone={contactPhone}
-         startInForm={contactStartForm} embedded onClose={()=>setCallsView("dial")}/>
+         startInForm={contactStartForm} embedded onCall={dialContact} onClose={()=>setCallsView("dial")}/>
        </div>:null}
       </section>:null}
       {ready&&tab==="translator"?<div className={`${styles.screen} ${styles.translatorV3}`}>
