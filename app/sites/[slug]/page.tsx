@@ -2,7 +2,7 @@ import type {CSSProperties} from "react";
 import type {Metadata} from "next";
 import {notFound} from "next/navigation";
 import {createClient} from "@supabase/supabase-js";
-import {normalizeWebContent,paletteStyles,webEmail,webPhone,webServices,webCategory,webWhatsApp,webPrimaryContact} from "@/lib/web-services-site";
+import {normalizeWebContent,paletteStyles,webEmail,webPhone,webServices,webCategory,webWhatsApp,webPrimaryContact,webServiceContact} from "@/lib/web-services-site";
 import "./site.css";
 
 export const dynamic="force-dynamic";
@@ -63,9 +63,16 @@ export default async function PublishedBusinessWebsite({params}:Props){
     <small>01 / SERVICIOS</small>
     <h2>Lo que hacemos<span>.</span></h2>
     <div className="ws-public-service-grid">
-     {services.length?services.map((name,i)=><article key={i}>
-       <span>{"0"+(i+1)}</span><h3>{name}</h3><span aria-hidden="true">↗</span>
-      </article>):<article><h3>{page.business}</h3></article>}
+     {services.length?services.map((name,i)=>{
+      const contact=webServiceContact(page,name);
+      return <article key={i}>
+       <a className="ws-public-service-action" href={contact.href}
+        target={contact.external?"_blank":undefined} rel={contact.external?"noopener noreferrer":undefined}
+        aria-label={"Consultar sobre "+name}>
+        <span>{"0"+(i+1)}</span><h3>{name}</h3><span aria-hidden="true">↗</span>
+       </a>
+      </article>;
+     }):<article><h3>{page.business}</h3></article>}
     </div>
    </section>
    {page.gallery.length?<section className="ws-public-section ws-public-gallery" aria-label="Galería">
