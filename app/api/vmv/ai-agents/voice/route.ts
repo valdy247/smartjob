@@ -29,6 +29,21 @@ function gather(base:string,lang:"es-ES"|"en-US",message:string){
     say(lang==="en-US"?"I did not hear you. Goodbye.":"No pude escucharte. Hasta pronto.",lang)+"<Hangup/>";
 }
 const bounded=(x:unknown,max:number)=>String(x||"").trim().slice(0,max);
+// Even an authorized trial line must not speak for a business with missing
+// identity, geography, human handoff or disclosure rules.
+function hasMinimumVoiceTraining(agent:Agent){
+ const c=agent.configuration||{};
+ const filled=(key:string)=>typeof c[key]==="string"&&c[key].trim().length>0;
+ const area=c.country==="Otro país"?filled("region_other"):filled("state");
+ const base=Boolean(agent.name.trim()&&agent.purpose.trim()&&filled("business_name")&&
+  filled("industry")&&filled("country")&&filled("city")&&area&&
+  (filled("human_review")||filled("handoff"))&&
+  (filled("data_scope")||filled("personal_data")));
+ if(!base)return false;
+ if(agent.kind!=="calls")return true;
+ return filled("calls_goal")&&(filled("call_forward")||filled("call_escalation"))&&
+  (c.call_consent==="Sí"||c.call_disclosure==="Sí");
+}
 const fallback=(lang:"es-ES"|"en-US")=>lang==="en-US"
   ?"I could not confirm that information. Please contact the business directly."
   :"No pude confirmar esa información. Comunícate directamente con el negocio.";
@@ -57,7 +72,7 @@ export async function POST(req:NextRequest){
    .select("id,business_id,owner_id,status,name,kind,language,purpose,instructions,knowledge,personality,configuration")
    .eq("id",binding.agent_id).eq("owner_id",binding.owner_id).eq("status","active").maybeSingle();
  const agent=agentRow as Agent|null;
- if(agentError||!agent)return voiceUnavailable();
+ if(agentError||!agent||!hasMinimumVoiceTraining(agent))return voiceUnavailable();
  const {data:business}=await db.from("vmv_ai_businesses").select("id,name")
    .eq("id",agent.business_id).eq("owner_id",agent.owner_id).maybeSingle();
  if(!business||!await paidServiceAllowed(binding.owner_id,"ai"))return voiceUnavailable();
