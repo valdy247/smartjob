@@ -156,6 +156,23 @@ export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=true
    <div className={styles.roles}>{allRoles.map(r=><button type="button" key={r} className={draft.kind===r?styles.choiceActive:styles.choice}
     onClick={()=>setDraft(d=>({...d,kind:r,purpose:d.kind===r?d.purpose:({calls:"Orientar a las personas que llaman.",support:"Responder preguntas de clientes.",sales:"Informar y calificar oportunidades comerciales.",bookings:"Recibir solicitudes de citas y explicar las políticas.",inventory:"Consultar información autorizada de productos.",operations:"Organizar solicitudes administrativas.",custom:"Cumplir una misión definida por el negocio."} as Record<AgentKind,string>)[r]}))}>
     {{calls:"Llamadas",support:"Clientes",sales:"Ventas",bookings:"Reservas",inventory:"Inventario",operations:"Administración",custom:"Personalizado"}[r]}</button>)}</div>
+   <p className={styles.fieldTitle}>¿Dónde trabajará?</p>
+   <div className={styles.choices}>{["Teléfono","Chat","Teléfono y chat"].map(x=><button type="button"
+    key={x} className={(draft.setup.channel||"Chat")===x?styles.choiceActive:styles.choice}
+    onClick={()=>answer("channel",x)}>{x}</button>)}</div>
+   <p className={styles.fieldTitle}>¿Qué tareas tendrá permitidas?</p>
+   <div className={styles.choices}>{([["cap_attend","Atender preguntas"],["cap_sales","Vender por teléfono o chat"],["cap_bookings","Solicitar reservas"],["cap_catalog","Consultar catálogo"]] as const).map(([key,label])=>
+    <button type="button" key={key} aria-pressed={draft.setup[key]==="Sí"}
+    className={draft.setup[key]==="Sí"?styles.choiceActive:styles.choice}
+    onClick={()=>answer(key,draft.setup[key]==="Sí"?"No":"Sí")}>{draft.setup[key]==="Sí"?"✓ ":""}{label}</button>)}</div>
+   {draft.setup.cap_sales==="Sí"?<>
+    <p className={styles.fieldTitle}>Autorizaciones de ventas</p>
+    <div className={styles.choices}>{([["perm_prepare_order","Preparar pedidos"],["perm_confirm_order","Confirmar tras aceptación"],["perm_payment_link","Ofrecer enlace de pago verificado"]] as const).map(([key,label])=>
+     <button type="button" key={key} aria-pressed={draft.setup[key]==="Sí"}
+      className={draft.setup[key]==="Sí"?styles.choiceActive:styles.choice}
+      onClick={()=>answer(key,draft.setup[key]==="Sí"?"No":"Sí")}>{draft.setup[key]==="Sí"?"✓ ":""}{label}</button>)}</div>
+    <p className={styles.hint}>No tomará números de tarjeta por llamada. Los importes se calculan en el servidor.</p>
+   </>:null>
   </div>:null}
   {step>0&&step<steps.length-1?<div className={styles.fields}>
    {step===2&&draft.setup.industry?<div className={styles.context}><Sparkles size={15}/> Negocio: <strong>{draft.setup.industry}</strong> · {draft.setup.city||""}{draft.setup.state?", "+draft.setup.state:""}. No necesitas repetir esos datos.</div>:null}
