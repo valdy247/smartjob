@@ -373,8 +373,18 @@ export default function VMVMobilePreview(){
           <span className={styles.balanceServiceIcon}><PhoneCall size={19}/></span>
           <div><h3>Llamadas normales</h3></div>
          </div>
-         <strong className={styles.directServiceStatus}>{billing?.subscriptionActive?"Incluidas en tu plan":"No disponibles"}</strong>
-         {billing?.plan==="starter"?<Row label="Starter · plan previsto" value="150 min nacionales"/>:null}
+         {billing?.national?.enabled?
+          <>
+           <strong className={styles.directServiceStatus}>{billing.national.available} min disponibles</strong>
+           <Row label="Incluidos" value={billing.national.included+" min"}/>
+           <Row label="Usados" value={billing.national.used+" min"}/>
+           {billing.national.reserved>0?<Row label="En llamada" value={billing.national.reserved+" min"}/>:null}
+           {billing.national.available===0?<p className={styles.testNote}>Sin minutos nacionales</p>:null}
+          </>:
+          <>
+           <strong className={styles.directServiceStatus}>{billing?.subscriptionActive?"Incluidas en tu plan":"No disponibles"}</strong>
+           {billing?.plan==="starter"?<Row label="Starter · plan previsto" value="150 min nacionales"/>:null}
+          </>}
          <Row label="Llamadas · 30 días" value={num(line?.usage.directCalls)}/>
         </div>
         <div className={styles.minuteHero}>
