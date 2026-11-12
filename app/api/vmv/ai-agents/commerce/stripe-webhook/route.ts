@@ -40,7 +40,7 @@ export async function POST(req:NextRequest){
  catch{return NextResponse.json({error:"Stripe verification unavailable"},{status:503});}
  const meta=actual.metadata as Record<string,unknown>|undefined;
  const verified=actual.id===sessionId && actual.livemode===false &&
-   meta?.vmv_ai_order_id===order.id&&meta.vmv_ai_mode==="test"&&
+   meta?.vmv_ai_order_id===order.id&&meta?.vmv_ai_mode==="test"&&
    Number(actual.amount_total)===order.total_cents &&
    String(actual.currency||"").toLowerCase()===order.currency;
  if(!verified)return NextResponse.json({error:"Checkout does not match order"},{status:409});
