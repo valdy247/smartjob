@@ -4,19 +4,20 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import * as SecureStore from "expo-secure-store";
 import type {Session} from "@supabase/supabase-js";
 import {offersFor,deliveryLabel,type OfferCharge,type ServiceOffer} from "./serviceOffers";
+import {supabase} from "./session";
+import {BUSINESS_CATEGORIES,categoryById,categoryLabel,categoryIdFromLabel} from "../../lib/vmv-business-categories";
 
 type ProfileDraft={
-  business:string;category:string;phone:string;website:string;address:string;
+  business:string;category:string;categoryId:string;phone:string;website:string;address:string;
   area:string;hours:string;description:string;googleEmail:string;assets:string;
   authorized:boolean;
 };
 const EMPTY:ProfileDraft={
-  business:"",category:"",phone:"",website:"",address:"",
+  business:"",category:"",categoryId:"",phone:"",website:"",address:"",
   area:"",hours:"",description:"",googleEmail:"",assets:"",authorized:false
 };
-const fields:{key:Exclude<keyof ProfileDraft,"authorized">;label:string;max:number;lines?:boolean;keyboard?:"email-address"|"phone-pad"|"url"}[]=[
+const fields:{key:Exclude<keyof ProfileDraft,"authorized"|"category"|"categoryId">;label:string;max:number;lines?:boolean;keyboard?:"email-address"|"phone-pad"|"url"}[]=[
   {key:"business",label:"Nombre del negocio *",max:100},
-  {key:"category",label:"Categoría *",max:80},
   {key:"phone",label:"Teléfono",max:24,keyboard:"phone-pad"},
   {key:"website",label:"Sitio web",max:150,keyboard:"url"},
   {key:"address",label:"Dirección",max:180},
@@ -58,6 +59,8 @@ export function BusinessServicesPanel({session}:{session:Session}){
  const [draft,setDraft]=useState<ProfileDraft>({...EMPTY});
  const [saved,setSaved]=useState(false);
  const [busy,setBusy]=useState(false);
+ const [categoryOpen,setCategoryOpen]=useState(false);
+ const [categorySearch,setCategorySearch]=useState("");
  const storageKey="vmv.gbp.draft.v1."+session.user.id;
 
  useEffect(()=>{
@@ -73,6 +76,8 @@ export function BusinessServicesPanel({session}:{session:Session}){
     const input=record[field.key];
     if(typeof input==="string")clean[field.key]=input.slice(0,field.max);
    }
+   clean.categoryId=categoryById(String(record.categoryId||""))?.id||categoryIdFromLabel(String(record.category||""));
+   clean.category=categoryLabel(clean.categoryId,String(record.category||""));
    clean.authorized=record.authorized===true;
    setDraft(clean);
    setSaved(true);
@@ -80,7 +85,21 @@ export function BusinessServicesPanel({session}:{session:Session}){
   return()=>{active=false;};
  },[storageKey]);
 
- const change=(key:Exclude<keyof ProfileDraft,"authorized">,value:string)=>{
+ useEffect(()=>{
+  let live=true;
+  void (async()=>{
+   if(!supabase)return;
+   const {data,error}=await supabase.from("smartjob_business_category_preferences")
+    .select("category_id").eq("owner_id",session.user.id).maybeSingle();
+   if(live&&!error&&data?.category_id&&categoryById(data.category_id)){
+    setDraft(previous=>previous.categoryId?previous:{...previous,categoryId:data.category_id,category:categoryLabel(data.category_id)});
+   }
+  })();
+  return()=>{live=false;};
+ },[session.user.id]);
+ const filteredCategories=BUSINESS_CATEGORIES.filter(cat=>
+  !categorySearch.trim()||((cat.label+" "+cat.group).normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("es").includes(categorySearch.normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("es"))).slice(0,12);
+  const change=(key:Exclude<keyof ProfileDraft,"authorized">,value:string)=>{
   setDraft(current=>({...current,[key]:value}));setSaved(false);
  };
  async function saveDraft(){
@@ -88,6 +107,12 @@ export function BusinessServicesPanel({session}:{session:Session}){
   setBusy(true);
   try{
    await SecureStore.setItemAsync(storageKey,JSON.stringify(draft));
+   if(draft.categoryId&&supabase){
+    const {error}=await supabase.from("smartjob_business_category_preferences").upsert({
+     owner_id:session.user.id,category_id:draft.categoryId,updated_at:new Date().toISOString()
+    },{onConflict:"owner_id"});
+    if(error)throw new Error("No se pudo sincronizar la categoría");
+   }
    setSaved(true);
   }catch{
    Alert.alert("Error","No se pudo guardar el borrador.");
@@ -95,7 +120,7 @@ export function BusinessServicesPanel({session}:{session:Session}){
  }
  async function shareDraft(){
   if(busy)return;
-  if(!draft.business.trim()||!draft.category.trim()||
+  if(!draft.business.trim()||!draft.categoryId.trim()||
      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.googleEmail.trim())||
      !(draft.address.trim()||draft.area.trim())){
    Alert.alert("Faltan datos","Completa el nombre, categoría, correo y dirección o zona.");
@@ -109,6 +134,7 @@ export function BusinessServicesPanel({session}:{session:Session}){
   try{
    const form=[
     "Google Business Profile",
+    "Categoría: "+categoryLabel(draft.categoryId),
     ...fields.map(field=>field.label.replace(/\s\*$/,"")+": "+(draft[field.key].trim()||"—")),
     "Autorización: Sí"
    ].join("\n");
@@ -129,6 +155,26 @@ export function BusinessServicesPanel({session}:{session:Session}){
     <Text style={styles.formChip}>Pago único · Asistido</Text></View>
   </View>
   <View style={styles.formCard}>
+   <View style={styles.fieldWrap}>
+    <Text style={styles.fieldLabel}>Categoría *</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel="Seleccionar categoría"
+     style={styles.categoryButton} onPress={()=>setCategoryOpen(v=>!v)}>
+     <Text style={styles.categoryValue}>{categoryLabel(draft.categoryId,"Seleccionar categoría")}</Text>
+     <Ionicons name={categoryOpen?"chevron-up":"chevron-down"} size={17} color={colors.accent}/>
+    </Pressable>
+    {categoryOpen?<View style={styles.categoryPicker}>
+     <TextInput placeholder="Buscar categoría" placeholderTextColor="#A494BD" value={categorySearch}
+      spellCheck={false} autoCorrect={false} autoCapitalize="none" onChangeText={setCategorySearch}
+      style={[styles.input,{marginBottom:8}]}/>
+     {filteredCategories.map(cat=><Pressable key={cat.id} accessibilityRole="button"
+      accessibilityLabel={"Elegir "+cat.label}
+      style={styles.categoryOption} onPress={()=>{
+       setDraft(v=>({...v,categoryId:cat.id,category:cat.label}));setCategoryOpen(false);setCategorySearch("");setSaved(false);
+      }}><Text style={styles.categoryValue}>{cat.label}</Text>
+       {draft.categoryId===cat.id?<Ionicons name="checkmark" size={15} color={colors.accent}/>:null}
+      </Pressable>)}
+    </View>:null}
+   </View>
    {fields.map(field=><View key={field.key} style={styles.fieldWrap}>
     <Text style={styles.fieldLabel}>{field.label}</Text>
     <TextInput accessibilityLabel={field.label} autoCapitalize="none"
@@ -206,6 +252,10 @@ const styles=StyleSheet.create({
  formChip:{fontSize:11,color:"#7D68A4",fontWeight:"700",marginTop:5},
  formCard:{backgroundColor:"#FFFFFF",borderColor:colors.line,borderWidth:1,borderRadius:23,padding:17},
  fieldWrap:{marginBottom:14},
+ categoryButton:{minHeight:49,paddingHorizontal:13,borderWidth:1,borderColor:"#E6DAF2",backgroundColor:colors.bg,borderRadius:13,alignItems:"center",justifyContent:"space-between",flexDirection:"row",gap:9},
+ categoryValue:{fontSize:13,color:colors.ink,fontWeight:"600",flex:1},
+ categoryPicker:{marginTop:8,padding:8,backgroundColor:"#F9F6FF",borderWidth:1,borderColor:"#E6DAF2",borderRadius:13},
+ categoryOption:{flexDirection:"row",alignItems:"center",padding:11,borderBottomWidth:1,borderBottomColor:"#E9E1F3",gap:7},
  fieldLabel:{fontSize:12,fontWeight:"800",color:"#6B5789",marginBottom:8},
  input:{backgroundColor:colors.bg,color:colors.ink,borderRadius:13,borderWidth:1,borderColor:"#E6DAF2",minHeight:49,padding:12,fontSize:14},
  multiline:{minHeight:80,textAlignVertical:"top"},
