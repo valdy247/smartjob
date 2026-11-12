@@ -266,22 +266,26 @@ export default function WebBuilderWorkspace(){
  }
  async function restore(revision:Revision){
   if(busy||!page||!window.confirm("¿Recuperar esta versión como borrador? La página pública no cambiará."))return;
+  if(dirty&&!window.confirm("Tienes cambios sin guardar. ¿Descartarlos y recuperar esta versión?"))return;
   setBusy(true);setError("");setNotice("");
   try{
-   const updated=await saveDraft(normalizeBuilderDocument(revision.document));
-   setTitle(revision.title);setDescription(revision.description);
-   // Restore stored title and SEO description together with the content.
-   const c=await authorized();
-   const {data,error}=await c.from("smartjob_builder_pages").update({
-    title:revision.title,description:revision.description,revision:updated.revision+1,
-    updated_at:new Date().toISOString()
-   }).eq("id",page.id).eq("owner_id",userId).eq("revision",updated.revision)
-    .select("id,site_id,owner_id,slug,title,description,draft,revision,updated_at").single();
-   if(error||!data)throw new Error("Contenido restaurado; revisa el título manualmente");
-   setPage(data as Page);setPages(old=>old.map(p=>p.id===data.id?data as Page:p));
-   setDocument(normalizeBuilderDocument(revision.document));
+   const db=await authorized();
+   const {data,error:restoreError}=await db.rpc("smartjob_builder_restore_revision",{
+    p_page_id:page.id,p_revision_id:revision.id,p_expected_revision:page.revision
+   });
+   if(restoreError||!data)throw new Error(
+    restoreError?.code==="40001"?"Otra pestaña cambió el borrador. Recarga para continuar.":"No se pudo recuperar la versión"
+   );
+   const {data:fresh,error:freshError}=await db.from("smartjob_builder_pages")
+    .select("id,site_id,owner_id,slug,title,description,draft,revision,updated_at")
+    .eq("id",page.id).eq("owner_id",userId).single();
+   if(freshError||!fresh)throw new Error("La versión se recuperó, pero debes volver a abrir el editor.");
+   const restored=fresh as Page;
+   setPage(restored);setPages(current=>current.map(p=>p.id===restored.id?restored:p));
+   setTitle(restored.title);setDescription(restored.description);
+   setDocument(normalizeBuilderDocument(restored.draft));
    setRefreshKey(x=>x+1);setView("editor");
-   setNotice("Versión recuperada como borrador. Publica para hacerla visible.");
+   setNotice("Versión recuperada como borrador. La página pública sigue igual hasta que publiques.");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo recuperar");}
   finally{setBusy(false);}
  }
