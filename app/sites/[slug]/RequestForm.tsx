@@ -92,6 +92,7 @@ export default function RequestForm({slug,categoryId,services,business}:Props){
    <span>Website</span><input tabIndex={-1} autoComplete="off" value={website} onChange={e=>setWebsite(e.target.value)}/>
   </label>
   {error?<p className="ws-inquiry-error" role="alert">{error}</p>:null}
+  <p className="ws-inquiry-privacy">Tus datos se compartirán con este negocio únicamente para responder tu solicitud.</p>
   <button type="submit" className="ws-inquiry-submit" disabled={busy}>{busy?"Enviando…":"Enviar solicitud"} <span aria-hidden="true">↗</span></button>
  </form>;
 }
