@@ -111,7 +111,7 @@ function Tag({title,selected,onPress}:{title:string;selected:boolean;onPress:()=
 }
 export function AIAgentWizard({initial,onSave,onCancel,saving=false,initialStep=0}:Props){
  const [draft,setDraft]=useState<AgentDraft>(()=>({...initial,configuration:{...(initial.configuration||{})}}));
- const [step,setStep]=useState(initialStep);
+ const [step,setStep]=useState<number>(initialStep);
  const [error,setError]=useState("");
  const [picker,setPicker]=useState<{key:string;title:string;values:string[]}|null>(null);
  const [answers,setAnswers]=useState<Record<string,string>>(()=>({...initial.configuration||{}}));
