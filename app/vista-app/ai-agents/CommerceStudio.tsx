@@ -2,7 +2,7 @@
 import {useEffect,useState} from "react";
 import {ArrowLeft,CheckCircle2,ClipboardList,Package,Plus,ReceiptText,ShieldCheck,ShoppingBag,UserRoundCheck} from "lucide-react";
 import type {PersistedAgent} from "./agentStore";
-import {confirmTestOrder,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,prepareTestOrder,saveCatalogItem,
+import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,prepareTestOrder,saveCatalogItem,
  type CatalogItem,type TestOrder,type HumanRequest} from "./commerceStore";
 import styles from "./CommerceStudio.module.css";
 
@@ -24,6 +24,7 @@ export default function CommerceStudio({agents,onClose}:{agents:PersistedAgent[]
  const [busy,setBusy]=useState(false);
  const [loading,setLoading]=useState(true);
  const [notice,setNotice]=useState("");
+ const [checkoutLinks,setCheckoutLinks]=useState<Record<string,string>>({});
  const [tab,setTab]=useState<"catalog"|"orders"|"human">("catalog");
  const refresh=async()=>{
   const [catalog,history,requests]=await Promise.all([listCatalog(),listTestOrders(),listHumanRequests()]);
@@ -64,6 +65,23 @@ export default function CommerceStudio({agents,onClose}:{agents:PersistedAgent[]
    setNotice("Aceptación de prueba registrada. Pedido aún NO PAGADO.");}
   catch(e){setNotice(e instanceof Error?e.message:"No se pudo registrar la aceptación.");}
   finally{setBusy(false);}
+ };
+ const checkout=async(order:TestOrder)=>{
+  if(busy)return;
+  setBusy(true);
+  try{
+   const url=await createTestCheckout(order);
+   setCheckoutLinks(prev=>({...prev,[order.id]:url}));
+   await refresh();
+   setNotice("Enlace de Checkout de PRUEBA creado. El pedido sigue pendiente hasta recibir verificación de Stripe.");
+  }catch(e){setNotice(e instanceof Error?e.message:"No se pudo obtener el enlace de pago de prueba.");}
+  finally{setBusy(false);}
+ };
+ const copyCheckout=async(url:string)=>{
+  try{
+   await navigator.clipboard.writeText(url);
+   setNotice("Enlace de prueba copiado. Compártelo únicamente con el comprador autorizado.");
+  }catch{setNotice("No fue posible copiar el enlace en este navegador.");}
  };
  const markHuman=async(request:HumanRequest,status:"reviewed"|"closed")=>{
   if(busy)return;
@@ -139,6 +157,9 @@ export default function CommerceStudio({agents,onClose}:{agents:PersistedAgent[]
       <small>TEST · {order.payment_status==="paid"?"Pago verificado":"NO PAGADO"}</small></div>
      {order.status==="awaiting_confirmation"?<button type="button" disabled={busy} onClick={()=>void confirm(order)}>
       <CheckCircle2 size={14}/> Simular aceptación</button>:null}
+     {order.status==="awaiting_payment"&&order.payment_status!=="paid"?<button type="button"
+       disabled={busy} onClick={()=>void checkout(order)}>Enlace test</button>:null}
+     {checkoutLinks[order.id]?<button type="button" onClick={()=>void copyCheckout(checkoutLinks[order.id])}>Copiar enlace</button>:null}
     </div>)}</div>}
    <div className={styles.warning}><ShieldCheck size={17}/><p>No se ofrece un enlace de pago hasta conectar y verificar una cuenta del negocio distinta de la facturación de VMV.</p></div>
   </>:<>
