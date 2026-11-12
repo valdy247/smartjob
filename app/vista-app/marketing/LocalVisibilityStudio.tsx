@@ -17,6 +17,7 @@ const directories=[
  {id:"apple",name:"Apple Business Connect",url:"https://businessconnect.apple.com/",note:"Apple Maps y Siri · Registro empresarial gratuito",method:"Edición desde Apple; APIs avanzadas para socios autorizados"},
  {id:"yelp",name:"Yelp for Business",url:"https://biz.yelp.com/",note:"Directorio y reputación local · Reclama tu ficha",method:"Publicación mediante portal; integración de gestión exige acuerdo con Yelp"}
 ] as const;
+const serviceCodeByDirectory={google:"google_profile",bing:"bing_places",apple:"apple_maps",yelp:"yelp_profile"} as const;
 const statusLabels:Record<ListingStatus,string>={
  not_started:"Sin empezar",in_progress:"En trámite",self_reported:"Completado según tú"
 };
@@ -25,8 +26,9 @@ function Field({label,value,onChange,placeholder}:{label:string;value:string;onC
 }
 function resultTone(value:number|null){return value===null?"Sin datos":value>=90?"Bien":value>=50?"Mejorable":"Prioridad";}
 
-export default function LocalVisibilityStudio({profile,onChange}:{
+export default function LocalVisibilityStudio({profile,onChange,onRequestHelp}:{
  profile:LocalProfile;onChange:(key:EditableKey,value:string)=>void;
+ onRequestHelp?:(service:"google_profile"|"bing_places"|"apple_maps"|"yelp_profile")=>void;
 }){
  const [hideAddress,setHideAddress]=useState(false);
  const [listingStatus,setListingStatus]=useState<Record<string,ListingStatus>>({});
@@ -105,6 +107,7 @@ export default function LocalVisibilityStudio({profile,onChange}:{
      <div className={styles.dirHeading}><div><strong>{item.name}</strong><p>{item.note}</p></div><span className={styles.status}>{statusLabels[listingStatus[item.id]||"not_started"]}</span></div>
      <small>{item.method}</small>
      <div className={styles.directoryActions}>
+      {onRequestHelp?<button type="button" className={styles.requestHelp} onClick={()=>onRequestHelp(serviceCodeByDirectory[item.id])}>Solicitar gestión en VMV</button>:null}
       <a href={item.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Abrir portal oficial</a>
       <select aria-label={"Estado de "+item.name} value={listingStatus[item.id]||"not_started"} onChange={e=>setListingStatus(prev=>({...prev,[item.id]:e.target.value as ListingStatus}))}>
        <option value="not_started">Sin empezar</option>
