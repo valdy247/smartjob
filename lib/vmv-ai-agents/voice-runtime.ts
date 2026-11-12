@@ -3,12 +3,13 @@ import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 import {verifyAiTestWebhook} from "@/lib/vmv-ai-agents/twilio-test";
 import {billingAdmin} from "@/lib/vmv-billing";
 import {findPhoneRoute} from "@/lib/phone-routes";
+import {phoneCommerceTurn} from "@/lib/vmv-ai-agents/voice-commerce";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 type Lang="es"|"en";
 type CallRecord={
- call_sid:string;route_id:string;owner_id:string;agent_id:string;
+ call_sid:string;route_id:string;owner_id:string;agent_id:string;order_id:string|null;
  agent_revision:number;agent_snapshot:Record<string,unknown>;
  preferred_language:Lang;turn_count:number;last_request_turn:number;last_reply:string;
  turns:{role:"user"|"assistant";content:string}[];expires_at:string;silence_count:number;
@@ -98,7 +99,7 @@ async function getReply(session:CallRecord,text:string,language:Lang):Promise<st
 }
 async function loadSession(db:NonNullable<ReturnType<typeof billingAdmin>>,sid:string):Promise<CallRecord|null>{
  const {data,error}=await db.from("vmv_ai_voice_calls")
- .select("call_sid,route_id,owner_id,agent_id,agent_revision,agent_snapshot,preferred_language,turn_count,last_request_turn,last_reply,turns,expires_at,silence_count")
+ .select("call_sid,route_id,owner_id,agent_id,order_id,agent_revision,agent_snapshot,preferred_language,turn_count,last_request_turn,last_reply,turns,expires_at,silence_count")
  .eq("call_sid",sid).maybeSingle();
  return error?null:data as CallRecord|null;
 }
@@ -179,7 +180,10 @@ export async function handleAiVoice(req:NextRequest){
  if(claimError||claimed!==true)return refused();
  const lang=languageFor(session,speech);
  let answer:string;
- try{answer=await getReply(session,speech,lang);}
+ try{
+  const commerce=await phoneCommerceTurn(db,session,speech,lang,turn);
+  answer=commerce??await getReply(session,speech,lang);
+ }
  catch{answer=lang==="es"?
   "No pude consultar la información en este momento. Una persona del negocio debe confirmarla.":
   "I couldn't retrieve the information just now. Someone at the business needs to confirm it.";}
