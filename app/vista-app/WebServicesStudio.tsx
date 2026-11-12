@@ -56,13 +56,17 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
   void (async()=>{
    try{
     const client=await verify();
-    const [own,publicSite]=await Promise.all([
+    const [own,publicSite,categoryPreference]=await Promise.all([
      client.from("smartjob_web_sites").select("slug,draft").eq("owner_id",ownerId).maybeSingle(),
-     client.from("smartjob_web_publications").select("slug").eq("owner_id",ownerId).maybeSingle()
+     client.from("smartjob_web_publications").select("slug").eq("owner_id",ownerId).maybeSingle(),
+     client.from("smartjob_business_category_preferences").select("category_id").eq("owner_id",ownerId).maybeSingle()
     ]);
-    if(own.error||publicSite.error)throw new Error("No se pudo cargar tu web");
+    if(own.error||publicSite.error||categoryPreference.error)throw new Error("No se pudo cargar tu web");
     if(!active)return;
-    if(own.data){setContent(normalizeWebContent(own.data.draft));setSlug(own.data.slug as string);}
+    const websiteDraft=own.data?normalizeWebContent(own.data.draft):{...defaultWebContent};
+    if(!websiteDraft.categoryId&&typeof categoryPreference.data?.category_id==="string")websiteDraft.categoryId=categoryPreference.data.category_id;
+    setContent(websiteDraft);
+    if(own.data)setSlug(own.data.slug as string);
     setPublished(Boolean(publicSite.data));setReady(true);
    }catch(error){if(active)setStatus(error instanceof Error?error.message:"No disponible");}
    finally{if(active)setLoading(false);}
@@ -86,6 +90,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
  };
  const validate=(next:WebSiteContent)=>{
   if(next.business.length<2||next.headline.length<3){setStatus("Completa el negocio y el título");return false;}
+  if(!next.categoryId){setStatus("Selecciona la categoría del negocio");return false;}
   return true;
  };
  const store=async(next:WebSiteContent):Promise<string>=>{
@@ -96,6 +101,10 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
   },{onConflict:"owner_id"}).select("slug").single();
   if(error||!data?.slug)throw new Error(error?.code==="23505"?"Vuelve a guardar":"Error al guardar");
   setSlug(data.slug as string);
+  if(next.categoryId){
+   const {error:categoryError}=await client.from("smartjob_business_category_preferences").upsert({owner_id:ownerId,category_id:next.categoryId,updated_at:new Date().toISOString()},{onConflict:"owner_id"});
+   if(categoryError)throw new Error("Sitio guardado, pero no se pudo sincronizar la categoría");
+  }
   return data.slug as string;
  };
  const save=async()=>{
@@ -208,7 +217,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
        </div>:null}
       </div>
       <WebStudioImages ownerId={ownerId} busy={busy} content={content}
-       onMessage={setStatus} onChange={next=>{setContent(v=>({...v,...next}));setStatus("");}}/>
+       onMessage={setStatus} onChange={next=>{setContent(v=>({...v,...next}));setStatus("Imágenes actualizadas. Guarda los cambios.");}}/>
      </div>
     </div>
     <div className={styles.visual}>
