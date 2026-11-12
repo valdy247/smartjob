@@ -51,35 +51,39 @@ async function agentReady(number:string,account:string,ownerId:string){
  if(!originalSmartCallUrl())return false;
  const db=billingAdmin();
  if(!db)return false;
+ // The owner explicitly selects an agent in web or iPhone before Twilio enrollment.
+ const {data:phone}=await db.from("smartjob_phone_routes").select("id,user_id")
+   .eq("twilio_number",number).eq("user_id",ownerId).eq("enabled",true).maybeSingle();
+ if(!phone)return false;
+ const {data:choice}=await db.from("vmv_ai_phone_selections").select("agent_id")
+   .eq("route_id",phone.id).eq("owner_id",ownerId).maybeSingle();
+ if(!choice?.agent_id)return false;
+ const {data:chosen}=await db.from("vmv_ai_agents").select("id,status,configuration")
+   .eq("id",choice.agent_id).eq("owner_id",ownerId).maybeSingle();
+ if(!chosen||chosen.status!=="active")return false;
  const fields="id,owner_id,agent_id,twilio_account_sid,enabled,verified_ownership,disclosure_approved,approved_at";
  const {data:existing,error:lookupError}=await db.from("vmv_ai_voice_routes")
    .select(fields).eq("twilio_number",number).maybeSingle();
  if(lookupError)return false;
  let entry=existing;
  if(!entry&&process.env.VMV_AI_VOICE_AUTO_ENROLL==="true"){
-   // A signature-verified Twilio call to the single enabled tenant number proves
-   // the current account/number pairing; only the named demo agent may be enrolled.
-   const {data:agent,error:agentError}=await db.from("vmv_ai_agents")
-     .select("id,configuration")
-     .eq("owner_id",ownerId).eq("name","Asistente VMV · Prueba")
-     .eq("kind","calls").eq("status","active").maybeSingle();
-   const cfg=agent?.configuration as Record<string,string>|undefined;
-   if(agentError||!agent||cfg?.call_disclosure!=="Sí")return false;
+   const c=chosen.configuration as Record<string,string>|null;
+   const trained=c?.call_disclosure==="Sí"||c?.call_consent==="Sí"||
+    c?.data_scope!==undefined||c?.personal_data!==undefined;
+   if(!trained)return false;
    const {data:created,error:creationError}=await db.from("vmv_ai_voice_routes")
      .insert({
-       owner_id:ownerId,agent_id:agent.id,twilio_number:number,
+       owner_id:ownerId,agent_id:choice.agent_id,twilio_number:number,
        twilio_account_sid:account,enabled:true,verified_ownership:true,
        disclosure_approved:true,approved_at:new Date().toISOString()
      }).select(fields).single();
    if(creationError||!created)return false;
    entry=created;
  }
- if(!entry||entry.owner_id!==ownerId||entry.twilio_account_sid!==account||
-    !entry.enabled||!entry.verified_ownership||!entry.disclosure_approved||!entry.approved_at)return false;
- const {data:agent,error:agentError}=await db.from("vmv_ai_agents").select("id")
-   .eq("id",entry.agent_id).eq("owner_id",ownerId).eq("status","active").maybeSingle();
- if(agentError||!agent)return false;
- return true; // Pilot billing is capped by the dedicated 5-calls/day RPC.
+ if(!entry||entry.owner_id!==ownerId||entry.agent_id!==choice.agent_id||
+    entry.twilio_account_sid!==account||!entry.enabled||
+    !entry.verified_ownership||!entry.disclosure_approved||!entry.approved_at)return false;
+ return true; // Each call is still capped by the server-only voice quota RPC.
 }
 export async function POST(req:NextRequest){
  const signed=await verifyAiTestWebhook(req);
