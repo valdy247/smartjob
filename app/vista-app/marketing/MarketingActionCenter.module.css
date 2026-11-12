@@ -80,3 +80,113 @@
 @media(max-width:860px){.services{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.hero{padding:21px}.quickActions,.formGrid{grid-template-columns:1fr}.panel{padding:15px}.services{grid-template-columns:repeat(2,minmax(0,1fr))}.service,.serviceActive{min-height:136px}.request{padding:13px}.requestTop{align-items:flex-start}}
 @media(max-width:360px){.services{grid-template-columns:1fr}.service,.serviceActive{min-height:105px}.quickActions button{padding:14px}}
+
+
+/* Marketing request wizard — accessible, mobile-first progressive disclosure */
+.wizardPanel{background:#fff;border:1px solid #eee3ee;border-radius:25px;padding:24px;box-shadow:0 12px 46px rgba(82,36,86,.045);scroll-margin-top:24px;overflow:hidden}
+.wizardHeading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.overline{display:inline-flex;align-items:center;gap:7px;font-size:10px;font-weight:900;letter-spacing:.085em;color:#a55785}
+.wizardHeading h3{margin:11px 0 8px;font-size:clamp(23px,3vw,31px);font-weight:880;line-height:1.17;letter-spacing:-1.05px;color:#372441}
+.wizardHeading p{font-size:12px;line-height:1.65;color:#93819a;margin:0;max-width:530px}
+.stepCount{white-space:nowrap;background:#f8eaf3;border:1px solid #f1dcea;border-radius:99px;font-size:12px;font-weight:900;color:#985980;padding:9px 12px}
+.stepper{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:23px 0 0;padding:0}
+.stepper li{display:flex;align-items:center;gap:7px;padding:12px 5px;border-top:3px solid #f1e8f0;color:#ac9eae;font-size:10px;font-weight:800;white-space:nowrap;min-width:0}
+.stepper .stepCurrent{border-top-color:#af5f91;color:#79345e}
+.stepper .stepDone{border-top-color:#5eac8a;color:#588b73}
+.stepBubble{width:23px;height:23px;flex:0 0 23px;display:grid;place-items:center;background:#f7f1f6;color:#ac9caf;border-radius:50%;font-size:11px;font-weight:900}
+.stepCurrent .stepBubble{background:#9c4f86;color:#fff}
+.stepDone .stepBubble{background:#e5f5ed;color:#318560}
+.wizardBody{padding-top:20px;display:flex;flex-direction:column;gap:17px;animation:vmv-wizard-in .22s ease-out}
+.serviceIntro{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
+.serviceIntro strong{font-size:14px;color:#503958}
+.serviceIntro span{font-size:11px;line-height:1.5;color:#998699}
+.servicePicker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.serviceTile{position:relative;display:flex;align-items:flex-start;gap:12px;text-align:left;padding:17px 16px;min-height:126px;border:1px solid #efe1ec;border-radius:18px;background:linear-gradient(145deg,#fff,#fffbfe);box-shadow:0 2px 7px rgba(85,52,88,.025);font:inherit;color:#5a3b63;cursor:pointer;transition:border-color .18s,box-shadow .18s,transform .18s}
+.serviceTile:hover{border-color:#c78bab;box-shadow:0 10px 26px rgba(104,55,96,.09);transform:translateY(-2px)}
+.serviceTile:active{transform:translateY(0)}
+.serviceIcon{width:45px;height:45px;flex:0 0 45px;display:grid;place-items:center;border:1px solid #f2dfec;background:#f9eaf4;color:#984c84;border-radius:15px}
+.serviceTile:nth-child(4n+2) .serviceIcon{background:#f0edfb;border-color:#e9e3fa;color:#7660a5}
+.serviceTile:nth-child(4n+3) .serviceIcon{background:#edf5fb;border-color:#e2eff8;color:#4d86ae}
+.serviceTile:nth-child(4n+4) .serviceIcon{background:#edf7f0;border-color:#dff0e4;color:#488966}
+.serviceText{min-width:0;display:flex;flex-direction:column;gap:7px;flex:1;padding-top:3px}
+.serviceText strong{font-size:13px;color:#513554;line-height:1.35}
+.serviceText small{font-size:11px;color:#98849b;line-height:1.5;max-width:280px}
+.tileArrow{position:absolute;right:12px;bottom:12px;color:#bb9bb2}
+.serviceTile:hover .tileArrow{color:#9e5488}
+.wizardHint{display:flex;align-items:flex-start;gap:8px;color:#967b91;font-size:11px;line-height:1.6;margin:2px 0 0}
+.wizardHint svg{flex:0 0 auto;color:#8c6a9b;margin-top:1px}
+.selectedServiceBanner{display:flex;align-items:center;gap:12px;border:1px solid #ead7e7;background:#fbf1f8;border-radius:16px;padding:13px 15px}
+.selectedServiceIcon{display:grid;place-items:center;width:43px;height:43px;flex:0 0 43px;background:#fff;border:1px solid #f2deea;color:#94517e;border-radius:13px}
+.selectedServiceBanner>span:nth-child(2){min-width:0;flex:1;display:flex;flex-direction:column;gap:4px}
+.selectedServiceBanner>span:nth-child(2) small{font-size:9px;color:#a77a98;font-weight:900;letter-spacing:.08em}
+.selectedServiceBanner>span:nth-child(2) strong{font-size:14px;color:#6a4164}
+.selectedServiceBanner button{background:transparent;border:0;color:#8d4675;font-size:11px;font-weight:850;cursor:pointer;padding:10px 4px}
+.wizardFields{display:flex;flex-direction:column;gap:17px}
+.wizardField{display:flex;flex-direction:column;gap:8px;color:#5e4967;font-size:12px;font-weight:850}
+.wizardField>span{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.wizardField em{font-size:10px;color:#ad8b9d;font-style:normal;font-weight:650}
+.wizardField input,.wizardField select{width:100%;min-width:0;box-sizing:border-box;min-height:52px;background:#fffcfe;border:1px solid #e8d9e6;border-radius:13px;padding:12px 14px;color:#463448;font-size:14px;font-family:inherit;outline:0}
+.wizardField input:focus,.wizardField select:focus{border-color:#a85f91;box-shadow:0 0 0 3px rgba(194,114,163,.18)}
+.presetLabel{font-size:12px;font-weight:850;color:#644e69}
+.goalPresets{display:grid;grid-template-columns:1fr;gap:8px}
+.preset,.presetActive{display:flex;align-items:flex-start;gap:10px;background:#fff;border:1px solid #eadce9;border-radius:13px;text-align:left;min-height:50px;padding:13px 14px;font:inherit;font-size:12px;line-height:1.5;color:#735d78;cursor:pointer}
+.preset svg,.presetActive svg{flex:0 0 auto;color:#c5adc2;margin-top:1px}
+.preset:hover{background:#fef6fb;border-color:#d5a6c4}
+.presetActive{background:#f9e8f3;border-color:#ae6a9b;color:#713965}
+.presetActive svg{color:#995083}
+.goalLabel{font-size:12px;font-weight:820}
+.goalLabel textarea{min-height:132px;font-size:13px}
+.reviewCard{border:1px solid #efdfeb;border-radius:16px;background:#fffdfd;overflow:hidden}
+.reviewTop{display:flex;align-items:center;gap:10px;padding:15px 17px;background:#fbf1f8;border-bottom:1px solid #f0e0eb;color:#67426d;font-size:14px}
+.reviewItem{display:grid;grid-template-columns:95px minmax(0,1fr) auto;align-items:baseline;gap:10px;padding:12px 17px;border-bottom:1px solid #f4edf2}
+.reviewItem span,.reviewGoal span{font-size:11px;color:#988098}
+.reviewItem strong{min-width:0;font-size:12px;color:#4b3754;font-weight:850}
+.reviewItem button,.reviewGoal button{border:0;background:transparent;color:#935c88;font:inherit;font-size:10px;font-weight:800;cursor:pointer;padding:5px 0;text-align:left}
+.wrapValue{overflow-wrap:anywhere}
+.reviewGoal{display:flex;flex-direction:column;gap:9px;padding:15px 17px}
+.reviewGoal p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.7;color:#5f4c63;margin:0}
+.costNote{display:flex;gap:11px;align-items:flex-start;border:1px solid #dcece2;background:#f5fbf7;border-radius:15px;padding:16px;color:#338161}
+.costNote svg{flex:0 0 auto}
+.costNote strong{font-size:13px;color:#367655}
+.costNote p{font-size:11px;line-height:1.65;color:#608371;margin:5px 0 0}
+.wizardFooter,.wizardButtons{display:flex;justify-content:space-between;gap:11px;padding-top:20px;margin-top:18px;border-top:1px solid #f1e8ef}
+.wizardBack,.wizardPrimary{min-height:48px;border-radius:13px;padding:12px 19px;display:inline-flex;justify-content:center;align-items:center;gap:8px;font-family:inherit;font-weight:850;font-size:12px;cursor:pointer}
+.wizardBack{background:#f8f2f7;border:1px solid #e8dce7;color:#785575}
+.wizardPrimary{background:#873f78;border:1px solid #873f78;color:#fff;min-width:145px}
+.wizardPrimary:hover{background:#713366}
+.wizardBack:hover{background:#f1e7ef}
+.wizardPrimary:disabled,.wizardBack:disabled{opacity:.48;cursor:not-allowed}
+.wizardError{margin:14px 0 0;padding:12px 13px;border:1px solid #f1cbd6;border-radius:12px;background:#fff2f4;color:#aa4162;font-size:12px;line-height:1.5}
+.wizardSuccess{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:32px 12px 16px}
+.successIcon{display:grid;place-items:center;width:76px;height:76px;border-radius:22px;background:#e5f6eb;color:#328565;box-shadow:0 8px 22px #336f4620}
+.wizardSuccess h3{font-size:26px;line-height:1.17;letter-spacing:-.75px;margin:0;color:#493453}
+.wizardSuccess>p{max-width:480px;font-size:12px;line-height:1.8;color:#8d7890;margin:0}
+.successReminder{display:flex;align-items:center;justify-content:center;gap:7px;font-size:11px;line-height:1.5;color:#567b61;background:#f1f8f2;border-radius:12px;padding:11px 13px}
+.wizardSuccess .wizardButtons{align-self:stretch;justify-content:center;flex-wrap:wrap;margin-top:15px}
+.wizardPanel button:focus-visible,.wizardPanel a:focus-visible{outline:3px solid #c176a3;outline-offset:3px}
+@media(max-width:1020px){.servicePicker{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){
+ .wizardPanel{border-radius:20px;padding:17px}
+ .wizardHeading h3{font-size:24px}
+ .servicePicker{gap:9px}
+ .serviceTile{padding:14px 12px;min-height:137px;gap:9px;flex-direction:column}
+ .serviceIcon{width:42px;height:42px;flex:0 0 42px}
+ .serviceText{padding-top:0;gap:5px;padding-bottom:13px}
+ .serviceText strong{font-size:12px}
+ .serviceText small{font-size:10px}
+ .stepper li{flex-direction:column;align-items:center;text-align:center;padding:10px 2px;gap:6px;font-size:9px}
+ .wizardBody{padding-top:17px}
+ .reviewItem{grid-template-columns:70px minmax(0,1fr) auto;padding:12px;gap:8px}
+ .wizardFooter .wizardBack{flex:1;min-width:0}
+ .wizardFooter .wizardPrimary{flex:1.5;min-width:0}
+}
+@media(max-width:380px){
+ .wizardPanel{padding:14px}
+ .servicePicker{grid-template-columns:1fr}
+ .serviceTile{flex-direction:row;min-height:106px}
+ .serviceIntro{flex-direction:column;align-items:flex-start}
+ .wizardFooter{gap:8px}
+ .wizardBack,.wizardPrimary{padding:11px 10px;font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){.wizardBody{animation:none}.serviceTile{transition:none}}
+@media(prefers-reduced-motion:no-preference){@keyframes vmv-wizard-in{from{opacity:.6;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}}
