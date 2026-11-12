@@ -95,8 +95,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [auditData,setAuditData]=useState<{scores:{performance:number|null;seo:number|null;accessibility:number|null};recommendations:string[]}|null>(null);
  const [auditPending,setAuditPending]=useState(false);
  const [auditError,setAuditError]=useState("");
- const reviewNegative=/\\b(malo|mala|pésimo|pesimo|terrible|decepcion|retraso|tarde|problema|queja|frío|frio|incorrecto|error|horrible|nunca|mal servicio|no recomiendo)\\b/i.test(reviewInput);
- const reviewPositive=/\\b(excelente|fantástico|fantastico|encantó|encanto|delicioso|deliciosa|recomiendo|increíble|increible|perfecto|perfecta|maravilloso|maravillosa|amable)\\b/i.test(reviewInput);
+ const reviewNegative=/\b(malo|mala|pésimo|pesimo|terrible|decepcion|retraso|tarde|problema|queja|frío|frio|incorrecto|error|horrible|nunca|mal servicio|no recomiendo)\b/i.test(reviewInput);
+ const reviewPositive=/\b(excelente|fantástico|fantastico|encantó|encanto|delicioso|deliciosa|recomiendo|increíble|increible|perfecto|perfecta|maravilloso|maravillosa|amable)\b/i.test(reviewInput);
  const answerReview=reviewInput.trim()?(reviewNegative?
   (reviewTone==="breve"?"Lamentamos que tu experiencia no haya sido la esperada. Gracias por contárnoslo; queremos mejorar.":"Gracias por compartir tu experiencia. Lamentamos que no haya sido lo que esperabas. En "+name+" nos tomamos en serio tus comentarios y queremos entender lo ocurrido para mejorar. Te invitamos a contactarnos por nuestros canales habituales."):
   reviewPositive?
