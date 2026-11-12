@@ -4,7 +4,7 @@ import {notFound} from "next/navigation";
 import {createClient} from "@supabase/supabase-js";
 import {Render} from "@puckeditor/core";
 import {builderConfig,normalizeBuilderDocument} from "@/lib/web-builder-puck";
-import "../../public.css";
+import "../../../web-builder-public.css";
 
 export const dynamic="force-dynamic";
 type Props={params:Promise<{slug:string;page?:string[]}>};
