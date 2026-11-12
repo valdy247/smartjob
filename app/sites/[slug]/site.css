@@ -1,0 +1,38 @@
+/* Published customer page — completely isolated from VMV application surfaces. */
+.ws-public{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ws-ink);background:#fff;min-height:100vh;overflow-x:hidden}
+.ws-public *{box-sizing:border-box}
+.ws-public a{color:inherit;text-decoration:none}
+.ws-public-nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:27px max(28px,7vw)}
+.ws-public-mark{font-size:25px;font-weight:900;letter-spacing:-.07em;overflow-wrap:anywhere}
+.ws-public-mark span,.ws-public-section h2 span{color:var(--ws-color)}
+.ws-public-nav nav{display:flex;gap:23px;font-weight:700;font-size:12px}
+.ws-public-nav nav a:hover,.ws-public-contacts a:hover{text-decoration:underline}
+.ws-public-hero{position:relative;background:var(--ws-surface);min-height:535px;padding:90px max(28px,7vw);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;isolation:isolate}
+.ws-public-eyebrow,.ws-public-section>small{font-size:11px;letter-spacing:.18em;font-weight:900;color:var(--ws-color)}
+.ws-public-hero h1{font-size:clamp(43px,8vw,112px);max-width:900px;line-height:.97;letter-spacing:-.085em;margin:24px 0;overflow-wrap:anywhere}
+.ws-public-hero p{font-size:clamp(16px,2vw,21px);line-height:1.6;max-width:650px;margin:0}
+.ws-public-button{display:inline-flex;align-items:center;gap:23px;margin-top:29px;padding:16px 23px;color:#fff!important;background:var(--ws-color);font-size:13px;font-weight:800;border-radius:999px}
+.ws-public-graphic{position:absolute;right:-55px;bottom:-105px;z-index:-1;font-size:clamp(140px,30vw,350px);color:var(--ws-color);opacity:.13;transform:rotate(23deg)}
+.ws-public-section{padding:80px max(28px,7vw)}
+.ws-public-section h2{font-size:clamp(32px,5vw,67px);line-height:1.04;letter-spacing:-.07em;margin:19px 0 35px}
+.ws-public-service-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.ws-public-service-grid article{display:flex;flex-direction:column;min-height:195px;gap:16px;padding:24px;background:var(--ws-surface);border-radius:19px}
+.ws-public-service-grid article>span:first-child{font-size:12px;font-weight:800;color:var(--ws-color)}
+.ws-public-service-grid article h3{font-size:clamp(18px,2.4vw,30px);letter-spacing:-.05em;line-height:1.15;overflow-wrap:anywhere;margin:auto 0}
+.ws-public-service-grid article>span:last-child{align-self:flex-end;font-size:22px;color:var(--ws-color)}
+.ws-public-about{color:white;background:var(--ws-ink)}
+.ws-public-about h2 span{color:var(--ws-surface)}
+.ws-public-about>small{color:var(--ws-surface)}
+.ws-public-about p{font-size:clamp(19px,3vw,32px);max-width:840px;line-height:1.5;overflow-wrap:anywhere}
+.ws-public-contact{background:var(--ws-surface)}
+.ws-public-contacts{display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+.ws-public-contacts a{font-size:clamp(17px,3vw,28px);font-weight:750;overflow-wrap:anywhere}
+.ws-public-contacts p{font-size:16px;white-space:pre-line;line-height:1.6}
+.ws-public-footer{display:flex;justify-content:space-between;gap:20px;padding:25px max(28px,7vw);font-size:13px;font-weight:750;border-top:1px solid #ddd}
+.ws-public--showcase .ws-public-hero{background:var(--ws-ink);color:white}
+.ws-public--showcase .ws-public-hero .ws-public-eyebrow{color:var(--ws-surface)}
+.ws-public--showcase .ws-public-hero .ws-public-button{background:var(--ws-surface);color:var(--ws-ink)!important}
+.ws-public--minimal .ws-public-hero{background:#fff;min-height:420px}
+.ws-public--minimal .ws-public-service-grid article{background:white;border:1px solid #ddd;border-radius:4px}
+.ws-public--minimal .ws-public-button{border-radius:6px}
+@media(max-width:700px){.ws-public-nav{padding:20px 6%;flex-direction:column;align-items:flex-start}.ws-public-nav nav{gap:17px;font-size:11px}.ws-public-hero{min-height:440px;padding:65px 6%}.ws-public-hero h1{font-size:clamp(44px,11vw,70px)}.ws-public-section{padding:65px 6%}.ws-public-service-grid{grid-template-columns:1fr}.ws-public-service-grid article{min-height:125px;padding:21px}.ws-public-section h2{margin-bottom:22px}.ws-public-footer{padding:23px 6%}}
