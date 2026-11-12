@@ -9,6 +9,8 @@ import DialPad from "./DialPad";
 import BusinessServicesPreview from "./BusinessServicesPreview";
 import {useSmartCallAccount,type Tab,type Panel,type CallSettings,type CallRecord,type Voice} from "./useSmartCallAccount";
 import styles from "./vista-app.module.css";
+import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
+import {useInterfaceLanguage} from "@/lib/i18n-web";
 
 const modules=[
  {name:"AI Agents",Icon:Bot},{name:"Inventory",Icon:Package},
@@ -64,6 +66,7 @@ function History({calls,onSave,onCallBack,onLookup,canCallBack=false,callingSid=
  </div>)}</div>:<div className={styles.emptyHistory}><Clock3 size={28}/><strong>Sin llamadas registradas</strong><p>Tu actividad aparecerá aquí después de las primeras llamadas.</p></div>;
 }
 export default function VMVMobilePreview(){
+ const {translate}=useInterfaceLanguage();
  const account=useSmartCallAccount();
  const {client,user,phase,profile,settings,route,provisioning,calls,summary,preferences,setPreferences,
   loading,working,error,notice,setError,setNotice,refresh,signIn,signOut,saveBasic,savePremium}=account;
@@ -243,12 +246,13 @@ export default function VMVMobilePreview(){
       {phase==="checking"?<div className={styles.loadingScreen}><LoaderCircle className={styles.spin}/><p>Verificando tu sesión…</p></div>:null}
       {phase==="unconfigured"?<div className={styles.loadingScreen}><LockKeyhole/><p>Falta configurar la conexión pública de Supabase en este deploy.</p></div>:null}
       {phase==="signed_out"?<div className={styles.signinScreen}>
-       <span className={styles.screenEyebrow}>ACCESO SEGURO</span><h2>Bienvenido<span className={styles.mint}>.</span></h2>
+       <div className={styles.smartCard}><InterfaceLanguagePicker compact/></div>
+       <span className={styles.screenEyebrow}>ACCESO SEGURO</span><h2>{translate("native.welcome")}<span className={styles.mint}>.</span></h2>
        <p className={styles.screenLead}>Inicia sesión con la misma cuenta que usas en Smart Call. No se creará otra cuenta.</p>
        <form className={styles.signinForm} onSubmit={login}>
-        <label htmlFor="login-email">Correo electrónico</label><input required type="email" id="login-email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="tu@empresa.com"/>
-        <label htmlFor="login-password">Contraseña</label><input required type="password" id="login-password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Tu contraseña"/>
-        <button type="submit" className={styles.mainAction} disabled={working}>{working?"Entrando…":"Entrar a mi cuenta"} <ArrowUpRight size={16}/></button>
+        <label htmlFor="login-email">{translate("common.email")}</label><input required type="email" id="login-email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="tu@empresa.com"/>
+        <label htmlFor="login-password">{translate("common.password")}</label><input required type="password" id="login-password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Tu contraseña"/>
+        <button type="submit" className={styles.mainAction} disabled={working}>{translate(working?"common.signingIn":"common.signIn")} <ArrowUpRight size={16}/></button>
        </form>
        <div className={styles.privacyNote}><ShieldCheck size={16}/><span>Sesión protegida por Supabase. Nadie puede ver tu balance o tus llamadas sin autenticarse.</span></div>
        <a href="/registro" className={styles.registerLink}>¿No tienes cuenta? Abrir registro ↗</a>
@@ -258,22 +262,22 @@ export default function VMVMobilePreview(){
        {loading?<LoaderCircle className={styles.spin}/>:<LockKeyhole/>}
        <h3>{loading?"Cargando Smart Call…":"No se pudo abrir tu cuenta"}</h3>
        <p>{loading?"Consultando tu perfil y tu saldo.":error||"Completa tu registro de Smart Call para continuar."}</p>
-       {!loading?<><button className={styles.mainAction} onClick={()=>void refresh()}>Reintentar</button><a className={styles.registerLink} href="/registro">Completar registro</a><button className={styles.logoutLink} onClick={()=>void signOut()}>Cerrar sesión</button></>:null}
+       {!loading?<><button className={styles.mainAction} onClick={()=>void refresh()}>Reintentar</button><a className={styles.registerLink} href="/registro">Completar registro</a><button className={styles.logoutLink} onClick={()=>void signOut()}>{translate("common.signOut")}</button></>:null}
       </div>:null}
       {ready&&tab==="home"?<div className={`${styles.screen} ${styles.homeV2}`}>
        <div className={styles.homeWelcome}>
         <button type="button" className={styles.homeProfile} onClick={()=>go("account")} aria-label="Abrir mi cuenta">
          <span className={styles.homeProfileAvatar}><UserRound size={21}/></span>
-         <span><small>BIENVENIDO A VMV</small><strong>Hola, {name}</strong></span>
+         <span><small>BIENVENIDO A VMV</small><strong>{translate("home.hello",{name})}</strong></span>
         </button>
         <span className={styles.homeBrandPill}>BUSINESS <span>✦</span></span>
        </div>
        <button type="button" className={styles.homeSpotlight} onClick={()=>showCall("overview")}
         aria-label="Abrir Smart Call">
         <span className={styles.homeSpotlightKicker}>SMART CALL <span>● EN PILOTO</span></span>
-        <strong>Tu negocio,<br/>conectado<span>.</span></strong>
-        <small>Llamadas y traducción</small>
-        <span className={styles.homeSpotlightMinutes}>{num(available)} min <span>para traducir</span></span>
+        <strong>{translate("home.businessConnected")}<span>.</span></strong>
+        <small>{translate("home.callsAndTranslation")}</small>
+        <span className={styles.homeSpotlightMinutes}>{num(available)} min <span>{translate("home.minutesToTranslate")}</span></span>
         <span className={styles.homeSpotlightArt} aria-hidden="true">
          <span className={styles.homeArtRingOne}></span>
          <span className={styles.homeArtRingTwo}></span>
@@ -284,8 +288,8 @@ export default function VMVMobilePreview(){
         <span className={styles.homeSpotlightGo}><ArrowUpRight size={20}/></span>
        </button>
        <div className={styles.homeSectionHeading}>
-        <h3>Destacados<span>.</span></h3>
-        <button type="button" onClick={()=>go("services")}>Ver todos <ArrowUpRight size={15}/></button>
+        <h3>{translate("home.featured")}<span>.</span></h3>
+        <button type="button" onClick={()=>go("services")}>{translate("home.seeAll")} <ArrowUpRight size={15}/></button>
        </div>
        <div className={styles.homeProductsGrid}>
         <button className={`${styles.homeProductCard} ${styles.homeProductMint}`}
@@ -304,7 +308,7 @@ export default function VMVMobilePreview(){
         </button>
         <div className={`${styles.homeProductCard} ${styles.homeProductSky}`}>
          <span className={styles.homeProductIcon}><Bot size={27}/></span>
-         <span className={styles.homeProductBody}><strong>AI Agents</strong><small>Próximamente</small></span>
+         <span className={styles.homeProductBody}><strong>AI Agents</strong><small>{translate("home.comingSoon")}</small></span>
          <span className={styles.homeProductDecor} aria-hidden="true"><Cpu size={79} strokeWidth={1.3}/></span>
         </div>
         <button type="button" className={`${styles.homeProductCard} ${styles.homeProductPink}`}
@@ -319,7 +323,7 @@ export default function VMVMobilePreview(){
         <span className={styles.homeExploreCopy}>
          <small>VMV BUSINESS</small>
          <strong>Descubre lo que<br/>viene después.</strong>
-         <span>Explorar servicios <ArrowUpRight size={15}/></span>
+         <span>{translate("home.explore")} <ArrowUpRight size={15}/></span>
         </span>
         <span className={styles.homeExploreGraphic} aria-hidden="true">✦</span>
        </button>
@@ -329,7 +333,7 @@ export default function VMVMobilePreview(){
         <button type="button" className={styles.back} onClick={()=>setServiceFocus("all")}><ChevronLeft size={17}/> Todos los servicios</button>
         {user?<BusinessServicesPreview userId={user.id} focus="web"/>:null}
        </>:<>
-       <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>Mis servicios<span className={styles.mint}>.</span></h2>
+       <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>{translate("home.moreServices")}<span className={styles.mint}>.</span></h2>
        <button type="button" className={styles.serviceHero} onClick={()=>showCall()} aria-label="Abrir Smart Call">
         <span className={styles.serviceHeroTop}><span className={styles.serviceHeroIcon}><PhoneCall size={26}/></span><span className={styles.serviceHeroStatus}>EN PILOTO</span></span>
         <strong>Smart Call<span>.</span></strong>
@@ -489,8 +493,9 @@ export default function VMVMobilePreview(){
        {client&&profile?<div className={styles.interpreterWrap}><LivePanel supabase={client} profile={profile} apiStatus={apiStatus}/></div>:null}
       </div>:null}
       {ready&&tab==="account"?<div className={`${styles.screen} ${styles.accountV3}`}>
-       <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>Mi cuenta<span className={styles.mint}>.</span></h2>
-       <div className={styles.accountHero}><span className={styles.accountHeroAvatar}><UserRound size={29}/></span>
+       <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>{translate("home.viewAccount")}<span className={styles.mint}>.</span></h2>
+       <div className={styles.smartCard}><InterfaceLanguagePicker/></div>
+        <div className={styles.accountHero}><span className={styles.accountHeroAvatar}><UserRound size={29}/></span>
         <span className={styles.accountHeroInfo}><strong>{business}</strong><small>{user?.email||"—"}</small></span>
         <span className={styles.accountHeroSpark} aria-hidden="true">✦</span>
        </div>
@@ -499,12 +504,12 @@ export default function VMVMobilePreview(){
          <span><Clock3 size={19}/></span><strong>{num(available)} min</strong><small>Traducción</small>
         </button>
         <button type="button" className={styles.accountStatTile} onClick={()=>showCall("minutes")}>
-         <span><ShieldCheck size={19}/></span><strong>{billing?.plan?.toUpperCase()||"—"}</strong><small>Tu plan</small>
+         <span><ShieldCheck size={19}/></span><strong>{billing?.plan?.toUpperCase()||"—"}</strong><small>{translate("common.plan")}</small>
         </button>
        </div>
        <div className={styles.smartCard}>
-        <Row label="Estado" value={billing?.status||"—"}/><Row label="Mi teléfono" value={profile?.phone||"—"}/>
-        <button className={styles.mainAction} onClick={()=>showCall("minutes")}>Ver mi plan <ArrowUpRight size={16}/></button>
+        <Row label={translate("common.status")} value={billing?.status||"—"}/><Row label="Mi teléfono" value={profile?.phone||"—"}/>
+        <button className={styles.mainAction} onClick={()=>showCall("minutes")}>{translate("common.viewPlan")} <ArrowUpRight size={16}/></button>
         {refreshButton}
        </div>
        <button className={styles.logoutLink} disabled={working} onClick={()=>void signOut()}><LogOut size={15}/> Cerrar sesión</button>
@@ -515,7 +520,7 @@ export default function VMVMobilePreview(){
        {summary&&!summary.billing.ok?<p className={styles.errorText}>El balance está temporalmente no disponible. No se muestra un saldo simulado.</p>:null}
       </div>:null}
      </div>
-     {ready?<nav className={styles.bottomNav} aria-label="Navegación de VMV Business">
+     {ready?<nav className={styles.bottomNav} aria-label={translate("home.primaryNavigation")}>
       {nav.map(([id,label,Icon])=><button key={id} className={[tab===id?styles.activeNav:"",id==="calls"?styles.navCallAction:""].filter(Boolean).join(" ")} onClick={()=>go(id)} aria-label={label} title={label} aria-pressed={tab===id}><span aria-hidden="true"><Icon size={id==="calls"?25:22}/></span></button>)}
      </nav>:null}
     </div>
