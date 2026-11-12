@@ -1,0 +1,17 @@
+.wrap{display:flex;flex-direction:column;gap:11px;color:#372b49;font-family:ui-sans-serif,system-ui,sans-serif}
+.current{width:100%;max-height:135px;object-fit:cover;border-radius:12px}
+.upload{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;background:#f3eaff;color:#7647bb;border:1px dashed #c8a9ef;padding:13px;border-radius:11px;font-size:12px;font-weight:850;cursor:pointer}
+.upload input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.heading{display:flex;justify-content:space-between;align-items:center}
+.heading span{font-size:11px;color:#7b609c;font-weight:850}
+.heading button{border:0;color:#7c52b7;background:transparent;cursor:pointer;padding:5px}
+.gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.gallery button{border:2px solid transparent;border-radius:9px;overflow:hidden;padding:0;background:transparent;cursor:pointer;height:62px;min-width:0}
+.gallery button.active{border-color:#8c57db}
+.gallery img{display:block;width:100%;height:100%;object-fit:cover}
+.empty{font-size:11px;color:#9584a8}
+.ai{border-top:1px solid #efe4f7;padding-top:10px;display:flex;flex-direction:column;gap:8px}
+.ai textarea{font:inherit;color:#382945;font-size:12px;padding:10px;border-radius:10px;border:1px solid #ddd0eb;resize:vertical}
+.ai button{display:flex;align-items:center;justify-content:center;gap:7px;color:#fff;background:#8857dd;border:0;border-radius:10px;padding:10px;font-size:12px;font-weight:800;cursor:pointer}
+.ai button:disabled{opacity:.5;cursor:not-allowed}
+.error{font-size:11px;color:#b04464}
