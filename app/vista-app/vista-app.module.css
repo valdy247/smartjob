@@ -434,3 +434,26 @@ button.homeProductCard:hover{transform:translateY(-2px)}
  .bottomNav .navCallAction>span{width:47px;height:47px}
 }
 @media(prefers-reduced-motion:reduce){.homeProductCard,.homeSpotlight,.bottomNav .navCallAction{transition:none}}
+
+
+/* Smart Call contacts → dialer: distinct edit and secure call actions. */
+.contactList .contactRow{display:flex;align-items:center;gap:5px;padding:0 9px 0 0;cursor:default}
+.contactList .contactRow:hover{background:#fbf9ff}
+.contactRowMain{display:flex;align-items:center;gap:12px;flex:1;min-width:0;min-height:69px;
+ background:transparent;border:0;color:inherit;font:inherit;text-align:left;padding:10px 7px 10px 13px;cursor:pointer}
+.contactRowMain:hover .contactInfo strong{color:#7751c5}
+.contactDialButton{display:grid;place-items:center;flex:0 0 43px;width:43px;height:43px;border-radius:15px;
+ border:1px solid #ddc8f9;background:#eee5ff;color:#8350d0;cursor:pointer}
+.contactDialButton:hover:not(:disabled){background:#e1d1fa;color:#6d3dc5}
+.contactDialButton:disabled{opacity:.3;cursor:not-allowed}
+.contactFormCall{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+ min-height:43px;margin:11px 0 2px;background:#f0e8ff;border:1px solid #ddcdf6;border-radius:15px;
+ color:#7545c6;font:inherit;font-weight:800;font-size:12px;cursor:pointer}
+.contactFormCall:hover:not(:disabled){background:#e5d6fc}
+.contactFormCall:disabled{opacity:.38;cursor:not-allowed}
+.dialerContactName{display:inline-flex;align-items:center;gap:5px;margin-top:1px;border-radius:20px;
+ background:#f0e7ff;color:#8c73ac;padding:8px 12px;font-size:11px;font-weight:650;max-width:100%}
+.dialerContactName strong{color:#6741ad;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dialerConfirmContact{display:block;font-weight:800;font-size:14px;color:#7047b8;margin:0 0 5px}
+.contactDialButton:focus-visible,.contactRowMain:focus-visible,.contactFormCall:focus-visible{
+ outline:3px solid #a875ed;outline-offset:2px}
