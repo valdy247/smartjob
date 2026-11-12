@@ -219,6 +219,21 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
   try{await navigator.clipboard.writeText(link);setStatus("Enlace copiado");}
   catch{setStatus("No se pudo copiar");}
  };
+ const shareSite=async()=>{
+  if(!published||!link)return;
+  try{
+   if(typeof navigator.share==="function"){
+    await navigator.share({title:content.business||"Mi negocio",text:"Visita nuestra página web",url:link});
+    setStatus("Enlace compartido");
+   }else{
+    await navigator.clipboard.writeText(link);
+    setStatus("Enlace copiado");
+   }
+  }catch(error){
+   if(error instanceof Error&&error.name==="AbortError")return;
+   setStatus("No se pudo compartir");
+  }
+ };
  const palette=paletteStyles[content.palette];
  const tokens={"--web-color":palette.accent,"--web-light":palette.light,"--web-ink":palette.ink} as CSSProperties;
  const serviceItems=webServices(content);
@@ -375,7 +390,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
      <div className={styles.publicationAddress}><Globe size={17}/><span>{slug}</span></div>
      <div className={styles.publicationLinkActions}>
       <a href={link} target="_blank" rel="noopener noreferrer"><ExternalLink size={16}/> Abrir sitio</a>
-      <button type="button" onClick={()=>void copy()}><Copy size={16}/> Copiar enlace</button>
+      <button type="button" onClick={()=>void shareSite()}><Copy size={16}/> Compartir</button>
      </div>
     </div>:null}
     {published?<button type="button" className={styles.withdraw} disabled={busy} onClick={()=>void unpublish()}><Trash2 size={16}/> Retirar publicación</button>:null}
