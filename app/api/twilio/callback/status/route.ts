@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import {callbackDb,callbackEnabled,validUuid,verifiedCallbackWebhook} from "@/lib/vmv-callback";
+import {nationalPilotFor,settleNational} from "@/lib/vmv-national-minutes";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -14,7 +15,7 @@ export async function POST(req:NextRequest){
  const db=callbackDb();
  if(!db)return new NextResponse(null,{status:503,headers});
  const {data,error}=await db.from("smartjob_callback_requests")
-  .select("owner_id,business_phone,twilio_leg_sid,status").eq("id",id).maybeSingle();
+  .select("owner_id,business_phone,twilio_leg_sid,status,claimed_at").eq("id",id).maybeSingle();
  if(error||!data)return new NextResponse(null,{status:404,headers});
  const client="client:sj_"+String(data.owner_id).replaceAll("-","");
  const sid=fields.get("CallSid")||"";
@@ -25,6 +26,12 @@ export async function POST(req:NextRequest){
  const completed=state==="completed";
  const failed=["failed","busy","no-answer","canceled"].includes(state);
  if(!completed&&!failed)return ok();
+ // If the owner never accepted, there was no customer conversation.
+ // Once bridged, the signed <Dial action> owns final minute settlement.
+ if(!data.claimed_at&&nationalPilotFor(data.owner_id)){
+  if(!await settleNational("out:"+id,0))
+   return new NextResponse(null,{status:503,headers});
+ }
  // Never turn an already-finalized request back into pending.
  await db.from("smartjob_callback_requests")
   .update({status:completed?"completed":"failed",twilio_leg_sid:sid,
