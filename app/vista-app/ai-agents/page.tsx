@@ -77,6 +77,7 @@ export default function AIAgentsPreview(){
   try{
    const before=selected?agents.find(a=>a.id===selected):null;
    const saved=await storeAgent(nextDraft,before?.revision?before:null);
+   try{sessionStorage.removeItem("vmv-ai-unsaved-wizard-v1");}catch{/* storage unavailable */}
    // The insert response confirms the write. A secondary phone lookup must not
    // turn a successful save into a misleading failure.
    setAgents(old=>[saved,...old.filter(a=>a.id!==saved.id)]);
@@ -217,7 +218,7 @@ export default function AIAgentsPreview(){
       <div className={styles.disclaimer}><ShieldCheck size={16}/> Los agentes se guardan en tu cuenta. Elegir uno no conecta Twilio ni autoriza pagos. El ejemplo ficticio es temporal.</div>
      </>:null}
      {screen==="editor"?<AgentSetupWizard key={(selected||draft.kind)+"-"+editStep}
-      initial={draft} initialStep={editStep} saving={busy} isPreview={false} onCancel={back}
+      initial={draft} initialStep={editStep} saving={busy} isPreview={false} authRequired={!authenticated} recoverDraft={!selected} onCancel={back}
       onSave={async updated=>{setDraft(updated);await save(updated);}}/>:null}
      {screen==="quality"&&active?<AgentQualityLab agent={active} onClose={back} onEdit={step=>edit(active,step)}/>:null}
      {screen==="commerce"?<CommerceStudio agents={agents.filter(a=>a.revision>0)} onClose={back}/>:null}
