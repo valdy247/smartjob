@@ -255,7 +255,7 @@ export default function MarketingPage(){
      {section==="campaign"?<>
       <div className={styles.sectionTop}><span>PASO 02 · ADQUISICIÓN</span><h2>Diseña una campaña con propósito</h2><p>Elige dónde quieres alcanzar clientes. El borrador se adapta al canal, pero debes revisarlo antes de publicarlo.</p></div>
       <div className={styles.channelGrid}>{channels.map(item=><button type="button" key={item.id} aria-pressed={form.channel===item.id}
-       className={form.channel===item.id?styles.channelActive:styles.channel} onClick={()=>patch("channel",item.id)}>
+       className={form.channel===item.id?styles.channelActive:styles.channel} onClick={()=>{patch("channel",item.id);setCampaignEditedText(null);setCampaignEditing(false);setCampaignDetailsOpen(false);}}>
         <strong>{item.label}</strong><small>{item.desc}</small></button>)}</div>
       <div className={styles.formGrid}>
        <Field label="Oferta a promocionar" value={form.offer} onChange={v=>patch("offer",v)} placeholder="Qué quieres vender"/>
@@ -264,12 +264,31 @@ export default function MarketingPage(){
        <Field label="Página de destino (opcional)" value={form.website} onChange={v=>patch("website",v)} placeholder="https://tusitio.com"/>
       </div>
       <article className={styles.plan}>
-       <span className={styles.planTag}><CheckCircle2 size={15}/> PLAN DE CAMPAÑA · BORRADOR</span>
+       <span className={styles.planTag}><CheckCircle2 size={15}/> TU PLAN · BORRADOR EDITABLE</span>
        <h3>{campaign.angle}</h3>
-       <p>{campaign.execution}</p>
-       <div className={styles.message}><span>MENSAJE INICIAL · REVÍSALO ANTES DE USARLO</span><p>{campaign.draft}</p></div>
-       <div className={styles.measure}><BarChart3 size={18}/><span>Medir: <strong>{campaign.measure}</strong></span></div>
-       <div className={styles.actions}><button type="button" className={styles.secondary} onClick={()=>void copy(campaign.draft)}><ClipboardCopy size={15}/> Copiar mensaje</button><button type="button" className={styles.primary} onClick={()=>void copy(report)}>Copiar plan completo <ArrowUpRight size={15}/></button></div>
+       <p className={styles.planSubtitle}>Una idea para revisar, personalizar y compartir. No se publica automáticamente.</p>
+       <div className={styles.message}>
+        <span>MENSAJE SUGERIDO</span>
+        {campaignEditing?<textarea className={styles.campaignTextarea} value={activeCampaignDraft}
+         onChange={e=>setCampaignEditedText(e.target.value)} maxLength={2000} rows={5}
+         aria-label="Editar mensaje de campaña"/>:
+         <p className={styles.campaignPreview}>{activeCampaignDraft}</p>}
+       </div>
+       <div className={styles.campaignQuickActions}>
+        <button type="button" className={styles.primary} onClick={()=>void shareText(activeCampaignDraft,"Campaña de "+business)}><Share2 size={17}/> Compartir</button>
+        <button type="button" className={styles.secondary} onClick={()=>setCampaignEditing(value=>!value)}>{campaignEditing?<CheckCircle2 size={16}/>:<ClipboardCopy size={16}/>} {campaignEditing?"Listo":"Editar"}</button>
+        <button type="button" className={styles.secondary} onClick={()=>void copy(activeCampaignDraft)}><ClipboardCopy size={16}/> Copiar</button>
+       </div>
+       <button type="button" className={styles.detailsToggle} aria-expanded={campaignDetailsOpen}
+        onClick={()=>setCampaignDetailsOpen(value=>!value)}>
+        <span>{campaignDetailsOpen?"Ocultar estrategia":"Ver estrategia y métricas"}</span>
+        {campaignDetailsOpen?<ChevronUp size={18}/>:<ChevronDown size={18}/>}
+       </button>
+       {campaignDetailsOpen?<div className={styles.campaignDetails}>
+        <div><strong>Qué hacer</strong><p>{campaign.execution}</p></div>
+        <div className={styles.measure}><BarChart3 size={18}/><span>Medir: <strong>{campaign.measure}</strong></span></div>
+        <button type="button" className={styles.secondary} onClick={()=>void copy(report)}><ClipboardCopy size={15}/> Copiar plan completo</button>
+       </div>:null}
       </article>
      </>:null}
      {section==="numbers"?<>
