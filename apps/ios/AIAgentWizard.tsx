@@ -115,7 +115,7 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false}:Props){
  const needsCalendar=yes(answers,"calendar_needed"),needsInventory=yes(answers,"inventory_needed");
  return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
   <View style={styles.headRow}><Text style={styles.kicker}>CONFIGURAR AGENTE</Text><Text style={styles.counter}>{step+1} / {steps.length}</Text></View>
-  <View style={styles.progress}><View style={[styles.progressFill,{width:((step+1)/steps.length*100)+"%"}]}/></View>
+  <View style={styles.progress}><View style={[styles.progressFill,{width:(((step+1)/steps.length*100)+"%") as `${number}%`}]}/></View>
   <View style={styles.dots}>{steps.map((s,i)=><View key={i}
     style={[styles.dot,i===step&&styles.dotOn,i<step&&styles.dotDone]}>
     {i<step?<Ionicons name="checkmark" size={12} color="#277858"/>:
