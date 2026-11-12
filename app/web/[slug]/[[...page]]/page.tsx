@@ -4,6 +4,7 @@ import {notFound} from "next/navigation";
 import {createClient} from "@supabase/supabase-js";
 import {Render} from "@puckeditor/core";
 import {builderConfig,normalizeBuilderDocument} from "@/lib/web-builder-puck";
+import RequestForm from "@/app/sites/[slug]/RequestForm";
 import "../../../web-builder-public.css";
 
 export const dynamic="force-dynamic";
@@ -17,7 +18,7 @@ async function findPage(slug:string,part:string){
  const client=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
  const [page,menu]=await Promise.all([
   client.from("smartjob_builder_public_pages")
-   .select("site_name,title,description,document,site_slug,page_slug")
+   .select("site_name,title,description,document,site_slug,page_slug,inquiries_enabled,category_id")
    .eq("site_slug",slug).eq("page_slug",part).maybeSingle(),
   client.from("smartjob_builder_public_pages")
    .select("title,page_slug").eq("site_slug",slug).order("page_slug")
@@ -54,6 +55,10 @@ export default async function VMVPublishedPage({params}:Props){
  const base=custom?"":"/web/"+slug;
  const siteName=result.page.site_name||slug.replace(/-/g," ");
  const data=normalizeBuilderDocument(result.page.document);
+ const services=data.content.filter(b=>b.type==="Services").flatMap(b=>
+  ["first","second","third"].map(k=>b.props?.[k]).filter((s):s is string=>typeof s==="string"&&Boolean(s.trim()))
+ ).slice(0,30);
+ const showForm=part==="home"&&result.page.inquiries_enabled===true;
  return <div className="vmv-site">
   <header className="vmv-site-nav">
    <a className="vmv-site-mark" href={base||"/"}>{siteName}<span>.</span></a>
@@ -62,7 +67,14 @@ export default async function VMVPublishedPage({params}:Props){
      {item.page_slug==="home"?"Inicio":item.title}</a>)}
    </nav>
   </header>
-  <main><Render config={builderConfig} data={data}/></main>
+  <main><Render config={builderConfig} data={data}/>
+   {showForm?<section className="vmv-site-inquiry" id="solicitud" aria-label="Enviar solicitud al negocio">
+    <small>CONTACTA CON NOSOTROS</small>
+    <h2>¿Qué necesitas?</h2>
+    <RequestForm source="builder" slug={slug} business={siteName}
+     categoryId={result.page.category_id||""} services={services}/>
+   </section>:null}
+  </main>
   <footer className="vmv-site-footer"><span>{siteName}</span><span>© {new Date().getUTCFullYear()}</span></footer>
  </div>;
 }
