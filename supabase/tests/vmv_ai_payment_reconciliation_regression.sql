@@ -1,7 +1,8 @@
 -- INTERNAL SQL REGRESSION ONLY. Simulated provider responses, not a real Stripe payment.
 -- BEGIN/ROLLBACK ensures no fake paid order or merchant credentials persist.
 begin;
-do $$
+do $
+<<qa>>
 declare owner_user uuid;biz uuid;agent uuid;item uuid;order_id uuid;result text;
  price_cents integer; paid_status text; qty integer; attempt_state text; forbidden text;
 begin
@@ -37,7 +38,7 @@ begin
  if qty<>0 then raise exception 'Inventory settled incorrectly; qty=%',qty;end if;
  select payment_status into paid_status from public.vmv_ai_orders where id=order_id;
  if paid_status<>'paid' then raise exception 'Payment mark missing after simulated validation';end if;
- select a.state into attempt_state from public.vmv_ai_payment_attempts a where a.order_id=order_id;
+ select a.state into attempt_state from public.vmv_ai_payment_attempts a where a.order_id=qa.order_id;
  if attempt_state<>'paid' then raise exception 'Payment attempt did not settle';end if;
  forbidden:=public.vmv_ai_test_verified_payment(order_id,'cs_test_TESTRECONCILIATION_002',
    'acct_ANOTHERACCOUNT',2150,'usd');
