@@ -8,7 +8,7 @@ export type AgentStatus="draft"|"active"|"paused";
 export type Language="es"|"en"|"both";
 export type AgentDraft={
   name:string;kind:AgentKind;purpose:string;personality:string;
-  language:Language;instructions:string;knowledge:string;status:AgentStatus;
+  language:Language;instructions:string;knowledge:string;configuration:Record<string,string>;status:AgentStatus;
 };
 export type Agent=AgentDraft&{
   id:string;owner_id:string;business_id:string;created_at:string;updated_at:string;
@@ -29,7 +29,7 @@ export function emptyAgent(kind:AgentKind):AgentDraft{
   const template=AI_AGENT_TEMPLATES.find(t=>t.kind===kind)||AI_AGENT_TEMPLATES[6];
   return {kind,name:template.title==="A mi medida"?"Mi agente":"Agente de "+template.title,
     purpose:template.purpose,personality:"Amable y profesional",language:"es",
-    instructions:"",knowledge:"",status:"draft"};
+    instructions:"",knowledge:"",configuration:{},status:"draft"};
 }
 function db(){
   if(!supabase)throw new Error("Configura Supabase para utilizar AI Agents.");
@@ -62,7 +62,7 @@ export async function saveAgent(session:Session,draft:AgentDraft,existingId?:str
   const normalized={name:draft.name.trim().slice(0,80),kind:draft.kind,
     purpose:draft.purpose.trim().slice(0,240),personality:draft.personality.trim().slice(0,60),
     language:draft.language,instructions:draft.instructions.trim().slice(0,2500),
-    knowledge:draft.knowledge.trim().slice(0,8000),status:draft.status,
+    knowledge:draft.knowledge.trim().slice(0,8000),configuration:Object.fromEntries(Object.entries(draft.configuration||{}).filter(([key,val])=>key.length<=50&&typeof val==="string").slice(0,60).map(([key,val])=>[key,val.slice(0,500)])),status:draft.status,
     updated_at:new Date().toISOString()};
   if(!normalized.name)throw new Error("El agente necesita un nombre.");
   if(existingId){
@@ -105,7 +105,9 @@ export async function getMessages(session:Session,id:string):Promise<AgentMessag
   return (data||[]) as AgentMessage[];
 }
 export async function simulateAgent(session:Session,agentId:string,conversationId:string,message:string):Promise<string>{
-  // A dedicated preview URL avoids silently calling the live Smart Call backend.\n  const agentApi=process.env.EXPO_PUBLIC_VMV_AI_API||api;\n  const response=await fetch(agentApi+"/api/vmv/ai-agents/simulate",{
+  // A dedicated preview URL avoids silently calling the live Smart Call backend.
+  const agentApi=process.env.EXPO_PUBLIC_VMV_AI_API||api;
+  const response=await fetch(agentApi+"/api/vmv/ai-agents/simulate",{
     method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
     body:JSON.stringify({agentId,conversationId,message})
   });
