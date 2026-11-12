@@ -60,7 +60,7 @@ export function AIAgentQualityLab({agent,onClose,onEdit}:Props){
      <Text style={styles.scoreTitle}>{report.requiredPassed?"Configuración esencial cubierta":"Aún faltan datos esenciales"}</Text>
      <Text style={styles.scoreSub}>{report.checks.filter(c=>c.passed).length} de {report.checks.length} puntos cubiertos</Text>
      <Text style={styles.scoreRemaining}>{missingEssential} requisitos esenciales pendientes</Text>
-     <View style={styles.progressTrack}><View style={[styles.progressFilled,{width:report.percent+"%" as `${number}%`}]}/></View>
+     <View style={styles.progressTrack}><View style={[styles.progressFilled,{width:(report.percent+"%") as `${number}%`}]}/></View>
     </View>
    </View>
   </View>
