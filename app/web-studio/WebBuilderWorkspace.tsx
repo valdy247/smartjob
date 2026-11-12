@@ -466,6 +466,19 @@ export default function WebBuilderWorkspace(){
   }catch(e){setError(e instanceof Error?e.message:"No se pudo verificar");}
   finally{setBusy(false);}
  }
+ function recoverLocal(){
+  if(!recovery||!page||recovery.pageId!==page.id)return;
+  const draft=recovery;
+  openDraft(draft.document);
+  setTitle(draft.title);setDescription(draft.description);
+  setSavePhase("pending");
+  setNotice("Contenido local recuperado. Se guardará como borrador, sin cambiar la web pública.");
+ }
+ function discardLocal(){
+  if(!page)return;
+  try{window.localStorage.removeItem(backupKey(userId,page.id));}catch{/* Storage is optional. */}
+  setRecovery(null);
+ }
  function back(){
   if(dirty&&!window.confirm("Hay cambios sin guardar. ¿Salir?"))return;
   setSite(null);setPage(null);setPublishedIds([]);setView("sites");setError("");setNotice("");
@@ -527,13 +540,24 @@ export default function WebBuilderWorkspace(){
      <button type="submit" disabled={busy}><Plus size={15}/> Página</button>
     </form>
     {page?<div className={styles.editing}>
+     {recovery?.pageId===page.id?<div className={styles.recoveryBanner} role="status">
+      <div><strong>Encontramos cambios que no llegaron a guardarse.</strong>
+       <span>Elige qué versión quieres conservar. La web pública no cambiará.</span></div>
+      <div className={styles.recoveryActions}>
+       <button type="button" onClick={recoverLocal}>Recuperar cambios</button>
+       <button type="button" onClick={discardLocal}>Usar versión guardada</button>
+      </div>
+     </div>:null}
      <div className={styles.editingHeader}>
       <div className={styles.meta}>
        <label>Título SEO<input value={title} maxLength={100} onChange={e=>setTitle(e.target.value)}/></label>
        <label>Descripción SEO<input value={description} maxLength={300} onChange={e=>setDescription(e.target.value)}/></label>
       </div>
       <div className={styles.actions}>
-       <button type="button" disabled={busy} onClick={()=>void save()}><Save size={15}/> Guardar</button>
+       <span className={styles.saveIndicator} role="status" aria-live="polite">
+        {savePhase==="saving"?"Guardando…":savePhase==="error"?"Error al guardar":dirty?"Sin guardar":"Borrador guardado"}
+       </span>
+       <button type="button" disabled={busy||Boolean(recovery)} onClick={()=>void save()}><Save size={15}/> Guardar</button>
        <button type="button" disabled={busy} onClick={()=>setPreviewMode("desktop")}>Vista previa</button>
        {publishedIds.includes(page.id)?<a href={pageUrl||"#"} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Página pública</a>:null}
       </div>
