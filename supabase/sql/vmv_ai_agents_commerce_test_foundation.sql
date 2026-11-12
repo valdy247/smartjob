@@ -7,7 +7,7 @@ create table if not exists public.vmv_ai_catalog_items(
  sku text not null check(length(sku) between 1 and 45),
  name text not null check(length(name) between 1 and 120),
  description text not null default '' check(length(description)<=700),
- price_cents integer not null check(price_cents between 1 and 100000000),
+ price_cents integer not null check(price_cents between 1 and 10000000),
  currency text not null default 'usd' check(currency='usd'),
  stock_mode text not null default 'manual' check(stock_mode in ('manual','tracked','unlimited')),
  available_qty integer check(available_qty>=0),
