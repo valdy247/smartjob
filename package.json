@@ -12,7 +12,8 @@
     "ios:internal": "cd apps/ios && npx eas-cli build --platform ios --profile preview",
     "catalog:sync": "node scripts/sync-registration-data.mjs",
     "prebuild": "npm run catalog:sync",
-    "predev": "npm run catalog:sync"
+    "predev": "npm run catalog:sync",
+    "i18n:test": "node --test scripts/interface-language.test.cjs"
   },
   "engines": {
     "node": ">=20.9"

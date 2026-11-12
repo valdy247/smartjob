@@ -33,7 +33,7 @@ function ensurePushRegistry():Promise<void>{
 export default function App(){
  const [session,setSession]=useState<Session|null>(null);
  const [authBootstrapped,setAuthBootstrapped]=useState(false);
- const {language:uiLanguage,ready:uiLanguageReady,saving:languageSaving,changeLanguage,translate:tr}=useNativeInterfaceLanguage(session,authBootstrapped);
+ const {language:uiLanguage,ready:uiLanguageReady,saving:languageSaving,error:languageError,retry:retryLanguage,changeLanguage,translate:tr}=useNativeInterfaceLanguage(session,authBootstrapped);
  const [activationProfile,setActivationProfile]=useState<NativeProfile|null>(null);
  const [activeTab,setActiveTab]=useState<"home"|"services"|"calls"|"live"|"settings">("home");
   const [callsView,setCallsView]=useState<"dial"|"history"|"contacts">("dial");
@@ -687,7 +687,7 @@ export default function App(){
     </Pressable>)}
   </View>
  </View>;
- if(!uiLanguageReady)return <SafeAreaView style={styles.safe}><ActivityIndicator style={{marginTop:64}} color={colors.accent}/></SafeAreaView>;
+ if(!uiLanguageReady)return <SafeAreaView style={styles.safe}>{languageError?<View style={{padding:24}}><Text>{tr("language.loadError")}</Text><Button label={tr("common.retry")} onPress={()=>void retryLanguage()}/></View>:<ActivityIndicator style={{marginTop:64}} color={colors.accent}/>}</SafeAreaView>;
  return <SafeAreaView style={styles.safe}>
   <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
   <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":undefined}>

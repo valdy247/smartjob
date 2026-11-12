@@ -1,108 +1,50 @@
 "use client";
-import {createContext,useContext,useEffect,useRef,useState,type ReactNode} from "react";
-import {getSupabase} from "./supabase";
-import {accountLanguage,interfaceLanguage,t,visitorLanguage,INTERFACE_LANGUAGE_KEY,type InterfaceLanguage,type MessageKey} from "./i18n";
-
-type InterfaceContextValue = {
-  language: InterfaceLanguage;
-  ready: boolean;
-  saving: boolean;
-  changeLanguage: (next: InterfaceLanguage) => Promise<void>;
-  translate: (key: MessageKey, values?: Record<string,string|number>) => string;
-};
-const InterfaceContext=createContext<InterfaceContextValue|null>(null);
-function persistVisitorLanguage(language:InterfaceLanguage) {
-  try {window.localStorage.setItem(INTERFACE_LANGUAGE_KEY,language);} catch {}
-  document.cookie=INTERFACE_LANGUAGE_KEY+"="+language+"; Path=/; Max-Age=31536000; SameSite=Lax";
+import {createContext,useContext,useEffect,useMemo,useSyncExternalStore} from "react";
+import {usePathname} from "next/navigation";
+import {getSupabase} from "@/lib/supabase";
+import {INTERFACE_LANGUAGE_KEY as LANGUAGE_KEY,interfaceLanguage,t as translate,type InterfaceLanguage as Language,type MessageKey} from "./i18n";
+import {LanguagePreference} from "./i18n-preference";
+const isLanguage=(value:unknown):value is Language=>interfaceLanguage(value)!==null;
+const Context=createContext<LanguagePreference|null>(null);
+const serverState={language:"en" as const,ready:false,saving:false,error:null};
+function Provider({children}:{children:React.ReactNode}){
+ const preference=useMemo(()=>{
+  let incoming=typeof window!=="undefined"&&window.location.pathname==="/registro"?new URLSearchParams(window.location.search).get("lang"):null;
+  return new LanguagePreference(getSupabase()?.auth||null,{
+  read:async()=>{const value=incoming;incoming=null;return isLanguage(value)?value:localStorage.getItem(LANGUAGE_KEY);},
+  write:async language=>{try{localStorage.setItem(LANGUAGE_KEY,language);}catch{}document.cookie=`vmv_ui_language=${language}; Path=/; Max-Age=31536000; SameSite=Lax`;}
+ },typeof navigator==="undefined"?"en":navigator.language);},[]);
+ const state=useSyncExternalStore(preference.subscribe,preference.getSnapshot,()=>serverState);
+ useEffect(()=>{
+  let active=true;
+  void preference.refresh();
+  const client=getSupabase();
+  const {data}=client?.auth.onAuthStateChange((event,session)=>{
+   if(event==="SIGNED_IN"||event==="SIGNED_OUT")preference.accountChanged(session?.user.id||null);
+   // Never await Supabase calls from inside its auth callback.
+   if(event==="SIGNED_IN"||event==="SIGNED_OUT")setTimeout(()=>{
+    if(active)void(event==="SIGNED_OUT"?preference.signedOut():preference.refresh());
+   },0);
+  })||{data:null};
+  const refresh=()=>{if(document.visibilityState==="visible")void preference.refresh();};
+  const storage=(event:StorageEvent)=>{if(event.key===LANGUAGE_KEY)void preference.refresh();};
+  window.addEventListener("storage",storage);document.addEventListener("visibilitychange",refresh);
+  return()=>{active=false;data?.subscription.unsubscribe();window.removeEventListener("storage",storage);document.removeEventListener("visibilitychange",refresh);};
+ },[preference]);
+ useEffect(()=>{if(state.ready){document.documentElement.lang=state.language;document.title=translate(state.language,"interface.meta.title");const description=document.querySelector('meta[name="description"]');description?.setAttribute("content",translate(state.language,"interface.meta.description"));}},[state.ready,state.language]);
+ return <Context.Provider value={preference}>
+  {!state.ready?<div role="status" style={{padding:24}}>{state.error?<><p>{translate(state.language,"language.loadError")}</p><button onClick={()=>void preference.refresh()}>{translate(state.language,"common.retry")}</button></>:<span aria-label="VMV Business">◌</span>}</div>:null}
+  <div hidden={!state.ready}>{children}</div>
+ </Context.Provider>;
 }
-function updatePageLanguage(language:InterfaceLanguage) {
-  document.documentElement.lang=language;
-  document.title=t(language,"meta.title");
-  document.querySelector('meta[name="description"]')?.setAttribute("content",t(language,"meta.description"));
+export function InterfaceLanguageProvider({children}:{children:React.ReactNode}){
+ // Published customer websites have their own content language, independent of VMV's interface.
+ const path=usePathname();
+ return path?.startsWith("/sites/")?<>{children}</>:<Provider>{children}</Provider>;
 }
-
-export function InterfaceLanguageProvider({children}:{children:ReactNode}) {
-  const [language,setLanguage]=useState<InterfaceLanguage>("es");
-  const [ready,setReady]=useState(false);
-  const [saving,setSaving]=useState(false);
-  const sequence=useRef(0);
-  const selection=useRef<InterfaceLanguage>("es");
-
-  useEffect(()=>{
-    let mounted=true;
-    const client=getSupabase();
-    let chosen:InterfaceLanguage;
-    try {
-      const queryLanguage=interfaceLanguage(new URLSearchParams(window.location.search).get("lang"));
-      chosen=queryLanguage||visitorLanguage(window.localStorage.getItem(INTERFACE_LANGUAGE_KEY),navigator.language);
-    }catch {chosen=visitorLanguage(null,navigator.language);}
-    selection.current=chosen;
-    setLanguage(chosen);
-    persistVisitorLanguage(chosen);
-    updatePageLanguage(chosen);
-    const synchronize=async()=>{
-      const ticket=++sequence.current;
-      if(!client){if(mounted&&ticket===sequence.current)setReady(true);return;}
-      try{
-        const {data,error}=await client.auth.getUser();
-        if(error)throw error;
-        const metadata=data.user?.user_metadata as Record<string,unknown>|undefined;
-        let selected=accountLanguage(metadata);
-        if(data.user&&!selected){
-          // Legacy users: initialize once from their explicit visitor choice/device language.
-          const fallback=selection.current;
-          const result=await client.auth.updateUser({data:{ui_language:fallback}});
-          if(!result.error)selected=accountLanguage(result.data.user?.user_metadata)||fallback;
-        }
-        if(mounted&&ticket===sequence.current){
-          const resolved=selected||selection.current;
-          selection.current=resolved;setLanguage(resolved);
-          persistVisitorLanguage(resolved);updatePageLanguage(resolved);
-        }
-      }catch {
-        // Never overwrite account metadata on authentication/network failures.
-      }finally{if(mounted&&ticket===sequence.current)setReady(true);}
-    };
-    const {data}=client?.auth.onAuthStateChange((event)=>{
-      if(event==="SIGNED_IN"||event==="SIGNED_OUT"||event==="USER_UPDATED"||event==="INITIAL_SESSION"){
-        setReady(false);
-        queueMicrotask(()=>{if(mounted)void synchronize();});
-      }
-    })||{data:null};
-    void synchronize();
-    return()=>{mounted=false;sequence.current++;data?.subscription.unsubscribe();};
-  },[]);
-
-  const changeLanguage=async(next:InterfaceLanguage)=>{
-    if(!interfaceLanguage(next))return;
-    const previous=selection.current;
-    ++sequence.current;
-    selection.current=next;setLanguage(next);
-    persistVisitorLanguage(next);updatePageLanguage(next);setSaving(true);
-    try {
-      const client=getSupabase();
-      if(client) {
-        const {data,error}=await client.auth.getUser();
-        if(error)throw error;
-        if(data.user){
-          const result=await client.auth.updateUser({data:{ui_language:next}});
-          if(result.error)throw result.error;
-        }
-      }
-    }catch(error){
-      selection.current=previous;setLanguage(previous);
-      persistVisitorLanguage(previous);updatePageLanguage(previous);
-      throw error;
-    }finally{setSaving(false);setReady(true);}
-  };
-  const value:InterfaceContextValue={language,ready,saving,changeLanguage,
-    translate:(key,values)=>t(language,key,values)};
-  return <InterfaceContext.Provider value={value}>
-    {ready?children:<div aria-busy="true" role="status" style={{minHeight:"100vh",display:"grid",placeItems:"center"}}>VMV Business</div>}
-  </InterfaceContext.Provider>;
-}
-export function useInterfaceLanguage():InterfaceContextValue{
-  const value=useContext(InterfaceContext);
-  if(!value)throw new Error("InterfaceLanguageProvider is missing.");
-  return value;
+export function useInterfaceLanguage(){
+ const preference=useContext(Context);
+ if(!preference)throw new Error("Interface language provider is missing");
+ const state=useSyncExternalStore(preference.subscribe,preference.getSnapshot,()=>serverState);
+ return {...state,changeLanguage:async(language:Language)=>{await preference.choose(language);if(preference.getSnapshot().error==="save")throw new Error("Language save failed");},translate:(key:MessageKey,variables?:Record<string,string|number>)=>translate(state.language,key,variables)};
 }

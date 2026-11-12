@@ -21,8 +21,9 @@ export function accountLanguage(metadata: Record<string, unknown> | null | undef
 
 export function t(language: InterfaceLanguage, key: MessageKey, values?: Record<string, string | number>): string {
   const template: string = messages[language][key];
+  if(typeof template!=="string")throw new Error("Missing interface translation: "+key);
   return template.replace(/\{([a-zA-Z][a-zA-Z0-9_]*)\}/g, (match, name: string) =>
-    values && Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : match);
+    values && Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : (()=>{throw new Error("Missing translation variable: "+name);})());
 }
 
 export function formatInterfaceDate(language: InterfaceLanguage, date: Date | string, options?: Intl.DateTimeFormatOptions): string {
@@ -36,4 +37,13 @@ export function formatInterfaceNumber(language: InterfaceLanguage, value: number
 // Keep the currency and amount supplied by billing: this changes presentation only.
 export function formatInterfaceCurrency(language: InterfaceLanguage, value: number, currency: string): string {
   return formatInterfaceNumber(language, value, {style: "currency", currency});
+}
+
+export function authErrorKey(error:unknown):MessageKey {
+ const code=typeof error==="object"&&error!==null&&"code" in error?String(error.code):"";
+ if(code==="invalid_credentials")return "auth.invalidCredentials";
+ if(code==="email_not_confirmed")return "auth.confirmEmail";
+ if(code.includes("rate_limit")||code==="over_request_rate_limit")return "auth.rateLimit";
+ if(error instanceof TypeError)return "auth.network";
+ return "auth.error";
 }

@@ -3,9 +3,11 @@ import {useEffect,useMemo,useRef,useState,type FormEvent,type KeyboardEvent} fro
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {ArrowLeft,ArrowRight,BriefcaseBusiness,Check,CheckCircle2,ChevronRight,Eye,EyeOff,
  Globe2,Mail,Palette,Phone,Search,ShieldCheck,UserRound} from "lucide-react";
-import {Brand} from "./Brand";
-import {InterfaceLanguagePicker} from "./InterfaceLanguagePicker";
+import {InterfaceLanguagePicker as LanguageSelector} from "./InterfaceLanguagePicker";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
+import type {MessageKey} from "@/lib/i18n";
+import {authErrorKey} from "@/lib/i18n";
+import {Brand} from "./Brand";
 import {CountryDialPicker} from "./CountryDialPicker";
 import {DIAL_COUNTRIES,US_STATES,OCCUPATION_ALIASES,normalize} from "@/lib/registration/options";
 
@@ -15,19 +17,9 @@ type FontScale="small"|"normal"|"large";
 type Appearance="light"|"dark"|"system";
 type Job={code:string;title:string};
 type PickOption={value:string;label:string;description?:string};
-const smsErrors:Record<string,string>={
- sms_unavailable:"La verificación por SMS no está disponible ahora. Podrás hacerlo después.",
- sms_rate_limit:"Límite de intentos. Vuelve a probar más tarde.",
- sms_delivery_failed:"No se pudo enviar el SMS. Revisa tu número.",
- incorrect_or_expired_code:"El código es incorrecto o ha caducado.",
- invalid_code:"Introduce el código completo.",
- invalid_phone:"Revisa el prefijo y el número.",
- verification_save_failed:"El SMS fue confirmado, pero no pudimos guardar la verificación.",
- invalid_origin:"No pudimos validar esta solicitud."
-};
 const emailPattern=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const choices=[["daily","Vida diaria"],["family","Familia y amigos"],["travel","Viajes"],["study","Estudios"]];
-const colorChoices=[["mint","Menta","#08b99b"],["blue","Azul","#4686eb"],["violet","Violeta","#895eea"]] as const;
+
+
 
 function Searchable({id,label,value,onChange,items,onSelect,placeholder,helper,disabled=false}:{
  id:string;label:string;value:string;onChange:(value:string)=>void;items:PickOption[];
@@ -63,14 +55,26 @@ function Searchable({id,label,value,onChange,items,onSelect,placeholder,helper,d
  </div>;
 }
 export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:()=>void}){
- const {language,translate}=useInterfaceLanguage();
+ const {language,translate:t}=useInterfaceLanguage();
  const steps=[
-  {tag:translate("signup.personalTag"),title:translate("signup.personalTitle"),description:translate("signup.personalDesc")},
-  {tag:translate("signup.useTag"),title:translate("signup.useTitle"),description:translate("signup.useDesc")},
-  {tag:translate("signup.styleTag"),title:translate("signup.styleTitle"),description:translate("signup.styleDesc")},
-  {tag:translate("signup.securityTag"),title:translate("signup.securityTitle"),description:translate("signup.securityDesc")}
- ];
+ {tag:t("signup.personalTag"),title:t("signup.personalTitle"),description:t("signup.personalDesc")},
+ {tag:t("signup.useTag"),title:t("signup.howUse"),description:t("signup.useDesc")},
+ {tag:t("signup.yourWay"),title:t("signup.styleTitle"),description:t("signup.configure")},
+ {tag:t("signup.securityTag"),title:t("signup.securityTitle"),description:t("signup.createAccess")}
+];
+const smsErrors:Record<string,MessageKey>={
+ sms_unavailable:"signup.smsUnavailable",
+ sms_rate_limit:"signup.smsLimit",
+ sms_delivery_failed:"signup.smsDelivery",
+ incorrect_or_expired_code:"signup.codeExpired",
+ invalid_code:"signup.completeCode",
+ invalid_phone:"signup.checkPhone",
+ verification_save_failed:"signup.smsSave",
+ invalid_origin:"signup.invalidRequest"
+};
 
+const choices=[["daily",t("signup.daily")],["family",t("signup.family")],["travel",t("signup.travel")],["study",t("signup.study")]];
+const colorChoices=[["mint",t("signup.mint"),"#08b99b"],["blue",t("signup.blue"),"#4686eb"],["violet",t("signup.violet"),"#895eea"]] as const;
  const [step,setStep]=useState(0),[busy,setBusy]=useState(false),[error,setError]=useState("");
  const [complete,setComplete]=useState(false),[hasSession,setHasSession]=useState(false);
  const [first,setFirst]=useState(""),[last,setLast]=useState("");
@@ -143,15 +147,15 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
  const clearVerification=()=>{setSmsSent(false);setSmsVerified(false);setSmsCode("");setSmsTicket("");setSmsMessage("");};
  const requestSMS=async()=>{
   setSmsMessage("");
-  if(!validNumber){setSmsMessage("Introduce un número válido.");return;}
+  if(!validNumber){setSmsMessage("signup.invalidNumber");return;}
   if(smsEnabled===false){setSmsMessage(smsErrors.sms_unavailable);return;}
   setSmsBusy(true);
   try{
    const r=await fetch("/api/signup/phone/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})});
    const data=await r.json();
-   if(!r.ok)throw Error(smsErrors[data.error]||"No pudimos enviar el SMS.");
-   setSmsSent(true);setSmsMessage("Te enviamos un código por SMS.");
-  }catch(e){setSmsMessage(e instanceof Error?e.message:"Error al enviar SMS.");}
+   if(!r.ok)throw Error(smsErrors[data.error]||"signup.smsFailed");
+   setSmsSent(true);setSmsMessage("signup.smsSent");
+  }catch(e){setSmsMessage(e instanceof Error&&Object.values(smsErrors).includes(e.message as MessageKey)?e.message:"signup.smsSendError");}
   finally{setSmsBusy(false);}
  };
  const checkSMS=async()=>{
@@ -160,27 +164,27 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
    const r=await fetch("/api/signup/phone/check",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone,code:smsCode})});
    const data=await r.json();
    if(!r.ok||!data.verified||typeof data.ticket!=="string")
-    throw Error(smsErrors[data.error]||"No pudimos confirmar el código.");
+    throw Error(smsErrors[data.error]||"signup.confirmFailed");
    setSmsVerified(true);setSmsSent(false);setSmsCode("");setSmsTicket(data.ticket);
    setSmsMessage("");
-  }catch(e){setSmsMessage(e instanceof Error?e.message:"Error al verificar el SMS.");}
+  }catch(e){setSmsMessage(e instanceof Error&&Object.values(smsErrors).includes(e.message as MessageKey)?e.message:"signup.smsVerifyError");}
   finally{setSmsBusy(false);}
  };
  const validate=(current:number)=>{
   setError("");
   if(current===0){
-   if(!first.trim()||!last.trim()){setError(translate("signup.firstError"));return false;}
-   if(!validNumber){setError(translate("signup.phoneError"));return false;}
-   if(!emailPattern.test(email.trim())){setError(translate("signup.emailError"));return false;}
+   if(!first.trim()||!last.trim()){setError("signup.firstError");return false;}
+   if(!validNumber){setError("signup.enterPhone");return false;}
+   if(!emailPattern.test(email.trim())){setError("signup.emailError");return false;}
   }
   if(current===1){
-   if(state.trim()&&!stateCode){setError("Selecciona el estado de la lista.");return false;}
+   if(state.trim()&&!stateCode){setError("signup.selectState");return false;}
    if(websiteUrl){try{const u=new URL(websiteUrl);if(!["https:","http:"].includes(u.protocol)||!u.hostname.includes("."))throw Error();}
-    catch{setError("Revisa la dirección de tu página web.");return false;}}
+    catch{setError("signup.checkWebsite");return false;}}
   }
   if(current===3){
-   if(password.length<8){setError(translate("signup.passwordError"));return false;}
-   if(password!==repeatPassword){setError(translate("signup.passwordMismatch"));return false;}
+   if(password.length<8){setError("signup.passwordError");return false;}
+   if(password!==repeatPassword){setError("interface.signup.passwordMismatch");return false;}
   }
   return true;
  };
@@ -195,6 +199,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
   if(!validate(0)||!validate(1)||!validate(3))return;
   setBusy(true);
   const values={
+   ui_language:language,
    first_name:first.trim(),last_name:last.trim(),phone,occupation:accountType==="personal"?"Uso personal":occupation.trim()||"Negocio",
    occupation_code:accountType==="business"?occupationCode:"",
    account_type:accountType,use_case:accountType==="personal"?useCase:"",
@@ -203,8 +208,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
    assistant_name:"Juan",owner_language:ownerLanguage,customer_language:ownerLanguage==="es"?"en":"es",
    line_choice:lineChoice,preferred_plan:null,plan_prompt_seen:false,line_setup_completed:false,
    theme_color:accent,font_scale:fontScale,appearance,reduce_motion:reduceMotion,
-   signup_wizard_completed:true,email_verify_preference:emailAction,
-   ui_language:language
+   signup_wizard_completed:true,email_verify_preference:emailAction
   };
   try{
    const {data,error:authError}=await supabase.auth.signUp({
@@ -224,174 +228,174 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
     }
    }
    setHasSession(Boolean(data.session));setComplete(true);
-  }catch(e){setError(translate("signup.registerError"));}
+  }catch(e){setError(authErrorKey(e));}
   finally{setBusy(false);}
  };
  if(complete)return <main className="vmv-signup-shell"><section className="vmv-signup-finish">
   <Brand/><span className="vmv-signup-finish-icon"><CheckCircle2 size={44}/></span>
-  <h1>{translate(hasSession?"signup.created":"signup.welcome")}</h1>
-  <p>{translate(hasSession?"signup.startNow":"signup.confirmEmail")}</p>
-  {smsVerified&&<span className="vmv-signup-success"><Check size={17}/> Teléfono validado por SMS</span>}
-  <button type="button" className="vmv-signup-mainbtn" onClick={onBack}>{translate("signup.goLogin")} <ArrowRight size={18}/></button>
+  <h1>{hasSession?t("signup.created"):t("interface.signup.welcome")}</h1>
+  <p>{hasSession?t("signup.startNow"):t("signup.confirmation")}</p>
+  {smsVerified&&<span className="vmv-signup-success"><Check size={17}/> {t("signup.phoneVerified")}</span>}
+  <button type="button" className="vmv-signup-mainbtn" onClick={onBack}>{t("signup.goLogin")}<ArrowRight size={18}/></button>
  </section></main>;
  return <main className="vmv-signup-shell">
-  <header className="vmv-signup-header" ref={scrollRef}><Brand/><InterfaceLanguagePicker compact/>
-   <button type="button" onClick={onBack}>{translate("signup.haveAccount")}</button>
+  <header className="vmv-signup-header" ref={scrollRef}><Brand/><LanguageSelector/>
+   <button type="button" onClick={onBack}>{t("signup.haveAccount")}</button>
   </header>
   <div className="vmv-signup-layout">
    <aside className="vmv-signup-sidebar">
     <div className="vmv-signup-sidebar-icon"><ShieldCheck size={27}/></div>
-    <h2>{translate("auth.tagline")}</h2>
-    <p>{translate("signup.intro")}</p>
+    <h2>{t("signup.tagline")}<span>.</span></h2>
+    <p>{t("signup.essentials")}</p>
     <ol>{steps.map((item,index)=><li key={item.tag} className={step===index?"selected":step>index?"complete":""}>
      <span>{step>index?<Check size={15}/>:index+1}</span>
-     <strong>{[translate("signup.yourInfo"),translate("signup.yourActivity"),translate("signup.yourStyle"),translate("signup.yourAccess")][index]}</strong>
+     <strong>{[t("signup.yourInfo"),t("signup.yourActivity"),t("signup.yourStyle"),t("interface.signup.yourAccess")][index]}</strong>
     </li>)}</ol>
    </aside>
    <section className="vmv-signup-card">
-    <div className="vmv-signup-progress-head"><span>{translate("signup.step",{step:step+1})}</span><span>{Math.floor((step+1)*25)}%</span></div>
+    <div className="vmv-signup-progress-head"><span>{t("signup.progress",{step:step+1,total:4})}</span><span>{Math.floor((step+1)*25)}%</span></div>
     <div className="vmv-signup-progress"><span style={{width:(step+1)*25+"%"}}/></div>
     <div className="vmv-signup-title"><span>{steps[step].tag}</span><h1>{steps[step].title}</h1><p>{steps[step].description}</p></div>
 
     {step===0&&<div className="vmv-signup-fields">
      <div className="vmv-signup-two">
-      <div className="vmv-signup-field"><label htmlFor="reg-first">Nombre *</label><input id="reg-first" autoComplete="given-name" maxLength={60} placeholder="Nombre" value={first} onChange={e=>setFirst(e.target.value)}/></div>
-      <div className="vmv-signup-field"><label htmlFor="reg-last">Apellidos *</label><input id="reg-last" autoComplete="family-name" maxLength={80} placeholder="Apellido" value={last} onChange={e=>setLast(e.target.value)}/></div>
+      <div className="vmv-signup-field"><label htmlFor="reg-first">{t("signup.firstRequired")}</label><input id="reg-first" autoComplete="given-name" maxLength={60} placeholder={t("common.firstName")} value={first} onChange={e=>setFirst(e.target.value)}/></div>
+      <div className="vmv-signup-field"><label htmlFor="reg-last">{t("signup.lastRequired")}</label><input id="reg-last" autoComplete="family-name" maxLength={80} placeholder={t("signup.lastName")} value={last} onChange={e=>setLast(e.target.value)}/></div>
      </div>
      <div className="vmv-signup-field">
-      <div className="vmv-signup-label-line"><label htmlFor="reg-phone">Teléfono *</label>
-       {smsVerified&&<span className="vmv-signup-success"><CheckCircle2 size={17}/> Verificado</span>}
+      <div className="vmv-signup-label-line"><label htmlFor="reg-phone">{t("signup.phoneRequired")}</label>
+       {smsVerified&&<span className="vmv-signup-success"><CheckCircle2 size={17}/> {t("signup.verified")}</span>}
       </div>
       <div className="vmv-signup-phone">
        <CountryDialPicker value={dialCountry} onChange={country=>{if(country!==dialCountry){setDialCountry(country);clearVerification();}}}/>
        <input id="reg-phone" type="tel" autoComplete="tel-national" inputMode="tel"
-        maxLength={22} placeholder="Tu número" value={nationalPhone} onChange={e=>{setNationalPhone(e.target.value);clearVerification();}}/>
+        maxLength={22} placeholder={t("signup.yourNumber")} value={nationalPhone} onChange={e=>{setNationalPhone(e.target.value);clearVerification();}}/>
       </div>
       {!smsVerified&&smsEnabled===true&&<div className="vmv-signup-sms-action">
        <button type="button" disabled={smsBusy} onClick={()=>void requestSMS()}>
-        <Phone size={16}/>{smsBusy?"Enviando…":smsSent?"Reenviar código":"Enviar código"}
+        <Phone size={16}/>{smsBusy?t("signup.sending"):smsSent?t("signup.resend"):t("signup.sendCode")}
        </button>
-       <small>Opcional · Puedes continuar sin verificarlo</small>
+       <small>{t("signup.optionalVerify")}</small>
       </div>}
       {smsSent&&!smsVerified&&<div className="vmv-signup-code">
-       <label htmlFor="reg-code">Código de verificación</label>
+       <label htmlFor="reg-code">{t("signup.verificationCode")}</label>
        <div><input id="reg-code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*"
         maxLength={10} placeholder="000000" value={smsCode} onChange={e=>setSmsCode(e.target.value.replace(/\D/g,""))}/>
-        <button type="button" disabled={smsBusy||smsCode.length<4} onClick={()=>void checkSMS()}>Verificar</button></div>
-       <small>iPhone puede sugerir automáticamente el código recibido.</small>
+        <button type="button" disabled={smsBusy||smsCode.length<4} onClick={()=>void checkSMS()}>{t("signup.verify")}</button></div>
+       <small>{t("signup.iphoneCode")}</small>
       </div>}
-      {smsMessage&&<small className="vmv-signup-help" role="status">{smsMessage}</small>}
-      {smsEnabled===false&&<small className="vmv-signup-help">Verificaremos tu número cuando tengas un plan pagado y estés configurando la línea.</small>}
+      {smsMessage&&<small className="vmv-signup-help" role="status">{t(smsMessage as MessageKey)}</small>}
+      {smsEnabled===false&&<small className="vmv-signup-help">{t("signup.verifyLater")}</small>}
      </div>
      <div className="vmv-signup-field">
-      <label>¿Cómo quieres recibir llamadas más adelante?</label>
-      <div className="vmv-signup-line-options" role="group" aria-label="Elegir tipo de línea">
+      <label>{t("signup.receiveCalls")}</label>
+      <div className="vmv-signup-line-options" role="group" aria-label={t("signup.lineType")}>
        <button type="button" aria-pressed={lineChoice==="keep"} className={lineChoice==="keep"?"selected":""} onClick={()=>setLineChoice("keep")}>
-        <Phone size={20}/><strong>Conservar mi número</strong>
-        <small>Conexión con tu operador, sin portarlo.</small>
+        <Phone size={20}/><strong>{t("signup.keepNumber")}</strong>
+        <small>{t("signup.carrierConnection")}</small>
        </button>
        <button type="button" aria-pressed={lineChoice==="new"} className={lineChoice==="new"?"selected":""} onClick={()=>setLineChoice("new")}>
-        <Phone size={20}/><strong>Un número nuevo</strong>
-        <small>Se solicita después del plan y la configuración.</small>
+        <Phone size={20}/><strong>{t("signup.newNumber")}</strong>
+        <small>{t("signup.requestLater")}</small>
        </button>
       </div>
-      <small className="vmv-signup-help">Este teléfono es tu contacto. Elegir una opción no activa desvíos ni compra un número.</small>
+      <small className="vmv-signup-help">{t("signup.contactOnly")}</small>
      </div>
      <div className="vmv-signup-field">
-      <label htmlFor="reg-email">Correo electrónico *</label>
+      <label htmlFor="reg-email">{t("signup.emailRequired")}</label>
       <input id="reg-email" type="email" autoComplete="email" maxLength={254} placeholder="tu@correo.com" value={email} onChange={e=>setEmail(e.target.value)}/>
-      <div className="vmv-signup-inline" role="group" aria-label="Cuándo verificar el correo">
-       <button type="button" className={emailAction==="now"?"selected":""} onClick={()=>setEmailAction("now")}><Mail size={15}/> Verificar ahora</button>
-       <button type="button" className={emailAction==="later"?"selected":""} onClick={()=>setEmailAction("later")}>Más tarde</button>
+      <div className="vmv-signup-inline" role="group" aria-label={t("signup.whenVerify")}>
+       <button type="button" className={emailAction==="now"?"selected":""} onClick={()=>setEmailAction("now")}><Mail size={15}/> {t("signup.verifyNow")}</button>
+       <button type="button" className={emailAction==="later"?"selected":""} onClick={()=>setEmailAction("later")}>{t("signup.later")}</button>
       </div>
-      <small className="vmv-signup-help">Al crear la cuenta te enviaremos un enlace. Puedes verificarlo después, pero podría ser necesario para iniciar sesión.</small>
+      <small className="vmv-signup-help">{t("signup.emailHelp")}</small>
      </div>
     </div>}
 
     {step===1&&<div className="vmv-signup-fields">
-     <div className="vmv-signup-account-type" role="group" aria-label="Tipo de cuenta">
+     <div className="vmv-signup-account-type" role="group" aria-label={t("signup.accountType")}>
       <button type="button" className={accountType==="personal"?"selected":""} onClick={()=>setAccountType("personal")}>
-       <UserRound size={24}/><strong>Personal</strong><small>Vida diaria</small>
+       <UserRound size={24}/><strong>{t("signup.personal")}</strong><small>{t("signup.daily")}</small>
       </button>
       <button type="button" className={accountType==="business"?"selected":""} onClick={()=>setAccountType("business")}>
-       <BriefcaseBusiness size={24}/><strong>Negocio</strong><small>Clientes y trabajos</small>
+       <BriefcaseBusiness size={24}/><strong>{t("signup.business")}</strong><small>{t("signup.clientsJobs")}</small>
       </button>
      </div>
-     {accountType==="personal"?<div className="vmv-signup-field"><label>¿Para qué lo usarás? <em>(opcional)</em></label>
+     {accountType==="personal"?<div className="vmv-signup-field"><label>{t("signup.purpose")}<em>{t("signup.optional")}</em></label>
       <div className="vmv-signup-chips">{choices.map(([key,text])=><button type="button" key={key} aria-pressed={useCase===key} className={useCase===key?"selected":""} onClick={()=>setUseCase(useCase===key?"":key)}>{text}</button>)}</div>
      </div>:<>
-      <div className="vmv-signup-field"><label htmlFor="reg-business">Nombre del negocio <em>(opcional)</em></label>
-       <input id="reg-business" value={businessName} onChange={e=>setBusinessName(e.target.value)} maxLength={120} placeholder="Mi empresa"/></div>
-      <Searchable id="reg-occupation" label="Ocupación o profesión" value={occupation}
+      <div className="vmv-signup-field"><label htmlFor="reg-business">{t("signup.businessName")}<em>{t("signup.optional")}</em></label>
+       <input id="reg-business" value={businessName} onChange={e=>setBusinessName(e.target.value)} maxLength={120} placeholder={t("signup.myCompany")}/></div>
+      <Searchable id="reg-occupation" label={t("signup.occupation")} value={occupation}
        onChange={v=>{setOccupation(v);setOccupationCode("");}} items={jobResults}
        onSelect={item=>{setOccupation(item.label);setOccupationCode(item.value);}}
-       placeholder="Carpintería, electricidad, limpieza…"
-       helper={jobsLoaded?"Catálogo de ocupaciones de EE. UU.; también puedes escribir tu propio oficio.":"Cargando profesiones…"}/>
+       placeholder={t("signup.tradeExample")}
+       helper={jobsLoaded?t("signup.occupationHelp"):t("signup.loadingJobs")}/>
      </>}
      <div className="vmv-signup-two">
-      <Searchable id="reg-state" label="Estado (EE. UU.)" value={state} items={states}
+      <Searchable id="reg-state" label={t("signup.state")} value={state} items={states}
        onChange={v=>{setState(v);setStateCode("");setCity("");}}
-       onSelect={x=>{setState(x.label);setStateCode(x.value);setCity("");}} placeholder="Busca tu estado"/>
-      <Searchable id="reg-city" label="Ciudad" value={city} items={cities} onChange={setCity}
-       onSelect={x=>setCity(x.value)} placeholder={stateCode?"Busca tu ciudad":"Elige un estado"} disabled={!stateCode}
-       helper="Puedes escribirla aunque no aparezca en la lista."/>
+       onSelect={x=>{setState(x.label);setStateCode(x.value);setCity("");}} placeholder={t("signup.findState")}/>
+      <Searchable id="reg-city" label={t("common.city")} value={city} items={cities} onChange={setCity}
+       onSelect={x=>setCity(x.value)} placeholder={stateCode?t("signup.findCity"):t("signup.chooseState")} disabled={!stateCode}
+       helper={t("signup.cityHelp")}/>
      </div>
-     <div className="vmv-signup-field"><label htmlFor="reg-website">¿Tienes un website? <em>(opcional)</em></label>
+     <div className="vmv-signup-field"><label htmlFor="reg-website">{t("signup.website")}<em>{t("signup.optional")}</em></label>
       <div className="vmv-signup-input-icon"><Globe2 size={17}/><input id="reg-website" type="text" inputMode="url" maxLength={250}
        value={website} onChange={e=>setWebsite(e.target.value)} placeholder="www.tunegocio.com"/></div>
      </div>
-     <div className="vmv-signup-field"><label>{translate("signup.spokenLanguage")}</label>
+     <div className="vmv-signup-field"><label>{t("profile.ownerLanguage")}</label>
       <div className="vmv-signup-lang-pair">
        <button type="button" className={ownerLanguage==="es"?"selected":""} onClick={()=>setOwnerLanguage("es")}>🇪🇸 Español</button>
        <button type="button" className={ownerLanguage==="en"?"selected":""} onClick={()=>setOwnerLanguage("en")}>🇺🇸 English</button>
       </div>
-      <small className="vmv-signup-help">{translate("signup.customerLanguage",{language:ownerLanguage==="es"?"English":"Español"})}</small>
+      <small className="vmv-signup-help">{t("interface.signup.customerLanguage",{language:ownerLanguage==="es"?"English":"Español"})}</small>
      </div>
     </div>}
 
     {step===2&&<div className="vmv-signup-fields">
-     <div className="vmv-signup-field"><label>{translate("signup.styleColor")}</label>
+     <div className="vmv-signup-field"><label>{t("signup.styleColor")}</label>
       <div className="vmv-signup-colors">{colorChoices.map(([key,title,color])=><button type="button" key={key} aria-pressed={accent===key}
        className={accent===key?"selected":""} onClick={()=>setAccent(key)}><span style={{background:color}}/>{title}{accent===key&&<Check size={17}/>}</button>)}</div>
      </div>
-     <div className="vmv-signup-field"><label>{translate("signup.styleText")}</label>
-      <div className="vmv-signup-segments">{([["small","Pequeña"],["normal","Normal"],["large","Grande"]] as const).map(([key,title])=>
+     <div className="vmv-signup-field"><label>{t("signup.styleText")}</label>
+      <div className="vmv-signup-segments">{([["small",t("signup.small")],["normal",t("signup.normal")],["large",t("signup.large")]] as const).map(([key,title])=>
        <button type="button" key={key} aria-pressed={fontScale===key} className={fontScale===key?"selected":""} onClick={()=>setFontScale(key)}>{title}</button>)}</div>
      </div>
-     <div className="vmv-signup-field"><label>{translate("signup.styleAppearance")}</label>
-      <div className="vmv-signup-segments">{([["light","Claro"],["dark","Oscuro"],["system","Sistema"]] as const).map(([key,title])=>
+     <div className="vmv-signup-field"><label>{t("signup.styleAppearance")}</label>
+      <div className="vmv-signup-segments">{([["light",t("signup.light")],["dark",t("signup.dark")],["system",t("signup.system")]] as const).map(([key,title])=>
        <button type="button" key={key} aria-pressed={appearance===key} className={appearance===key?"selected":""} onClick={()=>setAppearance(key)}>{title}</button>)}</div>
      </div>
-     <label className="vmv-signup-toggle"><span><strong>{translate("signup.reduceMotion")}</strong><small>{translate("signup.styleHint")}</small></span>
+     <label className="vmv-signup-toggle"><span><strong>{t("signup.reduceMotion")}</strong><small>{t("signup.styleHint")}</small></span>
       <input type="checkbox" checked={reduceMotion} onChange={e=>setReduceMotion(e.target.checked)}/></label>
      <div className="vmv-signup-preview" data-color={accent} data-text={fontScale} data-appearance={appearance}>
-      <span><Palette size={17}/> VISTA DE TU ESPACIO</span>
-      <strong>Hola, bienvenido<span>.</span></strong>
-      <p>Tu app, a tu manera.</p>
+      <span><Palette size={17}/> {t("signup.preview")}</span>
+      <strong>{t("signup.hello")}<span>.</span></strong>
+      <p>{t("signup.yourApp")}</p>
      </div>
     </div>}
 
     {step===3&&<form className="vmv-signup-fields" id="vmv-reg-final" onSubmit={submit}>
-     <div className="vmv-signup-security"><ShieldCheck size={23}/><span>Tu cuenta estará protegida con contraseña. No compartas tus códigos.</span></div>
-     <div className="vmv-signup-field"><label htmlFor="reg-password">{translate("signup.wizardPassword")}</label>
+     <div className="vmv-signup-security"><ShieldCheck size={23}/><span>{t("signup.securityHelp")}</span></div>
+     <div className="vmv-signup-field"><label htmlFor="reg-password">{t("signup.wizardPassword")}</label>
       <div className="vmv-signup-password"><input id="reg-password" type={showPassword?"text":"password"}
-       autoComplete="new-password" minLength={8} maxLength={128} placeholder={translate("signup.minPassword")} value={password} onChange={e=>setPassword(e.target.value)}/>
-       <button type="button" aria-label={showPassword?"Ocultar contraseña":"Mostrar contraseña"} onClick={()=>setShowPassword(!showPassword)}>{showPassword?<EyeOff size={18}/>:<Eye size={18}/>}</button></div></div>
-     <div className="vmv-signup-field"><label htmlFor="reg-repeat">{translate("signup.passwordConfirm")}</label>
+       autoComplete="new-password" minLength={8} maxLength={128} placeholder={t("signup.minPassword")} value={password} onChange={e=>setPassword(e.target.value)}/>
+       <button type="button" aria-label={showPassword?t("signup.hidePassword"):t("signup.showPassword")} onClick={()=>setShowPassword(!showPassword)}>{showPassword?<EyeOff size={18}/>:<Eye size={18}/>}</button></div></div>
+     <div className="vmv-signup-field"><label htmlFor="reg-repeat">{t("signup.passwordConfirm")}</label>
       <input id="reg-repeat" type={showPassword?"text":"password"} autoComplete="new-password" minLength={8} maxLength={128} value={repeatPassword}
-       placeholder={translate("signup.passwordRepeat")} onChange={e=>setRepeatPassword(e.target.value)}/></div>
+       placeholder={t("signup.passwordRepeat")} onChange={e=>setRepeatPassword(e.target.value)}/></div>
      <div className="vmv-signup-review">
-      <p><CheckCircle2 size={17}/> {first||"Tu nombre"} {last}</p>
-      <p><CheckCircle2 size={17}/> {accountType==="personal"?"Uso personal":"Uso para negocio"}</p>
-      <p><Mail size={16}/> {email||"Tu correo"}</p>
+      <p><CheckCircle2 size={17}/> {first||t("signup.yourName")} {last}</p>
+      <p><CheckCircle2 size={17}/> {accountType==="personal"?t("signup.personalUse"):t("signup.businessUse")}</p>
+      <p><Mail size={16}/> {email||t("signup.yourEmail")}</p>
      </div>
     </form>}
-    {error&&<div role="alert" className="vmv-signup-error">{error}</div>}
+    {error&&<div role="alert" className="vmv-signup-error">{t(error as MessageKey)}</div>}
     <footer className="vmv-signup-actions">
-     <button type="button" className="vmv-signup-back" onClick={back}><ArrowLeft size={17}/> {translate("common.back")}</button>
-     <div>{(step===1||step===2)&&<button type="button" className="vmv-signup-skip" onClick={skip}>{translate("common.skip")}</button>}
-      {step<3?<button type="button" className="vmv-signup-mainbtn" onClick={next}>{translate("common.next")} <ArrowRight size={18}/></button>:
-       <button type="submit" form="vmv-reg-final" disabled={busy} className="vmv-signup-mainbtn">{translate(busy?"signup.creating":"signup.createMine")} <ArrowRight size={18}/></button>}
+     <button type="button" className="vmv-signup-back" onClick={back}><ArrowLeft size={17}/> {t("interface.common.back")}</button>
+     <div>{(step===1||step===2)&&<button type="button" className="vmv-signup-skip" onClick={skip}>{t("common.skip")}</button>}
+      {step<3?<button type="button" className="vmv-signup-mainbtn" onClick={next}>{t("common.next")}<ArrowRight size={18}/></button>:
+       <button type="submit" form="vmv-reg-final" disabled={busy} className="vmv-signup-mainbtn">{busy?t("signup.creating"):t("signup.createMine")} <ArrowRight size={18}/></button>}
      </div>
     </footer>
    </section>

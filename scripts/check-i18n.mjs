@@ -16,3 +16,28 @@ for(const key of ["common.language","common.languageHint","settings.spokenYourLa
  assert.ok(keys.has(key),"Missing "+key);
 }
 console.log("i18n catalog:",keys.size,"complete keys per locale; placeholders match");
+
+// Validate literal translation references throughout the source, including native screens.
+const {readdirSync}=await import("node:fs");
+const ts=(await import("typescript")).default;
+let references=0;
+function scan(directory){
+ for(const item of readdirSync(new URL("../"+directory,import.meta.url),{withFileTypes:true})){
+  if(item.name==="node_modules"||item.name.startsWith("."))continue;
+  const relative=directory+"/"+item.name;
+  if(item.isDirectory()){scan(relative);continue;}
+  if(!/\.tsx?$/.test(item.name))continue;
+  const source=ts.createSourceFile(relative,readFileSync(new URL("../"+relative,import.meta.url),"utf8"),ts.ScriptTarget.Latest,true);
+  function visit(node){
+   if(ts.isCallExpression(node)&&ts.isIdentifier(node.expression)&&["t","translate"].includes(node.expression.text)){
+    const first=node.arguments[0],second=node.arguments[1];
+    const key=first&&ts.isStringLiteral(first)&&first.text.includes(".")?first:second&&ts.isStringLiteral(second)&&second.text.includes(".")?second:null;
+    if(key){assert.ok(keys.has(key.text),relative+": missing translation "+key.text);references++;}
+   }
+   ts.forEachChild(node,visit);
+  }
+  visit(source);
+ }
+}
+for(const directory of ["app","components","lib","apps/ios"])scan(directory);
+console.log("i18n references:",references,"literal keys validated");

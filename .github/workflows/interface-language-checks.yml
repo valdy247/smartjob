@@ -1,0 +1,21 @@
+name: Interface language checks
+on:
+  push:
+    branches: [feat/vmv-smart-call-control-center]
+    paths: ["lib/i18n*", "lib/i18n/**", "components/**", "app/**", "apps/ios/**", "scripts/*i18n*", "scripts/interface-language*", ".github/workflows/interface-language-checks.yml"]
+  pull_request:
+    paths: ["lib/i18n*", "lib/i18n/**", "components/**", "app/**", "apps/ios/**", "scripts/*i18n*", "scripts/interface-language*"]
+permissions:
+  contents: read
+jobs:
+  translations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9e
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+      - run: npm run i18n:check
+      - run: npm run i18n:test
+      - run: npm run typecheck
