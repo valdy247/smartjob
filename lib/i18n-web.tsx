@@ -32,8 +32,10 @@ export function InterfaceLanguageProvider({children}:{children:ReactNode}) {
     let mounted=true;
     const client=getSupabase();
     let chosen:InterfaceLanguage;
-    try {chosen=visitorLanguage(window.localStorage.getItem(INTERFACE_LANGUAGE_KEY),navigator.language);}
-    catch {chosen=visitorLanguage(null,navigator.language);}
+    try {
+      const queryLanguage=interfaceLanguage(new URLSearchParams(window.location.search).get("lang"));
+      chosen=queryLanguage||visitorLanguage(window.localStorage.getItem(INTERFACE_LANGUAGE_KEY),navigator.language);
+    }catch {chosen=visitorLanguage(null,navigator.language);}
     selection.current=chosen;
     setLanguage(chosen);
     persistVisitorLanguage(chosen);
