@@ -95,7 +95,8 @@ function stages(kind:AgentKind,answers:Record<string,string>):Stage[]{
   {title:"Reglas y supervisión",description:"Define límites y revisiones humanas.",items:[
     pick("handoff","¿Qué hacer si no conoce una respuesta?",["Reconocerlo y derivar a una persona","Solicitar datos y revisión humana"]),
     pick("personal_data","¿Qué información personal podrá solicitar?",["Ninguna","Solo nombre y contacto con consentimiento"]),
-    pick("channel","¿Dónde quieres utilizarlo en el futuro?",["Teléfono","Web","App","Varios canales"]),
+    pick("call_disclosure","¿Aceptas que el agente informe que habla una inteligencia artificial?",["Sí","Todavía no"],true,
+      a=>a.channel==="Teléfono"||a.channel==="Teléfono y chat"),
     para("restrictions","¿Qué promesas o tareas debe evitar?")
   ]},
   {title:"Revisar configuración",description:"Comprueba todo antes de guardar tu agente.",items:[]}
