@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useState,type ChangeEvent} from "react";
-import {Bot,Globe,Search,Star,CalendarDays,PanelsTopLeft,MapPin,ChartNoAxesCombined,Link2,PhoneCall,ArrowUpRight,ChevronLeft,Save,Copy,Check} from "lucide-react";
+import {Bot,Globe,Search,Star,CalendarDays,PanelsTopLeft,MapPin,ChartNoAxesCombined,Link2,PhoneCall,ArrowUpRight,ChevronLeft,Save,Copy,Check,Mail} from "lucide-react";
 import styles from "./BusinessServicesPreview.module.css";
 import WebServicesStudio from "./WebServicesStudio";
 import WebServicesInbox from "./WebServicesInbox";
