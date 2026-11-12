@@ -2,8 +2,10 @@ import React,{useCallback,useEffect,useMemo,useState} from "react";
 import {ActivityIndicator,Alert,Pressable,StyleSheet,Text,TextInput,View} from "react-native";
 import type {Session} from "@supabase/supabase-js";
 import {supabase} from "./session";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 type Contact={id:string;owner_id:string;name:string;phone_e164:string;notes:string;created_at:string};
+const canDialVMV=(phone:string)=>/^\+1[2-9]\d{2}[2-9]\d{6}$/.test(phone);
 const normalize=(input:string):string|null=>{
  const compact=input.trim().replace(/[().\s-]/g,"");
  if(!/^\+?[0-9]+$/.test(compact))return null;
@@ -17,8 +19,9 @@ const errorText=(error:unknown)=>{
  if(e?.code==="23514")return "Comprueba los datos del contacto.";
  return "No pudimos guardar el contacto. Revisa la conexión y vuelve a intentarlo.";
 };
-export function ContactsPanel({session,onBack,initialPhone="",startInForm=false,embedded=false}:{
- session:Session;onBack:()=>void;initialPhone?:string;startInForm?:boolean;embedded?:boolean
+export function ContactsPanel({session,onBack,initialPhone="",startInForm=false,embedded=false,onCall}:{
+ session:Session;onBack:()=>void;initialPhone?:string;startInForm?:boolean;embedded?:boolean;
+ onCall?:(phone:string,name:string)=>void
 }){
  const owner=session.user.id;
  const [contacts,setContacts]=useState<Contact[]>([]);
@@ -133,6 +136,14 @@ export function ContactsPanel({session,onBack,initialPhone="",startInForm=false,
     onPress={()=>void save()} style={[styles.primary,busy&&{opacity:.55}]}>
     <Text style={styles.primaryText}>{busy?"Guardando…":editing?"Guardar cambios":"Guardar contacto"}</Text>
    </Pressable>
+   {editing&&onCall?<Pressable accessibilityRole="button"
+    accessibilityLabel={"Preparar llamada a "+name+" desde VMV"}
+    disabled={busy||!canDialVMV(phone)}
+    style={[styles.callContact, (busy||!canDialVMV(phone))&&styles.callDisabled]}
+    onPress={()=>onCall(phone,name)}>
+    <Ionicons name="call-outline" size={19} color="#7445B8"/>
+    <Text style={styles.callContactText}>Preparar llamada con VMV</Text>
+   </Pressable>:null}
    <Pressable accessibilityRole="button" onPress={clear} style={styles.secondary}><Text style={styles.secondaryText}>Cancelar</Text></Pressable>
    {editing?<Pressable accessibilityRole="button" disabled={busy} onPress={askDelete} style={styles.delete}>
     <Text style={styles.deleteText}>Eliminar contacto</Text></Pressable>:null}
@@ -140,12 +151,19 @@ export function ContactsPanel({session,onBack,initialPhone="",startInForm=false,
    <TextInput accessibilityLabel="Buscar en contactos" style={styles.search} value={query} onChangeText={setQuery}
     placeholder="Buscar por nombre o número" placeholderTextColor="#93A79A" autoCapitalize="none"/>
    {loading?<ActivityIndicator color="#0BA980" style={{marginTop:30}}/>:
-    filtered.length?<View style={styles.card}>{filtered.map(entry=><Pressable key={entry.id} accessibilityRole="button"
-     accessibilityLabel={"Editar "+entry.name} style={styles.contactRow} onPress={()=>edit(entry)}>
+    filtered.length?<View style={styles.card}>{filtered.map(entry=><View key={entry.id} style={styles.contactRow}>
+     <Pressable accessibilityRole="button" accessibilityLabel={"Editar "+entry.name}
+      style={styles.contactRowMain} onPress={()=>edit(entry)}>
       <View style={styles.avatar}><Text style={styles.avatarText}>{entry.name.slice(0,1).toUpperCase()}</Text></View>
       <View style={{flex:1}}><Text style={styles.contactName}>{entry.name}</Text><Text style={styles.contactPhone}>{entry.phone_e164}</Text></View>
-      <Text style={styles.chevron}>›</Text>
-     </Pressable>)}</View>:
+     </Pressable>
+     {onCall?<Pressable accessibilityRole="button" accessibilityLabel={"Llamar a "+entry.name+" desde VMV"}
+      disabled={!canDialVMV(entry.phone_e164)}
+      style={[styles.callIconButton,!canDialVMV(entry.phone_e164)&&styles.callDisabled]}
+      onPress={()=>onCall(entry.phone_e164,entry.name)}>
+      <Ionicons name="call-outline" size={20} color="#7951C4"/>
+     </Pressable>:null}
+    </View>)}</View>:
     <View style={styles.empty}><Text style={styles.emptyIcon}>◎</Text>
      <Text style={styles.emptyTitle}>{contacts.length?"Sin coincidencias":"Todavía no tienes contactos"}</Text>
      <Text style={styles.caption}>{contacts.length?"Prueba otra búsqueda.":"Añade clientes a tu agenda para encontrarlos fácilmente."}</Text>
@@ -177,7 +195,14 @@ const styles=StyleSheet.create({
  primaryText:{color:"#FFFFFF",fontSize:14,fontWeight:"900"},
  secondary:{paddingVertical:15,alignItems:"center",marginTop:5},secondaryText:{fontSize:13,fontWeight:"700",color:"#8364AC"},
  delete:{alignItems:"center",padding:13,marginTop:6},deleteText:{color:"#AE4B5A",fontSize:12,fontWeight:"800"},
- contactRow:{flexDirection:"row",alignItems:"center",gap:11,paddingVertical:12,borderBottomColor:"#EAE2F1",borderBottomWidth:1},
+ contactRow:{flexDirection:"row",alignItems:"center",gap:6,paddingVertical:5,borderBottomColor:"#EAE2F1",borderBottomWidth:1},
+ contactRowMain:{flex:1,minWidth:0,minHeight:60,flexDirection:"row",alignItems:"center",gap:11},
+ callIconButton:{width:43,height:43,borderRadius:15,backgroundColor:"#EFE5FF",borderWidth:1,borderColor:"#E0CEF8",
+  alignItems:"center",justifyContent:"center"},
+ callDisabled:{opacity:.3},
+ callContact:{marginTop:12,minHeight:44,borderRadius:15,backgroundColor:"#EFE5FF",borderColor:"#E0CEF8",borderWidth:1,
+  flexDirection:"row",alignItems:"center",justifyContent:"center",gap:8},
+ callContactText:{color:"#7445B8",fontWeight:"800",fontSize:12},
  avatar:{width:43,height:43,backgroundColor:"#EFE6FF",borderRadius:15,alignItems:"center",justifyContent:"center"},
  avatarText:{fontSize:18,fontWeight:"800",color:"#8052C9"},
  contactName:{fontSize:14,fontWeight:"800",color:"#29223D"},
