@@ -66,3 +66,10 @@ No new credentials or production model settings were changed. Do not enable serv
 
 ## Shared integration branch update
 The five isolated AI Agents module files were copied to `feat/vmv-smart-call-control-center` at the Director's request. The shared `apps/ios/App.tsx` Home tile still needs a separately coordinated navigation edit. The Next.js API is part of the shared Vercel build, but the native studio is not visible in `/vista-app` until it has its own preview or the native navigation integration is approved. This SQL is a proposal, not a live database migration.
+
+## Web showcase on the shared Vercel preview
+- Module-only route: `/vista-app/ai-agents` (add it after the shared preview hostname).
+- Owned files: `app/vista-app/ai-agents/page.tsx` and `app/vista-app/ai-agents/page.module.css`.
+- This is a responsive, isolated **visual showcase**, not the Expo bundle. It demonstrates role selection, form fields, in-memory draft cards and an explicitly illustrated test conversation; it does not save to the database, invoke models or send customer data.
+- It deliberately does not edit `app/vista-app/page.tsx` or iOS `apps/ios/App.tsx`, so the existing Home tiles still point to their earlier destinations until the Director coordinates a shared navigation change.
+- The live server simulator remains in `app/api/vmv/ai-agents/simulate/route.ts`, gated by the proposed Supabase schema. The schema is still **not applied**. No live business operation or channel integration is enabled.
