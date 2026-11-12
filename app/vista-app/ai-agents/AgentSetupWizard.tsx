@@ -172,7 +172,7 @@ export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=true
       className={draft.setup[key]==="Sí"?styles.choiceActive:styles.choice}
       onClick={()=>answer(key,draft.setup[key]==="Sí"?"No":"Sí")}>{draft.setup[key]==="Sí"?"✓ ":""}{label}</button>)}</div>
     <p className={styles.hint}>No tomará números de tarjeta por llamada. Los importes se calculan en el servidor.</p>
-   </>:null>
+   </>:null}
   </div>:null}
   {step>0&&step<steps.length-1?<div className={styles.fields}>
    {step===2&&draft.setup.industry?<div className={styles.context}><Sparkles size={15}/> Negocio: <strong>{draft.setup.industry}</strong> · {draft.setup.city||""}{draft.setup.state?", "+draft.setup.state:""}. No necesitas repetir esos datos.</div>:null}
