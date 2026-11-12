@@ -243,3 +243,7 @@
 .auditSummary>span,.auditSummary>small{font-size:11px;color:#8e7690}
 .auditSummary>p{font-size:12px;color:#69546e;line-height:1.6;margin:0;overflow-wrap:anywhere}
 @media(max-width:700px){.catalogHeading h2{font-size:25px}.servicePicker{grid-template-columns:1fr}.serviceTile{flex-direction:row;min-height:94px;padding:14px;gap:12px}.serviceText{padding:0}.serviceText strong{font-size:14px}.serviceText small{font-size:11px}.serviceIcon{flex:0 0 42px}.wizardHeading p{display:none}}
+
+.catalogHeading{position:relative;padding-right:125px}
+.historyLink{position:absolute;right:0;top:6px;display:inline-flex;align-items:center;gap:6px;padding:9px 10px;border:1px solid #ead9e6;border-radius:11px;background:#fff;color:#7b4a75;text-decoration:none;font-size:11px;font-weight:850}
+@media(max-width:480px){.catalogHeading{padding-right:0}.historyLink{position:static;margin-top:12px}.catalogHeading h2{font-size:23px}}
