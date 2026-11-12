@@ -15,6 +15,7 @@ export type Preferences={voice_customer:Voice;voice_owner:Voice;greeting_custome
 export type Billing={
  plan:string;status:string;billingMode:"test"|"live";subscriptionActive:boolean;previewPilotActive:boolean;
  canCheckout:boolean;phoneServiceReady:boolean;periodEnd:string|null;note:string;
+ national:{enabled:boolean;included:number;used:number;reserved:number;available:number;periodStart:string|null;periodEnd:string|null};
  minutes:{included:number;used:number;reserved:number;rollover:number;topup:number;available:number;temporaryHold:number;holdUntil:string|null};
  plans:{id:string;name:string;priceCents:number;minutes:number}[];
  topup:{plan:string;minutes:number;priceCents:number;available:boolean}|null;
