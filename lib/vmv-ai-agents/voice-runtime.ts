@@ -43,6 +43,9 @@ function trained(snapshot:Record<string,unknown>){
   (c.country==="Otro país"?has("region_other"):has("state"))&&
   (has("human_review")||has("handoff"))&&(has("data_scope")||has("personal_data")));
 }
+function explicitHumanRequest(text:string):boolean{
+ return /(?:hablar|comunicarme|contactar|pasarme|transferir(?:me)?)\s+(?:con\s+)?(?:una?\s+)?(?:persona|emplead[oa]|agente humano|encargad[oa]|dueñ[oa]|representante)|(?:speak|talk|connect|transfer)\s+(?:me\s+)?(?:to|with)\s+(?:a\s+)?(?:person|human|representative|manager)/i.test(text);
+}
 function languageFor(session:CallRecord,text:string):Lang{
  const pref=session.preferred_language==="en"?"en":"es";
  const c=session.agent_snapshot;
@@ -180,13 +183,25 @@ export async function handleAiVoice(req:NextRequest){
  if(claimError||claimed!==true)return refused();
  const lang=languageFor(session,speech);
  let answer:string;
- try{
-  const commerce=await phoneCommerceTurn(db,session,speech,lang,turn);
-  answer=commerce??await getReply(session,speech,lang);
+ if(explicitHumanRequest(speech)){
+  const {data:registered,error:requestError}=await db.rpc("vmv_ai_phone_request_human",{
+   p_call_sid:sid,p_summary:"Caller explicitly asked to speak with a person."
+  });
+  answer=registered===true&&!requestError?
+   (lang==="es"?"Registré tu solicitud para que el negocio la revise. Todavía no puedo transferir llamadas; comunícate por el contacto oficial para hablar con una persona.":
+    "I recorded your request for business review. I cannot transfer calls yet; please use the official business contact."):
+   (lang==="es"?"No pude registrar la solicitud. Comunícate directamente con el negocio.":
+    "I couldn't register that request. Please contact the business directly.");
+ }else{
+  try{
+   const commerce=await phoneCommerceTurn(db,session,speech,lang,turn);
+   answer=commerce??await getReply(session,speech,lang);
+  }catch{
+   answer=lang==="es"?
+    "No pude consultar la información en este momento. Una persona del negocio debe confirmarla.":
+    "I couldn't retrieve the information just now. Someone at the business needs to confirm it.";
+  }
  }
- catch{answer=lang==="es"?
-  "No pude consultar la información en este momento. Una persona del negocio debe confirmarla.":
-  "I couldn't retrieve the information just now. Someone at the business needs to confirm it.";}
  const {data:saved,error:saveError}=await db.rpc("vmv_ai_voice_save_turn",{
   p_sid:sid,p_turn:turn,p_user:speech,p_reply:answer,p_lang:lang});
  if(saveError||saved!==true)return refused();
