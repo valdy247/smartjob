@@ -13,8 +13,8 @@ function normalize(input:string){
  if(/^\+1[0-9]{10}$/.test(compact))return compact;
  return null;
 }
-export default function DialPad({client,ownerId}:{client:SupabaseClient;ownerId:string}){
- const [phone,setPhone]=useState("");
+export default function DialPad({client,ownerId,initialPhone="",contactName=""}:{client:SupabaseClient;ownerId:string;initialPhone?:string;contactName?:string}){
+ const [phone,setPhone]=useState(initialPhone);
  const [available,setAvailable]=useState(false);
  const [checking,setChecking]=useState(true);
  const [confirm,setConfirm]=useState(false);
@@ -39,6 +39,7 @@ export default function DialPad({client,ownerId}:{client:SupabaseClient;ownerId:
  },[client,ownerId]);
 
  const formatted=normalize(phone);
+ const selectedContact=contactName&&phone===initialPhone?contactName:"";
  const add=(digit:string)=>{
   if(busy)return;
   setPhone(previous=>previous.length<20?previous+digit:previous);
@@ -67,7 +68,8 @@ export default function DialPad({client,ownerId}:{client:SupabaseClient;ownerId:
      call_in_progress:"Ya tienes una llamada en curso.",
      dialer_rate_limited:"Has alcanzado el límite de llamadas de prueba.",
      twilio_unavailable:"No se pudo conectar con Twilio.",
-     invalid_phone:"Revisa el número ingresado."
+     invalid_phone:"Revisa el número ingresado.",
+     national_minutes_exhausted:"Se agotaron tus minutos nacionales. Consulta tu plan."
     };
     throw Error(messages[result?.error]||"No se pudo iniciar la llamada.");
    }
@@ -79,6 +81,7 @@ export default function DialPad({client,ownerId}:{client:SupabaseClient;ownerId:
   }finally{setBusy(false);}
  }
  return <div className={styles.dialer} role="tabpanel" aria-label="Teclado para realizar llamadas">
+  {selectedContact?<span className={styles.dialerContactName}>Llamar a <strong>{selectedContact}</strong></span>:null}
   <div className={styles.dialerNumber}>
    <input type="tel" inputMode="tel" autoComplete="tel" aria-label="Número de teléfono"
     value={phone} onChange={event=>{setPhone(event.target.value.slice(0,20));setNotice("");}}
@@ -100,12 +103,14 @@ export default function DialPad({client,ownerId}:{client:SupabaseClient;ownerId:
    onClick={()=>{if(formatted)setConfirm(true);}}
    disabled={busy||checking||!available||!formatted}><Phone size={26} fill="currentColor" strokeWidth={1.6}/></button>
   <span className={styles.dialerHint}>{checking?"Comprobando línea…":available?"Llamada nacional · VMV":"Llamadas salientes no disponibles"}</span>
+  {selectedContact&&!formatted?<p className={styles.dialerError}>Este contacto necesita un número nacional válido.</p>:null}
   {notice?<p className={isError?styles.dialerError:styles.dialerSuccess} role="status">{notice}</p>:null}
   {confirm&&formatted?<div className={styles.callbackConfirmBackdrop}>
    <div className={styles.callbackConfirmCard} role="dialog" aria-modal="true"
     aria-labelledby="dialer-confirm-title">
     <span className={styles.smallKicker}>LLAMADA NORMAL · VMV</span>
     <h3 id="dialer-confirm-title">¿Llamar ahora?</h3>
+    {selectedContact?<span className={styles.dialerConfirmContact}>{selectedContact}</span>:null}
     <strong>{formatted}</strong>
     <p>El cliente verá tu número empresarial. Twilio puede generar cargos de voz.</p>
     <button type="button" className={styles.mainAction} disabled={busy} onClick={()=>void startCall()}>Llamar con VMV →</button>
