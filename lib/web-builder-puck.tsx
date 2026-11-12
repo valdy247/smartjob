@@ -1,6 +1,6 @@
 import type {Config,Data} from "@puckeditor/core";
 import type {CSSProperties} from "react";
-import {safeWebImageUrl} from "./web-services-site";
+import {safeWebImageUrl,webPrimaryContact,type WebSiteContent} from "./web-services-site";
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
 
 type ButtonProps={label?:string;url?:string};
@@ -77,6 +77,30 @@ export function starterBuilderDocument(name="Mi negocio",categoryId=""):Data{
   {type:"Text",props:{id:"about-start",title:"Nuestra historia",body:"Cuenta tu historia y conecta con tus clientes."}},
   {type:"Contact",props:{id:"contact-start",title:"Hablemos",description:"Será un placer atenderte.",email:"",phone:"",address:""}}
  ]});
+}
+/** Bring an owner's classic Web Services draft into Puck without changing the original site. */
+export function importLegacyBuilderDocument(legacy:WebSiteContent):Data{
+ const items:Array<{type:string;props:Record<string,string>}>=[];
+ const add=(type:string,id:string,props:Record<string,string>)=>items.push({type,props:{id,...props}});
+ add("Hero","legacy-hero",{
+  eyebrow:legacy.eyebrow||"BIENVENIDOS",title:legacy.headline||legacy.business,
+  description:legacy.intro,buttonText:legacy.action||"Contáctanos",
+  buttonUrl:webPrimaryContact(legacy).href
+ });
+ if(legacy.heroImage)add("Image","legacy-cover",{url:legacy.heroImage,alt:"Portada de "+legacy.business,caption:""});
+ const services=legacy.services.split(/\\r?\\n/).map(s=>s.trim()).filter(Boolean);
+ for(let i=0;i<services.length;i+=3){
+  add("Services","legacy-services-"+i,{
+   title:i===0?"Nuestros servicios":"Más servicios",
+   first:services[i]||"",second:services[i+1]||"",third:services[i+2]||""
+  });
+ }
+ if(legacy.about)add("Text","legacy-about",{title:"Sobre nosotros",body:legacy.about});
+ legacy.gallery.forEach((url,i)=>add("Image","legacy-gallery-"+i,{url,alt:"Galería de "+legacy.business,caption:""}));
+ add("Contact","legacy-contact",{title:"Contáctanos",description:legacy.intro,
+  email:legacy.email,phone:legacy.phone,address:legacy.address});
+ const normalized=normalizeBuilderDocument({content:items});
+ return {...normalized,root:{props:{palette:legacy.palette,font:"modern"}}} as Data;
 }
 const basicText={type:"text" as const};
 export const builderConfig:Config={
