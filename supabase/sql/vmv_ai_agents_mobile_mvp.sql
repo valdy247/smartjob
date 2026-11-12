@@ -130,7 +130,7 @@ create table if not exists public.vmv_ai_voice_routes (
  id uuid primary key default gen_random_uuid(),
  owner_id uuid not null references auth.users(id) on delete cascade,
  agent_id uuid not null references public.vmv_ai_agents(id) on delete cascade,
- twilio_number text not null unique check (twilio_number ~ '^\+[1-9][0-9]{7,14} twilio_account_sid text not null check (twilio_account_sid ~ '^AC[a-fA-F0-9]{32}$'),
+ twilio_number text not null unique check (twilio_number ~ '^\+[1-9][0-9]{7,14}$'),
  enabled boolean not null default false,
  verified_ownership boolean not null default false,
  disclosure_approved boolean not null default false,
