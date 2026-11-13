@@ -22,15 +22,19 @@ const base=()=>String(process.env.VMV_AI_TEST_BASE_URL||"");
 const locale=(l:Lang)=>l==="en"?"en-US":"es-ES";
 const safe=(s:unknown)=>typeof s==="string"?s.trim():"";
 function end(message:string,l:Lang){return twiml(say(message,locale(l))+"<Hangup/>");}
-function gather(message:string,l:Lang,next:number){
+function gather(message:string,l:Lang,next:number,offerEnglish=false){
  const action=xmlEscape(base()+"/api/vmv/ai-agents/voice?turn="+next);
- return twiml('<Gather input="speech" timeout="6" actionOnEmptyResult="true" speechTimeout="auto" '+
+ // The bilingual agent speaks first; pressing 1 is an optional language switch,
+ // not a mandatory second IVR that may be mistaken for the Smart Call language menu.
+ const input=offerEnglish?'speech dtmf':'speech';
+ const digit=offerEnglish?' numDigits="1"':'';
+ return twiml('<Gather input="'+input+'"'+digit+' timeout="7" actionOnEmptyResult="true" speechTimeout="auto" '+
   'language="'+locale(l)+'" method="POST" action="'+action+'">'+say(message,locale(l))+'</Gather>'+
   say(l==="es"?"No pude escucharte. Hasta pronto.":"I could not hear you. Goodbye.",locale(l))+"<Hangup/>");
 }
 function greeting(snapshot:Record<string,unknown>,l:Lang){
  const cfg=snapshot.configuration as Record<string,unknown>|null;
- const company=safe(snapshot.business_name)||"el negocio";
+ const company=safe(cfg?.business_name)||safe(snapshot.business_name)||"el negocio";
  const script=safe(cfg?.call_hello)||safe(cfg?.call_greeting);
  const intro=l==="es"?"Gracias por llamar a "+company+". Soy un asistente de inteligencia artificial.":
   "Thank you for calling "+company+". I'm an artificial intelligence assistant.";
@@ -136,10 +140,10 @@ export async function handleAiVoice(req:NextRequest){
   if(!session||!trained(session.agent_snapshot))return refused();
   const lang=session.preferred_language==="en"?"en":"es";
   if(session.agent_snapshot.language==="both"){
-   const action=xmlEscape(base()+"/api/vmv/ai-agents/voice?choose_lang=1");
-   const bilingual='Para español, marca dos. For English, press one.';
-   return twiml('<Gather input="dtmf" numDigits="1" timeout="6" method="POST" actionOnEmptyResult="true" action="'+action+'">'+
-    say(bilingual,"es-ES")+'</Gather><Redirect method="POST">'+action+"</Redirect>");
+   // No extra mandatory language selection after the caller already pressed 2
+   // to select AI Agents. Spanish is the default; one switches to English.
+   return gather(greeting(session.agent_snapshot,"es")+
+     " Si prefieres inglés, marca uno. For English, press one.","es",1,true);
   }
   return gather(greeting(session.agent_snapshot,lang),lang,1);
  }
@@ -157,6 +161,15 @@ export async function handleAiVoice(req:NextRequest){
  if(!turnRaw)return refused();
  const turn=Number(turnRaw);
  if(!Number.isInteger(turn)||turn<1||turn>8)return refused();
+ if(turn===1&&session.agent_snapshot.language==="both"){
+  const digits=signed.get("Digits");
+  if(digits==="1"){
+   const {error:languageError}=await db.rpc("vmv_ai_set_voice_lang",{p_call_sid:sid,p_lang:"en"});
+   if(languageError)return end("I could not change the language. Please try again.", "en");
+   return gather(greeting(session.agent_snapshot,"en"),"en",1);
+  }
+  if(digits==="2")return gather(greeting(session.agent_snapshot,"es"),"es",1);
+ }
  const speech=safe(signed.get("SpeechResult")).slice(0,900);
  const confidence=Number(signed.get("Confidence")||"1");
  if(!speech||(!Number.isNaN(confidence)&&confidence<0.25)){
