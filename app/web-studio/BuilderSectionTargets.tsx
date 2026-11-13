@@ -1,10 +1,10 @@
 "use client";
-import {type MouseEvent,type ReactNode} from "react";
+import {type MouseEvent,type ReactNode,type HTMLAttributes} from "react";
 export const SECTION_TARGET_EVENT="vmv-builder-target-selected";
 export type SectionTarget="section"|"button"|"title";
-export function BuilderSectionTargets({id,editing,children,className="",style,kind="section"}:{
+export function BuilderSectionTargets({id,editing,children,className="",style,kind="section",...other}:{
  id:string;editing:boolean;children:ReactNode;className?:string;style?:React.CSSProperties;kind?:string
-}){
+} & Omit<HTMLAttributes<HTMLElement>,"onClick"|"onClickCapture"|"children">}){
  function choose(event:MouseEvent<HTMLElement>){
   if(!editing)return;
   const el=event.target instanceof Element?event.target:null;
@@ -18,6 +18,6 @@ export function BuilderSectionTargets({id,editing,children,className="",style,ki
    detail:{id,target:selected}
   })));
  }
- return <section className={className} data-vmv-section-kind={kind}
+ return <section {...other} className={className} data-vmv-section-kind={kind}
   style={style} onClickCapture={choose}>{children}</section>;
 }
