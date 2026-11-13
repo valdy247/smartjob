@@ -5,6 +5,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import type {Session} from "@supabase/supabase-js";
 import {AIAgentWizard} from "./AIAgentWizard";
 import {AIAgentsCommerceStudio} from "./AIAgentsCommerceStudio";
+import {AIAgentsCallControl} from "./AIAgentsCallControl";
 import {AIAgentQualityLab} from "./AIAgentQualityLab";
 import {inspectAgent} from "./aiAgentQuality";
 import {AI_AGENT_TEMPLATES,createConversation,emptyAgent,getAgents,getConversations,getMessages,
@@ -13,7 +14,7 @@ import {AI_AGENT_TEMPLATES,createConversation,emptyAgent,getAgents,getConversati
 
 const C={bg:"#F9FAFC",paper:"#FFFFFF",ink:"#201C35",muted:"#817A91",
   purple:"#8959ED",purpleDark:"#7040C8",line:"#ECE8F3",pink:"#FCE4F0",mint:"#DDF8EE"};
-type Screen="home"|"edit"|"chat"|"history"|"quality"|"commerce";
+type Screen="home"|"edit"|"chat"|"history"|"quality"|"commerce"|"phone";
 type Props={session:Session;onBack:()=>void};
 type IconName=React.ComponentProps<typeof Ionicons>["name"];
 
@@ -201,11 +202,21 @@ export function AIAgentsStudio({session,onBack}:Props){
         {phone?<View style={styles.warning}>
           <Ionicons name="call-outline" size={18} color={C.purple}/>
           <Text style={[styles.help,{flex:1}]}>Línea {phone.maskedNumber}: {
-            phone.agentId?"Agente elegido · pendiente de conexión Twilio":"Sin agente elegido"}</Text>
+            phone.agentId?"Agente elegido · revisa la atención de llamadas":"Sin agente elegido"}</Text>
           {phone.agentId?<Action label="Quitar" icon="close-outline" onPress={()=>void choose(null)} disabled={busy}/>:null}
          </View>:null}
         {notice?<View style={styles.warning}><Ionicons name="information-circle-outline" size={18} color="#76559C"/>
           <Text style={[styles.help,{flex:1}]}>{notice}</Text></View>:null}
+        {phone?<Pressable accessibilityRole="button"
+         accessibilityLabel="Configurar atención de llamadas" onPress={()=>setScreen("phone")}
+         style={styles.commerceEntry}>
+         <View style={styles.commerceIcon}><Ionicons name="call-outline" size={23} color={C.purple}/></View>
+         <View style={{flex:1,gap:4}}>
+          <Text style={styles.commerceTitle}>Atención de llamadas</Text>
+          <Text style={styles.commerceCaption}>IA, traducción, horarios y pruebas de configuración</Text>
+         </View>
+         <Ionicons name="chevron-forward" size={19} color={C.purple}/>
+        </Pressable>:null}
         <Pressable accessibilityRole="button" accessibilityLabel="Configurar ventas por teléfono"
          onPress={()=>setScreen("commerce")} style={styles.commerceEntry}>
          <View style={styles.commerceIcon}><Ionicons name="bag-handle-outline" size={23} color={C.purple}/></View>
@@ -279,6 +290,9 @@ export function AIAgentsStudio({session,onBack}:Props){
           })}
         <Text style={styles.footerNote}>Los agentes se guardan en tu cuenta. Elegir uno para la línea no cambia el webhook de Twilio, ni confirma ventas o pagos.</Text>
       </ScrollView>:null}
+
+      {screen==="phone"?<AIAgentsCallControl session={session}
+         onBack={()=>{void refresh();setScreen("home");}}/>:null}
 
       {screen==="commerce"?<AIAgentsCommerceStudio session={session} agents={agents}
         phoneAgentId={phone?.agentId||null} onBack={()=>{void refresh();setScreen("home");}}
