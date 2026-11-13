@@ -11,6 +11,7 @@ import AgentSetupWizard,{type WizardDraft} from "./AgentSetupWizard";
 import AgentQualityLab from "./AgentQualityLab";
 import CommerceStudio from "./CommerceStudio";
 import {inspectAgent} from "./agentQuality";
+import {getSupabase} from "@/lib/supabase";
 import {loadAgents,loadPhoneSelection,selectPhoneAgent,setStudyStatus,storeAgent,type PersistedAgent,type PhoneSelection} from "./agentStore";
 
 type Kind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
@@ -39,6 +40,8 @@ export default function AIAgentsPreview(){
  const [draft,setDraft]=useState<AgentDraft>(()=>blank("support"));
  const [agents,setAgents]=useState<Agent[]>([]);
  const [phone,setPhone]=useState<PhoneSelection|null>(null);
+ const [pilotChecks,setPilotChecks]=useState<{key:string;label:string;ok:boolean}[]|null>(null);
+ const [pilotChecking,setPilotChecking]=useState(false);
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState(false);
  const [authenticated,setAuthenticated]=useState(true);
@@ -129,6 +132,28 @@ export default function AIAgentsPreview(){
   }catch(e){setNotice(e instanceof Error?e.message:"No fue posible cambiar el estado.");}
   finally{setBusy(false);}
  };
+ const checkPilot=async()=>{
+  if(pilotChecking)return;
+  setPilotChecking(true);setPilotChecks(null);
+  try{
+   const client=getSupabase();
+   const {data}=client?await client.auth.getSession():{data:{session:null}};
+   const token=data.session?.access_token;
+   if(!token)throw Error("Inicia sesión para comprobar tu línea.");
+   const response=await fetch("/api/vmv/ai-agents/pilot-status",{
+    headers:{Authorization:"Bearer "+token},cache:"no-store"
+   });
+   const status=await response.json() as {
+    checks?:{key:string;label:string;ok:boolean}[];error?:string
+   };
+   if(!response.ok||!status.checks)throw Error(status.error||"No se pudo comprobar la línea.");
+   setPilotChecks(status.checks);
+   setNotice(status.checks.every(c=>c.ok)?
+     "El piloto tiene sus requisitos configurados. Aún falta la prueba real y verificar el webhook de Twilio.":
+     "Hay requisitos pendientes. Consulta la lista de verificación telefónica.");
+  }catch(e){setNotice(e instanceof Error?e.message:"No se pudo comprobar la conexión.");}
+  finally{setPilotChecking(false);}
+ };
  const select=async(agent:Agent|null)=>{
   if(!phone||busy)return;
   if(agent&&!agent.revision){setNotice("Guarda primero un agente real.");return;}
@@ -175,8 +200,17 @@ export default function AIAgentsPreview(){
       </button>:null}
       {phone?<div className={styles.info}>
        <PhoneCall size={17}/> Línea de prueba {phone.maskedNumber} ·
-       {phone.agentId?" Agente elegido. Falta validar Twilio.":" Sin agente seleccionado."}
-       {phone.agentId?<button type="button" className={styles.buttonSecondary} onClick={()=>void select(null)} disabled={busy}>Quitar selección</button>:null}
+       {phone.agentId?" Agente seleccionado. Comprobar conexión.":" Sin agente seleccionado."}
+       {phone.agentId?<button type="button" className={styles.buttonSecondary}
+        onClick={()=>void checkPilot()} disabled={pilotChecking}>
+         {pilotChecking?"Comprobando…":"Verificar piloto"}</button>:null}
+       {phone.agentId?<button type="button" className={styles.buttonSecondary}
+        onClick={()=>void select(null)} disabled={busy}>Quitar selección</button>:null}
+      </div>:null}
+      {pilotChecks?<div className={styles.info} role="status">
+       <ShieldCheck size={17}/> Comprobaciones internas · No sustituyen una llamada real.
+       <div>{pilotChecks.map(c=><p key={c.key} style={{margin:"4px 0"}}>
+        {c.ok?"✓":"✕"} {c.label}</p>)}</div>
       </div>:null}
       <div className={styles.sectionHeading}><div><h2>¿Qué quieres automatizar?</h2><p>Selecciona una función para tu agente.</p></div></div>
       <div className={styles.tiles}>
