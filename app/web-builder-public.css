@@ -489,3 +489,14 @@
  .vmv-social-links{order:3;flex-basis:100%;justify-content:flex-start}
  .vmv-social-links a{min-height:44px}}
 @media(prefers-reduced-motion:reduce){.vmv-social-links a{transition:none}}
+
+
+/* CTA element-specific inspector controls for image, title and section background. */
+.vmv-context-action-panel .vmv-context-text-label select{
+ width:100%;min-height:41px;min-width:0;background:#fff;color:#423353;
+ border:1px solid #dfd1ee;border-radius:9px;padding:9px 11px;font-size:12px;
+ font-family:ui-sans-serif,system-ui,sans-serif;
+}
+.vmv-context-action-panel .vmv-context-text-label select:focus-visible{
+ outline:3px solid #9363dd;outline-offset:2px;
+}
