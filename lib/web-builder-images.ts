@@ -53,7 +53,7 @@ export function imageTargets(type:string,props:Record<string,unknown>):Array<Ima
 export function targetSettings(props:Record<string,unknown>,target:ImageTarget):Record<string,unknown>{
  if(target.index!==undefined||target.itemId){
   const index=imageTargetIndex(props,target);
-  return index<0?{}:props.items[index]||{};
+  return index<0?{}:(props.items as Record<string,unknown>[])[index]||{};
  }
  if(target.field==="beforeImage"||target.field==="afterImage"){
   const value=props[target.field+"Settings"];
