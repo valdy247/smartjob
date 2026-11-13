@@ -36,12 +36,15 @@ export async function generateMetadata({params}:Props):Promise<Metadata>{
  if(!result)return {title:"Sitio no disponible",robots:{index:false,follow:false}};
  const data=result.page;
  const rendered=normalizeBuilderDocument(data.document);
- const image=rendered.content.find(item=>item.type==="Image");
- const firstImage=typeof image?.props?.url==="string"?image.props.url:"";
+ const image=rendered.content.find(item=>item.type==="Image"||item.type==="HeroVisual"||item.type==="ComposeImage");
+ const imageUrl=image?.type==="Image"?image.props?.url:image?.props?.image;
+ const firstImage=typeof imageUrl==="string"?imageUrl:"";
+ const siteLanguage=(rendered.root?.props as Record<string,unknown>|undefined)?.language==="en"?"en":"es";
  return {title:(data.title==="Inicio"?data.site_name:data.title+" · "+data.site_name),
   description:data.description||"Conoce "+data.site_name,
   robots:{index:process.env.VERCEL_ENV==="production",follow:true},
-  openGraph:{title:data.title==="Inicio"?data.site_name:data.title,description:data.description||data.site_name,type:"website",
+  other:{"content-language":siteLanguage},
+  openGraph:{title:data.title==="Inicio"?data.site_name:data.title,description:data.description||data.site_name,type:"website",locale:siteLanguage==="en"?"en_US":"es_ES",
    ...(firstImage?{images:[{url:firstImage,alt:data.site_name}]}:{})},
   twitter:{card:firstImage?"summary_large_image":"summary",title:data.site_name,
    description:data.description||data.site_name,
@@ -65,6 +68,7 @@ export default async function VMVPublishedPage({params}:Props){
    item&&typeof item==="object"&&typeof (item as {title?:unknown}).title==="string"?[(item as {title:string}).title]:[]):[]);
  const services=Array.from(new Set([...classicServices,...visualServices])).slice(0,30);
  const rootData=(data.root?.props||{}) as Record<string,unknown>;
+ const siteLanguage=rootData.language==="en"?"en":"es";
  const logo=safeWebImageUrl(typeof rootData.logo==="string"?rootData.logo:"");
  const palette=typeof rootData.palette==="string"?rootData.palette:"violet";
  const colorMap:Record<string,[string,string]>={
@@ -78,7 +82,7 @@ export default async function VMVPublishedPage({params}:Props){
  const visualStyle={ "--vmv-accent":accent,"--vmv-pale":colors[1] } as CSSProperties;
  const family=typeof rootData.family==="string"&&["bakery","construction","professional","beauty","creative"].includes(rootData.family)?rootData.family:familyForCategory(result.page.category_id||"");
  const showForm=part==="home"&&result.page.inquiries_enabled===true;
- return <div className="vmv-site" data-site-style={rootData.style||"light"}
+ return <div lang={siteLanguage} className="vmv-site" data-site-style={rootData.style||"light"}
   data-site-family={family} style={visualStyle}>
   <header className="vmv-site-nav" data-header-family={family}>
    <a className="vmv-site-mark" href={base||"/"}>
