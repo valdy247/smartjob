@@ -18,9 +18,9 @@ const modules=[
  {name:"Web Services",Icon:Globe},{name:"Business Management",Icon:Settings2},
  {name:"Marketing & Analytics",Icon:BarChart3},{name:"Automations",Icon:Workflow}
 ];
-const nav:[Tab,string,typeof House][]=[
- ["home","Inicio",House],["services","Servicios",LayoutGrid],
- ["calls","Llamadas",PhoneCall],["translator","Traductor",Languages],["account","Cuenta",UserRound]
+const nav:[Tab,"common.home"|"common.services"|"common.calls"|"common.translator"|"common.account",typeof House][]=[
+ ["home","common.home",House],["services","common.services",LayoutGrid],
+ ["calls","common.calls",PhoneCall],["translator","common.translator",Languages],["account","common.account",UserRound]
 ];
 const lang=(value:string|null|undefined)=>value==="es"?"Español":value==="en"?"English":value||"—";
 const num=(value:number|null|undefined)=>typeof value==="number"&&Number.isFinite(value)?value.toLocaleString("es-US"):"—";
@@ -531,7 +531,7 @@ export default function VMVMobilePreview(){
       </div>:null}
      </div>
      {ready?<nav className={styles.bottomNav} aria-label={translate("home.primaryNavigation")}>
-      {nav.map(([id,label,Icon])=><button key={id} className={[tab===id?styles.activeNav:"",id==="calls"?styles.navCallAction:""].filter(Boolean).join(" ")} onClick={()=>go(id)} aria-label={label} title={label} aria-pressed={tab===id}><span aria-hidden="true"><Icon size={id==="calls"?25:22}/></span></button>)}
+      {nav.map(([id,labelKey,Icon])=><button key={id} type="button" className={[tab===id?styles.activeNav:"",id==="calls"?styles.navCallAction:""].filter(Boolean).join(" ")} onClick={()=>go(id)} aria-label={translate(labelKey)} title={translate(labelKey)} aria-pressed={tab===id}><span aria-hidden="true"><Icon size={id==="calls"?25:22}/></span><small>{translate(labelKey)}</small></button>)}
      </nav>:null}
     </div>
    </div>
