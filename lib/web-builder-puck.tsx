@@ -119,7 +119,8 @@ export function normalizeBuilderDocument(input:unknown):Data{
  const accent=typeof rawProps.accentColor==="string"&&/^#[0-9a-f]{6}$/i.test(rawProps.accentColor)?rawProps.accentColor:"";
  const logo=safeWebImageUrl(String(rawProps.logo||""))||"";
  const family=["bakery","construction","professional","beauty","creative"].includes(String(rawProps.family))?String(rawProps.family):"";
- return {content,root:{props:{palette,font,style,width,motion,accentColor:accent,logo,family}}} as Data;
+ const language=rawProps.language==="en"?"en":"es";
+ return {content,root:{props:{palette,font,style,width,motion,accentColor:accent,logo,family,language}}} as Data;
 }
 export function starterBuilderDocument(name="Mi negocio",categoryId=""):Data{
  const bakery=["bakery","catering","cafe","restaurant","food-truck"].includes(categoryId);
@@ -174,6 +175,7 @@ export const builderConfig:Config={
  },
  root:{
   fields:{
+   language:{type:"select",options:[{label:"Español",value:"es"},{label:"English",value:"en"}]},
    palette:{type:"custom",render:({value,onChange})=><ThemeSwatches value={value} onChange={onChange}/>},
    font:{type:"select",options:[
     {label:"Moderna",value:"modern"},{label:"Editorial",value:"editorial"},
@@ -189,7 +191,7 @@ export const builderConfig:Config={
    logo:{type:"custom",render:({value,onChange})=><BuilderImageField value={typeof value==="string"?value:""} onChange={onChange}/>}
 
   },
-  defaultProps:{palette:"violet",font:"modern",style:"light",width:"regular",motion:"off",accentColor:"",logo:""},
+  defaultProps:{palette:"violet",font:"modern",style:"light",width:"regular",motion:"off",accentColor:"",logo:"",language:"es"},
   render:({children,palette,font,style,width,motion,accentColor}:{children?:React.ReactNode;palette?:string;font?:string;style?:string;width?:string;motion?:string;accentColor?:string})=>{
    const colors:Record<string,{accent:string,pale:string}>={
     violet:{accent:"#8e5de4",pale:"#f0e9fd"},mint:{accent:"#198d74",pale:"#e5f8f0"},
