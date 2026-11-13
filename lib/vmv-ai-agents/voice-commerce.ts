@@ -1,6 +1,7 @@
 // Test-only phone commerce: the model proposes an intent; trusted database RPCs
 // own all price, stock, order IDs, buyer acceptance and payment state.
 import type {SupabaseClient} from "@supabase/supabase-js";
+import {askAiAgent} from "@/lib/vmv-ai-agents/model";
 export type VoiceCommerceSession={
  call_sid:string;owner_id:string;agent_id:string;order_id?:string|null;
  agent_snapshot:Record<string,unknown>;
@@ -62,9 +63,6 @@ export async function phoneCommerceTurn(db:SupabaseClient,session:VoiceCommerceS
  if(!products.length)return fallback(lang,"missing");
  const prior=Array.isArray(session.turns)?session.turns.filter(x=>
   x&&["user","assistant"].includes(x.role)&&typeof x.content==="string").slice(-10):[];
- const direct=Boolean(process.env.OPENAI_API_KEY);
- const credential=process.env.OPENAI_API_KEY||process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN;
- if(!credential)return fallback(lang,"human");
  const account=await db.from("vmv_ai_orders").select("id,order_no,status,total_cents")
   .eq("id",session.order_id||"00000000-0000-0000-0000-000000000000")
   .eq("owner_id",session.owner_id).maybeSingle();
@@ -87,20 +85,12 @@ export async function phoneCommerceTurn(db:SupabaseClient,session:VoiceCommerceS
  ].join("\n");
  let proposal:Record<string,unknown>={action:"none",reply:""};
  try{
-  const response=await fetch(direct?"https://api.openai.com/v1/chat/completions":
-    "https://ai-gateway.vercel.sh/v1/chat/completions",{
-   method:"POST",
-   headers:{"Content-Type":"application/json",Authorization:"Bearer "+credential},
-   body:JSON.stringify({model:direct?process.env.VMV_AI_VOICE_MODEL||"gpt-4.1-mini":
-     "openai/"+(process.env.VMV_AI_VOICE_MODEL||"gpt-4.1-mini"),
-    messages:[{role:"system",content:prompt},{role:"user",content:speech}],
-    response_format:{type:"json_object"},temperature:0,max_tokens:230,store:false}),
-   signal:AbortSignal.timeout(7000),cache:"no-store"
+  const text=await askAiAgent({
+   system:prompt,
+   messages:[{role:"user",content:speech}],
+   maxOutputTokens:230,temperature:0,timeoutMs:7000
   });
-  if(!response.ok)throw Error("Model request failed");
-  const payload=await response.json();
-  const text=payload.choices?.[0]?.message?.content;
-  proposal=JSON.parse(typeof text==="string"?text:"{}") as Record<string,unknown>;
+  proposal=JSON.parse(text) as Record<string,unknown>;
  }catch{return fallback(lang,"human");}
  const action=single(proposal.action,30),sku=single(proposal.sku,45).toUpperCase();
  const quantity=Number(proposal.quantity);
