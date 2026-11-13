@@ -88,6 +88,7 @@ export default function BuilderImageField({value,onChange}:Props){
  }
  async function generate(){
   if(generating||!ai||prompt.trim().length<8)return;
+  if(!window.confirm("Generar una imagen consume 1 generación del límite diario y tiene un costo externo de IA para VMV. No hay cobro al cliente en esta pantalla. ¿Continuar?"))return;
   setGenerating(true);setError("");
   try{
    const client=getSupabase();if(!client)throw new Error("No disponible");
@@ -120,6 +121,7 @@ export default function BuilderImageField({value,onChange}:Props){
     <img src={url} alt="Imagen disponible"/>
    </button>)}</div>:<small className={styles.empty}>Sube tu primera fotografía.</small>}
   {ai?<div className={styles.ai}>
+   <small>Consumo por imagen: 1 generación del cupo diario. El servicio utiliza una API con costo para VMV.</small>
    <textarea value={prompt} maxLength={450} spellCheck={false} rows={2}
     placeholder="Describe una imagen para generar" onChange={e=>setPrompt(e.target.value)}/>
    <button type="button" disabled={generating||prompt.trim().length<8} onClick={()=>void generate()}>
