@@ -90,3 +90,24 @@ test("business working hours are reused instead of invented",()=>{
  assert.equal(w.sun.enabled,false);
  assert.equal(businessWeek({h_mon_active:"Sí"}),null);
 });
+
+test("overnight opening never activates BEFORE opening on the same day",()=>{
+ const p=policy();
+ for(const d of Object.keys(p.schedule))p.schedule[d].enabled=false;
+ p.schedule.mon={enabled:true,start:"22:00",end:"02:00"};
+ assert.equal(inWeek(p.schedule,"mon",0),false);
+ assert.equal(inWeek(p.schedule,"mon",60),false);
+ assert.equal(inWeek(p.schedule,"mon",119),false);
+ assert.equal(inWeek(p.schedule,"mon",120),false);
+ assert.equal(inWeek(p.schedule,"mon",21*60+59),false);
+ assert.equal(inWeek(p.schedule,"mon",22*60),true);
+ assert.equal(inWeek(p.schedule,"tue",60),true);
+ assert.equal(inWeek(p.schedule,"tue",120),false);
+});
+test("overnight today does not spill into morning without previous-day shift",()=>{
+ const p=policy();for(const d of Object.keys(p.schedule))p.schedule[d].enabled=false;
+ p.schedule.fri={enabled:true,start:"23:30",end:"03:00"};
+ assert.equal(inWeek(p.schedule,"fri",60),false);
+ assert.equal(inWeek(p.schedule,"sat",120),true);
+ assert.equal(inWeek(p.schedule,"sat",180),false);
+});
