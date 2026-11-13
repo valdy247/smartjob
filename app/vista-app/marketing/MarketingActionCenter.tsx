@@ -9,6 +9,7 @@ import {
  Sparkles,Star,Wallet,Workflow
 } from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
+import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS,categoryLabel} from "@/lib/vmv-business-categories";
 import styles from "./MarketingActionCenter.module.css";
 import WebRepairStudio,{emptyWebRepair,validateWebRepair,type WebRepairData} from "./WebRepairStudio";
@@ -76,6 +77,11 @@ const errorMessage=(e:unknown,fallback:string)=>e instanceof Error?e.message:fal
 export default function MarketingActionCenter({businessName,industryId,website,onGoToVisibility,preselectedService,onWizardActiveChange}:{
  businessName:string;industryId:string;website:string;onGoToVisibility:()=>void;preselectedService?:ServiceCode;onWizardActiveChange?:(active:boolean)=>void
 }){
+ const {language}=useInterfaceLanguage();
+ const en=language==="en";
+ const serviceName=(id:ServiceCode)=>en?({google_profile:"Appear on Google",seo_improvement:"Improve my website",review_strategy:"My reputation",directory_listings:"Local directories"} as Partial<Record<ServiceCode,string>>)[id]||services.find(x=>x.id===id)?.name||id:services.find(x=>x.id===id)?.name||id;
+ const serviceWhy=(id:ServiceCode)=>en?({google_profile:"Create or improve your business listing.",seo_improvement:"Find practical improvements for your website.",review_strategy:"Manage authentic reviews and local listings."} as Partial<Record<ServiceCode,string>>)[id]||"":services.find(x=>x.id===id)?.why||"";
+
  const [client,setClient]=useState<SupabaseClient|null>(null);
  const [user,setUser]=useState<User|null>(null);
  const [savedCategory,setSavedCategory]=useState("");
@@ -481,8 +487,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   setQuoteNote(req.quote_note||"");setStageUpdate(req.staff_update||"");setEvidence(req.evidence_url||"");
  };
  return <div className={styles.root}>
-  {wizardStep===0?<header className={styles.catalogHeading}><h2>¿Qué quieres hacer hoy?</h2><p>Elige un servicio y te ayudamos paso a paso.</p><a href="#vmv-marketing-history" className={styles.historyLink}><ClipboardList size={16}/> Mis solicitudes</a>{pausedStep!==null?<button type="button" className={styles.resumeDraft} onClick={()=>{setWizardStep(pausedStep);setPausedStep(null);revealWizard();}}>Continuar mi solicitud guardada</button>:null}</header>:null}
-  {wizardStep>0&&wizardStep<4?<button type="button" className={styles.historyWizardAccess} onClick={()=>{setPausedStep(wizardStep);void saveCurrentDraft();setWizardStep(0);window.setTimeout(()=>document.getElementById("vmv-marketing-history")?.scrollIntoView({behavior:"smooth"}),0);}}><ClipboardList size={15}/> Mis solicitudes</button>:null}
+  {wizardStep===0?<header className={styles.catalogHeading}><h2>{en?"What would you like to do?":"¿Qué quieres hacer hoy?"}</h2><p>{en?"Choose a service. We’ll guide you.":"Elige un servicio y te ayudamos paso a paso."}</p><a href="#vmv-marketing-history" className={styles.historyLink}><ClipboardList size={16}/> {en?"My requests":"Mis solicitudes"}</a>{pausedStep!==null?<button type="button" className={styles.resumeDraft} onClick={()=>{setWizardStep(pausedStep);setPausedStep(null);revealWizard();}}>{en?"Continue saved request":"Continuar mi solicitud guardada"}</button>:null}</header>:null}
+  {wizardStep>0&&wizardStep<4?<button type="button" className={styles.historyWizardAccess} onClick={()=>{setPausedStep(wizardStep);void saveCurrentDraft();setWizardStep(0);window.setTimeout(()=>document.getElementById("vmv-marketing-history")?.scrollIntoView({behavior:"smooth"}),0);}}><ClipboardList size={15}/> {en?"My requests":"Mis solicitudes"}</button>:null}
   <section className={styles.wizardPanel} id="vmv-marketing-request" aria-label="Crear solicitud de marketing">
    {wizardStep===4?<div className={styles.wizardSuccess} role="status">
     <div className={styles.successIcon}><CheckCircle2 size={33}/></div>
@@ -513,15 +519,15 @@ export default function MarketingActionCenter({businessName,industryId,website,o
        const ServiceIcon=serviceIcons[service.id];
        return <button type="button" key={service.id} onClick={()=>chooseService(service.id)} className={styles.serviceTile} aria-label={"Elegir "+service.name}>
         <span className={styles.serviceIcon}><ServiceIcon size={23} strokeWidth={1.8}/></span>
-        <span className={styles.serviceText}><strong>{service.name}</strong><small>{service.why}</small></span>
-        <span className={styles.serviceCta}>Empezar <ArrowUpRight size={14}/></span>
+        <span className={styles.serviceText}><strong>{serviceName(service.id)}</strong><small>{serviceWhy(service.id)}</small></span>
+        <span className={styles.serviceCta}>{en?"Start":"Empezar"} <ArrowUpRight size={14}/></span>
        </button>;
       })}
      </div>
      <p className={styles.wizardHint}><ShieldCheck size={15}/> El envío de solicitudes es gratis. Si un servicio cuesta dinero, conocerás el precio antes de aprobarlo.</p>
     </div>:null}
     {wizardStep===1?<div className={styles.wizardBody}>
-     <div className={styles.selectedServiceBanner}><span className={styles.selectedServiceIcon}>{(()=>{const Icon=serviceIcons[selected];return <Icon size={23}/>;})()}</span><span><small>SERVICIO ELEGIDO</small><strong>{services.find(s=>s.id===selected)?.name}</strong></span><button type="button" onClick={()=>{setWizardStep(0);setWizardError("");}}>Cambiar</button></div>
+     <div className={styles.selectedServiceBanner}><span className={styles.selectedServiceIcon}>{(()=>{const Icon=serviceIcons[selected];return <Icon size={23}/>;})()}</span><span><small>SERVICIO ELEGIDO</small><strong>{serviceName(selected)}</strong></span><button type="button" onClick={()=>{setWizardStep(0);setWizardError("");}}>Cambiar</button></div>
      <div className={styles.wizardFields}>
       <label className={styles.wizardField}><span>Nombre de tu negocio <em>Obligatorio</em></span><input type="text" autoComplete="organization" value={name} maxLength={150} onChange={e=>{setName(e.target.value);setWizardError("");}} placeholder="Ej. Mi negocio" /></label>
       <label className={styles.wizardField}><span>¿A qué se dedica?</span><select value={effectiveCategory} onChange={e=>setChosenCategory(e.target.value)}>
@@ -551,7 +557,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     {wizardStep===3?<div className={styles.wizardBody}>
      <div className={styles.reviewCard}>
       <div className={styles.reviewTop}><ClipboardList size={20}/><strong>Resumen de tu solicitud</strong></div>
-      <div className={styles.reviewItem}><span>Servicio</span><strong>{services.find(s=>s.id===selected)?.name}</strong><button type="button" onClick={()=>editWizardStep(0)}>Editar</button></div>
+      <div className={styles.reviewItem}><span>{en?"Service":"Servicio"}</span><strong>{serviceName(selected)}</strong><button type="button" onClick={()=>editWizardStep(0)}>Editar</button></div>
       <div className={styles.reviewItem}><span>Negocio</span><strong>{name.trim()}</strong><button type="button" onClick={()=>editWizardStep(1)}>Editar</button></div>
       <div className={styles.reviewItem}><span>Sector</span><strong>{categoryLabel(effectiveCategory,"No especificado")}</strong></div>
       {site.trim()?<div className={styles.reviewItem}><span>Sitio web</span><strong className={styles.wrapValue}>{site.trim()}</strong></div>:null}
