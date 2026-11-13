@@ -1,0 +1,25 @@
+.root{display:flex;flex-direction:column;gap:13px;color:#2e233d;padding-bottom:25px}
+.back{display:flex;align-items:center;gap:7px;background:transparent;color:#8351d5;border:0;font-size:12px;font-weight:900;padding:7px 0;width:fit-content}
+.hero{display:flex;align-items:center;gap:12px;background:linear-gradient(110deg,#8555e6,#b489fa);border-radius:20px;padding:19px;color:white}
+.avatar{background:#fff3;border-radius:14px;display:grid;place-items:center;width:48px;height:48px;flex-shrink:0}
+.hero div{display:flex;flex-direction:column;gap:5px;min-width:0}
+.hero strong{font-size:17px;overflow:hidden;text-overflow:ellipsis}
+.hero small{font-size:10px;color:#f7edff;line-height:1.4}
+.notice{display:flex;align-items:flex-start;gap:9px;border-radius:13px;background:#e8f7ee;padding:12px;color:#376c52;font-size:11px;line-height:1.55}
+.notice svg{flex-shrink:0}
+.history{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:800;color:#5a436a}
+.history select{border:1px solid #e5daf1;border-radius:12px;padding:11px;background:white;color:#392548;font-size:12px;width:100%}
+.chat{background:#fff;border:1px solid #ece3f4;border-radius:17px;min-height:175px;max-height:350px;overflow:auto;padding:13px;display:flex;flex-direction:column;gap:10px}
+.empty{display:flex;align-items:center;gap:8px;font-size:11px;color:#82758e;line-height:1.6}
+.customer,.agentReply{margin:0;max-width:88%;font-size:11px;display:flex;flex-direction:column;gap:5px;line-height:1.5;padding:11px;border-radius:13px}
+.customer{align-self:flex-end;border-bottom-right-radius:4px;background:#8755df;color:#fff}
+.agentReply{align-self:flex-start;border-bottom-left-radius:4px;background:#f2edf8;color:#3e3051}
+.customer small,.agentReply small{font-size:9px;font-weight:900;letter-spacing:.6px;opacity:.8}
+.error{padding:11px;border-radius:12px;background:#fff0ef;color:#9a4654;font-size:11px;line-height:1.5}
+.entryLabel{font-size:11px;font-weight:850;color:#4e3a63}
+.root textarea{width:100%;resize:vertical;border:1px solid #e4d9f0;border-radius:13px;padding:12px;color:#2d213d;font:500 12px/1.5 system-ui,sans-serif;background:#fff}
+.root textarea:focus{outline:2px solid #c6a9f7;outline-offset:1px}
+.send{display:flex;justify-content:center;align-items:center;gap:8px;background:#8558e5;color:#fff;border:0;border-radius:13px;padding:13px;font-size:12px;font-weight:900}
+.send:disabled{opacity:.5}
+.edit{display:flex;align-items:center;justify-content:center;padding:12px;background:#fff;color:#8556dc;border:1px solid #e3d6f3;border-radius:12px;font-size:11px;font-weight:900}
+button:focus-visible{outline:3px solid #bfa1f6;outline-offset:2px}
