@@ -272,7 +272,12 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
    <div className={styles.panel}>
     <h3><span>03</span> Identidad visual</h3>
     <p>Usa fotografías propias. También puedes continuar sin ellas y añadirlas desde el editor antes de publicar.</p>
-    <p role="status" aria-live="polite">{mediaReady?(mediaSaving?"Guardando imágenes…":mediaMessage||"Las imágenes se conservan después de recargar."):"Recuperando imágenes guardadas…"}</p>
+    <p role="status" aria-live="polite">{mediaError?"Hubo un problema con tus imágenes.":mediaReady?(mediaSaving?"Guardando imágenes…":mediaMessage||"Las imágenes se conservan después de recargar."):"Recuperando imágenes guardadas…"}</p>
+    {mediaError&&!mediaReady?<button type="button" onClick={()=>window.location.reload()}
+     style={{alignSelf:"flex-start",border:"1px solid #d5c5eb",borderRadius:10,padding:"9px 13px",
+      background:"#f7f1ff",color:"#7853b3",fontSize:12,fontWeight:850,cursor:"pointer"}}>
+     Reintentar carga de imágenes
+    </button>:null}
     {mediaError?<p role="alert" className={styles.error}>{mediaError}</p>:null}
     <fieldset disabled={!mediaReady||mediaSaving} style={{border:0,padding:0,margin:0,minWidth:0}}>
      <div className={styles.photos}>
