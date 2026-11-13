@@ -1,5 +1,6 @@
 import type {Data} from "@puckeditor/core";
 import {normalizeBuilderDocument} from "./web-builder-puck";
+import type {BusinessSocialLinks} from "./web-builder-social";
 
 export type SiteFamily="bakery"|"construction"|"professional"|"beauty"|"creative";
 export type SiteObjective="calls"|"quotes"|"bookings"|"orders";
@@ -8,7 +9,7 @@ export type SiteProduct={id:string;title:string;description:string;image:string;
 export type SiteIntake={
  business:string;categoryId:string;offering:SiteOffering;objective:SiteObjective;
  phone:string;email:string;city:string;about:string;logo:string;photos:string[];
- offerings:string[];products?:SiteProduct[];
+ offerings:string[];products?:SiteProduct[];socials?:BusinessSocialLinks;
 };
 export type SiteProposal={id:string;family:SiteFamily;name:string;subtitle:string;data:Data;layout:string;palette:string};
 export const FAMILIES:{id:SiteFamily;name:string;summary:string;example:string}[]=[
@@ -127,7 +128,8 @@ function assemble(input:SiteIntake,family:SiteFamily,variant:number):Data{
  }
  const palette=familyThemes[family][variant]||"violet";
  return normalizeBuilderDocument({root:{props:{
-  palette,font:p.font,style:p.style,width:variant===1?"wide":"regular",logo:input.logo,motion:"off",family
+  palette,font:p.font,style:p.style,width:variant===1?"wide":"regular",logo:input.logo,motion:"off",family,
+  socialLinks:input.socials
  }},content:blocks});
 }
 export function createSiteProposals(input:SiteIntake,family=familyForCategory(input.categoryId)):SiteProposal[]{
