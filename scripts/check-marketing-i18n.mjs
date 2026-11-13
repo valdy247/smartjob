@@ -1,0 +1,49 @@
+/**
+ * Strict, Marketing-only regression gate for untranslated JSX and accessibility strings.
+ * Existing translations are catalog-based; published customer content is out of scope.
+ * This covers static JSX/props only, NOT runtime API errors, user content, or dependencies.
+ */
+import ts from "typescript";
+import {readdirSync,readFileSync} from "node:fs";
+import path from "node:path";
+const scope="app/vista-app/marketing";
+const root=process.cwd();
+const neutral=[
+ /^VMV(?: Business)?$/i,/^VMV Business · Marketing Studio$/i,
+ /^Google Business Profile$/i,/^PageSpeed Insights$/i,
+ /^Google$/i,/^SEO$/i,/^ROAS$/i,/^WhatsApp$/i,
+ /^GitHub$/i,/^GitLab$/i,/^Bitbucket$/i,
+ /^Apple Maps$/i,/^Bing Places$/i,/^Yelp$/i,/^Logo$/i,
+ /^Columbus$/i,/^Georgia$/i,/^US$/i,/^USA$/i,
+ /^https?:\/\//i,/^www\./i,/^\+?[\d\s().:/#%–—+-]+$/u,
+ /^[\p{P}\p{S}\s]+$/u
+];
+const allow=(str)=>str.length<3||neutral.some(re=>re.test(str))||!/[\p{L}]/u.test(str);
+const candidates=[];
+function walk(dir){
+ for(const item of readdirSync(path.join(root,dir),{withFileTypes:true})){
+  const file=path.posix.join(dir,item.name);
+  if(item.isDirectory()){walk(file);continue;}
+  if(!item.name.endsWith(".tsx")||item.name.endsWith(".test.tsx"))continue;
+  const code=readFileSync(path.join(root,file),"utf8"),ast=ts.createSourceFile(file,code,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+  function add(node,kind,source){
+   const value=source.replace(/\s+/g," ").trim();
+   if(allow(value))return;
+   candidates.push({file,line:ast.getLineAndCharacterOfPosition(node.getStart(ast)).line+1,kind,value:value.slice(0,150)});
+  }
+  function visit(node){
+   if(ts.isJsxText(node))add(node,"visible",node.getText(ast));
+   if(ts.isJsxAttribute(node)&&node.initializer&&ts.isStringLiteral(node.initializer)&&
+       ["placeholder","title","aria-label","aria-description","alt","label","hint"].includes(node.name.text))
+       add(node,"attribute:"+node.name.text,node.initializer.text);
+   if(ts.isJsxExpression(node)&&node.expression&&ts.isStringLiteral(node.expression))add(node,"visible-expression",node.expression.text);
+   ts.forEachChild(node,visit);
+  }
+  visit(ast);
+ }
+}
+walk(scope);
+const byFile=Object.entries(candidates.reduce((acc,x)=>{acc[x.file]=(acc[x.file]||0)+1;return acc;},{})).sort((a,b)=>b[1]-a[1]);
+console.log(JSON.stringify({module:"Marketing",untranslatedStaticCandidates:candidates.length,byFile,findings:candidates},null,2));
+console.error("MARKETING_I18N_AUDIT="+JSON.stringify({total:candidates.length,byFile}));
+if(candidates.length&&process.env.MARKETING_I18N_STRICT==="1")process.exitCode=1;
