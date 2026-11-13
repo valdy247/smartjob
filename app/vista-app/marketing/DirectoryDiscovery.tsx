@@ -49,7 +49,7 @@ export default function DirectoryDiscovery({data,onChange,industry}:{data:Direct
  const patch=(key:keyof DirectoryData,value:string|boolean)=>{
   const next={...data,[key]:value};
   if(key==="city"||key==="state"){
-   const allowed=new Set([...directoryOptions(next).map(x=>x.id),"research-local"]);
+   const allowed=new Set([...directoryOptions({...next,industry:next.industry||industry}).map(x=>x.id),"research-local"]);
    next.selected=data.selected.filter(t=>allowed.has(t.id)).map(t=>t.id==="research-local"?researchTarget(next):t);
   }
   onChange(next);
