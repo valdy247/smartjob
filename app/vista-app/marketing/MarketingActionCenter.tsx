@@ -127,7 +127,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [photoNotice,setPhotoNotice]=useState("");
  const draftSnapshot=():StoredMarketingDraft=>({
   version:1,savedAt:Date.now(),service:selected,step:wizardStep,googleStep,
-  name,site,category:chosenCategory||effectiveCategory,goal,reviewInput,reviewTone,
+  name,site,category:chosenCategory||industryId||savedCategory||"other",goal,reviewInput,reviewTone,
   consent:false,googleData,webRepair
  });
  const saveCurrentDraft=async()=>{
@@ -169,7 +169,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(!writeMarketingDraft(draftSnapshot()))setDraftNotice("No se está guardando el borrador. Mantén abierta esta página.");
   },300);
   return()=>window.clearTimeout(id);
- },[draftReady,wizardStep,googleStep,selected,name,site,chosenCategory,effectiveCategory,goal,reviewInput,reviewTone,googleData,webRepair]);
+ },[draftReady,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,goal,reviewInput,reviewTone,googleData,webRepair]);
  useEffect(()=>{
   if(!draftReady||selected!=="google_profile"||wizardStep<1||wizardStep>3)return;
   const id=window.setTimeout(()=>{
