@@ -56,7 +56,7 @@ function Field({label,value,onChange,placeholder,type="text",hint,min,max}:{
 }
 export default function MarketingPage(){
  const {translate,language}=useInterfaceLanguage();
- const localizedTabs=localizedTabs.map(tab=>({...tab,label:translate(("marketing.tabs."+tab.id+".label") as import("@/lib/i18n").MessageKey),description:translate(("marketing.tabs."+tab.id+".desc") as import("@/lib/i18n").MessageKey)}));
+ const localizedTabs=tabs.map(tab=>({...tab,label:translate(("marketing.tabs."+tab.id+".label") as import("@/lib/i18n").MessageKey),description:translate(("marketing.tabs."+tab.id+".desc") as import("@/lib/i18n").MessageKey)}));
  const localizedChannels=channels.map(channel=>({...channel,desc:translate(("marketing.channels."+channel.id) as import("@/lib/i18n").MessageKey)}));
  const [section,setSection]=useState<Section>("actions");
  const [requestedService,setRequestedService]=useState<ServiceCode|null>(null);
@@ -207,18 +207,18 @@ export default function MarketingPage(){
      {section==="strategy"?<>
       <div className={styles.sectionTop}><span>{translate("marketing.copy.step_01_foundations")}</span><h2>{translate("marketing.copy.let_s_understand_your_business")}</h2><p>{translate("marketing.copy.the_best_strategy_depends_on_who_buys_what_they_need_an")}</p></div>
       <div className={styles.formGrid}>
-       <Field label="Nombre del negocio" value={form.business} onChange={v=>patch("business",v)} placeholder="Ej. Mi negocio"/>
+       <Field label={translate("marketing.copy.business_name_2")} value={form.business} onChange={v=>patch("business",v)} placeholder={translate("marketing.copy.e_g_my_business")}/>
        <label className={styles.field}><span>{translate("marketing.copy.industry_or_service")}</span>
-        <select value={form.industry} onChange={e=>patch("industry",e.target.value)} aria-label="Selecciona la industria de tu negocio">
+        <select value={form.industry} onChange={e=>patch("industry",e.target.value)} aria-label={translate("marketing.copy.select_your_business_industry")}>
          <option value="">{translate("marketing.copy.select_your_industry")}</option>
          {CATEGORY_GROUPS.map(group=><optgroup key={group} label={group}>{BUSINESS_CATEGORIES.filter(option=>option.group===group).map(option=><option key={option.id} value={option.id}>{option.label}</option>)}</optgroup>)}
          <option value="unsure">{translate("marketing.copy.i_m_not_sure")}</option>
         </select><small>{translate("marketing.copy.standardized_options_help_create_more_consistent_strate")}</small>
        </label>
-       <Field label="Cliente ideal" value={form.audience} onChange={v=>patch("audience",v)} placeholder="¿Quién suele comprar y por qué?"/>
-       <Field label="Oferta principal" value={form.offer} onChange={v=>patch("offer",v)} placeholder="¿Qué vendes y qué problema resuelves?"/>
-       <Field label="Ticket promedio ($) · opcional" type="number" min={0} value={form.ticket} onChange={v=>patch("ticket",v)} placeholder="Puedes dejarlo vacío" hint="Importe promedio de cada venta. Si no lo sabes, no necesitas inventarlo."/>
-       <Field label="Margen bruto (%) · opcional" type="number" min={0} max={100} value={form.margin} onChange={v=>patch("margin",v)} placeholder="Puedes dejarlo vacío" hint="Porcentaje de una venta tras costes directos. No incluye publicidad ni gastos fijos."/>
+       <Field label={translate("marketing.copy.ideal_customer")} value={form.audience} onChange={v=>patch("audience",v)} placeholder={translate("marketing.copy.who_typically_buys_and_why")}/>
+       <Field label={translate("marketing.copy.main_offer")} value={form.offer} onChange={v=>patch("offer",v)} placeholder={translate("marketing.copy.what_do_you_sell_and_what_problem_does_it_solve")}/>
+       <Field label={translate("marketing.copy.average_order_value_optional")} type="number" min={0} value={form.ticket} onChange={v=>patch("ticket",v)} placeholder={translate("marketing.copy.you_can_leave_this_blank")} hint={translate("marketing.copy.average_amount_per_sale_if_you_don_t_know_don_t_make_it")}/>
+       <Field label={translate("marketing.copy.gross_margin_optional")} type="number" min={0} max={100} value={form.margin} onChange={v=>patch("margin",v)} placeholder={translate("marketing.copy.you_can_leave_this_blank")} hint={translate("marketing.copy.percentage_left_from_a_sale_after_direct_costs_excludes")}/>
       </div>
       <div className={styles.metricHelp}>
        <button type="button" className={styles.metricHelpToggle} onClick={()=>setShowMetricHelp(!showMetricHelp)} aria-expanded={showMetricHelp}>
@@ -229,15 +229,15 @@ export default function MarketingPage(){
         <div className={styles.metricHelpGrid}>
          <div className={styles.metricHelpSection}>
           <strong>{translate("marketing.copy.average_order_value")}</strong><small>{translate("marketing.copy.total_sales_number_of_orders_in_the_same_period")}</small>
-          <label>{translate("marketing.copy.period_revenue")}<input type="number" min={0} value={periodRevenue} onChange={e=>setPeriodRevenue(e.target.value)} placeholder="Ej. 1000"/></label>
-          <label>{translate("marketing.copy.orders_in_the_period")}<input type="number" min={1} value={periodOrders} onChange={e=>setPeriodOrders(e.target.value)} placeholder="Ej. 20"/></label>
+          <label>{translate("marketing.copy.period_revenue")}<input type="number" min={0} value={periodRevenue} onChange={e=>setPeriodRevenue(e.target.value)} placeholder={translate("marketing.copy.e_g_1000")}/></label>
+          <label>{translate("marketing.copy.orders_in_the_period")}<input type="number" min={1} value={periodOrders} onChange={e=>setPeriodOrders(e.target.value)} placeholder={translate("marketing.copy.e_g_20")}/></label>
           <span>{translate("marketing.copy.result")} {money(suggestedTicket)}</span>
           <button type="button" disabled={suggestedTicket===null} onClick={()=>patch("ticket",String(Math.round((suggestedTicket??0)*100)/100))}>{translate("marketing.copy.use_average_order_value")}</button>
          </div>
          <div className={styles.metricHelpSection}>
           <strong>{translate("marketing.copy.estimated_margin_for_one_product")}</strong><small>{translate("marketing.copy.selling_price_minus_direct_costs_divided_by_the_price_y")}</small>
-          <label>{translate("marketing.copy.selling_price")}<input type="number" min={0} value={samplePrice} onChange={e=>setSamplePrice(e.target.value)} placeholder="Ej. 50"/></label>
-          <label>{translate("marketing.copy.direct_costs")}<input type="number" min={0} value={sampleCost} onChange={e=>setSampleCost(e.target.value)} placeholder="Ej. 20"/></label>
+          <label>{translate("marketing.copy.selling_price")}<input type="number" min={0} value={samplePrice} onChange={e=>setSamplePrice(e.target.value)} placeholder={translate("marketing.copy.e_g_50")}/></label>
+          <label>{translate("marketing.copy.direct_costs")}<input type="number" min={0} value={sampleCost} onChange={e=>setSampleCost(e.target.value)} placeholder={translate("marketing.copy.e_g_20")}/></label>
           <span>{translate("marketing.copy.result")} {percent(suggestedMargin)}</span>
           <button type="button" disabled={suggestedMargin===null} onClick={()=>patch("margin",String(Math.round((suggestedMargin??0)*100)/100))}>{translate("marketing.copy.use_estimate")}</button>
          </div>
@@ -263,10 +263,10 @@ export default function MarketingPage(){
        className={form.channel===item.id?styles.channelActive:styles.channel} onClick={()=>{patch("channel",item.id);setCampaignEditedText(null);setCampaignEditing(false);setCampaignDetailsOpen(false);}}>
         <strong>{item.label}</strong><small>{item.desc}</small></button>)}</div>
       <div className={styles.formGrid}>
-       <Field label="Oferta a promocionar" value={form.offer} onChange={v=>patch("offer",v)} placeholder="Qué quieres vender"/>
-       <Field label="Público objetivo" value={form.audience} onChange={v=>patch("audience",v)} placeholder="A quién va dirigido"/>
-       <Field label="Llamada a la acción" value={form.cta} onChange={v=>patch("cta",v)} placeholder="Ej. Solicita una cotización"/>
-       <Field label="Página de destino (opcional)" value={form.website} onChange={v=>patch("website",v)} placeholder="https://tusitio.com"/>
+       <Field label={translate("marketing.copy.offer_to_promote")} value={form.offer} onChange={v=>patch("offer",v)} placeholder={translate("marketing.copy.what_do_you_want_to_sell")}/>
+       <Field label={translate("marketing.copy.target_audience")} value={form.audience} onChange={v=>patch("audience",v)} placeholder={translate("marketing.copy.who_is_it_for")}/>
+       <Field label={translate("marketing.copy.call_to_action")} value={form.cta} onChange={v=>patch("cta",v)} placeholder={translate("marketing.copy.e_g_request_a_quote")}/>
+       <Field label={translate("marketing.copy.landing_page_optional")} value={form.website} onChange={v=>patch("website",v)} placeholder="https://tusitio.com"/>
       </div>
       <article className={styles.plan}>
        <span className={styles.planTag}><CheckCircle2 size={15}/> {translate("marketing.copy.your_plan_editable_draft")}</span>
@@ -276,7 +276,7 @@ export default function MarketingPage(){
         <span>{translate("marketing.copy.suggested_message")}</span>
         {campaignEditing?<textarea className={styles.campaignTextarea} value={activeCampaignDraft}
          onChange={e=>setCampaignEditedText(e.target.value)} maxLength={2000} rows={5}
-         aria-label="Editar mensaje de campaña"/>:
+         aria-label={translate("marketing.copy.edit_campaign_message")}/>:
          <p className={styles.campaignPreview}>{activeCampaignDraft}</p>}
        </div>
        <div className={styles.campaignQuickActions}>
@@ -299,12 +299,12 @@ export default function MarketingPage(){
      {section==="numbers"?<>
       <div className={styles.sectionTop}><span>{translate("marketing.copy.step_03_measurement")}</span><h2>{translate("marketing.copy.is_your_marketing_profitable")}</h2><p>{translate("marketing.copy.enter_real_campaign_results_calculations_update_as_you_")}</p></div>
       <div className={styles.formGrid}>
-       <Field label="Gasto publicitario ($)" type="number" min={0} value={form.budget} onChange={v=>patch("budget",v)} placeholder="0"/>
-       <Field label="Personas interesadas (leads)" type="number" min={0} value={form.leads} onChange={v=>patch("leads",v)} placeholder="0"/>
-       <Field label="Clientes adquiridos" type="number" min={0} value={form.sales} onChange={v=>patch("sales",v)} placeholder="0"/>
-       <Field label="Ingresos atribuibles ($)" type="number" min={0} value={form.revenue} onChange={v=>patch("revenue",v)} placeholder="Ingresos reales" hint="Si se deja en blanco: clientes × ticket (estimación)"/>
-       <Field label="Ticket promedio ($)" type="number" min={0} value={form.ticket} onChange={v=>patch("ticket",v)} placeholder="0"/>
-       <Field label="Margen bruto (%)" type="number" min={0} max={100} value={form.margin} onChange={v=>patch("margin",v)} placeholder="0"/>
+       <Field label={translate("marketing.copy.ad_spend")} type="number" min={0} value={form.budget} onChange={v=>patch("budget",v)} placeholder="0"/>
+       <Field label={translate("marketing.copy.interested_leads")} type="number" min={0} value={form.leads} onChange={v=>patch("leads",v)} placeholder="0"/>
+       <Field label={translate("marketing.copy.customers_acquired")} type="number" min={0} value={form.sales} onChange={v=>patch("sales",v)} placeholder="0"/>
+       <Field label={translate("marketing.copy.attributed_revenue")} type="number" min={0} value={form.revenue} onChange={v=>patch("revenue",v)} placeholder={translate("marketing.copy.actual_revenue")} hint={translate("marketing.copy.if_left_blank_customers_average_order_value_estimate")}/>
+       <Field label={translate("marketing.copy.average_order_value_2")} type="number" min={0} value={form.ticket} onChange={v=>patch("ticket",v)} placeholder="0"/>
+       <Field label={translate("marketing.copy.gross_margin")} type="number" min={0} max={100} value={form.margin} onChange={v=>patch("margin",v)} placeholder="0"/>
       </div>
       {sales!==null&&leads!==null&&sales>leads?<p className={styles.warning}>{translate("marketing.copy.you_entered_more_customers_than_leads_check_your_source")}</p>:null}
       {margin!==null&&validMargin===null?<p className={styles.warning}>{translate("marketing.copy.margin_must_be_between_0_and_100")}</p>:null}
@@ -337,7 +337,7 @@ export default function MarketingPage(){
          </div>
          <div className={styles.reviewShare}>
           <button type="button" className={styles.primary} onClick={()=>void shareReview()} disabled={!reviewLinkIsValid}><Share2 size={16}/> {translate("marketing.copy.share_request")}</button>
-          <div className={styles.reviewShareOptions} aria-label="Otras formas de compartir">
+          <div className={styles.reviewShareOptions} aria-label={translate("marketing.copy.other_ways_to_share")}>
            {reviewLinkIsValid?<a className={styles.shareOption} href={whatsappReviewUrl} target="_blank" rel="noopener noreferrer"><MessageCircle size={15}/> WhatsApp</a>:null}
            {reviewLinkIsValid?<a className={styles.shareOption} href={emailReviewUrl}><Mail size={15}/> {translate("marketing.copy.email")}</a>:null}
            <button type="button" className={styles.shareOption} onClick={()=>void copy(review)} disabled={!reviewLinkIsValid}><ClipboardCopy size={15}/> {translate("marketing.copy.copy")}</button>
