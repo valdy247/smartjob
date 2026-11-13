@@ -92,6 +92,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [selected,setSelected]=useState<ServiceCode>(preselectedService||"google_profile");
  const [wizardStep,setWizardStep]=useState<WizardStep>(preselectedService?1:0);
  const [googleStep,setGoogleStep]=useState(0);
+ const [webStage,setWebStage]=useState(0);
  const [googleData,setGoogleData]=useState<GoogleData>(emptyGoogle);
  const [googleMedia,setGoogleMedia]=useState<GoogleMedia>(emptyMedia);
  useEffect(()=>{onWizardActiveChange?.(wizardStep>0&&wizardStep<4);},[wizardStep,onWizardActiveChange]);
@@ -147,7 +148,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const submitting=useRef(false);
  const draftSnapshot=():StoredMarketingDraft=>({
   version:2,savedAt:Date.now(),requestId,ownerId:user?.id||null,
-  service:selected,step:wizardStep,googleStep,
+  service:selected,step:wizardStep,googleStep,webStage,
   name,site,category:chosenCategory||industryId||savedCategory||"other",goal,reviewInput,reviewTone,
   reviewLink,reviewReply,reviewMode,googleData,webRepair,directoryData
  });
@@ -168,7 +169,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   void (async()=>{
    const saved=uid?(transferGuestDraft(uid)||readMarketingDraft(uid)):readMarketingDraft(null);
    if(!saved&&resolvedDraftOwner.current!=="initial"&&resolvedDraftOwner.current!==uid){
-    setRequestId(crypto.randomUUID());setWizardStep(0);setGoogleStep(0);
+    setRequestId(crypto.randomUUID());setWizardStep(0);setGoogleStep(0);setWebStage(0);
     setSelected("google_profile");setName(businessName||"");setSite(website||"");setChosenCategory("");
     setGoal("");setReviewInput("");setReviewLink("");setReviewReply("");setReviewMode("respond");
     setGoogleData(emptyGoogle);setGoogleMedia(emptyMedia);setWebRepair(emptyWebRepair);setDirectoryData(emptyDirectory);
@@ -179,6 +180,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     setRequestId(saved.requestId);setSelected(saved.service as ServiceCode);
     setWizardStep(saved.step as WizardStep);
     setGoogleStep(Math.max(0,Math.min(saved.googleStep,googleStepNames.length-1)));
+    setWebStage(Math.max(0,Math.min(saved.webStage||0,2)));
     setName(saved.name||"");setSite(saved.site||"");setChosenCategory(saved.category||"");
     setGoal(saved.goal||"");setReviewInput(saved.reviewInput||"");
     setReviewLink(saved.reviewLink||"");setReviewReply(saved.reviewReply||"");setReviewMode(saved.reviewMode==="request"?"request":"respond");
@@ -201,7 +203,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(!writeMarketingDraft(draftSnapshot()))setDraftNotice("No se está guardando el borrador. Mantén abierta esta página.");
   },300);
   return()=>window.clearTimeout(id);
- },[draftReady,authState,user?.id,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,goal,reviewInput,reviewTone,reviewLink,reviewReply,reviewMode,googleData,webRepair,directoryData,requestId]);
+ },[draftReady,authState,user?.id,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,webStage,goal,reviewInput,reviewTone,reviewLink,reviewReply,reviewMode,googleData,webRepair,directoryData,requestId]);
  useEffect(()=>{
   if(!draftReady||selected!=="google_profile"||wizardStep<1||wizardStep>3)return;
   const id=window.setTimeout(()=>{
@@ -222,7 +224,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  };
  const editWizardStep=(step:WizardStep)=>{closeKeyboard();setWizardStep(step);setWizardError("");revealWizard();};
  const chooseService=(code:ServiceCode)=>{
-  setRequestId(crypto.randomUUID());setPausedStep(null);
+  setRequestId(crypto.randomUUID());setPausedStep(null);setWebStage(0);
   if(code!==selected){setGoal("");setConsent(false);setReviewLink("");setReviewReply("");setReviewMode("respond");setReviewInput("");setWebRepair(emptyWebRepair);setDirectoryData(emptyDirectory);setGoogleStep(0);setGoogleMedia(emptyMedia);}
   setSelected(code);setWizardStep(1);setWizardError("");setSubmittedId(null);revealWizard();
  };
