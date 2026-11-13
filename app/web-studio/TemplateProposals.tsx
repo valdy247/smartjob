@@ -3,13 +3,13 @@ import {useEffect,useMemo,useRef,useState} from "react";
 import {Render} from "@puckeditor/core";
 import {ArrowLeft,ArrowRight,Check,LayoutTemplate} from "lucide-react";
 import {builderConfig} from "@/lib/web-builder-puck";
-import {createSiteProposals,FAMILIES,familyForCategory,type SiteIntake,type SiteProposal} from "@/lib/web-builder-templates";
+import {createSiteProposals,FAMILIES,familyForCategory,type SiteFamily,type SiteIntake,type SiteProposal} from "@/lib/web-builder-templates";
 import styles from "./TemplateProposals.module.css";
 
-type Props={input:SiteIntake;busy:boolean;onBack:()=>void;onChoose:(proposal:SiteProposal)=>void};
-export default function TemplateProposals({input,busy,onBack,onChoose}:Props){
- const proposals=useMemo(()=>createSiteProposals(input),[input]);
- const family=familyForCategory(input.categoryId);
+type Props={input:SiteIntake;familyOverride?:SiteFamily;busy:boolean;onBack:()=>void;onChoose:(proposal:SiteProposal)=>void};
+export default function TemplateProposals({input,familyOverride,busy,onBack,onChoose}:Props){
+ const family=familyOverride||familyForCategory(input.categoryId);
+ const proposals=useMemo(()=>createSiteProposals(input,family),[input,family]);
  const activeFamily=FAMILIES.find(item=>item.id===family);
  const scrollRef=useRef<HTMLDivElement|null>(null);
  const [index,setIndex]=useState(0);
