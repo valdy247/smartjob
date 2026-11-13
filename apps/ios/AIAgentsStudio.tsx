@@ -6,6 +6,7 @@ import type {Session} from "@supabase/supabase-js";
 import {AIAgentWizard} from "./AIAgentWizard";
 import {AIAgentsCommerceStudio} from "./AIAgentsCommerceStudio";
 import {AIAgentsCallControl} from "./AIAgentsCallControl";
+import {AIAgentsBookingStudio} from "./AIAgentsBookingStudio";
 import {AIAgentQualityLab} from "./AIAgentQualityLab";
 import {inspectAgent} from "./aiAgentQuality";
 import {AI_AGENT_TEMPLATES,createConversation,emptyAgent,getAgents,getConversations,getMessages,
@@ -14,7 +15,7 @@ import {AI_AGENT_TEMPLATES,createConversation,emptyAgent,getAgents,getConversati
 
 const C={bg:"#F9FAFC",paper:"#FFFFFF",ink:"#201C35",muted:"#817A91",
   purple:"#8959ED",purpleDark:"#7040C8",line:"#ECE8F3",pink:"#FCE4F0",mint:"#DDF8EE"};
-type Screen="home"|"edit"|"chat"|"history"|"quality"|"commerce"|"phone";
+type Screen="home"|"edit"|"chat"|"history"|"quality"|"commerce"|"phone"|"agenda";
 type Props={session:Session;onBack:()=>void};
 type IconName=React.ComponentProps<typeof Ionicons>["name"];
 
@@ -207,6 +208,14 @@ export function AIAgentsStudio({session,onBack}:Props){
          </View>:null}
         {notice?<View style={styles.warning}><Ionicons name="information-circle-outline" size={18} color="#76559C"/>
           <Text style={[styles.help,{flex:1}]}>{notice}</Text></View>:null}
+        <Pressable accessibilityRole="button" accessibilityLabel="Configurar servicios y reservas"
+         onPress={()=>setScreen("agenda")} style={styles.commerceEntry}>
+         <View style={styles.commerceIcon}><Ionicons name="calendar-outline" size={23} color={C.purple}/></View>
+         <View style={{flex:1,gap:4}}>
+          <Text style={styles.commerceTitle}>Agenda y reservas</Text>
+          <Text style={styles.commerceCaption}>Servicios, horarios reales y citas del negocio</Text>
+         </View><Ionicons name="chevron-forward" color={C.purple} size={19}/>
+        </Pressable>
         {phone?<Pressable accessibilityRole="button"
          accessibilityLabel="Configurar atención de llamadas" onPress={()=>setScreen("phone")}
          style={styles.commerceEntry}>
@@ -290,6 +299,9 @@ export function AIAgentsStudio({session,onBack}:Props){
           })}
         <Text style={styles.footerNote}>Los agentes se guardan en tu cuenta. Elegir uno para la línea no cambia el webhook de Twilio, ni confirma ventas o pagos.</Text>
       </ScrollView>:null}
+
+      {screen==="agenda"?<AIAgentsBookingStudio session={session} agents={agents}
+        selectedAgentId={phone?.agentId||null} onBack={()=>{void refresh();setScreen("home");}}/>:null}
 
       {screen==="phone"?<AIAgentsCallControl session={session}
          onBack={()=>{void refresh();setScreen("home");}}/>:null}
