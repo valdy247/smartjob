@@ -40,7 +40,7 @@ function Provider({children}:{children:React.ReactNode}){
 export function InterfaceLanguageProvider({children}:{children:React.ReactNode}){
  // Published customer websites have their own content language, independent of VMV's interface.
  const path=usePathname();
- return path?.startsWith("/sites/")?<>{children}</>:<Provider>{children}</Provider>;
+ return path?.startsWith("/sites/")||path?.startsWith("/web/")?<>{children}</>:<Provider>{children}</Provider>;
 }
 export function useInterfaceLanguage(){
  const preference=useContext(Context);
