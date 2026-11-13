@@ -4,6 +4,7 @@ import {ActivityIndicator,Alert,KeyboardAvoidingView,Platform,Pressable,SafeArea
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type {Session} from "@supabase/supabase-js";
 import {AIAgentWizard} from "./AIAgentWizard";
+import {AIAgentsCommerceStudio} from "./AIAgentsCommerceStudio";
 import {AIAgentQualityLab} from "./AIAgentQualityLab";
 import {inspectAgent} from "./aiAgentQuality";
 import {AI_AGENT_TEMPLATES,createConversation,emptyAgent,getAgents,getConversations,getMessages,
@@ -12,7 +13,7 @@ import {AI_AGENT_TEMPLATES,createConversation,emptyAgent,getAgents,getConversati
 
 const C={bg:"#F9FAFC",paper:"#FFFFFF",ink:"#201C35",muted:"#817A91",
   purple:"#8959ED",purpleDark:"#7040C8",line:"#ECE8F3",pink:"#FCE4F0",mint:"#DDF8EE"};
-type Screen="home"|"edit"|"chat"|"history"|"quality";
+type Screen="home"|"edit"|"chat"|"history"|"quality"|"commerce";
 type Props={session:Session;onBack:()=>void};
 type IconName=React.ComponentProps<typeof Ionicons>["name"];
 
@@ -205,6 +206,16 @@ export function AIAgentsStudio({session,onBack}:Props){
          </View>:null}
         {notice?<View style={styles.warning}><Ionicons name="information-circle-outline" size={18} color="#76559C"/>
           <Text style={[styles.help,{flex:1}]}>{notice}</Text></View>:null}
+        <Pressable accessibilityRole="button" accessibilityLabel="Configurar ventas por teléfono"
+         onPress={()=>setScreen("commerce")} style={styles.commerceEntry}>
+         <View style={styles.commerceIcon}><Ionicons name="bag-handle-outline" size={23} color={C.purple}/></View>
+         <View style={{flex:1,gap:5}}>
+          <Text style={styles.commerceTitle}>Ventas por teléfono</Text>
+          <Text style={styles.commerceCaption}>Configura permisos, productos, precios y pedidos del agente.</Text>
+          <Text style={styles.commerceTest}>PRUEBAS · No se realizan cobros reales</Text>
+         </View>
+         <Ionicons name="chevron-forward" size={19} color={C.purple}/>
+        </Pressable>
         <SectionTitle title="¿Qué quieres automatizar?" caption="Selecciona una función para preparar tu agente."/>
         <View style={styles.templateGrid}>
           {templates.map(template=><Pressable key={template.kind} accessibilityRole="button"
@@ -269,6 +280,13 @@ export function AIAgentsStudio({session,onBack}:Props){
         <Text style={styles.footerNote}>Los agentes se guardan en tu cuenta. Elegir uno para la línea no cambia el webhook de Twilio, ni confirma ventas o pagos.</Text>
       </ScrollView>:null}
 
+      {screen==="commerce"?<AIAgentsCommerceStudio session={session} agents={agents}
+        phoneAgentId={phone?.agentId||null} onBack={()=>{void refresh();setScreen("home");}}
+        onAgentUpdated={updated=>{
+         setAgents(list=>list.map(a=>a.id===updated.id?updated:a));
+         if(selected?.id===updated.id)setSelected(updated);
+        }}/>:null}
+
       {screen==="edit"?<AIAgentWizard key={(selected?.id||draft.kind)+"-"+editStep}
         initial={draft} initialStep={editStep} saving={busy}
         onCancel={()=>setScreen("home")}
@@ -328,6 +346,14 @@ export function AIAgentsStudio({session,onBack}:Props){
   </SafeAreaView>;
 }
 const styles=StyleSheet.create({
+  commerceEntry:{borderRadius:20,borderWidth:1,borderColor:"#EADBF9",
+    backgroundColor:"#F4EAFE",padding:14,flexDirection:"row",alignItems:"center",
+    gap:11,marginBottom:21},
+  commerceIcon:{width:46,height:46,borderRadius:14,backgroundColor:"#FFF",
+    justifyContent:"center",alignItems:"center"},
+  commerceTitle:{fontSize:15,fontWeight:"900",color:C.ink},
+  commerceCaption:{fontSize:11,color:C.muted,lineHeight:16},
+  commerceTest:{fontSize:9,color:C.purple,fontWeight:"900",letterSpacing:0.3},
   safe:{flex:1,backgroundColor:C.bg},
   header:{flexDirection:"row",alignItems:"center",paddingHorizontal:20,paddingTop:12,
     paddingBottom:14,gap:13,backgroundColor:C.paper,borderBottomWidth:1,borderBottomColor:C.line},
