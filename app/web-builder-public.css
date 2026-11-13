@@ -538,3 +538,11 @@
 .vmv-managed-image>.vmv-media-empty-pick:focus-visible,
 .vmv-managed-image>img[role=button]:focus-visible{outline:3px solid #8659d6;outline-offset:-3px}
 .vmv-managed-image>img[role=button]{cursor:pointer}
+
+/* Puck deliberately disables pointer-events on canvas descendants. Re-enable
+   only intentional image editor targets so a tap reaches the actual control. */
+.vmv-managed-image[data-editing=true]>.vmv-media-empty-pick,
+.vmv-managed-image[data-editing=true]>img[role=button],
+.vmv-managed-image[data-editing=true] .vmv-image-tools button{
+ pointer-events:auto!important;
+}
