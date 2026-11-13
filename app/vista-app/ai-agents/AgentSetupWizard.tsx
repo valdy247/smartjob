@@ -220,6 +220,12 @@ export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=fals
       onClick={()=>answer(key,draft.setup[key]==="Sí"?"No":"Sí")}>{draft.setup[key]==="Sí"?"✓ ":""}{label}</button>)}</div>
     <p className={styles.hint}>No tomará números de tarjeta por llamada. Los importes se calculan en el servidor.</p>
    </>:null}
+   {draft.setup.cap_bookings==="Sí"&&<><p className={styles.fieldTitle}>Autorización de reservas</p>
+    <button type="button" aria-pressed={draft.setup.perm_book_service==="Sí"}
+     className={draft.setup.perm_book_service==="Sí"?styles.choiceActive:styles.choice}
+     onClick={()=>answer("perm_book_service",draft.setup.perm_book_service==="Sí"?"No":"Sí")}>
+     {draft.setup.perm_book_service==="Sí"?"✓ ":""}Guardar citas aceptadas en la agenda VMV</button>
+    <p className={styles.hint}>Solo con horarios reales disponibles. No confirma pagos.</p></>}
   </div>:null}
   {step>0&&step<steps.length-1?<div className={styles.fields}>
    {step===2&&draft.setup.industry?<div className={styles.context}><Sparkles size={15}/> Negocio: <strong>{draft.setup.industry}</strong> · {draft.setup.city||""}{draft.setup.state?", "+draft.setup.state:""}. No necesitas repetir esos datos.</div>:null}
