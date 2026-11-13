@@ -94,6 +94,14 @@ export default function VMVMobilePreview(){
  const ready=phase==="signed_in"&&!!profile;
  useEffect(()=>{
   if(!ready)return;
+  // Marketing saves a draft before sending a visitor here to authenticate.
+  // Only this exact allow-listed return target may redirect after sign-in.
+  if(new URLSearchParams(window.location.search).get("returnTo")==="marketing"){
+   window.location.replace("/vista-app/marketing");
+  }
+ },[ready]);
+ useEffect(()=>{
+  if(!ready)return;
   let mounted=true;
   fetch("/api/status",{cache:"no-store"}).then(r=>r.json())
    .then(data=>{if(mounted)setApiStatus(data as Record<string,boolean>);}).catch(()=>{});
