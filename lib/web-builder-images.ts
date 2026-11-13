@@ -1,7 +1,17 @@
 import type {Data} from "@puckeditor/core";
 import type {CSSProperties} from "react";
 
-export type ImageTarget={field:string;index?:number};
+export type ImageTarget={field:string;index?:number;itemId?:string};
+export function imageTargetIndex(props:Record<string,unknown>,target:ImageTarget):number{
+ if(!Array.isArray(props.items))return -1;
+ if(target.itemId){
+  const index=props.items.findIndex((item:unknown)=>Boolean(item)&&typeof item==="object"&&
+   (item as Record<string,unknown>).id===target.itemId);
+  // Never fall back to the old index when an identified item was removed.
+  return index;
+ }
+ return typeof target.index==="number"&&props.items[target.index]!==undefined?target.index:-1;
+}
 export const IMAGE_SETTINGS={imageWidth:100,imageWidthMobile:100,imageRadius:16,
  imageOpacity:0,imageBorder:0,borderColor:"#30243F",imageMoveX:0,imageMoveY:0,
  imageMoveXMobile:0,imageMoveYMobile:0,imageAlign:"left",imageAlignMobile:"left"};
@@ -35,12 +45,16 @@ export function imageTargets(type:string,props:Record<string,unknown>):Array<Ima
  if(["ComposeImage","HeroVisual","Image"].includes(type))return [{field:type==="Image"?"url":"image",label:"Imagen"}];
  if(["OfferingGrid","PhotoGallery","ProjectShowcase","TeamGrid"].includes(type)&&Array.isArray(props.items))
   return props.items.map((item:Record<string,unknown>,index:number)=>({field:"image",index,
+   itemId:typeof item.id==="string"&&item.id.length>=3?item.id:undefined,
    label:String(item.title||item.caption||item.alt||"Imagen "+(index+1))}));
  if(type==="BeforeAfter")return [{field:"beforeImage",label:"Antes"},{field:"afterImage",label:"Después"}];
  return [];
 }
 export function targetSettings(props:Record<string,unknown>,target:ImageTarget):Record<string,unknown>{
- if(target.index!==undefined)return (Array.isArray(props.items)?props.items[target.index]:null)||{};
+ if(target.index!==undefined||target.itemId){
+  const index=imageTargetIndex(props,target);
+  return index<0?{}:props.items[index]||{};
+ }
  if(target.field==="beforeImage"||target.field==="afterImage"){
   const value=props[target.field+"Settings"];
   return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{};
@@ -48,7 +62,7 @@ export function targetSettings(props:Record<string,unknown>,target:ImageTarget):
  return props;
 }
 export function targetImage(props:Record<string,unknown>,target:ImageTarget):string{
- const value=target.index!==undefined?targetSettings(props,target)[target.field]:props[target.field];
+ const value=target.index!==undefined||target.itemId?targetSettings(props,target)[target.field]:props[target.field];
  return typeof value==="string"?value:"";
 }
 /** Patch a block by ID, never by URL: reusing a file must not couple its placements. */
@@ -58,9 +72,10 @@ export function patchBuilderImage(data:Data,id:string,target:ImageTarget,patch:R
   const source=node.props as Record<string,unknown>;
   let props=source;
   if(source.id===id){
-   if(target.index!==undefined){
-    if(!Array.isArray(source.items)||!source.items[target.index])return node;
-    props={...source,items:source.items.map((item,i)=>i===target.index?{...item,...patch}:item)};
+   if(target.index!==undefined||target.itemId){
+    const index=imageTargetIndex(source,target);
+    if(index<0)return node;
+    props={...source,items:(source.items as Record<string,unknown>[]).map((item,i)=>i===index?{...item,...patch}:item)};
    }else if(target.field==="beforeImage"||target.field==="afterImage"){
     const { [target.field]:image,...settings }=patch;
     props={...source,...(image!==undefined?{[target.field]:image}:{}),
