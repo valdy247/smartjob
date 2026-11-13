@@ -20,7 +20,7 @@ const example=normalizeBuilderDocument({
      gapDesktop:"airy",gapMobile:"normal",alignDesktop:"center",visibility:"all",
      left:[
       {type:"ComposeHeading",props:{id:"example-title",title:"Tu marca, con espacio para expresarse.",
-       level:"h2",sizeDesktop:"huge",sizeMobile:"medium",alignDesktop:"left",alignMobile:"center"}},
+       level:"h2",sizeDesktop:"huge",sizeMobile:"medium",font:"editorial",fontSize:52,textColor:"#30243F",textShadow:"soft",weight:"heavy",italic:"no",moveX:15,moveY:4,linkUrl:"#contacto",alignDesktop:"left",alignMobile:"center"}},
       {type:"ComposeText",props:{id:"example-intro",text:"Combina textos, fotos y botones sin depender de una plantilla rígida. Todo el contenido de esta demostración es ilustrativo.",
        size:"large",alignDesktop:"left",alignMobile:"center"}},
       {type:"ComposeButton",props:{id:"example-cta",label:"Explorar el editor",url:"/web-studio",
@@ -28,7 +28,7 @@ const example=normalizeBuilderDocument({
      ],
      right:[
       {type:"ComposeImage",props:{id:"example-photo",image:"",alt:"Ejemplo de fotografía pendiente",
-       ratio:"portrait",position:"center",radius:"round"}}
+       ratio:"portrait",position:"center",radius:"round",imageWidth:75,imageRadius:38,imageOpacity:20,imageBorder:3,borderColor:"#30243F",imageMoveX:-16,imageMoveY:12}}
      ],
      third:[]
     }}
@@ -52,9 +52,15 @@ const example=normalizeBuilderDocument({
 });
 // Fail the static build if our own document normalizer ever discards nested Puck slots.
 const top=example.content[0];
-const nested=(top?.props?.content as Array<{type:string;props:{left?:unknown[];right?:unknown[]}}> | undefined)||[];
+const nested=(top?.props?.content as Array<{type:string;props:{left?:Array<{props:Record<string,unknown>}>;right?:Array<{props:Record<string,unknown>}>}}> | undefined)||[];
 if(nested[0]?.type!=="ColumnsLayout"||!Array.isArray(nested[0].props.left)||nested[0].props.left.length!==3||
- !Array.isArray(nested[0].props.right)||nested[0].props.right.length!==1){
+ !Array.isArray(nested[0].props.right)||nested[0].props.right.length!==1||
+ nested[0].props.left[0].props.textShadow!=="soft"||
+ nested[0].props.left[0].props.linkUrl!=="#contacto"||
+ nested[0].props.right[0].props.imageRadius!==38||
+ nested[0].props.right[0].props.imageOpacity!==20||
+ nested[0].props.right[0].props.imageBorder!==3||
+ nested[0].props.right[0].props.imageMoveX!==-16){
  throw new Error("Composition slots must survive normalization for publishing");
 }
 export default function CompositionDemo(){
