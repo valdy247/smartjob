@@ -4,6 +4,7 @@ import {verifyAiTestWebhook} from "@/lib/vmv-ai-agents/twilio-test";
 import {billingAdmin} from "@/lib/vmv-billing";
 import {findPhoneRoute} from "@/lib/phone-routes";
 import {phoneCommerceTurn} from "@/lib/vmv-ai-agents/voice-commerce";
+import {phoneBookingTurn} from "@/lib/vmv-ai-agents/voice-bookings";
 import {askAiAgent} from "@/lib/vmv-ai-agents/model";
 
 export const runtime="nodejs";
@@ -201,7 +202,8 @@ export async function handleAiVoice(req:NextRequest){
     "I couldn't register that request. Please contact the business directly.");
  }else{
   try{
-   const commerce=await phoneCommerceTurn(db,session,speech,lang,turn);
+   const booking=await phoneBookingTurn(db,session,speech,lang);
+   const commerce=booking??await phoneCommerceTurn(db,session,speech,lang,turn);
    answer=commerce??await getReply(session,speech,lang);
   }catch{
    answer=lang==="es"?
