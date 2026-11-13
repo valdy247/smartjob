@@ -474,3 +474,18 @@
 /* A logo is a complete mark, not a photo to crop. */
 .vmv-site-mark>img{width:auto;max-width:min(120px,28vw);height:auto;max-height:62px;object-fit:contain;object-position:center;flex-shrink:0}
 @media(max-width:620px){.vmv-site-mark>img{width:auto;max-width:100px;height:auto;max-height:51px}}
+
+
+/* Real business profile links: visible in draft preview and published site. */
+.vmv-social-links{display:flex;justify-content:center;align-items:center;gap:8px;
+ flex-wrap:wrap;min-width:0}
+.vmv-social-links a{display:inline-flex;align-items:center;justify-content:center;
+ min-height:40px;padding:8px 12px;border-radius:999px;background:var(--vmv-pale);
+ color:var(--vmv-accent);font-weight:800;font-size:12px;text-decoration:none;
+ overflow-wrap:anywhere;transition:background-color .15s ease}
+.vmv-social-links a:hover{background:#e9dbf6;text-decoration:underline}
+.vmv-social-links a:focus-visible{outline:3px solid var(--vmv-accent);outline-offset:3px}
+@media(max-width:700px){.vmv-site-footer{flex-wrap:wrap;gap:10px}
+ .vmv-social-links{order:3;flex-basis:100%;justify-content:flex-start}
+ .vmv-social-links a{min-height:44px}}
+@media(prefers-reduced-motion:reduce){.vmv-social-links a{transition:none}}
