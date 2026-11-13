@@ -38,8 +38,14 @@ function slugify(input:string){
  return input.normalize("NFKD").toLowerCase().replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,49).replace(/-$/g,"");
 }
 const puckTokens=["header-publish","header-undo","header-redo","header-toggle-leftsidebar","header-toggle-rightsidebar","header-toggle-menubar","action-selectparent","action-drag","action-duplicate","action-delete","label-page","label-component","outline-empty","outline-header-title","outline-header-collapseall","outline-item-collapse","outline-item-expand","outline-item-duplicate","outline-item-delete","drawer-category-collapse","drawer-category-expand","drawer-category-other","canvas-noconfig","field-readonly","field-arrayitem-summary","field-arrayitem-duplicate","field-arrayitem-delete","field-external-selectdata","field-external-search","field-external-togglefilters","field-external-item","field-external-result-singular","field-external-result-plural","field-richtext-bold","field-richtext-italic","field-richtext-underline","field-richtext-strikethrough","field-richtext-blockquote","field-richtext-code-inline","field-richtext-code-block","field-richtext-list-bullet","field-richtext-list-ordered","field-richtext-horizontalrule","field-richtext-align-left","field-richtext-align-center","field-richtext-align-right","field-richtext-align-justify","field-richtext-select","field-richtext-headingselect-1","field-richtext-headingselect-2","field-richtext-headingselect-3","field-richtext-headingselect-4","field-richtext-headingselect-5","field-richtext-headingselect-6","field-richtext-alignselect-left","field-richtext-alignselect-center","field-richtext-alignselect-right","field-richtext-alignselect-justify","field-richtext-listselect-bullet","field-richtext-listselect-ordered","viewport-zoom-in","viewport-zoom-out","viewport-zoom-auto","viewport-toggle-menu","viewport-switch","viewport-switch-default","plugin-blocks","plugin-outline","plugin-fields","plugin-components","layout-maximize","layout-minimize","loader-loading"] as const;
+// Puck interpolates dynamic labels itself (e.g. "{title}", "{count}"). Keep
+// their placeholders intact rather than resolving them during Web Studio render.
+const puckVariables={title:"{title}",type:"{type}",index:"{index}",
+ count:"{count}",zoom:"{zoom}",label:"{label}"};
 function puckDictionary(language:InterfaceLanguage){
- return Object.fromEntries(puckTokens.map(token=>[token,interfaceText(language,`puck.${token}`)]));
+ return Object.fromEntries(puckTokens.map(token=>[
+  token,interfaceText(language,`puck.${token}`,puckVariables)
+ ]));
 }
 export default function WebBuilderWorkspace(){
  const {language}=useInterfaceLanguage();
@@ -594,7 +600,7 @@ export default function WebBuilderWorkspace(){
  }
  if(loading)return <main className={styles.loading}>Cargando Web Studio…</main>;
  if(!userId)return <main className={styles.loading}><h2>Inicia sesión para crear tu web</h2>
-  <p>{error}</p><a href="/vista-app">Ir a VMV Business</a></main>;
+  <p>{error}</p><a href="/vista-app?returnTo=web-studio">Iniciar sesión en VMV Business</a></main>;
  return <div className={styles.workspace} ref={workspaceRef}>
   <header className={styles.topbar} data-site={Boolean(site)}>
    <a href="/vista-app" className={styles.brand}>VMV <span>Web Studio</span></a>
