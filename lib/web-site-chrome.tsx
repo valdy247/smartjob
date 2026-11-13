@@ -1,6 +1,18 @@
 import type {CSSProperties,ReactNode} from "react";
 import {safeWebImageUrl} from "./web-services-site";
 
+export function websiteVisualStyle(palette:unknown,accentColor:unknown):CSSProperties{
+ const colors:Record<string,[string,string]>={
+  violet:["#8e5de4","#f0e9fd"],mint:["#198d74","#e5f8f0"],
+  amber:["#a97b26","#fff4d8"],ink:["#30283a","#eae8ed"],
+  rose:["#b64b70","#fff0f4"],forest:["#367457","#e9f4eb"],
+  ocean:["#267a9c","#e8f6fb"],terracotta:["#af6242","#fbede2"],
+  charcoal:["#24232b","#efedf2"]
+ };
+ const [accent,pale]=colors[String(palette)]||colors.violet;
+ return {"--vmv-accent":typeof accentColor==="string"&&/^#[0-9a-f]{6}$/i.test(accentColor)?
+  accentColor:accent,"--vmv-pale":pale} as CSSProperties;
+}
 export type WebsiteMenuItem={page_slug:string;title:string};
 export function WebsiteChrome({siteName,baseUrl,menu,logo,family,language="es",siteStyle="light",siteWidth="regular",visualStyle,children}:{
  siteName:string;baseUrl:string;menu:WebsiteMenuItem[];logo?:string|null;family:string;
