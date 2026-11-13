@@ -316,3 +316,10 @@
 .vmv-compose-settings{border:1px solid #e7daf2;padding:13px;border-radius:12px;display:flex;flex-direction:column;gap:10px;margin:0 0 12px;min-width:0}
 .vmv-compose-settings legend{font-size:12px;font-weight:900;color:#784daf;padding:0 5px}
 @media(prefers-reduced-motion:reduce){.vmv-compose-section *, .vmv-compose-section{animation:none!important;transition:none!important}}
+
+
+.vmv-compose-settings{display:block;border:1px solid #e7daf2;border-radius:12px;margin:0 0 10px;padding:0;background:#fdfcff}
+.vmv-compose-settings>summary{list-style-position:inside;cursor:pointer;font-size:12px;font-weight:900;
+ padding:12px 13px;color:#784daf;outline-offset:2px}
+.vmv-compose-settings[open]>summary{border-bottom:1px solid #e7daf2}
+.vmv-compose-settings-fields{display:flex;flex-direction:column;gap:11px;padding:13px;min-width:0}
