@@ -8,12 +8,12 @@ export type GoogleData={
  action:"create"|"claim"|"improve";kind:GoogleKind;googleCategory:string;otherCategories:string;
  street:string;unit:string;city:string;region:string;postal:string;country:string;serviceAreas:string;
  phone:string;secondaryPhone:string;description:string;services:string;products:string;
- bookingUrl:string;openingDate:string;hoursEnabled:boolean;hours:GoogleHour[];
+ bookingUrl:string;existingProfileUrl?:string;openingDate:string;hoursEnabled:boolean;hours:GoogleHour[];
 };
 export type GoogleMedia={logo:File|null;cover:File|null;photos:File[]};
 export const emptyGoogle:GoogleData={
  action:"create",kind:"storefront",googleCategory:"",otherCategories:"",street:"",unit:"",city:"",region:"",postal:"",country:"US",serviceAreas:"",
- phone:"",secondaryPhone:"",description:"",services:"",products:"",bookingUrl:"",openingDate:"",hoursEnabled:false,
+ phone:"",secondaryPhone:"",description:"",services:"",products:"",bookingUrl:"",existingProfileUrl:"",openingDate:"",hoursEnabled:false,
  hours:Array.from({length:7},()=>({closed:true,start:"09:00",end:"17:00"}))
 };
 export const emptyMedia:GoogleMedia={logo:null,cover:null,photos:[]};
@@ -32,7 +32,7 @@ export function validateGoogleAll(v:GoogleData){
 }
 const days=["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
 const isHttps=(v:string)=>{if(!v.trim())return true;try{const u=new URL(v.trim());return u.protocol==="https:"&&!u.username&&!u.password;}catch{return false;}};
-export function validateGoogleLinks(v:GoogleData){return isHttps(v.bookingUrl)?"":"El enlace de reservas debe empezar con https://";}
+export function validateGoogleLinks(v:GoogleData){return !isHttps(v.bookingUrl)?"El enlace de reservas debe empezar con https://":!isHttps(v.existingProfileUrl||"")?"El enlace del perfil debe empezar con https://":"";}
 function FilePicker({label,value,onChange,multiple=false}:{label:string;value:File[];onChange:(files:File[])=>void;multiple?:boolean}){
  const onPick=(e:ChangeEvent<HTMLInputElement>)=>{const files=Array.from(e.target.files||[]);onChange(files);e.target.value="";};
  return <label className={styles.upload}><span><strong>{label}</strong><small>{value.length?value.map(f=>f.name).join(", "):"Elegir imágenes (opcional)"}</small></span><input aria-label={label} type="file" accept="image/jpeg,image/png" multiple={multiple} onChange={onPick}/></label>;
@@ -52,6 +52,7 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
     <label className={styles.field}><span>Nombre del negocio <em>Necesario</em></span><input value={business} disabled readOnly/></label>
     <label className={styles.field}><span>Categoría principal en Google <em>Necesario</em></span>
      <input value={data.googleCategory} maxLength={100} onChange={e=>patch("googleCategory",e.target.value)} placeholder="Ej. Panadería, Pastelería, Restaurante"/></label>
+    {data.action!=="create"?<label className={styles.field}><span>Enlace de tu perfil actual <em>Opcional</em></span><input type="url" inputMode="url" maxLength={500} value={data.existingProfileUrl||""} placeholder="https://maps.google.com/..." onChange={e=>patch("existingProfileUrl",e.target.value)}/></label>:null}
     {field("otherCategories","Otras categorías","Separadas por comas")}
     <p className={styles.hint}>La categoría debe existir en Google. Nuestro equipo comprobará que coincida antes de gestionarla.</p>
    </div>:null}
