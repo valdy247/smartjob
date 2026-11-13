@@ -12,6 +12,7 @@ import {getSupabase} from "@/lib/supabase";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS,categoryLabel} from "@/lib/vmv-business-categories";
 import styles from "./MarketingActionCenter.module.css";
 import WebRepairStudio,{emptyWebRepair,validateWebRepair,type WebRepairData} from "./WebRepairStudio";
+import {readMarketingDraft,writeMarketingDraft,readDraftMedia,saveDraftMedia,clearMarketingDraft,type StoredMarketingDraft} from "./MarketingDraftStore";
 import GoogleProfileWizard,{emptyGoogle,emptyMedia,googleStepNames,validateGoogleStep,validateGoogleLinks,validateGoogleAll,type GoogleData,type GoogleMedia} from "./GoogleProfileWizard";
 
 export type ServiceCode="google_profile"|"apple_maps"|"bing_places"|"yelp_profile"|"search_console"|"seo_improvement"|"campaign_setup"|"review_strategy"|"other";
@@ -121,6 +122,67 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [stage,setStage]=useState<Status>("received");
  const [stageUpdate,setStageUpdate]=useState("");
  const [evidence,setEvidence]=useState("");
+ const [draftReady,setDraftReady]=useState(false);
+ const [draftNotice,setDraftNotice]=useState("");
+ const [photoNotice,setPhotoNotice]=useState("");
+ const draftSnapshot=():StoredMarketingDraft=>({
+  version:1,savedAt:Date.now(),service:selected,step:wizardStep,googleStep,
+  name,site,category:chosenCategory||effectiveCategory,goal,reviewInput,reviewTone,
+  consent:false,googleData,webRepair
+ });
+ const saveCurrentDraft=async()=>{
+  const ok=writeMarketingDraft(draftSnapshot());
+  if(!ok){setDraftNotice("Este navegador no permitió guardar el formulario. No salgas de la página todavía.");return false;}
+  if(selected==="google_profile"){
+   try{await saveDraftMedia(googleMedia);setPhotoNotice("");}
+   catch{setPhotoNotice("No se pudieron guardar las fotos en este dispositivo. Tendrás que seleccionarlas otra vez al volver.");}
+  }
+  return true;
+ };
+ useEffect(()=>{
+  let active=true;
+  void (async()=>{
+   const saved=readMarketingDraft();
+   if(saved&&active&&services.some(item=>item.id===saved.service)){
+    setSelected(saved.service as ServiceCode);
+    setWizardStep(saved.step as WizardStep);
+    setGoogleStep(Math.max(0,Math.min(saved.googleStep,googleStepNames.length-1)));
+    setName(saved.name||"");setSite(saved.site||"");setChosenCategory(saved.category||"");
+    setGoal(saved.goal||"");setReviewInput(saved.reviewInput||"");
+    setReviewTone(saved.reviewTone==="breve"?"breve":"cordial");
+    if(saved.googleData)setGoogleData(saved.googleData);
+    if(saved.webRepair)setWebRepair(saved.webRepair);
+    setConsent(false);
+    setDraftNotice("Recuperamos tu solicitud. Tus respuestas siguen aquí; revísalas antes de enviarla.");
+    try{
+     const media=await readDraftMedia();
+     if(active&&media)setGoogleMedia(media);
+    }catch{if(active)setPhotoNotice("No pudimos recuperar las fotos. Si habías seleccionado imágenes, agrégalas nuevamente.");}
+   }
+   if(active)setDraftReady(true);
+  })();
+  return()=>{active=false;};
+ },[]);
+ useEffect(()=>{
+  if(!draftReady||wizardStep<1||wizardStep>3)return;
+  const id=window.setTimeout(()=>{
+   if(!writeMarketingDraft(draftSnapshot()))setDraftNotice("No se está guardando el borrador. Mantén abierta esta página.");
+  },300);
+  return()=>window.clearTimeout(id);
+ },[draftReady,wizardStep,googleStep,selected,name,site,chosenCategory,effectiveCategory,goal,reviewInput,reviewTone,googleData,webRepair]);
+ useEffect(()=>{
+  if(!draftReady||selected!=="google_profile"||wizardStep<1||wizardStep>3)return;
+  const id=window.setTimeout(()=>{
+   void saveDraftMedia(googleMedia).then(()=>setPhotoNotice("")).catch(()=>setPhotoNotice("No fue posible conservar las fotos en el dispositivo. Selecciónalas de nuevo después de iniciar sesión."));
+  },450);
+  return()=>window.clearTimeout(id);
+ },[draftReady,selected,googleMedia,wizardStep]);
+ const continueToLogin=async()=>{
+  setBusy(true);
+  const saved=await saveCurrentDraft();
+  setBusy(false);
+  if(saved)window.location.assign("/vista-app?returnTo=marketing");
+ };
  const revealWizard=()=>document.getElementById("vmv-marketing-request")?.scrollIntoView({behavior:"smooth",block:"start"});
  const closeKeyboard=()=>{
   const active=document.activeElement;
@@ -274,6 +336,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    inserted=true;
    const requestId=String(data.id).slice(0,8);
    setSubmittedId(requestId);setWizardStep(4);
+   await clearMarketingDraft();setDraftNotice("");setPhotoNotice("");
    setMessage("Solicitud #"+requestId+" guardada con sus datos"+(uploaded.length?" y "+uploaded.length+" imágenes":"")+". No se ha publicado en Google.");
    setGoal("");setConsent(false);setGoogleMedia(emptyMedia);
    await refresh();
@@ -431,8 +494,10 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       <span>Autorizo a VMV a utilizar estos datos para gestionar y responder a mi solicitud. <strong>Publicaciones, pagos y cambios externos necesitarán aprobación adicional.</strong></span>
      </label>
      {authState==="checking"?<p className={styles.muted}>Verificando tu cuenta…</p>:
-      authState!=="ready"?<div className={styles.signIn}><LockKeyhole size={19}/><p>{authState==="unconfigured"?"El inicio de sesión no está configurado en este entorno.":"Inicia sesión en VMV Business para guardar tu solicitud."}</p><a href="/vista-app">Entrar a VMV Business <ArrowUpRight size={15}/></a></div>:null}
+      authState!=="ready"?<div className={styles.signIn}><LockKeyhole size={19}/><p>{authState==="unconfigured"?"El inicio de sesión no está configurado en este entorno.":"Antes de entrar, guardaremos tus respuestas en este dispositivo. Al volver podrás continuar donde quedaste."}</p><button type="button" disabled={busy||!draftReady} onClick={()=>void continueToLogin()}>Guardar y entrar a VMV <ArrowUpRight size={15}/></button><small>El borrador se conserva hasta 48 horas en este navegador. Usa el mismo dispositivo y navegador para volver.</small></div>:null}
     </div>:null}
+    {draftNotice?<p role="status" className={styles.draftNotice}>{draftNotice}</p>:null}
+    {photoNotice?<p role="status" className={styles.photoNotice}>{photoNotice}</p>:null}
     {wizardError?<p role="alert" className={styles.wizardError}>{wizardError}</p>:null}
     {wizardStep>0?<div className={styles.wizardFooter}>
      <button type="button" className={styles.wizardBack} onClick={goBack} disabled={busy}><ArrowLeft size={16}/> Anterior</button>
