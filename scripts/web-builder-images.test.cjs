@@ -79,3 +79,50 @@ test('public renderer uses shared frames, preserves settings and hides removed-p
  assert.match(html,/--image-width-mobile:93%/);assert.match(html,/--image-x:245px/);
  assert.doesNotMatch(html,/Agregar fotografía|Añade una imagen|vmv-image-tools/);
 });
+
+const {createSiteProposals}=require('../lib/web-builder-templates.ts');
+test('stable product media association survives reorder and never mutates a neighbor',()=>{
+ const choco='10000000-0000-0000-0000-000000000001';
+ const other='10000000-0000-0000-0000-000000000002';
+ const otherPhoto=photo.replace(/000000000002\.jpg$/,'000000000003.jpg');
+ const data=roundtrip({content:[block('OfferingGrid','products',{items:[
+  {id:choco,title:'Choco flan',image:photo},
+  {id:other,title:'Pastel personalizado',image:otherPhoto}
+ ]})]});
+ const original=data.content[0];
+ const reversed={...data,content:[{...original,props:{...original.props,items:[...original.props.items].reverse()}}]};
+ const patched=roundtrip(patchBuilderImage(reversed,'products',{field:'image',index:0,itemId:choco},{image:''}));
+ assert.equal(patched.content[0].props.items[0].id,other);
+ assert.equal(patched.content[0].props.items[0].image,otherPhoto);
+ assert.equal(patched.content[0].props.items[1].id,choco);
+ assert.equal(patched.content[0].props.items[1].image,'');
+ const afterRemoval=patchBuilderImage(patched,'products',{field:'image',index:0,itemId:choco},{image:photo});
+ assert.equal(afterRemoval.content[0].props.items[1].image,photo);
+ const ignored=patchBuilderImage(patched,'products',{field:'image',index:0,itemId:'missing-product'},{image:photo});
+ assert.equal(ignored,patched,'a removed item must not fall back to a different index');
+ assert.equal(original.props.items[0].image,photo,'the original published copy is immutable');
+});
+test('unrelated cover and gallery images never become a product photo by position',()=>{
+ const productId='20000000-0000-0000-0000-000000000001';
+ const input={business:"Mayuli's Bakery",categoryId:'bakery',offering:'products',
+  objective:'orders',phone:'',email:'',city:'',about:'',logo:'',photos:[photo,photo],
+  offerings:['Choco flan'],products:[{id:productId,title:'Choco flan',description:'',image:'',price:''}]};
+ for(const proposal of createSiteProposals(input,'bakery')){
+  const offerings=proposal.data.content.find(b=>b.type==='OfferingGrid');
+  assert.ok(offerings,'products block must exist');
+  const item=offerings.props.items.find(p=>p.title==='Choco flan');
+  assert.ok(item);assert.equal(item.id,productId);assert.equal(item.image,'');
+  const html=renderToStaticMarkup(React.createElement(Render,{config:builderConfig,data:proposal.data}));
+  assert.match(html,/Choco flan/);
+  assert.doesNotMatch(html,/Agregar fotografía|Nuevo elemento|vmv-image-tools/);
+ }
+});
+test('empty catalog products render no editing-only placeholders in public preview',()=>{
+ const doc=roundtrip({content:[block('OfferingGrid','offers',{
+  items:[{title:'Choco flan',image:''},{title:'',image:'',description:''}]
+ })]});
+ const html=renderToStaticMarkup(React.createElement(Render,{config:builderConfig,data:doc}));
+ assert.match(html,/Choco flan/);
+ assert.doesNotMatch(html,/Agregar fotografía|Nuevo elemento|vmv-media-empty/);
+ assert.equal((html.match(/class="vmv-offering-card"/g)||[]).length,1);
+});
