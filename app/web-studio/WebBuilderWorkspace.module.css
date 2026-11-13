@@ -196,6 +196,26 @@
  .main{padding:7px 8px 90px;max-width:100%;overflow:visible}
  .desktopSiteControls{display:none}
  .mobileStudioTools{display:flex;align-items:stretch;gap:7px;padding:6px 3px 7px;min-width:0}
+ .mobilePageSwitcher{display:block;flex:1;min-width:0;position:relative}
+ .mobilePageTrigger{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  width:100%;min-width:0;min-height:44px;padding:9px 13px;text-align:left;
+  background:#fff;color:#443054;border:1px solid #e6d9f2;border-radius:12px;
+  font-size:13px;font-weight:900}
+ .mobilePageTrigger>span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .mobilePageTrigger svg{flex-shrink:0;color:#7758ad}
+ .mobilePageTrigger[aria-expanded=true]{border-color:#ae8cd8;background:#f9f5fe}
+ .mobilePageMenu{position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:90;
+  max-height:min(55dvh,350px);overflow:auto;padding:6px;
+  background:#fff;border:1px solid #e0d2ed;border-radius:13px;
+  box-shadow:0 15px 35px #33204435}
+ .mobilePageMenu button{display:flex;align-items:center;justify-content:space-between;
+  gap:9px;min-height:43px;width:100%;text-align:left;border:0;border-radius:9px;
+  padding:9px 11px;background:transparent;color:#503866;font-size:12px;font-weight:800}
+ .mobilePageMenu button:hover,.mobilePageMenu button[aria-checked=true]{background:#f3ecfc;color:#7750b2}
+ .mobilePageMenu button.mobileAddPage{justify-content:flex-start;border-top:1px solid #eee6f3;
+  border-radius:0;color:#7b4dbe;margin-top:5px;padding-top:12px}
+ .mobilePageMenu button.mobileAddPage:hover{background:#f7f1fc}
+ .mobileToolButton[aria-pressed=true]{background:#e8d9fb;color:#6a3da3;border-color:#af8bdc}
  .mobilePageSelect{display:flex;align-items:center;gap:9px;flex:1;min-width:0;
   border:1px solid #e6d9f2;border-radius:12px;background:#fff;
   padding:7px 11px;color:#706087;position:relative;min-height:44px}
@@ -266,4 +286,10 @@
  .mobilePageSelect{padding:6px 8px;gap:6px}
  .mobileToolButton{min-width:41px;padding:7px}
  .mobileSettingsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* Secondary settings must never precede the canvas by default at phone width.
+   The editor's visible opening: compact site header, page picker, one status, canvas. */
+@media(max-width:700px){
+ .workspace{container:vmv-studio / inline-size}
 }
