@@ -25,10 +25,35 @@ function EditableMedia({id,target,url,alt}:{id:string;target:ImageTarget;url:str
   const api=getPuck();
   const selector=api.getSelectorForId(id);
   if(selector)api.dispatch({type:"setUi",ui:{itemSelector:selector}});
-  // Selection mounts the contextual action bar asynchronously in Puck.
-  // Let it commit before requesting the picker; the event reaches the shell
-  // whether Puck renders the canvas in an iframe or in the parent document.
-  requestAnimationFrame(()=>requestAnimationFrame(()=>broadcastImageSelection(id,target,!url)));
+  // Puck recreates its srcdoc iframe when a block becomes selected, which
+  // cancels requestAnimationFrame callbacks registered in the old canvas.
+  // Schedule on the *host* window so the new action bar can receive the
+  // picker request on the first tap. Keep all messages same-origin/local.
+  const host=window.parent!==window?window.parent:window;
+  const detail={id,target,openLibrary:!url};
+  const notify=()=>{
+   try{
+    host.dispatchEvent(new CustomEvent(IMAGE_SELECT_EVENT,{detail}));
+    if(host!==window)for(const frame of Array.from(host.document.querySelectorAll("iframe"))){
+     try{frame.contentWindow?.dispatchEvent(new CustomEvent(IMAGE_SELECT_EVENT,{detail}));}
+     catch{/* Ignore unrelated/cross-origin iframes. */}
+    }
+   }catch{/* A disconnected canvas must not break the editor. */}
+  };
+  notify();
+  host.setTimeout(notify,150);
+  host.setTimeout(()=>{
+   // Only retry if the first request did not open the media dialog.
+   try{
+    const open=(doc:Document)=>Boolean(doc.querySelector('[role="dialog"][aria-label="Seleccionar imagen"]'));
+    if(open(host.document))return;
+    for(const frame of Array.from(host.document.querySelectorAll("iframe"))){
+     try{if(frame.contentDocument&&open(frame.contentDocument))return;}
+     catch{/* Unrelated frame */}
+    }
+    notify();
+   }catch{/* The action bar may already have been dismissed. */}
+  },380);
  }
  return url?<img src={url} alt={alt} loading="lazy" onClick={select} role="button"
   tabIndex={0} aria-label={"Editar imagen: "+(alt||"Foto")}
