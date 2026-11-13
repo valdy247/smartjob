@@ -34,3 +34,6 @@
 .gallery .photoTile>.deletePhoto:disabled{opacity:.45;cursor:wait}
 .photoTile .deletingStatus{position:absolute;inset:0;display:grid;place-items:center;
  background:#262137ca;color:#fff;font-size:10px;font-weight:800;border-radius:10px;z-index:3}
+
+
+.notice{display:block;font-size:11px;line-height:1.5;color:#536777;background:#eef7f4;border:1px solid #cee5dc;border-radius:9px;padding:9px 10px}
