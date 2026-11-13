@@ -61,8 +61,8 @@ export default async function VMVPublishedPage({params}:Props){
  const classicServices=data.content.filter(b=>b.type==="Services").flatMap(b=>
   ["first","second","third"].map(k=>b.props?.[k]).filter((s):s is string=>typeof s==="string"&&Boolean(s.trim())));
  const visualServices=data.content.filter(b=>b.type==="OfferingGrid").flatMap(b=>
-  Array.isArray(b.props?.items)?b.props.items.flatMap(item=>
-   item&&typeof item==="object"&&typeof item.title==="string"?[item.title]:[]):[]);
+  Array.isArray(b.props?.items)?b.props.items.flatMap((item:unknown)=>
+   item&&typeof item==="object"&&typeof (item as {title?:unknown}).title==="string"?[(item as {title:string}).title]:[]):[]);
  const services=Array.from(new Set([...classicServices,...visualServices])).slice(0,30);
  const rootData=(data.root?.props||{}) as Record<string,unknown>;
  const logo=safeWebImageUrl(typeof rootData.logo==="string"?rootData.logo:"");
