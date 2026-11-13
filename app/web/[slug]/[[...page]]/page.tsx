@@ -6,7 +6,7 @@ import {Render} from "@puckeditor/core";
 import {builderConfig,normalizeBuilderDocument} from "@/lib/web-builder-puck";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import {familyForCategory} from "@/lib/web-builder-templates";
-import {WebsiteChrome} from "@/lib/web-site-chrome";
+import {WebsiteChrome,websiteVisualStyle} from "@/lib/web-site-chrome";
 import type {CSSProperties} from "react";
 import RequestForm from "@/app/sites/[slug]/RequestForm";
 import "../../../web-builder-public.css";
@@ -71,16 +71,7 @@ export default async function VMVPublishedPage({params}:Props){
  const rootData=(data.root?.props||{}) as Record<string,unknown>;
  const siteLanguage=rootData.language==="en"?"en":"es";
  const logo=safeWebImageUrl(typeof rootData.logo==="string"?rootData.logo:"");
- const palette=typeof rootData.palette==="string"?rootData.palette:"violet";
- const colorMap:Record<string,[string,string]>={
-  violet:["#8e5de4","#f0e9fd"],mint:["#198d74","#e5f8f0"],amber:["#a97b26","#fff4d8"],
-  ink:["#30283a","#eae8ed"],rose:["#b64b70","#fff0f4"],forest:["#367457","#e9f4eb"],
-  ocean:["#267a9c","#e8f6fb"],terracotta:["#af6242","#fbede2"],charcoal:["#24232b","#efedf2"]
- };
- const colors=colorMap[palette]||colorMap.violet;
- const accent=typeof rootData.accentColor==="string"&&/^#[0-9a-f]{6}$/i.test(rootData.accentColor)?
-  rootData.accentColor:colors[0];
- const visualStyle={ "--vmv-accent":accent,"--vmv-pale":colors[1] } as CSSProperties;
+ const visualStyle=websiteVisualStyle(rootData.palette,rootData.accentColor);
  const family=typeof rootData.family==="string"&&["bakery","construction","professional","beauty","creative"].includes(rootData.family)?rootData.family:familyForCategory(result.page.category_id||"");
  const showForm=part==="home"&&result.page.inquiries_enabled===true;
  return <WebsiteChrome siteName={siteName} baseUrl={base} menu={result.menu}
