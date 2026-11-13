@@ -32,6 +32,7 @@ export default function BuilderImageField({value,onChange}:Props){
  const [items,setItems]=useState<string[]>([]);
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
+ const [notice,setNotice]=useState("");
  const [prompt,setPrompt]=useState("");
  const [ai,setAi]=useState(false);
  const [generating,setGenerating]=useState(false);
@@ -40,14 +41,30 @@ export default function BuilderImageField({value,onChange}:Props){
   const client=getSupabase();if(!client)return;
   const {data,error:authError}=await client.auth.getUser();
   if(authError||!data.user||data.user.is_anonymous)return;
-  const {data:files,error}=await client.storage.from(bucket).list(data.user.id,{
-   limit:50,sortBy:{column:"created_at",order:"desc"}
-  });
-  if(error){setError("No se pudo cargar la biblioteca");return;}
-  const urls=(files||[]).filter(f=>/\.(webp|jpg|png)$/.test(f.name)).map(f=>{
-   const info=client.storage.from(bucket).getPublicUrl(data.user.id+"/"+f.name);
-   return safeWebImageUrl(info.data.publicUrl)||"";
-  }).filter(Boolean);
+  const {data:session}=await client.auth.getSession();
+  if(!session.session?.access_token){setError("Inicia sesión para cargar las fotos.");return;}
+  const [fileResult,hiddenResult]=await Promise.all([
+   client.storage.from(bucket).list(data.user.id,{
+    limit:50,sortBy:{column:"created_at",order:"desc"}
+   }),
+   fetch("/api/web-services/media/delete",{
+    cache:"no-store",headers:{Authorization:"Bearer "+session.session.access_token}
+   }).catch(()=>null)
+  ]);
+  if(fileResult.error||!hiddenResult||!hiddenResult.ok){
+   setError("No se pudo cargar la biblioteca. Inténtalo de nuevo.");return;
+  }
+  const hiddenData=await hiddenResult.json().catch(()=>({})) as {hidden?:string[]};
+  if(!Array.isArray(hiddenData.hidden)){
+   setError("No se pudo verificar la biblioteca.");return;
+  }
+  const hidden=new Set(hiddenData.hidden);
+  const urls=(fileResult.data||[])
+   .filter(f=>/\.(webp|jpg|png)$/.test(f.name)&&!hidden.has(f.name))
+   .map(f=>{
+    const info=client.storage.from(bucket).getPublicUrl(data.user.id+"/"+f.name);
+    return safeWebImageUrl(info.data.publicUrl)||"";
+   }).filter(Boolean);
   setItems(urls);
  },[]);
  useEffect(()=>{void load();},[load]);
@@ -56,11 +73,10 @@ export default function BuilderImageField({value,onChange}:Props){
    const deletedUrl=(event as CustomEvent<{url:string}>).detail?.url;
    if(!deletedUrl)return;
    setItems(current=>current.filter(url=>url!==deletedUrl));
-   if(value===deletedUrl)onChange("");
   };
   window.addEventListener("vmv:web-image-deleted",handleDelete);
   return()=>window.removeEventListener("vmv:web-image-deleted",handleDelete);
- },[value,onChange]);
+ },[]);
  useEffect(()=>{
   let active=true;
   void(async()=>{
@@ -77,7 +93,7 @@ export default function BuilderImageField({value,onChange}:Props){
  },[]);
  async function upload(file:File){
   if(busy)return;
-  setBusy(true);setError("");
+  setBusy(true);setError("");setNotice("");
   try{
    const client=getSupabase();if(!client)throw new Error("No disponible");
    const {data,error:authError}=await client.auth.getUser();
@@ -106,10 +122,10 @@ export default function BuilderImageField({value,onChange}:Props){
   }
   const isSelected=value===url;
   const message=isSelected
-   ?"¿Eliminar definitivamente esta foto de tu biblioteca? También se quitará del campo seleccionado. La acción no se puede deshacer."
-   :"¿Eliminar definitivamente esta foto de tu biblioteca? La acción no se puede deshacer.";
+   ?"¿Quitar esta foto de este campo y de tu biblioteca? Si otra página la usa, seguirá disponible allí."
+   :"¿Quitar esta foto de tu biblioteca? Los demás campos y páginas que la utilizan se conservarán.";
   if(!window.confirm(message))return;
-  setDeleting(url);setError("");
+  setDeleting(url);setError("");setNotice("");
   try{
    const client=getSupabase();
    if(!client)throw new Error("No se pudo acceder a tu cuenta.");
@@ -120,11 +136,19 @@ export default function BuilderImageField({value,onChange}:Props){
     headers:{"Authorization":"Bearer "+session.access_token,"Content-Type":"application/json"},
     body:JSON.stringify({filename})
    });
-   const body=await response.json().catch(()=>({})) as {deleted?:boolean;error?:string};
+   const body=await response.json().catch(()=>({})) as {deleted?:boolean;archived?:boolean;error?:string};
    if(!response.ok||body.deleted!==true)
-    throw new Error(body.error||"No se pudo eliminar la imagen.");
+    throw new Error(body.error||"No se pudo quitar la imagen.");
    setItems(current=>current.filter(item=>item!==url));
+   // Only the field where the customer clicked changes. Other places using
+   // this same URL keep their photo, including other mounted Puck fields.
+   if(isSelected)onChange("");
    window.dispatchEvent(new CustomEvent("vmv:web-image-deleted",{detail:{url}}));
+   setNotice(isSelected
+    ?"Foto quitada de este campo y de la biblioteca. El borrador se guardará; publica para actualizar la web."
+    :body.archived
+     ?"Foto retirada de tu biblioteca. Las páginas que la utilizan se conservaron."
+     :"Foto eliminada de tu biblioteca.");
   }catch(err){setError(err instanceof Error?err.message:"No se pudo eliminar la imagen.");}
   finally{setDeleting(null);}
  }
@@ -167,8 +191,8 @@ export default function BuilderImageField({value,onChange}:Props){
     disabled={busy||Boolean(deleting)} onClick={()=>onChange(url)}>
     <img src={url} alt="Fotografía de la biblioteca"/>
    </button>
-   <button type="button" className={styles.deletePhoto} aria-label="Eliminar esta foto definitivamente"
-    title="Eliminar foto" disabled={busy||Boolean(deleting)}
+   <button type="button" className={styles.deletePhoto} aria-label="Quitar esta foto de mi biblioteca"
+    title="Quitar foto de biblioteca" disabled={busy||Boolean(deleting)}
     onClick={()=>void deleteImage(url)}><Trash2 size={14} aria-hidden="true"/></button>
    {deleting===url?<span className={styles.deletingStatus}>Eliminando…</span>:null}
   </div>)}</div>:<small className={styles.empty}>Sube tu primera fotografía.</small>}
@@ -180,6 +204,7 @@ export default function BuilderImageField({value,onChange}:Props){
     <WandSparkles size={15}/>{generating?"Creando…":"Generar con IA"}
    </button>
   </div>:null}
+  {notice?<small role="status" className={styles.notice}>{notice}</small>:null}
   {error?<small role="alert" className={styles.error}>{error}</small>:null}
  </div>;
 }
