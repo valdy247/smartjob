@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from "next/server";
 
 export const runtime="nodejs";
+export const maxDuration=120;
 
 const fixedOrigin="https://www.googleapis.com/pagespeedonline/v5/runPagespeed";
 function safePublicWebsite(raw:string){
@@ -36,7 +37,7 @@ export async function GET(req:NextRequest){
  // Optional key is server-side only; without it the public free quota is used.
  if(process.env.GOOGLE_PAGESPEED_API_KEY)endpoint.searchParams.set("key",process.env.GOOGLE_PAGESPEED_API_KEY);
  try{
-  const response=await fetch(endpoint.toString(),{signal:AbortSignal.timeout(30000),next:{revalidate:3600}});
+  const response=await fetch(endpoint.toString(),{signal:AbortSignal.timeout(95000),next:{revalidate:86400}});
   if(!response.ok){
    const message=response.status===429?"La API gratuita alcanzó su límite. Intenta de nuevo más tarde.":"Google no pudo analizar este sitio por ahora.";
    return NextResponse.json({error:message,reportUrl}, {status:response.status===429?429:502});
@@ -72,6 +73,6 @@ export async function GET(req:NextRequest){
    note:"Puntuaciones técnicas, no ventas ni ranking garantizados."
   },{headers:{"Cache-Control":"private, max-age=0"}});
  }catch{
-  return NextResponse.json({error:"La auditoría tardó demasiado o la API no respondió. Prueba de nuevo más tarde."},{status:503});
+  return NextResponse.json({error:"El análisis de Google tardó más de lo esperado. No significa que tu web esté dañada; puedes volver a intentarlo o solicitar revisión técnica."},{status:503});
  }
 }
