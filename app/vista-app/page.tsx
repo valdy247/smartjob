@@ -470,12 +470,13 @@ export default function VMVMobilePreview(){
       </div>:null}
       {ready&&tab==="calls"?<section className={styles.screen}>
        <div className={styles.callViewTabs} role="tablist" aria-label="Secciones de llamadas">
-        {([{id:"dial",emoji:"⌨️",label:"Teclado"},{id:"history",emoji:"🕘",label:"Historial"},{id:"contacts",emoji:"👥",label:"Contactos"}] as const).map(item=>
-         <button type="button" key={item.id} role="tab" aria-label={item.label} title={item.label}
+        {([{id:"dial",emoji:"⌨️",key:"native.dialpad"},{id:"history",emoji:"🕘",key:"common.history"},{id:"contacts",emoji:"👥",key:"native.contacts"}] as const).map(item=>
+         <button type="button" key={item.id} role="tab" aria-label={translate(item.key)} title={translate(item.key)}
           aria-selected={callsView===item.id}
           className={callsView===item.id?styles.callViewTabActive:styles.callViewTab}
           onClick={()=>{setCallsView(item.id);if(item.id==="contacts"){setContactPhone("");setContactStartForm(false);}if(item.id==="dial")setDialTarget(null);}}>
           <span className={styles.callTabEmoji} aria-hidden="true">{item.emoji}</span>
+          <small className={styles.callTabLabel}>{translate(item.key)}</small>
          </button>)}
        </div>
        {callsView==="dial"&&client&&user?<DialPad client={client} ownerId={user.id} initialPhone={dialTarget?.phone||""} contactName={dialTarget?.name||""}/>:null}
