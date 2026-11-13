@@ -4,9 +4,10 @@ import {ArrowRight,ImagePlus,Plus,ShieldCheck,Sparkles,Trash2} from "lucide-reac
 import {getSupabase} from "@/lib/supabase";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
-import {FAMILIES,familyForCategory,type SiteFamily,type SiteIntake,type SiteOffering,type SiteObjective,type SiteProposal} from "@/lib/web-builder-templates";
+import {FAMILIES,familyForCategory,type SiteFamily,type SiteIntake,type SiteProduct,type SiteOffering,type SiteObjective,type SiteProposal} from "@/lib/web-builder-templates";
 import BuilderImageField from "./BuilderImageField";
 import TemplateProposals from "./TemplateProposals";
+import WebIntakeProducts,{type ProductSaveStatus} from "./WebIntakeProducts";
 import styles from "./WebSiteIntake.module.css";
 
 type Props={ownerId:string;busy:boolean;onChoose:(input:SiteIntake,proposal:SiteProposal)=>void};
@@ -62,6 +63,8 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const mediaActive=useRef(true);
  const [services,setServices]=useState<string[]>([]);
  const [newItem,setNewItem]=useState("");
+ const [products,setProducts]=useState<SiteProduct[]>([]);
+ const [productStatus,setProductStatus]=useState<ProductSaveStatus>("loading");
  const [family,setFamily]=useState<SiteFamily|null>(null);
  const [stage,setStage]=useState<"details"|"proposals">("details");
  const [mode,setMode]=useState<"templates"|"ai">("templates");
@@ -205,8 +208,10 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const intake=useMemo<SiteIntake>(()=>({
   business:name.trim(),categoryId:category,offering:kind,objective:goal,
   phone:phone.trim(),email:email.trim(),city:city.trim(),about:about.trim(),
-  logo,photos:photos.slice(0,2),offerings:services.filter(Boolean)
- }),[name,category,kind,goal,phone,email,city,about,logo,photos,services]);
+  logo,photos:photos.slice(0,2),
+  offerings:kind==="products"?[]:services.filter(Boolean),
+  products:kind==="services"?[]:products.filter(p=>p.title.trim())
+ }),[name,category,kind,goal,phone,email,city,about,logo,photos,services,products]);
  const suggestedFamily=family||familyForCategory(category);
  function addService(event:FormEvent){
   event.preventDefault();
@@ -219,6 +224,12 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
   if(!mediaReady||mediaSaving||mediaError){setError("Confirma que las fotografías terminaron de guardarse.");return;}
   if(intake.business.length<2){setError("Escribe el nombre del negocio.");return;}
   if(!category){setError("Selecciona la categoría del negocio.");return;}
+  if(kind!=="services"&&productStatus!=="saved"){
+   setError("Espera a que termine de guardar los productos antes de continuar.");return;
+  }
+  if(kind!=="services"&&products.some(p=>!p.title.trim())){
+   setError("Escribe el nombre de cada producto o elimina las fichas vacías.");return;
+  }
   if(intake.email&& !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(intake.email)){
    setError("Comprueba el correo de contacto.");return;
   }
@@ -259,15 +270,17 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
      {goals.map(item=><button key={item.id} type="button" data-active={goal===item.id}
       onClick={()=>setGoal(item.id)}><strong>{item.label}</strong><small>{item.details}</small></button>)}
     </div>
-    <form className={styles.addItem} onSubmit={addService}>
-     <label>{kind==="products"?"Productos":kind==="services"?"Servicios":"Productos y servicios"} (opcional)
+    <WebIntakeProducts ownerId={ownerId} items={products} visible={kind!=="services"}
+     onChange={setProducts} onStatusChange={setProductStatus}/>
+    {kind!=="products"?<form className={styles.addItem} onSubmit={addService}>
+     <label>Servicios (opcional)
       <span>Uno por campo. Sin precios inventados.</span></label>
      <div><input maxLength={120} value={newItem} placeholder="Ej. Pasteles personalizados"
       onChange={e=>setNewItem(e.target.value)}/><button type="submit"><Plus size={16}/> Agregar</button></div>
      <div className={styles.tokens}>{services.map((item,index)=><span key={index}>{item}
       <button type="button" aria-label={"Eliminar "+item} onClick={()=>setServices(old=>old.filter((_,i)=>i!==index))}><Trash2 size={12}/></button>
      </span>)}</div>
-    </form>
+    </form>:null}
    </div>
    <div className={styles.panel}>
     <h3><span>03</span> Identidad visual</h3>
@@ -308,7 +321,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
    {error?<p className={styles.error} role="alert">{error}</p>:null}
    <div className={styles.finish}>
     <span><ShieldCheck size={16}/> Tus datos no se publicarán todavía.</span>
-    <button type="button" disabled={busy||mode!=="templates"||!mediaReady||mediaSaving||Boolean(mediaError)} onClick={preview}>
+    <button type="button" disabled={busy||mode!=="templates"||!mediaReady||mediaSaving||Boolean(mediaError)||(kind!=="services"&&productStatus!=="saved")} onClick={preview}>
      Ver propuestas <ArrowRight size={17}/>
     </button>
    </div>
