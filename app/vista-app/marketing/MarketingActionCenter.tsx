@@ -234,8 +234,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const shown=teamView&&staff?requests:ownRequests;
  const isAccepted=(req:RequestRow)=>approvals.some(a=>a.request_id===req.id&&a.quote_revision===req.quote_revision&&a.quoted_price_cents===req.quoted_price_cents);
  const submit=async()=>{
-  setError("");setMessage("");
-  setWizardError("");
+  setError("");setMessage("");setWizardError("");
   if(wizardStep!==3)return;
   if(!client||!user){setWizardError("Inicia sesión en VMV Business para enviar tu solicitud.");return;}
   if(name.trim().length<2||name.trim().length>150){setWizardStep(1);setWizardError("Introduce el nombre comercial (2 a 150 caracteres).");return;}
@@ -244,27 +243,47 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(missing){setWizardStep(2);setGoogleStep(missing.step);setWizardError(missing.error);return;}
    const invalid=validateGoogleLinks(googleData);
    if(invalid){setWizardStep(2);setGoogleStep(2);setWizardError(invalid);return;}
+   const bad=googleFiles.find(({file})=>!(["image/jpeg","image/png"].includes(file.type))||file.size<10240||file.size>5242880);
+   if(bad){setWizardStep(2);setGoogleStep(5);setWizardError("Revisa "+bad.file.name+": fotos JPG o PNG entre 10 KB y 5 MB.");return;}
   }
   if(selected!=="google_profile"&&((goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5))||goal.trim().length>1500)){setWizardStep(2);setWizardError("Elige una necesidad o describe el resultado que buscas.");return;}
   if(selected==="seo_improvement"&&!site.trim()){setWizardStep(1);setWizardError("Añade la web que deseas mejorar.");return;}
   if(site.trim()&&!safeSite(site)){setWizardStep(1);setWizardError("La web debe tener una URL válida.");return;}
   if(!consent){setWizardError("Marca la autorización para que podamos atender la solicitud.");return;}
   setBusy(true);
+  const uploaded:string[]=[];
+  let inserted=false;
   try{
-   // The DB allows customers to insert only input fields, never quote, status or verification.
-   const {data, error:insertError}=await client.from("vmv_marketing_requests").insert({
+   const mediaPaths:{kind:string;path:string}[]=[];
+   if(selected==="google_profile"){
+    const folder=user.id+"/"+crypto.randomUUID();
+    for(const {kind,file} of googleFiles){
+     const extension=file.type==="image/png"?"png":"jpg";
+     const path=folder+"/"+kind+"."+extension;
+     const {error:uploadError}=await client.storage.from("vmv-google-media").upload(path,file,{contentType:file.type,cacheControl:"3600",upsert:false});
+     if(uploadError)throw new Error("No se pudo guardar la imagen "+kind+". "+uploadError.message);
+     uploaded.push(path);mediaPaths.push({kind,path});
+    }
+   }
+   const {data,error:insertError}=await client.from("vmv_marketing_requests").insert({
     owner_id:user.id,service_code:selected,business_name:name.trim(),
-    category_id:effectiveCategory,website_url:safeSite(site),goal_text:(selected==="review_strategy"&&reviewInput.trim()?("Reseña: "+reviewInput.trim().slice(0,650)+" | Respuesta sugerida, pendiente de revisión: "+answerReview).slice(0,1500):goal.trim()),
-    agreed_to_contact:true
+    category_id:effectiveCategory,website_url:safeSite(site),
+    goal_text:selected==="google_profile"?googleGoalText:selected==="review_strategy"&&reviewInput.trim()?
+     ("Reseña: "+reviewInput.trim().slice(0,650)+" | Respuesta sugerida, pendiente de revisión: "+answerReview).slice(0,1500):goal.trim(),
+    agreed_to_contact:true,
+    ...(selected==="google_profile"?{google_profile_data:{...googleData,media:mediaPaths}}:{})
    }).select("id").single();
    if(insertError)throw insertError;
+   inserted=true;
    const requestId=String(data.id).slice(0,8);
    setSubmittedId(requestId);setWizardStep(4);
-   setMessage("Solicitud #"+requestId+" registrada correctamente. Sin pagos ni publicaciones automáticas.");
-   setGoal("");setConsent(false);
+   setMessage("Solicitud #"+requestId+" guardada con sus datos"+(uploaded.length?" y "+uploaded.length+" imágenes":"")+". No se ha publicado en Google.");
+   setGoal("");setConsent(false);setGoogleMedia(emptyMedia);
    await refresh();
-  }catch(e){setWizardError("No se pudo registrar la solicitud. "+errorMessage(e,"Vuelve a intentarlo."));}
-  finally{setBusy(false);}
+  }catch(e){
+   if(!inserted&&uploaded.length)await client.storage.from("vmv-google-media").remove(uploaded);
+   setWizardError("No se pudo completar el envío. "+errorMessage(e,"Inténtalo de nuevo."));
+  }finally{setBusy(false);}
  };
  const accept=async(req:RequestRow)=>{
   if(!client||!user||req.owner_id!==user.id||req.status!=="quoted"||req.quoted_price_cents===null)return;
