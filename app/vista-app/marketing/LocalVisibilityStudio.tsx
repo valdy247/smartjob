@@ -67,7 +67,7 @@ export default function LocalVisibilityStudio({profile,onChange,onRequestHelp}:{
   catch{setAuditError(translate("marketing.visibility.enter_the_full_website_url_for_example_https_mybusin"));return;}
   setAuditing(true);
   try{
-   const response=await fetch("/api/marketing/site-audit?url="+encodeURIComponent(parsed.toString()));
+   const response=await fetch("/api/marketing/site-audit?url="+encodeURIComponent(parsed.toString())+"&lang="+language);
    const result=await response.json() as Audit&{error?:string};
    if(!response.ok)throw new Error(result.error||translate("marketing.visibility.couldn_t_analyze_the_website"));
    setAudit(result);

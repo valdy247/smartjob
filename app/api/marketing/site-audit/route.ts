@@ -28,23 +28,26 @@ function roundScore(score?:number){return typeof score==="number"&&Number.isFini
 
 export async function GET(req:NextRequest){
  const website=safePublicWebsite(req.nextUrl.searchParams.get("url")||"");
- if(!website)return NextResponse.json({error:"Introduce una URL pública válida (https://...)."}, {status:400});
+ const locale=req.nextUrl.searchParams.get("lang")==="en"?"en":"es";
+ const errorCopy=(es:string,en:string)=>locale==="en"?en:es;
+ if(!website)return NextResponse.json({error:errorCopy("Introduce una URL pública válida (https://...).","Enter a valid public website URL (https://...).")}, {status:400});
  const endpoint=new URL(fixedOrigin);
  const reportUrl="https://pagespeed.web.dev/?url="+encodeURIComponent(website);
  endpoint.searchParams.set("url",website);
  endpoint.searchParams.set("strategy","MOBILE");
+ endpoint.searchParams.set("locale",locale);
  for(const category of ["PERFORMANCE","SEO","ACCESSIBILITY"])endpoint.searchParams.append("category",category);
  // Optional key is server-side only; without it the public free quota is used.
  if(process.env.GOOGLE_PAGESPEED_API_KEY)endpoint.searchParams.set("key",process.env.GOOGLE_PAGESPEED_API_KEY);
  try{
   const response=await fetch(endpoint.toString(),{signal:AbortSignal.timeout(95000),next:{revalidate:86400}});
   if(!response.ok){
-   const message=response.status===429?"La API gratuita alcanzó su límite. Intenta de nuevo más tarde.":"Google no pudo analizar este sitio por ahora.";
+   const message=response.status===429?errorCopy("La API gratuita alcanzó su límite. Intenta de nuevo más tarde.","The free API quota has been reached. Please try again later."):errorCopy("Google no pudo analizar este sitio por ahora.","Google could not analyze this website right now.");
    return NextResponse.json({error:message,reportUrl}, {status:response.status===429?429:502});
   }
   const parsed=await response.json() as PsiResult;
   const lighthouse=parsed.lighthouseResult;
-  if(!lighthouse?.categories)return NextResponse.json({error:"No se recibieron resultados de auditoría para este sitio."},{status:502});
+  if(!lighthouse?.categories)return NextResponse.json({error:errorCopy("No se recibieron resultados de auditoría para este sitio.","No audit results were received for this website.")},{status:502});
   const priorityAudits=[
    "largest-contentful-paint","render-blocking-resources","modern-image-formats","uses-optimized-images",
    "uses-responsive-images","unused-javascript","total-blocking-time",
@@ -70,9 +73,9 @@ export async function GET(req:NextRequest){
    },
    recommendations,
    analyzedAt:new Date().toISOString(),
-   note:"Puntuaciones técnicas, no ventas ni ranking garantizados."
+   note:errorCopy("Puntuaciones técnicas, no ventas ni ranking garantizados.","Technical scores do not guarantee sales or search rankings.")
   },{headers:{"Cache-Control":"private, max-age=0"}});
  }catch{
-  return NextResponse.json({error:"El análisis de Google tardó más de lo esperado. No significa que tu web esté dañada; puedes volver a intentarlo o solicitar revisión técnica."},{status:503});
+  return NextResponse.json({error:errorCopy("El análisis de Google tardó más de lo esperado. No significa que tu web esté dañada; puedes volver a intentarlo o solicitar revisión técnica.","Google took longer than expected. This does not mean your website is broken; retry or request a technical review.")},{status:503});
  }
 }
