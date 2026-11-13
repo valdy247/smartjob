@@ -99,35 +99,54 @@ async function agentReady(number:string,account:string,ownerId:string){
 }
 export async function POST(req:NextRequest){
  const signed=await verifyAiTestWebhook(req);
- if(!signed)return twiml("<Hangup/>",403);
+ if(!signed){
+  console.warn("[vmv-ai-voice-pilot] incoming request rejected: Twilio signature or account data");
+  return twiml("<Hangup/>",403);
+ }
  const base=configuredBase();
  if(!base)return twiml("<Hangup/>",503);
  const sid=signed.get("CallSid")||"",account=signed.get("AccountSid")||"";
  const to=signed.get("To")||"";
  if(!callSid.test(sid)||!accountSid.test(account)||!e164.test(to)||
     (process.env.TWILIO_ACCOUNT_SID&&account!==process.env.TWILIO_ACCOUNT_SID))
-   return twiml("<Hangup/>",403);
-
+  return twiml("<Hangup/>",403);
  const route=await findPhoneRoute(to);
- // This can only share a number provisioned for Smart Call and its owner.
- if(!route||!route.enabled)return twiml("<Hangup/>",403);
- const available=await agentReady(to,account,route.user_id);
- if(!available)return smartCall();
+ if(!route||!route.enabled||route.user_id!==process.env.VMV_AI_TEST_OWNER_ID)
+  return twiml("<Hangup/>",403);
+ if(process.env.VERCEL_ENV!=="preview"||process.env.VMV_AI_VOICE_PILOT_ENABLED!=="true"||
+    !originalSmartCallUrl())return smartCall();
 
  const choice=req.nextUrl.searchParams.get("selection");
+ // The first menu is independent of AI/model readiness. A missing model credential
+ // must not silently bypass this menu and sound like the old Smart Call IVR.
  if(choice==="menu"){
-   const digits=signed.get("Digits")||"";
-   if(digits==="2")return redirect(base,agentVoice);
-   // Any other choice or a DTMF timeout retains the original voice service.
+  const digits=signed.get("Digits")||"";
+  if(digits!=="2"){
+   console.info("[vmv-ai-voice-pilot] Smart Call selected or menu timed out");
    return smartCall();
+  }
+  let ready=false;
+  try{ready=await agentReady(to,account,route.user_id);}
+  catch{console.error("[vmv-ai-voice-pilot] agent readiness check failed");}
+  if(!ready){
+   console.warn("[vmv-ai-voice-pilot] AI option requested but agent not ready");
+   const original=originalSmartCallUrl();
+   return twiml(
+    say("El agente de inteligencia artificial aún no está disponible. Te comunicaremos con Smart Call.","es-ES")+
+    (original?'<Redirect method="POST">'+xmlEscape(original)+'</Redirect>':"<Hangup/>")
+   );
+  }
+  console.info("[vmv-ai-voice-pilot] authorized AI option selected; handing off to AI runtime");
+  return redirect(base,agentVoice);
  }
- // Dial 1 for the original Smart Call experience; dial 2 for AI Agents.
+ if(choice!==null)return smartCall();
+ console.info("[vmv-ai-voice-pilot] authenticated inbound call reached AI Agents top-level menu");
  const action=xmlEscape(base+path+"?selection=menu");
  return twiml(
   '<Gather input="dtmf" numDigits="1" timeout="8" method="POST" action="'+action+'">'+
     say("Bienvenido a VMV. Para Smart Call y traducción, marca uno. Para hablar con el agente de inteligencia artificial, marca dos.","es-ES")+
     say("For Smart Call and translation, press one. To speak with our AI assistant, press two.","en-US")+
   '</Gather>'+
-  (originalSmartCallUrl()?'<Redirect method="POST">'+xmlEscape(originalSmartCallUrl()!)+'</Redirect>':'<Hangup/>')
+  (originalSmartCallUrl()?'<Redirect method="POST">'+xmlEscape(originalSmartCallUrl()!)+'</Redirect>':"<Hangup/>")
  );
 }
