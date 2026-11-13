@@ -1,6 +1,7 @@
 import type {GoogleMedia} from "./GoogleProfileWizard";
 import type {GoogleData} from "./GoogleProfileWizard";
 import type {WebRepairData} from "./WebRepairStudio";
+import type {DirectoryData} from "./DirectoryDiscovery";
 
 export const DRAFT_KEY="vmv-marketing-request-draft-v1";
 const DB_NAME="vmv-marketing-draft-media";
@@ -8,7 +9,7 @@ const MAX_AGE=48*60*60*1000;
 export type StoredMarketingDraft={
  version:1;savedAt:number;service:string;step:number;googleStep:number;
  name:string;site:string;category:string;goal:string;reviewInput:string;reviewTone:"cordial"|"breve";
- consent:boolean;googleData:GoogleData;webRepair:WebRepairData;
+ consent:boolean;googleData:GoogleData;webRepair:WebRepairData;directoryData?:DirectoryData;
 };
 export function readMarketingDraft():StoredMarketingDraft|null{
  try{
