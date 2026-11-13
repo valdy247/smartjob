@@ -117,42 +117,42 @@ export default function MarketingPage(){
  const emailReviewUrl="mailto:?subject="+encodeURIComponent(contentText(contentLanguage,"marketing.generated.subject",{business}))+"&body="+encodeURIComponent(review);
  const followup=contentText(contentLanguage,"marketing.generated.followup",{business,cta});
  const copy=async(value:string)=>{
-  try{await navigator.clipboard.writeText(value);setNotice("Texto copiado.");}
-  catch{setNotice("No se pudo copiar automáticamente; selecciona el texto para copiarlo.");}
+  try{await navigator.clipboard.writeText(value);setNotice(translate("marketing.feedback.copied"));}
+  catch{setNotice(translate("marketing.feedback.copyError"));}
  };
  const shareText=async(value:string,title:string)=>{
   if(typeof navigator.share==="function"){
-   try{await navigator.share({title,text:value});setNotice("Elige la aplicación y confirma el envío.");}
-   catch(error){if((error as Error)?.name!=="AbortError")setNotice("No se pudo abrir Compartir. Puedes copiar el mensaje.");}
+   try{await navigator.share({title,text:value});setNotice(translate("marketing.feedback.shareConfirm"));}
+   catch(error){if((error as Error)?.name!=="AbortError")setNotice(translate("marketing.feedback.shareError"));}
    return;
   }
-  try{await navigator.clipboard.writeText(value);setNotice("El mensaje se copió para que puedas compartirlo.");}
-  catch{setNotice("No se pudo compartir ni copiar automáticamente.");}
+  try{await navigator.clipboard.writeText(value);setNotice(translate("marketing.feedback.copiedToShare"));}
+  catch{setNotice(translate("marketing.feedback.copyShareError"));}
  };
  const shareReview=async()=>{
-  if(!reviewLinkIsValid){setNotice("Revisa el enlace de reseñas: debe comenzar con https:// y ser válido.");return;}
+  if(!reviewLinkIsValid){setNotice(translate("marketing.feedback.badReview"));return;}
   if(typeof navigator.share==="function"){
-   try{await navigator.share({text:review});setNotice("La solicitud se entregó a la opción elegida. Confirma el envío en esa aplicación.");}
-   catch(error){if((error as Error)?.name!=="AbortError")setNotice("No se pudo abrir Compartir. Puedes usar WhatsApp, Correo o copiar el mensaje.");}
+   try{await navigator.share({text:review});setNotice(translate("marketing.feedback.reviewConfirm"));}
+   catch(error){if((error as Error)?.name!=="AbortError")setNotice(translate("marketing.feedback.reviewShareError"));}
    return;
   }
-  try{await navigator.clipboard.writeText(review);setNotice("La opción nativa no está disponible aquí. Copiamos el mensaje para que lo pegues.");}
-  catch{setNotice("La opción nativa no está disponible aquí. Prueba WhatsApp o Correo.");}
+  try{await navigator.clipboard.writeText(review);setNotice(translate("marketing.feedback.reviewCopied"));}
+  catch{setNotice(translate("marketing.feedback.reviewFallback"));}
  };
  const report=[
-  "VMV MARKETING · PLAN DE TRABAJO",
-  "Negocio: "+business,"Sector: "+industryName(form.industry),
-  "Audiencia: "+audience,"Oferta: "+offer,"Objetivo / CTA: "+cta,
-  "Canal: "+campaign.channel,"Enfoque: "+campaign.angle,
-  "Acción: "+campaign.execution,"Mensaje de partida: "+activeCampaignDraft,
-  "Indicador: "+campaign.measure,
-  "Inversión introducida: "+money(spend),
-  "Leads introducidos: "+(leads===null?"No indicados":String(leads)),
-  "Clientes introducidos: "+(sales===null?"No indicados":String(sales)),
-  "Ingresos: "+money(revenue)+(estimatedRevenue?" (estimados por ticket × ventas)":""),
+  translate("marketing.export.title"),
+  translate("marketing.export.business")+business,translate("marketing.export.industry")+industryName(form.industry),
+  translate("marketing.export.audience")+audience,translate("marketing.export.offer")+offer,translate("marketing.export.cta")+cta,
+  translate("marketing.export.channel")+campaign.channel,translate("marketing.export.angle")+campaign.angle,
+  translate("marketing.export.action")+campaign.execution,translate("marketing.export.draft")+activeCampaignDraft,
+  translate("marketing.export.measure")+campaign.measure,
+  translate("marketing.export.spend")+money(spend),
+  translate("marketing.export.leads")+(leads===null?translate("marketing.export.undisclosed"):String(leads)),
+  translate("marketing.export.customers")+(sales===null?translate("marketing.export.undisclosed"):String(sales)),
+  translate("marketing.export.revenue")+money(revenue)+(estimatedRevenue?translate("marketing.export.estimated"):""),
   "CPL: "+money(metrics.cpl),"CAC: "+money(metrics.cac),
-  "Contribución después de publicidad: "+money(metrics.contribution),
-  "Nota: cálculo aproximado de margen bruto menos publicidad; no incluye gastos fijos, impuestos u otros costes."
+  translate("marketing.export.contribution")+money(metrics.contribution),
+  translate("marketing.export.note")
  ].join("\n");
  return <main className={styles.page}>
   <div className={styles.shell}>
@@ -197,7 +197,7 @@ export default function MarketingPage(){
       </div>
       <div className={styles.metricHelp}>
        <button type="button" className={styles.metricHelpToggle} onClick={()=>setShowMetricHelp(!showMetricHelp)} aria-expanded={showMetricHelp}>
-        <Lightbulb size={17}/> {translate("marketing.copy.not_sure_about_these_numbers")} <span>{showMetricHelp?"Ocultar ayuda":"Calculémoslos juntos"}</span>
+        <Lightbulb size={17}/> {translate("marketing.copy.not_sure_about_these_numbers")} <span>{showMetricHelp?translate("marketing.ui.showHideHelp"):translate("marketing.ui.calculateTogether")}</span>
        </button>
        {showMetricHelp?<div className={styles.metricHelpBody}>
         <p>{translate("marketing.copy.these_details_are_optional_use_real_figures_if_you_have")}</p>
@@ -255,13 +255,13 @@ export default function MarketingPage(){
          <p className={styles.campaignPreview}>{activeCampaignDraft}</p>}
        </div>
        <div className={styles.campaignQuickActions}>
-        <button type="button" className={styles.primary} onClick={()=>void shareText(activeCampaignDraft,"Campaña de "+business)}><Share2 size={17}/> {translate("marketing.copy.share")}</button>
-        <button type="button" className={styles.secondary} onClick={()=>setCampaignEditing(value=>!value)}>{campaignEditing?<CheckCircle2 size={16}/>:<ClipboardCopy size={16}/>} {campaignEditing?"Listo":"Editar"}</button>
+        <button type="button" className={styles.primary} onClick={()=>void shareText(activeCampaignDraft,translate("marketing.ui.campaignBy",{business}))}><Share2 size={17}/> {translate("marketing.copy.share")}</button>
+        <button type="button" className={styles.secondary} onClick={()=>setCampaignEditing(value=>!value)}>{campaignEditing?<CheckCircle2 size={16}/>:<ClipboardCopy size={16}/>} {campaignEditing?translate("marketing.ui.done"):translate("marketing.ui.edit")}</button>
         <button type="button" className={styles.secondary} onClick={()=>void copy(activeCampaignDraft)}><ClipboardCopy size={16}/> {translate("marketing.copy.copy")}</button>
        </div>
        <button type="button" className={styles.detailsToggle} aria-expanded={campaignDetailsOpen}
         onClick={()=>setCampaignDetailsOpen(value=>!value)}>
-        <span>{campaignDetailsOpen?"Ocultar estrategia":"Ver estrategia y métricas"}</span>
+        <span>{campaignDetailsOpen?translate("marketing.ui.hideStrategy"):translate("marketing.ui.showStrategy")}</span>
         {campaignDetailsOpen?<ChevronUp size={18}/>:<ChevronDown size={18}/>}
        </button>
        {campaignDetailsOpen?<div className={styles.campaignDetails}>
@@ -290,7 +290,7 @@ export default function MarketingPage(){
        <div><span>ROAS</span><strong>{metrics.roas===null?"—":metrics.roas.toFixed(2)+"×"}</strong><small>{translate("marketing.copy.revenue_ad_spend")}</small></div>
       </div>
       <div className={styles.profit}>
-       <div><span>{translate("marketing.copy.contribution_after_advertising")}</span><strong>{money(metrics.contribution)}</strong><small>{estimatedRevenue?"Con ingresos estimados por ticket × clientes. ":""}Margen bruto de ventas menos gasto publicitario.</small></div>
+       <div><span>{translate("marketing.copy.contribution_after_advertising")}</span><strong>{money(metrics.contribution)}</strong><small>{estimatedRevenue?translate("marketing.ui.metricEstimate"):""}Margen bruto de ventas menos gasto publicitario.</small></div>
        <div><span>{translate("marketing.copy.maximum_break_even_cac_on_first_purchase")}</span><strong>{money(metrics.breakEven)}</strong><small>{translate("marketing.copy.average_order_value_gross_margin_excludes_fixed_costs_t")}</small></div>
       </div>
       <p className={styles.fineprint}>{translate("marketing.copy.these_are_not_connected_data_or_a_sales_forecast_verify")}</p>
@@ -308,7 +308,7 @@ export default function MarketingPage(){
          <div className={styles.message}><span>{translate("marketing.copy.message_your_customer_will_receive")}</span>
           <p className={reviewPreviewOpen?styles.reviewMessage:styles.clampedMessage}>{review}</p>
           <button type="button" className={styles.previewToggle} aria-expanded={reviewPreviewOpen}
-           onClick={()=>setReviewPreviewOpen(value=>!value)}>{reviewPreviewOpen?"Mostrar menos":"Leer mensaje completo"} {reviewPreviewOpen?<ChevronUp size={14}/>:<ChevronDown size={14}/>}</button>
+           onClick={()=>setReviewPreviewOpen(value=>!value)}>{reviewPreviewOpen?translate("marketing.ui.showLess"):translate("marketing.ui.readMore")} {reviewPreviewOpen?<ChevronUp size={14}/>:<ChevronDown size={14}/>}</button>
          </div>
          <div className={styles.reviewShare}>
           <button type="button" className={styles.primary} onClick={()=>void shareReview()} disabled={!reviewLinkIsValid}><Share2 size={16}/> {translate("marketing.copy.share_request")}</button>
@@ -323,10 +323,10 @@ export default function MarketingPage(){
        <article><span className={styles.iconCircle}><Megaphone size={22}/></span><h3>{translate("marketing.copy.reconnect_with_permission")}</h3><p>{translate("marketing.copy.a_helpful_invitation_to_people_who_agreed_to_receive_me")}</p><div className={styles.message}>
         <p className={followupPreviewOpen?styles.reviewMessage:styles.clampedMessage}>{followup}</p>
         <button type="button" className={styles.previewToggle} aria-expanded={followupPreviewOpen}
-         onClick={()=>setFollowupPreviewOpen(value=>!value)}>{followupPreviewOpen?"Mostrar menos":"Leer mensaje completo"} {followupPreviewOpen?<ChevronUp size={14}/>:<ChevronDown size={14}/>}</button>
+         onClick={()=>setFollowupPreviewOpen(value=>!value)}>{followupPreviewOpen?translate("marketing.ui.showLess"):translate("marketing.ui.readMore")} {followupPreviewOpen?<ChevronUp size={14}/>:<ChevronDown size={14}/>}</button>
        </div>
        <div className={styles.followupActions}>
-        <button type="button" className={styles.primary} onClick={()=>void shareText(followup,"Mensaje de "+business)}><Share2 size={15}/> {translate("marketing.copy.share")}</button>
+        <button type="button" className={styles.primary} onClick={()=>void shareText(followup,translate("marketing.ui.messageFrom",{business}))}><Share2 size={15}/> {translate("marketing.copy.share")}</button>
         <button type="button" className={styles.secondary} onClick={()=>void copy(followup)}><ClipboardCopy size={15}/> {translate("marketing.copy.copy")}</button>
        </div></article>
       </div>
