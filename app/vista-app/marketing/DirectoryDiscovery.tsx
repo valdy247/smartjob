@@ -3,7 +3,7 @@ import {useMemo} from "react";
 import {MapPin,ExternalLink,SearchCheck,Check} from "lucide-react";
 import styles from "./DirectoryDiscovery.module.css";
 
-export type DirectoryProgress="pending_review"|"researching"|"needs_customer"|"submitted"|"published"|"not_eligible";
+export type DirectoryProgress="pending_review"|"researching"|"needs_customer"|"submitted"|"published"|"already_listed"|"not_eligible";
 export type DirectoryTarget={id:string;name:string;type:"national"|"state"|"local"|"research";url:string;cost:"free"|"membership"|"unknown";status:DirectoryProgress;evidenceUrl:string;note:string};
 export type DirectoryData={city:string;state:string;postal:string;industry:string;serviceArea:boolean;selected:DirectoryTarget[];notes:string};
 export const emptyDirectory:DirectoryData={city:"",state:"",postal:"",industry:"",serviceArea:false,selected:[],notes:""};
@@ -32,18 +32,27 @@ export function validateDirectory(data:DirectoryData){
  if(!data.state.trim()||!data.city.trim())return "Indica ciudad y estado para buscar oportunidades locales.";
  if(data.city.length>100||data.state.length>100||data.postal.length>20||data.notes.length>800)return "Revisa la longitud de los datos ingresados.";
  if(!data.selected.length)return "Selecciona al menos un directorio o la investigación local.";
+ const allowed=new Set([...directoryOptions(data).map(x=>x.id),"research-local"]);
+ if(data.selected.some(t=>!allowed.has(t.id)))return "Revisa tu selección: algunos directorios no corresponden a la ubicación actual.";
  return "";
 }
 export function safeDirectoryUrl(v:string){try{const u=new URL(v);return u.protocol==="https:"&&!u.username&&!u.password&&u.href.length<=750;}catch{return false;}}
 export const directoryStatusNames:Record<DirectoryProgress,string>={
  pending_review:"Por revisar",researching:"Investigando",needs_customer:"Necesita tu ayuda",
- submitted:"Solicitud enviada al directorio",published:"Publicado y verificado",not_eligible:"No elegible"
+ submitted:"Enviado con autorización",published:"Publicado y verificado",already_listed:"Ya existía una ficha verificada",not_eligible:"No elegible"
 };
 export default function DirectoryDiscovery({data,onChange,industry}:{data:DirectoryData;onChange:(d:DirectoryData)=>void;industry:string}){
  const current={...data,industry:data.industry||industry};
  const options=useMemo(()=>directoryOptions(current),[current.city,current.state,current.industry]);
  const selectedIds=new Set(data.selected.map(x=>x.id));
- const patch=(key:keyof DirectoryData,value:string|boolean)=>onChange({...data,[key]:value});
+ const patch=(key:keyof DirectoryData,value:string|boolean)=>{
+  const next={...data,[key]:value};
+  if(key==="city"||key==="state"){
+   const allowed=new Set([...directoryOptions(next).map(x=>x.id),"research-local"]);
+   next.selected=data.selected.filter(t=>allowed.has(t.id)).map(t=>t.id==="research-local"?researchTarget(next):t);
+  }
+  onChange(next);
+ };
  const toggle=(id:string)=>{
   const next=data.selected.filter(x=>x.id!==id);
   if(!selectedIds.has(id)){
