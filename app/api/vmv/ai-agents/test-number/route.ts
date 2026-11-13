@@ -145,8 +145,8 @@ export async function POST(req:NextRequest){
  const action=xmlEscape(base+path+"?selection=menu");
  return twiml(
   '<Gather input="dtmf" numDigits="1" timeout="8" method="POST" action="'+action+'">'+
-    say("Bienvenido a VMV. Para Smart Call y traducción, marca uno. Para hablar con el agente de inteligencia artificial, marca dos.","es-ES")+
-    say("For Smart Call and translation, press one. To speak with our AI assistant, press two.","en-US")+
+    say("Bienvenido a VMV Business. Para una llamada con traducción, marca uno. Para hablar con nuestro asistente virtual, marca dos.","es-ES")+
+    say("For a translated call, press one. For our virtual assistant, press two.","en-US")+
   '</Gather>'+
   (originalSmartCallUrl()?'<Redirect method="POST">'+xmlEscape(originalSmartCallUrl()!)+'</Redirect>':"<Hangup/>")
  );
