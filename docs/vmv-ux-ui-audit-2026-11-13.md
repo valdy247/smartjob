@@ -52,3 +52,42 @@ Propuesta: mapear **fondo**, **superficie**, **texto fuerte**, **texto secundari
 7. **P2 · QA transversal:** estados vacíos, carga, error, foco, contraste, navegación predecible, persistencia y pruebas de idioma.
 
 **Coordinación:** documento para Director y demás responsables; no se ha establecido comunicación directa con otros chats y no se ha publicado manualmente a producción.
+
+
+## Segunda entrega · 13 de noviembre de 2026
+
+**Alcance:** accesibilidad y jerarquía nativa de `apps/ios/App.tsx`, más un arreglo mínimo de la compilación web. Los cambios de los demás colaboradores en Marketing, AI Agents y Web Studio fueron conservados.
+
+### Implementado en iOS (código, sin afirmar QA de dispositivo)
+
+- Home: las tres tarjetas secundarias Web Services, AI Agents y Marketing ahora son `Pressable` accesibles. Abren la pestaña **Servicios** y el catálogo existente; **no** simulan abrir una pantalla nativa del servicio ni integraciones no disponibles.
+- Dock: Inicio / Servicios / Llamadas / Traductor / Cuenta muestran icono **y texto traducido**, con selección distinguible y botón central dentro del dock.
+- Llamadas: Teclado / Historial / Contactos tienen nombres visibles traducidos y objetivos táctiles verticalmente más cómodos.
+- Selector de idioma de interfaz: switch de banderas 🇪🇸/🇺🇸, estado radio y marca visible. Conserva la lógica persistente existente; el idioma hablado no se cambia.
+- Servicios: las herramientas secundarias planificadas se despliegan al pulsar «Otros servicios». No se han eliminado ofertas ni cambiado permisos, planes o disponibilidad.
+- Al pulsar la pestaña **Servicios**, se regresa al catálogo principal, sin reabrir automáticamente Smart Call. Encabezados de la lista y regreso usan claves bilingües existentes.
+
+Commits propios: `2cc849168322420c2d5c667f6b355589b3a731e9`, `aad9bb76c142e2d3ff42e9b6d6cec4823fcac12b`, `85fb7c327bd91f46f4b8d80f0fd887febf8704b3`, `5d5174fd0c2141c92d41efdcb8b56517ddd24bb9`.
+
+### Compilación web restablecida
+
+Los previews web de varios commits simultáneos presentaron errores de TypeScript en Marketing (no derivados del trabajo nativo). En `app/vista-app/marketing/MarketingActionCenter.tsx` se sustituyó una referencia a `categoryLabel` que ya no estaba importada por el helper de traducción **ya existente** `marketingCategoryLabel(language, effectiveCategory, "")`. No se modificaron IDs de categoría ni datos.
+
+Commit `f8b050d8baa7df8cd077f27b56f73e7b449cd3af`. **Vercel READY** para este SHA: https://smartjob-qquyu5fms-valdys-projects-b97fc7a6.vercel.app/vista-app. Esto valida la compilación y el despliegue web, no constituye un test visual del iPhone.
+
+### Bloqueos comprobados de verificación nativa
+
+1. **GitHub Actions:** los workflows de la rama terminaron con `failure` incluso para commits previos. Los jobs revisados se marcaron fallidos sin pasos ejecutados (`steps: []`, `runner_id: 0`); sus archivos de logs no estaban disponibles. No se puede atribuir ese resultado al código ni presentarlo como TypeScript ejecutado. Requiere revisión del acceso/ejecución de Actions.
+2. **EAS / compilaciones iOS previas:** las compilaciones preview de 11 y 13 de noviembre fallaron en configuración de credenciales, con `You don't have the required permissions` y `AppleAppIdentifierEntity ... action = READ`. Los permisos de la cuenta conectada solo indicaban capacidades `VIEW,RUN`. El código nativo de esta entrega **no llegó a compilarse en ese proceso**. La resolución pertenece al titular con acceso a EAS/Apple; no se modificaron credenciales ni se solicitó otra compilación.
+3. **Pruebas manuales:** sin sesión autenticada, iPhone real ni simulador existente disponible. Siguen pendientes textos largos en ES/EN, accesibilidad VoiceOver, áreas seguras, teclado y capturas antes/después.
+
+### Pendientes que no deben confundirse con correcciones terminadas
+
+- Revisar en iPhone real los anchos efectivos, la legibilidad del dock, los estados del catálogo y la navegación de retorno.
+- Verificar interacción autenticada de Web Studio (seleccionar/editar texto e imágenes, guardar, publicar, historial, contextos móviles) con el equipo responsable.
+- Verificar en móvil los horarios y el comportamiento real de Atención de llamadas de AI Agents sin tocar el backend.
+- Completar migración de textos visibles en Smart Call y iOS al catálogo ES/EN bajo el responsable de Idioma.
+- Consolidar tokens visuales y componentes entre web/nativo gradualmente, sin sustituir el sistema de estilos ni introducir nuevas pantallas ficticias.
+- Mantener pruebas de 360/390/430 px, teclado, foco, contraste y conservación de borradores como salida obligatoria antes de declarar listo.
+
+**Clasificación al cerrar esta entrega:** cambios registrados en GitHub y web `READY`; iOS implementado sin QA real; publicación a producción, compilación iOS y validaciones autenticadas no realizadas.
