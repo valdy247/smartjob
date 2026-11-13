@@ -325,13 +325,23 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   const uploaded:string[]=[];
   let inserted=false;
   try{
+   const {data:existing,error:lookupError}=await client.from("vmv_marketing_requests")
+    .select("id").eq("id",requestId).eq("owner_id",user.id).maybeSingle();
+   if(lookupError)throw lookupError;
+   if(existing){
+    inserted=true;setSubmittedId(String(existing.id).slice(0,8));setWizardStep(4);
+    await clearMarketingDraft(user.id,requestId);setDraftNotice("");setPhotoNotice("");
+    setMessage("Esta solicitud ya estaba guardada. No enviamos un duplicado.");
+    await refresh();return;
+   }
    const mediaPaths:{kind:string;path:string}[]=[];
    if(selected==="google_profile"){
-    const folder=user.id+"/"+crypto.randomUUID();
+    const folder=user.id+"/"+requestId;
     for(const {kind,file} of googleFiles){
      const extension=file.type==="image/png"?"png":"jpg";
      const path=folder+"/"+kind+"."+extension;
      const {error:uploadError}=await client.storage.from("vmv-google-media").upload(path,file,{contentType:file.type,cacheControl:"3600",upsert:false});
+     if(uploadError&&uploadError.message?.toLowerCase().includes("already exists")){mediaPaths.push({kind,path});continue;}
      if(uploadError)throw new Error("No se pudo guardar la imagen "+kind+". "+uploadError.message);
      uploaded.push(path);mediaPaths.push({kind,path});
     }
@@ -346,12 +356,20 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     ...(selected==="seo_improvement"?{web_repair_data:webRepair}:{}),
     ...(selected==="directory_listings"?{directory_data:{...directoryData,industry:effectiveCategory}}:{})
    }).select("id").single();
-   if(insertError)throw insertError;
+   if(insertError){
+    const {data:alreadySaved}=await client.from("vmv_marketing_requests")
+     .select("id").eq("id",requestId).eq("owner_id",user.id).maybeSingle();
+    if(!alreadySaved)throw insertError;
+    inserted=true;
+    setSubmittedId(String(alreadySaved.id).slice(0,8));setWizardStep(4);
+    await clearMarketingDraft(user.id,requestId);setDraftNotice("");setPhotoNotice("");
+    setMessage("Tu solicitud ya estaba recibida. No se envió de nuevo.");
+    await refresh();return;
+   }
    inserted=true;
    const savedId=String(data.id).slice(0,8);
    setSubmittedId(savedId);setWizardStep(4);
    await clearMarketingDraft(user.id,requestId);setDraftNotice("");setPhotoNotice("");
-   await clearMarketingDraft();setDraftNotice("");setPhotoNotice("");
    setMessage("Solicitud #"+requestId+" guardada con sus datos"+(uploaded.length?" y "+uploaded.length+" imágenes":"")+". No se ha publicado en Google.");
    setGoal("");setConsent(false);setGoogleMedia(emptyMedia);
    await refresh();
