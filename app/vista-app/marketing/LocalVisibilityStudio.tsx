@@ -2,6 +2,8 @@
 import {useState} from "react";
 import {ArrowUpRight,CheckCircle2,ChevronDown,ClipboardCopy,ExternalLink,Globe2,MapPinned,RefreshCw,Search,ShieldCheck,TrendingUp} from "lucide-react";
 import styles from "./LocalVisibilityStudio.module.css";
+import {useInterfaceLanguage} from "@/lib/i18n-web";
+import {t,type MessageKey,type InterfaceLanguage} from "@/lib/i18n";
 
 export type LocalProfile={
  business:string;industry:string;website:string;phone:string;address:string;
@@ -18,130 +20,130 @@ const directories=[
  {id:"yelp",name:"Yelp for Business",url:"https://biz.yelp.com/",note:"Directorio y reputación local · Reclama tu ficha",method:"Publicación mediante portal; integración de gestión exige acuerdo con Yelp"}
 ] as const;
 const serviceCodeByDirectory={google:"google_profile",bing:"bing_places",apple:"apple_maps",yelp:"yelp_profile"} as const;
-const statusLabels:Record<ListingStatus,string>={
- not_started:"Sin empezar",in_progress:"En trámite",self_reported:"Completado según tú"
-};
+
 function Field({label,value,onChange,placeholder}:{label:string;value:string;onChange:(value:string)=>void;placeholder?:string}){
  return <label className={styles.field}><span>{label}</span><input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} maxLength={250}/></label>;
 }
-function resultTone(value:number|null){return value===null?"Sin datos":value>=90?"Bien":value>=50?"Mejorable":"Prioridad";}
+
 
 export default function LocalVisibilityStudio({profile,onChange,onRequestHelp}:{
  profile:LocalProfile;onChange:(key:EditableKey,value:string)=>void;
  onRequestHelp?:(service:"google_profile"|"bing_places"|"apple_maps"|"yelp_profile")=>void;
 }){
- const [hideAddress,setHideAddress]=useState(true);
+ const {language,translate}=useInterfaceLanguage();
+  const [hideAddress,setHideAddress]=useState(true);
  const [listingStatus,setListingStatus]=useState<Record<string,ListingStatus>>({});
+ const statusLabels:Record<ListingStatus,string>={not_started:translate("marketing.visibility.not_started"),in_progress:translate("marketing.visibility.in_progress"),self_reported:translate("marketing.visibility.completed_self_reported")};
  const [notice,setNotice]=useState("");
  const [audit,setAudit]=useState<Audit|null>(null);
  const [auditError,setAuditError]=useState("");
  const [auditing,setAuditing]=useState(false);
  const details=[
-  ["Nombre",profile.business.trim()],["Sector",profile.industry.trim()&&profile.industry!=="Por definir"?profile.industry:""],
+  ["Nombre",profile.business.trim()],["Sector",profile.industry.trim()&&profile.industry!==translate("marketing.visibility.not_specified")?profile.industry:""],
   ["Teléfono",profile.phone.trim()],["Ciudad",profile.city.trim()],["Estado / región",profile.region.trim()],
   ["Horario",profile.hours.trim()],["Descripción",profile.description.trim()]
  ];
  const ready=details.filter(([,value])=>Boolean(value)).length;
  const exportText=[
   "FICHA EMPRESARIAL · VMV BUSINESS",
-  "Nombre: "+(profile.business.trim()||"Por definir"),
+  "Nombre: "+(profile.business.trim()||translate("marketing.visibility.not_specified")),
   "Industria: "+profile.industry,
-  "Teléfono: "+(profile.phone.trim()||"Por definir"),
-  "Ubicación: "+(hideAddress?"Negocio de área de servicio / dirección privada":([profile.address.trim(),profile.city.trim(),profile.region.trim(),profile.postal.trim()].filter(Boolean).join(", ")||"Por definir")),
-  "Horario: "+(profile.hours.trim()||"Por definir"),
-  "Sitio web: "+(profile.website.trim()||"Por definir"),
-  "Descripción: "+(profile.description.trim()||"Por definir")
+  "Teléfono: "+(profile.phone.trim()||translate("marketing.visibility.not_specified")),
+  "Ubicación: "+(hideAddress?"Negocio de área de servicio / dirección privada":([profile.address.trim(),profile.city.trim(),profile.region.trim(),profile.postal.trim()].filter(Boolean).join(", ")||translate("marketing.visibility.not_specified"))),
+  "Horario: "+(profile.hours.trim()||translate("marketing.visibility.not_specified")),
+  "Sitio web: "+(profile.website.trim()||translate("marketing.visibility.not_specified")),
+  "Descripción: "+(profile.description.trim()||translate("marketing.visibility.not_specified"))
  ].join("\n");
  const copyProfile=async()=>{
-  try{await navigator.clipboard.writeText(exportText);setNotice("Ficha empresarial copiada. Revisa los datos antes de enviarlos a un directorio.");}
-  catch{setNotice("No se pudo copiar. Selecciona y copia la información manualmente.");}
+  try{await navigator.clipboard.writeText(exportText);setNotice(translate("marketing.visibility.business_profile_copied_review_the_details_before_su"));}
+  catch{setNotice(translate("marketing.visibility.couldn_t_copy_select_and_copy_the_information_manual"));}
  };
  const auditSite=async()=>{
   setAudit(null);setAuditError("");
-  if(!profile.website.trim()){setAuditError("Introduce la dirección pública de tu web para analizarla.");return;}
+  if(!profile.website.trim()){setAuditError(translate("marketing.visibility.enter_your_public_website_address_to_analyze_it"));return;}
   let parsed:URL;
   try{parsed=new URL(profile.website.trim());if(!["http:","https:"].includes(parsed.protocol))throw new Error();}
-  catch{setAuditError("Escribe la URL completa de tu web, por ejemplo https://minegocio.com");return;}
+  catch{setAuditError(translate("marketing.visibility.enter_the_full_website_url_for_example_https_mybusin"));return;}
   setAuditing(true);
   try{
    const response=await fetch("/api/marketing/site-audit?url="+encodeURIComponent(parsed.toString()));
    const result=await response.json() as Audit&{error?:string};
-   if(!response.ok)throw new Error(result.error||"No fue posible analizar la web.");
+   if(!response.ok)throw new Error(result.error||translate("marketing.visibility.couldn_t_analyze_the_website"));
    setAudit(result);
-  }catch(err){setAuditError(err instanceof Error?err.message:"No fue posible analizar la web.");}
+  }catch(err){setAuditError(err instanceof Error?err.message:translate("marketing.visibility.couldn_t_analyze_the_website"));}
   finally{setAuditing(false);}
  };
  return <div className={styles.root}>
   <header className={styles.header}>
-   <span className={styles.overline}><MapPinned size={16}/> VISIBILIDAD LOCAL · PILOTO</span>
-   <h2>Haz que encuentren tu negocio.</h2>
-   <p>Una ficha coherente para presentar tu empresa en buscadores y directorios. Los registros se realizan en cada plataforma con tu autorización; VMV aún no publica automáticamente.</p>
+   <span className={styles.overline}><MapPinned size={16}/> {translate("marketing.visibility.local_visibility_pilot")}</span>
+   <h2>{translate("marketing.visibility.help_customers_find_your_business")}</h2>
+   <p>{translate("marketing.visibility.a_consistent_business_listing_for_search_engines_and")}</p>
   </header>
   <div className={styles.summary}>
-   <div><strong>{ready} de {details.length}</strong><span>Datos esenciales preparados</span></div>
-   <div><strong>{Object.values(listingStatus).filter(v=>v==="in_progress"||v==="self_reported").length} de {directories.length}</strong><span>Directorios iniciados (declarado)</span></div>
+   <div><strong>{ready} de {details.length}</strong><span>{translate("marketing.visibility.essential_details_completed")}</span></div>
+   <div><strong>{Object.values(listingStatus).filter(v=>v==="in_progress"||v==="self_reported").length} de {directories.length}</strong><span>{translate("marketing.visibility.directories_started_self_reported")}</span></div>
   </div>
   <section className={styles.panel}>
-   <div className={styles.sectionHeader}><div><span>01 · UNA SOLA FICHA</span><h3>Información para directorios</h3></div><button type="button" onClick={()=>void copyProfile()} className={styles.copy}><ClipboardCopy size={16}/> Copiar ficha</button></div>
-   <p className={styles.muted}>Usa exactamente el mismo nombre comercial, teléfono y datos de ubicación en cada plataforma. No añadas palabras clave al nombre si no forman parte de tu marca real.</p>
+   <div className={styles.sectionHeader}><div><span>{translate("marketing.visibility.01_one_business_profile")}</span><h3>{translate("marketing.visibility.information_for_directories")}</h3></div><button type="button" onClick={()=>void copyProfile()} className={styles.copy}><ClipboardCopy size={16}/> {translate("marketing.visibility.copy_business_profile")}</button></div>
+   <p className={styles.muted}>{translate("marketing.visibility.use_the_same_official_business_name_phone_and_locati")}</p>
    <div className={styles.grid}>
-    <Field label="Nombre comercial" value={profile.business} onChange={v=>onChange("business",v)} placeholder="Nombre oficial de tu empresa"/>
-    <div className={styles.readonlyField}><span>Industria</span><strong>{profile.industry||"Por definir"}</strong><small>Se selecciona en Diagnóstico</small></div>
-    <Field label="Teléfono de atención" value={profile.phone} onChange={v=>onChange("phone",v)} placeholder="+1 555 123 4567"/>
-    <Field label="Ciudad" value={profile.city} onChange={v=>onChange("city",v)} placeholder="Ciudad donde operas"/>
-    <Field label="Estado o región" value={profile.region} onChange={v=>onChange("region",v)} placeholder="Georgia"/>
-    <Field label="Sitio web (opcional)" value={profile.website} onChange={v=>{onChange("website",v);setAudit(null);setAuditError("");}} placeholder="https://tusitio.com"/>
+    <Field label={translate("marketing.visibility.business_name")} value={profile.business} onChange={v=>onChange("business",v)} placeholder={translate("marketing.visibility.your_official_business_name")}/>
+    <div className={styles.readonlyField}><span>{translate("marketing.visibility.industry")}</span><strong>{profile.industry||translate("marketing.visibility.not_specified")}</strong><small>{translate("marketing.visibility.selected_in_diagnosis")}</small></div>
+    <Field label={translate("marketing.visibility.business_phone")} value={profile.phone} onChange={v=>onChange("phone",v)} placeholder="+1 555 123 4567"/>
+    <Field label={translate("marketing.visibility.city")} value={profile.city} onChange={v=>onChange("city",v)} placeholder={translate("marketing.visibility.city_where_you_operate")}/>
+    <Field label={translate("marketing.visibility.state_or_region")} value={profile.region} onChange={v=>onChange("region",v)} placeholder="Georgia"/>
+    <Field label={translate("marketing.visibility.website_optional")} value={profile.website} onChange={v=>{onChange("website",v);setAudit(null);setAuditError("");}} placeholder="https://tusitio.com"/>
    </div>
    <details className={styles.extras}>
-    <summary><span><strong>Horarios, dirección y descripción</strong><small>Detalles opcionales · puedes completarlos después</small></span><ChevronDown size={18}/></summary>
+    <summary><span><strong>{translate("marketing.visibility.hours_address_and_description")}</strong><small>{translate("marketing.visibility.optional_details_finish_them_later")}</small></span><ChevronDown size={18}/></summary>
     <div className={styles.extraBody}>
-     <Field label="Horario de atención" value={profile.hours} onChange={v=>onChange("hours",v)} placeholder="Ej. Lun–Vie 9:00–17:00"/>
-     <div className={styles.hoursPresets} aria-label="Horarios habituales">
+     <Field label={translate("marketing.visibility.business_hours")} value={profile.hours} onChange={v=>onChange("hours",v)} placeholder="Ej. Lun–Vie 9:00–17:00"/>
+     <div className={styles.hoursPresets} aria-label={translate("marketing.visibility.typical_hours")}>
       {([
        ["Lun–Vie","Lun–Vie 9:00–17:00"],["Todos los días","Lun–Dom 9:00–17:00"],["Con cita","Solo con cita previa"]
       ] as const).map(([label,value])=><button type="button" key={label} onClick={()=>onChange("hours",value)} aria-pressed={profile.hours===value}>{label}</button>)}
      </div>
-     <Field label="Código postal" value={profile.postal} onChange={v=>onChange("postal",v)} placeholder="31901"/>
-     <label className={styles.privacy}><input type="checkbox" checked={hideAddress} onChange={e=>setHideAddress(e.target.checked)}/><span>Mi dirección es privada. No incluirla en los datos copiados para directorios.</span></label>
-     {!hideAddress?<Field label="Dirección comercial pública" value={profile.address} onChange={v=>onChange("address",v)} placeholder="Solo si atiendes clientes en esta dirección"/>:null}
-     <label className={styles.description}><span>Descripción breve del negocio</span><textarea value={profile.description} onChange={e=>onChange("description",e.target.value)} maxLength={500} rows={3} placeholder="Qué ofreces, a quién ayudas y dónde atiendes"/><small>Describe servicios reales sin afirmaciones inventadas.</small></label>
+     <Field label={translate("marketing.visibility.zip_code")} value={profile.postal} onChange={v=>onChange("postal",v)} placeholder="31901"/>
+     <label className={styles.privacy}><input type="checkbox" checked={hideAddress} onChange={e=>setHideAddress(e.target.checked)}/><span>{translate("marketing.visibility.my_address_is_private_do_not_include_it_in_copied_di")}</span></label>
+     {!hideAddress?<Field label={translate("marketing.visibility.public_business_address")} value={profile.address} onChange={v=>onChange("address",v)} placeholder={translate("marketing.visibility.only_if_you_serve_customers_at_this_address")}/>:null}
+     <label className={styles.description}><span>{translate("marketing.visibility.short_business_description")}</span><textarea value={profile.description} onChange={e=>onChange("description",e.target.value)} maxLength={500} rows={3} placeholder={translate("marketing.visibility.what_you_offer_whom_you_help_and_where_you_serve_cus")}/><small>{translate("marketing.visibility.describe_real_services_without_fabricated_claims")}</small></label>
     </div>
    </details>
    {notice?<p className={styles.notice} role="status">{notice}</p>:null}
   </section>
   <section className={styles.panel}>
-   <div className={styles.sectionHeader}><div><span>02 · DIRECTORIOS GRATUITOS</span><h3>Presencia donde buscan clientes</h3></div></div>
-   <p className={styles.muted}>Antes de crear una ficha nueva, busca si ya existe y reclama la tuya para evitar duplicados. Estos botones abren los portales oficiales; los estados son anotaciones manuales, no verificaciones de VMV.</p>
+   <div className={styles.sectionHeader}><div><span>{translate("marketing.visibility.02_free_directories")}</span><h3>{translate("marketing.visibility.be_where_customers_search")}</h3></div></div>
+   <p className={styles.muted}>{translate("marketing.visibility.before_creating_a_listing_check_whether_one_already_")}</p>
    <div className={styles.directories}>
     {directories.map(item=><article key={item.id} className={styles.directory}>
-     <div className={styles.dirHeading}><div><strong>{item.name}</strong><p>{item.note}</p></div><span className={styles.status}>{statusLabels[listingStatus[item.id]||"not_started"]}</span></div>
-     <small>{item.method}</small>
+     <div className={styles.dirHeading}><div><strong>{item.name}</strong><p>{translate(("marketing.visibility."+({google:"marketing.visibility.google_search_and_maps_claim_and_verify_your_busines",bing:"marketing.visibility.bing_and_bing_maps_may_import_details_from_google",apple:"marketing.visibility.apple_maps_and_siri_free_business_listing",yelp:"marketing.visibility.local_directory_and_reputation_claim_your_listing"} as Record<string,string>)[item.id].replace(/^marketing\.visibility\./,"")) as MessageKey)}</p></div><span className={styles.status}>{statusLabels[listingStatus[item.id]||"not_started"]}</span></div>
+     <small>{translate(({google:"marketing.visibility.future_sync_with_web_services_api_subject_to_approva",bing:"marketing.visibility.free_listing_and_verification_on_bing",apple:"marketing.visibility.editing_through_apple_advanced_apis_for_approved_par",yelp:"marketing.visibility.publish_via_portal_management_integration_requires_a"} as Record<string,MessageKey>)[item.id])}</small>
      <div className={styles.directoryActions}>
-      {onRequestHelp?<button type="button" className={styles.requestHelp} onClick={()=>onRequestHelp(serviceCodeByDirectory[item.id])}>Solicitar gestión en VMV</button>:null}
-      <a href={item.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Abrir portal oficial</a>
-      <select aria-label={"Estado de "+item.name} value={listingStatus[item.id]||"not_started"} onChange={e=>setListingStatus(prev=>({...prev,[item.id]:e.target.value as ListingStatus}))}>
-       <option value="not_started">Sin empezar</option>
-       <option value="in_progress">En trámite</option>
-       <option value="self_reported">Ya lo completé</option>
+      {onRequestHelp?<button type="button" className={styles.requestHelp} onClick={()=>onRequestHelp(serviceCodeByDirectory[item.id])}>{translate("marketing.visibility.request_vmv_assistance")}</button>:null}
+      <a href={item.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> {translate("marketing.visibility.open_official_portal")}</a>
+      <select aria-label={translate("undefined")+" "+item.name} value={listingStatus[item.id]||"not_started"} onChange={e=>setListingStatus(prev=>({...prev,[item.id]:e.target.value as ListingStatus}))}>
+       <option value="not_started">{translate("marketing.visibility.not_started")}</option>
+       <option value="in_progress">{translate("marketing.visibility.in_progress")}</option>
+       <option value="self_reported">{translate("marketing.visibility.i_completed_it")}</option>
       </select>
      </div>
     </article>)}
    </div>
-   <p className={styles.fine}>Los estados se muestran solo en esta sesión de prueba. No significan aprobación ni publicación comprobada.</p>
+   <p className={styles.fine}>{translate("marketing.visibility.statuses_are_shown_only_in_this_trial_session_they_d")}</p>
   </section>
   <section className={styles.panel}>
-   <div className={styles.sectionHeader}><div><span>03 · API GRATUITA</span><h3>Auditoría técnica de tu sitio web</h3></div><span className={styles.apiTag}><Globe2 size={14}/> PageSpeed Insights</span></div>
-   <p className={styles.muted}>Analizamos la web para detectar oportunidades técnicas de SEO y velocidad móvil usando la API pública de Google. Las puntuaciones no representan visitas ni ventas.</p>
-   <button type="button" className={styles.auditButton} disabled={auditing} onClick={()=>void auditSite()}><Search size={17}/>{auditing?"Analizando sitio…":"Analizar mi sitio gratis"}{auditing?<RefreshCw className={styles.spin} size={15}/>:<ArrowUpRight size={15}/>}</button>
+   <div className={styles.sectionHeader}><div><span>{translate("marketing.visibility.03_free_api")}</span><h3>{translate("marketing.visibility.technical_website_audit")}</h3></div><span className={styles.apiTag}><Globe2 size={14}/> PageSpeed Insights</span></div>
+   <p className={styles.muted}>{translate("marketing.visibility.we_analyze_technical_seo_and_mobile_speed_opportunit")}</p>
+   <button type="button" className={styles.auditButton} disabled={auditing} onClick={()=>void auditSite()}><Search size={17}/>{auditing?translate("marketing.visibility.analyzing_website"):translate("marketing.visibility.analyze_my_site_for_free")}{auditing?<RefreshCw className={styles.spin} size={15}/>:<ArrowUpRight size={15}/>}</button>
    {auditError?<div className={styles.auditFallback} role="alert"><p className={styles.error}>{auditError}</p>
-    <a href="https://pagespeed.web.dev/" target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Abrir PageSpeed gratuito en Google</a>
+    <a href="https://pagespeed.web.dev/" target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> {translate("marketing.visibility.open_free_google_pagespeed")}</a>
    </div>:null}
    {audit?<div className={styles.auditResult}>
     <div className={styles.scores}>
-     {([["Velocidad móvil",audit.scores.performance],["SEO técnico",audit.scores.seo],["Accesibilidad",audit.scores.accessibility]] as const).map(([label,value])=><div key={label}><strong>{value===null?"—":value+"/100"}</strong><span>{label}</span><small>{resultTone(value)}</small></div>)}
+     {([[translate("marketing.visibility.mobile_speed"),audit.scores.performance],[translate("marketing.visibility.technical_seo"),audit.scores.seo],[translate("marketing.visibility.accessibility"),audit.scores.accessibility]] as const).map(([label,value])=><div key={label}><strong>{value===null?"—":value+"/100"}</strong><span>{label}</span><small>{value===null?translate("marketing.visibility.no_data"):value>=90?translate("marketing.visibility.good"):value>=50?translate("marketing.visibility.needs_improvement"):translate("marketing.visibility.priority")}</small></div>)}
     </div>
-    {audit.recommendations.length>0?<div className={styles.opportunities}><strong><TrendingUp size={16}/> Posibles mejoras detectadas</strong><ul>{audit.recommendations.map((r,i)=><li key={i}>{r}</li>)}</ul></div>:<p className={styles.muted}><CheckCircle2 size={16}/> No se detectaron alertas dentro de las comprobaciones básicas seleccionadas.</p>}
-    <p className={styles.fine}><ShieldCheck size={14}/> Fuente: {audit.source}. Estos resultados pueden cambiar entre mediciones.</p>
+    {audit.recommendations.length>0?<div className={styles.opportunities}><strong><TrendingUp size={16}/> {translate("marketing.visibility.potential_improvements_found")}</strong><ul>{audit.recommendations.map((r,i)=><li key={i}>{r}</li>)}</ul></div>:<p className={styles.muted}><CheckCircle2 size={16}/> {translate("marketing.visibility.no_alerts_were_found_in_the_selected_basic_checks")}</p>}
+    <p className={styles.fine}><ShieldCheck size={14}/> {translate("marketing.visibility.source")} {audit.source}. Estos resultados pueden cambiar entre mediciones.</p>
    </div>:null}
   </section>
  </div>;
