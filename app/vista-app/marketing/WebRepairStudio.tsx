@@ -48,9 +48,21 @@ const actionFromFinding=(id:string,title:string)=>{
  if(/contrast|label|aria|landmark|accessib/.test(key))return "Comprobar y corregir esta barrera de accesibilidad.";
  return "Revisar esta comprobación técnica y determinar si requiere una corrección.";
 };
-function practicalExplanation(a:WebAudit){
+function practicalExplanation(a:WebAudit,en=false){
  const scores=a.scores;
  const parts:string[]=[];
+ if(en){
+  if(scores.performance!==null)parts.push(scores.performance>=90?"The measured speed is good.":"Your website speed has room for improvement.");
+  if(scores.seo!==null&&scores.seo>=95)parts.push("Google scored the technical SEO checks highly.");
+  if(scores.accessibility!==null&&scores.accessibility>=95)parts.push("Automated accessibility checks also scored highly.");
+  const priority=(a.findings||[]).filter(f=>f.title).slice(0,3);
+  if(priority.length){
+   parts.push("Three checks we recommend reviewing:");
+   priority.forEach((f,i)=>parts.push((i+1)+". Review and fix if needed: "+f.title+"."));
+  }else parts.push("No confirmed issues were provided. A technical review is needed before recommending fixes.");
+  parts.push("VMV will review the scope before quoting. Technical scores do not establish lost sales.");
+  return parts.join("\n\n");
+ }
  if(scores.performance!==null){
   parts.push(scores.performance>=90?"La velocidad medida es buena.":"La velocidad puede mejorarse"+(scores.performance>=70?", aunque el resultado actual es razonablemente bueno.":"."));
  }
@@ -108,7 +120,7 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
       <span>{en?"Accessibility":"Accesibilidad"} <strong>{report.scores.accessibility??"—"}/100</strong></span>
      </div>
      <div className={styles.explain}><strong>{report.explanationSource==="ai"?(en?"AI recommendations":"Qué te recomienda la IA"):(en?"What can improve":"Qué podemos mejorar")}</strong>
-      <p>{report.explanation||practicalExplanation(report)}</p>
+      <p>{report.explanation||practicalExplanation(report,en)}</p>
      </div>
      <details className={styles.technical}><summary><FileText size={16}/> {en?"View evidence and technical findings":"Ver problemas y evidencia"}</summary>
       <div className={styles.findings}>{(report.findings||[]).length?(report.findings||[]).map(f=><article key={f.id}><strong>{f.title}</strong><p>{f.description}</p><small>{f.id} · Puntuación de comprobación: {f.score===null?"No disponible":Math.round(f.score*100)+"%"}</small></article>):report.recommendations.map((x,i)=><p key={i}>{i+1}. {x}</p>)}</div>
