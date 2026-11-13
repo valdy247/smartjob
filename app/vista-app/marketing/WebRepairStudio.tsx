@@ -30,6 +30,40 @@ export function validateWebRepair(data:WebRepairData){
  if(data.notes.length>1200)return "El mensaje es demasiado largo.";
  return "";
 }
+// Honest, evidence-linked explanation even when the AI service is unavailable.
+const actionFromFinding=(id:string,title:string)=>{
+ const key=(id+" "+title).toLowerCase();
+ if(/image|imagen|picture|webp|avif|bitmap/.test(key))return "Revisar y optimizar las imágenes señaladas por Google, y volver a medir la carga.";
+ if(/javascript|unused-js|script|third.part/.test(key))return "Comprobar qué scripts son necesarios y reducir el trabajo de código que ralentiza la página.";
+ if(/render.block|critical.request|network.dependency|request.chain/.test(key))return "Revisar los recursos que bloquean la aparición del contenido principal.";
+ if(/largest.contentful|lcp|initial.server|server.response/.test(key))return "Investigar qué demora el contenido principal y probar una mejora concreta.";
+ if(/font|texto visible/.test(key))return "Optimizar la carga de las fuentes para que los textos aparezcan antes.";
+ if(/cache|caché/.test(key))return "Revisar cuánto tiempo se guardan los recursos para acelerar visitas posteriores.";
+ if(/meta.description|document.title|crawl|robots|index/.test(key))return "Revisar esta configuración para ayudar a los buscadores a interpretar la página.";
+ if(/contrast|label|aria|landmark|accessib/.test(key))return "Comprobar y corregir esta barrera de accesibilidad.";
+ return "Revisar esta comprobación técnica y determinar si requiere una corrección.";
+};
+function practicalExplanation(a:WebAudit){
+ const scores=a.scores;
+ const parts:string[]=[];
+ if(scores.performance!==null){
+  parts.push(scores.performance>=90?"La velocidad medida es buena.":"La velocidad puede mejorarse"+(scores.performance>=70?", aunque el resultado actual es razonablemente bueno.":"."));
+ }
+ if(scores.seo!==null&&scores.seo>=95)parts.push("El SEO técnico obtuvo una puntuación alta en las comprobaciones de Google.");
+ if(scores.accessibility!==null&&scores.accessibility>=95)parts.push("La accesibilidad también obtuvo una puntuación alta en las comprobaciones automáticas.");
+ const findings=(a.findings||[]).filter(f=>typeof f.title==="string"&&f.title.trim()).slice(0,20);
+ const candidates=findings.filter(f=>/image|lcp|largest.contentful|script|javascript|render.block|network.dependency|server.response|cache|font|third.part/i.test(f.id+" "+f.title));
+ const chosen=(candidates.length?candidates:findings).slice(0,3);
+ if(chosen.length){
+  parts.push("Para mejorar, estas son las primeras revisiones que proponemos, basadas en los hallazgos de Google:");
+  chosen.forEach((f,i)=>parts.push((i+1)+". "+actionFromFinding(f.id,f.title)+" (Evidencia: "+f.title+")"));
+ }else{
+  parts.push("Google no señaló problemas concretos entre los hallazgos recibidos. No recomendamos reparaciones sin una revisión adicional.");
+ }
+ parts.push("Antes de cambiar tu web, VMV debe comprobar qué solución corresponde a su plataforma y enviarte un presupuesto para aprobar.");
+ return parts.join("\n\n");
+}
+
 export default function WebRepairStudio({site,data,onChange,accessToken}:{site:string;data:WebRepairData;onChange:Dispatch<SetStateAction<WebRepairData>>;accessToken?:string}){
  const [loading,setLoading]=useState(false);
  const [error,setError]=useState("");
@@ -66,8 +100,8 @@ export default function WebRepairStudio({site,data,onChange,accessToken}:{site:s
       <span>SEO <strong>{report.scores.seo??"—"}/100</strong></span>
       <span>Accesibilidad <strong>{report.scores.accessibility??"—"}/100</strong></span>
      </div>
-     <div className={styles.explain}><strong>{report.explanationSource==="ai"?"Explicación con IA":"Explicación sencilla"}</strong>
-      <p>{report.explanation||"Estos números son una revisión técnica. Una puntuación baja puede indicar cosas que afectan la experiencia, pero no garantiza que haya perdido ventas. Más abajo puedes ver los problemas detectados."}</p>
+     <div className={styles.explain}><strong>{report.explanationSource==="ai"?"Qué te recomienda la IA":"Qué podemos mejorar"}</strong>
+      <p>{report.explanation||practicalExplanation(report)}</p>
      </div>
      <details className={styles.technical}><summary><FileText size={16}/> Ver problemas y evidencia</summary>
       <div className={styles.findings}>{(report.findings||[]).length?(report.findings||[]).map(f=><article key={f.id}><strong>{f.title}</strong><p>{f.description}</p><small>{f.id} · Puntuación de comprobación: {f.score===null?"No disponible":Math.round(f.score*100)+"%"}</small></article>):report.recommendations.map((x,i)=><p key={i}>{i+1}. {x}</p>)}</div>
