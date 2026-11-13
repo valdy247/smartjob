@@ -2,6 +2,7 @@ import type {Config,Data} from "@puckeditor/core";
 import type {CSSProperties} from "react";
 import {safeWebImageUrl,webPrimaryContact,type WebSiteContent} from "./web-services-site";
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
+import {visualBlocks,VISUAL_BLOCK_NAMES,normalizeVisualProps,type VisualBlockName} from "./web-builder-visual-blocks";
 
 type ButtonProps={label?:string;url?:string};
 function safeLink(value:unknown):string{
@@ -19,11 +20,11 @@ function ContactButton({label,url}:ButtonProps){
  return <a className="vmv-site-button" href={safeLink(url)}>{label||"Contáctanos"} <span>↗</span></a>;
 }
 export const VMV_BUILDER_BLOCKS=[
- "Hero","Heading","Text","Image","Services","Benefits","CTA","Quote","Spacer","FAQ","Contact"
+ "Hero","Heading","Text","Image","Services","Benefits","CTA","Quote","Spacer","FAQ","Contact",...VISUAL_BLOCK_NAMES
 ] as const;
 type BlockName=typeof VMV_BUILDER_BLOCKS[number];
 const text=(limit:number)=>(value:unknown)=>typeof value==="string"?value.slice(0,limit):"";
-const fieldSchema:Record<BlockName,Record<string,(value:unknown)=>string>>={
+const fieldSchema:Partial<Record<BlockName,Record<string,(value:unknown)=>string>>>= {
  Hero:{eyebrow:text(70),title:text(160),description:text(650),buttonText:text(45),buttonUrl:text(450)},
  Heading:{text:text(170),subtitle:text(350)},
  Text:{title:text(120),body:text(1800)},
@@ -49,8 +50,11 @@ export function normalizeBuilderDocument(input:unknown):Data{
   let id=typeof props.id==="string"&&/^[a-z0-9-]{3,80}$/i.test(props.id)?props.id:"node-"+index;
   if(used.has(id))id="node-"+index;
   used.add(id);
+  if(VISUAL_BLOCK_NAMES.includes(kind as VisualBlockName)){
+   return [{type:kind,props:{id,...normalizeVisualProps(kind as VisualBlockName,props)}}];
+  }
   const safe:Record<string,string>={id};
-  for(const [field,sanitize] of Object.entries(fieldSchema[kind])){
+  for(const [field,sanitize] of Object.entries(fieldSchema[kind]||{})){
    if(field==="url")safe[field]=safeWebImageUrl(sanitize(props[field]))||"";
    else if(field==="buttonUrl")safe[field]=safeLink(sanitize(props[field]));
    else safe[field]=sanitize(props[field]);
@@ -60,9 +64,14 @@ export function normalizeBuilderDocument(input:unknown):Data{
  });
  const sourceRoot=raw.root&&typeof raw.root==="object"?raw.root as Record<string,unknown>:{};
  const rawProps=sourceRoot.props&&typeof sourceRoot.props==="object"?sourceRoot.props as Record<string,unknown>:{};
- const palette=["violet","mint","amber","ink"].includes(String(rawProps.palette))?String(rawProps.palette):"violet";
- const font=["modern","editorial"].includes(String(rawProps.font))?String(rawProps.font):"modern";
- return {content,root:{props:{palette,font}}} as Data;
+ const palette=["violet","mint","amber","ink","rose","forest","ocean","terracotta","charcoal"].includes(String(rawProps.palette))?String(rawProps.palette):"violet";
+ const font=["modern","editorial","rounded","geometric"].includes(String(rawProps.font))?String(rawProps.font):"modern";
+ const style=["light","dark","warm","editorial","bold"].includes(String(rawProps.style))?String(rawProps.style):"light";
+ const width=["regular","wide"].includes(String(rawProps.width))?String(rawProps.width):"regular";
+ const motion=rawProps.motion==="subtle"?"subtle":"off";
+ const accent=typeof rawProps.accentColor==="string"&&/^#[0-9a-f]{6}$/i.test(rawProps.accentColor)?rawProps.accentColor:"";
+ const logo=safeWebImageUrl(String(rawProps.logo||""))||"";
+ return {content,root:{props:{palette,font,style,width,motion,accentColor:accent,logo}}} as Data;
 }
 export function starterBuilderDocument(name="Mi negocio",categoryId=""):Data{
  const bakery=["bakery","catering","cafe","restaurant","food-truck"].includes(categoryId);
@@ -108,22 +117,46 @@ export const builderConfig:Config={
   fields:{
    palette:{type:"select",options:[
     {label:"Lavanda",value:"violet"},{label:"Menta",value:"mint"},
-    {label:"Dorado",value:"amber"},{label:"Grafito",value:"ink"}
+    {label:"Dorado",value:"amber"},{label:"Grafito",value:"ink"},
+    {label:"Rosa suave",value:"rose"},{label:"Bosque",value:"forest"},
+    {label:"Océano",value:"ocean"},{label:"Terracota",value:"terracotta"},
+    {label:"Carbón",value:"charcoal"}
    ]},
-   font:{type:"select",options:[{label:"Moderna",value:"modern"},{label:"Editorial",value:"editorial"}]}
+   font:{type:"select",options:[
+    {label:"Moderna",value:"modern"},{label:"Editorial",value:"editorial"},
+    {label:"Redondeada",value:"rounded"},{label:"Geométrica",value:"geometric"}
+   ]},
+   style:{type:"select",options:[
+    {label:"Claro",value:"light"},{label:"Oscuro",value:"dark"},
+    {label:"Cálido",value:"warm"},{label:"Editorial",value:"editorial"},{label:"Atrevido",value:"bold"}
+   ]},
+   width:{type:"select",options:[{label:"Cómodo",value:"regular"},{label:"Amplio",value:"wide"}]},
+   accentColor:{type:"text"},
+   motion:{type:"select",options:[{label:"Sin animaciones",value:"off"},{label:"Suaves",value:"subtle"}]},
+   logo:{type:"custom",render:({value,onChange})=><BuilderImageField value={typeof value==="string"?value:""} onChange={onChange}/>}
+
   },
-  defaultProps:{palette:"violet",font:"modern"},
-  render:({children,palette,font}:{children?:React.ReactNode;palette?:string;font?:string})=>{
+  defaultProps:{palette:"violet",font:"modern",style:"light",width:"regular",motion:"off",accentColor:"",logo:""},
+  render:({children,palette,font,style,width,motion,accentColor}:{children?:React.ReactNode;palette?:string;font?:string;style?:string;width?:string;motion?:string;accentColor?:string})=>{
    const colors:Record<string,{accent:string,pale:string}>={
-    violet:{accent:"#8e5de4",pale:"#f0e9fd"},
-    mint:{accent:"#198d74",pale:"#e5f8f0"},
-    amber:{accent:"#a97b26",pale:"#fff4d8"},
-    ink:{accent:"#30283a",pale:"#eae8ed"}
+    violet:{accent:"#8e5de4",pale:"#f0e9fd"},mint:{accent:"#198d74",pale:"#e5f8f0"},
+    amber:{accent:"#a97b26",pale:"#fff4d8"},ink:{accent:"#30283a",pale:"#eae8ed"},
+    rose:{accent:"#b64b70",pale:"#fff0f4"},forest:{accent:"#367457",pale:"#e9f4eb"},
+    ocean:{accent:"#267a9c",pale:"#e8f6fb"},terracotta:{accent:"#af6242",pale:"#fbede2"},
+    charcoal:{accent:"#24232b",pale:"#efedf2"}
    };
    const color=colors[palette||"violet"]||colors.violet;
-   const style={"--vmv-accent":color.accent,"--vmv-pale":color.pale,
-    fontFamily:font==="editorial"?'Georgia, "Times New Roman", serif':'ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif'} as CSSProperties;
-   return <div className="vmv-site vmv-site-editor-canvas" style={style}>{children}</div>;
+   const fontFamily:Record<string,string>={
+    modern:'ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif',
+    editorial:'Georgia,"Times New Roman",serif',
+    rounded:'"Trebuchet MS",ui-sans-serif,system-ui,sans-serif',
+    geometric:'"Avenir Next",Montserrat,ui-sans-serif,system-ui,sans-serif'
+   };
+   const css={"--vmv-accent":/^#[0-9a-f]{6}$/i.test(accentColor||"")?accentColor:color.accent,
+    "--vmv-pale":color.pale,fontFamily:fontFamily[font||"modern"]||fontFamily.modern
+   } as CSSProperties;
+   return <div className="vmv-site vmv-site-editor-canvas" data-site-style={style||"light"}
+    data-site-width={width||"regular"} data-motion={motion||"off"} style={css}>{children}</div>;
   }
  },
  components:{
@@ -184,8 +217,8 @@ export const builderConfig:Config={
   Quote:{
    label:"Testimonio",
    fields:{quote:{type:"textarea"},author:basicText},
-   defaultProps:{quote:"La experiencia fue excepcional.",author:"Cliente"},
-   render:({quote,author})=><blockquote className="vmv-site-quote"><p>“{quote}”</p><footer>{author}</footer></blockquote>
+   defaultProps:{quote:"",author:""},
+   render:({quote,author})=>quote?<blockquote className="vmv-site-quote"><p>“{quote}”</p>{author?<footer>{author}</footer>:null}</blockquote>:null
   },
   Spacer:{
    label:"Separador",
@@ -211,6 +244,7 @@ export const builderConfig:Config={
     {typeof phone==="string"&&/^\+?[\d ()-]{7,36}$/.test(phone)?<a href={"tel:"+phone.replace(/[^\d+]/g,"")}>{phone}</a>:null}
     {address?<p>{address}</p>:null}
    </section>
-  }
+  },
+  ...visualBlocks
  }
 };
