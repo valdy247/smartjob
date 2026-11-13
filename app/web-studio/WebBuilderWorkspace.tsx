@@ -11,6 +11,7 @@ import WebSiteIntake from "./WebSiteIntake";
 import type {SiteIntake,SiteProposal} from "@/lib/web-builder-templates";
 import {WEBSITE_STYLES,restyleWebsiteDocument,type WebsiteStyleId} from "@/lib/web-builder-safe-styles";
 import BuilderHistoryControls from "./BuilderHistoryControls";
+import BuilderSelectedActions from "./BuilderSelectedActions";
 import {WebsiteChrome,websiteVisualStyle} from "@/lib/web-site-chrome";
 import {familyForCategory} from "@/lib/web-builder-templates";
 import RequestForm from "@/app/sites/[slug]/RequestForm";
@@ -696,7 +697,8 @@ export default function WebBuilderWorkspace(){
      </section>:null}
      <div className={styles.puckShell} style={{display:previewMode?"none":undefined}}>
       <Puck key={page.id+"-"+refreshKey} config={builderConfig} dnd={{enableDragHandle:true}}
-       overrides={{headerActions:({children})=><><BuilderHistoryControls/>{children}</>}}
+       overrides={{headerActions:({children})=><><BuilderHistoryControls/>{children}</>,
+        actionBar:({children,label})=><BuilderSelectedActions label={label}>{children}</BuilderSelectedActions>}}
        data={initialDocument} height="75vh"
        onChange={data=>setDocument(data)}
        onPublish={publish} />
