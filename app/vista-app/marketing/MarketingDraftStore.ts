@@ -30,7 +30,7 @@ export function readMarketingDraft(uid:string|null):StoredMarketingDraft|null{
   const storage=storageFor(uid),key=storeKey(uid),raw=storage.getItem(key);
   if(!raw)return null;
   const value=JSON.parse(raw) as unknown;
-  if(!valid(value)||value.ownerId!==uid){storage.removeItem(key);return null;}
+  if(!valid(value)||value.ownerId!==uid){storage.removeItem(key);if(value&&typeof value==="object"&&typeof (value as {requestId?:unknown}).requestId==="string")void clearMarketingDraft(uid,(value as {requestId:string}).requestId);return null;}
   return value;
  }catch{return null;}
 }
