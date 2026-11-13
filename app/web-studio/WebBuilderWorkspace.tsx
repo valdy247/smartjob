@@ -352,6 +352,28 @@ export default function WebBuilderWorkspace(){
  async function publish(value:Data){
   if(!page)return;
   if(busy){setNotice("Aún se está guardando. Pulsa Publicar nuevamente.");return;}
+  const normalized=normalizeBuilderDocument(value);
+  const warnings:string[]=[];
+  const hasRealContact=normalized.content.some(block=>{
+   if(block.type!=="Contact")return false;
+   return Boolean(String(block.props?.email||"").trim()||String(block.props?.phone||"").trim());
+  });
+  if(!hasRealContact&&!(site?.inquiries_enabled&&page.slug==="home")){
+   warnings.push("No hay correo, teléfono ni formulario de solicitud activo en esta página.");
+  }
+  if(normalized.content.some(block=>block.type==="HeroVisual"&&!block.props?.image)){
+   warnings.push("La portada contiene un espacio para foto sin imagen.");
+  }
+  const emptyCards=normalized.content.some(block=>["OfferingGrid","PhotoGallery","ProjectShowcase","TeamGrid"].includes(block.type)
+   &&Array.isArray(block.props?.items)&&block.props.items.some((item:unknown)=>
+    item&&typeof item==="object"&&!Boolean((item as {image?:string}).image)));
+  if(emptyCards)warnings.push("Hay tarjetas o galerías sin fotografías.");
+  if(normalized.content.some(block=>block.type==="OfferingGrid"
+    &&(!Array.isArray(block.props?.items)||block.props.items.length===0))){
+   warnings.push("Existe un catálogo de productos o servicios sin elementos.");
+  }
+  if(warnings.length&&!window.confirm("Antes de publicar, revisa:\n\n• "+warnings.join("\n• ")+
+    "\n\n¿Quieres publicar de todas formas?"))return;
   setBusy(true);setSavePhase("saving");setError("");setNotice("");
   try{
    const updated=await saveDraft(value);
