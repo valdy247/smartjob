@@ -3,6 +3,7 @@ import BuilderEditableImage from "@/app/web-studio/BuilderEditableImage";
 import {normalizeImageSettings} from "./web-builder-images";
 import type {CSSProperties} from "react";
 import {safeWebImageUrl,webPrimaryContact,type WebSiteContent} from "./web-services-site";
+import {normalizeSocialLinks} from "./web-builder-social";
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
 import {numericEditorField,colorEditorField,fontEditorField} from "@/app/web-studio/BuilderContextFields";
 import {BuilderSectionTargets} from "@/app/web-studio/BuilderSectionTargets";
@@ -127,7 +128,8 @@ export function normalizeBuilderDocument(input:unknown):Data{
  const logo=safeWebImageUrl(String(rawProps.logo||""))||"";
  const family=["bakery","construction","professional","beauty","creative"].includes(String(rawProps.family))?String(rawProps.family):"";
  const language=rawProps.language==="en"?"en":"es";
- return {content,root:{props:{palette,font,style,width,motion,accentColor:accent,logo,family,language}}} as Data;
+ const socialLinks=normalizeSocialLinks(rawProps.socialLinks);
+ return {content,root:{props:{palette,font,style,width,motion,accentColor:accent,logo,family,language,socialLinks}}} as Data;
 }
 export function starterBuilderDocument(name="Mi negocio",categoryId=""):Data{
  const bakery=["bakery","catering","cafe","restaurant","food-truck"].includes(categoryId);
