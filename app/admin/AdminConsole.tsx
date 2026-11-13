@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type {LucideIcon} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
+import CaseAttachments from "@/components/CaseAttachments";
 import styles from "./console.module.css";
 
 type Source="marketing"|"support"|"provisioning"|"domain";
@@ -32,7 +33,7 @@ type StaffPayload={staff:Operator[];canManage:boolean};
 type BillingPayload={accounts:Billing[];failures:{bridge_sid:string;owner_id:string;status:string;error_code:string;started_at:string}[];failureCount:number;note:string};
 type SettingsPayload={settings:{key:string;value:Record<string,unknown>;updated_at:string}[]};
 type ClientPayload={clients:Client[];total:number;truncated:boolean};
-type Overview={role:"admin"|"agent";cases:CaseRow[];staff:Operator[];total:number;truncated:boolean;
+type Overview={role:"admin"|"agent";actorId:string;cases:CaseRow[];staff:Operator[];total:number;truncated:boolean;
  failedCalls30d:number|null;sources:Record<Source,number>};
 
 const uuid=(value:string)=>/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
@@ -108,6 +109,7 @@ export default function AdminConsole(){
  const [serviceFilter,setServiceFilter]=useState("all");
  const [clientFilter,setClientFilter]=useState<string|null>(null);
  const [order,setOrder]=useState<"updated"|"oldest">("updated");
+ const [dueOnly,setDueOnly]=useState(false);
  const [draftMessage,setDraftMessage]=useState("");
  const [messageKind,setMessageKind]=useState<"message"|"internal_note">("message");
  const [stage,setStage]=useState("");
@@ -123,6 +125,7 @@ export default function AdminConsole(){
  const [team,setTeam]=useState<StaffPayload|null>(null);
  const [billing,setBilling]=useState<BillingPayload|null>(null);
  const [settings,setSettings]=useState<SettingsPayload|null>(null);
+ const [audit,setAudit]=useState<{events:{id:number;actor_id:string;action:string;source:string;source_id:string|null;created_at:string}[]}|null>(null);
  const [staffId,setStaffId]=useState("");
  const [staffRole,setStaffRole]=useState<"agent"|"admin">("agent");
  const [slaDays,setSlaDays]=useState("3");
@@ -203,7 +206,10 @@ export default function AdminConsole(){
    if(next==="team"&&!team)setTeam(await api<StaffPayload>("view=team"));
    if(next==="services"&&!billing&&overview?.role==="admin")setBilling(await api<BillingPayload>("view=billing"));
    if(next==="settings"&&!settings&&overview?.role==="admin"){
-    const data=await api<SettingsPayload>("view=settings");setSettings(data);
+    const [data,events]=await Promise.all([
+     api<SettingsPayload>("view=settings"),
+     api<{events:{id:number;actor_id:string;action:string;source:string;source_id:string|null;created_at:string}[]}>("view=activity")
+    ]);setSettings(data);setAudit(events);
     const defaults=data.settings.find(s=>s.key==="support_defaults")?.value;
     if(defaults){setSlaDays(String(defaults.sla_days||3));setWelcome(String(defaults.welcome_message||""));}
    }
@@ -282,6 +288,7 @@ export default function AdminConsole(){
  const visible=useMemo(()=>caseRows.filter(c=>{
   if(sourceFilter!=="all"&&c.source!==sourceFilter)return false;
   if(clientFilter&&c.owner_id!==clientFilter)return false;
+  if(dueOnly&&(!c.due_at||isDone(c.status)||Date.parse(c.due_at)>=Date.now()+48*3600000))return false;
   if(serviceFilter!=="all"&&c.service!==serviceFilter)return false;
   if(priorityFilter!=="all"&&c.priority!==priorityFilter)return false;
   if(assigneeFilter==="unassigned"&&c.assigned_to!==null)return false;
@@ -293,7 +300,7 @@ export default function AdminConsole(){
   const q=search.trim().toLowerCase();
   return !q||[c.title,c.description,c.client_name,c.service,c.id].some(x=>x.toLowerCase().includes(q));
  }).sort((a,b)=>order==="oldest"?Date.parse(a.created_at)-Date.parse(b.created_at):
-  Date.parse(b.updated_at)-Date.parse(a.updated_at)),[caseRows,sourceFilter,clientFilter,serviceFilter,priorityFilter,assigneeFilter,stateFilter,search,order]);
+  Date.parse(b.updated_at)-Date.parse(a.updated_at)),[caseRows,sourceFilter,clientFilter,serviceFilter,priorityFilter,assigneeFilter,stateFilter,search,order,dueOnly]);
  const selectedRow=caseRows.find(c=>caseKey(c)===selected)||null;
  const servicesInUse=[...new Set(caseRows.map(c=>c.service))].sort();
  const counts={
@@ -306,14 +313,14 @@ export default function AdminConsole(){
  };
  const openInbox=(opts?:{state?:"new"|"working"|"waiting"|"done";assignee?:string;source?:Source})=>{
   setStateFilter(opts?.state||"all");setAssigneeFilter(opts?.assignee||"all");setSourceFilter(opts?.source||"all");
-  setClientFilter(null);navigate("inbox");
+  setClientFilter(null);setDueOnly(false);navigate("inbox");
  };
  const stats:{title:string;value:number|null;hint:string;Icon:LucideIcon;call:()=>void}[]=[
   {title:"Nuevos",value:counts.new,hint:"Por revisar",Icon:Inbox,call:()=>openInbox({state:"new"})},
   {title:"Sin asignar",value:counts.unassigned,hint:"Necesitan responsable",Icon:UserRound,call:()=>openInbox({assignee:"unassigned"})},
   {title:"En progreso",value:counts.progress,hint:"Trabajo del equipo",Icon:ClipboardCheck,call:()=>openInbox({state:"working"})},
   {title:"Esperando cliente",value:counts.waiting,hint:"Aguardan respuesta o aprobación",Icon:MessageCircle,call:()=>openInbox({state:"waiting"})},
-  {title:"Próximos o vencidos",value:counts.soon,hint:"Plazo menor de 48 horas",Icon:CalendarClock,call:()=>openInbox()},
+  {title:"Próximos o vencidos",value:counts.soon,hint:"Plazo menor de 48 horas",Icon:CalendarClock,call:()=>{openInbox();setDueOnly(true);}},
   {title:"Fallos de llamadas",value:counts.alerts,hint:"Con código de error · 30 días",Icon:TriangleAlert,call:()=>navigate("services")}
  ];
  const nav:{id:Section;title:string;Icon:LucideIcon}[]=[
@@ -419,10 +426,10 @@ export default function AdminConsole(){
      <select aria-label="Estado" value={stateFilter} onChange={e=>setStateFilter(e.target.value as typeof stateFilter)}><option value="all">Todos los estados</option><option value="new">Nuevos</option><option value="working">En progreso</option><option value="waiting">Esperando cliente</option><option value="done">Finalizados</option></select>
      <select aria-label="Servicio" value={serviceFilter} onChange={e=>setServiceFilter(e.target.value)}><option value="all">Todos los servicios</option>{servicesInUse.map(v=><option key={v} value={v}>{serviceLabel(v)}</option>)}</select>
      <select aria-label="Prioridad" value={priorityFilter} onChange={e=>setPriorityFilter(e.target.value)}><option value="all">Todas las prioridades</option>{["low","normal","high","urgent"].map(v=><option key={v} value={v}>{statusLabel(v)}</option>)}</select>
-     <select aria-label="Responsable" value={assigneeFilter} onChange={e=>setAssigneeFilter(e.target.value)}><option value="all">Todos los responsables</option><option value="unassigned">Sin asignar</option>{operators.map(o=><option key={o.user_id} value={o.user_id}>{o.user_id===operators[0]?.user_id?"Operador "+o.user_id.slice(0,6):o.user_id.slice(0,8)}</option>)}</select>
+     <select aria-label="Responsable" value={assigneeFilter} onChange={e=>setAssigneeFilter(e.target.value)}><option value="all">Todos los responsables</option><option value="unassigned">Sin asignar</option><option value={overview?.actorId||"self"}>Asignados a mí</option>{operators.filter(o=>o.user_id!==overview?.actorId).map(o=><option key={o.user_id} value={o.user_id}>{o.user_id===operators[0]?.user_id?"Operador "+o.user_id.slice(0,6):o.user_id.slice(0,8)}</option>)}</select>
      <select aria-label="Orden" value={order} onChange={e=>setOrder(e.target.value as typeof order)}><option value="updated">Actividad reciente</option><option value="oldest">Más antiguos</option></select>
-     {(search||clientFilter||sourceFilter!=="all"||stateFilter!=="all"||serviceFilter!=="all"||priorityFilter!=="all"||assigneeFilter!=="all")?
-      <button type="button" className={styles.clear} onClick={()=>{setSearch("");setClientFilter(null);setSourceFilter("all");setStateFilter("all");setServiceFilter("all");setPriorityFilter("all");setAssigneeFilter("all");}}><FilterX size={15}/>Limpiar</button>:null}
+     {(search||clientFilter||dueOnly||sourceFilter!=="all"||stateFilter!=="all"||serviceFilter!=="all"||priorityFilter!=="all"||assigneeFilter!=="all")?
+      <button type="button" className={styles.clear} onClick={()=>{setSearch("");setClientFilter(null);setDueOnly(false);setSourceFilter("all");setStateFilter("all");setServiceFilter("all");setPriorityFilter("all");setAssigneeFilter("all");}}><FilterX size={15}/>Limpiar</button>:null}
     </div>
     <div className={styles.inboxGrid} data-pane={pane}>
      <section className={styles.caseList}>
@@ -458,6 +465,7 @@ export default function AdminConsole(){
         </div><textarea value={draftMessage} onChange={e=>setDraftMessage(e.target.value)} maxLength={4000} rows={3} placeholder={messageKind==="internal_note"?"Anota algo para el equipo…":"Escribe una respuesta que el cliente verá en su portal…"} aria-label="Nuevo mensaje"/>
         <div className={styles.composerFooter}><small>{messageKind==="message"?"Visible en el portal. No se envía SMS ni email automáticamente.":"Solo para operadores de VMV."}</small>
          <button type="button" className={styles.primary} onClick={()=>void send()} disabled={busy||!draftMessage.trim()}><Send size={15}/>Guardar</button></div></div>
+        <CaseAttachments source={detail.case.source} caseId={detail.case.id}/>
        </div>:<div className={styles.detailContent}><div className={styles.detailBox}><h3>Necesidad del cliente</h3><p>{detail.case.description}</p></div>
         {detail.case.source==="marketing"?<><div className={styles.detailBox}>
           <h3>Presupuesto</h3><p>{typeof detail.record.quoted_price_cents==="number"?dollars(detail.record.quoted_price_cents):"Todavía sin cotizar."}</p>
@@ -577,6 +585,10 @@ export default function AdminConsole(){
      <div className={styles.securityLine}><FileClock size={18}/><div><strong>Historial de eventos</strong><small>Mensajes append-only y bitácora de acciones administrativas</small></div><CheckCircle2 size={16}/></div>
      <div className={styles.securityLine}><CreditCard size={18}/><div><strong>Operaciones monetarias</strong><small>Solo consulta: sin reembolsos, compras ni cargos desde Admin</small></div><LockKeyhole size={16}/></div>
      <a className={styles.textButton} href="/vista-app/soporte">Abrir portal de soporte <ExternalLink size={15}/></a>
+     {overview?.role==="admin"?<div className={styles.contextSection}><h4>Actividad reciente de administradores</h4>
+       {(audit?.events||[]).slice(0,15).map(e=><div key={e.id} className={styles.failure}><FileClock size={14}/><span>{e.action.replaceAll("_"," ")} · {e.source}</span><small>{formatDate(e.created_at)}</small></div>)}
+       {!audit?<p className={styles.info}>Cargando bitácora…</p>:audit.events.length===0?<p className={styles.info}>Todavía sin eventos registrados.</p>:null}
+     </div>:null}
     </section>
    </div>:null}
   </main>

@@ -3,6 +3,7 @@ import {useCallback,useEffect,useMemo,useState} from "react";
 import {ArrowLeft,ArrowRight,CheckCircle2,ChevronRight,Headphones,Inbox,LockKeyhole,
  MessageCircle,Plus,RefreshCw,Send,ShieldCheck,Sparkles,TriangleAlert} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
+import CaseAttachments from "@/components/CaseAttachments";
 import styles from "./support.module.css";
 
 type Source="support"|"marketing";
@@ -150,6 +151,7 @@ export default function SupportPage(){
        <textarea rows={3} maxLength={4000} value={message} onChange={e=>setMessage(e.target.value)} placeholder="Escribe tu respuesta…" aria-label="Responder a VMV"/>
        <div className={styles.composeActions}><small>Los mensajes quedan en tu expediente.</small><button type="button" className={styles.primary} disabled={busy||!message.trim()} onClick={()=>void send()}><Send size={15}/>Enviar</button></div>
       </>}</div>
+      <CaseAttachments source={active.source} caseId={active.id} readOnly={resolved}/>
      </>:<div className={styles.empty}><MessageCircle size={33}/><h2>Tu conversación con VMV</h2><p>Abre una solicitud o crea un ticket de soporte para empezar.</p>
        <button type="button" className={styles.primary} onClick={()=>{setFormOpen(true);setMobile("detail");}}>Nuevo ticket <ChevronRight size={16}/></button></div>}
    </section>

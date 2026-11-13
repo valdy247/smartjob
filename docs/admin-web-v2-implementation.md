@@ -16,8 +16,8 @@ Branch: `feat/vmv-smart-call-control-center`. Scope: `app/admin`, `app/api/admin
 - Clients directory: profile and billing summary read only for admin role.
 - Team: view and manage explicit existing verified staff accounts, admin only; prevent self demotion/revocation and remove last admin.
 - Services: subscription/plan/test-versus-live overview, redacted failed-call diagnostics, no purchase/activation controls.
-- Settings: saved support SLA preference/welcome text, no fake automations.
-- Read-only audit append records for privileged mutations. Calls run with a server-only secret and the caller's authenticated user ID, never client supplied identity.
+- Settings: saved support SLA preference/welcome text, activity log reader, no fake automations.
+- Append-only audit records for privileged mutations, and a recent-activity reader in administrator settings. Calls use the caller’s verified user ID, never a client-supplied identity.
 - UI has mobile list-to-detail-to-context flow, light canvas, dark sidebar, compact typography and real counts. If queues exceed display limits, the UI shows a truncation warning instead of asserting completeness.
 
 ## Security
@@ -34,8 +34,8 @@ Branch: `feat/vmv-smart-call-control-center`. Scope: `app/admin`, `app/api/admin
 - External notification provider approval (SMS/email/push) and delivery status.
 - End-to-end authenticated browser QA with two distinct customer accounts, staff and mobile. DB schema catalog + build alone do not prove workflow.
 - QA of Marketing quote changes and read-back of customer portal using a temporary test case, without modifying real requests.
-- Server-side pagination/search for queues above 150 marketing/support or 100 provisioning/domains.
-- Attachments to support tickets and audit-log reader UI.
+- Server-side pagination/search for queues above 150 marketing/support or 100 provisioning/domains; small-case filters currently operate within the loaded records.
+- Private case attachments (JPG/PNG/WEBP/PDF, max 3 MB) are included with a private Supabase Storage bucket, ownership checks and 60-second signed links. End-to-end browser upload/download QA remains outstanding.
 - Staged production release, SMS deliverability, payment refunds/collections and staff handoff automation.
 - LLC formation: no canonical request backend currently; do not fabricate workflow.
 - Final app navigation link to `/vista-app/soporte` needs coordination with shared interface owners.

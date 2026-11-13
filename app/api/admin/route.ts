@@ -63,7 +63,7 @@ const accountName=(r:Record<string,unknown>)=>
 export async function GET(req:NextRequest){
  const auth=await context(req);
  if("error" in auth)return reply({error:auth.error},auth.status);
- const {db,role}=auth;
+ const {db,role,uid}=auth;
  const url=new URL(req.url),view=url.searchParams.get("view")||"overview";
  try{
  if(view==="overview"){
@@ -92,7 +92,7 @@ export async function GET(req:NextRequest){
    return {...r,client_name:people.get(r.owner_id)||"Cliente",priority:extra?.priority||"normal",
     assigned_to:extra?.assigned_to||null,due_at:extra?.due_at||null};
   }).sort((a,b)=>Date.parse(b.updated_at)-Date.parse(a.updated_at));
-  return reply({role,cases,staff:staff.data||[],total:(m.count||0)+(t.count||0)+(p.count||0)+(d.count||0),
+  return reply({role,actorId:uid,cases,staff:staff.data||[],total:(m.count||0)+(t.count||0)+(p.count||0)+(d.count||0),
     sources:{marketing:m.count||0,support:t.count||0,provisioning:p.count||0,domain:d.count||0},
     truncated:(m.count||0)>150||(t.count||0)>150||(p.count||0)>100||(d.count||0)>100,
     failedCalls30d:errors.error?null:(errors.count||0)});
@@ -152,6 +152,14 @@ export async function GET(req:NextRequest){
   if(accounts.error||errors.error)throw Error("billing_read_failed");
   return reply({accounts:accounts.data||[],failures:errors.data||[],failureCount:errors.count||0,
    note:"Lectura operativa. Stripe TEST no confirma pagos reales ni concede servicios."});
+ }
+ if(view==="activity"){
+  if(role!=="admin")return reply({error:"Solo administradores."},403);
+  const events=await db.from("vmv_admin_audit")
+   .select("id,actor_id,action,source,source_id,created_at")
+   .order("created_at",{ascending:false}).limit(80);
+  if(events.error)throw Error("audit_read_failed");
+  return reply({events:events.data||[]});
  }
  if(view==="settings"){
   if(role!=="admin")return reply({error:"Solo administradores."},403);
