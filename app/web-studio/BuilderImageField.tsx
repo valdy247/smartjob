@@ -5,7 +5,7 @@ import {ImagePlus,MoreVertical,RefreshCw,Trash2,WandSparkles,X} from "lucide-rea
 import {getSupabase} from "@/lib/supabase";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import styles from "./BuilderImageField.module.css";
-type Props={value:string;onChange:(url:string)=>void;kind?:"photo"|"logo"};
+type Props={value:string;onChange:(url:string)=>void;kind?:"photo"|"logo";openRequest?:number};
 const bucket="smartjob-web-images";
 async function shrink(file:File):Promise<Blob>{
  if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw new Error("Solo imágenes JPG, PNG o WebP");
@@ -29,7 +29,7 @@ async function shrink(file:File):Promise<Blob>{
   return converted;
  }finally{bitmap.close();}
 }
-export default function BuilderImageField({value,onChange,kind="photo"}:Props){
+export default function BuilderImageField({value,onChange,kind="photo",openRequest}:Props){
  const [items,setItems]=useState<string[]>([]);
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
@@ -44,6 +44,12 @@ export default function BuilderImageField({value,onChange,kind="photo"}:Props){
  const [confirmDelete,setConfirmDelete]=useState<string|null>(null);
  const triggerRef=useRef<HTMLButtonElement>(null);
  const closeRef=useRef<HTMLButtonElement>(null);
+ const lastOpenRequest=useRef<number|undefined>(undefined);
+ useEffect(()=>{
+  if(!openRequest||openRequest===lastOpenRequest.current)return;
+  lastOpenRequest.current=openRequest;
+  setTab("library");setError("");setPickerOpen(true);
+ },[openRequest]);
  const load=useCallback(async()=>{
   const client=getSupabase();if(!client)return;
   const {data,error:authError}=await client.auth.getUser();
