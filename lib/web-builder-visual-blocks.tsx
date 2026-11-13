@@ -1,5 +1,6 @@
 import type {Config} from "@puckeditor/core";
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
+import {numericEditorField,colorEditorField} from "@/app/web-studio/BuilderContextFields";
 import {safeWebImageUrl} from "./web-services-site";
 
 export type VisualBlockName="HeroVisual"|"OfferingGrid"|"PhotoGallery"|"ProcessSteps"|"ProjectShowcase"|"HoursArea"|"TeamGrid"|"PricingList"|"BeforeAfter"|"FAQList";
@@ -38,33 +39,58 @@ export const visualBlocks:Config["components"]={
    layout:{type:"select",options:[{label:"Dividida",value:"split"},{label:"Fondo completo",value:"cover"},{label:"Editorial",value:"editorial"}]},
    eyebrow:titleField,title:textArea,description:textArea,buttonText:titleField,buttonUrl:titleField,
    image:imgField,imageAlt:titleField,
+   imageWidth:numericEditorField("imageWidth"),
+   imageRadius:numericEditorField("imageRadius"),
+   imageOpacity:numericEditorField("imageOpacity"),
+   imageBorder:numericEditorField("imageBorder"),
+   borderColor:colorEditorField("Color del borde"),
+   imageMoveX:numericEditorField("imageMoveX"),
+   imageMoveY:numericEditorField("imageMoveY"),
    align:{type:"select",options:[{label:"Izquierda",value:"left"},{label:"Centro",value:"center"}]},
    imagePosition:{type:"select",options:[{label:"Centro",value:"center"},{label:"Arriba",value:"top"},{label:"Abajo",value:"bottom"},{label:"Izquierda",value:"left"},{label:"Derecha",value:"right"}]},
    shade:{type:"select",options:[{label:"Suave",value:"soft"},{label:"Medio",value:"medium"},{label:"Alto contraste",value:"strong"}]},
    height:{type:"select",options:[{label:"Normal",value:"normal"},{label:"Alta",value:"tall"}]},
    buttonStyle:{type:"select",options:[{label:"Sólido",value:"solid"},{label:"Contorno",value:"outline"},{label:"Enlace",value:"link"}]}
   },
-  defaultProps:{layout:"split",eyebrow:"",title:"Presenta tu negocio",description:"",buttonText:"Contactar",buttonUrl:"#contacto",image:"",imageAlt:"",align:"left",imagePosition:"center",shade:"medium",height:"normal",buttonStyle:"solid"},
+  defaultProps:{layout:"split",eyebrow:"",title:"Presenta tu negocio",description:"",buttonText:"Contactar",buttonUrl:"#contacto",image:"",imageAlt:"",align:"left",imagePosition:"center",shade:"medium",height:"normal",buttonStyle:"solid",imageWidth:100,imageRadius:0,imageOpacity:0,imageBorder:0,borderColor:"#30243F",imageMoveX:0,imageMoveY:0},
   renderFields:({fields})=><>
    <fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.eyebrow}{fields.title}{fields.description}{fields.buttonText}{fields.buttonUrl}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.align}{fields.height}{fields.buttonStyle}</fieldset>
-   <fieldset className="vmv-puck-field-group"><legend>Imagen</legend>{fields.image}{fields.imageAlt}{fields.imagePosition}{fields.shade}</fieldset>
+   <fieldset className="vmv-puck-field-group"><legend>Imagen · Reemplazar y ajustar</legend>
+    {fields.image}{fields.imageAlt}{fields.imageWidth}{fields.imageRadius}{fields.imageOpacity}
+    {fields.imageBorder}{fields.borderColor}{fields.imageMoveX}{fields.imageMoveY}
+    {fields.imagePosition}{fields.shade}</fieldset>
   </>,
-  render:({layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,height,buttonStyle,puck})=>{
+  render:({layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,height,buttonStyle,imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,puck})=>{
    const href=typeof buttonUrl==="string"&&(buttonUrl.startsWith("#")||buttonUrl.startsWith("mailto:")||buttonUrl.startsWith("tel:"))?buttonUrl:"#contacto";
    const position=["top","bottom","left","right"].includes(imagePosition)?imagePosition:"center";
    const media=photo(image);
+   const width=typeof imageWidth==="number"?Math.max(25,Math.min(100,imageWidth)):100;
+   const opacity=typeof imageOpacity==="number"?Math.max(0,Math.min(100,imageOpacity)):0;
+   const round=typeof imageRadius==="number"?Math.max(0,Math.min(80,imageRadius)):0;
+   const border=typeof imageBorder==="number"?Math.max(0,Math.min(12,imageBorder)):0;
+   const borderPaint=typeof borderColor==="string"&&/^#[\da-f]{6}$/i.test(borderColor)?borderColor:"#30243F";
+   const dx=typeof imageMoveX==="number"?Math.max(-150,Math.min(150,imageMoveX)):0;
+   const dy=typeof imageMoveY==="number"?Math.max(-150,Math.min(150,imageMoveY)):0;
    return <section className="vmv-hero-visual" data-layout={layout||"split"} data-align={align||"left"}
     data-shade={shade||"medium"} data-height={height||"normal"} data-has-image={Boolean(media)||Boolean(puck.isEditing)}>
-    {layout==="cover"?<div className="vmv-hero-cover" style={media?{backgroundImage:"url('"+media.replaceAll("'","%27")+"')",backgroundPosition:position}:undefined} aria-hidden="true"/>:null}
+    {layout==="cover"?<div className="vmv-hero-cover" style={media?{
+     backgroundImage:"url('"+media.replaceAll("'","%27")+"')",backgroundPosition:position,
+     backgroundSize:(100+(100-width)*.5)+"%",opacity:(100-opacity)/100,
+     borderRadius:round+"px",transform:"translate("+dx+"px,"+dy+"px)"
+    }:undefined} aria-hidden="true"/>:null}
     <div className="vmv-hero-content">
      {eyebrow?<span className="vmv-hero-eyebrow">{eyebrow}</span>:null}
      <h1>{title||"Presenta tu negocio"}</h1>
      {description?<p>{description}</p>:null}
      <a className="vmv-site-button" data-button-style={buttonStyle||"solid"} href={href}>{buttonText||"Contactar"} <span aria-hidden="true">↗</span></a>
     </div>
-    {layout!=="cover"&&(media||puck.isEditing)?<div className="vmv-hero-image"><ItemImage src={image} alt={imageAlt||"Imagen de portada"} editing={puck.isEditing}
-     style={{"--vmv-image-position":position} as React.CSSProperties}/></div>:null}
+    {layout!=="cover"&&(media||puck.isEditing)?<div className="vmv-hero-image"
+     style={{width:width+"%",transform:"translate("+dx+"px,"+dy+"px)"}}>
+     <ItemImage src={image} alt={imageAlt||"Imagen de portada"} editing={puck.isEditing}
+      style={{"--vmv-image-position":position,borderRadius:round+"px",
+       borderWidth:border+"px",borderStyle:border?"solid":"none",borderColor:borderPaint,
+       opacity:(100-opacity)/100} as React.CSSProperties}/></div>:null}
    </section>;
   }
  },
@@ -232,6 +258,19 @@ export function normalizeVisualProps(type:VisualBlockName,props:Record<string,un
   let value=typeof props[field]==="string"?props[field].slice(0,max):"";
   if(field==="buttonUrl"&&value&&!/^(#[a-z0-9-]{1,70}|mailto:[^<> ]+|tel:\+?[\d ()-]{7,36})$/i.test(value))value="#contacto";
   safe[field]=value;
+ }
+ if(type==="HeroVisual"){
+  for(const [field,range,fallback] of [
+   ["imageWidth",100,100],["imageRadius",80,0],["imageOpacity",100,0],
+   ["imageBorder",12,0],["imageMoveX",150,0],["imageMoveY",150,0]
+  ] as const){
+   const value=props[field];
+   safe[field]=typeof value==="number"&&Number.isFinite(value)?
+    Math.max(field==="imageMoveX"||field==="imageMoveY"?-150:field==="imageWidth"?25:0,
+     Math.min(range,Math.round(value))):fallback;
+  }
+  safe.borderColor=typeof props.borderColor==="string"&&/^#[\da-f]{6}$/i.test(props.borderColor)?
+   props.borderColor:"#30243F";
  }
  for(const field of schema.images)safe[field]=photo(props[field])||"";
  if(schema.arrays)for(const [key,itemFields] of Object.entries(schema.arrays)){
