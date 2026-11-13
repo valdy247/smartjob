@@ -18,7 +18,7 @@ const safeButtonLink=(v:unknown)=>{
  if(/^#[a-z0-9-]{1,70}$/i.test(s))return s;
  if(/^mailto:[^\s<>]+@[^\s<>]+$/i.test(s))return s;
  if(/^tel:\+?[\d ()-]{7,36}$/.test(s))return s;
- if(s.startsWith("/web/")&&/^\/web\/[a-z0-9-/]{1,120}$/.test(s))return s;
+ if(s==="/web-studio"||/^\/web\/[a-z0-9-]+(?:\/[a-z0-9-]+)?$/.test(s))return s;
  try{
   const url=new URL(s);
   return url.protocol==="https:"&&!url.username&&!url.password?url.href:"#solicitud";
