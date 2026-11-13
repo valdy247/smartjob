@@ -311,3 +311,7 @@
 .businessNote,.businessSuccess,.businessError{font-size:11px;line-height:1.55;margin:0}
 .businessNote{color:#876f85}.businessSuccess{color:#427e5c}.businessError{color:#af3c58}
 @media(max-width:430px){.savedBusinessBox{padding:12px}.businessActions button{min-width:0}}
+
+.saveBusinessInline{width:100%;display:flex;justify-content:center;align-items:center;min-height:46px;border:1px solid #b48aa9;border-radius:11px;background:#fff7fc;color:#814875;font-size:12px;font-weight:850;cursor:pointer}
+.saveBusinessInline:disabled{opacity:.5;cursor:not-allowed}
+.saveBusinessInline:focus-visible{outline:3px solid #b18ab0;outline-offset:2px}
