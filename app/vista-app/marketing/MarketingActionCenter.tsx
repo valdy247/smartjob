@@ -319,17 +319,18 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  },[client,user]);
  const loadSavedBusinesses=async(owner:string)=>{
   if(!client)return;
-  const [saved,profile,agent]=await Promise.all([
+  const [saved,profile,agent,category]=await Promise.all([
    client.from("vmv_marketing_businesses").select("id,owner_id,name,category_id,website_url").eq("owner_id",owner).order("created_at",{ascending:false}).limit(60),
    client.from("smartjob_profiles").select("business_name,website_url").eq("id",owner).maybeSingle(),
-   client.from("vmv_ai_businesses").select("id,name").eq("owner_id",owner).limit(60)
+   client.from("vmv_ai_businesses").select("id,name").eq("owner_id",owner).limit(60),
+   client.from("smartjob_business_category_preferences").select("category_id").eq("owner_id",owner).maybeSingle()
   ]);
   if(saved.error){setBusinessError("No pudimos cargar tus negocios guardados. Reintenta.");return;}
   const records=(saved.data||[]) as SavedBusiness[];
   const known=new Set(records.map(x=>x.name.trim().toLowerCase()));
   const candidates:SavedBusiness[]=[];
   const primary=profile.data?.business_name?.trim();
-  if(primary&&!known.has(primary.toLowerCase())){candidates.push({id:"profile:"+owner,owner_id:owner,name:primary,category_id:savedCategory||industryId||"other",website_url:profile.data?.website_url||null,source:"profile"});known.add(primary.toLowerCase());}
+  if(primary&&!known.has(primary.toLowerCase())){candidates.push({id:"profile:"+owner,owner_id:owner,name:primary,category_id:category.data?.category_id||industryId||"other",website_url:profile.data?.website_url||null,source:"profile"});known.add(primary.toLowerCase());}
   for(const row of agent.data||[]){
    const candidate=String(row.name||"").trim();
    if(!candidate||known.has(candidate.toLowerCase()))continue;
