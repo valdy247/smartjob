@@ -55,6 +55,7 @@ export default function WebBuilderWorkspace(){
  const [view,setView]=useState<View>("sites");
  const [mobileSettings,setMobileSettings]=useState(false);
  const [mobilePageForm,setMobilePageForm]=useState(false);
+ const [mobilePageMenu,setMobilePageMenu]=useState(false);
  const workspaceRef=useRef<HTMLDivElement|null>(null);
  const [compactStudio,setCompactStudio]=useState(false);
  useEffect(()=>{
@@ -581,7 +582,7 @@ export default function WebBuilderWorkspace(){
  }
  function back(){
   if(dirty&&!window.confirm("Hay cambios sin guardar. ¿Salir?"))return;
-  setSite(null);setPage(null);setPublishedIds([]);setPublishedSignatures({});setView("sites");setMobileSettings(false);setMobilePageForm(false);setError("");setNotice("");
+  setSite(null);setPage(null);setPublishedIds([]);setPublishedSignatures({});setView("sites");setMobileSettings(false);setMobilePageForm(false);setMobilePageMenu(false);setError("");setNotice("");
  }
  if(loading)return <main className={styles.loading}>Cargando Web Studio…</main>;
  if(!userId)return <main className={styles.loading}><h2>Inicia sesión para crear tu web</h2>
@@ -633,23 +634,34 @@ export default function WebBuilderWorkspace(){
      onClick={()=>{setView("editor");setMobileSettings(false);setError("");}}>
      <ArrowLeft size={16}/> Editor
     </button>:null}
-    <label className={styles.mobilePageSelect}>
-     <span>Página</span>
-     <select value={page?.id||""} aria-label="Página que estás editando" disabled={busy||!page}
-      onChange={event=>{const chosen=pages.find(p=>p.id===event.target.value);
-       if(chosen){choosePage(chosen);setMobileSettings(false);setMobilePageForm(false);}}}>
-      {pages.map(p=><option key={p.id} value={p.id}>
-       {p.slug==="home"?"Inicio":p.title}
-      </option>)}
-     </select>
-     <ChevronDown size={15} aria-hidden="true"/>
-    </label>
-    <button type="button" className={styles.mobileToolButton} title="Crear otra página"
-     aria-label="Crear otra página" aria-expanded={mobilePageForm}
-     onClick={()=>{setMobilePageForm(v=>!v);setMobileSettings(false);}}><FilePlus2 size={19}/></button>
+    <div className={styles.mobilePageSwitcher}>
+     <button type="button" className={styles.mobilePageTrigger} disabled={busy||!page}
+      aria-label="Seleccionar página" aria-haspopup="menu" aria-controls="vmv-page-choices"
+      aria-expanded={mobilePageMenu}
+      onClick={()=>{setMobilePageMenu(open=>!open);setMobilePageForm(false);setMobileSettings(false);}}>
+      <span>{page?.slug==="home"?"Inicio":page?.title||"Seleccionar página"}</span>
+      <ChevronDown size={16} aria-hidden="true"/>
+     </button>
+     {mobilePageMenu?<div id="vmv-page-choices" className={styles.mobilePageMenu} role="menu"
+      aria-label="Páginas del sitio">
+      {pages.map(p=><button type="button" role="menuitemradio" aria-checked={page?.id===p.id}
+       key={p.id} onClick={()=>{choosePage(p);setMobilePageMenu(false);setMobileSettings(false);setMobilePageForm(false);}}>
+       <span>{p.slug==="home"?"Inicio":p.title}</span>
+       {page?.id===p.id?<span aria-hidden="true">✓</span>:null}
+      </button>)}
+      <button type="button" role="menuitem" className={styles.mobileAddPage}
+       onClick={()=>{setMobilePageMenu(false);setMobilePageForm(true);setMobileSettings(false);}}>
+       <FilePlus2 size={17}/> Agregar página
+      </button>
+     </div>:null}
+    </div>
+    <button type="button" className={styles.mobileToolButton} title={previewMode?"Volver a editar":"Vista previa"}
+     aria-label={previewMode?"Volver al editor":"Vista previa"} aria-pressed={Boolean(previewMode)}
+     onClick={()=>{setView("editor");setPreviewMode(mode=>mode?null:"mobile");setDesignChoice(null);
+      setMobilePageForm(false);setMobilePageMenu(false);setMobileSettings(false);}}><Eye size={19}/></button>
     <button type="button" className={styles.mobileToolButton} title="Ajustes del sitio"
      aria-label="Ajustes del sitio" aria-expanded={mobileSettings}
-     onClick={()=>{setMobileSettings(v=>!v);setMobilePageForm(false);}}>
+     onClick={()=>{setMobileSettings(v=>!v);setMobilePageForm(false);setMobilePageMenu(false);}}>
      <Settings2 size={19}/>
     </button>
    </div>
@@ -705,8 +717,8 @@ export default function WebBuilderWorkspace(){
      data-error={savePhase==="error"}/>
     {savePhase==="saving"?"Guardando cambios…":
      savePhase==="error"?"Error al guardar":
-     dirty?"Cambios por guardar":unpublishedEdits?"Borrador guardado · Sin publicar":
-     publishedHere?"Publicado · Borrador al día":"Borrador guardado · Sin publicar"}
+     dirty?"Cambios pendientes de guardar":unpublishedEdits?"Cambios pendientes de publicar":
+     publishedHere?"Publicado · Borrador guardado":"Borrador guardado · Pendiente de publicar"}
    </div>:null}
    {page?<section className={styles.editorSection} style={{display:view==="editor"?undefined:"none"}}>
     <div className={styles.pageTabs}>{pages.map(p=><button type="button" key={p.id}
@@ -777,7 +789,7 @@ export default function WebBuilderWorkspace(){
      </section>:null}
      {previewMode?<section className={styles.previewOverlay} aria-label="Vista previa del borrador">
       <div className={styles.previewTop}>
-       <strong>Vista previa · Sin publicar</strong>
+       <strong>Vista previa del borrador</strong>
        <div>
         <button type="button" aria-pressed={previewMode==="desktop"} onClick={()=>setPreviewMode("desktop")}>Escritorio</button>
         <button type="button" aria-pressed={previewMode==="mobile"} onClick={()=>setPreviewMode("mobile")}>Móvil</button>
