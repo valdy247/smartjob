@@ -56,7 +56,6 @@ export default function CallControl({onBack}:{onBack:()=>void}){
     message:"Se reproduce el mensaje de cierre y termina la llamada"} as Record<string,string>)[x.decision.action]||"Sin atención");
   }catch(e){setNotice(e instanceof Error?e.message:"No se pudo probar.");}finally{setBusy(false);}
  };
- const hours=policy.agent_mode==="schedule"||policy.translation_mode==="schedule";
  return <div className={styles.root}>
   <button type="button" className={styles.back} onClick={onBack}><ArrowLeft size={16}/> AI Agents</button>
   <header className={styles.hero}><PhoneCall size={24}/><div><small>CONFIGURACIÓN DE LÍNEA</small>
@@ -76,6 +75,26 @@ export default function CallControl({onBack}:{onBack:()=>void}){
        {[10,15,18,20,25,30].map(n=><option key={n} value={n}>{n} segundos</option>)}
       </select></label><small>Intenta llamar al teléfono autorizado. Puede generar cargos telefónicos.</small>
      </>}
+     {policy.agent_enabled&&policy.agent_mode==="schedule"&&<div className={styles.inlineHours}>
+      <h3>Horario del agente IA</h3>
+      <label>Zona horaria del negocio<select value={policy.time_zone} onChange={e=>patch("time_zone",e.target.value)}>
+       {zoneOptions.map(z=><option key={z} value={z}>{z.replace("America/","").replaceAll("_"," ")}</option>)}
+      </select></label>
+      <small>El horario aparece aquí cuando eliges «Por horario».</small>
+      {business&&<label className={styles.toggle}>Usar el horario del negocio
+       <input type="checkbox" checked={policy.use_business_hours}
+        onChange={e=>patch("use_business_hours",e.target.checked)}/></label>}
+      {!policy.use_business_hours&&days.map(d=><div key={d} className={styles.day}>
+       <label className={styles.toggle}><span>{weekLabels[d]}</span><input type="checkbox"
+        checked={policy.schedule[d].enabled} onChange={e=>setDay(d,"enabled",e.target.checked)}/></label>
+       {policy.schedule[d].enabled&&<div className={styles.time}>
+        <label>Desde<input type="time" value={policy.schedule[d].start}
+         onChange={e=>setDay(d,"start",e.target.value)}/></label>
+        <label>Hasta<input type="time" value={policy.schedule[d].end}
+         onChange={e=>setDay(d,"end",e.target.value)}/></label>
+       </div>}
+      </div>)}
+     </div>}
     </>}
    </section>
    <section className={styles.section}><h2>Traducción</h2>
@@ -85,6 +104,26 @@ export default function CallControl({onBack}:{onBack:()=>void}){
      onChange={e=>patch("translation_mode",e.target.value as CallPolicy["translation_mode"])}>
      <option value="always">Siempre</option><option value="schedule">Por horario</option>
     </select></label>}
+     {policy.translation_enabled&&policy.translation_mode==="schedule"&&<div className={styles.inlineHours}>
+      <h3>Horario de traducción</h3>
+      <label>Zona horaria del negocio<select value={policy.time_zone} onChange={e=>patch("time_zone",e.target.value)}>
+       {zoneOptions.map(z=><option key={z} value={z}>{z.replace("America/","").replaceAll("_"," ")}</option>)}
+      </select></label>
+
+      <small>Independiente del agente. Conserva el traductor existente.</small>
+      {days.map(d=><div key={d} className={styles.day}>
+       <label className={styles.toggle}><span>{weekLabels[d]}</span><input type="checkbox"
+        checked={policy.translation_schedule[d].enabled}
+        onChange={e=>setDay(d,"enabled",e.target.checked,"translation_schedule")}/></label>
+       {policy.translation_schedule[d].enabled&&<div className={styles.time}>
+        <label>Desde<input type="time" value={policy.translation_schedule[d].start}
+         onChange={e=>setDay(d,"start",e.target.value,"translation_schedule")}/></label>
+        <label>Hasta<input type="time" value={policy.translation_schedule[d].end}
+         onChange={e=>setDay(d,"end",e.target.value,"translation_schedule")}/></label>
+       </div>}
+      </div>)}
+      <small>Los turnos nocturnos continúan hasta el cierre del día siguiente.</small>
+     </div>}
    </section>
    {policy.agent_enabled&&policy.translation_enabled&&<section className={styles.section}>
     <h2>Si ambos están disponibles</h2>
@@ -94,44 +133,6 @@ export default function CallControl({onBack}:{onBack:()=>void}){
      <option value="agent_first">Responde primero el agente IA</option>
      <option value="translation_first">Inicia Smart Call con traducción</option>
     </select>
-   </section>}
-   {hours&&<section className={styles.section}><h2>Zona horaria</h2>
-    <label>Zona horaria del negocio<select value={policy.time_zone} onChange={e=>patch("time_zone",e.target.value)}>
-     {zoneOptions.map(z=><option key={z} value={z}>{z.replace("America/","").replaceAll("_"," ")}</option>)}
-    </select></label>
-    <small>Los dos servicios utilizan esta zona horaria, pero cada uno tiene su horario.</small>
-   </section>}
-   {policy.agent_enabled&&policy.agent_mode==="schedule"&&<section className={styles.section}>
-    <h2>Horario del agente IA</h2>
-    {business&&<label className={styles.toggle}>Usar el horario del negocio
-     <input type="checkbox" checked={policy.use_business_hours}
-      onChange={e=>patch("use_business_hours",e.target.checked)}/></label>}
-    {!policy.use_business_hours&&days.map(d=><div key={d} className={styles.day}>
-     <label className={styles.toggle}><span>{weekLabels[d]}</span><input type="checkbox"
-      checked={policy.schedule[d].enabled} onChange={e=>setDay(d,"enabled",e.target.checked)}/></label>
-     {policy.schedule[d].enabled&&<div className={styles.time}>
-      <label>Desde<input type="time" value={policy.schedule[d].start}
-       onChange={e=>setDay(d,"start",e.target.value)}/></label>
-      <label>Hasta<input type="time" value={policy.schedule[d].end}
-       onChange={e=>setDay(d,"end",e.target.value)}/></label>
-     </div>}
-    </div>)}
-   </section>}
-   {policy.translation_enabled&&policy.translation_mode==="schedule"&&<section className={styles.section}>
-    <h2>Horario de traducción</h2>
-    <small>Independiente del agente. Conserva el traductor existente.</small>
-    {days.map(d=><div key={d} className={styles.day}>
-     <label className={styles.toggle}><span>{weekLabels[d]}</span><input type="checkbox"
-      checked={policy.translation_schedule[d].enabled}
-      onChange={e=>setDay(d,"enabled",e.target.checked,"translation_schedule")}/></label>
-     {policy.translation_schedule[d].enabled&&<div className={styles.time}>
-      <label>Desde<input type="time" value={policy.translation_schedule[d].start}
-       onChange={e=>setDay(d,"start",e.target.value,"translation_schedule")}/></label>
-      <label>Hasta<input type="time" value={policy.translation_schedule[d].end}
-       onChange={e=>setDay(d,"end",e.target.value,"translation_schedule")}/></label>
-     </div>}
-    </div>)}
-    <small>Los turnos nocturnos continúan hasta el cierre del día siguiente.</small>
    </section>}
    <section className={styles.section}><h2>Fuera de horario</h2>
     <label>Si no hay atención<select value={policy.outside_action}
