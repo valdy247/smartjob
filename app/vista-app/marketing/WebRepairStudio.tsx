@@ -133,24 +133,24 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
   </div>:null}
   {step===2&&data.requestRepair?<div className={styles.section}>
    <div className={styles.head}><FileText size={21}/><div><strong>{en?"How is your website managed?":"¿Cómo está hecha tu página?"}</strong><small>{translate("marketing.web.repairReason")}</small></div></div>
-   <label className={styles.field}>¿Con qué herramienta la editas?
+   <label className={styles.field}>{translate("marketing.web.editorLabel")}
     <select value={data.platform} onChange={e=>patch("platform",e.target.value)}>
      {platforms.map(([v,label])=><option value={v} key={v}>{({unknown:translate("marketing.web.platformUnknown"),custom:translate("marketing.web.platformCustom"),other:translate("marketing.web.platformOther")} as Record<string,string>)[v]||label}</option>)}
     </select>
    </label>
    {data.platform==="other"?<label className={styles.field}>{translate("marketing.web.platformName")}<input maxLength={100} value={data.otherPlatform} onChange={e=>patch("otherPlatform",e.target.value)} placeholder={translate("marketing.web.platformPlaceholder")}/></label>:null}
-   <label className={styles.field}>¿Dónde está alojada? (si lo sabes)
+   <label className={styles.field}>{translate("marketing.web.hostingLabel")}
     <select value={data.hosting||"unknown"} onChange={e=>patch("hosting",e.target.value)}>
      {hostingProviders.map(([v,label])=><option key={v} value={v}>{({unknown:translate("marketing.web.platformUnknown"),cpanel:translate("marketing.web.hostingCpanel"),other:translate("marketing.web.hostingOther")} as Record<string,string>)[v]||label}</option>)}
     </select>
    </label>
    {data.hosting==="other"?<label className={styles.field}>{translate("marketing.web.hostingName")}<input maxLength={100} value={data.otherHosting||""} onChange={e=>patch("otherHosting",e.target.value)} placeholder={translate("marketing.web.provider")}/></label>:null}
-   <label className={styles.field}>¿Dónde está guardado el código? (si lo sabes)
+   <label className={styles.field}>{translate("marketing.web.repositoryLabel")}
     <select value={data.repositoryHost} onChange={e=>patch("repositoryHost",e.target.value)}>
      <option value="unknown">{translate("marketing.web.repoUnknown")}</option><option value="github">GitHub</option><option value="gitlab">GitLab</option><option value="bitbucket">Bitbucket</option><option value="other">{translate("marketing.web.otherRepo")}</option>
     </select>
    </label>
-   {data.repositoryHost!=="unknown"&&data.repositoryHost!=="other"?<label className={styles.field}>Enlace del repositorio (opcional)
+   {data.repositoryHost!=="unknown"&&data.repositoryHost!=="other"?<label className={styles.field}>{translate("marketing.web.repositoryLink")}
     <input type="url" inputMode="url" maxLength={500} value={data.repositoryUrl} onChange={e=>patch("repositoryUrl",e.target.value)} placeholder="https://github.com/empresa/proyecto"/>
    </label>:null}
    <p className={styles.tip}>{translate("marketing.web.platformDisclaimer")}</p>
@@ -161,7 +161,7 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
     <button type="button" aria-pressed={data.requestRepair} onClick={()=>patch("requestRepair",true)}>{en?"Yes, request a quote":"Sí, quiero una cotización"}</button>
     <button type="button" aria-pressed={!data.requestRepair} onClick={()=>patch("requestRepair",false)}>{en?"Save report only":"Solo guardar el diagnóstico"}</button>
    </div>
-   <label className={styles.field}>¿Hay algo más que debamos saber? (opcional)
+   <label className={styles.field}>{translate("marketing.web.notesLabel")}
      <textarea rows={3} value={data.notes} maxLength={1200} onChange={e=>patch("notes",e.target.value)} placeholder={translate("marketing.web.notesPlaceholder")}/>
    </label>
    <p className={styles.tip}>{translate("marketing.web.noAccess")}</p>

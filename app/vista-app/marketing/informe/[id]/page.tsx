@@ -40,7 +40,7 @@ export default function SavedMarketingReport(){
   {pending?<p>{translate("marketing.report.loading")}</p>:error?<div role="alert" className={styles.card}>{translate(error as MessageKey)}</div>:report?<div className={styles.card}>
    <div className={styles.kicker}><ShieldCheck size={15}/> {translate("marketing.report.kicker")}</div>
    <h1>{translate("marketing.report.heading")} {report.business_name}</h1>
-   <p className={styles.muted}>{report.website_url||translate("marketing.report.website")} · Solicitud #{report.id.slice(0,8)}</p>
+   <p className={styles.muted}>{report.website_url||translate("marketing.report.website")} {translate("marketing.report.request")}{report.id.slice(0,8)}</p>
    {audit?<><div className={styles.metrics}>
     <div>{translate("marketing.report.speed")}<strong>{audit.scores.performance??"—"}/100</strong></div>
     <div>SEO<strong>{audit.scores.seo??"—"}/100</strong></div>
@@ -51,8 +51,8 @@ export default function SavedMarketingReport(){
     <small>{audit.explanationSource==="ai"?translate("marketing.report.aiSource"):translate("marketing.report.automaticSource")}</small>
    </section>
    <section className={styles.section}><h2>{translate("marketing.report.technical")}</h2>
-    {(audit.findings||[]).length?(audit.findings||[]).map(f=><article key={f.id} className={styles.finding}><strong>{f.title}</strong><p>{f.description}</p><small>{translate("marketing.report.id")} {f.id} · Resultado: {f.score===null?translate("marketing.report.notAvailable"):Math.round(f.score*100)+"%"}</small></article>):(audit.recommendations||[]).map((f,i)=><article key={i} className={styles.finding}><p>{f}</p></article>)}
-    <p className={styles.muted}>{translate("marketing.report.source")} {audit.source}. Analizado: {new Date(audit.analyzedAt).toLocaleString(language==="es"?"es-US":"en-US")} {translate("marketing.report.disclaimer")}</p>
+    {(audit.findings||[]).length?(audit.findings||[]).map(f=><article key={f.id} className={styles.finding}><strong>{f.title}</strong><p>{f.description}</p><small>{translate("marketing.report.id")} {f.id} {translate("marketing.report.result")}{f.score===null?translate("marketing.report.notAvailable"):Math.round(f.score*100)+"%"}</small></article>):(audit.recommendations||[]).map((f,i)=><article key={i} className={styles.finding}><p>{f}</p></article>)}
+    <p className={styles.muted}>{translate("marketing.report.source")} {audit.source} {translate("marketing.report.analyzed")}{new Date(audit.analyzedAt).toLocaleString(language==="es"?"es-US":"en-US")} {translate("marketing.report.disclaimer")}</p>
     <a href={audit.reportUrl||"https://pagespeed.web.dev/"} target="_blank" rel="noopener noreferrer" className={styles.link}><ExternalLink size={15}/> {translate("marketing.report.evidence")}</a>
    </section>
    </>:<section className={styles.section}><FileText size={20}/><h2>{translate("marketing.report.manual")}</h2><p>{translate("marketing.report.manualText")}</p></section>}

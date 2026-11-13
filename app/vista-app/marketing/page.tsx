@@ -290,7 +290,7 @@ export default function MarketingPage(){
        <div><span>ROAS</span><strong>{metrics.roas===null?"—":metrics.roas.toFixed(2)+"×"}</strong><small>{translate("marketing.copy.revenue_ad_spend")}</small></div>
       </div>
       <div className={styles.profit}>
-       <div><span>{translate("marketing.copy.contribution_after_advertising")}</span><strong>{money(metrics.contribution)}</strong><small>{estimatedRevenue?translate("marketing.ui.metricEstimate"):""}Margen bruto de ventas menos gasto publicitario.</small></div>
+       <div><span>{translate("marketing.copy.contribution_after_advertising")}</span><strong>{money(metrics.contribution)}</strong><small>{estimatedRevenue?translate("marketing.ui.metricEstimate"):""} {translate("marketing.ui.metricSource")}</small></div>
        <div><span>{translate("marketing.copy.maximum_break_even_cac_on_first_purchase")}</span><strong>{money(metrics.breakEven)}</strong><small>{translate("marketing.copy.average_order_value_gross_margin_excludes_fixed_costs_t")}</small></div>
       </div>
       <p className={styles.fineprint}>{translate("marketing.copy.these_are_not_connected_data_or_a_sales_forecast_verify")}</p>
