@@ -87,9 +87,7 @@ export default function BuilderQuickAdd({enabled=true}:{enabled?:boolean}){
    const issue=validateBuilderDocument(next);
    if(issue)throw new Error(issue);
    api.dispatch({type:"setData",data:next});
-   api.dispatch({type:"setUi",ui:{
-    itemSelector:{zone:"root:default-zone",index:next.content.length-1}
-   }});
+
    setAdded(entry.title+" añadido al final de la página");
    setOpened(false);setFilter("");setError("");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo agregar el elemento.");}
