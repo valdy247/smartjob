@@ -9,7 +9,7 @@ export type CallPolicy={
  coexistence:"menu"|"agent_first"|"translation_first";
  outside_action:"translation"|"message";
  ring_seconds:number;time_zone:string;use_business_hours:boolean;
- schedule:Record<DayName,Day>;closed_message:string;
+ schedule:Record<DayName,Day>;translation_schedule:Record<DayName,Day>;closed_message:string;
 };
 export type CallInfo={
  policy:CallPolicy;version:number;maskedPhone:string;agentActive:boolean;
