@@ -27,7 +27,7 @@ type RequestRow={
  staff_update:string|null;evidence_url:string|null;verified_at:string|null;
  created_at:string;updated_at:string;reputation_data?:{mode:string;reviewText:string;replyText:string;reviewLink:string}|null;google_profile_data?:GoogleData&{media?:{kind:string;path:string}[]}|null;web_repair_data?:WebRepairData|null;directory_data?:DirectoryData|null
 };
-type SavedBusiness={id:string;owner_id:string;name:string;category_id:string;website_url:string|null};
+type SavedBusiness={id:string;owner_id:string;name:string;category_id:string;website_url:string|null;source?:"profile"|"agent"};
 type Acceptance={id:string;request_id:string;owner_id:string;quote_revision:number;quoted_price_cents:number;accepted_at:string};
 type Service={id:ServiceCode;name:string;why:string;mode:string};
 const services:Service[]=[
@@ -319,10 +319,24 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  },[client,user]);
  const loadSavedBusinesses=async(owner:string)=>{
   if(!client)return;
-  const {data,error:loadError}=await client.from("vmv_marketing_businesses")
-   .select("id,owner_id,name,category_id,website_url").eq("owner_id",owner).order("created_at",{ascending:false}).limit(60);
-  if(loadError){setBusinessError("No pudimos cargar tus negocios guardados. Reintenta.");return;}
-  setSavedBusinesses((data||[]) as SavedBusiness[]);
+  const [saved,profile,agent]=await Promise.all([
+   client.from("vmv_marketing_businesses").select("id,owner_id,name,category_id,website_url").eq("owner_id",owner).order("created_at",{ascending:false}).limit(60),
+   client.from("smartjob_profiles").select("business_name,website_url").eq("id",owner).maybeSingle(),
+   client.from("vmv_ai_businesses").select("id,name").eq("owner_id",owner).limit(60)
+  ]);
+  if(saved.error){setBusinessError("No pudimos cargar tus negocios guardados. Reintenta.");return;}
+  const records=(saved.data||[]) as SavedBusiness[];
+  const known=new Set(records.map(x=>x.name.trim().toLowerCase()));
+  const candidates:SavedBusiness[]=[];
+  const primary=profile.data?.business_name?.trim();
+  if(primary&&!known.has(primary.toLowerCase())){candidates.push({id:"profile:"+owner,owner_id:owner,name:primary,category_id:savedCategory||industryId||"other",website_url:profile.data?.website_url||null,source:"profile"});known.add(primary.toLowerCase());}
+  for(const row of agent.data||[]){
+   const candidate=String(row.name||"").trim();
+   if(!candidate||known.has(candidate.toLowerCase()))continue;
+   candidates.push({id:"agent:"+row.id,owner_id:owner,name:candidate,category_id:"other",website_url:null,source:"agent"});
+   known.add(candidate.toLowerCase());
+  }
+  setSavedBusinesses([...records,...candidates]);
   setBusinessError("");
  };
  const pickBusiness=(id:string)=>{
@@ -341,7 +355,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(cleanSite&&!safeSite(cleanSite)){setBusinessError("La web debe tener un enlace válido (https://...).");return;}
   setBusinessBusy(true);setBusinessError("");setBusinessMessage("");
   try{
-   const existing=savedBusinesses.find(x=>x.id===businessId);
+   const existing=savedBusinesses.find(x=>x.id===businessId&&!x.source);
    const payload={name:cleanName,category_id:effectiveCategory,website_url:safeSite(cleanSite)};
    const result=existing?
     await client.from("vmv_marketing_businesses").update(payload).eq("id",existing.id).eq("owner_id",user.id).select("id").single():
@@ -586,7 +600,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
        <label className={styles.wizardField}><span>{en?"Load a saved business":"Cargar negocio guardado"}</span>
         <select value={businessId} onChange={e=>pickBusiness(e.target.value)} disabled={!user||businessBusy}>
          <option value="">{en?"Select a business…":"Selecciona tu negocio…"}</option>
-         {savedBusinesses.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
+         {savedBusinesses.map(item=><option key={item.id} value={item.id}>{item.name}{item.source?" · "+(item.source==="profile"?"Perfil VMV":"AI Agents"):""}</option>)}
         </select>
        </label>
        <div className={styles.businessActions}>
