@@ -20,6 +20,7 @@ const styleFields={
 const imageAlt=(value:string,description?:string)=>description?.trim()||value||"Imagen del negocio";
 const emptyItem=(value:unknown)=>Boolean(value&&typeof value==="object");
 const toList=(value:unknown)=>Array.isArray(value)?value.filter(emptyItem).slice(0,40) as VisualProps[]:[];
+const visualItemId=(item:VisualProps,index:number)=>typeof item.id==="string"&&/^[a-z0-9_-]{3,80}$/i.test(item.id)?item.id:"legacy-"+index;
 function Section({children,mode,padding,className=""}:{children:React.ReactNode;mode?:string;padding?:string;className?:string}){
  return <section className={"vmv-visual-section "+className} data-surface={["light","soft","dark"].includes(mode||"")?mode:"light"}
   data-padding={["compact","normal","spacious"].includes(padding||"")?padding:"normal"}>{children}</section>;
@@ -129,8 +130,8 @@ export const visualBlocks:Config["components"]={
   render:({id,title,description,items,layout,padding,surface,columns,showPrices,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-offerings">
    <div className="vmv-section-heading"><h2>{title}</h2>{description?<p>{description}</p>:null}</div>
    <div className="vmv-offerings-items" data-layout={layout||"grid"} data-columns={columns||"3"}>
-    {toList(items).map((item,index)=><article key={index} className="vmv-offering-card">
-     <BuilderEditableImage id={id} target={{field:"image",index}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
+    {toList(items).map((item,index)=>!(item.title||item.description||item.price||photo(item.image))&&!puck.isEditing?null:<article key={visualItemId(item,index)} className="vmv-offering-card" data-has-photo={Boolean(photo(item.image))}>
+     <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
      <div className="vmv-offering-copy">{item.title?<h3>{heading(item.title)}</h3>:<h3>Nuevo elemento</h3>}
       {item.description?<p>{heading(item.description)}</p>:null}
       {showPrices==="yes"&&item.price?<strong className="vmv-offering-price">{heading(item.price)}</strong>:null}
@@ -152,8 +153,8 @@ export const visualBlocks:Config["components"]={
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.padding}{fields.surface}</fieldset></>,
   render:({id,title,description,items,layout,padding,surface,puck})=>!toList(items).some(item=>photo(item.image))&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
    <div className="vmv-section-heading"><h2>{title}</h2>{description?<p>{description}</p>:null}</div>
-   <div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,index)=><figure key={index}>
-    <BuilderEditableImage id={id} target={{field:"image",index}} src={item.image} alt={imageAlt(heading(item.caption),heading(item.alt))} settings={item} editing={puck.isEditing}/>
+   <div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,index)=><figure key={visualItemId(item,index)}>
+    <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.caption),heading(item.alt))} settings={item} editing={puck.isEditing}/>
     {item.caption?<figcaption>{heading(item.caption)}</figcaption>:null}
    </figure>)}</div>
   </Section>
@@ -181,8 +182,8 @@ export const visualBlocks:Config["components"]={
   defaultProps:{title:"Proyectos",items:[],layout:"mosaic",padding:"spacious",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.padding}{fields.surface}</fieldset></>,
   render:({id,title,items,layout,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
-   <h2>{title}</h2><div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,index)=><figure key={index}>
-    <BuilderEditableImage id={id} target={{field:"image",index}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
+   <h2>{title}</h2><div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,index)=><figure key={visualItemId(item,index)}>
+    <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
     {item.title||item.description?<figcaption><strong>{heading(item.title)}</strong><p>{heading(item.description)}</p></figcaption>:null}
    </figure>)}</div>
   </Section>
@@ -207,8 +208,8 @@ export const visualBlocks:Config["components"]={
   defaultProps:{title:"Nuestro equipo",items:[],padding:"normal",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
   render:({id,title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-team">
-   <h2>{title}</h2><div>{toList(items).map((item,index)=><article key={index}>
-    <BuilderEditableImage id={id} target={{field:"image",index}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
+   <h2>{title}</h2><div>{toList(items).map((item,index)=><article key={visualItemId(item,index)}>
+    <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
     <h3>{heading(item.title)}</h3><p>{heading(item.description)}</p>
    </article>)}</div>
   </Section>
@@ -293,8 +294,10 @@ export function normalizeVisualProps(type:VisualBlockName,props:Record<string,un
  for(const field of schema.images)safe[field]=photo(props[field])||"";
  if(schema.arrays)for(const [key,itemFields] of Object.entries(schema.arrays)){
   const items=Array.isArray(props[key])?props[key].slice(0,40):[];
-  safe[key]=items.filter((x:unknown)=>x&&typeof x==="object"&&!Array.isArray(x)).map((raw:Record<string,unknown>)=>{
-   const item:Record<string,unknown>={};
+  safe[key]=items.filter((x:unknown)=>x&&typeof x==="object"&&!Array.isArray(x)).map((raw:Record<string,unknown>,index:number)=>{
+   const storedId=typeof raw.id==="string"&&/^[a-z0-9_-]{3,80}$/i.test(raw.id)?raw.id:"";
+   const fallback="item-"+String(props.id||type).replace(/[^a-z0-9-]/gi,"").slice(0,55)+"-"+index;
+   const item:Record<string,unknown>={id:storedId||fallback};
    for(const field of itemFields.strings)item[field]=typeof raw[field]==="string"?raw[field].slice(0,700):"";
    for(const field of itemFields.images)item[field]=photo(raw[field])||"";
    if(itemFields.images.length)Object.assign(item,normalizeImageSettings(raw));
