@@ -901,12 +901,12 @@ export default function App(){
       {activeTab==="services"?<>
        {activeModule==="smart-call"?<>
         <Pressable accessibilityRole="button" style={styles.backRow} onPress={()=>setActiveModule(null)}>
-         <Text style={styles.backText}>‹ Todos los servicios</Text>
+         <Text style={styles.backText}>‹ {tr("native.totalServices")}</Text>
         </Pressable>
         <SmartCallControlCenter session={session} onOpenCalls={()=>setActiveTab("calls")} onSettingsSaved={()=>void loadCustomization()}/>
        </>:<>
         <Text style={styles.kicker}>VMV BUSINESS</Text>
-        <Text style={styles.heading}>Mis servicios<Text style={{color:colors.accent}}>.</Text></Text>
+        <Text style={styles.heading}>{tr("home.moreServices")}<Text style={{color:colors.accent}}>.</Text></Text>
         <Pressable accessibilityRole="button" onPress={()=>setActiveModule("smart-call")}
          style={styles.servicesSpotlight}>
          <View style={styles.servicesSpotlightTop}>
@@ -921,7 +921,7 @@ export default function App(){
         <BusinessServicesPanel session={session}/>
         <View style={styles.servicesSectionHead}>
          <Text style={styles.servicesSectionTitle}>Explora más<Text style={{color:"#9867E4"}}>.</Text></Text>
-         <Text style={styles.servicesSectionHint}>PRÓXIMAMENTE</Text>
+         <Text style={styles.servicesSectionHint}>{tr("home.comingSoon")}</Text>
         </View>
         <View style={styles.servicesProductGrid}>
          {businessModules.filter(module=>module.id!=="smart-call").map((module,index)=>
@@ -1088,7 +1088,7 @@ export default function App(){
        {id:"settings",icon:"person-outline",label:tr("common.account")}] as const).map(item=>
        <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={item.label}
         accessibilityState={{selected:activeTab===item.id}}
-        onPress={()=>{setError("");setActiveTab(item.id);if(item.id==="settings")setSettingsPage("menu");}}
+        onPress={()=>{setError("");setActiveTab(item.id);if(item.id==="services")setActiveModule(null);if(item.id==="settings")setSettingsPage("menu");}}
         style={[styles.bottomItem,item.id==="calls"&&styles.bottomItemCenter]}>
         <View style={[styles.bottomOrb,activeTab===item.id&&styles.bottomOrbActive,item.id==="calls"&&styles.bottomOrbCenter,
           item.id==="calls"&&activeTab===item.id&&styles.bottomOrbCenterActive]}>
