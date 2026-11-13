@@ -411,3 +411,9 @@
 .vmv-context-action-panel :is(button,input,textarea):focus-visible{outline:3px solid #9363dd;outline-offset:2px}
 @media(max-width:650px){.vmv-context-action-panel{width:min(295px,calc(100vw - 30px));max-height:52vh}
  .vmv-context-action-panel .vmv-context-content{gap:11px}}
+
+
+/* Keep drag affordance inside hero photos, whose parent clips overflowing content. */
+.vmv-hero-image .vmv-move-handle,.vmv-compose-photo-box .vmv-move-handle{
+ top:12px;left:12px;background:rgba(38,29,50,.9);border-color:#fff6}
+.vmv-context-hero-tabs{margin-top:9px;padding-bottom:3px}
