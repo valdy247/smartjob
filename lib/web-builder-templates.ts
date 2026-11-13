@@ -118,7 +118,7 @@ function assemble(input:SiteIntake,family:SiteFamily,variant:number):Data{
  }
  const palette=familyThemes[family][variant]||"violet";
  return normalizeBuilderDocument({root:{props:{
-  palette,font:p.font,style:p.style,width:variant===1?"wide":"regular",logo:input.logo,motion:"off"
+  palette,font:p.font,style:p.style,width:variant===1?"wide":"regular",logo:input.logo,motion:"off",family
  }},content:blocks});
 }
 export function createSiteProposals(input:SiteIntake,family=familyForCategory(input.categoryId)):SiteProposal[]{
