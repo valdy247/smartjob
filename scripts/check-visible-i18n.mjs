@@ -58,6 +58,17 @@ reports.sort((a,b)=>a.file.localeCompare(b.file)||a.line-b.line);
 const byFile=Object.entries(reports.reduce((acc,r)=>{(acc[r.file]??=[]).push(r);return acc;},{}))
  .map(([file,items])=>({file,count:items.length}))
  .sort((a,b)=>b.count-a.count);
-console.log(JSON.stringify({total:reports.length,byFile,findings:reports},null,2));
+const moduleFor=file=>file.startsWith("app/vista-app/ai-agents/")||file.startsWith("apps/ios/AIAgent")||file.startsWith("apps/ios/AIAgents")?"AI Agents":
+ file.startsWith("app/vista-app/marketing/")?"Marketing":
+ file.startsWith("app/web-studio/")||file.includes("WebServicesStudio")?"Web Studio":
+ file.includes("Contact")?"Contactos":
+ file.includes("Billing")?"Facturación":
+ file.includes("Smart")||file.includes("Call")||file.includes("LivePanel")?"Smart Call":
+ file.startsWith("apps/ios/")?"iPhone / otros":
+ file==="app/vista-app/page.tsx"?"Home VMV":
+ file.startsWith("components/")?"Bloque A / componentes compartidos":"Otros";
+const byModule=Object.entries(reports.reduce((acc,r)=>{const key=moduleFor(r.file);acc[key]=(acc[key]||0)+1;return acc;},{}))
+ .map(([module,count])=>({module,count})).sort((a,b)=>b.count-a.count);
+console.log(JSON.stringify({total:reports.length,byModule,byFile,...(process.env.I18N_COVERAGE_DETAILS==="1"?{findings:reports}:{})},null,2));
 console.error("i18n visible-copy audit:",reports.length,"candidate untranslated strings across",byFile.length,"files");
 if(process.env.I18N_COVERAGE_STRICT==="1"&&reports.length)process.exitCode=1;
