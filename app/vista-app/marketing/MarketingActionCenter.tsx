@@ -134,7 +134,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const draftSnapshot=():StoredMarketingDraft=>({
   version:1,savedAt:Date.now(),service:selected,step:wizardStep,googleStep,
   name,site,category:chosenCategory||industryId||savedCategory||"other",goal,reviewInput,reviewTone,
-  consent:false,googleData,webRepair
+  consent:false,googleData,webRepair,directoryData
  });
  const saveCurrentDraft=async()=>{
   const ok=writeMarketingDraft(draftSnapshot());
@@ -158,6 +158,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     setReviewTone(saved.reviewTone==="breve"?"breve":"cordial");
     if(saved.googleData)setGoogleData(saved.googleData);
     if(saved.webRepair)setWebRepair(saved.webRepair);
+    if(saved.directoryData)setDirectoryData(saved.directoryData);
     setConsent(false);
     setDraftNotice("Recuperamos tu solicitud. Tus respuestas siguen aquí; revísalas antes de enviarla.");
     try{
@@ -175,7 +176,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(!writeMarketingDraft(draftSnapshot()))setDraftNotice("No se está guardando el borrador. Mantén abierta esta página.");
   },300);
   return()=>window.clearTimeout(id);
- },[draftReady,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,goal,reviewInput,reviewTone,googleData,webRepair]);
+ },[draftReady,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,goal,reviewInput,reviewTone,googleData,webRepair,directoryData]);
  useEffect(()=>{
   if(!draftReady||selected!=="google_profile"||wizardStep<1||wizardStep>3)return;
   const id=window.setTimeout(()=>{
@@ -413,17 +414,17 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  };
  const updateDirectoryProgress=async(req:RequestRow)=>{
   if(!client||!staff||!req.directory_data)return;
-  const selected=req.directory_data.selected.map(t=>{
-   const status=directoryStatus[t.id]||t.status;
-   const evidenceUrl=(directoryProof[t.id]??t.evidenceUrl).trim();
-   if(status==="published"&&!safeDirectoryUrl(evidenceUrl))throw Error("Para marcar "+t.name+" publicado debes incluir una URL pública HTTPS válida.");
-   return {...t,status,evidenceUrl:status==="published"?evidenceUrl:"",note:t.note};
-  });
   setBusy(true);setError("");
   try{
+   const selected=req.directory_data.selected.map(t=>{
+    const status=directoryStatus[t.id]||t.status;
+    const evidenceUrl=(directoryProof[t.id]??t.evidenceUrl).trim();
+    if(status==="published"&&!safeDirectoryUrl(evidenceUrl))throw Error("Para marcar "+t.name+" publicado debes incluir una URL HTTPS de la ficha.");
+    return {...t,status,evidenceUrl:status==="published"?evidenceUrl:"",note:t.note};
+   });
    const {error:saveError}=await client.from("vmv_marketing_requests").update({directory_data:{...req.directory_data,selected}}).eq("id",req.id);
    if(saveError)throw saveError;
-   setMessage("Estados de los directorios guardados. El cliente puede consultar cada uno.");
+   setMessage("Estados guardados. El cliente ya puede consultar el seguimiento de cada directorio.");
    await refresh();
   }catch(e){setError(errorMessage(e,"No se pudieron guardar los estados."));}
   finally{setBusy(false);}
