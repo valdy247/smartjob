@@ -66,8 +66,17 @@ export async function POST(request:NextRequest){
   return respond({error:"No se pudo revisar el uso de la foto. No se eliminó."},503);
  }
 
- if(inUse){
-  // A published page, saved draft, or history version still needs the bytes.
+ // Initial business intake is another authoritative usage of this photo. A logo,
+ // cover, or work image can exist here before the first Puck page is created.
+ // Do not physically remove a file referenced by one of those fields.
+ const {data:intake,error:intakeError}=await auth.admin.from("smartjob_web_intake_media")
+  .select("logo_url,cover_url,work_url").eq("owner_id",auth.ownerId).maybeSingle();
+ if(intakeError)return respond({error:"No se pudo comprobar el uso de la foto en el negocio."},503);
+ const referencedInIntake=Object.values(intake||{}).some(value=>
+  typeof value==="string"&&value.split("?")[0].endsWith("/"+path));
+
+ if(inUse||referencedInIntake){
+  // A saved intake, draft, published page, or revision needs the bytes.
   // Hide it from the owner's picker, without affecting another place where it is used.
   const {error:archiveError}=await auth.admin.from("smartjob_web_media_hidden")
    .upsert({owner_id:auth.ownerId,filename},{onConflict:"owner_id,filename"});
