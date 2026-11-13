@@ -56,8 +56,9 @@ export default function BuilderSelectedActions({children,label}:{
  },[]);
  const targets=item?imageTargets(item.type,item.props):[];
  const isImage=targets.length>0;
- const target=chosen?.id===id?targets.find(t=>t.field===chosen.target.field&&
-  (chosen.target.itemId?t.itemId===chosen.target.itemId:t.index===chosen.target.index)):targets[0];
+ const selectedImage=chosen?.id===id?chosen.target:null;
+ const target=selectedImage?targets.find(t=>t.field===selectedImage.field&&
+  (selectedImage.itemId?t.itemId===selectedImage.itemId:t.index===selectedImage.index)):targets[0];
  const data=usePuck(s=>s.appState.data);
  const destinations=imageDestinations(data);
  function changeImage(patch:Record<string,unknown>){
