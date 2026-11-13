@@ -2,6 +2,7 @@
 import {useState,type Dispatch,type SetStateAction} from "react";
 import {AlertCircle,ArrowUpRight,CheckCircle2,ExternalLink,FileText,ScanSearch} from "lucide-react";
 import styles from "./WebRepairStudio.module.css";
+import {useInterfaceLanguage} from "@/lib/i18n-web";
 
 export type WebAudit={
  source:string;website:string;analyzedAt:string;
@@ -69,6 +70,7 @@ function practicalExplanation(a:WebAudit){
 }
 
 export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:{site:string;data:WebRepairData;onChange:Dispatch<SetStateAction<WebRepairData>>;accessToken?:string;step?:number}){
+ const {language}=useInterfaceLanguage();const en=language==="en";
  const [loading,setLoading]=useState(false);
  const [error,setError]=useState("");
  const patch=<K extends keyof WebRepairData>(k:K,v:WebRepairData[K])=>onChange(prev=>({...prev,[k]:v}));
@@ -82,7 +84,7 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
    onChange(prev=>({...prev,audit}));
    if(accessToken){
     try{
-     const ai=await fetch("/api/marketing/explain-audit",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+accessToken},body:JSON.stringify({audit})});
+     const ai=await fetch("/api/marketing/explain-audit",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+accessToken},body:JSON.stringify({audit,locale:language})});
      if(ai.ok){const result=await ai.json();onChange(prev=>({...prev,audit:{...audit,explanation:result.explanation,explanationSource:result.source}}));}
     }catch{/* Technical report remains usable if interpretation is unavailable. */}
    }
@@ -91,33 +93,33 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
  };
  const report=data.audit;
  return <div className={styles.root}>
-  <p className={styles.tip}>Paso {step+1} de {data.requestRepair?3:2}</p>
+  <p className={styles.tip}>{en?"Step":"Paso"} {step+1} {en?"of":"de"} {data.requestRepair?3:2}</p>
   {step===0?<div className={styles.section}>
-   <div className={styles.head}><ScanSearch size={21}/><div><strong>Diagnóstico de tu web</strong><small>Primero encontramos qué se puede mejorar.</small></div></div>
+   <div className={styles.head}><ScanSearch size={21}/><div><strong>{en?"Your website report":"Diagnóstico de tu web"}</strong><small>{en?"First, we identify what may need improvement.":"Primero encontramos qué se puede mejorar."}</small></div></div>
    <p className={styles.url}>{site}</p>
-   <button type="button" className={styles.primary} onClick={()=>void scan()} disabled={loading}>{loading?"Analizando… puede tardar hasta 2 minutos":report?"Repetir análisis":"Analizar gratis"}</button>
+   <button type="button" className={styles.primary} onClick={()=>void scan()} disabled={loading}>{loading?(en?"Analyzing… up to 2 minutes":"Analizando… puede tardar hasta 2 minutos"):report?(en?"Scan again":"Repetir análisis"):(en?"Free scan":"Analizar gratis")}</button>
    {loading?<p role="status" className={styles.tip}>Google está revisando la página. Mantén esta pantalla abierta; algunas webs tardan más que otras.</p>:null}
    {error?<div role="alert" className={styles.warning}><AlertCircle size={16}/><span>{error} Puedes continuar y solicitar una revisión humana.</span></div>:null}
    {report?<div className={styles.report}>
-     <div className={styles.head}><CheckCircle2 size={18}/><strong>Informe técnico disponible</strong></div>
+     <div className={styles.head}><CheckCircle2 size={18}/><strong>{en?"Technical report available":"Informe técnico disponible"}</strong></div>
      <div className={styles.scores}>
-      <span>Velocidad <strong>{report.scores.performance??"—"}/100</strong></span>
+      <span>{en?"Speed":"Velocidad"} <strong>{report.scores.performance??"—"}/100</strong></span>
       <span>SEO <strong>{report.scores.seo??"—"}/100</strong></span>
-      <span>Accesibilidad <strong>{report.scores.accessibility??"—"}/100</strong></span>
+      <span>{en?"Accessibility":"Accesibilidad"} <strong>{report.scores.accessibility??"—"}/100</strong></span>
      </div>
-     <div className={styles.explain}><strong>{report.explanationSource==="ai"?"Qué te recomienda la IA":"Qué podemos mejorar"}</strong>
+     <div className={styles.explain}><strong>{report.explanationSource==="ai"?(en?"AI recommendations":"Qué te recomienda la IA"):(en?"What can improve":"Qué podemos mejorar")}</strong>
       <p>{report.explanation||practicalExplanation(report)}</p>
      </div>
-     <details className={styles.technical}><summary><FileText size={16}/> Ver problemas y evidencia</summary>
+     <details className={styles.technical}><summary><FileText size={16}/> {en?"View evidence and technical findings":"Ver problemas y evidencia"}</summary>
       <div className={styles.findings}>{(report.findings||[]).length?(report.findings||[]).map(f=><article key={f.id}><strong>{f.title}</strong><p>{f.description}</p><small>{f.id} · Puntuación de comprobación: {f.score===null?"No disponible":Math.round(f.score*100)+"%"}</small></article>):report.recommendations.map((x,i)=><p key={i}>{i+1}. {x}</p>)}</div>
       <small>Fuente: {report.source} · {new Date(report.analyzedAt).toLocaleDateString("es-US")}. Se guardará una copia de los hallazgos al enviar la solicitud.</small>
      </details>
-     <a className={styles.external} href={report.reportUrl||googleReport(site)} target="_blank" rel="noopener noreferrer">Contrastar diagnóstico en Google <ExternalLink size={15}/></a>
+     <a className={styles.external} href={report.reportUrl||googleReport(site)} target="_blank" rel="noopener noreferrer">{en?"Check Google PageSpeed report":"Contrastar diagnóstico en Google"} <ExternalLink size={15}/></a>
     </div>:null}
    {!report?<a className={styles.external} href={googleReport(site)} target="_blank" rel="noopener noreferrer">Abrir PageSpeed Insights <ArrowUpRight size={16}/></a>:null}
   </div>:null}
   {step===2&&data.requestRepair?<div className={styles.section}>
-   <div className={styles.head}><FileText size={21}/><div><strong>¿Cómo está hecha tu página?</strong><small>Necesitamos saberlo para evaluar una reparación, no para analizarla gratis.</small></div></div>
+   <div className={styles.head}><FileText size={21}/><div><strong>{en?"How is your website managed?":"¿Cómo está hecha tu página?"}</strong><small>Necesitamos saberlo para evaluar una reparación, no para analizarla gratis.</small></div></div>
    <label className={styles.field}>¿Con qué herramienta la editas?
     <select value={data.platform} onChange={e=>patch("platform",e.target.value)}>
      {platforms.map(([v,label])=><option value={v} key={v}>{label}</option>)}
@@ -141,10 +143,10 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
    <p className={styles.tip}>La herramienta de edición, el alojamiento y el repositorio pueden ser diferentes. No compartas contraseñas: el equipo solicitará acceso seguro después del presupuesto.</p>
   </div>:null}
   {step===1?<div className={styles.section}>
-   <div className={styles.head}><CheckCircle2 size={21}/><strong>¿Quieres que VMV la repare?</strong></div>
+   <div className={styles.head}><CheckCircle2 size={21}/><strong>{en?"Want VMV to repair your website?":"¿Quieres que VMV la repare?"}</strong></div>
    <div className={styles.choices}>
-    <button type="button" aria-pressed={data.requestRepair} onClick={()=>patch("requestRepair",true)}>Sí, quiero una cotización</button>
-    <button type="button" aria-pressed={!data.requestRepair} onClick={()=>patch("requestRepair",false)}>Solo guardar el diagnóstico</button>
+    <button type="button" aria-pressed={data.requestRepair} onClick={()=>patch("requestRepair",true)}>{en?"Yes, request a quote":"Sí, quiero una cotización"}</button>
+    <button type="button" aria-pressed={!data.requestRepair} onClick={()=>patch("requestRepair",false)}>{en?"Save report only":"Solo guardar el diagnóstico"}</button>
    </div>
    <label className={styles.field}>¿Hay algo más que debamos saber? (opcional)
      <textarea rows={3} value={data.notes} maxLength={1200} onChange={e=>patch("notes",e.target.value)} placeholder="Por ejemplo: mi web está en Vercel, tengo acceso al proyecto…"/>
