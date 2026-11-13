@@ -27,6 +27,7 @@ type RequestRow={
  staff_update:string|null;evidence_url:string|null;verified_at:string|null;
  created_at:string;updated_at:string;reputation_data?:{mode:string;reviewText:string;replyText:string;reviewLink:string}|null;google_profile_data?:GoogleData&{media?:{kind:string;path:string}[]}|null;web_repair_data?:WebRepairData|null;directory_data?:DirectoryData|null
 };
+type SavedBusiness={id:string;owner_id:string;name:string;category_id:string;website_url:string|null};
 type Acceptance={id:string;request_id:string;owner_id:string;quote_revision:number;quoted_price_cents:number;accepted_at:string};
 type Service={id:ServiceCode;name:string;why:string;mode:string};
 const services:Service[]=[
@@ -85,6 +86,11 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [client,setClient]=useState<SupabaseClient|null>(null);
  const [user,setUser]=useState<User|null>(null);
  const [savedCategory,setSavedCategory]=useState("");
+ const [savedBusinesses,setSavedBusinesses]=useState<SavedBusiness[]>([]);
+ const [businessId,setBusinessId]=useState("");
+ const [businessBusy,setBusinessBusy]=useState(false);
+ const [businessMessage,setBusinessMessage]=useState("");
+ const [businessError,setBusinessError]=useState("");
  const [authState,setAuthState]=useState<"checking"|"ready"|"signed_out"|"unconfigured">("checking");
  const [staff,setStaff]=useState(false);
  const [requests,setRequests]=useState<RequestRow[]>([]);
@@ -148,7 +154,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const submitting=useRef(false);
  const draftSnapshot=():StoredMarketingDraft=>({
   version:2,savedAt:Date.now(),requestId,ownerId:user?.id||null,
-  service:selected,step:wizardStep,googleStep,webStage,
+  service:selected,step:wizardStep,googleStep,webStage,businessId,
   name,site,category:chosenCategory||industryId||savedCategory||"other",goal,reviewInput,reviewTone,
   reviewLink,reviewReply,reviewMode,consent,googleData,webRepair,directoryData
  });
@@ -170,7 +176,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    const saved=uid?(transferGuestDraft(uid)||readMarketingDraft(uid)):readMarketingDraft(null);
    if(!saved&&resolvedDraftOwner.current!=="initial"&&resolvedDraftOwner.current!==uid){
     setRequestId(crypto.randomUUID());setWizardStep(0);setGoogleStep(0);setWebStage(0);
-    setSelected("google_profile");setName(businessName||"");setSite(website||"");setChosenCategory("");
+    setSelected("google_profile");setBusinessId("");setSavedBusinesses([]);setName(businessName||"");setSite(website||"");setChosenCategory("");
     setGoal("");setReviewInput("");setReviewLink("");setReviewReply("");setReviewMode("respond");
     setGoogleData(emptyGoogle);setGoogleMedia(emptyMedia);setWebRepair(emptyWebRepair);setDirectoryData(emptyDirectory);
     setConsent(false);setDraftNotice("");
@@ -178,6 +184,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    resolvedDraftOwner.current=uid;
    if(saved&&active&&services.some(item=>item.id===saved.service)){
     setRequestId(saved.requestId);setSelected(saved.service as ServiceCode);
+    setBusinessId(saved.businessId||"");
     setWizardStep(saved.step as WizardStep);
     setGoogleStep(Math.max(0,Math.min(saved.googleStep,googleStepNames.length-1)));
     setWebStage(Math.max(0,Math.min(saved.webStage||0,2)));
@@ -203,7 +210,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(!writeMarketingDraft(draftSnapshot()))setDraftNotice("No se está guardando el borrador. Mantén abierta esta página.");
   },300);
   return()=>window.clearTimeout(id);
- },[draftReady,authState,user?.id,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,webStage,goal,reviewInput,reviewTone,reviewLink,reviewReply,reviewMode,consent,googleData,webRepair,directoryData,requestId]);
+ },[draftReady,authState,user?.id,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,webStage,businessId,goal,reviewInput,reviewTone,reviewLink,reviewReply,reviewMode,consent,googleData,webRepair,directoryData,requestId]);
  useEffect(()=>{
   if(!draftReady||selected!=="google_profile"||wizardStep<1||wizardStep>3)return;
   const id=window.setTimeout(()=>{
@@ -280,11 +287,12 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(website)setSite(prev=>prev||website);
  },[businessName,website]);
  useEffect(()=>{
-  if(!client||!user){setRequests([]);setApprovals([]);setStaff(false);setTeamView(false);return;}
+  if(!client||!user){setRequests([]);setApprovals([]);setStaff(false);setTeamView(false);setSavedBusinesses([]);setBusinessId("");return;}
   let alive=true;
   const load=async()=>{
    setLoading(true);setError("");
    try{
+    void loadSavedBusinesses(user.id);
     const [{data:profile},staffResult,{data:category}]=await Promise.all([
      client.from("smartjob_profiles").select("business_name,website_url").eq("id",user.id).maybeSingle(),
      client.from("vmv_marketing_staff").select("role").eq("user_id",user.id).maybeSingle(),
@@ -309,6 +317,43 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   void load();
   return()=>{alive=false;};
  },[client,user]);
+ const loadSavedBusinesses=async(owner:string)=>{
+  if(!client)return;
+  const {data,error:loadError}=await client.from("vmv_marketing_businesses")
+   .select("id,owner_id,name,category_id,website_url").eq("owner_id",owner).order("created_at",{ascending:false}).limit(60);
+  if(loadError){setBusinessError("No pudimos cargar tus negocios guardados. Reintenta.");return;}
+  setSavedBusinesses((data||[]) as SavedBusiness[]);
+  setBusinessError("");
+ };
+ const pickBusiness=(id:string)=>{
+  if(!id)return;
+  const selectedBusiness=savedBusinesses.find(item=>item.id===id);
+  if(!selectedBusiness)return;
+  setBusinessId(id);setName(selectedBusiness.name);setSite(selectedBusiness.website_url||"");
+  setChosenCategory(selectedBusiness.category_id||"other");
+  setBusinessMessage("Negocio cargado. Puedes modificar los datos antes de continuar.");
+  setBusinessError("");setWizardError("");
+ };
+ const saveBusiness=async()=>{
+  if(!client||!user){setBusinessError("Inicia sesión para guardar este negocio en tu cuenta.");return;}
+  const cleanName=name.trim();const cleanSite=site.trim();
+  if(cleanName.length<2||cleanName.length>150){setBusinessError("Escribe un nombre comercial de 2 a 150 caracteres.");return;}
+  if(cleanSite&&!safeSite(cleanSite)){setBusinessError("La web debe tener un enlace válido (https://...).");return;}
+  setBusinessBusy(true);setBusinessError("");setBusinessMessage("");
+  try{
+   const existing=savedBusinesses.find(x=>x.id===businessId);
+   const payload={name:cleanName,category_id:effectiveCategory,website_url:safeSite(cleanSite)};
+   const result=existing?
+    await client.from("vmv_marketing_businesses").update(payload).eq("id",existing.id).eq("owner_id",user.id).select("id").single():
+    await client.from("vmv_marketing_businesses").insert({owner_id:user.id,...payload}).select("id").single();
+   if(result.error)throw result.error;
+   setBusinessId(String(result.data.id));
+   await loadSavedBusinesses(user.id);
+   setBusinessMessage("Negocio guardado. La próxima vez podrás seleccionarlo aquí.");
+  }catch(e){
+   setBusinessError(errorMessage(e,"No pudimos guardar el negocio. Revisa si ya existe uno con ese nombre."));
+  }finally{setBusinessBusy(false);}
+ };
  const refresh=async()=>{
   if(!client||!user)return;
   setLoading(true);setError("");
@@ -537,6 +582,21 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     {wizardStep===1?<div className={styles.wizardBody}>
      <div className={styles.selectedServiceBanner}><span className={styles.selectedServiceIcon}>{(()=>{const Icon=serviceIcons[selected];return <Icon size={23}/>;})()}</span><span><small>SERVICIO ELEGIDO</small><strong>{serviceName(selected)}</strong></span><button type="button" onClick={()=>{setWizardStep(0);setWizardError("");}}>Cambiar</button></div>
      <div className={styles.wizardFields}>
+      <div className={styles.savedBusinessBox}>
+       <label className={styles.wizardField}><span>{en?"Load a saved business":"Cargar negocio guardado"}</span>
+        <select value={businessId} onChange={e=>pickBusiness(e.target.value)} disabled={!user||businessBusy}>
+         <option value="">{en?"Select a business…":"Selecciona tu negocio…"}</option>
+         {savedBusinesses.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
+        </select>
+       </label>
+       <div className={styles.businessActions}>
+        <button type="button" onClick={()=>{setBusinessId("");setName("");setSite("");setChosenCategory("other");setBusinessMessage("");setBusinessError("");}}>{en?"New business":"Nuevo negocio"}</button>
+        <button type="button" disabled={businessBusy||!user} onClick={()=>void saveBusiness()}>{businessBusy?(en?"Saving…":"Guardando…"):businessId?(en?"Update business":"Actualizar negocio"):(en?"Save business":"Guardar negocio")}</button>
+       </div>
+       {!user?<p className={styles.businessNote}>{en?"Sign in to save and load businesses on any device. You can still complete this request.":"Inicia sesión para guardar y cargar negocios desde cualquier dispositivo. Puedes continuar tu solicitud sin hacerlo."}</p>:null}
+       {businessMessage?<p role="status" className={styles.businessSuccess}>{businessMessage}</p>:null}
+       {businessError?<p role="alert" className={styles.businessError}>{businessError}</p>:null}
+      </div>
       <label className={styles.wizardField}><span>Nombre de tu negocio <em>Obligatorio</em></span><input type="text" autoComplete="organization" value={name} maxLength={150} onChange={e=>{setName(e.target.value);setWizardError("");}} placeholder="Ej. Mi negocio" /></label>
       <label className={styles.wizardField}><span>¿A qué se dedica?</span><select value={effectiveCategory} onChange={e=>setChosenCategory(e.target.value)}>
        {CATEGORY_GROUPS.map(group=><optgroup key={group} label={group}>{BUSINESS_CATEGORIES.filter(c=>c.group===group).map(c=><option value={c.id} key={c.id}>{c.label}</option>)}</optgroup>)}
