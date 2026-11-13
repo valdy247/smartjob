@@ -371,3 +371,43 @@
  .vmv-compose-photo-box{max-width:100%}
  .vmv-move-handle{top:-28px;min-height:27px}
 }
+
+
+/* Selected-element toolbar on the Puck canvas: only visible during editing. */
+.vmv-context-action-wrap{position:relative;z-index:100;min-width:0;display:flex;align-items:center}
+.vmv-context-action-panel{position:absolute;z-index:110;right:0;top:calc(100% + 7px);
+ width:min(334px,calc(100vw - 45px));max-height:min(63vh,520px);overflow-y:auto;overscroll-behavior:contain;
+ background:white;color:#2b2238;border:1px solid #d7c9e6;border-radius:15px;
+ padding:0 12px 13px;box-shadow:0 16px 44px #281a3b30;text-align:left;
+ font-family:ui-sans-serif,system-ui,sans-serif;font-weight:400}
+.vmv-context-action-panel>header{display:flex;align-items:center;justify-content:space-between;
+ padding:11px 2px 9px;position:sticky;top:0;background:#fff;z-index:2;
+ border-bottom:1px solid #efe8f4;gap:9px}
+.vmv-context-action-panel>header strong{font-size:12px;color:#5a397f;font-weight:900}
+.vmv-context-action-panel>header button{border:0;background:#f1eaf8;color:#694b8a;
+ border-radius:7px;min-width:27px;min-height:27px;cursor:pointer;font-size:14px}
+.vmv-context-action-panel .vmv-context-content{display:flex;flex-direction:column;gap:13px;padding-top:12px}
+.vmv-context-action-panel .vmv-context-switch{display:flex;gap:5px;flex-wrap:wrap}
+.vmv-context-action-panel .vmv-context-switch button{display:inline-flex;align-items:center;gap:5px;
+ flex:1 1 auto;justify-content:center;background:#f9f6fb;color:#604b7a;
+ border:1px solid #ddd0ec;min-height:34px;padding:8px 10px;border-radius:9px;
+ font-weight:850;font-size:11px;cursor:pointer}
+.vmv-context-action-panel .vmv-context-switch button[aria-pressed=true]{
+ color:#7144b7;background:#eee3fc;border-color:#a77cd9}
+.vmv-context-action-panel .vmv-context-text-label{display:flex;flex-direction:column;gap:5px;
+ font-size:11px;font-weight:800;color:#67507f}
+.vmv-context-action-panel input[type=text],.vmv-context-action-panel textarea{
+ border:1px solid #dfd1ee;border-radius:9px;padding:9px 11px;min-height:35px;max-width:100%;
+ width:100%;font:inherit;font-size:12px;color:#2c2339;background:#fff}
+.vmv-context-action-panel textarea{min-height:64px;resize:vertical}
+.vmv-context-action-panel details{border:1px solid #eee5f5;border-radius:10px;padding:10px;display:flex}
+.vmv-context-action-panel details summary{font-size:11px;color:#735397;font-weight:850;cursor:pointer}
+.vmv-context-action-panel details[open]{display:flex;flex-direction:column;gap:12px}
+.vmv-context-action-panel details[open] summary{margin-bottom:10px}
+.vmv-context-action-panel .vmv-context-hint{font-size:11px;line-height:1.55;color:#7b7088;margin:0}
+.vmv-context-action-panel .vmv-context-remove{display:inline-flex;align-items:center;gap:8px;
+ justify-content:center;padding:10px 13px;border:1px solid #f0cbd6;color:#a3455e;background:#fff4f6;
+ border-radius:10px;font-size:11px;font-weight:900;cursor:pointer}
+.vmv-context-action-panel :is(button,input,textarea):focus-visible{outline:3px solid #9363dd;outline-offset:2px}
+@media(max-width:650px){.vmv-context-action-panel{width:min(295px,calc(100vw - 30px));max-height:52vh}
+ .vmv-context-action-panel .vmv-context-content{gap:11px}}
