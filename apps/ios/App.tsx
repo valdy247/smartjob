@@ -795,24 +795,30 @@ export default function App(){
         <View><Text style={[styles.homeProductTitle,{color:"#104A39"}]}>{tr("common.translator")}</Text>
          <Text style={[styles.homeProductSub,{color:"#367E6A"}]}>{tr("home.inPerson")}</Text></View>
        </Pressable>
-       <View style={[styles.homeProductTile,styles.homeProductYellow]}>
+       <Pressable accessibilityRole="button" accessibilityLabel={"Web Services · "+tr("home.explore")}
+        onPress={()=>{setActiveModule(null);setActiveTab("services");}}
+        style={[styles.homeProductTile,styles.homeProductYellow]}>
         <View style={styles.homeProductIconV2}><Ionicons name="globe-outline" size={28} color="#69471D"/></View>
         <Ionicons name="browsers-outline" size={75} color="#69471D" style={styles.homeProductArt} accessible={false}/>
         <View><Text style={[styles.homeProductTitle,{color:"#63451B"}]}>Web Services</Text>
-         <Text style={[styles.homeProductSub,{color:"#916F3C"}]}>{tr("home.comingSoon")}</Text></View>
-       </View>
-       <View style={[styles.homeProductTile,styles.homeProductSky]}>
+         <Text style={[styles.homeProductSub,{color:"#916F3C"}]}>{tr("home.explore")}</Text></View>
+       </Pressable>
+       <Pressable accessibilityRole="button" accessibilityLabel={"AI Agents · "+tr("home.explore")}
+        onPress={()=>{setActiveModule(null);setActiveTab("services");}}
+        style={[styles.homeProductTile,styles.homeProductSky]}>
         <View style={styles.homeProductIconV2}><Ionicons name="sparkles-outline" size={28} color="#305D8B"/></View>
         <Ionicons name="hardware-chip-outline" size={73} color="#294C78" style={styles.homeProductArt} accessible={false}/>
         <View><Text style={[styles.homeProductTitle,{color:"#294C78"}]}>AI Agents</Text>
-         <Text style={[styles.homeProductSub,{color:"#547DA0"}]}>{tr("home.comingSoon")}</Text></View>
-       </View>
-       <View style={[styles.homeProductTile,styles.homeProductPink]}>
+         <Text style={[styles.homeProductSub,{color:"#547DA0"}]}>{tr("home.explore")}</Text></View>
+       </Pressable>
+       <Pressable accessibilityRole="button" accessibilityLabel={"Marketing · "+tr("home.explore")}
+        onPress={()=>{setActiveModule(null);setActiveTab("services");}}
+        style={[styles.homeProductTile,styles.homeProductPink]}>
         <View style={styles.homeProductIconV2}><Ionicons name="trending-up-outline" size={28} color="#914B74"/></View>
         <Ionicons name="stats-chart-outline" size={73} color="#82425F" style={styles.homeProductArt} accessible={false}/>
         <View><Text style={[styles.homeProductTitle,{color:"#82425F"}]}>Marketing</Text>
-         <Text style={[styles.homeProductSub,{color:"#AD7692"}]}>{tr("home.comingSoon")}</Text></View>
-       </View>
+         <Text style={[styles.homeProductSub,{color:"#AD7692"}]}>{tr("home.explore")}</Text></View>
+       </Pressable>
       </View>
       <Pressable accessibilityRole="button" accessibilityLabel="Explorar otros servicios"
        onPress={()=>{setActiveModule(null);setActiveTab("services");}} style={styles.homeExploreV2}>
@@ -824,8 +830,8 @@ export default function App(){
      </>:null}
      {activeTab==="calls"?<>
        <View style={styles.callsTabs}>
-        {([{id:"dial",emoji:"⌨️",label:"Teclado"},{id:"history",emoji:"🕘",label:"Historial"},{id:"contacts",emoji:"👥",label:"Contactos"}] as const).map(item=>
-         <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={item.label}
+        {([{id:"dial",emoji:"⌨️",key:"native.dialpad"},{id:"history",emoji:"🕘",key:"common.history"},{id:"contacts",emoji:"👥",key:"native.contacts"}] as const).map(item=>
+         <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={tr(item.key)}
           accessibilityState={{selected:callsView===item.id}}
           style={[styles.callsTab,callsView===item.id&&styles.callsTabActive]}
           onPress={()=>{
@@ -835,6 +841,7 @@ export default function App(){
            if(item.id==="history")setCallTypeFilter("all");
           }}>
           <Text style={styles.callsTabEmoji}>{item.emoji}</Text>
+          <Text numberOfLines={1} style={[styles.callsTabLabel,callsView===item.id&&styles.callsTabLabelActive]}>{tr(item.key)}</Text>
          </Pressable>)}
        </View>
        {callsView==="dial"?<DialPad session={session} initialPhone={dialTarget?.phone||""} contactName={dialTarget?.name||""} onStarted={()=>{
@@ -1087,6 +1094,8 @@ export default function App(){
          <Ionicons name={item.icon} size={item.id==="calls"?25:22}
           color={item.id==="calls"?"#FFFFFF":activeTab===item.id?"#211D36":"#B7B4CA"}/>
         </View>
+        <Text numberOfLines={1} style={[styles.bottomLabel,activeTab===item.id&&styles.bottomLabelActive,
+         item.id==="calls"&&styles.bottomLabelCenter]}>{item.label}</Text>
        </Pressable>)}
     </View>:null}
   </KeyboardAvoidingView>
@@ -1271,16 +1280,16 @@ const styles=StyleSheet.create({
  quickRow:{flexDirection:"row",gap:10,marginVertical:10},
  quickButton:{flex:1,borderRadius:14,padding:15,backgroundColor:"#1A363E",alignItems:"center"},
  quickButtonText:{color:colors.text,fontSize:14,fontWeight:"800"},
- bottomDock:{position:"absolute",bottom:13,left:15,right:15,height:64,backgroundColor:"#1C1A2B",borderRadius:32,borderWidth:1,borderColor:"#333048",flexDirection:"row",alignItems:"center",justifyContent:"space-around",paddingHorizontal:9,shadowColor:"#171326",shadowOpacity:.15,shadowRadius:9,shadowOffset:{width:0,height:6},elevation:6},
- bottomItem:{flex:1,alignItems:"center",justifyContent:"center",height:56},
+ bottomDock:{position:"absolute",bottom:13,left:15,right:15,height:78,backgroundColor:"#1C1A2B",borderRadius:28,borderWidth:1,borderColor:"#333048",flexDirection:"row",alignItems:"center",justifyContent:"space-around",paddingHorizontal:5,paddingVertical:5,shadowColor:"#171326",shadowOpacity:.15,shadowRadius:9,shadowOffset:{width:0,height:6},elevation:6},
+ bottomItem:{flex:1,minWidth:0,alignItems:"center",justifyContent:"center",height:68},
  bottomItemCenter:{transform:[{translateY:-1}]},
- bottomOrb:{width:45,height:45,borderRadius:23,alignItems:"center",justifyContent:"center"},
+ bottomOrb:{width:42,height:39,borderRadius:15,alignItems:"center",justifyContent:"center"},
  bottomOrbActive:{backgroundColor:"#FFFFFF"},
- bottomOrbCenter:{width:49,height:49,borderRadius:25,backgroundColor:"#8E5CE7",borderColor:"#E1D1FF",borderWidth:1.5,shadowColor:"#442A91",shadowOpacity:.21,shadowRadius:5,shadowOffset:{width:0,height:3},elevation:3},
+ bottomOrbCenter:{width:44,height:40,borderRadius:15,backgroundColor:"#8E5CE7",borderColor:"#E1D1FF",borderWidth:1.5,shadowColor:"#442A91",shadowOpacity:.21,shadowRadius:5,shadowOffset:{width:0,height:3},elevation:3},
  bottomOrbCenterActive:{backgroundColor:"#A174F2",borderColor:"#F0E6FF"},
- bottomLabel:{color:"#AFA9C3",fontSize:9,fontWeight:"700",marginTop:2},
+ bottomLabel:{color:"#BEB5D3",fontSize:9,fontWeight:"700",marginTop:2,textAlign:"center",maxWidth:"100%"},
  bottomLabelActive:{color:"#FFFFFF"},
- bottomLabelCenter:{color:"#E1D4F5",marginTop:0},
+ bottomLabelCenter:{color:"#E1D4F5"},
  groupTitle:{color:"#9B77D4",fontSize:10,fontWeight:"800",letterSpacing:1.7,marginTop:22,marginBottom:11},
  languageChoice:{flexDirection:"row",gap:10,marginVertical:11},
  languageOption:{flex:1,alignItems:"center",justifyContent:"center",padding:13,backgroundColor:"#F4EFFB",borderRadius:15,borderWidth:1,borderColor:"#E5D9F2"},
@@ -1299,7 +1308,9 @@ const styles=StyleSheet.create({
  callsTabEmoji:{fontSize:25,lineHeight:34,textAlign:"center"},
  callsHistoryToolbar:{flexDirection:"row",alignItems:"center",gap:8,marginBottom:14},
  callsTabs:{flexDirection:"row",backgroundColor:"#EFE7FA",borderWidth:1,borderColor:"#E3D7F5",padding:5,borderRadius:19,marginBottom:18,gap:5},
- callsTab:{flex:1,minHeight:54,borderRadius:13,alignItems:"center",justifyContent:"center"},
+ callsTab:{flex:1,minHeight:67,borderRadius:13,alignItems:"center",justifyContent:"center",gap:3},
+ callsTabLabel:{fontSize:11,fontWeight:"700",color:"#786C8B"},
+ callsTabLabelActive:{color:"#6C42BB"},
  callsTabActive:{backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#DFCFF7"},
  callsTabText:{fontSize:14,fontWeight:"700",color:"#758B81"},
  callsTabTextActive:{color:"#08795B",fontWeight:"800"},
