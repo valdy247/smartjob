@@ -28,7 +28,7 @@ export function restyleWebsiteDocument(source:Data,styleId:WebsiteStyleId):Data{
  tree.root={...tree.root,props:{
   ...root,palette:selected.palette,font:selected.font,
   style:selected.style,width:selected.width
- }};
+ }} as unknown as Data["root"];
  const restyle=(items:Data["content"]):void=>{
   for(const item of items){
    const props=item.props as Record<string,unknown>;
