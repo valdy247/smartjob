@@ -76,7 +76,7 @@ export default async function VMVPublishedPage({params}:Props){
  const accent=typeof rootData.accentColor==="string"&&/^#[0-9a-f]{6}$/i.test(rootData.accentColor)?
   rootData.accentColor:colors[0];
  const visualStyle={ "--vmv-accent":accent,"--vmv-pale":colors[1] } as CSSProperties;
- const family=familyForCategory(result.page.category_id||"");
+ const family=typeof rootData.family==="string"&&["bakery","construction","professional","beauty","creative"].includes(rootData.family)?rootData.family:familyForCategory(result.page.category_id||"");
  const showForm=part==="home"&&result.page.inquiries_enabled===true;
  return <div className="vmv-site" data-site-style={rootData.style||"light"}
   data-site-family={family} style={visualStyle}>
