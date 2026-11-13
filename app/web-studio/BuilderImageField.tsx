@@ -1,6 +1,7 @@
 "use client";
-import {useCallback,useEffect,useState,type ChangeEvent} from "react";
-import {ImagePlus,RefreshCw,Trash2,WandSparkles} from "lucide-react";
+import {useCallback,useEffect,useRef,useState,type ChangeEvent} from "react";
+import {createPortal} from "react-dom";
+import {ImagePlus,MoreVertical,RefreshCw,Trash2,WandSparkles,X} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import styles from "./BuilderImageField.module.css";
@@ -37,6 +38,12 @@ export default function BuilderImageField({value,onChange,kind="photo"}:Props){
  const [ai,setAi]=useState(false);
  const [generating,setGenerating]=useState(false);
  const [deleting,setDeleting]=useState<string|null>(null);
+ const [pickerOpen,setPickerOpen]=useState(false);
+ const [tab,setTab]=useState<"library"|"upload">("library");
+ const [menuFor,setMenuFor]=useState<string|null>(null);
+ const [confirmDelete,setConfirmDelete]=useState<string|null>(null);
+ const triggerRef=useRef<HTMLButtonElement>(null);
+ const closeRef=useRef<HTMLButtonElement>(null);
  const load=useCallback(async()=>{
   const client=getSupabase();if(!client)return;
   const {data,error:authError}=await client.auth.getUser();
@@ -67,15 +74,24 @@ export default function BuilderImageField({value,onChange,kind="photo"}:Props){
    }).filter(Boolean);
   setItems(urls);
  },[]);
- useEffect(()=>{void load();},[load]);
+ useEffect(()=>{if(pickerOpen)void load();},[load,pickerOpen]);
+ useEffect(()=>{
+  if(!pickerOpen)return;
+  const prior=document.body.style.overflow;
+  document.body.style.overflow="hidden";
+  closeRef.current?.focus();
+  const onKey=(e:KeyboardEvent)=>{if(e.key==="Escape"){setPickerOpen(false);triggerRef.current?.focus();}};
+  document.addEventListener("keydown",onKey);
+  return()=>{document.body.style.overflow=prior;document.removeEventListener("keydown",onKey);};
+ },[pickerOpen]);
  useEffect(()=>{
   const handleDelete=(event:Event)=>{
    const deletedUrl=(event as CustomEvent<{url:string}>).detail?.url;
    if(!deletedUrl)return;
    setItems(current=>current.filter(url=>url!==deletedUrl));
   };
-  window.addEventListener("vmv:web-image-deleted",handleDelete);
-  return()=>window.removeEventListener("vmv:web-image-deleted",handleDelete);
+  window.addEventListener("vmv:web-image-archived",handleDelete);
+  return()=>window.removeEventListener("vmv:web-image-archived",handleDelete);
  },[]);
  useEffect(()=>{
   let active=true;
@@ -109,22 +125,23 @@ export default function BuilderImageField({value,onChange,kind="photo"}:Props){
    const url=safeWebImageUrl(result.data.publicUrl);
    if(!url)throw new Error("La URL no es válida");
    onChange(url);
+   setPickerOpen(false);
+   setNotice("Foto subida y seleccionada. Se guardará en este lugar.");
    await load();
   }catch(e){setError(e instanceof Error?e.message:"No se pudo subir la imagen");}
   finally{setBusy(false);}
  }
  async function deleteImage(url:string){
   if(busy||generating||deleting)return;
+  if(value===url){
+   setError("Esta foto está seleccionada aquí. Primero quítala de este lugar y guarda los cambios.");
+   setConfirmDelete(null);return;
+  }
   const safe=safeWebImageUrl(url);
   const filename=safe?.split("/").pop()||"";
   if(!/^[0-9a-f-]{36}\.(?:webp|jpg|png)$/.test(filename)){
-   setError("Esta imagen no se puede administrar desde la biblioteca.");return;
+   setError("Este archivo no se puede administrar desde la biblioteca.");return;
   }
-  const isSelected=value===url;
-  const message=isSelected
-   ?"¿Quitar esta foto de este campo y de tu biblioteca? Si otra página la usa, seguirá disponible allí."
-   :"¿Quitar esta foto de tu biblioteca? Los demás campos y páginas que la utilizan se conservarán.";
-  if(!window.confirm(message))return;
   setDeleting(url);setError("");setNotice("");
   try{
    const client=getSupabase();
@@ -138,19 +155,15 @@ export default function BuilderImageField({value,onChange,kind="photo"}:Props){
    });
    const body=await response.json().catch(()=>({})) as {deleted?:boolean;archived?:boolean;error?:string};
    if(!response.ok||body.deleted!==true)
-    throw new Error(body.error||"No se pudo quitar la imagen.");
+    throw new Error(body.error||"No se pudo eliminar el archivo.");
    setItems(current=>current.filter(item=>item!==url));
-   // Only the field where the customer clicked changes. Other places using
-   // this same URL keep their photo, including other mounted Puck fields.
-   if(isSelected)onChange("");
-   window.dispatchEvent(new CustomEvent("vmv:web-image-deleted",{detail:{url}}));
-   setNotice(isSelected
-    ?"Foto quitada de este campo y de la biblioteca. El borrador se guardará; publica para actualizar la web."
-    :body.archived
-     ?"Foto retirada de tu biblioteca. Las páginas que la utilizan se conservaron."
-     :"Foto eliminada de tu biblioteca.");
-  }catch(err){setError(err instanceof Error?err.message:"No se pudo eliminar la imagen.");}
-  finally{setDeleting(null);}
+   // Archiving a file changes library visibility, NOT any saved placement.
+   window.dispatchEvent(new CustomEvent("vmv:web-image-archived",{detail:{url}}));
+   setNotice(body.archived
+    ?"Archivo oculto en Mis imágenes. Las páginas y formularios que lo utilizan lo conservan."
+    :"Archivo eliminado de la biblioteca.");
+  }catch(err){setError(err instanceof Error?err.message:"No se pudo eliminar el archivo.");}
+  finally{setDeleting(null);setMenuFor(null);setConfirmDelete(null);}
  }
  async function generate(){
   if(generating||!ai||prompt.trim().length<8)return;
@@ -167,45 +180,98 @@ export default function BuilderImageField({value,onChange,kind="photo"}:Props){
    const body=await result.json();
    const url=typeof body.url==="string"?safeWebImageUrl(body.url):null;
    if(!result.ok||!url)throw new Error(body.error||"No se pudo generar");
-   onChange(url);await load();
+   onChange(url);setPickerOpen(false);setNotice("Imagen generada y seleccionada.");await load();
   }catch(e){setError(e instanceof Error?e.message:"Error en generación");}
   finally{setGenerating(false);}
  }
+ const selected=Boolean(value&&safeWebImageUrl(value));
+ const openPicker=()=>{setError("");setNotice("");setTab("library");setMenuFor(null);setConfirmDelete(null);setPickerOpen(true);};
+ function choose(url:string){
+  onChange(url);setPickerOpen(false);setNotice("Foto seleccionada para este lugar.");
+ }
  return <div className={styles.wrap}>
-  {value&&safeWebImageUrl(value)?<div className={styles.selectedImage}>
-   <img src={value} alt={kind==="logo"?"Logo completo seleccionado":"Imagen seleccionada"} className={kind==="logo"?styles.currentLogo:styles.current}/>
-   <button type="button" className={styles.clearSelection} disabled={busy||Boolean(deleting)}
-    onClick={()=>{onChange("");setNotice("Foto quitada solo de este lugar. Los demás usos no se modificaron.");setError("");}}>
-     <Trash2 size={13}/> Eliminar de este lugar</button>
-  </div>:null}
-  <label className={styles.upload}><ImagePlus size={16}/>{busy?"Subiendo…":"Subir foto"}
-   <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy}
-    onChange={(e:ChangeEvent<HTMLInputElement>)=>{
-     const selected=e.target.files?.[0];e.target.value="";
-     if(selected)void upload(selected);
-    }}/>
-  </label>
-  <div className={styles.heading}><span>Biblioteca</span><button type="button" onClick={()=>void load()} aria-label="Actualizar"><RefreshCw size={14}/></button></div>
-  {items.length>0?<div className={styles.gallery}>{items.map(url=><div key={url} className={styles.photoTile}>
-   <button type="button" className={value===url?styles.active:styles.selectPhoto}
-    aria-label="Seleccionar esta foto" aria-pressed={value===url}
-    disabled={busy||Boolean(deleting)} onClick={()=>onChange(url)}>
-    <img src={url} alt="Fotografía de la biblioteca"/>
-   </button>
-   <button type="button" className={styles.deletePhoto} aria-label="Quitar esta foto de mi biblioteca"
-    title="Quitar foto de biblioteca" disabled={busy||Boolean(deleting)}
-    onClick={()=>void deleteImage(url)}><Trash2 size={14} aria-hidden="true"/></button>
-   {deleting===url?<span className={styles.deletingStatus}>Eliminando…</span>:null}
-  </div>)}</div>:<small className={styles.empty}>Sube tu primera fotografía.</small>}
-  {ai?<div className={styles.ai}>
-   <small>Consumo por imagen: 1 generación del cupo diario. El servicio utiliza una API con costo para VMV.</small>
-   <textarea value={prompt} maxLength={450} spellCheck={false} rows={2}
-    placeholder="Describe una imagen para generar" onChange={e=>setPrompt(e.target.value)}/>
-   <button type="button" disabled={generating||prompt.trim().length<8} onClick={()=>void generate()}>
-    <WandSparkles size={15}/>{generating?"Creando…":"Generar con IA"}
-   </button>
-  </div>:null}
+  {selected?<div className={styles.selectedImage}>
+   <img src={value} alt={kind==="logo"?"Logo completo seleccionado":"Foto seleccionada"}
+    className={kind==="logo"?styles.currentLogo:styles.current}/>
+   <div className={styles.fieldActions}>
+    <button type="button" ref={triggerRef} className={styles.replace} onClick={openPicker}
+     disabled={busy||Boolean(deleting)}><ImagePlus size={15}/> Reemplazar</button>
+    <button type="button" className={styles.clearSelection} disabled={busy||Boolean(deleting)}
+     onClick={()=>{onChange("");setNotice("Foto quitada solo de este lugar. Otros usos permanecen intactos.");setError("");}}>
+     <Trash2 size={13}/> Quitar</button>
+   </div>
+  </div>:<button type="button" ref={triggerRef} className={styles.emptyPick}
+   disabled={busy||Boolean(deleting)} onClick={openPicker}>
+   <ImagePlus size={19}/><strong>Agregar foto</strong><small>Subir foto o elegir de Mis imágenes</small>
+  </button>}
   {notice?<small role="status" className={styles.notice}>{notice}</small>:null}
-  {error?<small role="alert" className={styles.error}>{error}</small>:null}
+  {error&&!pickerOpen?<small role="alert" className={styles.error}>{error}</small>:null}
+  {pickerOpen&&typeof document!=="undefined"?createPortal(
+   <div className={styles.backdrop} onMouseDown={e=>{if(e.target===e.currentTarget)setPickerOpen(false);}}>
+    <div className={styles.sheet} role="dialog" aria-modal="true" aria-label="Seleccionar imagen">
+     <div className={styles.modalHeader}>
+      <div><small>WEB STUDIO</small><h3>Seleccionar imagen</h3></div>
+      <button type="button" ref={closeRef} aria-label="Cerrar selector de imágenes"
+       onClick={()=>{setPickerOpen(false);triggerRef.current?.focus();}}><X size={20}/></button>
+     </div>
+     <div className={styles.tabs} role="tablist" aria-label="Origen de las imágenes">
+      <button type="button" role="tab" aria-selected={tab==="library"}
+       className={tab==="library"?styles.selectedTab:styles.tab} onClick={()=>setTab("library")}>Mis imágenes</button>
+      <button type="button" role="tab" aria-selected={tab==="upload"}
+       className={tab==="upload"?styles.selectedTab:styles.tab} onClick={()=>setTab("upload")}>Subir fotos</button>
+     </div>
+     <div className={styles.modalBody}>
+      {tab==="library"?<>
+       <div className={styles.heading}><span>Fotos guardadas</span>
+        <button type="button" onClick={()=>void load()} aria-label="Actualizar biblioteca"><RefreshCw size={16}/></button>
+       </div>
+       {items.length?<div className={styles.gallery}>
+        {items.map(url=><div key={url} className={styles.photoTile}>
+         <button type="button" className={value===url?styles.active:styles.selectPhoto}
+          aria-label="Seleccionar esta fotografía" aria-pressed={value===url}
+          disabled={busy||Boolean(deleting)} onClick={()=>choose(url)}>
+          <img src={url} alt="Fotografía de Mis imágenes"/>
+         </button>
+         <button type="button" className={styles.more} aria-label="Opciones del archivo"
+          aria-expanded={menuFor===url} disabled={busy||Boolean(deleting)}
+          onClick={()=>{setMenuFor(old=>old===url?null:url);setConfirmDelete(null);}}>
+          <MoreVertical size={17}/>
+         </button>
+         {menuFor===url?<div className={styles.fileMenu}>
+          {confirmDelete===url?<>
+           <p>¿Eliminar este archivo de la biblioteca? Los usos guardados se conservarán.</p>
+           <div><button type="button" onClick={()=>setConfirmDelete(null)}>Cancelar</button>
+            <button type="button" className={styles.danger} disabled={Boolean(deleting)}
+             onClick={()=>void deleteImage(url)}>Confirmar</button></div>
+          </>:<button type="button" onClick={()=>setConfirmDelete(url)}>Eliminar archivo</button>}
+         </div>:null}
+         {deleting===url?<span className={styles.deletingStatus}>Procesando…</span>:null}
+        </div>)}
+       </div>:<div className={styles.emptyState}>
+        <ImagePlus size={26}/><p>No tienes fotografías guardadas.</p>
+        <button type="button" onClick={()=>setTab("upload")}>Subir primera foto</button>
+       </div>}
+      </>:<>
+       <label className={styles.upload}><ImagePlus size={19}/>{busy?"Subiendo…":"Elegir una fotografía"}
+        <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy}
+         onChange={(e:ChangeEvent<HTMLInputElement>)=>{
+          const file=e.target.files?.[0];e.target.value="";
+          if(file)void upload(file);
+         }}/>
+       </label>
+       <p className={styles.hint}>JPG, PNG o WebP, hasta 18 MB. La foto se optimiza y queda seleccionada automáticamente.</p>
+       {ai?<div className={styles.ai}>
+        <small>Generar con IA consume 1 generación del cupo diario y utiliza una API con costo para VMV.</small>
+        <textarea value={prompt} maxLength={450} spellCheck={false} rows={2}
+         placeholder="Describe la imagen que quieres crear" onChange={e=>setPrompt(e.target.value)}/>
+        <button type="button" disabled={generating||prompt.trim().length<8} onClick={()=>void generate()}>
+         <WandSparkles size={15}/>{generating?"Creando…":"Generar con IA"}</button>
+       </div>:null}
+      </>}
+      {notice?<small role="status" className={styles.notice}>{notice}</small>:null}
+      {error?<small role="alert" className={styles.error}>{error}</small>:null}
+     </div>
+    </div>
+   </div>,document.body):null}
  </div>;
 }
