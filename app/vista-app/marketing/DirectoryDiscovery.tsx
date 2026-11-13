@@ -4,7 +4,7 @@ import {MapPin,ExternalLink,SearchCheck,Check} from "lucide-react";
 import styles from "./DirectoryDiscovery.module.css";
 
 export type DirectoryProgress="pending_review"|"researching"|"needs_customer"|"submitted"|"published"|"already_listed"|"not_eligible";
-export type DirectoryTarget={id:string;name:string;type:"national"|"state"|"local"|"research";url:string;cost:"free"|"membership"|"unknown";status:DirectoryProgress;evidenceUrl:string;note:string};
+export type DirectoryTarget={id:string;name:string;type:"national"|"state"|"local"|"research";url:string;cost:"free"|"membership"|"unknown";status:DirectoryProgress;evidenceUrl:string;existingUrl?:string;note:string};
 export type DirectoryData={city:string;state:string;postal:string;industry:string;serviceArea:boolean;selected:DirectoryTarget[];notes:string};
 export const emptyDirectory:DirectoryData={city:"",state:"",postal:"",industry:"",serviceArea:false,selected:[],notes:""};
 const list=[
@@ -26,12 +26,13 @@ export function directoryOptions(d:DirectoryData){
  return list.filter(x=>x.scope==="all"||x.scope==="travel"&&travel||x.scope==="ga-travel"&&ga&&travel||x.scope==="columbus"&&columbus);
 }
 export function researchTarget(data:DirectoryData):DirectoryTarget{
- return {id:"research-local",name:"Buscar directorios en "+[data.city,data.state].filter(Boolean).join(", "),type:"research",url:"",cost:"unknown",status:"pending_review",evidenceUrl:"",note:"Investigación humana pendiente; no es una ficha publicada."};
+ return {id:"research-local",name:"Buscar directorios en "+[data.city,data.state].filter(Boolean).join(", "),type:"research",url:"",cost:"unknown",status:"pending_review",evidenceUrl:"",existingUrl:"",note:"Investigación humana pendiente; no es una ficha publicada."};
 }
 export function validateDirectory(data:DirectoryData){
  if(!data.state.trim()||!data.city.trim())return "Indica ciudad y estado para buscar oportunidades locales.";
  if(data.city.length>100||data.state.length>100||data.postal.length>20||data.notes.length>800)return "Revisa la longitud de los datos ingresados.";
  if(!data.selected.length)return "Selecciona al menos un directorio o la investigación local.";
+ if(data.selected.some(t=>t.existingUrl?.trim()&&!safeDirectoryUrl(t.existingUrl)))return "Corrige el enlace de una ficha existente (debe ser HTTPS).";
  const allowed=new Set([...directoryOptions(data).map(x=>x.id),"research-local"]);
  if(data.selected.some(t=>!allowed.has(t.id)))return "Revisa tu selección: algunos directorios no corresponden a la ubicación actual.";
  return "";
@@ -57,7 +58,7 @@ export default function DirectoryDiscovery({data,onChange,industry}:{data:Direct
   const next=data.selected.filter(x=>x.id!==id);
   if(!selectedIds.has(id)){
    const match=options.find(x=>x.id===id);
-   const target=id==="research-local"?researchTarget(data):match?{id:match.id,name:match.name,type:match.type,url:match.url,cost:match.cost,status:"pending_review" as const,evidenceUrl:"",note:match.description}:null;
+   const target=id==="research-local"?researchTarget(data):match?{id:match.id,name:match.name,type:match.type,url:match.url,cost:match.cost,status:"pending_review" as const,evidenceUrl:"",existingUrl:"",note:match.description}:null;
    if(target)next.push(target);
   }
   onChange({...data,selected:next});
@@ -88,6 +89,7 @@ export default function DirectoryDiscovery({data,onChange,industry}:{data:Direct
      <span className={styles.optionText}><strong>Encontrar otros directorios locales</strong><small>VMV investigará directorios de tu estado, ciudad, cámaras de comercio y sector.</small><em>Revisión y precio de gestión sujetos a cotización</em></span>
     </button>
    </div>
+   {data.selected.filter(t=>t.id!=="research-local").map(t=><label key={t.id} className={styles.existingField}>¿Ya apareces en {t.name}? Comparte el enlace (opcional)<input type="url" inputMode="url" maxLength={750} value={t.existingUrl||""} placeholder="https://..." onChange={e=>onChange({...data,selected:data.selected.map(x=>x.id===t.id?{...x,existingUrl:e.target.value}:x)})}/></label>)}
    <p className={styles.hint}>Las opciones mostradas son oportunidades por evaluar, no fichas encontradas ni publicaciones automáticas. La membresía o la gestión pueden costar dinero; te informaremos antes de contratar.</p>
   </div>
   <div className={styles.section}>
