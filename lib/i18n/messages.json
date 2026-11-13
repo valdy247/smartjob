@@ -943,7 +943,18 @@
     "marketing.visibility.editing_through_apple_advanced_apis_for_approved_par": "Edición desde Apple; APIs avanzadas para socios autorizados",
     "marketing.visibility.local_directory_and_reputation_claim_your_listing": "Directorio y reputación local · Reclama tu ficha",
     "marketing.visibility.publish_via_portal_management_integration_requires_a": "Publicación mediante portal; integración de gestión exige acuerdo con Yelp",
-    "marketing.visibility.completed_self_reported": "Completado según tú"
+    "marketing.visibility.completed_self_reported": "Completado según tú",
+    "marketing.visibility.status_of": "Estado de",
+    "marketing.visibility.export_heading": "FICHA EMPRESARIAL · VMV BUSINESS",
+    "marketing.visibility.export_name": "Nombre: ",
+    "marketing.visibility.export_industry": "Industria: ",
+    "marketing.visibility.export_phone": "Teléfono: ",
+    "marketing.visibility.export_location": "Ubicación: ",
+    "marketing.visibility.export_hours": "Horario: ",
+    "marketing.visibility.export_website": "Sitio web: ",
+    "marketing.visibility.export_description": "Descripción: ",
+    "marketing.visibility.export_service_area": "Negocio de área de servicio / dirección privada",
+    "marketing.visibility.export_results_vary": "Estos resultados pueden cambiar entre mediciones."
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -1889,6 +1900,17 @@
     "marketing.visibility.editing_through_apple_advanced_apis_for_approved_par": "Editing through Apple; advanced APIs for approved partners",
     "marketing.visibility.local_directory_and_reputation_claim_your_listing": "Local directory and reputation · Claim your listing",
     "marketing.visibility.publish_via_portal_management_integration_requires_a": "Publish via portal; management integration requires an agreement with Yelp",
-    "marketing.visibility.completed_self_reported": "Completed (self-reported)"
+    "marketing.visibility.completed_self_reported": "Completed (self-reported)",
+    "marketing.visibility.status_of": "Status of",
+    "marketing.visibility.export_heading": "BUSINESS PROFILE · VMV BUSINESS",
+    "marketing.visibility.export_name": "Name: ",
+    "marketing.visibility.export_industry": "Industry: ",
+    "marketing.visibility.export_phone": "Phone: ",
+    "marketing.visibility.export_location": "Location: ",
+    "marketing.visibility.export_hours": "Hours: ",
+    "marketing.visibility.export_website": "Website: ",
+    "marketing.visibility.export_description": "Description: ",
+    "marketing.visibility.export_service_area": "Service-area business / private address",
+    "marketing.visibility.export_results_vary": "Results may vary between measurements."
   }
 }

@@ -1,9 +1,9 @@
 "use client";
-import {useState} from "react";
+import {useEffect,useState} from "react";
 import {ArrowUpRight,CheckCircle2,ChevronDown,ClipboardCopy,ExternalLink,Globe2,MapPinned,RefreshCw,Search,ShieldCheck,TrendingUp} from "lucide-react";
 import styles from "./LocalVisibilityStudio.module.css";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
-import {t,type MessageKey,type InterfaceLanguage} from "@/lib/i18n";
+
 
 export type LocalProfile={
  business:string;industry:string;website:string;phone:string;address:string;
@@ -38,6 +38,7 @@ export default function LocalVisibilityStudio({profile,onChange,onRequestHelp}:{
  const [audit,setAudit]=useState<Audit|null>(null);
  const [auditError,setAuditError]=useState("");
  const [auditing,setAuditing]=useState(false);
+ useEffect(()=>{setNotice("");setAuditError("");},[language]);
  const details=[
   ["Nombre",profile.business.trim()],["Sector",profile.industry.trim()&&profile.industry!==translate("marketing.visibility.not_specified")?profile.industry:""],
   ["Teléfono",profile.phone.trim()],["Ciudad",profile.city.trim()],["Estado / región",profile.region.trim()],
@@ -46,13 +47,13 @@ export default function LocalVisibilityStudio({profile,onChange,onRequestHelp}:{
  const ready=details.filter(([,value])=>Boolean(value)).length;
  const exportText=[
   "FICHA EMPRESARIAL · VMV BUSINESS",
-  "Nombre: "+(profile.business.trim()||translate("marketing.visibility.not_specified")),
-  "Industria: "+profile.industry,
-  "Teléfono: "+(profile.phone.trim()||translate("marketing.visibility.not_specified")),
-  "Ubicación: "+(hideAddress?"Negocio de área de servicio / dirección privada":([profile.address.trim(),profile.city.trim(),profile.region.trim(),profile.postal.trim()].filter(Boolean).join(", ")||translate("marketing.visibility.not_specified"))),
-  "Horario: "+(profile.hours.trim()||translate("marketing.visibility.not_specified")),
-  "Sitio web: "+(profile.website.trim()||translate("marketing.visibility.not_specified")),
-  "Descripción: "+(profile.description.trim()||translate("marketing.visibility.not_specified"))
+  translate("marketing.visibility.export_name")+(profile.business.trim()||translate("marketing.visibility.not_specified")),
+  translate("marketing.visibility.export_industry")+profile.industry,
+  translate("marketing.visibility.export_phone")+(profile.phone.trim()||translate("marketing.visibility.not_specified")),
+  translate("marketing.visibility.export_location")+(hideAddress?translate("marketing.visibility.export_service_area"):([profile.address.trim(),profile.city.trim(),profile.region.trim(),profile.postal.trim()].filter(Boolean).join(", ")||translate("marketing.visibility.not_specified"))),
+  translate("marketing.visibility.export_hours")+(profile.hours.trim()||translate("marketing.visibility.not_specified")),
+  translate("marketing.visibility.export_website")+(profile.website.trim()||translate("marketing.visibility.not_specified")),
+  translate("marketing.visibility.export_description")+(profile.description.trim()||translate("marketing.visibility.not_specified"))
  ].join("\n");
  const copyProfile=async()=>{
   try{await navigator.clipboard.writeText(exportText);setNotice(translate("marketing.visibility.business_profile_copied_review_the_details_before_su"));}
@@ -116,12 +117,12 @@ export default function LocalVisibilityStudio({profile,onChange,onRequestHelp}:{
    <p className={styles.muted}>{translate("marketing.visibility.before_creating_a_listing_check_whether_one_already_")}</p>
    <div className={styles.directories}>
     {directories.map(item=><article key={item.id} className={styles.directory}>
-     <div className={styles.dirHeading}><div><strong>{item.name}</strong><p>{translate(("marketing.visibility."+({google:"marketing.visibility.google_search_and_maps_claim_and_verify_your_busines",bing:"marketing.visibility.bing_and_bing_maps_may_import_details_from_google",apple:"marketing.visibility.apple_maps_and_siri_free_business_listing",yelp:"marketing.visibility.local_directory_and_reputation_claim_your_listing"} as Record<string,string>)[item.id].replace(/^marketing\.visibility\./,"")) as MessageKey)}</p></div><span className={styles.status}>{statusLabels[listingStatus[item.id]||"not_started"]}</span></div>
-     <small>{translate(({google:"marketing.visibility.future_sync_with_web_services_api_subject_to_approva",bing:"marketing.visibility.free_listing_and_verification_on_bing",apple:"marketing.visibility.editing_through_apple_advanced_apis_for_approved_par",yelp:"marketing.visibility.publish_via_portal_management_integration_requires_a"} as Record<string,MessageKey>)[item.id])}</small>
+     <div className={styles.dirHeading}><div><strong>{item.name}</strong><p>{({google:translate("marketing.visibility.google_search_and_maps_claim_and_verify_your_busines"),bing:translate("marketing.visibility.bing_and_bing_maps_may_import_details_from_google"),apple:translate("marketing.visibility.apple_maps_and_siri_free_business_listing"),yelp:translate("marketing.visibility.local_directory_and_reputation_claim_your_listing")} as Record<string,string>)[item.id]}</p></div><span className={styles.status}>{statusLabels[listingStatus[item.id]||"not_started"]}</span></div>
+     <small>{({google:translate("marketing.visibility.future_sync_with_web_services_api_subject_to_approva"),bing:translate("marketing.visibility.free_listing_and_verification_on_bing"),apple:translate("marketing.visibility.editing_through_apple_advanced_apis_for_approved_par"),yelp:translate("marketing.visibility.publish_via_portal_management_integration_requires_a")} as Record<string,string>)[item.id]}</small>
      <div className={styles.directoryActions}>
       {onRequestHelp?<button type="button" className={styles.requestHelp} onClick={()=>onRequestHelp(serviceCodeByDirectory[item.id])}>{translate("marketing.visibility.request_vmv_assistance")}</button>:null}
       <a href={item.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> {translate("marketing.visibility.open_official_portal")}</a>
-      <select aria-label={translate("undefined")+" "+item.name} value={listingStatus[item.id]||"not_started"} onChange={e=>setListingStatus(prev=>({...prev,[item.id]:e.target.value as ListingStatus}))}>
+      <select aria-label={translate("marketing.visibility.status_of")+" "+item.name} value={listingStatus[item.id]||"not_started"} onChange={e=>setListingStatus(prev=>({...prev,[item.id]:e.target.value as ListingStatus}))}>
        <option value="not_started">{translate("marketing.visibility.not_started")}</option>
        <option value="in_progress">{translate("marketing.visibility.in_progress")}</option>
        <option value="self_reported">{translate("marketing.visibility.i_completed_it")}</option>
@@ -143,7 +144,7 @@ export default function LocalVisibilityStudio({profile,onChange,onRequestHelp}:{
      {([[translate("marketing.visibility.mobile_speed"),audit.scores.performance],[translate("marketing.visibility.technical_seo"),audit.scores.seo],[translate("marketing.visibility.accessibility"),audit.scores.accessibility]] as const).map(([label,value])=><div key={label}><strong>{value===null?"—":value+"/100"}</strong><span>{label}</span><small>{value===null?translate("marketing.visibility.no_data"):value>=90?translate("marketing.visibility.good"):value>=50?translate("marketing.visibility.needs_improvement"):translate("marketing.visibility.priority")}</small></div>)}
     </div>
     {audit.recommendations.length>0?<div className={styles.opportunities}><strong><TrendingUp size={16}/> {translate("marketing.visibility.potential_improvements_found")}</strong><ul>{audit.recommendations.map((r,i)=><li key={i}>{r}</li>)}</ul></div>:<p className={styles.muted}><CheckCircle2 size={16}/> {translate("marketing.visibility.no_alerts_were_found_in_the_selected_basic_checks")}</p>}
-    <p className={styles.fine}><ShieldCheck size={14}/> {translate("marketing.visibility.source")} {audit.source}. Estos resultados pueden cambiar entre mediciones.</p>
+    <p className={styles.fine}><ShieldCheck size={14}/> {translate("marketing.visibility.source")} {audit.source}. {translate("marketing.visibility.export_results_vary")}</p>
    </div>:null}
   </section>
  </div>;
