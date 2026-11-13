@@ -60,7 +60,13 @@ export async function phoneCommerceTurn(db:SupabaseClient,session:VoiceCommerceS
  speech:string,lang:"es"|"en",turn:number):Promise<string|null>{
  if(!salesPermitted(session))return null;
  const products=await catalogForCall(db,session);
- if(!products.length)return fallback(lang,"missing");
+ if(!products.length){
+  // A sales-capable agent should still answer normal questions about the owner
+  // and the business. Lack of an approved catalog blocks commercial promises,
+  // not greeting or general support.
+  const commercialQuestion=/\b(comprar|compra|compras|venden|vendes|vende|venta|vender|producto|productos|precio|precios|cotizaci[oó]n|existencia|stock|disponibilidad|disponible|pedido|pedir|orden|pagar|pago|buy|purchase|price|prices|products?|stock|inventory|availability|available|orders?|payment|checkout)\b/i.test(speech);
+  return commercialQuestion?fallback(lang,"missing"):null;
+ }
  const prior=Array.isArray(session.turns)?session.turns.filter(x=>
   x&&["user","assistant"].includes(x.role)&&typeof x.content==="string").slice(-10):[];
  const account=await db.from("vmv_ai_orders").select("id,order_no,status,total_cents")
