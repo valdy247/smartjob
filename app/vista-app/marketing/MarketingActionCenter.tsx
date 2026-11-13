@@ -12,8 +12,9 @@ import {getSupabase} from "@/lib/supabase";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS,categoryLabel} from "@/lib/vmv-business-categories";
 import styles from "./MarketingActionCenter.module.css";
 import WebRepairStudio,{emptyWebRepair,validateWebRepair,type WebRepairData} from "./WebRepairStudio";
+import ReputationStudio,{reviewReplyTemplate,type ReviewMode} from "./ReputationStudio";
 import DirectoryDiscovery,{emptyDirectory,validateDirectory,directoryStatusNames,safeDirectoryUrl,type DirectoryData,type DirectoryProgress} from "./DirectoryDiscovery";
-import {readMarketingDraft,writeMarketingDraft,readDraftMedia,saveDraftMedia,clearMarketingDraft,markGuestLoginPending,transferGuestDraft,migrateLegacyDraft,type StoredMarketingDraft} from "./MarketingDraftStore";
+import {readMarketingDraft,writeMarketingDraft,readDraftMedia,saveDraftMedia,clearMarketingDraft,markGuestLoginPending,transferGuestDraft,type StoredMarketingDraft} from "./MarketingDraftStore";
 import GoogleProfileWizard,{emptyGoogle,emptyMedia,googleStepNames,validateGoogleStep,validateGoogleLinks,validateGoogleAll,type GoogleData,type GoogleMedia} from "./GoogleProfileWizard";
 
 export type ServiceCode="directory_listings"|"google_profile"|"apple_maps"|"bing_places"|"yelp_profile"|"search_console"|"seo_improvement"|"campaign_setup"|"review_strategy"|"other";
@@ -36,7 +37,7 @@ const services:Service[]=[
  {id:"search_console",name:"Search Console",why:"Configurar el acceso para descubrir búsquedas reales.",mode:"Conexión autorizada pendiente"},
  {id:"seo_improvement",name:"Mejorar mi web",why:"Descubre mejoras para tu sitio.",mode:"Auditoría + ayuda"},
  {id:"campaign_setup",name:"Crear una campaña",why:"Diseñar y preparar una campaña con presupuesto aprobado.",mode:"Con aprobación previa"},
- {id:"review_strategy",name:"Gestionar reseñas",why:"Responde reseñas y pide opiniones.",mode:"Herramientas y asistencia"},
+ {id:"review_strategy",name:"Mi reputación",why:"Responde reseñas y encuentra directorios.",mode:"Herramientas y asistencia"},
  {id:"other",name:"Otra necesidad de marketing",why:"Explica el resultado que deseas conseguir.",mode:"Evaluación individual"}
 ];
 type WizardStep=0|1|2|3|4;
@@ -101,6 +102,9 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [site,setSite]=useState(website);
  const [goal,setGoal]=useState("");
  const [reviewInput,setReviewInput]=useState("");
+ const [reviewMode,setReviewMode]=useState<ReviewMode>("respond");
+ const [reviewLink,setReviewLink]=useState("");
+ const [reviewReply,setReviewReply]=useState("");
  const [reviewTone,setReviewTone]=useState<"cordial"|"breve">("cordial");
  const [webRepair,setWebRepair]=useState<WebRepairData>(emptyWebRepair);
  const [directoryData,setDirectoryData]=useState<DirectoryData>(emptyDirectory);
@@ -129,6 +133,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [stageUpdate,setStageUpdate]=useState("");
  const [evidence,setEvidence]=useState("");
  const [draftReady,setDraftReady]=useState(false);
+ const resolvedDraftOwner=useRef<string|null|"initial">("initial");
  const [draftNotice,setDraftNotice]=useState("");
  const [photoNotice,setPhotoNotice]=useState("");
  const [requestId,setRequestId]=useState(()=>crypto.randomUUID());
@@ -137,7 +142,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   version:2,savedAt:Date.now(),requestId,ownerId:user?.id||null,
   service:selected,step:wizardStep,googleStep,
   name,site,category:chosenCategory||industryId||savedCategory||"other",goal,reviewInput,reviewTone,
-  reviewLink:"",reviewReply:"",googleData,webRepair,directoryData
+  reviewLink,reviewReply,googleData,webRepair,directoryData
  });
  const saveCurrentDraft=async()=>{
   const ok=writeMarketingDraft(draftSnapshot());
@@ -151,15 +156,25 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  useEffect(()=>{
   if(authState==="checking"||authState==="unconfigured")return;
   let active=true;
+  const uid=authState==="ready"?user?.id||null:null;
+  setDraftReady(false);
   void (async()=>{
-   const uid=authState==="ready"?user?.id||null:null;
-   const saved=uid?(transferGuestDraft(uid)||readMarketingDraft(uid)):(readMarketingDraft(null)||migrateLegacyDraft());
+   const saved=uid?(transferGuestDraft(uid)||readMarketingDraft(uid)):readMarketingDraft(null);
+   if(!saved&&resolvedDraftOwner.current!=="initial"&&resolvedDraftOwner.current!==uid){
+    setRequestId(crypto.randomUUID());setWizardStep(0);setGoogleStep(0);
+    setSelected("google_profile");setName(businessName||"");setSite(website||"");setChosenCategory("");
+    setGoal("");setReviewInput("");setReviewLink("");setReviewReply("");setReviewMode("respond");
+    setGoogleData(emptyGoogle);setGoogleMedia(emptyMedia);setWebRepair(emptyWebRepair);setDirectoryData(emptyDirectory);
+    setConsent(false);setDraftNotice("");
+   }
+   resolvedDraftOwner.current=uid;
    if(saved&&active&&services.some(item=>item.id===saved.service)){
     setRequestId(saved.requestId);setSelected(saved.service as ServiceCode);
     setWizardStep(saved.step as WizardStep);
     setGoogleStep(Math.max(0,Math.min(saved.googleStep,googleStepNames.length-1)));
     setName(saved.name||"");setSite(saved.site||"");setChosenCategory(saved.category||"");
     setGoal(saved.goal||"");setReviewInput(saved.reviewInput||"");
+    setReviewLink(saved.reviewLink||"");setReviewReply(saved.reviewReply||"");
     setReviewTone(saved.reviewTone==="breve"?"breve":"cordial");
     if(saved.googleData)setGoogleData(saved.googleData);
     if(saved.webRepair)setWebRepair(saved.webRepair);
@@ -179,7 +194,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(!writeMarketingDraft(draftSnapshot()))setDraftNotice("No se está guardando el borrador. Mantén abierta esta página.");
   },300);
   return()=>window.clearTimeout(id);
- },[draftReady,authState,user?.id,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,goal,reviewInput,reviewTone,googleData,webRepair,directoryData,requestId]);
+ },[draftReady,authState,user?.id,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,goal,reviewInput,reviewTone,reviewLink,reviewReply,googleData,webRepair,directoryData,requestId]);
  useEffect(()=>{
   if(!draftReady||selected!=="google_profile"||wizardStep<1||wizardStep>3)return;
   const id=window.setTimeout(()=>{
@@ -200,7 +215,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  };
  const editWizardStep=(step:WizardStep)=>{closeKeyboard();setWizardStep(step);setWizardError("");revealWizard();};
  const chooseService=(code:ServiceCode)=>{
-  if(code!==selected){setRequestId(crypto.randomUUID());setGoal("");setConsent(false);setReviewInput("");setWebRepair(emptyWebRepair);setDirectoryData(emptyDirectory);setGoogleStep(0);setGoogleMedia(emptyMedia);}
+  if(code!==selected){setRequestId(crypto.randomUUID());setGoal("");setConsent(false);setReviewLink("");setReviewReply("");setReviewMode("respond");setReviewInput("");setWebRepair(emptyWebRepair);setDirectoryData(emptyDirectory);setGoogleStep(0);setGoogleMedia(emptyMedia);}
   setSelected(code);setWizardStep(1);setWizardError("");setSubmittedId(null);revealWizard();
  };
  const goNext=()=>{
@@ -350,7 +365,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     id:requestId,owner_id:user.id,service_code:selected,business_name:name.trim(),
     category_id:effectiveCategory,website_url:safeSite(site),
     goal_text:selected==="directory_listings"?("Solicito evaluación para registrar o actualizar "+directoryData.selected.length+" directorios en "+directoryData.city+", "+directoryData.state+". Se requiere revisar elegibilidad, duplicados y presupuesto antes de iniciar."):selected==="google_profile"?googleGoalText:selected==="seo_improvement"?(webRepair.requestRepair?"Solicito presupuesto para reparación técnica de mi página web.":"Solicito guardar mi diagnóstico web sin contratar reparación."):selected==="review_strategy"&&reviewInput.trim()?
-     ("Reseña: "+reviewInput.trim().slice(0,650)+" | Respuesta sugerida, pendiente de revisión: "+answerReview).slice(0,1500):goal.trim(),
+     ("Reseña: "+reviewInput.trim().slice(0,650)+" | Respuesta para revisión: "+(reviewReply||reviewReplyTemplate(name,reviewInput,reviewTone)).slice(0,700)).slice(0,1500):goal.trim(),
     agreed_to_contact:true,
     ...(selected==="google_profile"?{google_profile_data:{...googleData,...(googleData.kind==="service_area"?{street:"",unit:"",city:"",region:"",postal:""}:{}),media:mediaPaths}}:{}),
     ...(selected==="seo_improvement"?{web_repair_data:webRepair}:{}),
@@ -487,7 +502,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     </ol>:null}
     {wizardStep===0?<div className={styles.wizardBody}>
      <div className={styles.servicePicker}>
-      {services.filter(service=>["google_profile","seo_improvement","directory_listings","review_strategy"].includes(service.id)).map(service=>{
+      {services.filter(service=>["google_profile","seo_improvement","review_strategy"].includes(service.id)).map(service=>{
        const ServiceIcon=serviceIcons[service.id];
        return <button type="button" key={service.id} onClick={()=>chooseService(service.id)} className={styles.serviceTile} aria-label={"Elegir "+service.name}>
         <span className={styles.serviceIcon}><ServiceIcon size={23} strokeWidth={1.8}/></span>
@@ -514,13 +529,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
      <div className={styles.selectedServiceBanner}><span className={styles.selectedServiceIcon}>{(()=>{const Icon=serviceIcons[selected];return <Icon size={23}/>;})()}</span><span><small>ESTAMOS PREPARANDO</small><strong>{services.find(s=>s.id===selected)?.name}</strong></span></div>
      {selected==="directory_listings"?<DirectoryDiscovery data={directoryData} onChange={setDirectoryData} industry={effectiveCategory}/>:null}
      {selected==="seo_improvement"?<WebRepairStudio site={site} data={webRepair} onChange={setWebRepair} accessToken={accessToken}/>:null}
-     {selected==="review_strategy"?<div className={styles.specialTool}>
-       <strong>¿Qué necesitas?</strong>
-       <div className={styles.goalPresets}><button type="button" className={styles.preset} onClick={()=>{setGoal("Quiero pedir reseñas honestas a mis clientes.");setReviewInput("");}}>Pedir reseñas</button><button type="button" className={styles.preset} onClick={()=>setGoal("Necesito responder una reseña.")}>Responder una reseña</button></div>
-       <label className={styles.goalLabel}>Pega una reseña (opcional)<textarea rows={3} maxLength={650} value={reviewInput} onChange={e=>{setReviewInput(e.target.value);setGoal(e.target.value.trim()?"Necesito responder esta reseña y revisar la respuesta sugerida.":"");}} placeholder="Texto de la reseña del cliente…"/></label>
-       {reviewInput.trim()?<div className={styles.auditSummary}><strong>Respuesta para revisar</strong><p>{answerReview}</p><div className={styles.goalPresets}><button type="button" className={styles.preset} onClick={()=>setReviewTone(reviewTone==="cordial"?"breve":"cordial")}>Cambiar tono</button><button type="button" className={styles.toolButton} onClick={()=>void navigator.clipboard?.writeText(answerReview)}>Copiar respuesta</button></div><small>Revisa antes de usarla. Nunca publicamos sin autorización.</small></div>:null}
-       {!reviewInput.trim()&&goal.includes("pedir reseñas")?<div className={styles.auditSummary}><p>{reviewRequestMessage}</p><button type="button" className={styles.toolButton} onClick={()=>void navigator.clipboard?.writeText(reviewRequestMessage)}>Copiar mensaje</button></div>:null}
-     </div>:null}
+     {selected==="review_strategy"?<ReputationStudio business={name} mode={reviewMode} onModeChange={v=>{setReviewMode(v);setGoal(v==="request"?"Quiero solicitar reseñas auténticas a mis clientes.":"Necesito preparar respuestas para reseñas reales.");}} reviewInput={reviewInput} onReviewChange={v=>{setReviewInput(v);setReviewReply("");setGoal(v.trim()?"Necesito preparar una respuesta revisable para una reseña real.":"");}} reply={reviewReply} onReplyChange={setReviewReply} link={reviewLink} onLinkChange={v=>{setReviewLink(v);setGoal("Quiero compartir un enlace auténtico para recibir reseñas de mis clientes.");}} onDirectory={()=>{setSelected("directory_listings");setWizardError("");setGoal("");}} reviewTone={reviewTone} onToneChange={setReviewTone}/>:null}
+     {selected==="directory_listings"?<button type="button" className={styles.preset} onClick={()=>{setSelected("review_strategy");setWizardError("");}}>← Volver a reseñas</button>:null}
      {selected!=="review_strategy"&&selected!=="seo_improvement"&&selected!=="directory_listings"?<span className={styles.presetLabel}>Elige qué necesitas</span>:null}
      <div className={styles.goalPresets}>{(selected==="review_strategy"||selected==="seo_improvement"||selected==="directory_listings"?[]:suggestedGoals[selected]).map(option=><button key={option} type="button" className={goal===option?styles.presetActive:styles.preset} aria-pressed={goal===option} onClick={()=>{setGoal(option);setWizardError("");}}>
       <CheckCircle2 size={16}/>{option}
@@ -540,8 +550,9 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       {site.trim()?<div className={styles.reviewItem}><span>Sitio web</span><strong className={styles.wrapValue}>{site.trim()}</strong></div>:null}
       {selected==="google_profile"?<div className={styles.googleReview}><strong>Datos para Google</strong><span>Operación: {googleData.action==="create"?"Crear":googleData.action==="claim"?"Reclamar":"Mejorar"} · {googleData.kind==="storefront"?"Local":googleData.kind==="service_area"?"Área de servicio":"Local y entregas"}</span><span>Categoría: {googleData.googleCategory}</span><span>{googleData.kind==="service_area"?"Áreas: "+googleData.serviceAreas:[googleData.street,googleData.unit,googleData.city,googleData.region,googleData.postal,googleData.country].filter(Boolean).join(", ")}</span>{googleData.phone?<span>Teléfono: {googleData.phone}</span>:null}{googleData.hoursEnabled?<span>Horarios: {googleData.hours.filter(h=>!h.closed).length} días abiertos</span>:null}{googleData.description?<span>Descripción: {googleData.description}</span>:null}<span>Fotos: {googleFiles.length} (privadas)</span><button type="button" onClick={()=>{setGoogleStep(0);editWizardStep(2);}}>Revisar datos de Google</button></div>:null}
       {selected==="directory_listings"?<div className={styles.googleReview}><strong>Directorios solicitados</strong><span>{directoryData.city}, {directoryData.state}</span>{directoryData.selected.map(d=><span key={d.id}>{d.name} · {d.cost==="free"?"Ficha gratuita":d.cost==="membership"?"Posible membresía":"Por evaluar"}</span>)}<span>VMV confirmará requisitos y precio antes de actuar.</span><button type="button" onClick={()=>editWizardStep(2)}>Revisar selección</button></div>:null}
+      {selected==="review_strategy"?<div className={styles.googleReview}><strong>Mi reputación</strong>{reviewInput.trim()?<span>Reseña real: {reviewInput}</span>:null}{reviewInput.trim()?<span>Respuesta revisada: {reviewReply||reviewReplyTemplate(name,reviewInput,reviewTone)}</span>:null}{reviewLink?<span>Enlace de reseñas: {reviewLink}</span>:null}</div>:null}
       {selected==="seo_improvement"?<div className={styles.googleReview}><strong>Diagnóstico web</strong><span>{webRepair.audit?"Velocidad: "+(webRepair.audit.scores.performance??"—")+"/100; SEO: "+(webRepair.audit.scores.seo??"—")+"/100":"Sin análisis automático; se requiere revisión técnica"}</span><span>Plataforma: {webRepair.platform==="other"?webRepair.otherPlatform:webRepair.platform}</span><span>Repositorio: {webRepair.repositoryHost}</span><span>{webRepair.requestRepair?"Quiero una cotización":"Solo guardar el diagnóstico"}</span><button type="button" onClick={()=>editWizardStep(2)}>Revisar información</button></div>:null}
-      <div className={styles.reviewGoal}><span>Qué necesitas</span><p>{selected==="seo_improvement"?(webRepair.requestRepair?"Solicitar evaluación y presupuesto de reparación.":"Guardar diagnóstico sin reparación."):selected==="google_profile"?googleGoalText:selected==="review_strategy"&&reviewInput.trim()?("Reseña: "+reviewInput.trim()+" · Respuesta sugerida: "+answerReview):goal.trim()}</p><button type="button" onClick={()=>editWizardStep(2)}>Modificar descripción</button></div>
+      <div className={styles.reviewGoal}><span>Qué necesitas</span><p>{selected==="seo_improvement"?(webRepair.requestRepair?"Solicitar evaluación y presupuesto de reparación.":"Guardar diagnóstico sin reparación."):selected==="google_profile"?googleGoalText:selected==="review_strategy"&&reviewInput.trim()?("Reseña: "+reviewInput.trim()+" · Respuesta: "+(reviewReply||reviewReplyTemplate(name,reviewInput,reviewTone))):goal.trim()}</p><button type="button" onClick={()=>editWizardStep(2)}>Modificar descripción</button></div>
      </div>
      <div className={styles.costNote}><Wallet size={22}/><div><strong>Enviar la solicitud: $0</strong><p>El coste de un servicio, si corresponde, se cotizará después. Ningún pago ni publicación se ejecuta al enviar.</p></div></div>
      <label className={styles.permission}><input type="checkbox" checked={consent} onChange={e=>{setConsent(e.target.checked);setWizardError("");}}/>
