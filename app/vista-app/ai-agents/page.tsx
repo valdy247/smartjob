@@ -10,6 +10,7 @@ import styles from "./page.module.css";
 import AgentSetupWizard,{type WizardDraft} from "./AgentSetupWizard";
 import AgentQualityLab from "./AgentQualityLab";
 import CommerceStudio from "./CommerceStudio";
+import CallControl from "./CallControl";
 import AgentLiveTest from "./AgentLiveTest";
 import {inspectAgent} from "./agentQuality";
 import {getSupabase} from "@/lib/supabase";
@@ -17,7 +18,7 @@ import {loadAgents,loadPhoneSelection,selectPhoneAgent,setStudyStatus,storeAgent
 
 type Kind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 type Status="draft"|"active"|"paused";
-type Screen="home"|"editor"|"test"|"quality"|"commerce";
+type Screen="home"|"editor"|"test"|"quality"|"commerce"|"phone";
 type AgentDraft=WizardDraft;
 type Agent=PersistedAgent;
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
@@ -196,6 +197,12 @@ export default function AIAgentsPreview(){
       {notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
       {loading?<div className={styles.info}>Consultando tus agentes guardados…</div>:null}
       {!authenticated?<div className={styles.info}>Inicia sesión en <a href="/vista-app">VMV Business</a> para guardar y seleccionar agentes.</div>:null}
+      {phone&&authenticated?<button type="button" className={styles.commerceLaunch}
+       onClick={()=>setScreen("phone")}>
+        <PhoneCall size={21}/><span><strong>Atención de llamadas</strong>
+         <small>Agente, traducción, horarios y prueba de configuración</small></span>
+         <ChevronRight size={16}/>
+      </button>:null}
       {authenticated&&agents.length>0?<button type="button" className={styles.commerceLaunch} onClick={()=>setScreen("commerce")}>
        <ShoppingBag size={21}/><span><strong>Catálogo y pedidos</strong><small>Precios aprobados, pedidos y pruebas comerciales</small></span><ArrowUpRight size={19}/>
       </button>:null}
@@ -260,6 +267,7 @@ export default function AIAgentsPreview(){
       initial={draft} initialStep={editStep} saving={busy} isPreview={false} authRequired={!authenticated} recoverDraft={!selected} onCancel={back}
       onSave={async updated=>{setDraft(updated);await save(updated);}}/>:null}
      {screen==="quality"&&active?<AgentQualityLab agent={active} onClose={back} onEdit={step=>edit(active,step)}/>:null}
+     {screen==="phone"?<CallControl onBack={back}/>:null}
      {screen==="commerce"?<CommerceStudio agents={agents.filter(a=>a.revision>0)}
       initialAgentId={selected||phone?.agentId||""} onAgentUpdated={updated=>
        setAgents(prev=>prev.map(a=>a.id===updated.id?updated:a))}
