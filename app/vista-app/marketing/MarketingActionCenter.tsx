@@ -245,7 +245,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(site.trim()&&!safeSite(site)){setWizardError(translate("marketing.action.check_your_website_link_it_must_begin_with_https"));return;}
   }
   if(wizardStep===2&&selected==="google_profile"){
-   const missing=validateGoogleStep(googleStep,googleData)||validateGoogleLinks(googleData);
+   const missing=validateGoogleStep(googleStep,googleData,language)||validateGoogleLinks(googleData,language);
    if(missing){setWizardError(missing);return;}
    if(googleStep<googleStepNames.length-1){closeKeyboard();setGoogleStep(googleStep+1);revealWizard();return;}
   }
@@ -401,9 +401,9 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(!client||!user){submitting.current=false;setWizardError(translate("marketing.action.sign_in_to_vmv_business_to_submit_your_request"));return;}
   if(name.trim().length<2||name.trim().length>150){setWizardStep(1);setWizardError(translate("marketing.action.enter_a_business_name_2_150_characters"));submitting.current=false;return;}
   if(selected==="google_profile"){
-   const missing=validateGoogleAll(googleData);
+   const missing=validateGoogleAll(googleData,language);
    if(missing){setWizardStep(2);setGoogleStep(missing.step);setWizardError(missing.error);submitting.current=false;return;}
-   const invalid=validateGoogleLinks(googleData);
+   const invalid=validateGoogleLinks(googleData,language);
    if(invalid){setWizardStep(2);setGoogleStep(2);setWizardError(invalid);submitting.current=false;return;}
    const bad=googleFiles.find(({file})=>!(["image/jpeg","image/png"].includes(file.type))||file.size<10240||file.size>5242880);
    if(bad){setWizardStep(2);setGoogleStep(5);setWizardError("Revisa "+bad.file.name+": fotos JPG o PNG entre 10 KB y 5 MB.");submitting.current=false;return;}

@@ -1154,7 +1154,14 @@
     "marketing.web.platformCustom": "Código propio / Next.js / HTML",
     "marketing.web.platformOther": "Otra herramienta de edición",
     "marketing.web.hostingCpanel": "cPanel / hosting compartido",
-    "marketing.web.hostingOther": "Otro alojamiento"
+    "marketing.web.hostingOther": "Otro alojamiento",
+    "marketing.google.validation.googleCategory": "Indica la categoría principal de Google.",
+    "marketing.google.validation.address": "Completa la dirección donde recibes clientes.",
+    "marketing.google.validation.serviceAreas": "Indica las ciudades o códigos postales donde atiendes.",
+    "marketing.google.validation.phone": "Revisa el teléfono comercial.",
+    "marketing.google.validation.hours": "Revisa los horarios de apertura y cierre.",
+    "marketing.google.validation.booking": "El enlace de reservas debe empezar con https://",
+    "marketing.google.validation.existing": "El enlace del perfil debe empezar con https://"
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -2311,6 +2318,13 @@
     "marketing.web.platformCustom": "Custom code / Next.js / HTML",
     "marketing.web.platformOther": "Other editing tool",
     "marketing.web.hostingCpanel": "cPanel / shared hosting",
-    "marketing.web.hostingOther": "Other hosting"
+    "marketing.web.hostingOther": "Other hosting",
+    "marketing.google.validation.googleCategory": "Enter your primary Google category.",
+    "marketing.google.validation.address": "Complete the address where customers visit you.",
+    "marketing.google.validation.serviceAreas": "Enter the cities or ZIP codes you serve.",
+    "marketing.google.validation.phone": "Check your business phone number.",
+    "marketing.google.validation.hours": "Check your opening and closing hours.",
+    "marketing.google.validation.booking": "The booking link must begin with https://",
+    "marketing.google.validation.existing": "The profile link must begin with https://"
   }
 }
