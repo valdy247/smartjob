@@ -9,6 +9,8 @@ import {normalizeWebContent,type WebSiteContent} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
 import WebSiteIntake from "./WebSiteIntake";
 import type {SiteIntake,SiteProposal} from "@/lib/web-builder-templates";
+import {WEBSITE_STYLES,restyleWebsiteDocument,type WebsiteStyleId} from "@/lib/web-builder-safe-styles";
+import BuilderHistoryControls from "./BuilderHistoryControls";
 import styles from "./WebBuilderWorkspace.module.css";
 
 type Site={id:string;owner_id:string;slug:string;name:string;category_id:string;inquiries_enabled:boolean;legacy_source_slug:string|null};
@@ -40,6 +42,8 @@ export default function WebBuilderWorkspace(){
  const [document,setDocument]=useState<Data>(()=>starterBuilderDocument());
  const [initialDocument,setInitialDocument]=useState<Data>(()=>starterBuilderDocument());
  const [previewMode,setPreviewMode]=useState<"desktop"|"mobile"|null>(null);
+ const [designChoice,setDesignChoice]=useState<WebsiteStyleId|null>(null);
+ const [designUndo,setDesignUndo]=useState<{pageId:string;document:Data}|null>(null);
  const [savePhase,setSavePhase]=useState<SavePhase>("saved");
  const [recovery,setRecovery]=useState<LocalBackup|null>(null);
  const blockedAutosaveRef=useRef("");
@@ -117,7 +121,7 @@ export default function WebBuilderWorkspace(){
   setInitialDocument(normalized);
   setDocument(normalized);
   setRefreshKey(value=>value+1);
-  setPreviewMode(null);
+  setPreviewMode(null);setDesignChoice(null);setDesignUndo(null);
  }
 
  // Restore a newer local copy only after the owner explicitly agrees.
@@ -522,6 +526,26 @@ export default function WebBuilderWorkspace(){
   try{window.localStorage.removeItem(backupKey(userId,page.id));}catch{/* Storage is optional. */}
   setRecovery(null);
  }
+ function applyDesign(){
+  if(!page||!designChoice||busy||recovery)return;
+  try{
+   const existing=normalizeBuilderDocument(document);
+   const next=restyleWebsiteDocument(existing,designChoice);
+   if(JSON.stringify(next)===JSON.stringify(existing)){
+    setDesignChoice(null);return;
+   }
+   if(!window.confirm("El diseño cambiará su paleta, tipografía y composición visual. Todos los bloques, fotos, productos y textos se conservarán. La web pública no cambiará hasta que publiques. ¿Aplicar al borrador?"))return;
+   openDraft(next);
+   setDesignUndo({pageId:page.id,document:existing});
+   setNotice("Nuevo diseño aplicado al borrador. Puedes deshacerlo antes o después de guardarlo. Publica solo cuando estés conforme.");
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo aplicar el diseño");}
+ }
+ function undoDesign(){
+  if(!page||designUndo?.pageId!==page.id||busy)return;
+  const previous=designUndo.document;
+  openDraft(previous);
+  setNotice("Diseño anterior recuperado en el borrador. La página pública sigue intacta.");
+ }
  function back(){
   if(dirty&&!window.confirm("Hay cambios sin guardar. ¿Salir?"))return;
   setSite(null);setPage(null);setPublishedIds([]);setPublishedSignatures({});setView("sites");setError("");setNotice("");
@@ -590,10 +614,41 @@ export default function WebBuilderWorkspace(){
         {savePhase==="saving"?"Guardando…":savePhase==="error"?"Error al guardar":dirty?"Sin guardar":"Borrador guardado"}
        </span>
        <button type="button" disabled={busy||Boolean(recovery)} onClick={()=>void save()}><Save size={15}/> Guardar</button>
-       <button type="button" disabled={busy} onClick={()=>setPreviewMode("desktop")}>Vista previa</button>
+       <button type="button" disabled={busy||Boolean(recovery)}
+        onClick={()=>{setDesignChoice(designChoice?null:"warm");setPreviewMode(null);}}>
+        {designChoice?"Cerrar diseños":"Cambiar diseño"}
+       </button>
+       <button type="button" disabled={busy} onClick={()=>{setPreviewMode("desktop");setDesignChoice(null);}}>Vista previa</button>
        {publishedIds.includes(page.id)?<a href={pageUrl||"#"} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Página pública</a>:null}
       </div>
      </div>
+     {designUndo?.pageId===page.id?<div className={styles.designRecovery}>
+      <span>El último cambio de diseño puede revertirse sin eliminar contenido.</span>
+      <button type="button" disabled={busy} onClick={undoDesign}>Deshacer cambio de diseño</button>
+     </div>:null}
+     {designChoice?<section className={styles.designPanel} aria-label="Comparar cambios de diseño">
+      <div className={styles.designPanelHead}>
+       <div><strong>Cambiar diseño sin perder contenido</strong>
+        <p>Compara sobre tu página actual. Conservaremos cada sección, imagen, producto, texto y enlace.</p></div>
+       <button type="button" onClick={()=>setDesignChoice(null)}>Cancelar</button>
+      </div>
+      <div className={styles.designChoices} role="group" aria-label="Estilo visual">
+       {WEBSITE_STYLES.map(style=><button type="button" key={style.id}
+        aria-pressed={designChoice===style.id} onClick={()=>setDesignChoice(style.id)}>
+        <strong>{style.title}</strong><small>{style.description}</small>
+       </button>)}
+      </div>
+      <div className={styles.designComparison}>
+       <div><strong>Actual</strong><div className={styles.designFrame}>
+        <Render config={builderConfig} data={normalizeBuilderDocument(document)}/></div></div>
+       <div><strong>Propuesta</strong><div className={styles.designFrame}>
+        <Render config={builderConfig} data={restyleWebsiteDocument(document,designChoice)}/></div></div>
+      </div>
+      <div className={styles.designApply}>
+       <span>No se elimina ninguna sección ni se publica automáticamente.</span>
+       <button type="button" disabled={busy||Boolean(recovery)} onClick={applyDesign}>Aplicar al borrador</button>
+      </div>
+     </section>:null}
      {previewMode?<section className={styles.previewOverlay} aria-label="Vista previa del borrador">
       <div className={styles.previewTop}>
        <strong>Vista previa · Sin publicar</strong>
@@ -609,6 +664,7 @@ export default function WebBuilderWorkspace(){
      </section>:null}
      <div className={styles.puckShell} style={{display:previewMode?"none":undefined}}>
       <Puck key={page.id+"-"+refreshKey} config={builderConfig} dnd={{enableDragHandle:true}}
+       overrides={{headerActions:({children})=><><BuilderHistoryControls/>{children}</>}}
        data={initialDocument} height="75vh"
        onChange={data=>setDocument(data)}
        onPublish={publish} />
