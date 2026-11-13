@@ -78,7 +78,7 @@ const errorMessage=(e:unknown,fallback:string)=>e instanceof Error?e.message:fal
 export default function MarketingActionCenter({businessName,industryId,website,onGoToVisibility,preselectedService,onWizardActiveChange}:{
  businessName:string;industryId:string;website:string;onGoToVisibility:()=>void;preselectedService?:ServiceCode;onWizardActiveChange?:(active:boolean)=>void
 }){
- const {language}=useInterfaceLanguage();
+ const {language,translate}=useInterfaceLanguage();
  const en=language==="en";
  const serviceName=(id:ServiceCode)=>en?({google_profile:"Appear on Google",seo_improvement:"Improve my website",review_strategy:"My reputation",directory_listings:"Local directories"} as Partial<Record<ServiceCode,string>>)[id]||services.find(x=>x.id===id)?.name||id:services.find(x=>x.id===id)?.name||id;
  const serviceWhy=(id:ServiceCode)=>en?({google_profile:"Create or improve your business listing.",seo_improvement:"Find practical improvements for your website.",review_strategy:"Manage authentic reviews and local listings."} as Partial<Record<ServiceCode,string>>)[id]||"":services.find(x=>x.id===id)?.why||"";
@@ -557,7 +557,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  return <div className={styles.root}>
   {wizardStep===0?<header className={styles.catalogHeading}><h2>{en?"What would you like to do?":"¿Qué quieres hacer hoy?"}</h2><p>{en?"Choose a service. We’ll guide you.":"Elige un servicio y te ayudamos paso a paso."}</p><a href="#vmv-marketing-history" className={styles.historyLink}><ClipboardList size={16}/> {en?"My requests":"Mis solicitudes"}</a>{pausedStep!==null?<button type="button" className={styles.resumeDraft} onClick={()=>{setWizardStep(pausedStep);setPausedStep(null);revealWizard();}}>{en?"Continue saved request":"Continuar mi solicitud guardada"}</button>:null}</header>:null}
   {wizardStep>0&&wizardStep<4?<button type="button" className={styles.historyWizardAccess} onClick={()=>{setPausedStep(wizardStep);void saveCurrentDraft();setWizardStep(0);window.setTimeout(()=>document.getElementById("vmv-marketing-history")?.scrollIntoView({behavior:"smooth"}),0);}}><ClipboardList size={15}/> {en?"My requests":"Mis solicitudes"}</button>:null}
-  <section className={wizardStep===0?styles.catalogPanel:styles.wizardPanel} id="vmv-marketing-request" aria-label="Crear solicitud de marketing">
+  <section className={wizardStep===0?styles.catalogPanel:styles.wizardPanel} id="vmv-marketing-request" aria-label={translate("marketing.ui.createAria")}>
    {wizardStep===4?<div className={styles.wizardSuccess} role="status">
     <div className={styles.successIcon}><CheckCircle2 size={33}/></div>
     <span className={styles.overline}>SOLICITUD RECIBIDA</span>
@@ -592,7 +592,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
        </button>;
       })}
      </div>
-     <p className={styles.wizardHint}><ShieldCheck size={15}/> El envío de solicitudes es gratis. Si un servicio cuesta dinero, conocerás el precio antes de aprobarlo.</p>
+     <p className={styles.wizardHint}><ShieldCheck size={15}/> {translate("marketing.ui.requestFree")}</p>
     </div>:null}
     {wizardStep===1?<div className={styles.wizardBody}>
      <div className={styles.selectedServiceBanner}><span className={styles.selectedServiceIcon}>{(()=>{const Icon=serviceIcons[selected];return <Icon size={23}/>;})()}</span><span><small>SERVICIO ELEGIDO</small><strong>{serviceName(selected)}</strong></span><button type="button" onClick={()=>{setWizardStep(0);setWizardError("");}}>Cambiar</button></div>
@@ -668,10 +668,10 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    </>}
   </section>
   {(wizardStep===0||wizardStep===4)?<section className={styles.panel} id="vmv-marketing-history">
-   <div className={styles.panelTop}><div><span>02 · SEGUIMIENTO REAL</span><h3>Mis solicitudes</h3></div><button type="button" onClick={()=>void refresh()} disabled={loading||!user} className={styles.refresh}><RefreshCw size={16}/> Actualizar</button></div>
-   {staff?<div className={styles.viewToggle}><button type="button" aria-pressed={!teamView} onClick={()=>setTeamView(false)}>Mis solicitudes</button><button type="button" aria-pressed={teamView} onClick={()=>setTeamView(true)}>Bandeja del equipo</button></div>:null}
-   {!user?<p className={styles.muted}>Tus solicitudes aparecerán aquí cuando inicies sesión.</p>:loading?<p className={styles.muted}>Cargando solicitudes…</p>:
-    shown.length===0?<div className={styles.empty}><ClipboardList size={25}/><strong>Aún no hay solicitudes</strong><span>Envía la primera desde el formulario anterior.</span></div>:
+   <div className={styles.panelTop}><div><span>{translate("marketing.ui.tracking")}</span><h3>{translate("marketing.ui.requests")}</h3></div><button type="button" onClick={()=>void refresh()} disabled={loading||!user} className={styles.refresh}><RefreshCw size={16}/> {translate("marketing.ui.refresh")}</button></div>
+   {staff?<div className={styles.viewToggle}><button type="button" aria-pressed={!teamView} onClick={()=>setTeamView(false)}>{translate("marketing.ui.requests")}</button><button type="button" aria-pressed={teamView} onClick={()=>setTeamView(true)}>{translate("marketing.ui.teamInbox")}</button></div>:null}
+   {!user?<p className={styles.muted}>{translate("marketing.ui.loginEmpty")}</p>:loading?<p className={styles.muted}>{translate("marketing.ui.loading")}</p>:
+    shown.length===0?<div className={styles.empty}><ClipboardList size={25}/><strong>{translate("marketing.ui.empty")}</strong><span>{translate("marketing.ui.emptyHint")}</span></div>:
     <div className={styles.requestList}>{shown.map(req=>{
      const approved=isAccepted(req);
      const service=services.find(s=>s.id===req.service_code)?.name||req.service_code;
@@ -720,7 +720,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     })}</div>
    }
   </section>:null}
-  {(wizardStep===0||wizardStep===4)?<div className={styles.bottomNote}><HandHeart size={17}/><p>Las APIs y portales externos requieren permisos propios. Una solicitud recibida no significa que el negocio haya sido registrado, ni que el servicio haya empezado.</p></div>:null}
+  {(wizardStep===0||wizardStep===4)?<div className={styles.bottomNote}><HandHeart size={17}/><p>{translate("marketing.ui.external")}</p></div>:null}
   {message?<p role="status" className={styles.notice}>{message}</p>:null}
   {error?<p role="alert" className={styles.error}>{error}</p>:null}
  </div>;

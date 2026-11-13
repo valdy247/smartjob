@@ -3,6 +3,7 @@ import {useMemo,useState} from "react";
 import Link from "next/link";
 import {ArrowLeft,ArrowUpRight,BarChart3,CheckCircle2,ChevronDown,ChevronUp,ClipboardCopy,Globe2,HeartHandshake,Workflow,Link2,Lightbulb,Mail,Megaphone,MessageCircle,Share2,ShieldCheck,Sparkles,Target,TrendingUp} from "lucide-react";
 import styles from "./page.module.css";
+import {useInterfaceLanguage} from "@/lib/i18n-web";
 import LocalVisibilityStudio from "./LocalVisibilityStudio";
 import MarketingActionCenter, {type ServiceCode} from "./MarketingActionCenter";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS,categoryLabel} from "@/lib/vmv-business-categories";
@@ -54,6 +55,7 @@ function Field({label,value,onChange,placeholder,type="text",hint,min,max}:{
   {hint?<small>{hint}</small>:null}</label>;
 }
 export default function MarketingPage(){
+ const {translate}=useInterfaceLanguage();
  const [section,setSection]=useState<Section>("actions");
  const [requestedService,setRequestedService]=useState<ServiceCode|null>(null);
  const [actionWizardActive,setActionWizardActive]=useState(false);
@@ -353,11 +355,11 @@ export default function MarketingPage(){
       </div>
       <div className={styles.insight}><Lightbulb size={21}/><div><strong>Experimento de 7 días</strong><p>Registra cuántos clientes aceptaron volver a recibir noticias, cuántos respondieron y cuántos regresaron. Compara la utilidad con el coste de conseguir clientes nuevos.</p></div></div>
      </>:null}
-     {section==="actions"&&!actionWizardActive?<details className={styles.advancedTools}><summary>Más herramientas de marketing</summary><div className={styles.advancedLinks}>{tabs.filter(t=>t.id!=="actions").map(tab=><button key={tab.id} type="button" onClick={()=>setSection(tab.id)}><tab.Icon size={17}/>{tab.label}<ArrowUpRight size={14}/></button>)}</div></details>:null}
+     {section==="actions"&&!actionWizardActive?<details className={styles.advancedTools}><summary>{translate("marketing.ui.moreTools")}</summary><div className={styles.advancedLinks}>{tabs.filter(t=>t.id!=="actions").map(tab=><button key={tab.id} type="button" onClick={()=>setSection(tab.id)}><tab.Icon size={17}/>{tab.label}<ArrowUpRight size={14}/></button>)}</div></details>:null}
      {notice?<p role="status" className={styles.toast}>{notice}</p>:null}
     </div>
    </div>
-   {!actionWizardActive?<footer className={styles.footer}><span>VMV Business · Marketing Studio</span><span>Planificación y cálculos locales · Sin envío ni publicación automática</span></footer>:null}
+   {!actionWizardActive?<footer className={styles.footer}><span>VMV Business · Marketing Studio</span><span>{translate("marketing.ui.footer")}</span></footer>:null}
   </div>
  </main>;
 }

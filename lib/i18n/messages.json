@@ -369,7 +369,20 @@
     "puck.plugin-components": "Elementos",
     "puck.layout-maximize": "Maximizar",
     "puck.layout-minimize": "Minimizar",
-    "puck.loader-loading": "Cargando"
+    "puck.loader-loading": "Cargando",
+    "marketing.ui.requestFree": "El envío de solicitudes es gratis. Si un servicio cuesta dinero, conocerás el precio antes de aprobarlo.",
+    "marketing.ui.tracking": "02 · SEGUIMIENTO REAL",
+    "marketing.ui.requests": "Mis solicitudes",
+    "marketing.ui.refresh": "Actualizar",
+    "marketing.ui.loginEmpty": "Tus solicitudes aparecerán aquí cuando inicies sesión.",
+    "marketing.ui.loading": "Cargando solicitudes…",
+    "marketing.ui.empty": "Aún no hay solicitudes",
+    "marketing.ui.emptyHint": "Envía la primera desde el formulario anterior.",
+    "marketing.ui.external": "Las APIs y portales externos requieren permisos propios. Una solicitud recibida no significa que el negocio haya sido registrado, ni que el servicio haya empezado.",
+    "marketing.ui.moreTools": "Más herramientas de marketing",
+    "marketing.ui.footer": "Planificación y cálculos locales · Sin envío ni publicación automática",
+    "marketing.ui.createAria": "Crear solicitud de marketing",
+    "marketing.ui.teamInbox": "Bandeja del equipo"
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -741,6 +754,19 @@
     "puck.plugin-components": "Components",
     "puck.layout-maximize": "Maximize",
     "puck.layout-minimize": "Minimize",
-    "puck.loader-loading": "Loading"
+    "puck.loader-loading": "Loading",
+    "marketing.ui.requestFree": "Submitting requests is free. If a service costs money, you will see the price before approving it.",
+    "marketing.ui.tracking": "02 · REQUEST TRACKING",
+    "marketing.ui.requests": "My requests",
+    "marketing.ui.refresh": "Refresh",
+    "marketing.ui.loginEmpty": "Your requests will appear here once you sign in.",
+    "marketing.ui.loading": "Loading requests…",
+    "marketing.ui.empty": "No requests yet",
+    "marketing.ui.emptyHint": "Send your first request using the form above.",
+    "marketing.ui.external": "External APIs and portals require their own permissions. A received request does not mean the business has been listed or that the service has started.",
+    "marketing.ui.moreTools": "More marketing tools",
+    "marketing.ui.footer": "Local planning and calculations · No automatic submission or publishing",
+    "marketing.ui.createAria": "Create marketing request",
+    "marketing.ui.teamInbox": "Team inbox"
   }
 }
