@@ -150,7 +150,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   version:2,savedAt:Date.now(),requestId,ownerId:user?.id||null,
   service:selected,step:wizardStep,googleStep,webStage,
   name,site,category:chosenCategory||industryId||savedCategory||"other",goal,reviewInput,reviewTone,
-  reviewLink,reviewReply,reviewMode,googleData,webRepair,directoryData
+  reviewLink,reviewReply,reviewMode,consent,googleData,webRepair,directoryData
  });
  const saveCurrentDraft=async()=>{
   const ok=writeMarketingDraft(draftSnapshot());
@@ -188,7 +188,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     if(saved.googleData)setGoogleData(saved.googleData);
     if(saved.webRepair)setWebRepair(saved.webRepair);
     if(saved.directoryData)setDirectoryData(saved.directoryData);
-    setConsent(false);
+    setConsent(saved.consent===true);
     setDraftNotice("Tu solicitud está recuperada. Revisa los datos antes de enviarla.");
     try{const media=await readDraftMedia(saved.requestId);if(active&&media)setGoogleMedia(media);}
     catch{if(active)setPhotoNotice("No pudimos recuperar las fotos; vuelve a seleccionarlas.");}
@@ -203,7 +203,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(!writeMarketingDraft(draftSnapshot()))setDraftNotice("No se está guardando el borrador. Mantén abierta esta página.");
   },300);
   return()=>window.clearTimeout(id);
- },[draftReady,authState,user?.id,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,webStage,goal,reviewInput,reviewTone,reviewLink,reviewReply,reviewMode,googleData,webRepair,directoryData,requestId]);
+ },[draftReady,authState,user?.id,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,webStage,goal,reviewInput,reviewTone,reviewLink,reviewReply,reviewMode,consent,googleData,webRepair,directoryData,requestId]);
  useEffect(()=>{
   if(!draftReady||selected!=="google_profile"||wizardStep<1||wizardStep>3)return;
   const id=window.setTimeout(()=>{
