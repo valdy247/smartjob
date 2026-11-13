@@ -6,6 +6,7 @@ import {Render} from "@puckeditor/core";
 import {builderConfig,normalizeBuilderDocument} from "@/lib/web-builder-puck";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import {familyForCategory} from "@/lib/web-builder-templates";
+import {WebsiteChrome} from "@/lib/web-site-chrome";
 import type {CSSProperties} from "react";
 import RequestForm from "@/app/sites/[slug]/RequestForm";
 import "../../../web-builder-public.css";
@@ -82,26 +83,15 @@ export default async function VMVPublishedPage({params}:Props){
  const visualStyle={ "--vmv-accent":accent,"--vmv-pale":colors[1] } as CSSProperties;
  const family=typeof rootData.family==="string"&&["bakery","construction","professional","beauty","creative"].includes(rootData.family)?rootData.family:familyForCategory(result.page.category_id||"");
  const showForm=part==="home"&&result.page.inquiries_enabled===true;
- return <div lang={siteLanguage} className="vmv-site" data-site-style={rootData.style||"light"}
-  data-site-family={family} style={visualStyle}>
-  <header className="vmv-site-nav" data-header-family={family}>
-   <a className="vmv-site-mark" href={base||"/"}>
-    {logo?<img src={logo} width="52" height="52" alt={"Logo de "+siteName} />:null}
-    <span className="vmv-site-brand-name">{siteName}<span>.</span></span>
-   </a>
-   <nav aria-label="Páginas del sitio">
-    {result.menu.map(item=><a key={item.page_slug} href={item.page_slug==="home"?(base||"/"):(base+"/"+item.page_slug)}>
-     {item.page_slug==="home"?"Inicio":item.title}</a>)}
-   </nav>
-  </header>
-  <main><Render config={builderConfig} data={data}/>
-   {showForm?<section className="vmv-site-inquiry" id="solicitud" aria-label="Enviar solicitud al negocio">
-    <small>CONTACTA CON NOSOTROS</small>
-    <h2>¿Qué necesitas?</h2>
-    <RequestForm source="builder" slug={slug} business={siteName}
-     categoryId={result.page.category_id||""} services={services}/>
-   </section>:null}
-  </main>
-  <footer className="vmv-site-footer"><span>{siteName}</span><span>© {new Date().getUTCFullYear()}</span></footer>
- </div>;
+ return <WebsiteChrome siteName={siteName} baseUrl={base} menu={result.menu}
+  logo={logo} family={family} language={siteLanguage} siteStyle={String(rootData.style||"light")}
+  siteWidth={String(rootData.width||"regular")} visualStyle={visualStyle}>
+  <Render config={builderConfig} data={data}/>
+  {showForm?<section className="vmv-site-inquiry" id="solicitud" aria-label="Enviar solicitud al negocio">
+   <small>CONTACTA CON NOSOTROS</small>
+   <h2>¿Qué necesitas?</h2>
+   <RequestForm source="builder" slug={slug} business={siteName}
+    categoryId={result.page.category_id||""} services={services}/>
+  </section>:null}
+ </WebsiteChrome>;
 }
