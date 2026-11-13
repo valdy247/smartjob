@@ -606,7 +606,6 @@ export default function MarketingActionCenter({businessName,industryId,website,o
        </label>
        <div className={styles.businessActions}>
         <button type="button" onClick={()=>{setBusinessId("");setName("");setSite("");setChosenCategory("other");setBusinessMessage("");setBusinessError("");}}>{en?"New business":"Nuevo negocio"}</button>
-        <button type="button" disabled={businessBusy||!user} onClick={()=>void saveBusiness()}>{businessBusy?(en?"Saving…":"Guardando…"):businessId?(en?"Update business":"Actualizar negocio"):(en?"Save business":"Guardar negocio")}</button>
        </div>
        {!user?<p className={styles.businessNote}>{en?"Sign in to save and load businesses on any device. You can still complete this request.":"Inicia sesión para guardar y cargar negocios desde cualquier dispositivo. Puedes continuar tu solicitud sin hacerlo."}</p>:null}
        {businessMessage?<p role="status" className={styles.businessSuccess}>{businessMessage}</p>:null}
@@ -617,6 +616,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
        {CATEGORY_GROUPS.map(group=><optgroup key={group} label={group}>{BUSINESS_CATEGORIES.filter(c=>c.group===group).map(c=><option value={c.id} key={c.id}>{c.label}</option>)}</optgroup>)}
       </select></label>
       <label className={styles.wizardField}><span>Sitio web <em>{selected==="seo_improvement"?"Necesario":"Opcional"}</em></span><input type="url" inputMode="url" autoComplete="url" value={site} maxLength={500} onChange={e=>{setSite(e.target.value);setWizardError("");}} placeholder="https://tusitio.com"/></label>
+      <button type="button" className={styles.saveBusinessInline} disabled={businessBusy||!user} onClick={()=>void saveBusiness()}>{businessBusy?(en?"Saving…":"Guardando…"):businessId?(en?"Update saved business":"Actualizar negocio guardado"):(en?"Save this business for next time":"Guardar negocio para próximas solicitudes")}</button>
      </div>
      <p className={styles.wizardHint}><ShieldCheck size={15}/> Si ya registraste tu negocio en VMV, los datos disponibles aparecen automáticamente.</p>
     </div>:null}
