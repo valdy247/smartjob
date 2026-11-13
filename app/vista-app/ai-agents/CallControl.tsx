@@ -37,8 +37,9 @@ export default function CallControl({onBack}:{onBack:()=>void}){
   setForward(x.forwardReady);setBusiness(x.businessHoursReady);
  }).catch(e=>{if(active)setNotice(String(e.message));}).finally(()=>{if(active)setLoading(false);});
  return()=>{active=false;};},[]);
- const setDay=(d:DayName,k:"enabled"|"start"|"end",v:boolean|string)=>{
-  setPolicy(x=>({...x,schedule:{...x.schedule,[d]:{...x.schedule[d],[k]:v}}}));setResult("");
+ const setDay=(d:DayName,k:"enabled"|"start"|"end",v:boolean|string,
+  target:"schedule"|"translation_schedule"="schedule")=>{
+  setPolicy(x=>({...x,[target]:{...x[target],[d]:{...x[target][d],[k]:v}}}));setResult("");
  };
  const submit=async()=>{
   if(busy)return;setBusy(true);setNotice("");
@@ -94,21 +95,43 @@ export default function CallControl({onBack}:{onBack:()=>void}){
      <option value="translation_first">Inicia Smart Call con traducción</option>
     </select>
    </section>}
-   {hours&&<section className={styles.section}><h2>Horarios</h2>
-    <label>Zona horaria<select value={policy.time_zone} onChange={e=>patch("time_zone",e.target.value)}>
+   {hours&&<section className={styles.section}><h2>Zona horaria</h2>
+    <label>Zona horaria del negocio<select value={policy.time_zone} onChange={e=>patch("time_zone",e.target.value)}>
      {zoneOptions.map(z=><option key={z} value={z}>{z.replace("America/","").replaceAll("_"," ")}</option>)}
     </select></label>
+    <small>Los dos servicios utilizan esta zona horaria, pero cada uno tiene su horario.</small>
+   </section>}
+   {policy.agent_enabled&&policy.agent_mode==="schedule"&&<section className={styles.section}>
+    <h2>Horario del agente IA</h2>
     {business&&<label className={styles.toggle}>Usar el horario del negocio
-     <input type="checkbox" checked={policy.use_business_hours} onChange={e=>patch("use_business_hours",e.target.checked)}/></label>}
+     <input type="checkbox" checked={policy.use_business_hours}
+      onChange={e=>patch("use_business_hours",e.target.checked)}/></label>}
     {!policy.use_business_hours&&days.map(d=><div key={d} className={styles.day}>
      <label className={styles.toggle}><span>{weekLabels[d]}</span><input type="checkbox"
       checked={policy.schedule[d].enabled} onChange={e=>setDay(d,"enabled",e.target.checked)}/></label>
      {policy.schedule[d].enabled&&<div className={styles.time}>
-      <label>Desde<input type="time" value={policy.schedule[d].start} onChange={e=>setDay(d,"start",e.target.value)}/></label>
-      <label>Hasta<input type="time" value={policy.schedule[d].end} onChange={e=>setDay(d,"end",e.target.value)}/></label>
+      <label>Desde<input type="time" value={policy.schedule[d].start}
+       onChange={e=>setDay(d,"start",e.target.value)}/></label>
+      <label>Hasta<input type="time" value={policy.schedule[d].end}
+       onChange={e=>setDay(d,"end",e.target.value)}/></label>
      </div>}
     </div>)}
-    <small>Si la hora de cierre es anterior a la apertura, el horario cruza medianoche.</small>
+   </section>}
+   {policy.translation_enabled&&policy.translation_mode==="schedule"&&<section className={styles.section}>
+    <h2>Horario de traducción</h2>
+    <small>Independiente del agente. Conserva el traductor existente.</small>
+    {days.map(d=><div key={d} className={styles.day}>
+     <label className={styles.toggle}><span>{weekLabels[d]}</span><input type="checkbox"
+      checked={policy.translation_schedule[d].enabled}
+      onChange={e=>setDay(d,"enabled",e.target.checked,"translation_schedule")}/></label>
+     {policy.translation_schedule[d].enabled&&<div className={styles.time}>
+      <label>Desde<input type="time" value={policy.translation_schedule[d].start}
+       onChange={e=>setDay(d,"start",e.target.value,"translation_schedule")}/></label>
+      <label>Hasta<input type="time" value={policy.translation_schedule[d].end}
+       onChange={e=>setDay(d,"end",e.target.value,"translation_schedule")}/></label>
+     </div>}
+    </div>)}
+    <small>Los turnos nocturnos continúan hasta el cierre del día siguiente.</small>
    </section>}
    <section className={styles.section}><h2>Fuera de horario</h2>
     <label>Si no hay atención<select value={policy.outside_action}
