@@ -1,13 +1,14 @@
 "use client";
 import {useEffect,useState} from "react";
 import {ActionBar,createUsePuck,useGetPuck,type Data} from "@puckeditor/core";
-import {ImagePlus,SlidersHorizontal,Trash2,Type} from "lucide-react";
+import {ImagePlus,Settings2,SlidersHorizontal,Trash2,Type} from "lucide-react";
 import BuilderImageField from "./BuilderImageField";
 import {ColorField,FontField,RangeField} from "./BuilderContextFields";
 
 const usePuck=createUsePuck();
 import BuilderImageControls from "./BuilderImageControls";
 import {IMAGE_SELECT_EVENT} from "./BuilderEditableImage";
+import {SECTION_TARGET_EVENT,type SectionTarget} from "./BuilderSectionTargets";
 import {imageTargets,targetSettings,targetImage,patchBuilderImage,imageDestinations,moveBuilderImage,type ImageTarget} from "@/lib/web-builder-images";
 const textTypes=new Set(["ComposeHeading","ComposeText"]);
 function patchItem(data:Data,id:string,key:string,value:unknown):Data{
@@ -32,6 +33,7 @@ export default function BuilderSelectedActions({children,label}:{
  const [open,setOpen]=useState(true);
  const [mode,setMode]=useState<"controls"|"library"|"text">("controls");
  const [chosen,setChosen]=useState<{id:string;target:ImageTarget}|null>(null);
+ const [ctaSelection,setCtaSelection]=useState<{id:string;target:SectionTarget}|null>(null);
  const id=item?.props?.id||"";
  useEffect(()=>{
   const select=(event:Event)=>{
@@ -43,6 +45,15 @@ export default function BuilderSelectedActions({children,label}:{
   return()=>window.removeEventListener(IMAGE_SELECT_EVENT,select);
  },[]);
  useEffect(()=>{setOpen(true);setMode("controls");},[id]);
+ useEffect(()=>{
+  const onSelect=(event:Event)=>{
+   const detail=(event as CustomEvent<{id:string;target:SectionTarget}>).detail;
+   if(!detail||!detail.id||!["section","title","button"].includes(detail.target))return;
+   setCtaSelection(detail);setOpen(true);
+  };
+  window.addEventListener(SECTION_TARGET_EVENT,onSelect);
+  return()=>window.removeEventListener(SECTION_TARGET_EVENT,onSelect);
+ },[]);
  const targets=item?imageTargets(item.type,item.props):[];
  const isImage=targets.length>0;
  const target=targets.find(t=>chosen&&chosen.id===id&&t.field===chosen.target.field&&t.index===chosen.target.index)||targets[0];
@@ -54,6 +65,8 @@ export default function BuilderSelectedActions({children,label}:{
   api.dispatch({type:"setData",data:patchBuilderImage(api.appState.data,id,target,patch)});
  }
  const isText=Boolean(item&&(textTypes.has(item.type)||item.type==="HeroVisual"));
+ const isCta=item?.type==="CTA";
+ const ctaTarget:SectionTarget=ctaSelection?.id===id?ctaSelection.target:"section";
  function change(field:string,value:unknown){
   if(!item||!id)return;
   const api=getPuck();
@@ -77,16 +90,16 @@ export default function BuilderSelectedActions({children,label}:{
  return <div className="vmv-context-action-wrap">
   <ActionBar label={label}>
    <ActionBar.Group>{children}</ActionBar.Group>
-   {(isImage||isText)?<ActionBar.Group>
-    <ActionBar.Action label={isImage?"Editar portada":"Editar texto"} onClick={()=>setOpen(v=>!v)}>
-     {isImage?<ImagePlus size={16}/>:<Type size={16}/>}
+   {(isImage||isText||isCta)?<ActionBar.Group>
+    <ActionBar.Action label={isCta?"Editar sección":isImage?"Editar imagen":"Editar texto"} onClick={()=>setOpen(v=>!v)}>
+     {isCta?<Settings2 size={16}/>:isImage?<ImagePlus size={16}/>:<Type size={16}/>}
     </ActionBar.Action>
    </ActionBar.Group>:null}
   </ActionBar>
-  {(isImage||isText)&&open?<div className="vmv-context-action-panel"
+  {(isImage||isText||isCta)&&open?<div className="vmv-context-action-panel"
     role="region" aria-label={isImage&&mode!=="text"?"Ajustes de la imagen seleccionada":"Ajustes del texto seleccionado"}
     onPointerDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()}>
-   <header><strong>{isImage&&mode!=="text"?"Imagen seleccionada":"Texto seleccionado"}</strong>
+   <header><strong>{isCta?"Editar "+(ctaTarget==="section"?"sección":ctaTarget==="title"?"título":"botón"):isImage&&mode!=="text"?"Imagen seleccionada":"Texto seleccionado"}</strong>
     <button type="button" aria-label="Cerrar ajustes" onClick={()=>setOpen(false)}>✕</button>
    </header>
    {item?.type==="HeroVisual"?<div className="vmv-context-switch vmv-context-hero-tabs" role="group"
@@ -126,6 +139,104 @@ export default function BuilderSelectedActions({children,label}:{
       {destinations.map((d,index)=><option key={d.id+d.slot} value={index}>{d.label}</option>)}
      </select>
     </label>:null}
+   </div>:null}
+   {isCta?<div className="vmv-context-content" aria-label="Controles de la sección seleccionada">
+    <div className="vmv-context-switch" role="group" aria-label="Editar">
+     {(["section","title","button"] as const).map(target=>
+      <button key={target} type="button" aria-pressed={ctaTarget===target}
+       onClick={()=>setCtaSelection({id,target})}>
+       {target==="section"?"Fondo":target==="title"?"Título":"Botón"}
+      </button>)}
+    </div>
+    {ctaTarget==="section"?<>
+     <label className="vmv-context-text-label">Estilo de la sección
+      <select value={String(props.sectionSurface||"dark")}
+       onChange={e=>change("sectionSurface",e.target.value)}>
+       <option value="dark">Oscuro</option><option value="light">Claro</option>
+       <option value="soft">Suave</option><option value="accent">Marca</option>
+       <option value="custom">Personalizado</option>
+      </select>
+     </label>
+     <ColorField label="Color de fondo" value={props.sectionBackground}
+      onChange={v=>{change("sectionBackground",v);change("sectionSurface","custom");}}/>
+     <ColorField label="Color general del texto" value={props.sectionTextColor}
+      onChange={v=>change("sectionTextColor",v)} allowTransparent/>
+     <RangeField label="Esquinas de la sección" min={0} max={48} unit="px"
+      value={props.sectionRadius??0} onChange={v=>change("sectionRadius",v)}/>
+     <label className="vmv-context-text-label">Espaciado
+      <select value={String(props.sectionPadding||"normal")}
+       onChange={e=>change("sectionPadding",e.target.value)}>
+       <option value="compact">Compacto</option><option value="normal">Normal</option>
+       <option value="spacious">Amplio</option>
+      </select>
+     </label>
+     <label className="vmv-context-text-label">Alineación
+      <select value={String(props.sectionAlign||"left")}
+       onChange={e=>change("sectionAlign",e.target.value)}>
+       <option value="left">Izquierda</option><option value="center">Centro</option>
+       <option value="right">Derecha</option>
+      </select>
+     </label>
+    </>:null}
+    {ctaTarget==="title"?<>
+     <label className="vmv-context-text-label">Título
+      <textarea value={String(props.title||"")} rows={2} maxLength={180}
+       onChange={e=>change("title",e.target.value)}/>
+     </label>
+     <label className="vmv-context-text-label">Descripción
+      <textarea value={String(props.description||"")} rows={2} maxLength={900}
+       onChange={e=>change("description",e.target.value)}/>
+     </label>
+     <FontField value={props.titleFont||"site"}
+      onChange={v=>change("titleFont",v)}/>
+     <RangeField label="Tamaño del título" min={0} max={110} unit="px"
+      value={props.titleFontSize??0} onChange={v=>change("titleFontSize",v)}/>
+     <ColorField label="Color del título" value={props.titleColor}
+      onChange={v=>change("titleColor",v)} allowTransparent/>
+     <label className="vmv-context-text-label">Sombra
+      <select value={String(props.titleShadow||"none")}
+       onChange={e=>change("titleShadow",e.target.value)}>
+       <option value="none">Sin sombra</option><option value="soft">Suave</option>
+       <option value="strong">Marcada</option>
+      </select>
+     </label>
+    </>:null}
+    {ctaTarget==="button"?<>
+     <label className="vmv-context-text-label">Texto del botón
+      <input type="text" maxLength={120} value={String(props.buttonText||"")}
+       onChange={e=>change("buttonText",e.target.value)}/>
+     </label>
+     <label className="vmv-context-text-label">Enlace
+      <input type="text" maxLength={500} placeholder="#contacto o https://..."
+       value={String(props.buttonUrl||"")} onChange={e=>change("buttonUrl",e.target.value)}/>
+     </label>
+     <label className="vmv-context-text-label">Estilo del botón
+      <select value={String(props.buttonStyle||"solid")}
+       onChange={e=>change("buttonStyle",e.target.value)}>
+       <option value="solid">Sólido</option><option value="outline">Contorno</option>
+       <option value="link">Solo enlace</option>
+      </select>
+     </label>
+     <label className="vmv-context-text-label">Forma
+      <select value={String(props.buttonShape||"pill")}
+       onChange={e=>change("buttonShape",e.target.value)}>
+       <option value="pill">Píldora</option><option value="rounded">Redondeado</option>
+       <option value="square">Recto</option>
+      </select>
+     </label>
+     <RangeField label="Redondeo" min={0} max={64} unit="px"
+      value={props.buttonRadius??0} onChange={v=>change("buttonRadius",v)}/>
+     <RangeField label="Tamaño del texto" min={11} max={26} unit="px"
+      value={props.buttonFontSize??13} onChange={v=>change("buttonFontSize",v)}/>
+     <ColorField label="Color del botón" value={props.buttonColor}
+      onChange={v=>change("buttonColor",v)}/>
+     <ColorField label="Color del texto" value={props.buttonTextColor}
+      onChange={v=>change("buttonTextColor",v)}/>
+     <ColorField label="Color del borde" value={props.buttonBorderColor}
+      onChange={v=>change("buttonBorderColor",v)}/>
+     <RangeField label="Grosor del borde" min={0} max={10} unit="px"
+      value={props.buttonBorderWidth??0} onChange={v=>change("buttonBorderWidth",v)}/>
+    </>:null}
    </div>:null}
    {isText&&(!isImage||mode==="text")?<div className="vmv-context-content">
     <label className="vmv-context-text-label">Contenido
