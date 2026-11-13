@@ -52,3 +52,22 @@ No declarar listo para lanzamiento solo por despliegue READY.
 
 ## Regla de seguimiento
 Las solicitudes futuras se agregan a esta misma tabla o a una nueva sección de entregas; no se eliminan por abrir un nuevo trabajo.
+
+
+## Solicitud del Director — experiencia móvil real y catálogo (13 noviembre 2026)
+
+Esta solicitud se suma a todos los pendientes anteriores; no los sustituye. Se preserva el sistema de idioma de VMV y las actualizaciones concurrentes de otros módulos.
+
+| Frente | Estado y evidencia |
+|---|---|
+| Lienzo móvil ancho completo, sin miniatura del escritorio | **Implementado en código**: Puck usa el ancho del contenedor y pantalla completa experimental en modo compacto. El contenedor impide desbordamiento horizontal. Prueba visual autenticada a 360, 390 y 430 px pendiente |
+| Diseño visible antes que opciones administrativas | **Implementado en código**: cabecera, selector con crear página, Vista previa y Publicar; SEO/dominios/historial en Ajustes. QA visual autenticada pendiente |
+| Selección contextual de fotos, CTA, títulos y botones nuevos | **Implementado en código**: fotos por toque notifican a Puck/inspector; botones ComposeButton tienen texto, URL y estilo contextuales. Botón + solicita seleccionar la nueva inserción cuando Puck reconoce su ID. Interacciones en móviles reales pendientes |
+| Fotos sin botones superpuestos ni falsa transparencia | **Implementado en código**: herramientas de imágenes ocultas salvo selección; panel de propiedades con tamaño táctil y posición inferior en móvil. Confirmar comportamiento de iframe/sheet con navegador real |
+| Catálogo «Choco flan»: evitar imágenes de otros elementos | **Pruebas Node 9/9 PASS** para IDs estables, reordenación y remoción, serialización y render; creación de propuestas ya no reasigna fotos de portada/galería por índice. **Los datos existentes del cliente no se modificaron**, asociación concreta sigue pendiente de inspección segura |
+| Vista pública sin «Agregar fotografía» | **Pruebas Node PASS**: el render público omite las herramientas y los placeholders de edición; productos vacíos se ocultan, el producto sin foto mantiene sus textos |
+| Galería múltiple y orden, recorte de portada, logo completo, imagen eliminada que reaparece | **Pendientes anteriores conservados.** No cerrar hasta las pruebas reales de crear, guardar, recargar y publicar sin alterar usos de la misma foto |
+| Traducciones | Se conservaron commits concurrentes de Idioma, incluido el catálogo común usado por Puck. No se modificaron archivos de diccionario |
+| QA final de móvil y publicación | Ejecutar con sesión de prueba a 360/390/430 px: agregar producto y foto, reordenar, editar título y botón, quitar imagen, recargar, previsualizar y republicar; adjuntar capturas reales y SHA exacto. Un build READY no valida estos escenarios |
+
+**Evidencia reproducible**: `node --test scripts/web-builder-images.test.cjs` pasó 9/9 y `npm run typecheck` pasó en el SHA `9ba8a1351353` (sandbox aislado); Vercel compila automáticamente cada commit. Los QA de interacción autenticada y seguridad de cuenta distinta no se realizaron.
