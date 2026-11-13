@@ -4,7 +4,7 @@ import type {Data} from "@puckeditor/core";
 import {Puck,Render} from "@puckeditor/core";
 import {ArrowLeft,ExternalLink,Globe,History,Layers,Plus,RefreshCw,Save,ShieldCheck,Trash2} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
-import {builderConfig,normalizeBuilderDocument,starterBuilderDocument,importLegacyBuilderDocument} from "@/lib/web-builder-puck";
+import {builderConfig,normalizeBuilderDocument,validateBuilderDocument,starterBuilderDocument,importLegacyBuilderDocument} from "@/lib/web-builder-puck";
 import {normalizeWebContent,type WebSiteContent} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
 import WebSiteIntake from "./WebSiteIntake";
@@ -286,6 +286,8 @@ export default function WebBuilderWorkspace(){
  }
  async function saveDraft(value:Data):Promise<Page>{
   if(!page)throw new Error("Selecciona una página");
+  const problem=validateBuilderDocument(value);
+  if(problem)throw new Error(problem);
   const c=await authorized();
   const clean=normalizeBuilderDocument(value);
   const pageTitle=title.trim().slice(0,100);
