@@ -56,7 +56,8 @@ export default function WebRepairStudio({site,data,onChange,accessToken}:{site:s
   <div className={styles.section}>
    <div className={styles.head}><ScanSearch size={21}/><div><strong>Diagnóstico de tu web</strong><small>Primero encontramos qué se puede mejorar.</small></div></div>
    <p className={styles.url}>{site}</p>
-   <button type="button" className={styles.primary} onClick={()=>void scan()} disabled={loading}>{loading?"Analizando sitio…":report?"Repetir análisis":"Analizar gratis"}</button>
+   <button type="button" className={styles.primary} onClick={()=>void scan()} disabled={loading}>{loading?"Analizando… puede tardar hasta 2 minutos":report?"Repetir análisis":"Analizar gratis"}</button>
+   {loading?<p role="status" className={styles.tip}>Google está revisando la página. Mantén esta pantalla abierta; algunas webs tardan más que otras.</p>:null}
    {error?<div role="alert" className={styles.warning}><AlertCircle size={16}/><span>{error} Puedes continuar y solicitar una revisión humana.</span></div>:null}
    {report?<div className={styles.report}>
      <div className={styles.head}><CheckCircle2 size={18}/><strong>Informe técnico disponible</strong></div>
