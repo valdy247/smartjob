@@ -6,7 +6,8 @@ import styles from "./page.module.css";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import LocalVisibilityStudio from "./LocalVisibilityStudio";
 import MarketingActionCenter, {type ServiceCode} from "./MarketingActionCenter";
-import {BUSINESS_CATEGORIES,CATEGORY_GROUPS,categoryLabel} from "@/lib/vmv-business-categories";
+import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
+import {marketingCategoryLabel,marketingGroupLabel} from "@/lib/marketing-taxonomy-i18n";
 
 type Section="strategy"|"actions"|"presence"|"campaign"|"numbers"|"retention";
 type Channel="social"|"search"|"local"|"referrals"|"email";
@@ -40,7 +41,7 @@ const money=(n:number|null)=>n===null?"—":n.toLocaleString("en-US",{style:"cur
 const percent=(n:number|null)=>n===null?"—":n.toLocaleString("es-US",{maximumFractionDigits:1})+"%";
 const safe=(v:string,fallback:string)=>v.trim()||fallback;
 // Shared taxonomy maintained by Web Services; IDs are reused across VMV Business.
-const industryName=(id:string)=>id==="unsure"?"No estoy seguro":categoryLabel(id,"Por definir");
+
 const validReviewUrl=(value:string)=>{
  if(!value)return true;
  try{const url=new URL(value);return url.protocol==="https:"&&Boolean(url.hostname);}
@@ -56,6 +57,7 @@ function Field({label,value,onChange,placeholder,type="text",hint,min,max}:{
 }
 export default function MarketingPage(){
  const {translate,language}=useInterfaceLanguage();
+ const industryName=(id:string)=>marketingCategoryLabel(language,id,translate("marketing.category.unknown"));
  const localizedTabs=tabs.map(tab=>({...tab,label:translate(("marketing.tabs."+tab.id+".label") as import("@/lib/i18n").MessageKey),description:translate(("marketing.tabs."+tab.id+".desc") as import("@/lib/i18n").MessageKey)}));
  const localizedChannels=channels.map(channel=>({...channel,desc:translate(("marketing.channels."+channel.id) as import("@/lib/i18n").MessageKey)}));
  const [section,setSection]=useState<Section>("actions");
@@ -211,7 +213,7 @@ export default function MarketingPage(){
        <label className={styles.field}><span>{translate("marketing.copy.industry_or_service")}</span>
         <select value={form.industry} onChange={e=>patch("industry",e.target.value)} aria-label={translate("marketing.copy.select_your_business_industry")}>
          <option value="">{translate("marketing.copy.select_your_industry")}</option>
-         {CATEGORY_GROUPS.map(group=><optgroup key={group} label={group}>{BUSINESS_CATEGORIES.filter(option=>option.group===group).map(option=><option key={option.id} value={option.id}>{option.label}</option>)}</optgroup>)}
+         {CATEGORY_GROUPS.map(group=><optgroup key={group} label={marketingGroupLabel(language,group)}>{BUSINESS_CATEGORIES.filter(option=>option.group===group).map(option=><option key={option.id} value={option.id}>{marketingCategoryLabel(language,option.id)}</option>)}</optgroup>)}
          <option value="unsure">{translate("marketing.copy.i_m_not_sure")}</option>
         </select><small>{translate("marketing.copy.standardized_options_help_create_more_consistent_strate")}</small>
        </label>
