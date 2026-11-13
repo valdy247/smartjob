@@ -56,6 +56,7 @@ function Field({label,value,onChange,placeholder,type="text",hint,min,max}:{
 export default function MarketingPage(){
  const [section,setSection]=useState<Section>("actions");
  const [requestedService,setRequestedService]=useState<ServiceCode|null>(null);
+ const [actionWizardActive,setActionWizardActive]=useState(false);
  const [form,setForm]=useState<FormState>(initial);
  const [notice,setNotice]=useState("");
  const [reviewUrl,setReviewUrl]=useState("");
@@ -245,7 +246,7 @@ export default function MarketingPage(){
        "Empieza por una sola oferta y un tipo de cliente. Hablar a todo el mundo suele dificultar medir qué funciona."}</p></div></div>
       <button type="button" className={styles.primary} onClick={()=>setSection("campaign")}>Diseñar campaña <ArrowUpRight size={16}/></button>
      </>:null}
-     {section==="actions"?<MarketingActionCenter businessName={form.business}
+     {section==="actions"?<MarketingActionCenter onWizardActiveChange={setActionWizardActive} businessName={form.business}
       industryId={form.industry} website={form.website} preselectedService={requestedService||undefined}
       onGoToVisibility={()=>{setSection("presence");setNotice("");}}/>:null}
      {section==="presence"?<LocalVisibilityStudio
@@ -352,11 +353,11 @@ export default function MarketingPage(){
       </div>
       <div className={styles.insight}><Lightbulb size={21}/><div><strong>Experimento de 7 días</strong><p>Registra cuántos clientes aceptaron volver a recibir noticias, cuántos respondieron y cuántos regresaron. Compara la utilidad con el coste de conseguir clientes nuevos.</p></div></div>
      </>:null}
-     {section==="actions"?<details className={styles.advancedTools}><summary>Más herramientas de marketing</summary><div className={styles.advancedLinks}>{tabs.filter(t=>t.id!=="actions").map(tab=><button key={tab.id} type="button" onClick={()=>setSection(tab.id)}><tab.Icon size={17}/>{tab.label}<ArrowUpRight size={14}/></button>)}</div></details>:null}
+     {section==="actions"&&!actionWizardActive?<details className={styles.advancedTools}><summary>Más herramientas de marketing</summary><div className={styles.advancedLinks}>{tabs.filter(t=>t.id!=="actions").map(tab=><button key={tab.id} type="button" onClick={()=>setSection(tab.id)}><tab.Icon size={17}/>{tab.label}<ArrowUpRight size={14}/></button>)}</div></details>:null}
      {notice?<p role="status" className={styles.toast}>{notice}</p>:null}
     </div>
    </div>
-   <footer className={styles.footer}><span>VMV Business · Marketing Studio</span><span>Planificación y cálculos locales · Sin envío ni publicación automática</span></footer>
+   {!actionWizardActive?<footer className={styles.footer}><span>VMV Business · Marketing Studio</span><span>Planificación y cálculos locales · Sin envío ni publicación automática</span></footer>:null}
   </div>
  </main>;
 }
