@@ -805,7 +805,7 @@ export default function WebBuilderWorkspace(){
      </section>:null}
      <div className={styles.puckShell} style={{display:previewMode?"none":undefined}}>
       <Puck key={page.id+"-"+refreshKey} config={builderConfig} dnd={{enableDragHandle:true}}
-       overrides={{headerActions:({children})=><><BuilderHistoryControls/><BuilderQuickAdd enabled={!previewMode&&view==="editor"}/>{compactStudio?null:children}</>,
+       overrides={{headerActions:({children})=><><BuilderHistoryControls/><BuilderQuickAdd compact={compactStudio} enabled={!previewMode&&view==="editor"}/>{compactStudio?null:children}</>,
         actionBar:({children,label})=><BuilderSelectedActions label={label||"Elemento"}>{children}</BuilderSelectedActions>}}
        data={initialDocument} height="75vh"
        onChange={data=>setDocument(data)}
