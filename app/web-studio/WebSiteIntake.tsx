@@ -8,6 +8,8 @@ import {FAMILIES,familyForCategory,type SiteFamily,type SiteIntake,type SiteProd
 import BuilderImageField from "./BuilderImageField";
 import TemplateProposals from "./TemplateProposals";
 import WebIntakeProducts,{type ProductSaveStatus} from "./WebIntakeProducts";
+import WebIntakeSocials,{type SocialSaveStatus} from "./WebIntakeSocials";
+import {EMPTY_SOCIAL_LINKS,SOCIAL_PLATFORMS,normalizeSocialLinks,normalizeSocialUrl,type BusinessSocialLinks} from "@/lib/web-builder-social";
 import styles from "./WebSiteIntake.module.css";
 
 type Props={ownerId:string;busy:boolean;onChoose:(input:SiteIntake,proposal:SiteProposal)=>void};
@@ -65,6 +67,8 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const [newItem,setNewItem]=useState("");
  const [products,setProducts]=useState<SiteProduct[]>([]);
  const [productStatus,setProductStatus]=useState<ProductSaveStatus>("loading");
+ const [socialLinks,setSocialLinks]=useState<BusinessSocialLinks>({...EMPTY_SOCIAL_LINKS});
+ const [socialStatus,setSocialStatus]=useState<SocialSaveStatus>("loading");
  const [family,setFamily]=useState<SiteFamily|null>(null);
  const [stage,setStage]=useState<"details"|"proposals">("details");
  const [mode,setMode]=useState<"templates"|"ai">("templates");
@@ -210,8 +214,9 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
   phone:phone.trim(),email:email.trim(),city:city.trim(),about:about.trim(),
   logo,photos:photos.slice(0,2),
   offerings:kind==="products"?[]:services.filter(Boolean),
-  products:kind==="services"?[]:products.filter(p=>p.title.trim())
- }),[name,category,kind,goal,phone,email,city,about,logo,photos,services,products]);
+  products:kind==="services"?[]:products.filter(p=>p.title.trim()),
+  socials:normalizeSocialLinks(socialLinks)
+ }),[name,category,kind,goal,phone,email,city,about,logo,photos,services,products,socialLinks]);
  const suggestedFamily=family||familyForCategory(category);
  function addService(event:FormEvent){
   event.preventDefault();
@@ -230,6 +235,10 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
   if(kind!=="services"&&products.some(p=>!p.title.trim())){
    setError("Escribe el nombre de cada producto o elimina las fichas vacías.");return;
   }
+  if(socialStatus!=="saved"){setError("Espera a que se guarden las redes sociales.");return;}
+  const invalidSocial=SOCIAL_PLATFORMS.find(network=>
+   socialLinks[network.id].trim()&&!normalizeSocialUrl(socialLinks[network.id],network.id));
+  if(invalidSocial){setError("Comprueba el enlace de "+invalidSocial.label+".");return;}
   if(intake.email&& !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(intake.email)){
    setError("Comprueba el correo de contacto.");return;
   }
@@ -257,6 +266,8 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
     <label>Ciudad o zona atendida<input value={city} maxLength={180} placeholder="Ciudad, estado" onChange={e=>setCity(e.target.value)}/></label>
     <label>Descripción aprobada<textarea value={about} maxLength={500} rows={3}
      placeholder="¿Qué hace tu negocio? Incluye solamente información real." onChange={e=>setAbout(e.target.value)}/></label>
+    <WebIntakeSocials ownerId={ownerId} links={socialLinks}
+     onChange={setSocialLinks} onStatusChange={setSocialStatus}/>
    </div>
    <div className={styles.panel}>
     <h3><span>02</span> Oferta y objetivo</h3>
@@ -321,7 +332,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
    {error?<p className={styles.error} role="alert">{error}</p>:null}
    <div className={styles.finish}>
     <span><ShieldCheck size={16}/> Tus datos no se publicarán todavía.</span>
-    <button type="button" disabled={busy||mode!=="templates"||!mediaReady||mediaSaving||Boolean(mediaError)||(kind!=="services"&&productStatus!=="saved")} onClick={preview}>
+    <button type="button" disabled={busy||mode!=="templates"||!mediaReady||mediaSaving||Boolean(mediaError)||socialStatus!=="saved"||(kind!=="services"&&productStatus!=="saved")} onClick={preview}>
      Ver propuestas <ArrowRight size={17}/>
     </button>
    </div>
