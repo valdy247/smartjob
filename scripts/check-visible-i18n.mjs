@@ -55,7 +55,7 @@ function walk(dir){
 }
 for(const dir of scopes)walk(dir);
 reports.sort((a,b)=>a.file.localeCompare(b.file)||a.line-b.line);
-const byFile=Object.entries(Object.groupBy(reports,r=>r.file))
+const byFile=Object.entries(reports.reduce((acc,r)=>{(acc[r.file]??=[]).push(r);return acc;},{}))
  .map(([file,items])=>({file,count:items.length}))
  .sort((a,b)=>b.count-a.count);
 console.log(JSON.stringify({total:reports.length,byFile,findings:reports},null,2));
