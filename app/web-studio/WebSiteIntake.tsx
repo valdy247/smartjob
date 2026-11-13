@@ -68,7 +68,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const intake=useMemo<SiteIntake>(()=>({
   business:name.trim(),categoryId:category,offering:kind,objective:goal,
   phone:phone.trim(),email:email.trim(),city:city.trim(),about:about.trim(),
-  logo,photos:photos.filter(Boolean),offerings:services.filter(Boolean)
+  logo,photos:photos.slice(0,2),offerings:services.filter(Boolean)
  }),[name,category,kind,goal,phone,email,city,about,logo,photos,services]);
  const suggestedFamily=family||familyForCategory(category);
  function addService(event:FormEvent){
