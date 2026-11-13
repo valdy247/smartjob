@@ -15,10 +15,10 @@ No declarar listo para lanzamiento solo por despliegue READY.
 | P0 | Eliminar la foto del campo exacto y no recuperarla tras recarga | SQL \`web_studio_intake_media_delete_roundtrip.sql\` passed; almacena un campo vacío en \`smartjob_web_intake_media\`, sin reintroducir fotografías históricas; prueba en navegador autenticado pendiente |
 | P0 | Diferenciar retirar una imagen de la biblioteca vs. retirarla de un campo; no romper otras páginas | SQL \`vmv_web_media_archive_roundtrip.sql\` passed; archivos usados se archivan / ocultan de biblioteca, sin borrar referencias; interacción real pendiente |
 | P0 | Logo sin recorte en formulario y en web | \`BuilderImageField.module.css\` y \`web-builder-public.css\` usan \`object-fit:contain\`; verificación visual real pendiente |
-| P0 | Productos independientes con foto, título, descripción y precio opcional; guardar tras recarga | \`WebIntakeProducts.tsx\` y tabla RLS; verificaciones automáticas del catálogo y sesión en navegador pendientes |
-| P0 | Controles al tocar imagen, texto, botón, título y fondo de sección | Imágenes y textos añadidos; SQL \`vmv_web_context_controls.sql\` passed. Verificar y completar selección contextual del botón, título y zona de fondo, sin confundir la sección con su imagen |
-| P0 | Menú flotante **+** en móvil que inserte elementos compatibles, sin falsas funciones de e-commerce | \`BuilderQuickAdd.tsx\` con elementos Puck, carrito sólo como no disponible; SQL \`vmv_web_quick_add_roundtrip.sql\` passed para tres bloques y publicación, interacción real en móvil pendiente |
-| P0 | **Pantalla del editor móvil debe mostrar el diseño primero** | Pendiente reorganizar a cabecera compacta (volver/nombre/publicar), selector de página y +; SEO, solicitudes, historia y dominios dentro de Ajustes |
+| P0 | Productos independientes con foto, título, descripción y precio opcional; guardar tras recarga | **SQL PASS** `vmv_web_intake_products_roundtrip.sql` comprobó dos productos distintos, quitar foto de uno, consultar de nuevo, eliminar otro y permisos; interacción real pendiente |
+| P0 | Controles al tocar imagen, texto, botón, título y fondo de sección | **SQL PASS** `vmv_web_context_controls.sql` y `vmv_web_cta_visual_controls.sql`: ajustes conservados en borrador/publicación. El panel ahora recibe eventos Puck (incluido iframe) y muestra Fondo/Título/Botón. **Selección táctil real sin comprobar** |
+| P0 | Menú flotante **+** en móvil que inserte elementos compatibles, sin falsas funciones de e-commerce | **Build READY + SQL PASS**: `demos/quick-add` valida 19 tipos con normalizador JSON y Render; `vmv_web_quick_add_roundtrip.sql` comprueba persistencia/publicación de tres bloques. FAB circular/hoja inferior implementados; interacción táctil real pendiente |
+| P0 | **Pantalla del editor móvil debe mostrar el diseño primero** | **Implementado, build READY**: cabecera volver/nombre/publicar, página actual, crear página por icono, Ajustes plegados, estado único, SEO en sección colapsada, barra +; responde al ancho del contenedor del simulador. Captura y uso real de móvil pendientes |
 | P0 | Estado claro de guardado, borrador vs publicación, recuperación, deshacer/rehacer | Autosave, indicador e historial Puck en código; reconfirmar con sesión real, recarga y versión |
 | P0 | Recorrido crear/proponer/editar/previsualizar/publicar/editar conservando fotos y diseño | Pruebas SQL de páginas y publicaciones parciales; QA real móvil y escritorio pendiente |
 | P1 | Redes sociales opcionales, primera ayuda elegante de copiar enlace, links reales en sitio | \`WebIntakeSocials.tsx\`, tabla RLS, normalizador y pie público; SQL \`vmv_web_quick_add_roundtrip.sql\` passed para guardar/publicar URL; UX real pendiente |
@@ -37,5 +37,18 @@ No declarar listo para lanzamiento solo por despliegue READY.
 5. Separar **Terminado y comprobado**, **Implementado sin comprobar** y **Pendiente / bloqueado**.
 6. No cerrar ni eliminar de esta lista los elementos aún no probados; actualizarla en cada entrega.
 
-## Entrega en curso
-Compactar la interfaz móvil del editor, revelar vista de la página antes que los ajustes, y verificar que el + inserta bloques que sobreviven al normalizador, guardado y publicación. Revisar los controles contextuales CTA y RLS de productos como dependencia.
+## Entrega actual — editor móvil primero (13 noviembre 2026)
+**Comprobado por automatización:**
+- SQL reversible: `web_studio_intake_media_delete_roundtrip.sql`, `vmv_web_media_archive_roundtrip.sql`, `vmv_web_context_controls.sql`, `vmv_web_quick_add_roundtrip.sql`, `vmv_web_intake_products_roundtrip.sql`, `vmv_web_cta_visual_controls.sql`. Sin registros de negocio permanentes.
+- Ruta `/web-studio/demos/quick-add`: validación de 19 tipos Puck, serialización/normalización y Render del sitio público en la compilación. No valida interacción en pantalla.
+- Vercel READY para cambios previos de esta etapa; comprobar HEAD final tras cada commit nuevo.
+**Implementado sin prueba visual de cliente:**
+- Rediseño basado en ancho del Web Studio, incluso el simulador móvil dentro de navegador de escritorio; estado de borrador visible, publicar arriba, selector de páginas, acceso a Ajustes, nuevo formulario compacto de página, SEO detrás de desplegable y ausencia de controles duplicados.
+- Menú + móvil con bloques compatibles y carrito marcado no disponible. Control CTA contextuales conectados a fondo/título/botón.
+**Pendientes bloqueantes de aceptación:**
+- Prueba manual autenticada en móvil y escritorio: primer render sobre página, scroll, legibilidad, apertura/cierre del +, insertar todos los tipos, recargar, deshacer/rehacer, select CTA por zona, publicar, visitar URL, cambiar página y volver, funcionamiento en Vista-App simulador.
+- Verificar subidas de archivo en cuenta de pruebas, reordenación, selección/tocado sin errores, pedidos/formularios, notificaciones y auditoría RLS cruzada entre cuentas.
+- IA real con consumo y revisión, cambio seguro entre familias, contenido dinámico y comercio completo. **No anunciar como terminado** hasta probar.
+
+## Regla de seguimiento
+Las solicitudes futuras se agregan a esta misma tabla o a una nueva sección de entregas; no se eliminan por abrir un nuevo trabajo.
