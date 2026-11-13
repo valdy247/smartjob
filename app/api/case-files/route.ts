@@ -28,10 +28,11 @@ async function authorize(req:NextRequest,source:unknown,id:unknown){
  if(staff.error||record.error)return {error:"No se pudo verificar el acceso.",status:503} as const;
  if(!record.data)return {error:"Caso no encontrado.",status:404} as const;
  const isStaff=Boolean(staff.data&&["admin","agent"].includes(staff.data.role));
- const owner=String(record.data.owner_id||record.data.user_id||"");
+ const ownerRecord=record.data as Record<string,unknown>;
+ const owner=String(ownerRecord.owner_id||ownerRecord.user_id||"");
  if(!isStaff&&(owner!==uid||!["support","marketing"].includes(String(source))))
   return {error:"No autorizado para este caso.",status:403} as const;
- return {db,uid,isStaff,source:source as Source,id:id as string,status:String(record.data.status||"")};
+ return {db,uid,isStaff,source:source as Source,id:id as string,caseStatus:String(record.data.status||"")};
 }
 function matches(bytes:Uint8Array,mime:string){
  if(mime==="application/pdf")return bytes.length>4&&bytes[0]===37&&bytes[1]===80&&bytes[2]===68&&bytes[3]===70&&bytes[4]===45;
@@ -72,7 +73,7 @@ export async function POST(req:NextRequest){
  const source=data.get("source"),id=data.get("id"),file=data.get("file");
  const auth=await authorize(req,source,id);
  if("error" in auth)return reply({error:auth.error},auth.status);
- if(!auth.isStaff&&["closed","resolved","verified","cancelled"].includes(auth.status))
+ if(!auth.isStaff&&["closed","resolved","verified","cancelled"].includes(auth.caseStatus))
   return reply({error:"El caso está finalizado."},409);
  if(!(file instanceof File)||file.size<1||file.size>3_145_728||!allowed.has(file.type))
   return reply({error:"Solo se admiten JPG, PNG, WEBP y PDF de máximo 3 MB."},400);
