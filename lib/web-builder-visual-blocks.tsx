@@ -37,7 +37,18 @@ export const visualBlocks:Config["components"]={
   label:"Portada con fotografía",
   fields:{
    layout:{type:"select",options:[{label:"Dividida",value:"split"},{label:"Fondo completo",value:"cover"},{label:"Editorial",value:"editorial"}]},
-   eyebrow:titleField,title:textArea,description:textArea,buttonText:titleField,buttonUrl:titleField,
+   eyebrow:titleField,title:{type:"textarea",contentEditable:true},description:textArea,buttonText:titleField,buttonUrl:titleField,
+   titleFont:{type:"select",options:[{label:"Fuente de la web",value:"site"},{label:"Moderna",value:"modern"},
+    {label:"Editorial",value:"editorial"},{label:"Redondeada",value:"rounded"},
+    {label:"Geométrica",value:"geometric"},{label:"Monoespaciada",value:"mono"}]},
+   titleColor:colorEditorField("Color del título"),titleFontSize:numericEditorField("fontSize"),
+   titleShadow:{type:"radio",options:[{label:"Sin sombra",value:"none"},
+    {label:"Suave",value:"soft"},{label:"Marcada",value:"strong"}]},
+   titleWeight:{type:"radio",options:[{label:"Ligera",value:"light"},{label:"Normal",value:"normal"},
+    {label:"Negrita",value:"heavy"}]},
+   titleItalic:{type:"radio",options:[{label:"Normal",value:"no"},{label:"Cursiva",value:"yes"}]},
+   titleLink:{type:"text"},
+
    image:imgField,imageAlt:titleField,
    imageWidth:numericEditorField("imageWidth"),
    imageRadius:numericEditorField("imageRadius"),
@@ -52,16 +63,18 @@ export const visualBlocks:Config["components"]={
    height:{type:"select",options:[{label:"Normal",value:"normal"},{label:"Alta",value:"tall"}]},
    buttonStyle:{type:"select",options:[{label:"Sólido",value:"solid"},{label:"Contorno",value:"outline"},{label:"Enlace",value:"link"}]}
   },
-  defaultProps:{layout:"split",eyebrow:"",title:"Presenta tu negocio",description:"",buttonText:"Contactar",buttonUrl:"#contacto",image:"",imageAlt:"",align:"left",imagePosition:"center",shade:"medium",height:"normal",buttonStyle:"solid",imageWidth:100,imageRadius:0,imageOpacity:0,imageBorder:0,borderColor:"#30243F",imageMoveX:0,imageMoveY:0},
+  defaultProps:{layout:"split",eyebrow:"",title:"Presenta tu negocio",description:"",buttonText:"Contactar",buttonUrl:"#contacto",image:"",imageAlt:"",align:"left",imagePosition:"center",shade:"medium",height:"normal",buttonStyle:"solid",imageWidth:100,imageRadius:0,imageOpacity:0,imageBorder:0,borderColor:"#30243F",imageMoveX:0,imageMoveY:0,titleFont:"site",titleColor:"",titleFontSize:0,titleShadow:"none",titleWeight:"normal",titleItalic:"no",titleLink:""},
   renderFields:({fields})=><>
    <fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.eyebrow}{fields.title}{fields.description}{fields.buttonText}{fields.buttonUrl}</fieldset>
+   <fieldset className="vmv-puck-field-group"><legend>Estilo del título</legend>{fields.titleFont}{fields.titleColor}
+    {fields.titleFontSize}{fields.titleShadow}{fields.titleWeight}{fields.titleItalic}{fields.titleLink}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.align}{fields.height}{fields.buttonStyle}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Imagen · Reemplazar y ajustar</legend>
     {fields.image}{fields.imageAlt}{fields.imageWidth}{fields.imageRadius}{fields.imageOpacity}
     {fields.imageBorder}{fields.borderColor}{fields.imageMoveX}{fields.imageMoveY}
     {fields.imagePosition}{fields.shade}</fieldset>
   </>,
-  render:({layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,height,buttonStyle,imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,puck})=>{
+  render:({layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,height,buttonStyle,imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,titleFont,titleColor,titleFontSize,titleShadow,titleWeight,titleItalic,titleLink,puck})=>{
    const href=typeof buttonUrl==="string"&&(buttonUrl.startsWith("#")||buttonUrl.startsWith("mailto:")||buttonUrl.startsWith("tel:"))?buttonUrl:"#contacto";
    const position=["top","bottom","left","right"].includes(imagePosition)?imagePosition:"center";
    const media=photo(image);
@@ -72,6 +85,20 @@ export const visualBlocks:Config["components"]={
    const borderPaint=typeof borderColor==="string"&&/^#[\da-f]{6}$/i.test(borderColor)?borderColor:"#30243F";
    const dx=typeof imageMoveX==="number"?Math.max(-150,Math.min(150,imageMoveX)):0;
    const dy=typeof imageMoveY==="number"?Math.max(-150,Math.min(150,imageMoveY)):0;
+   const titleFonts:Record<string,string>={site:"inherit",modern:"Arial,sans-serif",editorial:"Georgia,serif",
+    rounded:"Trebuchet MS,sans-serif",geometric:"Avenir Next,Arial,sans-serif",mono:"ui-monospace,monospace"};
+   const titleStyle:React.CSSProperties={
+    fontFamily:titleFonts[titleFont]||"inherit",
+    color:typeof titleColor==="string"&&/^#[\da-f]{6}$/i.test(titleColor)?titleColor:undefined,
+    fontSize:typeof titleFontSize==="number"&&titleFontSize>=12?titleFontSize+"px":undefined,
+    textShadow:titleShadow==="strong"?"0 4px 14px rgba(0,0,0,.52)":
+     titleShadow==="soft"?"0 2px 6px rgba(0,0,0,.25)":"none",
+    fontWeight:titleWeight==="light"?400:titleWeight==="heavy"?850:undefined,
+    fontStyle:titleItalic==="yes"?"italic":"normal"
+   };
+   const safeTitleLink=typeof titleLink==="string"&&
+    /^(#[a-z0-9-]{1,70}|https:\/\/[^\s<>]+|mailto:[^\s<>]+|tel:\+?[\d ()-]{7,36})$/i.test(titleLink)?
+    titleLink:"";
    return <section className="vmv-hero-visual" data-layout={layout||"split"} data-align={align||"left"}
     data-shade={shade||"medium"} data-height={height||"normal"} data-has-image={Boolean(media)||Boolean(puck.isEditing)}>
     {layout==="cover"?<div className="vmv-hero-cover" style={media?{
@@ -81,7 +108,9 @@ export const visualBlocks:Config["components"]={
     }:undefined} aria-hidden="true"/>:null}
     <div className="vmv-hero-content">
      {eyebrow?<span className="vmv-hero-eyebrow">{eyebrow}</span>:null}
-     <h1>{title||"Presenta tu negocio"}</h1>
+     <h1 style={titleStyle}>{safeTitleLink&&!puck.isEditing?
+      <a href={safeTitleLink} style={{color:"inherit",textDecoration:"inherit"}}>{title||"Presenta tu negocio"}</a>:
+      title||"Presenta tu negocio"}</h1>
      {description?<p>{description}</p>:null}
      <a className="vmv-site-button" data-button-style={buttonStyle||"solid"} href={href}>{buttonText||"Contactar"} <span aria-hidden="true">↗</span></a>
     </div>
@@ -239,7 +268,7 @@ export const visualBlocks:Config["components"]={
  }
 };
 const SCHEMA:Record<VisualBlockName,{strings:string[];images:string[];arrays?:Record<string,{strings:string[];images:string[]}>}>={
- HeroVisual:{strings:["layout","eyebrow","title","description","buttonText","buttonUrl","imageAlt","align","imagePosition","shade","height","buttonStyle"],images:["image"]},
+ HeroVisual:{strings:["layout","eyebrow","title","description","buttonText","buttonUrl","imageAlt","align","imagePosition","shade","height","buttonStyle","titleFont","titleColor","titleShadow","titleWeight","titleItalic","titleLink"],images:["image"]},
  OfferingGrid:{strings:["title","description","layout","padding","surface","columns","showPrices"],images:[],arrays:{items:{strings:["title","description","alt","price"],images:["image"]}}},
  PhotoGallery:{strings:["title","description","layout","padding","surface"],images:[],arrays:{items:{strings:["alt","caption"],images:["image"]}}},
  ProcessSteps:{strings:["title","padding","surface"],images:[],arrays:{items:{strings:["title","description"],images:[]}}},
@@ -260,6 +289,16 @@ export function normalizeVisualProps(type:VisualBlockName,props:Record<string,un
   safe[field]=value;
  }
  if(type==="HeroVisual"){
+  safe.titleFontSize=typeof props.titleFontSize==="number"&&Number.isFinite(props.titleFontSize)?
+   Math.max(0,Math.min(110,Math.round(props.titleFontSize))):0;
+  safe.titleFont=["site","modern","editorial","rounded","geometric","mono"].includes(String(safe.titleFont))?
+   safe.titleFont:"site";
+  safe.titleShadow=["none","soft","strong"].includes(String(safe.titleShadow))?safe.titleShadow:"none";
+  safe.titleWeight=["light","normal","heavy"].includes(String(safe.titleWeight))?safe.titleWeight:"normal";
+  safe.titleItalic=safe.titleItalic==="yes"?"yes":"no";
+  safe.titleColor=typeof safe.titleColor==="string"&&/^#[\da-f]{6}$/i.test(safe.titleColor)?safe.titleColor:"";
+  safe.titleLink=typeof safe.titleLink==="string"&&
+   /^(#[a-z0-9-]{1,70}|https:\/\/[^\s<>]+|mailto:[^\s<>]+|tel:\+?[\d ()-]{7,36})$/i.test(safe.titleLink)?safe.titleLink:"";
   for(const [field,range,fallback] of [
    ["imageWidth",100,100],["imageRadius",80,0],["imageOpacity",100,0],
    ["imageBorder",12,0],["imageMoveX",150,0],["imageMoveY",150,0]
