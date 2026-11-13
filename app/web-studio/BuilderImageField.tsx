@@ -1,6 +1,6 @@
 "use client";
 import {useCallback,useEffect,useState,type ChangeEvent} from "react";
-import {ImagePlus,RefreshCw,Trash2,WandSparkles,X} from "lucide-react";
+import {ImagePlus,RefreshCw,Trash2,WandSparkles} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import styles from "./BuilderImageField.module.css";
@@ -175,7 +175,8 @@ export default function BuilderImageField({value,onChange}:Props){
   {value&&safeWebImageUrl(value)?<div className={styles.selectedImage}>
    <img src={value} alt="Imagen seleccionada" className={styles.current}/>
    <button type="button" className={styles.clearSelection} disabled={busy||Boolean(deleting)}
-    onClick={()=>onChange("")}><X size={13}/> Quitar de este campo</button>
+    onClick={()=>{onChange("");setNotice("Foto quitada solo de este lugar. Los demás usos no se modificaron.");setError("");}}>
+     <Trash2 size={13}/> Eliminar de este lugar</button>
   </div>:null}
   <label className={styles.upload}><ImagePlus size={16}/>{busy?"Subiendo…":"Subir foto"}
    <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy}
