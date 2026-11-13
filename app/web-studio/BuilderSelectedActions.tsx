@@ -67,7 +67,7 @@ export default function BuilderSelectedActions({children,label}:{
     {mode==="library"?<BuilderImageField
      value={typeof props[imageKey]==="string"?props[imageKey]:""}
      onChange={src=>change(imageKey,src)}/>:<>
-     {item?.type==="ComposeImage"?<>
+     {(item?.type==="ComposeImage"||item?.type==="HeroVisual")?<>
       <RangeField label="Tamaño" min={25} max={100} unit="%" value={props.imageWidth??100}
        onChange={v=>change("imageWidth",v)}/>
       <RangeField label="Esquinas redondas" min={0} max={80} unit="px" value={props.imageRadius??16}
