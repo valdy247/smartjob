@@ -4,6 +4,7 @@ import {verifyAiTestWebhook} from "@/lib/vmv-ai-agents/twilio-test";
 import {billingAdmin} from "@/lib/vmv-billing";
 import {findPhoneRoute} from "@/lib/phone-routes";
 import {phoneCommerceTurn} from "@/lib/vmv-ai-agents/voice-commerce";
+import {askAiAgent} from "@/lib/vmv-ai-agents/model";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -84,23 +85,13 @@ async function getReply(session:CallRecord,text:string,language:Lang):Promise<st
  ].join("\n");
  const prior=Array.isArray(session.turns)?session.turns.filter(x=>x&&["user","assistant"].includes(x.role)&&
    typeof x.content==="string").slice(-12).map(x=>({role:x.role,content:x.content})):[];
- const direct=Boolean(process.env.OPENAI_API_KEY);
- const credential=process.env.OPENAI_API_KEY||process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN;
- if(!credential)throw Error("No AI provider configured");
- const model=process.env.VMV_AI_VOICE_MODEL||"gpt-4.1-mini";
- const url=direct?"https://api.openai.com/v1/chat/completions":"https://ai-gateway.vercel.sh/v1/chat/completions";
- const response=await fetch(url,{
-  method:"POST",
-  headers:{"Content-Type":"application/json",Authorization:"Bearer "+credential},
-  body:JSON.stringify({model:direct?model:"openai/"+model,
-   messages:[{role:"system",content:system},...prior,{role:"user",content:text}],
-   temperature:0.25,max_tokens:170,store:false}),
-  cache:"no-store",signal:AbortSignal.timeout(6800)
+ const answer=await askAiAgent({
+  system,
+  messages:[...prior,{role:"user" as const,content:text}],
+  maxOutputTokens:170,
+  temperature:0.25,
+  timeoutMs:6800
  });
- if(!response.ok)throw Error("Provider unavailable");
- const raw=await response.json();
- const answer=raw.choices?.[0]?.message?.content;
- if(typeof answer!=="string"||!answer.trim())throw Error("Empty answer");
  return answer.trim().slice(0,1100);
 }
 async function loadSession(db:NonNullable<ReturnType<typeof billingAdmin>>,sid:string):Promise<CallRecord|null>{
