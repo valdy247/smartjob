@@ -57,6 +57,7 @@ export default function BuilderQuickAdd({enabled=true,compact=false}:{enabled?:b
  const [filter,setFilter]=useState("");
  const [error,setError]=useState("");
  const [added,setAdded]=useState("");
+ const [pendingSelection,setPendingSelection]=useState<string|null>(null);
  const menuRef=useRef<HTMLDivElement>(null);
  const triggerRef=useRef<HTMLButtonElement>(null);
  const getPuck=useGetPuck();
@@ -77,6 +78,24 @@ export default function BuilderQuickAdd({enabled=true,compact=false}:{enabled?:b
   return()=>{window.clearTimeout(focus);document.removeEventListener("keydown",onKey);document.body.style.overflow=previousOverflow;};
  },[opened]);
  useEffect(()=>{if(!added)return;const timeout=window.setTimeout(()=>setAdded(""),3800);return()=>window.clearTimeout(timeout);},[added]);
+ useEffect(()=>{
+  if(!pendingSelection)return;
+  let attempts=0,frame=0,cancelled=false;
+  const select=()=>{
+   if(cancelled)return;
+   const api=getPuck();
+   const selector=api.getSelectorForId(pendingSelection);
+   if(selector){
+    // Only select after the new node is known to Puck. Never dispatch a
+    // speculative selector while the editor is still reconciling its data.
+    api.dispatch({type:"setUi",ui:{itemSelector:selector}});
+    setPendingSelection(null);
+   }else if(++attempts<8)frame=requestAnimationFrame(select);
+   else setPendingSelection(null);
+  };
+  frame=requestAnimationFrame(select);
+  return()=>{cancelled=true;cancelAnimationFrame(frame);};
+ },[pendingSelection,getPuck]);
  function add(entry:Shortcut){
   try{
    const api=getPuck();
@@ -87,8 +106,9 @@ export default function BuilderQuickAdd({enabled=true,compact=false}:{enabled?:b
    const issue=validateBuilderDocument(next);
    if(issue)throw new Error(issue);
    api.dispatch({type:"setData",data:next});
+   setPendingSelection(node.props.id);
 
-   setAdded(entry.title+" añadido al final de la página");
+   setAdded(entry.title+" añadido. Selecciónalo para editarlo.");
    setOpened(false);setFilter("");setError("");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo agregar el elemento.");}
  }
