@@ -120,22 +120,14 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
       row=current.data;
      }else row=inserted.data;
     }
-    const {data:{session}}=await client.auth.getSession();
-    if(!session?.access_token)throw new Error("Inicia sesión nuevamente para recuperar tus fotos.");
-    // A deleted object must never be restored by stale saved form values.
-    const hiddenResponse=await fetch("/api/web-services/media/delete",{
-     headers:{Authorization:"Bearer "+session.access_token},cache:"no-store"
-    });
-    if(!hiddenResponse.ok)throw new Error("No se pudo comprobar qué fotos eliminaste. Reintenta.");
-    const hiddenData=await hiddenResponse.json() as {hidden?:unknown};
-    if(!Array.isArray(hiddenData.hidden))throw new Error("No se pudo verificar la biblioteca.");
-    const hidden=new Set((hiddenData.hidden as unknown[]).filter((x):x is string=>typeof x==="string"));
+    // The saved intake row is authoritative. Library-hidden files are still valid
+    // when referenced by a business field; only missing Storage objects are cleared.
+    // Do not confuse archive visibility with an explicit field removal.
     const original=selectionFromRow(row);
     const cleaned={...original};
     const candidates=mediaSlots.map(slot=>({slot,filename:ownImageFilename(original[slot],ownerId)}))
      .filter(v=>v.filename);
     await Promise.all(candidates.map(async ({slot,filename})=>{
-     if(hidden.has(filename)){cleaned[slot]="";return;}
      const {data:files,error:listError}=await client.storage.from("smartjob-web-images")
       .list(ownerId,{search:filename,limit:100});
      // Fail closed on a missing/deleted asset; do not display broken old thumbnails.
