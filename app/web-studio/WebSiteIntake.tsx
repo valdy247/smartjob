@@ -281,7 +281,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
     {mediaError?<p role="alert" className={styles.error}>{mediaError}</p>:null}
     <fieldset disabled={!mediaReady||mediaSaving} style={{border:0,padding:0,margin:0,minWidth:0}}>
      <div className={styles.photos}>
-      <div><strong>Logo</strong><BuilderImageField value={logo} onChange={url=>saveMedia({logo_url:url})}/></div>
+      <div><strong>Logo</strong><BuilderImageField kind="logo" value={logo} onChange={url=>saveMedia({logo_url:url})}/></div>
       {[0,1].map(i=><div key={i}><strong>{i===0?"Foto de portada":"Foto de productos o trabajos"}</strong>
        <BuilderImageField value={photos[i]||""}
         onChange={url=>saveMedia(i===0?{cover_url:url}:{work_url:url})}/></div>)}
