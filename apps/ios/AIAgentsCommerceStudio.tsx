@@ -1,5 +1,5 @@
 import React,{useCallback,useEffect,useState} from "react";
-import {ActivityIndicator,Alert,Linking,Pressable,ScrollView,Share,StyleSheet,
+import {ActivityIndicator,Alert,Pressable,ScrollView,Share,StyleSheet,
  Switch,Text,TextInput,View} from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type {Session} from "@supabase/supabase-js";
@@ -474,14 +474,14 @@ const styles=StyleSheet.create({
  pillLabel:{fontSize:11,fontWeight:"800",color:C.muted},
  toggle:{flexDirection:"row",alignItems:"center",gap:10,
   paddingVertical:8,borderBottomWidth:1,borderBottomColor:"#F1EBF7"},
- toggleTitle:{fontSize:12,fontWeight:"850",color:C.ink},
+ toggleTitle:{fontSize:12,fontWeight:"800",color:C.ink},
  btn:{paddingHorizontal:12,paddingVertical:11,borderRadius:12,flexDirection:"row",
   justifyContent:"center",alignItems:"center",gap:6},
  btnSolid:{backgroundColor:C.purple},
  btnLine:{borderWidth:1,borderColor:C.line,backgroundColor:C.paper},
  btnText:{fontWeight:"900",color:C.deep,fontSize:11,textAlign:"center"},
  field:{gap:6},
- label:{fontSize:11,fontWeight:"850",color:"#493959"},
+ label:{fontSize:11,fontWeight:"800",color:"#493959"},
  input:{padding:12,borderWidth:1,borderColor:"#E4D9F1",borderRadius:12,
   backgroundColor:"#FFF",color:C.ink,fontSize:13,minHeight:44},
  empty:{gap:8,borderRadius:18,padding:24,backgroundColor:C.paper,
