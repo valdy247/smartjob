@@ -1253,7 +1253,8 @@
     "marketing.action.googleClaimGoal": "Quiero reclamar y verificar mi perfil existente de Google Business Profile.",
     "marketing.action.googleImproveGoal": "Quiero corregir o ampliar mi perfil de Google Business Profile.",
     "marketing.visibility.hoursExample": "Ej. Lun–Vie 9:00–17:00",
-    "marketing.action.counterHint": "caracteres · No compartas contraseñas ni información bancaria."
+    "marketing.action.counterHint": "caracteres · No compartas contraseñas ni información bancaria.",
+    "marketing.action.seoSeparator": " · SEO "
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -2509,6 +2510,7 @@
     "marketing.action.googleClaimGoal": "I want to claim and verify my existing Google Business Profile.",
     "marketing.action.googleImproveGoal": "I want to correct or expand my Google Business Profile.",
     "marketing.visibility.hoursExample": "E.g. Mon–Fri 9:00 AM–5:00 PM",
-    "marketing.action.counterHint": "characters · Do not share passwords or banking details."
+    "marketing.action.counterHint": "characters · Do not share passwords or banking details.",
+    "marketing.action.seoSeparator": " · SEO "
   }
 }
