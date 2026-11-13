@@ -71,3 +71,19 @@ Esta solicitud se suma a todos los pendientes anteriores; no los sustituye. Se p
 | QA final de móvil y publicación | Ejecutar con sesión de prueba a 360/390/430 px: agregar producto y foto, reordenar, editar título y botón, quitar imagen, recargar, previsualizar y republicar; adjuntar capturas reales y SHA exacto. Un build READY no valida estos escenarios |
 
 **Evidencia reproducible**: `node --test scripts/web-builder-images.test.cjs` pasó 9/9 y `npm run typecheck` pasó en el SHA `9ba8a1351353` (sandbox aislado); Vercel compila automáticamente cada commit. Los QA de interacción autenticada y seguridad de cuenta distinta no se realizaron.
+
+## Incidente crítico: preview /web-studio no carga — 13 noviembre 2026
+
+**Diagnóstico reproducido en Chromium sin sesión:** el deploy previamente comunicado, SHA `a37cef4146f8`, devolvía HTTP 200 y Vercel READY, pero la página terminaba en «This page couldn’t load» por la excepción de cliente `Missing translation variable: title`. El error provenía de `puckDictionary` en `WebBuilderWorkspace.tsx`, que interpolaba mensajes dinámicos de Puck sin los marcadores `title`, `count`, etc.
+
+**Corrección:** el diccionario conserva los marcadores dinámicos para que Puck los reemplace al usarlos. Se modificó solo el código de Web Studio, sin cambiar los diccionarios centrales de Idioma. El acceso sin sesión apunta ahora a `/vista-app?returnTo=web-studio`, y VMV Business regresa a `/web-studio` únicamente después de reconocer una sesión válida. No se acepta un destino abierto.
+
+**Evidencia de navegador real sin sesión (Chromium/Playwright, despliegue SHA `38134a14a6cf`):**
+- GET `/web-studio` → HTTP 200 en 360, 390 y 430 px.
+- Los tres tamaños muestran «Inicia sesión para crear tu web» y un enlace válido de inicio de sesión. Sin `pageerror` ni solicitudes fallidas; sin scroll horizontal a esos anchos.
+- A 390 px, el enlace navega al formulario real de `/vista-app?returnTo=web-studio`, visible y sin errores de JavaScript.
+- `node --test scripts/web-studio-startup-i18n.test.cjs` → 2/2 PASS para diccionario español/inglés y destino seguro.
+- **La carga del editor con sesión autenticada, sus datos privados y todo el circuito de edición/guardado/publicación permanecen pendientes de prueba real**. No usar READY ni HTTP 200 por sí solos como aceptación.
+- No se modificaron fotografías ni registros de clientes.
+
+Los anteriores pendientes de experiencia móvil, imágenes, contenido dinámico y funciones comerciales se mantienen intactos.
