@@ -63,7 +63,7 @@ export const visualBlocks:Config["components"]={
      {description?<p>{description}</p>:null}
      <a className="vmv-site-button" data-button-style={buttonStyle||"solid"} href={href}>{buttonText||"Contactar"} <span aria-hidden="true">↗</span></a>
     </div>
-    {layout!=="cover"?<div className="vmv-hero-image"><ItemImage src={image} alt={imageAlt||imageAlt("Portada",heading(title))}
+    {layout!=="cover"?<div className="vmv-hero-image"><ItemImage src={image} alt={imageAlt||"Imagen de portada"}
      style={{"--vmv-image-position":position} as React.CSSProperties}/></div>:null}
    </section>;
   }
