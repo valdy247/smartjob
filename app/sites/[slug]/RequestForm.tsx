@@ -3,11 +3,11 @@ import {useEffect,useState,type FormEvent} from "react";
 import {createClient} from "@supabase/supabase-js";
 import {inquiryFields,safeReferenceLink,type InquiryDetailKey} from "@/lib/web-services-inquiries";
 
-type Props={slug:string;categoryId:string;services:string[];business:string;source?:"classic"|"builder"};
+type Props={slug:string;categoryId:string;services:string[];business:string;source?:"classic"|"builder";preview?:boolean};
 type FormState={name:string;email:string;phone:string;service:string;message:string};
 const empty:FormState={name:"",email:"",phone:"",service:"",message:""};
 type Details=Partial<Record<InquiryDetailKey,string>>;
-export default function RequestForm({slug,categoryId,services,business,source="classic"}:Props){
+export default function RequestForm({slug,categoryId,services,business,source="classic",preview=false}:Props){
  const [form,setForm]=useState<FormState>({...empty});
  const [details,setDetails]=useState<Details>({});
  const [website,setWebsite]=useState("");
@@ -22,7 +22,7 @@ export default function RequestForm({slug,categoryId,services,business,source="c
  function change(key:keyof FormState,value:string){setForm(current=>({...current,[key]:value}));setError("");}
  async function submit(e:FormEvent<HTMLFormElement>){
   e.preventDefault();
-  if(busy||done)return;
+  if(preview||busy||done)return;
   if(form.name.trim().length<2){setError("Escribe tu nombre.");return;}
   if(!form.email.trim()&&!form.phone.trim()){setError("Indica correo o teléfono.");return;}
   if(form.email.trim()&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())){setError("Revisa el correo.");return;}
@@ -93,6 +93,6 @@ export default function RequestForm({slug,categoryId,services,business,source="c
   </label>
   {error?<p className="ws-inquiry-error" role="alert">{error}</p>:null}
   <p className="ws-inquiry-privacy">Tus datos se compartirán con este negocio únicamente para responder tu solicitud.</p>
-  <button type="submit" className="ws-inquiry-submit" disabled={busy}>{busy?"Enviando…":"Enviar solicitud"} <span aria-hidden="true">↗</span></button>
+  <button type="submit" className="ws-inquiry-submit" disabled={busy||preview}>{preview?"Disponible al publicar":busy?"Enviando…":"Enviar solicitud"} <span aria-hidden="true">↗</span></button>
  </form>;
 }
