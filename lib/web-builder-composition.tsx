@@ -1,4 +1,4 @@
-import type {Config,Slot} from "@puckeditor/core";
+import type {Config} from "@puckeditor/core";
 import type {CSSProperties} from "react";
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
 import {safeWebImageUrl} from "./web-services-site";
@@ -54,9 +54,6 @@ const ImageField={
 };
 function SettingsGroup({title,children}:{title:string;children:React.ReactNode}){
  return <fieldset className="vmv-compose-settings"><legend>{title}</legend>{children}</fieldset>;
-}
-function BlockSlot({field:Content,className}:{field:Slot;className:string}){
- return <Content className={className} minEmptyHeight={100} collisionAxis="dynamic"/>;
 }
 export const compositionBlocks:Config["components"]={
  SectionLayout:{
