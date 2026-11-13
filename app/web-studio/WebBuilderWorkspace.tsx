@@ -606,7 +606,7 @@ export default function WebBuilderWorkspace(){
       </div>
      </section>:null}
      <div className={styles.puckShell} style={{display:previewMode?"none":undefined}}>
-      <Puck key={page.id+"-"+refreshKey} config={builderConfig}
+      <Puck key={page.id+"-"+refreshKey} config={builderConfig} dnd={{enableDragHandle:true}}
        data={initialDocument} height="75vh"
        onChange={data=>setDocument(data)}
        onPublish={publish} />
