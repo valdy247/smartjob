@@ -240,7 +240,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(missing){setWizardError(missing);return;}
    if(googleStep<googleStepNames.length-1){closeKeyboard();setGoogleStep(googleStep+1);revealWizard();return;}
   }
-  if(wizardStep===2&&selected==="directory_listings"){const issue=validateDirectory(directoryData);if(issue){setWizardError(issue);return;}}
+  if(wizardStep===2&&selected==="directory_listings"){const issue=validateDirectory(directoryData,effectiveCategory);if(issue){setWizardError(issue);return;}}
   if(wizardStep===2&&selected==="seo_improvement"){
    if(webStage===0){setWebStage(1);closeKeyboard();revealWizard();return;}
    if(webStage===1&&webRepair.requestRepair){setWebStage(2);closeKeyboard();revealWizard();return;}
@@ -348,7 +348,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   }
   if(selected!=="google_profile"&&selected!=="seo_improvement"&&selected!=="directory_listings"&&((goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5))||goal.trim().length>1500)){setWizardStep(2);setWizardError("Elige una necesidad o describe el resultado que buscas.");submitting.current=false;return;}
   if(selected==="review_strategy"&&reviewMode==="request"&&!/^https:\/\/[^\s/]+\.[^\s/]+/i.test(reviewLink.trim())){setWizardStep(2);setWizardError("Introduce un enlace HTTPS válido para pedir reseñas.");submitting.current=false;return;}
-  if(selected==="directory_listings"&&validateDirectory(directoryData)){setWizardStep(2);setWizardError(validateDirectory(directoryData));submitting.current=false;return;}
+  if(selected==="directory_listings"&&validateDirectory(directoryData,effectiveCategory)){setWizardStep(2);setWizardError(validateDirectory(directoryData,effectiveCategory));submitting.current=false;return;}
   if(selected==="seo_improvement"&&validateWebRepair(webRepair)){setWizardStep(2);setWizardError(validateWebRepair(webRepair));submitting.current=false;return;}
   if(selected==="seo_improvement"&&!site.trim()){setWizardStep(1);setWizardError("Añade la web que deseas mejorar.");submitting.current=false;return;}
   if(site.trim()&&!safeSite(site)){setWizardStep(1);setWizardError("La web debe tener una URL válida.");submitting.current=false;return;}
