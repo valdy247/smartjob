@@ -293,3 +293,25 @@
 @media(max-width:700px){
  .workspace{container:vmv-studio / inline-size}
 }
+
+/* Unscaled, container-width canvas. No miniature desktop viewport on phones. */
+.compactPuck{width:100%;min-width:0;max-width:100%;overflow-x:clip;
+ --puck-color-selection-bg:transparent;
+ --puck-slot-component-color-overlay:transparent;
+ --puck-slot-component-color-overlay-border:#9b74d6}
+.compactPuck :global(.Puck){width:100%;min-width:0;max-width:100%;overflow-x:clip}
+.compactPuck :global(iframe){max-width:100%;border:0}
+@container vmv-studio (max-width:700px){
+ .main{padding-bottom:calc(125px + env(safe-area-inset-bottom))}
+ .compactPuck .puckShell{min-width:0}
+ .compactPuck :global(.vmv-context-action-panel){
+  position:fixed;z-index:9999;left:50%;right:auto;top:auto;
+  transform:translateX(-50%);bottom:0;width:min(100vw,430px);max-width:100vw;
+  max-height:min(67dvh,620px);padding-bottom:calc(13px + env(safe-area-inset-bottom));
+  border-radius:22px 22px 0 0}
+ .compactPuck :global(.vmv-context-action-panel button){
+  min-height:44px}
+ .compactPuck :global(.vmv-context-action-panel input),
+ .compactPuck :global(.vmv-context-action-panel textarea),
+ .compactPuck :global(.vmv-context-action-panel select){font-size:16px}
+}
