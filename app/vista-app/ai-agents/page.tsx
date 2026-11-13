@@ -10,6 +10,7 @@ import styles from "./page.module.css";
 import AgentSetupWizard,{type WizardDraft} from "./AgentSetupWizard";
 import AgentQualityLab from "./AgentQualityLab";
 import CommerceStudio from "./CommerceStudio";
+import AgentLiveTest from "./AgentLiveTest";
 import {inspectAgent} from "./agentQuality";
 import {getSupabase} from "@/lib/supabase";
 import {loadAgents,loadPhoneSelection,selectPhoneAgent,setStudyStatus,storeAgent,type PersistedAgent,type PhoneSelection} from "./agentStore";
@@ -263,22 +264,8 @@ export default function AIAgentsPreview(){
       initialAgentId={selected||phone?.agentId||""} onAgentUpdated={updated=>
        setAgents(prev=>prev.map(a=>a.id===updated.id?updated:a))}
       onClose={()=>{void reload().catch(()=>{});back();}}/>:null}
-     {screen==="test"&&active?<div className={styles.testing}>
-      <div className={styles.testAgent}><div className={styles.testAvatar}><Bot size={24}/></div><strong>{active.name}</strong>
-       <small>Simulación privada · Vista de diseño</small></div>
-      <div className={styles.sampleConversation}><span>CONVERSACIÓN ILUSTRATIVA</span>
-       <div className={styles.sampleUser}>Hola, ¿en qué horario atienden?</div>
-       <div className={styles.sampleBot}>Puedo responder con la información autorizada del negocio. Si aún no se ha proporcionado el horario, debo pedir confirmación.</div>
-      </div>
-      <label className={styles.field}>Mensaje de prueba<textarea value={message} rows={3}
-       maxLength={1000} onChange={e=>{setMessage(e.target.value);setMessageNotice("");}} placeholder="Escribe como si fueras un cliente..."/></label>
-      <button type="button" className={styles.saveButton} disabled={!message.trim()}
-       onClick={()=>setMessageNotice("Este sitio solo presenta la interfaz. Las respuestas reales necesitan activar el simulador y la base de datos.")}>
-       <MessageCircle size={18}/> Probar conversación</button>
-      {messageNotice?<p className={styles.info}>{messageNotice}</p>:null}
-      <button type="button" onClick={()=>edit(active)} className={styles.buttonSecondary}><BookOpen size={16}/> Ajustar conocimiento <ChevronRight size={16}/></button>
-      <p className={styles.smallNote}>No se ha realizado ninguna llamada, venta ni reserva. Ningún mensaje se envió a un modelo.</p>
-     </div>:null}
+     {screen==="test"&&active?<AgentLiveTest agent={active}
+      onClose={back} onEdit={()=>edit(active)}/>:null}
     </div>
     <div className={styles.phoneFooter}><div className={styles.footerBrand}><Bot size={17}/> AI Agents</div>
      <span>VMV Business <Sparkles size={12}/></span></div>
