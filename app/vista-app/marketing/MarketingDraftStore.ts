@@ -10,7 +10,7 @@ const MEDIA_DB="vmv-marketing-draft-media";
 const MAX_AGE=48*60*60*1000;
 export type StoredMarketingDraft={
  version:2;savedAt:number;requestId:string;ownerId:string|null;service:string;
- step:number;googleStep:number;webStage?:number;consent?:boolean;name:string;site:string;category:string;goal:string;
+ step:number;googleStep:number;webStage?:number;consent?:boolean;businessId?:string;name:string;site:string;category:string;goal:string;
  reviewInput:string;reviewTone:"cordial"|"breve";reviewMode?:"respond"|"request";reviewLink:string;reviewReply:string;
  googleData:GoogleData;webRepair:WebRepairData;directoryData?:DirectoryData;
 };
