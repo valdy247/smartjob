@@ -4,6 +4,7 @@ import Link from "next/link";
 import {ArrowLeft,ArrowUpRight,BarChart3,CheckCircle2,ChevronDown,ChevronUp,ClipboardCopy,Globe2,HeartHandshake,Workflow,Link2,Lightbulb,Mail,Megaphone,MessageCircle,Share2,ShieldCheck,Sparkles,Target,TrendingUp} from "lucide-react";
 import styles from "./page.module.css";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
+import {t as contentText,type MessageKey} from "@/lib/i18n";
 import LocalVisibilityStudio from "./LocalVisibilityStudio";
 import MarketingActionCenter, {type ServiceCode} from "./MarketingActionCenter";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
@@ -60,6 +61,7 @@ export default function MarketingPage(){
  const industryName=(id:string)=>marketingCategoryLabel(language,id,translate("marketing.category.unknown"));
  const localizedTabs=tabs.map(tab=>({...tab,label:translate(("marketing.tabs."+tab.id+".label") as import("@/lib/i18n").MessageKey),description:translate(("marketing.tabs."+tab.id+".desc") as import("@/lib/i18n").MessageKey)}));
  const localizedChannels=channels.map(channel=>({...channel,desc:translate(("marketing.channels."+channel.id) as import("@/lib/i18n").MessageKey)}));
+ const [contentLanguage]=useState(language); // Freeze generated customer-facing copy when switching the VMV UI language.
  const [section,setSection]=useState<Section>("actions");
  const [requestedService,setRequestedService]=useState<ServiceCode|null>(null);
  const [actionWizardActive,setActionWizardActive]=useState(false);
@@ -96,53 +98,24 @@ export default function MarketingPage(){
    revenue*(validMargin/100)-spend:null,
   breakEven:ticket!==null&&validMargin!==null?ticket*validMargin/100:null
  };
- const business=safe(form.business,"tu negocio");
- const offer=safe(form.offer,"tu producto o servicio");
- const audience=safe(form.audience,"las personas que más necesitan tu solución");
- const cta=safe(form.cta,"Escríbenos para conocer más");
+ const business=safe(form.business,contentText(contentLanguage,"marketing.generated.business"));
+ const offer=safe(form.offer,contentText(contentLanguage,"marketing.generated.offer"));
+ const audience=safe(form.audience,contentText(contentLanguage,"marketing.generated.audience"));
+ const cta=safe(form.cta,contentText(contentLanguage,"marketing.generated.cta"));
  const campaign=useMemo(()=>{
-  const channel=channels.find(c=>c.id===form.channel)?.label||"Canal";
-  const rows:Record<Channel,{angle:string;execution:string;draft:string;measure:string}>={
-   social:{
-    angle:"Demostrar valor antes de pedir la venta",
-    execution:"Publica una demostración real, resuelve una duda frecuente y termina con una invitación clara. Prueba dos creatividades y mide consultas.",
-    draft:"¿Buscas "+offer+"? En "+business+" ayudamos a "+audience+". Descubre cómo podemos ayudarte. "+cta+".",
-    measure:"Consultas calificadas → clientes → ventas"
-   },
-   search:{
-    angle:"Aparecer cuando el cliente ya busca una solución",
-    execution:"Crea una página específica para la oferta, investiga palabras clave y prueba búsquedas relevantes. Excluye consultas que no convierten.",
-    draft:business+" | "+offer+". Para "+audience+". "+cta+".",
-    measure:"Clics → contactos → clientes → coste de adquisición"
-   },
-   local:{
-    angle:"Aumentar descubrimiento y confianza local",
-    execution:"Completa el perfil empresarial, horarios y servicios, publica fotos reales y solicita reseñas auténticas sin incentivos.",
-    draft:business+": "+offer+". Consulta horarios, detalles y cómo contactarnos. "+cta+".",
-    measure:"Vistas locales → llamadas / mensajes → clientes"
-   },
-   referrals:{
-    angle:"Convertir clientes satisfechos en recomendaciones",
-    execution:"Diseña una invitación simple después de una buena experiencia, identifica referidos con una pregunta de origen y mide ventas atribuibles.",
-    draft:"¡Gracias por elegir "+business+"! Si conoces a alguien que pueda necesitar "+offer+", nos encantará ayudarle. "+cta+".",
-    measure:"Recomendaciones recibidas → clientes nuevos"
-   },
-   email:{
-    angle:"Volver a contactar clientes que aceptaron recibir mensajes",
-    execution:"Segmenta clientes con consentimiento, personaliza el contenido, incluye baja sencilla y evita enviar a listas compradas.",
-    draft:"Hola, desde "+business+" queremos compartir una novedad: "+offer+". Si te interesa, "+cta+". Puedes dejar de recibir estos mensajes cuando quieras.",
-    measure:"Respuestas / clics → compras (no solo aperturas)"
-   }
-  };
-  return {channel,...rows[form.channel]};
- },[form.channel,business,offer,audience,cta]);
+  const k=(field:"label"|"angle"|"execution"|"measure")=>translate(("marketing.campaign."+form.channel+"."+field) as MessageKey);
+  return {channel:k("label"),angle:k("angle"),execution:k("execution"),measure:k("measure"),
+   draft:contentText(contentLanguage,("marketing.campaign."+form.channel+".draft") as MessageKey,{business,offer,audience,cta})};
+ },[language,contentLanguage,form.channel,business,offer,audience,cta,translate]);
  const activeCampaignDraft=campaignEditedText??campaign.draft;
  const reviewLink=reviewUrl.trim();
  const reviewLinkIsValid=validReviewUrl(reviewLink);
- const review="¡Hola! Gracias por elegir "+business+". ¿Podrías contarnos cómo fue tu experiencia con una reseña honesta? Tu opinión nos ayuda a mejorar y orienta a otras personas."+(reviewLink&&reviewLinkIsValid?"\n\nPuedes dejar tu reseña aquí: "+reviewLink:"")+"\n\n¡Muchas gracias!";
+ const review=contentText(contentLanguage,"marketing.generated.review",{business})+
+  (reviewLink&&reviewLinkIsValid?"\n\n"+contentText(contentLanguage,"marketing.generated.reviewLink",{url:reviewLink}):"")+
+  "\n\n"+contentText(contentLanguage,"marketing.generated.thanks");
  const whatsappReviewUrl="https://wa.me/?text="+encodeURIComponent(review);
- const emailReviewUrl="mailto:?subject="+encodeURIComponent("Tu opinión sobre "+business)+"&body="+encodeURIComponent(review);
- const followup="Hola, te saludamos de "+business+". Gracias por confiar en nosotros. ¿Hay algo en lo que podamos ayudarte de nuevo? "+cta+". Si prefieres no recibir estos mensajes, dínoslo y no volveremos a escribirte.";
+ const emailReviewUrl="mailto:?subject="+encodeURIComponent(contentText(contentLanguage,"marketing.generated.subject",{business}))+"&body="+encodeURIComponent(review);
+ const followup=contentText(contentLanguage,"marketing.generated.followup",{business,cta});
  const copy=async(value:string)=>{
   try{await navigator.clipboard.writeText(value);setNotice("Texto copiado.");}
   catch{setNotice("No se pudo copiar automáticamente; selecciona el texto para copiarlo.");}
@@ -248,8 +221,8 @@ export default function MarketingPage(){
       </div>
       {margin!==null&&validMargin===null?<p className={styles.warning}>{translate("marketing.copy.margin_must_be_between_0_and_100")}</p>:null}
       <div className={styles.insight}><Lightbulb size={21}/><div><strong>{translate("marketing.copy.first_opportunity")}</strong><p>{form.offer.trim()&&form.audience.trim()?
-       "Tu siguiente campaña debe explicar por qué "+offer+" es valioso para "+audience+". Prueba una promesa específica, evidencia real y una llamada a la acción.": 
-       "Empieza por una sola oferta y un tipo de cliente. Hablar a todo el mundo suele dificultar medir qué funciona."}</p></div></div>
+       translate("marketing.generated.insight",{offer,audience}): 
+       translate("marketing.generated.insightEmpty")}</p></div></div>
       <button type="button" className={styles.primary} onClick={()=>setSection("campaign")}>{translate("marketing.copy.design_campaign")} <ArrowUpRight size={16}/></button>
      </>:null}
      {section==="actions"?<MarketingActionCenter onWizardActiveChange={setActionWizardActive} businessName={form.business}
