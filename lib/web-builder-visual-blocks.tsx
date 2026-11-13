@@ -1,6 +1,7 @@
 import type {Config} from "@puckeditor/core";
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
 import {numericEditorField,colorEditorField} from "@/app/web-studio/BuilderContextFields";
+import {MovableContent} from "@/app/web-studio/BuilderPositionDrag";
 import {safeWebImageUrl} from "./web-services-site";
 
 export type VisualBlockName="HeroVisual"|"OfferingGrid"|"PhotoGallery"|"ProcessSteps"|"ProjectShowcase"|"HoursArea"|"TeamGrid"|"PricingList"|"BeforeAfter"|"FAQList";
@@ -74,7 +75,7 @@ export const visualBlocks:Config["components"]={
     {fields.imageBorder}{fields.borderColor}{fields.imageMoveX}{fields.imageMoveY}
     {fields.imagePosition}{fields.shade}</fieldset>
   </>,
-  render:({layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,height,buttonStyle,imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,titleFont,titleColor,titleFontSize,titleShadow,titleWeight,titleItalic,titleLink,puck})=>{
+  render:({id,layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,height,buttonStyle,imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,titleFont,titleColor,titleFontSize,titleShadow,titleWeight,titleItalic,titleLink,puck})=>{
    const href=typeof buttonUrl==="string"&&(buttonUrl.startsWith("#")||buttonUrl.startsWith("mailto:")||buttonUrl.startsWith("tel:"))?buttonUrl:"#contacto";
    const position=["top","bottom","left","right"].includes(imagePosition)?imagePosition:"center";
    const media=photo(image);
@@ -114,12 +115,13 @@ export const visualBlocks:Config["components"]={
      {description?<p>{description}</p>:null}
      <a className="vmv-site-button" data-button-style={buttonStyle||"solid"} href={href}>{buttonText||"Contactar"} <span aria-hidden="true">↗</span></a>
     </div>
-    {layout!=="cover"&&(media||puck.isEditing)?<div className="vmv-hero-image"
-     style={{width:width+"%",transform:"translate("+dx+"px,"+dy+"px)"}}>
+    {layout!=="cover"&&(media||puck.isEditing)?<MovableContent id={id} editing={puck.isEditing}
+     x={dx} y={dy} xKey="imageMoveX" yKey="imageMoveY"
+     className="vmv-hero-image" style={{width:width+"%"}}>
      <ItemImage src={image} alt={imageAlt||"Imagen de portada"} editing={puck.isEditing}
       style={{"--vmv-image-position":position,borderRadius:round+"px",
        borderWidth:border+"px",borderStyle:border?"solid":"none",borderColor:borderPaint,
-       opacity:(100-opacity)/100} as React.CSSProperties}/></div>:null}
+       opacity:(100-opacity)/100} as React.CSSProperties}/></MovableContent>:null}
    </section>;
   }
  },
