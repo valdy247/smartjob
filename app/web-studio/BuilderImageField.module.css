@@ -15,3 +15,22 @@
 .ai button{display:flex;align-items:center;justify-content:center;gap:7px;color:#fff;background:#8857dd;border:0;border-radius:10px;padding:10px;font-size:12px;font-weight:800;cursor:pointer}
 .ai button:disabled{opacity:.5;cursor:not-allowed}
 .error{font-size:11px;color:#b04464}
+
+
+.selectedImage{display:flex;flex-direction:column;align-items:stretch;gap:6px}
+.clearSelection{align-self:flex-start;border:0;background:#f2edf8;color:#8157ad;border-radius:8px;
+ padding:6px 9px;display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:750;cursor:pointer}
+.clearSelection:disabled{opacity:.5;cursor:wait}
+.photoTile{position:relative;min-width:0;height:70px;border-radius:10px}
+.gallery .photoTile>.selectPhoto,.gallery .photoTile>.active{width:100%;height:100%;display:block;
+ border:2px solid transparent;border-radius:10px;padding:0;overflow:hidden;background:#f1eef5;cursor:pointer}
+.gallery .photoTile>.active{border-color:#8c57db}
+.gallery .photoTile>.deletePhoto{position:absolute;right:3px;top:3px;width:29px;height:29px;min-width:29px;
+ border:1px solid #fff9;background:rgba(30,25,40,.88);color:#fff;border-radius:8px;padding:0;
+ display:grid;place-items:center;z-index:2;box-shadow:0 2px 5px #21182a35;cursor:pointer}
+.gallery .photoTile>.deletePhoto:hover{background:#b73152}
+.gallery .photoTile>.deletePhoto:focus-visible,.gallery .photoTile>.selectPhoto:focus-visible{
+ outline:3px solid #9a65df;outline-offset:2px}
+.gallery .photoTile>.deletePhoto:disabled{opacity:.45;cursor:wait}
+.photoTile .deletingStatus{position:absolute;inset:0;display:grid;place-items:center;
+ background:#262137ca;color:#fff;font-size:10px;font-weight:800;border-radius:10px;z-index:3}
