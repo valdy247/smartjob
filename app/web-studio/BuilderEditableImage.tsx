@@ -6,16 +6,41 @@ import {imageSettingsStyle,normalizeImageSettings,patchBuilderImage,type ImageTa
 import {safeWebImageUrl} from "@/lib/web-services-site";
 
 export const IMAGE_SELECT_EVENT="vmv-builder-image-select";
+function sameTarget(a:ImageTarget,b:ImageTarget){
+ return a.field===b.field&&(a.itemId&&b.itemId?a.itemId===b.itemId:a.index===b.index);
+}
+function broadcastImageSelection(id:string,target:ImageTarget){
+ const detail={id,target};
+ window.dispatchEvent(new CustomEvent(IMAGE_SELECT_EVENT,{detail}));
+ // Puck's canvas lives inside an iframe: its contextual inspector lives in the shell.
+ try{
+  if(window.parent!==window)window.parent.dispatchEvent(new CustomEvent(IMAGE_SELECT_EVENT,{detail}));
+ }catch{/* Detached or restricted preview. */}
+}
 function ImageActions({id,target,label,settings,onPreview}:{id:string;target:ImageTarget;label:string;
  settings:Record<string,unknown>;onPreview:(patch:Record<string,unknown>)=>void}){
  const getPuck=useGetPuck();
+ const [selected,setSelected]=useState(false);
+ useEffect(()=>{
+  const onImage=(event:Event)=>{
+   const detail=(event as CustomEvent<{id:string;target:ImageTarget}>).detail;
+   setSelected(Boolean(detail&&detail.id===id&&sameTarget(detail.target,target)));
+  };
+  const onSection=()=>setSelected(false);
+  window.addEventListener(IMAGE_SELECT_EVENT,onImage);
+  window.addEventListener("vmv-builder-target-selected",onSection);
+  return()=>{
+   window.removeEventListener(IMAGE_SELECT_EVENT,onImage);
+   window.removeEventListener("vmv-builder-target-selected",onSection);
+  };
+ },[id,target.field,target.index,target.itemId]);
  const active=useRef<null|{pointer:number;startX:number;startY:number;x:number;y:number;
   minX:number;maxX:number;minY:number;maxY:number;scale:number;mobile:boolean;guides:number[]}>(null);
  function select(){
   const api=getPuck(),selector=api.getSelectorForId(id);
   if(selector)api.dispatch({type:"setUi",ui:{itemSelector:selector}});
-  // Puck may mount a new action bar after selecting another block.
-  requestAnimationFrame(()=>window.dispatchEvent(new CustomEvent(IMAGE_SELECT_EVENT,{detail:{id,target}})));
+  // Relay selection to the outer editor; never rely on iframe-local events only.
+  requestAnimationFrame(()=>broadcastImageSelection(id,target));
  }
  function measure(button:HTMLButtonElement){
   const frame=button.closest<HTMLElement>(".vmv-managed-image");
@@ -78,7 +103,7 @@ function ImageActions({id,target,label,settings,onPreview}:{id:string;target:Ima
   // Arrow keys provide precise movement without pointer snapping.
   commit(nextAt({...point,pointer:0,startX:0,startY:0,guides:[]},delta[event.key][0]*step*point.scale,delta[event.key][1]*step*point.scale));
  }
- return <div className="vmv-image-tools" onClick={e=>e.stopPropagation()}>
+ return <div className="vmv-image-tools" data-active={selected} onClick={e=>e.stopPropagation()}>
   <button type="button" className="vmv-image-edit" aria-label={"Editar imagen: "+label}
    onPointerDown={e=>e.stopPropagation()} onClick={select}><ImagePlus size={15}/> Ajustar</button>
   <button type="button" className="vmv-image-move" aria-label={"Mover imagen: "+label}
@@ -97,7 +122,12 @@ export default function BuilderEditableImage({id,target={field:"image"},src,alt,
  const url=typeof src==="string"?safeWebImageUrl(src):null;
  if(!url&&!editing)return null;
  return <div className={"vmv-managed-image vmv-visual-media "+className}
-  data-ratio={ratio} style={{...imageSettingsStyle({...settings,...preview},radius),
+  data-editing={editing} data-ratio={ratio}
+  onClickCapture={editing?event=>{
+   const el=event.target instanceof Element?event.target:null;
+   if(el?.closest(".vmv-image-tools"))return;
+   requestAnimationFrame(()=>broadcastImageSelection(id,target));
+  }:undefined} style={{...imageSettingsStyle({...settings,...preview},radius),
    "--vmv-image-position":["top","bottom","left","right"].includes(position)?position:"center"} as React.CSSProperties}>
   {url?<img src={url} alt={alt} loading="lazy"/>:<div className="vmv-media-empty"><span aria-hidden="true">▧</span><small>Agregar fotografía</small></div>}
   {editing?<ImageActions id={id} target={target} label={alt||"Imagen"} settings={{...settings,...preview}}
