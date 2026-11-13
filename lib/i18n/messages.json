@@ -1161,7 +1161,20 @@
     "marketing.google.validation.phone": "Revisa el teléfono comercial.",
     "marketing.google.validation.hours": "Revisa los horarios de apertura y cierre.",
     "marketing.google.validation.booking": "El enlace de reservas debe empezar con https://",
-    "marketing.google.validation.existing": "El enlace del perfil debe empezar con https://"
+    "marketing.google.validation.existing": "El enlace del perfil debe empezar con https://",
+    "marketing.directory.validation.city": "Indica ciudad y estado para buscar oportunidades locales.",
+    "marketing.directory.validation.length": "Revisa la longitud de los datos ingresados.",
+    "marketing.directory.validation.selection": "Selecciona al menos un directorio o la investigación local.",
+    "marketing.directory.validation.url": "Corrige el enlace de una ficha existente (debe ser HTTPS).",
+    "marketing.directory.validation.location": "Revisa tu selección: algunos directorios no corresponden a la ubicación actual.",
+    "marketing.directory.status.pending_review": "Por revisar",
+    "marketing.directory.status.researching": "Investigando",
+    "marketing.directory.status.needs_customer": "Necesita tu ayuda",
+    "marketing.directory.status.submitted": "Enviado con autorización",
+    "marketing.directory.status.published": "Publicado y verificado",
+    "marketing.directory.status.already_listed": "Ya existía una ficha verificada",
+    "marketing.directory.status.not_eligible": "No elegible",
+    "marketing.directory.researchFor": "Buscar directorios en {place}"
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -2325,6 +2338,19 @@
     "marketing.google.validation.phone": "Check your business phone number.",
     "marketing.google.validation.hours": "Check your opening and closing hours.",
     "marketing.google.validation.booking": "The booking link must begin with https://",
-    "marketing.google.validation.existing": "The profile link must begin with https://"
+    "marketing.google.validation.existing": "The profile link must begin with https://",
+    "marketing.directory.validation.city": "Enter a city and state to find local opportunities.",
+    "marketing.directory.validation.length": "Check the length of your entries.",
+    "marketing.directory.validation.selection": "Select at least one directory or local research.",
+    "marketing.directory.validation.url": "Correct an existing listing link (must be HTTPS).",
+    "marketing.directory.validation.location": "Review your selection: some directories don't serve this location.",
+    "marketing.directory.status.pending_review": "To review",
+    "marketing.directory.status.researching": "Researching",
+    "marketing.directory.status.needs_customer": "Needs your input",
+    "marketing.directory.status.submitted": "Submitted with approval",
+    "marketing.directory.status.published": "Published and verified",
+    "marketing.directory.status.already_listed": "Existing verified listing",
+    "marketing.directory.status.not_eligible": "Not eligible",
+    "marketing.directory.researchFor": "Find directories in {place}"
   }
 }

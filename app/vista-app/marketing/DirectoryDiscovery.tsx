@@ -3,7 +3,7 @@ import {useMemo} from "react";
 import {MapPin,ExternalLink,SearchCheck,Check} from "lucide-react";
 import styles from "./DirectoryDiscovery.module.css";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
-import type {MessageKey} from "@/lib/i18n";
+import {t as message,type MessageKey,type InterfaceLanguage} from "@/lib/i18n";
 const labelKeys:Record<string,MessageKey>={"¿Dónde está tu negocio?":"marketing.directory.where_is_your_business","Buscamos opciones relevantes para tu ciudad y sector.":"marketing.directory.we_find_relevant_options_for_your_city_and_industry","Ciudad":"marketing.directory.city","Estado":"marketing.directory.state","Código postal (opcional)":"marketing.directory.zip_code_optional","Atiendo por entregas o en casa del cliente":"marketing.directory.i_deliver_or_serve_customers_at_their_location","No pedimos tu dirección residencial. Los directorios pueden tener reglas de elegibilidad distintas.":"marketing.directory.we_don_t_ask_for_your_home_address_each_directory_has_","Directorios que podemos revisar":"marketing.directory.directories_we_can_review","Selecciona los que te interesan. Antes comprobaremos si ya tienes ficha.":"marketing.directory.select_relevant_listings_vmv_will_check_for_existing_p","Encontrar otros directorios locales":"marketing.directory.find_more_local_directories","VMV investigará directorios de tu estado, ciudad, cámaras de comercio y sector.":"marketing.directory.vmv_will_research_state_city_chamber_of_commerce_and_i","Revisión y precio de gestión sujetos a cotización":"marketing.directory.research_and_service_price_are_subject_to_a_quote","Las opciones mostradas son oportunidades por evaluar, no fichas encontradas ni publicaciones automáticas. La membresía o la gestión pueden costar dinero; te informaremos antes de contratar.":"marketing.directory.these_are_opportunities_to_evaluate_not_confirmed_list","¿Algún dato que debamos conocer? (opcional)":"marketing.directory.anything_else_we_should_know_optional","Ej. Ya aparezco en Yelp, pero los horarios están incorrectos.":"marketing.directory.e_g_i_m_already_on_yelp_but_my_hours_are_wrong","VMV comprobará duplicados y requisitos; nunca creará fichas ni pagará membresías sin tu autorización.":"marketing.directory.vmv_will_check_duplicates_and_requirements_no_listings","Georgia o GA":"marketing.directory.georgia_or_ga","Ficha sin tarifa de alta":"marketing.directory.free_listing","Puede requerir membresía":"marketing.directory.may_require_membership","Por verificar":"marketing.directory.to_be_confirmed","Consultar requisitos de ":"marketing.directory.review_requirements_for"};
 
 
@@ -32,13 +32,13 @@ export function directoryOptions(d:DirectoryData){
 export function researchTarget(data:DirectoryData):DirectoryTarget{
  return {id:"research-local",name:"Buscar directorios en "+[data.city,data.state].filter(Boolean).join(", "),type:"research",url:"",cost:"unknown",status:"pending_review",evidenceUrl:"",existingUrl:"",note:"Investigación humana pendiente; no es una ficha publicada."};
 }
-export function validateDirectory(data:DirectoryData,industry=""){
- if(!data.state.trim()||!data.city.trim())return "Indica ciudad y estado para buscar oportunidades locales.";
- if(data.city.length>100||data.state.length>100||data.postal.length>20||data.notes.length>800)return "Revisa la longitud de los datos ingresados.";
- if(!data.selected.length)return "Selecciona al menos un directorio o la investigación local.";
- if(data.selected.some(t=>t.existingUrl?.trim()&&!safeDirectoryUrl(t.existingUrl)))return "Corrige el enlace de una ficha existente (debe ser HTTPS).";
+export function validateDirectory(data:DirectoryData,industry="",language:InterfaceLanguage="es"){
+ if(!data.state.trim()||!data.city.trim())return message(language,"marketing.directory.validation.city");
+ if(data.city.length>100||data.state.length>100||data.postal.length>20||data.notes.length>800)return message(language,"marketing.directory.validation.length");
+ if(!data.selected.length)return message(language,"marketing.directory.validation.selection");
+ if(data.selected.some(t=>t.existingUrl?.trim()&&!safeDirectoryUrl(t.existingUrl)))return message(language,"marketing.directory.validation.url");
  const allowed=new Set([...directoryOptions({...data,industry:data.industry||industry}).map(x=>x.id),"research-local"]);
- if(data.selected.some(t=>!allowed.has(t.id)))return "Revisa tu selección: algunos directorios no corresponden a la ubicación actual.";
+ if(data.selected.some(t=>!allowed.has(t.id)))return message(language,"marketing.directory.validation.location");
  return "";
 }
 export function safeDirectoryUrl(v:string){try{const u=new URL(v);return u.protocol==="https:"&&!u.username&&!u.password&&u.href.length<=750;}catch{return false;}}
@@ -46,6 +46,7 @@ export const directoryStatusNames:Record<DirectoryProgress,string>={
  pending_review:"Por revisar",researching:"Investigando",needs_customer:"Necesita tu ayuda",
  submitted:"Enviado con autorización",published:"Publicado y verificado",already_listed:"Ya existía una ficha verificada",not_eligible:"No elegible"
 };
+export function localizedDirectoryStatus(language:InterfaceLanguage,status:DirectoryProgress){return message(language,("marketing.directory.status."+status) as MessageKey);}
 export default function DirectoryDiscovery({data,onChange,industry}:{data:DirectoryData;onChange:(d:DirectoryData)=>void;industry:string}){
  const {language,translate}=useInterfaceLanguage();const en=language==="en";
  const tx=(text:string)=>{const key=labelKeys[text];return key?translate(key):text;};
