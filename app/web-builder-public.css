@@ -529,3 +529,12 @@
  .vmv-context-action-panel select{font-size:16px;min-height:44px}
  .vmv-context-action-panel .vmv-context-remove{min-height:44px}
 }
+
+/* An empty image is a real touch/keyboard target in editing, not a passive hint. */
+.vmv-managed-image>.vmv-media-empty-pick{box-sizing:border-box;width:100%;min-width:0;
+ appearance:none;border:0;border-radius:inherit;cursor:pointer;text-align:center;
+ font-family:inherit;touch-action:manipulation}
+.vmv-managed-image>.vmv-media-empty-pick:hover{filter:brightness(.985)}
+.vmv-managed-image>.vmv-media-empty-pick:focus-visible,
+.vmv-managed-image>img[role=button]:focus-visible{outline:3px solid #8659d6;outline-offset:-3px}
+.vmv-managed-image>img[role=button]{cursor:pointer}
