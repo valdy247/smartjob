@@ -44,6 +44,7 @@ export default function App(){
   const [dialTarget,setDialTarget]=useState<{phone:string;name:string}|null>(null);
  const [businessModules,setBusinessModules]=useState<BusinessModule[]>(FALLBACK_MODULES);
  const [activeModule,setActiveModule]=useState<string|null>(null);
+ const [moreModulesOpen,setMoreModulesOpen]=useState(false);
  const [keyboardVisible,setKeyboardVisible]=useState(false),[forwardHelpOpen,setForwardHelpOpen]=useState(false);
  const [settingsPage,setSettingsPage]=useState<"menu"|"numbers"|"billing"|"history"|"security"|"profile"|"style"|"support"|"services">("menu");
  const [callHistory,setCallHistory]=useState<{bridge_sid:string;status:string;duration_seconds:number|null;started_at:string;call_mode:string;caller_phone:string|null}[]>([]);
@@ -919,11 +920,13 @@ export default function App(){
          <Text style={styles.servicesSpotlightStar}>✦</Text>
         </Pressable>
         <BusinessServicesPanel session={session}/>
-        <View style={styles.servicesSectionHead}>
-         <Text style={styles.servicesSectionTitle}>Explora más<Text style={{color:"#9867E4"}}>.</Text></Text>
-         <Text style={styles.servicesSectionHint}>{tr("home.comingSoon")}</Text>
-        </View>
-        <View style={styles.servicesProductGrid}>
+        <Pressable accessibilityRole="button" accessibilityLabel={tr("settings.otherServices")}
+         accessibilityState={{expanded:moreModulesOpen}} onPress={()=>setMoreModulesOpen(value=>!value)}
+         style={styles.servicesMoreToggle}>
+         <Text style={styles.servicesMoreToggleText}>{tr("settings.otherServices")}</Text>
+         <Ionicons name={moreModulesOpen?"chevron-up-outline":"chevron-down-outline"} size={19} color="#8655CA"/>
+        </Pressable>
+        {moreModulesOpen?<View style={styles.servicesProductGrid}>
          {businessModules.filter(module=>module.id!=="smart-call").map((module,index)=>
           <View key={module.id} style={[styles.servicesProductTile,
            [styles.servicesTileBlue,styles.servicesTileYellow,styles.servicesTilePink,
@@ -937,7 +940,7 @@ export default function App(){
             <Text style={styles.servicesTileCaption}>{tr("home.comingSoon")}</Text>
            </View>
           </View>)}
-        </View>
+        </View>:null}
        </>}
       </>:null}
      {activeTab==="settings"?<>
@@ -1135,6 +1138,8 @@ const styles=StyleSheet.create({
  servicesSpotlightLinkText:{fontSize:12,color:"#FFFFFF",fontWeight:"800"},
  servicesSpotlightStar:{position:"absolute",right:-3,bottom:-40,fontSize:130,color:"#D7C0FF67",zIndex:-1},
  servicesSectionHead:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8,marginTop:26,marginBottom:15},
+ servicesMoreToggle:{marginTop:20,minHeight:52,backgroundColor:"#F2ECFA",borderRadius:16,borderWidth:1,borderColor:"#E4D6F5",paddingHorizontal:16,flexDirection:"row",alignItems:"center",justifyContent:"space-between"},
+ servicesMoreToggleText:{fontSize:13,fontWeight:"800",color:"#60418B"},
  servicesSectionTitle:{fontSize:24,color:"#2A2240",fontWeight:"800",letterSpacing:-1.2},
  servicesSectionHint:{fontSize:9,fontWeight:"800",color:"#A193B8",letterSpacing:.5},
  servicesProductGrid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",rowGap:12},
