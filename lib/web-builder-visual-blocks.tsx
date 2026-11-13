@@ -1,7 +1,9 @@
 import type {Config} from "@puckeditor/core";
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
 import {numericEditorField,colorEditorField} from "@/app/web-studio/BuilderContextFields";
-import {MovableContent} from "@/app/web-studio/BuilderPositionDrag";
+import BuilderEditableImage from "@/app/web-studio/BuilderEditableImage";
+import {imageSettingsField} from "@/app/web-studio/BuilderImageControls";
+import {normalizeImageSettings} from "./web-builder-images";
 import {safeWebImageUrl} from "./web-services-site";
 
 export type VisualBlockName="HeroVisual"|"OfferingGrid"|"PhotoGallery"|"ProcessSteps"|"ProjectShowcase"|"HoursArea"|"TeamGrid"|"PricingList"|"BeforeAfter"|"FAQList";
@@ -18,12 +20,6 @@ const styleFields={
 const imageAlt=(value:string,description?:string)=>description?.trim()||value||"Imagen del negocio";
 const emptyItem=(value:unknown)=>Boolean(value&&typeof value==="object");
 const toList=(value:unknown)=>Array.isArray(value)?value.filter(emptyItem).slice(0,40) as VisualProps[]:[];
-function ItemImage({src,alt,style,editing=false}:{src:unknown;alt:string;style?:React.CSSProperties;editing?:boolean}){
- const url=photo(src);
- if(!url&&!editing)return null;
- return <div className="vmv-visual-media" style={style}>{url?<img src={url} alt={alt} loading="lazy"/>:
- <div className="vmv-media-empty" aria-label="Imagen pendiente"><span aria-hidden="true">✧</span><small>Agregar fotografía</small></div>}</div>;
-}
 function Section({children,mode,padding,className=""}:{children:React.ReactNode;mode?:string;padding?:string;className?:string}){
  return <section className={"vmv-visual-section "+className} data-surface={["light","soft","dark"].includes(mode||"")?mode:"light"}
   data-padding={["compact","normal","spacious"].includes(padding||"")?padding:"normal"}>{children}</section>;
@@ -75,17 +71,11 @@ export const visualBlocks:Config["components"]={
     {fields.imageBorder}{fields.borderColor}{fields.imageMoveX}{fields.imageMoveY}
     {fields.imagePosition}{fields.shade}</fieldset>
   </>,
-  render:({id,layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,height,buttonStyle,imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,titleFont,titleColor,titleFontSize,titleShadow,titleWeight,titleItalic,titleLink,puck})=>{
+  render:({id,layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,height,buttonStyle,imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,titleFont,titleColor,titleFontSize,titleShadow,titleWeight,titleItalic,titleLink,puck,...responsive})=>{
    const href=typeof buttonUrl==="string"&&(buttonUrl.startsWith("#")||buttonUrl.startsWith("mailto:")||buttonUrl.startsWith("tel:"))?buttonUrl:"#contacto";
    const position=["top","bottom","left","right"].includes(imagePosition)?imagePosition:"center";
    const media=photo(image);
-   const width=typeof imageWidth==="number"?Math.max(25,Math.min(100,imageWidth)):100;
-   const opacity=typeof imageOpacity==="number"?Math.max(0,Math.min(100,imageOpacity)):0;
-   const round=typeof imageRadius==="number"?Math.max(0,Math.min(80,imageRadius)):0;
-   const border=typeof imageBorder==="number"?Math.max(0,Math.min(12,imageBorder)):0;
-   const borderPaint=typeof borderColor==="string"&&/^#[\da-f]{6}$/i.test(borderColor)?borderColor:"#30243F";
-   const dx=typeof imageMoveX==="number"?Math.max(-150,Math.min(150,imageMoveX)):0;
-   const dy=typeof imageMoveY==="number"?Math.max(-150,Math.min(150,imageMoveY)):0;
+   const settings={imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,...responsive};
    const titleFonts:Record<string,string>={site:"inherit",modern:"Arial,sans-serif",editorial:"Georgia,serif",
     rounded:"Trebuchet MS,sans-serif",geometric:"Avenir Next,Arial,sans-serif",mono:"ui-monospace,monospace"};
    const titleStyle:React.CSSProperties={
@@ -102,11 +92,10 @@ export const visualBlocks:Config["components"]={
     titleLink:"";
    return <section className="vmv-hero-visual" data-layout={layout||"split"} data-align={align||"left"}
     data-shade={shade||"medium"} data-height={height||"normal"} data-has-image={Boolean(media)||Boolean(puck.isEditing)}>
-    {layout==="cover"?<div className="vmv-hero-cover" style={media?{
-     backgroundImage:"url('"+media.replaceAll("'","%27")+"')",backgroundPosition:position,
-     backgroundSize:(100+(100-width)*.5)+"%",opacity:(100-opacity)/100,
-     borderRadius:round+"px",transform:"translate("+dx+"px,"+dy+"px)"
-    }:undefined} aria-hidden="true"/>:null}
+    {layout==="cover"?<div className="vmv-hero-cover">
+     <BuilderEditableImage id={id} src={image} alt={imageAlt||"Imagen de portada"} settings={settings}
+      radius={0} editing={puck.isEditing} position={position}/>
+    </div>:null}
     <div className="vmv-hero-content">
      {eyebrow?<span className="vmv-hero-eyebrow">{eyebrow}</span>:null}
      <h1 style={titleStyle}>{safeTitleLink&&!puck.isEditing?
@@ -115,13 +104,10 @@ export const visualBlocks:Config["components"]={
      {description?<p>{description}</p>:null}
      <a className="vmv-site-button" data-button-style={buttonStyle||"solid"} href={href}>{buttonText||"Contactar"} <span aria-hidden="true">↗</span></a>
     </div>
-    {layout!=="cover"&&(media||puck.isEditing)?<MovableContent id={id} editing={puck.isEditing}
-     x={dx} y={dy} xKey="imageMoveX" yKey="imageMoveY"
-     className="vmv-hero-image" style={{width:width+"%"}}>
-     <ItemImage src={image} alt={imageAlt||"Imagen de portada"} editing={puck.isEditing}
-      style={{"--vmv-image-position":position,borderRadius:round+"px",
-       borderWidth:border+"px",borderStyle:border?"solid":"none",borderColor:borderPaint,
-       opacity:(100-opacity)/100} as React.CSSProperties}/></MovableContent>:null}
+    {layout!=="cover"&&(media||puck.isEditing)?<div className="vmv-hero-image">
+     <BuilderEditableImage id={id} src={image} alt={imageAlt||"Imagen de portada"} settings={settings}
+      radius={0} editing={puck.isEditing} position={position}/>
+    </div>:null}
    </section>;
   }
  },
@@ -140,11 +126,11 @@ export const visualBlocks:Config["components"]={
    <fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.description}{fields.items}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.columns}{fields.padding}{fields.surface}{fields.showPrices}</fieldset>
   </>,
-  render:({title,description,items,layout,padding,surface,columns,showPrices,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-offerings">
+  render:({id,title,description,items,layout,padding,surface,columns,showPrices,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-offerings">
    <div className="vmv-section-heading"><h2>{title}</h2>{description?<p>{description}</p>:null}</div>
    <div className="vmv-offerings-items" data-layout={layout||"grid"} data-columns={columns||"3"}>
     {toList(items).map((item,index)=><article key={index} className="vmv-offering-card">
-     <ItemImage src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} editing={puck.isEditing}/>
+     <BuilderEditableImage id={id} target={{field:"image",index}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
      <div className="vmv-offering-copy">{item.title?<h3>{heading(item.title)}</h3>:<h3>Nuevo elemento</h3>}
       {item.description?<p>{heading(item.description)}</p>:null}
       {showPrices==="yes"&&item.price?<strong className="vmv-offering-price">{heading(item.price)}</strong>:null}
@@ -164,10 +150,10 @@ export const visualBlocks:Config["components"]={
   defaultProps:{title:"Una mirada a nuestro trabajo",description:"",items:[],layout:"mosaic",padding:"normal",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.description}{fields.items}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.padding}{fields.surface}</fieldset></>,
-  render:({title,description,items,layout,padding,surface,puck})=>!toList(items).some(item=>photo(item.image))&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
+  render:({id,title,description,items,layout,padding,surface,puck})=>!toList(items).some(item=>photo(item.image))&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
    <div className="vmv-section-heading"><h2>{title}</h2>{description?<p>{description}</p>:null}</div>
    <div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,index)=><figure key={index}>
-    <ItemImage src={item.image} alt={imageAlt(heading(item.caption),heading(item.alt))} editing={puck.isEditing}/>
+    <BuilderEditableImage id={id} target={{field:"image",index}} src={item.image} alt={imageAlt(heading(item.caption),heading(item.alt))} settings={item} editing={puck.isEditing}/>
     {item.caption?<figcaption>{heading(item.caption)}</figcaption>:null}
    </figure>)}</div>
   </Section>
@@ -180,7 +166,7 @@ export const visualBlocks:Config["components"]={
    padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Cómo trabajamos",items:[],padding:"normal",surface:"soft"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
-  render:({title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-process">
+  render:({id,title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-process">
    <h2>{title}</h2><ol>{toList(items).map((item,index)=><li key={index}>
     <span>{String(index+1).padStart(2,"0")}</span><h3>{heading(item.title)}</h3><p>{heading(item.description)}</p>
    </li>)}</ol>
@@ -194,9 +180,9 @@ export const visualBlocks:Config["components"]={
    layout:styleFields.layout,padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Proyectos",items:[],layout:"mosaic",padding:"spacious",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.padding}{fields.surface}</fieldset></>,
-  render:({title,items,layout,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
-   <h2>{title}</h2><div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,i)=><figure key={i}>
-    <ItemImage src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} editing={puck.isEditing}/>
+  render:({id,title,items,layout,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
+   <h2>{title}</h2><div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,index)=><figure key={index}>
+    <BuilderEditableImage id={id} target={{field:"image",index}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
     {item.title||item.description?<figcaption><strong>{heading(item.title)}</strong><p>{heading(item.description)}</p></figcaption>:null}
    </figure>)}</div>
   </Section>
@@ -220,9 +206,9 @@ export const visualBlocks:Config["components"]={
    padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Nuestro equipo",items:[],padding:"normal",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
-  render:({title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-team">
-   <h2>{title}</h2><div>{toList(items).map((item,i)=><article key={i}>
-    <ItemImage src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} editing={puck.isEditing}/>
+  render:({id,title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-team">
+   <h2>{title}</h2><div>{toList(items).map((item,index)=><article key={index}>
+    <BuilderEditableImage id={id} target={{field:"image",index}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
     <h3>{heading(item.title)}</h3><p>{heading(item.description)}</p>
    </article>)}</div>
   </Section>
@@ -235,7 +221,7 @@ export const visualBlocks:Config["components"]={
    padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Precios",items:[],padding:"normal",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
-  render:({title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-price-list">
+  render:({id,title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-price-list">
    <h2>{title}</h2><dl>{toList(items).map((item,i)=><div key={i}>
     <dt>{heading(item.title)}{item.description?<small>{heading(item.description)}</small>:null}</dt>
     <dd>{heading(item.price)||"Consultar"}</dd>
@@ -245,14 +231,15 @@ export const visualBlocks:Config["components"]={
  BeforeAfter:{
   label:"Antes y después",
   fields:{title:titleField,beforeImage:imgField,afterImage:imgField,beforeAlt:titleField,afterAlt:titleField,
+   beforeImageSettings:imageSettingsField,afterImageSettings:imageSettingsField,
    padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Antes y después",beforeImage:"",afterImage:"",beforeAlt:"Antes",afterAlt:"Después",padding:"normal",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}</fieldset>
-   <fieldset className="vmv-puck-field-group"><legend>Imagen</legend>{fields.beforeImage}{fields.beforeAlt}{fields.afterImage}{fields.afterAlt}</fieldset>
+   <fieldset className="vmv-puck-field-group"><legend>Imagen</legend>{fields.beforeImage}{fields.beforeAlt}{fields.beforeImageSettings}{fields.afterImage}{fields.afterAlt}{fields.afterImageSettings}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
-  render:({title,beforeImage,afterImage,beforeAlt,afterAlt,padding,surface,puck})=>!photo(beforeImage)&&!photo(afterImage)&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-before-after">
-   <h2>{title}</h2><div><figure><ItemImage src={beforeImage} alt={heading(beforeAlt)||"Antes"} editing={puck.isEditing}/><figcaption>Antes</figcaption></figure>
-    <figure><ItemImage src={afterImage} alt={heading(afterAlt)||"Después"} editing={puck.isEditing}/><figcaption>Después</figcaption></figure></div>
+  render:({id,title,beforeImage,afterImage,beforeAlt,afterAlt,beforeImageSettings,afterImageSettings,padding,surface,puck})=>!photo(beforeImage)&&!photo(afterImage)&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-before-after">
+   <h2>{title}</h2><div><figure><BuilderEditableImage id={id} target={{field:"beforeImage"}} src={beforeImage} settings={beforeImageSettings} alt={heading(beforeAlt)||"Antes"} editing={puck.isEditing}/><figcaption>Antes</figcaption></figure>
+    <figure><BuilderEditableImage id={id} target={{field:"afterImage"}} src={afterImage} settings={afterImageSettings} alt={heading(afterAlt)||"Después"} editing={puck.isEditing}/><figcaption>Después</figcaption></figure></div>
   </Section>
  },
  FAQList:{
@@ -263,7 +250,7 @@ export const visualBlocks:Config["components"]={
   defaultProps:{title:"Preguntas frecuentes",items:[],padding:"normal",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
-  render:({title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-site-faq">
+  render:({id,title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-site-faq">
    <h2>{title}</h2>{toList(items).map((item,i)=><details key={i}><summary>{heading(item.question)}</summary>
     <p>{heading(item.answer)}</p></details>)}
   </Section>
@@ -301,27 +288,22 @@ export function normalizeVisualProps(type:VisualBlockName,props:Record<string,un
   safe.titleColor=typeof safe.titleColor==="string"&&/^#[\da-f]{6}$/i.test(safe.titleColor)?safe.titleColor:"";
   safe.titleLink=typeof safe.titleLink==="string"&&
    /^(#[a-z0-9-]{1,70}|https:\/\/[^\s<>]+|mailto:[^\s<>]+|tel:\+?[\d ()-]{7,36})$/i.test(safe.titleLink)?safe.titleLink:"";
-  for(const [field,range,fallback] of [
-   ["imageWidth",100,100],["imageRadius",80,0],["imageOpacity",100,0],
-   ["imageBorder",12,0],["imageMoveX",150,0],["imageMoveY",150,0]
-  ] as const){
-   const value=props[field];
-   safe[field]=typeof value==="number"&&Number.isFinite(value)?
-    Math.max(field==="imageMoveX"||field==="imageMoveY"?-150:field==="imageWidth"?25:0,
-     Math.min(range,Math.round(value))):fallback;
-  }
-  safe.borderColor=typeof props.borderColor==="string"&&/^#[\da-f]{6}$/i.test(props.borderColor)?
-   props.borderColor:"#30243F";
+  Object.assign(safe,normalizeImageSettings(props,0));
  }
  for(const field of schema.images)safe[field]=photo(props[field])||"";
  if(schema.arrays)for(const [key,itemFields] of Object.entries(schema.arrays)){
   const items=Array.isArray(props[key])?props[key].slice(0,40):[];
   safe[key]=items.filter((x:unknown)=>x&&typeof x==="object"&&!Array.isArray(x)).map((raw:Record<string,unknown>)=>{
-   const item:Record<string,string>={};
+   const item:Record<string,unknown>={};
    for(const field of itemFields.strings)item[field]=typeof raw[field]==="string"?raw[field].slice(0,700):"";
    for(const field of itemFields.images)item[field]=photo(raw[field])||"";
+   if(itemFields.images.length)Object.assign(item,normalizeImageSettings(raw));
    return item;
   });
+ }
+ if(type==="BeforeAfter")for(const key of ["beforeImageSettings","afterImageSettings"]){
+  const value=props[key];
+  safe[key]=normalizeImageSettings(value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{});
  }
  return safe;
 }

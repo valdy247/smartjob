@@ -1,4 +1,6 @@
 import type {Config,Data} from "@puckeditor/core";
+import BuilderEditableImage from "@/app/web-studio/BuilderEditableImage";
+import {normalizeImageSettings} from "./web-builder-images";
 import type {CSSProperties} from "react";
 import {safeWebImageUrl,webPrimaryContact,type WebSiteContent} from "./web-services-site";
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
@@ -98,13 +100,14 @@ export function normalizeBuilderDocument(input:unknown):Data{
    if(VISUAL_BLOCK_NAMES.includes(kind as VisualBlockName)){
     return [{type:kind,props:{id,...normalizeVisualProps(kind as VisualBlockName,source)}}];
    }
-   const safe:Record<string,string>={id};
+   const safe:Record<string,unknown>={id};
    for(const [field,sanitize] of Object.entries(fieldSchema[kind]||{})){
     if(field==="url")safe[field]=safeWebImageUrl(sanitize(source[field]))||"";
     else if(field==="buttonUrl")safe[field]=safeLink(sanitize(source[field]));
     else safe[field]=sanitize(source[field]);
    }
-   if(kind==="Spacer"&&!["24","48","80"].includes(safe.height))safe.height="48";
+   if(kind==="Image")Object.assign(safe,normalizeImageSettings(source,23));
+   if(kind==="Spacer"&&!["24","48","80"].includes(String(safe.height)))safe.height="48";
    return [{type:kind,props:safe}];
   });
  };
@@ -242,8 +245,9 @@ export const builderConfig:Config={
    label:"Imagen",
    fields:{url:{type:"custom",render:({value,onChange})=><BuilderImageField value={typeof value==="string"?value:""} onChange={onChange}/>},alt:basicText,caption:basicText},
    defaultProps:{url:"",alt:"",caption:""},
-   render:({url,alt,caption})=><figure className="vmv-site-image">
-    {safeWebImageUrl(url)?<img src={safeWebImageUrl(url)||""} alt={alt||"Imagen del negocio"}/>:<div className="vmv-site-image-placeholder">Añade una imagen de tu biblioteca</div>}
+   render:({id,url,alt,caption,puck,...settings})=>!url&&!puck.isEditing?<></>:<figure className="vmv-site-image">
+    <BuilderEditableImage id={id} target={{field:"url"}} src={url} alt={alt||"Imagen del negocio"}
+     settings={settings} radius={23} editing={puck.isEditing}/>
     {caption?<figcaption>{caption}</figcaption>:null}
    </figure>
   },

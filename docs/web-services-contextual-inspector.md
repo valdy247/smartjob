@@ -30,3 +30,17 @@ Changes exclusively in Web Studio / Puck composition and public rendering. Share
 - Existing legacy single-photo and catalog-item grids keep their original editor semantics; current image direct sliders apply to ComposeImage and HeroVisual. Older standalone Image supports replacing and removing but does not yet have contextual size/border sliders; per-product image selection inside OfferingGrid remains a future improvement.
 - Signed-in mobile and desktop interaction tests are **not yet verified** (Puck selection hit targets, action-bar clipping, touch pointer capture, upload interaction, visual parity). Do not describe these as tested until measured in actual browsers.
 - Undo/redo comes from Puck's current history; permanent deletion of uploaded Storage objects is a separate protected library action.
+
+
+## Unified content-image controls — follow-up, 13 November
+
+- Legacy Image, ComposeImage, HeroVisual, individual product/gallery/project/team pictures and both BeforeAfter sides now render through BuilderEditableImage. Branding logos remain separate from content pictures.
+- Each image can select its own contextual settings. Array selection uses its parent block ID and item index; no changes are addressed by shared file URL.
+- Width, alignment and offsets are stored independently for desktop and mobile. Borders, roundness and transparency share the same controls. Fully transparent pictures keep visible editor handles.
+- The new photo move handle uses measured section bounds and left/center/right snapping instead of the old fixed 150px limit. Arrow keys provide precise movement; Shift increases the step. Underlying offsets have a 2000px input-sanitization limit.
+- Standalone photos can also be relocated structurally to another section/column from “Mover a”, or with Puck's native drag. Structural moves clear offsets and keep the photo and other settings. Array photos remain within their product/gallery item.
+- All new properties pass through the same document normalizer and public renderer. A removed legacy image no longer exposes the internal library placeholder publicly.
+
+Validation of this follow-up: six Node regression tests in scripts/web-builder-images.test.cjs PASS; TypeScript PASS; full npm build PASS before the final CSS/keyboard cleanup (rechecked below in release report). The regressions verify JSON/normalization round-trips, independent reused-photo removal, BeforeAfter targeting, nested structural movement, safe settings and server HTML rendering. These are not authenticated DB writes or device interaction tests.
+
+Still required: authenticated editor interaction, file upload, actual DB save/reload/publish, Puck iframe touch/keyboard behavior and visual parity on phone/desktop. No customer documents or storage objects were changed by this work.

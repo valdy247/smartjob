@@ -6,7 +6,9 @@ import BuilderImageField from "./BuilderImageField";
 import {ColorField,FontField,RangeField} from "./BuilderContextFields";
 
 const usePuck=createUsePuck();
-const imageTypes=new Set(["ComposeImage","HeroVisual","Image"]);
+import BuilderImageControls from "./BuilderImageControls";
+import {IMAGE_SELECT_EVENT} from "./BuilderEditableImage";
+import {imageTargets,targetSettings,targetImage,patchBuilderImage,imageDestinations,moveBuilderImage,type ImageTarget} from "@/lib/web-builder-images";
 const textTypes=new Set(["ComposeHeading","ComposeText"]);
 function patchItem(data:Data,id:string,key:string,value:unknown):Data{
  let found=false;
@@ -29,9 +31,28 @@ export default function BuilderSelectedActions({children,label}:{
  const getPuck=useGetPuck();
  const [open,setOpen]=useState(true);
  const [mode,setMode]=useState<"controls"|"library"|"text">("controls");
+ const [chosen,setChosen]=useState<{id:string;target:ImageTarget}|null>(null);
  const id=item?.props?.id||"";
+ useEffect(()=>{
+  const select=(event:Event)=>{
+   const detail=(event as CustomEvent<{id:string;target:ImageTarget}>).detail;
+   if(!detail)return;
+   setChosen(detail);setOpen(true);setMode("controls");
+  };
+  window.addEventListener(IMAGE_SELECT_EVENT,select);
+  return()=>window.removeEventListener(IMAGE_SELECT_EVENT,select);
+ },[]);
  useEffect(()=>{setOpen(true);setMode("controls");},[id]);
- const isImage=Boolean(item&&imageTypes.has(item.type));
+ const targets=item?imageTargets(item.type,item.props):[];
+ const isImage=targets.length>0;
+ const target=targets.find(t=>chosen&&chosen.id===id&&t.field===chosen.target.field&&t.index===chosen.target.index)||targets[0];
+ const data=usePuck(s=>s.appState.data);
+ const destinations=imageDestinations(data);
+ function changeImage(patch:Record<string,unknown>){
+  if(!id||!target)return;
+  const api=getPuck();
+  api.dispatch({type:"setData",data:patchBuilderImage(api.appState.data,id,target,patch)});
+ }
  const isText=Boolean(item&&(textTypes.has(item.type)||item.type==="HeroVisual"));
  function change(field:string,value:unknown){
   if(!item||!id)return;
@@ -44,7 +65,7 @@ export default function BuilderSelectedActions({children,label}:{
   if(next!==api.appState.data)api.dispatch({type:"setData",data:next});
  }
  const props=item?.props||{};
- const imageKey=item?.type==="Image"?"url":"image";
+
  const textKey=item?.type==="ComposeHeading"||item?.type==="HeroVisual"?"title":"text";
  const textProp=(key:string)=>{
   if(item?.type!=="HeroVisual")return props[key];
@@ -80,34 +101,31 @@ export default function BuilderSelectedActions({children,label}:{
      <button type="button" aria-pressed={mode==="library"} onClick={()=>setMode("library")}>
       <ImagePlus size={13}/> Reemplazar</button>
     </div>
-    {mode==="library"?<BuilderImageField
-     value={typeof props[imageKey]==="string"?props[imageKey]:""}
-     onChange={src=>change(imageKey,src)}/>:<>
-     {(item?.type==="ComposeImage"||item?.type==="HeroVisual")?<>
-      <RangeField label="Tamaño" min={25} max={100} unit="%" value={props.imageWidth??100}
-       onChange={v=>change("imageWidth",v)}/>
-      <RangeField label="Esquinas redondas" min={0} max={80} unit="px" value={props.imageRadius??16}
-       onChange={v=>change("imageRadius",v)}/>
-      <RangeField label="Transparencia" min={0} max={100} unit="%" value={props.imageOpacity??0}
-       onChange={v=>change("imageOpacity",v)}/>
-      <RangeField label="Grosor del borde" min={0} max={12} unit="px" value={props.imageBorder??0}
-       onChange={v=>change("imageBorder",v)}/>
-      <ColorField label="Color del borde" value={props.borderColor}
-       onChange={v=>change("borderColor",v)}/>
-      <details><summary>Posición dentro de la sección</summary>
-       <RangeField label="Horizontal" min={-150} max={150} unit="px" value={props.imageMoveX??0}
-        onChange={v=>change("imageMoveX",v)}/>
-       <RangeField label="Vertical" min={-150} max={150} unit="px" value={props.imageMoveY??0}
-        onChange={v=>change("imageMoveY",v)}/>
-      </details>
-     </>:<p className="vmv-context-hint">
-      Esta portada tiene controles de imagen y encuadre en el panel de edición.
-      Puedes ajustar tamaño y transparencia en el bloque Imagen editable.
-     </p>}
-    </>}
+    {targets.length>1?<label className="vmv-context-text-label">Imagen
+     <select aria-label="Imagen que quieres editar" value={targets.indexOf(target)}
+      onChange={event=>{setChosen({id,target:targets[Number(event.target.value)]});setMode("controls");}}>
+      {targets.map((t,index)=><option value={index} key={index}>{t.label}</option>)}
+     </select>
+    </label>:null}
+    {mode==="library"?<BuilderImageField value={targetImage(props,target)}
+     onChange={src=>changeImage({[target.field]:src})}/>:<BuilderImageControls
+      value={targetSettings(props,target)} radius={item?.type==="HeroVisual"?0:item?.type==="Image"?23:16}
+      onChange={changeImage}/>}
     <button type="button" className="vmv-context-remove" onClick={()=>{
-     change(imageKey,"");setMode("controls");
+     changeImage({[target.field]:""});setMode("controls");
     }}><Trash2 size={14}/> Quitar imagen de este lugar</button>
+    {item&&["ComposeImage","Image"].includes(item.type)?<label className="vmv-context-text-label">Mover a
+     <select aria-label="Mover imagen a otra sección o columna" value="" onChange={event=>{
+      if(event.target.value==="")return;
+      const destination=destinations[Number(event.target.value)];
+      if(!destination)return;
+      const api=getPuck();
+      api.dispatch({type:"setData",data:moveBuilderImage(api.appState.data,id,destination.id,destination.slot)});
+     }}>
+      <option value="">Elegir posición…</option>
+      {destinations.map((d,index)=><option key={d.id+d.slot} value={index}>{d.label}</option>)}
+     </select>
+    </label>:null}
    </div>:null}
    {isText&&(!isImage||mode==="text")?<div className="vmv-context-content">
     <label className="vmv-context-text-label">Contenido

@@ -3,6 +3,8 @@ import type {CSSProperties} from "react";
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
 import {colorEditorField,fontEditorField,numericEditorField} from "@/app/web-studio/BuilderContextFields";
 import {MovableContent} from "@/app/web-studio/BuilderPositionDrag";
+import BuilderEditableImage from "@/app/web-studio/BuilderEditableImage";
+import {normalizeImageSettings} from "./web-builder-images";
 import {safeWebImageUrl} from "./web-services-site";
 
 export const COMPOSE_BLOCK_NAMES=["SectionLayout","ColumnsLayout","ComposeHeading","ComposeText","ComposeImage","ComposeButton"] as const;
@@ -77,8 +79,8 @@ const numericTypography=(source:Record<string,unknown>)=>({
  linkUrl:source.linkUrl?safeButtonLink(source.linkUrl):""
 });
 
-const slotChildren=["SectionLayout","ColumnsLayout","ComposeHeading","ComposeText","ComposeImage","ComposeButton"] as const;
-const innerChildren=["ComposeHeading","ComposeText","ComposeImage","ComposeButton","SectionLayout","ColumnsLayout"] as const;
+const slotChildren=["Image","SectionLayout","ColumnsLayout","ComposeHeading","ComposeText","ComposeImage","ComposeButton"] as const;
+const innerChildren=["Image","ComposeHeading","ComposeText","ComposeImage","ComposeButton","SectionLayout","ColumnsLayout"] as const;
 const fields={
  alignment:{type:"radio" as const,options:[
   {label:"Izquierda",value:"left"},{label:"Centro",value:"center"},{label:"Derecha",value:"right"}
@@ -258,29 +260,13 @@ export const compositionBlocks:Config["components"]={
    <SettingsGroup title="Mover imagen">{f.imageMoveX}{f.imageMoveY}</SettingsGroup>
    <SettingsGroup title="Visibilidad">{f.visibility}</SettingsGroup>
   </>,
-  render:({id,image,alt,ratio,position,radius,visibility,
-   imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,puck})=>{
-   const width=numberField(imageWidth,100,25,100);
-   const round=numberField(imageRadius,radius==="round"?30:radius==="none"?0:16,0,80);
-   const transparency=numberField(imageOpacity,0,0,100);
-   const border=numberField(imageBorder,0,0,12);
-   const borderPaint=typeof borderColor==="string"&&/^#[\da-f]{6}$/i.test(borderColor)?borderColor:"#30243F";
-   return <MovableContent id={id} editing={puck.isEditing}
-    x={numberField(imageMoveX,0,-150,150)} y={numberField(imageMoveY,0,-150,150)}
-    xKey="imageMoveX" yKey="imageMoveY" className="vmv-compose-photo-box"
-    style={{width:width+"%"}}>
-    <figure className="vmv-compose-picture"
-     data-ratio={ratio||"landscape"} data-position={position||"center"}
-     data-mobile-visibility={visibility||"all"}
-     style={{borderRadius:round+"px",borderWidth:border+"px",
-      borderStyle:border?"solid":"none",borderColor:borderPaint,opacity:(100-transparency)/100}}>
-     {safeWebImageUrl(image)?
-      <img src={safeWebImageUrl(image)||""} alt={alt||""} loading="lazy"/>:
-      puck.isEditing?<div className="vmv-compose-picture-empty"><span aria-hidden="true">▧</span>
-       <small>Selecciona esta imagen para agregar una foto</small></div>:null}
-    </figure>
-   </MovableContent>;
-  }
+  render:({id,image,alt,ratio,position,radius,visibility,puck,...settings})=>
+   <div className="vmv-compose-photo-box" data-mobile-visibility={visibility||"all"}>
+    <BuilderEditableImage id={id} src={image} alt={alt||""} settings={settings}
+     editing={puck.isEditing} position={position} ratio={ratio||"landscape"}
+     radius={radius==="round"?30:radius==="none"?0:16}/>
+   </div>
+
  },
  ComposeButton:{
   label:"Botón en composición",
@@ -344,13 +330,7 @@ export function normalizeComposeProps(kind:ComposeBlockName,source:Record<string
   props.ratio=select(ratios,"landscape")(source.ratio);
   props.position=select(["center","top","bottom","left","right"],"center")(source.position);
   props.radius=select(["none","soft","round"],"soft")(source.radius);
-  props.imageWidth=numberField(source.imageWidth,100,25,100);
-  props.imageRadius=numberField(source.imageRadius,props.radius==="round"?30:props.radius==="none"?0:16,0,80);
-  props.imageOpacity=numberField(source.imageOpacity,0,0,100);
-  props.imageBorder=numberField(source.imageBorder,0,0,12);
-  props.borderColor=typeof source.borderColor==="string"&&/^#[\da-f]{6}$/i.test(source.borderColor)?source.borderColor:"#30243F";
-  props.imageMoveX=numberField(source.imageMoveX,0,-150,150);
-  props.imageMoveY=numberField(source.imageMoveY,0,-150,150);
+  Object.assign(props,normalizeImageSettings(source,props.radius==="round"?30:props.radius==="none"?0:16));
  }
  if(kind==="ComposeButton"){
   props.label=str(source.label,90);
