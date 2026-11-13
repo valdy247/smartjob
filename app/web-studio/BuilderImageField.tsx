@@ -1,6 +1,6 @@
 "use client";
 import {useCallback,useEffect,useState,type ChangeEvent} from "react";
-import {ImagePlus,RefreshCw,WandSparkles} from "lucide-react";
+import {ImagePlus,RefreshCw,Trash2,WandSparkles,X} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import styles from "./BuilderImageField.module.css";
@@ -35,6 +35,7 @@ export default function BuilderImageField({value,onChange}:Props){
  const [prompt,setPrompt]=useState("");
  const [ai,setAi]=useState(false);
  const [generating,setGenerating]=useState(false);
+ const [deleting,setDeleting]=useState<string|null>(null);
  const load=useCallback(async()=>{
   const client=getSupabase();if(!client)return;
   const {data,error:authError}=await client.auth.getUser();
@@ -50,6 +51,16 @@ export default function BuilderImageField({value,onChange}:Props){
   setItems(urls);
  },[]);
  useEffect(()=>{void load();},[load]);
+ useEffect(()=>{
+  const handleDelete=(event:Event)=>{
+   const deletedUrl=(event as CustomEvent<{url:string}>).detail?.url;
+   if(!deletedUrl)return;
+   setItems(current=>current.filter(url=>url!==deletedUrl));
+   if(value===deletedUrl)onChange("");
+  };
+  window.addEventListener("vmv:web-image-deleted",handleDelete);
+  return()=>window.removeEventListener("vmv:web-image-deleted",handleDelete);
+ },[value,onChange]);
  useEffect(()=>{
   let active=true;
   void(async()=>{
@@ -86,6 +97,37 @@ export default function BuilderImageField({value,onChange}:Props){
   }catch(e){setError(e instanceof Error?e.message:"No se pudo subir la imagen");}
   finally{setBusy(false);}
  }
+ async function deleteImage(url:string){
+  if(busy||generating||deleting)return;
+  const safe=safeWebImageUrl(url);
+  const filename=safe?.split("/").pop()||"";
+  if(!/^[0-9a-f-]{36}\.(?:webp|jpg|png)$/.test(filename)){
+   setError("Esta imagen no se puede administrar desde la biblioteca.");return;
+  }
+  const isSelected=value===url;
+  const message=isSelected
+   ?"¿Eliminar definitivamente esta foto de tu biblioteca? También se quitará del campo seleccionado. La acción no se puede deshacer."
+   :"¿Eliminar definitivamente esta foto de tu biblioteca? La acción no se puede deshacer.";
+  if(!window.confirm(message))return;
+  setDeleting(url);setError("");
+  try{
+   const client=getSupabase();
+   if(!client)throw new Error("No se pudo acceder a tu cuenta.");
+   const {data:{session}}=await client.auth.getSession();
+   if(!session?.access_token)throw new Error("Inicia sesión nuevamente.");
+   const response=await fetch("/api/web-services/media/delete",{
+    method:"POST",cache:"no-store",
+    headers:{"Authorization":"Bearer "+session.access_token,"Content-Type":"application/json"},
+    body:JSON.stringify({filename})
+   });
+   const body=await response.json().catch(()=>({})) as {deleted?:boolean;error?:string};
+   if(!response.ok||body.deleted!==true)
+    throw new Error(body.error||"No se pudo eliminar la imagen.");
+   setItems(current=>current.filter(item=>item!==url));
+   window.dispatchEvent(new CustomEvent("vmv:web-image-deleted",{detail:{url}}));
+  }catch(err){setError(err instanceof Error?err.message:"No se pudo eliminar la imagen.");}
+  finally{setDeleting(null);}
+ }
  async function generate(){
   if(generating||!ai||prompt.trim().length<8)return;
   if(!window.confirm("Generar una imagen consume 1 generación del límite diario y tiene un costo externo de IA para VMV. No hay cobro al cliente en esta pantalla. ¿Continuar?"))return;
@@ -106,7 +148,11 @@ export default function BuilderImageField({value,onChange}:Props){
   finally{setGenerating(false);}
  }
  return <div className={styles.wrap}>
-  {value&&safeWebImageUrl(value)?<img src={value} alt="Imagen seleccionada" className={styles.current}/>:null}
+  {value&&safeWebImageUrl(value)?<div className={styles.selectedImage}>
+   <img src={value} alt="Imagen seleccionada" className={styles.current}/>
+   <button type="button" className={styles.clearSelection} disabled={busy||Boolean(deleting)}
+    onClick={()=>onChange("")}><X size={13}/> Quitar de este campo</button>
+  </div>:null}
   <label className={styles.upload}><ImagePlus size={16}/>{busy?"Subiendo…":"Subir foto"}
    <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy}
     onChange={(e:ChangeEvent<HTMLInputElement>)=>{
@@ -115,11 +161,17 @@ export default function BuilderImageField({value,onChange}:Props){
     }}/>
   </label>
   <div className={styles.heading}><span>Biblioteca</span><button type="button" onClick={()=>void load()} aria-label="Actualizar"><RefreshCw size={14}/></button></div>
-  {items.length>0?<div className={styles.gallery}>{items.map(url=><button key={url} type="button"
-   aria-label="Seleccionar esta foto" aria-pressed={value===url}
-   onClick={()=>onChange(url)} className={value===url?styles.active:""}>
-    <img src={url} alt="Imagen disponible"/>
-   </button>)}</div>:<small className={styles.empty}>Sube tu primera fotografía.</small>}
+  {items.length>0?<div className={styles.gallery}>{items.map(url=><div key={url} className={styles.photoTile}>
+   <button type="button" className={value===url?styles.active:styles.selectPhoto}
+    aria-label="Seleccionar esta foto" aria-pressed={value===url}
+    disabled={busy||Boolean(deleting)} onClick={()=>onChange(url)}>
+    <img src={url} alt="Fotografía de la biblioteca"/>
+   </button>
+   <button type="button" className={styles.deletePhoto} aria-label="Eliminar esta foto definitivamente"
+    title="Eliminar foto" disabled={busy||Boolean(deleting)}
+    onClick={()=>void deleteImage(url)}><Trash2 size={14} aria-hidden="true"/></button>
+   {deleting===url?<span className={styles.deletingStatus}>Eliminando…</span>:null}
+  </div>)}</div>:<small className={styles.empty}>Sube tu primera fotografía.</small>}
   {ai?<div className={styles.ai}>
    <small>Consumo por imagen: 1 generación del cupo diario. El servicio utiliza una API con costo para VMV.</small>
    <textarea value={prompt} maxLength={450} spellCheck={false} rows={2}
