@@ -193,3 +193,17 @@
  .vmv-site[data-motion=subtle] .vmv-hero-content{animation:vmv-hero-reveal .55s ease-out both}
  @keyframes vmv-hero-reveal{from{opacity:.3;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 }
+
+
+.vmv-site-mark{display:inline-flex;align-items:center;gap:11px;text-decoration:none;min-width:0}
+.vmv-site-mark>img{width:52px;height:52px;max-width:52px;object-fit:contain;border-radius:11px}
+.vmv-site-brand-name{min-width:0;overflow-wrap:anywhere}
+.vmv-site-nav[data-header-family=bakery]{background:#fffaf7;border-bottom:1px solid #f3e9ed}
+.vmv-site-nav[data-header-family=construction]{border-bottom:4px solid var(--vmv-accent)}
+.vmv-site-nav[data-header-family=professional]{border-bottom:1px solid #e9e4ef}
+.vmv-site-nav[data-header-family=beauty]{background:#fdf9fc;border-bottom:1px solid #f5e7f2}
+.vmv-site-nav[data-header-family=creative]{background:#26222a;color:white}
+.vmv-site-nav[data-header-family=creative] .vmv-site-mark,.vmv-site-nav[data-header-family=creative] nav a{color:#fff}
+.vmv-site-nav[data-header-family=creative] nav a:hover{text-decoration:underline}
+.vmv-site-nav[data-header-family=professional] .vmv-site-brand-name{font-family:Georgia,"Times New Roman",serif;font-weight:500;letter-spacing:-.03em}
+@media(max-width:620px){.vmv-site-mark>img{width:40px;height:40px;max-width:40px}}
