@@ -137,6 +137,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [draftNotice,setDraftNotice]=useState("");
  const [photoNotice,setPhotoNotice]=useState("");
  const [requestId,setRequestId]=useState(()=>crypto.randomUUID());
+ const [pausedStep,setPausedStep]=useState<WizardStep|null>(null);
  const submitting=useRef(false);
  const draftSnapshot=():StoredMarketingDraft=>({
   version:2,savedAt:Date.now(),requestId,ownerId:user?.id||null,
@@ -215,7 +216,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  };
  const editWizardStep=(step:WizardStep)=>{closeKeyboard();setWizardStep(step);setWizardError("");revealWizard();};
  const chooseService=(code:ServiceCode)=>{
-  if(code!==selected){setRequestId(crypto.randomUUID());setGoal("");setConsent(false);setReviewLink("");setReviewReply("");setReviewMode("respond");setReviewInput("");setWebRepair(emptyWebRepair);setDirectoryData(emptyDirectory);setGoogleStep(0);setGoogleMedia(emptyMedia);}
+  setRequestId(crypto.randomUUID());setPausedStep(null);
+  if(code!==selected){setGoal("");setConsent(false);setReviewLink("");setReviewReply("");setReviewMode("respond");setReviewInput("");setWebRepair(emptyWebRepair);setDirectoryData(emptyDirectory);setGoogleStep(0);setGoogleMedia(emptyMedia);}
   setSelected(code);setWizardStep(1);setWizardError("");setSubmittedId(null);revealWizard();
  };
  const goNext=()=>{
@@ -339,6 +341,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(!consent){setWizardError("Marca la autorización para que podamos atender la solicitud.");submitting.current=false;return;}
   setBusy(true);
   const uploaded:string[]=[];
+  let insertAttempted=false;
   let inserted=false;
   try{
    const {data:existing,error:lookupError}=await client.from("vmv_marketing_requests")
@@ -362,6 +365,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
      uploaded.push(path);mediaPaths.push({kind,path});
     }
    }
+   insertAttempted=true;
    const {data,error:insertError}=await client.from("vmv_marketing_requests").insert({
     id:requestId,owner_id:user.id,service_code:selected,business_name:name.trim(),
     category_id:effectiveCategory,website_url:safeSite(site),
@@ -391,7 +395,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    setGoal("");setConsent(false);setGoogleMedia(emptyMedia);
    await refresh();
   }catch(e){
-   if(!inserted&&uploaded.length)await client.storage.from("vmv-google-media").remove(uploaded);
+   if(!inserted&&!insertAttempted&&uploaded.length)await client.storage.from("vmv-google-media").remove(uploaded);
    setWizardError("No se pudo completar el envío. "+errorMessage(e,"Inténtalo de nuevo."));
   }finally{setBusy(false);submitting.current=false;}
  };
@@ -477,7 +481,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   setQuoteNote(req.quote_note||"");setStageUpdate(req.staff_update||"");setEvidence(req.evidence_url||"");
  };
  return <div className={styles.root}>
-  {wizardStep===0?<header className={styles.catalogHeading}><h2>¿Qué quieres hacer hoy?</h2><p>Elige un servicio y te ayudamos paso a paso.</p><a href="#vmv-marketing-history" className={styles.historyLink}><ClipboardList size={16}/> Mis solicitudes</a></header>:null}
+  {wizardStep===0?<header className={styles.catalogHeading}><h2>¿Qué quieres hacer hoy?</h2><p>Elige un servicio y te ayudamos paso a paso.</p><a href="#vmv-marketing-history" className={styles.historyLink}><ClipboardList size={16}/> Mis solicitudes</a>{pausedStep!==null?<button type="button" className={styles.resumeDraft} onClick={()=>{setWizardStep(pausedStep);setPausedStep(null);revealWizard();}}>Continuar mi solicitud guardada</button>:null}</header>:null}
+  {wizardStep>0&&wizardStep<4?<button type="button" className={styles.historyWizardAccess} onClick={()=>{setPausedStep(wizardStep);void saveCurrentDraft();setWizardStep(0);window.setTimeout(()=>document.getElementById("vmv-marketing-history")?.scrollIntoView({behavior:"smooth"}),0);}}><ClipboardList size={15}/> Mis solicitudes</button>:null}
   <section className={styles.wizardPanel} id="vmv-marketing-request" aria-label="Crear solicitud de marketing">
    {wizardStep===4?<div className={styles.wizardSuccess} role="status">
     <div className={styles.successIcon}><CheckCircle2 size={33}/></div>
@@ -486,7 +491,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     <p>Referencia <strong>#{submittedId}</strong>. La revisaremos y verás aquí si hace falta un presupuesto o alguna información adicional.</p>
     <div className={styles.successReminder}><ShieldCheck size={17}/> No hemos cobrado ni publicado nada. Cualquier coste necesitará tu aprobación.</div>
     <div className={styles.wizardButtons}>
-     <button type="button" className={styles.wizardBack} onClick={()=>{setWizardStep(0);setSubmittedId(null);setWizardError("");revealWizard();}}>Crear otra solicitud</button>
+     <button type="button" className={styles.wizardBack} onClick={()=>{setRequestId(crypto.randomUUID());setWizardStep(0);setSubmittedId(null);setWizardError("");setPausedStep(null);revealWizard();}}>Crear otra solicitud</button>
      <button type="button" className={styles.wizardPrimary} onClick={()=>document.getElementById("vmv-marketing-history")?.scrollIntoView({behavior:"smooth",block:"start"})}>Ver seguimiento <ArrowRight size={16}/></button>
     </div>
    </div>:<>
@@ -509,7 +514,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
        return <button type="button" key={service.id} onClick={()=>chooseService(service.id)} className={styles.serviceTile} aria-label={"Elegir "+service.name}>
         <span className={styles.serviceIcon}><ServiceIcon size={23} strokeWidth={1.8}/></span>
         <span className={styles.serviceText}><strong>{service.name}</strong><small>{service.why}</small></span>
-        <ArrowUpRight size={16} className={styles.tileArrow}/>
+        <span className={styles.serviceCta}>Empezar <ArrowUpRight size={14}/></span>
        </button>;
       })}
      </div>
