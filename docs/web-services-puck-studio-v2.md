@@ -143,3 +143,21 @@ Clearly labeled *non-production* demo pages with illustrative names and empty im
 - Signed-in desktop and smartphone acceptance screenshots.
 
 Do not promote to production without authorization; keep Smart Call, Director, Marketing and AI Agents untouched.
+
+
+## Director milestone: compositional editing and responsive controls (Nov 2026)
+
+- New Puck slot-based components: SectionLayout, ColumnsLayout, ComposeHeading, ComposeText, ComposeImage, ComposeButton.
+- Drag text, images and buttons inside independent column slots, then reorder components via Puck drag handles. No pixel-absolute free positioning is advertised.
+- Two or three columns, optional wide-left/wide-right layout, mobile stack/two-columns option, reverse mobile order, per-device alignment, spacing, font size and visibility, section surface/background, image aspect ratio/focal position and CTA style.
+- Inline text editing enabled on new title, paragraph and button label fields. Properties are split into collapsible Content/Design/Desktop/Mobile groups.
+- Left Puck sidebar groups blocks into free composition, individual elements, complete sections and legacy components. All legacy block types remain available.
+- Responsive behavior uses CSS container queries rooted in .vmv-site, so the independent phone preview can present new blocks at the correct width even when opened on a desktop browser.
+- The same shared config, CSS and new recursive normalizer are used by the authenticated editor and public renderer. Nested slot arrays are allowlisted and sanitized, with global per-document ID deduplication.
+- A validator rejects oversized/deep/unknown nested documents before autosave or manual save, avoiding silent dropping of newly nested content.
+- Visual demonstration (illustrative, not a customer site): /web-studio/demos/composition. This page asserts that the normalizer retained 3 nested left-column children and one right-column child before rendering.
+- Database regression: supabase/tests/vmv_web_composition_roundtrip.sql passed in a rolled-back transaction. Tested nested content, mobile column configuration, draft/live isolation, republish, revision restoration and anonymous public read; no user records were modified.
+- Vercel READY confirms successful Next.js build and type checks. It does NOT demonstrate manual mobile drag/drop, pixel parity, keyboard focus or screenshot checks.
+- The prior published websites and their domains are unchanged. This stage modifies only Web Studio-specific code and documentation.
+
+**Next stages:** shared visual header/footer and navigation, reusable section patterns with sync modes, template switching without loss, then structured content/products. Advanced mobile/desktop real-browser QA remains essential before commercial acceptance.
