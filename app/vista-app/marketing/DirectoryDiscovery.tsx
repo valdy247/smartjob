@@ -67,11 +67,13 @@ export default function DirectoryDiscovery({data,onChange,industry}:{data:Direct
   <div className={styles.section}>
    <div className={styles.heading}><SearchCheck size={19}/><div><strong>Directorios que podemos revisar</strong><small>Selecciona los que te interesan. Antes comprobaremos si ya tienes ficha.</small></div></div>
    <div className={styles.options}>
-    {options.map(d=><button type="button" key={d.id} aria-pressed={selectedIds.has(d.id)} onClick={()=>toggle(d.id)} className={styles.option}>
-     <span className={styles.checkbox}>{selectedIds.has(d.id)?<Check size={13}/>:null}</span>
-     <span className={styles.optionText}><strong>{d.name}</strong><small>{d.description}</small><em>{costNames[d.cost]}</em></span>
-     <a href={d.url} target="_blank" rel="noopener noreferrer" title={"Requisitos de "+d.name} onClick={e=>e.stopPropagation()}><ExternalLink size={16}/></a>
-    </button>)}
+    {options.map(d=><div key={d.id} className={styles.optionRow}>
+     <button type="button" aria-pressed={selectedIds.has(d.id)} onClick={()=>toggle(d.id)} className={styles.option}>
+      <span className={styles.checkbox}>{selectedIds.has(d.id)?<Check size={13}/>:null}</span>
+      <span className={styles.optionText}><strong>{d.name}</strong><small>{d.description}</small><em>{costNames[d.cost]}</em></span>
+     </button>
+     <a className={styles.source} href={d.url} target="_blank" rel="noopener noreferrer" title={"Consultar requisitos de "+d.name} aria-label={"Consultar requisitos de "+d.name}><ExternalLink size={16}/></a>
+    </div>)}
     <button type="button" aria-pressed={selectedIds.has("research-local")} onClick={()=>toggle("research-local")} className={styles.option}>
      <span className={styles.checkbox}>{selectedIds.has("research-local")?<Check size={13}/>:null}</span>
      <span className={styles.optionText}><strong>Encontrar otros directorios locales</strong><small>VMV investigará directorios de tu estado, ciudad, cámaras de comercio y sector.</small><em>Revisión y precio de gestión sujetos a cotización</em></span>
