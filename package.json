@@ -13,7 +13,8 @@
     "catalog:sync": "node scripts/sync-registration-data.mjs",
     "prebuild": "npm run catalog:sync",
     "predev": "npm run catalog:sync",
-    "i18n:test": "node --test scripts/interface-language.test.cjs"
+    "i18n:test": "node --test scripts/interface-language.test.cjs",
+    "i18n:coverage": "node scripts/check-visible-i18n.mjs"
   },
   "engines": {
     "node": ">=20.9"
