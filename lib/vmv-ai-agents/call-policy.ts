@@ -101,7 +101,9 @@ export function inWeek(week:Week,day:DayName,minutes:number):boolean{
  const overnightCarry=prev.enabled&&minute(prev.end)<minute(prev.start)&&
   minutes<minute(prev.end);
  if(!now.enabled)return overnightCarry;
- return (start<end?minutes>=start&&minutes<end:minutes>=start||minutes<end)||
+ // An overnight opening belongs to its START day. Early morning is open
+ // only when the preceding day actually opened an overnight shift.
+ return (start<end?minutes>=start&&minutes<end:minutes>=start)||
   overnightCarry;
 }
 export function localPreview(day:DayName,time:string):{day:DayName;minutes:number}{
