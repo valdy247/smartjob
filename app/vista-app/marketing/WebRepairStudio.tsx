@@ -11,21 +11,25 @@ export type WebAudit={
  explanation?:string;explanationSource?:"ai"|"automatic";
 };
 export type WebRepairData={
- platform:string;otherPlatform:string;repositoryHost:string;repositoryUrl:string;
+ platform:string;otherPlatform:string;hosting?:string;otherHosting?:string;repositoryHost:string;repositoryUrl:string;
  requestRepair:boolean;notes:string;audit:WebAudit|null;
 };
-export const emptyWebRepair:WebRepairData={platform:"unknown",otherPlatform:"",repositoryHost:"unknown",repositoryUrl:"",requestRepair:true,notes:"",audit:null};
+export const emptyWebRepair:WebRepairData={platform:"unknown",otherPlatform:"",hosting:"unknown",otherHosting:"",repositoryHost:"unknown",repositoryUrl:"",requestRepair:true,notes:"",audit:null};
 const platforms=[
- ["unknown","No lo sé"],["vercel","Vercel"],["wordpress","WordPress"],["shopify","Shopify"],["wix","Wix"],
- ["squarespace","Squarespace"],["webflow","Webflow"],["hostinger","Hostinger"],["godaddy","GoDaddy"],
- ["netlify","Netlify"],["cloudflare","Cloudflare Pages"],["cpanel","cPanel / hosting"],["aws","AWS"],
- ["firebase","Firebase"],["other","Otra plataforma"]
+ ["unknown","No lo sé"],["wordpress","WordPress"],["shopify","Shopify"],["wix","Wix"],
+ ["squarespace","Squarespace"],["webflow","Webflow"],["custom","Código propio / Next.js / HTML"],
+ ["other","Otra herramienta de edición"]
 ];
-const codePlatforms=["vercel","netlify","cloudflare","aws","firebase","other","unknown"];
+const hostingProviders=[
+ ["unknown","No lo sé"],["vercel","Vercel"],["netlify","Netlify"],["cloudflare","Cloudflare Pages"],
+ ["hostinger","Hostinger"],["godaddy","GoDaddy"],["cpanel","cPanel / hosting compartido"],
+ ["aws","AWS"],["firebase","Firebase"],["other","Otro alojamiento"]
+];
 const googleReport=(site:string)=>"https://pagespeed.web.dev/analysis?url="+encodeURIComponent(site);
 const linkSafe=(v:string)=>{if(!v.trim())return true;try{const u=new URL(v);return u.protocol==="https:"&&!u.username&&!u.password;}catch{return false;}};
 export function validateWebRepair(data:WebRepairData){
- if(data.platform==="other"&&!data.otherPlatform.trim())return "Indica el nombre de la plataforma.";
+ if(data.requestRepair&&data.platform==="other"&&!data.otherPlatform.trim())return "Indica qué herramienta utilizas para editar la web.";
+ if(data.requestRepair&&data.hosting==="other"&&!data.otherHosting?.trim())return "Indica el alojamiento de tu web.";
  if(data.repositoryUrl&&!linkSafe(data.repositoryUrl))return "Introduce un enlace HTTPS válido para tu repositorio.";
  if(data.notes.length>1200)return "El mensaje es demasiado largo.";
  return "";
@@ -111,26 +115,30 @@ export default function WebRepairStudio({site,data,onChange,accessToken}:{site:s
     </div>:null}
    {!report?<a className={styles.external} href={googleReport(site)} target="_blank" rel="noopener noreferrer">Abrir PageSpeed Insights <ArrowUpRight size={16}/></a>:null}
   </div>
-  <div className={styles.section}>
-   <div className={styles.head}><FileText size={21}/><div><strong>¿Dónde administras tu web?</strong><small>Si no lo sabes, te ayudaremos a averiguarlo.</small></div></div>
-   <label className={styles.field}>Plataforma o alojamiento
-    <select value={data.platform} onChange={e=>onChange(prev=>({...prev,platform:e.target.value,repositoryHost:"unknown",repositoryUrl:""}))}>
-      {platforms.map(([v,label])=><option key={v} value={v}>{label}</option>)}
+  {data.requestRepair?<div className={styles.section}>
+   <div className={styles.head}><FileText size={21}/><div><strong>¿Cómo está hecha tu página?</strong><small>Necesitamos saberlo para evaluar una reparación, no para analizarla gratis.</small></div></div>
+   <label className={styles.field}>¿Con qué herramienta la editas?
+    <select value={data.platform} onChange={e=>patch("platform",e.target.value)}>
+     {platforms.map(([v,label])=><option value={v} key={v}>{label}</option>)}
     </select>
    </label>
-   {data.platform==="other"?<label className={styles.field}>¿Cuál es la plataforma?<input value={data.otherPlatform} maxLength={100} onChange={e=>patch("otherPlatform",e.target.value)} placeholder="Nombre de la plataforma"/></label>:null}
-   {codePlatforms.includes(data.platform)?<>
-    <label className={styles.field}>¿Dónde está guardado el código?
-     <select value={data.repositoryHost} onChange={e=>patch("repositoryHost",e.target.value)}>
-      <option value="unknown">No lo sé</option><option value="github">GitHub</option><option value="gitlab">GitLab</option><option value="bitbucket">Bitbucket</option><option value="other">Otro / archivos locales</option>
-     </select>
-    </label>
-    {data.repositoryHost!=="unknown"&&data.repositoryHost!=="other"?<label className={styles.field}>Enlace del repositorio (opcional)
-      <input type="url" inputMode="url" value={data.repositoryUrl} onChange={e=>patch("repositoryUrl",e.target.value)} maxLength={500} placeholder="https://github.com/organizacion/proyecto"/>
-     </label>:null}
-   </>:null}
-   <p className={styles.tip}>Vercel y GitHub no son lo mismo: uno puede alojar tu web y el otro guardar su código. Nunca escribas contraseñas aquí.</p>
-  </div>
+   {data.platform==="other"?<label className={styles.field}>Nombre de la herramienta<input maxLength={100} value={data.otherPlatform} onChange={e=>patch("otherPlatform",e.target.value)} placeholder="¿Qué plataforma usas?"/></label>:null}
+   <label className={styles.field}>¿Dónde está alojada? (si lo sabes)
+    <select value={data.hosting||"unknown"} onChange={e=>patch("hosting",e.target.value)}>
+     {hostingProviders.map(([v,label])=><option key={v} value={v}>{label}</option>)}
+    </select>
+   </label>
+   {data.hosting==="other"?<label className={styles.field}>Nombre del alojamiento<input maxLength={100} value={data.otherHosting||""} onChange={e=>patch("otherHosting",e.target.value)} placeholder="Proveedor"/></label>:null}
+   <label className={styles.field}>¿Dónde está guardado el código? (si lo sabes)
+    <select value={data.repositoryHost} onChange={e=>patch("repositoryHost",e.target.value)}>
+     <option value="unknown">No lo sé / no aplica</option><option value="github">GitHub</option><option value="gitlab">GitLab</option><option value="bitbucket">Bitbucket</option><option value="other">Otro / archivos locales</option>
+    </select>
+   </label>
+   {data.repositoryHost!=="unknown"&&data.repositoryHost!=="other"?<label className={styles.field}>Enlace del repositorio (opcional)
+    <input type="url" inputMode="url" maxLength={500} value={data.repositoryUrl} onChange={e=>patch("repositoryUrl",e.target.value)} placeholder="https://github.com/empresa/proyecto"/>
+   </label>:null}
+   <p className={styles.tip}>La herramienta de edición, el alojamiento y el repositorio pueden ser diferentes. No compartas contraseñas: el equipo solicitará acceso seguro después del presupuesto.</p>
+  </div>:null}
   <div className={styles.section}>
    <div className={styles.head}><CheckCircle2 size={21}/><strong>¿Quieres que VMV la repare?</strong></div>
    <div className={styles.choices}>
