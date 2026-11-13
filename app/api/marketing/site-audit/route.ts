@@ -14,7 +14,7 @@ function safePublicWebsite(raw:string){
   return parsed.toString();
  }catch{return null;}
 }
-type Audit={title?:string;score?:number|null;scoreDisplayMode?:string};
+type Audit={title?:string;description?:string;score?:number|null;scoreDisplayMode?:string};
 type PsiResult={
  lighthouseResult?:{
   categories?:Record<string,{score?:number}>;
@@ -29,6 +29,7 @@ export async function GET(req:NextRequest){
  const website=safePublicWebsite(req.nextUrl.searchParams.get("url")||"");
  if(!website)return NextResponse.json({error:"Introduce una URL pública válida (https://...)."}, {status:400});
  const endpoint=new URL(fixedOrigin);
+ const reportUrl="https://pagespeed.web.dev/?url="+encodeURIComponent(website);
  endpoint.searchParams.set("url",website);
  endpoint.searchParams.set("strategy","MOBILE");
  for(const category of ["PERFORMANCE","SEO","ACCESSIBILITY"])endpoint.searchParams.append("category",category);
@@ -38,7 +39,7 @@ export async function GET(req:NextRequest){
   const response=await fetch(endpoint.toString(),{signal:AbortSignal.timeout(30000),next:{revalidate:3600}});
   if(!response.ok){
    const message=response.status===429?"La API gratuita alcanzó su límite. Intenta de nuevo más tarde.":"Google no pudo analizar este sitio por ahora.";
-   return NextResponse.json({error:message}, {status:response.status===429?429:502});
+   return NextResponse.json({error:message,reportUrl}, {status:response.status===429?429:502});
   }
   const parsed=await response.json() as PsiResult;
   const lighthouse=parsed.lighthouseResult;
@@ -54,8 +55,13 @@ export async function GET(req:NextRequest){
    .filter(a=>a.title&&a.mode!=="notApplicable"&&typeof a.score==="number"&&a.score<0.9)
    .sort((a,b)=>(a.score??1)-(b.score??1))
    .slice(0,4).map(a=>a.title);
+  const findings=Object.entries(lighthouse.audits||{})
+    .filter(([key,audit])=>audit?.title&&typeof audit.score==="number"&&audit.score<0.9&&audit.scoreDisplayMode!=="notApplicable"&&!key.includes("screenshot"))
+    .sort(([,a],[,b])=>(a.score??1)-(b.score??1))
+    .slice(0,25)
+    .map(([id,audit])=>({id,title:audit.title||id,description:(audit.description||"").replace(/<[^>]*>/g,"").slice(0,380),score:audit.score??null}));
   return NextResponse.json({
-   source:"Google PageSpeed Insights API",website,
+   source:"Google PageSpeed Insights API",website,reportUrl,findings,
    scores:{
     performance:roundScore(lighthouse.categories.performance?.score),
     seo:roundScore(lighthouse.categories.seo?.score),
