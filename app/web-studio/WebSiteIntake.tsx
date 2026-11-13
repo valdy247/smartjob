@@ -58,8 +58,10 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
    setCity(old=>old||String(saved.address||[person?.city,person?.state].filter(Boolean).join(", ")).slice(0,180));
    setAbout(old=>old||String(saved.intro||"").slice(0,500));
    setLogo(old=>old||String(saved.logo||"").slice(0,450));
-   if(Array.isArray(saved.gallery))setPhotos(old=>old.length?old:saved.gallery.filter((v:unknown):v is string=>typeof v==="string").slice(0,4));
-   if(typeof saved.services==="string")setServices(old=>old.length?old:saved.services.split(/\r?\n/).map((v:string)=>v.trim()).filter(Boolean).slice(0,16));
+   const existingPhotos=Array.isArray(saved.gallery)?saved.gallery.filter((v:unknown):v is string=>typeof v==="string").slice(0,4):[];
+   const existingServices=typeof saved.services==="string"?saved.services.split(/\r?\n/).map(v=>v.trim()).filter(Boolean).slice(0,16):[];
+   setPhotos(old=>old.length?old:existingPhotos);
+   setServices(old=>old.length?old:existingServices);
   })();
   return()=>{alive=false;};
  },[ownerId]);
