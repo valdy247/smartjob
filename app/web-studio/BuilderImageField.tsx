@@ -4,7 +4,7 @@ import {ImagePlus,RefreshCw,Trash2,WandSparkles} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import styles from "./BuilderImageField.module.css";
-type Props={value:string;onChange:(url:string)=>void};
+type Props={value:string;onChange:(url:string)=>void;kind?:"photo"|"logo"};
 const bucket="smartjob-web-images";
 async function shrink(file:File):Promise<Blob>{
  if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw new Error("Solo imágenes JPG, PNG o WebP");
@@ -28,7 +28,7 @@ async function shrink(file:File):Promise<Blob>{
   return converted;
  }finally{bitmap.close();}
 }
-export default function BuilderImageField({value,onChange}:Props){
+export default function BuilderImageField({value,onChange,kind="photo"}:Props){
  const [items,setItems]=useState<string[]>([]);
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
@@ -173,7 +173,7 @@ export default function BuilderImageField({value,onChange}:Props){
  }
  return <div className={styles.wrap}>
   {value&&safeWebImageUrl(value)?<div className={styles.selectedImage}>
-   <img src={value} alt="Imagen seleccionada" className={styles.current}/>
+   <img src={value} alt={kind==="logo"?"Logo completo seleccionado":"Imagen seleccionada"} className={kind==="logo"?styles.currentLogo:styles.current}/>
    <button type="button" className={styles.clearSelection} disabled={busy||Boolean(deleting)}
     onClick={()=>{onChange("");setNotice("Foto quitada solo de este lugar. Los demás usos no se modificaron.");setError("");}}>
      <Trash2 size={13}/> Eliminar de este lugar</button>
