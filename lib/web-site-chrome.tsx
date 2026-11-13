@@ -2,13 +2,13 @@ import type {CSSProperties,ReactNode} from "react";
 import {safeWebImageUrl} from "./web-services-site";
 
 export type WebsiteMenuItem={page_slug:string;title:string};
-export function WebsiteChrome({siteName,baseUrl,menu,logo,family,language="es",visualStyle,children}:{
+export function WebsiteChrome({siteName,baseUrl,menu,logo,family,language="es",siteStyle="light",siteWidth="regular",visualStyle,children}:{
  siteName:string;baseUrl:string;menu:WebsiteMenuItem[];logo?:string|null;family:string;
- language?:"es"|"en";visualStyle?:CSSProperties;children:ReactNode
+ language?:"es"|"en";siteStyle?:string;siteWidth?:string;visualStyle?:CSSProperties;children:ReactNode
 }){
  const safeLogo=logo?safeWebImageUrl(logo):null;
  return <div lang={language} className="vmv-site" data-site-family={family}
-  data-header-family={family} style={visualStyle}>
+  data-site-style={siteStyle} data-site-width={siteWidth} style={visualStyle}>
   <header className="vmv-site-nav" data-header-family={family}>
    <a className="vmv-site-mark" href={baseUrl||"/"}>
     {safeLogo?<img src={safeLogo} width={52} height={52} alt={"Logo de "+siteName}/>:null}
