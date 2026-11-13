@@ -67,7 +67,7 @@ export function checkCallPolicy(input:unknown):CallPolicy{
   coexistence:one("coexistence",["menu","agent_first","translation_first"]) as CallPolicy["coexistence"],
   outside_action:one("outside_action",["translation","message"]) as CallPolicy["outside_action"],
   ring_seconds:count,time_zone:zone,use_business_hours:p.use_business_hours,
-  schedule:Object.fromEntries(keyList.map(k=>[k,{...p.schedule![k as keyof typeof p.schedule] as DayHours}])) as Week,
+  schedule:Object.fromEntries(keyList.map(k=>[k,{...(p.schedule as Week)[k]}])) as Week,
   closed_message:p.closed_message.trim()
  };
 }
