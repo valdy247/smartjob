@@ -16,8 +16,9 @@ const styleFields={
 const imageAlt=(value:string,description?:string)=>description?.trim()||value||"Imagen del negocio";
 const emptyItem=(value:unknown)=>Boolean(value&&typeof value==="object");
 const toList=(value:unknown)=>Array.isArray(value)?value.filter(emptyItem).slice(0,40) as VisualProps[]:[];
-function ItemImage({src,alt,style}:{src:unknown;alt:string;style?:React.CSSProperties}){
+function ItemImage({src,alt,style,editing=false}:{src:unknown;alt:string;style?:React.CSSProperties;editing?:boolean}){
  const url=photo(src);
+ if(!url&&!editing)return null;
  return <div className="vmv-visual-media" style={style}>{url?<img src={url} alt={alt} loading="lazy"/>:
  <div className="vmv-media-empty" aria-label="Imagen pendiente"><span aria-hidden="true">✧</span><small>Agregar fotografía</small></div>}</div>;
 }
@@ -49,12 +50,12 @@ export const visualBlocks:Config["components"]={
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.align}{fields.height}{fields.buttonStyle}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Imagen</legend>{fields.image}{fields.imageAlt}{fields.imagePosition}{fields.shade}</fieldset>
   </>,
-  render:({layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,height,buttonStyle})=>{
+  render:({layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,height,buttonStyle,puck})=>{
    const href=typeof buttonUrl==="string"&&(buttonUrl.startsWith("#")||buttonUrl.startsWith("mailto:")||buttonUrl.startsWith("tel:"))?buttonUrl:"#contacto";
    const position=["top","bottom","left","right"].includes(imagePosition)?imagePosition:"center";
    const media=photo(image);
    return <section className="vmv-hero-visual" data-layout={layout||"split"} data-align={align||"left"}
-    data-shade={shade||"medium"} data-height={height||"normal"}>
+    data-shade={shade||"medium"} data-height={height||"normal"} data-has-image={Boolean(media)||Boolean(puck.isEditing)}>
     {layout==="cover"?<div className="vmv-hero-cover" style={media?{backgroundImage:"url('"+media.replaceAll("'","%27")+"')",backgroundPosition:position}:undefined} aria-hidden="true"/>:null}
     <div className="vmv-hero-content">
      {eyebrow?<span className="vmv-hero-eyebrow">{eyebrow}</span>:null}
@@ -62,7 +63,7 @@ export const visualBlocks:Config["components"]={
      {description?<p>{description}</p>:null}
      <a className="vmv-site-button" data-button-style={buttonStyle||"solid"} href={href}>{buttonText||"Contactar"} <span aria-hidden="true">↗</span></a>
     </div>
-    {layout!=="cover"?<div className="vmv-hero-image"><ItemImage src={image} alt={imageAlt||"Imagen de portada"}
+    {layout!=="cover"&&(media||puck.isEditing)?<div className="vmv-hero-image"><ItemImage src={image} alt={imageAlt||"Imagen de portada"} editing={puck.isEditing}
      style={{"--vmv-image-position":position} as React.CSSProperties}/></div>:null}
    </section>;
   }
@@ -82,11 +83,11 @@ export const visualBlocks:Config["components"]={
    <fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.description}{fields.items}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.columns}{fields.padding}{fields.surface}{fields.showPrices}</fieldset>
   </>,
-  render:({title,description,items,layout,padding,surface,columns,showPrices})=><Section mode={surface} padding={padding} className="vmv-offerings">
+  render:({title,description,items,layout,padding,surface,columns,showPrices,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-offerings">
    <div className="vmv-section-heading"><h2>{title}</h2>{description?<p>{description}</p>:null}</div>
    <div className="vmv-offerings-items" data-layout={layout||"grid"} data-columns={columns||"3"}>
     {toList(items).map((item,index)=><article key={index} className="vmv-offering-card">
-     <ItemImage src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))}/>
+     <ItemImage src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} editing={puck.isEditing}/>
      <div className="vmv-offering-copy">{item.title?<h3>{heading(item.title)}</h3>:<h3>Nuevo elemento</h3>}
       {item.description?<p>{heading(item.description)}</p>:null}
       {showPrices==="yes"&&item.price?<strong className="vmv-offering-price">{heading(item.price)}</strong>:null}
@@ -106,10 +107,10 @@ export const visualBlocks:Config["components"]={
   defaultProps:{title:"Una mirada a nuestro trabajo",description:"",items:[],layout:"mosaic",padding:"normal",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.description}{fields.items}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.padding}{fields.surface}</fieldset></>,
-  render:({title,description,items,layout,padding,surface})=><Section mode={surface} padding={padding} className="vmv-gallery-section">
+  render:({title,description,items,layout,padding,surface,puck})=>!toList(items).some(item=>photo(item.image))&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
    <div className="vmv-section-heading"><h2>{title}</h2>{description?<p>{description}</p>:null}</div>
    <div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,index)=><figure key={index}>
-    <ItemImage src={item.image} alt={imageAlt(heading(item.caption),heading(item.alt))}/>
+    <ItemImage src={item.image} alt={imageAlt(heading(item.caption),heading(item.alt))} editing={puck.isEditing}/>
     {item.caption?<figcaption>{heading(item.caption)}</figcaption>:null}
    </figure>)}</div>
   </Section>
@@ -122,7 +123,7 @@ export const visualBlocks:Config["components"]={
    padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Cómo trabajamos",items:[],padding:"normal",surface:"soft"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
-  render:({title,items,padding,surface})=><Section mode={surface} padding={padding} className="vmv-process">
+  render:({title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-process">
    <h2>{title}</h2><ol>{toList(items).map((item,index)=><li key={index}>
     <span>{String(index+1).padStart(2,"0")}</span><h3>{heading(item.title)}</h3><p>{heading(item.description)}</p>
    </li>)}</ol>
@@ -136,9 +137,9 @@ export const visualBlocks:Config["components"]={
    layout:styleFields.layout,padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Proyectos",items:[],layout:"mosaic",padding:"spacious",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.padding}{fields.surface}</fieldset></>,
-  render:({title,items,layout,padding,surface})=><Section mode={surface} padding={padding} className="vmv-gallery-section">
+  render:({title,items,layout,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
    <h2>{title}</h2><div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,i)=><figure key={i}>
-    <ItemImage src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))}/>
+    <ItemImage src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} editing={puck.isEditing}/>
     {item.title||item.description?<figcaption><strong>{heading(item.title)}</strong><p>{heading(item.description)}</p></figcaption>:null}
    </figure>)}</div>
   </Section>
@@ -149,7 +150,7 @@ export const visualBlocks:Config["components"]={
    surface:styleFields.surface,padding:styleFields.padding},
   defaultProps:{title:"Horario y zona de atención",hours:"",area:"",notes:"",surface:"soft",padding:"normal"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.hours}{fields.area}{fields.notes}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.surface}{fields.padding}</fieldset></>,
-  render:({title,hours,area,notes,surface,padding})=><Section mode={surface} padding={padding} className="vmv-hours">
+  render:({title,hours,area,notes,surface,padding,puck})=>!(hours||area||notes)&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-hours">
    <h2>{title}</h2><div><article><small>HORARIO</small><p>{hours||"Consulta disponibilidad"}</p></article>
     <article><small>ZONA</small><p>{area||"Consulta nuestra área de atención"}</p></article></div>
    {notes?<p>{notes}</p>:null}
@@ -162,9 +163,9 @@ export const visualBlocks:Config["components"]={
    padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Nuestro equipo",items:[],padding:"normal",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
-  render:({title,items,padding,surface})=><Section mode={surface} padding={padding} className="vmv-team">
+  render:({title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-team">
    <h2>{title}</h2><div>{toList(items).map((item,i)=><article key={i}>
-    <ItemImage src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))}/>
+    <ItemImage src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} editing={puck.isEditing}/>
     <h3>{heading(item.title)}</h3><p>{heading(item.description)}</p>
    </article>)}</div>
   </Section>
@@ -177,7 +178,7 @@ export const visualBlocks:Config["components"]={
    padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Precios",items:[],padding:"normal",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
-  render:({title,items,padding,surface})=><Section mode={surface} padding={padding} className="vmv-price-list">
+  render:({title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-price-list">
    <h2>{title}</h2><dl>{toList(items).map((item,i)=><div key={i}>
     <dt>{heading(item.title)}{item.description?<small>{heading(item.description)}</small>:null}</dt>
     <dd>{heading(item.price)||"Consultar"}</dd>
@@ -192,9 +193,9 @@ export const visualBlocks:Config["components"]={
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Imagen</legend>{fields.beforeImage}{fields.beforeAlt}{fields.afterImage}{fields.afterAlt}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
-  render:({title,beforeImage,afterImage,beforeAlt,afterAlt,padding,surface})=><Section mode={surface} padding={padding} className="vmv-before-after">
-   <h2>{title}</h2><div><figure><ItemImage src={beforeImage} alt={heading(beforeAlt)||"Antes"}/><figcaption>Antes</figcaption></figure>
-    <figure><ItemImage src={afterImage} alt={heading(afterAlt)||"Después"}/><figcaption>Después</figcaption></figure></div>
+  render:({title,beforeImage,afterImage,beforeAlt,afterAlt,padding,surface,puck})=>!photo(beforeImage)&&!photo(afterImage)&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-before-after">
+   <h2>{title}</h2><div><figure><ItemImage src={beforeImage} alt={heading(beforeAlt)||"Antes"} editing={puck.isEditing}/><figcaption>Antes</figcaption></figure>
+    <figure><ItemImage src={afterImage} alt={heading(afterAlt)||"Después"} editing={puck.isEditing}/><figcaption>Después</figcaption></figure></div>
   </Section>
  },
  FAQList:{
@@ -205,7 +206,7 @@ export const visualBlocks:Config["components"]={
   defaultProps:{title:"Preguntas frecuentes",items:[],padding:"normal",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
-  render:({title,items,padding,surface})=><Section mode={surface} padding={padding} className="vmv-site-faq">
+  render:({title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-site-faq">
    <h2>{title}</h2>{toList(items).map((item,i)=><details key={i}><summary>{heading(item.question)}</summary>
     <p>{heading(item.answer)}</p></details>)}
   </Section>
