@@ -169,6 +169,8 @@
 }
 
 
+
+.workspace{container:vmv-studio / inline-size}
 /* Web Studio mobile: the editable page is the main screen; configuration is secondary. */
 .mobileBack,.mobileSiteName,.mobilePublish,.mobileStudioTools,
 .mobileCreatePage,.mobileSettingsPanel,.mobileDraftStatus{display:none}
@@ -179,7 +181,7 @@
 .seoDisclosure>summary::-webkit-details-marker{display:none}
 .seoDisclosure[open]>summary{border-radius:11px 11px 0 0}
 .seoDisclosure>.meta{padding:14px 0 4px;max-width:none;min-width:0}
-@media(max-width:700px){
+@container vmv-studio (max-width:700px){
  .topbar[data-site=true]{position:sticky;top:0;z-index:80;padding:8px 12px;
   min-height:58px;gap:10px;background:#fff;box-shadow:0 3px 17px #2615390c}
  .topbar[data-site=true] .brand,.topbar[data-site=true] .back{display:none}
@@ -259,7 +261,7 @@
  .puckShell :global(.Puck){min-height:calc(100dvh - 190px)}
  .previewOverlay{border-radius:13px}
 }
-@media(max-width:380px){
+@container vmv-studio (max-width:380px){
  .mobileStudioTools{gap:5px}
  .mobilePageSelect{padding:6px 8px;gap:6px}
  .mobileToolButton{min-width:41px;padding:7px}
