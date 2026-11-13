@@ -167,3 +167,101 @@
  .designRecovery{align-items:stretch}
  .designRecovery button{width:100%}
 }
+
+
+/* Web Studio mobile: the editable page is the main screen; configuration is secondary. */
+.mobileBack,.mobileSiteName,.mobilePublish,.mobileStudioTools,
+.mobileCreatePage,.mobileSettingsPanel,.mobileDraftStatus{display:none}
+.seoDisclosure{min-width:230px;flex:1;max-width:670px}
+.seoDisclosure>summary{display:inline-flex;align-items:center;gap:8px;min-height:38px;
+ padding:9px 13px;cursor:pointer;list-style:none;font-size:12px;font-weight:850;
+ color:#7556a8;background:#f7f1fd;border:1px solid #e5d6f1;border-radius:11px}
+.seoDisclosure>summary::-webkit-details-marker{display:none}
+.seoDisclosure[open]>summary{border-radius:11px 11px 0 0}
+.seoDisclosure>.meta{padding:14px 0 4px;max-width:none;min-width:0}
+@media(max-width:700px){
+ .topbar[data-site=true]{position:sticky;top:0;z-index:80;padding:8px 12px;
+  min-height:58px;gap:10px;background:#fff;box-shadow:0 3px 17px #2615390c}
+ .topbar[data-site=true] .brand,.topbar[data-site=true] .back{display:none}
+ .mobileBack{display:grid;place-items:center;flex-shrink:0;width:40px;height:40px;
+  background:#f2ebfb;border:1px solid #e6d8f3;border-radius:12px;color:#7050aa}
+ .mobileSiteName{display:block;flex:1;min-width:0;font-size:15px;color:#352843;
+  font-weight:900;letter-spacing:-.025em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .mobilePublish{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+  min-height:41px;min-width:84px;padding:9px 12px;border:0;border-radius:12px;
+  color:#fff;background:#8a54df;font-size:12px;font-weight:900;
+  box-shadow:0 4px 12px #7a45c82c}
+ .main{padding:7px 8px 90px;max-width:100%;overflow:visible}
+ .desktopSiteControls{display:none}
+ .mobileStudioTools{display:flex;align-items:stretch;gap:7px;padding:6px 3px 7px;min-width:0}
+ .mobilePageSelect{display:flex;align-items:center;gap:9px;flex:1;min-width:0;
+  border:1px solid #e6d9f2;border-radius:12px;background:#fff;
+  padding:7px 11px;color:#706087;position:relative;min-height:44px}
+ .mobilePageSelect>span{font-size:10px;font-weight:850;color:#826b9c;
+  white-space:nowrap}
+ .mobilePageSelect select{appearance:none;display:block;flex:1;min-width:0;
+  border:0;background:transparent;color:#443054;font-size:13px;font-weight:900;
+  outline:0;padding-right:20px;text-overflow:ellipsis}
+ .mobilePageSelect>svg{position:absolute;right:11px;top:50%;transform:translateY(-50%);
+  pointer-events:none;color:#7758ad}
+ .mobileToolButton,.mobileEditorReturn{display:inline-flex;align-items:center;justify-content:center;
+  gap:7px;border:1px solid #e4d6f1;background:#fff;color:#794eb8;
+  border-radius:12px;min-width:44px;min-height:44px;padding:9px;flex-shrink:0}
+ .mobileToolButton[aria-expanded=true]{background:#ede3fb;border-color:#af89de}
+ .mobileEditorReturn{font-size:11px;font-weight:850;padding:9px 12px}
+ .mobileCreatePage{display:flex;align-items:flex-end;gap:9px;padding:11px;
+  border-radius:13px;border:1px solid #e7daf1;background:#fff;margin:0 3px 9px}
+ .mobileCreatePage label{display:flex;flex-direction:column;gap:6px;flex:1;
+  min-width:0;font-size:11px;font-weight:850;color:#71538c}
+ .mobileCreatePage input{min-height:43px;width:100%;min-width:0;padding:10px;
+  border-radius:9px;border:1px solid #ded1ed;font-size:13px}
+ .mobileCreatePage>button{min-height:43px;border:0;background:#8553d5;
+  border-radius:10px;color:#fff;padding:10px 15px;font-size:12px;font-weight:900}
+ .mobileDraftStatus{display:flex;align-items:center;gap:7px;margin:1px 4px 8px;
+  color:#70617e;font-size:11px;font-weight:750;min-height:19px}
+ .mobileStateDot{display:inline-block;flex-shrink:0;width:7px;height:7px;
+  border-radius:100%;background:#65ae91}
+ .mobileStateDot[data-error=true]{background:#dc7580}
+ .mobileSettingsPanel{display:flex;flex-direction:column;gap:13px;border:1px solid #e8dcf1;
+  border-radius:16px;background:#fff;padding:14px;margin:0 3px 11px;box-shadow:0 7px 20px #3320470c}
+ .mobileSettingsHeader{display:flex;align-items:center;justify-content:space-between;gap:12px}
+ .mobileSettingsHeader strong{font-size:16px;color:#48335f}
+ .mobileSettingsHeader button{border:0;background:#eee4fb;border-radius:9px;
+  color:#7652ad;font-size:11px;font-weight:850;padding:9px 11px}
+ .mobileSettingsGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+ .mobileSettingsGrid button,.mobileSettingsGrid a{display:flex;align-items:center;
+  justify-content:center;flex-direction:column;gap:6px;min-height:69px;
+  padding:9px 6px;border:1px solid #e8dcf2;border-radius:12px;background:#faf7ff;
+  color:#7450a9;font-size:11px;font-weight:800;text-align:center;text-decoration:none;min-width:0}
+ .mobileRequests{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  border-top:1px solid #ece5f3;padding:12px 2px 1px}
+ .mobileRequests>span{display:flex;flex-direction:column;gap:4px}
+ .mobileRequests strong{font-size:12px;color:#483a57}
+ .mobileRequests small{font-size:11px;color:#80728b;line-height:1.45}
+ .mobileRequests input{width:21px;height:21px;accent-color:#8c58da}
+ .mobileSeo{border-top:1px solid #ece5f3;padding-top:10px}
+ .mobileSeo>summary{display:flex;align-items:center;gap:9px;cursor:pointer;
+  list-style:none;color:#71509c;font-size:12px;font-weight:850;min-height:40px}
+ .mobileSeo>summary::-webkit-details-marker{display:none}
+ .mobileSeoFields{display:flex;flex-direction:column;gap:11px;padding:8px 1px 4px}
+ .mobileSeoFields>label{display:flex;flex-direction:column;gap:6px;color:#6e5b85;
+  font-size:11px;font-weight:850}
+ .mobileSeoFields input,.mobileSeoFields textarea{display:block;width:100%;
+  box-sizing:border-box;border:1px solid #ded2ec;background:#fff;border-radius:9px;
+  color:#35283e;font-size:13px;padding:10px;min-height:41px;resize:vertical}
+ .mobileSeoFields>small{font-size:11px;line-height:1.55;color:#857794}
+ .pageTabs,.addPage{display:none}
+ .editing{border:1px solid #ebdff3;border-radius:14px;overflow:visible;min-width:0;
+  box-shadow:0 7px 22px #3d255a0b}
+ .editingHeader{display:none}
+ .puckShell{min-height:calc(100dvh - 190px);overflow:hidden;border-radius:13px;
+  background:#fff}
+ .puckShell :global(.Puck){min-height:calc(100dvh - 190px)}
+ .previewOverlay{border-radius:13px}
+}
+@media(max-width:380px){
+ .mobileStudioTools{gap:5px}
+ .mobilePageSelect{padding:6px 8px;gap:6px}
+ .mobileToolButton{min-width:41px;padding:7px}
+ .mobileSettingsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
