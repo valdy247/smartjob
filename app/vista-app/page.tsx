@@ -93,13 +93,15 @@ export default function VMVMobilePreview(){
  useEffect(()=>{setDraft(settings?{...settings,caller_language:settings.desired_language===settings.caller_language?(settings.desired_language==="en"?"es":"en"):settings.caller_language}:null);},[settings]);
  const ready=phase==="signed_in"&&!!profile;
  useEffect(()=>{
-  if(!ready)return;
-  // Marketing saves a draft before sending a visitor here to authenticate.
-  // Only this exact allow-listed return target may redirect after sign-in.
-  if(new URLSearchParams(window.location.search).get("returnTo")==="marketing"){
-   window.location.replace("/vista-app/marketing");
+  // Redirect only to allow-listed, same-origin modules after authenticated access.
+  // Web Studio does not require a Smart Call profile; a signed-in account is enough.
+  const destination=new URLSearchParams(window.location.search).get("returnTo");
+  if(destination==="web-studio"&&phase==="signed_in"&&user){
+   window.location.replace("/web-studio");
+   return;
   }
- },[ready]);
+  if(ready&&destination==="marketing")window.location.replace("/vista-app/marketing");
+ },[ready,phase,user]);
  useEffect(()=>{
   if(!ready)return;
   let mounted=true;
