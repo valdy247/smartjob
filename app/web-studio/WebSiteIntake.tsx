@@ -1,7 +1,8 @@
 "use client";
-import {useEffect,useMemo,useState,type FormEvent} from "react";
+import {useEffect,useMemo,useRef,useState,type FormEvent} from "react";
 import {ArrowRight,ImagePlus,Plus,ShieldCheck,Sparkles,Trash2} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
+import {safeWebImageUrl} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
 import {FAMILIES,familyForCategory,type SiteFamily,type SiteIntake,type SiteOffering,type SiteObjective,type SiteProposal} from "@/lib/web-builder-templates";
 import BuilderImageField from "./BuilderImageField";
@@ -9,6 +10,26 @@ import TemplateProposals from "./TemplateProposals";
 import styles from "./WebSiteIntake.module.css";
 
 type Props={ownerId:string;busy:boolean;onChoose:(input:SiteIntake,proposal:SiteProposal)=>void};
+type MediaSlot="logo_url"|"cover_url"|"work_url";
+type MediaSelection={logo_url:string;cover_url:string;work_url:string};
+const EMPTY_MEDIA:MediaSelection={logo_url:"",cover_url:"",work_url:""};
+const mediaSlots:MediaSlot[]=["logo_url","cover_url","work_url"];
+const assetPath="/storage/v1/object/public/smartjob-web-images/";
+function selectionFromRow(value:unknown):MediaSelection{
+ const input=value&&typeof value==="object"?value as Record<string,unknown>:{};
+ return {
+  logo_url:typeof input.logo_url==="string"?safeWebImageUrl(input.logo_url)||"":"",
+  cover_url:typeof input.cover_url==="string"?safeWebImageUrl(input.cover_url)||"":"",
+  work_url:typeof input.work_url==="string"?safeWebImageUrl(input.work_url)||""
+ };
+}
+function ownImageFilename(value:string,ownerId:string):string{
+ const safe=safeWebImageUrl(value);
+ if(!safe)return "";
+ const asset=new URL(safe).pathname.split(assetPath)[1]||"";
+ return asset.startsWith(ownerId+"/")?asset.slice(ownerId.length+1):"";
+}
+
 const offeringOptions:{id:SiteOffering;title:string;hint:string}[]=[
  {id:"products",title:"Productos",hint:"Catálogo y consultas"},
  {id:"services",title:"Servicios",hint:"Especialidades y contacto"},
@@ -30,7 +51,15 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const [city,setCity]=useState("");
  const [about,setAbout]=useState("");
  const [logo,setLogo]=useState("");
- const [photos,setPhotos]=useState<string[]>([]);
+ const [photos,setPhotos]=useState<string[]>(["",""]);
+ const [mediaReady,setMediaReady]=useState(false);
+ const [mediaSaving,setMediaSaving]=useState(false);
+ const [mediaMessage,setMediaMessage]=useState("");
+ const [mediaError,setMediaError]=useState("");
+ const mediaRef=useRef<MediaSelection>({...EMPTY_MEDIA});
+ const mediaSaveQueue=useRef<Promise<void>>(Promise.resolve());
+ const mediaPending=useRef(0);
+ const mediaActive=useRef(true);
  const [services,setServices]=useState<string[]>([]);
  const [newItem,setNewItem]=useState("");
  const [family,setFamily]=useState<SiteFamily|null>(null);
@@ -39,14 +68,21 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const [error,setError]=useState("");
  useEffect(()=>{
   let alive=true;
+  mediaActive.current=true;
+  setMediaReady(false);setMediaError("");setMediaMessage("");
   void(async()=>{
-   const client=getSupabase();if(!client)return;
+   const client=getSupabase();if(!client){if(alive)setMediaError("No se pudo cargar tu biblioteca.");return;}
    const {data:auth}=await client.auth.getUser();
-   if(!auth.user||auth.user.id!==ownerId||auth.user.is_anonymous)return;
-   const [profile,pref,classic]=await Promise.all([
+   if(!auth.user||auth.user.id!==ownerId||auth.user.is_anonymous){
+    if(alive)setMediaError("Inicia sesión para recuperar tus fotografías.");
+    return;
+   }
+   const [profile,pref,classic,mediaResult]=await Promise.all([
     client.from("smartjob_profiles").select("business_name,phone,city,state").eq("id",ownerId).maybeSingle(),
     client.from("smartjob_business_category_preferences").select("category_id").eq("owner_id",ownerId).maybeSingle(),
-    client.from("smartjob_web_sites").select("draft").eq("owner_id",ownerId).maybeSingle()
+    client.from("smartjob_web_sites").select("draft").eq("owner_id",ownerId).maybeSingle(),
+    client.from("smartjob_web_intake_media").select("logo_url,cover_url,work_url")
+     .eq("owner_id",ownerId).maybeSingle()
    ]);
    if(!alive)return;
    const saved=classic.data?.draft&&typeof classic.data.draft==="object"?classic.data.draft as Record<string,unknown>:{};
@@ -57,14 +93,115 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
    setEmail(old=>old||String(saved.email||"").slice(0,180));
    setCity(old=>old||String(saved.address||[person?.city,person?.state].filter(Boolean).join(", ")).slice(0,180));
    setAbout(old=>old||String(saved.intro||"").slice(0,500));
-   setLogo(old=>old||String(saved.logo||"").slice(0,450));
-   const existingPhotos=Array.isArray(saved.gallery)?saved.gallery.filter((v:unknown):v is string=>typeof v==="string").slice(0,4):[];
    const existingServices=typeof saved.services==="string"?saved.services.split(/\r?\n/).map(v=>v.trim()).filter(Boolean).slice(0,16):[];
-   setPhotos(old=>old.length?old:existingPhotos);
    setServices(old=>old.length?old:existingServices);
+
+   try{
+    if(mediaResult.error)throw new Error("No fue posible recuperar las fotos guardadas.");
+    let row=mediaResult.data;
+    if(!row){
+     // The old classic draft may contain photos the owner already deleted.
+     // Do NOT auto-reimport its logo/gallery. Empty slots are intentional.
+     const inserted=await client.from("smartjob_web_intake_media")
+      .insert({owner_id:ownerId,...EMPTY_MEDIA}).select("logo_url,cover_url,work_url").single();
+     if(inserted.error){
+      // A second tab may have initialized the row first; read its authoritative values.
+      if(inserted.error.code!=="23505")throw new Error("No se pudo preparar el guardado de imágenes.");
+      const current=await client.from("smartjob_web_intake_media")
+       .select("logo_url,cover_url,work_url").eq("owner_id",ownerId).single();
+      if(current.error)throw new Error("No se pudieron recuperar tus fotos.");
+      row=current.data;
+     }else row=inserted.data;
+    }
+    const {data:{session}}=await client.auth.getSession();
+    if(!session?.access_token)throw new Error("Inicia sesión nuevamente para recuperar tus fotos.");
+    // A deleted object must never be restored by stale saved form values.
+    const hiddenResponse=await fetch("/api/web-services/media/delete",{
+     headers:{Authorization:"Bearer "+session.access_token},cache:"no-store"
+    });
+    if(!hiddenResponse.ok)throw new Error("No se pudo comprobar qué fotos eliminaste. Reintenta.");
+    const hiddenData=await hiddenResponse.json() as {hidden?:unknown};
+    if(!Array.isArray(hiddenData.hidden))throw new Error("No se pudo verificar la biblioteca.");
+    const hidden=new Set((hiddenData.hidden as unknown[]).filter((x):x is string=>typeof x==="string"));
+    const original=selectionFromRow(row);
+    const cleaned={...original};
+    const candidates=mediaSlots.map(slot=>({slot,filename:ownImageFilename(original[slot],ownerId)}))
+     .filter(v=>v.filename);
+    await Promise.all(candidates.map(async ({slot,filename})=>{
+     if(hidden.has(filename)){cleaned[slot]="";return;}
+     const {data:files,error:listError}=await client.storage.from("smartjob-web-images")
+      .list(ownerId,{search:filename,limit:100});
+     // Fail closed on a missing/deleted asset; do not display broken old thumbnails.
+     if(listError||!files?.some(file=>file.name===filename))cleaned[slot]="";
+    }));
+    if(!alive)return;
+    const cleanupPatch:Partial<MediaSelection>={};
+    for(const slot of mediaSlots)if(cleaned[slot]!==original[slot])cleanupPatch[slot]=cleaned[slot];
+    if(Object.keys(cleanupPatch).length){
+     const savedClean=await client.from("smartjob_web_intake_media")
+      .update({...cleanupPatch,updated_at:new Date().toISOString()})
+      .eq("owner_id",ownerId).select("logo_url,cover_url,work_url").single();
+     if(savedClean.error)throw new Error("No se pudieron confirmar tus fotos eliminadas.");
+    }
+    if(!alive)return;
+    mediaRef.current=cleaned;
+    setLogo(cleaned.logo_url);setPhotos([cleaned.cover_url,cleaned.work_url]);
+    setMediaReady(true);
+   }catch(e){
+    if(alive)setMediaError(e instanceof Error?e.message:"No se pudieron cargar las fotos.");
+   }
   })();
-  return()=>{alive=false;};
+  return()=>{alive=false;mediaActive.current=false;};
  },[ownerId]);
+
+ function saveMedia(patch:Partial<MediaSelection>){
+  if(!mediaReady)return;
+  mediaPending.current++;
+  setMediaSaving(true);setMediaError("");setMediaMessage("Guardando cambios…");
+  mediaSaveQueue.current=mediaSaveQueue.current.catch(()=>{}).then(async()=>{
+   try{
+    const client=getSupabase();if(!client)throw new Error("Sin conexión con el guardado.");
+    const values:Partial<MediaSelection>={};
+    for(const slot of mediaSlots)if(slot in patch){
+     const requested=patch[slot]||"";
+     const valid=requested?safeWebImageUrl(requested):"";
+     if(requested&&!valid)throw new Error("La imagen seleccionada no es válida.");
+     values[slot]=valid||"";
+    }
+    const {data,error}=await client.from("smartjob_web_intake_media")
+     .update({...values,updated_at:new Date().toISOString()})
+     .eq("owner_id",ownerId).select("logo_url,cover_url,work_url").single();
+    if(error||!data)throw new Error("No se guardó el cambio. Comprueba tu conexión e inténtalo otra vez.");
+    if(!mediaActive.current)return;
+    const selection=selectionFromRow(data);
+    mediaRef.current=selection;
+    setLogo(selection.logo_url);setPhotos([selection.cover_url,selection.work_url]);
+    setMediaMessage("Cambios guardados");
+   }catch(e){
+    if(mediaActive.current){
+     setMediaError(e instanceof Error?e.message:"No se pudo guardar la imagen.");
+     setMediaMessage("");
+    }
+   }finally{
+    mediaPending.current=Math.max(0,mediaPending.current-1);
+    if(mediaActive.current&&mediaPending.current===0)setMediaSaving(false);
+   }
+  });
+ }
+
+ useEffect(()=>{
+  if(!mediaReady)return;
+  const onLibraryDeleted=(event:Event)=>{
+   const url=(event as CustomEvent<{url?:string}>).detail?.url;
+   if(!url)return;
+   const current=mediaRef.current;
+   const patch:Partial<MediaSelection>={};
+   for(const slot of mediaSlots)if(current[slot]===url)patch[slot]="";
+   if(Object.keys(patch).length)saveMedia(patch);
+  };
+  window.addEventListener("vmv:web-image-deleted",onLibraryDeleted);
+  return()=>window.removeEventListener("vmv:web-image-deleted",onLibraryDeleted);
+ },[mediaReady,ownerId]);
  const intake=useMemo<SiteIntake>(()=>({
   business:name.trim(),categoryId:category,offering:kind,objective:goal,
   phone:phone.trim(),email:email.trim(),city:city.trim(),about:about.trim(),
@@ -134,13 +271,16 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
    <div className={styles.panel}>
     <h3><span>03</span> Identidad visual</h3>
     <p>Usa fotografías propias. También puedes continuar sin ellas y añadirlas desde el editor antes de publicar.</p>
-    <div className={styles.photos}>
-     <div><strong>Logo</strong><BuilderImageField value={logo} onChange={setLogo}/></div>
-     {[0,1].map(i=><div key={i}><strong>{i===0?"Foto de portada":"Foto de productos o trabajos"}</strong>
-      <BuilderImageField value={photos[i]||""} onChange={url=>setPhotos(old=>{
-       const arr=[...old];arr[i]=url;return arr;
-      })}/></div>)}
-    </div>
+    <p role="status" aria-live="polite">{mediaReady?(mediaSaving?"Guardando imágenes…":mediaMessage||"Las imágenes se conservan después de recargar."):"Recuperando imágenes guardadas…"}</p>
+    {mediaError?<p role="alert" className={styles.error}>{mediaError}</p>:null}
+    <fieldset disabled={!mediaReady||mediaSaving} style={{border:0,padding:0,margin:0,minWidth:0}}>
+     <div className={styles.photos}>
+      <div><strong>Logo</strong><BuilderImageField value={logo} onChange={url=>saveMedia({logo_url:url})}/></div>
+      {[0,1].map(i=><div key={i}><strong>{i===0?"Foto de portada":"Foto de productos o trabajos"}</strong>
+       <BuilderImageField value={photos[i]||""}
+        onChange={url=>saveMedia(i===0?{cover_url:url}:{work_url:url})}/></div>)}
+     </div>
+    </fieldset>
    </div>
    <div className={styles.panel}>
     <h3><span>04</span> Diseño inicial</h3>
