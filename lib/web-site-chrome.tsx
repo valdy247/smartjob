@@ -1,5 +1,6 @@
 import type {CSSProperties,ReactNode} from "react";
 import {safeWebImageUrl} from "./web-services-site";
+import {SOCIAL_PLATFORMS,normalizeSocialLinks} from "./web-builder-social";
 
 export function websiteVisualStyle(palette:unknown,accentColor:unknown):CSSProperties{
  const colors:Record<string,[string,string]>={
@@ -14,11 +15,13 @@ export function websiteVisualStyle(palette:unknown,accentColor:unknown):CSSPrope
   accentColor:accent,"--vmv-pale":pale} as CSSProperties;
 }
 export type WebsiteMenuItem={page_slug:string;title:string};
-export function WebsiteChrome({siteName,baseUrl,menu,logo,family,language="es",siteStyle="light",siteWidth="regular",visualStyle,children}:{
+export function WebsiteChrome({siteName,baseUrl,menu,logo,family,language="es",siteStyle="light",siteWidth="regular",socialLinks,visualStyle,children}:{
  siteName:string;baseUrl:string;menu:WebsiteMenuItem[];logo?:string|null;family:string;
- language?:"es"|"en";siteStyle?:string;siteWidth?:string;visualStyle?:CSSProperties;children:ReactNode
+ language?:"es"|"en";siteStyle?:string;siteWidth?:string;socialLinks?:unknown;visualStyle?:CSSProperties;children:ReactNode
 }){
  const safeLogo=logo?safeWebImageUrl(logo):null;
+ const social=normalizeSocialLinks(socialLinks);
+ const activeSocial=SOCIAL_PLATFORMS.filter(p=>Boolean(social[p.id]));
  return <div lang={language} className="vmv-site" data-site-family={family}
   data-site-style={siteStyle} data-site-width={siteWidth} style={visualStyle}>
   <header className="vmv-site-nav" data-header-family={family}>
@@ -34,6 +37,13 @@ export function WebsiteChrome({siteName,baseUrl,menu,logo,family,language="es",s
    </nav>
   </header>
   <main>{children}</main>
-  <footer className="vmv-site-footer"><span>{siteName}</span><span>© {new Date().getUTCFullYear()}</span></footer>
+  <footer className="vmv-site-footer">
+   <span>{siteName}</span>
+   {activeSocial.length?<nav className="vmv-social-links" aria-label={language==="en"?"Social media":"Redes sociales"}>
+    {activeSocial.map(p=><a key={p.id} href={social[p.id]} target="_blank" rel="noopener noreferrer"
+     aria-label={(language==="en"?"Our ":"Nuestro perfil en ")+p.label}>{p.label}</a>)}
+   </nav>:null}
+   <span>© {new Date().getUTCFullYear()}</span>
+  </footer>
  </div>;
 }
