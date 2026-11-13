@@ -1,6 +1,8 @@
 import type {Config} from "@puckeditor/core";
 import type {CSSProperties} from "react";
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
+import {colorEditorField,fontEditorField,numericEditorField} from "@/app/web-studio/BuilderContextFields";
+import {MovableContent} from "@/app/web-studio/BuilderPositionDrag";
 import {safeWebImageUrl} from "./web-services-site";
 
 export const COMPOSE_BLOCK_NAMES=["SectionLayout","ColumnsLayout","ComposeHeading","ComposeText","ComposeImage","ComposeButton"] as const;
@@ -29,6 +31,51 @@ const surfaces=["transparent","light","soft","dark","accent"] as const;
 const alignment=["left","center","right"] as const;
 const visibility=["all","desktop","mobile"] as const;
 const ratios=["square","portrait","landscape","wide"] as const;
+const fonts:Record<string,string>={
+ site:"inherit",modern:"Arial, ui-sans-serif, sans-serif",
+ editorial:"Georgia, serif",rounded:"Trebuchet MS, ui-sans-serif, sans-serif",
+ geometric:"Avenir Next, ui-sans-serif, sans-serif",mono:"ui-monospace, monospace"
+};
+const textShadow:Record<string,string>={
+ none:"none",soft:"0 2px 6px rgba(16,12,32,.22)",strong:"0 4px 12px rgba(16,12,32,.44)"
+};
+const styleText=(font:string,color:string,shadow:string,weight:string,italic:string,fontSize:number,letterSpacing:number):React.CSSProperties=>({
+ fontFamily:fonts[font]||"inherit",
+ color:/^#[\da-f]{6}$/i.test(color)?color:undefined,
+ textShadow:textShadow[shadow]||"none",
+ fontWeight:weight==="heavy"?850:weight==="light"?400:700,
+ fontStyle:italic==="yes"?"italic":"normal",
+ ...(fontSize>=12?{fontSize:fontSize+"px"}:{}),
+ letterSpacing:letterSpacing+"px"
+});
+const typographyFields={
+ font:fontEditorField,
+ textColor:colorEditorField("Color del texto"),
+ textShadow:{type:"radio" as const,options:[
+  {label:"Sin sombra",value:"none"},{label:"Suave",value:"soft"},{label:"Marcada",value:"strong"}
+ ]},
+ weight:{type:"radio" as const,options:[
+  {label:"Ligero",value:"light"},{label:"Normal",value:"normal"},{label:"Negrita",value:"heavy"}
+ ]},
+ italic:{type:"radio" as const,options:[{label:"Normal",value:"no"},{label:"Cursiva",value:"yes"}]},
+ fontSize:numericEditorField("fontSize"),
+ letterSpacing:numericEditorField("letterSpacing"),
+ moveX:numericEditorField("textMoveX"),
+ moveY:numericEditorField("textMoveY"),
+ linkUrl:{type:"text" as const}
+};
+const numericTypography=(source:Record<string,unknown>)=>({
+ font:select(["site","modern","editorial","rounded","geometric","mono"],"site")(source.font),
+ textColor:typeof source.textColor==="string"&&/^#[\da-f]{6}$/i.test(source.textColor)?source.textColor:"",
+ textShadow:select(["none","soft","strong"],"none")(source.textShadow),
+ weight:select(["light","normal","heavy"],"normal")(source.weight),
+ italic:select(["yes","no"],"no")(source.italic),
+ fontSize:numberField(source.fontSize,0,0,110),
+ letterSpacing:numberField(source.letterSpacing,0,-3,12),
+ moveX:numberField(source.moveX,0,-150,150),
+ moveY:numberField(source.moveY,0,-150,150),
+ linkUrl:source.linkUrl?safeButtonLink(source.linkUrl):""
+});
 
 const slotChildren=["SectionLayout","ColumnsLayout","ComposeHeading","ComposeText","ComposeImage","ComposeButton"] as const;
 const innerChildren=["ComposeHeading","ComposeText","ComposeImage","ComposeButton","SectionLayout","ColumnsLayout"] as const;
@@ -122,72 +169,118 @@ export const compositionBlocks:Config["components"]={
    </div>
  },
  ComposeHeading:{
-  label:"Título en composición",
+  label:"Título editable",
   fields:{
    title:{type:"text",contentEditable:true,placeholder:"Escribe tu título"},
    level:{type:"radio",options:[{label:"Principal",value:"h2"},{label:"Secundario",value:"h3"}]},
-   sizeDesktop:{type:"radio",options:[
-    {label:"Mediano",value:"medium"},{label:"Grande",value:"large"},{label:"Impactante",value:"huge"}]},
-   sizeMobile:{type:"radio",options:[
-    {label:"Compacto",value:"small"},{label:"Normal",value:"medium"},{label:"Grande",value:"large"}]},
+   sizeDesktop:{type:"radio",options:[{label:"Mediano",value:"medium"},{label:"Grande",value:"large"},{label:"Impactante",value:"huge"}]},
+   sizeMobile:{type:"radio",options:[{label:"Compacto",value:"small"},{label:"Normal",value:"medium"},{label:"Grande",value:"large"}]},
+   ...typographyFields,
    alignDesktop:fields.alignment,alignMobile:fields.alignment,
    visibility:fields.visibility
   },
   defaultProps:{title:"Escribe tu título",level:"h2",sizeDesktop:"large",sizeMobile:"medium",
+   font:"site",textColor:"",textShadow:"none",weight:"normal",italic:"no",
+   fontSize:0,letterSpacing:0,moveX:0,moveY:0,linkUrl:"",
    alignDesktop:"left",alignMobile:"left",visibility:"all"},
   renderFields:({fields:f})=><>
-   <SettingsGroup title="Contenido">{f.title}{f.level}</SettingsGroup>
-   <SettingsGroup title="Escritorio">{f.sizeDesktop}{f.alignDesktop}</SettingsGroup>
-   <SettingsGroup title="Móvil">{f.sizeMobile}{f.alignMobile}{f.visibility}</SettingsGroup>
+   <SettingsGroup title="Texto y enlace">{f.title}{f.level}{f.linkUrl}</SettingsGroup>
+   <SettingsGroup title="Fuente, color y sombra">{f.font}{f.fontSize}{f.textColor}{f.weight}{f.italic}{f.textShadow}{f.letterSpacing}</SettingsGroup>
+   <SettingsGroup title="Mover y alinear">{f.moveX}{f.moveY}{f.alignDesktop}{f.alignMobile}</SettingsGroup>
+   <SettingsGroup title="Por dispositivo">{f.sizeDesktop}{f.sizeMobile}{f.visibility}</SettingsGroup>
   </>,
-  render:({title,level,sizeDesktop,sizeMobile,alignDesktop,alignMobile,visibility})=>{
+  render:({id,title,level,sizeDesktop,sizeMobile,alignDesktop,alignMobile,visibility,
+    font,textColor,textShadow:shadow,weight,italic,fontSize,letterSpacing,moveX,moveY,linkUrl,puck})=>{
    const Tag=level==="h3"?"h3":"h2";
-   return <Tag className="vmv-compose-heading" data-size-desktop={sizeDesktop||"large"}
+   const inner=<Tag className="vmv-compose-heading" data-size-desktop={sizeDesktop||"large"}
     data-size-mobile={sizeMobile||"medium"} data-align-desktop={alignDesktop||"left"}
-    data-align-mobile={alignMobile||"left"} data-mobile-visibility={visibility||"all"}>{title}</Tag>;
+    data-align-mobile={alignMobile||"left"} data-mobile-visibility={visibility||"all"}
+    style={styleText(font,textColor,shadow,weight,italic,Number(fontSize)||0,Number(letterSpacing)||0)}>{title}</Tag>;
+   return <MovableContent id={id} editing={puck.isEditing} x={Number(moveX)||0} y={Number(moveY)||0}
+    xKey="moveX" yKey="moveY">
+    {linkUrl&&!puck.isEditing?<a className="vmv-compose-text-link" href={safeButtonLink(linkUrl)}>{inner}</a>:inner}
+   </MovableContent>;
   }
  },
  ComposeText:{
-  label:"Párrafo en composición",
+  label:"Texto editable",
   fields:{
    text:{type:"textarea",contentEditable:true,placeholder:"Escribe aquí"},
    size:{type:"radio",options:[{label:"Pequeño",value:"small"},{label:"Normal",value:"medium"},{label:"Destacado",value:"large"}]},
+   ...typographyFields,
    alignDesktop:fields.alignment,alignMobile:fields.alignment,visibility:fields.visibility
   },
-  defaultProps:{text:"Escribe aquí",size:"medium",alignDesktop:"left",alignMobile:"left",visibility:"all"},
+  defaultProps:{text:"Escribe aquí",size:"medium",font:"site",textColor:"",
+   textShadow:"none",weight:"normal",italic:"no",fontSize:0,letterSpacing:0,
+   moveX:0,moveY:0,linkUrl:"",alignDesktop:"left",alignMobile:"left",visibility:"all"},
   renderFields:({fields:f})=><>
-   <SettingsGroup title="Contenido">{f.text}</SettingsGroup>
-   <SettingsGroup title="Diseño">{f.size}{f.visibility}</SettingsGroup>
-   <SettingsGroup title="Escritorio">{f.alignDesktop}</SettingsGroup>
-   <SettingsGroup title="Móvil">{f.alignMobile}</SettingsGroup>
+   <SettingsGroup title="Texto y enlace">{f.text}{f.linkUrl}</SettingsGroup>
+   <SettingsGroup title="Fuente, color y sombra">{f.font}{f.fontSize}{f.textColor}{f.weight}{f.italic}{f.textShadow}{f.letterSpacing}</SettingsGroup>
+   <SettingsGroup title="Mover y alinear">{f.moveX}{f.moveY}{f.alignDesktop}{f.alignMobile}</SettingsGroup>
+   <SettingsGroup title="Por dispositivo">{f.size}{f.visibility}</SettingsGroup>
   </>,
-  render:({text,size,alignDesktop,alignMobile,visibility})=><p className="vmv-compose-copy"
-   data-size={size||"medium"} data-align-desktop={alignDesktop||"left"} data-align-mobile={alignMobile||"left"}
-   data-mobile-visibility={visibility||"all"}>{text}</p>
+  render:({id,text,size,alignDesktop,alignMobile,visibility,font,textColor,
+    textShadow:shadow,weight,italic,fontSize,letterSpacing,moveX,moveY,linkUrl,puck})=>{
+   const content=<p className="vmv-compose-copy" data-size={size||"medium"}
+    data-align-desktop={alignDesktop||"left"} data-align-mobile={alignMobile||"left"}
+    data-mobile-visibility={visibility||"all"}
+    style={styleText(font,textColor,shadow,weight,italic,Number(fontSize)||0,Number(letterSpacing)||0)}>{text}</p>;
+   return <MovableContent id={id} editing={puck.isEditing} x={Number(moveX)||0} y={Number(moveY)||0}
+    xKey="moveX" yKey="moveY">
+    {linkUrl&&!puck.isEditing?<a className="vmv-compose-text-link" href={safeButtonLink(linkUrl)}>{content}</a>:content}
+   </MovableContent>;
+  }
  },
  ComposeImage:{
-  label:"Imagen en composición",
+  label:"Imagen editable",
   fields:{
    image:ImageField,alt:{type:"text"},
+   imageWidth:numericEditorField("imageWidth"),
+   imageRadius:numericEditorField("imageRadius"),
+   imageOpacity:numericEditorField("imageOpacity"),
+   imageBorder:numericEditorField("imageBorder"),
+   borderColor:colorEditorField("Color del borde"),
+   imageMoveX:numericEditorField("imageMoveX"),
+   imageMoveY:numericEditorField("imageMoveY"),
    ratio:{type:"radio",options:[{label:"Cuadrada",value:"square"},{label:"Vertical",value:"portrait"},
     {label:"Horizontal",value:"landscape"},{label:"Panorámica",value:"wide"}]},
    position:{type:"radio",options:[{label:"Centro",value:"center"},{label:"Arriba",value:"top"},{label:"Abajo",value:"bottom"},
     {label:"Izquierda",value:"left"},{label:"Derecha",value:"right"}]},
-   radius:{type:"radio",options:[{label:"Recto",value:"none"},{label:"Suave",value:"soft"},{label:"Redondo",value:"round"}]},
    visibility:fields.visibility
   },
-  defaultProps:{image:"",alt:"",ratio:"landscape",position:"center",radius:"soft",visibility:"all"},
+  defaultProps:{image:"",alt:"",ratio:"landscape",position:"center",radius:"soft",
+   imageWidth:100,imageRadius:16,imageOpacity:0,imageBorder:0,borderColor:"#30243F",
+   imageMoveX:0,imageMoveY:0,visibility:"all"},
   renderFields:({fields:f})=><>
-   <SettingsGroup title="Imagen">{f.image}{f.alt}{f.ratio}{f.position}</SettingsGroup>
-   <SettingsGroup title="Diseño">{f.radius}{f.visibility}</SettingsGroup>
+   <SettingsGroup title="Reemplazar o quitar">{f.image}{f.alt}</SettingsGroup>
+   <SettingsGroup title="Tamaño y marco">{f.imageWidth}{f.imageRadius}{f.imageBorder}{f.borderColor}{f.ratio}</SettingsGroup>
+   <SettingsGroup title="Transparencia y encuadre">{f.imageOpacity}{f.position}</SettingsGroup>
+   <SettingsGroup title="Mover imagen">{f.imageMoveX}{f.imageMoveY}</SettingsGroup>
+   <SettingsGroup title="Visibilidad">{f.visibility}</SettingsGroup>
   </>,
-  render:({image,alt,ratio,position,radius,visibility})=><figure className="vmv-compose-picture"
-   data-ratio={ratio||"landscape"} data-position={position||"center"}
-   data-radius={radius||"soft"} data-mobile-visibility={visibility||"all"}>
-   {safeWebImageUrl(image)?
-    <img src={safeWebImageUrl(image)||""} alt={alt||""} loading="lazy"/>:
-    <div className="vmv-compose-picture-empty"><span aria-hidden="true">▧</span><small>Imagen pendiente</small></div>}
-  </figure>
+  render:({id,image,alt,ratio,position,radius,visibility,
+   imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,puck})=>{
+   const width=numberField(imageWidth,100,25,100);
+   const round=numberField(imageRadius,radius==="round"?30:radius==="none"?0:16,0,80);
+   const transparency=numberField(imageOpacity,0,0,100);
+   const border=numberField(imageBorder,0,0,12);
+   const borderPaint=typeof borderColor==="string"&&/^#[\da-f]{6}$/i.test(borderColor)?borderColor:"#30243F";
+   return <MovableContent id={id} editing={puck.isEditing}
+    x={numberField(imageMoveX,0,-150,150)} y={numberField(imageMoveY,0,-150,150)}
+    xKey="imageMoveX" yKey="imageMoveY" className="vmv-compose-photo-box"
+    style={{width:width+"%"}}>
+    <figure className="vmv-compose-picture"
+     data-ratio={ratio||"landscape"} data-position={position||"center"}
+     data-mobile-visibility={visibility||"all"}
+     style={{borderRadius:round+"px",borderWidth:border+"px",
+      borderStyle:border?"solid":"none",borderColor:borderPaint,opacity:(100-transparency)/100}}>
+     {safeWebImageUrl(image)?
+      <img src={safeWebImageUrl(image)||""} alt={alt||""} loading="lazy"/>:
+      puck.isEditing?<div className="vmv-compose-picture-empty"><span aria-hidden="true">▧</span>
+       <small>Selecciona esta imagen para agregar una foto</small></div>:null}
+    </figure>
+   </MovableContent>;
+  }
  },
  ComposeButton:{
   label:"Botón en composición",
@@ -236,11 +329,13 @@ export function normalizeComposeProps(kind:ComposeBlockName,source:Record<string
   props.level=select(["h2","h3"],"h2")(source.level);
   props.sizeDesktop=select(["medium","large","huge"],"large")(source.sizeDesktop);
   props.sizeMobile=select(["small","medium","large"],"medium")(source.sizeMobile);
+  Object.assign(props,numericTypography(source));
   for(const key of ["alignDesktop","alignMobile"])props[key]=select(alignment,"left")(source[key]);
  }
  if(kind==="ComposeText"){
   props.text=str(source.text,2400);
   props.size=select(["small","medium","large"],"medium")(source.size);
+  Object.assign(props,numericTypography(source));
   for(const key of ["alignDesktop","alignMobile"])props[key]=select(alignment,"left")(source[key]);
  }
  if(kind==="ComposeImage"){
@@ -249,6 +344,13 @@ export function normalizeComposeProps(kind:ComposeBlockName,source:Record<string
   props.ratio=select(ratios,"landscape")(source.ratio);
   props.position=select(["center","top","bottom","left","right"],"center")(source.position);
   props.radius=select(["none","soft","round"],"soft")(source.radius);
+  props.imageWidth=numberField(source.imageWidth,100,25,100);
+  props.imageRadius=numberField(source.imageRadius,props.radius==="round"?30:props.radius==="none"?0:16,0,80);
+  props.imageOpacity=numberField(source.imageOpacity,0,0,100);
+  props.imageBorder=numberField(source.imageBorder,0,0,12);
+  props.borderColor=typeof source.borderColor==="string"&&/^#[\da-f]{6}$/i.test(source.borderColor)?source.borderColor:"#30243F";
+  props.imageMoveX=numberField(source.imageMoveX,0,-150,150);
+  props.imageMoveY=numberField(source.imageMoveY,0,-150,150);
  }
  if(kind==="ComposeButton"){
   props.label=str(source.label,90);
