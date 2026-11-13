@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from "next/server";
 import {createClient} from "@supabase/supabase-js";
 import {billingAdmin} from "@/lib/vmv-billing";
+import {aiAgentModelPathAvailable,probeAiAgentModel} from "@/lib/vmv-ai-agents/model";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -54,14 +55,16 @@ export async function GET(req:NextRequest){
  }catch{}
  const configuredBase=process.env.VMV_AI_TEST_BASE_URL||"";
  const hosting=process.env.VERCEL_ENV==="preview";
- const model=Boolean(process.env.OPENAI_API_KEY||process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN);
+ // This is a REAL low-token, owner-authenticated model request, not a guess
+ // based on whether an OIDC token appears in process.env.
+ const model=aiAgentModelPathAvailable()&&hosting?await probeAiAgentModel():false;
  const credentials=Boolean(process.env.TWILIO_AUTH_TOKEN&&db);
  const pilot=process.env.VMV_AI_VOICE_PILOT_ENABLED==="true";
  const autoEnroll=process.env.VMV_AI_VOICE_AUTO_ENROLL==="true";
  const checks=[
   {key:"owner",label:"Agente autorizado por el propietario",ok:configured},
   {key:"credentials",label:"Credenciales de servidor presentes",ok:credentials},
-  {key:"model",label:"Credenciales del motor IA presentes",ok:model},
+  {key:"model",label:"Motor de IA respondió a la prueba real (Vercel Gateway)",ok:model},
   {key:"fallback",label:"URL original de Smart Call conservada",ok:validOriginal},
   {key:"preview",label:"Limitado al entorno Preview",ok:hosting},
   {key:"pilot",label:"Piloto telefónico habilitado",ok:pilot},
