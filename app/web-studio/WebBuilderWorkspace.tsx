@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import type {Data} from "@puckeditor/core";
 import {Puck,Render} from "@puckeditor/core";
-import {ArrowLeft,ExternalLink,Globe,History,Layers,Plus,RefreshCw,Save,ShieldCheck,Trash2} from "lucide-react";
+import {ArrowLeft,ChevronDown,ExternalLink,Eye,FilePlus2,Globe,History,Layers,Plus,RefreshCw,Save,Settings2,ShieldCheck,SlidersHorizontal,Trash2} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {builderConfig,normalizeBuilderDocument,validateBuilderDocument,starterBuilderDocument,importLegacyBuilderDocument} from "@/lib/web-builder-puck";
 import {normalizeWebContent,type WebSiteContent} from "@/lib/web-services-site";
@@ -53,6 +53,8 @@ export default function WebBuilderWorkspace(){
  const [recovery,setRecovery]=useState<LocalBackup|null>(null);
  const blockedAutosaveRef=useRef("");
  const [view,setView]=useState<View>("sites");
+ const [mobileSettings,setMobileSettings]=useState(false);
+ const [mobilePageForm,setMobilePageForm]=useState(false);
  const [classicDraft,setClassicDraft]=useState<WebSiteContent|null>(null);
  const [classicSlug,setClassicSlug]=useState<string|null>(null);
  const [newPageName,setNewPageName]=useState("");
@@ -186,7 +188,7 @@ export default function WebBuilderWorkspace(){
   if(dirty&&!window.confirm("Hay cambios sin guardar. ¿Cambiar de página?"))return;
   setPage(target);setTitle(target.title);setDescription(target.description);
   openDraft(target.draft);
-  setView("editor");setError("");setNotice("");
+  setView("editor");setError("");setNotice("");setMobileSettings(false);setMobilePageForm(false);
  }
  async function selectSite(chosen:Site){
   if(dirty&&!window.confirm("Hay cambios sin guardar. ¿Salir del editor?"))return;
@@ -303,7 +305,7 @@ export default function WebBuilderWorkspace(){
    if(error||!data)throw new Error("No se pudo crear la página");
    const newPage=data as Page;
    setPages(old=>[...old,newPage]);setPage(newPage);setTitle(name);setDescription("");
-   openDraft(draft);setNewPageName("");
+   openDraft(draft);setNewPageName("");setMobilePageForm(false);setMobileSettings(false);
    setView("editor");setNotice("Nueva página creada");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo crear");}
   finally{setBusy(false);}
@@ -568,7 +570,7 @@ export default function WebBuilderWorkspace(){
  }
  function back(){
   if(dirty&&!window.confirm("Hay cambios sin guardar. ¿Salir?"))return;
-  setSite(null);setPage(null);setPublishedIds([]);setPublishedSignatures({});setView("sites");setError("");setNotice("");
+  setSite(null);setPage(null);setPublishedIds([]);setPublishedSignatures({});setView("sites");setMobileSettings(false);setMobilePageForm(false);setError("");setNotice("");
  }
  if(loading)return <main className={styles.loading}>Cargando Web Studio…</main>;
  if(!userId)return <main className={styles.loading}><h2>Inicia sesión para crear tu web</h2>
@@ -576,6 +578,13 @@ export default function WebBuilderWorkspace(){
  return <div className={styles.workspace}>
   <header className={styles.topbar}>
    <a href="/vista-app" className={styles.brand}>VMV <span>Web Studio</span></a>
+   {site?<button type="button" className={styles.mobileBack} aria-label="Volver a mis sitios"
+    title="Mis sitios" onClick={back}><ArrowLeft size={19}/></button>:null}
+   {site?<strong className={styles.mobileSiteName} title={site.name}>{site.name}</strong>:null}
+   {site&&page&&view==="editor"?<button type="button" className={styles.mobilePublish}
+    disabled={busy||Boolean(recovery)} onClick={()=>void publish(document)}>
+    {busy?"Procesando…":"Publicar"}
+   </button>:null}
    {site?<button type="button" className={styles.back} onClick={back}><ArrowLeft size={16}/> Mis sitios</button>:null}
   </header>
   {error?<div className={styles.error} role="alert">{error}</div>:null}
@@ -591,12 +600,14 @@ export default function WebBuilderWorkspace(){
     {!sites.length?<p>Tu primer sitio comienza aquí.</p>:null}
    </div>
   </main>:<main className={styles.main}>
+   <div className={styles.desktopSiteControls}>
    <div className={styles.siteHeading}>
     <div><small>SITIO WEB</small><h1>{site.name}</h1></div>
-    {pages.some(p=>p.slug==="home"&&publishedIds.includes(p.id))?<a href={siteUrl||"#"} target="_blank" rel="noopener noreferrer" className={styles.sitePreview}><ExternalLink size={16}/> Ver sitio</a>:<span className={styles.unpublished}>Sin publicar</span>}
+    {pages.some(p=>p.slug==="home"&&publishedIds.includes(p.id))?<a href={siteUrl||"#"} target="_blank" rel="noopener noreferrer" className={styles.sitePreview}><ExternalLink size={16}/> Ver sitio</a>:null}
    </div>
    <label className={styles.siteLeadsSwitch}>
-    <span><strong>Recibir solicitudes</strong><small>Se activa al publicar Inicio</small></span>
+    <span><strong>Solicitudes {site.inquiries_enabled?"configuradas":"desactivadas"}</strong>
+     <small>{site.inquiries_enabled?"Se muestran cuando la página Inicio esté publicada":"No se recibirán desde este sitio"}</small></span>
     <input type="checkbox" role="switch" checked={site.inquiries_enabled}
      disabled={busy} onChange={e=>void toggleRequests(e.target.checked)}/>
    </label>
@@ -605,6 +616,87 @@ export default function WebBuilderWorkspace(){
     <button type="button" className={view==="history"?styles.selected:""} onClick={()=>void openHistory()}><History size={14}/> Historial</button>
     <button type="button" className={view==="domains"?styles.selected:""} onClick={()=>void openDomains()}><Globe size={14}/> Dominios</button>
    </div>
+   </div>
+   <div className={styles.mobileStudioTools} role="group" aria-label="Navegación del editor">
+    {view!=="editor"?<button type="button" className={styles.mobileEditorReturn}
+     onClick={()=>{setView("editor");setMobileSettings(false);setError("");}}>
+     <ArrowLeft size={16}/> Editor
+    </button>:null}
+    <label className={styles.mobilePageSelect}>
+     <span>Página</span>
+     <select value={page?.id||""} aria-label="Página que estás editando" disabled={busy||!page}
+      onChange={event=>{const chosen=pages.find(p=>p.id===event.target.value);
+       if(chosen){choosePage(chosen);setMobileSettings(false);setMobilePageForm(false);}}}>
+      {pages.map(p=><option key={p.id} value={p.id}>
+       {p.slug==="home"?"Inicio":p.title}
+      </option>)}
+     </select>
+     <ChevronDown size={15} aria-hidden="true"/>
+    </label>
+    <button type="button" className={styles.mobileToolButton} title="Crear otra página"
+     aria-label="Crear otra página" aria-expanded={mobilePageForm}
+     onClick={()=>{setMobilePageForm(v=>!v);setMobileSettings(false);}}><FilePlus2 size={19}/></button>
+    <button type="button" className={styles.mobileToolButton} title="Ajustes del sitio"
+     aria-label="Ajustes del sitio" aria-expanded={mobileSettings}
+     onClick={()=>{setMobileSettings(v=>!v);setMobilePageForm(false);}}>
+     <Settings2 size={19}/>
+    </button>
+   </div>
+   {mobilePageForm?<form className={styles.mobileCreatePage}
+    onSubmit={e=>{e.preventDefault();void createPage();}}>
+    <label>Nueva página
+     <input autoFocus value={newPageName} maxLength={100}
+      placeholder="Ej. Servicios" onChange={e=>setNewPageName(e.target.value)}/>
+    </label>
+    <button type="submit" disabled={busy||newPageName.trim().length<2}>Crear</button>
+   </form>:null}
+   {mobileSettings?<section className={styles.mobileSettingsPanel} aria-label="Ajustes del sitio y página">
+    <div className={styles.mobileSettingsHeader}><strong>Ajustes</strong>
+     <button type="button" onClick={()=>setMobileSettings(false)} aria-label="Cerrar ajustes">Cerrar</button>
+    </div>
+    <div className={styles.mobileSettingsGrid}>
+     <button type="button" onClick={()=>{setView("editor");setPreviewMode("mobile");setDesignChoice(null);
+      setMobileSettings(false);}}><Eye size={17}/> Vista previa</button>
+     <button type="button" disabled={busy} onClick={()=>{setView("editor");setDesignChoice("warm");
+      setPreviewMode(null);setMobileSettings(false);}}><SlidersHorizontal size={17}/> Diseño</button>
+     <button type="button" disabled={busy} onClick={()=>void save()}><Save size={17}/> Guardar</button>
+     <button type="button" onClick={()=>{void openHistory();setMobileSettings(false);}}>
+      <History size={17}/> Versiones</button>
+     <button type="button" onClick={()=>{void openDomains();setMobileSettings(false);}}>
+      <Globe size={17}/> Dominios</button>
+     {page&&publishedIds.includes(page.id)?<a href={pageUrl||"#"} target="_blank"
+      rel="noopener noreferrer"><ExternalLink size={17}/> Ver página</a>:null}
+    </div>
+    <label className={styles.mobileRequests}>
+     <span><strong>Recibir solicitudes</strong>
+      <small>{site.inquiries_enabled?"Configurado · verifica que Inicio esté publicado":
+       "Desactivadas"}</small></span>
+     <input type="checkbox" role="switch" checked={site.inquiries_enabled}
+      disabled={busy} onChange={e=>void toggleRequests(e.target.checked)}/>
+    </label>
+    <details className={styles.mobileSeo}>
+     <summary><Settings2 size={17}/> Ajustes de página · SEO</summary>
+     <div className={styles.mobileSeoFields}>
+      <label>Título para buscadores
+       <input value={title} maxLength={100} onChange={e=>setTitle(e.target.value)}/>
+      </label>
+      <label>Descripción para buscadores
+       <textarea value={description} maxLength={300} rows={3}
+        placeholder="Describe tu negocio y lo que ofreces"
+        onChange={e=>setDescription(e.target.value)}/>
+      </label>
+      <small>Estos textos no cambian el contenido que el visitante ve dentro de la página.</small>
+     </div>
+    </details>
+   </section>:null}
+   {page&&view==="editor"?<div className={styles.mobileDraftStatus} role="status" aria-live="polite">
+    <span aria-hidden="true" className={styles.mobileStateDot}
+     data-error={savePhase==="error"}/>
+    {savePhase==="saving"?"Guardando cambios…":
+     savePhase==="error"?"Error al guardar":
+     dirty?"Cambios por guardar":unpublishedEdits?"Borrador guardado · Sin publicar":
+     publishedHere?"Publicado · Borrador al día":"Borrador guardado · Sin publicar"}
+   </div>:null}
    {page?<section className={styles.editorSection} style={{display:view==="editor"?undefined:"none"}}>
     <div className={styles.pageTabs}>{pages.map(p=><button type="button" key={p.id}
      className={page?.id===p.id?styles.selected:""} onClick={()=>choosePage(p)}>{p.slug==="home"?"Inicio":p.title}</button>)}</div>
@@ -622,10 +714,13 @@ export default function WebBuilderWorkspace(){
       </div>
      </div>:null}
      <div className={styles.editingHeader}>
-      <div className={styles.meta}>
-       <label>Título SEO<input value={title} maxLength={100} onChange={e=>setTitle(e.target.value)}/></label>
-       <label>Descripción SEO<input value={description} maxLength={300} onChange={e=>setDescription(e.target.value)}/></label>
-      </div>
+      <details className={styles.seoDisclosure}>
+       <summary><Settings2 size={16}/> Ajustes de página · SEO</summary>
+       <div className={styles.meta}>
+        <label>Título para buscadores<input value={title} maxLength={100} onChange={e=>setTitle(e.target.value)}/></label>
+        <label>Descripción para buscadores<input value={description} maxLength={300} onChange={e=>setDescription(e.target.value)}/></label>
+       </div>
+      </details>
       <div className={styles.actions}>
        <span className={styles.publicationIndicator} data-pending={unpublishedEdits}>
         {!publishedHere?"Sin publicar":unpublishedEdits?"Cambios sin publicar":"Publicado"}
