@@ -11,6 +11,7 @@ import {
 import {getSupabase} from "@/lib/supabase";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS,categoryLabel} from "@/lib/vmv-business-categories";
 import styles from "./MarketingActionCenter.module.css";
+import GoogleProfileWizard,{emptyGoogle,emptyMedia,googleStepNames,validateGoogleStep,validateGoogleLinks,validateGoogleAll,type GoogleData,type GoogleMedia} from "./GoogleProfileWizard";
 
 export type ServiceCode="google_profile"|"apple_maps"|"bing_places"|"yelp_profile"|"search_console"|"seo_improvement"|"campaign_setup"|"review_strategy"|"other";
 type Status="received"|"quoted"|"approved"|"in_progress"|"needs_customer"|"verified"|"cancelled";
@@ -66,8 +67,8 @@ const safeSite=(value:string)=>{
 };
 const errorMessage=(e:unknown,fallback:string)=>e instanceof Error?e.message:fallback;
 
-export default function MarketingActionCenter({businessName,industryId,website,onGoToVisibility,preselectedService}:{
- businessName:string;industryId:string;website:string;onGoToVisibility:()=>void;preselectedService?:ServiceCode
+export default function MarketingActionCenter({businessName,industryId,website,onGoToVisibility,preselectedService,onWizardActiveChange}:{
+ businessName:string;industryId:string;website:string;onGoToVisibility:()=>void;preselectedService?:ServiceCode;onWizardActiveChange?:(active:boolean)=>void
 }){
  const [client,setClient]=useState<SupabaseClient|null>(null);
  const [user,setUser]=useState<User|null>(null);
@@ -78,13 +79,17 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [approvals,setApprovals]=useState<Acceptance[]>([]);
  const [selected,setSelected]=useState<ServiceCode>(preselectedService||"google_profile");
  const [wizardStep,setWizardStep]=useState<WizardStep>(preselectedService?1:0);
+ const [googleStep,setGoogleStep]=useState(0);
+ const [googleData,setGoogleData]=useState<GoogleData>(emptyGoogle);
+ const [googleMedia,setGoogleMedia]=useState<GoogleMedia>(emptyMedia);
+ useEffect(()=>{onWizardActiveChange?.(wizardStep>0&&wizardStep<4);},[wizardStep,onWizardActiveChange]);
  const [wizardError,setWizardError]=useState("");
  const [submittedId,setSubmittedId]=useState<string|null>(null);
  const [chosenCategory,setChosenCategory]=useState("");
  useEffect(()=>{
   if(preselectedService){
    setSelected(preselectedService);setGoal("");setConsent(false);
-   setWizardStep(1);setWizardError("");setSubmittedId(null);
+   setWizardStep(1);setGoogleStep(0);setWizardError("");setSubmittedId(null);
   }
  },[preselectedService]);
  const [name,setName]=useState(businessName);
@@ -136,7 +141,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  };
  const editWizardStep=(step:WizardStep)=>{closeKeyboard();setWizardStep(step);setWizardError("");revealWizard();};
  const chooseService=(code:ServiceCode)=>{
-  if(code!==selected){setGoal("");setConsent(false);setReviewInput("");setAuditData(null);setAuditError("");}
+  if(code!==selected){setGoal("");setConsent(false);setReviewInput("");setAuditData(null);setAuditError("");setGoogleStep(0);setGoogleMedia(emptyMedia);}
   setSelected(code);setWizardStep(1);setWizardError("");setSubmittedId(null);revealWizard();
  };
  const goNext=()=>{
@@ -146,12 +151,20 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(name.trim().length<2||name.trim().length>150){setWizardError("Escribe el nombre comercial de tu negocio.");return;}
    if(site.trim()&&!safeSite(site)){setWizardError("Comprueba el enlace de tu web: debe comenzar con https://.");return;}
   }
-  if(wizardStep===2&&goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5)){setWizardError("Elige una opción o describe lo que necesitas en al menos 12 caracteres.");return;}
+  if(wizardStep===2&&selected==="google_profile"){
+   const missing=validateGoogleStep(googleStep,googleData)||validateGoogleLinks(googleData);
+   if(missing){setWizardError(missing);return;}
+   if(googleStep<googleStepNames.length-1){closeKeyboard();setGoogleStep(googleStep+1);revealWizard();return;}
+  }
+  if(wizardStep===2&&selected!=="google_profile"&&goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5)){setWizardError("Elige una opción o describe lo que necesitas en al menos 12 caracteres.");return;}
   if(wizardStep===2&&goal.trim().length>1500){setWizardError("El mensaje no debe superar 1500 caracteres.");return;}
   if(wizardStep<3){closeKeyboard();setWizardStep((wizardStep+1) as WizardStep);revealWizard();}
  };
- const goBack=()=>{setWizardError("");if(wizardStep>0&&wizardStep<4)editWizardStep((wizardStep-1) as WizardStep);};
+ const goBack=()=>{setWizardError("");if(wizardStep===3&&selected==="google_profile"){editWizardStep(2);setGoogleStep(googleStepNames.length-1);return;}if(wizardStep===2&&selected==="google_profile"&&googleStep>0){closeKeyboard();setGoogleStep(googleStep-1);revealWizard();return;}if(wizardStep>0&&wizardStep<4)editWizardStep((wizardStep-1) as WizardStep);};
  const effectiveCategory=chosenCategory||industryId||savedCategory||"other";
+ useEffect(()=>{if(effectiveCategory!=="other")setGoogleData(v=>v.googleCategory?v:{...v,googleCategory:categoryLabel(effectiveCategory,"")});},[effectiveCategory]);
+ const googleGoalText=googleData.action==="create"?"Quiero preparar la creación de mi perfil en Google Business Profile.":googleData.action==="claim"?"Quiero reclamar y verificar mi perfil existente de Google Business Profile.":"Quiero corregir o ampliar mi perfil de Google Business Profile.";
+ const googleFiles=[...(googleMedia.logo?[{kind:"logo",file:googleMedia.logo}]:[]),...(googleMedia.cover?[{kind:"cover",file:googleMedia.cover}]:[]),...googleMedia.photos.map((file,i)=>({kind:"photo-"+(i+1),file}))];
  useEffect(()=>{
   let alive=true;
   const instance=getSupabase();
@@ -226,7 +239,13 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(wizardStep!==3)return;
   if(!client||!user){setWizardError("Inicia sesión en VMV Business para enviar tu solicitud.");return;}
   if(name.trim().length<2||name.trim().length>150){setWizardStep(1);setWizardError("Introduce el nombre comercial (2 a 150 caracteres).");return;}
-  if((goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5))||goal.trim().length>1500){setWizardStep(2);setWizardError("Elige una necesidad o describe el resultado que buscas.");return;}
+  if(selected==="google_profile"){
+   const missing=validateGoogleAll(googleData);
+   if(missing){setWizardStep(2);setGoogleStep(missing.step);setWizardError(missing.error);return;}
+   const invalid=validateGoogleLinks(googleData);
+   if(invalid){setWizardStep(2);setGoogleStep(2);setWizardError(invalid);return;}
+  }
+  if(selected!=="google_profile"&&((goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5))||goal.trim().length>1500)){setWizardStep(2);setWizardError("Elige una necesidad o describe el resultado que buscas.");return;}
   if(selected==="seo_improvement"&&!site.trim()){setWizardStep(1);setWizardError("Añade la web que deseas mejorar.");return;}
   if(site.trim()&&!safeSite(site)){setWizardStep(1);setWizardError("La web debe tener una URL válida.");return;}
   if(!consent){setWizardError("Marca la autorización para que podamos atender la solicitud.");return;}
