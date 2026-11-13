@@ -684,6 +684,7 @@ export default function WebBuilderWorkspace(){
         logo={typeof previewRoot.logo==="string"?previewRoot.logo:""} family={previewFamily}
         language={previewRoot.language==="en"?"en":"es"}
         siteStyle={String(previewRoot.style||"light")} siteWidth={String(previewRoot.width||"regular")}
+        socialLinks={previewRoot.socialLinks}
         visualStyle={websiteVisualStyle(previewRoot.palette,previewRoot.accentColor)}>
         <Render config={builderConfig} data={previewDocument}/>
         {site?.inquiries_enabled&&page.slug==="home"?<section className="vmv-site-inquiry"
