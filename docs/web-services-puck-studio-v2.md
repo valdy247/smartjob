@@ -87,3 +87,59 @@ The actual add/verify/domain SSL activation needs **all**:
 **Test limitations:** Full signed-in, real-browser E2E on iPhone and desktop, live upload/replace image, native media picker, screenshots and host-specific HTTP reloads still need manual QA. The shared preview requires the test account's own session. Mayuli Bakery's current website and domain were not changed, and no domain was registered or purchased.
 
 **Still not ready for sale:** paid registrar checkout/ownership and renewal workflow, credentialed DNS+HTTPS activation, spam-resistant customer notifications, full rollback/retention administration, billing entitlements, and AI usage charging. Keep these disabled or explicitly marked not yet available.
+
+## Director milestone — personality-first website proposals (Nov 12, 2026)
+
+### Customer flow implemented
+
+Web Studio: existing owner/business data → products/services/both → goal (call, quote, appointment request, order inquiry) → phone/email/city/description → optional photo/logo upload → itemized list of offerings → Ver propuestas → mobile swipe or desktop compare three genuine Puck renders → Elegir este diseño → atomic authenticated site + homepage creation → editor → autosave → explicit publish.
+
+Personalized AI option is explicitly unavailable until a priced, validated server AI provider is configured. The proposals are curated templates, never advertised as AI output. No invented testimonials, prices, experience or certifications are generated.
+
+### Five distinct template families
+
+- Bakery/products: hero image, image product catalog, optional gallery, order inquiries.
+- Construction/home: cover, specialties, project photos, process, quote request.
+- Professional services: typography-forward editorial hero, descriptive presentation, service list and contact.
+- Beauty/wellness: image-forward layout, services, opening-hours inquiry and contact.
+- Photography/creative: editorial hero, asymmetrical portfolio, packages and project inquiries.
+
+Three variants are generated within the relevant family: split, cover and editorial. Their block sequence, colors, fonts and media treatments are distinct, and input business text and media carry into each proposal.
+
+Clearly labeled *non-production* demo pages with illustrative names and empty image placeholders:
+- /web-studio/demos/bakery
+- /web-studio/demos/construction
+- /web-studio/demos/professional
+- /web-studio/demos/beauty
+- /web-studio/demos/creative
+
+### New editable capabilities
+
+- HeroVisual, OfferingGrid (dynamic array up to 40), PhotoGallery (dynamic array), ProcessSteps, ProjectShowcase, HoursArea, TeamGrid, PricingList, BeforeAfter and FAQList; all rendered in both Puck and published routes.
+- Visual layout choice (split/cover/editorial), section modes, image focal positions, button styles, gallery layout, image replacement and owner-scoped image library.
+- Nine root palettes with visual swatches, custom accent color, four font combinations, five site style choices and reduced-motion-aware optional animation.
+- The existing Quote block now defaults to an empty testimonial; no fake review is seeded.
+- Public header can render the saved site logo and family-specific styling.
+- New sites default to real public request forms after explicit publishing. Service validation on anonymous RPC accepts dynamic item names in new OfferingGrid, preserving anti-abuse guard and owner-specific private inbox.
+- Publishing prompts confirmation if a hero image, product photo, contact option or catalog is incomplete. Ordinary draft autosave still does not publish.
+- Owner-only image generation pilot now displays consumption of one daily generation and requires explicit confirmation before paid API use.
+
+### Verified — do not exaggerate
+
+- Both visual SQL integration and earlier publishing roundtrip regression passed inside rolled-back transactions, leaving no test records.
+- supabase/tests/vmv_web_visual_templates.sql tests five offered products, saved theme tokens, explicit publication, anonymous inquiry for the fifth product and owner receipt.
+- supabase/tests/vmv_web_studio_roundtrip.sql tests atomic creation, separate drafts/live pages, multiple routes, republishing, historical restore and RLS.
+- READY Vercel compilation demonstrates Next/TypeScript successful build, not real-browser mobile QA.
+- No screenshots available: container cannot reach protected preview; mobile swipes, pixel parity, user photo upload and keyboard navigation require interactive QA.
+- Mayuli Bakery current domain, published web and content were not changed.
+
+### Pending subsequent milestones
+
+- Safe switching of an existing populated website's complete template with preview and undo, while preserving all content.
+- Actual crop tools and stronger focal-point editor; full visual parity of public site header in editor.
+- Server AI-based generation and single-block regeneration with itemized charges and schema validation.
+- Business notifications and independently verified reservation/order/payment integrations.
+- Paid domain purchase and automatic connection with DNS/SSL, renewal and recovery.
+- Signed-in desktop and smartphone acceptance screenshots.
+
+Do not promote to production without authorization; keep Smart Call, Director, Marketing and AI Agents untouched.
