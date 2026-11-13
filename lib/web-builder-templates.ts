@@ -32,10 +32,10 @@ const messages:Record<SiteFamily,{eyebrow:string;headline:string;lead:string;off
  creative:{eyebrow:"IMÁGENES CON IDENTIDAD",headline:"Cada imagen tiene una historia.",lead:"Explora nuestro portafolio y cuéntanos tu proyecto.",offerings:"Nuestros formatos",gallery:"Portafolio seleccionado",contact:"Conversemos sobre tu idea"}
 };
 function cta(goal:SiteObjective,phone:string):{label:string;url:string}{
- if(goal==="calls")return {label:"Consultar por teléfono",url:/^\+?[\d ()-]{7,36}$/.test(phone)? "tel:"+phone.replace(/[^\d+]/g,""):"#contacto"};
- if(goal==="quotes")return {label:"Solicitar presupuesto",url:"#contacto"};
- if(goal==="bookings")return {label:"Solicitar cita",url:"#contacto"};
- return {label:"Consultar pedido",url:"#contacto"};
+ if(goal==="calls")return {label:"Consultar por teléfono",url:/^\+?[\d ()-]{7,36}$/.test(phone)? "tel:"+phone.replace(/[^\d+]/g,""):"#solicitud"};
+ if(goal==="quotes")return {label:"Solicitar presupuesto",url:"#solicitud"};
+ if(goal==="bookings")return {label:"Solicitar cita",url:"#solicitud"};
+ return {label:"Consultar pedido",url:"#solicitud"};
 }
 const node=(type:string,id:string,props:Record<string,unknown>)=>({type,props:{id,...props}});
 function previewOfferings(input:SiteIntake){
