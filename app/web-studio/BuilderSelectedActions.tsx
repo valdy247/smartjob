@@ -66,7 +66,7 @@ export default function BuilderSelectedActions({children,label}:{
  }
  const isText=Boolean(item&&(textTypes.has(item.type)||item.type==="HeroVisual"));
  const isCta=item?.type==="CTA";
- const ctaTarget:SectionTarget=ctaSelection?.id===id?ctaSelection.target:"section";
+ const ctaTarget:SectionTarget=ctaSelection&&ctaSelection.id===id?ctaSelection.target:"section";
  function change(field:string,value:unknown){
   if(!item||!id)return;
   const api=getPuck();
