@@ -2,6 +2,7 @@ import type {Config,Data} from "@puckeditor/core";
 import type {CSSProperties} from "react";
 import {safeWebImageUrl,webPrimaryContact,type WebSiteContent} from "./web-services-site";
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
+import ThemeSwatches,{AccentPicker} from "@/app/web-studio/ThemeSwatches";
 import {visualBlocks,VISUAL_BLOCK_NAMES,normalizeVisualProps,type VisualBlockName} from "./web-builder-visual-blocks";
 
 type ButtonProps={label?:string;url?:string};
@@ -115,13 +116,7 @@ const basicText={type:"text" as const};
 export const builderConfig:Config={
  root:{
   fields:{
-   palette:{type:"select",options:[
-    {label:"Lavanda",value:"violet"},{label:"Menta",value:"mint"},
-    {label:"Dorado",value:"amber"},{label:"Grafito",value:"ink"},
-    {label:"Rosa suave",value:"rose"},{label:"Bosque",value:"forest"},
-    {label:"Océano",value:"ocean"},{label:"Terracota",value:"terracotta"},
-    {label:"Carbón",value:"charcoal"}
-   ]},
+   palette:{type:"custom",render:({value,onChange})=><ThemeSwatches value={value} onChange={onChange}/>},
    font:{type:"select",options:[
     {label:"Moderna",value:"modern"},{label:"Editorial",value:"editorial"},
     {label:"Redondeada",value:"rounded"},{label:"Geométrica",value:"geometric"}
@@ -131,7 +126,7 @@ export const builderConfig:Config={
     {label:"Cálido",value:"warm"},{label:"Editorial",value:"editorial"},{label:"Atrevido",value:"bold"}
    ]},
    width:{type:"select",options:[{label:"Cómodo",value:"regular"},{label:"Amplio",value:"wide"}]},
-   accentColor:{type:"text"},
+   accentColor:{type:"custom",render:({value,onChange})=><AccentPicker value={value} onChange={onChange}/>},
    motion:{type:"select",options:[{label:"Sin animaciones",value:"off"},{label:"Suaves",value:"subtle"}]},
    logo:{type:"custom",render:({value,onChange})=><BuilderImageField value={typeof value==="string"?value:""} onChange={onChange}/>}
 
