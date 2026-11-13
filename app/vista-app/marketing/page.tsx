@@ -55,7 +55,9 @@ function Field({label,value,onChange,placeholder,type="text",hint,min,max}:{
   {hint?<small>{hint}</small>:null}</label>;
 }
 export default function MarketingPage(){
- const {translate}=useInterfaceLanguage();
+ const {translate,language}=useInterfaceLanguage();
+ const localizedTabs=localizedTabs.map(tab=>({...tab,label:translate(("marketing.tabs."+tab.id+".label") as import("@/lib/i18n").MessageKey),description:translate(("marketing.tabs."+tab.id+".desc") as import("@/lib/i18n").MessageKey)}));
+ const localizedChannels=channels.map(channel=>({...channel,desc:translate(("marketing.channels."+channel.id) as import("@/lib/i18n").MessageKey)}));
  const [section,setSection]=useState<Section>("actions");
  const [requestedService,setRequestedService]=useState<ServiceCode|null>(null);
  const [actionWizardActive,setActionWizardActive]=useState(false);
@@ -181,37 +183,37 @@ export default function MarketingPage(){
   <div className={styles.shell}>
    <header className={styles.header}>
     <Link href="/vista-app" className={styles.back}><ArrowLeft size={17}/> VMV Business</Link>
-    <span className={styles.marker}><Sparkles size={14}/> MARKETING STUDIO · BETA</span>
+    <span className={styles.marker}><Sparkles size={14}/> {translate("marketing.copy.marketing_studio_beta")}</span>
    </header>
    {section!=="actions"?<section className={styles.hero}>
     <div className={styles.heroIntro}>
-     <span className={styles.eyebrow}><TrendingUp size={16}/> MÁS CLIENTES. MEJORES DECISIONES.</span>
-     <h1>Marketing que se convierte en <em>crecimiento.</em></h1>
-     <p>Deja de adivinar qué publicar. Define tu oferta, lanza acciones concretas y descubre si realmente están generando rentabilidad.</p>
-     <div className={styles.heroPills}><span>Sin métricas inventadas</span><span>Orientado a resultados</span><span>Listo para pequeños negocios</span></div>
+     <span className={styles.eyebrow}><TrendingUp size={16}/> {translate("marketing.copy.more_customers_smarter_decisions")}</span>
+     <h1>{translate("marketing.copy.marketing_that_drives")} <em>{translate("marketing.copy.growth")}</em></h1>
+     <p>{translate("marketing.copy.stop_guessing_what_to_publish_define_your_offer_take_pr")}</p>
+     <div className={styles.heroPills}><span>{translate("marketing.copy.no_fabricated_metrics")}</span><span>{translate("marketing.copy.results_focused")}</span><span>{translate("marketing.copy.built_for_small_businesses")}</span></div>
     </div>
-    <div className={styles.heroShape}><div><Target size={38}/><strong>Tu siguiente cliente</strong><span>Comienza con una estrategia clara</span></div></div>
+    <div className={styles.heroShape}><div><Target size={38}/><strong>{translate("marketing.copy.your_next_customer")}</strong><span>{translate("marketing.copy.start_with_a_clear_strategy")}</span></div></div>
    </section>:null}
-   {section!=="actions"?<div className={styles.noticeBand}><ShieldCheck size={18}/><p><strong>Planificación local.</strong> Los borradores y cálculos de esta pantalla no se guardan en servidores. Las solicitudes enviadas desde Acciones sí quedan registradas en tu cuenta; no publicamos campañas ni hacemos cargos automáticamente.</p></div>:null}
+   {section!=="actions"?<div className={styles.noticeBand}><ShieldCheck size={18}/><p><strong>{translate("marketing.copy.local_planning")}</strong> {translate("marketing.copy.drafts_and_calculations_on_this_screen_are_not_saved_on")}</p></div>:null}
    <div className={section==="actions"?styles.catalogWorkspace:styles.workspace}>
     {section!=="actions"?<aside className={styles.sidebar}>
-     <span className={styles.sidebarLabel}>CENTRO DE CRECIMIENTO</span>
-     {tabs.map(tab=><button type="button" key={tab.id} onClick={()=>{setSection(tab.id);setNotice("");}}
+     <span className={styles.sidebarLabel}>{translate("marketing.copy.growth_center")}</span>
+     {localizedTabs.map(tab=><button type="button" key={tab.id} onClick={()=>{setSection(tab.id);setNotice("");}}
       className={section===tab.id?styles.tabActive:styles.tab} aria-current={section===tab.id?"page":undefined}>
        <tab.Icon size={20}/><span><strong>{tab.label}</strong><small>{tab.description}</small></span><ArrowUpRight size={14}/></button>)}
-     <div className={styles.sidebarNote}><Lightbulb size={19}/><strong>Regla del crecimiento</strong><p>Una campaña no es un éxito por sus vistas. Importan clientes, margen y recurrencia.</p></div>
+     <div className={styles.sidebarNote}><Lightbulb size={19}/><strong>{translate("marketing.copy.growth_principle")}</strong><p>{translate("marketing.copy.views_alone_do_not_make_a_successful_campaign_customers")}</p></div>
     </aside>:null}
     <div className={section==="actions"?styles.catalogContent:styles.content}>
      {section==="strategy"?<>
-      <div className={styles.sectionTop}><span>PASO 01 · FUNDAMENTOS</span><h2>Entendamos tu negocio</h2><p>La mejor estrategia depende de quién compra, qué necesita y cuánto deja cada venta.</p></div>
+      <div className={styles.sectionTop}><span>{translate("marketing.copy.step_01_foundations")}</span><h2>{translate("marketing.copy.let_s_understand_your_business")}</h2><p>{translate("marketing.copy.the_best_strategy_depends_on_who_buys_what_they_need_an")}</p></div>
       <div className={styles.formGrid}>
        <Field label="Nombre del negocio" value={form.business} onChange={v=>patch("business",v)} placeholder="Ej. Mi negocio"/>
-       <label className={styles.field}><span>Industria o servicio</span>
+       <label className={styles.field}><span>{translate("marketing.copy.industry_or_service")}</span>
         <select value={form.industry} onChange={e=>patch("industry",e.target.value)} aria-label="Selecciona la industria de tu negocio">
-         <option value="">Selecciona tu industria</option>
+         <option value="">{translate("marketing.copy.select_your_industry")}</option>
          {CATEGORY_GROUPS.map(group=><optgroup key={group} label={group}>{BUSINESS_CATEGORIES.filter(option=>option.group===group).map(option=><option key={option.id} value={option.id}>{option.label}</option>)}</optgroup>)}
-         <option value="unsure">No estoy seguro</option>
-        </select><small>Opciones estandarizadas para estrategias más consistentes.</small>
+         <option value="unsure">{translate("marketing.copy.i_m_not_sure")}</option>
+        </select><small>{translate("marketing.copy.standardized_options_help_create_more_consistent_strate")}</small>
        </label>
        <Field label="Cliente ideal" value={form.audience} onChange={v=>patch("audience",v)} placeholder="¿Quién suele comprar y por qué?"/>
        <Field label="Oferta principal" value={form.offer} onChange={v=>patch("offer",v)} placeholder="¿Qué vendes y qué problema resuelves?"/>
@@ -220,33 +222,33 @@ export default function MarketingPage(){
       </div>
       <div className={styles.metricHelp}>
        <button type="button" className={styles.metricHelpToggle} onClick={()=>setShowMetricHelp(!showMetricHelp)} aria-expanded={showMetricHelp}>
-        <Lightbulb size={17}/> ¿No sabes estos números? <span>{showMetricHelp?"Ocultar ayuda":"Calculémoslos juntos"}</span>
+        <Lightbulb size={17}/> {translate("marketing.copy.not_sure_about_these_numbers")} <span>{showMetricHelp?"Ocultar ayuda":"Calculémoslos juntos"}</span>
        </button>
        {showMetricHelp?<div className={styles.metricHelpBody}>
-        <p>Estos datos son opcionales. Si tienes cifras reales, calcula una aproximación. Si no, continúa con tu campaña y podrás medirlos más adelante.</p>
+        <p>{translate("marketing.copy.these_details_are_optional_use_real_figures_if_you_have")}</p>
         <div className={styles.metricHelpGrid}>
          <div className={styles.metricHelpSection}>
-          <strong>Ticket promedio</strong><small>Ventas totales ÷ número de pedidos del mismo período.</small>
-          <label>Ingresos del período ($)<input type="number" min={0} value={periodRevenue} onChange={e=>setPeriodRevenue(e.target.value)} placeholder="Ej. 1000"/></label>
-          <label>Pedidos del período<input type="number" min={1} value={periodOrders} onChange={e=>setPeriodOrders(e.target.value)} placeholder="Ej. 20"/></label>
-          <span>Resultado: {money(suggestedTicket)}</span>
-          <button type="button" disabled={suggestedTicket===null} onClick={()=>patch("ticket",String(Math.round((suggestedTicket??0)*100)/100))}>Usar ticket</button>
+          <strong>{translate("marketing.copy.average_order_value")}</strong><small>{translate("marketing.copy.total_sales_number_of_orders_in_the_same_period")}</small>
+          <label>{translate("marketing.copy.period_revenue")}<input type="number" min={0} value={periodRevenue} onChange={e=>setPeriodRevenue(e.target.value)} placeholder="Ej. 1000"/></label>
+          <label>{translate("marketing.copy.orders_in_the_period")}<input type="number" min={1} value={periodOrders} onChange={e=>setPeriodOrders(e.target.value)} placeholder="Ej. 20"/></label>
+          <span>{translate("marketing.copy.result")} {money(suggestedTicket)}</span>
+          <button type="button" disabled={suggestedTicket===null} onClick={()=>patch("ticket",String(Math.round((suggestedTicket??0)*100)/100))}>{translate("marketing.copy.use_average_order_value")}</button>
          </div>
          <div className={styles.metricHelpSection}>
-          <strong>Margen estimado de un producto</strong><small>Precio menos costes directos, dividido entre el precio. El margen del negocio completo puede ser diferente.</small>
-          <label>Precio de venta ($)<input type="number" min={0} value={samplePrice} onChange={e=>setSamplePrice(e.target.value)} placeholder="Ej. 50"/></label>
-          <label>Costes directos ($)<input type="number" min={0} value={sampleCost} onChange={e=>setSampleCost(e.target.value)} placeholder="Ej. 20"/></label>
-          <span>Resultado: {percent(suggestedMargin)}</span>
-          <button type="button" disabled={suggestedMargin===null} onClick={()=>patch("margin",String(Math.round((suggestedMargin??0)*100)/100))}>Usar estimación</button>
+          <strong>{translate("marketing.copy.estimated_margin_for_one_product")}</strong><small>{translate("marketing.copy.selling_price_minus_direct_costs_divided_by_the_price_y")}</small>
+          <label>{translate("marketing.copy.selling_price")}<input type="number" min={0} value={samplePrice} onChange={e=>setSamplePrice(e.target.value)} placeholder="Ej. 50"/></label>
+          <label>{translate("marketing.copy.direct_costs")}<input type="number" min={0} value={sampleCost} onChange={e=>setSampleCost(e.target.value)} placeholder="Ej. 20"/></label>
+          <span>{translate("marketing.copy.result")} {percent(suggestedMargin)}</span>
+          <button type="button" disabled={suggestedMargin===null} onClick={()=>patch("margin",String(Math.round((suggestedMargin??0)*100)/100))}>{translate("marketing.copy.use_estimate")}</button>
          </div>
         </div>
        </div>:null}
       </div>
-      {margin!==null&&validMargin===null?<p className={styles.warning}>El margen debe estar entre 0 y 100%.</p>:null}
-      <div className={styles.insight}><Lightbulb size={21}/><div><strong>Primera oportunidad</strong><p>{form.offer.trim()&&form.audience.trim()?
+      {margin!==null&&validMargin===null?<p className={styles.warning}>{translate("marketing.copy.margin_must_be_between_0_and_100")}</p>:null}
+      <div className={styles.insight}><Lightbulb size={21}/><div><strong>{translate("marketing.copy.first_opportunity")}</strong><p>{form.offer.trim()&&form.audience.trim()?
        "Tu siguiente campaña debe explicar por qué "+offer+" es valioso para "+audience+". Prueba una promesa específica, evidencia real y una llamada a la acción.": 
        "Empieza por una sola oferta y un tipo de cliente. Hablar a todo el mundo suele dificultar medir qué funciona."}</p></div></div>
-      <button type="button" className={styles.primary} onClick={()=>setSection("campaign")}>Diseñar campaña <ArrowUpRight size={16}/></button>
+      <button type="button" className={styles.primary} onClick={()=>setSection("campaign")}>{translate("marketing.copy.design_campaign")} <ArrowUpRight size={16}/></button>
      </>:null}
      {section==="actions"?<MarketingActionCenter onWizardActiveChange={setActionWizardActive} businessName={form.business}
       industryId={form.industry} website={form.website} preselectedService={requestedService||undefined}
@@ -256,8 +258,8 @@ export default function MarketingPage(){
       onChange={(key,value)=>patch(key,value)}
       onRequestHelp={(service)=>{setRequestedService(service);setSection("actions");setNotice("");}}/>:null}
      {section==="campaign"?<>
-      <div className={styles.sectionTop}><span>PASO 02 · ADQUISICIÓN</span><h2>Diseña una campaña con propósito</h2><p>Elige dónde quieres alcanzar clientes. El borrador se adapta al canal, pero debes revisarlo antes de publicarlo.</p></div>
-      <div className={styles.channelGrid}>{channels.map(item=><button type="button" key={item.id} aria-pressed={form.channel===item.id}
+      <div className={styles.sectionTop}><span>{translate("marketing.copy.step_02_acquisition")}</span><h2>{translate("marketing.copy.build_a_purposeful_campaign")}</h2><p>{translate("marketing.copy.choose_where_you_want_to_reach_customers_the_draft_adap")}</p></div>
+      <div className={styles.channelGrid}>{localizedChannels.map(item=><button type="button" key={item.id} aria-pressed={form.channel===item.id}
        className={form.channel===item.id?styles.channelActive:styles.channel} onClick={()=>{patch("channel",item.id);setCampaignEditedText(null);setCampaignEditing(false);setCampaignDetailsOpen(false);}}>
         <strong>{item.label}</strong><small>{item.desc}</small></button>)}</div>
       <div className={styles.formGrid}>
@@ -267,20 +269,20 @@ export default function MarketingPage(){
        <Field label="Página de destino (opcional)" value={form.website} onChange={v=>patch("website",v)} placeholder="https://tusitio.com"/>
       </div>
       <article className={styles.plan}>
-       <span className={styles.planTag}><CheckCircle2 size={15}/> TU PLAN · BORRADOR EDITABLE</span>
+       <span className={styles.planTag}><CheckCircle2 size={15}/> {translate("marketing.copy.your_plan_editable_draft")}</span>
        <h3>{campaign.angle}</h3>
-       <p className={styles.planSubtitle}>Una idea para revisar, personalizar y compartir. No se publica automáticamente.</p>
+       <p className={styles.planSubtitle}>{translate("marketing.copy.an_idea_to_review_customize_and_share_nothing_is_publis")}</p>
        <div className={styles.message}>
-        <span>MENSAJE SUGERIDO</span>
+        <span>{translate("marketing.copy.suggested_message")}</span>
         {campaignEditing?<textarea className={styles.campaignTextarea} value={activeCampaignDraft}
          onChange={e=>setCampaignEditedText(e.target.value)} maxLength={2000} rows={5}
          aria-label="Editar mensaje de campaña"/>:
          <p className={styles.campaignPreview}>{activeCampaignDraft}</p>}
        </div>
        <div className={styles.campaignQuickActions}>
-        <button type="button" className={styles.primary} onClick={()=>void shareText(activeCampaignDraft,"Campaña de "+business)}><Share2 size={17}/> Compartir</button>
+        <button type="button" className={styles.primary} onClick={()=>void shareText(activeCampaignDraft,"Campaña de "+business)}><Share2 size={17}/> {translate("marketing.copy.share")}</button>
         <button type="button" className={styles.secondary} onClick={()=>setCampaignEditing(value=>!value)}>{campaignEditing?<CheckCircle2 size={16}/>:<ClipboardCopy size={16}/>} {campaignEditing?"Listo":"Editar"}</button>
-        <button type="button" className={styles.secondary} onClick={()=>void copy(activeCampaignDraft)}><ClipboardCopy size={16}/> Copiar</button>
+        <button type="button" className={styles.secondary} onClick={()=>void copy(activeCampaignDraft)}><ClipboardCopy size={16}/> {translate("marketing.copy.copy")}</button>
        </div>
        <button type="button" className={styles.detailsToggle} aria-expanded={campaignDetailsOpen}
         onClick={()=>setCampaignDetailsOpen(value=>!value)}>
@@ -288,14 +290,14 @@ export default function MarketingPage(){
         {campaignDetailsOpen?<ChevronUp size={18}/>:<ChevronDown size={18}/>}
        </button>
        {campaignDetailsOpen?<div className={styles.campaignDetails}>
-        <div><strong>Qué hacer</strong><p>{campaign.execution}</p></div>
-        <div className={styles.measure}><BarChart3 size={18}/><span>Medir: <strong>{campaign.measure}</strong></span></div>
-        <button type="button" className={styles.secondary} onClick={()=>void copy(report)}><ClipboardCopy size={15}/> Copiar plan completo</button>
+        <div><strong>{translate("marketing.copy.what_to_do")}</strong><p>{campaign.execution}</p></div>
+        <div className={styles.measure}><BarChart3 size={18}/><span>{translate("marketing.copy.measure")} <strong>{campaign.measure}</strong></span></div>
+        <button type="button" className={styles.secondary} onClick={()=>void copy(report)}><ClipboardCopy size={15}/> {translate("marketing.copy.copy_complete_plan")}</button>
        </div>:null}
       </article>
      </>:null}
      {section==="numbers"?<>
-      <div className={styles.sectionTop}><span>PASO 03 · MEDICIÓN</span><h2>¿Tu marketing deja dinero?</h2><p>Introduce resultados reales de una campaña. Los cálculos se actualizan mientras escribes.</p></div>
+      <div className={styles.sectionTop}><span>{translate("marketing.copy.step_03_measurement")}</span><h2>{translate("marketing.copy.is_your_marketing_profitable")}</h2><p>{translate("marketing.copy.enter_real_campaign_results_calculations_update_as_you_")}</p></div>
       <div className={styles.formGrid}>
        <Field label="Gasto publicitario ($)" type="number" min={0} value={form.budget} onChange={v=>patch("budget",v)} placeholder="0"/>
        <Field label="Personas interesadas (leads)" type="number" min={0} value={form.leads} onChange={v=>patch("leads",v)} placeholder="0"/>
@@ -304,62 +306,62 @@ export default function MarketingPage(){
        <Field label="Ticket promedio ($)" type="number" min={0} value={form.ticket} onChange={v=>patch("ticket",v)} placeholder="0"/>
        <Field label="Margen bruto (%)" type="number" min={0} max={100} value={form.margin} onChange={v=>patch("margin",v)} placeholder="0"/>
       </div>
-      {sales!==null&&leads!==null&&sales>leads?<p className={styles.warning}>Hay más clientes que leads registrados. Revisa las fuentes antes de interpretar la conversión.</p>:null}
-      {margin!==null&&validMargin===null?<p className={styles.warning}>El margen debe estar entre 0 y 100%.</p>:null}
+      {sales!==null&&leads!==null&&sales>leads?<p className={styles.warning}>{translate("marketing.copy.you_entered_more_customers_than_leads_check_your_source")}</p>:null}
+      {margin!==null&&validMargin===null?<p className={styles.warning}>{translate("marketing.copy.margin_must_be_between_0_and_100")}</p>:null}
       <div className={styles.kpis}>
-       <div><span>Coste por lead</span><strong>{money(metrics.cpl)}</strong><small>Publicidad ÷ interesados</small></div>
-       <div><span>Coste por cliente</span><strong>{money(metrics.cac)}</strong><small>Publicidad ÷ clientes</small></div>
-       <div><span>Conversión</span><strong>{percent(metrics.conversion)}</strong><small>Clientes ÷ interesados</small></div>
-       <div><span>ROAS</span><strong>{metrics.roas===null?"—":metrics.roas.toFixed(2)+"×"}</strong><small>Ingresos ÷ publicidad</small></div>
+       <div><span>{translate("marketing.copy.cost_per_lead")}</span><strong>{money(metrics.cpl)}</strong><small>{translate("marketing.copy.ad_spend_leads")}</small></div>
+       <div><span>{translate("marketing.copy.cost_per_customer")}</span><strong>{money(metrics.cac)}</strong><small>{translate("marketing.copy.ad_spend_customers")}</small></div>
+       <div><span>{translate("marketing.copy.conversion")}</span><strong>{percent(metrics.conversion)}</strong><small>{translate("marketing.copy.customers_leads")}</small></div>
+       <div><span>ROAS</span><strong>{metrics.roas===null?"—":metrics.roas.toFixed(2)+"×"}</strong><small>{translate("marketing.copy.revenue_ad_spend")}</small></div>
       </div>
       <div className={styles.profit}>
-       <div><span>Contribución tras publicidad</span><strong>{money(metrics.contribution)}</strong><small>{estimatedRevenue?"Con ingresos estimados por ticket × clientes. ":""}Margen bruto de ventas menos gasto publicitario.</small></div>
-       <div><span>CAC máximo de equilibrio por primera compra</span><strong>{money(metrics.breakEven)}</strong><small>Ticket × margen bruto. No contempla costes fijos, impuestos, descuentos ni recompra.</small></div>
+       <div><span>{translate("marketing.copy.contribution_after_advertising")}</span><strong>{money(metrics.contribution)}</strong><small>{estimatedRevenue?"Con ingresos estimados por ticket × clientes. ":""}Margen bruto de ventas menos gasto publicitario.</small></div>
+       <div><span>{translate("marketing.copy.maximum_break_even_cac_on_first_purchase")}</span><strong>{money(metrics.breakEven)}</strong><small>{translate("marketing.copy.average_order_value_gross_margin_excludes_fixed_costs_t")}</small></div>
       </div>
-      <p className={styles.fineprint}>No son datos conectados ni una proyección de ventas. La atribución y el margen introducidos deben verificarse; un ROAS alto no implica ganancias.</p>
+      <p className={styles.fineprint}>{translate("marketing.copy.these_are_not_connected_data_or_a_sales_forecast_verify")}</p>
      </>:null}
      {section==="retention"?<>
-      <div className={styles.sectionTop}><span>PASO 04 · FIDELIZACIÓN</span><h2>El crecimiento también viene de quienes regresan</h2><p>Los clientes actuales pueden comprar otra vez, recomendarte y darte información útil para mejorar.</p></div>
+      <div className={styles.sectionTop}><span>{translate("marketing.copy.step_04_retention")}</span><h2>{translate("marketing.copy.growth_also_comes_from_returning_customers")}</h2><p>{translate("marketing.copy.existing_customers_can_buy_again_recommend_you_and_prov")}</p></div>
       <div className={styles.retentionCards}>
-       <article><span className={styles.iconCircle}><HeartHandshake size={22}/></span><h3>Solicitar reseñas honestas</h3><p>Pide opiniones a tus clientes de forma neutral, sin recompensas ni selección solo de reseñas positivas.</p>
+       <article><span className={styles.iconCircle}><HeartHandshake size={22}/></span><h3>{translate("marketing.copy.request_honest_reviews")}</h3><p>{translate("marketing.copy.ask_customers_for_neutral_feedback_without_incentives_o")}</p>
          <label className={styles.reviewLinkField}>
-          <span><Link2 size={15}/> Enlace para dejar la reseña <small>Opcional</small></span>
+          <span><Link2 size={15}/> {translate("marketing.copy.review_link_3")} <small>{translate("marketing.copy.optional")}</small></span>
           <input type="url" inputMode="url" value={reviewUrl} onChange={e=>{setReviewUrl(e.target.value);setNotice("");}} maxLength={2048} placeholder="https://g.page/r/..." aria-invalid={!reviewLinkIsValid}/>
-          <small>Pega el enlace directo de tu perfil de reseñas para que el cliente llegue con un toque.</small>
-          {!reviewLinkIsValid?<strong role="alert">Introduce un enlace https:// válido antes de compartir.</strong>:null}
+          <small>{translate("marketing.copy.paste_a_direct_review_link_so_your_customers_can_open_i")}</small>
+          {!reviewLinkIsValid?<strong role="alert">{translate("marketing.copy.enter_a_valid_https_link_before_sharing")}</strong>:null}
          </label>
-         <div className={styles.message}><span>MENSAJE QUE RECIBIRÁ TU CLIENTE</span>
+         <div className={styles.message}><span>{translate("marketing.copy.message_your_customer_will_receive")}</span>
           <p className={reviewPreviewOpen?styles.reviewMessage:styles.clampedMessage}>{review}</p>
           <button type="button" className={styles.previewToggle} aria-expanded={reviewPreviewOpen}
            onClick={()=>setReviewPreviewOpen(value=>!value)}>{reviewPreviewOpen?"Mostrar menos":"Leer mensaje completo"} {reviewPreviewOpen?<ChevronUp size={14}/>:<ChevronDown size={14}/>}</button>
          </div>
          <div className={styles.reviewShare}>
-          <button type="button" className={styles.primary} onClick={()=>void shareReview()} disabled={!reviewLinkIsValid}><Share2 size={16}/> Compartir solicitud</button>
+          <button type="button" className={styles.primary} onClick={()=>void shareReview()} disabled={!reviewLinkIsValid}><Share2 size={16}/> {translate("marketing.copy.share_request")}</button>
           <div className={styles.reviewShareOptions} aria-label="Otras formas de compartir">
            {reviewLinkIsValid?<a className={styles.shareOption} href={whatsappReviewUrl} target="_blank" rel="noopener noreferrer"><MessageCircle size={15}/> WhatsApp</a>:null}
-           {reviewLinkIsValid?<a className={styles.shareOption} href={emailReviewUrl}><Mail size={15}/> Correo</a>:null}
-           <button type="button" className={styles.shareOption} onClick={()=>void copy(review)} disabled={!reviewLinkIsValid}><ClipboardCopy size={15}/> Copiar</button>
+           {reviewLinkIsValid?<a className={styles.shareOption} href={emailReviewUrl}><Mail size={15}/> {translate("marketing.copy.email")}</a>:null}
+           <button type="button" className={styles.shareOption} onClick={()=>void copy(review)} disabled={!reviewLinkIsValid}><ClipboardCopy size={15}/> {translate("marketing.copy.copy")}</button>
           </div>
-          <small>Tú eliges a quién enviarlo y confirmas el mensaje. No se envían solicitudes automáticamente.</small>
+          <small>{translate("marketing.copy.you_choose_the_recipients_and_confirm_sending_no_reques")}</small>
          </div>
         </article>
-       <article><span className={styles.iconCircle}><Megaphone size={22}/></span><h3>Reactivar con permiso</h3><p>Una invitación útil para personas que aceptaron recibir comunicaciones; respeta las bajas y reglas del canal.</p><div className={styles.message}>
+       <article><span className={styles.iconCircle}><Megaphone size={22}/></span><h3>{translate("marketing.copy.reconnect_with_permission")}</h3><p>{translate("marketing.copy.a_helpful_invitation_to_people_who_agreed_to_receive_me")}</p><div className={styles.message}>
         <p className={followupPreviewOpen?styles.reviewMessage:styles.clampedMessage}>{followup}</p>
         <button type="button" className={styles.previewToggle} aria-expanded={followupPreviewOpen}
          onClick={()=>setFollowupPreviewOpen(value=>!value)}>{followupPreviewOpen?"Mostrar menos":"Leer mensaje completo"} {followupPreviewOpen?<ChevronUp size={14}/>:<ChevronDown size={14}/>}</button>
        </div>
        <div className={styles.followupActions}>
-        <button type="button" className={styles.primary} onClick={()=>void shareText(followup,"Mensaje de "+business)}><Share2 size={15}/> Compartir</button>
-        <button type="button" className={styles.secondary} onClick={()=>void copy(followup)}><ClipboardCopy size={15}/> Copiar</button>
+        <button type="button" className={styles.primary} onClick={()=>void shareText(followup,"Mensaje de "+business)}><Share2 size={15}/> {translate("marketing.copy.share")}</button>
+        <button type="button" className={styles.secondary} onClick={()=>void copy(followup)}><ClipboardCopy size={15}/> {translate("marketing.copy.copy")}</button>
        </div></article>
       </div>
-      <div className={styles.insight}><Lightbulb size={21}/><div><strong>Experimento de 7 días</strong><p>Registra cuántos clientes aceptaron volver a recibir noticias, cuántos respondieron y cuántos regresaron. Compara la utilidad con el coste de conseguir clientes nuevos.</p></div></div>
+      <div className={styles.insight}><Lightbulb size={21}/><div><strong>{translate("marketing.copy.7_day_experiment")}</strong><p>{translate("marketing.copy.track_how_many_customers_opted_in_replied_and_returned_")}</p></div></div>
      </>:null}
-     {section==="actions"&&!actionWizardActive?<details className={styles.advancedTools}><summary>{translate("marketing.ui.moreTools")}</summary><div className={styles.advancedLinks}>{tabs.filter(t=>t.id!=="actions").map(tab=><button key={tab.id} type="button" onClick={()=>setSection(tab.id)}><tab.Icon size={17}/>{tab.label}<ArrowUpRight size={14}/></button>)}</div></details>:null}
+     {section==="actions"&&!actionWizardActive?<details className={styles.advancedTools}><summary>{translate("marketing.ui.moreTools")}</summary><div className={styles.advancedLinks}>{localizedTabs.filter(t=>t.id!=="actions").map(tab=><button key={tab.id} type="button" onClick={()=>setSection(tab.id)}><tab.Icon size={17}/>{tab.label}<ArrowUpRight size={14}/></button>)}</div></details>:null}
      {notice?<p role="status" className={styles.toast}>{notice}</p>:null}
     </div>
    </div>
-   {!actionWizardActive?<footer className={styles.footer}><span>VMV Business · Marketing Studio</span><span>{translate("marketing.ui.footer")}</span></footer>:null}
+   {!actionWizardActive?<footer className={styles.footer}><span>{translate("marketing.copy.vmv_business_marketing_studio")}</span><span>{translate("marketing.ui.footer")}</span></footer>:null}
   </div>
  </main>;
 }
