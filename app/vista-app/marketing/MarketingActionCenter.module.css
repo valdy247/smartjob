@@ -300,3 +300,14 @@
 .wizardBody{min-width:0}
 @media(max-width:760px){.servicePicker{grid-template-columns:1fr;gap:11px}.serviceTile{min-height:0;display:grid;grid-template-columns:51px minmax(0,1fr);column-gap:13px;row-gap:10px;padding:17px;border-radius:19px;align-items:center}.serviceIcon{grid-row:1;grid-column:1}.serviceText{grid-row:1;grid-column:2;gap:5px}.serviceCta{grid-row:2;grid-column:2;justify-self:start;margin:0;min-height:35px}.catalogHeading{padding:4px 1px 0}}
 @media(max-width:420px){.serviceTile{padding:15px;column-gap:12px}.serviceText strong{font-size:15px}.serviceText small{font-size:11px}.serviceCta{font-size:11px;min-height:34px}}
+
+.savedBusinessBox{display:flex;flex-direction:column;gap:10px;background:#f8f0f7;border:1px solid #ead8e7;border-radius:15px;padding:14px;margin-bottom:7px}
+.savedBusinessBox .wizardField{margin:0}
+.savedBusinessBox select{background:#fff;color:#513652}
+.businessActions{display:flex;gap:9px;flex-wrap:wrap}
+.businessActions button{flex:1;min-width:125px;min-height:43px;border-radius:10px;border:1px solid #dfc9dc;background:#fff;color:#74436b;font-size:12px;font-weight:850;cursor:pointer}
+.businessActions button:last-child{background:#864579;border-color:#864579;color:#fff}
+.businessActions button:disabled{opacity:.56;cursor:not-allowed}
+.businessNote,.businessSuccess,.businessError{font-size:11px;line-height:1.55;margin:0}
+.businessNote{color:#876f85}.businessSuccess{color:#427e5c}.businessError{color:#af3c58}
+@media(max-width:430px){.savedBusinessBox{padding:12px}.businessActions button{min-width:0}}
