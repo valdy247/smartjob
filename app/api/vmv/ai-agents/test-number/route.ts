@@ -4,6 +4,7 @@ import {verifyAiTestWebhook} from "@/lib/vmv-ai-agents/twilio-test";
 import {findPhoneRoute} from "@/lib/phone-routes";
 import {billingAdmin} from "@/lib/vmv-billing";
 import {aiAgentModelPathAvailable} from "@/lib/vmv-ai-agents/model";
+import {businessWeek,checkCallPolicy,decideCall,localParts,type CallPolicy} from "@/lib/vmv-ai-agents/call-policy";
 
 
 export const runtime="nodejs";
@@ -98,16 +99,83 @@ async function agentReady(number:string,account:string,ownerId:string){
     !entry.verified_ownership||!entry.disclosure_approved||!entry.approved_at)return false;
  return true; // Each call is still capped by the server-only voice quota RPC.
 }
+type OwnerRoute=NonNullable<Awaited<ReturnType<typeof findPhoneRoute>>>;
+type SavedDecision={policy:CallPolicy;action:ReturnType<typeof decideCall>};
+async function savedDecision(route:OwnerRoute):Promise<SavedDecision|null>{
+ const db=billingAdmin();if(!db)throw Error("Phone call settings backend unavailable");
+ const {data,error}=await db.from("vmv_ai_call_settings").select("*")
+  .eq("route_id",route.id).eq("owner_id",route.user_id).maybeSingle();
+ if(error)throw Error("Phone call settings lookup failed");
+ if(!data)return null; // Preserve the existing 1/2 Twilio menu for unconfigured accounts.
+ const policy=checkCallPolicy(data);
+ let week=policy.schedule;
+ if(policy.use_business_hours){
+  const {data:choice,error:selError}=await db.from("vmv_ai_phone_selections").select("agent_id")
+   .eq("route_id",route.id).eq("owner_id",route.user_id).maybeSingle();
+  if(selError||!choice?.agent_id)throw Error("Business hours need a selected agent");
+  const {data:agent,error:agentError}=await db.from("vmv_ai_agents").select("configuration")
+   .eq("id",choice.agent_id).eq("owner_id",route.user_id).maybeSingle();
+  if(agentError)throw Error("Business hours lookup failed");
+  const hours=businessWeek(agent?.configuration as Record<string,unknown>|null);
+  if(!hours)throw Error("Business hours incomplete");
+  week=hours;
+ }
+ return {policy,action:decideCall(policy,localParts(new Date(),policy.time_zone),week)};
+}
+function closed(policy?:CallPolicy|null){
+ return twiml(say(policy?.closed_message||
+  "Lo sentimos, no podemos atender tu llamada en este momento.","es-ES")+"<Hangup/>");
+}
+function fallback(policy:CallPolicy|null,translationReady:boolean){
+ return policy?.outside_action==="message"?closed(policy):
+  translationReady?smartCall():closed(policy);
+}
+async function callBrand(route:OwnerRoute):Promise<string>{
+ const db=billingAdmin();if(!db)return "";
+ const {data:selection}=await db.from("vmv_ai_phone_selections")
+  .select("agent_id").eq("route_id",route.id).eq("owner_id",route.user_id).maybeSingle();
+ if(!selection?.agent_id)return "";
+ const {data:agent}=await db.from("vmv_ai_agents").select("configuration,business_id")
+  .eq("id",selection.agent_id).eq("owner_id",route.user_id).maybeSingle();
+ const businessName=agent?.configuration?.business_name;
+ if(typeof businessName==="string"&&businessName.trim())return businessName.trim().slice(0,75);
+ if(!agent?.business_id)return "";
+ const {data:business}=await db.from("vmv_ai_businesses").select("name")
+  .eq("id",agent.business_id).eq("owner_id",route.user_id).maybeSingle();
+ const name=String(business?.name||"").trim();
+ return name&&name!=="Mi negocio"?name.slice(0,75):"";
+}
+function menuPrompt(base:string,brand:string){
+ const name=brand?"Gracias por llamar a "+brand+". ":"Gracias por llamar. ";
+ const action=xmlEscape(base+path+"?selection=menu");
+ return twiml('<Gather input="dtmf" numDigits="1" timeout="8" method="POST" action="'+action+'">'+
+  say(name+"Para hablar con el asistente de inteligencia artificial, marca dos. Para hablar con traducción, marca uno.","es-ES")+
+  say("For the AI assistant, press two. For a translated call, press one.","en-US")+
+  '</Gather>'+
+  (originalSmartCallUrl()?'<Redirect method="POST">'+xmlEscape(originalSmartCallUrl()!)+'</Redirect>':"<Hangup/>"));
+}
+function ringOwner(base:string,route:OwnerRoute,policy:CallPolicy,caller:string){
+ // The owner must have explicitly chosen this mode; no hidden outbound dialing.
+ const destination=route.destination_phone;
+ if(!/^\+[1-9]\d{7,14}$/.test(destination)||destination===route.twilio_number||
+    destination===caller)return twiml('<Redirect method="POST">'+xmlEscape(base+agentVoice)+'</Redirect>');
+ return twiml(
+  '<Dial callerId="'+xmlEscape(route.twilio_number)+'" timeout="'+policy.ring_seconds+
+  '" answerOnBridge="true" method="POST" action="'+xmlEscape(base+path+"?flow=after_owner")+'">'+
+  '<Number>'+xmlEscape(destination)+'</Number></Dial>'+
+  '<Hangup/>'
+ );
+}
 export async function POST(req:NextRequest){
  const signed=await verifyAiTestWebhook(req);
  if(!signed){
-  console.warn("[vmv-ai-voice-pilot] incoming request rejected: Twilio signature or account data");
+  console.warn("[vmv-ai-voice-pilot] rejected unsigned Twilio webhook");
   return twiml("<Hangup/>",403);
  }
  const base=configuredBase();
  if(!base)return twiml("<Hangup/>",503);
  const sid=signed.get("CallSid")||"",account=signed.get("AccountSid")||"";
- const to=signed.get("To")||"";
+ const to=signed.get("To")||"",caller=signed.get("From")||"";
  if(!callSid.test(sid)||!accountSid.test(account)||!e164.test(to)||
     (process.env.TWILIO_ACCOUNT_SID&&account!==process.env.TWILIO_ACCOUNT_SID))
   return twiml("<Hangup/>",403);
@@ -117,37 +185,52 @@ export async function POST(req:NextRequest){
  if(process.env.VERCEL_ENV!=="preview"||process.env.VMV_AI_VOICE_PILOT_ENABLED!=="true"||
     !originalSmartCallUrl())return smartCall();
 
- const choice=req.nextUrl.searchParams.get("selection");
- // The first menu is independent of AI/model readiness. A missing model credential
- // must not silently bypass this menu and sound like the old Smart Call IVR.
- if(choice==="menu"){
-  const digits=signed.get("Digits")||"";
-  if(digits!=="2"){
-   console.info("[vmv-ai-voice-pilot] Smart Call selected or menu timed out");
-   return smartCall();
-  }
-  let ready=false;
-  try{ready=await agentReady(to,account,route.user_id);}
-  catch{console.error("[vmv-ai-voice-pilot] agent readiness check failed");}
-  if(!ready){
-   console.warn("[vmv-ai-voice-pilot] AI option requested but agent not ready");
-   const original=originalSmartCallUrl();
-   return twiml(
-    say("El agente de inteligencia artificial aún no está disponible. Te comunicaremos con Smart Call.","es-ES")+
-    (original?'<Redirect method="POST">'+xmlEscape(original)+'</Redirect>':"<Hangup/>")
-   );
-  }
-  console.info("[vmv-ai-voice-pilot] authorized AI option selected; handing off to AI runtime");
-  return redirect(base,agentVoice);
+ let saved:SavedDecision|null;
+ try{saved=await savedDecision(route);}
+ catch(error){
+  console.error("[vmv-ai-voice-pilot] owner call policy unavailable",
+   error instanceof Error?error.message:"unknown");
+  return twiml(say("La configuración de atención no está disponible. Por favor, llama más tarde.")+"<Hangup/>");
  }
- if(choice!==null)return smartCall();
- console.info("[vmv-ai-voice-pilot] authenticated inbound call reached AI Agents top-level menu");
- const action=xmlEscape(base+path+"?selection=menu");
- return twiml(
-  '<Gather input="dtmf" numDigits="1" timeout="8" method="POST" action="'+action+'">'+
-    say("Bienvenido a VMV Business. Para una llamada con traducción, marca uno. Para hablar con nuestro asistente virtual, marca dos.","es-ES")+
-    say("For a translated call, press one. For our virtual assistant, press two.","en-US")+
-  '</Gather>'+
-  (originalSmartCallUrl()?'<Redirect method="POST">'+xmlEscape(originalSmartCallUrl()!)+'</Redirect>':"<Hangup/>")
- );
+ const policy=saved?.policy||null,decision=saved?.action||null;
+ const flow=req.nextUrl.searchParams.get("flow");
+ if(flow==="after_owner"){
+  if(!policy||policy.agent_mode!=="after_no_answer"||!decision?.agentAvailable)
+   return fallback(policy,Boolean(decision?.translationAvailable));
+  const status=signed.get("DialCallStatus");
+  if(status==="completed"||status==="answered")return twiml("<Hangup/>");
+  if(!["no-answer","busy","failed"].includes(status||""))return closed(policy);
+  const ready=await agentReady(to,account,route.user_id);
+  return ready?redirect(base,agentVoice):fallback(policy,decision.translationAvailable);
+ }
+ if(flow!==null)return closed(policy);
+ const selection=req.nextUrl.searchParams.get("selection");
+ if(selection==="menu"){
+  const digits=signed.get("Digits")||"";
+  if(digits==="1")return decision&&!decision.translationAvailable?
+    closed(policy):smartCall();
+  if(digits!=="2")return decision?
+    fallback(policy,decision.translationAvailable):smartCall();
+  if(decision&&!decision.agentAvailable)return fallback(policy,decision.translationAvailable);
+  const ready=await agentReady(to,account,route.user_id);
+  if(!ready){
+   console.warn("[vmv-ai-voice-pilot] owner selected agent not ready");
+   return twiml(say("El asistente no está disponible en este momento.","es-ES")+
+    (decision?.translationAvailable?'<Redirect method="POST">'+
+     xmlEscape(originalSmartCallUrl()!)+'</Redirect>':"<Hangup/>"));
+  }
+  return policy?.agent_mode==="after_no_answer"?
+   ringOwner(base,route,policy,caller):redirect(base,agentVoice);
+ }
+ if(selection!==null)return closed(policy);
+ // Accounts without settings keep their tested 1 -> Smart Call, 2 -> AI behavior.
+ if(!saved)return menuPrompt(base,await callBrand(route));
+ const outcome=decision!;
+ if(outcome.action==="message")return closed(policy);
+ if(outcome.action==="translation")return smartCall();
+ if(outcome.action==="menu")return menuPrompt(base,await callBrand(route));
+ const ready=await agentReady(to,account,route.user_id);
+ if(!ready)return fallback(policy,outcome.translationAvailable);
+ return outcome.action==="ring_owner"?
+  ringOwner(base,route,policy!,caller):redirect(base,agentVoice);
 }
