@@ -20,7 +20,7 @@ type RequestRow={
  website_url:string|null;goal_text:string;status:Status;execution_mode:"assisted"|"automated";
  quoted_price_cents:number|null;quote_note:string|null;quote_revision:number;
  staff_update:string|null;evidence_url:string|null;verified_at:string|null;
- created_at:string;updated_at:string
+ created_at:string;updated_at:string;google_profile_data?:GoogleData&{media?:{kind:string;path:string}[]}|null
 };
 type Acceptance={id:string;request_id:string;owner_id:string;quote_revision:number;quoted_price_cents:number;accepted_at:string};
 type Service={id:ServiceCode;name:string;why:string;mode:string};
@@ -233,6 +233,12 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const ownRequests=useMemo(()=>requests.filter(r=>r.owner_id===user?.id),[requests,user]);
  const shown=teamView&&staff?requests:ownRequests;
  const isAccepted=(req:RequestRow)=>approvals.some(a=>a.request_id===req.id&&a.quote_revision===req.quote_revision&&a.quoted_price_cents===req.quoted_price_cents);
+ const openPrivatePhoto=async(path:string)=>{
+  if(!client)return;
+  const {data,error:mediaError}=await client.storage.from("vmv-google-media").createSignedUrl(path,120);
+  if(mediaError||!data?.signedUrl){setError("No fue posible abrir la imagen privada. Inténtalo otra vez.");return;}
+  window.open(data.signedUrl,"_blank","noopener,noreferrer");
+ };
  const submit=async()=>{
   setError("");setMessage("");setWizardError("");
   if(wizardStep!==3)return;
@@ -271,7 +277,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     goal_text:selected==="google_profile"?googleGoalText:selected==="review_strategy"&&reviewInput.trim()?
      ("Reseña: "+reviewInput.trim().slice(0,650)+" | Respuesta sugerida, pendiente de revisión: "+answerReview).slice(0,1500):goal.trim(),
     agreed_to_contact:true,
-    ...(selected==="google_profile"?{google_profile_data:{...googleData,media:mediaPaths}}:{})
+    ...(selected==="google_profile"?{google_profile_data:{...googleData,...(googleData.kind==="service_area"?{street:"",unit:"",city:"",region:"",postal:""}:{}),media:mediaPaths}}:{})
    }).select("id").single();
    if(insertError)throw insertError;
    inserted=true;
@@ -462,6 +468,17 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       <div className={styles.requestTop}><div><strong>{service}</strong><small>{req.business_name} · {date(req.created_at)} · #{req.id.slice(0,8)}</small></div>
        <span className={req.status==="verified"?styles.verified:styles.status}>{statusNames[req.status]}</span></div>
       <p>{req.goal_text}</p>
+      {req.service_code==="google_profile"&&req.google_profile_data?<details className={styles.googleSaved}>
+       <summary>Ver datos del perfil y fotos</summary><div className={styles.googleSavedContent}>
+        <p><strong>Categoría Google:</strong> {req.google_profile_data.googleCategory||"Pendiente"}</p>
+        <p><strong>Ubicación:</strong> {req.google_profile_data.kind==="service_area"?"Zona de servicio":req.google_profile_data.kind==="hybrid"?"Local y entregas":"Local"}</p>
+        {req.google_profile_data.kind==="service_area"?<p>{req.google_profile_data.serviceAreas}</p>:<p>{[req.google_profile_data.street,req.google_profile_data.unit,req.google_profile_data.city,req.google_profile_data.region,req.google_profile_data.postal].filter(Boolean).join(", ")}</p>}
+        {req.google_profile_data.phone?<p><strong>Teléfono:</strong> {req.google_profile_data.phone}</p>:null}
+        {req.google_profile_data.description?<p><strong>Descripción:</strong> {req.google_profile_data.description}</p>:null}
+        {req.google_profile_data.services?<p><strong>Servicios:</strong> {req.google_profile_data.services}</p>:null}
+        {req.google_profile_data.products?<p><strong>Productos:</strong> {req.google_profile_data.products}</p>:null}
+        {req.google_profile_data.media?.map(photo=><button type="button" key={photo.path} onClick={()=>void openPrivatePhoto(photo.path)}>Ver imagen {photo.kind}</button>)}
+       </div></details>:null}
       {req.staff_update?<div className={styles.staffNote}><strong>Actualización de VMV:</strong> {req.staff_update}</div>:null}
       {req.quoted_price_cents!==null?<div className={styles.quote}>
        <div><Wallet size={18}/><span><strong>{money(req.quoted_price_cents)}</strong> {req.quoted_price_cents===0?"Servicio gratuito":"Presupuesto propuesto"}<small>{req.quote_note||"Detalles pendientes"}</small></span></div>
