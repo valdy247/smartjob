@@ -98,7 +98,7 @@ export default function LocalVisibilityStudio({profile,onChange,onRequestHelp}:{
    <details className={styles.extras}>
     <summary><span><strong>{translate("marketing.visibility.hours_address_and_description")}</strong><small>{translate("marketing.visibility.optional_details_finish_them_later")}</small></span><ChevronDown size={18}/></summary>
     <div className={styles.extraBody}>
-     <Field label={translate("marketing.visibility.business_hours")} value={profile.hours} onChange={v=>onChange("hours",v)} placeholder="Ej. Lun–Vie 9:00–17:00"/>
+     <Field label={translate("marketing.visibility.business_hours")} value={profile.hours} onChange={v=>onChange("hours",v)} placeholder={translate("marketing.visibility.hoursExample")}/>
      <div className={styles.hoursPresets} aria-label={translate("marketing.visibility.typical_hours")}>
       {([
        ["Lun–Vie","Lun–Vie 9:00–17:00"],["Todos los días","Lun–Dom 9:00–17:00"],["Con cita","Solo con cita previa"]

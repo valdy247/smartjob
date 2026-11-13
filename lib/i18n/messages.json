@@ -1251,7 +1251,8 @@
     "marketing.action.customersNote": "Inicia sesión para guardar y cargar negocios desde cualquier dispositivo. Puedes continuar tu solicitud sin hacerlo.",
     "marketing.action.googleCreateGoal": "Quiero preparar la creación de mi perfil en Google Business Profile.",
     "marketing.action.googleClaimGoal": "Quiero reclamar y verificar mi perfil existente de Google Business Profile.",
-    "marketing.action.googleImproveGoal": "Quiero corregir o ampliar mi perfil de Google Business Profile."
+    "marketing.action.googleImproveGoal": "Quiero corregir o ampliar mi perfil de Google Business Profile.",
+    "marketing.visibility.hoursExample": "Ej. Lun–Vie 9:00–17:00"
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -2505,6 +2506,7 @@
     "marketing.action.customersNote": "Sign in to save and load businesses across devices. You can still complete this request.",
     "marketing.action.googleCreateGoal": "I want to create a Google Business Profile listing.",
     "marketing.action.googleClaimGoal": "I want to claim and verify my existing Google Business Profile.",
-    "marketing.action.googleImproveGoal": "I want to correct or expand my Google Business Profile."
+    "marketing.action.googleImproveGoal": "I want to correct or expand my Google Business Profile.",
+    "marketing.visibility.hoursExample": "E.g. Mon–Fri 9:00 AM–5:00 PM"
   }
 }
