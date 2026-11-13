@@ -470,3 +470,7 @@
 /* The cover's transparent text wrapper must not swallow its editing handles. */
 .vmv-hero-visual[data-layout=cover]:has(.vmv-image-tools) .vmv-hero-content{pointer-events:none}
 .vmv-hero-visual[data-layout=cover]:has(.vmv-image-tools) .vmv-hero-content :is(a,h1,p,span){pointer-events:auto}
+
+/* A logo is a complete mark, not a photo to crop. */
+.vmv-site-mark>img{width:auto;max-width:min(120px,28vw);height:auto;max-height:62px;object-fit:contain;object-position:center;flex-shrink:0}
+@media(max-width:620px){.vmv-site-mark>img{width:auto;max-width:100px;height:auto;max-height:51px}}
