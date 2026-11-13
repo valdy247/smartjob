@@ -10,47 +10,72 @@ const respond=(data:Record<string,unknown>,status=200)=>NextResponse.json(data,{
  status,headers:{"Cache-Control":"no-store"}
 });
 
-export async function POST(request:NextRequest){
+async function authenticate(request:NextRequest){
  const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
  const publishable=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
  const secret=process.env.SUPABASE_SECRET_KEY||"";
- if(!url||!publishable||!secret)return respond({error:"La biblioteca no está disponible ahora."},503);
-
+ if(!url||!publishable||!secret){
+  return {ok:false as const,response:respond({error:"La biblioteca no está disponible ahora."},503)};
+ }
  const authorization=request.headers.get("authorization")||"";
  const token=authorization.startsWith("Bearer ")?authorization.slice(7):"";
- if(!token||token.length>8000)return respond({error:"Inicia sesión para eliminar esta imagen."},401);
+ if(!token||token.length>8000){
+  return {ok:false as const,response:respond({error:"Inicia sesión para administrar tus fotos."},401)};
+ }
+ const authClient=createClient(url,publishable,{auth:{persistSession:false,autoRefreshToken:false}});
+ const {data:auth,error:authError}=await authClient.auth.getUser(token);
+ if(authError||!auth.user||auth.user.is_anonymous){
+  return {ok:false as const,response:respond({error:"Sesión inválida."},403)};
+ }
+ const admin=createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}});
+ return {ok:true as const,ownerId:auth.user.id,admin};
+}
+
+/** Files hidden from the library remain available to old published pages and revisions. */
+export async function GET(request:NextRequest){
+ const auth=await authenticate(request);
+ if(!auth.ok)return auth.response;
+ const {data,error}=await auth.admin.from("smartjob_web_media_hidden")
+  .select("filename").eq("owner_id",auth.ownerId).limit(2000);
+ if(error)return respond({error:"No se pudo consultar la biblioteca."},503);
+ return respond({hidden:(data||[]).map(row=>row.filename)});
+}
+
+/** Delete from this user's library, but never break other pages referring to the image. */
+export async function POST(request:NextRequest){
+ const auth=await authenticate(request);
+ if(!auth.ok)return auth.response;
 
  let payload:{filename?:unknown};
  try{payload=await request.json();}catch{return respond({error:"Solicitud inválida."},400);}
  const filename=typeof payload.filename==="string"?payload.filename:"";
  if(!filenamePattern.test(filename))return respond({error:"Nombre de archivo inválido."},400);
 
- const authClient=createClient(url,publishable,{auth:{persistSession:false,autoRefreshToken:false}});
- const {data:auth,error:authError}=await authClient.auth.getUser(token);
- if(authError||!auth.user||auth.user.is_anonymous)return respond({error:"Sesión inválida."},403);
-
- // Never accept an owner ID, storage bucket or full path from the browser.
- const path=auth.user.id+"/"+filename;
- const admin=createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}});
-
- // Protect any saved draft, public site, historical revision or classic site
- // before permanently removing the underlying object.
- const {data:inUse,error:checkError}=await admin.rpc("smartjob_web_media_in_use",{p_asset:path});
- if(checkError||typeof inUse!=="boolean")
-  return respond({error:"No se pudo verificar si esta imagen está en uso. No se eliminó."},503);
- if(inUse)return respond({
-  error:"Esta imagen se utiliza en una web guardada, publicada o en su historial. Retírala de las páginas y conserva las versiones que la necesiten antes de eliminarla.",
-  code:"IMAGE_IN_USE"
- },409);
-
- const {data:files,error:listError}=await admin.storage.from(bucket).list(auth.user.id,{
+ // Owner path is always taken from the verified token, never client-supplied.
+ const path=auth.ownerId+"/"+filename;
+ const {data:files,error:listError}=await auth.admin.storage.from(bucket).list(auth.ownerId,{
   search:filename,limit:100
  });
- if(listError)return respond({error:"No se pudo verificar el archivo. No se eliminó."},503);
- if(!files?.some(item=>item.name===filename))
-  return respond({error:"Esta imagen ya no está en la biblioteca.",code:"IMAGE_NOT_FOUND"},404);
+ if(listError)return respond({error:"No se pudo verificar la foto."},503);
+ if(!files?.some(file=>file.name===filename)){
+  return respond({error:"Esta foto ya no existe en la biblioteca.",code:"IMAGE_NOT_FOUND"},404);
+ }
 
- const {error:removeError}=await admin.storage.from(bucket).remove([path]);
- if(removeError)return respond({error:"No se pudo eliminar la imagen. Inténtalo nuevamente."},503);
- return respond({deleted:true,filename});
+ const {data:inUse,error:checkError}=await auth.admin.rpc("smartjob_web_media_in_use",{p_asset:path});
+ if(checkError||typeof inUse!=="boolean"){
+  return respond({error:"No se pudo revisar el uso de la foto. No se eliminó."},503);
+ }
+
+ if(inUse){
+  // A published page, saved draft, or history version still needs the bytes.
+  // Hide it from the owner's picker, without affecting another place where it is used.
+  const {error:archiveError}=await auth.admin.from("smartjob_web_media_hidden")
+   .upsert({owner_id:auth.ownerId,filename},{onConflict:"owner_id,filename"});
+  if(archiveError)return respond({error:"No se pudo retirar esta foto de la biblioteca."},503);
+  return respond({deleted:true,archived:true,filename});
+ }
+
+ const {error:removeError}=await auth.admin.storage.from(bucket).remove([path]);
+ if(removeError)return respond({error:"No se pudo eliminar la foto."},503);
+ return respond({deleted:true,archived:false,filename});
 }
