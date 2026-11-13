@@ -182,6 +182,13 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false,initialStep=
         onPress={()=>update(key,answers[key]==="Sí"?"No":"Sí")}/>)}</View>
       <Text style={styles.subtitle}>Nunca aceptará números de tarjeta durante la llamada.</Text>
     </>:null}
+    {answers.cap_bookings==="Sí"?<>
+     <Text style={styles.label}>Autorización de reservas</Text>
+     <View style={styles.choices}><Tag title="Guardar citas aceptadas en la agenda VMV"
+      selected={answers.perm_book_service==="Sí"}
+      onPress={()=>update("perm_book_service",answers.perm_book_service==="Sí"?"No":"Sí")}/></View>
+     <Text style={styles.subtitle}>Solo con horario disponible y aprobación del negocio. No confirma pagos.</Text>
+    </>:null}
     <Text style={styles.label}>¿Cómo hablará?</Text>
     <View style={styles.choices}>{["Español","English","Bilingüe"].map(x=><Tag key={x} title={x}
       selected={(answers.agent_language||({es:"Español",en:"English",both:"Bilingüe"}[draft.language]))===x}
