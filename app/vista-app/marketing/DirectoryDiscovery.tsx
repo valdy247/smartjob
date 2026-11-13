@@ -28,12 +28,12 @@ export function directoryOptions(d:DirectoryData){
 export function researchTarget(data:DirectoryData):DirectoryTarget{
  return {id:"research-local",name:"Buscar directorios en "+[data.city,data.state].filter(Boolean).join(", "),type:"research",url:"",cost:"unknown",status:"pending_review",evidenceUrl:"",existingUrl:"",note:"Investigación humana pendiente; no es una ficha publicada."};
 }
-export function validateDirectory(data:DirectoryData){
+export function validateDirectory(data:DirectoryData,industry=""){
  if(!data.state.trim()||!data.city.trim())return "Indica ciudad y estado para buscar oportunidades locales.";
  if(data.city.length>100||data.state.length>100||data.postal.length>20||data.notes.length>800)return "Revisa la longitud de los datos ingresados.";
  if(!data.selected.length)return "Selecciona al menos un directorio o la investigación local.";
  if(data.selected.some(t=>t.existingUrl?.trim()&&!safeDirectoryUrl(t.existingUrl)))return "Corrige el enlace de una ficha existente (debe ser HTTPS).";
- const allowed=new Set([...directoryOptions(data).map(x=>x.id),"research-local"]);
+ const allowed=new Set([...directoryOptions({...data,industry:data.industry||industry}).map(x=>x.id),"research-local"]);
  if(data.selected.some(t=>!allowed.has(t.id)))return "Revisa tu selección: algunos directorios no corresponden a la ubicación actual.";
  return "";
 }
