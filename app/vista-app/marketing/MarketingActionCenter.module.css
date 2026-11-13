@@ -247,3 +247,13 @@
 .catalogHeading{position:relative;padding-right:125px}
 .historyLink{position:absolute;right:0;top:6px;display:inline-flex;align-items:center;gap:6px;padding:9px 10px;border:1px solid #ead9e6;border-radius:11px;background:#fff;color:#7b4a75;text-decoration:none;font-size:11px;font-weight:850}
 @media(max-width:480px){.catalogHeading{padding-right:0}.historyLink{position:static;margin-top:12px}.catalogHeading h2{font-size:23px}}
+
+.googleReview{display:flex;flex-direction:column;gap:8px;padding:15px 17px;border-bottom:1px solid #f4edf2}
+.googleReview strong{font-size:13px;color:#67416b}
+.googleReview span{font-size:12px;line-height:1.5;color:#715d73;overflow-wrap:anywhere}
+.googleReview button{align-self:flex-start;border:0;background:transparent;color:#995e8e;padding:6px 0;font-size:11px;font-weight:850;cursor:pointer}
+.googleSaved{border:1px solid #eee0eb;background:#fffafd;border-radius:12px;padding:12px}
+.googleSaved summary{cursor:pointer;color:#78466f;font-size:12px;font-weight:850}
+.googleSavedContent{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.googleSavedContent p{margin:0;font-size:11px;color:#786578;overflow-wrap:anywhere;line-height:1.6}
+.googleSavedContent button{align-self:flex-start;background:#f6e8f2;border:1px solid #e9d7e5;border-radius:9px;color:#815078;padding:8px 10px;font-size:11px;cursor:pointer}
