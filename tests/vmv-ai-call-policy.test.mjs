@@ -111,3 +111,32 @@ test("overnight today does not spill into morning without previous-day shift",()
  assert.equal(inWeek(p.schedule,"sat",120),true);
  assert.equal(inWeek(p.schedule,"sat",180),false);
 });
+
+test("translation hours are independent of agent hours",()=>{
+ const p=policy();
+ p.agent_mode="schedule";p.translation_mode="schedule";
+ for(const d of Object.keys(p.schedule)){
+  p.schedule[d].enabled=false;
+  p.translation_schedule[d].enabled=false;
+ }
+ p.schedule.mon={enabled:true,start:"09:00",end:"12:00"};
+ p.translation_schedule.mon={enabled:true,start:"14:00",end:"18:00"};
+ assert.equal(decideCall(p,localPreview("mon","10:00")).action,"agent");
+ assert.equal(decideCall(p,localPreview("mon","15:00")).action,"translation");
+ assert.equal(decideCall(p,localPreview("mon","12:30")).action,"message");
+});
+test("business schedule overrides only AI; translation keeps its own hours",()=>{
+ const p=policy();p.agent_mode="schedule";p.translation_mode="schedule";
+ p.translation_schedule.mon={enabled:true,start:"20:00",end:"23:00"};
+ const business=structuredClone(p.schedule);
+ business.mon={enabled:true,start:"08:00",end:"10:00"};
+ assert.equal(decideCall(p,localPreview("mon","09:00"),business).action,"agent");
+ assert.equal(decideCall(p,localPreview("mon","21:00"),business).action,"translation");
+ assert.equal(decideCall(p,localPreview("mon","11:00"),business).action,"message");
+});
+test("legacy policy without translation schedule is upgraded without dropping owner hours",()=>{
+ const p=policy();delete p.translation_schedule;
+ const q=checkCallPolicy(p);
+ assert.deepEqual(q.translation_schedule,q.schedule);
+ assert.notEqual(q.translation_schedule,q.schedule);
+});
