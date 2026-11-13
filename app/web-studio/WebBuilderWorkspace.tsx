@@ -698,7 +698,7 @@ export default function WebBuilderWorkspace(){
      <div className={styles.puckShell} style={{display:previewMode?"none":undefined}}>
       <Puck key={page.id+"-"+refreshKey} config={builderConfig} dnd={{enableDragHandle:true}}
        overrides={{headerActions:({children})=><><BuilderHistoryControls/>{children}</>,
-        actionBar:({children,label})=><BuilderSelectedActions label={label}>{children}</BuilderSelectedActions>}}
+        actionBar:({children,label})=><BuilderSelectedActions label={label||"Elemento"}>{children}</BuilderSelectedActions>}}
        data={initialDocument} height="75vh"
        onChange={data=>setDocument(data)}
        onPublish={publish} />
