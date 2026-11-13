@@ -42,11 +42,13 @@ function cta(goal:SiteObjective,phone:string):{label:string;url:string}{
 const node=(type:string,id:string,props:Record<string,unknown>)=>({type,props:{id,...props}});
 function previewOfferings(input:SiteIntake){
  const products=(input.products||[]).filter(item=>item.title.trim()).map(item=>({
-  title:item.title.trim().slice(0,120),description:item.description.slice(0,400),
+  id:item.id,title:item.title.trim().slice(0,120),description:item.description.slice(0,400),
   image:item.image||"",alt:item.title.trim().slice(0,120),price:item.price.slice(0,32)
  }));
+ // A gallery or cover photo is not automatically a product photo. A historical
+ // positional fallback could put a person's portrait on an unrelated product.
  const legacy=input.offerings.map((title,i)=>({
-  title:title.slice(0,120),description:"",image:input.photos[i+1]||"",alt:title.slice(0,120),price:""
+  id:"service-"+i,title:title.slice(0,120),description:"",image:"",alt:title.slice(0,120),price:""
  }));
  if(input.offering==="products")return (products.length?products:legacy).slice(0,30);
  if(input.offering==="both")return [...products,...legacy].slice(0,30);
