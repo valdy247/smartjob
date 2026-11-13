@@ -93,7 +93,7 @@ export default function BuilderQuickAdd({enabled=true,compact=false}:{enabled?:b
   }catch(e){setError(e instanceof Error?e.message:"No se pudo agregar el elemento.");}
  }
  return enabled&&mounted?createPortal(<>
-  <button type="button" className={compact?styles.compactFab:styles.fab} ref={triggerRef}
+  <button type="button" className={compact?styles.fab+" "+styles.compactFab:styles.fab} ref={triggerRef}
    aria-label="Agregar un elemento o sección" aria-expanded={opened}
    aria-controls="vmv-quick-add-panel"
    onClick={()=>{setOpened(v=>!v);setError("");}}>
@@ -103,10 +103,10 @@ export default function BuilderQuickAdd({enabled=true,compact=false}:{enabled?:b
   {added&&!opened?<span className={styles.toast} role="status">
    <Check size={13} aria-hidden="true"/> {added}
   </span>:null}
-  {opened?<div className={compact?styles.compactBackdrop:styles.backdrop}
+  {opened?<div className={compact?styles.backdrop+" "+styles.compactBackdrop:styles.backdrop}
    onMouseDown={e=>{if(e.target===e.currentTarget)setOpened(false);}}>
    <div ref={menuRef} role="dialog" aria-modal="true" aria-label="Agregar a mi web"
-    id="vmv-quick-add-panel" className={compact?styles.compactSheet:styles.sheet}>
+    id="vmv-quick-add-panel" className={compact?styles.sheet+" "+styles.compactSheet:styles.sheet}>
     <header className={styles.heading}>
      <div><small>WEB STUDIO</small><strong>¿Qué quieres agregar?</strong></div>
      <button type="button" aria-label="Cerrar" onClick={()=>{setOpened(false);triggerRef.current?.focus();}}>
