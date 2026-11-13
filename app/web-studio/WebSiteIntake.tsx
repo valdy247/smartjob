@@ -20,7 +20,7 @@ function selectionFromRow(value:unknown):MediaSelection{
  return {
   logo_url:typeof input.logo_url==="string"?safeWebImageUrl(input.logo_url)||"":"",
   cover_url:typeof input.cover_url==="string"?safeWebImageUrl(input.cover_url)||"":"",
-  work_url:typeof input.work_url==="string"?safeWebImageUrl(input.work_url)||""
+  work_url:typeof input.work_url==="string"?safeWebImageUrl(input.work_url)||"":"",
  };
 }
 function ownImageFilename(value:string,ownerId:string):string{
@@ -216,6 +216,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
   setServices(old=>[...old,value]);setNewItem("");setError("");
  }
  function preview(){
+  if(!mediaReady||mediaSaving||mediaError){setError("Confirma que las fotografías terminaron de guardarse.");return;}
   if(intake.business.length<2){setError("Escribe el nombre del negocio.");return;}
   if(!category){setError("Selecciona la categoría del negocio.");return;}
   if(intake.email&& !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(intake.email)){
@@ -302,7 +303,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
    {error?<p className={styles.error} role="alert">{error}</p>:null}
    <div className={styles.finish}>
     <span><ShieldCheck size={16}/> Tus datos no se publicarán todavía.</span>
-    <button type="button" disabled={busy||mode!=="templates"} onClick={preview}>
+    <button type="button" disabled={busy||mode!=="templates"||!mediaReady||mediaSaving||Boolean(mediaError)} onClick={preview}>
      Ver propuestas <ArrowRight size={17}/>
     </button>
    </div>
