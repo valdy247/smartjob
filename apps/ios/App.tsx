@@ -710,18 +710,19 @@ export default function App(){
    setReady(false);setInvite(null);setCall(null);
    setStatus("Sesión cerrada");
  }
- const localePicker=<View style={styles.card}>
-  <Text style={styles.cardTitle}>{tr("common.language")}</Text>
-  <Text style={styles.helper}>{tr("common.languageHint")}</Text>
-  <View style={styles.languageChoice}>
-   {(["es","en"] as const).map(next=><Pressable key={next} accessibilityRole="button"
+ const localePicker=<View style={styles.interfaceLanguageCard}>
+  <Text style={styles.interfaceLanguageTitle}>{tr("common.language")}</Text>
+  <View style={styles.interfaceLanguageChoice} accessibilityRole="radiogroup">
+   {(["es","en"] as const).map(next=><Pressable key={next} accessibilityRole="radio"
      accessibilityLabel={next==="es"?"Español":"English"}
-     accessibilityState={{selected:uiLanguage===next,disabled:languageSaving}} disabled={languageSaving}
-     style={[styles.languageOption,uiLanguage===next&&styles.languageSelected]}
+     accessibilityState={{checked:uiLanguage===next,disabled:languageSaving}} disabled={languageSaving}
+     style={[styles.interfaceLanguageOption,uiLanguage===next&&styles.interfaceLanguageSelected]}
      onPress={()=>{void changeLanguage(next).catch(()=>Alert.alert(tr("common.saveError")));}}>
-     <Text style={styles.languageOptionText}>{next==="es"?"Español":"English"}</Text>
+     <Text style={styles.interfaceLanguageFlag}>{next==="es"?"🇪🇸":"🇺🇸"}</Text>
+     {uiLanguage===next?<Ionicons name="checkmark-circle" size={14} color="#6844B1" style={styles.interfaceLanguageCheck}/>:null}
     </Pressable>)}
   </View>
+  <Text style={styles.interfaceLanguageHint}>{tr("common.languageHint")}</Text>
  </View>;
  if(!uiLanguageReady)return <SafeAreaView style={styles.safe}>{languageError?<View style={{padding:24}}><Text>{tr("language.loadError")}</Text><Button label={tr("common.retry")} onPress={()=>void retryLanguage()}/></View>:<ActivityIndicator style={{marginTop:64}} color={colors.accent}/>}</SafeAreaView>;
  return <SafeAreaView style={styles.safe}>
@@ -1094,8 +1095,8 @@ export default function App(){
          <Ionicons name={item.icon} size={item.id==="calls"?25:22}
           color={item.id==="calls"?"#FFFFFF":activeTab===item.id?"#211D36":"#B7B4CA"}/>
         </View>
-        <Text numberOfLines={1} style={[styles.bottomLabel,activeTab===item.id&&styles.bottomLabelActive,
-         item.id==="calls"&&styles.bottomLabelCenter]}>{item.label}</Text>
+        <Text numberOfLines={1} style={[styles.bottomLabel,item.id==="calls"&&styles.bottomLabelCenter,
+         activeTab===item.id&&styles.bottomLabelActive]}>{item.label}</Text>
        </Pressable>)}
     </View>:null}
   </KeyboardAvoidingView>
@@ -1295,6 +1296,14 @@ const styles=StyleSheet.create({
  languageOption:{flex:1,alignItems:"center",justifyContent:"center",padding:13,backgroundColor:"#F4EFFB",borderRadius:15,borderWidth:1,borderColor:"#E5D9F2"},
  languageSelected:{borderColor:colors.accent,backgroundColor:"#E6D6FF"},
  languageOptionText:{fontSize:14,fontWeight:"700",color:colors.text},
+ interfaceLanguageCard:{backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#ECE6F3",borderRadius:20,padding:15,marginBottom:13,alignItems:"flex-start",gap:7},
+ interfaceLanguageTitle:{fontSize:13,fontWeight:"800",color:"#28223C"},
+ interfaceLanguageChoice:{flexDirection:"row",alignItems:"center",backgroundColor:"#F5F0FB",borderRadius:24,borderWidth:1,borderColor:"#E4D9F2",padding:3,gap:4},
+ interfaceLanguageOption:{height:43,width:54,alignItems:"center",justifyContent:"center",borderRadius:22,borderWidth:2,borderColor:"transparent",position:"relative"},
+ interfaceLanguageSelected:{backgroundColor:"#FFFFFF",borderColor:"#8D5EE6"},
+ interfaceLanguageFlag:{fontSize:26},
+ interfaceLanguageCheck:{position:"absolute",right:-3,top:-3},
+ interfaceLanguageHint:{fontSize:11,color:"#766A86",lineHeight:16},
  greetingEditor:{height:105,paddingTop:12},
 
 
