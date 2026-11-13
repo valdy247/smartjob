@@ -4,10 +4,11 @@ import {normalizeBuilderDocument} from "./web-builder-puck";
 export type SiteFamily="bakery"|"construction"|"professional"|"beauty"|"creative";
 export type SiteObjective="calls"|"quotes"|"bookings"|"orders";
 export type SiteOffering="products"|"services"|"both";
+export type SiteProduct={id:string;title:string;description:string;image:string;price:string};
 export type SiteIntake={
  business:string;categoryId:string;offering:SiteOffering;objective:SiteObjective;
  phone:string;email:string;city:string;about:string;logo:string;photos:string[];
- offerings:string[];
+ offerings:string[];products?:SiteProduct[];
 };
 export type SiteProposal={id:string;family:SiteFamily;name:string;subtitle:string;data:Data;layout:string;palette:string};
 export const FAMILIES:{id:SiteFamily;name:string;summary:string;example:string}[]=[
@@ -39,9 +40,16 @@ function cta(goal:SiteObjective,phone:string):{label:string;url:string}{
 }
 const node=(type:string,id:string,props:Record<string,unknown>)=>({type,props:{id,...props}});
 function previewOfferings(input:SiteIntake){
- return input.offerings.map((title,i)=>({
+ const products=(input.products||[]).filter(item=>item.title.trim()).map(item=>({
+  title:item.title.trim().slice(0,120),description:item.description.slice(0,400),
+  image:item.image||"",alt:item.title.trim().slice(0,120),price:item.price.slice(0,32)
+ }));
+ const legacy=input.offerings.map((title,i)=>({
   title:title.slice(0,120),description:"",image:input.photos[i+1]||"",alt:title.slice(0,120),price:""
- })).slice(0,20);
+ }));
+ if(input.offering==="products")return (products.length?products:legacy).slice(0,30);
+ if(input.offering==="both")return [...products,...legacy].slice(0,30);
+ return legacy.slice(0,30);
 }
 function gallery(input:SiteIntake){
  return input.photos.filter(Boolean).map((image,index)=>({image,alt:"Foto "+(index+1)+" de "+input.business,caption:""}));
@@ -64,7 +72,8 @@ function offerings(input:SiteIntake,family:SiteFamily,layout:"grid"|"mosaic"|"li
  const m=messages[family];
  return node("OfferingGrid","offerings-main",{
   title:m.offerings,description:"",items:previewOfferings(input),layout,padding:"normal",
-  surface,columns:layout==="list"?"2":"3",showPrices:"no"
+  surface,columns:layout==="list"?"2":"3",
+  showPrices:previewOfferings(input).some(item=>item.price)?"yes":"no"
  });
 }
 function portfolio(input:SiteIntake,family:SiteFamily,layout:"grid"|"mosaic"|"list",id="gallery-main"){
