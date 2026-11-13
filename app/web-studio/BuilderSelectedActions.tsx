@@ -77,6 +77,12 @@ export default function BuilderSelectedActions({children,label}:{
   const next=patchItem(api.appState.data,id,key,value);
   if(next!==api.appState.data)api.dispatch({type:"setData",data:next});
  }
+ function changeMultiple(values:Record<string,unknown>){
+  if(!item||!id)return;
+  const api=getPuck();
+  const next=Object.entries(values).reduce((data,[key,value])=>patchItem(data,id,key,value),api.appState.data);
+  if(next!==api.appState.data)api.dispatch({type:"setData",data:next});
+ }
  const props=item?.props||{};
 
  const textKey=item?.type==="ComposeHeading"||item?.type==="HeroVisual"?"title":"text";
@@ -158,7 +164,7 @@ export default function BuilderSelectedActions({children,label}:{
       </select>
      </label>
      <ColorField label="Color de fondo" value={props.sectionBackground}
-      onChange={v=>{change("sectionBackground",v);change("sectionSurface","custom");}}/>
+      onChange={v=>changeMultiple({sectionBackground:v,sectionSurface:"custom"})}/>
      <ColorField label="Color general del texto" value={props.sectionTextColor}
       onChange={v=>change("sectionTextColor",v)} allowTransparent/>
      <RangeField label="Esquinas de la sección" min={0} max={48} unit="px"
