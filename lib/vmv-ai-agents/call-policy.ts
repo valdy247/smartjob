@@ -12,7 +12,7 @@ export type CallPolicy={
  outside_action:"translation"|"message";
  ring_seconds:number;
  time_zone:string;use_business_hours:boolean;
- schedule:Week;closed_message:string;
+ schedule:Week;translation_schedule:Week;closed_message:string;
 };
 export type CallDecision={
  action:"menu"|"agent"|"translation"|"ring_owner"|"message";
@@ -30,7 +30,7 @@ export const initialCallPolicy:CallPolicy={
  agent_enabled:true,translation_enabled:true,agent_mode:"always",
  translation_mode:"always",coexistence:"menu",outside_action:"translation",
  ring_seconds:18,time_zone:"America/New_York",use_business_hours:false,
- schedule:defaultHours,closed_message:"Gracias por llamar. En este momento no podemos atenderte."
+ schedule:defaultHours,translation_schedule:structuredClone(defaultHours),closed_message:"Gracias por llamar. En este momento no podemos atenderte."
 };
 const minute=(x:string)=>Number(x.slice(0,2))*60+Number(x.slice(3,5));
 export function validWeek(value:unknown):value is Week{
@@ -54,7 +54,11 @@ export function checkCallPolicy(input:unknown):CallPolicy{
  if(typeof p.agent_enabled!=="boolean"||typeof p.translation_enabled!=="boolean"||
    (!p.agent_enabled&&!p.translation_enabled))throw Error("Deja al menos una función de llamadas habilitada.");
  if(typeof p.use_business_hours!=="boolean")throw Error("Elige cómo usar los horarios.");
- if(!validWeek(p.schedule))throw Error("Completa los días y las horas; apertura y cierre deben ser diferentes.");
+ if(!validWeek(p.schedule))throw Error("Completa los días y las horas del agente.");
+ // Older saved policies and mobile clients originally had one shared schedule.
+ // Preserve it if the separate translation hours have never been configured.
+ const translationSchedule=p.translation_schedule??p.schedule;
+ if(!validWeek(translationSchedule))throw Error("Completa los días y las horas de traducción.");
  const zone=one("time_zone",zoneOptions) as CallPolicy["time_zone"];
  const count=Number(p.ring_seconds);
  if(!Number.isInteger(count)||count<10||count>30)throw Error("La espera permitida es de 10 a 30 segundos.");
@@ -68,6 +72,7 @@ export function checkCallPolicy(input:unknown):CallPolicy{
   outside_action:one("outside_action",["translation","message"]) as CallPolicy["outside_action"],
   ring_seconds:count,time_zone:zone,use_business_hours:p.use_business_hours,
   schedule:Object.fromEntries(keyList.map(k=>[k,{...(p.schedule as Week)[k]}])) as Week,
+  translation_schedule:Object.fromEntries(keyList.map(k=>[k,{...(translationSchedule as Week)[k]}])) as Week,
   closed_message:p.closed_message.trim()
  };
 }
@@ -112,11 +117,12 @@ export function localPreview(day:DayName,time:string):{day:DayName;minutes:numbe
 }
 export function decideCall(policy:CallPolicy,at:{day:DayName;minutes:number},
  week:Week=policy.schedule):CallDecision{
- const inside=inWeek(week,at.day,at.minutes);
+ const agentInside=inWeek(week,at.day,at.minutes);
+ const translationInside=inWeek(policy.translation_schedule??week,at.day,at.minutes);
  const agentAvailable=policy.agent_enabled&&
-  (policy.agent_mode==="always"||policy.agent_mode==="after_no_answer"||inside);
+  (policy.agent_mode==="always"||policy.agent_mode==="after_no_answer"||agentInside);
  const translationAvailable=policy.translation_enabled&&
-  (policy.translation_mode==="always"||inside);
+  (policy.translation_mode==="always"||translationInside);
  let action:CallDecision["action"],reason:CallDecision["reason"];
  if(agentAvailable&&translationAvailable){
   action=policy.coexistence==="menu"?"menu":
@@ -129,6 +135,6 @@ export function decideCall(policy:CallPolicy,at:{day:DayName;minutes:number},
   reason=action==="ring_owner"?"owner_first":"agent";
  }else if(translationAvailable){
   action="translation";reason="translation";
- }else{action="message";reason=inside?"disabled":"outside_hours";}
+ }else{action="message";reason=agentInside||translationInside?"disabled":"outside_hours";}
  return {action,reason,agentAvailable,translationAvailable};
 }
