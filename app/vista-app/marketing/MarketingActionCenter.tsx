@@ -43,7 +43,7 @@ const services:Service[]=[
  {id:"other",name:"Otra necesidad de marketing",why:"Explica el resultado que deseas conseguir.",mode:"Evaluación individual"}
 ];
 type WizardStep=0|1|2|3|4;
-const wizardTitles=["Servicio","Tu negocio","Tu objetivo","Confirmar"] as const;
+
 const serviceIcons:Record<ServiceCode,typeof MapPinned>={
  directory_listings:MapPinned,google_profile:MapPinned,apple_maps:Apple,bing_places:Navigation,yelp_profile:Star,
  search_console:Search,seo_improvement:Gauge,campaign_setup:Megaphone,
@@ -61,13 +61,6 @@ const suggestedGoals:Record<ServiceCode,string[]>={
  review_strategy:["Quiero pedir reseñas auténticas a mis clientes.","Necesito mejorar la forma en que respondo a mis reseñas."],
  other:["Quiero explicar una necesidad de marketing para mi negocio.","Necesito ayuda para conseguir más clientes de manera medible."]
 };
-const statusNames:Record<Status,string>={
- received:"Solicitud recibida",quoted:"Presupuesto disponible",approved:"Presupuesto aprobado",
- in_progress:"Trabajo en proceso",needs_customer:"Necesitamos tu ayuda",
- verified:"Completado con evidencia",cancelled:"Cancelada"
-};
-const money=(cents:number)=>new Intl.NumberFormat("es-US",{style:"currency",currency:"USD"}).format(cents/100);
-const date=(v:string)=>new Intl.DateTimeFormat("es-US",{dateStyle:"medium"}).format(new Date(v));
 const safeSite=(value:string)=>{
  if(!value.trim())return null;
  try{const u=new URL(value.trim());return ["https:","http:"].includes(u.protocol)&&Boolean(u.hostname)&&!u.username&&!u.password?u.toString():null;}
@@ -80,8 +73,15 @@ export default function MarketingActionCenter({businessName,industryId,website,o
 }){
  const {language,translate}=useInterfaceLanguage();
  const en=language==="en";
- const serviceName=(id:ServiceCode)=>en?({google_profile:"Appear on Google",seo_improvement:"Improve my website",review_strategy:"My reputation",directory_listings:"Local directories"} as Partial<Record<ServiceCode,string>>)[id]||services.find(x=>x.id===id)?.name||id:services.find(x=>x.id===id)?.name||id;
- const serviceWhy=(id:ServiceCode)=>en?({google_profile:"Create or improve your business listing.",seo_improvement:"Find practical improvements for your website.",review_strategy:"Manage authentic reviews and local listings."} as Partial<Record<ServiceCode,string>>)[id]||"":services.find(x=>x.id===id)?.why||"";
+
+ const wizardTitles=[translate("marketing.step.service"),translate("marketing.step.business"),translate("marketing.step.goal"),translate("marketing.step.confirm")];
+ const statusNames:Record<Status,string>={received:translate("marketing.status.received"),quoted:translate("marketing.status.quoted"),approved:translate("marketing.status.approved"),in_progress:translate("marketing.status.in_progress"),needs_customer:translate("marketing.status.needs_customer"),verified:translate("marketing.status.verified"),cancelled:translate("marketing.status.cancelled")};
+ const serviceNames:Record<ServiceCode,string>={directory_listings:translate("marketing.service.directory_listings.name"),google_profile:translate("marketing.service.google_profile.name"),apple_maps:translate("marketing.service.apple_maps.name"),bing_places:translate("marketing.service.bing_places.name"),yelp_profile:translate("marketing.service.yelp_profile.name"),search_console:translate("marketing.service.search_console.name"),seo_improvement:translate("marketing.service.seo_improvement.name"),campaign_setup:translate("marketing.service.campaign_setup.name"),review_strategy:translate("marketing.service.review_strategy.name"),other:translate("marketing.service.other.name")};
+ const serviceWhys:Record<ServiceCode,string>={directory_listings:translate("marketing.service.directory_listings.why"),google_profile:translate("marketing.service.google_profile.why"),apple_maps:translate("marketing.service.apple_maps.why"),bing_places:translate("marketing.service.bing_places.why"),yelp_profile:translate("marketing.service.yelp_profile.why"),search_console:translate("marketing.service.search_console.why"),seo_improvement:translate("marketing.service.seo_improvement.why"),campaign_setup:translate("marketing.service.campaign_setup.why"),review_strategy:translate("marketing.service.review_strategy.why"),other:translate("marketing.service.other.why")};
+ const money=(cents:number)=>new Intl.NumberFormat(language==="es"?"es-US":"en-US",{style:"currency",currency:"USD"}).format(cents/100);
+ const date=(v:string)=>new Intl.DateTimeFormat(language==="es"?"es-US":"en-US",{dateStyle:"medium"}).format(new Date(v));
+ const serviceName=(id:ServiceCode)=>serviceNames[id]||id;
+ const serviceWhy=(id:ServiceCode)=>serviceWhys[id]||"";
 
  const [client,setClient]=useState<SupabaseClient|null>(null);
  const [user,setUser]=useState<User|null>(null);
@@ -622,7 +622,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     </div>:null}
     {wizardStep===2?<div className={styles.wizardBody}>
      {selected==="google_profile"?<GoogleProfileWizard step={googleStep} data={googleData} onData={setGoogleData} media={googleMedia} onMedia={setGoogleMedia} business={name} website={site}/>:<>
-     <div className={styles.selectedServiceBanner}><span className={styles.selectedServiceIcon}>{(()=>{const Icon=serviceIcons[selected];return <Icon size={23}/>;})()}</span><span><small>{translate("marketing.copy.preparing_your_request")}</small><strong>{services.find(s=>s.id===selected)?.name}</strong></span></div>
+     <div className={styles.selectedServiceBanner}><span className={styles.selectedServiceIcon}>{(()=>{const Icon=serviceIcons[selected];return <Icon size={23}/>;})()}</span><span><small>{translate("marketing.copy.preparing_your_request")}</small><strong>{serviceName(selected)}</strong></span></div>
      {selected==="directory_listings"?<DirectoryDiscovery data={directoryData} onChange={setDirectoryData} industry={effectiveCategory}/>:null}
      {selected==="seo_improvement"?<WebRepairStudio step={webStage} site={site} data={webRepair} onChange={setWebRepair} accessToken={accessToken}/>:null}
      {selected==="review_strategy"?<ReputationStudio business={name} mode={reviewMode} onModeChange={v=>{setReviewMode(v);setGoal(v==="request"?"Quiero solicitar reseñas auténticas a mis clientes.":"Necesito preparar respuestas para reseñas reales.");}} reviewInput={reviewInput} onReviewChange={v=>{setReviewInput(v);setReviewReply("");setGoal(v.trim()?"Necesito preparar una respuesta revisable para una reseña real.":"");}} reply={reviewReply} onReplyChange={setReviewReply} link={reviewLink} onLinkChange={v=>{setReviewLink(v);setGoal("Quiero compartir un enlace auténtico para recibir reseñas de mis clientes.");}} onDirectory={()=>{setSelected("directory_listings");setWizardError("");setGoal("");}} reviewTone={reviewTone} onToneChange={setReviewTone}/>:null}
@@ -674,7 +674,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     shown.length===0?<div className={styles.empty}><ClipboardList size={25}/><strong>{translate("marketing.ui.empty")}</strong><span>{translate("marketing.ui.emptyHint")}</span></div>:
     <div className={styles.requestList}>{shown.map(req=>{
      const approved=isAccepted(req);
-     const service=services.find(s=>s.id===req.service_code)?.name||req.service_code;
+     const service=serviceName(req.service_code);
      return <article className={styles.request} key={req.id}>
       <div className={styles.requestTop}><div><strong>{service}</strong><small>{req.business_name} · {date(req.created_at)} · #{req.id.slice(0,8)}</small></div>
        <span className={req.status==="verified"?styles.verified:styles.status}>{statusNames[req.status]}</span></div>
