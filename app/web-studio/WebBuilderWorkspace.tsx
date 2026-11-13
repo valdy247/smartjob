@@ -11,6 +11,9 @@ import WebSiteIntake from "./WebSiteIntake";
 import type {SiteIntake,SiteProposal} from "@/lib/web-builder-templates";
 import {WEBSITE_STYLES,restyleWebsiteDocument,type WebsiteStyleId} from "@/lib/web-builder-safe-styles";
 import BuilderHistoryControls from "./BuilderHistoryControls";
+import {WebsiteChrome,websiteVisualStyle} from "@/lib/web-site-chrome";
+import {familyForCategory} from "@/lib/web-builder-templates";
+import RequestForm from "@/app/sites/[slug]/RequestForm";
 import styles from "./WebBuilderWorkspace.module.css";
 
 type Site={id:string;owner_id:string;slug:string;name:string;category_id:string;inquiries_enabled:boolean;legacy_source_slug:string|null};
@@ -70,6 +73,21 @@ export default function WebBuilderWorkspace(){
  const [notice,setNotice]=useState("");
  const [refreshKey,setRefreshKey]=useState(0);
  const [origin,setOrigin]=useState("");
+ const previewDocument=useMemo(()=>normalizeBuilderDocument(document),[document]);
+ const previewRoot=(previewDocument.root?.props||{}) as Record<string,unknown>;
+ const previewFamily=typeof previewRoot.family==="string"&&
+  ["bakery","construction","professional","beauty","creative"].includes(previewRoot.family)?
+  previewRoot.family:familyForCategory(site?.category_id||"");
+ const previewServices=useMemo(()=>{
+  const fromClassic=previewDocument.content.filter(c=>c.type==="Services")
+   .flatMap(c=>["first","second","third"].map(k=>c.props?.[k]).filter((s):s is string=>
+    typeof s==="string"&&Boolean(s.trim())));
+  const fromCatalog=previewDocument.content.filter(c=>c.type==="OfferingGrid")
+   .flatMap(c=>Array.isArray(c.props?.items)?c.props.items.flatMap((v:unknown)=>
+    v&&typeof v==="object"&&typeof (v as {title?:unknown}).title==="string"?
+     [(v as {title:string}).title]:[]):[]);
+  return Array.from(new Set([...fromClassic,...fromCatalog])).slice(0,30);
+ },[previewDocument]);
  const dirty=page&&(JSON.stringify(normalizeBuilderDocument(document))!==JSON.stringify(normalizeBuilderDocument(page.draft))||
   title!==page.title||description!==page.description);
  const publishedHere=Boolean(page&&publishedIds.includes(page.id));
@@ -659,7 +677,21 @@ export default function WebBuilderWorkspace(){
        </div>
       </div>
       <div className={previewMode==="mobile"?styles.previewPhone:styles.previewDesktop}>
-       <Render config={builderConfig} data={normalizeBuilderDocument(document)}/>
+       <WebsiteChrome siteName={site?.name||"Mi negocio"} baseUrl={siteUrl||""}
+        menu={pages.filter(p=>publishedIds.includes(p.id)).map(p=>({title:p.title,page_slug:p.slug}))}
+        logo={typeof previewRoot.logo==="string"?previewRoot.logo:""} family={previewFamily}
+        language={previewRoot.language==="en"?"en":"es"}
+        siteStyle={String(previewRoot.style||"light")} siteWidth={String(previewRoot.width||"regular")}
+        visualStyle={websiteVisualStyle(previewRoot.palette,previewRoot.accentColor)}>
+        <Render config={builderConfig} data={previewDocument}/>
+        {site?.inquiries_enabled&&page.slug==="home"?<section className="vmv-site-inquiry"
+         id="solicitud" aria-label="Vista previa del formulario">
+         <small>CONTACTA CON NOSOTROS</small>
+         <h2>¿Qué necesitas?</h2>
+         <RequestForm preview source="builder" slug={site.slug} business={site.name}
+          categoryId={site.category_id} services={previewServices}/>
+        </section>:null}
+       </WebsiteChrome>
       </div>
      </section>:null}
      <div className={styles.puckShell} style={{display:previewMode?"none":undefined}}>
