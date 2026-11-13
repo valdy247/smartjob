@@ -4,6 +4,9 @@ import {notFound} from "next/navigation";
 import {createClient} from "@supabase/supabase-js";
 import {Render} from "@puckeditor/core";
 import {builderConfig,normalizeBuilderDocument} from "@/lib/web-builder-puck";
+import {safeWebImageUrl} from "@/lib/web-services-site";
+import {familyForCategory} from "@/lib/web-builder-templates";
+import type {CSSProperties} from "react";
 import RequestForm from "@/app/sites/[slug]/RequestForm";
 import "../../../web-builder-public.css";
 
@@ -55,13 +58,33 @@ export default async function VMVPublishedPage({params}:Props){
  const base=custom?"":"/web/"+slug;
  const siteName=result.page.site_name||slug.replace(/-/g," ");
  const data=normalizeBuilderDocument(result.page.document);
- const services=data.content.filter(b=>b.type==="Services").flatMap(b=>
-  ["first","second","third"].map(k=>b.props?.[k]).filter((s):s is string=>typeof s==="string"&&Boolean(s.trim()))
- ).slice(0,30);
+ const classicServices=data.content.filter(b=>b.type==="Services").flatMap(b=>
+  ["first","second","third"].map(k=>b.props?.[k]).filter((s):s is string=>typeof s==="string"&&Boolean(s.trim())));
+ const visualServices=data.content.filter(b=>b.type==="OfferingGrid").flatMap(b=>
+  Array.isArray(b.props?.items)?b.props.items.flatMap(item=>
+   item&&typeof item==="object"&&typeof item.title==="string"?[item.title]:[]):[]);
+ const services=Array.from(new Set([...classicServices,...visualServices])).slice(0,30);
+ const rootData=(data.root?.props||{}) as Record<string,unknown>;
+ const logo=safeWebImageUrl(typeof rootData.logo==="string"?rootData.logo:"");
+ const palette=typeof rootData.palette==="string"?rootData.palette:"violet";
+ const colorMap:Record<string,[string,string]>={
+  violet:["#8e5de4","#f0e9fd"],mint:["#198d74","#e5f8f0"],amber:["#a97b26","#fff4d8"],
+  ink:["#30283a","#eae8ed"],rose:["#b64b70","#fff0f4"],forest:["#367457","#e9f4eb"],
+  ocean:["#267a9c","#e8f6fb"],terracotta:["#af6242","#fbede2"],charcoal:["#24232b","#efedf2"]
+ };
+ const colors=colorMap[palette]||colorMap.violet;
+ const accent=typeof rootData.accentColor==="string"&&/^#[0-9a-f]{6}$/i.test(rootData.accentColor)?
+  rootData.accentColor:colors[0];
+ const visualStyle={ "--vmv-accent":accent,"--vmv-pale":colors[1] } as CSSProperties;
+ const family=familyForCategory(result.page.category_id||"");
  const showForm=part==="home"&&result.page.inquiries_enabled===true;
- return <div className="vmv-site">
-  <header className="vmv-site-nav">
-   <a className="vmv-site-mark" href={base||"/"}>{siteName}<span>.</span></a>
+ return <div className="vmv-site" data-site-style={rootData.style||"light"}
+  data-site-family={family} style={visualStyle}>
+  <header className="vmv-site-nav" data-header-family={family}>
+   <a className="vmv-site-mark" href={base||"/"}>
+    {logo?<img src={logo} width="52" height="52" alt={"Logo de "+siteName} />:null}
+    <span className="vmv-site-brand-name">{siteName}<span>.</span></span>
+   </a>
    <nav aria-label="Páginas del sitio">
     {result.menu.map(item=><a key={item.page_slug} href={item.page_slug==="home"?(base||"/"):(base+"/"+item.page_slug)}>
      {item.page_slug==="home"?"Inicio":item.title}</a>)}
