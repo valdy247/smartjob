@@ -1,9 +1,9 @@
 "use client";
 import {useEffect,useState} from "react";
-import {ArrowLeft,CheckCircle2,ClipboardList,Package,Plus,ReceiptText,ShieldCheck,ShoppingBag,UserRoundCheck} from "lucide-react";
+import {ArrowLeft,CheckCircle2,ClipboardList,Package,Plus,ReceiptText,ShieldCheck,ShoppingBag,UserRoundCheck,PhoneCall,Save} from "lucide-react";
 import type {PersistedAgent} from "./agentStore";
-import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,prepareTestOrder,saveCatalogItem,
- type CatalogItem,type TestOrder,type HumanRequest} from "./commerceStore";
+import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,prepareTestOrder,saveCatalogItem,saveCommerceAgentPermissions,
+ type CatalogItem,type TestOrder,type HumanRequest,type CommerceAgentPermissions} from "./commerceStore";
 import styles from "./CommerceStudio.module.css";
 
 type Form={
@@ -12,20 +12,44 @@ type Form={
 };
 const empty:Form={name:"",sku:"",description:"",price:"",stock_mode:"manual",available_qty:"",
  approved:false,active:true};
-export default function CommerceStudio({agents,onClose}:{agents:PersistedAgent[];onClose:()=>void}){
+export default function CommerceStudio({agents,onClose,initialAgentId="",onAgentUpdated}:{agents:PersistedAgent[];onClose:()=>void;initialAgentId?:string;onAgentUpdated?:(agent:PersistedAgent)=>void}){
  const [items,setItems]=useState<CatalogItem[]>([]);
  const [orders,setOrders]=useState<TestOrder[]>([]);
  const [human,setHuman]=useState<HumanRequest[]>([]);
  const [editing,setEditing]=useState<CatalogItem|null>(null);
  const [form,setForm]=useState<Form>(empty);
- const [agentId,setAgentId]=useState("");
+ const [agentId,setAgentId]=useState(initialAgentId);
  const [testItemId,setTestItemId]=useState("");
  const [qty,setQty]=useState(1);
  const [busy,setBusy]=useState(false);
  const [loading,setLoading]=useState(true);
  const [notice,setNotice]=useState("");
  const [checkoutLinks,setCheckoutLinks]=useState<Record<string,string>>({});
- const [tab,setTab]=useState<"catalog"|"orders"|"human">("catalog");
+ const [editedAgent,setEditedAgent]=useState<PersistedAgent|null>(null);
+ const [permissions,setPermissions]=useState<CommerceAgentPermissions>({
+  channel:"Chat",cap_sales:false,perm_prepare_order:false,perm_confirm_order:false,perm_payment_link:false
+ });
+ const selectedAgent=(editedAgent?.id===agentId?editedAgent:null)||agents.find(a=>a.id===agentId)||null;
+ useEffect(()=>{
+  const conf=selectedAgent?.setup||{};
+  setPermissions({
+   channel:conf.channel==="Teléfono"||conf.channel==="Teléfono y chat"?conf.channel:"Chat",
+   cap_sales:conf.cap_sales==="Sí",perm_prepare_order:conf.perm_prepare_order==="Sí",
+   perm_confirm_order:conf.perm_confirm_order==="Sí",perm_payment_link:conf.perm_payment_link==="Sí"
+  });
+ },[selectedAgent?.id,selectedAgent?.revision]);
+ const savePermissions=async()=>{
+  if(!selectedAgent||busy)return;
+  setBusy(true);
+  try{
+   const saved=await saveCommerceAgentPermissions(selectedAgent,permissions);
+   setEditedAgent(saved);onAgentUpdated?.(saved);
+   setNotice("Permisos guardados en tu cuenta. Las llamadas existentes mantienen su configuración anterior.");
+  }catch(e){setNotice(e instanceof Error?e.message:"No fue posible guardar los permisos.");}
+  finally{setBusy(false);}
+ };
+
+ const [tab,setTab]=useState<"setup"|"catalog"|"orders"|"human">(initialAgentId?"setup":"catalog");
  const refresh=async()=>{
   const [catalog,history,requests]=await Promise.all([listCatalog(),listTestOrders(),listHumanRequests()]);
   setItems(catalog);setOrders(history);setHuman(requests);
@@ -102,11 +126,56 @@ export default function CommerceStudio({agents,onClose}:{agents:PersistedAgent[]
   {notice?<div className={styles.notice} role="status">{notice}</div>:null}
   {loading?<p className={styles.hint}>Cargando catálogo y pedidos…</p>:null}
   <div className={styles.tabs}>
+   <button type="button" className={tab==="setup"?styles.on:styles.off} onClick={()=>setTab("setup")}><PhoneCall size={15}/> Ventas</button>
    <button type="button" className={tab==="catalog"?styles.on:styles.off} onClick={()=>setTab("catalog")}><Package size={15}/> Catálogo ({items.length})</button>
    <button type="button" className={tab==="orders"?styles.on:styles.off} onClick={()=>setTab("orders")}><ReceiptText size={15}/> Pedidos ({orders.length})</button>
    <button type="button" className={tab==="human"?styles.on:styles.off} onClick={()=>setTab("human")}><UserRoundCheck size={15}/> Humano ({human.filter(x=>x.status==="new").length})</button>
   </div>
-  {tab==="catalog"?<>
+  {tab==="setup"?<>
+   <div className={styles.heading}><h2>Preparar al agente para vender</h2></div>
+   <div className={styles.form}>
+    <label>Agente que atenderá las ventas
+     <select value={agentId} onChange={e=>{setAgentId(e.target.value);setEditedAgent(null);}}>
+      <option value="">Elige tu agente</option>
+      {agents.filter(a=>a.revision>0).map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
+     </select>
+    </label>
+    {selectedAgent?<><p className={styles.hint}>Habilitar ventas no cambia qué agente atiende el teléfono. Debes mantener seleccionado el agente correcto para tu línea.</p>
+     <label>Canal del agente
+      <select value={permissions.channel} onChange={e=>setPermissions(p=>({...p,channel:e.target.value as CommerceAgentPermissions["channel"]}))}>
+       <option value="Chat">Solo chat</option><option value="Teléfono">Teléfono</option>
+       <option value="Teléfono y chat">Teléfono y chat</option>
+      </select>
+     </label>
+     <label className={styles.check}><input type="checkbox" checked={permissions.cap_sales}
+      onChange={e=>setPermissions(p=>({...p,cap_sales:e.target.checked,
+       perm_prepare_order:e.target.checked?p.perm_prepare_order:false,
+       perm_confirm_order:e.target.checked?p.perm_confirm_order:false,
+       perm_payment_link:e.target.checked?p.perm_payment_link:false}))}/>
+      <span>Vender: consultar el catálogo aprobado y explicar sus precios.</span></label>
+     <label className={styles.check}><input type="checkbox" disabled={!permissions.cap_sales}
+      checked={permissions.perm_prepare_order}
+      onChange={e=>setPermissions(p=>({...p,perm_prepare_order:e.target.checked,
+       perm_confirm_order:e.target.checked?p.perm_confirm_order:false,
+       perm_payment_link:e.target.checked?p.perm_payment_link:false}))}/>
+      <span>Preparar cotizaciones y pedidos de PRUEBA con precios calculados en el servidor.</span></label>
+     <label className={styles.check}><input type="checkbox" disabled={!permissions.perm_prepare_order}
+      checked={permissions.perm_confirm_order}
+      onChange={e=>setPermissions(p=>({...p,perm_confirm_order:e.target.checked}))}/>
+      <span>Confirmar un pedido de prueba solo después de la aceptación expresa del comprador.</span></label>
+     <label className={styles.check}><input type="checkbox" disabled={!permissions.perm_prepare_order}
+      checked={permissions.perm_payment_link}
+      onChange={e=>setPermissions(p=>({...p,perm_payment_link:e.target.checked}))}/>
+      <span>Permitir enlace de pago de PRUEBA solo si el negocio tiene una cuenta comercial verificada.</span></label>
+     <button type="button" className={styles.primary} disabled={busy} onClick={()=>void savePermissions()}>
+      <Save size={16}/> Guardar permisos de ventas</button>
+    </>:<p className={styles.hint}>Guarda primero un agente y selecciónalo aquí.</p>}
+   </div>
+   <div className={styles.warning}><ShieldCheck size={18}/>
+    <p>Importante: un 97 % de configuración general no significa que el agente tenga productos autorizados. Tu siguiente paso es añadir al menos un producto con precio y unidades verificadas en <strong>Catálogo</strong>.</p>
+   </div>
+   <button type="button" className={styles.primary} onClick={()=>setTab("catalog")}><Package size={16}/> Ir al catálogo</button>
+  </>:tab==="catalog"?<>
    <div className={styles.heading}><h2>{editing?"Editar producto":"Añadir producto"}</h2>
     {editing?<button type="button" onClick={()=>{setEditing(null);setForm(empty);}}>Cancelar edición</button>:null}</div>
    <div className={styles.form}>
