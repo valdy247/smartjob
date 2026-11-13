@@ -218,7 +218,7 @@ export const builderConfig:Config={
    label:"Testimonio",
    fields:{quote:{type:"textarea"},author:basicText},
    defaultProps:{quote:"",author:""},
-   render:({quote,author})=>quote?<blockquote className="vmv-site-quote"><p>“{quote}”</p>{author?<footer>{author}</footer>:null}</blockquote>:null
+   render:({quote,author})=>quote?<blockquote className="vmv-site-quote"><p>“{quote}”</p>{author?<footer>{author}</footer>:null}</blockquote>:<></>
   },
   Spacer:{
    label:"Separador",
