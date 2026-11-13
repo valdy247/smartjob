@@ -49,8 +49,9 @@ export function AIAgentsCallControl({session,onBack}:Props){
  const patch=<K extends keyof CallPolicy>(key:K,value:CallPolicy[K])=>{
   setPolicy(p=>p?{...p,[key]:value}:p);setResult("");
  };
- const dayPatch=(d:DayName,key:"enabled"|"start"|"end",value:boolean|string)=>{
-  setPolicy(p=>p?{...p,schedule:{...p.schedule,[d]:{...p.schedule[d],[key]:value}}}:p);
+ const dayPatch=(d:DayName,key:"enabled"|"start"|"end",value:boolean|string,
+  target:"schedule"|"translation_schedule"="schedule")=>{
+  setPolicy(p=>p?{...p,[target]:{...p[target],[d]:{...p[target][d],[key]:value}}}:p);
   setResult("");
  };
  const choose=(title:string,options:SelectOption[],fn:(v:string)=>void)=>
@@ -128,10 +129,14 @@ export function AIAgentsCallControl({session,onBack}:Props){
        {label:"Traducción",value:"translation_first"}]}/>
     </View>}
     {(policy.agent_mode==="schedule"||policy.translation_mode==="schedule")&&<View style={s.box}>
-     <Title text="Horario"/>
+     <Title text="Zona horaria"/>
      {option("Zona horaria",policy.time_zone.replace("America/","").replaceAll("_"," "),
       ()=>choose("Zona horaria",zones.map(z=>({label:z.replace("America/","").replaceAll("_"," "),value:z})),
        v=>patch("time_zone",v)))}
+     <Text style={s.hint}>Los dos servicios comparten la zona horaria, pero tienen horarios independientes.</Text>
+    </View>}
+    {policy.agent_enabled&&policy.agent_mode==="schedule"&&<View style={s.box}>
+     <Title text="Horario del agente"/>
      {info.businessHoursReady&&<Toggle label="Usar horario del negocio" value={policy.use_business_hours}
       onChange={v=>patch("use_business_hours",v)}/>}
      {!policy.use_business_hours&&weekDays.map(day=><View style={s.day} key={day}>
@@ -147,7 +152,24 @@ export function AIAgentsCallControl({session,onBack}:Props){
         </Pressable>)}
       </View>}
      </View>)}
-     <Text style={s.hint}>Un cierre anterior a la apertura continúa después de medianoche.</Text>
+    </View>}
+    {policy.translation_enabled&&policy.translation_mode==="schedule"&&<View style={s.box}>
+     <Title text="Horario de traducción"/>
+     <Text style={s.hint}>Independiente del agente IA. Smart Call mantiene su motor actual.</Text>
+     {weekDays.map(day=><View style={s.day} key={day}>
+      <Toggle label={dayLabel[day]} value={policy.translation_schedule[day].enabled}
+       onChange={v=>dayPatch(day,"enabled",v,"translation_schedule")}/>
+      {policy.translation_schedule[day].enabled&&<View style={s.times}>
+       {(["start","end"] as const).map(key=>
+        <Pressable key={key} accessibilityRole="button" style={s.timeButton}
+         onPress={()=>choose(key==="start"?"Apertura":"Cierre",clockOptions,
+           v=>dayPatch(day,key,v,"translation_schedule"))}>
+         <Text style={s.hint}>{key==="start"?"Desde":"Hasta"}</Text>
+         <Text style={s.strong}>{policy.translation_schedule[day][key]}</Text>
+        </Pressable>)}
+      </View>}
+     </View>)}
+     <Text style={s.hint}>Un horario nocturno termina después de medianoche, nunca antes de su apertura.</Text>
     </View>}
     <View style={s.box}><Title text="Fuera de horario"/>
      <Segmented value={policy.outside_action} onChange={v=>patch("outside_action",v as CallPolicy["outside_action"])}
