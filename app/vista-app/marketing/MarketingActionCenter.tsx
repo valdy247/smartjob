@@ -419,8 +419,9 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    const selected=req.directory_data.selected.map(t=>{
     const status=directoryStatus[t.id]||t.status;
     const evidenceUrl=(directoryProof[t.id]??t.evidenceUrl).trim();
-    if(status==="published"&&!safeDirectoryUrl(evidenceUrl))throw Error("Para marcar "+t.name+" publicado debes incluir una URL HTTPS de la ficha.");
-    return {...t,status,evidenceUrl:status==="published"?evidenceUrl:"",note:t.note};
+    if(["published","already_listed"].includes(status)&&!safeDirectoryUrl(evidenceUrl))throw Error("Para confirmar "+t.name+" debes incluir una URL HTTPS de la ficha.");
+    if(["submitted","published"].includes(status)&&!isAccepted(req))throw Error("Primero el cliente debe aprobar el presupuesto de gestión (puede ser $0) antes de enviar registros a "+t.name+".");
+    return {...t,status,evidenceUrl:["published","already_listed"].includes(status)?evidenceUrl:"",note:t.note};
    });
    const {error:saveError}=await client.from("vmv_marketing_requests").update({directory_data:{...req.directory_data,selected}}).eq("id",req.id);
    if(saveError)throw saveError;
