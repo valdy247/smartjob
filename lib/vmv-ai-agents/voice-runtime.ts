@@ -106,7 +106,7 @@ async function loadSession(db:NonNullable<ReturnType<typeof billingAdmin>>,sid:s
  return error?null:data as CallRecord|null;
 }
 function nextSpeak(reply:string,l:Lang,turn:number){
- return turn>=8?end(reply+(l==="es"?" Gracias por llamar.":" Thanks for calling."),l):
+ return turn>=24?end(reply+(l==="es"?" Gracias por llamar.":" Thanks for calling."),l):
   gather(reply,l,turn+1);
 }
 export async function handleAiVoice(req:NextRequest){
@@ -161,7 +161,7 @@ export async function handleAiVoice(req:NextRequest){
  }
  if(!turnRaw)return refused();
  const turn=Number(turnRaw);
- if(!Number.isInteger(turn)||turn<1||turn>8)return refused();
+ if(!Number.isInteger(turn)||turn<1||turn>24)return refused();
  if(turn===1&&session.agent_snapshot.language==="both"){
   const digits=signed.get("Digits");
   if(digits==="1"){
@@ -186,7 +186,7 @@ export async function handleAiVoice(req:NextRequest){
   return nextSpeak(session.last_reply,session.preferred_language,turn);
  if(session.turn_count>=turn)return gather(
   session.preferred_language==="es"?"Un momento, por favor.":"One moment please.",
-  session.preferred_language,turn+1<=8?turn+1:8);
+  session.preferred_language,turn+1<=24?turn+1:24);
  const {data:claimed,error:claimError}=await db.rpc("vmv_ai_claim_turn",{p_call_sid:sid,p_expected:turn});
  if(claimError||claimed!==true)return refused();
  const lang=languageFor(session,speech);
