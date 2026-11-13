@@ -24,7 +24,7 @@ type RequestRow={
  website_url:string|null;goal_text:string;status:Status;execution_mode:"assisted"|"automated";
  quoted_price_cents:number|null;quote_note:string|null;quote_revision:number;
  staff_update:string|null;evidence_url:string|null;verified_at:string|null;
- created_at:string;updated_at:string;google_profile_data?:GoogleData&{media?:{kind:string;path:string}[]}|null;web_repair_data?:WebRepairData|null;directory_data?:DirectoryData|null
+ created_at:string;updated_at:string;reputation_data?:{mode:string;reviewText:string;replyText:string;reviewLink:string}|null;google_profile_data?:GoogleData&{media?:{kind:string;path:string}[]}|null;web_repair_data?:WebRepairData|null;directory_data?:DirectoryData|null
 };
 type Acceptance={id:string;request_id:string;owner_id:string;quote_revision:number;quoted_price_cents:number;accepted_at:string};
 type Service={id:ServiceCode;name:string;why:string;mode:string};
@@ -142,7 +142,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   version:2,savedAt:Date.now(),requestId,ownerId:user?.id||null,
   service:selected,step:wizardStep,googleStep,
   name,site,category:chosenCategory||industryId||savedCategory||"other",goal,reviewInput,reviewTone,
-  reviewLink,reviewReply,googleData,webRepair,directoryData
+  reviewLink,reviewReply,reviewMode,googleData,webRepair,directoryData
  });
  const saveCurrentDraft=async()=>{
   const ok=writeMarketingDraft(draftSnapshot());
@@ -174,7 +174,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     setGoogleStep(Math.max(0,Math.min(saved.googleStep,googleStepNames.length-1)));
     setName(saved.name||"");setSite(saved.site||"");setChosenCategory(saved.category||"");
     setGoal(saved.goal||"");setReviewInput(saved.reviewInput||"");
-    setReviewLink(saved.reviewLink||"");setReviewReply(saved.reviewReply||"");
+    setReviewLink(saved.reviewLink||"");setReviewReply(saved.reviewReply||"");setReviewMode(saved.reviewMode==="request"?"request":"respond");
     setReviewTone(saved.reviewTone==="breve"?"breve":"cordial");
     if(saved.googleData)setGoogleData(saved.googleData);
     if(saved.webRepair)setWebRepair(saved.webRepair);
@@ -194,7 +194,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(!writeMarketingDraft(draftSnapshot()))setDraftNotice("No se está guardando el borrador. Mantén abierta esta página.");
   },300);
   return()=>window.clearTimeout(id);
- },[draftReady,authState,user?.id,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,goal,reviewInput,reviewTone,reviewLink,reviewReply,googleData,webRepair,directoryData,requestId]);
+ },[draftReady,authState,user?.id,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,goal,reviewInput,reviewTone,reviewLink,reviewReply,reviewMode,googleData,webRepair,directoryData,requestId]);
  useEffect(()=>{
   if(!draftReady||selected!=="google_profile"||wizardStep<1||wizardStep>3)return;
   const id=window.setTimeout(()=>{
@@ -331,6 +331,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(bad){setWizardStep(2);setGoogleStep(5);setWizardError("Revisa "+bad.file.name+": fotos JPG o PNG entre 10 KB y 5 MB.");submitting.current=false;return;}
   }
   if(selected!=="google_profile"&&selected!=="seo_improvement"&&selected!=="directory_listings"&&((goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5))||goal.trim().length>1500)){setWizardStep(2);setWizardError("Elige una necesidad o describe el resultado que buscas.");submitting.current=false;return;}
+  if(selected==="review_strategy"&&reviewMode==="request"&&!/^https:\/\/[^\s/]+\.[^\s/]+/i.test(reviewLink.trim())){setWizardStep(2);setWizardError("Introduce un enlace HTTPS válido para pedir reseñas.");submitting.current=false;return;}
   if(selected==="directory_listings"&&validateDirectory(directoryData)){setWizardStep(2);setWizardError(validateDirectory(directoryData));submitting.current=false;return;}
   if(selected==="seo_improvement"&&validateWebRepair(webRepair)){setWizardStep(2);setWizardError(validateWebRepair(webRepair));submitting.current=false;return;}
   if(selected==="seo_improvement"&&!site.trim()){setWizardStep(1);setWizardError("Añade la web que deseas mejorar.");submitting.current=false;return;}
@@ -369,7 +370,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     agreed_to_contact:true,
     ...(selected==="google_profile"?{google_profile_data:{...googleData,...(googleData.kind==="service_area"?{street:"",unit:"",city:"",region:"",postal:""}:{}),media:mediaPaths}}:{}),
     ...(selected==="seo_improvement"?{web_repair_data:webRepair}:{}),
-    ...(selected==="directory_listings"?{directory_data:{...directoryData,industry:effectiveCategory}}:{})
+    ...(selected==="directory_listings"?{directory_data:{...directoryData,industry:effectiveCategory}}:{}),
+    ...(selected==="review_strategy"?{reputation_data:{mode:reviewMode,reviewText:reviewInput.slice(0,650),replyText:(reviewReply||reviewReplyTemplate(name,reviewInput,reviewTone)).slice(0,1200),reviewLink:reviewLink.slice(0,750)}}:{})
    }).select("id").single();
    if(insertError){
     const {data:alreadySaved}=await client.from("vmv_marketing_requests")
@@ -583,6 +585,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       <div className={styles.requestTop}><div><strong>{service}</strong><small>{req.business_name} · {date(req.created_at)} · #{req.id.slice(0,8)}</small></div>
        <span className={req.status==="verified"?styles.verified:styles.status}>{statusNames[req.status]}</span></div>
       <p>{req.goal_text}</p>
+      {req.service_code==="review_strategy"&&req.reputation_data?<details className={styles.googleSaved}><summary>Ver contenido de Mi reputación</summary><div className={styles.googleSavedContent}>{req.reputation_data.reviewText?<p>Reseña real: {req.reputation_data.reviewText}</p>:null}{req.reputation_data.replyText?<p>Respuesta preparada: {req.reputation_data.replyText}</p>:null}{req.reputation_data.reviewLink?<a href={req.reputation_data.reviewLink} target="_blank" rel="noopener noreferrer">Enlace de reseñas</a>:null}<small>Sin publicación ni envíos automáticos.</small></div></details>:null}
       {req.service_code==="directory_listings"&&req.directory_data?<div className={styles.dirHistory}><strong>Directorios seleccionados · {req.directory_data.city}, {req.directory_data.state}</strong>{req.directory_data.selected.map(t=><div className={styles.dirHistoryRow} key={t.id}><div><strong>{t.name}</strong><small>{directoryStatusNames[t.status]||"Por revisar"}</small>{t.evidenceUrl&&safeDirectoryUrl(t.evidenceUrl)?<a href={t.evidenceUrl} target="_blank" rel="noopener noreferrer">Ver evidencia de publicación ↗</a>:null}{t.note?<small>{t.note}</small>:null}</div>{staff&&teamView&&activeStaffId===req.id?<div className={styles.dirStaffFields}><select aria-label={"Estado de "+t.name} value={directoryStatus[t.id]||t.status} onChange={e=>setDirectoryStatus(v=>({...v,[t.id]:e.target.value as DirectoryProgress}))}>{Object.entries(directoryStatusNames).map(([v,label])=><option key={v} value={v}>{label}</option>)}</select><input aria-label={"Enlace verificado de "+t.name} value={directoryProof[t.id]??t.evidenceUrl} onChange={e=>setDirectoryProof(v=>({...v,[t.id]:e.target.value}))} placeholder="URL pública (solo si publicado)"/></div>:null}</div>)}</div>:null}
       {req.service_code==="seo_improvement"&&req.web_repair_data?<><a className={styles.reportLink} href={"/vista-app/marketing/informe/"+req.id}>Abrir informe completo guardado ↗</a><details className={styles.googleSaved}><summary>Ver diagnóstico y plataforma</summary><div className={styles.googleSavedContent}><p>Plataforma: {req.web_repair_data.platform==="other"?req.web_repair_data.otherPlatform:req.web_repair_data.platform}</p><p>Repositorio: {req.web_repair_data.repositoryHost}</p>{req.web_repair_data.repositoryUrl?<p>{req.web_repair_data.repositoryUrl}</p>:null}{req.web_repair_data.audit?<><p>Velocidad {req.web_repair_data.audit.scores.performance??"—"}/100 · SEO {req.web_repair_data.audit.scores.seo??"—"}/100</p>{req.web_repair_data.audit.explanation?<p>{req.web_repair_data.audit.explanation}</p>:null}<a href={req.web_repair_data.audit.reportUrl||"https://pagespeed.web.dev/"} target="_blank" rel="noopener noreferrer">Ver evidencia técnica en Google</a></>:<p>Sin informe automático. Solicitud pendiente de revisión.</p>}</div></details></>:null}
       {req.service_code==="google_profile"&&req.google_profile_data?<details className={styles.googleSaved}>
