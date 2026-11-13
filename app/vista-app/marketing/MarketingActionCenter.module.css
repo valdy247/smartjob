@@ -257,3 +257,5 @@
 .googleSavedContent{display:flex;flex-direction:column;gap:6px;margin-top:10px}
 .googleSavedContent p{margin:0;font-size:11px;color:#786578;overflow-wrap:anywhere;line-height:1.6}
 .googleSavedContent button{align-self:flex-start;background:#f6e8f2;border:1px solid #e9d7e5;border-radius:9px;color:#815078;padding:8px 10px;font-size:11px;cursor:pointer}
+
+.reportLink{display:inline-flex;align-self:flex-start;font-size:11px;font-weight:850;color:#874f7d;border:1px solid #ead8e6;border-radius:11px;padding:10px 13px;background:#fffafd;text-decoration:none}
