@@ -500,3 +500,32 @@
 .vmv-context-action-panel .vmv-context-text-label select:focus-visible{
  outline:3px solid #9363dd;outline-offset:2px;
 }
+
+/* Mobile editing must not dim the actual photo or obscure it with persistent tools.
+   Puck keeps a subtle selection border, but its overlay is transparent. */
+.vmv-site-editor-canvas{
+ --puck-color-selection-bg:transparent;
+ --puck-slot-component-color-overlay:transparent;
+ --puck-slot-component-color-overlay-border:#9667cc;
+}
+.vmv-image-tools[data-active=false]{display:none}
+.vmv-image-tools[data-active=true]{pointer-events:none}
+.vmv-image-tools[data-active=true] button{pointer-events:auto}
+.vmv-managed-image[data-editing=true]{cursor:pointer}
+.vmv-managed-image[data-editing=false]{cursor:inherit}
+@media(max-width:700px){
+ .vmv-image-tools[data-active=true]{top:auto;bottom:8px;left:8px;right:8px;
+  justify-content:flex-start;gap:8px}
+ .vmv-image-tools[data-active=true] button{min-height:44px;padding:10px 13px;
+  font-size:12px;border-radius:11px}
+ .vmv-context-action-panel{position:fixed;z-index:9999;left:0;right:0;top:auto;
+  bottom:0;width:100%;max-width:none;max-height:min(67dvh,640px);
+  border-radius:22px 22px 0 0;padding-bottom:calc(13px + env(safe-area-inset-bottom));
+  box-shadow:0 -14px 45px #281a3b30}
+ .vmv-context-action-panel>header{min-height:51px}
+ .vmv-context-action-panel>header button{min-width:44px;min-height:44px}
+ .vmv-context-action-panel .vmv-context-switch button{min-height:44px;font-size:12px}
+ .vmv-context-action-panel input[type=text],.vmv-context-action-panel textarea,
+ .vmv-context-action-panel select{font-size:16px;min-height:44px}
+ .vmv-context-action-panel .vmv-context-remove{min-height:44px}
+}
