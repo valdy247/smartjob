@@ -76,7 +76,7 @@ export default async function VMVPublishedPage({params}:Props){
  const showForm=part==="home"&&result.page.inquiries_enabled===true;
  return <WebsiteChrome siteName={siteName} baseUrl={base} menu={result.menu}
   logo={logo} family={family} language={siteLanguage} siteStyle={String(rootData.style||"light")}
-  siteWidth={String(rootData.width||"regular")} visualStyle={visualStyle}>
+  siteWidth={String(rootData.width||"regular")} socialLinks={rootData.socialLinks} visualStyle={visualStyle}>
   <Render config={builderConfig} data={data}/>
   {showForm?<section className="vmv-site-inquiry" id="solicitud" aria-label="Enviar solicitud al negocio">
    <small>CONTACTA CON NOSOTROS</small>
