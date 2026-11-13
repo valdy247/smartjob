@@ -263,7 +263,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(wizardStep===2&&selected==="seo_improvement"&&webStage>0){setWebStage(webStage-1);closeKeyboard();revealWizard();return;}
   if(wizardStep===3&&selected==="google_profile"){editWizardStep(2);setGoogleStep(googleStepNames.length-1);return;}if(wizardStep===2&&selected==="google_profile"&&googleStep>0){closeKeyboard();setGoogleStep(googleStep-1);revealWizard();return;}if(wizardStep>0&&wizardStep<4)editWizardStep((wizardStep-1) as WizardStep);};
  const effectiveCategory=chosenCategory||industryId||savedCategory||"other";
- useEffect(()=>{if(effectiveCategory!=="other")setGoogleData(v=>v.googleCategory?v:{...v,googleCategory:categoryLabel(effectiveCategory,"")});},[effectiveCategory]);
+ useEffect(()=>{if(effectiveCategory!=="other")setGoogleData(v=>v.googleCategory?v:{...v,googleCategory:marketingCategoryLabel(language,effectiveCategory,"")});},[effectiveCategory,language]);
  const googleGoalText=googleData.action==="create"?"Quiero preparar la creación de mi perfil en Google Business Profile.":googleData.action==="claim"?"Quiero reclamar y verificar mi perfil existente de Google Business Profile.":"Quiero corregir o ampliar mi perfil de Google Business Profile.";
  const googleFiles=[...(googleMedia.logo?[{kind:"logo",file:googleMedia.logo}]:[]),...(googleMedia.cover?[{kind:"cover",file:googleMedia.cover}]:[]),...googleMedia.photos.map((file,i)=>({kind:"photo-"+(i+1),file}))];
  useEffect(()=>{
