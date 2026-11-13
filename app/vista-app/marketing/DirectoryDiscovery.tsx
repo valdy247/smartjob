@@ -2,6 +2,9 @@
 import {useMemo} from "react";
 import {MapPin,ExternalLink,SearchCheck,Check} from "lucide-react";
 import styles from "./DirectoryDiscovery.module.css";
+import {useInterfaceLanguage} from "@/lib/i18n-web";
+const enLabels:Record<string,string>={"¿Dónde está tu negocio?":"Where is your business?","Buscamos opciones relevantes para tu ciudad y sector.":"We find relevant options for your city and industry.","Ciudad":"City","Estado":"State","Código postal (opcional)":"ZIP code (optional)","Atiendo por entregas o en casa del cliente":"I deliver or serve customers at their location","No pedimos tu dirección residencial. Los directorios pueden tener reglas de elegibilidad distintas.":"We don't ask for your home address. Each directory has its own eligibility rules.","Directorios que podemos revisar":"Directories we can review","Selecciona los que te interesan. Antes comprobaremos si ya tienes ficha.":"Select relevant listings. VMV will check for existing profiles first.","Encontrar otros directorios locales":"Find more local directories","VMV investigará directorios de tu estado, ciudad, cámaras de comercio y sector.":"VMV will research state, city, chamber of commerce and industry directories.","Revisión y precio de gestión sujetos a cotización":"Research and service price are subject to a quote.","Las opciones mostradas son oportunidades por evaluar, no fichas encontradas ni publicaciones automáticas. La membresía o la gestión pueden costar dinero; te informaremos antes de contratar.":"These are opportunities to evaluate, not confirmed listings or automatic publishing. Membership and assistance may cost extra; you'll see the price first.","¿Algún dato que debamos conocer? (opcional)":"Anything else we should know? (optional)","Ej. Ya aparezco en Yelp, pero los horarios están incorrectos.":"E.g. I'm already on Yelp, but my hours are wrong.","VMV comprobará duplicados y requisitos; nunca creará fichas ni pagará membresías sin tu autorización.":"VMV will check duplicates and requirements. No listings or memberships without your permission.","Georgia o GA":"Georgia or GA","Ficha sin tarifa de alta":"Free listing","Puede requerir membresía":"May require membership","Por verificar":"To be confirmed","Consultar requisitos de ":"Review requirements for "};
+
 
 export type DirectoryProgress="pending_review"|"researching"|"needs_customer"|"submitted"|"published"|"already_listed"|"not_eligible";
 export type DirectoryTarget={id:string;name:string;type:"national"|"state"|"local"|"research";url:string;cost:"free"|"membership"|"unknown";status:DirectoryProgress;evidenceUrl:string;existingUrl?:string;note:string};
@@ -43,6 +46,8 @@ export const directoryStatusNames:Record<DirectoryProgress,string>={
  submitted:"Enviado con autorización",published:"Publicado y verificado",already_listed:"Ya existía una ficha verificada",not_eligible:"No elegible"
 };
 export default function DirectoryDiscovery({data,onChange,industry}:{data:DirectoryData;onChange:(d:DirectoryData)=>void;industry:string}){
+ const {language}=useInterfaceLanguage();const en=language==="en";
+ const tx=(text:string)=>en?enLabels[text]||text:text;
  const current={...data,industry:data.industry||industry};
  const options=useMemo(()=>directoryOptions(current),[current.city,current.state,current.industry]);
  const selectedIds=new Set(data.selected.map(x=>x.id));
@@ -65,37 +70,37 @@ export default function DirectoryDiscovery({data,onChange,industry}:{data:Direct
  };
  return <div className={styles.root}>
   <div className={styles.section}>
-   <div className={styles.heading}><MapPin size={19}/><div><strong>¿Dónde está tu negocio?</strong><small>Buscamos opciones relevantes para tu ciudad y sector.</small></div></div>
+   <div className={styles.heading}><MapPin size={19}/><div><strong>{tx("¿Dónde está tu negocio?")}</strong><small>{tx("Buscamos opciones relevantes para tu ciudad y sector.")}</small></div></div>
    <div className={styles.two}>
-    <label>Ciudad<input value={data.city} maxLength={100} onChange={e=>patch("city",e.target.value)} placeholder="Columbus"/></label>
-    <label>Estado<input value={data.state} maxLength={100} onChange={e=>patch("state",e.target.value)} placeholder="Georgia o GA"/></label>
+    <label>{tx("Ciudad")}<input value={data.city} maxLength={100} onChange={e=>patch("city",e.target.value)} placeholder="Columbus"/></label>
+    <label>{tx("Estado")}<input value={data.state} maxLength={100} onChange={e=>patch("state",e.target.value)} placeholder={tx("Georgia o GA")}/></label>
    </div>
-   <label>Código postal (opcional)<input value={data.postal} maxLength={20} onChange={e=>patch("postal",e.target.value)} placeholder="31901" inputMode="numeric"/></label>
+   <label>{tx("Código postal (opcional)")}<input value={data.postal} maxLength={20} onChange={e=>patch("postal",e.target.value)} placeholder="31901" inputMode="numeric"/></label>
    <label className={styles.toggle}><input type="checkbox" checked={data.serviceArea} onChange={e=>patch("serviceArea",e.target.checked)}/> Atiendo por entregas o en casa del cliente</label>
-   <p className={styles.hint}>No pedimos tu dirección residencial. Los directorios pueden tener reglas de elegibilidad distintas.</p>
+   <p className={styles.hint}>{tx("No pedimos tu dirección residencial. Los directorios pueden tener reglas de elegibilidad distintas.")}</p>
   </div>
   <div className={styles.section}>
-   <div className={styles.heading}><SearchCheck size={19}/><div><strong>Directorios que podemos revisar</strong><small>Selecciona los que te interesan. Antes comprobaremos si ya tienes ficha.</small></div></div>
+   <div className={styles.heading}><SearchCheck size={19}/><div><strong>{tx("Directorios que podemos revisar")}</strong><small>{tx("Selecciona los que te interesan. Antes comprobaremos si ya tienes ficha.")}</small></div></div>
    <div className={styles.options}>
     {options.map(d=><div key={d.id} className={styles.optionRow}>
      <button type="button" aria-pressed={selectedIds.has(d.id)} onClick={()=>toggle(d.id)} className={styles.option}>
       <span className={styles.checkbox}>{selectedIds.has(d.id)?<Check size={13}/>:null}</span>
-      <span className={styles.optionText}><strong>{d.name}</strong><small>{d.description}</small><em>{costNames[d.cost]}</em></span>
+      <span className={styles.optionText}><strong>{d.name}</strong><small>{en?({yelp:"Free listing subject to Yelp review.",apple:"Business listing in Apple Maps; verification required.",bing:"Bing Maps listing; verification required.",tripadvisor:"Eligible food, lodging and travel businesses only.","explore-ga":"Free Georgia tourism listing if eligible.","chamber-columbus":"Member directory; membership may be required."} as Record<string,string>)[d.id]||d.description:d.description}</small><em>{en?tx(costNames[d.cost]):costNames[d.cost]}</em></span>
      </button>
-     <a className={styles.source} href={d.url} target="_blank" rel="noopener noreferrer" title={"Consultar requisitos de "+d.name} aria-label={"Consultar requisitos de "+d.name}><ExternalLink size={16}/></a>
+     <a className={styles.source} href={d.url} target="_blank" rel="noopener noreferrer" title={tx("Consultar requisitos de ")+d.name} aria-label={tx("Consultar requisitos de ")+d.name}><ExternalLink size={16}/></a>
     </div>)}
     <button type="button" aria-pressed={selectedIds.has("research-local")} onClick={()=>toggle("research-local")} className={styles.option}>
      <span className={styles.checkbox}>{selectedIds.has("research-local")?<Check size={13}/>:null}</span>
-     <span className={styles.optionText}><strong>Encontrar otros directorios locales</strong><small>VMV investigará directorios de tu estado, ciudad, cámaras de comercio y sector.</small><em>Revisión y precio de gestión sujetos a cotización</em></span>
+     <span className={styles.optionText}><strong>{tx("Encontrar otros directorios locales")}</strong><small>{tx("VMV investigará directorios de tu estado, ciudad, cámaras de comercio y sector.")}</small><em>{tx("Revisión y precio de gestión sujetos a cotización")}</em></span>
     </button>
    </div>
-   {data.selected.filter(t=>t.id!=="research-local").map(t=><label key={t.id} className={styles.existingField}>¿Ya apareces en {t.name}? Comparte el enlace (opcional)<input type="url" inputMode="url" maxLength={750} value={t.existingUrl||""} placeholder="https://..." onChange={e=>onChange({...data,selected:data.selected.map(x=>x.id===t.id?{...x,existingUrl:e.target.value}:x)})}/></label>)}
-   <p className={styles.hint}>Las opciones mostradas son oportunidades por evaluar, no fichas encontradas ni publicaciones automáticas. La membresía o la gestión pueden costar dinero; te informaremos antes de contratar.</p>
+   {data.selected.filter(t=>t.id!=="research-local").map(t=><label key={t.id} className={styles.existingField}>{en?"Already listed on ":"¿Ya apareces en "}{t.name}{en?"? Add the URL (optional)":"? Comparte el enlace (opcional)"}<input type="url" inputMode="url" maxLength={750} value={t.existingUrl||""} placeholder="https://..." onChange={e=>onChange({...data,selected:data.selected.map(x=>x.id===t.id?{...x,existingUrl:e.target.value}:x)})}/></label>)}
+   <p className={styles.hint}>{tx("Las opciones mostradas son oportunidades por evaluar, no fichas encontradas ni publicaciones automáticas. La membresía o la gestión pueden costar dinero; te informaremos antes de contratar.")}</p>
   </div>
   <div className={styles.section}>
-   <strong>¿Algún dato que debamos conocer? (opcional)</strong>
-   <textarea rows={3} value={data.notes} onChange={e=>patch("notes",e.target.value)} maxLength={800} placeholder="Ej. Ya aparezco en Yelp, pero los horarios están incorrectos."/>
-   <p className={styles.hint}>VMV comprobará duplicados y requisitos; nunca creará fichas ni pagará membresías sin tu autorización.</p>
+   <strong>{tx("¿Algún dato que debamos conocer? (opcional)")}</strong>
+   <textarea rows={3} value={data.notes} onChange={e=>patch("notes",e.target.value)} maxLength={800} placeholder={tx("Ej. Ya aparezco en Yelp, pero los horarios están incorrectos.")}/>
+   <p className={styles.hint}>{tx("VMV comprobará duplicados y requisitos; nunca creará fichas ni pagará membresías sin tu autorización.")}</p>
   </div>
  </div>;
 }
