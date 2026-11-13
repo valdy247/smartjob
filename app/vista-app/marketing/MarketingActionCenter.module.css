@@ -270,3 +270,8 @@
 .dirStaffFields{display:flex;flex-direction:column;gap:7px;flex:1;min-width:180px}
 .dirStaffFields select,.dirStaffFields input{width:100%;box-sizing:border-box;background:#fff;border:1px solid #e5d4e1;border-radius:9px;padding:9px;font-size:12px;color:#604661}
 @media(max-width:650px){.dirHistory{padding:11px}.dirHistoryRow{flex-direction:column}.dirStaffFields{min-width:0}}
+
+.historyWizardAccess{display:inline-flex;gap:7px;align-items:center;align-self:flex-start;border:1px solid #e6d6e4;border-radius:10px;background:#fff;padding:10px 13px;color:#82527c;font-size:11px;font-weight:850;cursor:pointer;margin:0 0 10px}
+.resumeDraft{display:inline-flex;gap:7px;align-items:center;min-height:40px;border:1px solid #b782ab;border-radius:11px;padding:10px 13px;background:#fff8fd;color:#76446d;font-size:11px;font-weight:850;cursor:pointer;margin-top:12px}
+.serviceCta{display:inline-flex;align-items:center;justify-content:center;gap:6px;margin-left:auto;background:#874779;color:white;padding:10px 13px;border-radius:10px;font-size:11px;font-weight:850;white-space:nowrap}
+@media(max-width:520px){.serviceCta{font-size:11px;padding:9px}.serviceTile{flex-wrap:wrap}.serviceText{flex:1;min-width:140px}}
