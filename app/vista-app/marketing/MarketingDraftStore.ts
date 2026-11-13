@@ -1,68 +1,109 @@
-import type {GoogleMedia} from "./GoogleProfileWizard";
-import type {GoogleData} from "./GoogleProfileWizard";
+import type {GoogleMedia,GoogleData} from "./GoogleProfileWizard";
 import type {WebRepairData} from "./WebRepairStudio";
 import type {DirectoryData} from "./DirectoryDiscovery";
 
-export const DRAFT_KEY="vmv-marketing-request-draft-v1";
-const DB_NAME="vmv-marketing-draft-media";
+// An unauthenticated draft stays in this tab; authenticated drafts are isolated by account.
+// Never store passwords, tokens, identity documents, or payment details in either store.
+const LEGACY_KEY="vmv-marketing-request-draft-v1";
+const KEY="vmv-marketing-draft-v2";
+const MEDIA_DB="vmv-marketing-draft-media";
 const MAX_AGE=48*60*60*1000;
 export type StoredMarketingDraft={
- version:1;savedAt:number;service:string;step:number;googleStep:number;
- name:string;site:string;category:string;goal:string;reviewInput:string;reviewTone:"cordial"|"breve";
- consent:boolean;googleData:GoogleData;webRepair:WebRepairData;directoryData?:DirectoryData;
+ version:2;savedAt:number;requestId:string;ownerId:string|null;service:string;
+ step:number;googleStep:number;name:string;site:string;category:string;goal:string;
+ reviewInput:string;reviewTone:"cordial"|"breve";reviewLink:string;reviewReply:string;
+ googleData:GoogleData;webRepair:WebRepairData;directoryData?:DirectoryData;
 };
-export function readMarketingDraft():StoredMarketingDraft|null{
+export const guestDraftKey=KEY+":guest";
+const ownerKey=(uid:string)=>KEY+":owner:"+uid;
+const storageFor=(uid:string|null)=>uid?localStorage:sessionStorage;
+const storeKey=(uid:string|null)=>uid?ownerKey(uid):guestDraftKey;
+const valid=(value:unknown):value is StoredMarketingDraft=>{
+ if(!value||typeof value!=="object")return false;
+ const d=value as Partial<StoredMarketingDraft>;
+ return d.version===2&&typeof d.requestId==="string"&&
+ /^[a-f0-9-]{36}$/i.test(d.requestId)&&typeof d.savedAt==="number"&&
+ Date.now()-d.savedAt<MAX_AGE&&d.step!==undefined&&d.step>=1&&d.step<=3;
+};
+export function readMarketingDraft(uid:string|null):StoredMarketingDraft|null{
  try{
-  const value=localStorage.getItem(DRAFT_KEY);
-  if(!value)return null;
-  const record=JSON.parse(value) as StoredMarketingDraft;
-  if(record.version!==1||!Number.isFinite(record.savedAt)||Date.now()-record.savedAt>MAX_AGE||record.step<1||record.step>3){
-   localStorage.removeItem(DRAFT_KEY);return null;
-  }
-  return record;
+  const storage=storageFor(uid),key=storeKey(uid),raw=storage.getItem(key);
+  if(!raw)return null;
+  const value=JSON.parse(raw) as unknown;
+  if(!valid(value)||value.ownerId!==uid){storage.removeItem(key);return null;}
+  return value;
  }catch{return null;}
 }
-export function writeMarketingDraft(record:StoredMarketingDraft):boolean{
- try{localStorage.setItem(DRAFT_KEY,JSON.stringify(record));return true;}
+export function writeMarketingDraft(value:StoredMarketingDraft):boolean{
+ try{storageFor(value.ownerId).setItem(storeKey(value.ownerId),JSON.stringify(value));return true;}
  catch{return false;}
 }
-function openMediaDb():Promise<IDBDatabase>{
+// A guest draft is moved to the verified account only when this tab initiated login.
+export function markGuestLoginPending(){
+ try{sessionStorage.setItem(KEY+":login-pending","1");}catch{}
+}
+export function transferGuestDraft(uid:string):StoredMarketingDraft|null{
+ try{
+  if(sessionStorage.getItem(KEY+":login-pending")!=="1")return null;
+  sessionStorage.removeItem(KEY+":login-pending");
+  const guest=readMarketingDraft(null);
+  if(!guest)return null;
+  const existing=readMarketingDraft(uid);
+  if(existing)return existing;
+  const next={...guest,ownerId:uid,savedAt:Date.now()};
+  if(!writeMarketingDraft(next))return null;
+  sessionStorage.removeItem(guestDraftKey);
+  return next;
+ }catch{return null;}
+}
+export function migrateLegacyDraft():StoredMarketingDraft|null{
+ try{
+  const raw=localStorage.getItem(LEGACY_KEY);
+  if(!raw)return null;
+  const old=JSON.parse(raw) as Partial<StoredMarketingDraft> & {consent?:boolean};
+  if(!old||typeof old.savedAt!=="number"||Date.now()-old.savedAt>MAX_AGE||!old.service||!old.name)return null;
+  if(old.step===undefined||old.step<1||old.step>3)return null;
+  const next:StoredMarketingDraft={
+   version:2,savedAt:Date.now(),requestId:crypto.randomUUID(),ownerId:null,
+   service:old.service,step:old.step,googleStep:old.googleStep||0,
+   name:old.name,site:old.site||"",category:old.category||"other",
+   goal:old.goal||"",reviewInput:old.reviewInput||"",reviewTone:old.reviewTone||"cordial",
+   reviewLink:"",reviewReply:"",googleData:old.googleData as GoogleData,
+   webRepair:old.webRepair as WebRepairData,directoryData:old.directoryData
+  };
+  if(writeMarketingDraft(next)){localStorage.removeItem(LEGACY_KEY);return next;}
+ }catch{}
+ return null;
+}
+function openMedia():Promise<IDBDatabase>{
  return new Promise((resolve,reject)=>{
-  if(typeof indexedDB==="undefined"){reject(Error("Almacenamiento de fotos no disponible"));return;}
-  const request=indexedDB.open(DB_NAME,1);
-  request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains("files"))request.result.createObjectStore("files");};
-  request.onsuccess=()=>resolve(request.result);
-  request.onerror=()=>reject(request.error||Error("No fue posible abrir las fotos guardadas"));
+  if(typeof indexedDB==="undefined")return reject(Error("No hay almacenamiento de imágenes"));
+  const r=indexedDB.open(MEDIA_DB,2);
+  r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains("files"))r.result.createObjectStore("files");};
+  r.onsuccess=()=>resolve(r.result);
+  r.onerror=()=>reject(r.error||Error("No disponible"));
  });
 }
-export async function readDraftMedia():Promise<GoogleMedia|null>{
- const db=await openMediaDb();
- try{return await new Promise<GoogleMedia|null>((resolve,reject)=>{
-  const tx=db.transaction("files","readonly");
-  const req=tx.objectStore("files").get("draft");
-  req.onsuccess=()=>resolve(req.result?.media||null);
-  req.onerror=()=>reject(req.error);
+const mediaKey=(requestId:string)=>"media:"+requestId;
+export async function readDraftMedia(requestId:string):Promise<GoogleMedia|null>{
+ const db=await openMedia();
+ try{return await new Promise((resolve,reject)=>{
+  const tx=db.transaction("files","readonly");const q=tx.objectStore("files").get(mediaKey(requestId));
+  q.onsuccess=()=>resolve(q.result?.media||null);q.onerror=()=>reject(q.error);
  });}finally{db.close();}
 }
-export async function saveDraftMedia(media:GoogleMedia):Promise<void>{
- const db=await openMediaDb();
+export async function saveDraftMedia(requestId:string,media:GoogleMedia):Promise<void>{
+ const db=await openMedia();
  try{await new Promise<void>((resolve,reject)=>{
   const tx=db.transaction("files","readwrite");
-  tx.objectStore("files").put({media,updatedAt:Date.now()},"draft");
-  tx.oncomplete=()=>resolve();
-  tx.onerror=()=>reject(tx.error||Error("No se pudieron guardar las imágenes"));
-  tx.onabort=()=>reject(tx.error||Error("No se pudieron guardar las imágenes"));
+  tx.objectStore("files").put({media,updatedAt:Date.now()},mediaKey(requestId));
+  tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);
  });}finally{db.close();}
 }
-export async function clearMarketingDraft():Promise<void>{
- try{localStorage.removeItem(DRAFT_KEY);}catch{}
- try{
-  const db=await openMediaDb();
-  try{await new Promise<void>((resolve,reject)=>{
-   const tx=db.transaction("files","readwrite");
-   tx.objectStore("files").delete("draft");
-   tx.oncomplete=()=>resolve();
-   tx.onerror=()=>reject(tx.error);
-  });}finally{db.close();}
- }catch{}
+export async function clearMarketingDraft(uid:string|null,requestId:string):Promise<void>{
+ try{storageFor(uid).removeItem(storeKey(uid));}catch{}
+ try{const db=await openMedia();try{await new Promise<void>((resolve,reject)=>{
+  const tx=db.transaction("files","readwrite");tx.objectStore("files").delete(mediaKey(requestId));
+  tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);
+ });}finally{db.close();}}catch{}
 }
