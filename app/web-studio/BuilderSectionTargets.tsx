@@ -4,7 +4,7 @@ export const SECTION_TARGET_EVENT="vmv-builder-target-selected";
 export type SectionTarget="section"|"button"|"title";
 export function BuilderSectionTargets({id,editing,children,className="",style,kind="section",...other}:{
  id:string;editing:boolean;children:ReactNode;className?:string;style?:React.CSSProperties;kind?:string
-} & Omit<HTMLAttributes<HTMLElement>,"onClick"|"onClickCapture"|"children">}){
+} & Omit<HTMLAttributes<HTMLElement>,"onClick"|"onClickCapture"|"children">){
  function choose(event:MouseEvent<HTMLElement>){
   if(!editing)return;
   const el=event.target instanceof Element?event.target:null;
