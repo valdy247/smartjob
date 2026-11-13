@@ -72,7 +72,8 @@ export function normalizeBuilderDocument(input:unknown):Data{
  const motion=rawProps.motion==="subtle"?"subtle":"off";
  const accent=typeof rawProps.accentColor==="string"&&/^#[0-9a-f]{6}$/i.test(rawProps.accentColor)?rawProps.accentColor:"";
  const logo=safeWebImageUrl(String(rawProps.logo||""))||"";
- return {content,root:{props:{palette,font,style,width,motion,accentColor:accent,logo}}} as Data;
+ const family=["bakery","construction","professional","beauty","creative"].includes(String(rawProps.family))?String(rawProps.family):"";
+ return {content,root:{props:{palette,font,style,width,motion,accentColor:accent,logo,family}}} as Data;
 }
 export function starterBuilderDocument(name="Mi negocio",categoryId=""):Data{
  const bakery=["bakery","catering","cafe","restaurant","food-truck"].includes(categoryId);
