@@ -51,14 +51,17 @@ function makeComponent(entry:Shortcut){
  const defaults=JSON.parse(JSON.stringify(componentConfig?.defaultProps||{})) as Record<string,unknown>;
  return {type:entry.type,props:{...defaults,...entry.preset,id:crypto.randomUUID()}};
 }
-export default function BuilderQuickAdd(){
+export default function BuilderQuickAdd({enabled=true}:{enabled?:boolean}){
  const [opened,setOpened]=useState(false);
+ const [mounted,setMounted]=useState(false);
  const [filter,setFilter]=useState("");
  const [error,setError]=useState("");
  const [added,setAdded]=useState("");
  const menuRef=useRef<HTMLDivElement>(null);
  const triggerRef=useRef<HTMLButtonElement>(null);
  const getPuck=useGetPuck();
+ useEffect(()=>setMounted(true),[]);
+ useEffect(()=>{if(!enabled)setOpened(false);},[enabled]);
  useEffect(()=>{
   if(!opened)return;
   const onKey=(event:KeyboardEvent)=>{
@@ -91,7 +94,7 @@ export default function BuilderQuickAdd(){
    setOpened(false);setFilter("");setError("");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo agregar el elemento.");}
  }
- return <>
+ return enabled&&mounted?createPortal(<>
   <button type="button" className={styles.fab} ref={triggerRef}
    aria-label="Agregar un elemento o sección" aria-expanded={opened}
    aria-controls="vmv-quick-add-panel"
@@ -102,7 +105,7 @@ export default function BuilderQuickAdd(){
   {added&&!opened?<span className={styles.toast} role="status">
    <Check size={13} aria-hidden="true"/> {added}
   </span>:null}
-  {opened&&typeof document!=="undefined"?createPortal(<div className={styles.backdrop}
+  {opened?<div className={styles.backdrop}
    onMouseDown={e=>{if(e.target===e.currentTarget)setOpened(false);}}>
    <div ref={menuRef} role="dialog" aria-modal="true" aria-label="Agregar a mi web"
     id="vmv-quick-add-panel" className={styles.sheet}>
@@ -152,6 +155,6 @@ export default function BuilderQuickAdd(){
     {error?<p role="alert" className={styles.error}>{error}</p>:null}
     <p className={styles.note}>Se añade al final de esta página. Puedes moverlo después con Puck y editarlo tocándolo. No se publica automáticamente.</p>
    </div>
-  </div>,document.body):null}
- </>;
+  </div>:null}
+ </>,document.body):null;
 }
