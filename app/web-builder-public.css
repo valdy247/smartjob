@@ -323,3 +323,11 @@
  padding:12px 13px;color:#784daf;outline-offset:2px}
 .vmv-compose-settings[open]>summary{border-bottom:1px solid #e7daf2}
 .vmv-compose-settings-fields{display:flex;flex-direction:column;gap:11px;padding:13px;min-width:0}
+
+
+/* A missing cover is editable in Puck but must never leave a giant empty media pane on the public site. */
+.vmv-hero-visual[data-has-image="false"]:not([data-layout="cover"]){grid-template-columns:minmax(0,1fr)}
+.vmv-hero-visual[data-has-image="false"]:not([data-layout="cover"]) .vmv-hero-content{
+ max-width:1160px;margin-inline:auto;width:100%;min-height:420px}
+.vmv-hero-visual[data-layout="editorial"][data-has-image="false"] .vmv-hero-content{margin-inline:auto}
+.vmv-offering-card:not(:has(.vmv-visual-media)) .vmv-offering-copy{padding-top:27px}
