@@ -56,7 +56,8 @@ export default function BuilderSelectedActions({children,label}:{
  },[]);
  const targets=item?imageTargets(item.type,item.props):[];
  const isImage=targets.length>0;
- const target=targets.find(t=>chosen&&chosen.id===id&&t.field===chosen.target.field&&t.index===chosen.target.index)||targets[0];
+ const target=chosen?.id===id?targets.find(t=>t.field===chosen.target.field&&
+  (chosen.target.itemId?t.itemId===chosen.target.itemId:t.index===chosen.target.index)):targets[0];
  const data=usePuck(s=>s.appState.data);
  const destinations=imageDestinations(data);
  function changeImage(patch:Record<string,unknown>){
@@ -66,6 +67,7 @@ export default function BuilderSelectedActions({children,label}:{
  }
  const isText=Boolean(item&&(textTypes.has(item.type)||item.type==="HeroVisual"));
  const isCta=item?.type==="CTA";
+ const isButton=item?.type==="ComposeButton";
  const ctaTarget:SectionTarget=ctaSelection&&ctaSelection.id===id?ctaSelection.target:"section";
  function change(field:string,value:unknown){
   if(!item||!id)return;
@@ -96,16 +98,16 @@ export default function BuilderSelectedActions({children,label}:{
  return <div className="vmv-context-action-wrap">
   <ActionBar label={label}>
    <ActionBar.Group>{children}</ActionBar.Group>
-   {(isImage||isText||isCta)?<ActionBar.Group>
-    <ActionBar.Action label={isCta?"Editar sección":isImage?"Editar imagen":"Editar texto"} onClick={()=>setOpen(v=>!v)}>
-     {isCta?<Settings2 size={16}/>:isImage?<ImagePlus size={16}/>:<Type size={16}/>}
+   {(isImage||isText||isCta||isButton)?<ActionBar.Group>
+    <ActionBar.Action label={isCta?"Editar sección":isButton?"Editar botón":isImage?"Editar imagen":"Editar texto"} onClick={()=>setOpen(v=>!v)}>
+     {isCta?<Settings2 size={16}/>:isButton?<SlidersHorizontal size={16}/>:isImage?<ImagePlus size={16}/>:<Type size={16}/>}
     </ActionBar.Action>
    </ActionBar.Group>:null}
   </ActionBar>
-  {(isImage||isText||isCta)&&open?<div className="vmv-context-action-panel"
-    role="region" aria-label={isImage&&mode!=="text"?"Ajustes de la imagen seleccionada":"Ajustes del texto seleccionado"}
+  {(isImage||isText||isCta||isButton)&&open?<div className="vmv-context-action-panel"
+    role="region" aria-label={isButton?"Ajustes del botón seleccionado":isImage&&mode!=="text"?"Ajustes de la imagen seleccionada":"Ajustes del elemento seleccionado"}
     onPointerDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()}>
-   <header><strong>{isCta?"Editar "+(ctaTarget==="section"?"sección":ctaTarget==="title"?"título":"botón"):isImage&&mode!=="text"?"Imagen seleccionada":"Texto seleccionado"}</strong>
+   <header><strong>{isCta?"Editar "+(ctaTarget==="section"?"sección":ctaTarget==="title"?"título":"botón"):isButton?"Editar botón":isImage&&mode!=="text"?"Imagen seleccionada":"Texto seleccionado"}</strong>
     <button type="button" aria-label="Cerrar ajustes" onClick={()=>setOpen(false)}>✕</button>
    </header>
    {item?.type==="HeroVisual"?<div className="vmv-context-switch vmv-context-hero-tabs" role="group"
@@ -113,7 +115,7 @@ export default function BuilderSelectedActions({children,label}:{
     <button type="button" aria-pressed={mode!=="text"} onClick={()=>setMode("controls")}>Foto</button>
     <button type="button" aria-pressed={mode==="text"} onClick={()=>setMode("text")}>Título</button>
    </div>:null}
-   {isImage&&mode!=="text"?<div className="vmv-context-content">
+   {isImage&&target&&mode!=="text"?<div className="vmv-context-content">
     <div className="vmv-context-switch" role="group" aria-label="Modo de imagen">
      <button type="button" aria-pressed={mode==="controls"} onClick={()=>setMode("controls")}>
       <SlidersHorizontal size={13}/> Ajustar</button>
@@ -145,6 +147,27 @@ export default function BuilderSelectedActions({children,label}:{
       {destinations.map((d,index)=><option key={d.id+d.slot} value={index}>{d.label}</option>)}
      </select>
     </label>:null}
+   </div>:null}
+   {isButton?<div className="vmv-context-content" aria-label="Editar el botón seleccionado">
+    <label className="vmv-context-text-label">Texto
+     <input type="text" maxLength={120} value={String(props.label||"")}
+      onChange={e=>change("label",e.target.value)}/>
+    </label>
+    <label className="vmv-context-text-label">Destino
+     <input type="text" maxLength={450} placeholder="#solicitud, teléfono o URL"
+      value={String(props.url||"")} onChange={e=>change("url",e.target.value)}/>
+    </label>
+    <label className="vmv-context-text-label">Apariencia
+     <select value={String(props.style||"solid")} onChange={e=>change("style",e.target.value)}>
+      <option value="solid">Sólido</option><option value="outline">Contorno</option>
+      <option value="link">Solo enlace</option>
+     </select>
+    </label>
+    <label className="vmv-context-text-label">Alineación en móvil
+     <select value={String(props.alignMobile||"left")} onChange={e=>change("alignMobile",e.target.value)}>
+      <option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option>
+     </select>
+    </label>
    </div>:null}
    {isCta?<div className="vmv-context-content" aria-label="Controles de la sección seleccionada">
     <div className="vmv-context-switch" role="group" aria-label="Editar">
