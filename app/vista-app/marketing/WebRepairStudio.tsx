@@ -1,5 +1,5 @@
 "use client";
-import {useState} from "react";
+import {useState,type Dispatch,type SetStateAction} from "react";
 import {AlertCircle,ArrowUpRight,CheckCircle2,ExternalLink,FileText,ScanSearch} from "lucide-react";
 import styles from "./WebRepairStudio.module.css";
 
@@ -30,10 +30,10 @@ export function validateWebRepair(data:WebRepairData){
  if(data.notes.length>1200)return "El mensaje es demasiado largo.";
  return "";
 }
-export default function WebRepairStudio({site,data,onChange,accessToken}:{site:string;data:WebRepairData;onChange:(v:WebRepairData)=>void;accessToken?:string}){
+export default function WebRepairStudio({site,data,onChange,accessToken}:{site:string;data:WebRepairData;onChange:Dispatch<SetStateAction<WebRepairData>>;accessToken?:string}){
  const [loading,setLoading]=useState(false);
  const [error,setError]=useState("");
- const patch=<K extends keyof WebRepairData>(k:K,v:WebRepairData[K])=>onChange({...data,[k]:v});
+ const patch=<K extends keyof WebRepairData>(k:K,v:WebRepairData[K])=>onChange(prev=>({...prev,[k]:v}));
  const scan=async()=>{
   setLoading(true);setError("");
   try{
@@ -41,11 +41,11 @@ export default function WebRepairStudio({site,data,onChange,accessToken}:{site:s
    const json=await res.json();
    if(!res.ok)throw new Error(json.error||"No fue posible analizar el sitio.");
    const audit:WebAudit={...json,reportUrl:json.reportUrl||googleReport(site),status:"complete"};
-   onChange({...data,audit});
+   onChange(prev=>({...prev,audit}));
    if(accessToken){
     try{
      const ai=await fetch("/api/marketing/explain-audit",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+accessToken},body:JSON.stringify({audit})});
-     if(ai.ok){const result=await ai.json();onChange({...data,audit:{...audit,explanation:result.explanation,explanationSource:result.source}});}
+     if(ai.ok){const result=await ai.json();onChange(prev=>({...prev,audit:{...audit,explanation:result.explanation,explanationSource:result.source}}));}
     }catch{/* Technical report remains usable if interpretation is unavailable. */}
    }
   }catch(e){setError(e instanceof Error?e.message:"No se pudo realizar el análisis.");}
@@ -72,14 +72,14 @@ export default function WebRepairStudio({site,data,onChange,accessToken}:{site:s
       <div className={styles.findings}>{(report.findings||[]).length?(report.findings||[]).map(f=><article key={f.id}><strong>{f.title}</strong><p>{f.description}</p><small>{f.id} · Puntuación de comprobación: {f.score===null?"No disponible":Math.round(f.score*100)+"%"}</small></article>):report.recommendations.map((x,i)=><p key={i}>{i+1}. {x}</p>)}</div>
       <small>Fuente: {report.source} · {new Date(report.analyzedAt).toLocaleDateString("es-US")}. Se guardará una copia de los hallazgos al enviar la solicitud.</small>
      </details>
-     <a className={styles.external} href={report.reportUrl||googleReport(site)} target="_blank" rel="noopener noreferrer">Abrir análisis técnico en Google <ExternalLink size={15}/></a>
+     <a className={styles.external} href={report.reportUrl||googleReport(site)} target="_blank" rel="noopener noreferrer">Contrastar diagnóstico en Google <ExternalLink size={15}/></a>
     </div>:null}
    {!report?<a className={styles.external} href={googleReport(site)} target="_blank" rel="noopener noreferrer">Abrir PageSpeed Insights <ArrowUpRight size={16}/></a>:null}
   </div>
   <div className={styles.section}>
    <div className={styles.head}><FileText size={21}/><div><strong>¿Dónde administras tu web?</strong><small>Si no lo sabes, te ayudaremos a averiguarlo.</small></div></div>
    <label className={styles.field}>Plataforma o alojamiento
-    <select value={data.platform} onChange={e=>onChange({...data,platform:e.target.value,repositoryHost:"unknown",repositoryUrl:""})}>
+    <select value={data.platform} onChange={e=>onChange(prev=>({...prev,platform:e.target.value,repositoryHost:"unknown",repositoryUrl:""}))}>
       {platforms.map(([v,label])=><option key={v} value={v}>{label}</option>)}
     </select>
    </label>
