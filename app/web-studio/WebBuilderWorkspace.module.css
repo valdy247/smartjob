@@ -131,3 +131,39 @@
 .publicationIndicator{display:inline-flex;align-items:center;white-space:nowrap;font-size:11px;font-weight:850;color:#766c80;background:#eeebf2;padding:9px 11px;border-radius:10px}
 .publicationIndicator[data-pending="true"]{background:#fff0d6;color:#92602d}
 @media(max-width:650px){.publicationIndicator{font-size:10px;padding:7px}}
+
+
+.designPanel{display:flex;flex-direction:column;gap:15px;background:#f6f1fb;border-bottom:1px solid #e4d5ee;padding:clamp(12px,3vw,23px)}
+.designPanelHead,.designApply{display:flex;align-items:center;justify-content:space-between;gap:13px;flex-wrap:wrap}
+.designPanelHead strong{font-size:15px;color:#4e336d}
+.designPanelHead p{font-size:12px;color:#786888;line-height:1.6;margin:6px 0 0}
+.designPanelHead button,.designRecovery button{border:1px solid #d9c6ef;border-radius:10px;color:#704ab1;background:white;padding:9px 12px;font-size:11px;font-weight:850;min-height:37px}
+.designChoices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.designChoices button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:7px;min-width:0;
+ padding:13px;border:1px solid #e2d4f0;background:#fff;border-radius:13px;color:#47315d}
+.designChoices button[aria-pressed=true]{border:2px solid #925ddd;background:#f0e7fe;padding:12px}
+.designChoices strong{font-size:13px}
+.designChoices small{font-size:11px;line-height:1.45;color:#786a85}
+.designComparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.designComparison>div{min-width:0}
+.designComparison>div>strong{display:block;font-size:11px;margin-bottom:7px;color:#6f528b}
+.designFrame{height:330px;overflow:hidden;border:1px solid #d8c9e8;border-radius:13px;
+ background:white;position:relative;isolation:isolate}
+.designFrame :global(.vmv-site){min-width:0;width:100%;overflow-x:hidden}
+.designFrame :global(.vmv-hero-visual){min-height:240px}
+.designFrame :global(.vmv-hero-content){padding:25px!important}
+.designFrame :global(.vmv-hero-content h1){font-size:clamp(24px,3vw,43px)!important}
+.designFrame :global(.vmv-hero-image){min-height:230px}
+.designFrame :global(.vmv-visual-section){padding:26px 20px!important}
+.designApply span{font-size:11px;line-height:1.5;color:#77668a}
+.designApply button{background:#8655d7;color:white;border:0;border-radius:11px;min-height:44px;padding:12px 18px;font-size:12px;font-weight:900}
+.designRecovery{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 17px;background:#fff4dd;border-bottom:1px solid #efdfc0}
+.designRecovery span{font-size:11px;color:#886c43;line-height:1.4;font-weight:700}
+@media(max-width:680px){
+ .designChoices{grid-template-columns:1fr}
+ .designComparison{grid-template-columns:1fr}
+ .designFrame{height:260px}
+ .designApply button{width:100%}
+ .designRecovery{align-items:stretch}
+ .designRecovery button{width:100%}
+}
