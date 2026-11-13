@@ -207,3 +207,5 @@
 .vmv-site-nav[data-header-family=creative] nav a:hover{text-decoration:underline}
 .vmv-site-nav[data-header-family=professional] .vmv-site-brand-name{font-family:Georgia,"Times New Roman",serif;font-weight:500;letter-spacing:-.03em}
 @media(max-width:620px){.vmv-site-mark>img{width:40px;height:40px;max-width:40px}}
+
+.vmv-site-mark .vmv-site-brand-name{color:inherit}.vmv-site-mark .vmv-site-brand-name>span{color:var(--vmv-accent)}
