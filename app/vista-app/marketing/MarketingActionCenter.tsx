@@ -11,6 +11,7 @@ import {
 import {getSupabase} from "@/lib/supabase";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS,categoryLabel} from "@/lib/vmv-business-categories";
 import styles from "./MarketingActionCenter.module.css";
+import WebRepairStudio,{emptyWebRepair,validateWebRepair,type WebRepairData} from "./WebRepairStudio";
 import GoogleProfileWizard,{emptyGoogle,emptyMedia,googleStepNames,validateGoogleStep,validateGoogleLinks,validateGoogleAll,type GoogleData,type GoogleMedia} from "./GoogleProfileWizard";
 
 export type ServiceCode="google_profile"|"apple_maps"|"bing_places"|"yelp_profile"|"search_console"|"seo_improvement"|"campaign_setup"|"review_strategy"|"other";
@@ -20,7 +21,7 @@ type RequestRow={
  website_url:string|null;goal_text:string;status:Status;execution_mode:"assisted"|"automated";
  quoted_price_cents:number|null;quote_note:string|null;quote_revision:number;
  staff_update:string|null;evidence_url:string|null;verified_at:string|null;
- created_at:string;updated_at:string;google_profile_data?:GoogleData&{media?:{kind:string;path:string}[]}|null
+ created_at:string;updated_at:string;google_profile_data?:GoogleData&{media?:{kind:string;path:string}[]}|null;web_repair_data?:WebRepairData|null
 };
 type Acceptance={id:string;request_id:string;owner_id:string;quote_revision:number;quoted_price_cents:number;accepted_at:string};
 type Service={id:ServiceCode;name:string;why:string;mode:string};
@@ -97,29 +98,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [goal,setGoal]=useState("");
  const [reviewInput,setReviewInput]=useState("");
  const [reviewTone,setReviewTone]=useState<"cordial"|"breve">("cordial");
- const [auditData,setAuditData]=useState<{scores:{performance:number|null;seo:number|null;accessibility:number|null};recommendations:string[]}|null>(null);
- const [auditPending,setAuditPending]=useState(false);
- const [auditError,setAuditError]=useState("");
- const reviewNegative=/\b(malo|mala|pésimo|pesimo|terrible|decepcion|retraso|tarde|problema|queja|frío|frio|incorrecto|error|horrible|nunca|mal servicio|no recomiendo)\b/i.test(reviewInput);
- const reviewPositive=/\b(excelente|fantástico|fantastico|encantó|encanto|delicioso|deliciosa|recomiendo|increíble|increible|perfecto|perfecta|maravilloso|maravillosa|amable)\b/i.test(reviewInput);
- const answerReview=reviewInput.trim()?(reviewNegative?
-  (reviewTone==="breve"?"Lamentamos que tu experiencia no haya sido la esperada. Gracias por contárnoslo; queremos mejorar.":"Gracias por compartir tu experiencia. Lamentamos que no haya sido lo que esperabas. En "+name+" nos tomamos en serio tus comentarios y queremos entender lo ocurrido para mejorar. Te invitamos a contactarnos por nuestros canales habituales."):
-  reviewPositive?
-  (reviewTone==="breve"?"¡Muchas gracias por tu reseña! Nos alegra saber que disfrutaste tu experiencia.":"¡Muchísimas gracias por compartir tu experiencia! Nos alegra saber que la disfrutaste. En "+name+" valoramos mucho que hayas dedicado tiempo a escribirnos. ¡Esperamos verte pronto!"):
-  (reviewTone==="breve"?"Gracias por compartir tu opinión. La tendremos en cuenta.":"Gracias por tomarte el tiempo de compartir tu experiencia. En "+name+" valoramos tus comentarios y los tendremos en cuenta para seguir mejorando.")):"";
- const analyzeSite=async()=>{
-  if(!safeSite(site)){setAuditError("Añade un enlace válido en el paso anterior.");return;}
-  setAuditPending(true);setAuditError("");setAuditData(null);
-  try{
-   const response=await fetch("/api/marketing/site-audit?url="+encodeURIComponent(safeSite(site)||""));
-   const result=await response.json();
-   if(!response.ok)throw new Error(result.error||"No se pudo analizar la web.");
-   const recommendations=(result.recommendations||[]).slice(0,3) as string[];
-   setAuditData({scores:result.scores,recommendations});
-   setGoal(("Solicito ayuda para mejorar mi web. Auditoría PageSpeed: velocidad "+(result.scores?.performance??"sin dato")+"/100; SEO "+(result.scores?.seo??"sin dato")+"/100; accesibilidad "+(result.scores?.accessibility??"sin dato")+"/100. Mejoras: "+recommendations.join("; ")).slice(0,1500));
-  }catch(error){setAuditError(errorMessage(error,"No se pudo analizar la web."));}
-  finally{setAuditPending(false);}
- };
+ const [webRepair,setWebRepair]=useState<WebRepairData>(emptyWebRepair);
+ const [accessToken,setAccessToken]=useState("");
  const reviewRequestMessage="¡Hola! Gracias por elegir "+name+". ¿Podrías compartir una reseña honesta sobre tu experiencia? Tu opinión nos ayuda a mejorar.";
 
  const [consent,setConsent]=useState(false);
@@ -141,7 +121,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  };
  const editWizardStep=(step:WizardStep)=>{closeKeyboard();setWizardStep(step);setWizardError("");revealWizard();};
  const chooseService=(code:ServiceCode)=>{
-  if(code!==selected){setGoal("");setConsent(false);setReviewInput("");setAuditData(null);setAuditError("");setGoogleStep(0);setGoogleMedia(emptyMedia);}
+  if(code!==selected){setGoal("");setConsent(false);setReviewInput("");setWebRepair(emptyWebRepair);setGoogleStep(0);setGoogleMedia(emptyMedia);}
   setSelected(code);setWizardStep(1);setWizardError("");setSubmittedId(null);revealWizard();
  };
  const goNext=()=>{
@@ -156,7 +136,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(missing){setWizardError(missing);return;}
    if(googleStep<googleStepNames.length-1){closeKeyboard();setGoogleStep(googleStep+1);revealWizard();return;}
   }
-  if(wizardStep===2&&selected!=="google_profile"&&goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5)){setWizardError("Elige una opción o describe lo que necesitas en al menos 12 caracteres.");return;}
+  if(wizardStep===2&&selected==="seo_improvement"){const invalid=validateWebRepair(webRepair);if(invalid){setWizardError(invalid);return;}}
+  if(wizardStep===2&&selected!=="google_profile"&&selected!=="seo_improvement"&&goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5)){setWizardError("Elige una opción o describe lo que necesitas en al menos 12 caracteres.");return;}
   if(wizardStep===2&&goal.trim().length>1500){setWizardError("El mensaje no debe superar 1500 caracteres.");return;}
   if(wizardStep<3){closeKeyboard();setWizardStep((wizardStep+1) as WizardStep);revealWizard();}
  };
@@ -176,6 +157,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     if(!alive)return;
     if(authError||!data.user||data.user.is_anonymous){setUser(null);setAuthState("signed_out");return;}
     setUser(data.user);setAuthState("ready");
+    const {data:session}=await instance.auth.getSession();if(alive)setAccessToken(session.session?.access_token||"");
    }catch{if(alive){setUser(null);setAuthState("signed_out");}}
   };
   const {data:listener}=instance.auth.onAuthStateChange(()=>queueMicrotask(()=>{if(alive)void sync();}));
@@ -252,7 +234,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    const bad=googleFiles.find(({file})=>!(["image/jpeg","image/png"].includes(file.type))||file.size<10240||file.size>5242880);
    if(bad){setWizardStep(2);setGoogleStep(5);setWizardError("Revisa "+bad.file.name+": fotos JPG o PNG entre 10 KB y 5 MB.");return;}
   }
-  if(selected!=="google_profile"&&((goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5))||goal.trim().length>1500)){setWizardStep(2);setWizardError("Elige una necesidad o describe el resultado que buscas.");return;}
+  if(selected!=="google_profile"&&selected!=="seo_improvement"&&((goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5))||goal.trim().length>1500)){setWizardStep(2);setWizardError("Elige una necesidad o describe el resultado que buscas.");return;}
+  if(selected==="seo_improvement"&&validateWebRepair(webRepair)){setWizardStep(2);setWizardError(validateWebRepair(webRepair));return;}
   if(selected==="seo_improvement"&&!site.trim()){setWizardStep(1);setWizardError("Añade la web que deseas mejorar.");return;}
   if(site.trim()&&!safeSite(site)){setWizardStep(1);setWizardError("La web debe tener una URL válida.");return;}
   if(!consent){setWizardError("Marca la autorización para que podamos atender la solicitud.");return;}
@@ -274,10 +257,11 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    const {data,error:insertError}=await client.from("vmv_marketing_requests").insert({
     owner_id:user.id,service_code:selected,business_name:name.trim(),
     category_id:effectiveCategory,website_url:safeSite(site),
-    goal_text:selected==="google_profile"?googleGoalText:selected==="review_strategy"&&reviewInput.trim()?
+    goal_text:selected==="google_profile"?googleGoalText:selected==="seo_improvement"?(webRepair.requestRepair?"Solicito presupuesto para reparación técnica de mi página web.":"Solicito guardar mi diagnóstico web sin contratar reparación."):selected==="review_strategy"&&reviewInput.trim()?
      ("Reseña: "+reviewInput.trim().slice(0,650)+" | Respuesta sugerida, pendiente de revisión: "+answerReview).slice(0,1500):goal.trim(),
     agreed_to_contact:true,
-    ...(selected==="google_profile"?{google_profile_data:{...googleData,...(googleData.kind==="service_area"?{street:"",unit:"",city:"",region:"",postal:""}:{}),media:mediaPaths}}:{})
+    ...(selected==="google_profile"?{google_profile_data:{...googleData,...(googleData.kind==="service_area"?{street:"",unit:"",city:"",region:"",postal:""}:{}),media:mediaPaths}}:{}),
+    ...(selected==="seo_improvement"?{web_repair_data:webRepair}:{})
    }).select("id").single();
    if(insertError)throw insertError;
    inserted=true;
@@ -406,13 +390,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     {wizardStep===2?<div className={styles.wizardBody}>
      {selected==="google_profile"?<GoogleProfileWizard step={googleStep} data={googleData} onData={setGoogleData} media={googleMedia} onMedia={setGoogleMedia} business={name} website={site}/>:<>
      <div className={styles.selectedServiceBanner}><span className={styles.selectedServiceIcon}>{(()=>{const Icon=serviceIcons[selected];return <Icon size={23}/>;})()}</span><span><small>ESTAMOS PREPARANDO</small><strong>{services.find(s=>s.id===selected)?.name}</strong></span></div>
-     {selected==="seo_improvement"?<div className={styles.specialTool}>
-      <strong>Analizar mi sitio</strong>
-      <p>{site.trim()||"Añade el enlace de tu web en el paso anterior."}</p>
-      <button type="button" className={styles.toolButton} disabled={auditPending||!safeSite(site)} onClick={()=>void analyzeSite()}>{auditPending?"Analizando…":"Analizar gratis"}</button>
-      {auditError?<p role="alert">{auditError}</p>:null}
-      {auditData?<div className={styles.auditSummary}><span>Velocidad {auditData.scores.performance??"—"}/100 · SEO {auditData.scores.seo??"—"}/100</span><strong>Tres mejoras prioritarias</strong>{auditData.recommendations.length?auditData.recommendations.map((v,i)=><p key={i}>{i+1}. {v}</p>):<p>No hay alertas en las comprobaciones prioritarias.</p>}<small>Auditoría técnica PageSpeed, no garantiza visitas ni ventas.</small></div>:null}
-     </div>:null}
+     {selected==="seo_improvement"?<WebRepairStudio site={site} data={webRepair} onChange={setWebRepair} accessToken={accessToken}/>:null}
      {selected==="review_strategy"?<div className={styles.specialTool}>
        <strong>¿Qué necesitas?</strong>
        <div className={styles.goalPresets}><button type="button" className={styles.preset} onClick={()=>{setGoal("Quiero pedir reseñas honestas a mis clientes.");setReviewInput("");}}>Pedir reseñas</button><button type="button" className={styles.preset} onClick={()=>setGoal("Necesito responder una reseña.")}>Responder una reseña</button></div>
@@ -420,14 +398,14 @@ export default function MarketingActionCenter({businessName,industryId,website,o
        {reviewInput.trim()?<div className={styles.auditSummary}><strong>Respuesta para revisar</strong><p>{answerReview}</p><div className={styles.goalPresets}><button type="button" className={styles.preset} onClick={()=>setReviewTone(reviewTone==="cordial"?"breve":"cordial")}>Cambiar tono</button><button type="button" className={styles.toolButton} onClick={()=>void navigator.clipboard?.writeText(answerReview)}>Copiar respuesta</button></div><small>Revisa antes de usarla. Nunca publicamos sin autorización.</small></div>:null}
        {!reviewInput.trim()&&goal.includes("pedir reseñas")?<div className={styles.auditSummary}><p>{reviewRequestMessage}</p><button type="button" className={styles.toolButton} onClick={()=>void navigator.clipboard?.writeText(reviewRequestMessage)}>Copiar mensaje</button></div>:null}
      </div>:null}
-     {selected!=="review_strategy"?<span className={styles.presetLabel}>Elige qué necesitas</span>:null}
-     <div className={styles.goalPresets}>{(selected==="review_strategy"?[]:suggestedGoals[selected]).map(option=><button key={option} type="button" className={goal===option?styles.presetActive:styles.preset} aria-pressed={goal===option} onClick={()=>{setGoal(option);setWizardError("");}}>
+     {selected!=="review_strategy"&&selected!=="seo_improvement"?<span className={styles.presetLabel}>Elige qué necesitas</span>:null}
+     <div className={styles.goalPresets}>{(selected==="review_strategy"||selected==="seo_improvement"?[]:suggestedGoals[selected]).map(option=><button key={option} type="button" className={goal===option?styles.presetActive:styles.preset} aria-pressed={goal===option} onClick={()=>{setGoal(option);setWizardError("");}}>
       <CheckCircle2 size={16}/>{option}
      </button>)}</div>
-     <label className={styles.goalLabel}>{selected==="review_strategy"?"¿Necesitas ayuda adicional?":"¿Quieres añadir algún detalle?"}
+     {selected!=="seo_improvement"?<label className={styles.goalLabel}>{selected==="review_strategy"?"¿Necesitas ayuda adicional?":"¿Quieres añadir algún detalle?"}
       <textarea value={goal} maxLength={1500} onChange={e=>{setGoal(e.target.value);setWizardError("");}} rows={5} placeholder="Ej. Mi negocio ya aparece, pero tiene el horario incorrecto. No quiero mostrar la dirección de mi casa."/>
       <small>{goal.length}/1500 caracteres · No compartas contraseñas ni información bancaria.</small>
-     </label>
+     </label>:null}
      </>}
     </div>:null}
     {wizardStep===3?<div className={styles.wizardBody}>
@@ -438,7 +416,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       <div className={styles.reviewItem}><span>Sector</span><strong>{categoryLabel(effectiveCategory,"No especificado")}</strong></div>
       {site.trim()?<div className={styles.reviewItem}><span>Sitio web</span><strong className={styles.wrapValue}>{site.trim()}</strong></div>:null}
       {selected==="google_profile"?<div className={styles.googleReview}><strong>Datos para Google</strong><span>Operación: {googleData.action==="create"?"Crear":googleData.action==="claim"?"Reclamar":"Mejorar"} · {googleData.kind==="storefront"?"Local":googleData.kind==="service_area"?"Área de servicio":"Local y entregas"}</span><span>Categoría: {googleData.googleCategory}</span><span>{googleData.kind==="service_area"?"Áreas: "+googleData.serviceAreas:[googleData.street,googleData.unit,googleData.city,googleData.region,googleData.postal,googleData.country].filter(Boolean).join(", ")}</span>{googleData.phone?<span>Teléfono: {googleData.phone}</span>:null}{googleData.hoursEnabled?<span>Horarios: {googleData.hours.filter(h=>!h.closed).length} días abiertos</span>:null}{googleData.description?<span>Descripción: {googleData.description}</span>:null}<span>Fotos: {googleFiles.length} (privadas)</span><button type="button" onClick={()=>{setGoogleStep(0);editWizardStep(2);}}>Revisar datos de Google</button></div>:null}
-      <div className={styles.reviewGoal}><span>Qué necesitas</span><p>{selected==="google_profile"?googleGoalText:selected==="review_strategy"&&reviewInput.trim()?("Reseña: "+reviewInput.trim()+" · Respuesta sugerida: "+answerReview):goal.trim()}</p><button type="button" onClick={()=>editWizardStep(2)}>Modificar descripción</button></div>
+      {selected==="seo_improvement"?<div className={styles.googleReview}><strong>Diagnóstico web</strong><span>{webRepair.audit?"Velocidad: "+(webRepair.audit.scores.performance??"—")+"/100; SEO: "+(webRepair.audit.scores.seo??"—")+"/100":"Sin análisis automático; se requiere revisión técnica"}</span><span>Plataforma: {webRepair.platform==="other"?webRepair.otherPlatform:webRepair.platform}</span><span>Repositorio: {webRepair.repositoryHost}</span><span>{webRepair.requestRepair?"Quiero una cotización":"Solo guardar el diagnóstico"}</span><button type="button" onClick={()=>editWizardStep(2)}>Revisar información</button></div>:null}
+      <div className={styles.reviewGoal}><span>Qué necesitas</span><p>{selected==="seo_improvement"?(webRepair.requestRepair?"Solicitar evaluación y presupuesto de reparación.":"Guardar diagnóstico sin reparación."):selected==="google_profile"?googleGoalText:selected==="review_strategy"&&reviewInput.trim()?("Reseña: "+reviewInput.trim()+" · Respuesta sugerida: "+answerReview):goal.trim()}</p><button type="button" onClick={()=>editWizardStep(2)}>Modificar descripción</button></div>
      </div>
      <div className={styles.costNote}><Wallet size={22}/><div><strong>Enviar la solicitud: $0</strong><p>El coste de un servicio, si corresponde, se cotizará después. Ningún pago ni publicación se ejecuta al enviar.</p></div></div>
      <label className={styles.permission}><input type="checkbox" checked={consent} onChange={e=>{setConsent(e.target.checked);setWizardError("");}}/>
@@ -467,6 +446,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       <div className={styles.requestTop}><div><strong>{service}</strong><small>{req.business_name} · {date(req.created_at)} · #{req.id.slice(0,8)}</small></div>
        <span className={req.status==="verified"?styles.verified:styles.status}>{statusNames[req.status]}</span></div>
       <p>{req.goal_text}</p>
+      {req.service_code==="seo_improvement"&&req.web_repair_data?<details className={styles.googleSaved}><summary>Ver diagnóstico y plataforma</summary><div className={styles.googleSavedContent}><p>Plataforma: {req.web_repair_data.platform==="other"?req.web_repair_data.otherPlatform:req.web_repair_data.platform}</p><p>Repositorio: {req.web_repair_data.repositoryHost}</p>{req.web_repair_data.repositoryUrl?<p>{req.web_repair_data.repositoryUrl}</p>:null}{req.web_repair_data.audit?<><p>Velocidad {req.web_repair_data.audit.scores.performance??"—"}/100 · SEO {req.web_repair_data.audit.scores.seo??"—"}/100</p>{req.web_repair_data.audit.explanation?<p>{req.web_repair_data.audit.explanation}</p>:null}<a href={req.web_repair_data.audit.reportUrl||"https://pagespeed.web.dev/"} target="_blank" rel="noopener noreferrer">Ver evidencia técnica en Google</a></>:<p>Sin informe automático. Solicitud pendiente de revisión.</p>}</div></details>:null}
       {req.service_code==="google_profile"&&req.google_profile_data?<details className={styles.googleSaved}>
        <summary>Ver datos del perfil y fotos</summary><div className={styles.googleSavedContent}>
         <p><strong>Categoría Google:</strong> {req.google_profile_data.googleCategory||"Pendiente"}</p>
