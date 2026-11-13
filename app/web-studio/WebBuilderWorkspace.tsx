@@ -576,7 +576,7 @@ export default function WebBuilderWorkspace(){
  if(!userId)return <main className={styles.loading}><h2>Inicia sesión para crear tu web</h2>
   <p>{error}</p><a href="/vista-app">Ir a VMV Business</a></main>;
  return <div className={styles.workspace}>
-  <header className={styles.topbar}>
+  <header className={styles.topbar} data-site={Boolean(site)}>
    <a href="/vista-app" className={styles.brand}>VMV <span>Web Studio</span></a>
    {site?<button type="button" className={styles.mobileBack} aria-label="Volver a mis sitios"
     title="Mis sitios" onClick={back}><ArrowLeft size={19}/></button>:null}
