@@ -166,8 +166,9 @@
 
 /* Calls v3: no redundant title or account summary. Three icon-only tabs. */
 .callViewTabs{grid-template-columns:repeat(3,minmax(0,1fr));margin:0 0 21px;gap:6px}
-.callViewTab,.callViewTabActive{min-height:53px;display:flex;align-items:center;justify-content:center;font-size:21px}
-.callTabEmoji{font-size:25px;line-height:1;display:block}
+.callViewTab,.callViewTabActive{min-height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:13px}
+.callTabEmoji{font-size:23px;line-height:1;display:block}
+.callTabLabel{display:block;font-size:11px;line-height:1.15;font-weight:780;white-space:nowrap}
 .callHistoryToolbar{display:flex;gap:8px;align-items:center;margin-bottom:14px}
 .callHistoryToolbar .callFilters{flex:1;margin:0}
 .callHistoryToolbar .callRefresh{flex:0 0 42px}
