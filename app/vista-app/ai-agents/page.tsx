@@ -243,6 +243,10 @@ export default function AIAgentsPreview(){
            onClick={()=>void select(a)}><PhoneCall size={15}/>{phone.agentId===a.id?"Elegido para la línea":"Elegir para teléfono"}</button>:null}
          <button type="button" className={styles.buttonSecondary} onClick={()=>quality(a)}><BookCheck size={15}/> Calidad</button>
          <button type="button" className={styles.buttonSecondary} onClick={()=>edit(a)}><ClipboardList size={15}/> Editar</button>
+         {a.revision>0&&(a.kind==="sales"||a.setup.cap_sales==="Sí"||phone?.agentId===a.id)?
+          <button type="button" className={styles.buttonSecondary}
+           onClick={()=>{setSelected(a.id);setScreen("commerce");}}>
+           <ShoppingBag size={15}/> Preparar ventas</button>:null}
          <button type="button" className={styles.buttonSecondary} onClick={()=>void toggleStatus(a)}>
           {a.status==="active"?<PauseCircle size={15}/>:<PlayCircle size={15}/>} {a.status==="active"?"Pausar":"Activar en estudio"}
          </button>
@@ -255,7 +259,10 @@ export default function AIAgentsPreview(){
       initial={draft} initialStep={editStep} saving={busy} isPreview={false} authRequired={!authenticated} recoverDraft={!selected} onCancel={back}
       onSave={async updated=>{setDraft(updated);await save(updated);}}/>:null}
      {screen==="quality"&&active?<AgentQualityLab agent={active} onClose={back} onEdit={step=>edit(active,step)}/>:null}
-     {screen==="commerce"?<CommerceStudio agents={agents.filter(a=>a.revision>0)} onClose={back}/>:null}
+     {screen==="commerce"?<CommerceStudio agents={agents.filter(a=>a.revision>0)}
+      initialAgentId={selected||phone?.agentId||""} onAgentUpdated={updated=>
+       setAgents(prev=>prev.map(a=>a.id===updated.id?updated:a))}
+      onClose={()=>{void reload().catch(()=>{});back();}}/>:null}
      {screen==="test"&&active?<div className={styles.testing}>
       <div className={styles.testAgent}><div className={styles.testAvatar}><Bot size={24}/></div><strong>{active.name}</strong>
        <small>Simulación privada · Vista de diseño</small></div>
