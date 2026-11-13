@@ -133,10 +133,10 @@ export default function AdminConsole(){
   const client=getSupabase();
   if(!client)throw Error("No se encuentra configurada la conexión.");
   const {data,error:sessionError}=await client.auth.getSession();
-  if(sessionError||!session.session?.access_token)throw Error("Debes iniciar sesión de nuevo.");
+  if(sessionError||!data.session?.access_token)throw Error("Debes iniciar sesión de nuevo.");
   const response=await fetch("/api/admin"+(post?"":"?"+view),{
    method:post?"POST":"GET",cache:"no-store",
-   headers:{Authorization:"Bearer "+session.session.access_token,...(post?{"Content-Type":"application/json"}:{})},
+   headers:{Authorization:"Bearer "+data.session.access_token,...(post?{"Content-Type":"application/json"}:{})},
    ...(post?{body:JSON.stringify(post)}:{})
   });
   const result=await response.json().catch(()=>({error:"Respuesta inválida."}));
@@ -516,7 +516,7 @@ export default function AdminConsole(){
    </>:null}
 
    {section==="clients"?<section className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>RELACIONES</span><h3>Directorio de clientes</h3></div><span className={styles.count}>{clients?.total??"—"} cuentas</span></div>
-    {overview.role!=="admin"?<p className={styles.info}>Solo los administradores pueden consultar el directorio completo.</p>:
+    {overview?.role!=="admin"?<p className={styles.info}>Solo los administradores pueden consultar el directorio completo.</p>:
     <><label className={styles.search}><Search size={17}/><input value={clientSearch} onChange={e=>setClientSearch(e.target.value)} placeholder="Buscar por nombre, negocio o ciudad…" aria-label="Buscar cliente"/></label>
      {clients?.truncated?<p className={styles.warning}>Se muestran las 250 cuentas más recientes.</p>:null}
      <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Cliente / negocio</th><th>Ubicación</th><th>Plan</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
@@ -533,9 +533,9 @@ export default function AdminConsole(){
    {section==="services"?<div className={styles.serviceContent}>
     <div className={styles.serviceCards}>{sources.map(s=><button className={styles.serviceCard} type="button" key={s.id} onClick={()=>openInbox({source:s.id})}>
      <span className={styles.serviceIcon}><s.Icon size={20}/></span><span><strong>{s.label}</strong><small>{s.description}</small></span>
-     <b>{overview.sources[s.id]||0}</b><ArrowUpRight size={16}/></button>)}</div>
+     <b>{overview?.sources[s.id]||0}</b><ArrowUpRight size={16}/></button>)}</div>
     <div className={styles.sectionHeading}><div><span className={styles.eyebrow}>SUPERVISIÓN</span><h2>Facturación y operación</h2></div></div>
-    {overview.role!=="admin"?<div className={styles.surface}><p className={styles.info}>La consulta de facturación requiere rol administrador.</p></div>:
+    {overview?.role!=="admin"?<div className={styles.surface}><p className={styles.info}>La consulta de facturación requiere rol administrador.</p></div>:
     <div className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>LECTURA SEGURA</span><h3>Suscripciones registradas</h3></div><span className={styles.count}>{billing?.accounts.length||0} cuentas</span></div>
      <p className={styles.info}>Este resumen no permite alterar cobros, saldos ni activar servicios. Las suscripciones de prueba no son pagos reales.</p>
      <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Cuenta</th><th>Plan</th><th>Modo</th><th>Estado</th><th>Minutos restantes (contables)</th></tr></thead><tbody>
@@ -557,7 +557,7 @@ export default function AdminConsole(){
       <button type="button" className={styles.secondary} disabled={busy||p.role==="agent"} onClick={()=>void revoke(p.user_id,"agent")}>Hacer agente</button>
       <button type="button" className={styles.danger} disabled={busy} onClick={()=>void revoke(p.user_id,"remove")}>Revocar</button></div>:null}
     </div>)}</div>
-    {overview.role==="admin"?<div className={styles.invite}><h3>Autorizar una cuenta VMV existente</h3><p className={styles.info}>Solo cuentas con perfil VMV y email verificado. No envía invitaciones ni crea usuarios nuevos.</p>
+    {overview?.role==="admin"?<div className={styles.invite}><h3>Autorizar una cuenta VMV existente</h3><p className={styles.info}>Solo cuentas con perfil VMV y email verificado. No envía invitaciones ni crea usuarios nuevos.</p>
      <div className={styles.flex}><input aria-label="Identificador de usuario UUID" placeholder="UUID del usuario verificado" value={staffId} onChange={e=>setStaffId(e.target.value)}/>
      <select aria-label="Nuevo rol" value={staffRole} onChange={e=>setStaffRole(e.target.value as "agent"|"admin")}><option value="agent">Operador</option><option value="admin">Administrador</option></select>
      <button type="button" className={styles.primary} disabled={busy||!uuid(staffId)} onClick={()=>void addStaff()}><Plus size={16}/>Autorizar</button></div></div>:null}
@@ -565,7 +565,7 @@ export default function AdminConsole(){
 
    {section==="settings"?<div className={styles.settingsGrid}>
     <section className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>OPERACIÓN</span><h3>Atención y soporte</h3></div></div>
-     {overview.role!=="admin"?<p className={styles.info}>Los ajustes requieren rol administrador.</p>:<>
+     {overview?.role!=="admin"?<p className={styles.info}>Los ajustes requieren rol administrador.</p>:<>
      <label className={styles.field}>Plazo objetivo de atención (días)<input type="number" min="1" max="30" value={slaDays} onChange={e=>setSlaDays(e.target.value)}/></label>
      <label className={styles.field}>Mensaje de bienvenida del equipo<textarea rows={4} maxLength={500} value={welcome} onChange={e=>setWelcome(e.target.value)} placeholder="Gracias por contactar a VMV…"/></label>
      <p className={styles.info}>Los plazos de los casos siguen siendo manuales hasta contar con reglas automáticas de vencimiento. Este ajuste guarda la preferencia.</p>
