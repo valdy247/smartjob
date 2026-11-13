@@ -45,3 +45,12 @@ After validation, the very first genuine signed incoming request auto-enrolls th
 **Still required:** copy the protected Twilio auth token and Supabase server key into the shared branch's **Preview** environment using the secure Vercel UI (never paste into chat); record the current original voice webhook in the same branch Preview environment. `TWILIO_ACCOUNT_SID` is recommended for an additional account match. Only then can the owner or Director turn on both preview pilot flags, redeploy, and switch the number to the signed menu endpoint. None of these steps changes production configuration by itself.
 
 This signed first-call registration does not change the Twilio number's incoming webhook. Provider routing is a separate action in the Twilio account, and is **not possible from this chat's currently connected tools**.
+
+## Original inbound voice webhook provided by the test-number owner (2026-11-12)
+
+- In Twilio **Voice Configuration → A Call Comes In**, the user reported the original webhook URL:
+  `https://smartjob-git-feat-live-v2-produ-44ed8c-valdys-projects-b97fc7a6.vercel.app/api/twilio/live/voice`
+- This exact non-secret URL has been stored in Vercel as `VMV_AI_ORIGINAL_VOICE_WEBHOOK`, limited to Preview on `feat/vmv-smart-call-control-center`. It is the fallback and rollback destination for the existing Smart Call and translation flow.
+- **IMPORTANT:** Twilio's current HTTP request method and any additional fallback settings were not fetched through an authenticated Twilio API. Verify/record these in the Twilio Console before changing the number; retain the existing method. The existing `/api/twilio/live/voice` handler itself was not modified.
+- The currently deployed AI Agents Preview is still NOT armed: `VMV_AI_VOICE_PILOT_ENABLED=false`, `VMV_AI_VOICE_AUTO_ENROLL=false`; Preview branch does not have `TWILIO_AUTH_TOKEN` or `SUPABASE_SECRET_KEY` scoped to it. Never switch the provider webhook until these are available and the new Preview deployment is READY.
+- Only after verifying both routes in a protected test should Twilio's **Voice → A Call Comes In** be changed to `https://smartjob-git-feat-vmv-smart-cal-fcbaa4-valdys-projects-b97fc7a6.vercel.app/api/vmv/ai-agents/test-number` with HTTP POST. Restore the exact URL above if either option fails.
