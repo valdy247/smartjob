@@ -28,36 +28,52 @@ export default function BuilderSelectedActions({children,label}:{
  const item=usePuck(s=>s.selectedItem);
  const getPuck=useGetPuck();
  const [open,setOpen]=useState(true);
- const [mode,setMode]=useState<"controls"|"library">("controls");
+ const [mode,setMode]=useState<"controls"|"library"|"text">("controls");
  const id=item?.props?.id||"";
  useEffect(()=>{setOpen(true);setMode("controls");},[id]);
  const isImage=Boolean(item&&imageTypes.has(item.type));
- const isText=Boolean(item&&textTypes.has(item.type));
+ const isText=Boolean(item&&(textTypes.has(item.type)||item.type==="HeroVisual"));
  function change(field:string,value:unknown){
   if(!item||!id)return;
   const api=getPuck();
-  const next=patchItem(api.appState.data,id,field,value);
+  const heroTextNames:Record<string,string>={font:"titleFont",fontSize:"titleFontSize",
+   textColor:"titleColor",textShadow:"titleShadow",weight:"titleWeight",
+   italic:"titleItalic",linkUrl:"titleLink"};
+  const key=item.type==="HeroVisual"&&field in heroTextNames?heroTextNames[field]:field;
+  const next=patchItem(api.appState.data,id,key,value);
   if(next!==api.appState.data)api.dispatch({type:"setData",data:next});
  }
  const props=item?.props||{};
  const imageKey=item?.type==="Image"?"url":"image";
- const textKey=item?.type==="ComposeHeading"?"title":"text";
+ const textKey=item?.type==="ComposeHeading"||item?.type==="HeroVisual"?"title":"text";
+ const textProp=(key:string)=>{
+  if(item?.type!=="HeroVisual")return props[key];
+  const heroTextNames:Record<string,string>={font:"titleFont",fontSize:"titleFontSize",
+   textColor:"titleColor",textShadow:"titleShadow",weight:"titleWeight",
+   italic:"titleItalic",linkUrl:"titleLink"};
+  return props[heroTextNames[key]||key];
+ };
  return <div className="vmv-context-action-wrap">
   <ActionBar label={label}>
    <ActionBar.Group>{children}</ActionBar.Group>
    {(isImage||isText)?<ActionBar.Group>
-    <ActionBar.Action label={isImage?"Editar imagen":"Editar texto"} onClick={()=>setOpen(v=>!v)}>
+    <ActionBar.Action label={isImage?"Editar portada":"Editar texto"} onClick={()=>setOpen(v=>!v)}>
      {isImage?<ImagePlus size={16}/>:<Type size={16}/>}
     </ActionBar.Action>
    </ActionBar.Group>:null}
   </ActionBar>
   {(isImage||isText)&&open?<div className="vmv-context-action-panel"
-    role="region" aria-label={isImage?"Ajustes de la imagen seleccionada":"Ajustes del texto seleccionado"}
+    role="region" aria-label={isImage&&mode!=="text"?"Ajustes de la imagen seleccionada":"Ajustes del texto seleccionado"}
     onPointerDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()}>
-   <header><strong>{isImage?"Imagen seleccionada":"Texto seleccionado"}</strong>
+   <header><strong>{isImage&&mode!=="text"?"Imagen seleccionada":"Texto seleccionado"}</strong>
     <button type="button" aria-label="Cerrar ajustes" onClick={()=>setOpen(false)}>✕</button>
    </header>
-   {isImage?<div className="vmv-context-content">
+   {item?.type==="HeroVisual"?<div className="vmv-context-switch vmv-context-hero-tabs" role="group"
+    aria-label="Elemento de portada">
+    <button type="button" aria-pressed={mode!=="text"} onClick={()=>setMode("controls")}>Foto</button>
+    <button type="button" aria-pressed={mode==="text"} onClick={()=>setMode("text")}>Título</button>
+   </div>:null}
+   {isImage&&mode!=="text"?<div className="vmv-context-content">
     <div className="vmv-context-switch" role="group" aria-label="Modo de imagen">
      <button type="button" aria-pressed={mode==="controls"} onClick={()=>setMode("controls")}>
       <SlidersHorizontal size={13}/> Ajustar</button>
@@ -93,37 +109,37 @@ export default function BuilderSelectedActions({children,label}:{
      change(imageKey,"");setMode("controls");
     }}><Trash2 size={14}/> Quitar imagen de este lugar</button>
    </div>:null}
-   {isText?<div className="vmv-context-content">
+   {isText&&(!isImage||mode==="text")?<div className="vmv-context-content">
     <label className="vmv-context-text-label">Contenido
-     <textarea rows={2} value={String(props[textKey]||"")} maxLength={item?.type==="ComposeHeading"?180:2400}
+     <textarea rows={2} value={String(props[textKey]||"")} maxLength={item?.type==="ComposeHeading"||item?.type==="HeroVisual"?180:2400}
       onChange={e=>change(textKey,e.target.value)}/></label>
-    <FontField value={props.font||"site"} onChange={v=>change("font",v)}/>
-    <RangeField label="Tamaño de fuente" min={12} max={110} value={props.fontSize??32}
+    <FontField value={textProp("font")||"site"} onChange={v=>change("font",v)}/>
+    <RangeField label="Tamaño de fuente" min={12} max={110} value={textProp("fontSize")??32}
      unit="px" onChange={v=>change("fontSize",v)}/>
-    <ColorField value={props.textColor} label="Color del texto"
+    <ColorField value={textProp("textColor")} label="Color del texto"
      onChange={v=>change("textColor",v)} allowTransparent/>
     <div className="vmv-context-switch" role="group" aria-label="Estilo de texto">
-     <button type="button" aria-pressed={props.weight==="heavy"} onClick={()=>
-      change("weight",props.weight==="heavy"?"normal":"heavy")}>Negrita</button>
-     <button type="button" aria-pressed={props.italic==="yes"} onClick={()=>
-      change("italic",props.italic==="yes"?"no":"yes")}>Cursiva</button>
+     <button type="button" aria-pressed={textProp("weight")==="heavy"} onClick={()=>
+      change("weight",textProp("weight")==="heavy"?"normal":"heavy")}>Negrita</button>
+     <button type="button" aria-pressed={textProp("italic")==="yes"} onClick={()=>
+      change("italic",textProp("italic")==="yes"?"no":"yes")}>Cursiva</button>
     </div>
     <div className="vmv-context-switch" role="group" aria-label="Sombra de texto">
      {([{value:"none",label:"Sin sombra"},{value:"soft",label:"Suave"},{value:"strong",label:"Fuerte"}]).map(option=>
-      <button type="button" key={option.value} aria-pressed={(props.textShadow||"none")===option.value}
+      <button type="button" key={option.value} aria-pressed={(textProp("textShadow")||"none")===option.value}
        onClick={()=>change("textShadow",option.value)}>{option.label}</button>)}
     </div>
     <label className="vmv-context-text-label">Convertir texto en enlace
-     <input type="text" placeholder="https://... o #contacto" value={String(props.linkUrl||"")}
+     <input type="text" placeholder="https://... o #contacto" value={String(textProp("linkUrl")||"")}
       onChange={e=>change("linkUrl",e.target.value)}/></label>
-    <details><summary>Mover dentro de la sección</summary>
+    {item?.type!=="HeroVisual"?<details><summary>Mover dentro de la sección</summary>
      <RangeField label="Horizontal" min={-150} max={150} unit="px" value={props.moveX??0}
       onChange={v=>change("moveX",v)}/>
      <RangeField label="Vertical" min={-150} max={150} unit="px" value={props.moveY??0}
       onChange={v=>change("moveY",v)}/>
-    </details>
-    <p className="vmv-context-hint">Arrastra el control Mover sobre el elemento para desplazarlo.
-     Usa el arrastre de Puck para colocarlo en otra columna.</p>
+    </details>:null}
+    {item?.type!=="HeroVisual"?<p className="vmv-context-hint">Arrastra el control Mover sobre el elemento para desplazarlo.
+     Usa el arrastre de Puck para colocarlo en otra columna.</p>:null}
    </div>:null}
   </div>:null}
  </div>;
