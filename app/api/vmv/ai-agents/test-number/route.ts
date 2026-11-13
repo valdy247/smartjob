@@ -3,6 +3,7 @@ import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 import {verifyAiTestWebhook} from "@/lib/vmv-ai-agents/twilio-test";
 import {findPhoneRoute} from "@/lib/phone-routes";
 import {billingAdmin} from "@/lib/vmv-billing";
+import {aiAgentModelPathAvailable} from "@/lib/vmv-ai-agents/model";
 
 
 export const runtime="nodejs";
@@ -44,7 +45,7 @@ function smartCall(){
 
 async function agentReady(number:string,account:string,ownerId:string){
  if(process.env.VERCEL_ENV!=="preview"||process.env.VMV_AI_VOICE_PILOT_ENABLED!=="true"||
-    !(process.env.OPENAI_API_KEY||process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN))return false;
+    !aiAgentModelPathAvailable())return false;
  if(!/^[a-f0-9-]{36}$/i.test(process.env.VMV_AI_TEST_OWNER_ID||"")||
     process.env.VMV_AI_TEST_OWNER_ID!==ownerId)return false;
  // Preserve the pre-pilot Smart Call webhook before even considering enrollment.
