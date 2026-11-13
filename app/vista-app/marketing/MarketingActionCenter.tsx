@@ -1,6 +1,6 @@
 "use client";
 
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useMemo,useRef,useState} from "react";
 import type {SupabaseClient,User} from "@supabase/supabase-js";
 import {
  ArrowLeft,ArrowRight,ArrowUpRight,Apple,Check,CheckCircle2,ClipboardList,ExternalLink,
@@ -13,7 +13,7 @@ import {BUSINESS_CATEGORIES,CATEGORY_GROUPS,categoryLabel} from "@/lib/vmv-busin
 import styles from "./MarketingActionCenter.module.css";
 import WebRepairStudio,{emptyWebRepair,validateWebRepair,type WebRepairData} from "./WebRepairStudio";
 import DirectoryDiscovery,{emptyDirectory,validateDirectory,directoryStatusNames,safeDirectoryUrl,type DirectoryData,type DirectoryProgress} from "./DirectoryDiscovery";
-import {readMarketingDraft,writeMarketingDraft,readDraftMedia,saveDraftMedia,clearMarketingDraft,type StoredMarketingDraft} from "./MarketingDraftStore";
+import {readMarketingDraft,writeMarketingDraft,readDraftMedia,saveDraftMedia,clearMarketingDraft,markGuestLoginPending,transferGuestDraft,migrateLegacyDraft,type StoredMarketingDraft} from "./MarketingDraftStore";
 import GoogleProfileWizard,{emptyGoogle,emptyMedia,googleStepNames,validateGoogleStep,validateGoogleLinks,validateGoogleAll,type GoogleData,type GoogleMedia} from "./GoogleProfileWizard";
 
 export type ServiceCode="directory_listings"|"google_profile"|"apple_maps"|"bing_places"|"yelp_profile"|"search_console"|"seo_improvement"|"campaign_setup"|"review_strategy"|"other";
@@ -131,26 +131,31 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [draftReady,setDraftReady]=useState(false);
  const [draftNotice,setDraftNotice]=useState("");
  const [photoNotice,setPhotoNotice]=useState("");
+ const [requestId,setRequestId]=useState(()=>crypto.randomUUID());
+ const submitting=useRef(false);
  const draftSnapshot=():StoredMarketingDraft=>({
-  version:1,savedAt:Date.now(),service:selected,step:wizardStep,googleStep,
+  version:2,savedAt:Date.now(),requestId,ownerId:user?.id||null,
+  service:selected,step:wizardStep,googleStep,
   name,site,category:chosenCategory||industryId||savedCategory||"other",goal,reviewInput,reviewTone,
-  consent:false,googleData,webRepair,directoryData
+  reviewLink:"",reviewReply:"",googleData,webRepair,directoryData
  });
  const saveCurrentDraft=async()=>{
   const ok=writeMarketingDraft(draftSnapshot());
-  if(!ok){setDraftNotice("Este navegador no permitió guardar el formulario. No salgas de la página todavía.");return false;}
+  if(!ok){setDraftNotice("El dispositivo no pudo guardar el formulario. No cierres la página.");return false;}
   if(selected==="google_profile"){
-   try{await saveDraftMedia(googleMedia);setPhotoNotice("");}
-   catch{setPhotoNotice("No se pudieron guardar las fotos en este dispositivo. Tendrás que seleccionarlas otra vez al volver.");}
+   try{await saveDraftMedia(requestId,googleMedia);setPhotoNotice("");}
+   catch{setPhotoNotice("No pudimos guardar tus fotos. Selecciónalas nuevamente después de iniciar sesión.");}
   }
   return true;
  };
  useEffect(()=>{
+  if(authState==="checking"||authState==="unconfigured")return;
   let active=true;
   void (async()=>{
-   const saved=readMarketingDraft();
+   const uid=authState==="ready"?user?.id||null:null;
+   const saved=uid?(transferGuestDraft(uid)||readMarketingDraft(uid)):(readMarketingDraft(null)||migrateLegacyDraft());
    if(saved&&active&&services.some(item=>item.id===saved.service)){
-    setSelected(saved.service as ServiceCode);
+    setRequestId(saved.requestId);setSelected(saved.service as ServiceCode);
     setWizardStep(saved.step as WizardStep);
     setGoogleStep(Math.max(0,Math.min(saved.googleStep,googleStepNames.length-1)));
     setName(saved.name||"");setSite(saved.site||"");setChosenCategory(saved.category||"");
@@ -160,35 +165,33 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     if(saved.webRepair)setWebRepair(saved.webRepair);
     if(saved.directoryData)setDirectoryData(saved.directoryData);
     setConsent(false);
-    setDraftNotice("Recuperamos tu solicitud. Tus respuestas siguen aquí; revísalas antes de enviarla.");
-    try{
-     const media=await readDraftMedia();
-     if(active&&media)setGoogleMedia(media);
-    }catch{if(active)setPhotoNotice("No pudimos recuperar las fotos. Si habías seleccionado imágenes, agrégalas nuevamente.");}
+    setDraftNotice("Tu solicitud está recuperada. Revisa los datos antes de enviarla.");
+    try{const media=await readDraftMedia(saved.requestId);if(active&&media)setGoogleMedia(media);}
+    catch{if(active)setPhotoNotice("No pudimos recuperar las fotos; vuelve a seleccionarlas.");}
    }
    if(active)setDraftReady(true);
   })();
   return()=>{active=false;};
- },[]);
+ },[authState,user?.id]);
  useEffect(()=>{
-  if(!draftReady||wizardStep<1||wizardStep>3)return;
+  if(!draftReady||authState==="checking"||wizardStep<1||wizardStep>3)return;
   const id=window.setTimeout(()=>{
    if(!writeMarketingDraft(draftSnapshot()))setDraftNotice("No se está guardando el borrador. Mantén abierta esta página.");
   },300);
   return()=>window.clearTimeout(id);
- },[draftReady,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,goal,reviewInput,reviewTone,googleData,webRepair,directoryData]);
+ },[draftReady,authState,user?.id,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,goal,reviewInput,reviewTone,googleData,webRepair,directoryData,requestId]);
  useEffect(()=>{
   if(!draftReady||selected!=="google_profile"||wizardStep<1||wizardStep>3)return;
   const id=window.setTimeout(()=>{
-   void saveDraftMedia(googleMedia).then(()=>setPhotoNotice("")).catch(()=>setPhotoNotice("No fue posible conservar las fotos en el dispositivo. Selecciónalas de nuevo después de iniciar sesión."));
+   void saveDraftMedia(requestId,googleMedia).then(()=>setPhotoNotice("")).catch(()=>setPhotoNotice("No pudimos conservar las fotos en este dispositivo. Selecciónalas de nuevo al regresar."));
   },450);
   return()=>window.clearTimeout(id);
- },[draftReady,selected,googleMedia,wizardStep]);
+ },[draftReady,selected,googleMedia,wizardStep,requestId]);
  const continueToLogin=async()=>{
   setBusy(true);
   const saved=await saveCurrentDraft();
   setBusy(false);
-  if(saved)window.location.assign("/vista-app?returnTo=marketing");
+  if(saved){markGuestLoginPending();window.location.assign("/vista-app?returnTo=marketing");}
  };
  const revealWizard=()=>document.getElementById("vmv-marketing-request")?.scrollIntoView({behavior:"smooth",block:"start"});
  const closeKeyboard=()=>{
@@ -197,7 +200,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  };
  const editWizardStep=(step:WizardStep)=>{closeKeyboard();setWizardStep(step);setWizardError("");revealWizard();};
  const chooseService=(code:ServiceCode)=>{
-  if(code!==selected){setGoal("");setConsent(false);setReviewInput("");setWebRepair(emptyWebRepair);setDirectoryData(emptyDirectory);setGoogleStep(0);setGoogleMedia(emptyMedia);}
+  if(code!==selected){setRequestId(crypto.randomUUID());setGoal("");setConsent(false);setReviewInput("");setWebRepair(emptyWebRepair);setDirectoryData(emptyDirectory);setGoogleStep(0);setGoogleMedia(emptyMedia);}
   setSelected(code);setWizardStep(1);setWizardError("");setSubmittedId(null);revealWizard();
  };
  const goNext=()=>{
@@ -300,23 +303,24 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  };
  const submit=async()=>{
   setError("");setMessage("");setWizardError("");
-  if(wizardStep!==3)return;
-  if(!client||!user){setWizardError("Inicia sesión en VMV Business para enviar tu solicitud.");return;}
-  if(name.trim().length<2||name.trim().length>150){setWizardStep(1);setWizardError("Introduce el nombre comercial (2 a 150 caracteres).");return;}
+  if(wizardStep!==3||submitting.current)return;
+  submitting.current=true;
+  if(!client||!user){submitting.current=false;setWizardError("Inicia sesión en VMV Business para enviar tu solicitud.");return;}
+  if(name.trim().length<2||name.trim().length>150){setWizardStep(1);setWizardError("Introduce el nombre comercial (2 a 150 caracteres).");submitting.current=false;return;}
   if(selected==="google_profile"){
    const missing=validateGoogleAll(googleData);
-   if(missing){setWizardStep(2);setGoogleStep(missing.step);setWizardError(missing.error);return;}
+   if(missing){setWizardStep(2);setGoogleStep(missing.step);setWizardError(missing.error);submitting.current=false;return;}
    const invalid=validateGoogleLinks(googleData);
-   if(invalid){setWizardStep(2);setGoogleStep(2);setWizardError(invalid);return;}
+   if(invalid){setWizardStep(2);setGoogleStep(2);setWizardError(invalid);submitting.current=false;return;}
    const bad=googleFiles.find(({file})=>!(["image/jpeg","image/png"].includes(file.type))||file.size<10240||file.size>5242880);
-   if(bad){setWizardStep(2);setGoogleStep(5);setWizardError("Revisa "+bad.file.name+": fotos JPG o PNG entre 10 KB y 5 MB.");return;}
+   if(bad){setWizardStep(2);setGoogleStep(5);setWizardError("Revisa "+bad.file.name+": fotos JPG o PNG entre 10 KB y 5 MB.");submitting.current=false;return;}
   }
-  if(selected!=="google_profile"&&selected!=="seo_improvement"&&selected!=="directory_listings"&&((goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5))||goal.trim().length>1500)){setWizardStep(2);setWizardError("Elige una necesidad o describe el resultado que buscas.");return;}
-  if(selected==="directory_listings"&&validateDirectory(directoryData)){setWizardStep(2);setWizardError(validateDirectory(directoryData));return;}
-  if(selected==="seo_improvement"&&validateWebRepair(webRepair)){setWizardStep(2);setWizardError(validateWebRepair(webRepair));return;}
-  if(selected==="seo_improvement"&&!site.trim()){setWizardStep(1);setWizardError("Añade la web que deseas mejorar.");return;}
-  if(site.trim()&&!safeSite(site)){setWizardStep(1);setWizardError("La web debe tener una URL válida.");return;}
-  if(!consent){setWizardError("Marca la autorización para que podamos atender la solicitud.");return;}
+  if(selected!=="google_profile"&&selected!=="seo_improvement"&&selected!=="directory_listings"&&((goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5))||goal.trim().length>1500)){setWizardStep(2);setWizardError("Elige una necesidad o describe el resultado que buscas.");submitting.current=false;return;}
+  if(selected==="directory_listings"&&validateDirectory(directoryData)){setWizardStep(2);setWizardError(validateDirectory(directoryData));submitting.current=false;return;}
+  if(selected==="seo_improvement"&&validateWebRepair(webRepair)){setWizardStep(2);setWizardError(validateWebRepair(webRepair));submitting.current=false;return;}
+  if(selected==="seo_improvement"&&!site.trim()){setWizardStep(1);setWizardError("Añade la web que deseas mejorar.");submitting.current=false;return;}
+  if(site.trim()&&!safeSite(site)){setWizardStep(1);setWizardError("La web debe tener una URL válida.");submitting.current=false;return;}
+  if(!consent){setWizardError("Marca la autorización para que podamos atender la solicitud.");submitting.current=false;return;}
   setBusy(true);
   const uploaded:string[]=[];
   let inserted=false;
@@ -333,7 +337,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     }
    }
    const {data,error:insertError}=await client.from("vmv_marketing_requests").insert({
-    owner_id:user.id,service_code:selected,business_name:name.trim(),
+    id:requestId,owner_id:user.id,service_code:selected,business_name:name.trim(),
     category_id:effectiveCategory,website_url:safeSite(site),
     goal_text:selected==="directory_listings"?("Solicito evaluación para registrar o actualizar "+directoryData.selected.length+" directorios en "+directoryData.city+", "+directoryData.state+". Se requiere revisar elegibilidad, duplicados y presupuesto antes de iniciar."):selected==="google_profile"?googleGoalText:selected==="seo_improvement"?(webRepair.requestRepair?"Solicito presupuesto para reparación técnica de mi página web.":"Solicito guardar mi diagnóstico web sin contratar reparación."):selected==="review_strategy"&&reviewInput.trim()?
      ("Reseña: "+reviewInput.trim().slice(0,650)+" | Respuesta sugerida, pendiente de revisión: "+answerReview).slice(0,1500):goal.trim(),
@@ -344,8 +348,9 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    }).select("id").single();
    if(insertError)throw insertError;
    inserted=true;
-   const requestId=String(data.id).slice(0,8);
-   setSubmittedId(requestId);setWizardStep(4);
+   const savedId=String(data.id).slice(0,8);
+   setSubmittedId(savedId);setWizardStep(4);
+   await clearMarketingDraft(user.id,requestId);setDraftNotice("");setPhotoNotice("");
    await clearMarketingDraft();setDraftNotice("");setPhotoNotice("");
    setMessage("Solicitud #"+requestId+" guardada con sus datos"+(uploaded.length?" y "+uploaded.length+" imágenes":"")+". No se ha publicado en Google.");
    setGoal("");setConsent(false);setGoogleMedia(emptyMedia);
@@ -353,7 +358,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   }catch(e){
    if(!inserted&&uploaded.length)await client.storage.from("vmv-google-media").remove(uploaded);
    setWizardError("No se pudo completar el envío. "+errorMessage(e,"Inténtalo de nuevo."));
-  }finally{setBusy(false);}
+  }finally{setBusy(false);submitting.current=false;}
  };
  const accept=async(req:RequestRow)=>{
   if(!client||!user||req.owner_id!==user.id||req.status!=="quoted"||req.quoted_price_cents===null)return;
