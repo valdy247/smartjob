@@ -1,9 +1,10 @@
 "use client";
 
 import {useEffect,useRef,useState} from "react";
-import {createUsePuck,useGetPuck,type Data} from "@puckeditor/core";
+import {useGetPuck,type Data} from "@puckeditor/core";
+import {createPortal} from "react-dom";
 import {
- AlignLeft,ArrowLeftRight,BookOpen,CalendarClock,Check,Clock,Columns2,
+ AlignLeft,ArrowLeftRight,BookOpen,Check,Clock,Columns2,
  Contact,HelpCircle,Image,Images,LayoutTemplate,ListOrdered,
  MessageSquare,Minus,MousePointerClick,Package,Plus,Search,
  ShoppingBag,ShoppingCart,Square,Type,Users,Workflow,X
@@ -44,7 +45,6 @@ const shortcuts:Shortcut[]=[
   preset:{columns:"2",left:[],right:[],third:[]}},
  {type:"Spacer",title:"Espacio",hint:"Separación entre secciones",icon:Minus,category:"Diseño"}
 ];
-const usePuck=createUsePuck();
 const sections=["Contenido","Negocio","Diseño"] as const;
 function makeComponent(entry:Shortcut){
  const componentConfig=(builderConfig.components as Record<string,{defaultProps?:Record<string,unknown>}>)[entry.type];
@@ -59,7 +59,6 @@ export default function BuilderQuickAdd(){
  const menuRef=useRef<HTMLDivElement>(null);
  const triggerRef=useRef<HTMLButtonElement>(null);
  const getPuck=useGetPuck();
- const selected=usePuck(s=>s.selectedItem?.type);
  useEffect(()=>{
   if(!opened)return;
   const onKey=(event:KeyboardEvent)=>{
@@ -68,10 +67,13 @@ export default function BuilderQuickAdd(){
     triggerRef.current?.focus();
    }
   };
+  const previousOverflow=document.body.style.overflow;
+  document.body.style.overflow="hidden";
   document.addEventListener("keydown",onKey);
   const focus=window.setTimeout(()=>menuRef.current?.querySelector<HTMLInputElement>("input")?.focus(),0);
-  return()=>{window.clearTimeout(focus);document.removeEventListener("keydown",onKey);};
+  return()=>{window.clearTimeout(focus);document.removeEventListener("keydown",onKey);document.body.style.overflow=previousOverflow;};
  },[opened]);
+ useEffect(()=>{if(!added)return;const timeout=window.setTimeout(()=>setAdded(""),3800);return()=>window.clearTimeout(timeout);},[added]);
  function add(entry:Shortcut){
   try{
    const api=getPuck();
@@ -100,7 +102,7 @@ export default function BuilderQuickAdd(){
   {added&&!opened?<span className={styles.toast} role="status">
    <Check size={13} aria-hidden="true"/> {added}
   </span>:null}
-  {opened?<div className={styles.backdrop}
+  {opened&&typeof document!=="undefined"?createPortal(<div className={styles.backdrop}
    onMouseDown={e=>{if(e.target===e.currentTarget)setOpened(false);}}>
    <div ref={menuRef} role="dialog" aria-modal="true" aria-label="Agregar a mi web"
     id="vmv-quick-add-panel" className={styles.sheet}>
@@ -150,6 +152,6 @@ export default function BuilderQuickAdd(){
     {error?<p role="alert" className={styles.error}>{error}</p>:null}
     <p className={styles.note}>Se añade al final de esta página. Puedes moverlo después con Puck y editarlo tocándolo. No se publica automáticamente.</p>
    </div>
-  </div>:null}
+  </div>,document.body):null}
  </>;
 }
