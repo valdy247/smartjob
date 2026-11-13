@@ -274,16 +274,17 @@ button.homeProductCard:hover{transform:translateY(-2px)}
 .homeTopHidden{display:none}
 
 
-/* Compact navigation: five accessible icons, no captions. */
-.bottomNav{height:66px;padding:7px 10px;margin-bottom:12px;align-items:center}
-.bottomNav button{height:52px;min-height:52px;gap:0;align-items:center;justify-content:center}
-.bottomNav button>span{width:45px;height:45px;border-radius:50%;display:grid;place-items:center}
-.bottomNav button.activeNav>span{border-radius:50%}
-.bottomNav .navCallAction{transform:translateY(-5px);gap:0}
-.bottomNav .navCallAction>span{width:53px;height:53px;border-radius:50%;border:2px solid #dfcaff;background:linear-gradient(145deg,#a778fc,#7648d7);box-shadow:0 5px 12px #27134842}
-.bottomNav .navCallAction.activeNav>span{border:2px solid #e9d9ff;background:linear-gradient(145deg,#ae80ff,#7847d7);box-shadow:0 0 0 1px #ffffff22,0 5px 13px #27134848}
-@media(max-width:360px){.bottomNav{padding-inline:8px}.bottomNav .navCallAction>span{width:51px;height:51px}}
-
+/* Five visible bilingual navigation labels; the call shortcut stays in the dock. */
+.bottomNav{height:80px;padding:7px 8px 6px;margin-bottom:12px;align-items:stretch}
+.bottomNav button{height:64px;min-height:60px;gap:2px;align-items:center;justify-content:center;padding:2px 0}
+.bottomNav button>span{width:42px;height:37px;border-radius:15px;display:grid;place-items:center}
+.bottomNav button.activeNav>span{border-radius:15px}
+.bottomNav button small{display:block;max-width:100%;font-size:clamp(9px,2.4vw,10px);line-height:1.15;font-weight:760;white-space:nowrap}
+.bottomNav .navCallAction{transform:none;gap:2px}
+.bottomNav .navCallAction>span{width:43px;height:39px;border-radius:15px;border:2px solid #d9c4fa;background:linear-gradient(145deg,#a778fc,#7648d7);box-shadow:0 3px 8px #27134832}
+.bottomNav .navCallAction.activeNav>span{border:2px solid #e9d9ff;background:linear-gradient(145deg,#ae80ff,#7847d7);box-shadow:0 0 0 1px #ffffff22,0 3px 8px #27134838}
+.bottomNav .navCallAction small{color:#d9caef;margin:0}
+@media(max-width:360px){.bottomNav{padding-inline:5px;gap:0}.bottomNav button small{font-size:9px}}
 
 /* VMV visual system v3 · shared across Services, Smart Call, Calls, Translator and Account.
    Lavender surfaces, minimal ink typography, soft product colors and dark dock. */
