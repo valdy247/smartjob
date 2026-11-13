@@ -823,11 +823,13 @@ export default function WebBuilderWorkspace(){
        </WebsiteChrome>
       </div>
      </section>:null}
-     <div className={styles.puckShell} style={{display:previewMode?"none":undefined}}>
+     <div className={compactStudio?styles.puckShell+" "+styles.compactPuck:styles.puckShell} style={{display:previewMode?"none":undefined}}>
       <Puck key={page.id+"-"+refreshKey} dictionary={dictionary} config={builderConfig} dnd={{enableDragHandle:true}}
        overrides={{headerActions:({children})=><><BuilderHistoryControls/><BuilderQuickAdd compact={compactStudio} enabled={!previewMode&&view==="editor"}/>{compactStudio?null:children}</>,
         actionBar:({children,label})=><BuilderSelectedActions label={label||"Elemento"}>{children}</BuilderSelectedActions>}}
-       data={initialDocument} height="75vh"
+       viewports={compactStudio?[{width:"100%",label:"Pantalla actual",icon:"Smartphone"}]:undefined}
+       _experimentalFullScreenCanvas={compactStudio}
+       data={initialDocument} height={compactStudio?"100%":"75vh"}
        onChange={data=>setDocument(data)}
        onPublish={publish} />
      </div>
