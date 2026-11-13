@@ -33,13 +33,16 @@ export default function BuilderSelectedActions({children,label}:{
  const [open,setOpen]=useState(true);
  const [mode,setMode]=useState<"controls"|"library"|"text">("controls");
  const [chosen,setChosen]=useState<{id:string;target:ImageTarget}|null>(null);
+ const [pickerRequest,setPickerRequest]=useState(0);
  const [ctaSelection,setCtaSelection]=useState<{id:string;target:SectionTarget}|null>(null);
  const id=item?.props?.id||"";
  useEffect(()=>{
   const select=(event:Event)=>{
-   const detail=(event as CustomEvent<{id:string;target:ImageTarget}>).detail;
+   const detail=(event as CustomEvent<{id:string;target:ImageTarget;openLibrary?:boolean}>).detail;
    if(!detail)return;
-   setChosen(detail);setOpen(true);setMode("controls");
+   setChosen({id:detail.id,target:detail.target});
+   setOpen(true);setMode(detail.openLibrary?"library":"controls");
+   if(detail.openLibrary)setPickerRequest(n=>n+1);
   };
   window.addEventListener(IMAGE_SELECT_EVENT,select);
   return()=>window.removeEventListener(IMAGE_SELECT_EVENT,select);
@@ -120,7 +123,8 @@ export default function BuilderSelectedActions({children,label}:{
     <div className="vmv-context-switch" role="group" aria-label="Modo de imagen">
      <button type="button" aria-pressed={mode==="controls"} onClick={()=>setMode("controls")}>
       <SlidersHorizontal size={13}/> Ajustar</button>
-     <button type="button" aria-pressed={mode==="library"} onClick={()=>setMode("library")}>
+     <button type="button" aria-pressed={mode==="library"}
+      onClick={()=>{setMode("library");setPickerRequest(n=>n+1);}}>
       <ImagePlus size={13}/> Reemplazar</button>
     </div>
     {targets.length>1?<label className="vmv-context-text-label">Imagen
@@ -130,6 +134,7 @@ export default function BuilderSelectedActions({children,label}:{
      </select>
     </label>:null}
     {mode==="library"?<BuilderImageField value={targetImage(props,target)}
+     openRequest={pickerRequest}
      onChange={src=>changeImage({[target.field]:src})}/>:<BuilderImageControls
       value={targetSettings(props,target)} radius={item?.type==="HeroVisual"?0:item?.type==="Image"?23:16}
       onChange={changeImage}/>}
