@@ -420,7 +420,6 @@ export default function MarketingActionCenter({businessName,industryId,website,o
        {reviewInput.trim()?<div className={styles.auditSummary}><strong>Respuesta para revisar</strong><p>{answerReview}</p><div className={styles.goalPresets}><button type="button" className={styles.preset} onClick={()=>setReviewTone(reviewTone==="cordial"?"breve":"cordial")}>Cambiar tono</button><button type="button" className={styles.toolButton} onClick={()=>void navigator.clipboard?.writeText(answerReview)}>Copiar respuesta</button></div><small>Revisa antes de usarla. Nunca publicamos sin autorización.</small></div>:null}
        {!reviewInput.trim()&&goal.includes("pedir reseñas")?<div className={styles.auditSummary}><p>{reviewRequestMessage}</p><button type="button" className={styles.toolButton} onClick={()=>void navigator.clipboard?.writeText(reviewRequestMessage)}>Copiar mensaje</button></div>:null}
      </div>:null}
-     {selected==="google_profile"?<p className={styles.wizardHint}>Google puede requerir verificar que el negocio es tuyo. VMV te ayudará con ese proceso.</p>:null}
      {selected!=="review_strategy"?<span className={styles.presetLabel}>Elige qué necesitas</span>:null}
      <div className={styles.goalPresets}>{(selected==="review_strategy"?[]:suggestedGoals[selected]).map(option=><button key={option} type="button" className={goal===option?styles.presetActive:styles.preset} aria-pressed={goal===option} onClick={()=>{setGoal(option);setWizardError("");}}>
       <CheckCircle2 size={16}/>{option}
