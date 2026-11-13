@@ -56,7 +56,7 @@ export default function BuilderSelectedActions({children,label}:{
  },[]);
  const targets=item?imageTargets(item.type,item.props):[];
  const isImage=targets.length>0;
- const selectedImage=chosen?.id===id?chosen.target:null;
+ const selectedImage=chosen&&chosen.id===id?chosen.target:null;
  const target=selectedImage?targets.find(t=>t.field===selectedImage.field&&
   (selectedImage.itemId?t.itemId===selectedImage.itemId:t.index===selectedImage.index)):targets[0];
  const data=usePuck(s=>s.appState.data);
