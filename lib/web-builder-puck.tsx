@@ -130,6 +130,17 @@ export function importLegacyBuilderDocument(legacy:WebSiteContent):Data{
 }
 const basicText={type:"text" as const};
 export const builderConfig:Config={
+ categories:{
+  composition:{title:"Composición libre",components:["SectionLayout","ColumnsLayout"],defaultExpanded:true},
+  elements:{title:"Elementos editables",components:["ComposeHeading","ComposeText","ComposeImage","ComposeButton"],defaultExpanded:true},
+  sections:{title:"Secciones completas",components:[
+   "HeroVisual","OfferingGrid","PhotoGallery","ProjectShowcase","ProcessSteps",
+   "HoursArea","TeamGrid","PricingList","BeforeAfter","FAQList"
+  ],defaultExpanded:false},
+  legacy:{title:"Bloques anteriores",components:[
+   "Hero","Heading","Text","Image","Services","Benefits","CTA","Quote","Spacer","FAQ","Contact"
+  ],defaultExpanded:false}
+ },
  root:{
   fields:{
    palette:{type:"custom",render:({value,onChange})=><ThemeSwatches value={value} onChange={onChange}/>},
