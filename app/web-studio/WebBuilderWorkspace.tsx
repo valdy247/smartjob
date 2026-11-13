@@ -55,6 +55,17 @@ export default function WebBuilderWorkspace(){
  const [view,setView]=useState<View>("sites");
  const [mobileSettings,setMobileSettings]=useState(false);
  const [mobilePageForm,setMobilePageForm]=useState(false);
+ const workspaceRef=useRef<HTMLDivElement|null>(null);
+ const [compactStudio,setCompactStudio]=useState(false);
+ useEffect(()=>{
+  const element=workspaceRef.current;
+  if(!element)return;
+  const update=()=>setCompactStudio(element.getBoundingClientRect().width<=700);
+  update();
+  const observer=new ResizeObserver(update);
+  observer.observe(element);
+  return()=>observer.disconnect();
+ },[site?.id]);
  const [classicDraft,setClassicDraft]=useState<WebSiteContent|null>(null);
  const [classicSlug,setClassicSlug]=useState<string|null>(null);
  const [newPageName,setNewPageName]=useState("");
@@ -575,7 +586,7 @@ export default function WebBuilderWorkspace(){
  if(loading)return <main className={styles.loading}>Cargando Web Studio…</main>;
  if(!userId)return <main className={styles.loading}><h2>Inicia sesión para crear tu web</h2>
   <p>{error}</p><a href="/vista-app">Ir a VMV Business</a></main>;
- return <div className={styles.workspace}>
+ return <div className={styles.workspace} ref={workspaceRef}>
   <header className={styles.topbar} data-site={Boolean(site)}>
    <a href="/vista-app" className={styles.brand}>VMV <span>Web Studio</span></a>
    {site?<button type="button" className={styles.mobileBack} aria-label="Volver a mis sitios"
@@ -794,7 +805,7 @@ export default function WebBuilderWorkspace(){
      </section>:null}
      <div className={styles.puckShell} style={{display:previewMode?"none":undefined}}>
       <Puck key={page.id+"-"+refreshKey} config={builderConfig} dnd={{enableDragHandle:true}}
-       overrides={{headerActions:({children})=><><BuilderHistoryControls/><BuilderQuickAdd enabled={!previewMode&&view==="editor"}/>{children}</>,
+       overrides={{headerActions:({children})=><><BuilderHistoryControls/><BuilderQuickAdd enabled={!previewMode&&view==="editor"}/>{compactStudio?null:children}</>,
         actionBar:({children,label})=><BuilderSelectedActions label={label||"Elemento"}>{children}</BuilderSelectedActions>}}
        data={initialDocument} height="75vh"
        onChange={data=>setDocument(data)}
