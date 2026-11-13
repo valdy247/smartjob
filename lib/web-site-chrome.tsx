@@ -1,0 +1,27 @@
+import type {CSSProperties,ReactNode} from "react";
+import {safeWebImageUrl} from "./web-services-site";
+
+export type WebsiteMenuItem={page_slug:string;title:string};
+export function WebsiteChrome({siteName,baseUrl,menu,logo,family,language="es",visualStyle,children}:{
+ siteName:string;baseUrl:string;menu:WebsiteMenuItem[];logo?:string|null;family:string;
+ language?:"es"|"en";visualStyle?:CSSProperties;children:ReactNode
+}){
+ const safeLogo=logo?safeWebImageUrl(logo):null;
+ return <div lang={language} className="vmv-site" data-site-family={family}
+  data-header-family={family} style={visualStyle}>
+  <header className="vmv-site-nav" data-header-family={family}>
+   <a className="vmv-site-mark" href={baseUrl||"/"}>
+    {safeLogo?<img src={safeLogo} width={52} height={52} alt={"Logo de "+siteName}/>:null}
+    <span className="vmv-site-brand-name">{siteName}<span>.</span></span>
+   </a>
+   <nav aria-label="Páginas del sitio">
+    {menu.map(item=><a key={item.page_slug}
+     href={item.page_slug==="home"?(baseUrl||"/"):(baseUrl+"/"+item.page_slug)}>
+     {item.page_slug==="home"?(language==="en"?"Home":"Inicio"):item.title}
+    </a>)}
+   </nav>
+  </header>
+  <main>{children}</main>
+  <footer className="vmv-site-footer"><span>{siteName}</span><span>© {new Date().getUTCFullYear()}</span></footer>
+ </div>;
+}
