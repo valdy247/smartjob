@@ -4,6 +4,8 @@ import type {Data} from "@puckeditor/core";
 import {Puck,Render} from "@puckeditor/core";
 import {ArrowLeft,ChevronDown,ExternalLink,Eye,FilePlus2,Globe,History,Layers,Plus,RefreshCw,Save,Settings2,ShieldCheck,SlidersHorizontal,Trash2} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
+import {useInterfaceLanguage} from "@/lib/i18n-web";
+import {t as interfaceText,type InterfaceLanguage} from "@/lib/i18n";
 import {builderConfig,normalizeBuilderDocument,validateBuilderDocument,starterBuilderDocument,importLegacyBuilderDocument} from "@/lib/web-builder-puck";
 import {normalizeWebContent,type WebSiteContent} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
@@ -35,7 +37,13 @@ function publicationSignature(draft:unknown,title:string,description:string){
 function slugify(input:string){
  return input.normalize("NFKD").toLowerCase().replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,49).replace(/-$/g,"");
 }
+const puckTokens=["header-publish","header-undo","header-redo","header-toggle-leftsidebar","header-toggle-rightsidebar","header-toggle-menubar","action-selectparent","action-drag","action-duplicate","action-delete","label-page","label-component","outline-empty","outline-header-title","outline-header-collapseall","outline-item-collapse","outline-item-expand","outline-item-duplicate","outline-item-delete","drawer-category-collapse","drawer-category-expand","drawer-category-other","canvas-noconfig","field-readonly","field-arrayitem-summary","field-arrayitem-duplicate","field-arrayitem-delete","field-external-selectdata","field-external-search","field-external-togglefilters","field-external-item","field-external-result-singular","field-external-result-plural","field-richtext-bold","field-richtext-italic","field-richtext-underline","field-richtext-strikethrough","field-richtext-blockquote","field-richtext-code-inline","field-richtext-code-block","field-richtext-list-bullet","field-richtext-list-ordered","field-richtext-horizontalrule","field-richtext-align-left","field-richtext-align-center","field-richtext-align-right","field-richtext-align-justify","field-richtext-select","field-richtext-headingselect-1","field-richtext-headingselect-2","field-richtext-headingselect-3","field-richtext-headingselect-4","field-richtext-headingselect-5","field-richtext-headingselect-6","field-richtext-alignselect-left","field-richtext-alignselect-center","field-richtext-alignselect-right","field-richtext-alignselect-justify","field-richtext-listselect-bullet","field-richtext-listselect-ordered","viewport-zoom-in","viewport-zoom-out","viewport-zoom-auto","viewport-toggle-menu","viewport-switch","viewport-switch-default","plugin-blocks","plugin-outline","plugin-fields","plugin-components","layout-maximize","layout-minimize","loader-loading"] as const;
+function puckDictionary(language:InterfaceLanguage){
+ return Object.fromEntries(puckTokens.map(token=>[token,interfaceText(language,`puck.${token}`)]));
+}
 export default function WebBuilderWorkspace(){
+ const {language}=useInterfaceLanguage();
+ const dictionary=useMemo(()=>puckDictionary(language),[language]);
  const [userId,setUserId]=useState("");
  const [sites,setSites]=useState<Site[]>([]);
  const [site,setSite]=useState<Site|null>(null);
@@ -816,7 +824,7 @@ export default function WebBuilderWorkspace(){
       </div>
      </section>:null}
      <div className={styles.puckShell} style={{display:previewMode?"none":undefined}}>
-      <Puck key={page.id+"-"+refreshKey} config={builderConfig} dnd={{enableDragHandle:true}}
+      <Puck key={page.id+"-"+refreshKey} dictionary={dictionary} config={builderConfig} dnd={{enableDragHandle:true}}
        overrides={{headerActions:({children})=><><BuilderHistoryControls/><BuilderQuickAdd compact={compactStudio} enabled={!previewMode&&view==="editor"}/>{compactStudio?null:children}</>,
         actionBar:({children,label})=><BuilderSelectedActions label={label||"Elemento"}>{children}</BuilderSelectedActions>}}
        data={initialDocument} height="75vh"
