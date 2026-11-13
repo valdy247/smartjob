@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import {createClient} from "@supabase/supabase-js";
+import {askAiAgent,aiAgentModelPathAvailable} from "@/lib/vmv-ai-agents/model";
 
 // Isolated AI Agents simulator. No phone, inventory, booking, sales or other tools.
 export const runtime="nodejs";
@@ -42,11 +43,7 @@ export async function POST(req:NextRequest){
     .eq("id",agent.business_id).eq("owner_id",userId).maybeSingle();
   if(!business)return fail("Negocio no autorizado.",403);
 
-  const key=process.env.OPENAI_API_KEY;
-  const gatewayKey=process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN;
-  const throughGateway=!key;
-  const bearer=key||gatewayKey;
-  if(!bearer)return fail("Proveedor de IA no configurado.",503);
+  if(!aiAgentModelPathAvailable())return fail("Proveedor de IA no configurado.",503);
 
   const {data:quota,error:quotaError}=await db.rpc("vmv_ai_reserve_simulation",{p_agent_id:agentId});
   if(quotaError)return fail("Límites de AI Agents sin configurar.",503);
@@ -89,20 +86,11 @@ export async function POST(req:NextRequest){
     "Configuración aprobada del wizard (datos de la empresa, reglas, agenda e inventario solicitado; nunca prueba de conexión):\n"+JSON.stringify(agent.configuration||{}).slice(0,6500)
   ].join("\n");
   try{
-    const controller=AbortSignal.timeout(20000);
-    const answer=await fetch(throughGateway?"https://ai-gateway.vercel.sh/v1/chat/completions":"https://api.openai.com/v1/chat/completions",{
-      method:"POST",
-      headers:{Authorization:"Bearer "+bearer,"Content-Type":"application/json"},
-      body:JSON.stringify({
-        model:throughGateway?"openai/"+(process.env.VMV_AI_MODEL||"gpt-4.1-mini"):(process.env.VMV_AI_MODEL||"gpt-4.1-mini"),
-        messages:[{role:"system",content:system},...history,{role:"user",content:message}],
-        temperature:0.25,max_tokens:450,store:false
-      }),
-      signal:controller
-    });
-    if(!answer.ok)return fail("No se pudo obtener una respuesta. Intenta de nuevo.",502);
-    const response=await answer.json();
-    const reply=String(response.choices?.[0]?.message?.content||"").trim().slice(0,3500);
+    const reply=(await askAiAgent({
+      system,
+      messages:[...history,{role:"user" as const,content:message}],
+      maxOutputTokens:450,temperature:0.25,timeoutMs:12000
+    })).slice(0,3500);
     if(!reply)return fail("El agente no pudo responder.",502);
     const {error:saveError}=await db.from("vmv_ai_messages").insert({
       conversation_id:conversationId,owner_id:userId,role:"assistant",content:reply
