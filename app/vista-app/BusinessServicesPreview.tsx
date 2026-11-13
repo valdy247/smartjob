@@ -152,9 +152,11 @@ export default function BusinessServicesPreview({userId,focus="all"}:{userId:str
     const inner=<><div className={styles.offerIcon}><o.Icon size={25}/></div>
      <div className={styles.offerBottom}><strong>{o.name}</strong><div className={styles.badges}>
       <small>{o.delivery==="automatic"?"Auto":"Asistido"}</small>
-      <small>{o.state==="pilot"?"Piloto":"Próximamente"}</small>
-     </div></div>{o.id==="google-business-profile"?<ArrowUpRight className={styles.arrow} size={17}/>:null}</>;
-    return o.id==="google-business-profile"?
+      <small>{o.id==="ai-agents"?"Beta":o.state==="pilot"?"Piloto":"Próximamente"}</small>
+     </div></div>{o.id==="google-business-profile"||o.id==="ai-agents"?<ArrowUpRight className={styles.arrow} size={17}/>:null}</>;
+    return o.id==="ai-agents"?
+     <button type="button" key={o.id} className={styles.tile+" "+styles[o.color]} onClick={()=>window.location.assign("/vista-app/ai-agents")} aria-label="AI Agents — Beta">{inner}</button>:
+     o.id==="google-business-profile"?
      <button type="button" key={o.id} className={styles.tile+" "+styles[o.color]} onClick={()=>setEditor(true)} aria-label="Preparar Google Business Profile">{inner}</button>:
      o.id==="website-design"?<button type="button" key={o.id} className={styles.tile+" "+styles[o.color]} onClick={()=>setSiteEditor(true)} aria-label="Crear web">{inner}</button>:
      <div key={o.id} className={styles.tile+" "+styles[o.color]}>{inner}</div>;
