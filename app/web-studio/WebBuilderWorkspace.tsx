@@ -7,6 +7,8 @@ import {getSupabase} from "@/lib/supabase";
 import {builderConfig,normalizeBuilderDocument,starterBuilderDocument,importLegacyBuilderDocument} from "@/lib/web-builder-puck";
 import {normalizeWebContent,type WebSiteContent} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
+import WebSiteIntake from "./WebSiteIntake";
+import type {SiteIntake,SiteProposal} from "@/lib/web-builder-templates";
 import styles from "./WebBuilderWorkspace.module.css";
 
 type Site={id:string;owner_id:string;slug:string;name:string;category_id:string;inquiries_enabled:boolean;legacy_source_slug:string|null};
@@ -42,8 +44,6 @@ export default function WebBuilderWorkspace(){
  const [recovery,setRecovery]=useState<LocalBackup|null>(null);
  const blockedAutosaveRef=useRef("");
  const [view,setView]=useState<View>("sites");
- const [newSiteName,setNewSiteName]=useState("");
- const [newSiteCategory,setNewSiteCategory]=useState("");
  const [classicDraft,setClassicDraft]=useState<WebSiteContent|null>(null);
  const [classicSlug,setClassicSlug]=useState<string|null>(null);
  const [newPageName,setNewPageName]=useState("");
@@ -93,9 +93,6 @@ export default function WebBuilderWorkspace(){
      .select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug").eq("owner_id",data.user.id).order("created_at",{ascending:false});
     if(error)throw new Error("No se pudieron cargar tus sitios");
     if(active){setUserId(data.user.id);setSites((rows||[]) as Site[]);}
-    const pref=await client.from("smartjob_business_category_preferences")
-     .select("category_id").eq("owner_id",data.user.id).maybeSingle();
-    if(active&&pref.data?.category_id)setNewSiteCategory(pref.data.category_id);
     const {data:classic}=await client.from("smartjob_web_sites")
      .select("slug,draft").eq("owner_id",data.user.id).maybeSingle();
     if(classic?.draft&&active&&!rows?.some(row=>row.legacy_source_slug===classic.slug)){
@@ -201,26 +198,25 @@ export default function WebBuilderWorkspace(){
    throw new Error("Sitio creado, pero no pudo abrirse. Recarga Mis sitios.");
   return {created:siteResult.data as Site,home:pageResult.data as Page};
  }
- async function createSite(){
+ async function createSite(intake:SiteIntake,proposal:SiteProposal){
   if(busy||!userId)return;
-  const name=newSiteName.trim().slice(0,100);
+  const name=intake.business.trim().slice(0,100);
   if(name.length<2){setError("Escribe el nombre del negocio");return;}
-  setBusy(true);setError("");
+  setBusy(true);setError("");setNotice("");
   try{
-   const c=await authorized();
-   const generated=(slugify(name).slice(0,33)||"mi-negocio")+"-"+crypto.randomUUID().replace(/-/g,"").slice(0,8);
-   const {data:ids,error:rpcError}=await c.rpc("smartjob_builder_create_site",{
-    p_name:name,p_slug:generated,p_category_id:newSiteCategory,
-    p_home_draft:starterBuilderDocument(name,newSiteCategory),
-    p_home_description:"",p_legacy_source_slug:null
+   const db=await authorized();
+   const slug=(slugify(name).slice(0,33)||"mi-negocio")+"-"+crypto.randomUUID().replace(/-/g,"").slice(0,8);
+   const {data:ids,error:rpcError}=await db.rpc("smartjob_builder_create_site",{
+    p_name:name,p_slug:slug,p_category_id:intake.categoryId,
+    p_home_draft:normalizeBuilderDocument(proposal.data),
+    p_home_description:intake.about.slice(0,300),p_legacy_source_slug:null
    });
    if(rpcError||!ids?.siteId||!ids?.pageId)throw new Error("No se pudo crear el sitio. Revisa el límite de sitios.");
-   const {created:siteCreated,home}=await loadCreatedSite(c,ids);
-   setSites(current=>[siteCreated,...current]);
-   setSite(siteCreated);setPages([home as Page]);setPage(home as Page);setPublishedIds([]);setPublishedSignatures({});
-   openDraft(home.draft);setTitle(home.title);setDescription("");
-   setNewSiteName("");setView("editor");
-   setNotice("Sitio creado. Personaliza tus bloques y publica cuando esté listo.");
+   const {created,home}=await loadCreatedSite(db,ids);
+   setSites(current=>[created,...current]);
+   setSite(created);setPages([home]);setPage(home);setPublishedIds([]);setPublishedSignatures({});
+   openDraft(home.draft);setTitle(home.title);setDescription(home.description);
+   setView("editor");setNotice("Diseño creado. Personalízalo y publícalo cuando esté listo.");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo crear");}
   finally{setBusy(false);}
  }
@@ -517,21 +513,7 @@ export default function WebBuilderWorkspace(){
   {error?<div className={styles.error} role="alert">{error}</div>:null}
   {notice?<div className={styles.notice} role="status">{notice}</div>:null}
   {!site?<main className={styles.landing}>
-   <div className={styles.welcome}><small>WEB SERVICES 2.0</small><h1>Crea algo increíble<span>.</span></h1>
-    <p>Diseña y publica tus páginas con un editor visual.</p></div>
-   <form onSubmit={e=>{e.preventDefault();void createSite();}} className={styles.createSite}>
-    <label htmlFor="newSite">Nuevo sitio web</label>
-    <div><input id="newSite" maxLength={100} placeholder="Nombre de tu negocio" spellCheck={false}
-     value={newSiteName} onChange={e=>setNewSiteName(e.target.value)}/>
-     <button type="submit" disabled={busy}><Plus size={17}/> Crear sitio</button></div>
-    <label htmlFor="newCategory">Categoría del negocio</label>
-    <select id="newCategory" value={newSiteCategory} onChange={e=>setNewSiteCategory(e.target.value)}>
-     <option value="">General</option>
-     {CATEGORY_GROUPS.map(group=><optgroup key={group} label={group}>
-      {BUSINESS_CATEGORIES.filter(item=>item.group===group).map(category=><option key={category.id} value={category.id}>{category.label}</option>)}
-     </optgroup>)}
-    </select>
-   </form>
+   <WebSiteIntake ownerId={userId} busy={busy} onChoose={(input,proposal)=>void createSite(input,proposal)}/>
    {classicDraft?<button type="button" className={styles.importClassic} disabled={busy}
     onClick={()=>void importClassic()}><Layers size={18}/> Importar mi web actual al editor visual</button>:null}
    <h2>Mis sitios</h2>
