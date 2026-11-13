@@ -275,3 +275,28 @@
 .resumeDraft{display:inline-flex;gap:7px;align-items:center;min-height:40px;border:1px solid #b782ab;border-radius:11px;padding:10px 13px;background:#fff8fd;color:#76446d;font-size:11px;font-weight:850;cursor:pointer;margin-top:12px}
 .serviceCta{display:inline-flex;align-items:center;justify-content:center;gap:6px;margin-left:auto;background:#874779;color:white;padding:10px 13px;border-radius:10px;font-size:11px;font-weight:850;white-space:nowrap}
 @media(max-width:520px){.serviceCta{font-size:11px;padding:9px}.serviceTile{flex-wrap:wrap}.serviceText{flex:1;min-width:140px}}
+
+/* VMV launch action cards: compact hierarchy, warm pastel surfaces and mobile-first spacing. */
+.servicePicker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.serviceTile{display:flex;flex-direction:column;align-items:flex-start;min-width:0;min-height:200px;gap:12px;padding:21px 19px 17px;border-radius:21px;border:1px solid #e9d8e4;background:#fcf2f8;box-shadow:0 3px 13px rgba(74,45,72,.035);text-align:left;transition:transform .16s,border-color .16s,box-shadow .16s}
+.serviceTile:nth-child(3n+1){background:#fbeef5;border-color:#efd8e5}
+.serviceTile:nth-child(3n+2){background:#f0eefb;border-color:#e3ddf5}
+.serviceTile:nth-child(3n+3){background:#edf7f1;border-color:#d8eadf}
+.serviceTile:hover{transform:translateY(-2px);box-shadow:0 8px 23px rgba(74,45,72,.08);border-color:#c7a4bf}
+.serviceIcon,.serviceTile:nth-child(3n+1) .serviceIcon{width:49px;height:49px;flex:0 0 49px;border-radius:15px;background:#fff9fc;border:1px solid #ecd3e2;color:#94567f}
+.serviceTile:nth-child(3n+2) .serviceIcon{background:#faf8ff;border-color:#e0d8f5;color:#7763a6}
+.serviceTile:nth-child(3n+3) .serviceIcon{background:#f8fffa;border-color:#d5e8dc;color:#4c8a64}
+.serviceText{width:100%;gap:6px;flex:1;padding:0;min-width:0}
+.serviceText strong{font-size:16px;line-height:1.26;font-weight:850;letter-spacing:-.3px;color:#3f2d47}
+.serviceText small{font-size:12px;line-height:1.43;color:#716579;max-width:none}
+.serviceCta{margin-top:auto;margin-left:0;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:108px;min-height:38px;border-radius:11px;background:#fff;border:1px solid #e7d6e2;color:#7d4874;padding:9px 12px;font-size:12px;font-weight:850;box-shadow:0 2px 5px rgba(77,44,74,.03)}
+.serviceTile:nth-child(3n+2) .serviceCta{color:#6f5b9d;border-color:#dcd6ee}
+.serviceTile:nth-child(3n+3) .serviceCta{color:#457d5c;border-color:#cfe5d5}
+.serviceTile:focus-visible{outline:3px solid #916b99;outline-offset:3px}
+.catalogHeading{padding:8px 3px 1px}
+.catalogHeading h2{font-size:clamp(23px,4vw,30px);line-height:1.12}
+.catalogHeading p{margin-top:7px;font-size:12px;line-height:1.5}
+.wizardPanel{background:transparent;box-shadow:none;border:0;padding:0;overflow:visible;border-radius:0}
+.wizardBody{min-width:0}
+@media(max-width:760px){.servicePicker{grid-template-columns:1fr;gap:11px}.serviceTile{min-height:0;display:grid;grid-template-columns:51px minmax(0,1fr);column-gap:13px;row-gap:10px;padding:17px;border-radius:19px;align-items:center}.serviceIcon{grid-row:1;grid-column:1}.serviceText{grid-row:1;grid-column:2;gap:5px}.serviceCta{grid-row:2;grid-column:2;justify-self:start;margin:0;min-height:35px}.catalogHeading{padding:4px 1px 0}}
+@media(max-width:420px){.serviceTile{padding:15px;column-gap:12px}.serviceText strong{font-size:15px}.serviceText small{font-size:11px}.serviceCta{font-size:11px;min-height:34px}}
