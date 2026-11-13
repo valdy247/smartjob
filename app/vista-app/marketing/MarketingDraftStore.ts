@@ -11,7 +11,7 @@ const MAX_AGE=48*60*60*1000;
 export type StoredMarketingDraft={
  version:2;savedAt:number;requestId:string;ownerId:string|null;service:string;
  step:number;googleStep:number;name:string;site:string;category:string;goal:string;
- reviewInput:string;reviewTone:"cordial"|"breve";reviewLink:string;reviewReply:string;
+ reviewInput:string;reviewTone:"cordial"|"breve";reviewMode?:"respond"|"request";reviewLink:string;reviewReply:string;
  googleData:GoogleData;webRepair:WebRepairData;directoryData?:DirectoryData;
 };
 export const guestDraftKey=KEY+":guest";
