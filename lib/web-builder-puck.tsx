@@ -4,6 +4,9 @@ import {normalizeImageSettings} from "./web-builder-images";
 import type {CSSProperties} from "react";
 import {safeWebImageUrl,webPrimaryContact,type WebSiteContent} from "./web-services-site";
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
+import {numericEditorField,colorEditorField,fontEditorField} from "@/app/web-studio/BuilderContextFields";
+import {BuilderSectionTargets} from "@/app/web-studio/BuilderSectionTargets";
+import {normalizeCalloutStyle,calloutButtonStyles,calloutSectionStyles,calloutHeadingStyles} from "./web-builder-callout-style";
 import ThemeSwatches,{AccentPicker} from "@/app/web-studio/ThemeSwatches";
 import {visualBlocks,VISUAL_BLOCK_NAMES,normalizeVisualProps,type VisualBlockName} from "./web-builder-visual-blocks";
 import {compositionBlocks,COMPOSE_BLOCK_NAMES,COMPOSE_SLOTS,normalizeComposeProps,type ComposeBlockName} from "./web-builder-composition";
@@ -107,6 +110,7 @@ export function normalizeBuilderDocument(input:unknown):Data{
     else safe[field]=sanitize(source[field]);
    }
    if(kind==="Image")Object.assign(safe,normalizeImageSettings(source,23));
+   if(kind==="CTA")Object.assign(safe,normalizeCalloutStyle(source));
    if(kind==="Spacer"&&!["24","48","80"].includes(String(safe.height)))safe.height="48";
    return [{type:kind,props:safe}];
   });
@@ -269,9 +273,61 @@ export const builderConfig:Config={
   },
   CTA:{
    label:"Llamada a la acción",
-   fields:{title:basicText,description:{type:"textarea"},buttonText:basicText,buttonUrl:basicText},
-   defaultProps:{title:"¿Comenzamos?",description:"Cuéntanos qué necesitas.",buttonText:"Contáctanos",buttonUrl:"#contacto"},
-   render:({title,description,buttonText,buttonUrl})=><section className="vmv-site-cta"><h2>{title}</h2><p>{description}</p><ContactButton label={buttonText} url={buttonUrl}/></section>
+   fields:{
+    title:{type:"text",contentEditable:true},description:{type:"textarea"},
+    buttonText:{type:"text"},buttonUrl:{type:"text"},
+    buttonStyle:{type:"radio",options:[{label:"Sólido",value:"solid"},{label:"Contorno",value:"outline"},{label:"Enlace",value:"link"}]},
+    buttonShape:{type:"radio",options:[{label:"Píldora",value:"pill"},{label:"Redondeado",value:"rounded"},{label:"Recto",value:"square"}]},
+    buttonRadius:numericEditorField("imageRadius"),
+    buttonFontSize:numericEditorField("fontSize"),
+    buttonColor:colorEditorField("Fondo del botón"),
+    buttonTextColor:colorEditorField("Texto del botón"),
+    buttonBorderColor:colorEditorField("Borde del botón"),
+    buttonBorderWidth:numericEditorField("imageBorder"),
+    titleFont:fontEditorField,
+    titleFontSize:numericEditorField("fontSize"),
+    titleColor:colorEditorField("Color del título"),
+    titleShadow:{type:"radio",options:[{label:"Ninguna",value:"none"},{label:"Suave",value:"soft"},{label:"Marcada",value:"strong"}]},
+    sectionSurface:{type:"radio",options:[
+     {label:"Oscuro",value:"dark"},{label:"Claro",value:"light"},
+     {label:"Suave",value:"soft"},{label:"Marca",value:"accent"},{label:"Personalizado",value:"custom"}]},
+    sectionBackground:colorEditorField("Fondo personalizado"),
+    sectionTextColor:colorEditorField("Color general del texto"),
+    sectionAlign:{type:"radio",options:[
+     {label:"Izquierda",value:"left"},{label:"Centro",value:"center"},{label:"Derecha",value:"right"}]},
+    sectionPadding:{type:"radio",options:[
+     {label:"Compacto",value:"compact"},{label:"Normal",value:"normal"},{label:"Amplio",value:"spacious"}]},
+    sectionRadius:numericEditorField("imageRadius")
+   },
+   defaultProps:{
+    title:"¿Comenzamos?",description:"Cuéntanos qué necesitas.",buttonText:"Contáctanos",buttonUrl:"#contacto",
+    ...normalizeCalloutStyle({})
+   },
+   renderFields:({fields:f})=><>
+    <fieldset className="vmv-puck-field-group"><legend>Contenido de la sección</legend>
+     {f.title}{f.description}{f.buttonText}{f.buttonUrl}</fieldset>
+    <fieldset className="vmv-puck-field-group"><legend>Botón · Forma y color</legend>
+     {f.buttonStyle}{f.buttonShape}{f.buttonRadius}{f.buttonColor}{f.buttonTextColor}
+     {f.buttonBorderColor}{f.buttonBorderWidth}{f.buttonFontSize}</fieldset>
+    <fieldset className="vmv-puck-field-group"><legend>Título · Diseño</legend>
+     {f.titleFont}{f.titleFontSize}{f.titleColor}{f.titleShadow}</fieldset>
+    <fieldset className="vmv-puck-field-group"><legend>Sección · Fondo y espacio</legend>
+     {f.sectionSurface}{f.sectionBackground}{f.sectionTextColor}{f.sectionAlign}
+     {f.sectionPadding}{f.sectionRadius}</fieldset>
+   </>,
+   render:({id,title,description,buttonText,buttonUrl,puck,...settings})=>
+    <BuilderSectionTargets id={id} editing={puck.isEditing} className="vmv-site-cta"
+     kind="CTA" style={calloutSectionStyles(settings)}>
+     <div className="vmv-cta-inner" data-align={settings.sectionAlign||"left"}
+      data-spacing={settings.sectionPadding||"normal"}>
+      <h2 data-vmv-edit-target="title" style={calloutHeadingStyles(settings)}>{title}</h2>
+      {description?<p data-vmv-edit-target="title">{description}</p>:null}
+      <a data-vmv-edit-target="button" href={safeLink(buttonUrl)}
+       className="vmv-site-button vmv-cta-button" style={calloutButtonStyles(settings)}>
+       {buttonText||"Contáctanos"} <span aria-hidden="true">↗</span>
+      </a>
+     </div>
+    </BuilderSectionTargets>
   },
   Quote:{
    label:"Testimonio",
