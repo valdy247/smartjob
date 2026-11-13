@@ -39,6 +39,37 @@ const fieldSchema:Partial<Record<BlockName,Record<string,(value:unknown)=>string
  FAQ:{title:text(110),q1:text(170),a1:text(450),q2:text(170),a2:text(450)},
  Contact:{title:text(110),description:text(450),email:text(180),phone:text(36),address:text(180)}
 };
+/** Reject oversized or unsupported nested layouts before saving, rather than silently trimming slots. */
+export function validateBuilderDocument(input:unknown):string|null{
+ try{
+  const json=JSON.stringify(input);
+  if(json.length>90000)return "Esta página supera el tamaño disponible. Divide el contenido en varias páginas.";
+  const root=input&&typeof input==="object"&&!Array.isArray(input)?input as Record<string,unknown>:{};
+  let count=0;
+  const validate=(items:unknown,depth:number):string|null=>{
+   if(!Array.isArray(items))return "Una sección contiene datos inválidos.";
+   if(depth>7)return "La composición supera siete niveles de anidamiento.";
+   if(items.length>100)return "Esta composición contiene más de 100 elementos. Divídela antes de guardar.";
+   for(const node of items){
+    if(!node||typeof node!=="object"||Array.isArray(node))return "Se encontró un bloque inválido.";
+    const item=node as Record<string,unknown>;
+    if(typeof item.type!=="string"||!VMV_BUILDER_BLOCKS.includes(item.type as BlockName))
+     return "Existe un bloque que este editor no reconoce. No se sobrescribirá el borrador.";
+    count++;
+    if(count>350)return "La página contiene demasiados elementos. Divídela en varias páginas.";
+    const slots=COMPOSE_SLOTS[item.type as ComposeBlockName]||[];
+    const props=item.props&&typeof item.props==="object"&&!Array.isArray(item.props)?
+     item.props as Record<string,unknown>:{};
+    for(const slot of slots){
+     const problem=validate(props[slot]||[],depth+1);
+     if(problem)return problem;
+    }
+   }
+   return null;
+  };
+  return validate(root.content||[],0);
+ }catch{return "Los cambios no pudieron verificarse. Se conservan sin publicarse.";}
+}
 export function normalizeBuilderDocument(input:unknown):Data{
  const raw=input&&typeof input==="object"&&!Array.isArray(input)?input as Record<string,unknown>:{};
  const seen=new Set<string>();
