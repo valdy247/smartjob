@@ -149,3 +149,39 @@ export async function getTestCheckout(orderId:string):Promise<string|null>{
  const url=data?.[0]?.checkout_url;
  return typeof url==="string"&&/^https:\/\/checkout[.]stripe[.]com\//i.test(url)?url:null;
 }
+
+export type CommerceAgentPermissions={
+ channel:"Chat"|"Teléfono"|"Teléfono y chat";
+ cap_sales:boolean;perm_prepare_order:boolean;
+ perm_confirm_order:boolean;perm_payment_link:boolean;
+};
+/** Only merchant capabilities. Never replace the agent's other trained knowledge. */
+export async function saveCommerceAgentPermissions(agent:PersistedAgent,
+ input:CommerceAgentPermissions):Promise<PersistedAgent>{
+ const {db,owner}=await current();
+ if(agent.owner_id!==owner||!uuid.test(agent.id)||!uuid.test(agent.business_id))
+  throw Error("El agente no pertenece a tu cuenta.");
+ if(!["Chat","Teléfono","Teléfono y chat"].includes(input.channel))
+  throw Error("Canal de ventas no válido.");
+ if(input.perm_prepare_order&&!input.cap_sales||
+    input.perm_confirm_order&&!input.perm_prepare_order||
+    input.perm_payment_link&&!input.perm_prepare_order)
+  throw Error("Primero autoriza las capacidades y permisos anteriores.");
+ const conf:Record<string,string>={...agent.setup,
+  channel:input.channel,
+  cap_sales:input.cap_sales?"Sí":"No",
+  perm_prepare_order:input.perm_prepare_order?"Sí":"No",
+  perm_confirm_order:input.perm_confirm_order?"Sí":"No",
+  perm_payment_link:input.perm_payment_link?"Sí":"No"
+ };
+ if(input.channel!=="Chat"&&conf.call_disclosure!=="Sí"&&conf.call_consent!=="Sí")
+  throw Error("Debes aprobar el aviso de inteligencia artificial en el asistente antes de usar teléfono.");
+ const {data,error}=await db.from("vmv_ai_agents")
+  .update({configuration:conf}).eq("id",agent.id).eq("owner_id",owner)
+  .eq("business_id",agent.business_id).eq("revision",agent.revision)
+  .select("id,revision,updated_at,configuration").maybeSingle();
+ if(error)throw Error("No fue posible guardar los permisos comerciales.");
+ if(!data)throw Error("El agente cambió en otro dispositivo. Actualiza AI Agents y vuelve a revisar.");
+ return {...agent,setup:data.configuration as Record<string,string>,
+  revision:data.revision,updated_at:data.updated_at};
+}
