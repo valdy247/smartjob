@@ -9,13 +9,34 @@ export const IMAGE_SELECT_EVENT="vmv-builder-image-select";
 function sameTarget(a:ImageTarget,b:ImageTarget){
  return a.field===b.field&&(a.itemId&&b.itemId?a.itemId===b.itemId:a.index===b.index);
 }
-function broadcastImageSelection(id:string,target:ImageTarget){
- const detail={id,target};
+function broadcastImageSelection(id:string,target:ImageTarget,openLibrary=false){
+ const detail={id,target,openLibrary};
  window.dispatchEvent(new CustomEvent(IMAGE_SELECT_EVENT,{detail}));
  // Puck's canvas lives inside an iframe: its contextual inspector lives in the shell.
  try{
   if(window.parent!==window)window.parent.dispatchEvent(new CustomEvent(IMAGE_SELECT_EVENT,{detail}));
  }catch{/* Detached or restricted preview. */}
+}
+// Keep the media itself interactive instead of relying on Puck's detached action bar.
+// A placeholder opens the shared library on the first tap, even for array items.
+function EditableMedia({id,target,url,alt}:{id:string;target:ImageTarget;url:string|null;alt:string}){
+ const getPuck=useGetPuck();
+ function select(){
+  const api=getPuck();
+  const selector=api.getSelectorForId(id);
+  if(selector)api.dispatch({type:"setUi",ui:{itemSelector:selector}});
+  // Selection mounts the contextual action bar asynchronously in Puck.
+  // Let it commit before requesting the picker; the event reaches the shell
+  // whether Puck renders the canvas in an iframe or in the parent document.
+  requestAnimationFrame(()=>requestAnimationFrame(()=>broadcastImageSelection(id,target,!url)));
+ }
+ return url?<img src={url} alt={alt} loading="lazy" onClick={select} role="button"
+  tabIndex={0} aria-label={"Editar imagen: "+(alt||"Foto")}
+  onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();select();}}}/>:
+  <button type="button" className="vmv-media-empty vmv-media-empty-pick"
+   aria-label="Agregar fotografía: elegir imagen" onClick={select}>
+   <span aria-hidden="true">▧</span><small>Agregar fotografía</small>
+  </button>;
 }
 function ImageActions({id,target,label,settings,onPreview}:{id:string;target:ImageTarget;label:string;
  settings:Record<string,unknown>;onPreview:(patch:Record<string,unknown>)=>void}){
@@ -123,13 +144,10 @@ export default function BuilderEditableImage({id,target={field:"image"},src,alt,
  if(!url&&!editing)return null;
  return <div className={"vmv-managed-image vmv-visual-media "+className}
   data-editing={editing} data-ratio={ratio}
-  onClickCapture={editing?event=>{
-   const el=event.target instanceof Element?event.target:null;
-   if(el?.closest(".vmv-image-tools"))return;
-   requestAnimationFrame(()=>broadcastImageSelection(id,target));
-  }:undefined} style={{...imageSettingsStyle({...settings,...preview},radius),
+  style={{...imageSettingsStyle({...settings,...preview},radius),
    "--vmv-image-position":["top","bottom","left","right"].includes(position)?position:"center"} as React.CSSProperties}>
-  {url?<img src={url} alt={alt} loading="lazy"/>:<div className="vmv-media-empty"><span aria-hidden="true">▧</span><small>Agregar fotografía</small></div>}
+  {editing?<EditableMedia id={id} target={target} url={url} alt={alt}/>:
+   url?<img src={url} alt={alt} loading="lazy"/>:null}
   {editing?<ImageActions id={id} target={target} label={alt||"Imagen"} settings={{...settings,...preview}}
    onPreview={setPreview}/>:null}
  </div>;
