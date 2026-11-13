@@ -4,6 +4,7 @@ import {safeWebImageUrl,webPrimaryContact,type WebSiteContent} from "./web-servi
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
 import ThemeSwatches,{AccentPicker} from "@/app/web-studio/ThemeSwatches";
 import {visualBlocks,VISUAL_BLOCK_NAMES,normalizeVisualProps,type VisualBlockName} from "./web-builder-visual-blocks";
+import {compositionBlocks,COMPOSE_BLOCK_NAMES,COMPOSE_SLOTS,normalizeComposeProps,type ComposeBlockName} from "./web-builder-composition";
 
 type ButtonProps={label?:string;url?:string};
 function safeLink(value:unknown):string{
@@ -21,7 +22,7 @@ function ContactButton({label,url}:ButtonProps){
  return <a className="vmv-site-button" href={safeLink(url)}>{label||"Contáctanos"} <span>↗</span></a>;
 }
 export const VMV_BUILDER_BLOCKS=[
- "Hero","Heading","Text","Image","Services","Benefits","CTA","Quote","Spacer","FAQ","Contact",...VISUAL_BLOCK_NAMES
+ "Hero","Heading","Text","Image","Services","Benefits","CTA","Quote","Spacer","FAQ","Contact",...VISUAL_BLOCK_NAMES,...COMPOSE_BLOCK_NAMES
 ] as const;
 type BlockName=typeof VMV_BUILDER_BLOCKS[number];
 const text=(limit:number)=>(value:unknown)=>typeof value==="string"?value.slice(0,limit):"";
@@ -40,29 +41,43 @@ const fieldSchema:Partial<Record<BlockName,Record<string,(value:unknown)=>string
 };
 export function normalizeBuilderDocument(input:unknown):Data{
  const raw=input&&typeof input==="object"&&!Array.isArray(input)?input as Record<string,unknown>:{};
- const list=Array.isArray(raw.content)?raw.content:[];
- const used=new Set<string>();
- const content=list.slice(0,75).flatMap((node,index)=>{
-  if(!node||typeof node!=="object"||Array.isArray(node))return [];
-  const value=node as Record<string,unknown>;
-  const kind=value.type as BlockName;
-  if(!VMV_BUILDER_BLOCKS.includes(kind))return [];
-  const props=value.props&&typeof value.props==="object"&&!Array.isArray(value.props)?value.props as Record<string,unknown>:{};
-  let id=typeof props.id==="string"&&/^[a-z0-9-]{3,80}$/i.test(props.id)?props.id:"node-"+index;
-  if(used.has(id))id="node-"+index;
-  used.add(id);
-  if(VISUAL_BLOCK_NAMES.includes(kind as VisualBlockName)){
-   return [{type:kind,props:{id,...normalizeVisualProps(kind as VisualBlockName,props)}}];
-  }
-  const safe:Record<string,string>={id};
-  for(const [field,sanitize] of Object.entries(fieldSchema[kind]||{})){
-   if(field==="url")safe[field]=safeWebImageUrl(sanitize(props[field]))||"";
-   else if(field==="buttonUrl")safe[field]=safeLink(sanitize(props[field]));
-   else safe[field]=sanitize(props[field]);
-  }
-  if(kind==="Spacer"&&!["24","48","80"].includes(safe.height))safe.height="48";
-  return [{type:kind,props:safe}];
- });
+ const seen=new Set<string>();
+ let generated=0;
+ // Slot content is recursive Puck data, not an ordinary string field.
+ // Validate it with the same allowlist as top-level blocks so nested edits survive save, reload and publish.
+ const normalizeNodes=(items:unknown,depth:number):Array<{type:BlockName;props:Record<string,unknown>}>=>{
+  if(!Array.isArray(items)||depth>7)return [];
+  return items.slice(0,100).flatMap((node)=>{
+   if(!node||typeof node!=="object"||Array.isArray(node))return [];
+   const value=node as Record<string,unknown>;
+   if(typeof value.type!=="string"||!VMV_BUILDER_BLOCKS.includes(value.type as BlockName))return [];
+   const kind=value.type as BlockName;
+   const source=value.props&&typeof value.props==="object"&&!Array.isArray(value.props)?
+    value.props as Record<string,unknown>:{};
+   let id=typeof source.id==="string"&&/^[a-z0-9-]{3,80}$/i.test(source.id)?source.id:"node-"+generated++;
+   while(seen.has(id))id="node-"+generated++;
+   seen.add(id);
+   if(COMPOSE_BLOCK_NAMES.includes(kind as ComposeBlockName)){
+    const props:Record<string,unknown>={id,...normalizeComposeProps(kind as ComposeBlockName,source)};
+    for(const slot of COMPOSE_SLOTS[kind as ComposeBlockName]||[]){
+     props[slot]=normalizeNodes(source[slot],depth+1);
+    }
+    return [{type:kind,props}];
+   }
+   if(VISUAL_BLOCK_NAMES.includes(kind as VisualBlockName)){
+    return [{type:kind,props:{id,...normalizeVisualProps(kind as VisualBlockName,source)}}];
+   }
+   const safe:Record<string,string>={id};
+   for(const [field,sanitize] of Object.entries(fieldSchema[kind]||{})){
+    if(field==="url")safe[field]=safeWebImageUrl(sanitize(source[field]))||"";
+    else if(field==="buttonUrl")safe[field]=safeLink(sanitize(source[field]));
+    else safe[field]=sanitize(source[field]);
+   }
+   if(kind==="Spacer"&&!["24","48","80"].includes(safe.height))safe.height="48";
+   return [{type:kind,props:safe}];
+  });
+ };
+ const content=normalizeNodes(raw.content,0);
  const sourceRoot=raw.root&&typeof raw.root==="object"?raw.root as Record<string,unknown>:{};
  const rawProps=sourceRoot.props&&typeof sourceRoot.props==="object"?sourceRoot.props as Record<string,unknown>:{};
  const palette=["violet","mint","amber","ink","rose","forest","ocean","terracotta","charcoal"].includes(String(rawProps.palette))?String(rawProps.palette):"violet";
@@ -241,6 +256,7 @@ export const builderConfig:Config={
     {address?<p>{address}</p>:null}
    </section>
   },
-  ...visualBlocks
+  ...visualBlocks,
+  ...compositionBlocks
  }
 };
