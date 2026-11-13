@@ -253,7 +253,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(wizardStep===2&&selected==="seo_improvement"){
    if(webStage===0){setWebStage(1);closeKeyboard();revealWizard();return;}
    if(webStage===1&&webRepair.requestRepair){setWebStage(2);closeKeyboard();revealWizard();return;}
-   const invalid=validateWebRepair(webRepair);if(invalid){setWizardError(invalid);return;}
+   const invalid=validateWebRepair(webRepair,language);if(invalid){setWizardError(invalid);return;}
   }
   if(wizardStep===2&&selected!=="google_profile"&&selected!=="seo_improvement"&&selected!=="directory_listings"&&goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5)){setWizardError(translate("marketing.action.choose_an_option_or_describe_your_needs_in_at_least_1"));return;}
   if(wizardStep===2&&goal.trim().length>1500){setWizardError(translate("marketing.action.the_message_cannot_exceed_1_500_characters"));return;}
@@ -411,7 +411,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(selected!=="google_profile"&&selected!=="seo_improvement"&&selected!=="directory_listings"&&((goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5))||goal.trim().length>1500)){setWizardStep(2);setWizardError(translate("marketing.action.choose_a_need_or_describe_the_result_you_want"));submitting.current=false;return;}
   if(selected==="review_strategy"&&reviewMode==="request"&&!/^https:\/\/[^\s/]+\.[^\s/]+/i.test(reviewLink.trim())){setWizardStep(2);setWizardError(translate("marketing.action.enter_a_valid_https_link_to_request_reviews"));submitting.current=false;return;}
   if(selected==="directory_listings"&&validateDirectory(directoryData,effectiveCategory)){setWizardStep(2);setWizardError(validateDirectory(directoryData,effectiveCategory));submitting.current=false;return;}
-  if(selected==="seo_improvement"&&validateWebRepair(webRepair)){setWizardStep(2);setWizardError(validateWebRepair(webRepair));submitting.current=false;return;}
+  if(selected==="seo_improvement"&&validateWebRepair(webRepair,language)){setWizardStep(2);setWizardError(validateWebRepair(webRepair,language));submitting.current=false;return;}
   if(selected==="seo_improvement"&&!site.trim()){setWizardStep(1);setWizardError(translate("marketing.action.enter_the_website_you_want_to_improve"));submitting.current=false;return;}
   if(site.trim()&&!safeSite(site)){setWizardStep(1);setWizardError(translate("marketing.action.the_website_url_must_be_valid"));submitting.current=false;return;}
   if(!consent){setWizardError(translate("marketing.action.check_the_authorization_box_so_we_can_process_your_re"));submitting.current=false;return;}

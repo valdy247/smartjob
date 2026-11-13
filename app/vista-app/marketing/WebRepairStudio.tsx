@@ -3,6 +3,7 @@ import {useState,type Dispatch,type SetStateAction} from "react";
 import {AlertCircle,ArrowUpRight,CheckCircle2,ExternalLink,FileText,ScanSearch} from "lucide-react";
 import styles from "./WebRepairStudio.module.css";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
+import {t as msg,type MessageKey,type InterfaceLanguage} from "@/lib/i18n";
 
 export type WebAudit={
  source:string;website:string;analyzedAt:string;
@@ -28,11 +29,11 @@ const hostingProviders=[
 ];
 const googleReport=(site:string)=>"https://pagespeed.web.dev/analysis?url="+encodeURIComponent(site);
 const linkSafe=(v:string)=>{if(!v.trim())return true;try{const u=new URL(v);return u.protocol==="https:"&&!u.username&&!u.password;}catch{return false;}};
-export function validateWebRepair(data:WebRepairData){
- if(data.requestRepair&&data.platform==="other"&&!data.otherPlatform.trim())return "Indica qué herramienta utilizas para editar la web.";
- if(data.requestRepair&&data.hosting==="other"&&!data.otherHosting?.trim())return "Indica el alojamiento de tu web.";
- if(data.repositoryUrl&&!linkSafe(data.repositoryUrl))return "Introduce un enlace HTTPS válido para tu repositorio.";
- if(data.notes.length>1200)return "El mensaje es demasiado largo.";
+export function validateWebRepair(data:WebRepairData,language:InterfaceLanguage="es"){
+ if(data.requestRepair&&data.platform==="other"&&!data.otherPlatform.trim())return msg(language,"marketing.web.validatePlatform");
+ if(data.requestRepair&&data.hosting==="other"&&!data.otherHosting?.trim())return msg(language,"marketing.web.validateHosting");
+ if(data.repositoryUrl&&!linkSafe(data.repositoryUrl))return msg(language,"marketing.web.validateRepository");
+ if(data.notes.length>1200)return msg(language,"marketing.web.validateNotes");
  return "";
 }
 // Honest, evidence-linked explanation even when the AI service is unavailable.
@@ -82,16 +83,16 @@ function practicalExplanation(a:WebAudit,en=false){
 }
 
 export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:{site:string;data:WebRepairData;onChange:Dispatch<SetStateAction<WebRepairData>>;accessToken?:string;step?:number}){
- const {language}=useInterfaceLanguage();const en=language==="en";
+ const {language,translate}=useInterfaceLanguage();const en=language==="en";
  const [loading,setLoading]=useState(false);
  const [error,setError]=useState("");
  const patch=<K extends keyof WebRepairData>(k:K,v:WebRepairData[K])=>onChange(prev=>({...prev,[k]:v}));
  const scan=async()=>{
   setLoading(true);setError("");
   try{
-   const res=await fetch("/api/marketing/site-audit?url="+encodeURIComponent(site),{cache:"no-store"});
+   const res=await fetch("/api/marketing/site-audit?url="+encodeURIComponent(site)+"&lang="+language,{cache:"no-store"});
    const json=await res.json();
-   if(!res.ok)throw new Error(json.error||"No fue posible analizar el sitio.");
+   if(!res.ok)throw new Error(translate("marketing.web.auditFailed"));
    const audit:WebAudit={...json,reportUrl:json.reportUrl||googleReport(site),status:"complete"};
    onChange(prev=>({...prev,audit}));
    if(accessToken){
@@ -100,7 +101,7 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
      if(ai.ok){const result=await ai.json();onChange(prev=>({...prev,audit:{...audit,explanation:result.explanation,explanationSource:result.source}}));}
     }catch{/* Technical report remains usable if interpretation is unavailable. */}
    }
-  }catch(e){setError(e instanceof Error?e.message:"No se pudo realizar el análisis.");}
+  }catch(e){setError(translate("marketing.web.auditFailed"));}
   finally{setLoading(false);}
  };
  const report=data.audit;
@@ -110,8 +111,8 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
    <div className={styles.head}><ScanSearch size={21}/><div><strong>{en?"Your website report":"Diagnóstico de tu web"}</strong><small>{en?"First, we identify what may need improvement.":"Primero encontramos qué se puede mejorar."}</small></div></div>
    <p className={styles.url}>{site}</p>
    <button type="button" className={styles.primary} onClick={()=>void scan()} disabled={loading}>{loading?(en?"Analyzing… up to 2 minutes":"Analizando… puede tardar hasta 2 minutos"):report?(en?"Scan again":"Repetir análisis"):(en?"Free scan":"Analizar gratis")}</button>
-   {loading?<p role="status" className={styles.tip}>Google está revisando la página. Mantén esta pantalla abierta; algunas webs tardan más que otras.</p>:null}
-   {error?<div role="alert" className={styles.warning}><AlertCircle size={16}/><span>{error} Puedes continuar y solicitar una revisión humana.</span></div>:null}
+   {loading?<p role="status" className={styles.tip}>{translate("marketing.web.auditBusy")}</p>:null}
+   {error?<div role="alert" className={styles.warning}><AlertCircle size={16}/><span>{error} {translate("marketing.web.errorHint")}</span></div>:null}
    {report?<div className={styles.report}>
      <div className={styles.head}><CheckCircle2 size={18}/><strong>{en?"Technical report available":"Informe técnico disponible"}</strong></div>
      <div className={styles.scores}>
@@ -123,36 +124,36 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
       <p>{report.explanation||practicalExplanation(report,en)}</p>
      </div>
      <details className={styles.technical}><summary><FileText size={16}/> {en?"View evidence and technical findings":"Ver problemas y evidencia"}</summary>
-      <div className={styles.findings}>{(report.findings||[]).length?(report.findings||[]).map(f=><article key={f.id}><strong>{f.title}</strong><p>{f.description}</p><small>{f.id} · Puntuación de comprobación: {f.score===null?"No disponible":Math.round(f.score*100)+"%"}</small></article>):report.recommendations.map((x,i)=><p key={i}>{i+1}. {x}</p>)}</div>
-      <small>Fuente: {report.source} · {new Date(report.analyzedAt).toLocaleDateString("es-US")}. Se guardará una copia de los hallazgos al enviar la solicitud.</small>
+      <div className={styles.findings}>{(report.findings||[]).length?(report.findings||[]).map(f=><article key={f.id}><strong>{f.title}</strong><p>{f.description}</p><small>{f.id} · {translate("marketing.web.scoreLabel")} {f.score===null?translate("marketing.web.noScore"):Math.round(f.score*100)+"%"}</small></article>):report.recommendations.map((x,i)=><p key={i}>{i+1}. {x}</p>)}</div>
+      <small>{translate("marketing.web.source")} {report.source} · {new Date(report.analyzedAt).toLocaleDateString("es-US")}{translate("marketing.web.savedWithRequest")}</small>
      </details>
      <a className={styles.external} href={report.reportUrl||googleReport(site)} target="_blank" rel="noopener noreferrer">{en?"Check Google PageSpeed report":"Contrastar diagnóstico en Google"} <ExternalLink size={15}/></a>
     </div>:null}
-   {!report?<a className={styles.external} href={googleReport(site)} target="_blank" rel="noopener noreferrer">Abrir PageSpeed Insights <ArrowUpRight size={16}/></a>:null}
+   {!report?<a className={styles.external} href={googleReport(site)} target="_blank" rel="noopener noreferrer">{translate("marketing.web.openPageSpeed")} <ArrowUpRight size={16}/></a>:null}
   </div>:null}
   {step===2&&data.requestRepair?<div className={styles.section}>
-   <div className={styles.head}><FileText size={21}/><div><strong>{en?"How is your website managed?":"¿Cómo está hecha tu página?"}</strong><small>Necesitamos saberlo para evaluar una reparación, no para analizarla gratis.</small></div></div>
+   <div className={styles.head}><FileText size={21}/><div><strong>{en?"How is your website managed?":"¿Cómo está hecha tu página?"}</strong><small>{translate("marketing.web.repairReason")}</small></div></div>
    <label className={styles.field}>¿Con qué herramienta la editas?
     <select value={data.platform} onChange={e=>patch("platform",e.target.value)}>
-     {platforms.map(([v,label])=><option value={v} key={v}>{label}</option>)}
+     {platforms.map(([v,label])=><option value={v} key={v}>{({unknown:translate("marketing.web.platformUnknown"),custom:translate("marketing.web.platformCustom"),other:translate("marketing.web.platformOther")} as Record<string,string>)[v]||label}</option>)}
     </select>
    </label>
-   {data.platform==="other"?<label className={styles.field}>Nombre de la herramienta<input maxLength={100} value={data.otherPlatform} onChange={e=>patch("otherPlatform",e.target.value)} placeholder="¿Qué plataforma usas?"/></label>:null}
+   {data.platform==="other"?<label className={styles.field}>{translate("marketing.web.platformName")}<input maxLength={100} value={data.otherPlatform} onChange={e=>patch("otherPlatform",e.target.value)} placeholder={translate("marketing.web.platformPlaceholder")}/></label>:null}
    <label className={styles.field}>¿Dónde está alojada? (si lo sabes)
     <select value={data.hosting||"unknown"} onChange={e=>patch("hosting",e.target.value)}>
-     {hostingProviders.map(([v,label])=><option key={v} value={v}>{label}</option>)}
+     {hostingProviders.map(([v,label])=><option key={v} value={v}>{({unknown:translate("marketing.web.platformUnknown"),cpanel:translate("marketing.web.hostingCpanel"),other:translate("marketing.web.hostingOther")} as Record<string,string>)[v]||label}</option>)}
     </select>
    </label>
-   {data.hosting==="other"?<label className={styles.field}>Nombre del alojamiento<input maxLength={100} value={data.otherHosting||""} onChange={e=>patch("otherHosting",e.target.value)} placeholder="Proveedor"/></label>:null}
+   {data.hosting==="other"?<label className={styles.field}>{translate("marketing.web.hostingName")}<input maxLength={100} value={data.otherHosting||""} onChange={e=>patch("otherHosting",e.target.value)} placeholder={translate("marketing.web.provider")}/></label>:null}
    <label className={styles.field}>¿Dónde está guardado el código? (si lo sabes)
     <select value={data.repositoryHost} onChange={e=>patch("repositoryHost",e.target.value)}>
-     <option value="unknown">No lo sé / no aplica</option><option value="github">GitHub</option><option value="gitlab">GitLab</option><option value="bitbucket">Bitbucket</option><option value="other">Otro / archivos locales</option>
+     <option value="unknown">{translate("marketing.web.repoUnknown")}</option><option value="github">GitHub</option><option value="gitlab">GitLab</option><option value="bitbucket">Bitbucket</option><option value="other">{translate("marketing.web.otherRepo")}</option>
     </select>
    </label>
    {data.repositoryHost!=="unknown"&&data.repositoryHost!=="other"?<label className={styles.field}>Enlace del repositorio (opcional)
     <input type="url" inputMode="url" maxLength={500} value={data.repositoryUrl} onChange={e=>patch("repositoryUrl",e.target.value)} placeholder="https://github.com/empresa/proyecto"/>
    </label>:null}
-   <p className={styles.tip}>La herramienta de edición, el alojamiento y el repositorio pueden ser diferentes. No compartas contraseñas: el equipo solicitará acceso seguro después del presupuesto.</p>
+   <p className={styles.tip}>{translate("marketing.web.platformDisclaimer")}</p>
   </div>:null}
   {step===1?<div className={styles.section}>
    <div className={styles.head}><CheckCircle2 size={21}/><strong>{en?"Want VMV to repair your website?":"¿Quieres que VMV la repare?"}</strong></div>
@@ -161,9 +162,9 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
     <button type="button" aria-pressed={!data.requestRepair} onClick={()=>patch("requestRepair",false)}>{en?"Save report only":"Solo guardar el diagnóstico"}</button>
    </div>
    <label className={styles.field}>¿Hay algo más que debamos saber? (opcional)
-     <textarea rows={3} value={data.notes} maxLength={1200} onChange={e=>patch("notes",e.target.value)} placeholder="Por ejemplo: mi web está en Vercel, tengo acceso al proyecto…"/>
+     <textarea rows={3} value={data.notes} maxLength={1200} onChange={e=>patch("notes",e.target.value)} placeholder={translate("marketing.web.notesPlaceholder")}/>
    </label>
-   <p className={styles.tip}>No pedimos acceso todavía. Si hay trabajo de pago, revisaremos el sitio y te enviaremos un presupuesto que podrás aceptar o rechazar.</p>
+   <p className={styles.tip}>{translate("marketing.web.noAccess")}</p>
   </div>:null}
  </div>;
 }
