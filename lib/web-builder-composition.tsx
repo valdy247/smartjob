@@ -53,7 +53,9 @@ const ImageField={
   <BuilderImageField value={typeof value==="string"?value:""} onChange={onChange}/>
 };
 function SettingsGroup({title,children}:{title:string;children:React.ReactNode}){
- return <fieldset className="vmv-compose-settings"><legend>{title}</legend>{children}</fieldset>;
+ return <details className="vmv-compose-settings" open={title==="Contenido"?true:undefined}>
+  <summary>{title}</summary><div className="vmv-compose-settings-fields">{children}</div>
+ </details>;
 }
 export const compositionBlocks:Config["components"]={
  SectionLayout:{
