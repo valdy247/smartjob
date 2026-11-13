@@ -1,4 +1,3 @@
-"use client";
 import type {CSSProperties} from "react";
 
 export function RangeField({value,onChange,label,min=0,max=100,step=1,unit="%",disabled=false}:{
