@@ -922,7 +922,7 @@ export default function App(){
           </View>
           <Text style={styles.servicesModuleHandoffTitle}>{activeModule==="ai-agents"?"AI Agents":"Marketing"}</Text>
           <Button label={tr("home.explore")+" ↗"} secondary
-           onPress={()=>void openBusinessWeb(activeModule)}/>
+           onPress={()=>void openBusinessWeb(activeModule||undefined)}/>
          </View>}
        </>:<>
         <Text style={styles.servicesUnifiedTitle}>{tr("common.services")}<Text style={{color:colors.accent}}>.</Text></Text>
