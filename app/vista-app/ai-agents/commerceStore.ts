@@ -4,7 +4,7 @@ export type CatalogItem={
  id:string;owner_id:string;business_id:string;sku:string;name:string;description:string;
  price_cents:number;currency:"usd";stock_mode:"manual"|"tracked"|"unlimited";
  available_qty:number|null;approved:boolean;active:boolean;updated_at:string;
- variants:unknown[];extras:unknown[];
+ variants:unknown[];extras:unknown[];web_source_id?:string|null;
 };
 export type TestOrder={
  id:string;order_no:number;owner_id:string;agent_id:string;status:string;
@@ -184,4 +184,40 @@ export async function saveCommerceAgentPermissions(agent:PersistedAgent,
  if(!data)throw Error("El agente cambió en otro dispositivo. Actualiza AI Agents y vuelve a revisar.");
  return {...agent,setup:data.configuration as Record<string,string>,
   revision:data.revision,updated_at:data.updated_at};
+}
+
+/** Web Studio cards are display-only. A price may be marketing text, not a quote. */
+export type WebStudioCard={id:string;title:string;description:string;price:string;importable:boolean};
+export async function listWebStudioCards():Promise<WebStudioCard[]>{
+ const {db,owner}=await current();
+ const {data,error}=await db.from("smartjob_web_intake_products").select("items")
+  .eq("owner_id",owner).maybeSingle();
+ if(error)throw Error("No se pudieron consultar los productos guardados en Web Studio.");
+ const raw=Array.isArray(data?.items)?data.items:[];
+ return raw.slice(0,30).flatMap((value:unknown)=>{
+  if(!value||typeof value!=="object"||Array.isArray(value))return [];
+  const p=value as Record<string,unknown>;
+  const id=typeof p.id==="string"?p.id:"";
+  if(!uuid.test(id))return [];
+  const title=typeof p.title==="string"?p.title.trim().slice(0,120):"";
+  const price=typeof p.price==="string"?p.price.trim().slice(0,32):"";
+  return [{id,title,price,description:typeof p.description==="string"?p.description.slice(0,400):"",
+   importable:!!title&&/^\\$?\\d{1,5}(?:\\.\\d{1,2})?$/.test(price)&&
+    Number(price.replace("$",""))>0&&Number(price.replace("$",""))<=100000}];
+ });
+}
+/** Import is explicit and owner-scoped in an invoker RLS RPC. Source prices and
+ * inventory are NEVER made active or approved automatically. */
+export async function importWebStudioCard(businessId:string,cardId:string):Promise<string>{
+ if(!uuid.test(businessId)||!uuid.test(cardId))throw Error("Producto o negocio inválido.");
+ const {db,owner}=await current();
+ const {data:business,error}=await db.from("vmv_ai_businesses").select("id")
+  .eq("id",businessId).eq("owner_id",owner).maybeSingle();
+ if(error||!business)throw Error("Este negocio no pertenece a tu cuenta.");
+ const {data,error:importError}=await db.rpc("vmv_ai_owner_import_web_card",{
+  p_business_id:businessId,p_web_product_id:cardId
+ });
+ if(importError||typeof data!=="string")
+  throw Error("No se pudo importar. Revisa que el producto tenga nombre y precio fijo en USD.");
+ return data;
 }
