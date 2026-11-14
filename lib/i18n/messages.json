@@ -1312,7 +1312,9 @@
     "setup.saved": "Objetivo guardado",
     "category.search": "Escribe tu actividad o profesión",
     "category.noResults": "No encontramos una categoría cercana.",
-    "category.invalidWebsite": "Revisa la dirección de tu sitio web."
+    "category.invalidWebsite": "Revisa la dirección de tu sitio web.",
+    "marketing.google.removePhoto": "Quitar foto",
+    "category.websiteExample": "tusitio.com"
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -2627,6 +2629,8 @@
     "setup.saved": "Goal saved",
     "category.search": "Type your activity or profession",
     "category.noResults": "No matching category found.",
-    "category.invalidWebsite": "Check your website address."
+    "category.invalidWebsite": "Check your website address.",
+    "marketing.google.removePhoto": "Remove photo",
+    "category.websiteExample": "yourbusiness.com"
   }
 }

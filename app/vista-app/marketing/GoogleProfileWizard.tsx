@@ -1,7 +1,7 @@
 "use client";
 import BusinessPhoneInput from "@/components/BusinessPhoneInput";
 import {contactPhoneE164} from "@/lib/contact-phone";
-import type {ChangeEvent} from "react";
+import {useEffect,useState,type ChangeEvent} from "react";
 import styles from "./GoogleProfileWizard.module.css";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {t as labelText,type MessageKey,type InterfaceLanguage} from "@/lib/i18n";
@@ -41,8 +41,26 @@ const isHttps=(v:string)=>{if(!v.trim())return true;try{const u=new URL(v.trim()
 export function validateGoogleLinks(v:GoogleData,language:InterfaceLanguage="es"){return !isHttps(v.bookingUrl)?labelText(language,"marketing.google.validation.booking"):!isHttps(v.existingProfileUrl||"")?labelText(language,"marketing.google.validation.existing"):"";}
 function FilePicker({label,value,onChange,multiple=false}:{label:string;value:File[];onChange:(files:File[])=>void;multiple?:boolean}){
  const {translate}=useInterfaceLanguage();
- const onPick=(e:ChangeEvent<HTMLInputElement>)=>{const files=Array.from(e.target.files||[]);onChange(files);e.target.value="";};
- return <label className={styles.upload}><span><strong>{label}</strong><small>{value.length?value.map(f=>f.name).join(", "):translate("marketing.google.choose_images_optional")}</small></span><input aria-label={label} type="file" accept="image/jpeg,image/png" multiple={multiple} onChange={onPick}/></label>;
+ const [previews,setPreviews]=useState<{file:File;url:string}[]>([]);
+ useEffect(()=>{
+  const next=value.map(file=>({file,url:URL.createObjectURL(file)}));
+  setPreviews(next);
+  return()=>next.forEach(item=>URL.revokeObjectURL(item.url));
+ },[value]);
+ const onPick=(e:ChangeEvent<HTMLInputElement>)=>{
+  const files=Array.from(e.target.files||[]);
+  if(files.length)onChange(multiple?[...value,...files].filter((file,index,all)=>all.findIndex(other=>other.name===file.name&&other.size===file.size&&other.lastModified===file.lastModified)===index):files);
+  e.target.value="";
+ };
+ return <section className={styles.photoField} aria-label={label}>
+  <label className={styles.upload}><span><strong>{label}</strong><small>{translate("marketing.google.choose_images_optional")}</small></span>
+   <input aria-label={label} type="file" accept="image/jpeg,image/png" multiple={multiple} onChange={onPick}/></label>
+  {previews.length?<div className={styles.photoGrid}>{previews.map(({file,url},index)=><figure className={styles.photoPreview} key={url}>
+   <img src={url} alt={file.name} width={180} height={130}/>
+   <figcaption>{file.name}</figcaption>
+   <button type="button" onClick={()=>onChange(value.filter((_,i)=>i!==index))} aria-label={translate("marketing.google.removePhoto")+": "+file.name}>{translate("marketing.google.removePhoto")}</button>
+  </figure>)}</div>:null}
+ </section>;
 }
 export default function GoogleProfileWizard({step,data,onData,media,onMedia,business,website}:{step:number;data:GoogleData;onData:(v:GoogleData)=>void;media:GoogleMedia;onMedia:(v:GoogleMedia)=>void;business:string;website:string}){
  const {language,translate}=useInterfaceLanguage();const en=language==="en";
