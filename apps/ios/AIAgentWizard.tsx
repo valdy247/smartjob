@@ -118,7 +118,9 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false,initialStep=
  const [answers,setAnswers]=useState<Record<string,string>>(()=>({...initial.configuration||{}}));
  const steps=useMemo(()=>stages(draft.kind,answers),[draft.kind,answers]);
  const curr=steps[step];
- const questions=curr.items.filter(q=>!q.when||q.when(answers));
+ const centralFields=new Set((answers.central_prefill_fields||"").split("|").filter(Boolean));
+ const questions=curr.items.filter(q=>(!q.when||q.when(answers))&&
+  !(answers.central_business_id&&centralFields.has(q.id)));
  const update=(key:string,value:string)=>setAnswers(prev=>({...prev,[key]:value}));
  const next=()=>{
   if(step===0&&(!draft.name.trim()||!draft.purpose.trim())){
@@ -155,6 +157,10 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false,initialStep=
   <Text style={styles.eyebrow}>PASO {step+1}</Text>
   <Text style={styles.title}>{curr.title}</Text>
   <Text style={styles.subtitle}>{curr.description}</Text>
+  {step===1&&answers.central_business_id?<View style={styles.notice}>
+   <Ionicons name="shield-checkmark-outline" size={18} color="#6840B5"/>
+   <Text style={styles.subtitle}>Datos de {answers.business_name||"tu negocio"} precargados del perfil central de VMV. Solo completaremos lo que falta.</Text>
+  </View>:null}
 
   {step===0?<View style={styles.fields}>
     <Text style={styles.label}>¿Cómo se llama este agente? *</Text>
