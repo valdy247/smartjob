@@ -456,7 +456,7 @@ export function AIAgentsStudio({session,onBack}:Props){
          onBack={()=>{void refresh();setScreen("home");}}/>:null}
 
       {screen==="commerce"?<AIAgentsCommerceStudio session={session} initialTab={commerceTab} agents={principal?[principal]:visibleAgents}
-        phoneAgentId={principal?.id||null} onBack={()=>{void refresh();setScreen("home");}}
+        phoneAgentId={phone?.agentId||null} selectedAgentId={principal?.id||null} onBack={()=>{void refresh();setScreen("home");}}
         onAgentUpdated={updated=>{
          setAgents(list=>list.map(a=>a.id===updated.id?updated:a));
          if(selected?.id===updated.id)setSelected(updated);
