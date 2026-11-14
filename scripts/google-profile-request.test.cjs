@@ -88,3 +88,13 @@ test('unverified geographic details require an explicit manual-review decision',
  assert.equal(googleProfileIssue(v).key,'address');
  assert.equal(googleProfileIssue({...v,locationPendingReview:true}),null);
 });
+
+test('confirmed postal mismatches cannot be overridden by choosing manual review',()=>{
+ const v={...fixture(),locationChecked:false,locationPendingReview:true,locationConflict:true};
+ assert.equal(googleProfileIssue(v).key,'address');
+ assert.equal(googleProfileIssue({...v,locationConflict:false}),null);
+});
+test('fictitious region codes are not accepted as countries',()=>{
+ const v={...fixture(),country:'ZZ'};
+ assert.equal(googleProfileIssue(v).key,'country');
+});
