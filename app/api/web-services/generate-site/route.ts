@@ -4,6 +4,7 @@ import {BUSINESS_CATEGORIES} from "@/lib/vmv-business-categories";
 import {askAiAgent,aiAgentModelPathAvailable} from "@/lib/vmv-ai-agents/model";
 import {aiSiteRequestContext,buildAiSiteProposal,parseAiSiteResponse} from "@/lib/web-builder-ai-site";
 import {safeWebImageUrl} from "@/lib/web-services-site";
+import {normalizeSocialLinks} from "@/lib/web-builder-social";
 import type {SiteIntake,SiteProduct} from "@/lib/web-builder-templates";
 
 export const runtime="nodejs";
@@ -32,7 +33,7 @@ function intakeFromBody(value:unknown):SiteIntake|null{
  return {
   business,categoryId,objective,offering,products,
   phone:str(v.phone,36),email:str(v.email,180),city:str(v.city,180),
-  about:str(v.about,500),logo:safeWebImageUrl(str(v.logo,500))||"",
+  about:str(v.about,500),logo:safeWebImageUrl(str(v.logo,500))||"",socials:normalizeSocialLinks(v.socials),
   photos:Array.isArray(v.photos)?v.photos.slice(0,12).map((x:unknown)=>safeWebImageUrl(str(x,500))||"").filter(Boolean):[],
   offerings:offeringItems
  };
