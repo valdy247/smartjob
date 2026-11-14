@@ -359,7 +359,7 @@ export default function AIAgentsPreview(){
          <small>Agente, traducción, horarios y prueba de configuración</small></span>
          <ChevronRight size={16}/>
       </button>:null}
-      {visibleAgents.length>0?<button type="button" className={styles.commerceLaunch} onClick={()=>setScreen("commerce")}>
+      {visibleAgents.length>0?<button type="button" className={styles.commerceLaunch} onClick={()=>void start("inventory")}>
        <ShoppingBag size={21}/><span><strong>Catálogo y pedidos del negocio</strong><small>Comparte catálogo con el agente principal, sin crear otro</small></span><ArrowUpRight size={19}/>
       </button>:null}
       {phone?<div className={styles.info}>
@@ -451,7 +451,7 @@ export default function AIAgentsPreview(){
       onSave={async updated=>{setDraft(updated);await save(updated);}}/>:null}
      {screen==="quality"&&active?<AgentQualityLab agent={active} onClose={back} onEdit={step=>edit(active,step)}/>:null}
      {screen==="phone"?<CallControl onBack={back}/>:null}
-     {screen==="commerce"?<CommerceStudio agents={visibleAgents.filter(a=>a.revision>0)}
+     {screen==="commerce"?<CommerceStudio agents={principal?[principal]:visibleAgents.filter(a=>a.revision>0)}
       initialAgentId={principal?.id||selected||""} initialTab={commerceTab} onAgentUpdated={updated=>
        setAgents(prev=>prev.map(a=>a.id===updated.id?updated:a))}
       onClose={()=>{void reload().catch(()=>{});back();}}/>:null}
