@@ -13,7 +13,7 @@ const sources=[
  {name:"BusinessServicesPreview",text:preview}
 ];
 const allowed=[
- /^VMV(?: BUSINESS| Business)?$/i,/^Smart Call$/i,/^AI Agents$/i,
+ /^VMV(?: BUSINESS| Business)?\s*\/?$/i,/^Smart Call$/i,/^AI Agents$/i,
  /^Web Services$/i,/^Web Care$/i,/^Smart Booking$/i,
  /^Google Business Profile$/i,/^Beta$/i,/^SEO$/i,
  /^App iPhone$/i,/^English$/i,/^Español$/i,
