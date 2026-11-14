@@ -17,7 +17,7 @@ const allowed=[
  /^Web Services$/i,/^Web Care$/i,/^Smart Booking$/i,
  /^Google Business Profile$/i,/^Beta$/i,/^SEO$/i,
  /^App iPhone$/i,/^English$/i,/^Español$/i,
- /^\d+$/, /^min$/i,/^USD$/i,/^TEST$/i,
+ /^\d+$/, /^min$/i,/^USD(?:\s*·)?$/i,/^TEST$/i,
  /^[\p{P}\p{S}\s\d]+$/u
 ];
 const findings=[];
