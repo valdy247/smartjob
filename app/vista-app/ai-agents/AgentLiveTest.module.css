@@ -23,3 +23,10 @@
 .send:disabled{opacity:.5}
 .edit{display:flex;align-items:center;justify-content:center;padding:12px;background:#fff;color:#8556dc;border:1px solid #e3d6f3;border-radius:12px;font-size:11px;font-weight:900}
 button:focus-visible{outline:3px solid #bfa1f6;outline-offset:2px}
+
+.catalogAccess{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:#faf7ff;border:1px solid #e9ddfa;border-radius:13px;padding:12px}
+.catalogAccess div{display:flex;flex:1 1 180px;flex-direction:column;gap:5px}
+.catalogAccess strong{font-size:12px;color:#463064}
+.catalogAccess small{font-size:11px;line-height:1.5;color:#766588}
+.catalogAccess button{font-size:11px;font-weight:850;background:#8857df;border:0;border-radius:11px;color:white;padding:11px 13px}
+.catalogAccess button:disabled{opacity:.6}
