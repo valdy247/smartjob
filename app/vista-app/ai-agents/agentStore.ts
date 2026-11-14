@@ -60,32 +60,27 @@ export async function loadAgents(){
  if(error)throw Error("No fue posible consultar los agentes guardados.");
  return (data||[]).map(r=>asAgent(r as DbAgent));
 }
-async function ensureBusiness(){
+export async function storeAgent(
+ input:WizardDraft,previous?:PersistedAgent|null,workspaceId?:string
+):Promise<PersistedAgent>{
  const {client,user}=await currentUser();
- const {data:existing,error:lookupError}=await client.from("vmv_ai_businesses")
-   .select("id").eq("owner_id",user.id).maybeSingle();
- if(lookupError)throw Error("No se pudo consultar tu negocio.");
- if(existing?.id)return {client,user,businessId:existing.id as string};
- const {data:created,error:insertError}=await client.from("vmv_ai_businesses")
-  .insert({owner_id:user.id,name:"Mi negocio"}).select("id").single();
- if(created?.id)return {client,user,businessId:created.id as string};
- const {data:race}=await client.from("vmv_ai_businesses").select("id")
-  .eq("owner_id",user.id).maybeSingle();
- if(race?.id)return {client,user,businessId:race.id as string};
- throw Error(insertError?.message?"No fue posible crear el negocio.":"Espacio del negocio no disponible.");
-}
-export async function storeAgent(input:WizardDraft,previous?:PersistedAgent|null):Promise<PersistedAgent>{
- const {client,user,businessId}=await ensureBusiness();
  const values=normalized(input);
  if(previous&&uuid.test(previous.id)){
   // Optimistic write prevents another device from silently overwriting edits.
   const {data,error}=await client.from("vmv_ai_agents").update(values)
-   .eq("id",previous.id).eq("owner_id",user.id).eq("revision",previous.revision)
+   .eq("id",previous.id).eq("owner_id",user.id).eq("business_id",previous.business_id).eq("revision",previous.revision)
    .select("*").maybeSingle();
   if(error)throw Error("No se pudo guardar. Revisa tu conexión y vuelve a intentarlo.");
   if(!data)throw Error("Este agente cambió en otro dispositivo. Regresa a la lista y vuelve a cargar antes de editar.");
   return asAgent(data as DbAgent);
  }
+ if(!workspaceId||!uuid.test(workspaceId))
+  throw Error("Selecciona primero un negocio de tu perfil central.");
+ const {data:workspace,error:workspaceError}=await client.from("vmv_ai_businesses")
+  .select("id,central_business_id").eq("id",workspaceId).eq("owner_id",user.id).maybeSingle();
+ if(workspaceError||!workspace?.central_business_id)
+  throw Error("Este negocio todavía no está vinculado al perfil central de VMV.");
+ const businessId=workspace.id;
  const {data,error}=await client.from("vmv_ai_agents")
   .insert({...values,owner_id:user.id,business_id:businessId,status:"draft"})
   .select("*").single();
