@@ -512,26 +512,26 @@ export default function VMVMobilePreview(){
       </div>:null}
       {ready&&tab==="account"?<div className={`${styles.screen} ${styles.accountV3}`}>
        <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>{translate("home.viewAccount")}<span className={styles.mint}>.</span></h2>
-       <div className={styles.smartCard}><InterfaceLanguagePicker/></div>
-       <div className={styles.smartCard}><a href="/vista-app/soporte" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,padding:"13px 8px",textDecoration:"none",color:"inherit",fontWeight:800,fontSize:13}}><span style={{display:"inline-flex",gap:10,alignItems:"center"}}><MessageCircle size={20}/>{language==="en"?"Contact VMV Support":"Contactar soporte VMV"}</span><ArrowUpRight size={17}/></a></div>
-        <div className={styles.accountHero}><span className={styles.accountHeroAvatar}><UserRound size={29}/></span>
+       {/* Interface language is already available from the shared app header; do not duplicate it here. */}
+       <div className={styles.accountHero}><span className={styles.accountHeroAvatar}><UserRound size={29}/></span>
         <span className={styles.accountHeroInfo}><strong>{business}</strong><small>{user?.email||"—"}</small></span>
         <span className={styles.accountHeroSpark} aria-hidden="true">✦</span>
        </div>
        <div className={styles.accountStatGrid}>
         <button type="button" className={styles.accountStatTile} onClick={()=>showCall("minutes")}>
-         <span><Clock3 size={19}/></span><strong>{num(available)} min</strong><small>Traducción</small>
+         <span><Clock3 size={19}/></span><strong>{num(available)} min</strong><small>{translate("home.minutesToTranslate")}</small>
         </button>
         <button type="button" className={styles.accountStatTile} onClick={()=>showCall("minutes")}>
          <span><ShieldCheck size={19}/></span><strong>{billing?.plan?.toUpperCase()||"—"}</strong><small>{translate("common.plan")}</small>
         </button>
        </div>
        <div className={styles.smartCard}>
-        <Row label={translate("common.status")} value={billing?.status||"—"}/><Row label="Mi teléfono" value={profile?.phone||"—"}/>
+        <Row label={translate("common.status")} value={billing?.status||"—"}/><Row label={translate("common.phone")} value={profile?.phone||"—"}/>
         <button className={styles.mainAction} onClick={()=>showCall("minutes")}>{translate("common.viewPlan")} <ArrowUpRight size={16}/></button>
         {refreshButton}
        </div>
-       <button className={styles.logoutLink} disabled={working} onClick={()=>void signOut()}><LogOut size={15}/> Cerrar sesión</button>
+       <div className={styles.smartCard}><a href="/vista-app/soporte" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,padding:"13px 8px",textDecoration:"none",color:"inherit",fontWeight:800,fontSize:13}}><span style={{display:"inline-flex",gap:10,alignItems:"center"}}><MessageCircle size={20}/>{language==="en"?"Contact VMV Support":"Contactar soporte VMV"}</span><ArrowUpRight size={17}/></a></div>
+       <button className={styles.logoutLink} disabled={working} onClick={()=>void signOut()}><LogOut size={15}/> {translate("common.signOut")}</button>
       </div>:null}
       {ready&&(error||notice||summary&&!summary.billing.ok)?<div className={styles.feedbackArea} aria-live="polite" role="status">
        {error?<p className={styles.errorText}>{error}</p>:null}
