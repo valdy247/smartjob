@@ -117,7 +117,10 @@ export function AIAgentsStudio({session,onBack}:Props){
       const workspaceId=selected?.business_id||
        (businesses.some(b=>b.id===businessChoice)?
         await provisionWorkspace(session,businessChoice):linked?.id);
-      const item=await saveAgent(session,nextDraft,selected?.id,selected?.revision,workspaceId);
+      const reviewed=selected&&activeBusiness&&selected.business_id===linkedWorkspace?.id?
+        {...nextDraft,configuration:{...nextDraft.configuration,
+          central_source_updated_at:activeBusiness.updated_at}}:nextDraft;
+      const item=await saveAgent(session,reviewed,selected?.id,selected?.revision,workspaceId);
       setSelected(item);
       await refresh();
       setScreen("home");
@@ -126,6 +129,11 @@ export function AIAgentsStudio({session,onBack}:Props){
   }
   async function toggleStatus(agent:Agent){
     const next:AgentStatus=agent.status==="active"?"paused":"active";
+    if(next==="active"&&staleAgents.some(x=>x.id===agent.id)){
+      Alert.alert("Revisa el negocio","El perfil central cambió. Revisa y guarda este agente antes de activarlo.",
+        [{text:"Después",style:"cancel"},{text:"Revisar",onPress:()=>edit(agent)}]);
+      return;
+    }
     // Internal activation requires the owner's essential business facts.
     if(next==="active"&&!inspectAgent(agent).requiredPassed){
       setSelected(agent);setScreen("quality");return;
@@ -198,6 +206,9 @@ export function AIAgentsStudio({session,onBack}:Props){
   const visibleAgents=agents.filter(a=>linkedWorkspace?
     a.business_id===linkedWorkspace.id:legacyId?a.business_id===legacyId:false);
   const unlinked=workspaces.filter(w=>!w.central_business_id);
+  const staleAgents=activeBusiness&&linkedWorkspace?visibleAgents.filter(a=>
+    a.revision>0&&a.configuration.central_source_updated_at&&
+    a.configuration.central_source_updated_at!==activeBusiness.updated_at):[];
   const activeCount=visibleAgents.filter(a=>a.status==="active").length;
   async function linkPilot(){
     if(!activeBusiness||unlinked.length!==1||busy)return;
@@ -252,6 +263,9 @@ export function AIAgentsStudio({session,onBack}:Props){
              selected={businessChoice==="legacy:"+w.id}
              onPress={()=>{setBusinessChoice("legacy:"+w.id);setSelected(null);}}/>)}
            </ScrollView>}
+          {staleAgents.length>0?<Text style={styles.help}>
+            {staleAgents.length} agente(s) necesitan revisión por cambios en el perfil central.
+          </Text>:null}
           {activeBusiness?<Text style={styles.help}>{
             (activeBusiness.category_id||"Actividad pendiente")+" · "+
             (activeBusiness.city||"Ubicación pendiente")
