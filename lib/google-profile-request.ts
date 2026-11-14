@@ -18,7 +18,7 @@ export function googleProfileIssue(v:GoogleData,step?:number):GoogleValidationIs
  if(at(2)&&[v.phone,v.secondaryPhone].some(x=>x.trim()&&!contactPhoneE164(x,v.country)))return {step:2,key:"phone"};
  if(at(2)&&v.bookingUrl.trim()&&!googleProfileLink(v.bookingUrl))return {step:2,key:"booking"};
  if(at(0)&&v.action!=="create"&&v.existingProfileUrl?.trim()&&!googleProfileLink(v.existingProfileUrl))return {step:0,key:"existing"};
- if(at(3)&&v.hoursEnabled&&(!Array.isArray(v.hours)||v.hours.length!==7||!v.hours.some(h=>!h.closed)||v.hours.some(h=>!h||typeof h.closed!=="boolean"||(!h.closed&&(!/^([01]\d|2[0-3]):[0-5]\d$/.test(h.start)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(h.end)||h.start===h.end)))))return {step:3,key:"hours"};
+ if(at(3)&&v.hoursEnabled&&(!Array.isArray(v.hours)||v.hours.length!==7||!v.hours.some(h=>h?.closed===false)||v.hours.some(h=>!h||typeof h.closed!=="boolean"||(!h.closed&&(!/^([01]\d|2[0-3]):[0-5]\d$/.test(h.start)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(h.end)||h.start===h.end)))))return {step:3,key:"hours"};
  if(at(3)&&v.action==="create"&&v.openingDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(v.openingDate)||!Number.isFinite(Date.parse(v.openingDate+"T00:00:00Z"))||new Date(v.openingDate+"T00:00:00Z").toISOString().slice(0,10)!==v.openingDate))return {step:3,key:"date"};
  if(at(4)&&(v.description.length>750||/(?:https?:\/\/|www\.)/i.test(v.description)))return {step:4,key:"description"};
  for(const [s,key,limit] of [[0,"googleCategory",100],[0,"otherCategories",250],[0,"existingProfileUrl",500],[1,"street",250],[1,"unit",250],[1,"city",250],[1,"region",250],[1,"postal",250],[1,"serviceAreas",400],[2,"bookingUrl",250],[4,"services",900],[4,"products",900]] as const){
