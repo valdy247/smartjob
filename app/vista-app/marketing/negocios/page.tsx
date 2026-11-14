@@ -5,6 +5,7 @@ import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {googlePhotoKey} from "@/lib/google-profile-request";
 import {centralBusinessDefaults,centralBusinessWritePayload,validCentralBusiness,type CentralBusiness} from "@/lib/vmv-central-business";
+import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import CentralBusinessEditor,{emptyBusinessFiles,type CentralBusinessFiles} from "../CentralBusinessEditor";
 import styles from "./page.module.css";
 
@@ -139,6 +140,7 @@ export default function MyBusinessesPage(){
     <div className={styles.heading}><strong>{active?(en?"Edit business":"Editar negocio"):(en?"Create your first business":"Crear tu primer negocio")}</strong><span>{en?"Private profile":"Perfil privado"}</span></div>
     <label className={styles.field}>{en?"Business name":"Nombre comercial"}<input maxLength={150} value={data.name} onChange={e=>{dirty.current=true;setData(v=>({...v,name:e.target.value}));}} placeholder={onboarding?.name||(en?"My business":"Mi negocio")}/></label>
     <label className={styles.field}>{en?"Website (optional)":"Sitio web (opcional)"}<input value={data.website_url||""} onChange={e=>{dirty.current=true;setData(v=>({...v,website_url:e.target.value}));}} inputMode="url" placeholder={en?"yourbusiness.com":"tunegocio.com"}/></label>
+    <label className={styles.field}>{en?"Business category":"Actividad del negocio"}<BusinessCategoryPicker value={data.category_id} onChange={v=>{dirty.current=true;setData(d=>({...d,category_id:v}));}}/></label>
     <CentralBusinessEditor business={data} onChange={v=>{dirty.current=true;setData(v);}} files={files} onFiles={v=>{dirty.current=true;setFiles(v);}}/>
     {[data.logo_path,data.cover_path,...data.gallery_paths].filter((v):v is string=>Boolean(v)).length>0?<div className={styles.photos}><strong>{en?"Saved private photos":"Fotos privadas guardadas"}</strong><div>{[data.logo_path,data.cover_path,...data.gallery_paths].filter((v):v is string=>Boolean(v)).map((path,i)=><button key={path} onClick={()=>void openPhoto(path)} type="button">{en?"View image ":"Ver imagen "}{i+1} <ExternalLink size={13}/></button>)}</div></div>:null}
     {error?<p role="alert" className={styles.error}>{error}</p>:null}
