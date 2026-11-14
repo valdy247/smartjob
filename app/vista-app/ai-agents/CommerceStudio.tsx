@@ -12,7 +12,7 @@ type Form={
 };
 const empty:Form={name:"",sku:"",description:"",price:"",stock_mode:"manual",available_qty:"",
  approved:false,active:true};
-export default function CommerceStudio({agents,onClose,initialAgentId="",initialTab="catalog",onAgentUpdated,workspaceId,catalogOnly=false}:{catalogOnly?:boolean;workspaceId?:string;agents:PersistedAgent[];onClose:()=>void;initialAgentId?:string;initialTab?:"setup"|"catalog";onAgentUpdated?:(agent:PersistedAgent)=>void}){
+export default function CommerceStudio({agents,onClose,initialAgentId="",initialTab="catalog",onAgentUpdated,workspaceId,centralBusinessId="",catalogOnly=false}:{catalogOnly?:boolean;workspaceId?:string;centralBusinessId?:string;agents:PersistedAgent[];onClose:()=>void;initialAgentId?:string;initialTab?:"setup"|"catalog";onAgentUpdated?:(agent:PersistedAgent)=>void}){
  const [items,setItems]=useState<CatalogItem[]>([]);
  const [webCards,setWebCards]=useState<WebStudioCard[]>([]);
  const [verified,setVerified]=useState<VerifiedCatalogItem[]>([]);
@@ -157,6 +157,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
   </div>:null}
   {tab==="setup"?<>
    <div className={styles.heading}><h2>Preparar al agente para vender</h2></div>
+   {centralBusinessId?<a className={styles.financeLink} href={"/vista-app/finanzas?business="+encodeURIComponent(centralBusinessId)}>💳 Conectar Stripe para cobrar desde VMV →</a>:null}
    <div className={styles.form}>
     <label>Agente que atenderá las ventas
      <select value={agentId} onChange={e=>{setAgentId(e.target.value);setEditedAgent(null);}}>
