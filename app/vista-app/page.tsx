@@ -433,7 +433,7 @@ export default function VMVMobilePreview(){
          {billing?.topup?.available&&billing.billingMode==="test"?<div className={styles.topupOffer}>
           <div className={styles.topupOfferLine}>
            <strong>+{billing.topup.minutes} min</strong>
-           <span>{"$"+(billing.topup.priceCents/100).toFixed(2)} USD · TEST</span>
+           <span>{"$"+(billing.topup.priceCents/100).toFixed(2)} USD · {translate("services.call.testTag")}</span>
           </div>
           <button type="button" className={styles.mainAction} disabled={topupBusy}
            onClick={()=>void requestTranslationTopup()}>{topupBusy?translate("services.call.openStripe"):translate("services.call.topup")}</button>
