@@ -106,13 +106,16 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
   try{
    const q=new URLSearchParams({country:data.country,city:data.city,region:data.region,postal:data.postal});
    const r=await fetch("/api/marketing/google-location?"+q,{cache:"no-store"});
-   const result=await r.json() as {verified?:boolean;error?:string};
+   const result=await r.json() as {verified?:boolean;postalMatched?:boolean;error?:string};
    if(r.ok&&result.verified){
     onData({...data,locationChecked:true,locationPendingReview:false});
     setLocationMessage(en?"City, region and postal code matched Google Maps. This does not verify the storefront or street address.":"Ciudad, región y código postal coinciden con Google Maps. Esto no verifica el local ni la dirección exacta.");
+   }else if(r.ok&&result.postalMatched){
+    onData({...data,locationChecked:false,locationPendingReview:true});
+    setLocationMessage(en?"City, state and ZIP match a postal directory. Google verification is still pending and VMV must review it.":"Ciudad, estado y código postal coinciden en un directorio postal. Google aún no los ha validado; VMV debe revisarlos.");
    }else{
     onData({...data,locationChecked:false,locationPendingReview:false});
-    setLocationMessage(r.status===503?(en?"Google location validation is not connected. Ask VMV for manual verification.":"La validación geográfica de Google no está conectada. Solicita revisión manual a VMV."):(en?"Google could not confirm these location details. Please check them.":"Google no pudo confirmar estos datos. Revísalos."));
+    setLocationMessage(r.status===422?(en?"City, region and postal code do not match the available geographic records. Check your spelling and ZIP.":"La ciudad, región y código postal no coinciden con los registros geográficos consultados. Revisa los datos."):r.status===503?(en?"Automatic verification is unavailable. Request manual review by VMV.":"La comprobación automática no está disponible. Solicita revisión manual de VMV."):(en?"We could not confirm the location. Please check the details.":"No pudimos confirmar la ubicación. Revisa los datos."));
    }
   }catch{setLocationMessage(en?"Google location checking is temporarily unavailable.":"La comprobación de Google no está disponible ahora.");}
   finally{setCheckingLocation(false);}
@@ -152,7 +155,7 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
      </select>
     </label>
     <div className={styles.locationCheck}>
-     {data.kind!=="service_area"?<button type="button" disabled={checkingLocation||!data.city.trim()} onClick={()=>void verifyLocation()}><MapPin size={15}/>{checkingLocation?(en?"Checking…":"Comprobando…"):(en?"Check city and postal code with Google":"Comprobar ciudad y código postal con Google")}</button>:null}
+     {data.kind!=="service_area"?<button type="button" disabled={checkingLocation||!data.city.trim()} onClick={()=>void verifyLocation()}><MapPin size={15}/>{checkingLocation?(en?"Checking…":"Comprobando…"):(en?"Check city, region and ZIP":"Comprobar ciudad, región y código postal")}</button>:null}
      {data.locationChecked?<p className={styles.locationVerified}><CheckCircle2 size={15}/>{en?"Location matched Google Maps":"Ubicación contrastada con Google Maps"}</p>:null}
      {locationMessage?<p className={styles.locationWarning} role="status"><AlertCircle size={15}/>{locationMessage}</p>:null}
      {!data.locationChecked?<button type="button" className={styles.manualLocation} aria-pressed={!!data.locationPendingReview} onClick={()=>patch("locationPendingReview",true)}>{en?"Request manual location verification":"Solicitar verificación manual de ubicación"}</button>:null}
