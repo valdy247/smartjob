@@ -299,7 +299,7 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
   {error?<p className={styles.error} role="alert">{error}</p>:null}
   <div className={styles.actions}><button type="button" className={styles.prev} onClick={back}><ArrowLeft size={17}/>{step===0?"Cancelar":"Atrás"}</button>
    {recoverDraft&&step===0?<button type="button" className={styles.prev} disabled={saving||!draft.name.trim()}
-    onClick={()=>void onSave(draft).catch(e=>setError(e instanceof Error?e.message:"No se pudo guardar el borrador."))}>
+    onClick={()=>{void Promise.resolve(onSave(draft)).catch((e:unknown)=>setError(e instanceof Error?e.message:"No se pudo guardar el borrador."));}}>
     Guardar borrador</button>:null}
    <button type="button" disabled={saving} className={styles.next} onClick={()=>void next()}>{saving?"Guardando…":step===steps.length-1?"Guardar agente":"Continuar"}
    {step===steps.length-1?<Check size={17}/>:<ArrowRight size={17}/>}</button></div>
