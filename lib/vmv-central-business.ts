@@ -65,7 +65,7 @@ export function businessRequestSnapshot(b:CentralBusiness,service:"google_profil
   website_url:websiteAddress(b.website_url||""),
   kind:service==="google_profile"&&g?g.kind:b.kind,
   // Do not copy a residential address into a request meant for a service area.
-  location:(service==="google_profile"&&g?.kind==="service_area")||b.kind==="service_area"?
+  location:(service==="google_profile"&&g?g.kind:b.kind)==="service_area"?
    {country:g?.country||b.country,serviceAreas:g?.serviceAreas||b.service_areas,addressPublic:false}:
    {country:g?.country||b.country,street:g?.street??b.street,unit:g?.unit??b.unit,
     city:g?.city??b.city,region:g?.region??b.region,postal:g?.postal??b.postal,
