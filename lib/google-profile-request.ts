@@ -12,7 +12,7 @@ export type GoogleValidationIssue={step:number;key:"googleCategory"|"address"|"s
 export function googleProfileIssue(v:GoogleData,step?:number):GoogleValidationIssue|null {
  const at=(s:number)=>step===undefined||step===s;
  if(at(0)&&!v.googleCategory.trim())return {step:0,key:"googleCategory"};
- if(at(1)&&!/^([A-Z]{2})$/.test(v.country))return {step:1,key:"country"};
+ if(at(1)&&!/^([A-Z]{2})$/.test(v.country.trim().toUpperCase()))return {step:1,key:"country"};
  if(at(1)&&v.kind!=="service_area"&&[v.street,v.city,v.region,v.postal].some(x=>!x.trim()))return {step:1,key:"address"};
  if(at(1)&&v.kind!=="storefront"&&!v.serviceAreas.trim())return {step:1,key:"serviceAreas"};
  if(at(2)&&[v.phone,v.secondaryPhone].some(x=>x.trim()&&!contactPhoneE164(x,v.country)))return {step:2,key:"phone"};
