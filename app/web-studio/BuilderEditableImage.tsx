@@ -40,26 +40,33 @@ function EditableMedia({id,target,url,alt}:{id:string;target:ImageTarget;url:str
     }
    }catch{/* A disconnected canvas must not break the editor. */}
   };
-  notify();
-  host.setTimeout(notify,150);
-  host.setTimeout(()=>{
-   // Only retry if the first request did not open the media dialog.
+  const hasPicker=()=>{
+   const found=(doc:Document)=>Boolean(doc.querySelector('[role="dialog"][aria-label="Seleccionar imagen"]'));
    try{
-    const open=(doc:Document)=>Boolean(doc.querySelector('[role="dialog"][aria-label="Seleccionar imagen"]'));
-    if(open(host.document))return;
+    if(found(host.document))return true;
     for(const frame of Array.from(host.document.querySelectorAll("iframe"))){
-     try{if(frame.contentDocument&&open(frame.contentDocument))return;}
-     catch{/* Unrelated frame */}
+     try{if(frame.contentDocument&&found(frame.contentDocument))return true;}
+     catch{/* Other frame */}
     }
-    notify();
-   }catch{/* The action bar may already have been dismissed. */}
-  },380);
+   }catch{/* Detached canvas */}
+   return false;
+  };
+  notify();
+  let attempts=0;
+  const retry=()=>{
+   if(!url&&hasPicker())return;
+   notify();
+   if(!url&&++attempts<16)host.setTimeout(retry,140);
+  };
+  host.setTimeout(retry,150);
  }
- return url?<img src={url} alt={alt} loading="lazy" onClick={select} role="button"
+ return url?<img src={url} alt={alt} loading="lazy" onPointerDown={e=>{e.stopPropagation();select();}} role="button"
   tabIndex={0} aria-label={"Editar imagen: "+(alt||"Foto")}
   onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();select();}}}/>:
   <button type="button" className="vmv-media-empty vmv-media-empty-pick"
-   aria-label="Agregar fotografía: elegir imagen" onClick={select}>
+   aria-label="Agregar fotografía: elegir imagen"
+   onPointerDown={e=>{e.stopPropagation();select();}}
+   onClick={e=>{e.stopPropagation();if(e.detail===0)select();}}>
    <span aria-hidden="true">▧</span><small>Agregar fotografía</small>
   </button>;
 }
