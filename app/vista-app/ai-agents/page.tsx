@@ -46,7 +46,8 @@ export default function AIAgentsPreview(){
  const [pilotChecking,setPilotChecking]=useState(false);
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState(false);
- const [authenticated,setAuthenticated]=useState(true);
+ const [authenticated,setAuthenticated]=useState(false);
+ const [retryAccount,setRetryAccount]=useState(0);
  useEffect(()=>{let live=true;
   // Phone enrollment is optional: a missing/unauthorized phone number must never
   // prevent loading and saving agents from this account.
@@ -55,10 +56,10 @@ export default function AIAgentsPreview(){
      void loadPhoneSelection().then(selection=>{if(live)setPhone(selection);})
        .catch(()=>{if(live)setPhone(null);});
    })
-   .catch(e=>{if(!live)return;setAuthenticated(false);setNotice(e instanceof Error?e.message:"Inicia sesión en VMV para comenzar.");})
+   .catch(()=>{if(!live)return;setAuthenticated(false);setNotice("");})
    .finally(()=>{if(live)setLoading(false);});
   return ()=>{live=false;};
- },[]);
+ },[retryAccount]);
  async function reload(){
   const list=await loadAgents();
   setAgents(list);setAuthenticated(true);
@@ -186,6 +187,14 @@ export default function AIAgentsPreview(){
      <span className={styles.sparkleBadge}><Sparkles size={21}/></span>
     </div>
     <div className={styles.scroller}>
+     {loading?<div className={styles.info} role="status">Cargando tu espacio de trabajo…</div>:null}
+     {!loading&&!authenticated?<div className={styles.info} role="alert">
+      <ShieldCheck size={17}/> No pudimos cargar tu cuenta.
+      <button type="button" className={styles.buttonSecondary}
+       onClick={()=>{setNotice("");setLoading(true);setRetryAccount(n=>n+1);}}>
+       Reintentar</button>
+     </div>:null}
+     {authenticated?<>
      {screen!=="home"&&notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
      {screen==="home"?<>
       <div className={styles.hero}>
@@ -195,8 +204,6 @@ export default function AIAgentsPreview(){
        <div className={styles.heroPills}><span>{agents.length} agentes guardados</span><span>{agents.filter(a=>a.status==="active").length} activos en estudio</span></div>
       </div>
       {notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
-      {loading?<div className={styles.info}>Consultando tus agentes guardados…</div>:null}
-      {!authenticated?<div className={styles.info}>Inicia sesión en <a href="/vista-app">VMV Business</a> para guardar y seleccionar agentes.</div>:null}
       {phone&&authenticated?<button type="button" className={styles.commerceLaunch}
        onClick={()=>setScreen("phone")}>
         <PhoneCall size={21}/><span><strong>Atención de llamadas</strong>
@@ -274,6 +281,7 @@ export default function AIAgentsPreview(){
       onClose={()=>{void reload().catch(()=>{});back();}}/>:null}
      {screen==="test"&&active?<AgentLiveTest agent={active}
       onClose={back} onEdit={()=>edit(active)}/>:null}
+     </>:null}
     </div>
     <div className={styles.phoneFooter}><div className={styles.footerBrand}><Bot size={17}/> AI Agents</div>
      <span>VMV Business <Sparkles size={12}/></span></div>
