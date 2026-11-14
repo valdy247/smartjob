@@ -6,9 +6,11 @@ test('missing agent opens Account setup for the selected business',()=>{
  const url=new URL(agentSetupDestination(null,'business-a'),'https://vmv.example');
  assert.equal(url.pathname,'/vista-app');assert.equal(url.searchParams.get('tab'),'account');assert.equal(url.searchParams.get('setup'),'agent');assert.equal(url.searchParams.get('business'),'business-a');
 });
-test('a named but incomplete agent still requires setup',()=>{
- const agent=complete();delete agent.setup.human_review;assert.ok(agentSetupDestination(agent,'business-a'));
- agent.setup.human_review='Ask owner';delete agent.setup.support_topics;assert.ok(agentSetupDestination(agent,'business-a'));
+test('an existing incomplete agent opens its capabilities, not new agent setup',()=>{
+ const agent=complete();delete agent.setup.human_review;
+ assert.equal(agentSetupDestination(agent,'business-a'),null);
+ agent.setup.human_review='Ask owner';delete agent.setup.support_topics;
+ assert.equal(agentSetupDestination(agent,'business-a'),null);
 });
 test('a configured agent enters capabilities without requiring telephone activation',()=>{
  assert.equal(agentSetupDestination(complete(),'business-a'),null);
