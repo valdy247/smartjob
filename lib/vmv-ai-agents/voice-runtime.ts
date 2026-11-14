@@ -183,20 +183,20 @@ export async function handleAiVoice(req:NextRequest){
    // No extra mandatory language selection after the caller already pressed 2
    // to select AI Agents. Spanish is the default; one switches to English.
    return gather(greeting(session.agent_snapshot,"es")+
-     " Si prefieres inglés, marca uno. For English, press one.","es",1,true);
+     " Si prefieres inglés, marca uno. For English, press one.","es",1,true,session.agent_snapshot);
   }
-  return gather(greeting(session.agent_snapshot,lang),lang,1);
+  return gather(greeting(session.agent_snapshot,lang),lang,1,false,session.agent_snapshot);
  }
  if(!session||session.owner_id!==ownerRoute.user_id||session.route_id!==binding.id||
     Date.parse(session.expires_at)<=Date.now())return refused();
  const {data:liveAgent}=await db.from("vmv_ai_agents").select("status")
    .eq("id",session.agent_id).eq("owner_id",session.owner_id).maybeSingle();
- if(liveAgent?.status!=="active")return end("Este agente ha sido pausado. Gracias por llamar.",session.preferred_language);
+ if(liveAgent?.status!=="active")return end("Este agente ha sido pausado. Gracias por llamar.",session.preferred_language,session.agent_snapshot);
  const choose=req.nextUrl.searchParams.get("choose_lang");
  if(choose==="1"){
   const lang:Lang=signed.get("Digits")==="1"?"en":"es";
   await db.rpc("vmv_ai_set_voice_lang",{p_call_sid:sid,p_lang:lang});
-  return gather(greeting(session.agent_snapshot,lang),lang,1);
+  return gather(greeting(session.agent_snapshot,lang),lang,1,false,session.agent_snapshot);
  }
  if(!turnRaw)return refused();
  const turn=Number(turnRaw);
@@ -205,10 +205,10 @@ export async function handleAiVoice(req:NextRequest){
   const digits=signed.get("Digits");
   if(digits==="1"){
    const {error:languageError}=await db.rpc("vmv_ai_set_voice_lang",{p_call_sid:sid,p_lang:"en"});
-   if(languageError)return end("I could not change the language. Please try again.", "en");
-   return gather(greeting(session.agent_snapshot,"en"),"en",1);
+   if(languageError)return end("I could not change the language. Please try again.", "en",session.agent_snapshot);
+   return gather(greeting(session.agent_snapshot,"en"),"en",1,false,session.agent_snapshot);
   }
-  if(digits==="2")return gather(greeting(session.agent_snapshot,"es"),"es",1);
+  if(digits==="2")return gather(greeting(session.agent_snapshot,"es"),"es",1,false,session.agent_snapshot);
  }
  const speech=safe(signed.get("SpeechResult")).slice(0,900);
  const confidence=Number(signed.get("Confidence")||"1");
@@ -216,16 +216,16 @@ export async function handleAiVoice(req:NextRequest){
   const {data:n}=await db.rpc("vmv_ai_note_silence",{p_call_sid:sid});
   if(typeof n!=="number"||n>2)return end(
    session.preferred_language==="es"?"No pude escucharte con claridad. Puedes volver a llamar cuando quieras.":
-    "I could not hear you clearly. Please call again when convenient.",session.preferred_language);
+    "I could not hear you clearly. Please call again when convenient.",session.preferred_language,session.agent_snapshot);
   return gather(session.preferred_language==="es"?
    "Perdona, no pude escuchar bien. ¿Puedes repetirlo?":"Sorry, I couldn't hear that. Please say it again.",
-   session.preferred_language,turn);
+   session.preferred_language,turn,false,session.agent_snapshot);
  }
  if(session.last_request_turn>=turn&&session.last_reply)
-  return nextSpeak(session.last_reply,session.preferred_language,turn);
+  return nextSpeak(session.last_reply,session.preferred_language,turn,session.agent_snapshot);
  if(session.turn_count>=turn)return gather(
   session.preferred_language==="es"?"Un momento, por favor.":"One moment please.",
-  session.preferred_language,turn+1<=24?turn+1:24);
+  session.preferred_language,turn+1<=24?turn+1:24,false,session.agent_snapshot);
  const {data:claimed,error:claimError}=await db.rpc("vmv_ai_claim_turn",{p_call_sid:sid,p_expected:turn});
  if(claimError||claimed!==true)return refused();
  const lang=languageFor(session,speech);
@@ -253,5 +253,5 @@ export async function handleAiVoice(req:NextRequest){
  const {data:saved,error:saveError}=await db.rpc("vmv_ai_voice_save_turn",{
   p_sid:sid,p_turn:turn,p_user:speech,p_reply:answer,p_lang:lang});
  if(saveError||saved!==true)return refused();
- return nextSpeak(answer,lang,turn);
+ return nextSpeak(answer,lang,turn,session.agent_snapshot);
 }
