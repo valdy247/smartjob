@@ -135,7 +135,7 @@ export default function BusinessServicesPreview({userId,focus="all",excludeFeatu
    </form>
   </section>;
  return <section className={styles.root}>
-  <div className={styles.header}><h3>{focus==="web"?"Web Services":excludeFeatured?translate("settings.otherServices"):translate("common.services")}<span>.</span></h3><div className={styles.headerIcon}><PanelsTopLeft size={20}/></div></div>
+  {!excludeFeatured?<div className={styles.header}><h3>{focus==="web"?"Web Services":translate("common.services")}<span>.</span></h3><div className={styles.headerIcon}><PanelsTopLeft size={20}/></div></div>:null}
   {focus==="web"?<div className={styles.webActions}>
     <a className={styles.primary} href="/web-studio"><PanelsTopLeft size={18}/> {translate("services.visualEditor")} <ArrowUpRight size={16}/></a>
     <button className={styles.webActionSecondary} type="button" onClick={()=>setSiteEditor(true)}>{translate("services.classicEditor")}</button>
@@ -148,10 +148,11 @@ export default function BusinessServicesPreview({userId,focus="all",excludeFeatu
   <div className={styles.grid}>
    {offers.filter(o=>o.charge===charge&&(focus!=="web"||WEB_SERVICE_IDS.has(o.id))&&(!excludeFeatured||!["smart-call","ai-agents"].includes(o.id))).map(o=>{
     const inner=<><div className={styles.offerIcon}><o.Icon size={25}/></div>
-     <div className={styles.offerBottom}><strong>{translate(SERVICE_NAME_KEYS[o.id])}</strong><div className={styles.badges}>
+     <div className={styles.offerBottom}><strong>{translate(SERVICE_NAME_KEYS[o.id])}</strong>
+     {!excludeFeatured?<div className={styles.badges}>
       <small>{translate(o.delivery==="automatic"?"services.automatic":"services.assisted")}</small>
       <small>{o.id==="ai-agents"?"Beta":translate(o.state==="pilot"?"services.pilot":"services.comingSoon")}</small>
-     </div></div>{o.id==="google-business-profile"||o.id==="ai-agents"?<ArrowUpRight className={styles.arrow} size={17}/>:null}</>;
+     </div>:null}</div>{o.id==="google-business-profile"||o.id==="ai-agents"?<ArrowUpRight className={styles.arrow} size={17}/>:null}</>;
     return o.id==="ai-agents"?
      <button type="button" key={o.id} className={styles.tile+" "+styles[o.color]} onClick={()=>window.location.assign("/vista-app/ai-agents")} aria-label={translate("services.offer.ai-agents")+" — Beta"}>{inner}</button>:
      o.id==="google-business-profile"?
