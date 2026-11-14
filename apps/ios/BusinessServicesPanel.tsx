@@ -3,7 +3,7 @@ import {Alert,Pressable,Share,StyleSheet,Text,TextInput,View} from "react-native
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as SecureStore from "expo-secure-store";
 import type {Session} from "@supabase/supabase-js";
-import {offersFor,deliveryLabel,type OfferCharge,type ServiceOffer} from "./serviceOffers";
+import {SERVICE_OFFERS,offersFor,deliveryLabel,type OfferCharge,type ServiceOffer} from "./serviceOffers";
 import {supabase} from "./session";
 import {BUSINESS_CATEGORIES,categoryById,categoryLabel,categoryIdFromLabel} from "../../lib/vmv-business-categories";
 
@@ -53,8 +53,9 @@ function OfferCard({item,onPress,compact=false}:{item:ServiceOffer;onPress?:()=>
   <View style={cardStyle}>{inner}</View>;
 }
 
-export function BusinessServicesPanel({session,focus="all",excludeFeatured=false}:{session:Session;focus?:"all"|"web";excludeFeatured?:boolean}){
+export function BusinessServicesPanel({session,focus="all",excludeFeatured=false,searchTerm=""}:{session:Session;focus?:"all"|"web";excludeFeatured?:boolean;searchTerm?:string}){
  const [charge,setCharge]=useState<OfferCharge>("subscription");
+ const normalizedSearch=searchTerm.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase();
  const [editing,setEditing]=useState(false);
  const [draft,setDraft]=useState<ProfileDraft>({...EMPTY});
  const [saved,setSaved]=useState(false);
@@ -210,16 +211,16 @@ export function BusinessServicesPanel({session,focus="all",excludeFeatured=false
    <Text style={styles.heading}>{focus==="web"?"Web Services":"Servicios"}<Text style={{color:colors.accent}}>.</Text></Text>
    <View style={styles.smallSymbol}><Ionicons name="apps-outline" size={19} color={colors.accent}/></View>
   </View>:null}
-  <View style={styles.segmented} accessibilityRole="tablist">
+  {!normalizedSearch?<View style={styles.segmented} accessibilityRole="tablist">
    {([{id:"subscription",label:"En planes"},{id:"one_time",label:"Pago único"}] as const).map(item=>
     <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected:charge===item.id}}
      onPress={()=>setCharge(item.id)}
      style={[styles.segment,charge===item.id&&styles.segmentActive]}>
      <Text style={[styles.segmentText,charge===item.id&&styles.segmentTextActive]}>{item.label}</Text>
     </Pressable>)}
-  </View>
+  </View>:null}
   <View style={styles.grid}>
-   {offersFor(charge).filter(item=>(focus!=="web"||["site-care","local-seo","reviews","website-design","google-business-profile","seo-setup","domain-setup"].includes(item.id))&&(!excludeFeatured||!["smart-call","ai-agents"].includes(item.id))).map(item=><OfferCard key={item.id} item={item} compact={excludeFeatured}
+   {(normalizedSearch?SERVICE_OFFERS:offersFor(charge)).filter(item=>(focus!=="web"||["site-care","local-seo","reviews","website-design","google-business-profile","seo-setup","domain-setup"].includes(item.id))&&(!excludeFeatured||!["smart-call","ai-agents"].includes(item.id))&&(!normalizedSearch||item.name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase().includes(normalizedSearch))).map(item=><OfferCard key={item.id} item={item} compact={excludeFeatured}
     onPress={item.id==="google-business-profile"?()=>setEditing(true):undefined}/>)}
   </View>
  </View>;
