@@ -48,3 +48,10 @@ Do not label the entire service 100% verified until these are observed:
 - Verification methods and owner action: https://support.google.com/business/answer/7107242
 - Photo requirements: https://support.google.com/business/answer/6103862
 - Private Storage and signed access: https://supabase.com/docs/guides/storage/buckets/fundamentals
+
+## Follow-up verification
+
+- Fixed a malformed UUID validator in `/api/support`: previously valid UUIDs were rejected, blocking existing case reads, thread/history and message submission. Five HTTP-handler tests now cover authentication, ownership, private notes/history, server-derived actor, invalid IDs and safe error responses.
+- Customer Marketing cases now link directly to their existing support conversation; no second ticket is created. Saved Google details include all seven days of hours, country, secondary phone, categories and safe profile/booking links.
+- `supabase/tests/vmv_google_profile_conversation.sql` passed against the live database in a transaction that rolled back: case index, customer/staff messages, retry deduplication, internal notifications, denial of cross-account messages/internal notes, private history and closed-case rejection. These tests do not prove browser authentication or external email/SMS delivery.
+- Genuine customer and operator browser sessions, private photo upload/download after reopening, and fulfillment in Google remain explicit acceptance gates. No real Google changes or charges were made.

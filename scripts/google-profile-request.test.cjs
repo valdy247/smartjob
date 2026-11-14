@@ -19,3 +19,9 @@ test('photo IDs use contents, not size or last-modified; forged file types fail'
  const png=[137,80,78,71,13,10,26,10];const a=new Blob([new Uint8Array([...png,1])],{type:'image/png'}),b=new Blob([new Uint8Array([...png,2])],{type:'image/png'});
  assert.notEqual(await googlePhotoKey(a),await googlePhotoKey(b));assert.equal(await googlePhotoKey(a),await googlePhotoKey(a));await assert.rejects(googlePhotoKey(new Blob(['not a photo'],{type:'image/png'})));
 });
+
+const {googleProfileLink}=require('../lib/google-profile-request.ts');
+test('saved booking and profile links reject executable schemes and embedded credentials',()=>{
+ assert.equal(googleProfileLink('https://maps.google.com/?cid=123'),'https://maps.google.com/?cid=123');
+ for(const input of ['javascript:alert(1)','data:text/html,x','https://user:password@example.com','http://example.com',null,{}])assert.equal(googleProfileLink(input),null);
+});

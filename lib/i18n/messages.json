@@ -1325,7 +1325,11 @@
     "marketing.google.thirdPartyNotice": "Trabajar con un tercero",
     "marketing.google.photoLimit": "Puedes añadir hasta 8 fotos, además del logo y la portada.",
     "marketing.google.photoRequirements": "Elige una imagen JPG o PNG válida, de 10 KB a 5 MB y al menos 250 × 250 píxeles.",
-    "marketing.google.checkingPhoto": "Comprobando imagen…"
+    "marketing.google.checkingPhoto": "Comprobando imagen…",
+    "marketing.google.openConversation": "Hablar con VMV sobre esta solicitud",
+    "marketing.google.closed": "Cerrado",
+    "marketing.google.countryLabel": "País:",
+    "marketing.google.hoursPending": "Horarios pendientes de confirmar."
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -2653,6 +2657,10 @@
     "marketing.google.thirdPartyNotice": "Working with a third party",
     "marketing.google.photoLimit": "Add up to 8 photos, plus a logo and cover.",
     "marketing.google.photoRequirements": "Choose a valid JPG or PNG, 10 KB to 5 MB and at least 250 × 250 pixels.",
-    "marketing.google.checkingPhoto": "Checking image…"
+    "marketing.google.checkingPhoto": "Checking image…",
+    "marketing.google.openConversation": "Talk to VMV about this request",
+    "marketing.google.closed": "Closed",
+    "marketing.google.countryLabel": "Country:",
+    "marketing.google.hoursPending": "Business hours awaiting confirmation."
   }
 }

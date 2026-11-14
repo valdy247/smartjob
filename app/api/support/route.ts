@@ -8,7 +8,7 @@ const headers={"Cache-Control":"private, no-store"};
 const reply=(data:Record<string,unknown>,status=200)=>NextResponse.json(data,{status,headers});
 type Source="support"|"marketing"|"provisioning"|"domain";
 const sources=new Set<Source>(["support","marketing","provisioning","domain"]);
-const uuid=(v:unknown):v is string=>typeof v==="string"&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(v);
+const uuid=(v:unknown):v is string=>typeof v==="string"&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(v);
 const num=(v:string|null,max=100,fallback=20)=>Math.min(max,Math.max(1,Number.parseInt(v||"",10)||fallback));
 const page=(v:string|null)=>Math.max(1,Math.min(100000,Number.parseInt(v||"",10)||1));
 const parse=(e:unknown)=>{

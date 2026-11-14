@@ -39,3 +39,8 @@ export async function googlePhotoKey(file:Blob):Promise<string>{
  const hash=await crypto.subtle.digest("SHA-256",bytes);
  return Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,"0")).join("");
 }
+
+export function googleProfileLink(value:unknown):string|null {
+ if(typeof value!=="string"||!value.trim())return null;
+ try{const url=new URL(value.trim());return url.protocol==="https:"&&!url.username&&!url.password&&url.hostname?url.href:null;}catch{return null;}
+}
