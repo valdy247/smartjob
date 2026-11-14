@@ -68,7 +68,8 @@ const safeSite=(value:string)=>{
  try{const u=new URL(value.trim());return ["https:","http:"].includes(u.protocol)&&Boolean(u.hostname)&&!u.username&&!u.password?u.toString():null;}
  catch{return null;}
 };
-const errorMessage=(e:unknown,fallback:string)=>e instanceof Error?e.message:fallback;
+// Technical API errors are not localized; never render their raw messages in either locale.
+const errorMessage=(_error:unknown,localizedFallback:string)=>localizedFallback;
 
 export default function MarketingActionCenter({businessName,industryId,website,onGoToVisibility,preselectedService,onWizardActiveChange}:{
  businessName:string;industryId:string;website:string;onGoToVisibility:()=>void;preselectedService?:ServiceCode;onWizardActiveChange?:(active:boolean)=>void
