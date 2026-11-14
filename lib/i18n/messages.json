@@ -1254,7 +1254,21 @@
     "marketing.action.googleImproveGoal": "Quiero corregir o ampliar mi perfil de Google Business Profile.",
     "marketing.visibility.hoursExample": "Ej. Lun–Vie 9:00–17:00",
     "marketing.action.counterHint": "caracteres · No compartas contraseñas ni información bancaria.",
-    "marketing.action.seoSeparator": " · SEO "
+    "marketing.action.seoSeparator": " · SEO ",
+    "marketing.feedback.requestQueryError": "No se pudo consultar el centro de solicitudes. {reason}",
+    "marketing.feedback.invalidPhoto": "Revisa {file}: fotos JPG o PNG entre 10 KB y 5 MB.",
+    "marketing.feedback.saved": "Solicitud #{id} guardada con sus datos{photos}. No se ha publicado en Google.",
+    "marketing.feedback.photoCount": " y {count} imágenes",
+    "marketing.feedback.submitFailed": "No se pudo completar el envío. {reason}",
+    "marketing.feedback.approvePrompt": "¿Apruebas el presupuesto de {price}? Esta aprobación no cobra dinero, pero permite al equipo comenzar el servicio.",
+    "marketing.feedback.approved": "Presupuesto {price} aprobado y registrado. No se ha realizado ningún cobro.",
+    "marketing.feedback.prepared": "Presupuesto preparado. Esperamos tu aprobación.",
+    "marketing.feedback.confirmListing": "Para confirmar {name} debes incluir una URL HTTPS de la ficha.",
+    "marketing.feedback.approvalNeeded": "Primero el cliente debe aprobar el presupuesto de gestión (puede ser $0) antes de enviar registros a {name}.",
+    "marketing.feedback.directoryGoal": "Solicito evaluación para registrar o actualizar {count} directorios en {city}, {state}. Se requiere revisar elegibilidad, duplicados y presupuesto antes de iniciar.",
+    "marketing.feedback.repairGoal": "Solicito presupuesto para reparación técnica de mi página web.",
+    "marketing.feedback.reportOnlyGoal": "Solicito guardar mi diagnóstico web sin contratar reparación.",
+    "marketing.feedback.reputationGoal": "Reseña: {review} | Respuesta para revisión: {reply}"
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -2511,6 +2525,20 @@
     "marketing.action.googleImproveGoal": "I want to correct or expand my Google Business Profile.",
     "marketing.visibility.hoursExample": "E.g. Mon–Fri 9:00 AM–5:00 PM",
     "marketing.action.counterHint": "characters · Do not share passwords or banking details.",
-    "marketing.action.seoSeparator": " · SEO "
+    "marketing.action.seoSeparator": " · SEO ",
+    "marketing.feedback.requestQueryError": "Couldn't load the request center. {reason}",
+    "marketing.feedback.invalidPhoto": "Check {file}: JPG or PNG photos must be between 10 KB and 5 MB.",
+    "marketing.feedback.saved": "Request #{id} saved with its details{photos}. Nothing has been published on Google.",
+    "marketing.feedback.photoCount": " and {count} images",
+    "marketing.feedback.submitFailed": "Couldn't submit the request. {reason}",
+    "marketing.feedback.approvePrompt": "Approve the {price} quote? No payment will be charged now, but the team may start the service.",
+    "marketing.feedback.approved": "Quote {price} approved and recorded. No payment was charged.",
+    "marketing.feedback.prepared": "Quote prepared. Waiting for your approval.",
+    "marketing.feedback.confirmListing": "To confirm {name}, provide a valid HTTPS listing URL.",
+    "marketing.feedback.approvalNeeded": "The customer must approve the service quote (which may be $0) before submitting listings to {name}.",
+    "marketing.feedback.directoryGoal": "I request an evaluation to list or update {count} directories in {city}, {state}. Eligibility, duplicates, and a quote must be reviewed before work begins.",
+    "marketing.feedback.repairGoal": "I request a quote for technical website repairs.",
+    "marketing.feedback.reportOnlyGoal": "I want to save my website audit without requesting repairs.",
+    "marketing.feedback.reputationGoal": "Review: {review} | Reply for review: {reply}"
   }
 }

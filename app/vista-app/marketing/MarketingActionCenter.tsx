@@ -315,7 +315,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     if(r.error)throw r.error;
     if(a.error)throw a.error;
     if(alive){setRequests((r.data||[]) as RequestRow[]);setApprovals((a.data||[]) as Acceptance[]);}
-   }catch(e){if(alive)setError("No se pudo consultar el centro de solicitudes. "+errorMessage(e,translate("marketing.action.check_your_connection")));}
+   }catch(e){if(alive)setError(translate("marketing.feedback.requestQueryError",{reason:errorMessage(e,translate("marketing.action.check_your_connection"))}));}
    finally{if(alive)setLoading(false);}
   };
   void load();
@@ -408,7 +408,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    const invalid=validateGoogleLinks(googleData,language);
    if(invalid){setWizardStep(2);setGoogleStep(2);setWizardError(invalid);submitting.current=false;return;}
    const bad=googleFiles.find(({file})=>!(["image/jpeg","image/png"].includes(file.type))||file.size<10240||file.size>5242880);
-   if(bad){setWizardStep(2);setGoogleStep(5);setWizardError("Revisa "+bad.file.name+": fotos JPG o PNG entre 10 KB y 5 MB.");submitting.current=false;return;}
+   if(bad){setWizardStep(2);setGoogleStep(5);setWizardError(translate("marketing.feedback.invalidPhoto",{file:bad.file.name}));submitting.current=false;return;}
   }
   if(selected!=="google_profile"&&selected!=="seo_improvement"&&selected!=="directory_listings"&&((goal.trim().length<12&&!(selected==="review_strategy"&&reviewInput.trim().length>=5))||goal.trim().length>1500)){setWizardStep(2);setWizardError(translate("marketing.action.choose_a_need_or_describe_the_result_you_want"));submitting.current=false;return;}
   if(selected==="review_strategy"&&reviewMode==="request"&&!/^https:\/\/[^\s/]+\.[^\s/]+/i.test(reviewLink.trim())){setWizardStep(2);setWizardError(translate("marketing.action.enter_a_valid_https_link_to_request_reviews"));submitting.current=false;return;}
@@ -447,8 +447,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    const {data,error:insertError}=await client.from("vmv_marketing_requests").insert({
     id:requestId,owner_id:user.id,service_code:selected,business_name:name.trim(),
     category_id:effectiveCategory,website_url:safeSite(site),
-    goal_text:selected==="directory_listings"?("Solicito evaluación para registrar o actualizar "+directoryData.selected.length+" directorios en "+directoryData.city+", "+directoryData.state+". Se requiere revisar elegibilidad, duplicados y presupuesto antes de iniciar."):selected==="google_profile"?googleGoalText:selected==="seo_improvement"?(webRepair.requestRepair?"Solicito presupuesto para reparación técnica de mi página web.":"Solicito guardar mi diagnóstico web sin contratar reparación."):selected==="review_strategy"&&reviewInput.trim()?
-     ("Reseña: "+reviewInput.trim().slice(0,650)+" | Respuesta para revisión: "+(reviewReply||reviewReplyTemplate(name,reviewInput,reviewTone)).slice(0,700)).slice(0,1500):goal.trim(),
+    goal_text:selected==="directory_listings"?(contentText(contentLanguage,"marketing.feedback.directoryGoal",{count:directoryData.selected.length,city:directoryData.city,state:directoryData.state})):selected==="google_profile"?googleGoalText:selected==="seo_improvement"?(webRepair.requestRepair?contentText(contentLanguage,"marketing.feedback.repairGoal"):contentText(contentLanguage,"marketing.feedback.reportOnlyGoal")):selected==="review_strategy"&&reviewInput.trim()?
+     (contentText(contentLanguage,"marketing.feedback.reputationGoal",{review:reviewInput.trim().slice(0,650),reply:(reviewReply||reviewReplyTemplate(name,reviewInput,reviewTone)).slice(0,700)})).slice(0,1500):goal.trim(),
     agreed_to_contact:true,
     ...(selected==="google_profile"?{google_profile_data:{...googleData,...(googleData.kind==="service_area"?{street:"",unit:"",city:"",region:"",postal:""}:{}),media:mediaPaths}}:{}),
     ...(selected==="seo_improvement"?{web_repair_data:webRepair}:{}),
@@ -469,18 +469,18 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    const savedId=String(data.id).slice(0,8);
    setSubmittedId(savedId);setWizardStep(4);
    await clearMarketingDraft(user.id,requestId);setDraftNotice("");setPhotoNotice("");
-   setMessage(translate("marketing.action.request")+requestId+" guardada con sus datos"+(uploaded.length?" y "+uploaded.length+" imágenes":"")+". No se ha publicado en Google.");
+   setMessage(translate("marketing.feedback.saved",{id:requestId,photos:uploaded.length?translate("marketing.feedback.photoCount",{count:uploaded.length}):""}));
    setGoal("");setConsent(false);setGoogleMedia(emptyMedia);
    await refresh();
   }catch(e){
    if(!inserted&&!insertAttempted&&uploaded.length)await client.storage.from("vmv-google-media").remove(uploaded);
-   setWizardError("No se pudo completar el envío. "+errorMessage(e,translate("marketing.action.try_again")));
+   setWizardError(translate("marketing.feedback.submitFailed",{reason:errorMessage(e,translate("marketing.action.try_again"))}));
   }finally{setBusy(false);submitting.current=false;}
  };
  const accept=async(req:RequestRow)=>{
   if(!client||!user||req.owner_id!==user.id||req.status!=="quoted"||req.quoted_price_cents===null)return;
   if(isAccepted(req))return;
-  if(!window.confirm("¿Apruebas el presupuesto de "+money(req.quoted_price_cents)+"? Esta aprobación no cobra dinero, pero permite al equipo comenzar el servicio."))return;
+  if(!window.confirm(translate("marketing.feedback.approvePrompt",{price:money(req.quoted_price_cents)})))return;
   setError("");setMessage("");setBusy(true);
   try{
    const {error:acceptError}=await client.from("vmv_marketing_quote_acceptances").insert({
@@ -488,7 +488,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     quoted_price_cents:req.quoted_price_cents
    });
    if(acceptError)throw acceptError;
-   setMessage("Presupuesto "+money(req.quoted_price_cents)+" aprobado y registrado. No se ha realizado ningún cobro.");
+   setMessage(translate("marketing.feedback.approved",{price:money(req.quoted_price_cents)}));
    await refresh();
   }catch(e){setError(errorMessage(e,translate("marketing.action.couldn_t_record_your_approval")));}
   finally{setBusy(false);}
@@ -505,7 +505,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   try{
    const {error:quoteError}=await client.from("vmv_marketing_requests")
     .update({quoted_price_cents:Math.round(amount*100),quote_note:quoteNote.trim(),
-     staff_update:"Presupuesto preparado. Esperamos tu aprobación."})
+     staff_update:contentText(contentLanguage,"marketing.feedback.prepared")})
     .eq("id",req.id);
    if(quoteError)throw quoteError;
    setMessage(translate("marketing.action.quote_saved_the_customer_can_view_and_approve_it_from"));
@@ -541,8 +541,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    const selected=req.directory_data.selected.map(t=>{
     const status=directoryStatus[t.id]||t.status;
     const evidenceUrl=(directoryProof[t.id]??t.evidenceUrl).trim();
-    if(["published","already_listed"].includes(status)&&!safeDirectoryUrl(evidenceUrl))throw Error("Para confirmar "+t.name+" debes incluir una URL HTTPS de la ficha.");
-    if(["submitted","published"].includes(status)&&!isAccepted(req))throw Error("Primero el cliente debe aprobar el presupuesto de gestión (puede ser $0) antes de enviar registros a "+t.name+".");
+    if(["published","already_listed"].includes(status)&&!safeDirectoryUrl(evidenceUrl))throw Error(translate("marketing.feedback.confirmListing",{name:t.name}));
+    if(["submitted","published"].includes(status)&&!isAccepted(req))throw Error(translate("marketing.feedback.approvalNeeded",{name:t.name}));
     return {...t,status,evidenceUrl:["published","already_listed"].includes(status)?evidenceUrl:"",note:t.note};
    });
    const {error:saveError}=await client.from("vmv_marketing_requests").update({directory_data:{...req.directory_data,selected}}).eq("id",req.id);
