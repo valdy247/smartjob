@@ -75,7 +75,35 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const [aiDirection,setAiDirection]=useState("");
  const [aiProposal,setAiProposal]=useState<SiteProposal|null>(null);
  const [generatingAi,setGeneratingAi]=useState(false);
+ const [aiStatus,setAiStatus]=useState<"idle"|"checking"|"ready"|"unavailable">("idle");
+ const [aiStatusMessage,setAiStatusMessage]=useState("");
+ const [aiCheck,setAiCheck]=useState(0);
  const [error,setError]=useState("");
+ useEffect(()=>{
+  if(mode!=="ai"){setAiStatus("idle");return;}
+  const controller=new AbortController();
+  let active=true;
+  setAiStatus("checking");setAiStatusMessage("");
+  void(async()=>{
+   try{
+    const client=getSupabase();
+    if(!client)throw new Error("No se pudo comprobar la conexión con VMV.");
+    const {data:{session}}=await client.auth.getSession();
+    if(!session?.access_token)throw new Error("Inicia sesión para generar una web con IA.");
+    const response=await fetch("/api/web-services/generate-site",{
+     cache:"no-store",headers:{"Authorization":"Bearer "+session.access_token},
+     signal:controller.signal
+    });
+    const result=await response.json().catch(()=>({})) as {enabled?:boolean;reason?:string};
+    if(!response.ok||result.enabled!==true)
+     throw new Error(result.reason||"La IA no está disponible en este momento.");
+    if(active)setAiStatus("ready");
+   }catch(e){
+    if(active){setAiStatus("unavailable");setAiStatusMessage(e instanceof Error?e.message:"La IA no respondió.");}
+   }
+  })();
+  return()=>{active=false;controller.abort();};
+ },[mode,ownerId,aiCheck]);
  useEffect(()=>{
   let alive=true;
   mediaActive.current=true;
@@ -240,6 +268,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
   }
   setError("");
   if(mode==="ai"){
+   if(aiStatus!=="ready"){setError("La IA todavía no está conectada. Comprueba su estado o utiliza una plantilla.");return;}
    setGeneratingAi(true);
    try{
     const client=getSupabase();
@@ -351,12 +380,17 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
       <small>La IA reutiliza la conexión de VMV. El diseño no se publica automáticamente;
        revisa la información antes de aceptarla. No inventaremos reseñas ni precios.
        Se usa una generación de tu cupo diario (máximo 2).</small>
+      {aiStatus==="checking"?<small role="status">Comprobando la conexión real con la IA de VMV…</small>:
+       aiStatus==="ready"?<small role="status">IA conectada. Puedes generar tu diseño.</small>:
+       <div><small role="alert">{aiStatusMessage||"La IA no está disponible."}</small>
+        <button type="button" disabled={generatingAi} onClick={()=>setAiCheck(n=>n+1)}>Recomprobar IA</button>
+       </div>}
      </div>}
    </div>
    {error?<p className={styles.error} role="alert">{error}</p>:null}
    <div className={styles.finish}>
     <span><ShieldCheck size={16}/> Tus datos no se publicarán todavía.</span>
-    <button type="button" disabled={busy||generatingAi||!mediaReady||mediaSaving||Boolean(mediaError)||socialStatus!=="saved"||(kind!=="services"&&productStatus!=="saved")} onClick={()=>void preview()}>
+    <button type="button" disabled={busy||generatingAi||(mode==="ai"&&aiStatus!=="ready")||!mediaReady||mediaSaving||Boolean(mediaError)||socialStatus!=="saved"||(kind!=="services"&&productStatus!=="saved")} onClick={()=>void preview()}>
      {generatingAi?"Creando tu web con IA…":mode==="ai"?"Generar web con IA":"Ver propuestas"} <ArrowRight size={17}/>
     </button>
    </div>
