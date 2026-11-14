@@ -264,12 +264,18 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const editWizardStep=(step:WizardStep)=>{closeKeyboard();setWizardStep(step);setWizardError("");revealWizard();};
  const chooseService=(code:ServiceCode)=>{
   setRequestId(crypto.randomUUID());setPausedStep(null);setWebStage(0);
+  setSaveAlsoInBusiness(false);
   if(code!==selected){setGoal("");setConsent(false);setReviewLink("");setReviewReply("");setReviewMode("respond");setReviewInput("");setWebRepair(emptyWebRepair);setDirectoryData(emptyDirectory);setGoogleStep(0);setGoogleMedia(emptyMedia);}
-  setSelected(code);setWizardStep(1);setWizardError("");setSubmittedId(null);revealWizard();
+  const linked=savedBusinesses.some(x=>x.id===businessId&&!x.source);
+  setSelected(code);setWizardStep(code==="google_profile"&&linked?2:1);setGoogleStep(0);setWizardError("");setSubmittedId(null);revealWizard();
  };
- const goNext=()=>{
+ const goNext=async()=>{
   setWizardError("");
   if(wizardStep===1){
+   if(user&&!savedBusinesses.some(x=>x.id===businessId&&!x.source)){
+    const id=await saveBusiness();
+    if(!id){setWizardError(en?"Save or select a business to continue.":"Guarda o selecciona un negocio para continuar.");return;}
+   }
    if(selected==="seo_improvement"&&!site.trim()){setWizardError(translate("marketing.action.enter_the_website_address_to_analyze_it"));return;}
    if(name.trim().length<2||name.trim().length>150){setWizardError(translate("marketing.action.enter_your_business_name"));return;}
    if(site.trim()&&!websiteAddress(site)){setWizardError(translate("category.invalidWebsite"));return;}
@@ -277,7 +283,23 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(wizardStep===2&&selected==="google_profile"){
    const missing=validateGoogleStep(googleStep,googleData,language)||validateGoogleLinks(googleData,language);
    if(missing){setWizardError(missing);return;}
-   if(googleStep<googleStepNames.length-1){closeKeyboard();setGoogleStep(googleStep+1);revealWizard();return;}
+   if(googleStep<googleStepNames.length-1){
+    const selectedRecord=savedBusinesses.find(x=>x.id===businessId&&!x.source);
+    const steps=Array.from({length:5-googleStep},(_,i)=>googleStep+i+1);
+    const incomplete=(index:number)=>{
+     if(!selectedRecord)return true;
+     if(index===1)return Boolean(validateGoogleStep(1,googleData,language));
+     if(index===2)return !googleData.phone.trim()&&!googleData.secondaryPhone.trim();
+     if(index===3)return !googleData.hoursEnabled;
+     if(index===4)return !googleData.description.trim()&&!googleData.services.trim()&&!googleData.products.trim();
+     if(index===5)return !selectedRecord.logo_path&&!selectedRecord.cover_path&&!selectedRecord.gallery_paths.length&&!googleFiles.length;
+     return true;
+    };
+    const next=steps.find(incomplete);
+    closeKeyboard();
+    if(next!==undefined){setGoogleStep(next);revealWizard();return;}
+    setWizardStep(3);revealWizard();return;
+   }
   }
   if(wizardStep===2&&selected==="directory_listings"){const issue=validateDirectory(directoryData,effectiveCategory,language);if(issue){setWizardError(issue);return;}}
   if(wizardStep===2&&selected==="seo_improvement"){
@@ -681,16 +703,18 @@ export default function MarketingActionCenter({businessName,industryId,website,o
         </select>
        </label>
        <div className={styles.businessActions}>
-        <button type="button" onClick={()=>{setBusinessId("");setName("");setSite("");setChosenCategory("other");setBusinessMessage("");setBusinessError("");}}>{en?"New business":translate("marketing.action.new_business")}</button>
+        <button type="button" disabled={savedBusinesses.some(x=>!x.source)} onClick={()=>{businessEditedRef.current=true;setBusinessId("");setBusinessDetails({id:"",owner_id:user?.id||"",...centralBusinessDefaults()});setBusinessFiles(emptyBusinessFiles);setGoogleData(emptyGoogle);setGoogleMedia(emptyMedia);setName("");setSite("");setChosenCategory("other");setBusinessMessage("");setBusinessError("");}}>{en?"New business":translate("marketing.action.new_business")}</button>
        </div>
+       {savedBusinesses.some(x=>!x.source)?<p className={styles.businessNote}>{en?"Additional businesses are pending plan-limit approval. Existing businesses remain accessible.":"Los negocios adicionales están pendientes de definir los límites del plan. Los existentes se conservan."}</p>:null}
        {!user?<p className={styles.businessNote}>{en?"Sign in to save and load businesses on any device. You can still complete this request." :translate("marketing.action.customersNote")}</p>:null}
        {businessMessage?<p role="status" className={styles.businessSuccess}>{businessMessage}</p>:null}
        {businessError?<p role="alert" className={styles.businessError}>{businessError}</p>:null}
       </div>
-      <label className={styles.wizardField}><span>{translate("marketing.copy.business_name")} <em>{translate("marketing.copy.required")}</em></span><input type="text" autoComplete="organization" value={name} maxLength={150} onChange={e=>{setName(e.target.value);setWizardError("");}} placeholder={translate("marketing.action.e_g_my_business")} /></label>
-      <label className={styles.wizardField}><span>{translate("marketing.copy.what_does_your_business_do")}</span><BusinessCategoryPicker value={effectiveCategory} onChange={setChosenCategory}/></label>
-      <label className={styles.wizardField}><span>{translate("marketing.copy.website")} <em>{selected==="seo_improvement"?translate("marketing.action.required"):translate("marketing.action.optional")}</em></span><input type="text" inputMode="url" autoCapitalize="none" autoCorrect="off" autoComplete="url" value={site} maxLength={500} onChange={e=>{setSite(e.target.value);setWizardError("");}} placeholder={translate("category.websiteExample")}/></label>
-      <button type="button" className={styles.saveBusinessInline} disabled={businessBusy||!user} onClick={()=>void saveBusiness()}>{businessBusy?(en?"Saving…":"Guardando…"):businessId?(en?"Update saved business":translate("marketing.action.update_saved_business")):(en?"Save this business for next time":translate("marketing.action.save_this_business_for_future_requests"))}</button>
+      <label className={styles.wizardField}><span>{translate("marketing.copy.business_name")} <em>{translate("marketing.copy.required")}</em></span><input type="text" autoComplete="organization" value={name} maxLength={150} onChange={e=>{businessEditedRef.current=true;setName(e.target.value);setWizardError("");}} placeholder={translate("marketing.action.e_g_my_business")} /></label>
+      <label className={styles.wizardField}><span>{translate("marketing.copy.what_does_your_business_do")}</span><BusinessCategoryPicker value={effectiveCategory} onChange={v=>{businessEditedRef.current=true;setChosenCategory(v);}}/></label>
+      <label className={styles.wizardField}><span>{translate("marketing.copy.website")} <em>{selected==="seo_improvement"?translate("marketing.action.required"):translate("marketing.action.optional")}</em></span><input type="text" inputMode="url" autoCapitalize="none" autoCorrect="off" autoComplete="url" value={site} maxLength={500} onChange={e=>{businessEditedRef.current=true;setSite(e.target.value);setWizardError("");}} placeholder={translate("category.websiteExample")}/></label>
+      <CentralBusinessEditor business={businessDetails} onChange={v=>{businessEditedRef.current=true;setBusinessDetails(v);}} files={businessFiles} onFiles={setBusinessFiles}/>
+      <button type="button" className={styles.saveBusinessInline} disabled={businessBusy||!user} onClick={()=>void saveBusiness()}>{businessBusy?(en?"Saving…":"Guardando…"):savedBusinesses.some(x=>x.id===businessId&&!x.source)?(en?"Save business changes":translate("marketing.action.update_saved_business")):(en?"Save this business for next time":translate("marketing.action.save_this_business_for_future_requests"))}</button>
      </div>
      <p className={styles.wizardHint}><ShieldCheck size={15}/> {translate("marketing.copy.if_you_registered_your_business_with_vmv_available_d")}</p>
     </div>:null}
