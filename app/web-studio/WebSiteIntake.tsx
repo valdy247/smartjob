@@ -1,4 +1,5 @@
 "use client";
+import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {useEffect,useMemo,useRef,useState,type FormEvent} from "react";
 import {ArrowRight,ImagePlus,Plus,ShieldCheck,Sparkles,Trash2} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
@@ -301,12 +302,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
     <h3><span>01</span> Información</h3>
     <div className={styles.twoColumns}>
      <label>Nombre del negocio<input value={name} maxLength={100} placeholder="Nombre comercial" onChange={e=>setName(e.target.value)}/></label>
-     <label>Categoría<select value={category} onChange={e=>{setCategory(e.target.value);setFamily(null);}}>
-      <option value="">Seleccionar categoría</option>
-      {CATEGORY_GROUPS.map(group=><optgroup label={group} key={group}>
-       {BUSINESS_CATEGORIES.filter(v=>v.group===group).map(v=><option value={v.id} key={v.id}>{v.label}</option>)}
-      </optgroup>)}
-     </select></label>
+     <label>Categoría<BusinessCategoryPicker value={category} onChange={value=>{setCategory(value);setFamily(null);}}/></label>
      <label>Teléfono de negocio<input value={phone} maxLength={36} type="tel" placeholder="+1 000 000 0000" onChange={e=>setPhone(e.target.value)}/></label>
      <label>Correo de contacto<input value={email} maxLength={180} type="email" placeholder="hola@minegocio.com" onChange={e=>setEmail(e.target.value)}/></label>
     </div>

@@ -1,4 +1,5 @@
 "use client";
+import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {useCallback,useEffect,useRef,useState,type CSSProperties} from "react";
 import {ArrowLeft,Check,Copy,ExternalLink,Globe,Save,Send,Trash2,Plus,X,ArrowUp,ArrowDown,MessageCircle,Phone,Mail} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
@@ -258,13 +259,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
      <header className={styles.panelHead}><strong>Contenido</strong><small>EDITAR</small></header>
      <div className={styles.fields}>
       <label className={styles.field}><span>Categoría de negocio</span>
-       <select value={content.categoryId} onChange={e=>{setContent(v=>({...v,categoryId:e.target.value}));setStatus("");}}
-        aria-label="Selecciona la categoría de tu negocio">
-        <option value="">Seleccionar categoría</option>
-        {CATEGORY_GROUPS.map(group=><optgroup key={group} label={group}>
-         {BUSINESS_CATEGORIES.filter(cat=>cat.group===group).map(cat=><option key={cat.id} value={cat.id}>{cat.label}</option>)}
-        </optgroup>)}
-       </select>
+       <BusinessCategoryPicker value={content.categoryId} onChange={id=>{setContent(v=>({...v,categoryId:id}));setStatus("");}}/>
       </label>
       {fields.map(f=><label key={f.id} className={styles.field}>
        <span>{f.label}</span>

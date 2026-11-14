@@ -1,4 +1,5 @@
 "use client";
+import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {useMemo,useState} from "react";
 import Link from "next/link";
 import {ArrowLeft,ArrowUpRight,BarChart3,CheckCircle2,ChevronDown,ChevronUp,ClipboardCopy,Globe2,HeartHandshake,Workflow,Link2,Lightbulb,Mail,Megaphone,MessageCircle,Share2,ShieldCheck,Sparkles,Target,TrendingUp} from "lucide-react";
@@ -184,11 +185,7 @@ export default function MarketingPage(){
       <div className={styles.formGrid}>
        <Field label={translate("marketing.copy.business_name_2")} value={form.business} onChange={v=>patch("business",v)} placeholder={translate("marketing.copy.e_g_my_business")}/>
        <label className={styles.field}><span>{translate("marketing.copy.industry_or_service")}</span>
-        <select value={form.industry} onChange={e=>patch("industry",e.target.value)} aria-label={translate("marketing.copy.select_your_business_industry")}>
-         <option value="">{translate("marketing.copy.select_your_industry")}</option>
-         {CATEGORY_GROUPS.map(group=><optgroup key={group} label={marketingGroupLabel(language,group)}>{BUSINESS_CATEGORIES.filter(option=>option.group===group).map(option=><option key={option.id} value={option.id}>{marketingCategoryLabel(language,option.id)}</option>)}</optgroup>)}
-         <option value="unsure">{translate("marketing.copy.i_m_not_sure")}</option>
-        </select><small>{translate("marketing.copy.standardized_options_help_create_more_consistent_strate")}</small>
+        <BusinessCategoryPicker value={form.industry} onChange={value=>patch("industry",value)}/><small>{translate("marketing.copy.standardized_options_help_create_more_consistent_strate")}</small>
        </label>
        <Field label={translate("marketing.copy.ideal_customer")} value={form.audience} onChange={v=>patch("audience",v)} placeholder={translate("marketing.copy.who_typically_buys_and_why")}/>
        <Field label={translate("marketing.copy.main_offer")} value={form.offer} onChange={v=>patch("offer",v)} placeholder={translate("marketing.copy.what_do_you_sell_and_what_problem_does_it_solve")}/>

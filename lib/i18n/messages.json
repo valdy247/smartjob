@@ -1309,7 +1309,10 @@
     "setup.open": "Comenzar",
     "setup.change": "Cambiar objetivo",
     "setup.saveError": "No se pudo guardar. Intenta otra vez.",
-    "setup.saved": "Objetivo guardado"
+    "setup.saved": "Objetivo guardado",
+    "category.search": "Escribe tu actividad o profesión",
+    "category.noResults": "No encontramos una categoría cercana.",
+    "category.invalidWebsite": "Revisa la dirección de tu sitio web."
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -2621,6 +2624,9 @@
     "setup.open": "Get started",
     "setup.change": "Change goal",
     "setup.saveError": "Could not save. Please try again.",
-    "setup.saved": "Goal saved"
+    "setup.saved": "Goal saved",
+    "category.search": "Type your activity or profession",
+    "category.noResults": "No matching category found.",
+    "category.invalidWebsite": "Check your website address."
   }
 }

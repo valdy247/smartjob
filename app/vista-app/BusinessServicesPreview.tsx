@@ -1,4 +1,5 @@
 "use client";
+import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {useEffect,useState,type ChangeEvent} from "react";
 import {Bot,Globe,Search,Star,CalendarDays,PanelsTopLeft,MapPin,ChartNoAxesCombined,Link2,PhoneCall,ArrowUpRight,ChevronLeft,Save,Copy,Check,Mail} from "lucide-react";
 import styles from "./BusinessServicesPreview.module.css";
@@ -114,15 +115,7 @@ export default function BusinessServicesPreview({userId,focus="all"}:{userId:str
    </div>
    <form className={styles.form} autoComplete="off" spellCheck={false} onSubmit={e=>{e.preventDefault();void save();}}>
     <label className={styles.field}><span>Categoría *</span>
-     <select value={draft.categoryId} onChange={e=>{
-      const id=e.target.value;
-      setDraft(d=>({...d,categoryId:id,category:categoryLabel(id)}));setStatus("");
-     }} aria-label="Categoría de negocio">
-      <option value="">Seleccionar categoría</option>
-      {CATEGORY_GROUPS.map(group=><optgroup key={group} label={group}>
-       {BUSINESS_CATEGORIES.filter(cat=>cat.group===group).map(cat=><option key={cat.id} value={cat.id}>{cat.label}</option>)}
-      </optgroup>)}
-     </select>
+     <BusinessCategoryPicker value={draft.categoryId} onChange={id=>{setDraft(d=>({...d,categoryId:id,category:categoryLabel(id)}));setStatus("");}}/>
     </label>
     {fields.map(f=><label className={styles.field} key={f.key}>
       <span>{f.label}</span>{f.multi?<textarea maxLength={f.max} value={draft[f.key]} onChange={e=>edit(f.key,e.target.value)} rows={3} placeholder={f.label.replace(" *","")}

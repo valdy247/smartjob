@@ -1,4 +1,6 @@
 "use client";
+import {websiteAddress} from "@/lib/website-address";
+import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 
 import {useEffect,useMemo,useRef,useState} from "react";
 import type {SupabaseClient,User} from "@supabase/supabase-js";
@@ -248,7 +250,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(wizardStep===1){
    if(selected==="seo_improvement"&&!site.trim()){setWizardError(translate("marketing.action.enter_the_website_address_to_analyze_it"));return;}
    if(name.trim().length<2||name.trim().length>150){setWizardError(translate("marketing.action.enter_your_business_name"));return;}
-   if(site.trim()&&!safeSite(site)){setWizardError(translate("marketing.action.check_your_website_link_it_must_begin_with_https"));return;}
+   if(site.trim()&&!websiteAddress(site)){setWizardError(translate("category.invalidWebsite"));return;}
   }
   if(wizardStep===2&&selected==="google_profile"){
    const missing=validateGoogleStep(googleStep,googleData,language)||validateGoogleLinks(googleData,language);
@@ -362,11 +364,11 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(!client||!user){setBusinessError(translate("marketing.action.sign_in_to_save_this_business_to_your_account"));return;}
   const cleanName=name.trim();const cleanSite=site.trim();
   if(cleanName.length<2||cleanName.length>150){setBusinessError(translate("marketing.action.enter_a_business_name_between_2_and_150_characters"));return;}
-  if(cleanSite&&!safeSite(cleanSite)){setBusinessError(translate("marketing.action.the_website_must_have_a_valid_https_url"));return;}
+  if(cleanSite&&!websiteAddress(cleanSite)){setBusinessError(translate("category.invalidWebsite"));return;}
   setBusinessBusy(true);setBusinessError("");setBusinessMessage("");
   try{
    const existing=savedBusinesses.find(x=>x.id===businessId&&!x.source&&x.owner_id===user.id);
-   const payload={name:cleanName,category_id:effectiveCategory,website_url:safeSite(cleanSite)};
+   const payload={name:cleanName,category_id:effectiveCategory,website_url:websiteAddress(cleanSite)};
    const result=existing?
     await client.from("vmv_marketing_businesses").update(payload).eq("id",existing.id).eq("owner_id",user.id).select("id").single():
     await client.from("vmv_marketing_businesses").insert({owner_id:user.id,...payload}).select("id").single();
@@ -421,7 +423,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(selected==="directory_listings"&&validateDirectory(directoryData,effectiveCategory,language)){setWizardStep(2);setWizardError(validateDirectory(directoryData,effectiveCategory,language));submitting.current=false;return;}
   if(selected==="seo_improvement"&&validateWebRepair(webRepair,language)){setWizardStep(2);setWizardError(validateWebRepair(webRepair,language));submitting.current=false;return;}
   if(selected==="seo_improvement"&&!site.trim()){setWizardStep(1);setWizardError(translate("marketing.action.enter_the_website_you_want_to_improve"));submitting.current=false;return;}
-  if(site.trim()&&!safeSite(site)){setWizardStep(1);setWizardError(translate("marketing.action.the_website_url_must_be_valid"));submitting.current=false;return;}
+  if(site.trim()&&!websiteAddress(site)){setWizardStep(1);setWizardError(translate("marketing.action.the_website_url_must_be_valid"));submitting.current=false;return;}
   if(!consent){setWizardError(translate("marketing.action.check_the_authorization_box_so_we_can_process_your_re"));submitting.current=false;return;}
   setBusy(true);
   const uploaded:string[]=[];
@@ -453,7 +455,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    const {data,error:insertError}=await client.from("vmv_marketing_requests").insert({
     id:requestId,owner_id:user.id,service_code:selected,business_name:name.trim(),
     ...(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(businessId)?{business_id:businessId}:{}),
-    category_id:effectiveCategory,website_url:safeSite(site),
+    category_id:effectiveCategory,website_url:websiteAddress(site),
     goal_text:selected==="directory_listings"?(contentText(contentLanguage,"marketing.feedback.directoryGoal",{count:directoryData.selected.length,city:directoryData.city,state:directoryData.state})):selected==="google_profile"?googleGoalText:selected==="seo_improvement"?(webRepair.requestRepair?contentText(contentLanguage,"marketing.feedback.repairGoal"):contentText(contentLanguage,"marketing.feedback.reportOnlyGoal")):selected==="review_strategy"&&reviewInput.trim()?
      (contentText(contentLanguage,"marketing.feedback.reputationGoal",{review:reviewInput.trim().slice(0,650),reply:(reviewReply||reviewReplyTemplate(name,reviewInput,reviewTone)).slice(0,700)})).slice(0,1500):goal.trim(),
     agreed_to_contact:true,
@@ -623,19 +625,17 @@ export default function MarketingActionCenter({businessName,industryId,website,o
        {businessError?<p role="alert" className={styles.businessError}>{businessError}</p>:null}
       </div>
       <label className={styles.wizardField}><span>{translate("marketing.copy.business_name")} <em>{translate("marketing.copy.required")}</em></span><input type="text" autoComplete="organization" value={name} maxLength={150} onChange={e=>{setName(e.target.value);setWizardError("");}} placeholder={translate("marketing.action.e_g_my_business")} /></label>
-      <label className={styles.wizardField}><span>{translate("marketing.copy.what_does_your_business_do")}</span><select value={effectiveCategory} onChange={e=>setChosenCategory(e.target.value)}>
-       {CATEGORY_GROUPS.map(group=><optgroup key={group} label={marketingGroupLabel(language,group)}>{BUSINESS_CATEGORIES.filter(c=>c.group===group).map(c=><option value={c.id} key={c.id}>{marketingCategoryLabel(language,c.id)}</option>)}</optgroup>)}
-      </select></label>
-      <label className={styles.wizardField}><span>{translate("marketing.copy.website")} <em>{selected==="seo_improvement"?translate("marketing.action.required"):translate("marketing.action.optional")}</em></span><input type="url" inputMode="url" autoComplete="url" value={site} maxLength={500} onChange={e=>{setSite(e.target.value);setWizardError("");}} placeholder="https://tusitio.com"/></label>
+      <label className={styles.wizardField}><span>{translate("marketing.copy.what_does_your_business_do")}</span><BusinessCategoryPicker value={effectiveCategory} onChange={setChosenCategory}/></label>
+      <label className={styles.wizardField}><span>{translate("marketing.copy.website")} <em>{selected==="seo_improvement"?translate("marketing.action.required"):translate("marketing.action.optional")}</em></span><input type="text" inputMode="url" autoCapitalize="none" autoCorrect="off" autoComplete="url" value={site} maxLength={500} onChange={e=>{setSite(e.target.value);setWizardError("");}} placeholder="tusitio.com"/></label>
       <button type="button" className={styles.saveBusinessInline} disabled={businessBusy||!user} onClick={()=>void saveBusiness()}>{businessBusy?(en?"Saving…":"Guardando…"):businessId?(en?"Update saved business":translate("marketing.action.update_saved_business")):(en?"Save this business for next time":translate("marketing.action.save_this_business_for_future_requests"))}</button>
      </div>
      <p className={styles.wizardHint}><ShieldCheck size={15}/> {translate("marketing.copy.if_you_registered_your_business_with_vmv_available_d")}</p>
     </div>:null}
     {wizardStep===2?<div className={styles.wizardBody}>
-     {selected==="google_profile"?<GoogleProfileWizard step={googleStep} data={googleData} onData={setGoogleData} media={googleMedia} onMedia={setGoogleMedia} business={name} website={site}/>:<>
+     {selected==="google_profile"?<GoogleProfileWizard step={googleStep} data={googleData} onData={setGoogleData} media={googleMedia} onMedia={setGoogleMedia} business={name} website={websiteAddress(site)||site}/>:<>
      <div className={styles.selectedServiceBanner}><span className={styles.selectedServiceIcon}>{(()=>{const Icon=serviceIcons[selected];return <Icon size={23}/>;})()}</span><span><small>{translate("marketing.copy.preparing_your_request")}</small><strong>{serviceName(selected)}</strong></span></div>
      {selected==="directory_listings"?<DirectoryDiscovery data={directoryData} onChange={setDirectoryData} industry={effectiveCategory}/>:null}
-     {selected==="seo_improvement"?<WebRepairStudio step={webStage} site={site} data={webRepair} onChange={setWebRepair} accessToken={accessToken}/>:null}
+     {selected==="seo_improvement"?<WebRepairStudio step={webStage} site={websiteAddress(site)||site} data={webRepair} onChange={setWebRepair} accessToken={accessToken}/>:null}
      {selected==="review_strategy"?<ReputationStudio business={name} mode={reviewMode} onModeChange={v=>{setReviewMode(v);setGoal(v==="request"?"Quiero solicitar reseñas auténticas a mis clientes.":"Necesito preparar respuestas para reseñas reales.");}} reviewInput={reviewInput} onReviewChange={v=>{setReviewInput(v);setReviewReply("");setGoal(v.trim()?"Necesito preparar una respuesta revisable para una reseña real.":"");}} reply={reviewReply} onReplyChange={setReviewReply} link={reviewLink} onLinkChange={v=>{setReviewLink(v);setGoal("Quiero compartir un enlace auténtico para recibir reseñas de mis clientes.");}} onDirectory={()=>{setSelected("directory_listings");setWizardError("");setGoal("");}} reviewTone={reviewTone} onToneChange={setReviewTone}/>:null}
      {selected==="directory_listings"?<button type="button" className={styles.preset} onClick={()=>{setSelected("review_strategy");setWizardError("");}}>{translate("marketing.copy.back_to_reviews")}</button>:null}
      {selected!=="review_strategy"&&selected!=="seo_improvement"&&selected!=="directory_listings"?<span className={styles.presetLabel}>{translate("marketing.copy.choose_what_you_need")}</span>:null}

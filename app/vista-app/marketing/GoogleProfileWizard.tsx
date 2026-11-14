@@ -1,4 +1,6 @@
 "use client";
+import BusinessPhoneInput from "@/components/BusinessPhoneInput";
+import {contactPhoneE164} from "@/lib/contact-phone";
 import type {ChangeEvent} from "react";
 import styles from "./GoogleProfileWizard.module.css";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
@@ -26,7 +28,7 @@ export function validateGoogleStep(step:number,v:GoogleData,language:InterfaceLa
  if(step===0&&!v.googleCategory.trim())return labelText(language,"marketing.google.validation.googleCategory");
  if(step===1&&v.kind!=="service_area"&&(!v.street.trim()||!v.city.trim()||!v.region.trim()||!v.postal.trim()))return labelText(language,"marketing.google.validation.address");
  if(step===1&&v.kind!=="storefront"&&!v.serviceAreas.trim())return labelText(language,"marketing.google.validation.serviceAreas");
- if(step===2&&v.phone.trim()&&v.phone.replace(/[^0-9]/g,"").length<7)return labelText(language,"marketing.google.validation.phone");
+ if(step===2&&[v.phone,v.secondaryPhone].some(phone=>phone.trim()&&!contactPhoneE164(phone,"US")))return labelText(language,"marketing.google.validation.phone");
  if(step===3&&v.hoursEnabled&&v.hours.some(h=>!h.closed&&(!h.start||!h.end||h.start>=h.end)))return labelText(language,"marketing.google.validation.hours");
  return "";
 }
@@ -55,7 +57,7 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
    {step===0?<div className={styles.group}>
     <h3>{tx("¿Qué necesitas hacer?")}</h3>
     <div className={styles.choices}>{([["create","Crear un perfil"],["claim","Reclamar uno existente"],["improve","Mejorar el actual"]] as const).map(([id,label])=>
-     <button type="button" aria-pressed={data.action===id} key={id} onClick={()=>patch("action",id)}>{tx(label)}</button>)}</div>
+     <button type="button" aria-pressed={data.action===id} key={id} onClick={()=>onData({...data,action:id,openingDate:id==="create"?data.openingDate:""})}>{tx(label)}</button>)}</div>
     <label className={styles.field}><span>{tx("Nombre del negocio")} <em>{tx("Necesario")}</em></span><input value={business} disabled readOnly/></label>
     <label className={styles.field}><span>{tx("Categoría principal en Google")} <em>{tx("Necesario")}</em></span>
      <input value={data.googleCategory} maxLength={100} onChange={e=>patch("googleCategory",e.target.value)} placeholder={tx("Ej. Panadería, Pastelería, Restaurante")}/></label>
@@ -79,8 +81,8 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
    </div>:null}
    {step===2?<div className={styles.group}>
     <h3>{tx("¿Cómo pueden contactarte?")}</h3>
-    {field("phone","Teléfono comercial","Ej. +1 706 555 1234")}
-    {field("secondaryPhone","Teléfono adicional","Opcional")}
+    <label className={styles.field}><span>{tx("Teléfono comercial")} <em>{tx("Opcional")}</em></span><BusinessPhoneInput value={data.phone} onChange={value=>patch("phone",value)} country={data.country} label={tx("Teléfono comercial")}/></label>
+    <label className={styles.field}><span>{tx("Teléfono adicional")} <em>{tx("Opcional")}</em></span><BusinessPhoneInput value={data.secondaryPhone} onChange={value=>patch("secondaryPhone",value)} country={data.country} label={tx("Teléfono adicional")}/></label>
     <label className={styles.field}><span>{tx("Sitio web")} <em>{tx("Opcional")}</em></span><input value={website} disabled readOnly placeholder={tx("Sin página web")}/></label>
     {field("bookingUrl","Enlace para reservar o pedir","https://...")}
     <p className={styles.hint}>{tx("Nunca necesitamos tu contraseña de Google. La conexión y verificación se hacen con tu autorización.")}</p>
@@ -92,7 +94,7 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
      <strong>{tx(days[i])}</strong><label><input type="checkbox" checked={!h.closed} onChange={e=>patch("hours",data.hours.map((x,j)=>j===i?{...x,closed:!e.target.checked}:x))}/> {tx("Abierto")}</label>
      {!h.closed?<><input aria-label={tx("Apertura")+" "+tx(days[i])} type="time" value={h.start} onChange={e=>patch("hours",data.hours.map((x,j)=>j===i?{...x,start:e.target.value}:x))}/><input aria-label={tx("Cierre")+" "+tx(days[i])} type="time" value={h.end} onChange={e=>patch("hours",data.hours.map((x,j)=>j===i?{...x,end:e.target.value}:x))}/></>:null}
     </div>)}</div>:<p className={styles.hint}>{tx("Puedes dejar los horarios pendientes si todavía no los tienes definidos.")}</p>}
-    {field("openingDate","Fecha de apertura","AAAA-MM-DD")}
+    {data.action==="create"?<label className={styles.field}><span>{tx("Fecha de apertura")} <em>{tx("Opcional")}</em></span><input type="date" value={data.openingDate} onChange={e=>patch("openingDate",e.target.value)}/></label>:null}
     <p className={styles.hint}>{tx("Los horarios especiales de feriados se configuran después. Tu horario real debe coincidir con lo que ofreces.")}</p>
    </div>:null}
    {step===4?<div className={styles.group}>
