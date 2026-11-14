@@ -543,15 +543,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    }
    const found=await client.from("vmv_marketing_businesses").select("*").eq("owner_id",user.id).eq("id",linkedId).maybeSingle();
    if(found.error||!found.data)throw Error(en?"Business unavailable. Select your business again.":"El negocio no está disponible. Vuelve a seleccionarlo.");
-   let storedBusiness=found.data as CentralBusiness;
-   if(saveAlsoInBusiness&&selected==="google_profile"){
-    const changed=await client.from("vmv_marketing_businesses")
-      .update({name:name.trim(),category_id:effectiveCategory,website_url:websiteAddress(site),...googleChangesForProfile(storedBusiness,googleData)})
-      .eq("owner_id",user.id).eq("id",linkedId).select("*").single();
-    if(changed.error)throw changed.error;
-    storedBusiness=changed.data as CentralBusiness;
-    setBusinessDetails(storedBusiness);setSaveAlsoInBusiness(false);
-   }
+   const storedBusiness=found.data as CentralBusiness;
+   // Save the customer-approved request before changing the reusable profile.
    // The request records the reviewed version without changing the stored
    // profile when the optional "save changes" control was not selected.
    const approvedBusiness:CentralBusiness={...storedBusiness,
@@ -597,10 +590,22 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     await refresh();return;
    }
    inserted=true;
+   let profileUpdateWarning="";
+   if(saveAlsoInBusiness&&selected==="google_profile"){
+    const changed=await client.from("vmv_marketing_businesses")
+     .update({name:name.trim(),category_id:effectiveCategory,website_url:websiteAddress(site),...googleChangesForProfile(storedBusiness,googleData)})
+     .eq("owner_id",user.id).eq("id",linkedId).select("*").single();
+    if(changed.error){
+     profileUpdateWarning=en?" The request was saved, but the business profile could not be updated.":" La solicitud se guardó, pero el perfil del negocio no pudo actualizarse.";
+    }else{
+     setBusinessDetails(changed.data as CentralBusiness);
+     setSaveAlsoInBusiness(false);
+    }
+   }
    const savedId=String(data.id).slice(0,8);
    setSubmittedId(savedId);setWizardStep(4);
    await clearMarketingDraft(user.id,requestId);setDraftNotice("");setPhotoNotice("");
-   setMessage(translate("marketing.feedback.saved",{id:requestId,photos:uploaded.length?translate("marketing.feedback.photoCount",{count:uploaded.length}):""}));
+   setMessage(translate("marketing.feedback.saved",{id:requestId,photos:uploaded.length?translate("marketing.feedback.photoCount",{count:uploaded.length}):""})+profileUpdateWarning);
    setGoal("");setConsent(false);setGoogleMedia(emptyMedia);
    await refresh();
   }catch(e){
