@@ -2,6 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {billingAdmin} from "@/lib/vmv-billing";
 import {merchantTestEnabled,stripeMerchantApi,validConnectedAccount,verifiedStripeWebhook}
  from "@/lib/vmv-ai-agents/stripe-commerce";
+import {checkedAccount,stripeStatus} from "@/lib/vmv-finances/connect";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const ok=(status:string)=>NextResponse.json({received:true,status},{headers:{"Cache-Control":"no-store"}});
@@ -12,6 +13,32 @@ export async function POST(req:NextRequest){
  if(!event)return NextResponse.json({error:"Invalid signature"},{status:400});
  if(event.livemode!==false)return NextResponse.json({error:"Live payments not supported"},{status:400});
  const type=String(event.type||"");
+ if(type==="account.updated"){
+  const obj=(event.data as {object?:Record<string,unknown>}|undefined)?.object;
+  const id=String(event.account||obj?.id||"");
+  if(!validConnectedAccount(id))return ok("ignored");
+  const db=billingAdmin();if(!db)return NextResponse.json({error:"Server not available"},{status:503});
+  const {data:merchant}=await db.from("vmv_ai_merchant_payments")
+   .select("business_id,owner_id,provider_account_id").eq("provider","stripe_connect")
+   .eq("provider_account_id",id).eq("livemode",false).maybeSingle();
+  if(!merchant)return ok("unknown_merchant");
+  const {data:workspace}=await db.from("vmv_ai_businesses")
+   .select("central_business_id").eq("id",merchant.business_id)
+   .eq("owner_id",merchant.owner_id).maybeSingle();
+  if(!workspace?.central_business_id)return ok("unlinked_business");
+  try{
+   // A signed event alone is insufficient: reread current Stripe state and
+   // verify its immutable owner/business metadata before updating readiness.
+   const current=await checkedAccount(id,merchant.owner_id,workspace.central_business_id);
+   const state=stripeStatus(current);
+   const {error}=await db.from("vmv_ai_merchant_payments")
+    .update({verified_by_server:state.ready,can_accept_payments:state.ready,updated_at:new Date().toISOString()})
+    .eq("business_id",merchant.business_id).eq("owner_id",merchant.owner_id)
+    .eq("provider_account_id",id).eq("livemode",false);
+   if(error)return NextResponse.json({error:"Could not record account status"},{status:503});
+   return ok(state.ready?"merchant_ready":"merchant_pending");
+  }catch{return NextResponse.json({error:"Could not verify account state"},{status:503});}
+ }
  if(!["checkout.session.completed","checkout.session.async_payment_succeeded",
        "checkout.session.async_payment_failed"].includes(type))return ok("ignored");
  const account=String(event.account||"");
