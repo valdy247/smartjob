@@ -43,6 +43,7 @@ export default function CaseAttachments({source,caseId,readOnly=false,staff=fals
   if(file.size<1||file.size>3_145_728||!allowed.has(file.type)){
    setError("JPG, PNG, WEBP o PDF, máximo 3 MB.");return;
   }
+  const caseKey=source+":"+caseId;
   setBusy(true);setError("");setNotice("");
   try{
    const token=await auth(),form=new FormData();
@@ -50,9 +51,10 @@ export default function CaseAttachments({source,caseId,readOnly=false,staff=fals
    const res=await fetch("/api/case-files",{method:"POST",headers:{Authorization:"Bearer "+token},body:form,cache:"no-store"});
    const data=await res.json();
    if(!res.ok)throw Error(data.error||"No se pudo subir el archivo.");
+   if(current.current!==caseKey)return;
    setFile(null);setNotice("Archivo guardado de manera privada.");
    await load();
-  }catch(e){setError(e instanceof Error?e.message:"No se pudo subir el archivo.");}
+  }catch(e){if(current.current===caseKey)setError(e instanceof Error?e.message:"No se pudo subir el archivo.");}
   finally{setBusy(false);}
  };
  const open=async(id:string)=>{
@@ -69,7 +71,7 @@ export default function CaseAttachments({source,caseId,readOnly=false,staff=fals
    if(current.current!==key){popup?.close();return;}
    if(popup){popup.opener=null;popup.location.replace(url.toString());}
    else window.location.assign(url.toString());
-  }catch(e){popup?.close();setError(e instanceof Error?e.message:"No se pudo abrir el archivo.");}
+  }catch(e){popup?.close();if(current.current===key)setError(e instanceof Error?e.message:"No se pudo abrir el archivo.");}
  };
  return <section className={styles.root} aria-label="Archivos de este caso">
   <div className={styles.heading}><span><Paperclip size={16}/>Archivos adjuntos</span><button aria-label="Actualizar archivos" type="button" disabled={loading} onClick={()=>void load()}><RefreshCw size={14}/></button></div>

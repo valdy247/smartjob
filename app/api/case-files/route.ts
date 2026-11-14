@@ -30,7 +30,7 @@ async function authorize(req:NextRequest,source:unknown,id:unknown){
  const isStaff=Boolean(staff.data&&["admin","agent"].includes(staff.data.role));
  const ownerRecord=record.data as Record<string,unknown>;
  const owner=String(ownerRecord.owner_id||ownerRecord.user_id||"");
- if(!isStaff&&(owner!==uid||!["support","marketing"].includes(String(source))))
+ if(!isStaff&&owner!==uid)
   return {error:"No autorizado para este caso.",status:403} as const;
  return {db,uid,isStaff,source:source as Source,id:id as string,caseStatus:String(record.data.status||"")};
 }
