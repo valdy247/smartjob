@@ -1,7 +1,7 @@
 "use client";
 import {normalizeGoogleProfile,googlePhotoKey,googleProfileLink} from "@/lib/google-profile-request";
 import {websiteAddress} from "@/lib/website-address";
-import {businessGoogleSeed,mergeGoogleWithBusiness,googleChangesForProfile,businessRequestSnapshot,centralBusinessDefaults,validCentralBusiness,type CentralBusiness} from "@/lib/vmv-central-business";
+import {businessGoogleSeed,mergeGoogleWithBusiness,googleChangesForProfile,businessRequestSnapshot,centralBusinessDefaults,centralBusinessWritePayload,validCentralBusiness,type CentralBusiness} from "@/lib/vmv-central-business";
 import CentralBusinessEditor,{emptyBusinessFiles,type CentralBusinessFiles} from "./CentralBusinessEditor";
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 
@@ -407,7 +407,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   const record=savedBusinesses.find(x=>x.id===id);
   if(!record)return;
   businessEditedRef.current=true;
-  setBusinessId(id);setBusinessDetails({...record});setBusinessFiles(emptyBusinessFiles);
+  const {source:ignored,...clean}=record;
+  setBusinessId(id);setBusinessDetails({...clean});setBusinessFiles(emptyBusinessFiles);
   setName(record.name);setSite(record.website_url||"");setChosenCategory(record.category_id||"other");
   setSaveAlsoInBusiness(false);setConsent(false);
   setGoogleData(v=>businessGoogleSeed(record,v.action));
@@ -424,10 +425,10 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   try{
    const current=savedBusinesses.find(x=>x.id===businessId&&!x.source&&x.owner_id===user.id);
    const newId=current?.id||(/^[a-f0-9-]{36}$/i.test(businessId)?businessId:requestId);
-   const payload={...draft,id:newId,owner_id:user.id};
+   const payload=centralBusinessWritePayload(draft);
    const result=current?
     await client.from("vmv_marketing_businesses").update(payload).eq("id",current.id).eq("owner_id",user.id).select("*").single():
-    await client.from("vmv_marketing_businesses").insert(payload).select("*").single();
+    await client.from("vmv_marketing_businesses").insert({...payload,id:newId,owner_id:user.id}).select("*").single();
    let saved=result.data as CentralBusiness|null;
    if(result.error){
     // An uncertain response can hide a successful creation. Reuse its stable id.
@@ -444,9 +445,9 @@ export default function MarketingActionCenter({businessName,industryId,website,o
      ...businessFiles.gallery.map((f,i)=>["gallery-"+i,f] as const)
     ]){
      if(!["image/jpeg","image/png"].includes(file.type)||file.size<10240||file.size>5242880)throw Error(en?"Only JPG/PNG photos of 10 KB–5 MB are allowed.":"Fotos JPG o PNG, de 10 KB a 5 MB.");
-     const path=user.id+"/"+saved.id+"/"+kind+"-"+crypto.randomUUID()+"."+(file.type==="image/png"?"png":"jpg");
+     const path=user.id+"/"+saved.id+"/"+kind+"-"+(await googlePhotoKey(file))+"."+(file.type==="image/png"?"png":"jpg");
      const upload=await client.storage.from("vmv-business-media").upload(path,file,{contentType:file.type,upsert:false});
-     if(upload.error)throw upload.error;
+     if(upload.error&&!upload.error.message?.toLowerCase().includes("already exists"))throw upload.error;
      if(kind==="logo")updates.logo_path=path;
      else if(kind==="cover")updates.cover_path=path;
      else updates.gallery_paths=[...(updates.gallery_paths||saved.gallery_paths||[]),path].slice(-12);
