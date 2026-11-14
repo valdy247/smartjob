@@ -134,7 +134,9 @@ test('Smart Call header owns the compact accessible flag switch',()=>{
  const header=page.split('styles.appHeaderIdentity')[1]?.split('<div className={styles.scrollArea}')[0];
  assert.ok(header?.includes('<InterfaceLanguagePicker compact/>'),'flag switch must be beside the brand in header');
  assert.match(picker,/role="radiogroup"/);
- assert.match(picker,/role="radio"/);
+ assert.match(picker,/<input type="radio"/);
+ assert.match(picker,/onChange=\{\(\)=>choose\(code\)\}/);
+ assert.match(picker,/width:compact\?39:46/,'minimum touch target must remain comfortable');
  assert.match(picker,/<svg /,'flags must render as actual graphics, not unsupported emoji glyphs');
  assert.ok(!picker.includes('localStorage.setItem'),'picker must use VMV account preference');
  assert.ok(!page.includes('key={language}'),'language switching must not remount the input form');
@@ -151,4 +153,29 @@ test('Smart Call first-screen catalog has distinct Spanish and English copy',()=
   assert.equal(translate('es',key),catalog.es[key]);
   assert.equal(translate('en',key),catalog.en[key]);
  }
+});
+
+test('refresh while saving cannot revert a deliberate language switch',async()=>{
+ const f=fixture({account:'es'});await f.preference.refresh();
+ const original=f.auth.updateUser;let finish;
+ f.auth.updateUser=async args=>{await new Promise(resolve=>{finish=resolve;});return original(args);};
+ const choice=f.preference.choose('en');
+ for(let i=0;i<10&&typeof finish!=='function';i++)await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(typeof finish,'function');
+ assert.equal(f.preference.getSnapshot().language,'en');
+ assert.equal(f.preference.getSnapshot().saving,true);
+ await f.preference.refresh();
+ assert.equal(f.preference.getSnapshot().language,'en');
+ finish();await choice;await f.preference.refresh();
+ assert.equal(f.preference.getSnapshot().language,'en');
+ assert.equal(f.user().user_metadata.ui_language,'en');
+});
+test('occupations switch display language without clearing selected O*NET code',()=>{
+ const wizard=fs.readFileSync(require('node:path').join(__dirname,'../components/SignupWizard.tsx'),'utf8');
+ const sync=fs.readFileSync(require('node:path').join(__dirname,'../scripts/sync-registration-data.mjs'),'utf8');
+ assert.ok(wizard.includes('job.title_es||job.title'),'Spanish suggestions must use translated titles');
+ assert.ok(wizard.includes('language,occupationCode,jobs,jobsLoaded'),'selected occupation follows interface language');
+ assert.ok(wizard.includes('setOccupationCode(item.value)'),'stable O*NET code remains selected');
+ assert.ok(sync.includes('spanish_taxonomy.zip'),'catalog comes from official O*NET translations');
+ assert.ok(sync.includes('jobs.filter(job=>!!job.title_es).length<950'),'do not silently ship English-only catalogs');
 });
