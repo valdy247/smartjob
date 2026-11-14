@@ -138,3 +138,19 @@
 .commerceLaunch strong{font-size:12px;color:#2c2142;font-weight:900}
 .commerceLaunch small{font-size:10px;color:#8f80a0;font-weight:700}
 .commerceLaunch:focus-visible{outline:3px solid #b49ade;outline-offset:3px}
+
+/* Canonical VMV business context; local to AI Agents, never shared navigation. */
+.businessPicker{margin:0 0 16px;padding:14px;background:#fff;border:1px solid #e5d8f3;border-radius:18px;display:flex;flex-direction:column;gap:10px}
+.businessHead{display:flex;align-items:center;gap:9px;color:#7950c3}
+.businessHead>span{display:flex;flex-direction:column;gap:4px;min-width:0}
+.businessHead strong{font-size:12px;color:#2c2341;font-weight:900}
+.businessHead small{font-size:10px;color:#8e809b}
+.businessPicker select{width:100%;padding:11px 12px;background:#fbf9ff;border:1px solid #ded0f1;border-radius:12px;color:#322448;font-size:12px;font-weight:750;min-width:0}
+.businessName{font-size:15px;color:#312342}
+.businessSummary{display:flex;flex-direction:column;gap:5px;color:#857692;font-size:10px;line-height:1.5}
+.businessSummary a,.businessCreate{color:#7751c1;font-weight:850;font-size:11px;text-decoration:none}
+.businessCreate{display:inline-flex;align-items:center;gap:6px;padding:8px 0}
+.businessHint{font-size:11px;line-height:1.5;color:#87778f;margin:0}
+.businessLink{border:1px solid #cdb9ee;border-radius:12px;background:#f2eaff;color:#7044bf;font-size:11px;font-weight:850;display:flex;align-items:center;gap:8px;justify-content:center;padding:10px}
+.businessLink:disabled{opacity:.55}
+.tile:disabled{opacity:.45;cursor:not-allowed;transform:none}
