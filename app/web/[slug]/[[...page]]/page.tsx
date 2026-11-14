@@ -39,16 +39,27 @@ export async function generateMetadata({params}:Props):Promise<Metadata>{
  const rendered=normalizeBuilderDocument(data.document);
  const image=rendered.content.find(item=>item.type==="Image"||item.type==="HeroVisual"||item.type==="ComposeImage");
  const imageUrl=image?.type==="Image"?image.props?.url:image?.props?.image;
- const firstImage=typeof imageUrl==="string"?imageUrl:"";
+ const firstImage=typeof imageUrl==="string"?safeWebImageUrl(imageUrl)||"":"";
  const siteLanguage=(rendered.root?.props as Record<string,unknown>|undefined)?.language==="en"?"en":"es";
- return {title:(data.title==="Inicio"?data.site_name:data.title+" · "+data.site_name),
-  description:data.description||"Conoce "+data.site_name,
+ const brand=data.site_name||slug;
+ const seoTitle=data.title==="Inicio"?brand:
+  data.title.toLocaleLowerCase().includes(brand.toLocaleLowerCase())?data.title:data.title+" · "+brand;
+ const summary=data.description||"Conoce "+brand;
+ const reqHeaders=await headers();
+ const isCustom=reqHeaders.get("x-vmv-custom-domain")==="1";
+ const host=reqHeaders.get("host")||"";
+ const canonical=isCustom&&/^[a-z0-9][a-z0-9.-]{2,250}$/i.test(host)?
+  "https://"+host+(part==="home"?"/":"/"+part):undefined;
+ return {title:seoTitle,
+  description:summary,
   robots:{index:process.env.VERCEL_ENV==="production",follow:true},
+  ...(canonical?{alternates:{canonical}}:{}),
   other:{"content-language":siteLanguage},
-  openGraph:{title:data.title==="Inicio"?data.site_name:data.title,description:data.description||data.site_name,type:"website",locale:siteLanguage==="en"?"en_US":"es_ES",
-   ...(firstImage?{images:[{url:firstImage,alt:data.site_name}]}:{})},
-  twitter:{card:firstImage?"summary_large_image":"summary",title:data.site_name,
-   description:data.description||data.site_name,
+  openGraph:{title:seoTitle,description:summary,type:"website",locale:siteLanguage==="en"?"en_US":"es_ES",
+   ...(canonical?{url:canonical}:{}),
+   ...(firstImage?{images:[{url:firstImage,alt:brand}]}:{})},
+  twitter:{card:firstImage?"summary_large_image":"summary",title:seoTitle,
+   description:summary,
    ...(firstImage?{images:[firstImage]}:{})}
  };
 }
@@ -74,9 +85,24 @@ export default async function VMVPublishedPage({params}:Props){
  const visualStyle=websiteVisualStyle(rootData.palette,rootData.accentColor);
  const family=typeof rootData.family==="string"&&["bakery","construction","professional","beauty","creative"].includes(rootData.family)?rootData.family:familyForCategory(result.page.category_id||"");
  const showForm=part==="home"&&result.page.inquiries_enabled===true;
+ const host=requestHeaders.get("host")||"";
+ const verifiedHost=custom&&/^[a-z0-9][a-z0-9.-]{2,250}$/i.test(host);
+ const publicUrl=verifiedHost?"https://"+host+(part==="home"?"/":"/"+part):null;
+ const facts=data.content.filter(block=>block.type==="Contact")
+  .map(block=>block.props||{}).find(block=>block.email||block.phone)||{};
+ const organization=publicUrl?{
+  "@context":"https://schema.org","@type":"Organization",
+  name:siteName,url:publicUrl,
+  ...(logo?{logo}:{}),
+  ...(typeof facts.phone==="string"&&/^\+?[\d ()-]{7,36}$/.test(facts.phone)?{telephone:facts.phone}:{}),
+  ...(typeof facts.email==="string"&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(facts.email)?{email:facts.email}:{})
+ }:null;
  return <WebsiteChrome siteName={siteName} baseUrl={base} menu={result.menu}
   logo={logo} family={family} language={siteLanguage} siteStyle={String(rootData.style||"light")}
   siteWidth={String(rootData.width||"regular")} socialLinks={rootData.socialLinks} visualStyle={visualStyle}>
+  {organization?<script type="application/ld+json" dangerouslySetInnerHTML={{
+   __html:JSON.stringify(organization).replace(/</g,"\\u003c")
+  }}/>:null}
   <Render config={builderConfig} data={data}/>
   {showForm?<section className="vmv-site-inquiry" id="solicitud" aria-label="Enviar solicitud al negocio">
    <small>CONTACTA CON NOSOTROS</small>
