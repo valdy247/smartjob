@@ -59,3 +59,33 @@ test("unlinked legacy pilot snapshot stays unchanged",()=>{
  const original={name:"Existing phone pilot",configuration:{business_name:"Pilot"}};
  assert.equal(approvedCentralSnapshot(original,null),original);
 });
+
+test("withdrawn Marketing details are absent from the next phone snapshot",()=>{
+ const original={agent_revision:8,configuration:{
+  channel:"Teléfono",call_disclosure:"Sí",custom_rule:"Keep responses short",
+  industry:"Old category",business_description:"Old description",
+  city:"Old city",state:"Old region",service_areas:"Old area",
+  website:"https://old.example",booking_url:"https://old.example/book",
+  country:"Estados Unidos",h_mon_active:"Sí",
+  h_mon_open:"08:00",h_mon_close:"20:00"
+ }};
+ const revised=sample();
+ revised.category_id="other";
+ revised.description=null;
+ revised.city="";
+ revised.region="";
+ revised.service_areas="";
+ revised.website_url=null;
+ revised.booking_url="";
+ revised.country="CA";
+ revised.hours_enabled=false;
+ revised.hours=null;
+ const result=approvedCentralSnapshot(original,revised);
+ for(const key of ["industry","business_description","city","state","service_areas",
+  "website","booking_url","country","h_mon_active","h_mon_open","h_mon_close"])
+  assert.equal(Object.hasOwn(result.configuration,key),false,key+" was retained");
+ assert.equal(result.configuration.business_name,"Authorized bakery");
+ assert.equal(result.configuration.custom_rule,"Keep responses short");
+ assert.equal(result.configuration.channel,"Teléfono");
+ assert.equal(result.agent_revision,8);
+});
