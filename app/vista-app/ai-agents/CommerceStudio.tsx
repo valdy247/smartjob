@@ -2,8 +2,8 @@
 import {useEffect,useState} from "react";
 import {ArrowLeft,CheckCircle2,ClipboardList,Package,Plus,ReceiptText,ShieldCheck,ShoppingBag,UserRoundCheck,PhoneCall,Save} from "lucide-react";
 import type {PersistedAgent} from "./agentStore";
-import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,prepareTestOrder,saveCatalogItem,saveCommerceAgentPermissions,listWebStudioCards,importWebStudioCard,
- type CatalogItem,type TestOrder,type HumanRequest,type CommerceAgentPermissions,type WebStudioCard} from "./commerceStore";
+import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,prepareTestOrder,saveCatalogItem,saveCommerceAgentPermissions,listWebStudioCards,importWebStudioCard,getVerifiedCatalog,
+ type CatalogItem,type TestOrder,type HumanRequest,type CommerceAgentPermissions,type WebStudioCard,type VerifiedCatalogItem} from "./commerceStore";
 import styles from "./CommerceStudio.module.css";
 
 type Form={
@@ -15,6 +15,8 @@ const empty:Form={name:"",sku:"",description:"",price:"",stock_mode:"manual",ava
 export default function CommerceStudio({agents,onClose,initialAgentId="",onAgentUpdated}:{agents:PersistedAgent[];onClose:()=>void;initialAgentId?:string;onAgentUpdated?:(agent:PersistedAgent)=>void}){
  const [items,setItems]=useState<CatalogItem[]>([]);
  const [webCards,setWebCards]=useState<WebStudioCard[]>([]);
+ const [verified,setVerified]=useState<VerifiedCatalogItem[]>([]);
+ const [inventoryReady,setInventoryReady]=useState(false);
  const [orders,setOrders]=useState<TestOrder[]>([]);
  const [human,setHuman]=useState<HumanRequest[]>([]);
  const [editing,setEditing]=useState<CatalogItem|null>(null);
@@ -31,6 +33,13 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
   channel:"Chat",cap_sales:false,perm_prepare_order:false,perm_confirm_order:false,perm_payment_link:false
  });
  const selectedAgent=(editedAgent?.id===agentId?editedAgent:null)||agents.find(a=>a.id===agentId)||null;
+ useEffect(()=>{let live=true;setInventoryReady(false);
+  if(!selectedAgent?.business_id){setVerified([]);return;}
+  void getVerifiedCatalog(selectedAgent.business_id).then(products=>{
+   if(live){setVerified(products);setInventoryReady(true);}
+  }).catch(e=>{if(live){setVerified([]);setNotice(e instanceof Error?e.message:"No se pudo verificar inventario.");}});
+  return()=>{live=false;};
+ },[selectedAgent?.business_id,items]);
  useEffect(()=>{
   const conf=selectedAgent?.setup||{};
   setPermissions({
@@ -126,7 +135,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
   }catch(e){setNotice(e instanceof Error?e.message:"No se pudo actualizar.");}
   finally{setBusy(false);}
  };
- const approved=items.filter(x=>x.active&&x.approved&&x.stock_mode!=="manual"&&!x.variants.length&&!x.extras.length);
+ const approved=items.filter(x=>verified.some(v=>v.id===x.id&&v.sellableInTest));
  return <div className={styles.root}>
   <button type="button" onClick={onClose} className={styles.back}><ArrowLeft size={17}/> AI Agents</button>
   <div className={styles.hero}><div><small>COMERCIO INTELIGENTE · TEST</small>
@@ -230,7 +239,15 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
    {items.length===0?<div className={styles.empty}><Package size={26}/><p>Tu catálogo está vacío. No añadiré productos o precios inventados.</p></div>:
     <div className={styles.items}>{items.map(item=><div key={item.id} className={styles.item}>
      <div><strong>{item.name}</strong><small>{item.sku} · {formatUsd(item.price_cents)}</small>
-      <small>{item.approved?"Precio aprobado":"Pendiente de aprobación"} · {item.stock_mode==="tracked"?String(item.available_qty)+" unidades":item.stock_mode==="manual"?"Disponibilidad manual":"Sin límite configurado"}</small></div>
+      <small>{item.approved?"Precio aprobado":"Pendiente de aprobación"} · {item.stock_mode==="tracked"?String(item.available_qty)+" unidades configuradas":item.stock_mode==="manual"?"Disponibilidad manual":"Sin límite configurado"}</small>
+      {item.approved&&item.active&&inventoryReady?<small>{
+       (()=>{const stock=verified.find(v=>v.id===item.id);
+        return stock?.availability==="tracked"?String(stock.availableQuantity)+" disponibles tras apartados":
+         stock?.availability==="manual"?"Confirmar existencia manualmente":
+         stock?.availability==="unlimited"?"Sin límite de unidades configurado":"No ofertable";
+       })()
+      }</small>:null}
+      {item.web_source_id?<small>Vinculado a Web Studio · cambios futuros requieren revisión</small>:null}</div>
      <button type="button" onClick={()=>beginEdit(item)}>Editar</button>
     </div>)}</div>}
    <div className={styles.heading}><h2>Cotización de prueba</h2></div>
@@ -242,7 +259,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
      <option value="">Selecciona producto</option>{approved.map(p=><option key={p.id} value={p.id}>{p.name} · {formatUsd(p.price_cents)}</option>)}
     </select></label>
     <label>Cantidad<input min={1} max={50} type="number" value={qty} onChange={e=>setQty(Number(e.target.value)||1)}/></label>
-    <button type="button" className={styles.primary} disabled={busy||!agentId||!testItemId}
+    <button type="button" className={styles.primary} disabled={busy||!inventoryReady||!agentId||!testItemId}
       onClick={()=>void quote()}><ClipboardList size={17}/> Preparar cotización de prueba</button>
     <p className={styles.hint}>El total se calcula en Supabase usando el precio aprobado, no desde la interfaz ni el modelo de IA.</p>
    </div>
