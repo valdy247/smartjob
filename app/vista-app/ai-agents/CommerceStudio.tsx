@@ -2,8 +2,8 @@
 import {useEffect,useState} from "react";
 import {ArrowLeft,CheckCircle2,ClipboardList,Package,Plus,ReceiptText,ShieldCheck,ShoppingBag,UserRoundCheck,PhoneCall,Save} from "lucide-react";
 import type {PersistedAgent} from "./agentStore";
-import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,prepareTestOrder,saveCatalogItem,saveCommerceAgentPermissions,
- type CatalogItem,type TestOrder,type HumanRequest,type CommerceAgentPermissions} from "./commerceStore";
+import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,prepareTestOrder,saveCatalogItem,saveCommerceAgentPermissions,listWebStudioCards,importWebStudioCard,
+ type CatalogItem,type TestOrder,type HumanRequest,type CommerceAgentPermissions,type WebStudioCard} from "./commerceStore";
 import styles from "./CommerceStudio.module.css";
 
 type Form={
@@ -14,6 +14,7 @@ const empty:Form={name:"",sku:"",description:"",price:"",stock_mode:"manual",ava
  approved:false,active:true};
 export default function CommerceStudio({agents,onClose,initialAgentId="",onAgentUpdated}:{agents:PersistedAgent[];onClose:()=>void;initialAgentId?:string;onAgentUpdated?:(agent:PersistedAgent)=>void}){
  const [items,setItems]=useState<CatalogItem[]>([]);
+ const [webCards,setWebCards]=useState<WebStudioCard[]>([]);
  const [orders,setOrders]=useState<TestOrder[]>([]);
  const [human,setHuman]=useState<HumanRequest[]>([]);
  const [editing,setEditing]=useState<CatalogItem|null>(null);
@@ -51,12 +52,12 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
 
  const [tab,setTab]=useState<"setup"|"catalog"|"orders"|"human">(initialAgentId?"setup":"catalog");
  const refresh=async()=>{
-  const [catalog,history,requests]=await Promise.all([listCatalog(),listTestOrders(),listHumanRequests()]);
-  setItems(catalog);setOrders(history);setHuman(requests);
+  const [catalog,history,requests,cards]=await Promise.all([listCatalog(),listTestOrders(),listHumanRequests(),listWebStudioCards()]);
+  setItems(catalog);setOrders(history);setHuman(requests);setWebCards(cards);
  };
  useEffect(()=>{let live=true;
-  void Promise.all([listCatalog(),listTestOrders(),listHumanRequests()])
-   .then(([cat,history,requests])=>{if(live){setItems(cat);setOrders(history);setHuman(requests);}})
+  void Promise.all([listCatalog(),listTestOrders(),listHumanRequests(),listWebStudioCards()])
+   .then(([cat,history,requests,cards])=>{if(live){setItems(cat);setOrders(history);setHuman(requests);setWebCards(cards);}})
    .catch(e=>{if(live)setNotice(e instanceof Error?e.message:"Inicia sesión para consultar tu negocio.");})
    .finally(()=>{if(live)setLoading(false);});
   return()=>{live=false;};
@@ -68,6 +69,16 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
    await saveCatalogItem(form,editing);await refresh();
    setEditing(null);setForm(empty);setNotice("Producto guardado en tu negocio. Se compartirá con los agentes de esta cuenta.");
   }catch(e){setNotice(e instanceof Error?e.message:"No se pudo guardar.");}
+  finally{setBusy(false);}
+ };
+ const importFromWeb=async(card:WebStudioCard)=>{
+  if(busy||!selectedAgent)return;
+  setBusy(true);
+  try{
+   await importWebStudioCard(selectedAgent.business_id,card.id);
+   await refresh();
+   setNotice("Ficha importada, pero todavía NO se puede vender. Revisa su precio, inventario y actívala manualmente.");
+  }catch(e){setNotice(e instanceof Error?e.message:"No se pudo importar la ficha.");}
   finally{setBusy(false);}
  };
  const beginEdit=(item:CatalogItem)=>{
@@ -176,6 +187,24 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
    </div>
    <button type="button" className={styles.primary} onClick={()=>setTab("catalog")}><Package size={16}/> Ir al catálogo</button>
   </>:tab==="catalog"?<>
+   <div className={styles.heading}><h2>Productos de Web Studio</h2></div>
+   <div className={styles.warning}><ShieldCheck size={17}/><p>
+    Las fichas web son informativas. Importarlas no autoriza ventas ni crea existencias:
+    revisa el precio fijo y la disponibilidad antes de aprobarlas. Los cambios futuros
+    en Web Studio requieren revisión para evitar datos contradictorios.</p></div>
+   {webCards.length===0?<p className={styles.hint}>Aún no hay fichas de productos guardadas en Web Studio.</p>:
+    <div className={styles.items}>{webCards.map(card=>{
+     const linked=items.some(item=>item.web_source_id===card.id);
+     return <div key={card.id} className={styles.item}>
+      <div><strong>{card.title||"Producto sin nombre"}</strong>
+       <small>{card.price||"Precio sin definir"}</small>
+       <small>{linked?"Importado · revisa aprobación y existencias":
+        card.importable?"Precio fijo reconocible · pendiente de revisión":
+        "Necesita precio fijo en USD y nombre válido"}</small></div>
+      <button type="button" disabled={busy||linked||!card.importable||!selectedAgent}
+       onClick={()=>void importFromWeb(card)}>
+       {linked?"Vinculado":"Importar"}</button>
+     </div>;})}</div>}
    <div className={styles.heading}><h2>{editing?"Editar producto":"Añadir producto"}</h2>
     {editing?<button type="button" onClick={()=>{setEditing(null);setForm(empty);}}>Cancelar edición</button>:null}</div>
    <div className={styles.form}>
