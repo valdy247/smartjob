@@ -13,7 +13,7 @@ export type {GoogleKind,GoogleHour,GoogleData} from "@/lib/google-profile-reques
 import {googlePhotoKey,googleProfileIssue,type GoogleData} from "@/lib/google-profile-request";
 export type GoogleMedia={logo:File|null;cover:File|null;photos:File[]};
 export const emptyGoogle:GoogleData={
- action:"create",kind:"storefront",googleCategory:"",googleCategoryId:"",categoryPendingReview:false,locationChecked:false,locationPendingReview:false,otherCategories:"",street:"",unit:"",city:"",region:"",postal:"",country:"US",serviceAreas:"",
+ action:"create",kind:"storefront",googleCategory:"",googleCategoryId:"",categoryPendingReview:false,locationChecked:false,locationPendingReview:false,locationConflict:false,otherCategories:"",street:"",unit:"",city:"",region:"",postal:"",country:"US",serviceAreas:"",
  phone:"",secondaryPhone:"",description:"",services:"",products:"",bookingUrl:"",existingProfileUrl:"",openingDate:"",hoursEnabled:false,
  hours:Array.from({length:7},()=>({closed:true,start:"09:00",end:"17:00"}))
 };
@@ -97,7 +97,7 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
  },[en]);
  const patch=<K extends keyof GoogleData>(key:K,value:GoogleData[K])=>{
   const locationFields=["country","street","unit","city","region","postal","serviceAreas","kind"];
-  onData({...data,[key]:value,...(locationFields.includes(String(key))?{locationChecked:false,locationPendingReview:false}:{}),...(key==="country"?{googleCategory:"",googleCategoryId:"",categoryPendingReview:false,otherCategories:""}:{})});
+  onData({...data,[key]:value,...(locationFields.includes(String(key))?{locationChecked:false,locationPendingReview:false,locationConflict:false}:{}),...(key==="country"?{googleCategory:"",googleCategoryId:"",categoryPendingReview:false,otherCategories:""}:{})});
   if(locationFields.includes(String(key)))setLocationMessage("");
  };
  const verifyLocation=async()=>{
@@ -108,13 +108,13 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
    const r=await fetch("/api/marketing/google-location?"+q,{cache:"no-store"});
    const result=await r.json() as {verified?:boolean;postalMatched?:boolean;error?:string};
    if(r.ok&&result.verified){
-    onData({...data,locationChecked:true,locationPendingReview:false});
+    onData({...data,locationChecked:true,locationPendingReview:false,locationConflict:false});
     setLocationMessage(en?"City, region and postal code matched Google Maps. This does not verify the storefront or street address.":"Ciudad, región y código postal coinciden con Google Maps. Esto no verifica el local ni la dirección exacta.");
    }else if(r.ok&&result.postalMatched){
-    onData({...data,locationChecked:false,locationPendingReview:true});
+    onData({...data,locationChecked:false,locationPendingReview:true,locationConflict:false});
     setLocationMessage(en?"City, state and ZIP match a postal directory. Google verification is still pending and VMV must review it.":"Ciudad, estado y código postal coinciden en un directorio postal. Google aún no los ha validado; VMV debe revisarlos.");
    }else{
-    onData({...data,locationChecked:false,locationPendingReview:false});
+    onData({...data,locationChecked:false,locationPendingReview:false,locationConflict:r.status===422});
     setLocationMessage(r.status===422?(en?"City, region and postal code do not match the available geographic records. Check your spelling and ZIP.":"La ciudad, región y código postal no coinciden con los registros geográficos consultados. Revisa los datos."):r.status===503?(en?"Automatic verification is unavailable. Request manual review by VMV.":"La comprobación automática no está disponible. Solicita revisión manual de VMV."):(en?"We could not confirm the location. Please check the details.":"No pudimos confirmar la ubicación. Revisa los datos."));
    }
   }catch{setLocationMessage(en?"Google location checking is temporarily unavailable.":"La comprobación de Google no está disponible ahora.");}
@@ -158,7 +158,7 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
      {data.kind!=="service_area"?<button type="button" disabled={checkingLocation||!data.city.trim()} onClick={()=>void verifyLocation()}><MapPin size={15}/>{checkingLocation?(en?"Checking…":"Comprobando…"):(en?"Check city, region and ZIP":"Comprobar ciudad, región y código postal")}</button>:null}
      {data.locationChecked?<p className={styles.locationVerified}><CheckCircle2 size={15}/>{en?"Location matched Google Maps":"Ubicación contrastada con Google Maps"}</p>:null}
      {locationMessage?<p className={styles.locationWarning} role="status"><AlertCircle size={15}/>{locationMessage}</p>:null}
-     {!data.locationChecked?<button type="button" className={styles.manualLocation} aria-pressed={!!data.locationPendingReview} onClick={()=>patch("locationPendingReview",true)}>{en?"Request manual location verification":"Solicitar verificación manual de ubicación"}</button>:null}
+     {!data.locationChecked?<button type="button" className={styles.manualLocation} aria-pressed={!!data.locationPendingReview} disabled={!!data.locationConflict} onClick={()=>patch("locationPendingReview",true)}>{en?"Request manual location verification":"Solicitar verificación manual de ubicación"}</button>:null}
      {data.locationPendingReview?<small>{en?"VMV will verify the location before any Google submission.":"VMV comprobará la ubicación antes de presentar cualquier dato a Google."}</small>:null}
     </div>
     {data.kind!=="storefront"?<label className={styles.field}><span>{tx("Áreas donde atiendes")} <em>{tx("Necesario")}</em></span>
