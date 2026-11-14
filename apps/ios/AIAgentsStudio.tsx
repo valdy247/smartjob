@@ -8,7 +8,7 @@ import {AIAgentsCommerceStudio} from "./AIAgentsCommerceStudio";
 import {AIAgentsCallControl} from "./AIAgentsCallControl";
 import {AIAgentsBookingStudio} from "./AIAgentsBookingStudio";
 import {AIAgentQualityLab} from "./AIAgentQualityLab";
-import {centralChoices,linkLegacyAgentWorkspace,prefillNativeAgent,provisionWorkspace,type NativeCentralBusiness,type NativeAiWorkspace} from "./aiAgentsCentralData";
+import {centralChoices,chooseNativePrincipal,linkLegacyAgentWorkspace,prefillNativeAgent,provisionWorkspace,type NativeCentralBusiness,type NativeAiWorkspace} from "./aiAgentsCentralData";
 import {inspectAgent} from "./aiAgentQuality";
 import {AI_AGENT_TEMPLATES,createConversation,emptyAgent,getAgents,getConversations,getMessages,
   choosePhoneAgent,getPhoneSelection,saveAgent,simulateAgent,updateAgentStatus,type NativePhoneSelection,type Agent,type AgentConversation,
@@ -67,6 +67,7 @@ export function AIAgentsStudio({session,onBack}:Props){
   const [phone,setPhone]=useState<NativePhoneSelection|null>(null);
   const [selected,setSelected]=useState<Agent|null>(null);
   const [draft,setDraft]=useState<AgentDraft>(emptyAgent("support"));
+  const [pendingCapability,setPendingCapability]=useState<AgentKind|null>(null);
   const [busy,setBusy]=useState(false);
   const [loading,setLoading]=useState(true);
   const [notice,setNotice]=useState("");
@@ -97,10 +98,43 @@ export function AIAgentsStudio({session,onBack}:Props){
   function patch<K extends keyof AgentDraft>(key:K,value:AgentDraft[K]){
     setDraft(old=>({...old,[key]:value}));
   }
-  function create(kind:AgentKind){
+  async function designate(agent:Agent){
+    if(!linkedWorkspace||agent.business_id!==linkedWorkspace.id)
+      throw Error("Primero vincula tu negocio central.");
+    await chooseNativePrincipal(session,linkedWorkspace.id,agent.id,linkedWorkspace.primary_agent_id||null);
+    setWorkspaces(old=>old.map(w=>w.id===linkedWorkspace.id?{...w,primary_agent_id:agent.id}:w));
+    setNotice("Agente principal guardado. La línea de teléfono no cambia.");
+  }
+  function openCapability(kind:AgentKind,agent:Agent){
+    setSelected(agent);
+    if(kind==="inventory"||kind==="sales")setScreen("commerce");
+    else if(kind==="bookings")setScreen("agenda");
+    else if(kind==="calls"){
+      if(phone?.agentId===agent.id)setScreen("phone");
+      else Alert.alert("Configurar llamadas",
+       "Asigna primero este mismo agente a tu línea mediante «Elegir línea». No se cambiará la línea sin tu aprobación.");
+    }else if(kind==="support"){
+      openTest(agent);
+      setNotice("Chat privado de prueba. La conexión al sitio público todavía no está verificada.");
+    }else if(kind==="operations")void openHistory(agent);
+    else edit(agent);
+  }
+  async function startCapability(kind:AgentKind){
     const business=businesses.find(b=>b.id===businessChoice);
     if(!business){Alert.alert("Elige tu negocio","Registra o selecciona primero tu negocio en Marketing de VMV Business.");return;}
-    setSelected(null);setEditStep(0);setDraft(prefillNativeAgent(business,emptyAgent(kind)));setScreen("edit");
+    let agent=principal;
+    if(!agent&&proposal&&visibleAgents.length===1){
+      try{await designate(proposal);agent=proposal;}
+      catch(e){Alert.alert("Agente principal",e instanceof Error?e.message:"No se pudo elegir.");return;}
+    }
+    if(agent){openCapability(kind,agent);return;}
+    if(visibleAgents.length>0){
+      Alert.alert("Elegir agente principal","Tienes varios agentes existentes. Elige uno como principal; no los fusionaremos ni cambiaremos sus permisos.");
+      return;
+    }
+    setPendingCapability(kind);
+    setSelected(null);setEditStep(0);
+    setDraft(prefillNativeAgent(business,emptyAgent("support")));setScreen("edit");
   }
   function edit(agent:Agent,step:0|1|2|3=0){
     setSelected(agent);setEditStep(step);
@@ -122,8 +156,17 @@ export function AIAgentsStudio({session,onBack}:Props){
           central_source_updated_at:activeBusiness.updated_at}}:nextDraft;
       const item=await saveAgent(session,reviewed,selected?.id,selected?.revision,workspaceId);
       setSelected(item);
+      let assigned=true;
+      if(!selected&&workspaceId){
+        try{
+          await chooseNativePrincipal(session,workspaceId,item.id,null);
+          setWorkspaces(old=>old.map(w=>w.id===workspaceId?{...w,primary_agent_id:item.id}:w));
+        }catch{assigned=false;}
+      }
       await refresh();
-      setScreen("home");
+      if(pendingCapability&&assigned){const kind=pendingCapability;setPendingCapability(null);openCapability(kind,item);}
+      else{setPendingCapability(null);setScreen("home");}
+      setNotice(assigned?"Agente principal guardado. Capacidades sujetas a permisos.":"Agente guardado, pero otra sesión cambió el principal. Revisa la selección.");
     }catch(e){Alert.alert("No se pudo guardar",e instanceof Error?e.message:"Vuelve a intentarlo.");}
     finally{setBusy(false);}
   }
@@ -210,6 +253,9 @@ export function AIAgentsStudio({session,onBack}:Props){
     a.revision>0&&a.configuration.central_source_updated_at&&
     a.configuration.central_source_updated_at!==activeBusiness.updated_at):[];
   const activeCount=visibleAgents.filter(a=>a.status==="active").length;
+  const principal=visibleAgents.find(a=>a.id===linkedWorkspace?.primary_agent_id)||null;
+  const proposal=!principal&&(phone?.agentId?visibleAgents.find(a=>a.id===phone.agentId):null)||
+    (!principal&&visibleAgents.length===1?visibleAgents[0]:null);
   async function linkPilot(){
     if(!activeBusiness||unlinked.length!==1||busy)return;
     setBusy(true);
@@ -238,14 +284,14 @@ export function AIAgentsStudio({session,onBack}:Props){
       {screen==="home"?<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
         <View style={styles.hero}>
           <View style={styles.heroTop}>
-            <Text style={styles.heroKicker}>TU EQUIPO INTELIGENTE</Text>
+            <Text style={styles.heroKicker}>UN AGENTE POR NEGOCIO</Text>
             <Ionicons name="sparkles-outline" size={28} color="#E5D5FF"/>
           </View>
-          <Text style={styles.heroTitle}>Crea agentes.{"\n"}Haz más con VMV.</Text>
-          <Text style={styles.heroSub}>Configúralos, enséñales tu negocio y pruébalos desde aquí.</Text>
+          <Text style={styles.heroTitle}>Un agente.{"\n"}Todas tus funciones.</Text>
+          <Text style={styles.heroSub}>Una sola identidad para atender llamadas, consultas, inventario, ventas y reservas.</Text>
           <View style={styles.heroStats}>
-            <Text style={styles.heroStat}>{visibleAgents.length} agentes</Text>
-            <Text style={styles.heroStat}>{activeCount} activos en estudio</Text>
+            <Text style={styles.heroStat}>{principal?"Principal: "+principal.name:"Principal pendiente"}</Text>
+            <Text style={styles.heroStat}>{visibleAgents.length} agentes conservados · {activeCount} en estudio</Text>
           </View>
         </View>
         <View style={styles.businessPanel}>
@@ -287,7 +333,7 @@ export function AIAgentsStudio({session,onBack}:Props){
         {notice?<View style={styles.warning}><Ionicons name="information-circle-outline" size={18} color="#76559C"/>
           <Text style={[styles.help,{flex:1}]}>{notice}</Text></View>:null}
         <Pressable accessibilityRole="button" accessibilityLabel="Configurar servicios y reservas"
-         onPress={()=>setScreen("agenda")} style={styles.commerceEntry}>
+         onPress={()=>void startCapability("bookings")} style={styles.commerceEntry}>
          <View style={styles.commerceIcon}><Ionicons name="calendar-outline" size={23} color={C.purple}/></View>
          <View style={{flex:1,gap:4}}>
           <Text style={styles.commerceTitle}>Agenda y reservas</Text>
@@ -295,7 +341,7 @@ export function AIAgentsStudio({session,onBack}:Props){
          </View><Ionicons name="chevron-forward" color={C.purple} size={19}/>
         </Pressable>
         {phone?<Pressable accessibilityRole="button"
-         accessibilityLabel="Configurar atención de llamadas" onPress={()=>setScreen("phone")}
+         accessibilityLabel="Configurar atención de llamadas" onPress={()=>void startCapability("calls")}
          style={styles.commerceEntry}>
          <View style={styles.commerceIcon}><Ionicons name="call-outline" size={23} color={C.purple}/></View>
          <View style={{flex:1,gap:4}}>
@@ -305,7 +351,7 @@ export function AIAgentsStudio({session,onBack}:Props){
          <Ionicons name="chevron-forward" size={19} color={C.purple}/>
         </Pressable>:null}
         <Pressable accessibilityRole="button" accessibilityLabel="Configurar ventas por teléfono"
-         onPress={()=>setScreen("commerce")} style={styles.commerceEntry}>
+         onPress={()=>void startCapability("sales")} style={styles.commerceEntry}>
          <View style={styles.commerceIcon}><Ionicons name="bag-handle-outline" size={23} color={C.purple}/></View>
          <View style={{flex:1,gap:5}}>
           <Text style={styles.commerceTitle}>Ventas por teléfono</Text>
@@ -314,28 +360,47 @@ export function AIAgentsStudio({session,onBack}:Props){
          </View>
          <Ionicons name="chevron-forward" size={19} color={C.purple}/>
         </Pressable>
-        <SectionTitle title="¿Qué quieres automatizar?" caption="Selecciona una función para preparar tu agente."/>
+        <SectionTitle title={"Tu agente: "+(principal?.name||proposal?.name||"Sin configurar")}
+          caption={"Negocio: "+(activeBusiness?.name||"Selecciona tu negocio")+". Una identidad para todas las funciones."}/>
+        {principal?<Text style={styles.help}>Llamadas: {phone?.agentId===principal.id&&phone?.prepared?
+          "ruta lista para prueba":"requiere conexión"} · Chat público: sin conectar · Ventas y reservas: verificar permisos y fuentes.</Text>:null}
+        {proposal&&!principal&&linkedWorkspace?<Action label={"Usar "+proposal.name+" como agente principal"}
+          icon="person-circle-outline" disabled={busy} onPress={()=>void designate(proposal).catch(e=>
+           Alert.alert("Selección",e instanceof Error?e.message:"No disponible."))}/>:null}
+        <SectionTitle title="Capacidades de tu agente" caption="Configura cada función sin crear otro asistente."/>
         <View style={styles.templateGrid}>
-          {templates.map(template=><Pressable key={template.kind} accessibilityRole="button"
-            accessibilityLabel={"Crear agente de "+template.title} disabled={!activeBusiness} onPress={()=>create(template.kind)}
+          {templates.map(template=>{
+           const label=({
+            calls:"Llamadas",support:"Chat web",sales:"Ventas",bookings:"Reservas",
+            inventory:"Catálogo e inventario",operations:"Actividad",custom:"Identidad"
+           } as Record<AgentKind,string>)[template.kind];
+           const description=({
+            calls:"Atención y traducción",support:"Chat público pendiente",
+            sales:"Permisos y pedidos",bookings:"Agenda y citas",inventory:"Productos y stock",
+            operations:"Conversaciones",custom:"Voz, idioma y personalidad"
+           } as Record<AgentKind,string>)[template.kind];
+           return <Pressable key={template.kind} accessibilityRole="button"
+            accessibilityLabel={"Configurar "+label} disabled={!activeBusiness}
+            onPress={()=>void startCapability(template.kind)}
             style={[styles.template,{backgroundColor:template.bg}]}>
             <View style={styles.templateIcon}><Ionicons name={template.icon} size={23} color={template.fg}/></View>
             <View style={{flex:1,justifyContent:"flex-end"}}>
-              <Text style={[styles.templateTitle,{color:template.fg}]}>{template.title}</Text>
-              <Text style={[styles.templateCaption,{color:template.fg}]}>{template.subtitle}</Text>
+              <Text style={[styles.templateTitle,{color:template.fg}]}>{label}</Text>
+              <Text style={[styles.templateCaption,{color:template.fg}]}>{description}</Text>
             </View>
             <Ionicons name="arrow-up-outline" color={template.fg} size={18} style={styles.templateArrow}/>
-          </Pressable>)}
+           </Pressable>;
+          })}
         </View>
         <View style={styles.listHeading}>
-          <SectionTitle title="Mis agentes"/>
+          <SectionTitle title="Agentes existentes y principal"/>
           <Text style={styles.listCount}>{visibleAgents.length}</Text>
         </View>
         {loading?<ActivityIndicator size="large" color={C.purple}/>:visibleAgents.length===0?
           <View style={styles.empty}>
             <Ionicons name="cube-outline" size={27} color={C.purple}/>
             <Text style={styles.emptyTitle}>Aquí vivirán tus agentes</Text>
-            <Text style={styles.help}>Elige una tarjeta para crear tu primero.</Text>
+            <Text style={styles.help}>Elige una capacidad para configurar el primer agente principal.</Text>
           </View>:visibleAgents.map(agent=>{
             const info=kindInfo(agent.kind);
             return <View key={agent.id} style={styles.agentCard}>
@@ -349,7 +414,7 @@ export function AIAgentsStudio({session,onBack}:Props){
                 </View>
                 <View style={[styles.stateBadge,agent.status==="active"?{backgroundColor:"#E2F7E9"}:null]}>
                   <Text style={[styles.stateText,agent.status==="active"?{color:"#237C55"}:null]}>
-                    {agent.status==="paused"?"Pausado":phone?.agentId===agent.id?"Seleccionado":agent.status==="active"?"Estudio activo":"Borrador"}
+                    {principal?.id===agent.id?"Principal":agent.status==="paused"?"Pausado":phone?.agentId===agent.id?"Línea":agent.status==="active"?"Estudio activo":"Borrador"}
                   </Text>
                 </View>
               </View>
@@ -365,7 +430,10 @@ export function AIAgentsStudio({session,onBack}:Props){
                 {phone?<Action label={phone.agentId===agent.id?"Elegido":"Elegir línea"}
                   icon="call-outline" disabled={busy} onPress={()=>void choose(agent)}/>:null}
                 <Action label="Calidad" icon="shield-checkmark-outline" onPress={()=>openQuality(agent)}/>
-                <Action label="Editar" icon="create-outline" onPress={()=>edit(agent)}/>
+                {!principal||principal.id!==agent.id?<Action label="Hacer principal" icon="person-circle-outline"
+                  disabled={!linkedWorkspace||busy} onPress={()=>void designate(agent).catch(e=>
+                   Alert.alert("Selección",e instanceof Error?e.message:"No disponible."))}/>:null}
+                <Action label="Editar identidad" icon="create-outline" onPress={()=>edit(agent)}/>
                 <Action label="Historial" icon="time-outline" onPress={()=>void openHistory(agent)}/>
               </View>
               <Pressable accessibilityRole="button" disabled={busy} onPress={()=>void toggleStatus(agent)}
@@ -378,14 +446,14 @@ export function AIAgentsStudio({session,onBack}:Props){
         <Text style={styles.footerNote}>Los agentes se guardan en tu cuenta. Elegir uno para la línea no cambia el webhook de Twilio, ni confirma ventas o pagos.</Text>
       </ScrollView>:null}
 
-      {screen==="agenda"?<AIAgentsBookingStudio session={session} agents={visibleAgents}
-        selectedAgentId={phone?.agentId||null} onBack={()=>{void refresh();setScreen("home");}}/>:null}
+      {screen==="agenda"?<AIAgentsBookingStudio session={session} agents={principal?[principal]:visibleAgents}
+        selectedAgentId={principal?.id||null} onBack={()=>{void refresh();setScreen("home");}}/>:null}
 
       {screen==="phone"?<AIAgentsCallControl session={session}
          onBack={()=>{void refresh();setScreen("home");}}/>:null}
 
-      {screen==="commerce"?<AIAgentsCommerceStudio session={session} agents={visibleAgents}
-        phoneAgentId={phone?.agentId||null} onBack={()=>{void refresh();setScreen("home");}}
+      {screen==="commerce"?<AIAgentsCommerceStudio session={session} agents={principal?[principal]:visibleAgents}
+        phoneAgentId={principal?.id||null} onBack={()=>{void refresh();setScreen("home");}}
         onAgentUpdated={updated=>{
          setAgents(list=>list.map(a=>a.id===updated.id?updated:a));
          if(selected?.id===updated.id)setSelected(updated);
