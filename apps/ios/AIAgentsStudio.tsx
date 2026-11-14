@@ -68,6 +68,7 @@ export function AIAgentsStudio({session,onBack}:Props){
   const [selected,setSelected]=useState<Agent|null>(null);
   const [draft,setDraft]=useState<AgentDraft>(emptyAgent("support"));
   const [pendingCapability,setPendingCapability]=useState<AgentKind|null>(null);
+  const [commerceTab,setCommerceTab]=useState<"setup"|"catalog">("setup");
   const [busy,setBusy]=useState(false);
   const [loading,setLoading]=useState(true);
   const [notice,setNotice]=useState("");
@@ -107,7 +108,9 @@ export function AIAgentsStudio({session,onBack}:Props){
   }
   function openCapability(kind:AgentKind,agent:Agent){
     setSelected(agent);
-    if(kind==="inventory"||kind==="sales")setScreen("commerce");
+    if(kind==="inventory"||kind==="sales"){
+      setCommerceTab(kind==="inventory"?"catalog":"setup");setScreen("commerce");
+    }
     else if(kind==="bookings")setScreen("agenda");
     else if(kind==="calls"){
       if(phone?.agentId===agent.id)setScreen("phone");
@@ -452,7 +455,7 @@ export function AIAgentsStudio({session,onBack}:Props){
       {screen==="phone"?<AIAgentsCallControl session={session}
          onBack={()=>{void refresh();setScreen("home");}}/>:null}
 
-      {screen==="commerce"?<AIAgentsCommerceStudio session={session} agents={principal?[principal]:visibleAgents}
+      {screen==="commerce"?<AIAgentsCommerceStudio session={session} initialTab={commerceTab} agents={principal?[principal]:visibleAgents}
         phoneAgentId={principal?.id||null} onBack={()=>{void refresh();setScreen("home");}}
         onAgentUpdated={updated=>{
          setAgents(list=>list.map(a=>a.id===updated.id?updated:a));
