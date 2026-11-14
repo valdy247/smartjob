@@ -2,7 +2,7 @@ import ts from "typescript";
 import {readFileSync} from "node:fs";
 const read=path=>readFileSync(path,"utf8");
 const main=read("app/vista-app/page.tsx");
-const homeBegin=main.indexOf('{ready&&tab==="home"?');
+const homeBegin=main.indexOf('{ready&&tab==="home"?<div className=');
 const servicesBegin=main.indexOf('{ready&&tab==="services"&&!open?');
 const servicesEnd=main.indexOf('{ready&&tab==="calls"?',servicesBegin);
 if(homeBegin<0||servicesBegin<=homeBegin||servicesEnd<=servicesBegin)
