@@ -26,7 +26,7 @@ Una etiqueta «Desde $25» NO es un precio de compra fijo. Nunca copiarla como p
 - Postgres, transacción **ROLLBACK**: importación a $25.50, reimportación idempotente, rechazo de «Desde $25», estado no aprobado/inactivo/manual: **PASS**.
 - Postgres, transacción **ROLLBACK**: un usuario diferente no puede importar productos al negocio de otro: **PASS**.
 - TypeScript aislado de AI Agents (`CommerceStudio`, `commerceStore`, `catalog-snapshot`, `voice-commerce`, endpoint autenticado): **PASS**.
-- El compilador global encontró un error en `lib/web-builder-ai-site.ts` (otro módulo). No editar ese archivo desde AI Agents. Volver a verificar el HEAD actualizado.
+- El build global de la rama compartida está en ERROR por errores en Web Services: `lib/web-builder-ai-site.ts:84` (Expected comma) y `app/web-studio/TemplateProposals.tsx:64` (JSX Expected closing tag). No se han editado esos archivos desde AI Agents. El responsable de Web Services debe reconciliar y validar ambos cambios; revisar el HEAD y desplegar nuevamente.
 - No se procesaron cobros, se publicaron sitios ni se modificaron productos comerciales reales.
 
 ## Acciones pendientes para Web Services / Director
