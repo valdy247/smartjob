@@ -42,3 +42,12 @@
 .seoPreview strong{font-size:10px;font-weight:900;letter-spacing:.06em;color:#8864b0}
 .seoPreview span{font-size:14px;font-weight:800;line-height:1.35;color:#2f5496;word-break:break-word}
 .seoPreview small{font-size:11px;line-height:1.45;color:#656273;word-break:break-word}
+
+.carousel[data-single=true]{grid-template-columns:minmax(0,1fr);max-width:850px;margin:0 auto;overflow-x:hidden}
+.carousel[data-single=true] .card{width:100%;max-width:none}
+.carousel[data-single=true] .websiteFrame{height:390px}
+@media(max-width:900px){.carousel[data-single=true]{display:flex;overflow-x:visible;max-width:650px}
+ .carousel[data-single=true] .card{flex:1 1 100%;max-width:none}
+ .carousel[data-single=true] .websiteFrame{height:305px}}
+@media(max-width:570px){.carousel[data-single=true]{padding-inline:15px;max-width:100%}
+ .carousel[data-single=true] .card{flex:1 1 auto;width:100%;max-width:100%}}
