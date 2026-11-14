@@ -111,3 +111,44 @@ test('slow local storage writes cannot leave an older visitor choice as the fina
  await new Promise(resolve=>setImmediate(resolve));release();await Promise.all([first,last]);
  assert.equal(stored,'en');assert.equal(p.getSnapshot().language,'en');
 });
+
+test('Smart Call signed-out screen uses the account locale for all entry copy',()=>{
+ const page=fs.readFileSync(require('node:path').join(__dirname,'../app/vista-app/page.tsx'),'utf8');
+ const login=page.split('{phase==="signed_out"?')[1]?.split('{phase==="signed_in"&&!profile?')[0];
+ assert.ok(login,'signed-out screen must exist');
+ for(const key of ['native.secureAccess','native.signInExplanation','native.emailPlaceholder',
+  'native.passwordPlaceholder','native.signInPrivacy','native.registerPrompt','common.loginError']){
+  assert.ok(login.includes('translate("'+key+'")'),key+' must render via the shared language controller');
+ }
+ for(const raw of ['ACCESO SEGURO','Inicia sesión con la misma cuenta','Tu contraseña',
+  'Sesión protegida por Supabase','¿No tienes cuenta? Abrir registro']){
+  assert.ok(!login.includes(raw),'untranslated signed-out copy: '+raw);
+ }
+ assert.ok(login.includes('value={email}')&&login.includes('value={password}'),
+  'language toggles must not replace controlled credentials');
+ assert.ok(!login.includes('<InterfaceLanguagePicker'), 'language control must not occupy a form card');
+});
+test('Smart Call header owns the compact accessible flag switch',()=>{
+ const page=fs.readFileSync(require('node:path').join(__dirname,'../app/vista-app/page.tsx'),'utf8');
+ const picker=fs.readFileSync(require('node:path').join(__dirname,'../components/InterfaceLanguagePicker.tsx'),'utf8');
+ const header=page.split('styles.appHeaderIdentity')[1]?.split('<div className={styles.scrollArea}')[0];
+ assert.ok(header?.includes('<InterfaceLanguagePicker compact/>'),'flag switch must be beside the brand in header');
+ assert.match(picker,/role="radiogroup"/);
+ assert.match(picker,/role="radio"/);
+ assert.match(picker,/<svg /,'flags must render as actual graphics, not unsupported emoji glyphs');
+ assert.ok(!picker.includes('localStorage.setItem'),'picker must use VMV account preference');
+ assert.ok(!page.includes('key={language}'),'language switching must not remount the input form');
+});
+test('Smart Call first-screen catalog has distinct Spanish and English copy',()=>{
+ const catalog=JSON.parse(fs.readFileSync(require('node:path').join(__dirname,'../lib/i18n/messages.json'),'utf8'));
+ const keys=['native.secureAccess','native.signInExplanation','native.signInPrivacy','native.registerPrompt',
+  'native.checkingSession','native.supabaseMissing','native.profileLoading','native.profileError',
+  'native.introLead','native.introMinutesTitle','native.introDisclaimer'];
+ for(const key of keys){
+  assert.equal(typeof catalog.es[key],'string',key+' Spanish');
+  assert.equal(typeof catalog.en[key],'string',key+' English');
+  assert.notEqual(catalog.es[key],catalog.en[key],key+' must not reuse the wrong language');
+  assert.equal(translate('es',key),catalog.es[key]);
+  assert.equal(translate('en',key),catalog.en[key]);
+ }
+});
