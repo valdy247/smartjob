@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),{test}=require('node:test'),fs=require('node:fs'),ts=require('typescript');
 require.extensions['.ts']=(mod,path)=>mod._compile(ts.transpileModule(fs.readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,path);
 const {googleProfileIssue,normalizeGoogleProfile,googlePhotoKey}=require('../lib/google-profile-request.ts');
-const fixture=()=>({action:'create',kind:'storefront',googleCategory:'Bakery',otherCategories:'',street:'123 Main',unit:'',city:'Columbus',region:'GA',postal:'31901',country:'US',serviceAreas:'',phone:'7065551234',secondaryPhone:'',description:'Cuban bakery',services:'',products:'',bookingUrl:'',existingProfileUrl:'',openingDate:'',hoursEnabled:false,hours:Array.from({length:7},()=>({closed:true,start:'09:00',end:'17:00'}))});
+const fixture=()=>({action:'create',kind:'storefront',googleCategory:'Bakery',googleCategoryId:'test-official-id',categoryPendingReview:false,locationChecked:true,locationPendingReview:false,otherCategories:'',street:'123 Main',unit:'',city:'Columbus',region:'GA',postal:'31901',country:'US',serviceAreas:'',phone:'7065551234',secondaryPhone:'',description:'Cuban bakery',services:'',products:'',bookingUrl:'',existingProfileUrl:'',openingDate:'',hoursEnabled:false,hours:Array.from({length:7},()=>({closed:true,start:'09:00',end:'17:00'}))});
 test('storefront, service-area and hybrid have distinct location requirements',()=>{
  const v=fixture();assert.equal(googleProfileIssue(v),null);v.street='';assert.equal(googleProfileIssue(v).key,'address');v.kind='service_area';assert.equal(googleProfileIssue(v).key,'serviceAreas');v.serviceAreas='Columbus GA';assert.equal(googleProfileIssue(v),null);v.kind='hybrid';assert.equal(googleProfileIssue(v).key,'address');
 });
@@ -76,4 +76,15 @@ test('country validation accepts lowercase and whitespace that normalization alr
  assert.equal(normalizeGoogleProfile(v).country,'US');
  assert.equal(v.country,' us ');
  assert.equal(googleProfileIssue({...v,country:'U S'}).key,'country');
+});
+
+test('a typed category without official selection cannot be silently marked valid',()=>{
+ const v={...fixture(),googleCategoryId:'',categoryPendingReview:false};
+ assert.equal(googleProfileIssue(v).key,'googleCategory');
+ assert.equal(googleProfileIssue({...v,categoryPendingReview:true}),null);
+});
+test('unverified geographic details require an explicit manual-review decision',()=>{
+ const v={...fixture(),locationChecked:false,locationPendingReview:false};
+ assert.equal(googleProfileIssue(v).key,'address');
+ assert.equal(googleProfileIssue({...v,locationPendingReview:true}),null);
 });
