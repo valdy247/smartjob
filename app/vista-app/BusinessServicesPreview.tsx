@@ -41,9 +41,10 @@ const fields:{key:Exclude<keyof Draft,"authorized"|"category"|"categoryId">;labe
 ];
 const SERVICE_NAME_KEYS:Record<string,MessageKey>={"smart-call":"services.offer.smart-call","site-care":"services.offer.site-care","ai-agents":"services.offer.ai-agents","local-seo":"services.offer.local-seo","reviews":"services.offer.reviews","smart-booking":"services.offer.smart-booking","website-design":"services.offer.website-design","google-business-profile":"services.offer.google-business-profile","seo-setup":"services.offer.seo-setup","domain-setup":"services.offer.domain-setup"};
 const WEB_SERVICE_IDS=new Set(["site-care","local-seo","reviews","website-design","google-business-profile","seo-setup","domain-setup"]);
-export default function BusinessServicesPreview({userId,focus="all",excludeFeatured=false}:{userId:string;focus?:"all"|"web";excludeFeatured?:boolean}){
+export default function BusinessServicesPreview({userId,focus="all",excludeFeatured=false,searchTerm=""}:{userId:string;focus?:"all"|"web";excludeFeatured?:boolean;searchTerm?:string}){
  const {language,translate}=useInterfaceLanguage();
  const [charge,setCharge]=useState<Charge>("subscription");
+ const normalizedSearch=searchTerm.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase();
  const [editor,setEditor]=useState(false);
  const [siteEditor,setSiteEditor]=useState(false);
  const [inboxOpen,setInboxOpen]=useState(false);
@@ -141,12 +142,12 @@ export default function BusinessServicesPreview({userId,focus="all",excludeFeatu
     <button className={styles.webActionSecondary} type="button" onClick={()=>setSiteEditor(true)}>{translate("services.classicEditor")}</button>
     <button className={styles.webActionSecondary} type="button" onClick={()=>setInboxOpen(true)}><Mail size={17}/> {translate("services.requests")}</button>
    </div>:null}
-  <div className={styles.toggle} role="group" aria-label={translate("services.serviceType")}>
+  {!normalizedSearch?<div className={styles.toggle} role="group" aria-label={translate("services.serviceType")}>
    <button type="button" className={charge==="subscription"?styles.selected:""} aria-pressed={charge==="subscription"} onClick={()=>setCharge("subscription")}>{translate("services.inPlans")}</button>
    <button type="button" className={charge==="one_time"?styles.selected:""} aria-pressed={charge==="one_time"} onClick={()=>setCharge("one_time")}>{translate("services.oneTime")}</button>
-  </div>
+  </div>:null}
   <div className={styles.grid}>
-   {offers.filter(o=>o.charge===charge&&(focus!=="web"||WEB_SERVICE_IDS.has(o.id))&&(!excludeFeatured||!["smart-call","ai-agents"].includes(o.id))).map(o=>{
+   {offers.filter(o=>(normalizedSearch?true:o.charge===charge)&&(focus!=="web"||WEB_SERVICE_IDS.has(o.id))&&(!excludeFeatured||!["smart-call","ai-agents"].includes(o.id))&&(!normalizedSearch||translate(SERVICE_NAME_KEYS[o.id]).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase().includes(normalizedSearch))).map(o=>{
     const inner=<><div className={styles.offerIcon}><o.Icon size={25}/></div>
      <div className={styles.offerBottom}><strong>{translate(SERVICE_NAME_KEYS[o.id])}</strong>
      {!excludeFeatured?<div className={styles.badges}>
