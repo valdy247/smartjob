@@ -2,6 +2,7 @@
 // own all price, stock, order IDs, buyer acceptance and payment state.
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {askAiAgent} from "@/lib/vmv-ai-agents/model";
+import {ownerCatalogSnapshot} from "@/lib/vmv-ai-agents/catalog-snapshot";
 export type VoiceCommerceSession={
  call_sid:string;owner_id:string;agent_id:string;order_id?:string|null;
  agent_snapshot:Record<string,unknown>;
@@ -31,21 +32,19 @@ function salesPermitted(s:VoiceCommerceSession){
    cfg.channel!=="Chat";
 }
 async function catalogForCall(db:SupabaseClient,s:VoiceCommerceSession):Promise<Catalog[]>{
- const {data:agent}=await db.from("vmv_ai_agents").select("business_id")
+ const {data:agent,error}=await db.from("vmv_ai_agents").select("business_id")
   .eq("id",s.agent_id).eq("owner_id",s.owner_id).maybeSingle();
- if(!agent)return [];
- const {data,error}=await db.from("vmv_ai_catalog_items")
-  .select("id,sku,name,description,price_cents,currency,stock_mode,available_qty,variants,extras")
-  .eq("business_id",agent.business_id).eq("owner_id",s.owner_id)
-  .eq("approved",true).eq("active",true).limit(30);
- if(error||!data)return [];
- return data.filter(x=>Array.isArray(x.variants)&&x.variants.length===0&&
-   Array.isArray(x.extras)&&x.extras.length===0).map(x=>({
-    id:x.id,sku:x.sku,name:x.name,description:x.description||"",
-    price_cents:x.price_cents,currency:x.currency,
-    stock_mode:x.stock_mode,available_qty:x.available_qty
-   }));
+ if(error||!agent)return [];
+ // Exactly the same canonical source consumed by the authenticated web catalog
+ // endpoint. Active inventory holds are subtracted from tracked availability.
+ const products=await ownerCatalogSnapshot(db,s.owner_id,agent.business_id);
+ return products.filter(p=>p.supportsSimpleOrder).slice(0,30).map(p=>({
+  id:p.id,sku:p.sku,name:p.name,description:p.description,
+  price_cents:p.priceCents,currency:p.currency,
+  stock_mode:p.availability,available_qty:p.availableQuantity
+ }));
 }
+
 function fallback(lang:"es"|"en",what:"missing"|"pending"|"human"){
  if(lang==="es"){
   if(what==="missing")return "No tengo un catálogo de productos verificado para confirmar precios o existencias. El negocio debe configurarlo.";
