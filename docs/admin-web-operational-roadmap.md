@@ -63,3 +63,8 @@ Limitaciones deliberadas de esta fase: la actualización `staff_update` es una *
 - Mostrar solo Inicio, Bandeja y Servicios mientras el resto no esté operativo. Registrar Clientes, Equipo y Configuración en el alcance, no simular botones.
 - La página usa control de acceso de cliente + RLS real del servidor. Este es un MVP de entrada; futuras operaciones sensibles deberían tener endpoints de servidor con revisión de permisos, tasa y auditoría.
 - Evitar elevación por `user_metadata` y evitar incorporar solicitudes ajenas por semejanza de esquema.
+
+
+## Estado posterior al cierre de base (13 nov 2026)
+
+El archivo `docs/admin-web-closure-2026-11-13.md` describe el sistema operativo ampliado y sus pruebas. Bandeja paginada, métricas globales, soporte, avisos, auditoría transaccional, roles y archivos con visibilidad separada ya se implementaron. Siguen pendientes la aceptación autenticada en móvil/escritorio con dos cuentas piloto, la validación completa en inglés y los contratos externos específicos; no se cambió ningún caso real como prueba.

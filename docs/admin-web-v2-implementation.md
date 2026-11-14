@@ -39,3 +39,8 @@ Branch: `feat/vmv-smart-call-control-center`. Scope: `app/admin`, `app/api/admin
 - Staged production release, SMS deliverability, payment refunds/collections and staff handoff automation.
 - LLC formation: no canonical request backend currently; do not fabricate workflow.
 - Final app navigation link to `/vista-app/soporte` needs coordination with shared interface owners.
+
+
+## Actualización de cierre operativo (13 nov 2026)
+
+Consulta `docs/admin-web-closure-2026-11-13.md` para la implementación transaccional, migraciones aplicadas, verificación de permisos, pruebas SQL aisladas y aceptación pendiente. La versión previa de este documento se mantiene como registro de la fase V2; los límites de 150 casos y la falta de mensajes para líneas/dominios se corrigieron en el cierre. No declarar 100 % hasta QA autenticada y revisión completa en inglés.
