@@ -17,7 +17,7 @@ const C={
 type Tab="setup"|"catalog"|"orders";
 type IconName=React.ComponentProps<typeof Ionicons>["name"];
 type Props={
- session:Session;agents:Agent[];phoneAgentId:string|null;onBack:()=>void;
+ session:Session;agents:Agent[];phoneAgentId:string|null;onBack:()=>void;initialTab?:Tab;
  onAgentUpdated:(agent:Agent)=>void;
 };
 const blank:CatalogDraft={
@@ -81,8 +81,8 @@ function Title({children,caption}:{children:React.ReactNode;caption?:string}){
  </View>;
 }
 const moneyNote="El precio se calcula en el servidor. No permitimos que la IA lo modifique.";
-export function AIAgentsCommerceStudio({session,agents,phoneAgentId,onBack,onAgentUpdated}:Props){
- const [tab,setTab]=useState<Tab>("setup");
+export function AIAgentsCommerceStudio({session,agents,phoneAgentId,onBack,initialTab="setup",onAgentUpdated}:Props){
+ const [tab,setTab]=useState<Tab>(initialTab);
  const [agentId,setAgentId]=useState(agents.some(a=>a.id===phoneAgentId)?phoneAgentId!:agents[0]?.id||"");
  const [perms,setPerms]=useState<SalesPermissions>(defaultPerms);
  const [items,setItems]=useState<CatalogItem[]>([]);
