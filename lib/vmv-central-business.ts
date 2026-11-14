@@ -69,7 +69,7 @@ export function businessRequestSnapshot(b:CentralBusiness,service:"google_profil
    {country:g?.country||b.country,serviceAreas:g?.serviceAreas||b.service_areas,addressPublic:false}:
    {country:g?.country||b.country,street:g?.street??b.street,unit:g?.unit??b.unit,
     city:g?.city??b.city,region:g?.region??b.region,postal:g?.postal??b.postal,
-    serviceAreas:g?.serviceAreas||b.service_areas,addressPublic:b.address_visibility==="public"},
+    serviceAreas:g?.serviceAreas||b.service_areas,addressPublic:service==="google_profile"&&g?true:b.address_visibility==="public"},
   phone:g?.phone||b.phone,secondaryPhone:g?.secondaryPhone||b.secondary_phone,
   email:b.email,description:g?.description??b.description,
   services:g?.services??b.services,products:g?.products??b.products,
