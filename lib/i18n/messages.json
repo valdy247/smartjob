@@ -1539,9 +1539,10 @@
     "marketing.visibility.createBusiness": "Configurar mi negocio",
     "marketing.visibility.profileDraftEdits": "Los ajustes de esta ficha no cambian tu perfil guardado.",
     "marketing.visibility.savedCategory": "Categoría del perfil guardado",
-    "marketing.google.profileLoadedShort": "Datos del negocio cargados",
+    "marketing.google.profileLoadedShort": "Datos cargados de tu negocio.",
     "marketing.google.onlyMissing": "Solo lo que falta",
-    "marketing.google.categoryFromBusiness": "Usaremos la actividad guardada. VMV comprobará su categoría correspondiente en Google."
+    "marketing.google.categoryFromBusiness": "Usaremos la actividad guardada. VMV comprobará su categoría correspondiente en Google.",
+    "marketing.google.moreInfo": "Más información"
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -3085,6 +3086,7 @@
     "marketing.visibility.savedCategory": "Category from your saved business profile",
     "marketing.google.profileLoadedShort": "Business details loaded",
     "marketing.google.onlyMissing": "Only missing details",
-    "marketing.google.categoryFromBusiness": "We will use your saved business activity. VMV will check the corresponding Google category."
+    "marketing.google.categoryFromBusiness": "We will use your saved business activity. VMV will check the corresponding Google category.",
+    "marketing.google.moreInfo": "More information"
   }
 }

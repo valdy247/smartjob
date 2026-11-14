@@ -81,6 +81,10 @@ function FilePicker({label,value,onChange,multiple=false}:{label:string;value:Fi
   </figure>)}</div>:null}
  </section>;
 }
+function MoreInfo({children}:{children:import("react").ReactNode}){
+ const {translate}=useInterfaceLanguage();
+ return <details className={styles.moreInfo}><summary>{translate("marketing.google.moreInfo")}</summary>{children}</details>;
+}
 export default function GoogleProfileWizard({step,data,onData,media,onMedia,business,website,loadedData,editLoaded=false}:{loadedData?:GoogleData;editLoaded?:boolean;step:number;data:GoogleData;onData:(v:GoogleData)=>void;media:GoogleMedia;onMedia:(v:GoogleMedia)=>void;business:string;website:string}){
  const {language,translate}=useInterfaceLanguage();const en=language==="en";
  const [editing,setEditing]=useState(editLoaded);
@@ -146,11 +150,11 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
      <button type="button" aria-pressed={data.action===id} key={id} onClick={()=>onData({...data,action:id,openingDate:id==="create"?data.openingDate:""})}>{tx(label)}</button>)}</div>
     {!loadedData||editing?<label className={styles.field}><span>{tx("Nombre del negocio")} <em>{tx("Necesario")}</em></span><input value={business} disabled readOnly/></label>:null}
     {!hasSaved("googleCategory")?<GoogleCategoryLookup key={data.country} data={data} onData={onData}/>:null}
-    {data.googleCategorySource==="business_activity"?<p className={styles.hint}>{translate("marketing.google.categoryFromBusiness")}</p>:null}
     {data.action!=="create"&&!hasSaved("existingProfileUrl")?<label className={styles.field}><span>{tx("Enlace de tu perfil actual")} <em>{tx("Opcional")}</em></span><input type="url" inputMode="url" maxLength={500} value={data.existingProfileUrl||""} placeholder="https://maps.google.com/..." onChange={e=>patch("existingProfileUrl",e.target.value)}/></label>:null}
-    <p className={styles.hint}>{en?"Additional categories will be checked by VMV against Google before submission.":"VMV comprobará las categorías adicionales con Google antes de gestionarlas."}</p>
-    <p className={styles.hint}>{translate("marketing.google.eligibility")}</p>
-    <p className={styles.hint}>{tx("La categoría debe existir en Google. Nuestro equipo comprobará que coincida antes de gestionarla.")}</p>
+    <MoreInfo>
+     <p className={styles.hint}>{data.googleCategorySource==="business_activity"?translate("marketing.google.categoryFromBusiness"):tx("La categoría debe existir en Google. Nuestro equipo comprobará que coincida antes de gestionarla.")}</p>
+     <p className={styles.hint}>{translate("marketing.google.eligibility")}</p>
+    </MoreInfo>
    </div>:null}
    {step===1?<div className={styles.group}>
     <h3>{tx("¿Dónde atiendes?")}</h3>
@@ -185,7 +189,7 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
     {!hasSaved("secondaryPhone")?<label className={styles.field}><span>{tx("Teléfono adicional")} <em>{tx("Opcional")}</em></span><BusinessPhoneInput value={data.secondaryPhone} onChange={value=>patch("secondaryPhone",value)} country={data.country} label={tx("Teléfono adicional")}/></label>:null}
     {!loadedData||editing?<label className={styles.field}><span>{tx("Sitio web")} <em>{tx("Opcional")}</em></span><input value={website} disabled readOnly placeholder={tx("Sin página web")}/></label>:null}
     {field("bookingUrl","Enlace para reservar o pedir","https://...")}
-    <p className={styles.hint}>{tx("Nunca necesitamos tu contraseña de Google. La conexión y verificación se hacen con tu autorización.")}</p>
+    <MoreInfo><p className={styles.hint}>{tx("Nunca necesitamos tu contraseña de Google. La conexión y verificación se hacen con tu autorización.")}</p></MoreInfo>
    </div>:null}
    {step===3?<div className={styles.group}>
     <h3>{tx("Horarios habituales")}</h3>
@@ -196,7 +200,7 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
     {h.end<h.start?<small>{translate("marketing.google.nextDay")}</small>:null}
     </div>)}</div>:<p className={styles.hint}>{tx("Puedes dejar los horarios pendientes si todavía no los tienes definidos.")}</p>}
     {data.action==="create"&&!hasSaved("openingDate")?<label className={styles.field}><span>{tx("Fecha de apertura")} <em>{tx("Opcional")}</em></span><input type="date" value={data.openingDate} onChange={e=>patch("openingDate",e.target.value)}/></label>:null}
-    <p className={styles.hint}>{tx("Los horarios especiales de feriados se configuran después. Tu horario real debe coincidir con lo que ofreces.")}</p>
+    <MoreInfo><p className={styles.hint}>{tx("Los horarios especiales de feriados se configuran después. Tu horario real debe coincidir con lo que ofreces.")}</p></MoreInfo>
    </div>:null}
    {step===4?<div className={styles.group}>
     <h3>{tx("Cuéntales qué ofreces")}</h3>
@@ -211,7 +215,7 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
     <FilePicker label="Logo" value={media.logo?[media.logo]:[]} onChange={files=>onMedia({...media,logo:files[0]||null})}/>
     <FilePicker label={tx("Foto de portada")} value={media.cover?[media.cover]:[]} onChange={files=>onMedia({...media,cover:files[0]||null})}/>
     <FilePicker label={tx("Productos, local o trabajos (hasta 8)")} value={media.photos} multiple onChange={files=>onMedia({...media,photos:files.slice(0,8)})}/>
-    <p className={styles.hint}>{tx("Se guardarán de forma privada en VMV al enviar la solicitud. Google solo mostrará fotos después de verificar tu perfil.")}</p>
+    <MoreInfo><p className={styles.hint}>{tx("Se guardarán de forma privada en VMV al enviar la solicitud. Google solo mostrará fotos después de verificar tu perfil.")}</p></MoreInfo>
     <p className={styles.count}>{[media.logo,media.cover,...media.photos].filter(Boolean).length} {tx("fotos seleccionadas")}</p>
    </div>:null}
  </div>;
