@@ -45,6 +45,8 @@ export default function App(){
  const [businessModules,setBusinessModules]=useState<BusinessModule[]>(FALLBACK_MODULES);
  const [activeModule,setActiveModule]=useState<string|null>(null);
  const [moreModulesOpen,setMoreModulesOpen]=useState(false);
+ const [catalogQuery,setCatalogQuery]=useState("");
+ const [catalogGroup,setCatalogGroup]=useState<"all"|"communication"|"digital"|"growth">("all");
  const [keyboardVisible,setKeyboardVisible]=useState(false),[forwardHelpOpen,setForwardHelpOpen]=useState(false);
  const [settingsPage,setSettingsPage]=useState<"menu"|"numbers"|"billing"|"history"|"security"|"profile"|"style"|"support"|"services">("menu");
  const [callHistory,setCallHistory]=useState<{bridge_sid:string;status:string;duration_seconds:number|null;started_at:string;call_mode:string;caller_phone:string|null}[]>([]);
@@ -458,7 +460,7 @@ export default function App(){
   finally{if(current())setHistoryBusy(false);}
  }
  useEffect(()=>{
-  if(session?.user.id&&((activeTab==="settings"&&settingsPage==="history")||(activeTab==="calls"&&callsView==="history")))void refreshCallHistory();
+  if(session?.user.id&&(activeTab==="home"||(activeTab==="settings"&&settingsPage==="history")||(activeTab==="calls"&&callsView==="history")))void refreshCallHistory();
  },[session?.user.id,activeTab,settingsPage,callsView]);
  async function lookupOriginalCaller(item:{bridge_sid:string;caller_phone:string|null}){
   if(!supabase||!sessionRef.current||callerLookupBusy)return;
@@ -725,60 +727,17 @@ export default function App(){
   </View>
   <Text style={styles.interfaceLanguageHint}>{tr("common.languageHint")}</Text>
  </View>;
- // Home and Services use the same featured products, artwork and destinations.
- const featuredSmartCall=(
-      <Pressable accessibilityRole="button" accessibilityLabel="Abrir Smart Call"
-       style={styles.homeSpotlightV2} onPress={()=>{setActiveModule("smart-call");setActiveTab("services");}}>
-       <View style={styles.homeSpotlightRingOuter}/>
-       <View style={styles.homeSpotlightRingInner}/>
-       <View style={styles.homeSpotlightPhone}>
-        <View style={styles.homeSpotlightPhoneShine}/>
-        <Ionicons name="call" size={29} color="#64339F"/>
-       </View>
-       <View style={styles.homeSpotlightMiniBubble}><Ionicons name="language-outline" size={17} color="#367E72"/></View>
-       <Text style={styles.homeSpotlightSpark}>✦</Text>
-       <Text style={styles.homeSpotlightKicker}>Smart Call · {tr("home.pilot")}</Text>
-       <Text style={styles.homeSpotlightHeadline}>{tr("home.businessConnected")}<Text style={{color:"#F9E28A"}}>.</Text></Text>
-       <Text style={styles.homeSpotlightCaption}>{tr("home.callsAndTranslation")}</Text>
-       <View style={styles.homeSpotlightMinutes}>
-        <Text style={styles.homeSpotlightMinutesText}>{billingOverview?.minutes?.available??"—"} min  <Text style={{fontSize:10,fontWeight:"600"}}>{tr("home.minutesToTranslate")}</Text></Text>
-       </View>
-       <View style={styles.homeSpotlightArrow}><Ionicons name="arrow-up-outline" size={20} color="#FFFFFF"/></View>
-      </Pressable>
- );
- const featuredServiceTiles=(
-      <View style={styles.homeProductGrid}>
-       <Pressable accessibilityRole="button" accessibilityLabel="Abrir traductor"
-        style={[styles.homeProductTile,styles.homeProductMint]} onPress={()=>setActiveTab("live")}>
-        <View style={styles.homeProductIconV2}><Ionicons name="language-outline" size={28} color="#105744"/></View>
-        <Ionicons name="chatbubbles-outline" size={73} color="#105744" style={styles.homeProductArt} accessible={false}/>
-        <View><Text style={[styles.homeProductTitle,{color:"#104A39"}]}>{tr("common.translator")}</Text>
-         <Text style={[styles.homeProductSub,{color:"#367E6A"}]}>{tr("home.inPerson")}</Text></View>
-       </Pressable>
-       <Pressable accessibilityRole="button" accessibilityLabel={"Web Services · "+tr("home.explore")}
-        onPress={()=>{setActiveModule("web-services");setActiveTab("services");}}
-        style={[styles.homeProductTile,styles.homeProductYellow]}>
-        <View style={styles.homeProductIconV2}><Ionicons name="globe-outline" size={28} color="#69471D"/></View>
-        <Ionicons name="browsers-outline" size={75} color="#69471D" style={styles.homeProductArt} accessible={false}/>
-        <View><Text style={[styles.homeProductTitle,{color:"#63451B"}]}>Web Services</Text></View>
-       </Pressable>
-       <Pressable accessibilityRole="button" accessibilityLabel={"AI Agents · "+tr("home.explore")}
-        onPress={()=>{setActiveModule("ai-agents");setActiveTab("services");}}
-        style={[styles.homeProductTile,styles.homeProductSky]}>
-        <View style={styles.homeProductIconV2}><Ionicons name="sparkles-outline" size={28} color="#305D8B"/></View>
-        <Ionicons name="hardware-chip-outline" size={73} color="#294C78" style={styles.homeProductArt} accessible={false}/>
-        <View><Text style={[styles.homeProductTitle,{color:"#294C78"}]}>AI Agents</Text>
-         <Text style={[styles.homeProductSub,{color:"#547DA0"}]}>Beta</Text></View>
-       </Pressable>
-       <Pressable accessibilityRole="button" accessibilityLabel={"Marketing · "+tr("home.explore")}
-        onPress={()=>{setActiveModule("marketing-analytics");setActiveTab("services");}}
-        style={[styles.homeProductTile,styles.homeProductPink]}>
-        <View style={styles.homeProductIconV2}><Ionicons name="trending-up-outline" size={28} color="#914B74"/></View>
-        <Ionicons name="stats-chart-outline" size={73} color="#82425F" style={styles.homeProductArt} accessible={false}/>
-        <View><Text style={[styles.homeProductTitle,{color:"#82425F"}]}>Marketing</Text></View>
-       </Pressable>
-      </View>
- );
+ // Services use real destinations; Home shows status and history instead of product tiles.
+ const catalogItems=[
+  {id:"smart-call",name:"Smart Call",group:"communication",Icon:"call-outline" as const,tone:styles.nativeCatalogViolet,status:tr("home.pilot"),open:()=>{setActiveModule("smart-call");setActiveTab("services");}},
+  {id:"translator",name:tr("common.translator"),group:"communication",Icon:"language-outline" as const,tone:styles.nativeCatalogMint,status:tr("catalog.open"),open:()=>setActiveTab("live")},
+  {id:"web",name:"Web Services",group:"digital",Icon:"globe-outline" as const,tone:styles.nativeCatalogYellow,status:tr("catalog.open"),open:()=>{setActiveModule("web-services");setActiveTab("services");}},
+  {id:"agents",name:"AI Agents",group:"digital",Icon:"sparkles-outline" as const,tone:styles.nativeCatalogSky,status:tr("catalog.beta"),open:()=>{setActiveModule("ai-agents");setActiveTab("services");}},
+  {id:"marketing",name:"Marketing",group:"growth",Icon:"trending-up-outline" as const,tone:styles.nativeCatalogPink,status:tr("catalog.beta"),open:()=>{setActiveModule("marketing-analytics");setActiveTab("services");}}
+ ] as const;
+ const normalizedCatalogQuery=catalogQuery.trim().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLocaleLowerCase();
+ const filteredCatalogItems=catalogItems.filter(item=>(catalogGroup==="all"||item.group===catalogGroup)&&
+  (!normalizedCatalogQuery||item.name.normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLocaleLowerCase().includes(normalizedCatalogQuery)));
  if(!uiLanguageReady)return <SafeAreaView style={styles.safe}>{languageError?<View style={{padding:24}}><Text>{tr("language.loadError")}</Text><Button label={tr("common.retry")} onPress={()=>void retryLanguage()}/></View>:<ActivityIndicator style={{marginTop:64}} color={colors.accent}/>}</SafeAreaView>;
  return <SafeAreaView style={styles.safe}>
   <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
@@ -812,27 +771,73 @@ export default function App(){
         onPress={()=>{setSettingsPage("menu");setActiveTab("settings");}} style={styles.homeUser}>
         <View style={styles.homeAvatar}><Ionicons name="person-outline" size={23} color="#754BD0"/></View>
         <View style={{flex:1}}>
-         <Text style={styles.homeEyebrow}>{tr("auth.welcomeBack")}</Text>
-         <Text style={styles.homeGreeting} numberOfLines={1}>{tr("home.hello",{name:String(session.user.user_metadata?.first_name||"").trim()||"VMV"})}</Text>
+         <Text style={styles.homeEyebrow}>{tr("home.hello",{name:String(session.user.user_metadata?.first_name||"VMV").trim()||"VMV"})}</Text>
+         <Text style={styles.homeGreeting} numberOfLines={1}>{String(session.user.user_metadata?.business_name||"").trim()||tr("dashboard.business")}</Text>
         </View>
        </Pressable>
-       <View style={styles.homeBrandBadge}><Text style={styles.homeBrandBadgeText}>BUSINESS ✦</Text></View>
+       <View style={styles.homeBrandBadge}><Text style={styles.homeBrandBadgeText}>VMV ✦</Text></View>
       </View>
-      {featuredSmartCall}
-      <View style={styles.homeSectionHead}>
-       <Text style={styles.homeSectionTitle}>{tr("home.featured")}<Text style={{color:"#8959EB"}}>.</Text></Text>
-       <Pressable accessibilityRole="button" accessibilityLabel="Ver todos los servicios" style={styles.homeSeeAll}
-        onPress={()=>{setActiveModule(null);setActiveTab("services");}}>
-        <Text style={styles.homeSeeAllText}>{tr("home.seeAll")}</Text><Ionicons name="arrow-up-outline" size={15} color="#8960D4"/>
+      <Pressable accessibilityRole="button" accessibilityLabel={tr("dashboard.manageCalls")}
+       style={styles.nativeDashboardHero} onPress={()=>{setActiveModule("smart-call");setActiveTab("services");}}>
+       <View style={styles.nativeDashboardHeroTop}>
+        <Text style={styles.nativeDashboardKicker}>SMART CALL</Text>
+        <Ionicons name="call-outline" size={25} color="#FFE49D"/>
+       </View>
+       <Text style={styles.nativeDashboardTitle}>{tr("dashboard.callCenter")}</Text>
+       <Text style={styles.nativeDashboardStatus}>{tr("dashboard.lineStatus")}: {accountOverview?
+        (accountOverview.connectedToApp?tr("services.call.iphoneRoute"):
+         accountOverview.verified?tr("services.call.numberVerifiedValue"):tr("services.call.activationPending")):
+        tr("dashboard.unavailable")}</Text>
+       <View style={styles.nativeDashboardMetrics}>
+        <View style={styles.nativeDashboardMetric}>
+         <Text style={styles.nativeDashboardNumber}>{billingOverview?.minutes?.available??"—"}</Text>
+         <Text style={styles.nativeDashboardMetricLabel}>{tr("dashboard.minutes")}</Text>
+        </View>
+        <View style={styles.nativeDashboardMetric}>
+         <Text style={styles.nativeDashboardNumber}>{accountOverview?.usage.calls??"—"}</Text>
+         <Text style={styles.nativeDashboardMetricLabel}>{tr("dashboard.calls")}</Text>
+        </View>
+       </View>
+      </Pressable>
+      <View style={styles.nativeDashboardHeading}>
+       <Text style={styles.nativeDashboardHeadingText}>{tr("dashboard.quickActions")}</Text>
+       <Pressable accessibilityRole="button" onPress={()=>{setActiveModule(null);setActiveTab("services");}} style={styles.homeSeeAll}>
+        <Text style={styles.homeSeeAllText}>{tr("home.seeAll")}</Text>
+        <Ionicons name="arrow-up-outline" size={15} color="#8960D4"/>
        </Pressable>
       </View>
-      {featuredServiceTiles}
-      <Pressable accessibilityRole="button" accessibilityLabel={tr("native.totalServices")}
-       onPress={()=>{setActiveModule(null);setActiveTab("services");}} style={styles.homeExploreCompact}>
-       <Ionicons name="grid-outline" size={19} color="#764FC0"/>
-       <Text style={styles.homeExploreCompactText}>{tr("native.totalServices")}</Text>
-       <Ionicons name="arrow-up-outline" size={17} color="#764FC0"/>
-      </Pressable>
+      <View style={styles.nativeDashboardQuickGrid}>
+       <Pressable accessibilityRole="button" accessibilityLabel={tr("common.translator")}
+        style={[styles.nativeDashboardQuick,styles.nativeCatalogMint]} onPress={()=>setActiveTab("live")}>
+        <Ionicons name="language-outline" size={27} color="#145945"/>
+        <Text style={styles.nativeDashboardQuickTitle}>{tr("common.translator")}</Text>
+        <Ionicons name="arrow-up-outline" size={16} color="#145945" style={styles.nativeDashboardQuickArrow}/>
+       </Pressable>
+       <Pressable accessibilityRole="button" accessibilityLabel="AI Agents"
+        style={[styles.nativeDashboardQuick,styles.nativeCatalogSky]} onPress={()=>{setActiveModule("ai-agents");setActiveTab("services");}}>
+        <Ionicons name="sparkles-outline" size={27} color="#2B527B"/>
+        <Text style={styles.nativeDashboardQuickTitle}>AI Agents</Text>
+        <Ionicons name="arrow-up-outline" size={16} color="#2B527B" style={styles.nativeDashboardQuickArrow}/>
+       </Pressable>
+      </View>
+      <View style={styles.nativeDashboardActivity}>
+       <View style={styles.nativeDashboardActivityHead}>
+        <Text style={styles.nativeDashboardHeadingText}>{tr("dashboard.activity")}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={tr("dashboard.viewActivity")}
+         onPress={()=>{setCallsView("history");setActiveTab("calls");}} style={styles.homeSeeAll}>
+         <Text style={styles.homeSeeAllText}>{tr("dashboard.viewActivity")}</Text>
+         <Ionicons name="arrow-up-outline" size={15} color="#8960D4"/>
+        </Pressable>
+       </View>
+       {callHistory.length?callHistory.slice(0,2).map(item=><View key={item.bridge_sid} style={styles.nativeDashboardHistoryRow}>
+        <View style={styles.nativeDashboardHistoryIcon}><Ionicons name="call-outline" size={16} color="#7B51C9"/></View>
+        <View style={{flex:1}}>
+         <Text style={styles.nativeDashboardHistoryTitle}>{tr(item.call_mode==="translated"?"services.history.translated":"services.history.direct")}</Text>
+         <Text style={styles.nativeDashboardHistoryDate}>{new Date(item.started_at).toLocaleDateString(uiLanguage==="es"?"es-US":"en-US",{month:"short",day:"numeric"})}</Text>
+        </View>
+       </View>):
+        <Text style={styles.nativeDashboardEmpty}>{historyBusy?tr("marketing.ui.loading"):tr("dashboard.emptyActivity")}</Text>}
+      </View>
      </>:null}
      {activeTab==="calls"?<>
        <View style={styles.callsTabs}>
@@ -924,15 +929,46 @@ export default function App(){
          </View>}
        </>:<>
         <Text style={styles.servicesUnifiedTitle}>{tr("common.services")}<Text style={{color:colors.accent}}>.</Text></Text>
-        {featuredSmartCall}
-        {featuredServiceTiles}
-        <Pressable accessibilityRole="button" accessibilityLabel={tr("settings.otherServices")}
-         accessibilityState={{expanded:moreModulesOpen}} onPress={()=>setMoreModulesOpen(value=>!value)}
-         style={styles.servicesMoreToggle}>
-         <Text style={styles.servicesMoreToggleText}>{tr("settings.otherServices")}</Text>
-         <Ionicons name={moreModulesOpen?"chevron-up-outline":"chevron-down-outline"} size={19} color="#8655CA"/>
-        </Pressable>
-        {moreModulesOpen?<BusinessServicesPanel session={session} excludeFeatured/>:null}
+        <View style={styles.nativeCatalogSearch}>
+         <Ionicons name="search-outline" size={20} color="#8D65C9"/>
+         <TextInput accessibilityLabel={tr("catalog.searchLabel")} placeholder={tr("catalog.search")}
+          placeholderTextColor="#9B8BA8" autoCapitalize="none" autoCorrect={false}
+          value={catalogQuery} onChangeText={setCatalogQuery} style={styles.nativeCatalogSearchInput}/>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+         contentContainerStyle={styles.nativeCatalogFilterRow}>
+         {(["all","communication","digital","growth"] as const).map(group=>
+          <Pressable key={group} accessibilityRole="button"
+           accessibilityState={{selected:catalogGroup===group}}
+           style={[styles.nativeCatalogFilter,catalogGroup===group&&styles.nativeCatalogFilterActive]}
+           onPress={()=>setCatalogGroup(group)}>
+           <Text style={[styles.nativeCatalogFilterText,catalogGroup===group&&styles.nativeCatalogFilterTextActive]}>
+            {tr(group==="all"?"catalog.all":group==="communication"?"catalog.communication":group==="digital"?"catalog.digital":"catalog.growth")}
+           </Text>
+          </Pressable>)}
+        </ScrollView>
+        <View style={styles.nativeCatalogGrid}>
+         {filteredCatalogItems.map(item=><Pressable key={item.id} accessibilityRole="button"
+          accessibilityLabel={item.name+" · "+item.status}
+          onPress={item.open} style={[styles.nativeCatalogCard,item.tone]}>
+          <View style={styles.nativeCatalogIcon}><Ionicons name={item.Icon} size={26} color="#47345E"/></View>
+          <View><Text style={styles.nativeCatalogCardTitle}>{item.name}</Text>
+           <Text style={styles.nativeCatalogCardStatus}>{item.status}</Text></View>
+          <Ionicons name="arrow-up-outline" size={16} color="#685274" style={styles.nativeCatalogCardArrow}/>
+         </Pressable>)}
+        </View>
+        {!filteredCatalogItems.length?<Text style={styles.nativeCatalogEmpty}>{tr("catalog.noResults")}</Text>:null}
+        {catalogGroup==="all"?(catalogQuery.trim()?
+         <BusinessServicesPanel session={session} excludeFeatured searchTerm={catalogQuery}/>:
+         <>
+          <Pressable accessibilityRole="button" accessibilityLabel={tr("settings.otherServices")}
+           accessibilityState={{expanded:moreModulesOpen}} onPress={()=>setMoreModulesOpen(value=>!value)}
+           style={styles.servicesMoreToggle}>
+           <Text style={styles.servicesMoreToggleText}>{tr("settings.otherServices")}</Text>
+           <Ionicons name={moreModulesOpen?"chevron-up-outline":"chevron-down-outline"} size={19} color="#8655CA"/>
+          </Pressable>
+          {moreModulesOpen?<BusinessServicesPanel session={session} excludeFeatured/>:null}
+         </>):null}
        </>}
       </>:null}
      {activeTab==="settings"?<>
