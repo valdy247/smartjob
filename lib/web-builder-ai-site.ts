@@ -102,7 +102,45 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
   subtitle:"Un sitio editable con textos originales y estructura optimizada",
   data:data as Data,seoTitle,seoDescription,aiGenerated:true};
 }
-export function aiSiteRequestContext(input:SiteIntake,creativeDirection:string){
+export function buildAiPageProposal(input:SiteIntake,result:unknown,pageName:string):SiteProposal{
+ const whole=buildAiSiteProposal(input,result);
+ const name=copy(pageName,80);
+ if(name.length<2)throw new Error("La página necesita un nombre.");
+ const lower=name.toLocaleLowerCase("es");
+ const isContact=/contact|contacto|ubicaci[oó]n|cita|reserv/.test(lower);
+ const isAbout=/nosotros|sobre|equipo|historia|acerca|about/.test(lower);
+ const isPortfolio=/galer[ií]a|portafolio|proyectos|trabajos|fotos|portfolio/.test(lower);
+ const isServices=/servicios|productos|cat[aá]logo|men[uú]|precios|services|products/.test(lower);
+ const keep=new Set(isContact?["HeroVisual","Contact"]:
+  isAbout?["HeroVisual","Text","Contact"]:
+  isPortfolio?["HeroVisual","PhotoGallery","ProjectShowcase","Contact"]:
+  isServices?["HeroVisual","OfferingGrid","PricingList","FAQList","Contact"]:
+  ["HeroVisual","OfferingGrid","Text","FAQList","Contact"]);
+ let content=(whole.data.content as Array<{type:string;props:Record<string,unknown>}>)
+  .filter(item=>keep.has(item.type));
+ if(!content.some(item=>item.type==="Contact")){
+  content=[...content,{type:"Contact",props:{id:"ai-page-contact",title:"Contacto",description:"",
+   email:input.email,phone:input.phone,address:input.city}}];
+ }
+ if(content.some(x=>x.type==="HeroVisual"))content=content.map(item=>item.type==="HeroVisual"?
+  {...item,props:{...item.props,buttonUrl:"#contacto"}}:item);
+ // A subpage does not embed the home-only request form. All CTAs must be live.
+ content=content.map(item=>item.type==="CTA"?{...item,props:{...item.props,buttonUrl:"#contacto"}}:item);
+ // When a relevant block has no verified content, omit rather than invent it.
+ content=content.filter(item=>!["PhotoGallery","ProjectShowcase"].includes(item.type)||
+  (Array.isArray(item.props.items)&&item.props.items.length>0));
+ const data=normalizeBuilderDocument({root:whole.data.root,content});
+ const problem=validateBuilderDocument(data);if(problem)throw new Error(problem);
+ let seoTitle=whole.seoTitle||"";
+ const brand=input.business;
+ if(!seoTitle.toLocaleLowerCase("es").includes(name.toLocaleLowerCase("es"))){
+  seoTitle=(name+" | "+brand).slice(0,80);
+ }
+ return {...whole,id:"ai-page-"+name.toLocaleLowerCase("es").replace(/[^a-z0-9]+/g,"-"),
+  name:"Página con IA · "+name,subtitle:"Página enfocada en "+name+" · editable",
+  data,seoTitle,seoDescription:whole.seoDescription};
+}
+export function aiSiteRequestContext(input:SiteIntake,creativeDirection:string,pageName=""){
  // The model receives facts, not URLs, upload tokens or arbitrary component code.
  return {
   business:input.business.slice(0,100),categoryId:input.categoryId.slice(0,60),
@@ -113,7 +151,7 @@ export function aiSiteRequestContext(input:SiteIntake,creativeDirection:string){
   products:(input.products||[]).slice(0,24).map(x=>({name:x.title.slice(0,120),
    description:x.description.slice(0,320)})),
   imagesAvailable:input.photos.filter(Boolean).length,
-  direction:creativeDirection.slice(0,400)
+  direction:creativeDirection.slice(0,400),pageName:pageName.slice(0,80)
  };
 }
 export function parseAiSiteResponse(raw:string):unknown{
