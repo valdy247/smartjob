@@ -22,12 +22,13 @@ import GoogleProfileWizard,{emptyGoogle,emptyMedia,googleStepNames,validateGoogl
 
 export type ServiceCode="directory_listings"|"google_profile"|"apple_maps"|"bing_places"|"yelp_profile"|"search_console"|"seo_improvement"|"campaign_setup"|"review_strategy"|"other";
 type Status="received"|"quoted"|"approved"|"in_progress"|"needs_customer"|"verified"|"cancelled";
+type ActivityEvent={date:string;kind:"quote"|"status"|"directories"|"update";status:Status;note?:string;quoteCents?:number|null;revision?:number;evidenceUrl?:string|null};
 type RequestRow={
  id:string;owner_id:string;service_code:ServiceCode;business_name:string;category_id:string;
  website_url:string|null;goal_text:string;status:Status;execution_mode:"assisted"|"automated";
  quoted_price_cents:number|null;quote_note:string|null;quote_revision:number;
  staff_update:string|null;evidence_url:string|null;verified_at:string|null;
- created_at:string;updated_at:string;reputation_data?:{mode:string;reviewText:string;replyText:string;reviewLink:string}|null;google_profile_data?:GoogleData&{media?:{kind:string;path:string}[]}|null;web_repair_data?:WebRepairData|null;directory_data?:DirectoryData|null
+ created_at:string;updated_at:string;activity_history?:ActivityEvent[];reputation_data?:{mode:string;reviewText:string;replyText:string;reviewLink:string}|null;google_profile_data?:GoogleData&{media?:{kind:string;path:string}[]}|null;web_repair_data?:WebRepairData|null;directory_data?:DirectoryData|null
 };
 type SavedBusiness={id:string;owner_id:string;name:string;category_id:string;website_url:string|null;source?:"profile"|"agent"};
 type Acceptance={id:string;request_id:string;owner_id:string;quote_revision:number;quoted_price_cents:number;accepted_at:string};
@@ -702,6 +703,19 @@ export default function MarketingActionCenter({businessName,industryId,website,o
         {req.google_profile_data.products?<p><strong>{translate("marketing.copy.products")}</strong> {req.google_profile_data.products}</p>:null}
         {req.google_profile_data.media?.map(photo=><button type="button" key={photo.path} onClick={()=>void openPrivatePhoto(photo.path)}>{translate("marketing.copy.view_image")} {photo.kind}</button>)}
        </div></details>:null}
+      <details className={styles.activityTimeline}>
+       <summary>{en?"Request history":"Historial de la solicitud"} · {1+(Array.isArray(req.activity_history)?req.activity_history.length:0)+(approved?1:0)}</summary>
+       <ol>
+        <li><span>{date(req.created_at)}</span><strong>{en?"Request received":"Solicitud recibida"}</strong></li>
+        {(Array.isArray(req.activity_history)?req.activity_history:[]).map((ev,i)=><li key={i}>
+         <span>{date(ev.date)}</span>
+         <strong>{ev.kind==="quote"?(en?"Quote prepared":"Presupuesto preparado"):ev.kind==="directories"?(en?"Directory progress updated":"Directorios actualizados"):ev.kind==="status"?(en?"Status updated":"Estado actualizado"):(en?"Team update":"Actualización de VMV")}</strong>
+         {ev.kind==="quote"&&typeof ev.quoteCents==="number"?<small>{money(ev.quoteCents)}</small>:null}
+         {ev.note?<small>{ev.note}</small>:null}
+        </li>)}
+        {approvals.filter(a=>a.request_id===req.id).map(a=><li key={a.id}><span>{date(a.accepted_at)}</span><strong>{en?"Quote accepted by customer":"Presupuesto aceptado por el cliente"}</strong><small>{money(a.quoted_price_cents)}</small></li>)}
+       </ol>
+      </details>
       {req.staff_update?<div className={styles.staffNote}><strong>{translate("marketing.copy.vmv_update")}</strong> {req.staff_update}</div>:null}
       {req.quoted_price_cents!==null?<div className={styles.quote}>
        <div><Wallet size={18}/><span><strong>{money(req.quoted_price_cents)}</strong> {req.quoted_price_cents===0?translate("marketing.action.free_service"):translate("marketing.action.proposed_quote")}<small>{req.quote_note||translate("marketing.action.details_pending")}</small></span></div>
