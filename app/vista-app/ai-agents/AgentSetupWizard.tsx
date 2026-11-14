@@ -10,7 +10,7 @@ export type WizardDraft={
 };
 type Question={id:string;title:string;hint?:string;kind?:"text"|"textarea"|"choice"|"multi"|"state"|"hours";options?:string[];required?:boolean;when?:(a:Record<string,string>)=>boolean};
 type Section={title:string;subtitle:string;questions:Question[]};
-type Props={initial:WizardDraft;onSave:(updated:WizardDraft)=>Promise<void>|void;onCancel:()=>void;isPreview?:boolean;initialStep?:0|1|2|3;saving?:boolean;authRequired?:boolean;recoverDraft?:boolean};
+type Props={onReviewBusiness?:()=>void;initial:WizardDraft;onSave:(updated:WizardDraft)=>Promise<void>|void;onCancel:()=>void;isPreview?:boolean;initialStep?:0|1|2|3;saving?:boolean;authRequired?:boolean;recoverDraft?:boolean};
 const allRoles:AgentKind[]=["calls","support","sales","bookings","inventory","operations","custom"];
 const q=(id:string,title:string,options:string[],required=false,when?:Question["when"]):Question=>({id,title,kind:"choice",options,required,when});
 const t=(id:string,title:string,required=false,hint?:string):Question=>({id,title,required,hint,kind:"text"});
@@ -120,7 +120,7 @@ function sections(kind:AgentKind,answers:Record<string,string>):Section[]{
  ];
 }
 function inputValue(v:Record<string,string>,key:string){return v[key]||"";}
-export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=false,initialStep=0,saving=false,authRequired=false,recoverDraft=false}:Props){
+export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusiness,isPreview=false,initialStep=0,saving=false,authRequired=false,recoverDraft=false}:Props){
  const [draft,setDraft]=useState<WizardDraft>(()=>({...initial,setup:{...(initial.setup||{})}}));
  const [step,setStep]=useState<number>(initialStep);
  const [recoveryReady,setRecoveryReady]=useState(false);
@@ -136,7 +136,8 @@ export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=fals
      if(typeof saved.at==="number"&&Date.now()-saved.at<86400000&&
         candidate&&candidate.kind===initial.kind&&typeof candidate.name==="string"&&
         typeof candidate.purpose==="string"&&candidate.setup&&typeof candidate.setup==="object"&&
-        !Array.isArray(candidate.setup)){
+        !Array.isArray(candidate.setup)&&
+        (candidate.setup.central_business_id||"")===(initial.setup.central_business_id||"")){
        setDraft({...candidate,setup:{...candidate.setup}});
        setStep(Math.min(3,Math.max(0,Number(saved.step)||0)));
        setDraftRestored(true);
@@ -200,7 +201,7 @@ export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=fals
     draft.setup.city,draft.setup.state
    ].filter(Boolean).join(" · ")}.
    No volveremos a preguntarte lo que ya está guardado.
-   <a href="/vista-app/marketing"> Revisar negocio</a></p>
+   {onReviewBusiness?<button type="button" onClick={onReviewBusiness}>Revisar negocio</button>:null}</p>
   </div>:null}
   {authRequired?<div className={styles.reviewMessage} role="alert">
    <ShieldCheck size={18}/><p>Para guardar este agente debes iniciar sesión en VMV.

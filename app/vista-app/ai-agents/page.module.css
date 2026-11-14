@@ -154,3 +154,21 @@
 .businessLink{border:1px solid #cdb9ee;border-radius:12px;background:#f2eaff;color:#7044bf;font-size:11px;font-weight:850;display:flex;align-items:center;gap:8px;justify-content:center;padding:10px}
 .businessLink:disabled{opacity:.55}
 .tile:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+.businessCreate{border:0;background:transparent;text-align:left;cursor:pointer;min-height:40px}
+.businessDialog{width:min(540px,calc(100vw - 24px));max-height:88dvh;margin:auto;padding:20px;border:1px solid #e5d8f3;border-radius:24px;background:#fff;color:#30223e;overflow:auto;box-sizing:border-box}
+.businessDialog::backdrop{background:#21122c70}
+.businessDialogHead{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.businessDialogHead h2{margin:0;font-size:20px}
+.businessDialogHead button{border:0;border-radius:12px;width:40px;height:40px;font-size:24px;background:#f3edfc;color:#7044b4;cursor:pointer}
+.businessDialog>p{font-size:12px;line-height:1.5;color:#776882}
+.businessFields{border:0;padding:0;margin:0;display:grid;gap:14px;min-width:0}
+.businessFields>label{display:grid;gap:6px;font-size:12px;font-weight:750}
+.businessFields input:not([type=checkbox]),.businessLinkPanel select{box-sizing:border-box;width:100%;padding:11px;border:1px solid #ddd1ef;border-radius:12px;font:inherit;color:inherit;background:#fff;min-width:0}
+.businessLinkPanel{padding:12px;background:#f7f2fd;border-radius:14px;display:grid;gap:10px;font-size:12px}
+.businessLinkPanel label{display:flex;align-items:flex-start;gap:8px;line-height:1.5}
+.businessDialogActions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+.businessDialogActions button{padding:12px 16px;border:1px solid #e1d5f2;border-radius:12px;background:#faf7ff;color:#7044b4;font-weight:800;cursor:pointer}
+.businessDialogActions button[type=submit]{background:#8958df;color:#fff;border-color:#8958df}
+.businessDialogActions button:disabled{opacity:.5;cursor:wait}
+.businessError{color:#a12d50!important;background:#fff0f3;padding:12px;border-radius:12px}

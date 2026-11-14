@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import type {LucideIcon} from "lucide-react";
 import styles from "./page.module.css";
+import BusinessProfileDialog from "./BusinessProfileDialog";
 import AgentSetupWizard,{type WizardDraft} from "./AgentSetupWizard";
 import AgentQualityLab from "./AgentQualityLab";
 import CommerceStudio from "./CommerceStudio";
@@ -46,6 +47,8 @@ export default function AIAgentsPreview(){
  const [workspaces,setWorkspaces]=useState<AiWorkspace[]>([]);
  const [chosenBusiness,setChosenBusiness]=useState<string>("");
  const [linkBusy,setLinkBusy]=useState(false);
+ const [businessDialog,setBusinessDialog]=useState(false);
+ const [pendingKind,setPendingKind]=useState<Kind|null>(null);
  const [phone,setPhone]=useState<PhoneSelection|null>(null);
  const [pilotChecks,setPilotChecks]=useState<{key:string;label:string;ok:boolean}[]|null>(null);
  const [pilotChecking,setPilotChecking]=useState(false);
@@ -100,9 +103,17 @@ export default function AIAgentsPreview(){
   a.setup.central_source_updated_at!==selectedBusiness.updated_at):[];
  const typeInfo=(kind:Kind)=>types.find(t=>t.id===kind)||types[6];
  const start=(kind:Kind)=>{
-  if(!selectedBusiness){setNotice("Selecciona o crea tu negocio en el perfil central de VMV antes de crear un agente.");return;}
+  if(!selectedBusiness){setPendingKind(kind);setBusinessDialog(true);setNotice("");return;}
   setDraft(centralPrefill(selectedBusiness,blank(kind)));
   setSelected(null);setEditStep(0);setScreen("editor");setNotice("");
+ };
+ const businessSaved=async(id:string)=>{
+  const [list,profile]=await Promise.all([loadAgents(),loadBusinessChoices()]);
+  setAgents(list);setBusinesses(profile.businesses);setWorkspaces(profile.workspaces);setChosenBusiness(id);
+  const saved=profile.businesses.find(b=>b.id===id);
+  if(!saved)throw Error("El negocio se guardó, pero no se pudo actualizar la lista. Vuelve a intentarlo.");
+  setBusinessDialog(false);setNotice("Negocio guardado. Ya puedes configurar tus agentes aquí.");
+  if(pendingKind){setDraft(centralPrefill(saved,blank(pendingKind)));setSelected(null);setEditStep(0);setScreen("editor");setPendingKind(null);}
  };
  const edit=(agent:Agent,step:0|1|2|3=0)=>{setSelected(agent.id);setEditStep(step);setDraft({
   name:agent.name,kind:agent.kind,purpose:agent.purpose,personality:agent.personality,
@@ -257,19 +268,19 @@ export default function AIAgentsPreview(){
        <div className={styles.heroEyebrow}><span>TU EQUIPO INTELIGENTE</span><Sparkles size={22}/></div>
        <h1>Crea agentes.<br/>Haz más con VMV.</h1>
        <p>Configúralos, enséñales tu negocio y pruébalos desde aquí.</p>
-       <div className={styles.heroPills}><span>{visibleAgents.length} agentes del negocio</span><span>{visibleAgents.filter(a=>a.status==="active").length} activos en estudio</span></div>
+       <div className={styles.heroPills}><span>{visibleAgents.length} agentes disponibles</span><span>{visibleAgents.filter(a=>inspectAgent(a).requiredPassed).length} con configuración completa</span></div>
       </div>
       {notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
       <section className={styles.businessPicker} aria-label="Negocio para AI Agents">
        <div className={styles.businessHead}><BriefcaseBusiness size={19}/>
         <span><strong>Negocio que estás configurando</strong>
-         <small>Se utiliza el perfil central de VMV Business</small></span>
+         <small>Tus datos se comparten entre los servicios de VMV</small></span>
        </div>
        {businesses.length>1||unlinked.length>0?<select aria-label="Elegir negocio"
         value={chosenBusiness} onChange={e=>{setChosenBusiness(e.target.value);setSelected(null);setNotice("");}}>
         <option value="">Seleccionar negocio</option>
         {businesses.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
-        {unlinked.map(b=><option key={b.id} value={"legacy:"+b.id}>Sin vincular · {b.name}</option>)}
+        {unlinked.map(b=><option key={b.id} value={"legacy:"+b.id}>Agentes existentes · {b.name}</option>)}
        </select>:selectedBusiness?<strong className={styles.businessName}>{selectedBusiness.name}</strong>:null}
        {staleAgents.length>0?<p className={styles.businessHint} role="status">
         {staleAgents.length} agente(s) requieren revisar datos del perfil central.
@@ -280,11 +291,9 @@ export default function AIAgentsPreview(){
         <span>{missingBusinessInfo.length?
          "Para completar en el perfil: "+missingBusinessInfo.slice(0,3).join(", "):
          "Datos comerciales disponibles"}</span>
-        <a href="/vista-app/marketing">Revisar perfil central</a>
-       </div>:<p className={styles.businessHint}>Aún no hay un negocio central seleccionado.
-        Los agentes existentes del piloto conservan su configuración y línea.</p>}
-       {businesses.length===0?<a className={styles.businessCreate} href="/vista-app/marketing">
-        Crear tu negocio en VMV Business <ArrowUpRight size={14}/></a>:null}
+        <button type="button" className={styles.businessCreate} onClick={()=>setBusinessDialog(true)}>Editar negocio</button>
+       </div>:<p className={styles.businessHint}>Completa tu negocio para crear agentes nuevos. Tus agentes existentes siguen disponibles.</p>}
+       {!selectedBusiness?<button type="button" className={styles.businessCreate} onClick={()=>setBusinessDialog(true)}>Configurar mi negocio <ArrowUpRight size={14}/></button>:null}
        {selectedBusiness&&!selectedWorkspace&&unlinked.length===1?
         <button type="button" className={styles.businessLink} disabled={linkBusy}
          onClick={()=>void linkPilot()}>
@@ -314,10 +323,10 @@ export default function AIAgentsPreview(){
         {c.ok?"✓":"✕"} {c.label}</p>)}</div>
       </div>:null}
       <div className={styles.sectionHeading}><div><h2>¿Qué quieres automatizar?</h2>
-       <p>{selectedBusiness?"Crea un agente para "+selectedBusiness.name+".":"Primero selecciona un negocio central."}</p></div></div>
+       <p>{selectedBusiness?"Crea un agente para "+selectedBusiness.name+".":"Elige una función; te ayudaremos a completar tu negocio."}</p></div></div>
       <div className={styles.tiles}>
        {types.map(type=><button type="button" key={type.id} className={styles.tile}
-          style={{background:type.bg,color:type.fg}} disabled={!selectedBusiness} onClick={()=>start(type.id)}>
+          style={{background:type.bg,color:type.fg}} onClick={()=>start(type.id)}>
           <span className={styles.tileIcon}><type.Icon size={24}/></span>
           <ArrowUpRight className={styles.tileArrow} size={20}/>
           <strong>{type.title}</strong><small>{type.sub}</small>
@@ -357,8 +366,10 @@ export default function AIAgentsPreview(){
       </div>}
       <div className={styles.disclaimer}><ShieldCheck size={16}/> Los agentes se guardan en tu cuenta. Elegir uno no conecta Twilio ni autoriza pagos. El ejemplo ficticio es temporal.</div>
      </>:null}
+     {businessDialog?<BusinessProfileDialog businessId={selectedBusiness?.id} initialName={workspaces.find(w=>w.id===legacyId)?.name}
+      legacy={selectedWorkspace?[]:unlinked} initialLegacyId={legacyId} onClose={()=>{setBusinessDialog(false);setPendingKind(null);}} onSaved={businessSaved}/>:null}
      {screen==="editor"?<AgentSetupWizard key={(selected||draft.kind)+"-"+editStep}
-      initial={draft} initialStep={editStep} saving={busy} isPreview={false} authRequired={!authenticated} recoverDraft={!selected} onCancel={back}
+      initial={draft} onReviewBusiness={()=>setBusinessDialog(true)} initialStep={editStep} saving={busy} isPreview={false} authRequired={!authenticated} recoverDraft={!selected} onCancel={back}
       onSave={async updated=>{setDraft(updated);await save(updated);}}/>:null}
      {screen==="quality"&&active?<AgentQualityLab agent={active} onClose={back} onEdit={step=>edit(active,step)}/>:null}
      {screen==="phone"?<CallControl onBack={back}/>:null}
