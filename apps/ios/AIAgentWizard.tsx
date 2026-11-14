@@ -171,9 +171,16 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false,initialStep=
     <TextInput accessibilityLabel="Misión del agente" style={styles.textarea} multiline
       maxLength={240} value={draft.purpose} onChangeText={purpose=>setDraft(s=>({...s,purpose}))}
       placeholder="Explica la misión en una frase" placeholderTextColor="#AB9DB9"/>
-    <Text style={styles.label}>Especialidad</Text>
-    <View style={styles.choices}>{AI_AGENT_TEMPLATES.map(t=><Tag key={t.kind} title={t.title}
-      selected={draft.kind===t.kind} onPress={()=>setDraft(s=>({...s,kind:t.kind,purpose:s.kind===t.kind?s.purpose:t.purpose}))}/>)}</View>
+    <Text style={styles.subtitle}>Este negocio tendrá una identidad principal. Llamadas, chat, ventas, inventario y reservas se activan como capacidades, sin crear otros agentes.</Text>
+    <Text style={styles.label}>Voz telefónica</Text>
+    <View style={styles.choices}>{([["default","Predeterminada de Twilio"],["female","Femenina · Polly"],["male","Masculina · Polly"]] as const).map(([value,label])=>
+      <Tag key={value} title={label} selected={(answers.voice_preset||"default")===value}
+       onPress={()=>update("voice_preset",value)}/>)}</View>
+    <Text style={styles.subtitle}>Se aplicará en llamadas nuevas autorizadas; las voces Polly pueden generar cargos del proveedor. Esta pantalla no realiza llamadas.</Text>
+    <Text style={styles.label}>Extensión de respuesta</Text>
+    <View style={styles.choices}>{([["brief","Breve"],["balanced","Equilibrada"],["detailed","Detallada"]] as const).map(([value,label])=>
+      <Tag key={value} title={label} selected={(answers.response_style||"balanced")===value}
+       onPress={()=>update("response_style",value)}/>)}</View>
     <Text style={styles.label}>¿En qué canal trabajará?</Text>
     <View style={styles.choices}>{["Teléfono","Chat","Teléfono y chat"].map(x=><Tag key={x} title={x}
       selected={(answers.channel||"Chat")===x} onPress={()=>update("channel",x)}/>)}</View>
