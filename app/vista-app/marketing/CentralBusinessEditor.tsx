@@ -36,7 +36,7 @@ export default function CentralBusinessEditor({business,onChange,files,onFiles,a
    <label className={styles.field}><span>{en?"Description":"Descripción"}</span><textarea maxLength={900} rows={3} value={business.description} onChange={e=>patch("description",e.target.value)}/></label>
    <div className={styles.grid}>{input("phone",en?"Business phone":"Teléfono comercial","","tel")}{input("secondary_phone",en?"Additional phone":"Teléfono adicional","","tel")}</div>
    <label className={styles.field}><span>{en?"Where do you serve customers?":"¿Dónde atiendes?"}</span>
-    <select value={business.kind} onChange={e=>patch("kind",e.target.value as CentralBusiness["kind"])}>
+    <select value={business.kind} onChange={e=>onChange({...business,kind:e.target.value as CentralBusiness["kind"],address_visibility:e.target.value==="service_area"?"private":business.address_visibility})}>
      <option value="storefront">{en?"Storefront":"Local"}</option><option value="service_area">{en?"At customers' locations":"En casa del cliente / entregas"}</option><option value="hybrid">{en?"Both":"Ambos"}</option>
     </select></label>
    <div className={styles.grid}>{input("city",en?"City":"Ciudad")}{input("region",en?"State / region":"Estado / región")}{input("country",en?"Country code":"Código de país","US")}{input("postal",en?"ZIP / postal code":"Código postal")}</div>
