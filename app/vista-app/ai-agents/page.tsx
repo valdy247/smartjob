@@ -281,6 +281,10 @@ export default function AIAgentsPreview(){
  const select=async(agent:Agent|null)=>{
   if(!phone||busy)return;
   if(agent&&!agent.revision){setNotice("Guarda primero un agente real.");return;}
+  if(agent&&selectedWorkspace&&agent.id!==principal?.id){
+    setNotice("Selecciona este agente como principal antes de asignarlo a la línea. La selección no cambia tu número automáticamente.");
+    return;
+  }
   setBusy(true);
   try{
    await selectPhoneAgent(phone.routeId,agent);
@@ -428,7 +432,7 @@ export default function AIAgentsPreview(){
         </div>
         <div className={styles.agentButtons}>
          <button type="button" className={styles.buttonPrimary} onClick={()=>test(a)}><MessageCircle size={15}/> Probar</button>
-         {phone&&a.revision>0?<button type="button" disabled={busy} className={styles.buttonSecondary}
+         {phone&&a.revision>0&&(!selectedWorkspace||principal?.id===a.id)?<button type="button" disabled={busy} className={styles.buttonSecondary}
            onClick={()=>void select(a)}><PhoneCall size={15}/>{phone.agentId===a.id?"Elegido para la línea":"Elegir para teléfono"}</button>:null}
          <button type="button" className={styles.buttonSecondary} onClick={()=>quality(a)}><BookCheck size={15}/> Calidad</button>
          {!principal||principal.id!==a.id?<button type="button" className={styles.buttonSecondary}
