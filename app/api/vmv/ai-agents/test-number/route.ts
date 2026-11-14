@@ -5,6 +5,7 @@ import {findPhoneRoute} from "@/lib/phone-routes";
 import {billingAdmin} from "@/lib/vmv-billing";
 import {aiAgentModelPathAvailable} from "@/lib/vmv-ai-agents/model";
 import {businessWeek,checkCallPolicy,decideCall,localParts,type CallPolicy} from "@/lib/vmv-ai-agents/call-policy";
+import {centralPublicBusiness,publicMarketingWeek} from "@/lib/vmv-ai-agents/central-public-context";
 
 
 export const runtime="nodejs";
@@ -113,10 +114,14 @@ async function savedDecision(route:OwnerRoute):Promise<SavedDecision|null>{
   const {data:choice,error:selError}=await db.from("vmv_ai_phone_selections").select("agent_id")
    .eq("route_id",route.id).eq("owner_id",route.user_id).maybeSingle();
   if(selError||!choice?.agent_id)throw Error("Business hours need a selected agent");
-  const {data:agent,error:agentError}=await db.from("vmv_ai_agents").select("configuration")
+  const {data:agent,error:agentError}=await db.from("vmv_ai_agents").select("configuration,business_id")
    .eq("id",choice.agent_id).eq("owner_id",route.user_id).maybeSingle();
   if(agentError)throw Error("Business hours lookup failed");
-  const hours=businessWeek(agent?.configuration as Record<string,unknown>|null);
+  if(!agent?.business_id)throw Error("Business hours agent unavailable");
+  const central=await centralPublicBusiness(db,route.user_id,agent.business_id);
+  const source=central?publicMarketingWeek(central):
+   agent.configuration as Record<string,unknown>|null;
+  const hours=businessWeek(source);
   if(!hours)throw Error("Business hours incomplete");
   week=hours;
  }
@@ -137,9 +142,13 @@ async function callBrand(route:OwnerRoute):Promise<string>{
  if(!selection?.agent_id)return "";
  const {data:agent}=await db.from("vmv_ai_agents").select("configuration,business_id")
   .eq("id",selection.agent_id).eq("owner_id",route.user_id).maybeSingle();
+ if(!agent?.business_id)return "";
+ try{
+  const central=await centralPublicBusiness(db,route.user_id,agent.business_id);
+  if(central)return central.name.slice(0,75);
+ }catch{return "";}
  const businessName=agent?.configuration?.business_name;
  if(typeof businessName==="string"&&businessName.trim())return businessName.trim().slice(0,75);
- if(!agent?.business_id)return "";
  const {data:business}=await db.from("vmv_ai_businesses").select("name")
   .eq("id",agent.business_id).eq("owner_id",route.user_id).maybeSingle();
  const name=String(business?.name||"").trim();
