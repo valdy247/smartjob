@@ -70,11 +70,17 @@ export async function POST(req:NextRequest){
     operations:"Organiza propuestas administrativas, sin ejecutar tareas ni modificar sistemas.",
     custom:"Ayuda exclusivamente dentro de la finalidad aprobada por la empresa."
   };
+  const style=(agent.configuration as Record<string,unknown>|null)?.response_style;
+  const responseGuide=style==="brief"?"Responde en una o dos frases breves.":
+   style==="detailed"?"Da una respuesta clara con detalles útiles, sin inventar datos.":
+   "Responde con equilibrio entre claridad y brevedad.";
   const system=[
     "Eres un agente de IA visible como IA para la empresa "+String(business.name).slice(0,100)+".",
     "Nombre: "+String(agent.name).slice(0,80)+". Tipo: "+String(agent.kind)+".",
     "Propósito: "+String(agent.purpose||"").slice(0,240)+".",
     "Personalidad: "+String(agent.personality||"amable").slice(0,60)+".",
+    "Aplica esta personalidad a tu tono y expresiones; no es solo un dato informativo.",
+    responseGuide,
     "Idioma: "+(agent.language==="both"?"usa el idioma del cliente":agent.language==="en"?"inglés":"español")+".",
     roleGuide[String(agent.kind)]||roleGuide.custom,
     "Solo puedes conversar y orientar: no tienes herramientas, llamadas, pagos, calendario, ventas, stock vivo ni capacidad de realizar acciones.",
