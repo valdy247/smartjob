@@ -592,14 +592,17 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    inserted=true;
    let profileUpdateWarning="";
    if(saveAlsoInBusiness&&selected==="google_profile"){
-    const changed=await client.from("vmv_marketing_businesses")
-     .update({name:name.trim(),category_id:effectiveCategory,website_url:websiteAddress(site),...googleChangesForProfile(storedBusiness,googleData)})
-     .eq("owner_id",user.id).eq("id",linkedId).select("*").single();
-    if(changed.error){
-     profileUpdateWarning=en?" The request was saved, but the business profile could not be updated.":" La solicitud se guardó, pero el perfil del negocio no pudo actualizarse.";
-    }else{
+    try{
+     const changed=await client.from("vmv_marketing_businesses")
+      .update({name:name.trim(),category_id:effectiveCategory,website_url:websiteAddress(site),...googleChangesForProfile(storedBusiness,googleData)})
+      .eq("owner_id",user.id).eq("id",linkedId).select("*").single();
+     if(changed.error)throw changed.error;
      setBusinessDetails(changed.data as CentralBusiness);
      setSaveAlsoInBusiness(false);
+    }catch{
+     // The request is already confirmed. A failed optional synchronization
+     // must not turn its successful submission into a misleading retry.
+     profileUpdateWarning=en?" The request was saved, but the business profile could not be updated.":" La solicitud se guardó, pero el perfil del negocio no pudo actualizarse.";
     }
    }
    const savedId=String(data.id).slice(0,8);
