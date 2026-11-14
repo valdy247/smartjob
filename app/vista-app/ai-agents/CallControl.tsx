@@ -1,12 +1,11 @@
 "use client";
 import {useEffect,useState} from "react";
-import {ArrowLeft,Check,PhoneCall,ShieldCheck,TestTube2} from "lucide-react";
+import {ArrowLeft,Check,PhoneCall,ShieldCheck} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {checkCallPolicy,days,initialCallPolicy,zoneOptions,type CallPolicy,type DayName} from "@/lib/vmv-ai-agents/call-policy";
 import styles from "./CallControl.module.css";
 const weekLabels:Record<DayName,string>={sun:"Domingo",mon:"Lunes",tue:"Martes",wed:"Miércoles",thu:"Jueves",fri:"Viernes",sat:"Sábado"};
 type Info={policy:CallPolicy;version:number;maskedPhone:string;agentActive:boolean;selectedAgentId:string|null;forwardReady:boolean;businessHoursReady:boolean;error?:string};
-type Evaluation={decision:{action:string;agentAvailable:boolean;translationAvailable:boolean};error?:string};
 async function request(method:"GET"|"POST"|"PUT",payload?:object){
  const db=getSupabase();if(!db)throw Error("Supabase no disponible.");
  const {data}=await db.auth.getSession();if(!data.session?.access_token)throw Error("Inicia sesión en VMV.");
@@ -27,10 +26,7 @@ export default function CallControl({onBack}:{onBack:()=>void}){
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState(false);
  const [notice,setNotice]=useState("");
- const [testDay,setTestDay]=useState<DayName>("mon");
- const [testTime,setTestTime]=useState("10:00");
- const [result,setResult]=useState("");
- const patch=<K extends keyof CallPolicy>(k:K,v:CallPolicy[K])=>{setPolicy(x=>({...x,[k]:v}));setResult("");};
+ const patch=<K extends keyof CallPolicy>(k:K,v:CallPolicy[K])=>setPolicy(x=>({...x,[k]:v}));
  useEffect(()=>{let active=true;void request("GET").then((x:Info)=>{
   if(!active)return;setPolicy(checkCallPolicy(x.policy));setVersion(x.version);
   setLine(x.maskedPhone);setReady(Boolean(x.selectedAgentId&&x.agentActive));
@@ -39,22 +35,13 @@ export default function CallControl({onBack}:{onBack:()=>void}){
  return()=>{active=false;};},[]);
  const setDay=(d:DayName,k:"enabled"|"start"|"end",v:boolean|string,
   target:"schedule"|"translation_schedule"="schedule")=>{
-  setPolicy(x=>({...x,[target]:{...x[target],[d]:{...x[target][d],[k]:v}}}));setResult("");
+  setPolicy(x=>({...x,[target]:{...x[target],[d]:{...x[target][d],[k]:v}}}));
  };
  const submit=async()=>{
   if(busy)return;setBusy(true);setNotice("");
   try{const x=await request("PUT",{policy:checkCallPolicy(policy),version});
    setPolicy(x.policy);setVersion(x.version);setNotice("Guardado. Se aplicará a las próximas llamadas.");
   }catch(e){setNotice(e instanceof Error?e.message:"No se pudo guardar.");}finally{setBusy(false);}
- };
- const simulate=async()=>{
-  if(busy)return;setBusy(true);setNotice("");
-  try{const x=await request("POST",{policy,day:testDay,time:testTime}) as Evaluation;
-   setResult(({menu:"Se ofrece el menú para elegir agente o traducción",
-    agent:"Responde el agente de IA seleccionado",translation:"Se utiliza Smart Call",
-    ring_owner:"Primero suena el teléfono del negocio; si nadie contesta, atiende el agente",
-    message:"Se reproduce el mensaje de cierre y termina la llamada"} as Record<string,string>)[x.decision.action]||"Sin atención");
-  }catch(e){setNotice(e instanceof Error?e.message:"No se pudo probar.");}finally{setBusy(false);}
  };
  return <div className={styles.root}>
   <button type="button" className={styles.back} onClick={onBack}><ArrowLeft size={16}/> AI Agents</button>
@@ -147,18 +134,6 @@ export default function CallControl({onBack}:{onBack:()=>void}){
    <div className={styles.summary}><ShieldCheck size={17}/><p>Las reglas se aplican en el servidor a nuevas llamadas. El traductor existente no se modifica.</p></div>
    <button className={styles.primary} type="button" disabled={busy} onClick={()=>void submit()}>
     <Check size={17}/> {busy?"Procesando…":"Guardar configuración"}</button>
-   <section className={styles.section}><h2>Probar configuración</h2>
-    <p className={styles.hint}>Simula un horario sin realizar llamadas.</p>
-    <div className={styles.time}>
-     <select aria-label="Día" value={testDay} onChange={e=>setTestDay(e.target.value as DayName)}>
-      {days.map(d=><option key={d} value={d}>{weekLabels[d]}</option>)}
-     </select>
-     <input type="time" aria-label="Hora" value={testTime} onChange={e=>setTestTime(e.target.value)}/>
-    </div>
-    <button className={styles.secondary} disabled={busy} type="button" onClick={()=>void simulate()}>
-     <TestTube2 size={16}/> Ver resultado</button>
-    {result&&<p className={styles.result} role="status">{result}</p>}
-   </section>
   </div>}
  </div>;
 }
