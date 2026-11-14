@@ -72,6 +72,9 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const [family,setFamily]=useState<SiteFamily|null>(null);
  const [stage,setStage]=useState<"details"|"proposals">("details");
  const [mode,setMode]=useState<"templates"|"ai">("templates");
+ const [aiDirection,setAiDirection]=useState("");
+ const [aiProposal,setAiProposal]=useState<SiteProposal|null>(null);
+ const [generatingAi,setGeneratingAi]=useState(false);
  const [error,setError]=useState("");
  useEffect(()=>{
   let alive=true;
@@ -217,7 +220,8 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
   if(services.length>=25){setError("Máximo 25 elementos iniciales; puedes agregar más desde el editor.");return;}
   setServices(old=>[...old,value]);setNewItem("");setError("");
  }
- function preview(){
+ async function preview(){
+  if(generatingAi||busy)return;
   if(!mediaReady||mediaSaving||mediaError){setError("Confirma que las fotografías terminaron de guardarse.");return;}
   if(intake.business.length<2){setError("Escribe el nombre del negocio.");return;}
   if(!category){setError("Selecciona la categoría del negocio.");return;}
@@ -234,10 +238,32 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
   if(intake.email&& !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(intake.email)){
    setError("Comprueba el correo de contacto.");return;
   }
-  setError("");setStage("proposals");
+  setError("");
+  if(mode==="ai"){
+   setGeneratingAi(true);
+   try{
+    const client=getSupabase();
+    if(!client)throw new Error("No se pudo acceder a tu cuenta.");
+    const {data:{session}}=await client.auth.getSession();
+    if(!session?.access_token)throw new Error("Inicia sesión para utilizar IA.");
+    const result=await fetch("/api/web-services/generate-site",{
+     method:"POST",cache:"no-store",
+     headers:{"Authorization":"Bearer "+session.access_token,"Content-Type":"application/json"},
+     body:JSON.stringify({intake,direction:aiDirection.trim()})
+    });
+    const json=await result.json().catch(()=>({})) as {proposal?:SiteProposal;error?:string};
+    if(!result.ok||!json.proposal?.data)
+     throw new Error(json.error||"La IA no pudo preparar un diseño. Prueba nuevamente.");
+    setAiProposal(json.proposal);setStage("proposals");
+   }catch(err){setError(err instanceof Error?err.message:"No se pudo generar el diseño con IA.");}
+   finally{setGeneratingAi(false);}
+   return;
+  }
+  setAiProposal(null);setStage("proposals");
  }
  if(stage==="proposals")return <TemplateProposals input={intake} familyOverride={suggestedFamily}
-   busy={busy} onBack={()=>setStage("details")} onChoose={proposal=>onChoose(intake,proposal)}/>;
+   generated={mode==="ai"?aiProposal:null} busy={busy} onBack={()=>setStage("details")}
+   onChoose={proposal=>onChoose(intake,proposal)}/>;
  return <section className={styles.root}>
   <div className={styles.intro}><small>WEB STUDIO · NUEVO SITIO</small><h2>Empecemos por tu negocio<span>.</span></h2>
    <p>Usaremos tus datos para preparar propuestas editables. Revisa que sean correctos antes de continuar.</p></div>
@@ -311,21 +337,27 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
       <ImagePlus size={20}/><strong>Elegir una plantilla</strong><small>Tres propuestas basadas en tu contenido.</small>
      </button>
      <button type="button" data-active={mode==="ai"} onClick={()=>setMode("ai")}>
-      <Sparkles size={20}/><strong>Diseñar con IA</strong><small>Se habilitará al conectar el proveedor y los costos.</small>
+      <Sparkles size={20}/><strong>Diseñar con IA</strong><small>Textos, diseño y SEO personalizados. 2 generaciones diarias.</small>
      </button>
     </div>
     {mode==="templates"?<label>Familia de diseño<select value={suggestedFamily} onChange={e=>setFamily(e.target.value as SiteFamily)}>
       {FAMILIES.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
-     </select></label>:<div role="status" className={styles.aiUnavailable}>
-      La generación personalizada con IA no está habilitada. No se ejecutará ninguna IA ni habrá cargos. Puedes continuar con plantillas.
-      <button type="button" onClick={()=>setMode("templates")}>Usar plantillas</button>
+     </select></label>:<div className={styles.aiUnavailable}>
+      <label>¿Qué estilo imaginas para tu web? (opcional)
+       <textarea rows={3} maxLength={400} value={aiDirection}
+        placeholder="Ej. Editorial y elegante, con tonos cálidos, fotografías grandes y textos breves."
+        onChange={e=>setAiDirection(e.target.value)}/>
+      </label>
+      <small>La IA reutiliza la conexión de VMV. El diseño no se publica automáticamente;
+       revisa la información antes de aceptarla. No inventaremos reseñas ni precios.
+       Se usa una generación de tu cupo diario (máximo 2).</small>
      </div>}
    </div>
    {error?<p className={styles.error} role="alert">{error}</p>:null}
    <div className={styles.finish}>
     <span><ShieldCheck size={16}/> Tus datos no se publicarán todavía.</span>
-    <button type="button" disabled={busy||mode!=="templates"||!mediaReady||mediaSaving||Boolean(mediaError)||socialStatus!=="saved"||(kind!=="services"&&productStatus!=="saved")} onClick={preview}>
-     Ver propuestas <ArrowRight size={17}/>
+    <button type="button" disabled={busy||generatingAi||!mediaReady||mediaSaving||Boolean(mediaError)||socialStatus!=="saved"||(kind!=="services"&&productStatus!=="saved")} onClick={()=>void preview()}>
+     {generatingAi?"Creando tu web con IA…":mode==="ai"?"Generar web con IA":"Ver propuestas"} <ArrowRight size={17}/>
     </button>
    </div>
   </div>
