@@ -17,6 +17,7 @@ export function googleProfileIssue(v:GoogleData,step?:number):GoogleValidationIs
  if(at(1)&&v.kind!=="storefront"&&!v.serviceAreas.trim())return {step:1,key:"serviceAreas"};
  if(at(2)&&[v.phone,v.secondaryPhone].some(x=>x.trim()&&!contactPhoneE164(x,v.country.trim().toUpperCase())))return {step:2,key:"phone"};
  if(at(2)&&v.bookingUrl.trim()&&!googleProfileLink(v.bookingUrl))return {step:2,key:"booking"};
+ if(at(0)&&v.action!=="create"&&String(v.existingProfileUrl||"").length>500)return {step:0,key:"length"};
  if(at(0)&&v.action!=="create"&&v.existingProfileUrl?.trim()&&!googleProfileLink(v.existingProfileUrl))return {step:0,key:"existing"};
  if(at(3)&&v.hoursEnabled&&(!Array.isArray(v.hours)||v.hours.length!==7||!v.hours.some(h=>h?.closed===false)||v.hours.some(h=>!h||typeof h.closed!=="boolean"||(!h.closed&&(!/^([01]\d|2[0-3]):[0-5]\d$/.test(h.start)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(h.end)||h.start===h.end)))))return {step:3,key:"hours"};
  if(at(3)&&v.action==="create"&&v.openingDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(v.openingDate)||!Number.isFinite(Date.parse(v.openingDate+"T00:00:00Z"))||new Date(v.openingDate+"T00:00:00Z").toISOString().slice(0,10)!==v.openingDate))return {step:3,key:"date"};
