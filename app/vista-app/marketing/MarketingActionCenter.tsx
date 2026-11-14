@@ -691,8 +691,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  };
  return <div className={styles.root}>
   {user&&businessId&&savedBusinesses.some(x=>x.id===businessId&&!x.source)?<div className={styles.activeBusiness}><MapPinned size={15}/>{en?"Active business: ":"Negocio activo: "}<strong>{savedBusinesses.find(x=>x.id===businessId)?.name||name}</strong></div>:null}
-  {wizardStep===0?<header className={styles.catalogHeading}><h2>{en?"What would you like to do?":"¿Qué quieres hacer hoy?"}</h2><p>{en?"Choose a service. We’ll guide you.":"Elige un servicio y te ayudamos paso a paso."}</p><a href="#vmv-marketing-history" className={styles.historyLink}><ClipboardList size={16}/> {en?"My requests":"Mis solicitudes"}</a>{pausedStep!==null?<button type="button" className={styles.resumeDraft} onClick={()=>{setWizardStep(pausedStep);setPausedStep(null);revealWizard();}}>{en?"Continue saved request":"Continuar mi solicitud guardada"}</button>:null}</header>:null}
-  {wizardStep>0&&wizardStep<4?<button type="button" className={styles.historyWizardAccess} onClick={()=>{setPausedStep(wizardStep);void saveCurrentDraft();setWizardStep(0);window.setTimeout(()=>document.getElementById("vmv-marketing-history")?.scrollIntoView({behavior:"smooth"}),0);}}><ClipboardList size={15}/> {en?"My requests":"Mis solicitudes"}</button>:null}
+  {wizardStep===0?<header className={styles.catalogHeading}><h2>{en?"What would you like to do?":"¿Qué quieres hacer hoy?"}</h2><p>{en?"Choose a service. We’ll guide you.":"Elige un servicio y te ayudamos paso a paso."}</p><a href="#vmv-marketing-history" className={styles.historyLink}><ClipboardList size={16}/> {translate("marketing.ui.requests")}</a>{pausedStep!==null?<button type="button" className={styles.resumeDraft} onClick={()=>{setWizardStep(pausedStep);setPausedStep(null);revealWizard();}}>{translate("marketing.request.continueDraft")}</button>:null}</header>:null}
+  {wizardStep>0&&wizardStep<4?<button type="button" className={styles.historyWizardAccess} onClick={()=>{setPausedStep(wizardStep);void saveCurrentDraft();setWizardStep(0);window.setTimeout(()=>document.getElementById("vmv-marketing-history")?.scrollIntoView({behavior:"smooth"}),0);}}><ClipboardList size={15}/> {translate("marketing.ui.requests")}</button>:null}
   <section className={wizardStep===0?styles.catalogPanel:styles.wizardPanel} id="vmv-marketing-request" aria-label={translate("marketing.ui.createAria")}>
    {wizardStep===4?<div className={styles.wizardSuccess} role="status">
     <div className={styles.successIcon}><CheckCircle2 size={33}/></div>
@@ -885,12 +885,12 @@ export default function MarketingActionCenter({businessName,industryId,website,o
         {req.google_profile_data.media?.map(photo=><button type="button" key={photo.path} onClick={()=>void openPrivatePhoto(photo.path)}>{translate("marketing.copy.view_image")} {photo.kind}</button>)}
        </div></details>:null}
       <details className={styles.activityTimeline}>
-       <summary>{en?"Request history":"Historial de la solicitud"} · {1+historyEntries.length}</summary>
+       <summary>{translate("marketing.request.history")} · {1+historyEntries.length}</summary>
        <ol>
-        <li><span>{date(req.created_at)}</span><strong>{en?"Request received":"Solicitud recibida"}</strong></li>
+        <li><span>{date(req.created_at)}</span><strong>{translate("marketing.request.received")}</strong></li>
         {historyEntries.map(ev=><li key={ev.key}>
          <span>{date(ev.date)}</span>
-         <strong>{ev.kind==="acceptance"?(en?"Quote accepted by customer":"Presupuesto aceptado por el cliente"):ev.kind==="quote"?(en?"Quote prepared":"Presupuesto preparado"):ev.kind==="directories"?(en?"Directory progress updated":"Directorios actualizados"):ev.kind==="status"?(en?"Status updated":"Estado actualizado"):(en?"Team update":"Actualización de VMV")}</strong>
+         <strong>{ev.kind==="acceptance"?translate("marketing.request.accepted"):ev.kind==="quote"?translate("marketing.request.quotePrepared"):ev.kind==="directories"?translate("marketing.request.directoryUpdated"):ev.kind==="status"?translate("marketing.request.statusUpdated"):translate("marketing.request.teamUpdate")}</strong>
          {typeof ev.quoteCents==="number"?<small>{money(ev.quoteCents)}</small>:null}
          {ev.note?<small>{ev.note}</small>:null}
         </li>)}

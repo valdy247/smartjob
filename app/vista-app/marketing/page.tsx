@@ -5,6 +5,7 @@ import Link from "next/link";
 import {ArrowLeft,ArrowUpRight,BarChart3,CheckCircle2,ChevronDown,ChevronUp,ClipboardCopy,Globe2,HeartHandshake,Workflow,Link2,Lightbulb,Mail,Megaphone,MessageCircle,Share2,ShieldCheck,Sparkles,Target,TrendingUp} from "lucide-react";
 import styles from "./page.module.css";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
+import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
 import {t as contentText,type MessageKey} from "@/lib/i18n";
 import LocalVisibilityStudio from "./LocalVisibilityStudio";
 import MarketingActionCenter, {type ServiceCode} from "./MarketingActionCenter";
@@ -158,7 +159,10 @@ export default function MarketingPage(){
  return <main className={styles.page}>
   <div className={styles.shell}>
    <header className={styles.header}>
-    <Link href="/vista-app" className={styles.back}><ArrowLeft size={17}/> VMV Business</Link>
+    <div className={styles.headerIdentity}>
+     <Link href="/vista-app" className={styles.back}><ArrowLeft size={17}/> VMV Business</Link>
+     <InterfaceLanguagePicker compact/>
+    </div>
     <span className={styles.marker}><Sparkles size={14}/> {translate("marketing.copy.marketing_studio_beta")}</span>
    </header>
    {section!=="actions"?<section className={styles.hero}>

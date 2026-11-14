@@ -214,3 +214,9 @@
 .advancedLinks button{display:flex;align-items:center;gap:7px;min-height:43px;border:1px solid #ecdfeb;border-radius:10px;background:#fffbfe;color:#664766;text-align:left;padding:10px;font-size:12px;cursor:pointer}
 .advancedLinks button svg:last-child{margin-left:auto}
 @media(max-width:650px){.catalogContent{padding:0 2px}.advancedLinks{grid-template-columns:1fr}.catalogWorkspace{padding-bottom:env(safe-area-inset-bottom)}}
+
+/* VMV's account preference belongs in the Marketing header, not within drafts. */
+.headerIdentity{display:flex;align-items:center;gap:11px;min-width:0;flex-shrink:0}
+.headerIdentity .back{white-space:nowrap;flex-shrink:0}
+@media(max-width:650px){.headerIdentity{gap:6px}.headerIdentity .back{font-size:11px}}
+@media(max-width:370px){.header .marker{font-size:7px;padding:6px;letter-spacing:0}.headerIdentity{gap:4px}.headerIdentity .back{font-size:10px;gap:3px}}

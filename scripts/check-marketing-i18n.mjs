@@ -74,6 +74,27 @@ if(/const errorMessage\s*=\s*[^;]*\.message/.test(action))
 if(!action.includes("const [contentLanguage]=useState(language)")||
    !homepage.includes("const [contentLanguage]=useState(language)"))
  regressions.push("Customer-facing draft language should remain independent of UI switch");
+
+const requestHistoryKeys=["marketing.request.continueDraft","marketing.request.history","marketing.request.received","marketing.request.accepted","marketing.request.quotePrepared","marketing.request.directoryUpdated","marketing.request.statusUpdated","marketing.request.teamUpdate"];
+for(const key of requestHistoryKeys){
+ for(const locale of ["es","en"]){
+  if(typeof catalog[locale]?.[key]!=="string"||!catalog[locale][key].trim())
+   regressions.push("Missing request translation "+key+" in "+locale);
+ }
+ if(!action.includes('translate("'+key+'")'))
+  regressions.push("Untranslated request status or history "+key);
+}
+if(!homepage.includes("<InterfaceLanguagePicker compact/>"))
+ regressions.push("The Marketing header is missing the account-language switch");
+if(!action.includes("<p>{req.goal_text}</p>"))
+ regressions.push("Customer-authored request goal should never be translated");
+for(const original of ["req.business_name","req.staff_update","req.quote_note","ev.note",
+ "req.reputation_data.reviewText","req.reputation_data.replyText"]){
+ if(!action.includes(original))regressions.push("Missing unmodified business data "+original);
+}
+if(/key=\{language\}/.test(homepage)||/key=\{language\}/.test(action))
+ regressions.push("Locale toggle must not reset Marketing state");
+
 console.error("MARKETING_I18N_REGRESSIONS="+JSON.stringify(regressions));
 if(regressions.length)process.exitCode=1;
 

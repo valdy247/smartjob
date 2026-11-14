@@ -1329,7 +1329,15 @@
     "marketing.google.openConversation": "Hablar con VMV sobre esta solicitud",
     "marketing.google.closed": "Cerrado",
     "marketing.google.countryLabel": "País:",
-    "marketing.google.hoursPending": "Horarios pendientes de confirmar."
+    "marketing.google.hoursPending": "Horarios pendientes de confirmar.",
+    "marketing.request.continueDraft": "Continuar mi solicitud guardada",
+    "marketing.request.history": "Historial de la solicitud",
+    "marketing.request.received": "Solicitud recibida",
+    "marketing.request.accepted": "Presupuesto aceptado por el cliente",
+    "marketing.request.quotePrepared": "Presupuesto preparado",
+    "marketing.request.directoryUpdated": "Directorios actualizados",
+    "marketing.request.statusUpdated": "Estado actualizado",
+    "marketing.request.teamUpdate": "Actualización de VMV"
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -2661,6 +2669,14 @@
     "marketing.google.openConversation": "Talk to VMV about this request",
     "marketing.google.closed": "Closed",
     "marketing.google.countryLabel": "Country:",
-    "marketing.google.hoursPending": "Business hours awaiting confirmation."
+    "marketing.google.hoursPending": "Business hours awaiting confirmation.",
+    "marketing.request.continueDraft": "Continue saved request",
+    "marketing.request.history": "Request history",
+    "marketing.request.received": "Request received",
+    "marketing.request.accepted": "Quote accepted by customer",
+    "marketing.request.quotePrepared": "Quote prepared",
+    "marketing.request.directoryUpdated": "Directory progress updated",
+    "marketing.request.statusUpdated": "Status updated",
+    "marketing.request.teamUpdate": "Team update"
   }
 }
