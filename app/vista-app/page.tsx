@@ -172,7 +172,7 @@ export default function VMVMobilePreview(){
   <button type="button" className={`${styles.homeProductCard} ${styles.homeProductYellow}`}
    onClick={()=>{setOpen(false);setServiceFocus("web");setTab("services");}} aria-label={translate("home.explore")+": Web Services"}>
    <span className={styles.homeProductIcon}><Globe size={27}/></span>
-   <span className={styles.homeProductBody}><strong>Web Services</strong><small>{translate("home.explore")}</small></span>
+   <span className={styles.homeProductBody}><strong>Web Services</strong></span>
    <span className={styles.homeProductDecor} aria-hidden="true"><Monitor size={83} strokeWidth={1.25}/></span>
    <span className={styles.homeProductArrow}>↗</span>
   </button>
@@ -186,7 +186,7 @@ export default function VMVMobilePreview(){
   <button type="button" className={`${styles.homeProductCard} ${styles.homeProductPink}`}
    onClick={()=>window.location.assign("/vista-app/marketing")} aria-label={translate("home.explore")+": Marketing"}>
    <span className={styles.homeProductIcon}><BarChart3 size={27}/></span>
-   <span className={styles.homeProductBody}><strong>Marketing</strong><small>{translate("home.explore")}</small></span>
+   <span className={styles.homeProductBody}><strong>Marketing</strong></span>
    <span className={styles.homeProductDecor} aria-hidden="true"><TrendingUp size={82} strokeWidth={1.3}/></span>
    <span className={styles.homeProductArrow}>↗</span>
   </button>
