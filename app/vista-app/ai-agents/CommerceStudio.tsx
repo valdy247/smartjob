@@ -12,7 +12,7 @@ type Form={
 };
 const empty:Form={name:"",sku:"",description:"",price:"",stock_mode:"manual",available_qty:"",
  approved:false,active:true};
-export default function CommerceStudio({agents,onClose,initialAgentId="",onAgentUpdated}:{agents:PersistedAgent[];onClose:()=>void;initialAgentId?:string;onAgentUpdated?:(agent:PersistedAgent)=>void}){
+export default function CommerceStudio({agents,onClose,initialAgentId="",initialTab="catalog",onAgentUpdated}:{agents:PersistedAgent[];onClose:()=>void;initialAgentId?:string;initialTab?:"setup"|"catalog";onAgentUpdated?:(agent:PersistedAgent)=>void}){
  const [items,setItems]=useState<CatalogItem[]>([]);
  const [webCards,setWebCards]=useState<WebStudioCard[]>([]);
  const [verified,setVerified]=useState<VerifiedCatalogItem[]>([]);
@@ -60,7 +60,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
   finally{setBusy(false);}
  };
 
- const [tab,setTab]=useState<"setup"|"catalog"|"orders"|"human">(initialAgentId?"setup":"catalog");
+ const [tab,setTab]=useState<"setup"|"catalog"|"orders"|"human">(initialTab);
  const refresh=async()=>{
   if(!businessId){setItems([]);setOrders([]);setHuman([]);return;}
   const [catalog,history,requests,cards]=await Promise.all([
@@ -82,7 +82,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
   if(busy)return;
   setBusy(true);try{
    await saveCatalogItem(form,editing,businessId);await refresh();
-   setEditing(null);setForm(empty);setNotice("Producto guardado en tu negocio. Se compartirá con los agentes de esta cuenta.");
+   setEditing(null);setForm(empty);setNotice("Producto guardado en este negocio. El agente principal podrá consultarlo solo con permisos válidos.");
   }catch(e){setNotice(e instanceof Error?e.message:"No se pudo guardar.");}
   finally{setBusy(false);}
  };
