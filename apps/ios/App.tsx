@@ -760,8 +760,7 @@ export default function App(){
         style={[styles.homeProductTile,styles.homeProductYellow]}>
         <View style={styles.homeProductIconV2}><Ionicons name="globe-outline" size={28} color="#69471D"/></View>
         <Ionicons name="browsers-outline" size={75} color="#69471D" style={styles.homeProductArt} accessible={false}/>
-        <View><Text style={[styles.homeProductTitle,{color:"#63451B"}]}>Web Services</Text>
-         <Text style={[styles.homeProductSub,{color:"#916F3C"}]}>{tr("home.explore")}</Text></View>
+        <View><Text style={[styles.homeProductTitle,{color:"#63451B"}]}>Web Services</Text></View>
        </Pressable>
        <Pressable accessibilityRole="button" accessibilityLabel={"AI Agents · "+tr("home.explore")}
         onPress={()=>{setActiveModule("ai-agents");setActiveTab("services");}}
@@ -769,15 +768,14 @@ export default function App(){
         <View style={styles.homeProductIconV2}><Ionicons name="sparkles-outline" size={28} color="#305D8B"/></View>
         <Ionicons name="hardware-chip-outline" size={73} color="#294C78" style={styles.homeProductArt} accessible={false}/>
         <View><Text style={[styles.homeProductTitle,{color:"#294C78"}]}>AI Agents</Text>
-         <Text style={[styles.homeProductSub,{color:"#547DA0"}]}>{tr("home.explore")}</Text></View>
+         <Text style={[styles.homeProductSub,{color:"#547DA0"}]}>Beta</Text></View>
        </Pressable>
        <Pressable accessibilityRole="button" accessibilityLabel={"Marketing · "+tr("home.explore")}
         onPress={()=>{setActiveModule("marketing-analytics");setActiveTab("services");}}
         style={[styles.homeProductTile,styles.homeProductPink]}>
         <View style={styles.homeProductIconV2}><Ionicons name="trending-up-outline" size={28} color="#914B74"/></View>
         <Ionicons name="stats-chart-outline" size={73} color="#82425F" style={styles.homeProductArt} accessible={false}/>
-        <View><Text style={[styles.homeProductTitle,{color:"#82425F"}]}>Marketing</Text>
-         <Text style={[styles.homeProductSub,{color:"#AD7692"}]}>{tr("home.explore")}</Text></View>
+        <View><Text style={[styles.homeProductTitle,{color:"#82425F"}]}>Marketing</Text></View>
        </Pressable>
       </View>
  );
