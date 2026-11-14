@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run bridge:test && npm run i18n:check && npm run i18n:coverage && npm run i18n:marketing && npm run i18n:test && next build",
+    "build": "npm run bridge:test && npm run i18n:check && npm run i18n:coverage && npm run i18n:marketing && npm run i18n:test && npm run testers:test && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "i18n:check": "node scripts/check-i18n.mjs",
@@ -15,7 +15,8 @@
     "predev": "npm run catalog:sync",
     "i18n:test": "node --test scripts/interface-language.test.cjs",
     "i18n:coverage": "node scripts/check-visible-i18n.mjs",
-    "i18n:marketing": "node scripts/check-marketing-i18n.mjs"
+    "i18n:marketing": "node scripts/check-marketing-i18n.mjs",
+    "testers:test": "node --test scripts/admin-testers.test.cjs"
   },
   "engines": {
     "node": ">=20.9"

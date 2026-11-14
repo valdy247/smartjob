@@ -46,8 +46,8 @@ export async function getLatestTesterPreview():Promise<TesterPreview>{
  const items=Array.isArray(result.deployments)?result.deployments as VercelDeployment[]:[];
  const deployments=items.map(normalize).filter((d):d is TesterDeployment=>Boolean(d)).sort((a,b)=>b.createdAt-a.createdAt);
  const ready=deployments.find(d=>d.state==="READY")||null;
- const newest=deployments[0]||null;
- const building=newest&&["BUILDING","QUEUED","INITIALIZING"].includes(newest.state)&&(!ready||newest.createdAt>ready.createdAt)?newest:null;
+ const building=deployments.find(d=>["BUILDING","QUEUED","INITIALIZING"].includes(d.state)&&
+   (!ready||d.createdAt>ready.createdAt))||null;
  return {ready,building,projectVerified:true,...protection(project)};
 }
 export async function verifyTesterDeployment(id:string){
