@@ -95,7 +95,7 @@ export const visualBlocks:Config["components"]={
     data-shade={shade||"medium"} data-height={height||"normal"} data-has-image={Boolean(media)||Boolean(puck.isEditing)}>
     {layout==="cover"?<div className="vmv-hero-cover">
      <BuilderEditableImage id={id} src={image} alt={imageAlt||"Imagen de portada"} settings={settings}
-      radius={0} editing={puck.isEditing} position={position}/>
+      radius={0} editing={puck.isEditing} position={position} priority={!puck.isEditing}/>
     </div>:null}
     <div className="vmv-hero-content">
      {eyebrow?<span className="vmv-hero-eyebrow">{eyebrow}</span>:null}
@@ -107,7 +107,7 @@ export const visualBlocks:Config["components"]={
     </div>
     {layout!=="cover"&&(media||puck.isEditing)?<div className="vmv-hero-image">
      <BuilderEditableImage id={id} src={image} alt={imageAlt||"Imagen de portada"} settings={settings}
-      radius={0} editing={puck.isEditing} position={position}/>
+      radius={0} editing={puck.isEditing} position={position} priority={!puck.isEditing}/>
     </div>:null}
    </section>;
   }
