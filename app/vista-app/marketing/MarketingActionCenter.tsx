@@ -565,6 +565,38 @@ export default function MarketingActionCenter({businessName,industryId,website,o
      if(uploadError)throw new Error("No se pudo guardar la imagen "+kind+". "+uploadError.message);
      uploaded.push(path);mediaPaths.push({kind,path});
     }
+    // Admin already knows how to open private Google request photos. Copy
+    // inherited central-business media into immutable request-scoped paths,
+    // rather than depending on a profile image that may later be replaced.
+    const inherited=[
+     ...(storedBusiness.logo_path?[{kind:"logo",source:storedBusiness.logo_path}]:[]),
+     ...(storedBusiness.cover_path?[{kind:"cover",source:storedBusiness.cover_path}]:[]),
+     ...storedBusiness.gallery_paths.map((source,i)=>({kind:"photo-"+(i+1),source}))
+    ];
+    const used=new Set(mediaPaths.map(m=>m.kind));
+    let nextPhoto=1;
+    for(const item of inherited){
+     let kind=item.kind;
+     if(kind.startsWith("photo-")){
+      while(nextPhoto<=8&&used.has("photo-"+nextPhoto))nextPhoto++;
+      if(nextPhoto>8)break;
+      kind="photo-"+nextPhoto;
+     }
+     if(used.has(kind)||mediaPaths.length>=10)continue;
+     const downloaded=await client.storage.from("vmv-business-media").download(item.source);
+     if(downloaded.error||!downloaded.data)throw Error(en?"We could not attach a saved business photo. Try again.":"No pudimos adjuntar una foto guardada del negocio. Inténtalo nuevamente.");
+     const type=item.source.toLowerCase().endsWith(".png")?"image/png":"image/jpeg";
+     const blob=new Blob([downloaded.data],{type});
+     if(blob.size<10240||blob.size>5242880)throw Error(en?"A saved business photo must be 10 KB–5 MB.":"Una foto guardada debe pesar entre 10 KB y 5 MB.");
+     const fingerprint=await googlePhotoKey(blob);
+     const extension=type==="image/png"?"png":"jpg";
+     const path=folder+"/"+kind+"-"+fingerprint+"."+extension;
+     const uploadedMedia=await client.storage.from("vmv-google-media").upload(path,blob,{contentType:type,cacheControl:"3600",upsert:false});
+     if(uploadedMedia.error&&!uploadedMedia.error.message?.toLowerCase().includes("already exists"))
+      throw Error(en?"We could not preserve a business photo for this request.":"No pudimos conservar una foto del negocio para esta solicitud.");
+     if(!uploadedMedia.error)uploaded.push(path);
+     mediaPaths.push({kind,path});used.add(kind);
+    }
    }
    insertAttempted=true;
    const {data,error:insertError}=await client.from("vmv_marketing_requests").insert({
