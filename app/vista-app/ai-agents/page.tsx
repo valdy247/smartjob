@@ -11,17 +11,17 @@ import BusinessProfileDialog from "./BusinessProfileDialog";
 import AgentSetupWizard,{type WizardDraft} from "./AgentSetupWizard";
 import AgentQualityLab from "./AgentQualityLab";
 import CommerceStudio from "./CommerceStudio";
+import BookingStudio from "./BookingStudio";
 import CallControl from "./CallControl";
 import AgentLiveTest from "./AgentLiveTest";
 import {inspectAgent} from "./agentQuality";
-import {agentSetupDestination} from "@/lib/agent-capability-access";
 import {getSupabase} from "@/lib/supabase";
 import {centralPrefill,businessMissing,choosePrincipalAgent,linkLegacyWorkspace,loadBusinessChoices,provisionAiWorkspace,type CentralBusiness,type AiWorkspace} from "./centralBusiness";
 import {loadAgents,loadPhoneSelection,selectPhoneAgent,setStudyStatus,storeAgent,type PersistedAgent,type PhoneSelection} from "./agentStore";
 
 type Kind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 type Status="draft"|"active"|"paused";
-type Screen="home"|"editor"|"test"|"quality"|"commerce"|"phone";
+type Screen="home"|"editor"|"test"|"quality"|"commerce"|"phone"|"bookings";
 type AgentDraft=WizardDraft;
 type Agent=PersistedAgent;
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
@@ -123,20 +123,54 @@ export default function AIAgentsPreview(){
   }else if(kind==="calls"&&phone?.agentId===agent.id)setScreen("phone");
   else if(kind==="calls"){
    setNotice("El agente principal no está asignado a la línea. Elige «Elegir para teléfono» explícitamente, después configura Llamadas.");
+  }else if(kind==="bookings"){
+   setScreen("bookings");setNotice("");
   }else if(kind==="support"){
    test(agent);setNotice("Prueba privada. El chat público de Web Services todavía requiere una conexión verificada.");
   }else if(kind==="operations"){
-   quality(agent);setNotice("Actividad: consulta el historial telefónico en tu cuenta y el laboratorio de calidad aquí.");
+   quality(agent);setNotice("Actividad: consulta el historial telefónico y la calidad del agente.");
   }else{
    edit(agent,0);
-   if(kind==="bookings")setNotice("Configura Reservas en este agente. La agenda real aún requiere comprobar su integración.");
   }
  };
  const start=async(kind:Kind)=>{
-  const destination=agentSetupDestination(staleAgents.some(a=>a.id===principal?.id)?null:principal,selectedBusiness?.id||null);
-  if(destination){window.location.assign(destination);return;}
-  if(!principal)return;
-  openFor(kind,principal);
+  // A missing permission or incomplete readiness is NOT a missing agent.
+  // If this screen was opened in an older tab, first discover fresh agents.
+  if(principal){openFor(kind,principal);return;}
+  if(!selectedBusiness){
+   setPendingKind(kind);setBusinessDialog(true);
+   setNotice("Selecciona o vincula tu negocio para continuar con su agente existente.");
+   return;
+  }
+  try{
+   const [list,profile]=await Promise.all([loadAgents(),loadBusinessChoices()]);
+   setAgents(list);setBusinesses(profile.businesses);setWorkspaces(profile.workspaces);
+   const workspace=profile.workspaces.find(w=>w.central_business_id===selectedBusiness.id);
+   const candidates=workspace?list.filter(a=>a.business_id===workspace.id):[];
+   const assigned=candidates.find(a=>a.id===workspace?.primary_agent_id);
+   if(assigned){openFor(kind,assigned);return;}
+   if(workspace&&candidates.length===1){
+    const existing=candidates[0];
+    await choosePrincipalAgent(workspace.id,existing.id,workspace.primary_agent_id||null);
+    setWorkspaces(old=>old.map(w=>w.id===workspace.id?{...w,primary_agent_id:existing.id}:w));
+    openFor(kind,existing);return;
+   }
+   if(candidates.length>1){
+    setNotice("Ya tienes agentes. Selecciona «Hacer principal» en el agente que quieres usar; no crearemos otro.");
+    return;
+   }
+   if(!workspace&&profile.workspaces.some(w=>!w.central_business_id)){
+    setPendingKind(kind);setBusinessDialog(true);
+    setNotice("Ya hay agentes de un espacio anterior. Vincula el negocio para reutilizarlos sin crear otro.");
+    return;
+   }
+   // Only a genuinely empty workspace may start the one-time identity wizard.
+   setPendingKind(kind);
+   setDraft(centralPrefill(selectedBusiness,blank("support")));
+   setSelected(null);setEditStep(0);setScreen("editor");setNotice("");
+  }catch(e){
+   setNotice(e instanceof Error?e.message:"No se pudo comprobar tu agente. Intenta actualizar la página.");
+  }
  };
  const businessSaved=async(id:string)=>{
   const [list,profile]=await Promise.all([loadAgents(),loadBusinessChoices()]);
@@ -401,6 +435,8 @@ export default function AIAgentsPreview(){
       initial={draft} workspaceId={active?.business_id||selectedWorkspace?.id} onReviewBusiness={current=>{setDraft(current);setBusinessDialog(true);}} initialStep={editStep} saving={busy} isPreview={false} authRequired={!authenticated} recoverDraft={!selected} onCancel={back}
       onSave={async updated=>{setDraft(updated);await save(updated);}}/>:null}
      {screen==="quality"&&active?<AgentQualityLab agent={active} onClose={back} onEdit={step=>edit(active,step)}/>:null}
+     {screen==="bookings"&&active?<BookingStudio agent={active} onClose={back}
+      onAgentUpdated={updated=>setAgents(old=>old.map(a=>a.id===updated.id?updated:a))}/>:null}
      {screen==="phone"?<CallControl onBack={back}/>:null}
      {screen==="commerce"?<CommerceStudio agents={principal?[principal]:visibleAgents.filter(a=>a.revision>0)}
       initialAgentId={principal?.id||selected||""} initialTab={commerceTab} onAgentUpdated={updated=>
