@@ -41,7 +41,7 @@ const fields:{key:Exclude<keyof Draft,"authorized"|"category"|"categoryId">;labe
 ];
 const SERVICE_NAME_KEYS:Record<string,MessageKey>={"smart-call":"services.offer.smart-call","site-care":"services.offer.site-care","ai-agents":"services.offer.ai-agents","local-seo":"services.offer.local-seo","reviews":"services.offer.reviews","smart-booking":"services.offer.smart-booking","website-design":"services.offer.website-design","google-business-profile":"services.offer.google-business-profile","seo-setup":"services.offer.seo-setup","domain-setup":"services.offer.domain-setup"};
 const WEB_SERVICE_IDS=new Set(["site-care","local-seo","reviews","website-design","google-business-profile","seo-setup","domain-setup"]);
-export default function BusinessServicesPreview({userId,focus="all"}:{userId:string;focus?:"all"|"web"}){
+export default function BusinessServicesPreview({userId,focus="all",excludeFeatured=false}:{userId:string;focus?:"all"|"web";excludeFeatured?:boolean}){
  const {language,translate}=useInterfaceLanguage();
  const [charge,setCharge]=useState<Charge>("subscription");
  const [editor,setEditor]=useState(false);
@@ -135,7 +135,7 @@ export default function BusinessServicesPreview({userId,focus="all"}:{userId:str
    </form>
   </section>;
  return <section className={styles.root}>
-  <div className={styles.header}><h3>{focus==="web"?"Web Services":translate("common.services")}<span>.</span></h3><div className={styles.headerIcon}><PanelsTopLeft size={20}/></div></div>
+  <div className={styles.header}><h3>{focus==="web"?"Web Services":excludeFeatured?translate("settings.otherServices"):translate("common.services")}<span>.</span></h3><div className={styles.headerIcon}><PanelsTopLeft size={20}/></div></div>
   {focus==="web"?<div className={styles.webActions}>
     <a className={styles.primary} href="/web-studio"><PanelsTopLeft size={18}/> {translate("services.visualEditor")} <ArrowUpRight size={16}/></a>
     <button className={styles.webActionSecondary} type="button" onClick={()=>setSiteEditor(true)}>{translate("services.classicEditor")}</button>
@@ -146,7 +146,7 @@ export default function BusinessServicesPreview({userId,focus="all"}:{userId:str
    <button type="button" className={charge==="one_time"?styles.selected:""} aria-pressed={charge==="one_time"} onClick={()=>setCharge("one_time")}>{translate("services.oneTime")}</button>
   </div>
   <div className={styles.grid}>
-   {offers.filter(o=>o.charge===charge&&(focus!=="web"||WEB_SERVICE_IDS.has(o.id))).map(o=>{
+   {offers.filter(o=>o.charge===charge&&(focus!=="web"||WEB_SERVICE_IDS.has(o.id))&&(!excludeFeatured||!["smart-call","ai-agents"].includes(o.id))).map(o=>{
     const inner=<><div className={styles.offerIcon}><o.Icon size={25}/></div>
      <div className={styles.offerBottom}><strong>{translate(SERVICE_NAME_KEYS[o.id])}</strong><div className={styles.badges}>
       <small>{translate(o.delivery==="automatic"?"services.automatic":"services.assisted")}</small>
