@@ -5,7 +5,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import type {Session} from "@supabase/supabase-js";
 import type {Agent} from "./aiAgentsData";
 import {createTestCheckout,getCatalog,getLines,getMerchant,getOrderEvents,getOrders,
- newTestQuote,saveCatalog,saveSalesPermissions,simulateBuyerAcceptance,usd,
+ saveCatalog,saveSalesPermissions,simulateBuyerAcceptance,usd,
  type CatalogDraft,type CatalogItem,type MerchantStatus,type OrderEvent,
  type OrderLine,type SaleOrder,type SalesPermissions} from "./aiAgentsCommerceData";
 
@@ -94,8 +94,6 @@ export function AIAgentsCommerceStudio({session,agents,phoneAgentId,selectedAgen
  const [showForm,setShowForm]=useState(false);
  const [editing,setEditing]=useState<CatalogItem|null>(null);
  const [draft,setDraft]=useState<CatalogDraft>(blank);
- const [productId,setProductId]=useState("");
- const [quantity,setQuantity]=useState("1");
  const [expandedOrder,setExpandedOrder]=useState<string|null>(null);
  const [lines,setLines]=useState<OrderLine[]>([]);
  const [events,setEvents]=useState<OrderEvent[]>([]);
@@ -160,18 +158,6 @@ export function AIAgentsCommerceStudio({session,agents,phoneAgentId,selectedAgen
    approved:item.approved,active:item.active});
   setShowForm(true);
  };
- const quote=async()=>{
-  const item=items.find(x=>x.id===productId);
-  const qty=Number(quantity);
-  if(!agent||!item)return;
-  setBusy(true);
-  try{
-   await newTestQuote(session,agent,item,qty);
-   await refresh();setTab("orders");
-   setNotice("Cotización de PRUEBA creada. No hay cobro ni aceptación real del comprador.");
-  }catch(e){Alert.alert("Cotización",e instanceof Error?e.message:"No se pudo crear.");}
-  finally{setBusy(false);}
- };
  const accept=async(order:SaleOrder)=>{
   if(order.call_sid){Alert.alert("Pedido telefónico","La aceptación debe hacerla el comprador durante la llamada.");return;}
   Alert.alert("Solo simulación","Esta acción simula la aceptación del comprador en un pedido de prueba, no una venta ni un cobro.",[
@@ -206,8 +192,6 @@ export function AIAgentsCommerceStudio({session,agents,phoneAgentId,selectedAgen
    setLines(details);setEvents(history);
   }catch(e){Alert.alert("Pedido",e instanceof Error?e.message:"No se pudo cargar el detalle.");}
  };
- const approved=items.filter(item=>item.approved&&item.active&&item.stock_mode!=="manual"&&
-  item.variants.length===0&&item.extras.length===0);
  const selectedForPhone=phoneAgentId===agentId;
  const phoneReady=perms.channel!=="Chat"&&perms.cap_sales&&perms.perm_prepare_order&&
   (permission.call_disclosure==="Sí"||permission.call_consent==="Sí");
@@ -351,19 +335,6 @@ export function AIAgentsCommerceStudio({session,agents,phoneAgentId,selectedAgen
      </View>
      <SmallButton icon="create-outline" label="Editar" onPress={()=>beginEdit(item)}/>
     </View>)}
-    <Title caption="También puedes preparar un pedido ficticio desde el iPhone para revisar los totales antes de llamar.">Prueba de cálculo</Title>
-    <View style={styles.panel}>
-     <Text style={styles.detail}>Producto disponible para cotización de prueba</Text>
-     {approved.length===0?<Text style={styles.warning}>Necesitas un producto aprobado con unidades verificadas para continuar.</Text>:
-      <View style={styles.choiceRow}>{approved.map(item=>
-       <Pick key={item.id} text={item.name+" · "+usd(item.price_cents)}
-        selected={productId===item.id} onPress={()=>setProductId(item.id)}/>)}</View>}
-     <RowField label="Cantidad (1 a 50)" value={quantity} keyboardType="number-pad"
-      onChange={setQuantity} placeholder="1"/>
-     <SmallButton label="Preparar pedido de PRUEBA" icon="flask-outline"
-      solid disabled={!agent||!productId||busy} onPress={()=>void quote()}/>
-     <Text style={styles.detail}>Solo se crean cotizaciones. No se descuenta definitivamente el inventario ni se cobra al comprador.</Text>
-    </View>
     <SmallButton label="Ver pedidos registrados" icon="receipt-outline"
      onPress={()=>{void refresh();setTab("orders");}}/>
    </>:null}
