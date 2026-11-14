@@ -105,8 +105,8 @@ export default function AIAgentsPreview(){
 
  const typeInfo=(kind:Kind)=>types.find(t=>t.id===kind)||types[6];
  const principal=visibleAgents.find(a=>a.id===selectedWorkspace?.primary_agent_id)||null;
- const proposal=!principal&&(phone?.agentId?visibleAgents.find(a=>a.id===phone.agentId):null)||
-  (!principal&&visibleAgents.length===1?visibleAgents[0]:null);
+ const proposal=principal?null:
+  (visibleAgents.find(a=>a.id===phone?.agentId)|| (visibleAgents.length===1?visibleAgents[0]:null));
  const designate=async(agent:Agent)=>{
   if(!selectedWorkspace||!agent.revision||agent.business_id!==selectedWorkspace.id)
    throw Error("Vincula primero el negocio y guarda un agente real.");
