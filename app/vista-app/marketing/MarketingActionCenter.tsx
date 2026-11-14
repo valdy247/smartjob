@@ -847,7 +847,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    <div className={styles.panelTop}><div><span>{translate("marketing.ui.tracking").replace(/^02\s*·\s*/,"")}</span><h3>{translate("marketing.ui.requests")}</h3></div><button type="button" onClick={()=>void refresh()} disabled={loading||!user} className={styles.refresh}><RefreshCw size={16}/> {translate("marketing.ui.refresh")}</button></div>
    {staff?<div className={styles.viewToggle}><button type="button" aria-pressed={!teamView} onClick={()=>setTeamView(false)}>{translate("marketing.ui.requests")}</button><button type="button" aria-pressed={teamView} onClick={()=>setTeamView(true)}>{translate("marketing.ui.teamInbox")}</button></div>:null}
    {!user?<p className={styles.muted}>{translate("marketing.ui.loginEmpty")}</p>:loading?<p className={styles.muted}>{translate("marketing.ui.loading")}</p>:
-    shown.length===0?<div className={styles.empty}><ClipboardList size={25}/><strong>{translate("marketing.ui.empty")}</strong><a href="/vista-app/marketing" className={styles.reportLink}>{translate("marketing.report.back")}</a></div>:
+    shown.length===0?<div className={styles.empty}><ClipboardList size={25}/><strong>{translate("marketing.ui.empty")}</strong><span>{translate("marketing.ui.emptyHint")}</span><a href="/vista-app/marketing" className={styles.reportLink}>{translate("marketing.report.back")}</a></div>:
     <div className={styles.requestList}>{shown.map(req=>{
      const approved=isAccepted(req);
      const service=serviceName(req.service_code);
