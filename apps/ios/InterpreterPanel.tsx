@@ -2,14 +2,13 @@ import React,{useEffect,useRef,useState} from "react";
 import {ActivityIndicator,KeyboardAvoidingView,Modal,Platform,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
 import {AudioModule,RecordingPresets,setAudioModeAsync,useAudioRecorder} from "expo-audio";
 import * as Speech from "expo-speech";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import type {Session} from "@supabase/supabase-js";
 import {api,supabase} from "./session";
 
 type Mode="voice"|"text";
-type Stage="context"|"active";
 type Language="es"|"en";
 type Context={job_type:string;client_name:string;details:string;city:string;state:string;zip:string;dimensions:string;materials:string};
-type Answer={question:string;answer:string};
 type Turn={source:string;target:string;language:Language;translatedTo:Language;blocked:boolean;warning?:string};
 const initial:Context={job_type:"",client_name:"",details:"",city:"",state:"",zip:"",dimensions:"",materials:""};
 const flag=(value:Language)=>value==="es"?"🇪🇸":"🇺🇸";
@@ -30,39 +29,24 @@ function predictedLanguage(text:string):Language|null{
  if(Math.max(es,en)<2||es===en)return null;
  return es>en?"es":"en";
 }
-const interfaceColors={dark:"#152329",mint:"#2DD6B0"};
-export function InterpreterPanel({session}:{session:Session}){
- const ownerLanguage:Language=session.user.user_metadata?.owner_language==="en"?"en":"es";
- const firstName=String(session.user.user_metadata?.first_name||"").trim();
- const [mode,setMode]=useState<Mode|null>(null),[stage,setStage]=useState<Stage>("context");
- const [accepted,setAccepted]=useState(false),[question,setQuestion]=useState("");
- const [answers,setAnswers]=useState<Answer[]>([]),[answerText,setAnswerText]=useState("");
- const [draft,setDraft]=useState(""),[context,setContext]=useState<Context>(initial);
+const interfaceColors={dark:"#292040",mint:"#9F72EA"};
+export function InterpreterPanel({session: _session}:{session:Session}){
+ const [mode,setMode]=useState<Mode|null>(null);
+ const [accepted,setAccepted]=useState(false);
+ const [draft,setDraft]=useState("");
+ const context=initial;
  const [turns,setTurns]=useState<Turn[]>([]),[recording,setRecording]=useState(false);
  const [working,setWorking]=useState(false),[message,setMessage]=useState("");
  const recorder=useAudioRecorder(RecordingPresets.HIGH_QUALITY);
  const pressed=useRef(false),recordingRef=useRef(false),lock=useRef(false);
  const viewRef=useRef<ScrollView|null>(null);
- const firstQuestion=ownerLanguage==="es"?"Hola"+(firstName?", "+firstName:"")+", ¿con quién vas a conversar y de qué van a hablar?":
-  "Hi"+(firstName?", "+firstName:"")+", who are you meeting and what will you discuss?";
- const currentQuestion=question||firstQuestion;
- useEffect(()=>{
-  let mounted=true;
-  if(supabase)void supabase.from("smartjob_contexts").select("job_type,client_name,details,city,state,zip,dimensions,materials")
-   .eq("user_id",session.user.id).maybeSingle().then(({data})=>{
-    if(mounted&&data)setContext({...initial,...data});
-   });
-  return()=>{mounted=false;};
- },[session.user.id]);
  useEffect(()=>()=>{Speech.stop();},[]);
  const speak=(value:string,language:Language)=>{
   void Speech.stop();
   Speech.speak(value,{language:language==="es"?"es-ES":"en-US",rate:.93,pitch:1});
  };
  const open=(selected:Mode)=>{
-  setMode(selected);setStage("context");setAccepted(false);setQuestion("");
-  setAnswers([]);setAnswerText("");setDraft("");setTurns([]);setMessage("");
-  if(selected==="voice")speak(firstQuestion,ownerLanguage);
+  setMode(selected);setAccepted(false);setDraft("");setTurns([]);setMessage("");
  };
  const close=()=>{
   pressed.current=false;
@@ -82,35 +66,6 @@ export function InterpreterPanel({session}:{session:Session}){
   if(!r.ok)throw Error(value.error||"No fue posible completar la solicitud.");
   return value as Record<string,unknown>;
  };
- const persist=async(next:Context)=>{
-  if(!supabase)return;
-  const {error}=await supabase.from("smartjob_contexts").upsert({...next,user_id:session.user.id,updated_at:new Date().toISOString()});
-  if(error)setMessage("El contexto se usará en esta sesión, pero no pudo guardarse.");
- };
- const skip=()=>{Speech.stop();setStage("active");setMessage("");};
- const submitContext=async(value:string)=>{
-  if(!value.trim()||lock.current)return;
-  if(!accepted){setMessage("Confirma el consentimiento antes de continuar.");return;}
-  const next=[...answers,{question:currentQuestion,answer:value.trim().slice(0,550)}];
-  setAnswers(next);setAnswerText("");setMessage("");setWorking(true);lock.current=true;
-  try{
-   const result=await call("/api/interpreter",{action:"context",answers:next,ownerLanguage});
-   if(result.done===true||next.length>=3){
-    const data=(result.context||{}) as Partial<Context>;
-    const merged={...context,job_type:data.job_type||context.job_type,
-     client_name:data.client_name||context.client_name,
-     details:data.details||next.map(v=>v.answer).join(" · ").slice(0,650)};
-    setContext(merged);void persist(merged);
-    setStage("active");Speech.stop();
-   }else{
-    const nextQuestion=String(result.question||"").trim();
-    if(!nextQuestion){setStage("active");return;}
-    setQuestion(nextQuestion);
-    if(mode==="voice")speak(nextQuestion,ownerLanguage);
-   }
-  }catch(e){setMessage(e instanceof Error?e.message:"No se pudo preparar el contexto. Puedes omitirlo.");}
-  finally{setWorking(false);lock.current=false;}
- };
  const translate=async(value:string)=>{
   if(!value.trim()||lock.current)return;
   if(!accepted){setMessage("Confirma que ambos conocen el uso del traductor.");return;}
@@ -127,7 +82,6 @@ export function InterpreterPanel({session}:{session:Session}){
   }catch(e){setMessage(e instanceof Error?e.message:"No se pudo traducir.");}
   finally{setWorking(false);lock.current=false;}
  };
- const input=(value:string)=>stage==="context"?submitContext(value):translate(value);
  const stopRecording=async()=>{
   pressed.current=false;
   if(!recordingRef.current)return;
@@ -149,7 +103,7 @@ export function InterpreterPanel({session}:{session:Session}){
    const spoken=String(decoded.text||"").trim();
    if(!spoken)throw Error("No se detectó voz. Inténtalo de nuevo.");
    lock.current=false;setWorking(false);
-   await input(spoken);
+   await translate(spoken);
   }catch(e){setMessage(e instanceof Error?e.message:"No se pudo procesar el audio.");}
   finally{lock.current=false;setWorking(false);}
  };
@@ -172,55 +126,40 @@ export function InterpreterPanel({session}:{session:Session}){
  const latest=turns[turns.length-1];
  const estimated=predictedLanguage(draft);
  return <View style={styles.entry}>
-  <Text style={styles.eyebrow}>TRADUCCIÓN EN PERSONA</Text>
-  <Text style={styles.heading}>¿Cómo conversarán?</Text>
-  <Pressable style={styles.choice} accessibilityRole="button" onPress={()=>open("voice")}>
-   <View style={styles.choiceIcon}><Text style={styles.choiceEmoji}>🎙</Text></View>
-   <View style={styles.choiceCopy}><Text style={styles.choiceName}>Iniciar conversación hablada</Text>
-    <Text style={styles.choiceDetails}>Habla, suelta y escucha la traducción</Text></View>
-   <Text style={styles.chevron}>›</Text>
-  </Pressable>
-  <Pressable style={styles.choice} accessibilityRole="button" onPress={()=>open("text")}>
-   <View style={styles.choiceIcon}><Text style={styles.choiceEmoji}>⌨</Text></View>
-   <View style={styles.choiceCopy}><Text style={styles.choiceName}>Escribir mensajes</Text>
-    <Text style={styles.choiceDetails}>Idioma detectado automáticamente</Text></View>
-   <Text style={styles.chevron}>›</Text>
-  </Pressable>
+  <View style={styles.translatorBanner}>
+   <Text style={styles.translatorBannerEyebrow}>VMV BUSINESS / TRADUCTOR</Text>
+   <Text style={styles.translatorBannerTitle}>Dos idiomas.{"\n"}<Text style={styles.translatorBannerHighlight}>Una conversación.</Text></Text>
+   <View style={styles.translatorLanguages}>
+    <Text style={styles.translatorLanguagesText}>🇪🇸 Español  ⇄  🇺🇸 English</Text>
+   </View>
+   <View style={styles.translatorArtRing}/>
+   <View style={styles.translatorArtRingInner}/>
+   <View style={styles.translatorArtIcon}><Ionicons name="language-outline" size={34} color="#7246BB"/></View>
+   <Text style={styles.translatorArtSpark}>✦</Text>
+  </View>
+  <Text style={styles.translatorModeTitle}>Elige cómo conversar<Text style={{color:"#9463E6"}}>.</Text></Text>
+  <View style={styles.translatorModeGrid}>
+   <Pressable accessibilityRole="button" accessibilityLabel="Comenzar conversación por voz"
+    style={[styles.translatorModeTile,styles.translatorVoiceTile]} onPress={()=>open("voice")}>
+    <View style={styles.translatorModeIcon}><Ionicons name="mic-outline" size={29} color="#278A72"/></View>
+    <View><Text style={styles.translatorModeName}>Hablar</Text><Text style={styles.translatorModeDetail}>Voz en tiempo real</Text></View>
+   </Pressable>
+   <Pressable accessibilityRole="button" accessibilityLabel="Comenzar conversación escrita"
+    style={[styles.translatorModeTile,styles.translatorTextTile]} onPress={()=>open("text")}>
+    <View style={styles.translatorModeIcon}><Ionicons name="keypad-outline" size={29} color="#A56D38"/></View>
+    <View><Text style={styles.translatorModeName}>Escribir</Text><Text style={styles.translatorModeDetail}>Mensajes traducidos</Text></View>
+   </Pressable>
+  </View>
   <Modal visible={mode!==null} animationType="slide" presentationStyle="fullScreen" onRequestClose={close}>
-   <KeyboardAvoidingView style={[styles.modal,{backgroundColor:mode==="voice"?interfaceColors.dark:"#F7FCFB"}]}
+   <KeyboardAvoidingView style={[styles.modal,{backgroundColor:mode==="voice"?interfaceColors.dark:"#FBFAFF"}]}
     behavior={Platform.OS==="ios"?"padding":undefined}>
     <View style={styles.top}>
      <Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={close}><Text style={styles.back}>‹</Text></Pressable>
-     <View style={styles.topTitle}><Text style={[styles.title,{color:mode==="voice"?"#F4FBF8":"#152229"}]}>{stage==="context"?"Antes de comenzar":mode==="voice"?"Conversación hablada":"Conversación escrita"}</Text>
+     <View style={styles.topTitle}><Text style={[styles.title,{color:mode==="voice"?"#FFFFFF":"#29223D"}]}>{mode==="voice"?"Conversación hablada":"Conversación escrita"}</Text>
       <Text style={styles.topLanguages}>🇺🇸 English ⇄ 🇪🇸 Español</Text></View>
-     {stage==="context"?<Pressable accessibilityRole="button" onPress={skip}><Text style={styles.skip}>Omitir</Text></Pressable>:
-      <Pressable accessibilityRole="button" onPress={()=>{setTurns([]);setMessage("");}}><Text style={styles.skip}>Limpiar</Text></Pressable>}
+     <Pressable accessibilityRole="button" onPress={()=>{setTurns([]);setMessage("");}}><Text style={styles.skip}>Limpiar</Text></Pressable>
     </View>
-    {stage==="context"?<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.contextBody}>
-     <View style={styles.contextOrb}><Text style={styles.contextIcon}>✦</Text></View>
-     <Text style={styles.contextKicker}>CONTEXTO · {Math.min(answers.length+1,3)} DE 3</Text>
-     <Text style={[styles.question,{color:mode==="voice"?"white":"#17242B"}]}>{currentQuestion}</Text>
-     <Text style={[styles.smallHint,{color:mode==="voice"?"#A9C4C0":"#66817B"}]}>Solo preguntaremos lo necesario.</Text>
-     {mode==="voice"?<>
-      <Pressable accessibilityRole="button" style={styles.listenButton} onPress={()=>speak(currentQuestion,ownerLanguage)}>
-       <Text style={styles.listenText}>🔊 Escuchar pregunta</Text></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Mantener pulsado para responder"
-       onPressIn={()=>void startRecording()} onPressOut={()=>void stopRecording()} disabled={working}
-       style={[styles.micButton,recording&&styles.recording]}>
-       <Text style={styles.flags}>🇺🇸  🇪🇸</Text><Text style={styles.micIcon}>🎙</Text>
-       <Text style={styles.micLabel}>{recording?"Escuchando…":"Responder"}</Text>
-      </Pressable>
-     </>:<View style={styles.contextComposer}>
-      <TextInput multiline numberOfLines={3} style={styles.textField} placeholder="Cuéntame brevemente…"
-       placeholderTextColor="#8D9FA0" value={answerText} onChangeText={setAnswerText} maxLength={550}/>
-      <Pressable style={styles.primary} onPress={()=>void submitContext(answerText)} disabled={working||!answerText.trim()}>
-       <Text style={styles.primaryText}>Continuar →</Text></Pressable>
-     </View>}
-     <Pressable onPress={()=>setAccepted(!accepted)} accessibilityRole="checkbox" accessibilityState={{checked:accepted}} style={styles.consent}>
-      <Text style={styles.consentTick}>{accepted?"☑":"☐"}</Text>
-      <Text style={[styles.consentCopy,{color:mode==="voice"?"#B4D1CB":"#57796F"}]}>Ambos aceptamos procesar la conversación con IA.</Text>
-     </Pressable>
-    </ScrollView>:mode==="voice"?<View style={styles.voiceBody}>
+    {mode==="voice"?<View style={styles.voiceBody}>
      <ScrollView ref={viewRef} contentContainerStyle={styles.transcript}>
       {latest?<View style={styles.transcriptBlock}>
        <Text style={styles.transcriptLang}>{flag(latest.language)} {label(latest.language)}</Text>
@@ -274,9 +213,31 @@ export function InterpreterPanel({session}:{session:Session}){
  </View>;
 }
 const styles=StyleSheet.create({
- entry:{paddingTop:10},
- eyebrow:{color:"#0C9E7F",fontSize:11,fontWeight:"800",letterSpacing:2,marginBottom:11},
- heading:{fontSize:25,fontWeight:"800",letterSpacing:-.6,color:"#172329",marginBottom:22},
+ entry:{paddingTop:5,paddingBottom:35},
+ translatorBanner:{minHeight:226,backgroundColor:"#8353E2",borderRadius:25,padding:20,overflow:"hidden",position:"relative",
+  shadowColor:"#6B42BD",shadowOpacity:.18,shadowRadius:14,shadowOffset:{width:0,height:8},elevation:4},
+ translatorBannerEyebrow:{color:"#F0E5FF",fontSize:10,fontWeight:"800",letterSpacing:1.0,zIndex:2},
+ translatorBannerTitle:{color:"#FFFFFF",fontSize:29,lineHeight:33,fontWeight:"800",letterSpacing:-1.5,marginTop:28,zIndex:2,maxWidth:"81%"},
+ translatorBannerHighlight:{color:"#FFE298"},
+ translatorLanguages:{alignSelf:"flex-start",marginTop:19,borderRadius:23,paddingHorizontal:12,paddingVertical:10,
+  backgroundColor:"#FFFFFF2B",borderWidth:1,borderColor:"#FFFFFF58",zIndex:2},
+ translatorLanguagesText:{fontSize:11,color:"#FFFFFF",fontWeight:"800"},
+ translatorArtRing:{position:"absolute",right:-31,top:35,height:159,width:159,borderRadius:80,borderWidth:20,borderColor:"#D8B9FF80"},
+ translatorArtRingInner:{position:"absolute",right:-2,top:75,height:112,width:112,borderRadius:57,borderWidth:14,borderColor:"#F5D1FF85"},
+ translatorArtIcon:{position:"absolute",right:21,top:74,height:78,width:78,borderRadius:24,backgroundColor:"#FFCA86",justifyContent:"center",alignItems:"center",
+   transform:[{rotate:"-14deg"}]},
+ translatorArtSpark:{position:"absolute",top:18,right:30,fontSize:31,color:"#FFE080"},
+ translatorModeTitle:{fontSize:24,color:"#2C2341",fontWeight:"800",letterSpacing:-1.2,marginTop:26,marginBottom:15},
+ translatorModeGrid:{flexDirection:"row",justifyContent:"space-between",gap:12},
+ translatorModeTile:{flex:1,minHeight:171,borderRadius:22,padding:16,alignItems:"flex-start",justifyContent:"space-between"},
+ translatorVoiceTile:{backgroundColor:"#BCEBD9"},
+ translatorTextTile:{backgroundColor:"#FFE08C"},
+ translatorModeIcon:{width:50,height:50,borderRadius:17,backgroundColor:"#FFFFFF9C",alignItems:"center",justifyContent:"center"},
+ translatorModeName:{fontSize:20,fontWeight:"800",color:"#2F2840",letterSpacing:-.8},
+ translatorModeDetail:{fontSize:11,fontWeight:"700",color:"#6F657B",marginTop:6},
+
+ eyebrow:{color:"#9369D4",fontSize:11,fontWeight:"800",letterSpacing:2,marginBottom:11},
+ heading:{fontSize:25,fontWeight:"800",letterSpacing:-.6,color:"#2C2340",marginBottom:22},
  choice:{flexDirection:"row",alignItems:"center",gap:14,backgroundColor:"#FFFFFF",borderRadius:23,borderWidth:1,borderColor:"#D8EDE6",padding:19,marginBottom:14},
  choiceIcon:{width:54,height:54,alignItems:"center",justifyContent:"center",backgroundColor:"#D9F9ED",borderRadius:17},
  choiceEmoji:{fontSize:25,color:"#09765B"},choiceCopy:{flex:1},
@@ -284,52 +245,52 @@ const styles=StyleSheet.create({
  choiceDetails:{color:"#788984",fontSize:11,marginTop:5},chevron:{color:"#0E9775",fontSize:26},
  modal:{flex:1,paddingHorizontal:17,paddingTop:Platform.OS==="ios"?54:28,paddingBottom:Platform.OS==="ios"?22:16},
  top:{minHeight:57,flexDirection:"row",alignItems:"center",gap:10},
- back:{fontSize:37,color:"#3DDDB7",fontWeight:"600",width:35,lineHeight:40},
+ back:{fontSize:37,color:"#CFADFF",fontWeight:"600",width:35,lineHeight:40},
  topTitle:{flex:1,alignItems:"center"},
- title:{fontSize:14,fontWeight:"800"},topLanguages:{fontSize:11,color:"#84B9A8",marginTop:4,fontWeight:"700"},
- skip:{fontSize:12,color:"#2ED7AD",fontWeight:"800",minWidth:46,textAlign:"right"},
+ title:{fontSize:14,fontWeight:"800"},topLanguages:{fontSize:11,color:"#B6A0DA",marginTop:4,fontWeight:"700"},
+ skip:{fontSize:12,color:"#CFADFF",fontWeight:"800",minWidth:46,textAlign:"right"},
  contextBody:{flexGrow:1,alignItems:"center",justifyContent:"center",paddingVertical:24,gap:14},
- contextOrb:{height:72,width:72,borderRadius:40,backgroundColor:"#26DAB7",justifyContent:"center",alignItems:"center"},
- contextIcon:{fontSize:33,color:"#075A49"},
- contextKicker:{color:"#45DDB7",letterSpacing:2,fontWeight:"800",fontSize:11},
+ contextOrb:{height:72,width:72,borderRadius:40,backgroundColor:"#FFD38E",justifyContent:"center",alignItems:"center"},
+ contextIcon:{fontSize:33,color:"#6C48A1"},
+ contextKicker:{color:"#D2B8FC",letterSpacing:2,fontWeight:"800",fontSize:11},
  question:{fontSize:24,fontWeight:"800",textAlign:"center",lineHeight:32,letterSpacing:-.4},
  smallHint:{fontSize:12,textAlign:"center",lineHeight:17},
  listenButton:{padding:12,borderRadius:12,backgroundColor:"#FFFFFF13"},
- listenText:{color:"#31D9AE",fontSize:13,fontWeight:"800",marginTop:6,textAlign:"center"},
- micButton:{width:172,height:172,borderRadius:90,borderWidth:8,borderColor:"#A3FFE52A",backgroundColor:"#37E1BD",justifyContent:"center",alignItems:"center",gap:7},
- recording:{backgroundColor:"#F8AF8A",borderColor:"#F8C0A05B"},flags:{fontSize:30},micIcon:{fontSize:25},micLabel:{color:"#064735",fontSize:12,fontWeight:"900"},
+ listenText:{color:"#DFCAFF",fontSize:13,fontWeight:"800",marginTop:6,textAlign:"center"},
+ micButton:{width:172,height:172,borderRadius:90,borderWidth:8,borderColor:"#E9D4FF40",backgroundColor:"#A57AED",justifyContent:"center",alignItems:"center",gap:7},
+ recording:{backgroundColor:"#F8AF8A",borderColor:"#F8C0A05B"},flags:{fontSize:30},micIcon:{fontSize:25},micLabel:{color:"#FFFFFF",fontSize:12,fontWeight:"900"},
  contextComposer:{width:"100%",maxWidth:470,gap:12},
  textField:{minHeight:103,textAlignVertical:"top",fontSize:16,backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#D7E9E5",borderRadius:18,padding:14,color:"#1A2D30"},
- primary:{backgroundColor:"#2DDDB8",borderRadius:16,padding:15,alignItems:"center"},
- primaryText:{fontWeight:"800",fontSize:15,color:"#064E3B"},
+ primary:{backgroundColor:"#9162E4",borderRadius:16,padding:15,alignItems:"center"},
+ primaryText:{fontWeight:"800",fontSize:15,color:"#FFFFFF"},
  consent:{flexDirection:"row",alignItems:"center",gap:8,marginTop:13,alignSelf:"center",maxWidth:370,paddingVertical:6},
- consentTick:{color:"#2EDEB5",fontSize:21},consentCopy:{color:"#ABC9C2",fontSize:11,lineHeight:16,flexShrink:1},
+ consentTick:{color:"#CBAAFF",fontSize:21},consentCopy:{color:"#ABC9C2",fontSize:11,lineHeight:16,flexShrink:1},
  voiceBody:{flex:1,minHeight:0,justifyContent:"space-between"},
  transcript:{flexGrow:1,justifyContent:"center",alignItems:"center",paddingVertical:20,gap:8},
  transcriptBlock:{alignItems:"center",gap:7,maxWidth:480,width:"100%"},
- transcriptLang:{fontSize:12,color:"#6CE7C6",fontWeight:"800"},
+ transcriptLang:{fontSize:12,color:"#D7B9FF",fontWeight:"800"},
  original:{color:"#FFFFFF",fontWeight:"700",textAlign:"center",lineHeight:30},
- down:{color:"#46E6BC",fontSize:22},
- translated:{color:"#ABFDE2",fontWeight:"800",textAlign:"center",lineHeight:30},
+ down:{color:"#FFE09D",fontSize:22},
+ translated:{color:"#F1E2FF",fontWeight:"800",textAlign:"center",lineHeight:30},
  warning:{fontSize:11,color:"#FFCAA6",textAlign:"center"},
  voiceEmpty:{color:"#91ACA6",fontSize:13,textAlign:"center"},
  micZone:{alignItems:"center",gap:12,paddingBottom:10},
- voiceNote:{fontSize:12,color:"#B4CEC5",textAlign:"center"},
+ voiceNote:{fontSize:12,color:"#D0BFEB",textAlign:"center"},
  textBody:{flex:1,minHeight:0},
  messages:{flexGrow:1,paddingVertical:20,gap:14},
- turn:{borderRadius:19,backgroundColor:"#FFFFFF",borderColor:"#DBEBE7",borderWidth:1,padding:16,gap:7},
- turnLanguage:{fontSize:12,fontWeight:"800",color:"#178D73"},
+ turn:{borderRadius:21,backgroundColor:"#FFFFFF",borderColor:"#E6DAF2",borderWidth:1,padding:16,gap:7},
+ turnLanguage:{fontSize:12,fontWeight:"800",color:"#8154CA"},
  turnSource:{fontSize:14,color:"#77868B"},
  turnTranslation:{fontSize:20,fontWeight:"700",color:"#17272B",lineHeight:27},
  textEmpty:{marginTop:80,textAlign:"center",color:"#849995",fontSize:13},
  textInputZone:{paddingBottom:10},
- detected:{alignSelf:"flex-start",backgroundColor:"#FFFFFF",borderRadius:25,paddingVertical:8,paddingHorizontal:13,marginBottom:10,borderWidth:1,borderColor:"#C8EADD"},
- detectedText:{color:"#0C896A",fontWeight:"800",fontSize:12},
- compose:{flexDirection:"row",alignItems:"flex-end",backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#D8E8E4",borderRadius:19,padding:8,gap:8},
+ detected:{alignSelf:"flex-start",backgroundColor:"#FFFFFF",borderRadius:25,paddingVertical:8,paddingHorizontal:13,marginBottom:10,borderWidth:1,borderColor:"#DFD0F5"},
+ detectedText:{color:"#8054C6",fontWeight:"800",fontSize:12},
+ compose:{flexDirection:"row",alignItems:"flex-end",backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#E4D7F1",borderRadius:21,padding:8,gap:8},
  messageInput:{flex:1,minHeight:49,maxHeight:122,fontSize:15,color:"#1A2D30",paddingHorizontal:8,paddingVertical:9,textAlignVertical:"top"},
- send:{width:45,height:45,justifyContent:"center",alignItems:"center",borderRadius:14,backgroundColor:"#2ED8B3"},
- sendText:{color:"#073B2E",fontSize:23},
+ send:{width:45,height:45,justifyContent:"center",alignItems:"center",borderRadius:15,backgroundColor:"#9260E6"},
+ sendText:{color:"#FFFFFF",fontSize:23},
  loading:{flexDirection:"row",alignItems:"center",alignSelf:"center",gap:9,paddingVertical:6},
- loadingText:{color:"#3ADDAD",fontSize:12},
+ loadingText:{color:"#BFA3F5",fontSize:12},
  error:{fontSize:12,lineHeight:18,textAlign:"center",marginTop:6,marginBottom:8},
 });

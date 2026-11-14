@@ -1,0 +1,36 @@
+.root{color:#2c213b;display:flex;flex-direction:column;gap:13px;padding-bottom:25px}
+.back{border:0;background:none;color:#8454d8;font-size:12px;font-weight:900;display:flex;align-items:center;gap:8px;padding:5px 0;width:max-content}
+.hero{display:flex;align-items:center;gap:14px;background:linear-gradient(115deg,#8456e8,#b48aff);border-radius:20px;color:#fff;padding:19px}
+.hero>svg{flex-shrink:0}
+.hero small{font-size:9px;font-weight:900;letter-spacing:1px;color:#eddefe}
+.hero h1{font-size:22px;margin:6px 0 3px;font-weight:900;color:#fff}
+.hero p{margin:0;font-size:11px;color:#f3e9ff}
+.stack{display:flex;flex-direction:column;gap:12px}
+.section{background:#fff;border:1px solid #e9e0f1;border-radius:17px;padding:15px;display:flex;flex-direction:column;gap:12px}
+.section h2{font-size:16px;margin:0;font-weight:900;color:#322546}
+.section>small,.hint{font-size:11px;line-height:1.5;color:#8b7d99;margin:0}
+.section label{font-size:11px;color:#594768;font-weight:800;display:flex;flex-direction:column;gap:7px}
+.section select,.section textarea,.section input[type=time]{min-height:42px;max-width:100%;width:100%;border:1px solid #e7daef;background:#fcfaff;border-radius:12px;font:600 12px system-ui,sans-serif;color:#30273d;padding:10px}
+.section textarea{resize:vertical}
+.section .toggle{flex-direction:row;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:#352443}
+.toggle input{width:19px;height:19px;accent-color:#8859e7;flex-shrink:0}
+.day{border-top:1px solid #f0e9f6;padding-top:10px;display:flex;flex-direction:column;gap:9px}
+.time{display:flex;gap:8px;align-items:center}
+.time label,.time input,.time select{min-width:0;flex:1}
+.summary{display:flex;align-items:flex-start;gap:9px;padding:12px;background:#e9f7ee;border-radius:14px;color:#3a7659;font-size:11px;line-height:1.6}
+.summary p{margin:0}.summary svg{flex-shrink:0}
+.primary,.secondary{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border-radius:13px;padding:13px;font-weight:900;font-size:12px}
+.primary{background:#8655e2;border:0;color:#fff}
+.secondary{background:#fff;color:#8855d6;border:1px solid #e5d8f4}
+.primary:disabled,.secondary:disabled{opacity:.5;cursor:not-allowed}
+.notice{margin:0;padding:12px;border-radius:13px;background:#fff0df;color:#8c5a26;font-size:11px;line-height:1.5}
+.result{background:#ede6ff;border-radius:12px;color:#66449e;padding:12px;font-size:12px;line-height:1.5;margin:0}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #a77af0;outline-offset:2px}
+
+.inlineHours{display:flex;flex-direction:column;gap:12px;padding:14px;margin-top:2px;border:1px solid #dfd0fb;border-radius:14px;background:#faf7ff}
+.inlineHours h3{font-size:14px;line-height:1.3;color:#653caa;margin:0;font-weight:900}
+.inlineHours>small{font-size:11px;color:#82728f;line-height:1.5}
+.inlineHours .day{border-top:1px solid #eadff9}
+.inlineHours .time{align-items:stretch;gap:8px}
+.inlineHours .time label{flex:1;min-width:0}
+@media(max-width:390px){.section{padding:12px}.inlineHours{padding:10px}.inlineHours .time{gap:6px}.inlineHours .time input{padding:8px 5px;font-size:12px}}

@@ -1,0 +1,96 @@
+/* Published customer page — completely isolated from VMV application surfaces. */
+.ws-public{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ws-ink);background:#fff;min-height:100vh;overflow-x:hidden}
+.ws-public *{box-sizing:border-box}
+.ws-public a{color:inherit;text-decoration:none}
+.ws-public-nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:27px max(28px,7vw)}
+.ws-public-mark{font-size:25px;font-weight:900;letter-spacing:-.07em;overflow-wrap:anywhere}
+.ws-public-mark span,.ws-public-section h2 span{color:var(--ws-color)}
+.ws-public-nav nav{display:flex;gap:23px;font-weight:700;font-size:12px}
+.ws-public-nav nav a:hover,.ws-public-contacts a:hover{text-decoration:underline}
+.ws-public-hero{position:relative;background:var(--ws-surface);min-height:535px;padding:90px max(28px,7vw);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;isolation:isolate}
+.ws-public-eyebrow,.ws-public-section>small{font-size:11px;letter-spacing:.18em;font-weight:900;color:var(--ws-color)}
+.ws-public-hero h1{font-size:clamp(43px,8vw,112px);max-width:900px;line-height:.97;letter-spacing:-.085em;margin:24px 0;overflow-wrap:anywhere}
+.ws-public-hero p{font-size:clamp(16px,2vw,21px);line-height:1.6;max-width:650px;margin:0}
+.ws-public-button{display:inline-flex;align-items:center;gap:23px;margin-top:29px;padding:16px 23px;color:#fff!important;background:var(--ws-color);font-size:13px;font-weight:800;border-radius:999px}
+.ws-public-graphic{position:absolute;right:-55px;bottom:-105px;z-index:-1;font-size:clamp(140px,30vw,350px);color:var(--ws-color);opacity:.13;transform:rotate(23deg)}
+.ws-public-section{padding:80px max(28px,7vw)}
+.ws-public-section h2{font-size:clamp(32px,5vw,67px);line-height:1.04;letter-spacing:-.07em;margin:19px 0 35px}
+.ws-public-service-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.ws-public-service-grid article{display:flex;flex-direction:column;min-height:195px;gap:16px;padding:24px;background:var(--ws-surface);border-radius:19px}
+.ws-public-service-grid article>span:first-child{font-size:12px;font-weight:800;color:var(--ws-color)}
+.ws-public-service-grid article h3{font-size:clamp(18px,2.4vw,30px);letter-spacing:-.05em;line-height:1.15;overflow-wrap:anywhere;margin:auto 0}
+.ws-public-service-grid article>span:last-child{align-self:flex-end;font-size:22px;color:var(--ws-color)}
+.ws-public-about{color:white;background:var(--ws-ink)}
+.ws-public-about h2 span{color:var(--ws-surface)}
+.ws-public-about>small{color:var(--ws-surface)}
+.ws-public-about p{font-size:clamp(19px,3vw,32px);max-width:840px;line-height:1.5;overflow-wrap:anywhere}
+.ws-public-contact{background:var(--ws-surface)}
+.ws-public-contacts{display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+.ws-public-contacts a{font-size:clamp(17px,3vw,28px);font-weight:750;overflow-wrap:anywhere}
+.ws-public-contacts p{font-size:16px;white-space:pre-line;line-height:1.6}
+.ws-public-footer{display:flex;justify-content:space-between;gap:20px;padding:25px max(28px,7vw);font-size:13px;font-weight:750;border-top:1px solid #ddd}
+.ws-public--showcase .ws-public-hero{background:var(--ws-ink);color:white}
+.ws-public--showcase .ws-public-hero .ws-public-eyebrow{color:var(--ws-surface)}
+.ws-public--showcase .ws-public-hero .ws-public-button{background:var(--ws-surface);color:var(--ws-ink)!important}
+.ws-public--minimal .ws-public-hero{background:#fff;min-height:420px}
+.ws-public--minimal .ws-public-service-grid article{background:white;border:1px solid #ddd;border-radius:4px}
+.ws-public--minimal .ws-public-button{border-radius:6px}
+@media(max-width:700px){.ws-public-nav{padding:20px 6%;flex-direction:column;align-items:flex-start}.ws-public-nav nav{gap:17px;font-size:11px}.ws-public-hero{min-height:440px;padding:65px 6%}.ws-public-hero h1{font-size:clamp(44px,11vw,70px)}.ws-public-section{padding:65px 6%}.ws-public-service-grid{grid-template-columns:1fr}.ws-public-service-grid article{min-height:125px;padding:21px}.ws-public-section h2{margin-bottom:22px}.ws-public-footer{padding:23px 6%}}
+
+.ws-public-hero-photo{display:block;width:min(100%,670px);height:clamp(190px,28vw,370px);object-fit:cover;border-radius:22px;margin:25px 0 0;box-shadow:0 14px 30px #16102022}
+.ws-public-gallery{background:#fff}
+.ws-public-gallery>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.ws-public-gallery>div img{width:100%;height:clamp(190px,25vw,340px);object-fit:cover;display:block;border-radius:19px}
+@media(max-width:700px){.ws-public-gallery>div{grid-template-columns:1fr}.ws-public-gallery>div img{height:250px}.ws-public-hero-photo{height:215px;border-radius:15px}}
+
+
+/* Direct conversion links; present only when the owner configures WhatsApp. */
+.ws-public-contact .ws-public-whatsapp-link{display:inline-flex;align-items:center;justify-content:center;gap:15px;max-width:100%;padding:16px 20px;margin:0 0 12px;background:var(--ws-color);color:#fff;border-radius:999px;font-size:15px;letter-spacing:-.02em;box-shadow:0 7px 22px #00000015}
+.ws-public-whatsapp-float{position:fixed;right:25px;bottom:24px;z-index:8;display:inline-flex;align-items:center;gap:9px;padding:14px 19px;background:#168c66;color:#fff!important;text-decoration:none;font-size:13px;font-weight:850;border-radius:999px;box-shadow:0 12px 38px #162c2870}
+.ws-public-whatsapp-float:hover{filter:brightness(1.07);transform:translateY(-2px)}
+.ws-public-whatsapp-float:focus-visible,.ws-public-button:focus-visible{outline:3px solid var(--ws-color);outline-offset:4px}
+.ws-public-whatsapp-float span{font-size:17px;line-height:1}
+.ws-public:has(.ws-public-whatsapp-float) .ws-public-footer{padding-bottom:72px}
+@media(max-width:700px){.ws-public-whatsapp-float{bottom:16px;right:15px;padding:12px 15px;font-size:12px}.ws-public:has(.ws-public-whatsapp-float) .ws-public-footer{padding-bottom:78px}}
+@media(prefers-reduced-motion:reduce){.ws-public-whatsapp-float{transition:none}.ws-public-whatsapp-float:hover{transform:none}}
+
+
+/* Service cards are real inquiry links with explicit keyboard focus. */
+.ws-public-service-grid article:has(.ws-public-service-action){padding:0;overflow:hidden}
+.ws-public-service-action{display:flex;flex-direction:column;gap:16px;min-height:195px;height:100%;padding:24px;color:inherit;text-decoration:none;border-radius:19px}
+.ws-public-service-action>span:first-child{font-size:12px;font-weight:800;color:var(--ws-color)}
+.ws-public-service-action h3{font-size:clamp(18px,2.4vw,30px);letter-spacing:-.05em;line-height:1.15;overflow-wrap:anywhere;margin:auto 0}
+.ws-public-service-action>span:last-child{align-self:flex-end;font-size:22px;color:var(--ws-color)}
+.ws-public-service-action:hover{box-shadow:inset 0 0 0 2px var(--ws-color)}
+.ws-public-service-action:focus-visible{outline:3px solid var(--ws-color);outline-offset:-4px}
+@media(max-width:700px){.ws-public-service-action{min-height:125px;padding:21px}}
+
+
+.ws-public-contacts .ws-public-map-link{display:inline-flex;align-items:center;gap:12px;margin-top:9px;padding:11px 17px;border:1px solid var(--ws-color);border-radius:99px;font-size:13px;font-weight:850;color:var(--ws-color)}
+.ws-public-map-link:focus-visible{outline:3px solid var(--ws-color);outline-offset:4px}
+
+
+/* Public request form: accessible, polished, and responsive on customer devices. */
+.ws-public-inquiry{background:#f9f7fc}
+.ws-public-inquiry h2{margin-bottom:32px}
+.ws-inquiry-form{display:flex;flex-direction:column;gap:19px;max-width:760px;padding:clamp(19px,4vw,35px);background:#fff;border:1px solid #e9e6ee;border-radius:22px;box-shadow:0 20px 60px #2320330a}
+.ws-inquiry-form label,.ws-inquiry-extra label{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ws-inquiry-form label>span{font-size:12px;font-weight:760;color:var(--ws-ink)}
+.ws-inquiry-form input,.ws-inquiry-form select,.ws-inquiry-form textarea{font:inherit;font-size:15px;color:var(--ws-ink);background:#fbfaff;border:1px solid #dcd8e3;border-radius:11px;padding:14px 15px;max-width:100%;min-width:0;width:100%;min-height:47px}
+.ws-inquiry-form textarea{resize:vertical;min-height:115px;line-height:1.55}
+.ws-inquiry-form input:focus-visible,.ws-inquiry-form select:focus-visible,.ws-inquiry-form textarea:focus-visible{outline:2px solid var(--ws-color);outline-offset:2px;border-color:var(--ws-color)}
+.ws-inquiry-field-row,.ws-inquiry-extra{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.ws-inquiry-extra{padding:16px 0 0;border-top:1px solid #eee9f3}
+.ws-inquiry-trap{position:absolute!important;left:-9999px!important;top:auto!important;width:1px!important;height:1px!important;overflow:hidden!important}
+.ws-inquiry-error{color:#a53255;background:#fff0f3;padding:11px 14px;border-radius:10px;font-size:13px;margin:0}
+.ws-inquiry-submit{display:flex;justify-content:center;align-items:center;gap:18px;background:var(--ws-color);color:#fff;border:0;border-radius:999px;padding:16px 21px;min-height:51px;font-size:14px;font-weight:850;cursor:pointer}
+.ws-inquiry-submit:disabled{opacity:.6;cursor:wait}
+.ws-inquiry-submit:focus-visible{outline:3px solid var(--ws-color);outline-offset:3px}
+.ws-inquiry-success{max-width:760px;border-radius:20px;padding:43px 28px;background:white;border:1px solid #e9e6ee;text-align:center}
+.ws-inquiry-success>span{display:grid;place-items:center;border-radius:50%;width:56px;height:56px;margin:0 auto 18px;background:var(--ws-surface);color:var(--ws-color);font-size:29px;font-weight:800}
+.ws-inquiry-success h3{font-size:clamp(24px,4vw,38px);letter-spacing:-.06em;margin:0 0 8px}
+.ws-inquiry-success p{font-size:14px;color:#605b69;line-height:1.7;margin:0 auto 21px;max-width:450px}
+.ws-inquiry-success button{font:inherit;border-radius:99px;padding:12px 20px;background:var(--ws-color);color:white;border:0;cursor:pointer}
+@media(max-width:650px){.ws-inquiry-field-row,.ws-inquiry-extra{grid-template-columns:1fr}.ws-public-inquiry{padding:55px 6%}.ws-inquiry-form{padding:19px;gap:16px;border-radius:17px}.ws-public-nav nav{flex-wrap:wrap}}
+
+.ws-inquiry-privacy{font-size:11px;line-height:1.6;color:#79727e;margin:-4px 0 0}

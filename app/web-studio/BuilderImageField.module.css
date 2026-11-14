@@ -1,0 +1,109 @@
+.wrap{display:flex;flex-direction:column;gap:11px;color:#372b49;font-family:ui-sans-serif,system-ui,sans-serif}
+.current{display:block;width:100%;height:170px;object-fit:contain;object-position:center;border-radius:12px;background:#fff}
+.currentLogo{display:block;width:100%;height:185px;object-fit:contain;object-position:center;border-radius:12px;background:#fff;padding:6px}
+.upload{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;background:#f3eaff;color:#7647bb;border:1px dashed #c8a9ef;padding:13px;border-radius:11px;font-size:12px;font-weight:850;cursor:pointer}
+.upload input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.heading{display:flex;justify-content:space-between;align-items:center}
+.heading span{font-size:11px;color:#7b609c;font-weight:850}
+.heading button{border:0;color:#7c52b7;background:transparent;cursor:pointer;padding:5px}
+.gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.gallery button{border:2px solid transparent;border-radius:9px;overflow:hidden;padding:0;background:transparent;cursor:pointer;height:62px;min-width:0}
+.gallery button.active{border-color:#8c57db}
+.gallery img{display:block;width:100%;height:100%;object-fit:cover}
+.empty{font-size:11px;color:#9584a8}
+.ai{border-top:1px solid #efe4f7;padding-top:10px;display:flex;flex-direction:column;gap:8px}
+.ai textarea{font:inherit;color:#382945;font-size:12px;padding:10px;border-radius:10px;border:1px solid #ddd0eb;resize:vertical}
+.ai button{display:flex;align-items:center;justify-content:center;gap:7px;color:#fff;background:#8857dd;border:0;border-radius:10px;padding:10px;font-size:12px;font-weight:800;cursor:pointer}
+.ai button:disabled{opacity:.5;cursor:not-allowed}
+.error{font-size:11px;color:#b04464}
+
+
+.selectedImage{display:flex;flex-direction:column;align-items:stretch;gap:6px}
+.clearSelection{align-self:flex-start;border:0;background:#f2edf8;color:#8157ad;border-radius:8px;
+ padding:6px 9px;display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:750;cursor:pointer}
+.clearSelection:disabled{opacity:.5;cursor:wait}
+.photoTile{position:relative;min-width:0;height:70px;border-radius:10px}
+.gallery .photoTile>.selectPhoto,.gallery .photoTile>.active{width:100%;height:100%;display:block;
+ border:2px solid transparent;border-radius:10px;padding:0;overflow:hidden;background:#f1eef5;cursor:pointer}
+.gallery .photoTile>.active{border-color:#8c57db}
+.gallery .photoTile>.deletePhoto{position:absolute;right:3px;top:3px;width:29px;height:29px;min-width:29px;
+ border:1px solid #fff9;background:rgba(30,25,40,.88);color:#fff;border-radius:8px;padding:0;
+ display:grid;place-items:center;z-index:2;box-shadow:0 2px 5px #21182a35;cursor:pointer}
+.gallery .photoTile>.deletePhoto:hover{background:#b73152}
+.gallery .photoTile>.deletePhoto:focus-visible,.gallery .photoTile>.selectPhoto:focus-visible{
+ outline:3px solid #9a65df;outline-offset:2px}
+.gallery .photoTile>.deletePhoto:disabled{opacity:.45;cursor:wait}
+.photoTile .deletingStatus{position:absolute;inset:0;display:grid;place-items:center;
+ background:#262137ca;color:#fff;font-size:10px;font-weight:800;border-radius:10px;z-index:3}
+
+
+.notice{display:block;font-size:11px;line-height:1.5;color:#536777;background:#eef7f4;border:1px solid #cee5dc;border-radius:9px;padding:9px 10px}
+
+/* One compact image control per field; the media library is shown only on demand. */
+.fieldActions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.replace{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid #d4bde9;
+ background:#8b58d5;color:#fff;border-radius:9px;padding:9px 12px;font-size:12px;font-weight:800;cursor:pointer}
+.replace:disabled,.emptyPick:disabled{opacity:.55;cursor:wait}
+.emptyPick{display:flex;min-height:115px;flex-direction:column;align-items:center;justify-content:center;
+ gap:7px;border:1px dashed #c9b0e6;border-radius:15px;background:#f9f5ff;
+ color:#7852a9;cursor:pointer;padding:17px 12px}
+.emptyPick strong{font-size:13px;line-height:1.2}
+.emptyPick small{font-size:11px;color:#8d7b9e;text-align:center}
+.backdrop{position:fixed;inset:0;z-index:99999;display:flex;justify-content:center;
+ align-items:center;background:rgba(24,17,37,.61);backdrop-filter:blur(3px);padding:16px}
+.sheet{box-sizing:border-box;display:flex;flex-direction:column;width:min(620px,100%);
+ max-height:min(770px,90dvh);background:#fffcff;border:1px solid #e2d5ef;
+ border-radius:22px;box-shadow:0 25px 70px #20122c55;color:#372b49;
+ font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+.modalHeader{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:17px 19px 12px}
+.modalHeader>div{display:flex;flex-direction:column;gap:3px}
+.modalHeader small{font-size:10px;font-weight:850;letter-spacing:.1em;color:#9267ce}
+.modalHeader h3{font-size:20px;font-weight:900;letter-spacing:-.035em;margin:0}
+.modalHeader>button{display:grid;place-items:center;width:36px;height:36px;
+ border:1px solid #e2d5ed;border-radius:10px;background:#f7f1fc;color:#6b5288;cursor:pointer}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 19px 10px;
+ background:#f4edf9;border-radius:12px;padding:4px}
+.tabs button{border:0;border-radius:9px;padding:11px 12px;font-size:12px;
+ font-weight:850;cursor:pointer;color:#72578b;background:transparent}
+.tabs button.selectedTab{background:#fff;color:#6d42b3;box-shadow:0 2px 9px #46325d12}
+.modalBody{display:flex;flex-direction:column;gap:12px;padding:5px 19px 19px;overflow-y:auto;
+ overscroll-behavior:contain;min-height:120px}
+.modalBody .heading{display:flex;justify-content:space-between;align-items:center}
+.modalBody .heading span{font-size:12px}
+.modalBody .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:10px}
+.modalBody .photoTile{height:108px;position:relative;border:1px solid #e5ddec;background:#f3eef7}
+.modalBody .gallery .photoTile>.selectPhoto,.modalBody .gallery .photoTile>.active{
+ width:100%;height:100%;border-radius:10px;display:block;overflow:hidden}
+.modalBody .gallery .photoTile>.active{border:3px solid #9160d7}
+.modalBody .gallery img{width:100%;height:100%;object-fit:cover}
+.modalBody .gallery .photoTile>.more{position:absolute;right:5px;top:5px;z-index:2;
+ display:grid;place-items:center;width:28px;height:28px;min-width:28px;
+ color:#fff;border:1px solid #ffffff70;background:#2e2346cc;border-radius:9px;padding:0;cursor:pointer}
+.fileMenu{position:absolute;top:38px;right:3px;z-index:4;min-width:160px;max-width:215px;
+ padding:7px;border:1px solid #dfd3e8;background:#fff;border-radius:11px;
+ box-shadow:0 10px 25px #3421493c}
+.fileMenu>button,.fileMenu>div button{padding:8px 9px;background:#faf7fd;color:#6e4e91;
+ border:0;border-radius:7px;text-align:left;font-size:11px;font-weight:800;cursor:pointer}
+.fileMenu p{font-size:11px;line-height:1.4;color:#654d78;padding:2px 3px;margin:2px 0 8px}
+.fileMenu>div{display:flex;gap:5px}
+.fileMenu>div button.danger{background:#b83d59;color:#fff}
+.modalBody .upload{min-height:136px;display:flex;flex-direction:column;gap:9px}
+.hint{font-size:11px;line-height:1.5;margin:0;color:#847392}
+.emptyState{display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:8px;min-height:170px;color:#8c6caf;text-align:center}
+.emptyState p{margin:0;font-size:12px;color:#8c779f}
+.emptyState button{border:0;border-radius:10px;background:#8e5ad9;color:#fff;
+ padding:10px 14px;font-size:12px;font-weight:850;cursor:pointer}
+.wrap button:focus-visible,.sheet button:focus-visible,.sheet input:focus-visible,.sheet textarea:focus-visible{
+ outline:3px solid #aa7de8;outline-offset:2px}
+@media(max-width:680px){
+ .backdrop{padding:0;align-items:flex-end}
+ .sheet{width:100%;max-height:88dvh;border-radius:24px 24px 0 0;
+  padding-bottom:env(safe-area-inset-bottom);border-bottom:0}
+ .modalHeader{padding:18px 16px 13px}
+ .tabs{margin:0 16px 10px}
+ .modalBody{padding:5px 16px 20px}
+ .modalBody .gallery{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+ .modalBody .photoTile{height:97px}
+ .fileMenu{right:0;max-width:190px}
+}

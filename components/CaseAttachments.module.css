@@ -1,0 +1,23 @@
+.root{background:#fbfdf9;border:1px solid #e2ebde;border-radius:14px;padding:15px;margin-top:14px;color:#28402e;min-width:0}
+.heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px}
+.heading span{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:900}
+.heading button,.fileRow button{border:0;color:#577851;background:transparent;padding:7px;display:grid;place-items:center;border-radius:9px}
+.heading button:hover,.fileRow button:hover{background:#e9f3e4}
+.fileRow{display:flex;align-items:center;gap:10px;min-width:0;padding:10px 0;border-top:1px solid #e7eee3}
+.fileIcon{width:32px;height:32px;flex-shrink:0;display:grid;place-items:center;border-radius:10px;background:#eae6f4;color:#73629c}
+.fileRow>div{min-width:0;flex:1;display:grid;gap:3px}
+.fileRow strong{font-size:11px;overflow-wrap:anywhere}
+.fileRow small{font-size:10px;color:#8ba08e}
+.empty{color:#819383;font-size:11px;line-height:1.5}
+.upload{padding-top:13px;border-top:1px solid #e6eee2;margin-top:11px}
+.upload label{display:inline-flex;align-items:center;gap:7px;padding:10px 12px;border:1px solid #d2e5c9;border-radius:10px;background:#fff;color:#4a7445;font-size:11px;font-weight:900;cursor:pointer;position:relative}
+.upload input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.upload>small{display:block;font-size:10px;color:#879789;line-height:1.5;margin-top:10px}
+.selected{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:9px;font-size:10px;color:#5c765f}
+.selected span{overflow-wrap:anywhere;min-width:0}
+.selected button{background:#b9ed9d;color:#28532b;border:0;padding:9px 11px;border-radius:9px;font-weight:900;font-size:10px;white-space:nowrap}
+.success,.error{display:flex;align-items:center;gap:6px;font-size:10px;line-height:1.5;margin-top:10px;color:#527d49}
+.error{color:#b15a48}
+
+.visibilityLabel{display:grid!important;gap:5px;margin-top:10px;color:#58745b;font-size:10px!important;font-weight:850}
+.visibilityLabel select{border:1px solid #d7e7d4;border-radius:10px;padding:9px;color:#355838;background:#fff;font-size:11px}

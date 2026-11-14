@@ -1,0 +1,142 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {initialCallPolicy,decideCall,inWeek,businessWeek,validWeek,
+ localParts,localPreview,checkCallPolicy} from "../lib/vmv-ai-agents/call-policy.ts";
+
+const policy=()=>structuredClone(initialCallPolicy);
+const date=(s)=>new Date(s);
+test("default preserved menu when both services are available",()=>{
+ const p=policy();
+ const r=decideCall(p,localPreview("mon","10:00"));
+ assert.equal(r.action,"menu");
+ assert.equal(r.agentAvailable,true);
+ assert.equal(r.translationAvailable,true);
+});
+test("agent-first bypasses menu; translation-first reuses Smart Call",()=>{
+ const p=policy();p.coexistence="agent_first";
+ assert.equal(decideCall(p,localPreview("mon","10:00")).action,"agent");
+ p.coexistence="translation_first";
+ assert.equal(decideCall(p,localPreview("mon","10:00")).action,"translation");
+});
+test("pausing agent leaves translation available",()=>{
+ const p=policy();p.agent_enabled=false;
+ assert.equal(decideCall(p,localPreview("mon","10:00")).action,"translation");
+});
+test("only AI enabled routes directly to agent",()=>{
+ const p=policy();p.translation_enabled=false;p.outside_action="message";
+ assert.equal(decideCall(p,localPreview("mon","10:00")).action,"agent");
+});
+test("scheduled agent outside hours falls back to enabled translation",()=>{
+ const p=policy();p.agent_mode="schedule";
+ assert.equal(decideCall(p,localPreview("sun","13:00")).action,"translation");
+ assert.equal(decideCall(p,localPreview("mon","10:00")).action,"menu");
+});
+test("both services scheduled off hours safely close",()=>{
+ const p=policy();p.agent_mode="schedule";p.translation_mode="schedule";
+ assert.equal(decideCall(p,localPreview("sun","10:00")).action,"message");
+ assert.equal(decideCall(p,localPreview("mon","10:00")).action,"menu");
+});
+test("overnight Monday schedule continues into Tuesday, not beyond closing",()=>{
+ const p=policy();
+ for(const d of Object.keys(p.schedule))p.schedule[d].enabled=false;
+ p.schedule.mon={enabled:true,start:"22:00",end:"02:00"};
+ assert.equal(inWeek(p.schedule,"mon",21*60+59),false);
+ assert.equal(inWeek(p.schedule,"mon",22*60),true);
+ assert.equal(inWeek(p.schedule,"tue",60),true);
+ assert.equal(inWeek(p.schedule,"tue",119),true);
+ assert.equal(inWeek(p.schedule,"tue",120),false);
+});
+test("overnight Sunday continues across the week boundary",()=>{
+ const p=policy();for(const d of Object.keys(p.schedule))p.schedule[d].enabled=false;
+ p.schedule.sun={enabled:true,start:"23:30",end:"01:30"};
+ assert.equal(inWeek(p.schedule,"mon",45),true);
+ assert.equal(inWeek(p.schedule,"mon",90),false);
+});
+test("US timezone conversion and daylight saving shift",()=>{
+ const before=localParts(date("2026-07-01T14:00:00Z"),"America/New_York");
+ assert.equal(before.day,"wed");assert.equal(before.minutes,10*60);
+ const winter=localParts(date("2026-12-01T15:00:00Z"),"America/New_York");
+ assert.equal(winter.day,"tue");assert.equal(winter.minutes,10*60);
+ const chicago=localParts(date("2026-07-01T14:00:00Z"),"America/Chicago");
+ assert.equal(chicago.minutes,9*60);
+});
+test("after no answer only if agent is available",()=>{
+ const p=policy();p.agent_mode="after_no_answer";p.coexistence="agent_first";
+ assert.equal(decideCall(p,localPreview("mon","10:00")).action,"ring_owner");
+ p.agent_enabled=false;assert.equal(decideCall(p,localPreview("mon","10:00")).action,"translation");
+});
+test("validates complete days, 24-hour times and errors",()=>{
+ const p=policy();assert.equal(validWeek(p.schedule),true);
+ assert.equal(checkCallPolicy(p).ring_seconds,18);
+ p.schedule.mon.start="24:60";assert.equal(validWeek(p.schedule),false);
+ assert.throws(()=>checkCallPolicy(p));
+});
+test("requires a functioning route and explicit fallback",()=>{
+ const p=policy();p.agent_enabled=false;p.translation_enabled=false;
+ assert.throws(()=>checkCallPolicy(p));
+ p.agent_enabled=true;p.translation_enabled=false;
+ p.outside_action="message";
+ assert.equal(checkCallPolicy(p).translation_enabled,false);
+ p.ring_seconds=99;assert.throws(()=>checkCallPolicy(p));
+});
+test("business working hours are reused instead of invented",()=>{
+ const config={};
+ for(const d of ["sun","mon","tue","wed","thu","fri","sat"]){
+  config["h_"+d+"_active"]=d==="sun"?"No":"Sí";
+  config["h_"+d+"_open"]="09:00";
+  config["h_"+d+"_close"]="17:00";
+ }
+ const w=businessWeek(config);assert.ok(w);
+ assert.equal(w.sun.enabled,false);
+ assert.equal(businessWeek({h_mon_active:"Sí"}),null);
+});
+
+test("overnight opening never activates BEFORE opening on the same day",()=>{
+ const p=policy();
+ for(const d of Object.keys(p.schedule))p.schedule[d].enabled=false;
+ p.schedule.mon={enabled:true,start:"22:00",end:"02:00"};
+ assert.equal(inWeek(p.schedule,"mon",0),false);
+ assert.equal(inWeek(p.schedule,"mon",60),false);
+ assert.equal(inWeek(p.schedule,"mon",119),false);
+ assert.equal(inWeek(p.schedule,"mon",120),false);
+ assert.equal(inWeek(p.schedule,"mon",21*60+59),false);
+ assert.equal(inWeek(p.schedule,"mon",22*60),true);
+ assert.equal(inWeek(p.schedule,"tue",60),true);
+ assert.equal(inWeek(p.schedule,"tue",120),false);
+});
+test("overnight today does not spill into morning without previous-day shift",()=>{
+ const p=policy();for(const d of Object.keys(p.schedule))p.schedule[d].enabled=false;
+ p.schedule.fri={enabled:true,start:"23:30",end:"03:00"};
+ assert.equal(inWeek(p.schedule,"fri",60),false);
+ assert.equal(inWeek(p.schedule,"sat",120),true);
+ assert.equal(inWeek(p.schedule,"sat",180),false);
+});
+
+test("translation hours are independent of agent hours",()=>{
+ const p=policy();
+ p.agent_mode="schedule";p.translation_mode="schedule";
+ for(const d of Object.keys(p.schedule)){
+  p.schedule[d].enabled=false;
+  p.translation_schedule[d].enabled=false;
+ }
+ p.schedule.mon={enabled:true,start:"09:00",end:"12:00"};
+ p.translation_schedule.mon={enabled:true,start:"14:00",end:"18:00"};
+ assert.equal(decideCall(p,localPreview("mon","10:00")).action,"agent");
+ assert.equal(decideCall(p,localPreview("mon","15:00")).action,"translation");
+ assert.equal(decideCall(p,localPreview("mon","12:30")).action,"message");
+});
+test("business schedule overrides only AI; translation keeps its own hours",()=>{
+ const p=policy();p.agent_mode="schedule";p.translation_mode="schedule";
+ p.translation_schedule.mon={enabled:true,start:"20:00",end:"23:00"};
+ const business=structuredClone(p.schedule);
+ business.mon={enabled:true,start:"08:00",end:"10:00"};
+ assert.equal(decideCall(p,localPreview("mon","09:00"),business).action,"agent");
+ assert.equal(decideCall(p,localPreview("mon","21:00"),business).action,"translation");
+ assert.equal(decideCall(p,localPreview("mon","11:00"),business).action,"message");
+});
+test("legacy policy without translation schedule is upgraded without dropping owner hours",()=>{
+ const p=policy();delete p.translation_schedule;
+ const q=checkCallPolicy(p);
+ assert.deepEqual(q.translation_schedule,q.schedule);
+ assert.notEqual(q.translation_schedule,q.schedule);
+});

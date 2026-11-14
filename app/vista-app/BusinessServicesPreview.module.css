@@ -1,0 +1,53 @@
+/* VMV Business offer tiles — scoped to the /vista-app simulator. */
+.root{color:#29213d;margin-top:19px;padding-bottom:24px}
+.root *{box-sizing:border-box}
+.header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.header h3{font-size:25px;font-weight:900;letter-spacing:-1.1px;margin:0}
+.header h3 span{color:#895de4}
+.headerIcon{width:38px;height:38px;border-radius:13px;background:#eee3ff;display:grid;place-items:center;color:#895de4}
+.toggle{display:flex;gap:5px;background:#f1ecf9;border-radius:18px;padding:5px;margin-bottom:15px}
+.toggle button{flex:1;border:0;border-radius:13px;padding:12px 6px;background:transparent;color:#847698;font-size:13px;font-weight:800;cursor:pointer}
+.toggle .selected{background:#fff;color:#6541ad;box-shadow:0 3px 9px #5d418117}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.tile{text-align:left;position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:17px;min-height:160px;border:0;border-radius:22px;padding:15px;color:#29213d;overflow:hidden}
+button.tile{cursor:pointer}
+button.tile:focus-visible,.toggle button:focus-visible,.back:focus-visible,.save:focus-visible,.primary:focus-visible{outline:3px solid #7449cc;outline-offset:3px}
+.tile .offerIcon{width:45px;height:45px;border-radius:15px;display:grid;place-items:center;background:#ffffffb4;color:#513b76}
+.offerBottom{display:flex;flex-direction:column;gap:9px}
+.offerBottom strong{font-size:16px;letter-spacing:-.55px;font-weight:900;line-height:1.2}
+.badges{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.badges small{background:#ffffffb7;border-radius:8px;padding:6px;font-size:10px;line-height:1;font-weight:800;color:#695979}
+.badges small+small{background:transparent;padding:6px 1px;color:#746883}
+.arrow{position:absolute;right:14px;top:17px;color:#6541ad}
+.violet{background:#dfd0ff}.yellow{background:#ffe39c}.blue{background:#c4e8ff}
+.mint{background:#bcefdc}.pink{background:#ffd5e7}.lilac{background:#e5dafe}
+.back{border:0;background:transparent;display:flex;align-items:center;gap:3px;color:#895de4;font-size:13px;font-weight:800;padding:4px 0 15px;cursor:pointer}
+.editorHero{display:flex;align-items:center;gap:12px;margin-bottom:17px}
+.editorIcon{width:54px;height:54px;flex-shrink:0;border-radius:17px;display:grid;place-items:center;background:#ded0ff;color:#6941a1}
+.editorHero h3{font-size:20px;font-weight:900;letter-spacing:-.9px;margin:0 0 4px;line-height:1.2}
+.editorHero span{font-size:11px;font-weight:800;color:#7d68a4}
+.form{padding:16px;border:1px solid #e7dff2;border-radius:22px;background:#fff;display:flex;flex-direction:column;gap:13px}
+.field{display:flex;flex-direction:column;gap:8px}
+.field>span{font-size:12px;font-weight:800;color:#6b5789}
+.field input,.field textarea{display:block;width:100%;min-width:0;max-width:100%;padding:12px;border:1px solid #e6daf2;background:#fbfaff;border-radius:12px;color:#29213d;font-size:14px;font-family:inherit}
+.field input:focus-visible,.field textarea:focus-visible{outline:2px solid #9569db;outline-offset:1px}
+.field input{min-height:49px}.field textarea{resize:vertical;min-height:75px}
+.field input::placeholder,.field textarea::placeholder{color:#aca1bc}
+.check{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;color:#29213d;margin:5px 0}
+.check input{width:18px;height:18px;accent-color:#895de4;flex-shrink:0}
+.save,.primary{min-height:49px;border-radius:15px;font-size:13px;font-weight:850;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer}
+.save{background:#fff;border:1px solid #e8ddf6;color:#895de4}
+.primary{border:0;background:#895de4;color:#fff}
+.status{font-size:11px;color:#6a5b89;text-align:center;min-height:13px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:350px){.grid{gap:8px}.tile{padding:11px}.offerBottom strong{font-size:14px}.badges small{font-size:9px}}
+
+
+.field select{display:block;width:100%;min-height:49px;min-width:0;max-width:100%;padding:12px;border:1px solid #e6daf2;background:#fbfaff;color:#29213d;border-radius:12px;font-size:14px;font-family:inherit}
+.field select:focus-visible{outline:3px solid #9764e2;outline-offset:1px}
+
+
+.webActions{display:grid;grid-template-columns:minmax(0,1fr);gap:9px;margin:0 0 16px}
+.webActions .primary{width:100%;margin:0}
+.webActionSecondary{display:flex;align-items:center;justify-content:center;gap:9px;min-height:49px;color:#895de4;background:#fff;border:1px solid #e8dcf7;border-radius:15px;font-size:13px;font-weight:850;cursor:pointer}
+.webActionSecondary:focus-visible{outline:3px solid #8b60da;outline-offset:2px}

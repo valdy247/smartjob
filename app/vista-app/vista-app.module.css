@@ -1,0 +1,476 @@
+.stage{color-scheme:light}.stage *{box-sizing:border-box} .stage{min-height:100vh;background:#f5faf7;color:#172b28;font-family:Inter,"Helvetica Neue",Arial,sans-serif} .pageHeader{height:76px;display:flex;align-items:center;justify-content:space-between;gap:22px;padding:0 clamp(20px,5vw,76px);background:#fff;border-bottom:1px solid #dfebe6}.wordmark{font-weight:950;font-size:27px;letter-spacing:-.09em;text-decoration:none;color:#0b3126;white-space:nowrap}.wordmark span{color:#08a780;font-size:10px;font-weight:850;letter-spacing:.14em;margin-left:11px;vertical-align:middle}.previewTag{font-size:10px;font-weight:800;letter-spacing:.13em;color:#81938c;text-align:center}.webLink{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:750;color:#0c7157;text-decoration:none;border:1px solid #c7e7d8;background:#ecfaf3;padding:10px 15px;border-radius:10px;white-space:nowrap}.layout{max-width:1350px;margin:0 auto;padding:clamp(36px,6vw,83px) clamp(20px,5vw,70px) 70px;display:grid;grid-template-columns:minmax(0,1fr) minmax(350px,420px);align-items:center;gap:clamp(40px,7vw,110px)}.intro{max-width:650px}.kicker{font-size:11px;font-weight:800;letter-spacing:.17em;color:#0b9877}.intro h1{font-size:clamp(51px,5.5vw,88px);letter-spacing:-.084em;line-height:.99;margin:20px 0 24px;font-weight:740}.intro h1 em{font-style:normal;color:#0ab68b}.intro>p{font-size:clamp(15px,1.2vw,18px);color:#667d74;line-height:1.8;max-width:530px;margin:0 0 40px}.feature{display:flex;gap:19px;border-top:1px solid #d9e7dd;padding:20px 0}.feature>span{font-size:11px;color:#0a9e77;font-weight:800;padding-top:3px}.feature div{display:flex;flex-direction:column;gap:7px}.feature strong{font-size:17px;font-weight:750;letter-spacing:-.03em}.feature small{font-size:13px;color:#7c9086;line-height:1.5}.disclaimer{margin-top:20px;padding:18px;background:#e8f6ed;border:1px solid #cae5d6;display:flex;align-items:flex-start;gap:12px;border-radius:14px;color:#507263;font-size:12px;line-height:1.65}.disclaimer svg{flex:0 0 17px;margin-top:2px}.phoneFrame{display:flex;align-items:center;justify-content:center}.device{width:100%;max-width:402px;height:785px;background:#fafdfb;border:9px solid #1d3130;border-radius:48px;box-shadow:0 26px 80px #14352d26,0 2px 10px #23443520;display:flex;flex-direction:column;overflow:hidden;position:relative}.statusBar{height:43px;padding:10px 27px 0;display:flex;align-items:flex-start;justify-content:space-between;font-size:11px;font-weight:850;color:#1f3632;position:relative}.dynamicIsland{width:97px;height:25px;border-radius:18px;background:#182d2c;position:absolute;top:5px;left:50%;transform:translateX(-50%)}.appTop{display:flex;align-items:center;justify-content:space-between;padding:16px 22px 13px;border-bottom:1px solid #e5eee8;background:#fff;flex-shrink:0}.appLogo{display:flex;align-items:center;gap:8px}.appLogo b{font-size:18px;letter-spacing:-.085em;font-weight:950;color:#18312e}.appLogo b span{color:#06a984}.mark{height:33px;width:33px;border-radius:11px;display:grid;place-items:center;background:#18d6ac;font-size:23px;color:#075343;font-weight:900}.appTop button{height:37px;width:37px;border:0;border-radius:50%;background:#e5f8ef;display:grid;place-items:center;color:#087558;cursor:pointer}.scrollArea{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#c9dfd3 transparent}.screen,.smartScreen{padding:23px 20px 40px}.screenEyebrow,.groupTitle,.smallKicker{display:block;font-size:10px;font-weight:850;letter-spacing:.15em;color:#109c79}.screen h2{font-size:32px;letter-spacing:-.07em;line-height:1.08;font-weight:850;margin:11px 0 10px}.mint{color:#04b18a}.screenLead{font-size:13px;line-height:1.58;color:#81918b;margin:0 0 24px}.homeHero{background:linear-gradient(135deg,#143f34,#0e6b53);border:0;border-radius:23px;text-align:left;min-height:177px;padding:22px;color:white;display:flex;flex-direction:column;align-items:flex-start;width:100%;position:relative;overflow:hidden;cursor:pointer}.homeHero::after{content:"";height:180px;width:180px;border:1px solid #ffffff24;border-radius:50%;position:absolute;right:-36px;top:-80px;pointer-events:none}.tileEyebrow{font-size:10px;font-weight:900;letter-spacing:.13em;color:#8be0c0}.homeHero strong{font-size:31px;letter-spacing:-.06em;margin-top:19px}.homeHero small{font-size:12px;color:#c0e8d9;margin-top:7px}.tileArrow{position:absolute;right:17px;bottom:16px;width:40px;height:40px;border:1px solid #ffffff50;border-radius:50%;display:grid;place-items:center}.homeGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 28px}.homeGrid button{background:#fff;border:1px solid #daeae2;border-radius:18px;padding:16px;text-align:left;display:flex;flex-direction:column;align-items:flex-start;gap:9px;color:#0e8467;cursor:pointer;min-height:132px}.homeGrid strong{font-size:15px;color:#1f3630}.homeGrid small{font-size:11px;color:#7d9287;line-height:1.3}.groupTitle{margin:26px 0 15px}.listEntry{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2ece7;border-radius:14px;width:100%;padding:15px;text-align:left;cursor:pointer}.listEntry svg{color:#0a9e7b}.listEntry div{display:flex;flex-direction:column;gap:5px;flex:1}.listEntry strong{font-size:13px}.listEntry small{font-size:11px;color:#86988d}.listEntry>span{font-size:25px;color:#5e8d7c}.serviceHero{background:linear-gradient(135deg,#e0fff0,#c6f7de);border:1px solid #a4e4ca;border-radius:24px;position:relative;width:100%;min-height:207px;display:flex;flex-direction:column;align-items:flex-start;padding:20px;text-align:left;color:#17392f;cursor:pointer}.serviceHeroIcon{width:49px;height:49px;border-radius:15px;background:#fff;display:grid;place-items:center;color:#0b9770;margin-bottom:12px}.serviceHero .tileEyebrow{font-size:9px;color:#28876c}.serviceHero strong{font-size:26px;letter-spacing:-.07em;margin:7px 0 5px}.serviceHero small{font-size:12px;color:#4b7967}.serviceLink{font-size:12px;font-weight:850;color:#0c8a69;margin-top:16px}.moduleRow{background:white;border-bottom:1px solid #e4eee9;padding:12px 5px;display:flex;align-items:center;gap:11px}.moduleIcon{height:39px;width:39px;border-radius:12px;background:#eef9f3;display:grid;place-items:center;color:#0c9874;flex:0 0 39px}.moduleRow>div:nth-child(2){display:flex;flex-direction:column;gap:4px;flex:1}.moduleRow strong{font-size:12px;color:#263b34}.moduleRow small{color:#80998c;font-size:10px}.pending{font-size:9px;font-weight:650;color:#8fa49a;background:#f3f7f4;border-radius:30px;padding:6px 7px}.back{background:none;border:0;color:#0b9977;font-size:12px;display:flex;align-items:center;gap:2px;padding:0;margin:0 0 14px;cursor:pointer;font-weight:750}.smartHero{background:#143a30;border-radius:23px;padding:22px;color:#fff;position:relative;overflow:hidden}.smartHero::after{content:"";position:absolute;right:-55px;top:-80px;border:1px solid #ffffff28;width:190px;height:190px;border-radius:50%}.smartHero>span{font-size:9px;letter-spacing:.13em;font-weight:850;color:#7ddaba}.smartHero h2{font-size:33px;line-height:1;letter-spacing:-.07em;margin:13px 0 10px}.smartHero h2 span{color:#21d9aa}.smartHero p{font-size:12px;line-height:1.7;color:#c3e0d1;max-width:245px;margin:0}.smartBadge{display:inline-flex;align-items:center;gap:8px;border-radius:50px;background:#295348;padding:10px 12px;font-size:10px;font-weight:750;margin-top:17px;color:#e5fff2}.smartBadge span{display:inline-block;height:7px;width:7px;background:#27d49f;border-radius:50%}.switcher{margin:15px 0;display:flex;gap:3px;padding:4px;border-radius:13px;background:#e8f3ed}.switcher button{flex:1;border:0;background:transparent;border-radius:10px;padding:12px 3px;font-size:11px;font-weight:800;color:#69867a;cursor:pointer}.switcher button.selected{background:white;color:#0b7656;box-shadow:0 2px 4px #152e1e10}.smartCard{border:1px solid #e0e9e2;border-radius:20px;background:white;padding:18px;margin-bottom:13px}.smallKicker{font-size:9px}.smartCard h3{font-size:21px;color:#19382f;letter-spacing:-.06em;margin:11px 0 8px}.smartCard p{font-size:11px;line-height:1.7;color:#789183;margin:9px 0 12px}.rule{height:1px;background:#e3ece7;margin:15px 0 6px}.setting{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #edf2ee;padding:10px 0}.setting div{display:flex;flex-direction:column;gap:3px;flex:1}.setting strong{font-size:11px;font-weight:700;color:#7b9388}.setting small{font-size:10px;color:#8fa99e}.setting>span{font-size:11px;font-weight:850;color:#183c2d;text-align:right}.mainAction{background:#06b68c;border:0;border-radius:12px;color:#08432f;min-height:46px;padding:12px 15px;font-size:12px;font-weight:850;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;margin-top:16px;cursor:pointer}.miniCards{display:grid;grid-template-columns:1fr 1fr;gap:10px}.miniCards>div{border:1px solid #e0ede5;border-radius:17px;background:#f2faf4;padding:14px;min-height:80px;display:flex;flex-direction:column;gap:8px}.miniCards strong{font-size:27px;color:#24483a}.miniCards small{font-size:10px;color:#8b9c8e}.smartCard label{display:block;font-size:11px;color:#2b4c3d;font-weight:750;margin:14px 0 8px}.smartCard input,.smartCard select{display:block;width:100%;background:#fcfffd;color:#19392c;border:1px solid #ccdfd4;border-radius:11px;min-height:45px;padding:11px 12px;font-size:13px;outline-offset:2px}.voicePills{display:flex;gap:6px;flex-wrap:wrap}.voicePills span{border-radius:30px;border:1px solid #c8e5d5;padding:8px 11px;font-size:11px;color:#43836d;background:#f5fcf7}.demoNote{border-radius:12px;background:#e9f8ef;color:#267658;font-size:11px;line-height:1.55;padding:11px;margin-top:10px}.emptyHistory{min-height:185px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#419a76;text-align:center}.emptyHistory strong{font-size:13px;color:#1c4034}.emptyHistory p{max-width:225px;margin:0}.bigCircle{width:88px;height:88px;background:#e2f9ed;color:#009d74;display:grid;place-items:center;border-radius:50%;margin:12px auto 21px}.screen .smartCard{text-align:center}.bottomNav{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;background:#fff;border-top:1px solid #e3ece5;padding:9px 7px 17px;flex:0 0 auto}.bottomNav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:transparent;border:0;color:#8c9f94;padding:3px 0;min-width:0;cursor:pointer}.bottomNav button>span{display:grid;place-items:center;width:42px;height:35px;border-radius:14px}.bottomNav button small{font-size:9px;font-weight:750}.bottomNav button.activeNav{color:#087d61}.bottomNav button.activeNav>span{background:#d8f7e7}@media(max-width:970px){.layout{grid-template-columns:1fr;justify-items:center;padding-top:35px}.intro{max-width:620px}.intro h1{font-size:55px}.phoneFrame{width:100%}.device{max-width:402px}}@media(max-width:570px){.pageHeader{height:65px;padding:0 16px}.wordmark{font-size:21px}.wordmark span{font-size:8px;margin-left:6px}.previewTag{display:none}.webLink{font-size:10px;padding:9px}.layout{padding:22px 12px 40px;gap:24px}.intro h1{font-size:44px}.intro>p{font-size:13px;margin-bottom:20px}.feature{display:none}.disclaimer{margin-top:14px;padding:13px;font-size:11px}.device{height:750px;max-width:390px;border-width:6px;border-radius:37px}.appTop{padding:11px 18px}.scrollArea{scrollbar-width:none}.screen,.smartScreen{padding:20px 17px 35px}.phoneFrame{max-width:390px}}@media(max-width:360px){.device{border-width:4px;height:720px}.appLogo b{font-size:15px}.appLogo .mark{width:30px;height:30px}.bottomNav button small{font-size:8px}.smartHero{padding:18px}.screen,.smartScreen{padding:17px 13px}}@media(prefers-reduced-motion:reduce){.stage *{scroll-behavior:auto!important}}
+
+/* Authenticated Smart Call Preview. Native calling remains in iOS/CallKit. */
+.signinScreen,.loadingScreen{padding:36px 22px;display:flex;flex-direction:column;min-height:390px}
+.signinScreen h2{font-size:36px;letter-spacing:-.075em;line-height:1.1;color:#143d31;margin:18px 0 14px}
+.signinForm{display:flex;flex-direction:column;gap:5px;padding-top:7px}
+.signinForm label,.smartCard label{font-size:11px;font-weight:800;color:#345c4b;margin:15px 0 7px;display:block}
+.signinForm input,.smartCard input,.smartCard select,.smartCard textarea{width:100%;background:#fcfffd;border:1px solid #cfe5d8;border-radius:12px;padding:12px 13px;color:#173c30;font-size:14px;min-height:46px;outline-offset:2px}
+.signinForm input:disabled,.smartCard input:disabled,.smartCard select:disabled,.smartCard textarea:disabled{opacity:.55;cursor:not-allowed}
+.smartCard textarea{resize:vertical;min-height:80px;line-height:1.55}
+.smartCard fieldset{border:0;padding:0;margin:0;min-width:0}
+.voiceFields:disabled{opacity:.55}
+.smartCard label+select,.smartCard label+input,.smartCard label+textarea{margin-bottom:3px}
+.smartCard button:disabled,.secondaryAction:disabled{opacity:.52;cursor:not-allowed}
+.registerLink{color:#0b886a;font-weight:800;text-decoration:none;font-size:11px;margin-top:20px;display:block}
+.loadingScreen{align-items:center;justify-content:center;text-align:center;gap:16px;color:#0b9777}
+.loadingScreen p{font-size:13px;line-height:1.6;color:#789083;max-width:250px}
+.loadingScreen h3{font-size:19px;letter-spacing:-.05em;color:#15382e;margin:0}
+.privacyNote{background:#eaf7ed;border:1px solid #cee7d6;border-radius:14px;padding:13px;color:#517566;
+ font-size:11px;line-height:1.6;display:flex;gap:10px;align-items:flex-start;margin-top:16px}
+.privacyNote svg{flex:0 0 17px;margin-top:1px}
+.secondaryAction{width:100%;min-height:43px;background:#e3f8ec;border:1px solid #c4e6d6;border-radius:12px;
+ color:#0a795b;display:flex;align-items:center;justify-content:center;gap:9px;font-size:12px;font-weight:800;margin-top:14px;cursor:pointer}
+.secondaryAction:hover{background:#d3f3e0}
+.logoutLink{margin:22px auto 2px;background:transparent;border:0;color:#9e485b;font-size:12px;font-weight:800;
+ display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;min-height:32px}
+.logoutLink:disabled{opacity:.55}
+.minuteHero{border-radius:21px;background:linear-gradient(132deg,#11372d,#1d6750);color:white;padding:23px 21px;margin-bottom:13px;
+ display:flex;flex-direction:column;align-items:flex-start;min-height:200px;position:relative;overflow:hidden}
+.minuteHero::before{content:"";position:absolute;border:1px solid #ffffff2c;border-radius:50%;width:260px;height:260px;right:-80px;top:-135px;pointer-events:none}
+.minuteHero .smallKicker{color:#a8ecd1}
+.minuteHero>strong{font-size:62px;line-height:1;letter-spacing:-.07em;margin:16px 0 9px;font-weight:900}
+.minuteHero>strong small{font-size:18px;letter-spacing:0;font-weight:750}
+.minuteHero p{font-size:12px;color:#c8eadb;margin:0 0 19px}
+.minuteHero>small{color:#c4e5d6;font-size:10px;line-height:1.5;margin-top:10px}
+.minuteTrack{height:7px;background:#ffffff3b;border-radius:30px;overflow:hidden;width:100%}
+.minuteTrack>span{display:block;height:100%;background:#21e2b2;border-radius:30px}
+.testNote{background:#fff7e9;border:1px solid #f1dfb9;color:#8f6e34;border-radius:12px;padding:11px;
+ font-size:11px;line-height:1.65;margin-top:15px}
+.realHistory{display:flex;flex-direction:column;margin:8px 0 16px}
+.historyItem{display:flex;align-items:center;gap:11px;padding:14px 0;border-bottom:1px solid #e9f1ec;color:#13836a}
+.historyItem>svg{flex:0 0 16px}
+.historyItem>div{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0}
+.historyItem strong{color:#1d3c32;font-size:12px;font-weight:800}
+.historyItem small{color:#85998e;font-size:10px;line-height:1.5}
+.historyDuration{color:#168a6d;font-size:11px;font-weight:850;white-space:nowrap}
+.feedbackArea{padding:8px 20px 25px}
+.errorText{background:#fff0f1;color:#b34c5d;border:1px solid #f2cad0;padding:12px;border-radius:11px;font-size:12px;line-height:1.55;margin:7px 0}
+.successText{background:#e8f8eb;color:#197450;border:1px solid #bce4cb;padding:12px;border-radius:11px;font-size:12px;line-height:1.55;margin:7px 0}
+.interpreterWrap{margin:0 -10px}
+.spin{animation:vmv-spin 1.15s linear infinite}
+@keyframes vmv-spin{to{transform:rotate(360deg)}}
+@media(max-width:570px){.minuteHero>strong{font-size:55px}.signinScreen,.loadingScreen{padding:30px 18px}.interpreterWrap{margin:0 -7px}}
+@media(prefers-reduced-motion:reduce){.spin{animation:none}}
+
+/* Keep the standard account view simple; technical accounting is optional. */
+.minuteDetails{border-top:1px solid #e4eee8;margin-top:18px;padding-top:15px}
+.minuteDetails summary{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;color:#0a8769;font-size:12px;font-weight:800;list-style:none;padding:4px 0;min-height:32px}
+.minuteDetails summary::-webkit-details-marker{display:none}
+.minuteDetails summary::after{content:"+";font-size:18px;line-height:1;color:#0b896b}
+.minuteDetails[open] summary::after{content:"−"}
+.minuteDetails summary:focus-visible{outline:2px solid #10ab82;outline-offset:4px;border-radius:5px}
+.minuteBreakdown{padding:12px 0 2px}
+.minuteExplanation{font-size:11px;line-height:1.6;color:#718a7c;margin:14px 0 4px}
+
+/* VMV tactile segmented controls — no native OS-blue dropdown menu */
+.segmentedField{margin:17px 0 14px}
+.segmentedLabel{display:block;color:#345c4b;font-size:11px;font-weight:800;margin-bottom:9px;letter-spacing:.01em}
+.segmentedTrack{display:grid;grid-auto-columns:minmax(0,1fr);grid-auto-flow:column;gap:5px;padding:5px;border:1px solid #d0e9dd;border-radius:16px;background:#f0f8f3;min-width:0}
+.segmentedOption,.segmentedActive{appearance:none;-webkit-appearance:none;border:1px solid transparent;border-radius:12px;padding:12px 6px;min-width:0;min-height:43px;background:transparent;color:#648576;font:inherit;font-size:12px;font-weight:750;cursor:pointer;transition:background .16s ease,color .16s ease,box-shadow .16s ease,transform .16s ease;white-space:normal;text-align:center}
+.segmentedOption:hover:not(:disabled){background:#e3f4e9;color:#14694e}
+.segmentedActive{border-color:#b1e6d1;background:#fff;color:#087e61;box-shadow:0 2px 8px rgba(19,83,55,.09)}
+.segmentedOption:disabled,.segmentedActive:disabled{cursor:not-allowed;opacity:.55}
+.segmentedOption:focus-visible,.segmentedActive:focus-visible{outline:3px solid #13b98b;outline-offset:2px;z-index:1}
+@media(prefers-reduced-motion:reduce){.segmentedOption,.segmentedActive{transition:none}}
+
+/* Calls: clear two-level navigation, compact premium filter chips. */
+.callViewTabs{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;background:#eaf5ee;border:1px solid #d6e9dd;border-radius:17px;margin:2px 0 19px}
+.callViewTab,.callViewTabActive{appearance:none;border:1px solid transparent;background:transparent;color:#789285;border-radius:12px;min-height:46px;font:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:background .16s,color .16s}
+.callViewTab:hover{background:#e0f1e7;color:#187d60}
+.callViewTabActive{background:white;border-color:#c5e8d7;color:#087a5c;box-shadow:0 2px 9px rgba(20,76,49,.08)}
+.callViewTab:focus-visible,.callViewTabActive:focus-visible,.callFilter:focus-visible,.callFilterActive:focus-visible,.callRefresh:focus-visible{outline:3px solid #10b98c;outline-offset:2px}
+.callSummaryFooter{display:flex;align-items:flex-start;gap:10px;padding:8px 6px 16px;color:#789185;font-size:11px;line-height:1.7}
+.callSummaryFooter svg{flex:0 0 17px;color:#13a07a;margin-top:1px}
+.callHistoryHeader{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:1px 0 17px}
+.callHistoryHeader h3{color:#173a2f;font-size:24px;font-weight:850;letter-spacing:-.06em;margin:7px 0 0}
+.callRefresh{border:1px solid #cde9db;background:white;color:#138666;border-radius:13px;width:42px;height:42px;display:grid;place-items:center;cursor:pointer}
+.callRefresh:disabled{opacity:.55;cursor:not-allowed}
+.callFilters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:14px}
+.callFilter,.callFilterActive{appearance:none;min-width:0;min-height:39px;padding:9px 5px;border:1px solid #dcebe2;background:#fff;color:#698676;border-radius:12px;font:inherit;font-size:11px;font-weight:750;cursor:pointer}
+.callFilter:hover{background:#edf8f2}
+.callFilterActive{background:#e2f8ec;border-color:#a5e4c5;color:#087d5a}
+.callHistoryLimit{font-size:10px!important;color:#82998a!important;line-height:1.5;text-align:center;margin-top:14px!important}
+@media(prefers-reduced-motion:reduce){.callViewTab,.callViewTabActive{transition:none}}
+
+/* Contact book — VMV primary communication workflow */
+.callTop{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:15px}
+.callTop h2{margin:0}
+.contactsAccess{border:1px solid #bee6d1;background:#edfaf2;color:#078261;min-height:39px;border-radius:12px;display:flex;align-items:center;gap:6px;padding:8px 10px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
+.contactsAccess:hover,.contactAdd:hover{background:#def6e8}
+.historySide{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:86px}
+.saveFromCall{border:0;background:none;color:#078668;font:inherit;font-size:10px;font-weight:750;display:flex;align-items:center;justify-content:flex-end;gap:4px;padding:4px 0;cursor:pointer;text-align:right}
+.saveFromCall:hover{text-decoration:underline}
+.contactsPage{min-width:0}
+.contactsHeader{display:flex;align-items:center;justify-content:space-between;gap:13px;margin-bottom:21px}
+.contactsHeader h2{font-size:33px;font-weight:850;letter-spacing:-.075em;margin:9px 0 7px;color:#183d30}
+.contactsHeader p{font-size:11px;color:#879a8e;margin:0}
+.contactAdd{background:#e3f8eb;border:1px solid #b9e7cd;border-radius:14px;width:46px;height:46px;display:grid;place-items:center;color:#078366;cursor:pointer;flex-shrink:0}
+.contactFormTitle{display:flex;gap:12px;align-items:center;border-bottom:1px solid #e5eee8;padding:0 0 15px;margin-bottom:15px}
+.contactFormTitle>div{flex:1}
+.contactFormTitle h3{font-size:20px;margin:6px 0 0;color:#163a2c}
+.contactClose{appearance:none;border:0;background:#edf7ef;color:#4d8671;border-radius:50%;width:32px;height:32px;display:grid;place-items:center;cursor:pointer}
+.contactSearch{display:flex;align-items:center;gap:9px;padding:0 12px;border:1px solid #cee7d8;border-radius:14px;background:white;color:#179772;margin-bottom:15px}
+.contactSearch input{border:0;outline:0;min-height:47px;padding:11px 2px;flex:1;min-width:0;font-size:13px;background:transparent;color:#173b2e}
+.contactSearch:focus-within{outline:2px solid #29bd93;outline-offset:2px}
+.contactList{overflow:hidden;border:1px solid #e0ece4;border-radius:18px;background:white}
+.contactRow{display:flex;align-items:center;gap:12px;min-height:70px;border:0;border-bottom:1px solid #e9f1eb;background:transparent;padding:11px 13px;width:100%;font:inherit;text-align:left;cursor:pointer}
+.contactRow:last-child{border-bottom:0}
+.contactRow:hover{background:#f1fbf5}
+.contactAvatar{display:grid;place-items:center;width:43px;height:43px;flex:0 0 43px;border-radius:15px;background:#e1f9ee;color:#078f68}
+.contactInfo{min-width:0;flex:1;display:flex;flex-direction:column;gap:5px}
+.contactInfo strong{font-weight:800;color:#153c30;font-size:13px;overflow-wrap:anywhere}
+.contactInfo small{font-size:11px;color:#81958c;overflow-wrap:anywhere}
+.contactChevron{font-size:21px;color:#8aa99b}
+.contactDanger{margin:13px 0 5px;text-align:center}
+.contactDanger>button,.contactDanger>div button{border:0;background:none;padding:10px;color:#a44a5d;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.contactDanger>button{display:inline-flex;align-items:center;gap:7px}
+.contactDanger p{font-size:12px;color:#a44a5d}
+.contactHelper{font-size:11px;color:#84988f;line-height:1.6;margin:10px 0}
+.screenReaderOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.contactsPage .successText{display:flex;align-items:center;gap:6px}
+@media(max-width:360px){.contactsAccess{font-size:10px;padding-inline:8px}.callTop h2{font-size:28px}}
+
+/* Two genuinely separate service areas: direct calls use subscription
+   access; only translated calls currently have a purchased-minute ledger. */
+.balanceIntro{margin:1px 0 17px;padding:1px 2px}
+.balanceIntro h3{font-size:23px;letter-spacing:-.055em;color:#173f32;line-height:1.15;margin:9px 0 7px}
+.balanceIntro p{font-size:12px;line-height:1.65;color:#80978a;margin:0}
+.balanceTitle{display:flex;align-items:center;gap:11px;margin-bottom:19px}
+.balanceTitle h3{font-size:19px;letter-spacing:-.05em;margin:5px 0 0}
+.balanceServiceIcon{display:grid;place-items:center;width:41px;height:41px;border-radius:14px;background:#e6f7ee;color:#088966;flex-shrink:0}
+.directServiceStatus{display:block;font-size:23px;letter-spacing:-.055em;font-weight:850;color:#127b5b;line-height:1.2;margin-bottom:7px}
+.topupOffer{border-radius:15px;background:#effaf3;border:1px solid #c9ebd9;margin-top:19px;padding:16px}
+.topupOfferLine{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:9px}
+.topupOfferLine strong{font-size:22px;color:#124434;letter-spacing:-.05em}
+.topupOfferLine span{font-size:10px;font-weight:800;color:#648b77;text-align:right}
+.topupOffer .mainAction{margin-top:14px}
+.topupOffer .minuteExplanation{margin-bottom:0}
+
+.callBackAction{display:flex;align-items:center;gap:5px;background:#e0f9ed;border:1px solid #9fdec0;border-radius:10px;color:#077856;font-size:10px;font-weight:850;cursor:pointer;padding:8px 9px;white-space:nowrap;text-align:center}
+.callBackAction:hover:not(:disabled){background:#c6efd9}
+.callBackAction:disabled{opacity:.45;cursor:not-allowed}
+.callBackAction:focus-visible{outline:2px solid #0b9471;outline-offset:2px}
+.callbackFeedback{border-radius:13px;padding:12px 13px;background:#effaf3;color:#207855;font-size:11px;line-height:1.65;margin:14px 0;border:1px solid #c6ebd6}
+
+.callbackConfirmBackdrop{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(10,35,27,.55);backdrop-filter:blur(5px);padding:24px}
+.callbackConfirmCard{max-width:390px;width:100%;background:#fff;border-radius:24px;padding:27px 23px;box-shadow:0 24px 70px rgba(8,39,26,.28);border:1px solid #d6e9dc}
+.callbackConfirmCard h3{font-size:26px;color:#173e30;letter-spacing:-.06em;margin:9px 0 16px}
+.callbackConfirmCard p{font-size:13px;line-height:1.7;color:#6d8776;margin:0 0 16px}
+.callbackConfirmCard strong{display:block;font-size:23px;color:#098060;margin:6px 0 16px;letter-spacing:-.035em}
+.callbackConfirmCard .secondaryAction{display:block;width:100%;margin-top:10px}
+
+.plansLink{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;font:inherit;font-size:12px;font-weight:800;color:#087d60;text-decoration:none;border-bottom:1px solid #80d2ad;padding:5px 0;margin:5px 0 13px}
+.plansLink:hover{color:#065e47;border-color:#065e47}
+.plansLink:focus-visible{outline:2px solid #0ab78e;outline-offset:4px}
+
+/* Calls v3: no redundant title or account summary. Three icon-only tabs. */
+.callViewTabs{grid-template-columns:repeat(3,minmax(0,1fr));margin:0 0 21px;gap:6px}
+.callViewTab,.callViewTabActive{min-height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:13px}
+.callTabEmoji{font-size:23px;line-height:1;display:block}
+.callTabLabel{display:block;font-size:11px;line-height:1.15;font-weight:780;white-space:nowrap}
+.callHistoryToolbar{display:flex;gap:8px;align-items:center;margin-bottom:14px}
+.callHistoryToolbar .callFilters{flex:1;margin:0}
+.callHistoryToolbar .callRefresh{flex:0 0 42px}
+.contactsHeaderCompact{display:flex;align-items:center;justify-content:space-between;gap:15px;margin:0 0 16px;min-height:46px}
+.contactsMiniCount{font-size:12px;font-weight:800;color:#718d7b}
+.dialer{display:flex;flex-direction:column;align-items:center;padding:12px 6px 35px;min-height:490px}
+.dialerNumber{width:100%;max-width:338px;min-height:74px;display:flex;align-items:center;gap:7px;margin:4px 0 13px}
+.dialerNumber input{flex:1;width:100%;min-width:0;border:0;background:transparent;text-align:center;color:#14382b;font:inherit;font-size:clamp(22px,6.8vw,31px);font-weight:650;letter-spacing:-.045em;outline:none;padding:12px 0}
+.dialerNumber input::placeholder{color:#b2c7b8;opacity:1;font-size:clamp(20px,6vw,26px);font-weight:500}
+.dialerNumber:focus-within{border-bottom:1px solid #c8e7d8}
+.dialerDelete{display:grid;place-items:center;width:32px;height:34px;flex:0 0 32px;border:0;background:transparent;color:#779184;cursor:pointer}
+.dialerKeys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px 18px;width:min(100%,294px);justify-items:center;margin:0 auto}
+.dialerKey{appearance:none;display:flex;flex-direction:column;align-items:center;justify-content:center;width:min(100%,76px);height:76px;border-radius:50%;border:1px solid #e0eee4;background:#f1f8f3;cursor:pointer;transition:background .14s,transform .14s;touch-action:manipulation;color:#12372a}
+.dialerKey strong{font-size:28px;font-weight:550;line-height:1.02;letter-spacing:-.055em}
+.dialerKey small{font-size:8px;letter-spacing:.19em;font-weight:800;color:#779183;margin-top:5px;min-height:10px}
+.dialerKey:hover:not(:disabled){background:#e0f5e7;transform:scale(1.03)}
+.dialerKey:active:not(:disabled){background:#bff0d5;transform:scale(.97)}
+.dialerKey:disabled{opacity:.65;cursor:default}
+.dialerCall{display:grid;place-items:center;width:72px;height:72px;margin:22px auto 0;background:#04bb8c;border:0;border-radius:50%;color:white;box-shadow:0 10px 28px rgba(4,187,140,.22);cursor:pointer;transition:transform .16s,background .16s}
+.dialerCall:hover:not(:disabled){background:#009b76;transform:translateY(-2px)}
+.dialerCall:active:not(:disabled){transform:scale(.95)}
+.dialerCall:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.dialerHint{margin:12px 0 0;font-size:11px;color:#889e91;line-height:1.5;text-align:center}
+.dialerError,.dialerSuccess{margin:15px auto 0;padding:10px 12px;border-radius:11px;font-size:12px;line-height:1.55;text-align:center;width:100%;max-width:330px}
+.dialerError{background:#fff0f1;color:#a33d4f}
+.dialerSuccess{background:#e7f9ef;color:#087e5f}
+.dialerKey:focus-visible,.dialerCall:focus-visible,.dialerDelete:focus-visible{outline:3px solid #08ad85;outline-offset:3px}
+@media(max-width:360px){.dialerKeys{gap:10px 12px}.dialerKey{width:70px;height:70px}.dialer{padding:8px 4px 29px}.dialerCall{width:65px;height:65px;margin-top:17px}}
+@media(prefers-reduced-motion:reduce){.dialerKey,.dialerCall{transition:none}}
+
+/* Digit-only dialer: centered 0, delete in bottom-right, no letter legends. */
+.dialerKey{font-size:32px;font-weight:560;line-height:1;letter-spacing:-.05em}
+.dialerDelete{width:min(100%,76px);height:76px;border-radius:50%;border:0;background:transparent;color:#7b998a;display:grid;place-items:center;cursor:pointer}
+.dialerDelete:hover:not(:disabled){background:#edf6f0;color:#196b50}
+.dialerDelete:disabled{opacity:.35;cursor:default}
+@media(max-width:360px){.dialerDelete{width:70px;height:70px}}
+
+
+/* VMV home refresh — editorial lavender + vivid product tiles, restrained copy. */
+.scrollArea:has(.homeV2){background:#fbfaff}
+.homeV2{min-height:100%;background:#fbfaff;padding:18px 17px 43px}
+.homeWelcome{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 23px}
+.homeProfile{display:flex;align-items:center;gap:11px;border:0;background:transparent;text-align:left;color:#211c37;cursor:pointer;min-width:0;padding:0}
+.homeProfileAvatar{display:grid;place-items:center;width:45px;height:45px;flex:0 0 45px;border-radius:16px;color:#643cc5;background:linear-gradient(135deg,#f4ceff,#c9b6ff);box-shadow:0 4px 12px #7d57bf1a}
+.homeProfile>span:last-child{display:flex;flex-direction:column;gap:4px;min-width:0}
+.homeProfile small{color:#9d94b0;font-size:9px;font-weight:850;letter-spacing:.1em}
+.homeProfile strong{font-size:17px;font-weight:850;letter-spacing:-.045em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:195px}
+.homeBrandPill{display:inline-flex;align-items:center;gap:7px;border-radius:50px;padding:10px 11px;background:#eee8ff;color:#6943c4;font-size:9px;font-weight:850;letter-spacing:.075em;white-space:nowrap}
+.homeBrandPill span{font-size:16px;line-height:0}
+.homeSpotlight{position:relative;isolation:isolate;display:flex;flex-direction:column;align-items:flex-start;width:100%;min-height:204px;padding:20px 19px 19px;background:linear-gradient(125deg,#7950df 0%,#9d6af8 55%,#b78dff 100%);border:0;border-radius:24px;color:#fff;text-align:left;overflow:hidden;cursor:pointer;box-shadow:0 12px 28px #8156db3a}
+.homeSpotlightKicker{position:relative;z-index:2;color:#f2e8ff;font-size:10px;font-weight:850;letter-spacing:.1em}
+.homeSpotlightKicker span{font-size:8px;font-weight:700;letter-spacing:.04em;margin-left:6px;color:#e7d9ff}
+.homeSpotlight>strong{position:relative;z-index:2;font-size:clamp(23px,6.9vw,29px);font-weight:870;line-height:1.09;letter-spacing:-.062em;margin:21px 0 7px}
+.homeSpotlight>strong span{color:#fae676}
+.homeSpotlight>small{position:relative;z-index:2;font-size:12px;color:#ece4ff}
+.homeSpotlightMinutes{position:relative;z-index:2;margin-top:18px;border:1px solid #ffffff52;background:#ffffff25;border-radius:100px;padding:7px 11px;font-size:12px;font-weight:850;backdrop-filter:blur(6px)}
+.homeSpotlightMinutes span{font-size:9px;font-weight:650;color:#f2e6ff}
+.homeSpotlightArt{position:absolute;right:-15px;top:34px;width:151px;height:155px;display:grid;place-items:center;z-index:1;pointer-events:none}
+.homeArtRingOne,.homeArtRingTwo{position:absolute;display:block;border-radius:50%;transform:rotate(-24deg);border:19px solid #d8bbff7b;width:130px;height:130px}
+.homeArtRingTwo{width:95px;height:95px;border:13px solid #f5ccff80;transform:translate(16px,13px) rotate(22deg)}
+.homeArtPhone{position:relative;display:grid;place-items:center;width:82px;height:82px;background:linear-gradient(140deg,#ffdf83,#ff9c66);color:#5f2c9a;border-radius:25px;transform:rotate(-15deg);box-shadow:0 13px 19px #51359e55}
+.homeArtSpark{position:absolute;right:13px;top:1px;color:#fbe57c;font-size:31px}
+.homeSpotlightGo{position:absolute;right:16px;bottom:16px;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#ffffff40;z-index:3}
+.homeSectionHeading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:25px 0 14px}
+.homeSectionHeading h3{color:#201b32;letter-spacing:-.065em;font-size:23px;font-weight:850;margin:0}
+.homeSectionHeading h3 span{color:#8659e3}
+.homeSectionHeading button{display:inline-flex;align-items:center;gap:4px;border:0;background:transparent;color:#8865d4;font-size:11px;font-weight:800;cursor:pointer;padding:7px 0}
+.homeProductsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.homeProductCard{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;min-height:147px;min-width:0;overflow:hidden;border:0;border-radius:20px;padding:16px 14px;text-align:left;color:#302b40}
+button.homeProductCard{cursor:pointer}
+button.homeProductCard:hover{transform:translateY(-2px)}
+.homeProductMint{background:#b6efdb;color:#104a39}
+.homeProductYellow{background:#ffdf79;color:#644218}
+.homeProductSky{background:#b9e2ff;color:#244b78}
+.homeProductPink{background:#ffd2e7;color:#804364}
+.homeProductIcon{display:grid;place-items:center;height:45px;width:45px;border-radius:15px;background:#ffffff78;position:relative;z-index:2}
+.homeProductBody{display:flex;flex-direction:column;gap:4px;z-index:2;margin-top:17px}
+.homeProductBody strong{font-size:17px;font-weight:850;letter-spacing:-.055em}
+.homeProductBody small{font-size:10px;font-weight:650;opacity:.69}
+.homeProductArrow{position:absolute;top:15px;right:16px;font-size:18px;font-weight:850}
+.homeProductDeco{position:absolute;font-size:100px;line-height:1;right:-30px;top:-28px;opacity:.17;transform:rotate(12deg);pointer-events:none}
+.homeExplore{display:flex;align-items:center;justify-content:space-between;gap:6px;position:relative;width:100%;min-height:152px;overflow:hidden;border-radius:22px;border:0;margin:15px 0 5px;padding:21px;background:linear-gradient(120deg,#ffb753,#ffd37b);text-align:left;color:#4a2c28;cursor:pointer}
+.homeExploreCopy{position:relative;z-index:2;display:flex;align-items:flex-start;flex-direction:column;gap:8px}
+.homeExploreCopy small{font-size:9px;font-weight:850;letter-spacing:.11em;opacity:.75}
+.homeExploreCopy strong{font-size:23px;line-height:1.11;letter-spacing:-.06em;font-weight:840}
+.homeExploreCopy>span{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:850;background:#fff7;border-radius:20px;padding:8px 10px;margin-top:3px}
+.homeExploreGraphic{font-size:112px;line-height:1;color:#fff7;transform:rotate(-22deg);position:absolute;right:-6px;top:3px}
+.homeV2 :is(button,a):focus-visible{outline:3px solid #6b43c7;outline-offset:3px}
+/* Shared floating dock: dark as reference one, purple raised Call control as reference two. */
+.bottomNav{position:relative;z-index:9;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));flex:0 0 auto;height:74px;gap:1px;margin:0 12px 11px;padding:9px 9px 7px;border-radius:30px;border:1px solid #ffffff1c;background:#1c1a2b;box-shadow:0 13px 25px #26223d30}
+.bottomNav button{color:#a9a9be;gap:3px;min-height:50px;border-radius:18px}
+.bottomNav button>span{width:44px;height:35px;border-radius:17px;color:inherit}
+.bottomNav button small{font-size:9px;letter-spacing:-.02em;font-weight:760}
+.bottomNav button.activeNav{color:#fff}
+.bottomNav button.activeNav>span{background:#fff;color:#25203c}
+.bottomNav .navCallAction{transform:translateY(-13px);overflow:visible;gap:4px}
+.bottomNav .navCallAction>span{width:57px;height:57px;border-radius:50%;background:linear-gradient(140deg,#a869ff,#7946d9);color:#fff;box-shadow:0 8px 16px #27134848;border:4px solid #fbfaff}
+.bottomNav .navCallAction.activeNav>span{background:linear-gradient(140deg,#ac77ff,#7240d4);color:#fff;box-shadow:0 0 0 2px #b9a0ff,0 8px 18px #27134866}
+.bottomNav .navCallAction small{color:#d9caef;margin-top:-1px}
+.bottomNav button:focus-visible{outline:2px solid #caa9ff;outline-offset:-2px}
+@media(max-width:360px){.homeV2{padding:15px 13px 38px}.homeSpotlight{padding:19px 16px}.homeSpotlightArt{right:-31px;opacity:.8}.homeProductCard{padding:13px;min-height:139px}.homeProductBody strong{font-size:15px}.homeProfile strong{max-width:165px}.bottomNav{margin-inline:9px;padding-inline:6px}}
+@media(prefers-reduced-motion:reduce){button.homeProductCard:hover{transform:none}}
+
+.homeTopHidden{display:none}
+
+
+/* Five visible bilingual navigation labels; the call shortcut stays in the dock. */
+.bottomNav{height:80px;padding:7px 8px 6px;margin-bottom:12px;align-items:stretch}
+.bottomNav button{height:64px;min-height:60px;gap:2px;align-items:center;justify-content:center;padding:2px 0}
+.bottomNav button>span{width:42px;height:37px;border-radius:15px;display:grid;place-items:center}
+.bottomNav button.activeNav>span{border-radius:15px}
+.bottomNav button small{display:block;max-width:100%;font-size:clamp(9px,2.4vw,10px);line-height:1.15;font-weight:760;white-space:nowrap}
+.bottomNav .navCallAction{transform:none;gap:2px}
+.bottomNav .navCallAction>span{width:43px;height:39px;border-radius:15px;border:2px solid #d9c4fa;background:linear-gradient(145deg,#a778fc,#7648d7);box-shadow:0 3px 8px #27134832}
+.bottomNav .navCallAction.activeNav>span{border:2px solid #e9d9ff;background:linear-gradient(145deg,#ae80ff,#7847d7);box-shadow:0 0 0 1px #ffffff22,0 3px 8px #27134838}
+.bottomNav .navCallAction small{color:#d9caef;margin:0}
+@media(max-width:360px){.bottomNav{padding-inline:5px;gap:0}.bottomNav button small{font-size:9px}}
+
+/* VMV visual system v3 · shared across Services, Smart Call, Calls, Translator and Account.
+   Lavender surfaces, minimal ink typography, soft product colors and dark dock. */
+.scrollArea:has(.servicesV3),.scrollArea:has(.translatorV3),.scrollArea:has(.accountV3),.scrollArea:has(.smartScreen),.scrollArea:has(.callViewTabs){background:#fbfaff}
+.screenEyebrow,.groupTitle,.smallKicker{color:#865bca}
+.screen h2{color:#252039;letter-spacing:-.07em}
+.screen .mint,.smartScreen .mint{color:#9862e5}
+.servicesV3{padding:23px 17px 42px;min-height:100%}
+.servicesV3 h2{margin:10px 0 20px}
+.servicesV3 .serviceHero{position:relative;isolation:isolate;min-height:213px;padding:19px 20px;display:flex;flex-direction:column;align-items:flex-start;background:linear-gradient(130deg,#7b51db,#aa7bf3);border:0;border-radius:24px;color:#fff;overflow:hidden;box-shadow:0 12px 26px #8154d22a}
+.servicesV3 .serviceHeroTop{display:flex;align-items:flex-start;justify-content:space-between;align-self:stretch;gap:15px;position:relative;z-index:2}
+.servicesV3 .serviceHeroIcon{width:53px;height:53px;border-radius:17px;color:#7748ba;background:linear-gradient(145deg,#ffdf9a,#ffb17b);margin:0;box-shadow:0 7px 14px #412b7b33}
+.servicesV3 .serviceHeroStatus{border:1px solid #ffffff4f;border-radius:99px;background:#ffffff27;color:#fff;padding:8px 10px;font-size:9px;font-weight:800;letter-spacing:.065em}
+.servicesV3 .serviceHero>strong{z-index:2;margin:13px 0 4px;font-size:30px;line-height:1.06;color:#fff;font-weight:850;letter-spacing:-.07em}
+.servicesV3 .serviceHero>strong span{color:#ffe499}
+.servicesV3 .serviceHero>small{z-index:2;color:#eee1ff;font-size:12px}
+.servicesV3 .serviceLink{z-index:2;margin-top:20px;display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:9px 12px;background:#ffffff2d;color:#fff;font-size:11px;font-weight:850}
+.servicesV3 .serviceHeroDecoration{position:absolute;right:-12px;bottom:11px;font-size:125px;line-height:1;color:#e6d3ff5e;pointer-events:none;transform:rotate(-24deg)}
+.serviceGridHeading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:26px 0 15px}
+.serviceGridHeading h3{font-size:23px;letter-spacing:-.07em;color:#262039;font-weight:850;margin:0}
+.serviceGridHeading h3 span{color:#9761e5}
+.serviceGridHeading>span{font-size:9px;color:#9c91b3;font-weight:800;letter-spacing:.07em}
+.serviceModuleGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.serviceModuleTile{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;min-height:149px;padding:16px 15px;border-radius:20px;position:relative;overflow:hidden;color:#2b2540}
+.serviceModuleIcon{display:grid;place-items:center;width:46px;height:46px;border-radius:15px;background:#ffffff88;z-index:2}
+.serviceModuleBottom{display:flex;flex-direction:column;gap:5px;z-index:2}
+.serviceModuleBottom strong{font-size:15px;line-height:1.18;letter-spacing:-.055em;font-weight:850;overflow-wrap:anywhere}
+.serviceModuleBottom small{font-size:10px;font-weight:650;opacity:.68}
+.serviceTileSky{background:#bde5ff;color:#2a517a}
+.serviceTileYellow{background:#ffdf87;color:#6d501f}
+.serviceTilePink{background:#ffd1e5;color:#824763}
+.serviceTileMint{background:#b8eedb;color:#185946}
+.serviceTileLavender{background:#ddd0ff;color:#6746a0}
+.serviceTilePeach{background:#ffd3b3;color:#7f5033}
+/* Smart Call: same visual identity while maintaining exact account data. */
+.smartScreen{background:#fbfaff;min-height:100%;padding:23px 17px 44px}
+.smartScreen .back{color:#8155cc;font-weight:800;margin-bottom:17px}
+.smartScreen .smartHero{background:linear-gradient(125deg,#28223f,#6d43b0);border-radius:24px;box-shadow:0 11px 25px #3c245b26;padding:22px}
+.smartScreen .smartHero>span{color:#cdb2ff}
+.smartScreen .smartBadge{background:#ffffff22;border-color:#ffffff3b;color:#f3e7ff}
+.smartScreen .switcher{background:#eee7fb;border:1px solid #e7dafa;border-radius:18px;padding:5px;gap:4px}
+.smartScreen .switcher button{border-radius:13px;color:#8d7da5;min-height:43px}
+.smartScreen .switcher button.selected{background:white;color:#6f45b6;box-shadow:0 3px 12px #4c2b8217}
+.smartScreen .smartCard{border-color:#ebe6f0;border-radius:23px;box-shadow:0 4px 16px #3321480b}
+.smartScreen .smartCard h3{color:#29223c}
+.smartScreen .minuteHero{background:linear-gradient(135deg,#8053da,#b182f4);box-shadow:0 11px 23px #7e4fc82b}
+.smartScreen .minuteHero .smallKicker{color:#efe1ff}
+.smartScreen .miniCards>div{border-color:#ded5f1;background:#efe9ff}
+.smartScreen .mainAction,.accountV3 .mainAction{background:#8d5de5;color:#fff;border-radius:15px;box-shadow:0 5px 13px #8056cd23}
+.smartScreen .mainAction:hover,.accountV3 .mainAction:hover{background:#794acd}
+.smartScreen .secondaryAction,.accountV3 .secondaryAction{background:#f0e9ff;border-color:#ded0f9;color:#7449bb}
+.smartScreen .segmentedTrack{background:#f1ecfa;border-color:#e2d5f4;border-radius:17px}
+.smartScreen .segmentedActive{color:#6a42b3;border-color:#ded0f5}
+.smartScreen input,.smartScreen textarea,.accountV3 input{border-color:#e2dbea;border-radius:15px}
+.smartScreen input:focus-visible,.smartScreen textarea:focus-visible{outline:2px solid #9f74ee;outline-offset:1px}
+/* Calls, contacts and history retain their functional affordances with softer controls. */
+.screen:has(.callViewTabs){padding:22px 16px 44px;background:#fbfaff;min-height:100%}
+.callViewTabs{background:#eee8f8;border-color:#e4d6f7;border-radius:19px}
+.callViewTab,.callViewTabActive{border-radius:15px}
+.callViewTabActive{border-color:#e4d5f8;color:#7448c6;box-shadow:0 3px 9px #754fb321}
+.callViewTab:hover{background:#e6daf8;color:#653db3}
+.callFilters{gap:6px}
+.callFilter,.callFilterActive{border-radius:13px}
+.callFilterActive{background:#e9dcff;border-color:#d6beff;color:#7652be}
+.screen:has(.callViewTabs) .smartCard{border-color:#e9e3f0;border-radius:22px}
+.screen:has(.callViewTabs) .contactAvatar{background:#ece2ff;color:#794cbd}
+.screen:has(.callViewTabs) .contactAdd{background:#e9ddff;border-color:#d9c4fd;color:#7446c1}
+.screen:has(.callViewTabs) .contactSearch{border-color:#e3d9f2}
+.screen:has(.callViewTabs) .contactSearch:focus-within{outline-color:#9767e6}
+.screen:has(.callViewTabs) .dialerKey{background:#f2edf9;border-color:#e8ddf5;color:#28203d}
+.screen:has(.callViewTabs) .dialerKey:hover:not(:disabled){background:#e8dcfa}
+.screen:has(.callViewTabs) .dialerCall{background:#905ee5;box-shadow:0 9px 23px #7044c63b}
+.screen:has(.callViewTabs) .dialerCall:hover:not(:disabled){background:#7549ca}
+/* Interpreter header is short; the live translation engine is untouched. */
+.translatorV3{padding:23px 16px 40px;min-height:100%}
+.translatorWelcome{position:relative;display:flex;align-items:center;gap:13px;min-height:108px;margin-bottom:16px;background:linear-gradient(130deg,#dcd0ff,#f2e9ff);border-radius:22px;padding:18px;overflow:hidden}
+.translatorWelcomeIcon{width:53px;height:53px;display:grid;place-items:center;border-radius:17px;background:#ffffffad;color:#784bc6;flex-shrink:0}
+.translatorWelcome .screenEyebrow{font-size:9px;color:#8065b1}
+.translatorWelcome h2{font-size:28px;line-height:1;margin:9px 0 0;color:#29203e}
+.translatorSpark{position:absolute;right:8px;top:-25px;color:#ffffff99;font-size:105px;transform:rotate(-14deg)}
+.translatorV3 .interpreterWrap{margin:0 -5px}
+/* Account tiles & profile, based on the exact same palette as Home. */
+.accountV3{padding:23px 17px 46px;min-height:100%}
+.accountV3 h2{margin-bottom:18px}
+.accountHero{background:linear-gradient(125deg,#dbceff,#f4eaff);border-radius:23px;padding:20px 17px;display:flex;align-items:center;gap:12px;overflow:hidden;position:relative;min-height:111px}
+.accountHeroAvatar{flex:0 0 55px;height:55px;border-radius:19px;background:#ffffffab;color:#744ac3;display:grid;place-items:center;z-index:2}
+.accountHeroInfo{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0;z-index:2}
+.accountHeroInfo strong{color:#31254e;font-size:18px;letter-spacing:-.05em;overflow-wrap:anywhere}
+.accountHeroInfo small{color:#7d6a99;font-size:10px;overflow-wrap:anywhere}
+.accountHeroSpark{position:absolute;right:-1px;top:-27px;font-size:114px;color:#ffffff83;pointer-events:none}
+.accountStatGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin:13px 0}
+.accountStatTile{display:flex;flex-direction:column;align-items:flex-start;gap:7px;background:#ffe18d;border:0;border-radius:20px;min-height:124px;padding:16px;text-align:left;cursor:pointer}
+.accountStatTile:nth-child(2){background:#bde5ff}
+.accountStatTile>span{color:#684d29;display:grid;place-items:center;width:34px;height:34px;background:#ffffff80;border-radius:12px}
+.accountStatTile:nth-child(2)>span{color:#3d6d96}
+.accountStatTile strong{font-size:20px;font-weight:850;line-height:1.1;color:#292039;max-width:100%;overflow-wrap:anywhere}
+.accountStatTile small{font-size:11px;color:#77643e}
+.accountStatTile:nth-child(2) small{color:#50718c}
+.accountV3 .smartCard{border-color:#ece6f3;border-radius:22px;text-align:left}
+.accountV3 .logoutLink{margin:20px auto;color:#9479b6}
+/* Generic tap & reduced-motion safety across redesigned views. */
+.servicesV3 button:focus-visible,.accountV3 button:focus-visible,.smartScreen button:focus-visible,.translatorV3 button:focus-visible{outline:3px solid #a577ed;outline-offset:2px}
+@media(max-width:360px){.servicesV3,.accountV3{padding-inline:13px}.serviceModuleTile{padding:13px;min-height:136px}.serviceModuleBottom strong{font-size:14px}.servicesV3 .serviceHero{min-height:198px}}
+
+
+/* Home finesse v4 — preserve VMV palette, fix title/art collision at 320px. */
+.homeWelcome{margin-bottom:17px}
+.homeSpotlight{min-height:211px;padding:19px 18px 18px;border-radius:24px;box-shadow:0 10px 24px #7848d92c}
+.homeSpotlight>strong{max-width:57%;font-size:clamp(23px,6.5vw,27px);line-height:1.06;letter-spacing:-.057em;margin:22px 0 8px;overflow-wrap:normal}
+.homeSpotlight>small{font-size:11px}
+.homeSpotlightMinutes{margin-top:17px;padding:7px 10px}
+.homeSpotlightArt{top:57px;right:17px;width:115px;height:121px}
+.homeArtRingOne,.homeArtRingTwo{position:absolute;display:block;transform:none;box-sizing:border-box}
+.homeArtRingOne{width:116px;height:116px;left:0;top:2px;border:13px solid #eedaff56;box-shadow:0 0 0 4px #ffffff0d}
+.homeArtRingTwo{width:91px;height:91px;left:14px;top:15px;border:9px solid #f7daff91}
+.homeArtPhone{position:relative;z-index:2;width:74px;height:74px;border-radius:50%;transform:rotate(-12deg);background:radial-gradient(circle at 29% 23%,#ffeab1 0%,#ffc47e 45%,#fd9b72 100%);color:#6935a5;border:2px solid #ffe8abbb;box-shadow:inset -7px -9px 14px #cc665531,inset 6px 6px 14px #fff8e36e,0 11px 19px #58349855}
+.homeArtPhone:before{content:"";position:absolute;width:31px;height:12px;top:11px;left:12px;border-radius:50%;transform:rotate(-19deg);background:#ffffff75;filter:blur(5px)}
+.homeArtMiniBubble{position:absolute;z-index:3;left:3px;bottom:1px;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:linear-gradient(145deg,#d5fce8,#a6e4da);color:#337c73;border:2px solid #e7fff5;box-shadow:0 5px 11px #50309f42}
+.homeArtSpark{top:-8px;right:4px;font-size:25px;color:#ffe58d}
+.homeSpotlightGo{width:31px;height:31px;right:15px;bottom:15px;background:#ffffff3a}
+.homeSectionHeading{margin:21px 0 13px}
+.homeProductsGrid{gap:12px}
+.homeProductCard{min-height:148px;border-radius:21px;padding:15px}
+.homeProductIcon{height:45px;width:45px}
+.homeProductDecor{position:absolute;right:-10px;top:-9px;z-index:1;color:currentColor;opacity:.16;transform:rotate(-13deg);pointer-events:none}
+.homeProductMint .homeProductDecor{right:-13px;top:-4px;transform:rotate(15deg)}
+.homeProductYellow .homeProductDecor{right:-12px;top:-12px;transform:rotate(12deg)}
+.homeProductSky .homeProductDecor{right:-12px;top:-10px;transform:rotate(-10deg)}
+.homeProductPink .homeProductDecor{right:-14px;top:-13px;transform:rotate(8deg)}
+.homeProductBody{position:relative;z-index:2;margin-top:16px}
+.homeExplore{margin-top:13px}
+.bottomNav{height:64px;border-radius:32px;padding:7px 10px;margin-bottom:12px;box-shadow:0 9px 20px #26223d27}
+.bottomNav button{height:50px;min-height:50px}
+.bottomNav .navCallAction{transform:translateY(-1px)}
+.bottomNav .navCallAction>span{width:49px;height:49px;border:1.5px solid #e0cfff;background:linear-gradient(145deg,#ac80fa,#8552e0);box-shadow:0 4px 10px #30175030}
+.bottomNav .navCallAction.activeNav>span{border:1.5px solid #f2e8ff;box-shadow:0 0 0 1px #c7a7ff65,0 4px 10px #30175039}
+.homeV2 :is(.homeSpotlight,.homeProductCard,.homeExplore):focus-visible{outline:3px solid #7048ba;outline-offset:3px}
+@media(max-width:360px){
+ .homeWelcome{margin-bottom:15px}
+ .homeSpotlight{padding:17px 15px;min-height:203px}
+ .homeSpotlight>strong{max-width:58%;font-size:23px;margin-top:21px}
+ .homeSpotlightArt{width:101px;height:110px;top:64px;right:11px;opacity:1}
+ .homeArtRingOne{width:104px;height:104px;border-width:11px}
+ .homeArtRingTwo{width:81px;height:81px;border-width:8px;left:13px;top:14px}
+ .homeArtPhone{width:65px;height:65px}
+ .homeArtMiniBubble{width:29px;height:29px}
+ .homeProductCard{padding:13px}
+ .bottomNav .navCallAction>span{width:47px;height:47px}
+}
+@media(prefers-reduced-motion:reduce){.homeProductCard,.homeSpotlight,.bottomNav .navCallAction{transition:none}}
+
+
+/* Smart Call contacts → dialer: distinct edit and secure call actions. */
+.contactList .contactRow{display:flex;align-items:center;gap:5px;padding:0 9px 0 0;cursor:default}
+.contactList .contactRow:hover{background:#fbf9ff}
+.contactRowMain{display:flex;align-items:center;gap:12px;flex:1;min-width:0;min-height:69px;
+ background:transparent;border:0;color:inherit;font:inherit;text-align:left;padding:10px 7px 10px 13px;cursor:pointer}
+.contactRowMain:hover .contactInfo strong{color:#7751c5}
+.contactDialButton{display:grid;place-items:center;flex:0 0 43px;width:43px;height:43px;border-radius:15px;
+ border:1px solid #ddc8f9;background:#eee5ff;color:#8350d0;cursor:pointer}
+.contactDialButton:hover:not(:disabled){background:#e1d1fa;color:#6d3dc5}
+.contactDialButton:disabled{opacity:.3;cursor:not-allowed}
+.contactFormCall{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+ min-height:43px;margin:11px 0 2px;background:#f0e8ff;border:1px solid #ddcdf6;border-radius:15px;
+ color:#7545c6;font:inherit;font-weight:800;font-size:12px;cursor:pointer}
+.contactFormCall:hover:not(:disabled){background:#e5d6fc}
+.contactFormCall:disabled{opacity:.38;cursor:not-allowed}
+.dialerContactName{display:inline-flex;align-items:center;gap:5px;margin-top:1px;border-radius:20px;
+ background:#f0e7ff;color:#8c73ac;padding:8px 12px;font-size:11px;font-weight:650;max-width:100%}
+.dialerContactName strong{color:#6741ad;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dialerConfirmContact{display:block;font-weight:800;font-size:14px;color:#7047b8;margin:0 0 5px}
+.contactDialButton:focus-visible,.contactRowMain:focus-visible,.contactFormCall:focus-visible{
+ outline:3px solid #a875ed;outline-offset:2px}
+
+.contactPhoneField{display:grid;grid-template-columns:112px minmax(0,1fr);gap:8px;align-items:center;min-width:0}
+.contactPhoneField>input{min-width:0}
+.contactPhoneField :global(.vmv-country-trigger){height:46px;min-height:46px;border-radius:12px;padding:0 10px}
+
+/* Compact, persistent language switch sits beside the mobile VMV Business identity.
+   It never occupies a sign-in form card or intercepts credentials. */
+.appHeaderIdentity{display:flex;align-items:center;gap:10px;min-width:0}
+.appHeaderLanguage{display:flex;align-items:center;flex-shrink:0}
+@media(max-width:460px){
+ .appTop{padding:11px 14px 10px;gap:8px}
+ .appHeaderIdentity{gap:7px}
+ .appLogo b{font-size:16px}
+ .appLogo .mark{height:30px;width:30px;border-radius:9px}
+}

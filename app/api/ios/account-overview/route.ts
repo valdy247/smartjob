@@ -4,6 +4,7 @@ import {authenticatedUser} from "@/lib/auth-server";
 import {getBillingAccount,billingEnabledFor,balance,eligible as billingEligible} from "@/lib/vmv-billing";
 import {languageMenuEnabled} from "@/lib/vmv-ivr";
 import {allowSpendWithAccount,ownerPreviewPilot} from "@/lib/vmv-entitlements";
+import {nationalMinutes} from "@/lib/vmv-national-minutes";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const headers={"Cache-Control":"no-store"};
@@ -29,6 +30,9 @@ export async function GET(req:NextRequest){
    &&route.twilio_number!==route.destination_phone;
  const duration=(calls.data||[]).reduce((sum,c)=>sum+Math.max(0,Math.min(86400,c.duration_seconds||0)),0);
  const billingAccount=await getBillingAccount(uid);
+ let national;
+ try{national=await nationalMinutes(uid,billingAccount);}
+ catch{return NextResponse.json({error:"national_usage_unavailable"},{status:503,headers});}
  const paid=allowSpendWithAccount(billingAccount,"direct_call");
  const pilot=ownerPreviewPilot(billingAccount);
  const count=(calls.data||[]).length;
@@ -47,7 +51,7 @@ export async function GET(req:NextRequest){
   carrier:verification.data?.carrier||null,
   forwardingReported:route?.forwarding_mode!=="none"&&Boolean(route?.forwarding_mode),
   usage:{periodDays:30,calls:count,completed,directCalls,translatedCalls,seconds:duration,minutes:Math.ceil(duration/60),translatedMinutes:Math.ceil(translatedSeconds/60),metering:"indicative"},
-  billing:{enabled:true,active:paid,pilot,
+  billing:{enabled:true,active:paid,pilot,national,
     plan:billingAccount?.plan_code||"none",availableMinutes:balance(billingAccount),
     message:pilot?"Prueba privada: minutos VMV activados y limitados.":paid?"Suscripción real verificada.":"Recepción bloqueada hasta confirmar un pago real y completar la activación."},
   nextAction:pilot?"Conectar iPhone y llamar a tu número VMV; marca 1 para traducción.":paid&&eligible?"Conecta tu iPhone y prueba la recepción.":"Elegir un plan, completar configuración y esperar activación tras pago real."

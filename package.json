@@ -4,14 +4,21 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run bridge:test && next build",
+    "build": "npm run bridge:test && npm run i18n:check && npm run i18n:coverage && npm run i18n:marketing && npm run i18n:test && npm run testers:test && npm run google-profile:test && npm run marketing-support:test && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
+    "i18n:check": "node scripts/check-i18n.mjs",
     "bridge:test": "node --check services/live-bridge/server.mjs && node --test services/live-bridge/*.test.mjs",
     "ios:internal": "cd apps/ios && npx eas-cli build --platform ios --profile preview",
     "catalog:sync": "node scripts/sync-registration-data.mjs",
     "prebuild": "npm run catalog:sync",
-    "predev": "npm run catalog:sync"
+    "predev": "npm run catalog:sync",
+    "i18n:test": "node --test scripts/interface-language.test.cjs",
+    "i18n:coverage": "node scripts/check-visible-i18n.mjs",
+    "i18n:marketing": "node scripts/check-marketing-i18n.mjs",
+    "testers:test": "node --test scripts/admin-testers.test.cjs",
+    "google-profile:test": "node --test scripts/google-profile-request.test.cjs",
+    "marketing-support:test": "node --test scripts/marketing-support-api.test.cjs"
   },
   "engines": {
     "node": ">=20.9"
@@ -23,7 +30,8 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "ai": "7.0.166",
-    "@ai-sdk/gateway": "4.0.139"
+    "@ai-sdk/gateway": "4.0.139",
+    "@puckeditor/core": "0.24.0"
   },
   "devDependencies": {
     "@types/node": "22.16.5",
