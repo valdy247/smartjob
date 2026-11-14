@@ -1159,7 +1159,7 @@
     "marketing.google.validation.address": "Completa la dirección donde recibes clientes.",
     "marketing.google.validation.serviceAreas": "Indica las ciudades o códigos postales donde atiendes.",
     "marketing.google.validation.phone": "Revisa el teléfono comercial.",
-    "marketing.google.validation.hours": "Revisa los horarios de apertura y cierre.",
+    "marketing.google.validation.hours": "Selecciona al menos un día abierto e indica una hora de apertura y cierre diferentes.",
     "marketing.google.validation.booking": "El enlace de reservas debe empezar con https://",
     "marketing.google.validation.existing": "El enlace del perfil debe empezar con https://",
     "marketing.directory.validation.city": "Indica ciudad y estado para buscar oportunidades locales.",
@@ -1314,7 +1314,18 @@
     "category.noResults": "No encontramos una categoría cercana.",
     "category.invalidWebsite": "Revisa la dirección de tu sitio web.",
     "marketing.google.removePhoto": "Quitar foto",
-    "category.websiteExample": "tusitio.com"
+    "category.websiteExample": "tusitio.com",
+    "marketing.google.validation.country": "Introduce el país con dos letras: US, ES…",
+    "marketing.google.validation.description": "La descripción admite hasta 750 caracteres y no debe incluir enlaces.",
+    "marketing.google.validation.date": "Revisa la fecha de apertura.",
+    "marketing.google.validation.length": "Uno de los campos supera su longitud permitida.",
+    "marketing.google.nextDay": "Cierra al día siguiente",
+    "marketing.google.eligibility": "Para negocios que atienden en persona, en un local o en la ubicación del cliente. Revisaremos si cumple los requisitos.",
+    "marketing.google.serviceDisclosure": "El perfil de Google es gratuito. Cualquier honorario de VMV se cotiza y autoriza por separado. Tú conservas la propiedad. Google decide la verificación; no garantizamos aprobación ni posicionamiento.",
+    "marketing.google.thirdPartyNotice": "Trabajar con un tercero",
+    "marketing.google.photoLimit": "Puedes añadir hasta 8 fotos, además del logo y la portada.",
+    "marketing.google.photoRequirements": "Elige una imagen JPG o PNG válida, de 10 KB a 5 MB y al menos 250 × 250 píxeles.",
+    "marketing.google.checkingPhoto": "Comprobando imagen…"
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -2476,7 +2487,7 @@
     "marketing.google.validation.address": "Complete the address where customers visit you.",
     "marketing.google.validation.serviceAreas": "Enter the cities or ZIP codes you serve.",
     "marketing.google.validation.phone": "Check your business phone number.",
-    "marketing.google.validation.hours": "Check your opening and closing hours.",
+    "marketing.google.validation.hours": "Select at least one open day with different opening and closing times.",
     "marketing.google.validation.booking": "The booking link must begin with https://",
     "marketing.google.validation.existing": "The profile link must begin with https://",
     "marketing.directory.validation.city": "Enter a city and state to find local opportunities.",
@@ -2631,6 +2642,17 @@
     "category.noResults": "No matching category found.",
     "category.invalidWebsite": "Check your website address.",
     "marketing.google.removePhoto": "Remove photo",
-    "category.websiteExample": "yourbusiness.com"
+    "category.websiteExample": "yourbusiness.com",
+    "marketing.google.validation.country": "Enter the two-letter country code: US, ES…",
+    "marketing.google.validation.description": "Use up to 750 characters without links in the description.",
+    "marketing.google.validation.date": "Check the opening date.",
+    "marketing.google.validation.length": "One field exceeds its allowed length.",
+    "marketing.google.nextDay": "Closes the following day",
+    "marketing.google.eligibility": "For businesses serving customers in person, at a storefront or at the customer’s location. We will review eligibility.",
+    "marketing.google.serviceDisclosure": "Google Business Profile is free. Any VMV fee is quoted and authorized separately. You retain ownership. Google determines verification; approval and rankings are not guaranteed.",
+    "marketing.google.thirdPartyNotice": "Working with a third party",
+    "marketing.google.photoLimit": "Add up to 8 photos, plus a logo and cover.",
+    "marketing.google.photoRequirements": "Choose a valid JPG or PNG, 10 KB to 5 MB and at least 250 × 250 pixels.",
+    "marketing.google.checkingPhoto": "Checking image…"
   }
 }

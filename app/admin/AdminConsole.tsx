@@ -93,7 +93,7 @@ const caseKey=(c:CaseRow)=>c.source+":"+c.id;
 const shortRef=(c:CaseRow)=>({marketing:"MKT",support:"SUP",provisioning:"TEL",domain:"DOM"}[c.source])+"-"+c.id.slice(0,8).toUpperCase();
 const detailText=(v:unknown)=>typeof v==="string"?v:typeof v==="number"?String(v):typeof v==="boolean"?(v?"Sí":"No"):"—";
 const metadataLabels:Record<string,string>={
- googleCategory:"Categoría de Google",kind:"Tipo de negocio",phone:"Teléfono",street:"Dirección",
+ action:"Gestión solicitada",country:"País",otherCategories:"Otras categorías",secondaryPhone:"Teléfono adicional",bookingUrl:"Reservas / pedidos",existingProfileUrl:"Perfil existente",openingDate:"Fecha de apertura",hoursEnabled:"Horarios definidos",googleCategory:"Categoría de Google",kind:"Tipo de negocio",phone:"Teléfono",street:"Dirección",
  unit:"Unidad",city:"Ciudad",region:"Estado / región",postal:"Código postal",
  serviceAreas:"Zonas de servicio",description:"Descripción",services:"Servicios",products:"Productos",
  website:"Sitio web",businessName:"Nombre comercial",email:"Correo",ownerEmail:"Correo del titular",
@@ -746,6 +746,8 @@ export default function AdminConsole(){
 }
 
 function MarketingDetails({record,onMedia}:{record:Record<string,unknown>;onMedia:(path:string)=>void}){
+ const {language}=useInterfaceLanguage();
+ const en=language==="en";
  const areas:{key:string;label:string}[]=[
   {key:"google_profile_data",label:"Google Business Profile"},
   {key:"web_repair_data",label:"Diagnóstico y reparación web"},
@@ -757,7 +759,20 @@ function MarketingDetails({record,onMedia}:{record:Record<string,unknown>;onMedi
   if(!data||typeof data!=="object"||Array.isArray(data))return null;
   const entry=data as Record<string,unknown>;
   return <div className={styles.detailBox} key={key}><h3>{label}</h3>
+   {key==="google_profile_data"?<details><summary>{en?"Operator checklist":"Lista de revisión del operador"}</summary><ol>
+    <li>{en?"Check eligibility, real business name, category and possible duplicate profiles.":"Revisar elegibilidad, nombre real, categoría y posibles perfiles duplicados."}</li>
+    <li>{en?"Quote VMV fees separately; obtain customer approval before starting.":"Cotizar los honorarios de VMV por separado; obtener aprobación antes de empezar."}</li>
+    <li>{en?"The customer retains ownership. Request an invitation as manager; never request passwords or verification codes.":"El cliente conserva la propiedad. Solicitar invitación como administrador; nunca pedir contraseñas ni códigos de verificación."}</li>
+    <li>{en?"Confirm address visibility, hours, contact details and photos before submitting changes.":"Confirmar dirección pública, horarios, contacto y fotos antes de presentar cambios."}</li>
+    <li>{en?"If Google needs customer verification, use Needs customer and explain the next step in the case conversation.":"Si Google requiere verificación del cliente, usar Necesita cliente y explicar el siguiente paso en la conversación del caso."}</li>
+    <li>{en?"Complete only after checking the live Google Maps profile, customer access and approved changes. Save the public profile URL as evidence.":"Cerrar solo tras comprobar el perfil real en Google Maps, el acceso del cliente y los cambios aprobados. Guardar el enlace público como evidencia."}</li>
+   </ol></details>:null}
    <dl className={styles.dataList}>{Object.entries(entry).filter(([k,v])=>k!=="media"&&v!==null&&v!==""&&v!==undefined).map(([k,v])=>{
+    if(k==="hours"&&Array.isArray(v))return <div key={k}><dt>{en?"Business hours":"Horarios del negocio"}</dt><dd>{entry.hoursEnabled?v.map((value,i)=>{
+     const h=value as {closed?:boolean;start?:string;end?:string};
+     const day=(en?["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]:["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"])[i]||String(i+1);
+     return <div key={i}>{day}: {h.closed?(en?"Closed":"Cerrado"):(h.start+" – "+h.end+(String(h.end)<String(h.start)?(en?" (following day)":" (día siguiente)"):""))}</div>;
+    }):(en?"To confirm with customer":"Por confirmar con el cliente")}</dd></div>;
     if(Array.isArray(v)&&k==="selected")return <div key={k}><dt>Directorios seleccionados</dt><dd>{v.map((x,i)=>{
      const d=x&&typeof x==="object"?x as Record<string,unknown>:{};
      return <div key={i} className={styles.directoryRow}><strong>{detailText(d.name||d.id)}</strong><small>{statusLabel(String(d.status||"pending"))}</small>

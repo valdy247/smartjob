@@ -1,4 +1,5 @@
 "use client";
+import {normalizeGoogleProfile,googlePhotoKey} from "@/lib/google-profile-request";
 import {websiteAddress} from "@/lib/website-address";
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 
@@ -315,8 +316,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     if(staffResult.error)throw staffResult.error;
     setStaff(Boolean(staffResult.data));
     const [r,a]=await Promise.all([
-     client.from("vmv_marketing_requests").select("*").order("created_at",{ascending:false}).limit(80),
-     client.from("vmv_marketing_quote_acceptances").select("*").order("accepted_at",{ascending:false}).limit(120)
+     (teamView&&staff?client.from("vmv_marketing_requests").select("*"):client.from("vmv_marketing_requests").select("*").eq("owner_id",user.id)).order("created_at",{ascending:false}).limit(80),
+     (teamView&&staff?client.from("vmv_marketing_quote_acceptances").select("*"):client.from("vmv_marketing_quote_acceptances").select("*").eq("owner_id",user.id)).order("accepted_at",{ascending:false}).limit(120)
     ]);
     if(r.error)throw r.error;
     if(a.error)throw a.error;
@@ -326,7 +327,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   };
   void load();
   return()=>{alive=false;};
- },[client,user]);
+ },[client,user,teamView,staff]);
  const loadSavedBusinesses=async(owner:string)=>{
   if(!client)return;
   const [saved,profile,agent,category]=await Promise.all([
@@ -386,8 +387,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   setLoading(true);setError("");
   try{
    const [r,a]=await Promise.all([
-    client.from("vmv_marketing_requests").select("*").order("created_at",{ascending:false}).limit(80),
-    client.from("vmv_marketing_quote_acceptances").select("*").order("accepted_at",{ascending:false}).limit(120)
+    (teamView&&staff?client.from("vmv_marketing_requests").select("*"):client.from("vmv_marketing_requests").select("*").eq("owner_id",user.id)).order("created_at",{ascending:false}).limit(80),
+    (teamView&&staff?client.from("vmv_marketing_quote_acceptances").select("*"):client.from("vmv_marketing_quote_acceptances").select("*").eq("owner_id",user.id)).order("accepted_at",{ascending:false}).limit(120)
    ]);
    if(r.error)throw r.error;
    if(a.error)throw a.error;
@@ -444,7 +445,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     const folder=user.id+"/"+requestId;
     for(const {kind,file} of googleFiles){
      const extension=file.type==="image/png"?"png":"jpg";
-     const path=folder+"/"+kind+"-"+file.size+"-"+file.lastModified+"."+extension;
+     const fingerprint=await googlePhotoKey(file);
+     const path=folder+"/"+kind+"-"+fingerprint+"."+extension;
      const {error:uploadError}=await client.storage.from("vmv-google-media").upload(path,file,{contentType:file.type,cacheControl:"3600",upsert:false});
      if(uploadError&&uploadError.message?.toLowerCase().includes("already exists")){mediaPaths.push({kind,path});continue;}
      if(uploadError)throw new Error("No se pudo guardar la imagen "+kind+". "+uploadError.message);
@@ -459,7 +461,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     goal_text:selected==="directory_listings"?(contentText(contentLanguage,"marketing.feedback.directoryGoal",{count:directoryData.selected.length,city:directoryData.city,state:directoryData.state})):selected==="google_profile"?googleGoalText:selected==="seo_improvement"?(webRepair.requestRepair?contentText(contentLanguage,"marketing.feedback.repairGoal"):contentText(contentLanguage,"marketing.feedback.reportOnlyGoal")):selected==="review_strategy"&&reviewInput.trim()?
      (contentText(contentLanguage,"marketing.feedback.reputationGoal",{review:reviewInput.trim().slice(0,650),reply:(reviewReply||reviewReplyTemplate(name,reviewInput,reviewTone)).slice(0,700)})).slice(0,1500):goal.trim(),
     agreed_to_contact:true,
-    ...(selected==="google_profile"?{google_profile_data:{...googleData,...(googleData.kind==="service_area"?{street:"",unit:"",city:"",region:"",postal:""}:{}),media:mediaPaths}}:{}),
+    ...(selected==="google_profile"?{google_profile_data:{...normalizeGoogleProfile(googleData),media:mediaPaths}}:{}),
     ...(selected==="seo_improvement"?{web_repair_data:webRepair}:{}),
     ...(selected==="directory_listings"?{directory_data:{...directoryData,industry:effectiveCategory}}:{}),
     ...(selected==="review_strategy"?{reputation_data:{mode:reviewMode,reviewText:reviewInput.slice(0,650),replyText:(reviewReply||reviewReplyTemplate(name,reviewInput,reviewTone)).slice(0,1200),reviewLink:reviewLink.slice(0,750)}}:{})
@@ -661,6 +663,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       {selected==="seo_improvement"?<div className={styles.googleReview}><strong>{translate("marketing.copy.website_diagnosis")}</strong><span>{webRepair.audit?translate("marketing.action.speed")+(webRepair.audit.scores.performance??"—")+"/100; SEO: "+(webRepair.audit.scores.seo??"—")+"/100":translate("marketing.action.no_automated_analysis_technical_review_required")}</span><span>{translate("marketing.copy.platform")} {webRepair.platform==="other"?webRepair.otherPlatform:webRepair.platform}</span><span>{translate("marketing.copy.repository")} {webRepair.repositoryHost}</span><span>{webRepair.requestRepair?translate("marketing.action.i_want_a_quote"):translate("marketing.action.save_diagnosis_only")}</span><button type="button" onClick={()=>editWizardStep(2)}>{translate("marketing.copy.review_information")}</button></div>:null}
       <div className={styles.reviewGoal}><span>{translate("marketing.copy.what_you_need")}</span><p>{selected==="seo_improvement"?(webRepair.requestRepair?translate("marketing.action.request_a_repair_evaluation_and_quote"):translate("marketing.action.save_diagnosis_without_repairs")):selected==="google_profile"?googleGoalText:selected==="review_strategy"&&reviewInput.trim()?(translate("marketing.action.reviewLabel")+reviewInput.trim()+translate("marketing.action.reviewResponse")+(reviewReply||reviewReplyTemplate(name,reviewInput,reviewTone))):goal.trim()}</p><button type="button" onClick={()=>editWizardStep(2)}>{translate("marketing.copy.edit_description")}</button></div>
      </div>
+     {selected==="google_profile"?<p className={styles.wizardHint}>{translate("marketing.google.serviceDisclosure")} <a href="https://support.google.com/business/answer/7353941" target="_blank" rel="noopener noreferrer">{translate("marketing.google.thirdPartyNotice")}</a></p>:null}
      <div className={styles.costNote}><Wallet size={22}/><div><strong>{translate("marketing.copy.submit_request_0")}</strong><p>{translate("marketing.copy.any_service_cost_will_be_quoted_later_no_payment_or_")}</p></div></div>
      <label className={styles.permission}><input type="checkbox" checked={consent} onChange={e=>{setConsent(e.target.checked);setWizardError("");}}/>
       <span>{translate("marketing.copy.i_authorize_vmv_to_use_these_details_to_manage_and_r")} <strong>{translate("marketing.copy.publishing_payments_and_external_changes_will_requir")}</strong></span>
