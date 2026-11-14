@@ -32,6 +32,7 @@ export function emptyAgent(kind:AgentKind):AgentDraft{
     purpose:template.purpose,personality:"Amable y profesional",language:"es",
     instructions:"",knowledge:"",configuration:{},status:"draft"};
 }
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function db(){
   if(!supabase)throw new Error("Configura Supabase para utilizar AI Agents.");
   return supabase;
@@ -42,24 +43,7 @@ export async function getAgents(session:Session):Promise<Agent[]>{
   if(error)throw new Error("AI Agents todavía no está habilitado para esta cuenta.");
   return (data||[]) as Agent[];
 }
-async function ensureBusiness(session:Session):Promise<string>{
-  const client=db();
-  const {data:existing,error:lookupError}=await client.from("vmv_ai_businesses")
-    .select("id").eq("owner_id",session.user.id).maybeSingle();
-  if(lookupError)throw new Error("No se pudo consultar tu empresa.");
-  if(existing?.id)return existing.id;
-  const raw=String(session.user.user_metadata?.business_name||"Mi negocio").trim();
-  const {data:created,error:insertError}=await client.from("vmv_ai_businesses")
-    .insert({owner_id:session.user.id,name:(raw||"Mi negocio").slice(0,100)})
-    .select("id").single();
-  if(created?.id)return created.id;
-  // Another device may have created the business concurrently.
-  const {data:concurrent}=await client.from("vmv_ai_businesses")
-    .select("id").eq("owner_id",session.user.id).maybeSingle();
-  if(concurrent?.id)return concurrent.id;
-  throw new Error(insertError?.message?"No se pudo crear el espacio de tu negocio.":"No se pudo crear tu negocio.");
-}
-export async function saveAgent(session:Session,draft:AgentDraft,existingId?:string,expectedRevision?:number):Promise<Agent>{
+export async function saveAgent(session:Session,draft:AgentDraft,existingId?:string,expectedRevision?:number,workspaceId?:string):Promise<Agent>{
   const normalized={name:draft.name.trim().slice(0,80),kind:draft.kind,
     purpose:draft.purpose.trim().slice(0,240),personality:draft.personality.trim().slice(0,60),
     language:draft.language,instructions:draft.instructions.trim().slice(0,2500),
@@ -74,7 +58,14 @@ export async function saveAgent(session:Session,draft:AgentDraft,existingId?:str
     if(!data)throw new Error("El agente cambió en otro dispositivo. Vuelve a cargar para evitar sobrescribir.");
     return data as Agent;
   }
-  const business_id=await ensureBusiness(session);
+  if(!workspaceId||!uuid.test(workspaceId))
+    throw new Error("Selecciona primero tu negocio central en VMV.");
+  const {data:workspace,error:workspaceError}=await db().from("vmv_ai_businesses")
+    .select("id,central_business_id").eq("id",workspaceId)
+    .eq("owner_id",session.user.id).maybeSingle();
+  if(workspaceError||!workspace?.central_business_id)
+    throw new Error("El negocio debe vincularse a tu perfil central antes de crear agentes.");
+  const business_id=workspace.id;
   const {data,error}=await db().from("vmv_ai_agents")
     .insert({...normalized,business_id,owner_id:session.user.id}).select("*").single();
   if(error||!data)throw new Error("No fue posible crear el agente.");
