@@ -335,34 +335,6 @@ export function AIAgentsStudio({session,onBack}:Props){
          </View>:null}
         {notice?<View style={styles.warning}><Ionicons name="information-circle-outline" size={18} color="#76559C"/>
           <Text style={[styles.help,{flex:1}]}>{notice}</Text></View>:null}
-        <Pressable accessibilityRole="button" accessibilityLabel="Configurar servicios y reservas"
-         onPress={()=>void startCapability("bookings")} style={styles.commerceEntry}>
-         <View style={styles.commerceIcon}><Ionicons name="calendar-outline" size={23} color={C.purple}/></View>
-         <View style={{flex:1,gap:4}}>
-          <Text style={styles.commerceTitle}>Agenda y reservas</Text>
-          <Text style={styles.commerceCaption}>Servicios, horarios reales y citas del negocio</Text>
-         </View><Ionicons name="chevron-forward" color={C.purple} size={19}/>
-        </Pressable>
-        {phone?<Pressable accessibilityRole="button"
-         accessibilityLabel="Configurar atención de llamadas" onPress={()=>void startCapability("calls")}
-         style={styles.commerceEntry}>
-         <View style={styles.commerceIcon}><Ionicons name="call-outline" size={23} color={C.purple}/></View>
-         <View style={{flex:1,gap:4}}>
-          <Text style={styles.commerceTitle}>Atención de llamadas</Text>
-          <Text style={styles.commerceCaption}>IA, traducción, horarios y pruebas de configuración</Text>
-         </View>
-         <Ionicons name="chevron-forward" size={19} color={C.purple}/>
-        </Pressable>:null}
-        <Pressable accessibilityRole="button" accessibilityLabel="Configurar ventas por teléfono"
-         onPress={()=>void startCapability("sales")} style={styles.commerceEntry}>
-         <View style={styles.commerceIcon}><Ionicons name="bag-handle-outline" size={23} color={C.purple}/></View>
-         <View style={{flex:1,gap:5}}>
-          <Text style={styles.commerceTitle}>Ventas por teléfono</Text>
-          <Text style={styles.commerceCaption}>Configura permisos, productos, precios y pedidos del agente.</Text>
-          <Text style={styles.commerceTest}>PRUEBAS · No se realizan cobros reales</Text>
-         </View>
-         <Ionicons name="chevron-forward" size={19} color={C.purple}/>
-        </Pressable>
         <SectionTitle title={"Tu agente: "+(principal?.name||proposal?.name||"Sin configurar")}
           caption={"Negocio: "+(activeBusiness?.name||"Selecciona tu negocio")+". Una identidad para todas las funciones."}/>
         {principal?<Text style={styles.help}>Llamadas: {phone?.agentId===principal.id&&phone?.prepared?
@@ -377,10 +349,23 @@ export function AIAgentsStudio({session,onBack}:Props){
             calls:"Llamadas",support:"Chat web",sales:"Ventas",bookings:"Reservas",
             inventory:"Catálogo e inventario",operations:"Actividad",custom:"Identidad"
            } as Record<AgentKind,string>)[template.kind];
+           const configured=principal?.configuration||{};
+           const status=!principal?"Sin configurar":
+            template.kind==="calls"?(phone?.agentId===principal.id&&phone.prepared?
+             "Lista para probar":phone?.agentId===principal.id?"Requiere atención":"Sin configurar"):
+            template.kind==="support"?"Requiere atención":
+            template.kind==="inventory"?(configured.cap_catalog==="Sí"?"Requiere atención":"Sin configurar"):
+            template.kind==="sales"?(configured.cap_sales==="Sí"?"Requiere atención":"Sin configurar"):
+            template.kind==="bookings"?(configured.cap_bookings==="Sí"?"Requiere atención":"Sin configurar"):
+            "Lista para probar";
            const description=({
-            calls:"Atención y traducción",support:"Chat público pendiente",
-            sales:"Permisos y pedidos",bookings:"Agenda y citas",inventory:"Productos y stock",
-            operations:"Conversaciones",custom:"Voz, idioma y personalidad"
+            calls:"Horarios y traducción · prueba real pendiente",
+            support:"Chat público pendiente · ensayo privado",
+            sales:"Permisos y pagos por verificar",
+            bookings:"Agenda y citas por verificar",
+            inventory:"Catálogo y existencias aprobadas",
+            operations:"Conversaciones del mismo agente",
+            custom:"Voz, idioma y personalidad"
            } as Record<AgentKind,string>)[template.kind];
            return <Pressable key={template.kind} accessibilityRole="button"
             accessibilityLabel={"Configurar "+label} disabled={!activeBusiness}
@@ -389,7 +374,7 @@ export function AIAgentsStudio({session,onBack}:Props){
             <View style={styles.templateIcon}><Ionicons name={template.icon} size={23} color={template.fg}/></View>
             <View style={{flex:1,justifyContent:"flex-end"}}>
               <Text style={[styles.templateTitle,{color:template.fg}]}>{label}</Text>
-              <Text style={[styles.templateCaption,{color:template.fg}]}>{description}</Text>
+              <Text style={[styles.templateCaption,{color:template.fg}]}>{status+" · "+description}</Text>
             </View>
             <Ionicons name="arrow-up-outline" color={template.fg} size={18} style={styles.templateArrow}/>
            </Pressable>;
