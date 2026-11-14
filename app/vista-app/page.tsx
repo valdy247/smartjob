@@ -2,7 +2,7 @@
 import {useEffect,useState,type FormEvent} from "react";
 import {House,LayoutGrid,PhoneCall,Languages,UserRound,ArrowUpRight,ChevronLeft,Clock3,ContactRound,UserRoundPlus,
  ShieldCheck,Mic,Package,CalendarDays,Users,BarChart3,Workflow,Globe,Bot,
- RefreshCw,Settings2,LoaderCircle,LogOut,LockKeyhole,PhoneForwarded,MessageCircle,Monitor,Cpu,TrendingUp} from "lucide-react";
+ RefreshCw,Settings2,LoaderCircle,LogOut,LockKeyhole,PhoneForwarded,MessageCircle,Monitor,Cpu,TrendingUp,Search} from "lucide-react";
 import {LivePanel} from "@/components/LivePanel";
 import InitialServiceCard from "@/components/InitialServiceCard";
 import dynamic from "next/dynamic";
@@ -82,6 +82,8 @@ export default function VMVMobilePreview(){
  useEffect(()=>{if(new URLSearchParams(window.location.search).get("tab")==="account")setTab("account");},[]);
  const [open,setOpen]=useState(false);
  const [serviceFocus,setServiceFocus]=useState<"all"|"web">("all");
+ const [catalogQuery,setCatalogQuery]=useState("");
+ const [catalogGroup,setCatalogGroup]=useState<"all"|"communication"|"digital"|"growth">("all");
  const [panel,setPanel]=useState<Panel>("overview");
  const [callsView,setCallsView]=useState<"dial"|"history"|"contacts">("dial");
  const [callFilter,setCallFilter]=useState<"all"|"direct"|"translated">("all");
@@ -145,53 +147,17 @@ export default function VMVMobilePreview(){
  const lineState=line?.connectedToApp?translate("services.call.iphoneRoute"):line?.verified?translate("services.call.numberVerifiedValue"):route?.enabled?translate("services.call.routeRegistered"):translate("services.call.activationPending");
  const go=(next:Tab)=>{if(next!=="account"){const url=new URL(window.location.href);if(url.searchParams.get("tab")==="account"){url.searchParams.delete("tab");url.searchParams.delete("setup");window.history.replaceState(null,"",url.pathname+url.search+url.hash);}}setServiceFocus("all");setCallbackConfirmSid(null);setTab(next);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("dial");setDialTarget(null);setCallFilter("all");}setError("");setNotice("");};
  const showCall=(next:Panel="overview")=>{setTab("services");setOpen(true);setPanel(next);setError("");setNotice("");};
- // Home and Services reuse the same featured cards so labels, destinations and
- // availability cannot drift. Commercial offers remain a separate catalog.
- const featuredSmartCall=<button type="button" className={styles.homeSpotlight} onClick={()=>showCall("overview")}
-  aria-label={translate("services.openSmartCall")}>
-  <span className={styles.homeSpotlightKicker}>SMART CALL <span>● {translate("home.pilot")}</span></span>
-  <strong>{translate("home.businessConnected")}<span>.</span></strong>
-  <small>{translate("home.callsAndTranslation")}</small>
-  <span className={styles.homeSpotlightMinutes}>{num(available)} min <span>{translate("home.minutesToTranslate")}</span></span>
-  <span className={styles.homeSpotlightArt} aria-hidden="true">
-   <span className={styles.homeArtRingOne}></span>
-   <span className={styles.homeArtRingTwo}></span>
-   <span className={styles.homeArtPhone}><PhoneCall size={30} strokeWidth={2.2}/></span>
-   <span className={styles.homeArtMiniBubble}><Languages size={17}/></span>
-   <span className={styles.homeArtSpark}>✦</span>
-  </span>
-  <span className={styles.homeSpotlightGo}><ArrowUpRight size={20}/></span>
- </button>;
- const featuredServices=<div className={styles.homeProductsGrid}>
-  <button type="button" className={`${styles.homeProductCard} ${styles.homeProductMint}`}
-   onClick={()=>go("translator")} aria-label={translate("home.openInPerson")}>
-   <span className={styles.homeProductIcon}><Languages size={27}/></span>
-   <span className={styles.homeProductDecor} aria-hidden="true"><MessageCircle size={75} strokeWidth={1.5}/></span>
-   <span className={styles.homeProductBody}><strong>{translate("common.translator")}</strong><small>{translate("home.inPerson")}</small></span>
-   <span className={styles.homeProductArrow}>↗</span>
-  </button>
-  <button type="button" className={`${styles.homeProductCard} ${styles.homeProductYellow}`}
-   onClick={()=>{setOpen(false);setServiceFocus("web");setTab("services");}} aria-label={translate("home.explore")+": Web Services"}>
-   <span className={styles.homeProductIcon}><Globe size={27}/></span>
-   <span className={styles.homeProductBody}><strong>Web Services</strong></span>
-   <span className={styles.homeProductDecor} aria-hidden="true"><Monitor size={83} strokeWidth={1.25}/></span>
-   <span className={styles.homeProductArrow}>↗</span>
-  </button>
-  <button type="button" className={`${styles.homeProductCard} ${styles.homeProductSky}`}
-   onClick={()=>window.location.assign("/vista-app/ai-agents")} aria-label={translate("home.explore")+": AI Agents"}>
-   <span className={styles.homeProductIcon}><Bot size={27}/></span>
-   <span className={styles.homeProductBody}><strong>AI Agents</strong><small>Beta</small></span>
-   <span className={styles.homeProductDecor} aria-hidden="true"><Cpu size={79} strokeWidth={1.3}/></span>
-   <span className={styles.homeProductArrow} aria-hidden="true">↗</span>
-  </button>
-  <button type="button" className={`${styles.homeProductCard} ${styles.homeProductPink}`}
-   onClick={()=>window.location.assign("/vista-app/marketing")} aria-label={translate("home.explore")+": Marketing"}>
-   <span className={styles.homeProductIcon}><BarChart3 size={27}/></span>
-   <span className={styles.homeProductBody}><strong>Marketing</strong></span>
-   <span className={styles.homeProductDecor} aria-hidden="true"><TrendingUp size={82} strokeWidth={1.3}/></span>
-   <span className={styles.homeProductArrow}>↗</span>
-  </button>
- </div>;
+ // Services are discoverable products; Home uses authenticated operational data instead.
+ const catalogItems=[
+  {id:"smart-call",name:"Smart Call",search:"calls llamadas teléfono",group:"communication",Icon:PhoneCall,tone:styles.catalogViolet,state:translate("home.pilot"),action:()=>showCall("overview")},
+  {id:"translator",name:translate("common.translator"),search:"translator intérprete traducción",group:"communication",Icon:Languages,tone:styles.catalogMint,state:translate("catalog.open"),action:()=>go("translator")},
+  {id:"web",name:"Web Services",search:"web sitios páginas",group:"digital",Icon:Globe,tone:styles.catalogYellow,state:translate("catalog.open"),action:()=>{setOpen(false);setServiceFocus("web");setTab("services");}},
+  {id:"agents",name:"AI Agents",search:"ia inteligencia artificial agentes",group:"digital",Icon:Bot,tone:styles.catalogSky,state:translate("catalog.beta"),action:()=>window.location.assign("/vista-app/ai-agents")},
+  {id:"marketing",name:"Marketing",search:"marketing publicidad reputación",group:"growth",Icon:BarChart3,tone:styles.catalogPink,state:translate("catalog.beta"),action:()=>window.location.assign("/vista-app/marketing")}
+ ] as const;
+ const catalogSearch=catalogQuery.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase();
+ const filteredCatalog=catalogItems.filter(item=>(catalogGroup==="all"||item.group===catalogGroup)&&
+  (!catalogSearch||(item.name+" "+item.search).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase().includes(catalogSearch)));
  const openContacts=(number="",startInForm=false)=>{setContactPhone(number);setContactStartForm(startInForm);setCallsView("contacts");setTab("calls");setError("");setNotice("");};
  const dialContact=(phone:string,name:string)=>{setDialTarget({phone,name});setCallsView("dial");setContactPhone("");setContactStartForm(false);setTab("calls");};
  async function login(e:FormEvent<HTMLFormElement>){e.preventDefault();await signIn(email,password);setPassword("");}
@@ -335,22 +301,48 @@ export default function VMVMobilePreview(){
       </div>:null}
       {ready&&tab==="home"?<div className={`${styles.screen} ${styles.homeV2}`}>
        <div className={styles.homeWelcome}>
-        <button type="button" className={styles.homeProfile} onClick={()=>go("account")} aria-label="Abrir mi cuenta">
+        <button type="button" className={styles.homeProfile} onClick={()=>go("account")} aria-label={translate("home.viewAccount")}>
          <span className={styles.homeProfileAvatar}><UserRound size={21}/></span>
-         <span><small>BIENVENIDO A VMV</small><strong>{translate("home.hello",{name})}</strong></span>
+         <span><small>{translate("dashboard.business")}</small><strong>{business}</strong></span>
         </button>
-        <span className={styles.homeBrandPill}>BUSINESS <span>✦</span></span>
+        <span className={styles.homeBrandPill}>VMV <span>✦</span></span>
        </div>
-       {featuredSmartCall}
-       <InitialServiceCard key={user?.id} value={user?.user_metadata?.initial_service} onTranslation={()=>go("calls")}/>
-       <div className={styles.homeSectionHeading}>
-        <h3>{translate("home.featured")}<span>.</span></h3>
-        <button type="button" onClick={()=>go("services")}>{translate("home.seeAll")} <ArrowUpRight size={15}/></button>
-       </div>
-       {featuredServices}
-       <button className={styles.homeExploreCompact} type="button" onClick={()=>go("services")}>
-        <LayoutGrid size={18}/>{translate("native.totalServices")} <ArrowUpRight size={16}/>
+       <button className={styles.dashboardCallCard} type="button" onClick={()=>showCall("overview")}
+        aria-label={translate("dashboard.manageCalls")}>
+        <span className={styles.dashboardCallTop}><span>SMART CALL</span><PhoneCall size={24}/></span>
+        <strong>{translate("dashboard.callCenter")}</strong>
+        <span className={styles.dashboardLineState}>{translate("dashboard.lineStatus")}: {summary?.line.ok?lineState:translate("dashboard.unavailable")}</span>
+        <span className={styles.dashboardMetrics}>
+         <span><b>{summary?.billing.ok?num(available):"—"}</b><small>{translate("dashboard.minutes")}</small></span>
+         <span><b>{summary?.line.ok?num(summary.line.data?.usage.calls):"—"}</b><small>{translate("dashboard.calls")}</small></span>
+        </span>
+        <span className={styles.dashboardCardArrow}><ArrowUpRight size={18}/></span>
        </button>
+       <div className={styles.dashboardHeading}><h3>{translate("dashboard.quickActions")}</h3>
+        <button type="button" onClick={()=>go("services")}>{translate("home.seeAll")} <ArrowUpRight size={14}/></button></div>
+       <div className={styles.dashboardQuickGrid}>
+        <button type="button" className={styles.dashboardQuickMint} onClick={()=>go("translator")}>
+         <Languages size={26}/><strong>{translate("common.translator")}</strong><ArrowUpRight size={15}/>
+        </button>
+        <button type="button" className={styles.dashboardQuickSky} onClick={()=>window.location.assign("/vista-app/ai-agents")}>
+         <Bot size={26}/><strong>AI Agents</strong><ArrowUpRight size={15}/>
+        </button>
+       </div>
+       <section className={styles.dashboardActivity} aria-label={translate("dashboard.activity")}>
+        <div className={styles.dashboardActivityHeading}>
+         <h3>{translate("dashboard.activity")}</h3>
+         <button type="button" onClick={()=>showCall("activity")}>{translate("dashboard.viewActivity")} <ArrowUpRight size={14}/></button>
+        </div>
+        {calls.length?<div className={styles.dashboardActivityList}>{calls.slice(0,2).map(item=>
+         <div className={styles.dashboardActivityItem} key={item.bridge_sid}>
+          <span className={styles.dashboardActivityIcon}><PhoneCall size={17}/></span>
+          <span><strong>{translate(item.call_mode==="translated"?"services.history.translated":"services.history.direct")}</strong>
+           <small>{new Date(item.started_at).toLocaleDateString(language==="es"?"es-US":"en-US",{month:"short",day:"numeric"})} · {callStatusKeys[item.status]?translate(callStatusKeys[item.status]):item.status}</small>
+          </span>
+         </div>)}</div>:
+         <p className={styles.dashboardEmpty}>{loading?translate("marketing.ui.loading"):translate("dashboard.emptyActivity")}</p>}
+       </section>
+       <InitialServiceCard key={user?.id} value={user?.user_metadata?.initial_service} onTranslation={()=>go("calls")}/>
       </div>:null}
       {ready&&tab==="services"&&!open?<div className={`${styles.screen} ${styles.servicesV3}`}>
        {serviceFocus==="web"?<>
@@ -358,12 +350,36 @@ export default function VMVMobilePreview(){
         {user?<BusinessServicesPreview userId={user.id} focus="web"/>:null}
        </>:<>
         <h2 className={styles.servicesTitle}>{translate("common.services")}<span className={styles.mint}>.</span></h2>
-        {featuredSmartCall}
-        {featuredServices}
-        <details className={styles.servicesMoreCatalog}>
-         <summary>{translate("settings.otherServices")} <ChevronLeft size={18} aria-hidden="true"/></summary>
-         {user?<BusinessServicesPreview userId={user.id} excludeFeatured/>:null}
-        </details>
+        <label className={styles.catalogSearch}>
+         <span className={styles.srOnly}>{translate("catalog.searchLabel")}</span>
+         <Search size={18} aria-hidden="true"/>
+         <input value={catalogQuery} onChange={event=>setCatalogQuery(event.target.value)}
+          type="search" placeholder={translate("catalog.search")} autoComplete="off"/>
+        </label>
+        <div className={styles.catalogFilters} role="group" aria-label={translate("catalog.mainTools")}>
+         {(["all","communication","digital","growth"] as const).map(group=>
+          <button key={group} type="button" aria-pressed={catalogGroup===group}
+           className={catalogGroup===group?styles.catalogFilterActive:styles.catalogFilter}
+           onClick={()=>setCatalogGroup(group)}>{translate(group==="all"?"catalog.all":group==="communication"?"catalog.communication":group==="digital"?"catalog.digital":"catalog.growth")}</button>)}
+        </div>
+        <div className={styles.catalogGrid}>
+         {filteredCatalog.map(item=><button type="button" key={item.id}
+          className={`${styles.catalogCard} ${item.tone}`} onClick={item.action}
+          aria-label={item.name+" · "+item.state}>
+          <span className={styles.catalogIcon}><item.Icon size={26}/></span>
+          <span className={styles.catalogCardCopy}><strong>{item.name}</strong><small>{item.state}</small></span>
+          <ArrowUpRight className={styles.catalogCardArrow} size={16}/>
+         </button>)}
+        </div>
+        {!filteredCatalog.length?<p className={styles.catalogEmpty}>{translate("catalog.noResults")}</p>:null}
+        {catalogGroup==="all"?catalogSearch?
+         <section className={styles.catalogMoreResults} aria-label={translate("settings.otherServices")}>
+          {user?<BusinessServicesPreview userId={user.id} excludeFeatured searchTerm={catalogQuery}/>:null}
+         </section>:
+         <details className={styles.servicesMoreCatalog}>
+          <summary>{translate("settings.otherServices")} <ChevronLeft size={18} aria-hidden="true"/></summary>
+          {user?<BusinessServicesPreview userId={user.id} excludeFeatured/>:null}
+         </details>:null}
        </>}
       </div>:null}
       {ready&&tab==="services"&&open?<div className={styles.smartScreen}>
