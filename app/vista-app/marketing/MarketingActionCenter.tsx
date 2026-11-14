@@ -201,6 +201,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    }
    resolvedDraftOwner.current=uid;
    if(saved&&active&&services.some(item=>item.id===saved.service)){
+    businessEditedRef.current=true;
     setRequestId(saved.requestId);setSelected(saved.service as ServiceCode);
     setBusinessId(saved.businessId||"");
     if(saved.businessDetails)setBusinessDetails(saved.businessDetails);
@@ -423,7 +424,10 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(invalid){setBusinessError(invalid);return null;}
   setBusinessBusy(true);setBusinessError("");setBusinessMessage("");
   try{
-   const current=savedBusinesses.find(x=>x.id===businessId&&!x.source&&x.owner_id===user.id);
+   const inMemory=savedBusinesses.find(x=>x.id===businessId&&!x.source&&x.owner_id===user.id);
+   const remote=!inMemory&&/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(businessId)?
+    await client.from("vmv_marketing_businesses").select("*").eq("owner_id",user.id).eq("id",businessId).maybeSingle():null;
+   const current=inMemory||(remote?.data as SavedBusiness|null)||undefined;
    const newId=current?.id||(/^[a-f0-9-]{36}$/i.test(businessId)?businessId:requestId);
    const payload=centralBusinessWritePayload(draft);
    const result=current?
