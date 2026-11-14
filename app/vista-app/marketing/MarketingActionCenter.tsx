@@ -89,6 +89,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
 
  const [client,setClient]=useState<SupabaseClient|null>(null);
  const [user,setUser]=useState<User|null>(null);
+ const activeBusinessOwnerRef=useRef<string|null>(null);
+ activeBusinessOwnerRef.current=user?.id||null;
  const [savedCategory,setSavedCategory]=useState("");
  const [savedBusinesses,setSavedBusinesses]=useState<SavedBusiness[]>([]);
  const [businessId,setBusinessId]=useState("");
@@ -330,6 +332,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    client.from("vmv_ai_businesses").select("id,name").eq("owner_id",owner).limit(60),
    client.from("smartjob_business_category_preferences").select("category_id").eq("owner_id",owner).maybeSingle()
   ]);
+  if(activeBusinessOwnerRef.current!==owner)return;
   if(saved.error){setBusinessError(translate("marketing.action.couldn_t_load_saved_businesses_try_again"));return;}
   const records=(saved.data||[]) as SavedBusiness[];
   const known=new Set(records.map(x=>x.name.trim().toLowerCase()));
@@ -361,15 +364,16 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(cleanSite&&!safeSite(cleanSite)){setBusinessError(translate("marketing.action.the_website_must_have_a_valid_https_url"));return;}
   setBusinessBusy(true);setBusinessError("");setBusinessMessage("");
   try{
-   const existing=savedBusinesses.find(x=>x.id===businessId&&!x.source);
+   const existing=savedBusinesses.find(x=>x.id===businessId&&!x.source&&x.owner_id===user.id);
    const payload={name:cleanName,category_id:effectiveCategory,website_url:safeSite(cleanSite)};
    const result=existing?
     await client.from("vmv_marketing_businesses").update(payload).eq("id",existing.id).eq("owner_id",user.id).select("id").single():
     await client.from("vmv_marketing_businesses").insert({owner_id:user.id,...payload}).select("id").single();
    if(result.error)throw result.error;
+   if(activeBusinessOwnerRef.current!==user.id)return;
    setBusinessId(String(result.data.id));
    await loadSavedBusinesses(user.id);
-   setBusinessMessage(translate("marketing.action.business_saved_you_can_select_it_next_time"));
+   if(activeBusinessOwnerRef.current===user.id)setBusinessMessage(translate("marketing.action.business_saved_you_can_select_it_next_time"));
   }catch(e){
    setBusinessError(errorMessage(e,translate("marketing.action.couldn_t_save_the_business_check_whether_one_with_tha")));
   }finally{setBusinessBusy(false);}
@@ -437,7 +441,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     const folder=user.id+"/"+requestId;
     for(const {kind,file} of googleFiles){
      const extension=file.type==="image/png"?"png":"jpg";
-     const path=folder+"/"+kind+"."+extension;
+     const path=folder+"/"+kind+"-"+file.size+"-"+file.lastModified+"."+extension;
      const {error:uploadError}=await client.storage.from("vmv-google-media").upload(path,file,{contentType:file.type,cacheControl:"3600",upsert:false});
      if(uploadError&&uploadError.message?.toLowerCase().includes("already exists")){mediaPaths.push({kind,path});continue;}
      if(uploadError)throw new Error("No se pudo guardar la imagen "+kind+". "+uploadError.message);
