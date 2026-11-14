@@ -288,12 +288,14 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
     <div className={styles.reviewLine}><span>Ubicación</span><b>{[draft.setup.city,draft.setup.country==="Otro país"?draft.setup.region_other:draft.setup.state,draft.setup.country].filter(Boolean).join(", ")||"—"}</b></div>
     <div className={styles.reviewLine}><span>Horario</span><b>{draft.setup.hours_mode||"Sin definir"}</b></div>
     {draft.kind==="bookings"&&<div className={styles.reviewLine}><span>Reserva anticipada</span><b>{draft.setup.booking_lead||"—"}</b></div>}
-    <div className={styles.reviewLine}><span>Especialidad</span><b>{({calls:"Llamadas",support:"Clientes",sales:"Ventas",bookings:"Reservas",inventory:"Inventario",operations:"Administración",custom:"Personalizado"} as Record<AgentKind,string>)[draft.kind]}</b></div>
+    <div className={styles.reviewLine}><span>Voz telefónica</span><b>{draft.setup.voice_preset==="female"?"Femenina · Polly":draft.setup.voice_preset==="male"?"Masculina · Polly":"Predeterminada"}</b></div>
+    <div className={styles.reviewLine}><span>Personalidad</span><b>{draft.personality||"Amable y profesional"}</b></div>
+    <div className={styles.reviewLine}><span>Respuestas</span><b>{draft.setup.response_style==="brief"?"Breves":draft.setup.response_style==="detailed"?"Detalladas":"Equilibradas"}</b></div>
     <div className={styles.reviewLine}><span>Idioma</span><b>{draft.setup.language_rule||"Español"}</b></div>
-    <div className={styles.reviewLine}><span>Agenda VMV</span><b>{yesCalendar?"Solicitada · pendiente":"No solicitada"}</b></div>
-    <div className={styles.reviewLine}><span>Inventario VMV</span><b>{yesInventory?"Solicitado · pendiente":"No solicitado"}</b></div>
+    <div className={styles.reviewLine}><span>Reservas</span><b>{draft.setup.cap_bookings==="Sí"?"Capacidad elegida · confirmar agenda":"Sin configurar"}</b></div>
+    <div className={styles.reviewLine}><span>Inventario</span><b>{draft.setup.cap_catalog==="Sí"?"Consulta elegida · verificar catálogo":"Sin configurar"}</b></div>
     <div className={styles.reviewLine}><span>Supervisión</span><b>{draft.setup.human_review||"Humana"}</b></div>
-    <div className={styles.reviewMessage}><ShieldCheck size={20}/><p>Tu agente comenzará como <strong>borrador</strong>. No responderá llamadas ni modificará reservas, inventario o pedidos.</p></div>
+    <div className={styles.reviewMessage}><ShieldCheck size={20}/><p>Guardar la configuración no activa nuevas líneas ni permite cobros, reservas o modificaciones de inventario sin las conexiones y permisos correspondientes.</p></div>
     {isPreview?<p className={styles.previewNote}>Esta es una vista previa; inicia sesión para guardar tu agente.</p>:<p className={styles.previewNote}>Tu agente se guardará en tu cuenta VMV. Podrás editarlo desde la web o el iPhone.</p>}
   </div>:null}
   {error?<p className={styles.error} role="alert">{error}</p>:null}
