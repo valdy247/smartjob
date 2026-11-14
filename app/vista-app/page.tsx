@@ -14,6 +14,7 @@ import {useSmartCallAccount,type Tab,type Panel,type CallSettings,type CallRecor
 import styles from "./vista-app.module.css";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
+import type {MessageKey} from "@/lib/i18n";
 
 const modules=[
  {name:"AI Agents",Icon:Bot},{name:"Inventory",Icon:Package},
@@ -29,9 +30,11 @@ const lang=(value:string|null|undefined)=>value==="es"?"Español":value==="en"?"
 const num=(value:number|null|undefined)=>typeof value==="number"&&Number.isFinite(value)?value.toLocaleString("es-US"):"—";
 const date=(value:string|null|undefined)=>value&&Number.isFinite(Date.parse(value))?
  new Date(value).toLocaleDateString("es-US",{year:"numeric",month:"short",day:"numeric"}):"—";
-const statuses:Record<string,string>={
- completed:"Finalizada","in-progress":"En curso",ringing:"Sonando",initiated:"Iniciando",
- failed:"Fallida",busy:"Ocupada","no-answer":"Sin respuesta",canceled:"Cancelada"
+const callStatusKeys:Record<string,MessageKey>={
+ completed:"services.history.status.completed","in-progress":"services.history.status.inProgress",
+ ringing:"services.history.status.ringing",initiated:"services.history.status.initiated",
+ failed:"services.history.status.failed",busy:"services.history.status.busy",
+ "no-answer":"services.history.status.noAnswer",canceled:"services.history.status.canceled"
 };
 const choices:{value:Voice;label:string}[]=[
  {value:"default",label:"Estándar"},{value:"bright",label:"Clara"},{value:"calm",label:"Serena"}
@@ -54,19 +57,20 @@ function SegmentedSelect<T extends string>({label,value,options,onChange,disable
  </div>;
 }
 function History({calls,onSave,onCallBack,onLookup,canCallBack=false,callingSid=null,lookupSid=null}:{calls:CallRecord[];onSave?:(phone:string)=>void;onCallBack?:(sid:string)=>void;onLookup?:(sid:string)=>void;canCallBack?:boolean;callingSid?:string|null;lookupSid?:string|null}){
+ const {language,translate}=useInterfaceLanguage();
  return calls.length?<div className={styles.realHistory}>{calls.map(item=><div key={item.bridge_sid} className={styles.historyItem}>
-  <PhoneCall size={16}/><div><strong>{item.call_mode==="translated"?"Llamada traducida":"Llamada directa"}</strong>
-  <small>{new Date(item.started_at).toLocaleString("es-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})} · {statuses[item.status]||item.status}</small>{item.caller_phone?<small>{item.caller_phone}</small>:null}</div>
+  <PhoneCall size={16}/><div><strong>{translate(item.call_mode==="translated"?"services.history.translated":"services.history.direct")}</strong>
+  <small>{new Date(item.started_at).toLocaleString(language==="es"?"es-US":"en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})} · {callStatusKeys[item.status]?translate(callStatusKeys[item.status]):item.status}</small>{item.caller_phone?<small>{item.caller_phone}</small>:null}</div>
   <span className={styles.historySide}><span className={styles.historyDuration}>{item.duration_seconds===null?"—":Math.ceil(Math.max(0,item.duration_seconds)/60)+" min"}</span>
   {onLookup&&!item.caller_phone?<button className={styles.saveFromCall} type="button"
    disabled={!canCallBack||Boolean(lookupSid)} onClick={()=>onLookup(item.bridge_sid)}>
-   <PhoneCall size={13}/>{lookupSid===item.bridge_sid?"Buscando…":"Recuperar número"}</button>:null}
+   <PhoneCall size={13}/>{lookupSid===item.bridge_sid?translate("services.history.searching"):translate("services.history.recoverNumber")}</button>:null}
   {onCallBack&&item.caller_phone?<button className={styles.callBackAction} type="button"
-   disabled={!canCallBack||Boolean(callingSid)} title={!canCallBack?"Devolución no disponible en esta cuenta":undefined}
-   onClick={()=>onCallBack(item.bridge_sid)}><PhoneCall size={13}/>{callingSid===item.bridge_sid?"Conectando…":"Devolver llamada"}</button>:null}
+   disabled={!canCallBack||Boolean(callingSid)} title={!canCallBack?translate("services.history.callbackUnavailable"):undefined}
+   onClick={()=>onCallBack(item.bridge_sid)}><PhoneCall size={13}/>{callingSid===item.bridge_sid?translate("services.history.connecting"):translate("services.history.callBack")}</button>:null}
   {onSave?<button className={styles.saveFromCall} type="button" onClick={()=>onSave(item.caller_phone||"")}>
-   <UserRoundPlus size={13}/>{item.caller_phone?"Guardar contacto":"Añadir contacto"}</button>:null}</span>
- </div>)}</div>:<div className={styles.emptyHistory}><Clock3 size={28}/><strong>Sin llamadas registradas</strong><p>Tu actividad aparecerá aquí después de las primeras llamadas.</p></div>;
+   <UserRoundPlus size={13}/>{item.caller_phone?translate("services.history.saveContact"):translate("services.history.addContact")}</button>:null}</span>
+ </div>)}</div>:<div className={styles.emptyHistory}><Clock3 size={28}/><strong>{translate("services.history.empty")}</strong><p>{translate("services.history.emptyHint")}</p></div>;
 }
 export default function VMVMobilePreview(){
  const {translate,language}=useInterfaceLanguage();
@@ -219,20 +223,20 @@ export default function VMVMobilePreview(){
  }
  const filteredCalls=callFilter==="all"?calls:calls.filter(item=>item.call_mode===callFilter);
  const refreshButton=<button className={styles.secondaryAction} disabled={loading||working}
-  onClick={()=>void refresh()}><RefreshCw size={15}/>{loading?"Actualizando…":"Actualizar datos"}</button>;
+  onClick={()=>void refresh()}><RefreshCw size={15}/>{loading?translate("services.history.refreshing"):translate("services.history.refreshData")}</button>;
  const confirmingEntry=callbackConfirmSid?calls.find(item=>item.bridge_sid===callbackConfirmSid):null;
  return <main className={styles.stage}>
   {ready&&confirmingEntry?.caller_phone?<div className={styles.callbackConfirmBackdrop}>
    <div className={styles.callbackConfirmCard} role="dialog" aria-modal="true" aria-labelledby="callback-confirm-title">
-    <span className={styles.smallKicker}>LLAMADA EMPRESARIAL</span>
-    <h3 id="callback-confirm-title">Devolver llamada</h3>
-    <p>VMV llamará primero a tu iPhone. Cuando contestes, conectará con:</p>
+    <span className={styles.smallKicker}>{translate("services.history.businessCall")}</span>
+    <h3 id="callback-confirm-title">{translate("services.history.callBack")}</h3>
+    <p>{translate("services.history.callbackInstructions")}</p>
     <strong>{confirmingEntry.caller_phone}</strong>
-    <p>El cliente verá tu número Twilio empresarial. Esta llamada será normal, sin traducción, y puede generar cargos de voz de Twilio.</p>
+    <p>{translate("services.history.callbackDisclaimer")}</p>
     <button type="button" className={styles.mainAction} onClick={()=>{
       const sid=confirmingEntry.bridge_sid;setCallbackConfirmSid(null);void returnBusinessCall(sid);
-    }}>Devolver con VMV →</button>
-    <button type="button" className={styles.secondaryAction} onClick={()=>setCallbackConfirmSid(null)}>Cancelar</button>
+    }}>{translate("services.history.callbackConfirm")} →</button>
+    <button type="button" className={styles.secondaryAction} onClick={()=>setCallbackConfirmSid(null)}>{translate("services.history.cancel")}</button>
    </div>
   </div>:null}
   <header className={styles.pageHeader}>
