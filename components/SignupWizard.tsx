@@ -375,8 +375,6 @@ const colorChoices=[["mint",t("signup.mint"),"#08b99b"],["blue",t("signup.blue")
       <div className="vmv-signup-segments">{([["light",t("signup.light")],["dark",t("signup.dark")],["system",t("signup.system")]] as const).map(([key,title])=>
        <button type="button" key={key} aria-pressed={appearance===key} className={appearance===key?"selected":""} onClick={()=>setAppearance(key)}>{title}</button>)}</div>
      </div>
-     <label className="vmv-signup-toggle"><span><strong>{t("signup.reduceMotion")}</strong><small>{t("signup.styleHint")}</small></span>
-      <input type="checkbox" role="switch" checked={reduceMotion} onChange={e=>setReduceMotion(e.target.checked)}/></label>
      </details>
      <section className={setupStyles.preview} data-text={fontScale} data-appearance={appearance} aria-label={t("setup.preview")}>
       <small>{t("setup.preview")}</small>
