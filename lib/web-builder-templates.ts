@@ -11,7 +11,8 @@ export type SiteIntake={
  phone:string;email:string;city:string;about:string;logo:string;photos:string[];
  offerings:string[];products?:SiteProduct[];socials?:BusinessSocialLinks;
 };
-export type SiteProposal={id:string;family:SiteFamily;name:string;subtitle:string;data:Data;layout:string;palette:string};
+export type SiteProposal={id:string;family:SiteFamily;name:string;subtitle:string;data:Data;layout:string;palette:string;
+ seoTitle?:string;seoDescription?:string;aiGenerated?:boolean};
 export const FAMILIES:{id:SiteFamily;name:string;summary:string;example:string}[]=[
  {id:"bakery",name:"Repostería y productos",summary:"Catálogo fotográfico, detalles y consultas",example:"Demo · Repostería"},
  {id:"construction",name:"Construcción y hogar",summary:"Portada potente, especialidades y proyectos",example:"Demo · Construcción"},
