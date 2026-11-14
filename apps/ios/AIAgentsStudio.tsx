@@ -254,8 +254,8 @@ export function AIAgentsStudio({session,onBack}:Props){
     a.configuration.central_source_updated_at!==activeBusiness.updated_at):[];
   const activeCount=visibleAgents.filter(a=>a.status==="active").length;
   const principal=visibleAgents.find(a=>a.id===linkedWorkspace?.primary_agent_id)||null;
-  const proposal=!principal&&(phone?.agentId?visibleAgents.find(a=>a.id===phone.agentId):null)||
-    (!principal&&visibleAgents.length===1?visibleAgents[0]:null);
+  const proposal=principal?null:
+    (visibleAgents.find(a=>a.id===phone?.agentId)||(visibleAgents.length===1?visibleAgents[0]:null));
   async function linkPilot(){
     if(!activeBusiness||unlinked.length!==1||busy)return;
     setBusy(true);
