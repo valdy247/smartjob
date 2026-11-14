@@ -1,7 +1,8 @@
 import {NextRequest,NextResponse} from "next/server";
 import {createClient,type SupabaseClient} from "@supabase/supabase-js";
 import {businessWeek,checkCallPolicy,decideCall,initialCallPolicy,
- localParts,localPreview,type CallPolicy} from "@/lib/vmv-ai-agents/call-policy";
+ localParts,localPreview,type CallPolicy,type Week} from "@/lib/vmv-ai-agents/call-policy";
+import {centralPublicBusiness,publicMarketingWeek} from "@/lib/vmv-ai-agents/central-public-context";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -10,8 +11,8 @@ const reply=(data:Record<string,unknown>,status=200)=>NextResponse.json(data,
 type Context={
  db:SupabaseClient;owner:string;
  route:{id:string;twilio_number:string;destination_phone:string;enabled:boolean};
- selected:{id:string;status:string;kind:string;configuration:Record<string,string>}|null;
- version:number;policy:CallPolicy;forwardReady:boolean;businessReady:boolean;
+ selected:{id:string;business_id:string;status:string;kind:string;configuration:Record<string,string>}|null;
+ version:number;policy:CallPolicy;forwardReady:boolean;businessReady:boolean;businessHours:Week|null;
 };
 async function context(req:NextRequest):Promise<Context>{
  const token=req.headers.get("authorization")?.match(/^Bearer (\S+)$/i)?.[1]||"";
@@ -40,16 +41,26 @@ async function context(req:NextRequest):Promise<Context>{
  let selected:Context["selected"]=null;
  if(id){
   const {data,error}=await db.from("vmv_ai_agents")
-   .select("id,status,kind,configuration").eq("id",id).eq("owner_id",owner)
+   .select("id,business_id,status,kind,configuration").eq("id",id).eq("owner_id",owner)
    .maybeSingle();
   if(error)throw Error("DATABASE:No se pudo consultar el agente seleccionado.");
   selected=data as Context["selected"];
+ }
+ let businessHours=businessWeek(selected?.configuration||null);
+ if(selected?.business_id){
+  try{
+   const central=await centralPublicBusiness(db,owner,selected.business_id);
+   if(central){
+    const fromMarketing=publicMarketingWeek(central);
+    businessHours=fromMarketing?businessWeek(fromMarketing):null;
+   }
+  }catch{throw Error("DATABASE:No se pudieron consultar los horarios del negocio central.");}
  }
  const forwardReady=/^\+[1-9]\d{7,14}$/.test(route.destination_phone)&&
   route.destination_phone!==route.twilio_number;
  return {db,owner,route,selected,version:p.data?.version??0,
   policy:p.data?checkCallPolicy(p.data):initialCallPolicy,forwardReady,
-  businessReady:!!businessWeek(selected?.configuration||null)};
+  businessReady:!!businessHours,businessHours};
 }
 function failure(error:unknown){
  const msg=error instanceof Error?error.message:"No se pudo consultar la línea.";
@@ -123,7 +134,7 @@ export async function POST(req:NextRequest){
   const ctx=await context(req);
   const body=await req.json() as {policy?:unknown;day?:string;time?:string};
   const policy=checkCallPolicy(body.policy);
-  const week=policy.use_business_hours?businessWeek(ctx.selected?.configuration||null):policy.schedule;
+  const week=policy.use_business_hours?ctx.businessHours:policy.schedule;
   if(!week)throw Error("El horario del negocio aún no está definido.");
   const sample=body.day&&body.time?
    localPreview(body.day as Parameters<typeof localPreview>[0],body.time):
