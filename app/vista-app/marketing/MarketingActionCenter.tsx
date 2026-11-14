@@ -523,6 +523,30 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     setMessage(translate("marketing.action.this_request_was_already_saved_we_didn_t_submit_a_dup"));
     await refresh();return;
    }
+   let linkedId=businessId;
+   if(!savedBusinesses.some(x=>x.id===linkedId&&!x.source)){
+    const createdId=await saveBusiness();
+    if(!createdId)throw Error(en?"Save or select your business before submitting.":"Guarda o selecciona tu negocio antes de enviar.");
+    linkedId=createdId;
+   }
+   const found=await client.from("vmv_marketing_businesses").select("*").eq("owner_id",user.id).eq("id",linkedId).maybeSingle();
+   if(found.error||!found.data)throw Error(en?"Business unavailable. Select your business again.":"El negocio no está disponible. Vuelve a seleccionarlo.");
+   let storedBusiness=found.data as CentralBusiness;
+   if(saveAlsoInBusiness&&selected==="google_profile"){
+    const changed=await client.from("vmv_marketing_businesses")
+      .update({name:name.trim(),category_id:effectiveCategory,website_url:websiteAddress(site),...googleChangesForProfile(storedBusiness,googleData)})
+      .eq("owner_id",user.id).eq("id",linkedId).select("*").single();
+    if(changed.error)throw changed.error;
+    storedBusiness=changed.data as CentralBusiness;
+    setBusinessDetails(storedBusiness);setSaveAlsoInBusiness(false);
+   }
+   // The request records the reviewed version without changing the stored
+   // profile when the optional "save changes" control was not selected.
+   const approvedBusiness:CentralBusiness={...storedBusiness,
+     ...businessDetails,id:linkedId,owner_id:user.id,name:name.trim(),
+     category_id:effectiveCategory,website_url:websiteAddress(site)};
+   const snapshot=businessRequestSnapshot(approvedBusiness,selected==="google_profile"?"google_profile":"other",
+     selected==="google_profile"?normalizeGoogleProfile(googleData):undefined);
    const mediaPaths:{kind:string;path:string}[]=[];
    if(selected==="google_profile"){
     const folder=user.id+"/"+requestId;
@@ -539,7 +563,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    insertAttempted=true;
    const {data,error:insertError}=await client.from("vmv_marketing_requests").insert({
     id:requestId,owner_id:user.id,service_code:selected,business_name:name.trim(),
-    ...(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(businessId)?{business_id:businessId}:{}),
+    business_id:linkedId,business_snapshot:snapshot,consent_version:"vmv-business-consent-v1",
     category_id:effectiveCategory,website_url:websiteAddress(site),
     goal_text:selected==="directory_listings"?(contentText(contentLanguage,"marketing.feedback.directoryGoal",{count:directoryData.selected.length,city:directoryData.city,state:directoryData.state})):selected==="google_profile"?googleGoalText:selected==="seo_improvement"?(webRepair.requestRepair?contentText(contentLanguage,"marketing.feedback.repairGoal"):contentText(contentLanguage,"marketing.feedback.reportOnlyGoal")):selected==="review_strategy"&&reviewInput.trim()?
      (contentText(contentLanguage,"marketing.feedback.reputationGoal",{review:reviewInput.trim().slice(0,650),reply:(reviewReply||reviewReplyTemplate(name,reviewInput,reviewTone)).slice(0,700)})).slice(0,1500):goal.trim(),
