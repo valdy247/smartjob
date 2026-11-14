@@ -70,6 +70,7 @@ function History({calls,onSave,onCallBack,onLookup,canCallBack=false,callingSid=
 }
 export default function VMVMobilePreview(){
  const {translate,language}=useInterfaceLanguage();
+ const localizedVoiceChoices=choices.map(c=>({...c,label:translate(c.value==="default"?"services.call.voiceStandard":c.value==="bright"?"services.call.voiceBright":"services.call.voiceCalm")}));
  const account=useSmartCallAccount();
  const {client,user,phase,profile,settings,route,provisioning,calls,summary,preferences,setPreferences,
   loading,working,error,notice,setError,setNotice,refresh,signIn,signOut,saveBasic,savePremium}=account;
@@ -135,8 +136,8 @@ export default function VMVMobilePreview(){
  const available=minuteData?.available;
  const name=profile?.first_name||"bienvenido";
  const business=profile?.business_name?.trim()||profile?.first_name||"Mi negocio";
- const lineNumber=line?.twilioPhone||route?.twilio_number||"Sin número asignado";
- const lineState=line?.connectedToApp?"Ruta iPhone configurada":line?.verified?"Número verificado":route?.enabled?"Ruta registrada":"Pendiente de activación";
+ const lineNumber=line?.twilioPhone||route?.twilio_number||translate("services.call.noAssignedNumber");
+ const lineState=line?.connectedToApp?translate("services.call.iphoneRoute"):line?.verified?translate("services.call.numberVerifiedValue"):route?.enabled?translate("services.call.routeRegistered"):translate("services.call.activationPending");
  const go=(next:Tab)=>{setServiceFocus("all");setCallbackConfirmSid(null);setTab(next);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("dial");setDialTarget(null);setCallFilter("all");}setError("");setNotice("");};
  const showCall=(next:Panel="overview")=>{setTab("services");setOpen(true);setPanel(next);setError("");setNotice("");};
  const openContacts=(number="",startInForm=false)=>{setContactPhone(number);setContactStartForm(startInForm);setCallsView("contacts");setTab("calls");setError("");setNotice("");};
@@ -349,128 +350,128 @@ export default function VMVMobilePreview(){
       </div>:null}
       {ready&&tab==="services"&&!open?<div className={`${styles.screen} ${styles.servicesV3}`}>
        {serviceFocus==="web"?<>
-        <button type="button" className={styles.back} onClick={()=>setServiceFocus("all")}><ChevronLeft size={17}/> Todos los servicios</button>
+        <button type="button" className={styles.back} onClick={()=>setServiceFocus("all")}><ChevronLeft size={17}/> {translate("native.totalServices")}</button>
         {user?<BusinessServicesPreview userId={user.id} focus="web"/>:null}
        </>:<>
        <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>{translate("home.moreServices")}<span className={styles.mint}>.</span></h2>
-       <button type="button" className={styles.serviceHero} onClick={()=>showCall()} aria-label="Abrir Smart Call">
-        <span className={styles.serviceHeroTop}><span className={styles.serviceHeroIcon}><PhoneCall size={26}/></span><span className={styles.serviceHeroStatus}>EN PILOTO</span></span>
+       <button type="button" className={styles.serviceHero} onClick={()=>showCall()} aria-label={translate("services.openSmartCall")}>
+        <span className={styles.serviceHeroTop}><span className={styles.serviceHeroIcon}><PhoneCall size={26}/></span><span className={styles.serviceHeroStatus}>{translate("home.pilot")}</span></span>
         <strong>Smart Call<span>.</span></strong>
-        <small>{num(available)} min para traducir</small>
-        <span className={styles.serviceLink}>Abrir servicio <ArrowUpRight size={17}/></span>
+        <small>{num(available)} min {translate("home.minutesToTranslate")}</small>
+        <span className={styles.serviceLink}>{translate("services.openService")} <ArrowUpRight size={17}/></span>
         <span className={styles.serviceHeroDecoration} aria-hidden="true">✦</span>
        </button>
        {user?<BusinessServicesPreview userId={user.id}/>:null}
        </>}
       </div>:null}
       {ready&&tab==="services"&&open?<div className={styles.smartScreen}>
-       <button className={styles.back} onClick={()=>setOpen(false)}><ChevronLeft size={17}/> Todos los servicios</button>
-       <div className={styles.smartHero}><span>VMV BUSINESS / COMUNICACIÓN</span><h2>Smart Call<span>.</span></h2><div className={styles.smartBadge}><span/>{lineState}</div></div>
-       <div className={styles.switcher}>{([{id:"overview",label:"Resumen"},{id:"minutes",label:"Minutos"},{id:"settings",label:"Ajustes"},{id:"activity",label:"Actividad"}] as const).map(item=><button key={item.id} onClick={()=>setPanel(item.id)} className={panel===item.id?styles.selected:""}>{item.label}</button>)}</div>
+       <button className={styles.back} onClick={()=>setOpen(false)}><ChevronLeft size={17}/> {translate("native.totalServices")}</button>
+       <div className={styles.smartHero}><span>VMV BUSINESS / {translate("services.call.communication")}</span><h2>Smart Call<span>.</span></h2><div className={styles.smartBadge}><span/>{lineState}</div></div>
+       <div className={styles.switcher}>{([{id:"overview",label:translate("services.call.overview")},{id:"minutes",label:translate("common.minutes")},{id:"settings",label:translate("common.settings")},{id:"activity",label:translate("services.call.activity")}] as const).map(item=><button key={item.id} onClick={()=>setPanel(item.id)} className={panel===item.id?styles.selected:""}>{item.label}</button>)}</div>
        {panel==="overview"?<>
         <div className={styles.smartCard}>
-         <span className={styles.smallKicker}>TU NÚMERO VMV</span>
+         <span className={styles.smallKicker}>{translate("services.call.yourNumber")}</span>
          <h3>{lineNumber}</h3>
-         <p>{line?.connectedToApp?"Configurado para recibir llamadas en tu iPhone.":line?.verified?"Tu número está verificado. Comprueba la conexión con el iPhone.":"La configuración de tu línea está pendiente."}</p>
+         <p>{line?.connectedToApp?translate("services.call.connectedToIphone"):line?.verified?translate("services.call.verifiedCheckIphone"):translate("services.call.linePending")}</p>
          <div className={styles.rule}/>
-         <Row label="Idiomas" value={lang(settings?.caller_language)+" → "+lang(settings?.desired_language)}/>
-         <Row label="Tu asistente" value={settings?.assistant_name||"Sin configurar"}/>
-         <button className={styles.mainAction} onClick={()=>setPanel("settings")}>Cambiar configuración →</button>
+         <Row label={translate("services.call.languages")} value={lang(settings?.caller_language)+" → "+lang(settings?.desired_language)}/>
+         <Row label={translate("services.call.assistant")} value={settings?.assistant_name||translate("services.call.notConfigured")}/>
+         <button className={styles.mainAction} onClick={()=>setPanel("settings")}>{translate("services.call.changeSettings")} →</button>
          <details className={styles.minuteDetails}>
-          <summary>Ver detalles de la línea</summary>
+          <summary>{translate("services.call.lineDetails")}</summary>
           <div className={styles.minuteBreakdown}>
-           <Row label="Estado de la línea" value={lineState}/>
-           <Row label="Número verificado" value={line?.verified?"Sí":"Pendiente"}/>
-           <Row label="Número de contacto" value={line?.publicPhone||"No configurado"}/>
-           <Row label="Operador" value={(!line?.carrier||line.carrier==="other")&&(!provisioning?.carrier||provisioning.carrier==="other")?"No especificado":line?.carrier||provisioning?.carrier||"No especificado"}/>
-           <Row label="Solicitud" value={({activated:"Activada",approved:"Aprobada",pending:"Pendiente",contacted:"En revisión",rejected:"Rechazada"} as Record<string,string>)[provisioning?.status||""]||"Sin solicitud"}/>
-           <Row label="Recepción" value={route?.receive_method==="ios_app"?"App iPhone":route?.receive_method==="pstn"?"Otra línea":"Sin configurar"}/>
-           <Row label="Desvío" value={route?.forwarding_mode==="none"?"No configurado":route?.forwarding_mode==="conditional"?"Condicional":route?.forwarding_mode==="all_calls"?"Todas las llamadas":"No disponible"}/>
-           <Row label="Menú bilingüe" value={line?.menuPrepared?"Preparado para pruebas":"No verificado"}/>
+           <Row label={translate("services.call.lineStatus")} value={lineState}/>
+           <Row label={translate("services.call.numberVerified")} value={line?.verified?"Sí":"Pendiente"}/>
+           <Row label={translate("services.call.contactNumber")} value={line?.publicPhone||"No configurado"}/>
+           <Row label={translate("services.call.carrier")} value={(!line?.carrier||line.carrier==="other")&&(!provisioning?.carrier||provisioning.carrier==="other")?"No especificado":line?.carrier||provisioning?.carrier||"No especificado"}/>
+           <Row label={translate("services.call.request")} value={({activated:"Activada",approved:"Aprobada",pending:"Pendiente",contacted:"En revisión",rejected:"Rechazada"} as Record<string,string>)[provisioning?.status||""]||"Sin solicitud"}/>
+           <Row label={translate("services.call.receiving")} value={route?.receive_method==="ios_app"?"App iPhone":route?.receive_method==="pstn"?"Otra línea":"Sin configurar"}/>
+           <Row label={translate("services.call.forwarding")} value={route?.forwarding_mode==="none"?"No configurado":route?.forwarding_mode==="conditional"?"Condicional":route?.forwarding_mode==="all_calls"?"Todas las llamadas":"No disponible"}/>
+           <Row label={translate("services.call.bilingualMenu")} value={line?.menuPrepared?"Preparado para pruebas":"No verificado"}/>
            
           </div>
          </details>
         </div>
-        <div className={styles.miniCards}><div><strong>{num(available)}</strong><small>Minutos para traducir</small></div><div><strong>{line?.usage.calls??"—"}</strong><small>Llamadas registradas · 30 días</small></div></div>
+        <div className={styles.miniCards}><div><strong>{num(available)}</strong><small>{translate("services.call.minutesToTranslate")}</small></div><div><strong>{line?.usage.calls??"—"}</strong><small>{translate("services.call.registeredCalls30")}</small></div></div>
         {refreshButton}
        </>:null}
        {panel==="minutes"?<>
         <div className={styles.smartCard}>
          <div className={styles.balanceTitle}>
           <span className={styles.balanceServiceIcon}><PhoneCall size={19}/></span>
-          <div><h3>Llamadas normales</h3></div>
+          <div><h3>{translate("services.call.normalCalls")}</h3></div>
          </div>
          {billing?.national?.enabled?
           <>
-           <strong className={styles.directServiceStatus}>{billing.national.available} min disponibles</strong>
-           <Row label="Incluidos" value={billing.national.included+" min"}/>
-           <Row label="Usados" value={billing.national.used+" min"}/>
-           {billing.national.reserved>0?<Row label="En llamada" value={billing.national.reserved+" min"}/>:null}
-           {billing.national.available===0?<p className={styles.testNote}>Sin minutos nacionales</p>:null}
+           <strong className={styles.directServiceStatus}>{billing.national.available} {translate("services.call.minutesAvailable")}</strong>
+           <Row label={translate("services.call.included")} value={billing.national.included+" min"}/>
+           <Row label={translate("services.call.used")} value={billing.national.used+" min"}/>
+           {billing.national.reserved>0?<Row label={translate("services.call.inCall")} value={billing.national.reserved+" min"}/>:null}
+           {billing.national.available===0?<p className={styles.testNote}>{translate("services.call.noNationalMinutes")}</p>:null}
           </>:
           <>
-           <strong className={styles.directServiceStatus}>{billing?.subscriptionActive?"Incluidas en tu plan":"No disponibles"}</strong>
-           {billing?.plan==="starter"?<Row label="Starter · plan previsto" value="150 min nacionales"/>:null}
+           <strong className={styles.directServiceStatus}>{billing?.subscriptionActive?translate("services.call.includedInPlan"):translate("services.call.notAvailablePlural")}</strong>
+           {billing?.plan==="starter"?<Row label={translate("services.call.starterExpected")} value={"150 "+translate("services.call.nationalMinutes")}/>:null}
           </>}
-         <Row label="Llamadas · 30 días" value={num(line?.usage.directCalls)}/>
+         <Row label={translate("services.call.calls30")} value={num(line?.usage.directCalls)}/>
         </div>
         <div className={styles.minuteHero}>
-         <span className={styles.smallKicker}>LLAMADAS CON TRADUCCIÓN</span>
+         <span className={styles.smallKicker}>{translate("services.call.translatedCalls")}</span>
          <strong>{num(available)}<small> min</small></strong>
-         <p>{available==null?"Saldo no disponible":available===0?"Sin minutos disponibles":"Disponibles"}</p>
+         <p>{available==null?translate("services.call.balanceUnavailable"):available===0?translate("services.call.noMinutes"):translate("services.call.available")}</p>
         </div>
         <div className={styles.smartCard}>
-         <Row label="Plan" value={billing?.plan&&billing.plan!=="none"?billing.plan.charAt(0).toUpperCase()+billing.plan.slice(1):"—"}/>
-         <a className={styles.plansLink} href="https://vmv-business-design-git-feat-vm-073e13-valdys-projects-b97fc7a6.vercel.app/es/planes/" target="_blank" rel="noopener noreferrer">Ver planes <ArrowUpRight size={15}/></a>
-         <Row label="Incluidos" value={num(minuteData?.included)+" min"}/>
-         <Row label="Usados" value={num(minuteData?.used)+" min"}/>
-         <Row label="Renovación" value={date(billing?.periodEnd)}/>
+         <Row label={translate("common.plan")} value={billing?.plan&&billing.plan!=="none"?billing.plan.charAt(0).toUpperCase()+billing.plan.slice(1):"—"}/>
+         <a className={styles.plansLink} href="https://vmv-business-design-git-feat-vm-073e13-valdys-projects-b97fc7a6.vercel.app/es/planes/" target="_blank" rel="noopener noreferrer">{translate("services.call.viewPlans")} <ArrowUpRight size={15}/></a>
+         <Row label={translate("services.call.included")} value={num(minuteData?.included)+" min"}/>
+         <Row label={translate("services.call.used")} value={num(minuteData?.used)+" min"}/>
+         <Row label={translate("services.call.renewal")} value={date(billing?.periodEnd)}/>
          {billing?.topup?.available&&billing.billingMode==="test"?<div className={styles.topupOffer}>
           <div className={styles.topupOfferLine}>
            <strong>+{billing.topup.minutes} min</strong>
            <span>{"$"+(billing.topup.priceCents/100).toFixed(2)} USD · TEST</span>
           </div>
           <button type="button" className={styles.mainAction} disabled={topupBusy}
-           onClick={()=>void requestTranslationTopup()}>{topupBusy?"Abriendo Stripe…":"Recargar traducción →"}</button>
-          <p className={styles.minuteExplanation}>Pago de prueba · Sin cargo real</p>
-          {topupMessage?<p role="alert" className={styles.errorText}>{topupMessage}</p>:null}
+           onClick={()=>void requestTranslationTopup()}>{topupBusy?translate("services.call.openStripe"):translate("services.call.topup")}</button>
+          <p className={styles.minuteExplanation}>{translate("services.call.testPayment")}</p>
+          {topupMessage?<p role="alert" className={styles.errorText}>{translate("services.call.topupError")}</p>:null}
          </div>:null}
-         {billing?.billingMode==="test"&&!billing.topup?.available?<p className={styles.testNote}>Cuenta de prueba</p>:null}
+         {billing?.billingMode==="test"&&!billing.topup?.available?<p className={styles.testNote}>{translate("services.call.testAccount")}</p>:null}
          <details className={styles.minuteDetails}>
-          <summary>Detalle del consumo</summary>
+          <summary>{translate("services.call.usageDetails")}</summary>
           <div className={styles.minuteBreakdown}>
-           <Row label="Recargas" value={num(minuteData?.topup)+" min"}/>
-           <Row label="Transferidos" value={num(minuteData?.rollover)+" min"}/>
-           <Row label="Reservados" value={num(minuteData?.reserved)+" min"}/>
-           <Row label="Retención temporal" value={num(minuteData?.temporaryHold)+" min"}/>
+           <Row label={translate("services.call.topups")} value={num(minuteData?.topup)+" min"}/>
+           <Row label={translate("services.call.rollover")} value={num(minuteData?.rollover)+" min"}/>
+           <Row label={translate("services.call.reserved")} value={num(minuteData?.reserved)+" min"}/>
+           <Row label={translate("services.call.temporaryHold")} value={num(minuteData?.temporaryHold)+" min"}/>
           </div>
          </details>
          {refreshButton}
         </div>
        </>:null}
        {panel==="settings"?<>
-        <form className={styles.smartCard} onSubmit={saveSettings}><span className={styles.smallKicker}>CONFIGURACIÓN DE TU CUENTA</span><h3>Idiomas y asistente</h3>
-         <SegmentedSelect label="Tu idioma" value={draft?.desired_language||"es"} options={[{value:"es",label:"Español"},{value:"en",label:"English"}]} disabled={!draft||working} onChange={value=>setDraft(v=>v?{...v,desired_language:value,caller_language:value==="es"?"en":"es"}:null)}/>
-         <SegmentedSelect label="Idioma del cliente" value={draft?.caller_language||"en"} options={[{value:"en",label:"English"},{value:"es",label:"Español"}]} disabled={!draft||working} onChange={value=>setDraft(v=>v?{...v,caller_language:value,desired_language:value==="es"?"en":"es"}:null)}/>
-         <label htmlFor="my-assistant">Nombre del asistente</label><input id="my-assistant" disabled={!draft||working} maxLength={40} required value={draft?.assistant_name||""} onChange={e=>setDraft(v=>v?{...v,assistant_name:e.target.value}:null)}/>
+        <form className={styles.smartCard} onSubmit={saveSettings}><span className={styles.smallKicker}>{translate("services.call.accountSettings")}</span><h3>{translate("services.call.languagesAndAssistant")}</h3>
+         <SegmentedSelect label={translate("services.call.yourLanguage")} value={draft?.desired_language||"es"} options={[{value:"es",label:"Español"},{value:"en",label:"English"}]} disabled={!draft||working} onChange={value=>setDraft(v=>v?{...v,desired_language:value,caller_language:value==="es"?"en":"es"}:null)}/>
+         <SegmentedSelect label={translate("services.call.customerLanguage")} value={draft?.caller_language||"en"} options={[{value:"en",label:"English"},{value:"es",label:"Español"}]} disabled={!draft||working} onChange={value=>setDraft(v=>v?{...v,caller_language:value,desired_language:value==="es"?"en":"es"}:null)}/>
+         <label htmlFor="my-assistant">{translate("services.call.assistantName")}</label><input id="my-assistant" disabled={!draft||working} maxLength={40} required value={draft?.assistant_name||""} onChange={e=>setDraft(v=>v?{...v,assistant_name:e.target.value}:null)}/>
          
-         {!draft?<div className={styles.testNote}>Primero completa la activación de tu línea para crear la configuración inicial.</div>:null}
-         <button type="submit" disabled={!draft||working} className={styles.mainAction}>{working?"Guardando…":"Guardar preferencias"} →</button>
+         {!draft?<div className={styles.testNote}>{translate("services.call.activateFirst")}</div>:null}
+         <button type="submit" disabled={!draft||working} className={styles.mainAction}>{working?translate("common.saving"):translate("services.call.savePreferences")} →</button>
         </form>
-        <form className={styles.smartCard} onSubmit={saveVoices}><span className={styles.smallKicker}>PERSONALIZACIÓN</span><h3>Voces y saludos</h3>
-         <p>{premium?.message||"Sin conexión con la personalización. Requiere Pro o Premium activo."}</p>
+        <form className={styles.smartCard} onSubmit={saveVoices}><span className={styles.smallKicker}>{translate("services.call.personalization")}</span><h3>{translate("services.call.voicesGreetings")}</h3>
+         <p>{premium?.editable===true?translate("services.call.premiumEnabled"):translate("services.call.premiumUnavailable")}</p>
          <fieldset className={styles.voiceFields} disabled={premium?.editable!==true||working}>
-          <SegmentedSelect label="Voz para cliente" value={preferences.voice_customer} options={choices} disabled={premium?.editable!==true||working} onChange={value=>setPreferences({...preferences,voice_customer:value})}/>
-          <SegmentedSelect label="Tu voz" value={preferences.voice_owner} options={choices} disabled={premium?.editable!==true||working} onChange={value=>setPreferences({...preferences,voice_owner:value})}/>
-          <label htmlFor="greeting-customer">Saludo para cliente</label><textarea id="greeting-customer" maxLength={180} rows={3} value={preferences.greeting_customer} onChange={e=>setPreferences({...preferences,greeting_customer:e.target.value})} placeholder="Gracias por llamar…"/>
-          <label htmlFor="greeting-owner">Saludo para ti</label><textarea id="greeting-owner" maxLength={180} rows={3} value={preferences.greeting_owner} onChange={e=>setPreferences({...preferences,greeting_owner:e.target.value})} placeholder="Tienes una llamada entrante…"/>
+          <SegmentedSelect label={translate("services.call.customerVoice")} value={preferences.voice_customer} options={localizedVoiceChoices} disabled={premium?.editable!==true||working} onChange={value=>setPreferences({...preferences,voice_customer:value})}/>
+          <SegmentedSelect label={translate("services.call.yourVoice")} value={preferences.voice_owner} options={localizedVoiceChoices} disabled={premium?.editable!==true||working} onChange={value=>setPreferences({...preferences,voice_owner:value})}/>
+          <label htmlFor="greeting-customer">{translate("services.call.customerGreeting")}</label><textarea id="greeting-customer" maxLength={180} rows={3} value={preferences.greeting_customer} onChange={e=>setPreferences({...preferences,greeting_customer:e.target.value})} placeholder={translate("services.call.greetingCustomerPlaceholder")}/>
+          <label htmlFor="greeting-owner">{translate("services.call.yourGreeting")}</label><textarea id="greeting-owner" maxLength={180} rows={3} value={preferences.greeting_owner} onChange={e=>setPreferences({...preferences,greeting_owner:e.target.value})} placeholder={translate("services.call.greetingOwnerPlaceholder")}/>
          </fieldset>
-         <p>{preferences.greeting_customer.length}/180 · {preferences.greeting_owner.length}/180 caracteres</p>
-         <button type="submit" disabled={premium?.editable!==true||working} className={styles.mainAction}>{working?"Guardando…":"Guardar voces y saludos"} →</button>
-         {premium?.editable!==true?<div className={styles.testNote}>Se necesita un plan Pro o Premium activo para editar estos controles.</div>:null}
+         <p>{preferences.greeting_customer.length}/180 · {preferences.greeting_owner.length}/180 {translate("services.call.characters")}</p>
+         <button type="submit" disabled={premium?.editable!==true||working} className={styles.mainAction}>{working?translate("common.saving"):translate("services.call.saveVoices")} →</button>
+         {premium?.editable!==true?<div className={styles.testNote}>{translate("services.call.premiumRequired")}</div>:null}
         </form>
        </>:null}
-       {panel==="activity"?<div className={styles.smartCard}><span className={styles.smallKicker}>HISTORIAL REAL</span><h3>Llamadas recientes</h3>
+       {panel==="activity"?<div className={styles.smartCard}><span className={styles.smallKicker}>{translate("services.call.realHistory")}</span><h3>{translate("services.call.recentCalls")}</h3>
         
         <History calls={calls} onSave={phone=>openContacts(phone,true)} onCallBack={sid=>setCallbackConfirmSid(sid)} onLookup={sid=>void lookupCustomer(sid)}
          canCallBack={callbackAvailable} callingSid={callbackBusy} lookupSid={lookupBusy}/>
