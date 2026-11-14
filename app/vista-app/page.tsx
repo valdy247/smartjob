@@ -371,10 +371,10 @@ export default function VMVMobilePreview(){
           <ArrowUpRight className={styles.catalogCardArrow} size={16}/>
          </button>)}
         </div>
-        {!filteredCatalog.length?<p className={styles.catalogEmpty}>{translate("catalog.noResults")}</p>:null}
+        {!filteredCatalog.length&&(catalogGroup!=="all"||!catalogSearch)?<p className={styles.catalogEmpty}>{translate("catalog.noResults")}</p>:null}
         {catalogGroup==="all"?catalogSearch?
          <section className={styles.catalogMoreResults} aria-label={translate("settings.otherServices")}>
-          {user?<BusinessServicesPreview userId={user.id} excludeFeatured searchTerm={catalogQuery}/>:null}
+          {user?<BusinessServicesPreview userId={user.id} excludeFeatured searchTerm={catalogQuery} primaryHasMatches={filteredCatalog.length>0}/>:null}
          </section>:
          <details className={styles.servicesMoreCatalog}>
           <summary>{translate("settings.otherServices")} <ChevronLeft size={18} aria-hidden="true"/></summary>
