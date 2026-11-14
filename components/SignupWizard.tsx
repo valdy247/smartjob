@@ -1,12 +1,14 @@
 "use client";
-import {useEffect,useMemo,useRef,useState,type FormEvent,type KeyboardEvent} from "react";
+import {useEffect,useMemo,useRef,useState,type FormEvent,type KeyboardEvent,type CSSProperties} from "react";
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {ArrowLeft,ArrowRight,BriefcaseBusiness,Check,CheckCircle2,ChevronRight,Eye,EyeOff,
- Globe2,Mail,Palette,Phone,Search,ShieldCheck,UserRound} from "lucide-react";
+ Globe2,Mail,Phone,Search,ShieldCheck,UserRound} from "lucide-react";
 import {InterfaceLanguagePicker as LanguageSelector} from "./InterfaceLanguagePicker";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import type {MessageKey} from "@/lib/i18n";
 import {authErrorKey} from "@/lib/i18n";
+import setupStyles from "./SignupHomeSetup.module.css";
+import {INITIAL_SERVICES,type InitialService} from "@/lib/initial-service";
 import {Brand} from "./Brand";
 import {CountryDialPicker} from "./CountryDialPicker";
 import {DIAL_COUNTRIES,US_STATES,OCCUPATION_ALIASES,normalize} from "@/lib/registration/options";
@@ -59,7 +61,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
  const steps=[
  {tag:t("signup.personalTag"),title:t("signup.personalTitle"),description:t("signup.personalDesc")},
  {tag:t("signup.useTag"),title:t("signup.howUse"),description:t("signup.useDesc")},
- {tag:t("signup.yourWay"),title:t("signup.styleTitle"),description:t("signup.configure")},
+ {tag:t("signup.yourWay"),title:t("setup.title"),description:t("setup.description")},
  {tag:t("signup.securityTag"),title:t("signup.securityTitle"),description:t("signup.createAccess")}
 ];
 const smsErrors:Record<string,MessageKey>={
@@ -90,6 +92,7 @@ const colorChoices=[["mint",t("signup.mint"),"#08b99b"],["blue",t("signup.blue")
  const [state,setState]=useState(""),[stateCode,setStateCode]=useState(""),[city,setCity]=useState("");
  const [places,setPlaces]=useState<string[]>([]),[website,setWebsite]=useState("");
  const [ownerLanguage,setOwnerLanguage]=useState<"es"|"en">("es");
+ const [initialService,setInitialService]=useState<InitialService|null>(null);
  const [accent,setAccent]=useState<Accent>("mint"),[fontScale,setFontScale]=useState<FontScale>("normal");
  const [appearance,setAppearance]=useState<Appearance>("light"),[reduceMotion,setReduceMotion]=useState(false);
  const [password,setPassword]=useState(""),[repeatPassword,setRepeatPassword]=useState(""),[showPassword,setShowPassword]=useState(false);
@@ -191,7 +194,7 @@ const colorChoices=[["mint",t("signup.mint"),"#08b99b"],["blue",t("signup.blue")
  const next=()=>{if(validate(step))setStep(v=>Math.min(v+1,3));};
  const back=()=>{setError("");step===0?onBack():setStep(v=>v-1);};
  const skip=()=>{setError("");if(step===1){setBusinessName("");setOccupation("");setOccupationCode("");setState("");setStateCode("");setCity("");setWebsite("");setUseCase("");}
-  if(step===2){setAccent("mint");setFontScale("normal");setAppearance("light");setReduceMotion(false);}
+  if(step===2){setInitialService(null);setAccent("mint");setFontScale("normal");setAppearance("light");setReduceMotion(false);}
   setStep(v=>Math.min(v+1,3));
  };
  const submit=async(event:FormEvent)=>{
@@ -207,7 +210,7 @@ const colorChoices=[["mint",t("signup.mint"),"#08b99b"],["blue",t("signup.blue")
    website_url:websiteUrl,city:city.trim(),state:stateCode,country:dialCountry,
    assistant_name:"Juan",owner_language:ownerLanguage,customer_language:ownerLanguage==="es"?"en":"es",
    line_choice:lineChoice,preferred_plan:null,plan_prompt_seen:false,line_setup_completed:false,
-   theme_color:accent,font_scale:fontScale,appearance,reduce_motion:reduceMotion,
+   initial_service:initialService,theme_color:accent,font_scale:fontScale,appearance,reduce_motion:reduceMotion,
    signup_wizard_completed:true,email_verify_preference:emailAction
   };
   try{
@@ -247,14 +250,13 @@ const colorChoices=[["mint",t("signup.mint"),"#08b99b"],["blue",t("signup.blue")
     <div className="vmv-signup-sidebar-icon"><ShieldCheck size={27}/></div>
     <h2>{t("signup.tagline")}<span>.</span></h2>
     <p>{t("signup.essentials")}</p>
-    <ol>{steps.map((item,index)=><li key={item.tag} className={step===index?"selected":step>index?"complete":""}>
+    <ol>{steps.map((item,index)=><li key={item.tag} className={step===index?"selected":step>index?"complete":""} aria-current={step===index?"step":undefined}>
      <span>{step>index?<Check size={15}/>:index+1}</span>
-     <strong>{[t("signup.yourInfo"),t("signup.yourActivity"),t("signup.yourStyle"),t("interface.signup.yourAccess")][index]}</strong>
+     <strong>{[t("signup.yourInfo"),t("signup.yourActivity"),t("setup.title"),t("interface.signup.yourAccess")][index]}</strong>
     </li>)}</ol>
    </aside>
    <section className="vmv-signup-card">
-    <div className="vmv-signup-progress-head"><span>{t("signup.progress",{step:step+1,total:4})}</span><span>{Math.floor((step+1)*25)}%</span></div>
-    <div className="vmv-signup-progress"><span style={{width:(step+1)*25+"%"}}/></div>
+    <div className={setupStyles.srOnly} role="status">{t("signup.progress",{step:step+1,total:4})}</div>
     <div className="vmv-signup-title"><span>{steps[step].tag}</span><h1>{steps[step].title}</h1><p>{steps[step].description}</p></div>
 
     {step===0&&<div className="vmv-signup-fields">
@@ -353,11 +355,18 @@ const colorChoices=[["mint",t("signup.mint"),"#08b99b"],["blue",t("signup.blue")
      </div>
     </div>}
 
-    {step===2&&<div className="vmv-signup-fields">
-     <div className="vmv-signup-field"><label>{t("signup.styleColor")}</label>
-      <div className="vmv-signup-colors">{colorChoices.map(([key,title,color])=><button type="button" key={key} aria-pressed={accent===key}
-       className={accent===key?"selected":""} onClick={()=>setAccent(key)}><span style={{background:color}}/>{title}{accent===key&&<Check size={17}/>}</button>)}</div>
-     </div>
+    {step===2&&<div className={`vmv-signup-fields ${setupStyles.setup}`} style={{"--setup-accent":colorChoices.find(c=>c[0]===accent)?.[2]} as CSSProperties}>
+     <fieldset className={setupStyles.goals}><legend>{t("setup.goal")}</legend>
+      {INITIAL_SERVICES.map(item=><button type="button" key={item.id} aria-pressed={initialService===item.id} onClick={()=>setInitialService(item.id)}>
+       {t(item.label)}{initialService===item.id&&<Check size={18} aria-hidden="true"/>}
+      </button>)}
+     </fieldset>
+     <fieldset className={setupStyles.colors}><legend>{t("signup.styleColor")}</legend>
+      {colorChoices.map(([key,label,color])=><button type="button" key={key} aria-label={label} title={label} aria-pressed={accent===key} onClick={()=>setAccent(key)} style={{background:color}}>
+       {accent===key&&<Check size={20} aria-hidden="true"/>}
+      </button>)}
+     </fieldset>
+     <details className={setupStyles.options}><summary>{t("setup.appearance")}</summary>
      <div className="vmv-signup-field"><label>{t("signup.styleText")}</label>
       <div className="vmv-signup-segments">{([["small",t("signup.small")],["normal",t("signup.normal")],["large",t("signup.large")]] as const).map(([key,title])=>
        <button type="button" key={key} aria-pressed={fontScale===key} className={fontScale===key?"selected":""} onClick={()=>setFontScale(key)}>{title}</button>)}</div>
@@ -367,12 +376,14 @@ const colorChoices=[["mint",t("signup.mint"),"#08b99b"],["blue",t("signup.blue")
        <button type="button" key={key} aria-pressed={appearance===key} className={appearance===key?"selected":""} onClick={()=>setAppearance(key)}>{title}</button>)}</div>
      </div>
      <label className="vmv-signup-toggle"><span><strong>{t("signup.reduceMotion")}</strong><small>{t("signup.styleHint")}</small></span>
-      <input type="checkbox" checked={reduceMotion} onChange={e=>setReduceMotion(e.target.checked)}/></label>
-     <div className="vmv-signup-preview" data-color={accent} data-text={fontScale} data-appearance={appearance}>
-      <span><Palette size={17}/> {t("signup.preview")}</span>
-      <strong>{t("signup.hello")}<span>.</span></strong>
-      <p>{t("signup.yourApp")}</p>
-     </div>
+      <input type="checkbox" role="switch" checked={reduceMotion} onChange={e=>setReduceMotion(e.target.checked)}/></label>
+     </details>
+     <section className={setupStyles.preview} data-text={fontScale} data-appearance={appearance} aria-label={t("setup.preview")}>
+      <small>{t("setup.preview")}</small>
+      <strong>{t("setup.greeting",{name:first.trim()||t("common.firstName")})}</strong>
+      <div className={setupStyles.previewCard}><span>{t("setup.next")}</span><b>{t(INITIAL_SERVICES.find(x=>x.id===initialService)?.label||"setup.goal")}</b>
+       <span className={setupStyles.previewAction}>{t("setup.open")} <ArrowRight size={16}/></span></div>
+     </section>
     </div>}
 
     {step===3&&<form className="vmv-signup-fields" id="vmv-reg-final" onSubmit={submit}>

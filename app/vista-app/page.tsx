@@ -4,6 +4,7 @@ import {House,LayoutGrid,PhoneCall,Languages,UserRound,ArrowUpRight,ChevronLeft,
  ShieldCheck,Mic,Package,CalendarDays,Users,BarChart3,Workflow,Globe,Bot,
  RefreshCw,Settings2,LoaderCircle,LogOut,LockKeyhole,PhoneForwarded,MessageCircle,Monitor,Cpu,TrendingUp} from "lucide-react";
 import {LivePanel} from "@/components/LivePanel";
+import InitialServiceCard from "@/components/InitialServiceCard";
 import ContactBook from "./ContactBook";
 import DialPad from "./DialPad";
 import BusinessServicesPreview from "./BusinessServicesPreview";
@@ -300,6 +301,7 @@ export default function VMVMobilePreview(){
         </span>
         <span className={styles.homeSpotlightGo}><ArrowUpRight size={20}/></span>
        </button>
+       <InitialServiceCard key={user?.id} value={user?.user_metadata?.initial_service} onTranslation={()=>go("calls")}/>
        <div className={styles.homeSectionHeading}>
         <h3>{translate("home.featured")}<span>.</span></h3>
         <button type="button" onClick={()=>go("services")}>{translate("home.seeAll")} <ArrowUpRight size={15}/></button>

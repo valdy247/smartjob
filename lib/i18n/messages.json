@@ -1294,7 +1294,22 @@
     "native.profileError": "No se pudo abrir tu cuenta",
     "native.profileLoadingHint": "Consultando tu perfil y saldo.",
     "native.profileMissingHint": "Completa tu registro de Smart Call para continuar.",
-    "native.finishRegistration": "Completar registro"
+    "native.finishRegistration": "Completar registro",
+    "setup.title": "Prepara tu inicio",
+    "setup.description": "Elige por dónde empezar. Puedes cambiarlo después.",
+    "setup.goal": "¿Qué quieres hacer primero?",
+    "setup.translation": "Llamar con traducción",
+    "setup.agent": "Configurar mi agente",
+    "setup.website": "Crear mi web",
+    "setup.marketing": "Mejorar mi negocio",
+    "setup.appearance": "Apariencia y accesibilidad",
+    "setup.preview": "Así se verá tu inicio",
+    "setup.greeting": "Hola, {name}",
+    "setup.next": "Tu siguiente paso",
+    "setup.open": "Comenzar",
+    "setup.change": "Cambiar objetivo",
+    "setup.saveError": "No se pudo guardar. Intenta otra vez.",
+    "setup.saved": "Objetivo guardado"
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -2591,6 +2606,21 @@
     "native.profileError": "Couldn't open your account",
     "native.profileLoadingHint": "Loading your profile and balance.",
     "native.profileMissingHint": "Complete your Smart Call registration to continue.",
-    "native.finishRegistration": "Complete registration"
+    "native.finishRegistration": "Complete registration",
+    "setup.title": "Set up your home",
+    "setup.description": "Choose where to start. You can change it later.",
+    "setup.goal": "What would you like to do first?",
+    "setup.translation": "Call with translation",
+    "setup.agent": "Set up my agent",
+    "setup.website": "Create my website",
+    "setup.marketing": "Grow my business",
+    "setup.appearance": "Appearance and accessibility",
+    "setup.preview": "Your home preview",
+    "setup.greeting": "Hello, {name}",
+    "setup.next": "Your next step",
+    "setup.open": "Get started",
+    "setup.change": "Change goal",
+    "setup.saveError": "Could not save. Please try again.",
+    "setup.saved": "Goal saved"
   }
 }
