@@ -202,7 +202,7 @@ export async function listWebStudioCards():Promise<WebStudioCard[]>{
   const title=typeof p.title==="string"?p.title.trim().slice(0,120):"";
   const price=typeof p.price==="string"?p.price.trim().slice(0,32):"";
   return [{id,title,price,description:typeof p.description==="string"?p.description.slice(0,400):"",
-   importable:!!title&&/^\\$?\\d{1,5}(?:\\.\\d{1,2})?$/.test(price)&&
+   importable:!!title&&/^\$?\d{1,5}(?:\.\d{1,2})?$/.test(price)&&
     Number(price.replace("$",""))>0&&Number(price.replace("$",""))<=100000}];
  });
 }
