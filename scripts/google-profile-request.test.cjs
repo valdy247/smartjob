@@ -26,6 +26,14 @@ test('saved booking and profile links reject executable schemes and embedded cre
  for(const input of ['javascript:alert(1)','data:text/html,x','https://user:password@example.com','http://example.com',null,{}])assert.equal(googleProfileLink(input),null);
 });
 
+test('profile links reject embedded control characters instead of silently rewriting them',()=>{
+ for(const url of ['https://exa\\nmple.com','https://example.com/pa\\tth','https://example.com/\\radmin']){
+  const input=url.replace('\\n','\n').replace('\\t','\t').replace('\\r','\r');
+  assert.equal(googleProfileLink(input),null);
+  assert.equal(googleProfileIssue({...fixture(),bookingUrl:input}).key,'booking');
+ }
+});
+
 test('shared intake validation rejects unsafe booking and existing-profile URLs',()=>{
  const base=fixture();
  for(const url of ['http://example.com','javascript:alert(1)','https://user:pass@example.com','not-a-url']){
