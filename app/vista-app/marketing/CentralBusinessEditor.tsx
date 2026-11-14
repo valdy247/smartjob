@@ -57,7 +57,7 @@ export default function CentralBusinessEditor({business,onChange,files,onFiles,a
     <strong><ImagePlus size={16}/>{en?"Business photos (private)":"Fotos del negocio (privadas)"}</strong>
     <div className={styles.grid}>
      <label>{en?"Logo":"Logo"}<input type="file" accept="image/jpeg,image/png" onChange={e=>onFiles({...files,logo:choose(e.target.files)[0]||null})}/><UploadPreview file={files.logo} label="Logo"/></label>
-     <label>{en?"Cover":"Portada"}<input type="file" accept="image/jpeg,image/png" onChange={e=>onFiles({...files,cover:choose(e.target.files)[0]||null})}/><UploadPreview file={files.cover} label="Cover"/></label>
+     <label>{en?"Cover":"Portada"}<input type="file" accept="image/jpeg,image/png" onChange={e=>onFiles({...files,cover:choose(e.target.files)[0]||null})}/><UploadPreview file={files.cover} label={en?"Cover":"Portada"}/></label>
     </div>
     <label>{en?"Gallery (up to 8)":"Galería (hasta 8)"}<input multiple type="file" accept="image/jpeg,image/png" onChange={e=>onFiles({...files,gallery:choose(e.target.files,true)})}/></label>
     <span>{[business.logo_path,business.cover_path,...business.gallery_paths].filter(Boolean).length} {en?"saved photos":"fotos guardadas"} · {files.gallery.length+(files.logo?1:0)+(files.cover?1:0)} {en?"selected":"seleccionadas"}</span>
