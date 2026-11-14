@@ -87,6 +87,22 @@ export async function storeAgent(
  if(error||!data)throw Error("No se pudo crear el agente. Comprueba el estado de tu sesión.");
  return asAgent(data as DbAgent);
 }
+
+/** Owner-approved, read-only catalog access for this specific agent.
+ * Does not activate sales, bookings, phone routing, payments or stock writes. */
+export async function setAgentCatalogReadAccess(agent:PersistedAgent,enabled:boolean):Promise<PersistedAgent>{
+ const {client,user}=await currentUser();
+ if(agent.owner_id!==user.id||!uuid.test(agent.id)||!uuid.test(agent.business_id))
+  throw Error("El agente no pertenece a tu cuenta.");
+ const {data,error}=await client.from("vmv_ai_agents")
+  .update({configuration:{...agent.setup,cap_catalog:enabled?"Sí":"No"}})
+  .eq("id",agent.id).eq("owner_id",user.id)
+  .eq("business_id",agent.business_id).eq("revision",agent.revision)
+  .select("*").maybeSingle();
+ if(error)throw Error("No se pudo actualizar el acceso al catálogo.");
+ if(!data)throw Error("El agente cambió en otro dispositivo. Actualiza antes de conectar el inventario.");
+ return asAgent(data as DbAgent);
+}
 export async function setStudyStatus(agent:PersistedAgent,status:PersistedAgent["status"]){
  const {client,user}=await currentUser();
  const {data,error}=await client.from("vmv_ai_agents").update({status})
