@@ -114,3 +114,12 @@ test('fictitious region codes are not accepted as countries',()=>{
  const v={...fixture(),country:'ZZ'};
  assert.equal(googleProfileIssue(v).key,'country');
 });
+
+test('external links reject bidirectional control characters that disguise destinations',()=>{
+ for(const mark of ['\u202a','\u202e','\u2066','\u2069']){
+  const url=`https://example.com/${mark}account`;
+  assert.equal(googleProfileLink(url),null);
+  assert.equal(googleProfileIssue({...fixture(),bookingUrl:url}).key,'booking');
+  assert.equal(googleProfileIssue({...fixture(),action:'improve',existingProfileUrl:url}).key,'existing');
+ }
+});
