@@ -15,7 +15,7 @@ export function googleProfileIssue(v:GoogleData,step?:number):GoogleValidationIs
  if(at(1)&&!/^([A-Z]{2})$/.test(v.country.trim().toUpperCase()))return {step:1,key:"country"};
  if(at(1)&&v.kind!=="service_area"&&[v.street,v.city,v.region,v.postal].some(x=>!x.trim()))return {step:1,key:"address"};
  if(at(1)&&v.kind!=="storefront"&&!v.serviceAreas.trim())return {step:1,key:"serviceAreas"};
- if(at(2)&&[v.phone,v.secondaryPhone].some(x=>x.trim()&&!contactPhoneE164(x,v.country)))return {step:2,key:"phone"};
+ if(at(2)&&[v.phone,v.secondaryPhone].some(x=>x.trim()&&!contactPhoneE164(x,v.country.trim().toUpperCase())))return {step:2,key:"phone"};
  if(at(2)&&v.bookingUrl.trim()&&!googleProfileLink(v.bookingUrl))return {step:2,key:"booking"};
  if(at(0)&&v.action!=="create"&&v.existingProfileUrl?.trim()&&!googleProfileLink(v.existingProfileUrl))return {step:0,key:"existing"};
  if(at(3)&&v.hoursEnabled&&(!Array.isArray(v.hours)||v.hours.length!==7||!v.hours.some(h=>h?.closed===false)||v.hours.some(h=>!h||typeof h.closed!=="boolean"||(!h.closed&&(!/^([01]\d|2[0-3]):[0-5]\d$/.test(h.start)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(h.end)||h.start===h.end)))))return {step:3,key:"hours"};
