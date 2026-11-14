@@ -1,5 +1,5 @@
 "use client";
-import {useState} from "react";
+import {useId,useState} from "react";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 
 function FlagIcon({language}:{language:"es"|"en"}){
@@ -22,8 +22,9 @@ function FlagIcon({language}:{language:"es"|"en"}){
 export function InterfaceLanguagePicker({compact=false}:{compact?:boolean}){
  const {language,saving,changeLanguage,translate}=useInterfaceLanguage();
  const [error,setError]=useState(false);
+ const selectorId=useId();
  const choose=(next:"es"|"en")=>{
-  if(next===language||saving)return;
+  if(next===language)return;
   setError(false);
   void changeLanguage(next).catch(()=>setError(true));
  };
@@ -34,18 +35,22 @@ export function InterfaceLanguagePicker({compact=false}:{compact?:boolean}){
   <div role="radiogroup" aria-label={ariaLabel} aria-busy={saving}
    style={{display:"inline-flex",gap:2,padding:compact?2:4,alignItems:"center",
     background:"#eef7f3",border:"1px solid #bcded0",borderRadius:999,flexShrink:0}}>
-   {(["es","en"] as const).map(code=><button key={code} type="button" role="radio"
-     aria-checked={language===code} aria-label={code==="es"?"Español":"English"}
-     title={code==="es"?"Español":"English"} disabled={saving} onClick={()=>choose(code)}
+   {(["es","en"] as const).map(code=><label key={code}
+     title={code==="es"?"Español":"English"}
      style={{display:"inline-flex",alignItems:"center",justifyContent:"center",
-      width:compact?29:45,height:compact?27:39,padding:0,minWidth:0,minHeight:0,
-      borderRadius:999,cursor:saving?"wait":"pointer",
+      position:"relative",width:compact?39:46,height:compact?40:46,padding:0,
+      borderRadius:999,cursor:"pointer",flexShrink:0,
       border:language===code?"1.5px solid #079a7c":"1.5px solid transparent",
       background:language===code?"#fff":"transparent",
       boxShadow:language===code?"0 1px 4px #12372e24":"none",
-      opacity:saving?0.6:1,transition:"background .15s,border-color .15s"}}>
+      transition:"background .15s,border-color .15s"}}>
+     <input type="radio" name={selectorId} value={code}
+      checked={language===code} onChange={()=>choose(code)}
+      aria-label={code==="es"?"Español":"English"}
+      style={{position:"absolute",inset:0,width:"100%",height:"100%",margin:0,
+       opacity:0,cursor:"pointer",zIndex:1}}/>
      <FlagIcon language={code}/>
-    </button>)}
+    </label>)}
   </div>
   {!compact?<small className="muted">{translate("common.languageHint")}</small>:null}
   {error?<small role="alert" style={{color:"#b42318",

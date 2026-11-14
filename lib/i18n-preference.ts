@@ -29,6 +29,9 @@ export class LanguagePreference {
   if(userId!==this.userId){++this.version;this.publish({ready:false,saving:false,error:null});}
  }
  async refresh(){
+  // Do not re-read stale account metadata in the middle of an explicit user choice.
+  // SIGNED_OUT and accountChanged still invalidate that choice independently.
+  if(this.state.saving)return;
   const version=++this.version;
   this.publish({saving:false});
   let local:string|null=null;
@@ -53,7 +56,7 @@ export class LanguagePreference {
  async choose(language:Language){
   if(!isLanguage(language))return;
   const version=++this.version;
-  this.publish({language,ready:true,error:null});
+  this.publish({language,ready:true,error:null,saving:!!(this.auth&&this.userId)});
   await this.cache(language);
   await this.save(language,version,false);
  }

@@ -17,7 +17,7 @@ type AccountType="personal"|"business";
 type Accent="mint"|"blue"|"violet";
 type FontScale="small"|"normal"|"large";
 type Appearance="light"|"dark"|"system";
-type Job={code:string;title:string};
+type Job={code:string;title:string;title_es?:string};
 type PickOption={value:string;label:string;description?:string};
 const emailPattern=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -126,15 +126,22 @@ const colorChoices=[["mint",t("signup.mint"),"#08b99b"],["blue",t("signup.blue")
  const jobResults=useMemo(()=>{
   const q=normalize(occupation);if(q.length<2)return [];
   return jobs.map(job=>{
-   const normalized=normalize(job.title);
-   const aliases=Object.entries(OCCUPATION_ALIASES).find(([name])=>normalize(name)===normalized)?.[1]||[];
-   const related=aliases.map(normalize);
-   const score=normalized.startsWith(q)?0:normalized.split(/\s+/).some(v=>v.startsWith(q))?1:
-    related.some(v=>v.startsWith(q))?2:normalized.includes(q)?3:related.some(v=>v.includes(q))?4:99;
+   const primary=normalize(language==="es"?(job.title_es||job.title):job.title);
+   const english=normalize(job.title);
+   const aliases=(OCCUPATION_ALIASES[job.title]||[]).map(normalize);
+   const score=primary.startsWith(q)?0:primary.split(/\s+/).some(v=>v.startsWith(q))?1:
+    aliases.some(v=>v.startsWith(q))?2:primary.includes(q)?3:aliases.some(v=>v.includes(q))?4:
+    language==="es"&&english.startsWith(q)?7:language==="es"&&english.includes(q)?8:99;
    return {job,score};
   }).filter(v=>v.score<99).sort((a,b)=>a.score-b.score||a.job.title.localeCompare(b.job.title)).slice(0,8)
-   .map(v=>({value:v.job.code,label:v.job.title,description:"O*NET · "+v.job.code}));
- },[jobs,occupation]);
+   .map(v=>({value:v.job.code,label:language==="es"?(v.job.title_es||v.job.title):v.job.title,
+    description:"O*NET · "+v.job.code}));
+ },[jobs,occupation,language]);
+ useEffect(()=>{
+  if(!occupationCode||!jobsLoaded)return;
+  const selected=jobs.find(job=>job.code===occupationCode);
+  if(selected)setOccupation(language==="es"?(selected.title_es||selected.title):selected.title);
+ },[language,occupationCode,jobs,jobsLoaded]);
  const states=useMemo(()=>{
   const q=normalize(state);
   if(q.length===0)return [];
