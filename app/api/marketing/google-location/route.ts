@@ -22,7 +22,22 @@ export async function GET(request:NextRequest){
   !/^[\p{L} .'-]{2,100}$/u.test(city)||!/^[\p{L}\p{N} .'-]{0,100}$/u.test(region)||
   !/^[\p{L}\p{N} -]{0,25}$/u.test(postal))return reply({error:"invalid_location"},400);
  const key=process.env.GOOGLE_MAPS_GEOCODING_API_KEY;
- if(!key)return reply({error:"google_location_not_connected",verified:false},503);
+ if(!key){
+  // Postal cross-check is useful today, but is NOT Google verification.
+  // Never return verified:true here or imply a street address was checked.
+  if(!postal)return reply({error:"google_location_not_connected",verified:false},503);
+  try{
+   const url="https://api.zippopotam.us/"+encodeURIComponent(country.toLowerCase())+"/"+encodeURIComponent(postal);
+   const response=await fetch(url,{signal:AbortSignal.timeout(6500),next:{revalidate:86400}});
+   if(response.status===404)return reply({error:"postal_not_found",verified:false},422);
+   if(!response.ok)return reply({error:"postal_lookup_unavailable",verified:false},503);
+   const json=await response.json() as {places?:{"place name":string;state:string;"state abbreviation":string}[];"country abbreviation"?:string};
+   const match=(json.places||[]).some(place=>normalized(place["place name"])===normalized(city)&&
+    (!region||[place.state,place["state abbreviation"]].some(v=>normalized(v)===normalized(region))));
+   if(!match||json["country abbreviation"]?.toUpperCase()!==country)return reply({error:"postal_city_mismatch",verified:false},422);
+   return reply({verified:false,postalMatched:true,source:"Zippopotam.us / GeoNames",error:"google_location_not_connected"},200);
+  }catch{return reply({error:"postal_lookup_unavailable",verified:false},503);}
+ }
  const url=new URL("https://maps.googleapis.com/maps/api/geocode/json");
  url.searchParams.set("address",[city,region,postal,country].filter(Boolean).join(", "));
  url.searchParams.set("components","country:"+country);
