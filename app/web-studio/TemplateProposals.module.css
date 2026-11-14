@@ -37,3 +37,8 @@
 @media(max-width:900px){.carousel{display:flex;gap:13px;scroll-padding-inline:8px}.card{flex:0 0 86%;max-width:445px}.websiteFrame{height:305px}.scale{width:285.714%;height:870px}}
 @media(max-width:570px){.root{padding:16px 0}.root>.back,.heading,.bottom,.note{margin-left:15px;margin-right:15px}.heading h2{font-size:36px}.carousel{padding-inline:15px;gap:12px}.card{flex:0 0 88vw;max-width:none;border-radius:19px}.websiteFrame{height:290px}.cardTitle{padding:15px}.bottom{justify-content:space-between}.note{font-size:11px}}
 @media(prefers-reduced-motion:reduce){.carousel{scroll-behavior:auto}}
+
+.seoPreview{display:flex;flex-direction:column;gap:5px;padding:12px 17px;border-top:1px solid #f0e9f6;background:#fcfbff}
+.seoPreview strong{font-size:10px;font-weight:900;letter-spacing:.06em;color:#8864b0}
+.seoPreview span{font-size:14px;font-weight:800;line-height:1.35;color:#2f5496;word-break:break-word}
+.seoPreview small{font-size:11px;line-height:1.45;color:#656273;word-break:break-word}
