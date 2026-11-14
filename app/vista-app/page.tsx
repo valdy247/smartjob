@@ -233,46 +233,49 @@ export default function VMVMobilePreview(){
   </div>:null}
   <header className={styles.pageHeader}>
    <a href="/" className={styles.wordmark}>VMV<span> BUSINESS</span></a>
-   <span className={styles.previewTag}>SMART CALL · DATOS DE TU CUENTA</span>
-   <a className={styles.webLink} href="https://vmv-business-design-git-feat-vm-073e13-valdys-projects-b97fc7a6.vercel.app/es/workspace/smart-call/" target="_blank" rel="noopener noreferrer">Panel web <ArrowUpRight size={15}/></a>
+   <span className={styles.previewTag}>{translate("native.previewAccountLabel")}</span>
+   <a className={styles.webLink} href="https://vmv-business-design-git-feat-vm-073e13-valdys-projects-b97fc7a6.vercel.app/es/workspace/smart-call/" target="_blank" rel="noopener noreferrer">{translate("native.webPanel")} <ArrowUpRight size={15}/></a>
   </header>
   <div className={styles.layout}>
    <aside className={styles.intro}>
     <span className={styles.kicker}>VMV BUSINESS / SMART CALL</span>
-    <h1>Tu negocio.<br/><em>En tu bolsillo.</em></h1>
-    <p>Entra con tu cuenta y descubre la experiencia de Smart Call con tus minutos de traducción telefónica, plan, historial, idiomas, asistente, voces y saludos auténticos.</p>
-    <div className={styles.feature}><span>01</span><div><strong>Minutos para traducir llamadas</strong><small>Un saldo específico para las llamadas con interpretación, distinto del contador de llamadas recibidas.</small></div></div>
-    <div className={styles.feature}><span>02</span><div><strong>Configuración sincronizada</strong><small>Guarda los idiomas, el nombre del asistente y la personalización habilitada por tu plan.</small></div></div>
-    <div className={styles.feature}><span>03</span><div><strong>Tu línea y llamadas reales</strong><small>Consulta el estado de activación y tu historial sin simular llamadas ni clientes.</small></div></div>
-    <div className={styles.disclaimer}><ShieldCheck size={17}/><span>La vista del navegador permite controlar Smart Call con tu cuenta. Las llamadas telefónicas entrantes siguen funcionando en la app iPhone, no aquí. No modificamos desvíos ni números.</span></div>
+    <h1>{translate("native.introBusiness")}<br/><em>{translate("native.introPocket")}</em></h1>
+    <p>{translate("native.introLead")}</p>
+    <div className={styles.feature}><span>01</span><div><strong>{translate("native.introMinutesTitle")}</strong><small>{translate("native.introMinutesBody")}</small></div></div>
+    <div className={styles.feature}><span>02</span><div><strong>{translate("native.introSyncTitle")}</strong><small>{translate("native.introSyncBody")}</small></div></div>
+    <div className={styles.feature}><span>03</span><div><strong>{translate("native.introLineTitle")}</strong><small>{translate("native.introLineBody")}</small></div></div>
+    <div className={styles.disclaimer}><ShieldCheck size={17}/><span>{translate("native.introDisclaimer")}</span></div>
    </aside>
    <div className={styles.phoneFrame}>
     <div className={styles.device}>
      <div className={styles.statusBar}><span>VMV</span><div className={styles.dynamicIsland}/><span>◢ ▰</span></div>
-     <div className={ready&&tab==="home"?styles.homeTopHidden:styles.appTop}><div className={styles.appLogo}><span className={styles.mark}>▥</span><b>VMV<span> BUSINESS</span></b></div>
-      {user?<button aria-label="Ir a mi cuenta" onClick={()=>go("account")}><UserRound size={18}/></button>:<LockKeyhole size={18}/>}
+     <div className={ready&&tab==="home"?styles.homeTopHidden:styles.appTop}>
+      <div className={styles.appHeaderIdentity}>
+       <div className={styles.appLogo}><span className={styles.mark}>▥</span><b>VMV<span> BUSINESS</span></b></div>
+       <div className={styles.appHeaderLanguage}><InterfaceLanguagePicker compact/></div>
+      </div>
+      {user?<button aria-label={translate("native.accountButton")} onClick={()=>go("account")}><UserRound size={18}/></button>:<LockKeyhole size={18} aria-hidden="true"/>}
      </div>
      <div className={styles.scrollArea} key={ready?tab+(open?"details":"list"):"login"}>
-      {phase==="checking"?<div className={styles.loadingScreen}><LoaderCircle className={styles.spin}/><p>Verificando tu sesión…</p></div>:null}
-      {phase==="unconfigured"?<div className={styles.loadingScreen}><LockKeyhole/><p>Falta configurar la conexión pública de Supabase en este deploy.</p></div>:null}
+      {phase==="checking"?<div className={styles.loadingScreen}><LoaderCircle className={styles.spin}/><p>{translate("native.checkingSession")}</p></div>:null}
+      {phase==="unconfigured"?<div className={styles.loadingScreen}><LockKeyhole/><p>{translate("native.supabaseMissing")}</p></div>:null}
       {phase==="signed_out"?<div className={styles.signinScreen}>
-       <div className={styles.smartCard}><InterfaceLanguagePicker compact/></div>
-       <span className={styles.screenEyebrow}>ACCESO SEGURO</span><h2>{translate("native.welcome")}<span className={styles.mint}>.</span></h2>
-       <p className={styles.screenLead}>Inicia sesión con la misma cuenta que usas en Smart Call. No se creará otra cuenta.</p>
+       <span className={styles.screenEyebrow}>{translate("native.secureAccess")}</span><h2>{translate("native.welcome")}<span className={styles.mint}>.</span></h2>
+       <p className={styles.screenLead}>{translate("native.signInExplanation")}</p>
        <form className={styles.signinForm} onSubmit={login}>
-        <label htmlFor="login-email">{translate("common.email")}</label><input required type="email" id="login-email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="tu@empresa.com"/>
-        <label htmlFor="login-password">{translate("common.password")}</label><input required type="password" id="login-password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Tu contraseña"/>
+        <label htmlFor="login-email">{translate("common.email")}</label><input required type="email" id="login-email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={translate("native.emailPlaceholder")}/>
+        <label htmlFor="login-password">{translate("common.password")}</label><input required type="password" id="login-password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={translate("native.passwordPlaceholder")}/>
         <button type="submit" className={styles.mainAction} disabled={working}>{translate(working?"common.signingIn":"common.signIn")} <ArrowUpRight size={16}/></button>
        </form>
-       <div className={styles.privacyNote}><ShieldCheck size={16}/><span>Sesión protegida por Supabase. Nadie puede ver tu balance o tus llamadas sin autenticarse.</span></div>
-       <a href="/registro" className={styles.registerLink}>¿No tienes cuenta? Abrir registro ↗</a>
-       {error?<p className={styles.errorText} role="alert">{error}</p>:null}
+       <div className={styles.privacyNote}><ShieldCheck size={16}/><span>{translate("native.signInPrivacy")}</span></div>
+       <a href="/registro" className={styles.registerLink}>{translate("native.registerPrompt")} ↗</a>
+       {error?<p className={styles.errorText} role="alert">{translate("common.loginError")}</p>:null}
       </div>:null}
       {phase==="signed_in"&&!profile?<div className={styles.loadingScreen}>
        {loading?<LoaderCircle className={styles.spin}/>:<LockKeyhole/>}
-       <h3>{loading?"Cargando Smart Call…":"No se pudo abrir tu cuenta"}</h3>
-       <p>{loading?"Consultando tu perfil y tu saldo.":error||"Completa tu registro de Smart Call para continuar."}</p>
-       {!loading?<><button className={styles.mainAction} onClick={()=>void refresh()}>Reintentar</button><a className={styles.registerLink} href="/registro">Completar registro</a><button className={styles.logoutLink} onClick={()=>void signOut()}>{translate("common.signOut")}</button></>:null}
+       <h3>{translate(loading?"native.profileLoading":"native.profileError")}</h3>
+       <p>{translate(loading?"native.profileLoadingHint":"native.profileMissingHint")}</p>
+       {!loading?<><button className={styles.mainAction} onClick={()=>void refresh()}>{translate("common.retry")}</button><a className={styles.registerLink} href="/registro">{translate("native.finishRegistration")}</a><button className={styles.logoutLink} onClick={()=>void signOut()}>{translate("common.signOut")}</button></>:null}
       </div>:null}
       {ready&&tab==="home"?<div className={`${styles.screen} ${styles.homeV2}`}>
        <div className={styles.homeWelcome}>

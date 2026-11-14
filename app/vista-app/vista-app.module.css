@@ -463,3 +463,14 @@ button.homeProductCard:hover{transform:translateY(-2px)}
 .contactPhoneField{display:grid;grid-template-columns:112px minmax(0,1fr);gap:8px;align-items:center;min-width:0}
 .contactPhoneField>input{min-width:0}
 .contactPhoneField :global(.vmv-country-trigger){height:46px;min-height:46px;border-radius:12px;padding:0 10px}
+
+/* Compact, persistent language switch sits beside the mobile VMV Business identity.
+   It never occupies a sign-in form card or intercepts credentials. */
+.appHeaderIdentity{display:flex;align-items:center;gap:10px;min-width:0}
+.appHeaderLanguage{display:flex;align-items:center;flex-shrink:0}
+@media(max-width:460px){
+ .appTop{padding:11px 14px 10px;gap:8px}
+ .appHeaderIdentity{gap:7px}
+ .appLogo b{font-size:16px}
+ .appLogo .mark{height:30px;width:30px;border-radius:9px}
+}
