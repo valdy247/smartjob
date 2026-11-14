@@ -2,7 +2,6 @@ import React,{useMemo,useState} from "react";
 import {Modal,Pressable,ScrollView,StyleSheet,Switch,Text,TextInput,View} from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type {AgentDraft,AgentKind,Language} from "./aiAgentsData";
-import {AI_AGENT_TEMPLATES} from "./aiAgentsData";
 
 type Question={id:string;label:string;type?:"text"|"paragraph"|"choice"|"state"|"hours";options?:string[];required?:boolean;when?:(a:Record<string,string>)=>boolean};
 type Stage={title:string;description:string;items:Question[]};
@@ -269,18 +268,20 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false,initialStep=
       <Text style={styles.summaryText}>{draft.purpose}</Text></View>
     {[
       ["Negocio",answers.business_name||"—"],
-      ["Tipo de agente",AI_AGENT_TEMPLATES.find(t=>t.kind===draft.kind)?.title||"Personalizado"],
+      ["Voz",answers.voice_preset==="female"?"Femenina · Polly":answers.voice_preset==="male"?"Masculina · Polly":"Predeterminada"],
+      ["Personalidad",answers.personality||draft.personality],
+      ["Respuestas",answers.response_style==="brief"?"Breves":answers.response_style==="detailed"?"Detalladas":"Equilibradas"],
       ["Ubicación",[answers.city,answers.country==="Otro país"?answers.region_other:answers.state,answers.country].filter(Boolean).join(", ")||"—"],
       ["Horario",answers.hours_mode||"Sin definir"],
       ...(draft.kind==="bookings"?[["Anticipación",answers.booking_lead||"—"]]:[]),
-      ["Agenda VMV",needsCalendar?"Solicitada · pendiente":"No solicitada"],
-      ["Inventario VMV",needsInventory?"Solicitado · pendiente":"No solicitado"],
+      ["Reservas",answers.cap_bookings==="Sí"?"Capacidad elegida · verificar agenda":"Sin configurar"],
+      ["Inventario",answers.cap_catalog==="Sí"?"Consulta elegida · verificar catálogo":"Sin configurar"],
       ["Revisión humana",answers.handoff||"Obligatoria"]
     ].map(([label,value])=><View key={label} style={styles.summaryLine}>
       <Text style={styles.summaryLabel}>{label}</Text><Text style={styles.summaryValue}>{value}</Text>
     </View>)}
     <View style={styles.notice}><Ionicons name="shield-checkmark-outline" color="#237C63" size={22}/>
-      <Text style={styles.noticeText}>Comenzará como borrador. No contestará llamadas ni modificará reservas, pagos o inventario automáticamente.</Text>
+      <Text style={styles.noticeText}>Guardar no conecta una línea ni permite cobrar, reservar o modificar inventario sin los permisos y servicios verificados.</Text>
     </View>
   </View>:null}
   {error?<Text accessibilityRole="alert" style={styles.error}>{error}</Text>:null}
