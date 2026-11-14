@@ -22,7 +22,7 @@ import styles from "./MarketingActionCenter.module.css";
 import WebRepairStudio,{emptyWebRepair,validateWebRepair,type WebRepairData} from "./WebRepairStudio";
 import ReputationStudio,{reviewReplyTemplate,type ReviewMode} from "./ReputationStudio";
 import DirectoryDiscovery,{emptyDirectory,validateDirectory,directoryStatusNames,localizedDirectoryStatus,safeDirectoryUrl,type DirectoryData,type DirectoryProgress} from "./DirectoryDiscovery";
-import {readMarketingDraft,writeMarketingDraft,readDraftMedia,saveDraftMedia,clearMarketingDraft,markGuestLoginPending,transferGuestDraft,type StoredMarketingDraft} from "./MarketingDraftStore";
+import {readMarketingDraft,writeMarketingDraft,readDraftMedia,saveDraftMedia,clearMarketingDraft,markGuestLoginPending,transferGuestDraft,readBusinessDraftMedia,saveBusinessDraftMedia,type StoredMarketingDraft} from "./MarketingDraftStore";
 import GoogleProfileWizard,{emptyGoogle,emptyMedia,googleStepNames,validateGoogleStep,validateGoogleLinks,validateGoogleAll,type GoogleData,type GoogleMedia} from "./GoogleProfileWizard";
 
 export type ServiceCode="directory_listings"|"google_profile"|"apple_maps"|"bing_places"|"yelp_profile"|"search_console"|"seo_improvement"|"campaign_setup"|"review_strategy"|"other";
@@ -171,13 +171,14 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const submitting=useRef(false);
  const draftSnapshot=():StoredMarketingDraft=>({
   version:2,savedAt:Date.now(),requestId,ownerId:user?.id||null,
-  service:selected,step:wizardStep,googleStep,webStage,businessId,
+  service:selected,step:wizardStep,googleStep,webStage,businessId,businessDetails,saveAlsoInBusiness,
   name,site,category:chosenCategory||industryId||savedCategory||"other",goal,reviewInput,reviewTone,
   reviewLink,reviewReply,reviewMode,consent,googleData,webRepair,directoryData
  });
  const saveCurrentDraft=async()=>{
   const ok=writeMarketingDraft(draftSnapshot());
   if(!ok){setDraftNotice(translate("marketing.action.this_device_couldn_t_save_the_form_keep_this_page_ope"));return false;}
+  try{await saveBusinessDraftMedia(requestId,businessFiles);}catch{setPhotoNotice(en?"Business photos could not be saved on this device.":"Las fotos del negocio no pudieron guardarse en este dispositivo.");}
   if(selected==="google_profile"){
    try{await saveDraftMedia(requestId,googleMedia);setPhotoNotice("");}
    catch{setPhotoNotice(translate("marketing.action.we_couldn_t_save_your_photos_select_them_again_after_"));}
@@ -202,6 +203,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(saved&&active&&services.some(item=>item.id===saved.service)){
     setRequestId(saved.requestId);setSelected(saved.service as ServiceCode);
     setBusinessId(saved.businessId||"");
+    if(saved.businessDetails)setBusinessDetails(saved.businessDetails);
+    setSaveAlsoInBusiness(saved.saveAlsoInBusiness===true);
     setWizardStep(saved.step as WizardStep);
     setGoogleStep(Math.max(0,Math.min(saved.googleStep,googleStepNames.length-1)));
     setWebStage(Math.max(0,Math.min(saved.webStage||0,2)));
@@ -214,7 +217,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     if(saved.directoryData)setDirectoryData(saved.directoryData);
     setConsent(saved.consent===true);
     setDraftNotice(translate("marketing.action.your_request_has_been_restored_review_it_before_submi"));
-    try{const media=await readDraftMedia(saved.requestId);if(active&&media)setGoogleMedia(media);}
+    try{const media=await readDraftMedia(saved.requestId);if(active&&media)setGoogleMedia(media);const businessMedia=await readBusinessDraftMedia(saved.requestId);if(active&&businessMedia)setBusinessFiles(businessMedia);}
     catch{if(active)setPhotoNotice(translate("marketing.action.we_couldn_t_restore_your_photos_select_them_again"));}
    }
    if(active)setDraftReady(true);
@@ -227,7 +230,19 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(!writeMarketingDraft(draftSnapshot()))setDraftNotice(translate("marketing.action.your_draft_isn_t_being_saved_keep_this_page_open"));
   },300);
   return()=>window.clearTimeout(id);
- },[draftReady,authState,user?.id,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,webStage,businessId,goal,reviewInput,reviewTone,reviewLink,reviewReply,reviewMode,consent,googleData,webRepair,directoryData,requestId]);
+ },[draftReady,authState,user?.id,wizardStep,googleStep,selected,name,site,chosenCategory,industryId,savedCategory,webStage,businessId,businessDetails,saveAlsoInBusiness,goal,reviewInput,reviewTone,reviewLink,reviewReply,reviewMode,consent,googleData,webRepair,directoryData,requestId]);
+ useEffect(()=>{
+  if(!draftReady||wizardStep<1||wizardStep>3)return;
+  const id=window.setTimeout(()=>{void saveBusinessDraftMedia(requestId,businessFiles).catch(()=>setPhotoNotice(en?"Could not preserve business photos.":"No pudimos conservar las fotos del negocio."));},450);
+  return()=>window.clearTimeout(id);
+ },[draftReady,wizardStep,businessFiles,requestId]);
+ useEffect(()=>{
+  if(!draftReady||!user||businessId||businessEditedRef.current)return;
+  const real=savedBusinesses.filter(b=>!b.source);
+  if(real.length!==1)return;
+  const b=real[0];setBusinessId(b.id);setBusinessDetails({...b});setName(b.name);setSite(b.website_url||"");setChosenCategory(b.category_id);
+  setGoogleData(g=>g.googleCategory||g.phone||g.street?mergeGoogleWithBusiness(g,b):businessGoogleSeed(b,g.action));
+ },[draftReady,user?.id,savedBusinesses,businessId]);
  useEffect(()=>{
   if(!draftReady||selected!=="google_profile"||wizardStep<1||wizardStep>3)return;
   const id=window.setTimeout(()=>{
