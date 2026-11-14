@@ -7,7 +7,7 @@ export type CatalogItem={
  variants:unknown[];extras:unknown[];web_source_id?:string|null;
 };
 export type TestOrder={
- id:string;order_no:number;owner_id:string;agent_id:string;status:string;
+ id:string;order_no:number;owner_id:string;business_id:string;agent_id:string;status:string;
  payment_status:string;subtotal_cents:number;total_cents:number;currency:string;mode:string;
  created_at:string;idempotency_key:string;
 };
@@ -27,10 +27,11 @@ export function parseUsd(value:string){
  const cents=Number(m[1])*100+Number((m[2]||"").padEnd(2,"0"));
  return cents>=1&&cents<=10000000?cents:null;
 }
-export async function listCatalog():Promise<CatalogItem[]>{
+export async function listCatalog(businessId:string):Promise<CatalogItem[]>{
+ if(!uuid.test(businessId))throw Error("Selecciona el negocio correcto.");
  const {db,owner}=await current();
  const {data,error}=await db.from("vmv_ai_catalog_items").select("*")
-  .eq("owner_id",owner).order("name",{ascending:true}).limit(100);
+  .eq("owner_id",owner).eq("business_id",businessId).order("name",{ascending:true}).limit(100);
  if(error)throw Error("No se pudo consultar el catálogo.");
  return (data||[]) as CatalogItem[];
 }
@@ -38,10 +39,13 @@ export async function saveCatalogItem(input:{
  name:string;sku:string;description:string;price:string;
  stock_mode:CatalogItem["stock_mode"];available_qty:string;
  approved:boolean;active:boolean;
-},previous?:CatalogItem|null){
+},previous:CatalogItem|null,businessId:string){
+ if(!uuid.test(businessId))throw Error("Selecciona un negocio.");
  const {db,owner}=await current();
  const {data:business}=await db.from("vmv_ai_businesses").select("id")
-  .eq("owner_id",owner).maybeSingle();
+  .eq("id",businessId).eq("owner_id",owner).maybeSingle();
+ if(previous&&(previous.owner_id!==owner||previous.business_id!==businessId))
+  throw Error("El artículo pertenece a otro negocio.");
  if(!business)throw Error("Primero crea un agente para abrir tu espacio de negocio.");
  const price_cents=parseUsd(input.price);
  if(price_cents===null)throw Error("Introduce un precio válido en USD.");
@@ -61,7 +65,7 @@ export async function saveCatalogItem(input:{
  };
  if(previous){
   const {data:updated,error}=await db.from("vmv_ai_catalog_items")
-   .update(data).eq("id",previous.id).eq("owner_id",owner)
+   .update(data).eq("id",previous.id).eq("owner_id",owner).eq("business_id",businessId)
    .eq("updated_at",previous.updated_at).select("id").maybeSingle();
   if(error)throw Error("No se pudo guardar el producto. Revisa el SKU y vuelve a intentarlo.");
   if(!updated)throw Error("El producto cambió en otro dispositivo. Actualiza la lista.");
@@ -70,10 +74,11 @@ export async function saveCatalogItem(input:{
  const {error}=await db.from("vmv_ai_catalog_items").insert(data);
  if(error)throw Error("No se pudo añadir el producto. Comprueba que el código SKU sea único.");
 }
-export async function listTestOrders():Promise<TestOrder[]>{
+export async function listTestOrders(businessId:string):Promise<TestOrder[]>{
+ if(!uuid.test(businessId))throw Error("Selecciona el negocio correcto.");
  const {db,owner}=await current();
  const {data,error}=await db.from("vmv_ai_orders").select("*")
-  .eq("owner_id",owner).eq("mode","test").order("created_at",{ascending:false}).limit(30);
+  .eq("owner_id",owner).eq("business_id",businessId).eq("mode","test").order("created_at",{ascending:false}).limit(30);
  if(error)throw Error("No se pudo consultar el historial de pedidos.");
  return (data||[]) as TestOrder[];
 }
@@ -104,11 +109,17 @@ export type HumanRequest={
  id:string;owner_id:string;agent_id:string;call_sid:string;
  status:"new"|"reviewed"|"closed";summary:string;created_at:string;
 };
-export async function listHumanRequests():Promise<HumanRequest[]>{
+export async function listHumanRequests(businessId:string):Promise<HumanRequest[]>{
+ if(!uuid.test(businessId))throw Error("Selecciona el negocio correcto.");
  const {db,owner}=await current();
+ const {data:agents,error:agentError}=await db.from("vmv_ai_agents")
+  .select("id").eq("owner_id",owner).eq("business_id",businessId).limit(100);
+ if(agentError)throw Error("No se pudo comprobar el negocio.");
+ const ids=(agents||[]).map(x=>x.id);
+ if(!ids.length)return [];
  const {data,error}=await db.from("vmv_ai_human_requests")
   .select("id,owner_id,agent_id,call_sid,status,summary,created_at")
-  .eq("owner_id",owner).order("created_at",{ascending:false}).limit(30);
+  .eq("owner_id",owner).in("agent_id",ids).order("created_at",{ascending:false}).limit(30);
  if(error)throw Error("No fue posible consultar las solicitudes humanas.");
  return (data||[]) as HumanRequest[];
 }
