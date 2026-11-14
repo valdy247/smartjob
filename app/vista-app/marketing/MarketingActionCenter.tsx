@@ -24,7 +24,7 @@ export type ServiceCode="directory_listings"|"google_profile"|"apple_maps"|"bing
 type Status="received"|"quoted"|"approved"|"in_progress"|"needs_customer"|"verified"|"cancelled";
 type ActivityEvent={date:string;kind:"quote"|"status"|"directories"|"update";status:Status;note?:string;quoteCents?:number|null;revision?:number;evidenceUrl?:string|null};
 type RequestRow={
- id:string;owner_id:string;service_code:ServiceCode;business_name:string;category_id:string;
+ id:string;owner_id:string;service_code:ServiceCode;business_name:string;business_id?:string|null;category_id:string;
  website_url:string|null;goal_text:string;status:Status;execution_mode:"assisted"|"automated";
  quoted_price_cents:number|null;quote_note:string|null;quote_revision:number;
  staff_update:string|null;evidence_url:string|null;verified_at:string|null;
@@ -452,6 +452,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    insertAttempted=true;
    const {data,error:insertError}=await client.from("vmv_marketing_requests").insert({
     id:requestId,owner_id:user.id,service_code:selected,business_name:name.trim(),
+    ...(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(businessId)?{business_id:businessId}:{}),
     category_id:effectiveCategory,website_url:safeSite(site),
     goal_text:selected==="directory_listings"?(contentText(contentLanguage,"marketing.feedback.directoryGoal",{count:directoryData.selected.length,city:directoryData.city,state:directoryData.state})):selected==="google_profile"?googleGoalText:selected==="seo_improvement"?(webRepair.requestRepair?contentText(contentLanguage,"marketing.feedback.repairGoal"):contentText(contentLanguage,"marketing.feedback.reportOnlyGoal")):selected==="review_strategy"&&reviewInput.trim()?
      (contentText(contentLanguage,"marketing.feedback.reputationGoal",{review:reviewInput.trim().slice(0,650),reply:(reviewReply||reviewReplyTemplate(name,reviewInput,reviewTone)).slice(0,700)})).slice(0,1500):goal.trim(),
