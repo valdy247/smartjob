@@ -9,7 +9,7 @@ export type CentralBusiness={
  address_visibility:"private"|"public";hours_enabled:boolean;
  hours:unknown;phone:string;updated_at:string;
 };
-export type AiWorkspace={id:string;owner_id:string;name:string;central_business_id:string|null};
+export type AiWorkspace={id:string;owner_id:string;name:string;central_business_id:string|null;primary_agent_id:string|null};
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 async function authorized(){
  const db=getSupabase();if(!db)throw Error("No se pudo conectar con VMV.");
@@ -27,7 +27,7 @@ export async function loadBusinessChoices():Promise<{
   db.from("vmv_marketing_businesses")
    .select("id,owner_id,name,category_id,description,city,region,country,service_areas,website_url,booking_url,address_visibility,hours_enabled,hours,phone,updated_at")
    .eq("owner_id",owner).order("created_at",{ascending:false}).limit(80),
-  db.from("vmv_ai_businesses").select("id,owner_id,name,central_business_id")
+  db.from("vmv_ai_businesses").select("id,owner_id,name,central_business_id,primary_agent_id")
    .eq("owner_id",owner).limit(80)
  ]);
  if(central.error||legacy.error)throw Error("No se pudieron consultar los negocios de tu cuenta.");
@@ -110,4 +110,17 @@ export function businessMissing(b:CentralBusiness):string[]{
  if(!b.region.trim())missing.push("Estado o región");
  if(!b.hours_enabled)missing.push("Horarios");
  return missing;
+}
+
+/** Explicit, owner-authorized choice; never changes vmv_ai_phone_selections. */
+export async function choosePrincipalAgent(
+ workspaceId:string,agentId:string|null,expectedId:string|null
+):Promise<void>{
+ if(!uuid.test(workspaceId)||(agentId!==null&&!uuid.test(agentId))||
+    (expectedId!==null&&!uuid.test(expectedId)))throw Error("Selección de agente inválida.");
+ const {db}=await authorized();
+ const {data,error}=await db.rpc("vmv_ai_select_primary_agent",{
+  p_workspace_id:workspaceId,p_agent_id:agentId,p_expected_id:expectedId
+ });
+ if(error||data!==true)throw Error("El agente principal cambió o no pertenece a este negocio. Actualiza la lista.");
 }
