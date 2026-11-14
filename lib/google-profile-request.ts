@@ -22,7 +22,7 @@ export function googleProfileIssue(v:GoogleData,step?:number):GoogleValidationIs
  if(at(3)&&v.action==="create"&&v.openingDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(v.openingDate)||!Number.isFinite(Date.parse(v.openingDate+"T00:00:00Z"))||new Date(v.openingDate+"T00:00:00Z").toISOString().slice(0,10)!==v.openingDate))return {step:3,key:"date"};
  if(at(4)&&(v.description.length>750||/(?:https?:\/\/|www\.)/i.test(v.description)))return {step:4,key:"description"};
  for(const [s,key,limit] of [[0,"googleCategory",100],[0,"otherCategories",250],[0,"existingProfileUrl",500],[1,"street",250],[1,"unit",250],[1,"city",250],[1,"region",250],[1,"postal",250],[1,"serviceAreas",400],[2,"bookingUrl",250],[4,"services",900],[4,"products",900]] as const){
-  if(at(s)&&String(v[key]||"").length>limit)return {step:s,key:"length"};
+  if(at(s)&&(key!=="existingProfileUrl"||v.action!=="create")&&String(v[key]||"").length>limit)return {step:s,key:"length"};
  }
  return null;
 }
