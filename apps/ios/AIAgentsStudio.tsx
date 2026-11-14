@@ -8,6 +8,7 @@ import {AIAgentsCommerceStudio} from "./AIAgentsCommerceStudio";
 import {AIAgentsCallControl} from "./AIAgentsCallControl";
 import {AIAgentsBookingStudio} from "./AIAgentsBookingStudio";
 import {AIAgentQualityLab} from "./AIAgentQualityLab";
+import {centralChoices,linkLegacyAgentWorkspace,prefillNativeAgent,provisionWorkspace,type NativeCentralBusiness,type NativeAiWorkspace} from "./aiAgentsCentralData";
 import {inspectAgent} from "./aiAgentQuality";
 import {AI_AGENT_TEMPLATES,createConversation,emptyAgent,getAgents,getConversations,getMessages,
   choosePhoneAgent,getPhoneSelection,saveAgent,simulateAgent,updateAgentStatus,type NativePhoneSelection,type Agent,type AgentConversation,
@@ -60,6 +61,9 @@ export function AIAgentsStudio({session,onBack}:Props){
   const [screen,setScreen]=useState<Screen>("home");
   const [editStep,setEditStep]=useState<0|1|2|3>(0);
   const [agents,setAgents]=useState<Agent[]>([]);
+  const [businesses,setBusinesses]=useState<NativeCentralBusiness[]>([]);
+  const [workspaces,setWorkspaces]=useState<NativeAiWorkspace[]>([]);
+  const [businessChoice,setBusinessChoice]=useState("");
   const [phone,setPhone]=useState<NativePhoneSelection|null>(null);
   const [selected,setSelected]=useState<Agent|null>(null);
   const [draft,setDraft]=useState<AgentDraft>(emptyAgent("support"));
@@ -72,9 +76,21 @@ export function AIAgentsStudio({session,onBack}:Props){
   const [message,setMessage]=useState("");
 
   const refresh=useCallback(async()=>{
-    try{const [list,selection]=await Promise.all([getAgents(session),getPhoneSelection(session)]);
-      setAgents(list);setPhone(selection);setNotice("");}
-    catch(e){setNotice(e instanceof Error?e.message:"No se pudo cargar AI Agents.");}
+    try{
+      const [list,selection,central]=await Promise.all([
+       getAgents(session),getPhoneSelection(session),centralChoices(session)
+      ]);
+      setAgents(list);setPhone(selection);
+      setBusinesses(central.businesses);setWorkspaces(central.workspaces);
+      setBusinessChoice(current=>{
+       if(central.businesses.some(b=>b.id===current))return current;
+       if(current.startsWith("legacy:")&&central.workspaces.some(w=>w.id===current.slice(7)&&!w.central_business_id))return current;
+       if(central.businesses.length===1)return central.businesses[0].id;
+       if(central.businesses.length===0&&central.workspaces.length===1)
+        return "legacy:"+central.workspaces[0].id;
+       return "";
+      });setNotice("");
+    }catch(e){setNotice(e instanceof Error?e.message:"No se pudo cargar AI Agents.");}
     finally{setLoading(false);}
   },[session.user.id,session.access_token]);
   useEffect(()=>{void refresh();},[refresh]);
@@ -82,7 +98,9 @@ export function AIAgentsStudio({session,onBack}:Props){
     setDraft(old=>({...old,[key]:value}));
   }
   function create(kind:AgentKind){
-    setSelected(null);setEditStep(0);setDraft(emptyAgent(kind));setScreen("edit");
+    const business=businesses.find(b=>b.id===businessChoice);
+    if(!business){Alert.alert("Elige tu negocio","Registra o selecciona primero tu negocio en Marketing de VMV Business.");return;}
+    setSelected(null);setEditStep(0);setDraft(prefillNativeAgent(business,emptyAgent(kind)));setScreen("edit");
   }
   function edit(agent:Agent,step:0|1|2|3=0){
     setSelected(agent);setEditStep(step);
@@ -95,7 +113,11 @@ export function AIAgentsStudio({session,onBack}:Props){
     if(busy)return;
     setBusy(true);
     try{
-      const item=await saveAgent(session,nextDraft,selected?.id,selected?.revision);
+      const linked=workspaces.find(w=>w.central_business_id===businessChoice);
+      const workspaceId=selected?.business_id||
+       (businesses.some(b=>b.id===businessChoice)?
+        await provisionWorkspace(session,businessChoice):linked?.id);
+      const item=await saveAgent(session,nextDraft,selected?.id,selected?.revision,workspaceId);
       setSelected(item);
       await refresh();
       setScreen("home");
@@ -170,7 +192,22 @@ export function AIAgentsStudio({session,onBack}:Props){
     if(screen==="chat"&&conversationId){setScreen("home");return;}
     setScreen("home");
   }
-  const activeCount=agents.filter(a=>a.status==="active").length;
+  const activeBusiness=businesses.find(b=>b.id===businessChoice)||null;
+  const linkedWorkspace=workspaces.find(w=>w.central_business_id===businessChoice)||null;
+  const legacyId=businessChoice.startsWith("legacy:")?businessChoice.slice(7):null;
+  const visibleAgents=agents.filter(a=>linkedWorkspace?
+    a.business_id===linkedWorkspace.id:legacyId?a.business_id===legacyId:false);
+  const unlinked=workspaces.filter(w=>!w.central_business_id);
+  const activeCount=visibleAgents.filter(a=>a.status==="active").length;
+  async function linkPilot(){
+    if(!activeBusiness||unlinked.length!==1||busy)return;
+    setBusy(true);
+    try{
+      await linkLegacyAgentWorkspace(session,unlinked[0].id,activeBusiness.id);
+      await refresh();
+    }catch(e){Alert.alert("Vincular negocio",e instanceof Error?e.message:"No se pudo vincular.");}
+    finally{setBusy(false);}
+  }
   const templates=AI_AGENT_TEMPLATES;
   const kindInfo=(kind:AgentKind)=>templates.find(t=>t.kind===kind)||templates[6];
 
@@ -196,9 +233,36 @@ export function AIAgentsStudio({session,onBack}:Props){
           <Text style={styles.heroTitle}>Crea agentes.{"\n"}Haz más con VMV.</Text>
           <Text style={styles.heroSub}>Configúralos, enséñales tu negocio y pruébalos desde aquí.</Text>
           <View style={styles.heroStats}>
-            <Text style={styles.heroStat}>{agents.length} agentes</Text>
+            <Text style={styles.heroStat}>{visibleAgents.length} agentes</Text>
             <Text style={styles.heroStat}>{activeCount} activos en estudio</Text>
           </View>
+        </View>
+        <View style={styles.businessPanel}>
+          <View style={{flexDirection:"row",gap:9,alignItems:"center"}}>
+           <Ionicons name="briefcase-outline" color={C.purple} size={20}/>
+           <View style={{flex:1}}><Text style={styles.businessTitle}>Negocio en AI Agents</Text>
+            <Text style={styles.help}>Datos del perfil central de VMV</Text></View>
+          </View>
+          {businesses.length===1&&unlinked.length===0?
+           <Text style={styles.businessName}>{businesses[0].name}</Text>:
+           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:7}}>
+            {businesses.map(b=><SelectPill key={b.id} label={b.name}
+             selected={businessChoice===b.id} onPress={()=>{setBusinessChoice(b.id);setSelected(null);}}/>)}
+            {unlinked.map(w=><SelectPill key={w.id} label={"Sin vincular · "+w.name}
+             selected={businessChoice==="legacy:"+w.id}
+             onPress={()=>{setBusinessChoice("legacy:"+w.id);setSelected(null);}}/>)}
+           </ScrollView>}
+          {activeBusiness?<Text style={styles.help}>{
+            (activeBusiness.category_id||"Actividad pendiente")+" · "+
+            (activeBusiness.city||"Ubicación pendiente")
+          }</Text>:
+          <Text style={styles.help}>Crea o selecciona un negocio en Marketing antes de añadir agentes nuevos.</Text>}
+          {businesses.length===0?<Action label="Ir a VMV Business" icon="arrow-back-outline" onPress={onBack}/>:null}
+          {activeBusiness&&!linkedWorkspace&&unlinked.length===1?
+           <Action label="Vincular agentes existentes" icon="shield-checkmark-outline"
+             disabled={busy} onPress={()=>Alert.alert("Vincular negocio",
+               "¿Asociar «"+unlinked[0].name+"» con «"+activeBusiness.name+"»? Tus llamadas y agentes se conservan; no cambia la línea.",
+               [{text:"Cancelar",style:"cancel"},{text:"Vincular",onPress:()=>{void linkPilot();}}])}/>:null}
         </View>
         {phone?<View style={styles.warning}>
           <Ionicons name="call-outline" size={18} color={C.purple}/>
@@ -239,7 +303,7 @@ export function AIAgentsStudio({session,onBack}:Props){
         <SectionTitle title="¿Qué quieres automatizar?" caption="Selecciona una función para preparar tu agente."/>
         <View style={styles.templateGrid}>
           {templates.map(template=><Pressable key={template.kind} accessibilityRole="button"
-            accessibilityLabel={"Crear agente de "+template.title} onPress={()=>create(template.kind)}
+            accessibilityLabel={"Crear agente de "+template.title} disabled={!activeBusiness} onPress={()=>create(template.kind)}
             style={[styles.template,{backgroundColor:template.bg}]}>
             <View style={styles.templateIcon}><Ionicons name={template.icon} size={23} color={template.fg}/></View>
             <View style={{flex:1,justifyContent:"flex-end"}}>
@@ -251,14 +315,14 @@ export function AIAgentsStudio({session,onBack}:Props){
         </View>
         <View style={styles.listHeading}>
           <SectionTitle title="Mis agentes"/>
-          <Text style={styles.listCount}>{agents.length}</Text>
+          <Text style={styles.listCount}>{visibleAgents.length}</Text>
         </View>
-        {loading?<ActivityIndicator size="large" color={C.purple}/>:agents.length===0?
+        {loading?<ActivityIndicator size="large" color={C.purple}/>:visibleAgents.length===0?
           <View style={styles.empty}>
             <Ionicons name="cube-outline" size={27} color={C.purple}/>
             <Text style={styles.emptyTitle}>Aquí vivirán tus agentes</Text>
             <Text style={styles.help}>Elige una tarjeta para crear tu primero.</Text>
-          </View>:agents.map(agent=>{
+          </View>:visibleAgents.map(agent=>{
             const info=kindInfo(agent.kind);
             return <View key={agent.id} style={styles.agentCard}>
               <View style={styles.agentTop}>
@@ -300,13 +364,13 @@ export function AIAgentsStudio({session,onBack}:Props){
         <Text style={styles.footerNote}>Los agentes se guardan en tu cuenta. Elegir uno para la línea no cambia el webhook de Twilio, ni confirma ventas o pagos.</Text>
       </ScrollView>:null}
 
-      {screen==="agenda"?<AIAgentsBookingStudio session={session} agents={agents}
+      {screen==="agenda"?<AIAgentsBookingStudio session={session} agents={visibleAgents}
         selectedAgentId={phone?.agentId||null} onBack={()=>{void refresh();setScreen("home");}}/>:null}
 
       {screen==="phone"?<AIAgentsCallControl session={session}
          onBack={()=>{void refresh();setScreen("home");}}/>:null}
 
-      {screen==="commerce"?<AIAgentsCommerceStudio session={session} agents={agents}
+      {screen==="commerce"?<AIAgentsCommerceStudio session={session} agents={visibleAgents}
         phoneAgentId={phone?.agentId||null} onBack={()=>{void refresh();setScreen("home");}}
         onAgentUpdated={updated=>{
          setAgents(list=>list.map(a=>a.id===updated.id?updated:a));
@@ -372,6 +436,10 @@ export function AIAgentsStudio({session,onBack}:Props){
   </SafeAreaView>;
 }
 const styles=StyleSheet.create({
+  businessPanel:{backgroundColor:"#FFF",borderWidth:1,borderColor:"#E5D8F3",
+    borderRadius:18,padding:14,gap:10,marginBottom:14},
+  businessTitle:{fontSize:13,fontWeight:"900",color:C.ink},
+  businessName:{fontSize:15,fontWeight:"900",color:C.ink},
   commerceEntry:{borderRadius:20,borderWidth:1,borderColor:"#EADBF9",
     backgroundColor:"#F4EAFE",padding:14,flexDirection:"row",alignItems:"center",
     gap:11,marginBottom:21},
