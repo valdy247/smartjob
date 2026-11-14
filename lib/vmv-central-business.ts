@@ -100,3 +100,25 @@ export function centralBusinessWritePayload(b:CentralBusiness){
   source_system:b.source_system||null,source_record_id:b.source_record_id||null
  };
 }
+
+export function applyProfileEditsToGoogle(current:GoogleData,before:CentralBusiness,after:CentralBusiness):GoogleData{
+ const changed=<K extends keyof CentralBusiness>(key:K)=>before[key]!==after[key];
+ const next={...current};
+ if(changed("kind"))next.kind=after.kind;
+ if(changed("country"))next.country=after.country;
+ if(changed("street"))next.street=after.street;
+ if(changed("unit"))next.unit=after.unit;
+ if(changed("city"))next.city=after.city;
+ if(changed("region"))next.region=after.region;
+ if(changed("postal"))next.postal=after.postal;
+ if(changed("service_areas"))next.serviceAreas=after.service_areas;
+ if(changed("phone"))next.phone=after.phone;
+ if(changed("secondary_phone"))next.secondaryPhone=after.secondary_phone;
+ if(changed("description"))next.description=after.description;
+ if(changed("services"))next.services=after.services;
+ if(changed("products"))next.products=after.products;
+ if(changed("booking_url"))next.bookingUrl=after.booking_url;
+ if(changed("hours_enabled"))next.hoursEnabled=after.hours_enabled;
+ if(changed("hours"))next.hours=after.hours.length===7?after.hours:Array.from({length:7},()=>({closed:true,start:"09:00",end:"17:00"}));
+ return next;
+}
