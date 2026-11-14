@@ -320,6 +320,19 @@ button.homeProductCard:hover{transform:translateY(-2px)}
 .serviceTileMint{background:#b8eedb;color:#185946}
 .serviceTileLavender{background:#ddd0ff;color:#6746a0}
 .serviceTilePeach{background:#ffd3b3;color:#7f5033}
+/* Home and Services reuse the exact featured cards and destinations.
+   The secondary offer list stays discoverable without dominating the landing view. */
+.servicesV3 .homeSpotlight{margin-bottom:0}
+.servicesV3 .homeProductsGrid{margin:0}
+.servicesMoreCatalog{margin:22px 0 9px;border:1px solid #e8dff4;background:#f5f0fc;border-radius:18px;overflow:hidden}
+.servicesMoreCatalog>summary{list-style:none;min-height:55px;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;color:#65449c;font-size:13px;font-weight:850}
+.servicesMoreCatalog>summary::-webkit-details-marker{display:none}
+.servicesMoreCatalog>summary svg{transform:rotate(-90deg);transition:transform .15s ease}
+.servicesMoreCatalog[open]>summary svg{transform:rotate(90deg)}
+.servicesMoreCatalog[open]>summary{border-bottom:1px solid #e8dff4}
+.servicesMoreCatalog>section{padding:3px 14px 12px}
+.servicesMoreCatalog>summary:focus-visible{outline:3px solid #9d77df;outline-offset:-3px}
+@media(prefers-reduced-motion:reduce){.servicesMoreCatalog>summary svg{transition:none}}
 /* Smart Call: same visual identity while maintaining exact account data. */
 .smartScreen{background:#fbfaff;min-height:100%;padding:23px 17px 44px}
 .smartScreen .back{color:#8155cc;font-weight:800;margin-bottom:17px}
