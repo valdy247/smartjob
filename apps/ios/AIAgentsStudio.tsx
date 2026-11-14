@@ -194,6 +194,11 @@ export function AIAgentsStudio({session,onBack}:Props){
   }
   async function choose(agent:Agent|null){
     if(!phone||busy)return;
+    if(agent&&linkedWorkspace&&agent.id!==principal?.id){
+      Alert.alert("Primero el agente principal",
+        "Elige el principal de este negocio. Solo ese mismo agente puede asignarse a la línea mediante tu aprobación.");
+      return;
+    }
     setBusy(true);
     try{
       await choosePhoneAgent(session,phone.routeId,agent);
@@ -415,7 +420,7 @@ export function AIAgentsStudio({session,onBack}:Props){
               </View>
               <View style={styles.agentActions}>
                 <Action label="Probar" icon="chatbubble-ellipses-outline" solid onPress={()=>openTest(agent)}/>
-                {phone?<Action label={phone.agentId===agent.id?"Elegido":"Elegir línea"}
+                {phone&&(!linkedWorkspace||principal?.id===agent.id)?<Action label={phone.agentId===agent.id?"Elegido":"Elegir línea"}
                   icon="call-outline" disabled={busy} onPress={()=>void choose(agent)}/>:null}
                 <Action label="Calidad" icon="shield-checkmark-outline" onPress={()=>openQuality(agent)}/>
                 {!principal||principal.id!==agent.id?<Action label="Hacer principal" icon="person-circle-outline"
