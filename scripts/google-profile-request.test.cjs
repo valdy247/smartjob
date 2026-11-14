@@ -60,3 +60,12 @@ test('creating a profile ignores an oversized hidden URL from a previous action'
  assert.equal(googleProfileIssue(create),null);
  assert.equal(normalizeGoogleProfile(create).existingProfileUrl,'');
 });
+
+test('country formatting is applied before phone normalization',()=>{
+ const v={...fixture(),country:' us ',phone:'7065551234',secondaryPhone:'7065555678'};
+ const n=normalizeGoogleProfile(v);
+ assert.equal(n.country,'US');
+ assert.equal(n.phone,'+17065551234');
+ assert.equal(n.secondaryPhone,'+17065555678');
+ assert.equal(v.country,' us ');
+});
