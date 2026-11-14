@@ -53,15 +53,19 @@ export async function GET(req:NextRequest){
   if(!attachment.data)return reply({error:"Archivo inexistente."},404);
   const auth=await authorize(req,attachment.data.source,attachment.data.source_id);
   if("error" in auth)return reply({error:auth.error},auth.status);
+  if(attachment.data.visibility==="internal"&&!auth.isStaff)
+    return reply({error:"Este archivo es solo para el equipo de VMV."},403);
   const link=await db.storage.from("vmv-admin-files").createSignedUrl(attachment.data.object_path,60);
   if(link.error||!link.data?.signedUrl)return reply({error:"No se pudo abrir el archivo."},503);
   return reply({url:link.data.signedUrl,expiresIn:60});
  }
  const auth=await authorize(req,url.searchParams.get("source"),url.searchParams.get("id"));
  if("error" in auth)return reply({error:auth.error},auth.status);
- const list=await auth.db.from("vmv_admin_attachments")
-  .select("id,source,source_id,uploader_id,filename,content_type,bytes,created_at")
-  .eq("source",auth.source).eq("source_id",auth.id).order("created_at",{ascending:true}).limit(80);
+ let stmt=auth.db.from("vmv_admin_attachments")
+  .select("id,source,source_id,uploader_id,filename,content_type,bytes,created_at,visibility")
+  .eq("source",auth.source).eq("source_id",auth.id);
+ if(!auth.isStaff)stmt=stmt.eq("visibility","shared");
+ const list=await stmt.order("created_at",{ascending:true}).limit(80);
  if(list.error)return reply({error:"No se pudieron consultar los archivos."},503);
  return reply({attachments:list.data||[]});
 }
@@ -71,10 +75,12 @@ export async function POST(req:NextRequest){
  let data:FormData;
  try{data=await req.formData();}catch{return reply({error:"Formulario inválido."},400);}
  const source=data.get("source"),id=data.get("id"),file=data.get("file");
+ const visibility=data.get("visibility")==="internal"?"internal":"shared";
  const auth=await authorize(req,source,id);
  if("error" in auth)return reply({error:auth.error},auth.status);
- if(!auth.isStaff&&["closed","resolved","verified","cancelled"].includes(auth.caseStatus))
+ if(!auth.isStaff&&["closed","resolved","verified","cancelled","activated","connected"].includes(auth.caseStatus))
   return reply({error:"El caso está finalizado."},409);
+ if(visibility==="internal"&&!auth.isStaff)return reply({error:"Solo VMV puede subir archivos internos."},403);
  if(!(file instanceof File)||file.size<1||file.size>3_145_728||!allowed.has(file.type))
   return reply({error:"Solo se admiten JPG, PNG, WEBP y PDF de máximo 3 MB."},400);
  const [usage,count]=await Promise.all([
@@ -91,19 +97,13 @@ export async function POST(req:NextRequest){
   contentType:file.type,upsert:false,cacheControl:"0"
  });
  if(uploaded.error)return reply({error:"No se pudo guardar el archivo privado."},503);
- const stored=await auth.db.from("vmv_admin_attachments").insert({
-  source:auth.source,source_id:auth.id,uploader_id:auth.uid,object_path:objectPath,
-  filename:original,content_type:file.type,bytes:file.size
- }).select("id,filename,bytes,created_at").single();
- if(stored.error){
+ const stored=await auth.db.rpc("vmv_admin_register_file",{
+  p_actor:auth.uid,p_source:auth.source,p_id:auth.id,p_path:objectPath,
+  p_filename:original,p_mime:file.type,p_bytes:file.size,p_visibility:visibility
+ });
+ if(stored.error||!stored.data?.id){
   await auth.db.storage.from("vmv-admin-files").remove([objectPath]);
-  return reply({error:"No se pudo registrar el archivo."},503);
+  return reply({error:"No se pudo registrar el archivo. Se revirtió la subida."},503);
  }
- if(auth.isStaff){
-  await auth.db.from("vmv_admin_audit").insert({
-   actor_id:auth.uid,action:"case_file_uploaded",source:auth.source,source_id:auth.id,
-   detail:{file_id:stored.data.id}
-  });
- }
- return reply({ok:true,attachment:stored.data},201);
+ return reply({ok:true,attachment:{id:stored.data.id,filename:original,bytes:file.size,visibility}},201);
 }

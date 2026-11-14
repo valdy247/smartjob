@@ -249,3 +249,28 @@
 }
 @media(max-width:390px){.brandMark{width:34px;height:34px}.nav,.navOn{width:31px}.stat{padding:12px}.serviceCards{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.stat:hover{transform:none}.spin{animation:none}}
+
+/* Case pagination, notifications and historical record */
+.pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 15px;border-top:1px solid #e4ece2;background:#fff;color:#718774;font-size:11px}
+.pagination button{display:inline-flex;align-items:center;gap:6px;border:1px solid #dae9d4;border-radius:9px;padding:9px 10px;background:#f8fcf5;color:#456d41;font-size:11px;font-weight:850;cursor:pointer}
+.pagination button:disabled{opacity:.45;cursor:not-allowed}
+.notificationWrap{position:relative}
+.notificationCount{position:absolute;right:-3px;top:-4px;min-width:18px;height:18px;border-radius:999px;background:#6da451;color:#fff;font-size:9px;display:grid;place-items:center;padding:2px}
+.notificationPanel{position:absolute;right:0;top:51px;z-index:30;width:min(330px,calc(100vw - 35px));max-height:410px;overflow:auto;background:#fff;box-shadow:0 15px 50px #15271d27;border:1px solid #e2e9df;border-radius:17px;padding:14px;display:grid;gap:6px}
+.notificationPanel>strong{font-size:12px;margin:3px 0 6px}
+.notificationPanel p{font-size:11px;color:#8a988b;padding:10px}
+.notification,.notificationRead{background:#f3f9ef;border:1px solid #e2eddc;border-radius:11px;padding:11px;display:grid;gap:6px;text-align:left;color:#364f3b}
+.notificationRead{background:#fff;border-color:#edf1ed}
+.notification span,.notificationRead span{font-size:11px;font-weight:850}
+.notification small,.notificationRead small{font-size:10px;color:#91a193}
+.historyLine{display:flex;align-items:flex-start;gap:8px;justify-content:space-between;border-top:1px solid #e7eee4;padding:10px 0;line-height:1.5}
+.historyLine span{font-size:11px;font-weight:700;color:#4b604c}
+.historyLine small{font-size:9px;color:#8d9d8e;white-space:nowrap}
+@media(max-width:750px){
+ .table{min-width:0}
+ .table thead{display:none}
+ .table,.table tbody,.table tr,.table td{display:block;width:100%}
+ .table tr{border:1px solid #e7eee3;border-radius:13px;margin:8px 0;padding:9px;background:#fbfdf9}
+ .table td{padding:7px 8px;border:0}
+ .historyLine{display:grid;gap:3px}
+}

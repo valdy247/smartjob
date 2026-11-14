@@ -66,7 +66,7 @@ function History({calls,onSave,onCallBack,onLookup,canCallBack=false,callingSid=
  </div>)}</div>:<div className={styles.emptyHistory}><Clock3 size={28}/><strong>Sin llamadas registradas</strong><p>Tu actividad aparecerá aquí después de las primeras llamadas.</p></div>;
 }
 export default function VMVMobilePreview(){
- const {translate}=useInterfaceLanguage();
+ const {translate,language}=useInterfaceLanguage();
  const account=useSmartCallAccount();
  const {client,user,phase,profile,settings,route,provisioning,calls,summary,preferences,setPreferences,
   loading,working,error,notice,setError,setNotice,refresh,signIn,signOut,saveBasic,savePremium}=account;
@@ -508,6 +508,7 @@ export default function VMVMobilePreview(){
       {ready&&tab==="account"?<div className={`${styles.screen} ${styles.accountV3}`}>
        <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>{translate("home.viewAccount")}<span className={styles.mint}>.</span></h2>
        <div className={styles.smartCard}><InterfaceLanguagePicker/></div>
+       <div className={styles.smartCard}><a href="/vista-app/soporte" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,padding:"13px 8px",textDecoration:"none",color:"inherit",fontWeight:800,fontSize:13}}><span style={{display:"inline-flex",gap:10,alignItems:"center"}}><MessageCircle size={20}/>{language==="en"?"Contact VMV Support":"Contactar soporte VMV"}</span><ArrowUpRight size={17}/></a></div>
         <div className={styles.accountHero}><span className={styles.accountHeroAvatar}><UserRound size={29}/></span>
         <span className={styles.accountHeroInfo}><strong>{business}</strong><small>{user?.email||"—"}</small></span>
         <span className={styles.accountHeroSpark} aria-hidden="true">✦</span>
