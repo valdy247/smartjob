@@ -68,3 +68,18 @@ Limitaciones deliberadas de esta fase: la actualización `staff_update` es una *
 ## Estado posterior al cierre de base (13 nov 2026)
 
 El archivo `docs/admin-web-closure-2026-11-13.md` describe el sistema operativo ampliado y sus pruebas. Bandeja paginada, métricas globales, soporte, avisos, auditoría transaccional, roles y archivos con visibilidad separada ya se implementaron. Siguen pendientes la aceptación autenticada en móvil/escritorio con dos cuentas piloto, la validación completa en inglés y los contratos externos específicos; no se cambió ningún caso real como prueba.
+
+
+## Testers — envío manual de Preview Vercel (13 nov 2026)
+
+- Sección administrativa **Testers**, reservada a roles `admin`.
+- Datos privados de destinatarios, correo, teléfono, consentimiento, preferencia y baja SMS; altas y cambios auditados.
+- Último despliegue Preview READY para el proyecto `smartjob` y la rama `feat/vmv-smart-call-control-center`; una construcción más reciente se informa por separado.
+- Envío de URL específica del despliegue tras confirmación de versión, canal y destinatarios.
+- Lotes persistentes, idempotencia y auditoría, estados de proveedor; botón para continuar pendientes y reintentar fallidos, sin reintento automático de estado desconocido.
+- Email Resend y SMS Twilio preparados con firmas de webhook. Envío real bloqueado cuando falta configuración de proveedor, remitente verificado, consentimiento o verificación de protección del Preview.
+- Límite conservador de 15 destinatarios por confirmación. Para grupos mayores, separar lotes y revisar límites legales, operativos y financieros.
+- Ver detalles y configuración requerida en `docs/admin-web-testers.md` y revisión de seguridad `docs/admin-testers-security-review.md`.
+- La QA final con envío real se hará únicamente a un destinatario expresamente autorizado por Valdy; no enviar terceros durante desarrollo.
+
+Esto no reemplaza la cola operativa ni modifica los otros servicios. Se mantienen pendientes las pruebas E2E de Admin, Web Services, AI Agents y Crear compañía previamente documentadas.

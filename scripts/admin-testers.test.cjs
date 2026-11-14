@@ -124,6 +124,43 @@ test("SMS requires explicit enabled sender and includes opt-out information",asy
   assert.equal(calls,1);assert.equal(sent.state,"accepted");assert.equal(sent.providerId,"SMmock");
  }finally{restore();}
 });
+test("Resend webhook requires valid HMAC and fresh timestamp",()=>{
+ const {createHmac}=require("node:crypto");
+ const hooksSource=fs.readFileSync(path.join(root,"lib/vmv-tester-webhooks.ts"),"utf8");
+ const built=ts.transpileModule(hooksSource,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}});
+ const holder={exports:{}};
+ const mockRequire=(name)=>name==="@/lib/vmv-billing"?{billingAdmin:()=>null}:require(name);
+ new Function("module","exports","require",built.outputText)(holder,holder.exports,mockRequire);
+ const old=process.env.RESEND_WEBHOOK_SECRET;
+ try{
+  const signingKey=Buffer.from("test-webhook-hmac-key");
+  process.env.RESEND_WEBHOOK_SECRET="whsec_"+signingKey.toString("base64");
+  const id="msg_123456789",timestamp=String(Math.floor(Date.now()/1000)),body='{"type":"email.delivered"}';
+  const signature=createHmac("sha256",signingKey).update(id+"."+timestamp+"."+body).digest("base64");
+  const headers=new Headers({"svix-id":id,"svix-timestamp":timestamp,"svix-signature":"v1,"+signature});
+  assert.equal(holder.exports.validResendWebhook(headers,body),true);
+  assert.equal(holder.exports.validResendWebhook(headers,body+" "),false);
+ }finally{if(old===undefined)delete process.env.RESEND_WEBHOOK_SECRET;else process.env.RESEND_WEBHOOK_SECRET=old;}
+});
+test("Twilio webhook rejects changed body and signature",()=>{
+ const {createHmac}=require("node:crypto");
+ const hooksSource=fs.readFileSync(path.join(root,"lib/vmv-tester-webhooks.ts"),"utf8");
+ const built=ts.transpileModule(hooksSource,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}});
+ const holder={exports:{}};
+ const mockRequire=(name)=>name==="@/lib/vmv-billing"?{billingAdmin:()=>null}:require(name);
+ new Function("module","exports","require",built.outputText)(holder,holder.exports,mockRequire);
+ const token=process.env.TWILIO_AUTH_TOKEN;
+ try{
+  process.env.TWILIO_AUTH_TOKEN="test-auth-token";
+  const url="https://example.com/api/admin/testers/webhooks/twilio",params=new URLSearchParams({MessageSid:"SM123",MessageStatus:"delivered"});
+  const payload=url+[...params.entries()].sort(([a],[b])=>a.localeCompare(b,"en")).map(([k,v])=>k+v).join("");
+  const sig=createHmac("sha1",process.env.TWILIO_AUTH_TOKEN).update(payload).digest("base64");
+  const headers=new Headers({"x-twilio-signature":sig});
+  assert.equal(holder.exports.validTwilioWebhook(headers,params,url),true);
+  params.set("MessageStatus","failed");
+  assert.equal(holder.exports.validTwilioWebhook(headers,params,url),false);
+ }finally{if(token===undefined)delete process.env.TWILIO_AUTH_TOKEN;else process.env.TWILIO_AUTH_TOKEN=token;}
+});
 test("SQL and API enforce admin-only, durability, rate limits and signed webhooks",()=>{
  const sql=fs.readFileSync(path.join(root,"supabase/sql/vmv_admin_testers.sql"),"utf8");
  const api=fs.readFileSync(path.join(root,"app/api/admin/testers/route.ts"),"utf8");
