@@ -4,7 +4,7 @@ import type {Session} from "@supabase/supabase-js";
 import {api,supabase} from "./session";
 
 export type NativeProfile={
- id:string;first_name:string;phone:string;owner_language:string;assistant_name:string;
+ id:string;first_name:string;business_name?:string|null;phone:string;owner_language:string;assistant_name:string;
  line_choice?:"keep"|"new";line_carrier?:string;preferred_plan?:"starter"|"pro"|"premium"|null;
  plan_prompt_seen?:boolean;line_setup_completed?:boolean;
 };
