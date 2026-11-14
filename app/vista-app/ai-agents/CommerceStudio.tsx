@@ -1,8 +1,8 @@
 "use client";
 import {useEffect,useState} from "react";
-import {ArrowLeft,CheckCircle2,ClipboardList,Package,Plus,ReceiptText,ShieldCheck,ShoppingBag,UserRoundCheck,PhoneCall,Save} from "lucide-react";
+import {ArrowLeft,CheckCircle2,Package,Plus,ReceiptText,ShieldCheck,ShoppingBag,UserRoundCheck,PhoneCall,Save} from "lucide-react";
 import type {PersistedAgent} from "./agentStore";
-import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,prepareTestOrder,saveCatalogItem,saveCommerceAgentPermissions,listWebStudioCards,importWebStudioCard,getVerifiedCatalog,
+import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,saveCatalogItem,saveCommerceAgentPermissions,listWebStudioCards,importWebStudioCard,getVerifiedCatalog,
  type CatalogItem,type TestOrder,type HumanRequest,type CommerceAgentPermissions,type WebStudioCard,type VerifiedCatalogItem} from "./commerceStore";
 import styles from "./CommerceStudio.module.css";
 
@@ -23,8 +23,6 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
  const [form,setForm]=useState<Form>(empty);
  const [agentId,setAgentId]=useState(agents.some(a=>a.id===initialAgentId)?initialAgentId:agents[0]?.id||"");
  const businessId=workspaceId||agents[0]?.business_id||"";
- const [testItemId,setTestItemId]=useState("");
- const [qty,setQty]=useState(1);
  const [busy,setBusy]=useState(false);
  const [loading,setLoading]=useState(true);
  const [notice,setNotice]=useState("");
@@ -101,15 +99,6 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
    price:(item.price_cents/100).toFixed(2),stock_mode:item.stock_mode,
    available_qty:String(item.available_qty??""),approved:item.approved,active:item.active});
  };
- const quote=async()=>{
-  const a=agents.find(x=>x.id===agentId),item=items.find(x=>x.id===testItemId);
-  if(!a||!item){setNotice("Selecciona un agente y un producto aprobado.");return;}
-  setBusy(true);try{
-   await prepareTestOrder(a,item,qty);await refresh();setTab("orders");
-   setNotice("Cotización de prueba creada. Falta aceptación del comprador y un proveedor de pago.");
-  }catch(e){setNotice(e instanceof Error?e.message:"No se pudo preparar el pedido.");}
-  finally{setBusy(false);}
- };
  const confirm=async(order:TestOrder)=>{
   setBusy(true);try{await confirmTestOrder(order.id);await refresh();
    setNotice("Aceptación de prueba registrada. Pedido aún NO PAGADO.");}
@@ -141,7 +130,6 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
   }catch(e){setNotice(e instanceof Error?e.message:"No se pudo actualizar.");}
   finally{setBusy(false);}
  };
- const approved=items.filter(x=>verified.some(v=>v.id===x.id&&v.sellableInTest));
  return <div className={styles.root}>
   <button type="button" onClick={onClose} className={styles.back}><ArrowLeft size={17}/> {catalogOnly?"Volver al agente":"AI Agents"}</button>
   {!catalogOnly?<>
@@ -260,21 +248,6 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
       {item.web_source_id?<small>Vinculado a Web Studio · cambios futuros requieren revisión</small>:null}</div>
      <button type="button" onClick={()=>beginEdit(item)}>Editar</button>
     </div>)}</div>}
-   {!catalogOnly?<>
-   <div className={styles.heading}><h2>Cotización de prueba</h2></div>
-   <div className={styles.form}>
-    <label>Agente que preparará el pedido<select value={agentId} onChange={e=>setAgentId(e.target.value)}>
-      <option value="">Selecciona agente</option>{agents.filter(a=>a.revision>0).map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
-    </select></label>
-    <label>Producto aprobado<select value={testItemId} onChange={e=>setTestItemId(e.target.value)}>
-     <option value="">Selecciona producto</option>{approved.map(p=><option key={p.id} value={p.id}>{p.name} · {formatUsd(p.price_cents)}</option>)}
-    </select></label>
-    <label>Cantidad<input min={1} max={50} type="number" value={qty} onChange={e=>setQty(Number(e.target.value)||1)}/></label>
-    <button type="button" className={styles.primary} disabled={busy||!inventoryReady||!agentId||!testItemId}
-      onClick={()=>void quote()}><ClipboardList size={17}/> Preparar cotización de prueba</button>
-    <p className={styles.hint}>El total se calcula en Supabase usando el precio aprobado, no desde la interfaz ni el modelo de IA.</p>
-   </div>
-   </>:null}
   </>:tab==="orders"?<>
    <h2 className={styles.ordersTitle}>Historial de prueba</h2>
    {orders.length===0?<div className={styles.empty}><ReceiptText size={26}/><p>Todavía no hay pedidos de prueba.</p></div>:
