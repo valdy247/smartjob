@@ -43,8 +43,7 @@ function FilePicker({label,value,onChange,multiple=false}:{label:string;value:Fi
   if(!files.length)return;
   setFileError("");setChecking(true);
   try{
-   const next=multiple?[...value,...files].filter((file,index,all)=>all.findIndex(other=>other.name===file.name&&other.size===file.size&&other.lastModified===file.lastModified)===index):files;
-   if(multiple&&next.length>8){setFileError(translate("marketing.google.photoLimit"));return;}
+   // Validate every new file before deduplicating; metadata alone cannot identify photo content.
    for(const file of files){
     if(!["image/jpeg","image/png"].includes(file.type)||file.size<10240||file.size>5242880)throw new Error("photo");
     await googlePhotoKey(file);
@@ -54,6 +53,14 @@ function FilePicker({label,value,onChange,multiple=false}:{label:string;value:Fi
      if(image.naturalWidth<250||image.naturalHeight<250)throw new Error("dimensions");
     }finally{URL.revokeObjectURL(url);}
    }
+   const candidates=multiple?[...value,...files]:files;
+   const seen=new Set<string>();
+   const next:File[]=[];
+   for(const file of candidates){
+    const digest=await googlePhotoKey(file);
+    if(!seen.has(digest)){seen.add(digest);next.push(file);}
+   }
+   if(multiple&&next.length>8){setFileError(translate("marketing.google.photoLimit"));return;}
    onChange(next);
   }catch{setFileError(translate("marketing.google.photoRequirements"));}
   finally{setChecking(false);}
