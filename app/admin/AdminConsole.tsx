@@ -285,7 +285,7 @@ export default function AdminConsole(){
    const result=await api<{items:Message[];hasMore:boolean}>(query.toString());
    if(selectedRef.current!==key)return;
    if(history)setDetail(prev=>prev?{...prev,
-    history:[...(result.items as Detail["history"]),...prev.history],historyHasMore:result.hasMore}:prev);
+    history:[...(result.items as unknown as Detail["history"]),...prev.history],historyHasMore:result.hasMore}:prev);
    else setDetail(prev=>prev?{...prev,messages:[...result.items,...prev.messages],
     messagesHasMore:result.hasMore}:prev);
   }catch(e){if(selectedRef.current===key)setError(e instanceof Error?e.message:"No se pudo cargar el historial.");}

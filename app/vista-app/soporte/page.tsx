@@ -122,7 +122,7 @@ export default function SupportPage(){
   try{
    const r=await api<{items:Message[];hasMore:boolean}>(param.toString());
    if(currentKey.current!==key)return;
-   if(isHistory){setHistory(prev=>[...(r.items as History[]),...prev]);setHistoryMore(r.hasMore);}
+   if(isHistory){setHistory(prev=>[...(r.items as unknown as History[]),...prev]);setHistoryMore(r.hasMore);}
    else{setMessages(prev=>[...r.items,...prev]);setHasMore(r.hasMore);}
   }catch(e){if(currentKey.current===key)setError(e instanceof Error?e.message:"No se pudo cargar el historial.");}
  };
