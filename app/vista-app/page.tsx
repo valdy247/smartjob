@@ -347,13 +347,8 @@ export default function VMVMobilePreview(){
         <button type="button" onClick={()=>go("services")}>{translate("home.seeAll")} <ArrowUpRight size={15}/></button>
        </div>
        {featuredServices}
-       <button className={styles.homeExplore} type="button" onClick={()=>go("services")}>
-        <span className={styles.homeExploreCopy}>
-         <small>VMV BUSINESS</small>
-         <strong>Descubre lo que<br/>viene después.</strong>
-         <span>{translate("home.explore")} <ArrowUpRight size={15}/></span>
-        </span>
-        <span className={styles.homeExploreGraphic} aria-hidden="true">✦</span>
+       <button className={styles.homeExploreCompact} type="button" onClick={()=>go("services")}>
+        <LayoutGrid size={18}/>{translate("native.totalServices")} <ArrowUpRight size={16}/>
        </button>
       </div>:null}
       {ready&&tab==="services"&&!open?<div className={`${styles.screen} ${styles.servicesV3}`}>
@@ -361,10 +356,8 @@ export default function VMVMobilePreview(){
         <button type="button" className={styles.back} onClick={()=>setServiceFocus("all")}><ChevronLeft size={17}/> {translate("native.totalServices")}</button>
         {user?<BusinessServicesPreview userId={user.id} focus="web"/>:null}
        </>:<>
-        <span className={styles.screenEyebrow}>VMV BUSINESS</span>
-        <h2>{translate("home.moreServices")}<span className={styles.mint}>.</span></h2>
+        <h2 className={styles.servicesTitle}>{translate("common.services")}<span className={styles.mint}>.</span></h2>
         {featuredSmartCall}
-        <div className={styles.serviceGridHeading}><h3>{translate("home.featured")}<span>.</span></h3></div>
         {featuredServices}
         <details className={styles.servicesMoreCatalog}>
          <summary>{translate("settings.otherServices")} <ChevronLeft size={18} aria-hidden="true"/></summary>
