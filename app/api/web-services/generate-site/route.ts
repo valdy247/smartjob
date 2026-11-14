@@ -1,7 +1,7 @@
 import {NextRequest,NextResponse} from "next/server";
 import {createClient} from "@supabase/supabase-js";
 import {BUSINESS_CATEGORIES} from "@/lib/vmv-business-categories";
-import {askAiAgent,aiAgentModelPathAvailable} from "@/lib/vmv-ai-agents/model";
+import {askAiAgent,aiAgentModelPathAvailable,probeAiAgentModel} from "@/lib/vmv-ai-agents/model";
 import {aiSiteRequestContext,buildAiSiteProposal,parseAiSiteResponse} from "@/lib/web-builder-ai-site";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import {normalizeSocialLinks} from "@/lib/web-builder-social";
@@ -56,7 +56,10 @@ async function authorize(req:NextRequest){
 export async function GET(req:NextRequest){
  if(!configured())return response({enabled:false,reason:"La conexión de IA no está disponible."});
  const user=await authorize(req);
- return response({enabled:Boolean(user),dailyLimit:2});
+ if(!user)return response({enabled:false,reason:"Inicia sesión para usar IA."},401);
+ const ready=await probeAiAgentModel();
+ return response({enabled:ready,dailyLimit:2,
+  ...(!ready?{reason:"La IA no está respondiendo. Puedes usar plantillas y volver a comprobar más tarde."}:{})});
 }
 export async function POST(req:NextRequest){
  if(!configured())return response({error:"La conexión de IA no está disponible en este entorno."},503);
