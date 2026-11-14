@@ -123,21 +123,40 @@ export function AIAgentsStudio({session,onBack}:Props){
     else edit(agent);
   }
   async function startCapability(kind:AgentKind){
+    // An incomplete agent is still an existing identity, never a new agent.
+    if(principal){openCapability(kind,principal);return;}
     const business=businesses.find(b=>b.id===businessChoice);
-    if(!business){Alert.alert("Elige tu negocio","Registra o selecciona primero tu negocio en Marketing de VMV Business.");return;}
-    let agent=principal;
-    if(!agent&&proposal&&visibleAgents.length===1){
-      try{await designate(proposal);agent=proposal;}
-      catch(e){Alert.alert("Agente principal",e instanceof Error?e.message:"No se pudo elegir.");return;}
-    }
-    if(agent){openCapability(kind,agent);return;}
-    if(visibleAgents.length>0){
-      Alert.alert("Elegir agente principal","Tienes varios agentes existentes. Elige uno como principal; no los fusionaremos ni cambiaremos sus permisos.");
+    if(!business){
+      Alert.alert("Elige tu negocio","Selecciona o vincula tu negocio para usar su agente existente.");
       return;
     }
-    setPendingCapability(kind);
-    setSelected(null);setEditStep(0);
-    setDraft(prefillNativeAgent(business,emptyAgent("support")));setScreen("edit");
+    try{
+      // Another device may have already created/selected the principal.
+      const [latest,profile]=await Promise.all([getAgents(session),centralChoices(session)]);
+      setAgents(latest);setBusinesses(profile.businesses);setWorkspaces(profile.workspaces);
+      const workspace=profile.workspaces.find(w=>w.central_business_id===business.id);
+      const candidates=workspace?latest.filter(a=>a.business_id===workspace.id):[];
+      const existing=candidates.find(a=>a.id===workspace?.primary_agent_id);
+      if(existing){openCapability(kind,existing);return;}
+      if(workspace&&candidates.length===1){
+        const only=candidates[0];
+        await chooseNativePrincipal(session,workspace.id,only.id,workspace.primary_agent_id||null);
+        setWorkspaces(old=>old.map(w=>w.id===workspace.id?{...w,primary_agent_id:only.id}:w));
+        openCapability(kind,only);return;
+      }
+      if(candidates.length>1){
+        Alert.alert("Elegir agente principal","Ya tienes agentes existentes. Elige uno como principal; no crearemos otro.");
+        return;
+      }
+      if(!workspace&&profile.workspaces.some(w=>!w.central_business_id)){
+        Alert.alert("Vincular negocio","Ya existen agentes sin vincular. Enlaza ese espacio a tu negocio antes de crear otro asistente.");
+        return;
+      }
+      setPendingCapability(kind);setSelected(null);setEditStep(0);
+      setDraft(prefillNativeAgent(business,emptyAgent("support")));setScreen("edit");
+    }catch(e){
+      Alert.alert("AI Agents",e instanceof Error?e.message:"No se pudo comprobar tu agente. Actualiza e intenta nuevamente.");
+    }
   }
   function edit(agent:Agent,step:0|1|2|3=0){
     setSelected(agent);setEditStep(step);
