@@ -443,7 +443,8 @@ export default function AIAgentsPreview(){
        setAgents(prev=>prev.map(a=>a.id===updated.id?updated:a))}
       onClose={()=>{void reload().catch(()=>{});back();}}/>:null}
      {screen==="test"&&active?<AgentLiveTest agent={active}
-      onClose={back} onEdit={()=>edit(active)}/>:null}
+      onClose={back} onEdit={()=>edit(active)}
+      onAgentUpdated={updated=>setAgents(old=>old.map(a=>a.id===updated.id?updated:a))}/>:null}
      </>:null}
     </div>
     <div className={styles.phoneFooter}><div className={styles.footerBrand}><Bot size={17}/> AI Agents</div>
