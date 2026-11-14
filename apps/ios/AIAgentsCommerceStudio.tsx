@@ -83,7 +83,7 @@ function Title({children,caption}:{children:React.ReactNode;caption?:string}){
 const moneyNote="El precio se calcula en el servidor. No permitimos que la IA lo modifique.";
 export function AIAgentsCommerceStudio({session,agents,phoneAgentId,onBack,onAgentUpdated}:Props){
  const [tab,setTab]=useState<Tab>("setup");
- const [agentId,setAgentId]=useState(phoneAgentId||agents[0]?.id||"");
+ const [agentId,setAgentId]=useState(agents.some(a=>a.id===phoneAgentId)?phoneAgentId!:agents[0]?.id||"");
  const [perms,setPerms]=useState<SalesPermissions>(defaultPerms);
  const [items,setItems]=useState<CatalogItem[]>([]);
  const [orders,setOrders]=useState<SaleOrder[]>([]);
