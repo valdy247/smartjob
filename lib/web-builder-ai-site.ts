@@ -81,7 +81,7 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
  const faqs:Array<{id:string;question:string;answer:string}>=[];
  if(input.email||input.phone){
   faqs.push({id:"ai-faq-contact",question:"¿Cómo puedo comunicarme?",
-   answer:"Puedes contactarnos "+[input.phone?"por teléfono al "+input.phone:"",input.email?"por correo a "+input.email:""].filter(Boolean).join(" o ")+".");
+   answer:"Puedes contactarnos "+[input.phone?"por teléfono al "+input.phone:"",input.email?"por correo a "+input.email:""].filter(Boolean).join(" o ")+ "."});
  }
  if(offerings.length){
   faqs.push({id:"ai-faq-offerings",question:"¿Qué opciones ofrecen?",
