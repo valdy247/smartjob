@@ -46,4 +46,6 @@ walk(scope);
 const byFile=Object.entries(candidates.reduce((acc,x)=>{acc[x.file]=(acc[x.file]||0)+1;return acc;},{})).sort((a,b)=>b[1]-a[1]);
 console.log(JSON.stringify({module:"Marketing",untranslatedStaticCandidates:candidates.length,byFile,findings:candidates},null,2));
 console.error("MARKETING_I18N_AUDIT="+JSON.stringify({total:candidates.length,byFile}));
-if(candidates.length&&process.env.MARKETING_I18N_STRICT==="1")process.exitCode=1;
+// New untranslated static UI copy in Marketing is a CI/build regression.
+// This scope is clean; debt in other VMV modules remains separately tracked.
+if(candidates.length)process.exitCode=1;
