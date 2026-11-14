@@ -65,6 +65,24 @@ export function approvedCentralSnapshot(
   ...(central.website_url?.startsWith("https://")?{website:central.website_url.slice(0,500)}:{}),
   ...(central.booking_url?.startsWith("https://")?{booking_url:central.booking_url.slice(0,500)}:{})
  };
+ // A deleted or unpublished Marketing field must not leak back into a new call
+ // through an older agent revision. Keep agent-specific rules untouched.
+ const authoritativeFields=[
+  ["industry",category],
+  ["business_description",central.description?.trim()],
+  ["city",central.city?.trim()],
+  ["state",central.region?.trim()],
+  ["service_areas",central.service_areas?.trim()],
+  ["website",central.website_url?.startsWith("https://")?central.website_url:null],
+  ["booking_url",central.booking_url?.startsWith("https://")?central.booking_url:null]
+ ] as const;
+ for(const [key,current] of authoritativeFields)
+  if(!current)delete config[key];
+ if(central.country!=="US")delete config.country;
+ // Never answer with former public hours after the business disables them.
+ for(const day of days)
+  for(const field of ["active","open","close"])
+   delete config[`h_${day}_${field}`];
  const week=publicMarketingWeek(central);
  if(week)Object.assign(config,week);
  return {
