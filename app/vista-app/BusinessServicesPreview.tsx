@@ -153,7 +153,7 @@ export default function BusinessServicesPreview({userId,focus="all"}:{userId:str
       <small>{o.id==="ai-agents"?"Beta":translate(o.state==="pilot"?"services.pilot":"services.comingSoon")}</small>
      </div></div>{o.id==="google-business-profile"||o.id==="ai-agents"?<ArrowUpRight className={styles.arrow} size={17}/>:null}</>;
     return o.id==="ai-agents"?
-     <button type="button" key={o.id} className={styles.tile+" "+styles[o.color]} onClick={()=>window.location.assign("/vista-app/ai-agents")} aria-label="AI Agents — Beta">{inner}</button>:
+     <button type="button" key={o.id} className={styles.tile+" "+styles[o.color]} onClick={()=>window.location.assign("/vista-app/ai-agents")} aria-label={translate("services.offer.ai-agents")+" — Beta"}>{inner}</button>:
      o.id==="google-business-profile"?
      <button type="button" key={o.id} className={styles.tile+" "+styles[o.color]} onClick={()=>setEditor(true)} aria-label={translate("services.prepareGoogle")}>{inner}</button>:
      o.id==="website-design"?<button type="button" key={o.id} className={styles.tile+" "+styles[o.color]} onClick={()=>setSiteEditor(true)} aria-label={translate("services.createWebsite")}>{inner}</button>:
