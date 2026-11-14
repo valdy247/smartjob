@@ -1,6 +1,8 @@
 import type {GoogleMedia,GoogleData} from "./GoogleProfileWizard";
 import type {WebRepairData} from "./WebRepairStudio";
 import type {DirectoryData} from "./DirectoryDiscovery";
+import type {CentralBusiness} from "@/lib/vmv-central-business";
+import type {CentralBusinessFiles} from "./CentralBusinessEditor";
 
 // An unauthenticated draft stays in this tab; authenticated drafts are isolated by account.
 // Never store passwords, tokens, identity documents, or payment details in either store.
@@ -10,7 +12,7 @@ const MEDIA_DB="vmv-marketing-draft-media";
 const MAX_AGE=48*60*60*1000;
 export type StoredMarketingDraft={
  version:2;savedAt:number;requestId:string;ownerId:string|null;service:string;
- step:number;googleStep:number;webStage?:number;consent?:boolean;businessId?:string;name:string;site:string;category:string;goal:string;
+ step:number;googleStep:number;webStage?:number;consent?:boolean;businessId?:string;businessDetails?:CentralBusiness;saveAlsoInBusiness?:boolean;name:string;site:string;category:string;goal:string;
  reviewInput:string;reviewTone:"cordial"|"breve";reviewMode?:"respond"|"request";reviewLink:string;reviewReply:string;
  googleData:GoogleData;webRepair:WebRepairData;directoryData?:DirectoryData;
 };
@@ -103,7 +105,21 @@ export async function saveDraftMedia(requestId:string,media:GoogleMedia):Promise
 export async function clearMarketingDraft(uid:string|null,requestId:string):Promise<void>{
  try{storageFor(uid).removeItem(storeKey(uid));}catch{}
  try{const db=await openMedia();try{await new Promise<void>((resolve,reject)=>{
-  const tx=db.transaction("files","readwrite");tx.objectStore("files").delete(mediaKey(requestId));
+  const tx=db.transaction("files","readwrite");tx.objectStore("files").delete(mediaKey(requestId));tx.objectStore("files").delete("business-media:"+requestId);
   tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);
  });}finally{db.close();}}catch{}
+}
+
+export async function readBusinessDraftMedia(requestId:string):Promise<CentralBusinessFiles|null>{
+ const db=await openMedia();try{return await new Promise((resolve,reject)=>{
+  const q=db.transaction("files","readonly").objectStore("files").get("business-media:"+requestId);
+  q.onsuccess=()=>resolve(q.result?.media||null);q.onerror=()=>reject(q.error);
+ });}finally{db.close();}
+}
+export async function saveBusinessDraftMedia(requestId:string,media:CentralBusinessFiles):Promise<void>{
+ const db=await openMedia();try{await new Promise<void>((resolve,reject)=>{
+  const tx=db.transaction("files","readwrite");
+  tx.objectStore("files").put({media,updatedAt:Date.now()},"business-media:"+requestId);
+  tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);
+ });}finally{db.close();}
 }
