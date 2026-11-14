@@ -54,3 +54,36 @@ This signed first-call registration does not change the Twilio number's incoming
 - **IMPORTANT:** Twilio's current HTTP request method and any additional fallback settings were not fetched through an authenticated Twilio API. Verify/record these in the Twilio Console before changing the number; retain the existing method. The existing `/api/twilio/live/voice` handler itself was not modified.
 - The currently deployed AI Agents Preview is still NOT armed: `VMV_AI_VOICE_PILOT_ENABLED=false`, `VMV_AI_VOICE_AUTO_ENROLL=false`; Preview branch does not have `TWILIO_AUTH_TOKEN` or `SUPABASE_SECRET_KEY` scoped to it. Never switch the provider webhook until these are available and the new Preview deployment is READY.
 - Only after verifying both routes in a protected test should Twilio's **Voice → A Call Comes In** be changed to `https://smartjob-git-feat-vmv-smart-cal-fcbaa4-valdys-projects-b97fc7a6.vercel.app/api/vmv/ai-agents/test-number` with HTTP POST. Restore the exact URL above if either option fails.
+
+
+## Audit update — 2026-11-14
+
+This section supersedes the **older environment-status snapshot** above; it does
+not authorize any provider change or certify a fully functioning end-to-end agent.
+
+- Vercel Preview branch `feat/vmv-smart-call-control-center` currently has
+  `VMV_AI_VOICE_PILOT_ENABLED=true` and `VMV_AI_VOICE_AUTO_ENROLL=true`.
+  Branch-scoped entries for `TWILIO_AUTH_TOKEN` and `SUPABASE_SECRET_KEY`
+  are present; their values were not read or disclosed.
+- Supabase read-only audit: **1 enabled AI voice route** matching its owner's
+  explicitly selected agent, **3 existing voice-call records** (latest
+  November 13 UTC), **2 records with responses**, **9 total turns**,
+  **0 orders associated with those calls**. No new calls were placed.
+- **0 linked AI workspaces** and **0 central Marketing businesses in the account
+  holding the enabled phone route**. The currently available Marketing business
+  belongs to another account; consent-based linkage must occur only under the
+  owner of the telephone business. Existing pilot assignments were not changed.
+  None of the three call snapshots is marked with a central-profile version.
+- The shared-branch Next.js Preview for the tested snapshot fix
+  (`4aefb3be8361781a3f0528ee8c8a172563d1169a`) reached Vercel **READY**.
+  Two focused isolated cases of the production helper, using its exact Git blob
+  and stripped TypeScript annotations, passed: withdrawn public fields do not
+  survive into new call snapshots; newly approved fields replace old ones.
+  The complete repository test suite has **not** passed: current GitHub Actions
+  runs report failures without accessible job logs or step results.
+- The configured Twilio Console `VoiceUrl` and real incoming-call behavior
+  **were not reverified via authenticated Twilio access**. An enabled database
+  route and previous call records alone do not establish the newly linked
+  Marketing → AI Agent → action → history → billing journey.
+- Do not change Twilio routing, production settings, legacy translator,
+  payment state or business ownership based solely on this audit.
