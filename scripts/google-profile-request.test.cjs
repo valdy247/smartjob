@@ -69,3 +69,11 @@ test('country formatting is applied before phone normalization',()=>{
  assert.equal(n.secondaryPhone,'+17065555678');
  assert.equal(v.country,' us ');
 });
+
+test('country validation accepts lowercase and whitespace that normalization already supports',()=>{
+ const v={...fixture(),country:' us '};
+ assert.equal(googleProfileIssue(v),null);
+ assert.equal(normalizeGoogleProfile(v).country,'US');
+ assert.equal(v.country,' us ');
+ assert.equal(googleProfileIssue({...v,country:'U S'}).key,'country');
+});
