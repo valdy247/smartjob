@@ -95,6 +95,9 @@ export default function AIAgentsPreview(){
  const unlinked=workspaces.filter(x=>!x.central_business_id);
  const linkedWorkspaceForNew=selectedWorkspace?.id||null;
  const missingBusinessInfo=selectedBusiness?businessMissing(selectedBusiness):[];
+ const staleAgents=selectedBusiness&&selectedWorkspace?visibleAgents.filter(a=>
+  a.revision>0&&a.setup.central_source_updated_at&&
+  a.setup.central_source_updated_at!==selectedBusiness.updated_at):[];
  const typeInfo=(kind:Kind)=>types.find(t=>t.id===kind)||types[6];
  const start=(kind:Kind)=>{
   if(!selectedBusiness){setNotice("Selecciona o crea tu negocio en el perfil central de VMV antes de crear un agente.");return;}
@@ -114,7 +117,12 @@ export default function AIAgentsPreview(){
    // Owner selection does not change an existing agent's business or phone binding.
    const workspaceId=before?.business_id||
     (selectedBusiness?await provisionAiWorkspace(selectedBusiness.id):linkedWorkspaceForNew);
-   const saved=await storeAgent(nextDraft,before?.revision?before:null,workspaceId||undefined);
+   // Saving after the review step approves the current central profile version;
+   // background loads never overwrite an in-progress agent edit.
+   const reviewed=selectedBusiness&&before?.business_id===selectedWorkspace?.id?
+    {...nextDraft,setup:{...nextDraft.setup,
+      central_source_updated_at:selectedBusiness.updated_at}}:nextDraft;
+   const saved=await storeAgent(reviewed,before?.revision?before:null,workspaceId||undefined);
    try{sessionStorage.removeItem("vmv-ai-unsaved-wizard-v1");}catch{/* storage unavailable */}
    // The insert response confirms the write. A secondary phone lookup must not
    // turn a successful save into a misleading failure.
@@ -156,6 +164,10 @@ export default function AIAgentsPreview(){
  const toggleStatus=async(agent:Agent)=>{
   if(busy)return;
   if(!agent.revision){setNotice("Guarda el ejemplo en tu cuenta antes de activarlo.");return;}
+  if(agent.status!=="active"&&staleAgents.some(x=>x.id===agent.id)){
+   setNotice("El perfil central cambió. Revisa y guarda las instrucciones del agente antes de activarlo.");
+   edit(agent);return;
+  }
   if(agent.status!=="active"&&!inspectAgent(agent).requiredPassed){
    setNotice("Completa los requisitos antes de activar en estudio.");quality(agent);return;
   }
@@ -259,6 +271,10 @@ export default function AIAgentsPreview(){
         {businesses.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
         {unlinked.map(b=><option key={b.id} value={"legacy:"+b.id}>Sin vincular · {b.name}</option>)}
        </select>:selectedBusiness?<strong className={styles.businessName}>{selectedBusiness.name}</strong>:null}
+       {staleAgents.length>0?<p className={styles.businessHint} role="status">
+        {staleAgents.length} agente(s) requieren revisar datos del perfil central.
+        Sus instrucciones y permisos no se han cambiado automáticamente.
+       </p>:null}
        {selectedBusiness?<div className={styles.businessSummary}>
         <span>{selectedBusiness.category_id||"Actividad pendiente"} · {selectedBusiness.city||"Ubicación pendiente"}</span>
         <span>{missingBusinessInfo.length?
