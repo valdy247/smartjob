@@ -113,6 +113,15 @@ export default function Home(){
     return()=>{cancelled=true;};
   },[supabase,user?.id]);
   const signout=async()=>{await supabase?.auth.signOut();};
+  useEffect(()=>{
+    if(starting||checkingProfile||!user||profile?.id!==user.id||passwordRecovery)return;
+    // Keep password-reset links on their original form, including before the
+    // PASSWORD_RECOVERY event. Other signed-in root visits use the current Home.
+    const query=new URLSearchParams(window.location.search);
+    const fragment=new URLSearchParams(window.location.hash.slice(1));
+    if(query.get("type")==="recovery"||fragment.get("type")==="recovery")return;
+    window.location.replace("/vista-app");
+  },[starting,checkingProfile,user?.id,profile?.id,passwordRecovery]);
   if(splash||starting||checkingProfile)return <div className="splash"><div className="splash-inner"><Brand/><p className="eyebrow" style={{color:"#b1c2b0"}}>{translate("auth.tagline")}</p><div className="splash-track"/></div></div>;
   if(!supabase)return <main className="shell" style={{maxWidth:690,paddingTop:45}}><Brand/><div className="card" style={{marginTop:50}}><h1>{translate("auth.setupTitle")}</h1><p className="muted">{translate("auth.setupHint")}</p><code>NEXT_PUBLIC_SUPABASE_URL</code><br/><code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code></div></main>;
   if(!user)return <AuthPanel supabase={supabase}/>;

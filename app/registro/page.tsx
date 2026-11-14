@@ -13,7 +13,7 @@ export default function RegisterPage(){
  if(!client)return <main className="vmv-signup-shell"><section className="vmv-signup-finish">
   <h1>{t("register.unavailable")}</h1>
   <p>{t("register.connection")}</p>
-  <a href="/" className="vmv-signup-mainbtn">{t("interface.common.back")}</a>
+  <a href="/vista-app" className="vmv-signup-mainbtn">{t("interface.common.back")}</a>
  </section></main>;
- return <SignupWizard supabase={client} onBack={()=>{window.location.assign("/");}}/>;
+ return <SignupWizard supabase={client} onBack={()=>{window.location.assign("/vista-app");}}/>;
 }

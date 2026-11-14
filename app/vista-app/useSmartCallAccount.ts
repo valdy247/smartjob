@@ -3,6 +3,7 @@ import {useCallback,useEffect,useRef,useState} from "react";
 import type {SupabaseClient,User} from "@supabase/supabase-js";
 import type {Profile} from "@/lib/types";
 import {getSupabase} from "@/lib/supabase";
+import {initialAccountProfile} from "@/lib/account-profile";
 
 export type Tab="home"|"services"|"calls"|"translator"|"account";
 export type Panel="overview"|"settings"|"activity"|"minutes";
@@ -94,8 +95,19 @@ export function useSmartCallAccount(){
    const {data:session,error:sessionError}=await client.auth.getSession();
    if(sessionError||!session.session||session.session.user.id!==user.id)throw new Error("Tu sesión expiró.");
    const uid=user.id;
+   // A new signup can enter this Home directly, without the legacy / bootstrap.
+   // Never overwrite an existing profile or copy paid permissions from metadata.
+   const loadProfile=async()=>{
+    const existing=await client.from("smartjob_profiles").select("*").eq("id",uid).maybeSingle();
+    if(existing.error||existing.data||revision!==requestId.current)return existing;
+    const initial=initialAccountProfile(uid,identity.user.user_metadata||{});
+    if(!initial)return existing;
+    const inserted=await client.from("smartjob_profiles").upsert(initial,{onConflict:"id",ignoreDuplicates:true});
+    if(inserted.error)return {...existing,error:inserted.error};
+    return client.from("smartjob_profiles").select("*").eq("id",uid).maybeSingle();
+   };
    const [profileRes,settingsRes,routeRes,provisionRes,callsRes,summaryRes]=await Promise.all([
-    client.from("smartjob_profiles").select("*").eq("id",uid).maybeSingle(),
+    loadProfile(),
     client.from("smartjob_call_settings").select("user_id,existing_phone,desired_language,caller_language,assistant_name").eq("user_id",uid).maybeSingle(),
     client.from("smartjob_phone_routes").select("id,twilio_number,public_number,enabled,receive_method,forwarding_mode,destination_phone").eq("user_id",uid).order("created_at",{ascending:false}).limit(1),
     client.from("smartjob_provisioning_requests").select("status,carrier,answer_method,phone_verified_at").eq("user_id",uid).order("created_at",{ascending:false}).limit(1),

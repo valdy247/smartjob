@@ -216,7 +216,7 @@ const colorChoices=[["mint",t("signup.mint"),"#08b99b"],["blue",t("signup.blue")
   try{
    const {data,error:authError}=await supabase.auth.signUp({
     email:email.trim().toLowerCase(),password,
-    options:{emailRedirectTo:window.location.origin,data:values}
+    options:{emailRedirectTo:window.location.origin+"/vista-app",data:values}
    });
    if(authError)throw authError;
    if(smsVerified&&smsTicket&&data.user){
