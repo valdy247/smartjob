@@ -735,9 +735,9 @@ export default function App(){
   {id:"agents",name:"AI Agents",group:"digital",Icon:"sparkles-outline" as const,tone:styles.nativeCatalogSky,status:tr("catalog.beta"),open:()=>{setActiveModule("ai-agents");setActiveTab("services");}},
   {id:"marketing",name:"Marketing",group:"growth",Icon:"trending-up-outline" as const,tone:styles.nativeCatalogPink,status:tr("catalog.beta"),open:()=>{setActiveModule("marketing-analytics");setActiveTab("services");}}
  ] as const;
- const normalizedCatalogQuery=catalogQuery.trim().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLocaleLowerCase();
+ const normalizedCatalogQuery=catalogQuery.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase();
  const filteredCatalogItems=catalogItems.filter(item=>(catalogGroup==="all"||item.group===catalogGroup)&&
-  (!normalizedCatalogQuery||item.name.normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLocaleLowerCase().includes(normalizedCatalogQuery)));
+  (!normalizedCatalogQuery||item.name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase().includes(normalizedCatalogQuery)));
  if(!uiLanguageReady)return <SafeAreaView style={styles.safe}>{languageError?<View style={{padding:24}}><Text>{tr("language.loadError")}</Text><Button label={tr("common.retry")} onPress={()=>void retryLanguage()}/></View>:<ActivityIndicator style={{marginTop:64}} color={colors.accent}/>}</SafeAreaView>;
  return <SafeAreaView style={styles.safe}>
   <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
@@ -1165,10 +1165,10 @@ const styles=StyleSheet.create({
  nativeDashboardNumber:{fontSize:22,fontWeight:"900",color:"#FFFFFF"},
  nativeDashboardMetricLabel:{fontSize:10,fontWeight:"600",color:"#F0E6FF",lineHeight:14},
  nativeDashboardHeading:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8,marginTop:22,marginBottom:12},
- nativeDashboardHeadingText:{fontSize:18,fontWeight:"850",color:"#29213E",letterSpacing:-.55},
+ nativeDashboardHeadingText:{fontSize:18,fontWeight:"800",color:"#29213E",letterSpacing:-.55},
  nativeDashboardQuickGrid:{flexDirection:"row",justifyContent:"space-between",gap:11},
  nativeDashboardQuick:{width:"48%",minHeight:115,borderRadius:20,padding:16,justifyContent:"space-between",alignItems:"flex-start",position:"relative"},
- nativeDashboardQuickTitle:{fontSize:16,fontWeight:"850",color:"#302745",letterSpacing:-.5,marginTop:10},
+ nativeDashboardQuickTitle:{fontSize:16,fontWeight:"800",color:"#302745",letterSpacing:-.5,marginTop:10},
  nativeDashboardQuickArrow:{position:"absolute",right:13,top:14},
  nativeDashboardActivity:{backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#E8E0F1",borderRadius:21,padding:16,marginTop:18,marginBottom:10},
  nativeDashboardActivityHead:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:7,marginBottom:11},
@@ -1179,7 +1179,7 @@ const styles=StyleSheet.create({
  nativeDashboardEmpty:{color:"#82778E",fontSize:11,lineHeight:17,marginTop:2},
  // Product catalog: search, category filters and accessible action tiles.
  nativeCatalogSearch:{flexDirection:"row",alignItems:"center",gap:10,borderWidth:1,borderColor:"#E8DFF1",borderRadius:15,paddingHorizontal:14,minHeight:48,backgroundColor:"#FFFFFF"},
- nativeCatalogSearchInput:{flex:1,minHeight:46,fontSize:13,fontWeight:"650",color:"#352A44",paddingVertical:8},
+ nativeCatalogSearchInput:{flex:1,minHeight:46,fontSize:13,fontWeight:"600",color:"#352A44",paddingVertical:8},
  nativeCatalogFilterRow:{flexDirection:"row",alignItems:"center",gap:7,paddingTop:12,paddingBottom:17},
  nativeCatalogFilter:{minHeight:35,paddingHorizontal:13,paddingVertical:8,backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#E6DCF0",borderRadius:99,justifyContent:"center"},
  nativeCatalogFilterActive:{backgroundColor:"#8957DF",borderColor:"#8957DF"},
@@ -1188,7 +1188,7 @@ const styles=StyleSheet.create({
  nativeCatalogGrid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",rowGap:11},
  nativeCatalogCard:{width:"48%",minHeight:144,borderRadius:20,padding:15,justifyContent:"space-between",position:"relative",overflow:"hidden"},
  nativeCatalogIcon:{width:44,height:44,borderRadius:14,backgroundColor:"#FFFFFF96",alignItems:"center",justifyContent:"center"},
- nativeCatalogCardTitle:{fontSize:16,fontWeight:"850",letterSpacing:-.5,color:"#332744"},
+ nativeCatalogCardTitle:{fontSize:16,fontWeight:"800",letterSpacing:-.5,color:"#332744"},
  nativeCatalogCardStatus:{fontSize:10,fontWeight:"700",color:"#756587",marginTop:5},
  nativeCatalogCardArrow:{position:"absolute",right:13,top:15},
  nativeCatalogViolet:{backgroundColor:"#E5D8FF"},
