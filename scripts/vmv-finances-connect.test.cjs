@@ -37,3 +37,11 @@ test("Readiness is server-verified and does not mean live payments",()=>{
  assert.match(status,/Cache-Control":"no-store"/);
  assert.match(page,/!status\.configured/);
 });
+
+test("Signed Stripe account updates require Stripe re-verification before readiness changes",()=>{
+ const hook=read("app/api/vmv/ai-agents/commerce/stripe-webhook/route.ts");
+ assert.match(hook,/verifiedStripeWebhook\(raw/);
+ assert.match(hook,/type==="account.updated"/);
+ assert.match(hook,/checkedAccount\(id,merchant\.owner_id,workspace\.central_business_id\)/);
+ assert.match(hook,/verified_by_server:state\.ready,can_accept_payments:state\.ready/);
+});
