@@ -221,3 +221,22 @@ export async function importWebStudioCard(businessId:string,cardId:string):Promi
   throw Error("No se pudo importar. Revisa que el producto tenga nombre y precio fijo en USD.");
  return data;
 }
+
+export type VerifiedCatalogItem={
+ id:string;sku:string;name:string;priceCents:number;currency:"usd";
+ availableQuantity:number|null;availability:"tracked"|"manual"|"unlimited";
+ supportsSimpleOrder:boolean;sellableInTest:boolean;webSourceId:string|null;
+};
+export async function getVerifiedCatalog(businessId:string):Promise<VerifiedCatalogItem[]>{
+ if(!uuid.test(businessId))throw Error("Negocio inválido.");
+ const {db}=await current();
+ const {data:auth,error}=await db.auth.getSession();
+ if(error||!auth.session?.access_token)throw Error("Inicia sesión para consultar inventario.");
+ const response=await fetch("/api/vmv/ai-agents/catalog?businessId="+encodeURIComponent(businessId),{
+  cache:"no-store",headers:{Authorization:"Bearer "+auth.session.access_token}
+ });
+ let payload:{products?:VerifiedCatalogItem[];error?:string}={};
+ try{payload=await response.json();}catch{throw Error("El catálogo comercial no respondió.");}
+ if(!response.ok)throw Error(payload.error||"No se pudo consultar el inventario verificado.");
+ return Array.isArray(payload.products)?payload.products:[];
+}
