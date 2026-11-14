@@ -11,7 +11,6 @@ export type WizardDraft={
 type Question={id:string;title:string;hint?:string;kind?:"text"|"textarea"|"choice"|"multi"|"state"|"hours";options?:string[];required?:boolean;when?:(a:Record<string,string>)=>boolean};
 type Section={title:string;subtitle:string;questions:Question[]};
 type Props={onReviewBusiness?:()=>void;initial:WizardDraft;onSave:(updated:WizardDraft)=>Promise<void>|void;onCancel:()=>void;isPreview?:boolean;initialStep?:0|1|2|3;saving?:boolean;authRequired?:boolean;recoverDraft?:boolean};
-const allRoles:AgentKind[]=["calls","support","sales","bookings","inventory","operations","custom"];
 const q=(id:string,title:string,options:string[],required=false,when?:Question["when"]):Question=>({id,title,kind:"choice",options,required,when});
 const t=(id:string,title:string,required=false,hint?:string):Question=>({id,title,required,hint,kind:"text"});
 const a=(id:string,title:string,required=false,hint?:string):Question=>({id,title,required,hint,kind:"textarea"});
@@ -108,8 +107,6 @@ function sections(kind:AgentKind,answers:Record<string,string>):Section[]{
    ...(availableTools.inventory&&["inventory","sales"].includes(kind)?[q("inventory_needed","¿Deseas consultar el inventario autorizado?",["Sí","No"],true)]:[])
   ]}]:[]),
   {title:"Reglas y supervisión",subtitle:"Tú decides los límites de este agente.",questions:[
-   q("language_rule","¿Qué idioma usará con los clientes?",["Español","English","Bilingüe"],true),
-   q("personality_rule","¿Qué estilo de comunicación prefieres?",["Amable y profesional","Cercano","Formal","Directo"],true),
    q("human_review","¿Qué hacer si no conoce la respuesta?",["Reconocerlo y derivar a un humano","Pedir datos y solicitar revisión humana"],true),
    q("data_scope","¿Qué datos personales puede solicitar?",["Solo nombre y medio de contacto con permiso","Ninguno"],true),
    q("call_disclosure","¿Aceptas que el agente avise que es una inteligencia artificial?",["Sí","Todavía no"],true,
@@ -210,10 +207,24 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
   {step===0?<div className={styles.fields}>
    <label className={styles.field}>¿Cómo se llamará tu agente?<input maxLength={80} value={draft.name} onChange={e=>value("name",e.target.value)} placeholder="Ej. Luna, asistente de ventas"/></label>
    <label className={styles.field}>¿Cuál será su misión?<textarea maxLength={240} rows={3} value={draft.purpose} onChange={e=>value("purpose",e.target.value)} placeholder="¿Qué debe lograr para tu negocio?"/></label>
-   <p className={styles.fieldTitle}>¿Cuál será su especialidad?</p>
-   <div className={styles.roles}>{allRoles.map(r=><button type="button" key={r} className={draft.kind===r?styles.choiceActive:styles.choice}
-    onClick={()=>setDraft(d=>({...d,kind:r,purpose:d.kind===r?d.purpose:({calls:"Orientar a las personas que llaman.",support:"Responder preguntas de clientes.",sales:"Informar y calificar oportunidades comerciales.",bookings:"Recibir solicitudes de citas y explicar las políticas.",inventory:"Consultar información autorizada de productos.",operations:"Organizar solicitudes administrativas.",custom:"Cumplir una misión definida por el negocio."} as Record<AgentKind,string>)[r]}))}>
-    {{calls:"Llamadas",support:"Clientes",sales:"Ventas",bookings:"Reservas",inventory:"Inventario",operations:"Administración",custom:"Personalizado"}[r]}</button>)}</div>
+   <p className={styles.hint}>Una identidad compartida: llamadas, chat, ventas, inventario y reservas son capacidades del mismo agente. Los agentes antiguos conservan su configuración.</p>
+   <p className={styles.fieldTitle}>Voz del teléfono</p>
+   <div className={styles.choices}>{([["default","Predeterminada de Twilio"],["female","Femenina · Polly"],["male","Masculina · Polly"]] as const).map(([value,label])=>
+    <button type="button" key={value} className={(draft.setup.voice_preset||"default")===value?styles.choiceActive:styles.choice}
+     onClick={()=>answer("voice_preset",value)}>{label}</button>)}</div>
+   <p className={styles.hint}>La voz elegida se usa únicamente al recibir llamadas de prueba con el agente; las voces Polly pueden tener costo del proveedor. No se realiza ninguna llamada al configurarla.</p>
+   <p className={styles.fieldTitle}>Idioma de conversación</p>
+   <div className={styles.choices}>{["Español","English","Bilingüe"].map(x=><button type="button" key={x}
+     className={(draft.setup.language_rule||draft.language)===x?styles.choiceActive:styles.choice}
+     onClick={()=>answer("language_rule",x)}>{x}</button>)}</div>
+   <p className={styles.fieldTitle}>Personalidad</p>
+   <div className={styles.choices}>{["Amable y profesional","Cercano","Formal","Directo"].map(x=><button type="button" key={x}
+     className={(draft.setup.personality_rule||draft.personality)===x?styles.choiceActive:styles.choice}
+     onClick={()=>answer("personality_rule",x)}>{x}</button>)}</div>
+   <p className={styles.fieldTitle}>Extensión de respuesta</p>
+   <div className={styles.choices}>{([["brief","Breve"],["balanced","Equilibrada"],["detailed","Detallada"]] as const).map(([value,label])=>
+    <button type="button" key={value} className={(draft.setup.response_style||"balanced")===value?styles.choiceActive:styles.choice}
+     onClick={()=>answer("response_style",value)}>{label}</button>)}</div>
    <p className={styles.fieldTitle}>¿Dónde trabajará?</p>
    <div className={styles.choices}>{["Teléfono","Chat","Teléfono y chat"].map(x=><button type="button"
     key={x} className={(draft.setup.channel||"Chat")===x?styles.choiceActive:styles.choice}
@@ -287,6 +298,9 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
   </div>:null}
   {error?<p className={styles.error} role="alert">{error}</p>:null}
   <div className={styles.actions}><button type="button" className={styles.prev} onClick={back}><ArrowLeft size={17}/>{step===0?"Cancelar":"Atrás"}</button>
+   {recoverDraft&&step===0?<button type="button" className={styles.prev} disabled={saving||!draft.name.trim()}
+    onClick={()=>void onSave(draft).catch(e=>setError(e instanceof Error?e.message:"No se pudo guardar el borrador."))}>
+    Guardar borrador</button>:null}
    <button type="button" disabled={saving} className={styles.next} onClick={()=>void next()}>{saving?"Guardando…":step===steps.length-1?"Guardar agente":"Continuar"}
    {step===steps.length-1?<Check size={17}/>:<ArrowRight size={17}/>}</button></div>
  </section>;
