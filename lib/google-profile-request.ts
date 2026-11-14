@@ -10,7 +10,7 @@ export function isKnownGoogleCountry(value:string):boolean{
 export type GoogleKind="storefront"|"service_area"|"hybrid";
 export type GoogleHour={closed:boolean;start:string;end:string};
 export type GoogleData={
- action:"create"|"claim"|"improve";kind:GoogleKind;googleCategory:string;googleCategoryId?:string;categoryPendingReview?:boolean;locationChecked?:boolean;locationPendingReview?:boolean;otherCategories:string;
+ action:"create"|"claim"|"improve";kind:GoogleKind;googleCategory:string;googleCategoryId?:string;categoryPendingReview?:boolean;locationChecked?:boolean;locationPendingReview?:boolean;locationConflict?:boolean;otherCategories:string;
  street:string;unit:string;city:string;region:string;postal:string;country:string;serviceAreas:string;
  phone:string;secondaryPhone:string;description:string;services:string;products:string;
  bookingUrl:string;existingProfileUrl?:string;openingDate:string;hoursEnabled:boolean;hours:GoogleHour[];
@@ -21,6 +21,7 @@ export function googleProfileIssue(v:GoogleData,step?:number):GoogleValidationIs
  const at=(s:number)=>step===undefined||step===s;
  if(at(0)&&!(v.googleCategoryId?.trim()&&v.googleCategory.trim())&&!v.categoryPendingReview)return {step:0,key:"googleCategory"};
  if(at(1)&&!isKnownGoogleCountry(v.country))return {step:1,key:"country"};
+ if(at(1)&&v.locationConflict)return {step:1,key:"address"};
  if(at(1)&&!(v.locationChecked||v.locationPendingReview))return {step:1,key:"address"};
  if(at(1)&&v.kind!=="service_area"&&[v.street,v.city,v.region,v.postal].some(x=>!x.trim()))return {step:1,key:"address"};
  if(at(1)&&v.kind!=="storefront"&&!v.serviceAreas.trim())return {step:1,key:"serviceAreas"};
