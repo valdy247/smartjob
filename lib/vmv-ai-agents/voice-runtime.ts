@@ -6,6 +6,7 @@ import {findPhoneRoute} from "@/lib/phone-routes";
 import {phoneCommerceTurn} from "@/lib/vmv-ai-agents/voice-commerce";
 import {phoneBookingTurn} from "@/lib/vmv-ai-agents/voice-bookings";
 import {askAiAgent} from "@/lib/vmv-ai-agents/model";
+import {approvedCentralSnapshot,centralPublicBusiness} from "@/lib/vmv-ai-agents/central-public-context";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -139,7 +140,30 @@ export async function handleAiVoice(req:NextRequest){
   const {data:started,error}=await db.rpc("vmv_ai_open_voice_call",{p_route_id:binding.id,p_call_sid:sid});
   if(error||started!==true)return refused();
   session=await loadSession(db,sid);
-  if(!session||!trained(session.agent_snapshot))return refused();
+  if(!session)return refused();
+  // Freeze the latest APPROVED public-facing Marketing business facts at call start.
+  // Existing pilot agents without a central link retain their tested snapshot.
+  try{
+   const {data:agent,error:agentError}=await db.from("vmv_ai_agents")
+    .select("business_id").eq("id",session.agent_id)
+    .eq("owner_id",session.owner_id).maybeSingle();
+   if(agentError||!agent)throw Error("agent_business_unavailable");
+   const central=await centralPublicBusiness(db,session.owner_id,agent.business_id);
+   if(central){
+    const updated=approvedCentralSnapshot(session.agent_snapshot,central);
+    const {data:saved,error:saveError}=await db.from("vmv_ai_voice_calls")
+     .update({agent_snapshot:updated})
+     .eq("call_sid",sid).eq("owner_id",session.owner_id)
+     .eq("agent_id",session.agent_id).eq("turn_count",0)
+     .select("call_sid").maybeSingle();
+    if(saveError||!saved)throw Error("call_snapshot_unavailable");
+    session={...session,agent_snapshot:updated};
+   }
+  }catch{
+   console.warn("[vmv-ai-voice] verified business context unavailable");
+   return end("No puedo consultar la información autorizada del negocio ahora mismo. Vuelve a llamar más tarde.","es");
+  }
+  if(!trained(session.agent_snapshot))return refused();
   const lang=session.preferred_language==="en"?"en":"es";
   if(session.agent_snapshot.language==="both"){
    // No extra mandatory language selection after the caller already pressed 2
