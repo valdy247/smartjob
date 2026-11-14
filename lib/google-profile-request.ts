@@ -56,6 +56,6 @@ export async function googlePhotoKey(file:Blob):Promise<string>{
 }
 
 export function googleProfileLink(value:unknown):string|null {
- if(typeof value!=="string"||!value.trim()||/[\u0000-\u001F\u007F]/.test(value))return null;
+ if(typeof value!=="string"||!value.trim()||/[\u0000-\u001F\u007F\\]/.test(value))return null;
  try{const url=new URL(value.trim());return url.protocol==="https:"&&!url.username&&!url.password&&url.hostname?url.href:null;}catch{return null;}
 }
