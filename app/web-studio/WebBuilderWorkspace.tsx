@@ -261,14 +261,29 @@ export default function WebBuilderWorkspace(){
    const {data:ids,error:rpcError}=await db.rpc("smartjob_builder_create_site",{
     p_name:name,p_slug:slug,p_category_id:intake.categoryId,
     p_home_draft:normalizeBuilderDocument(proposal.data),
-    p_home_description:intake.about.slice(0,300),p_legacy_source_slug:null
+    p_home_description:(proposal.seoDescription||intake.about).slice(0,300),p_legacy_source_slug:null
    });
    if(rpcError||!ids?.siteId||!ids?.pageId)throw new Error("No se pudo crear el sitio. Revisa el límite de sitios.");
-   const {created,home}=await loadCreatedSite(db,ids);
+   const loaded=await loadCreatedSite(db,ids);
+   const created=loaded.created;
+   let home=loaded.home;
+   let seoPending=false;
+   if(proposal.seoTitle){
+    // A generated site is only a draft. Persist its SEO title on the same
+    // owner-scoped row, without affecting public pages or other modules.
+    const {data:optimized,error:seoError}=await db.from("smartjob_builder_pages")
+     .update({title:proposal.seoTitle.slice(0,100),
+      description:(proposal.seoDescription||"").slice(0,300),updated_at:new Date().toISOString(),
+      revision:home.revision+1})
+     .eq("id",home.id).eq("owner_id",userId).eq("revision",home.revision)
+     .select("id,site_id,owner_id,slug,title,description,draft,revision,updated_at").maybeSingle();
+    if(optimized&&!seoError)home=optimized as Page;
+    else seoPending=true;
+   }
    setSites(current=>[created,...current]);
    setSite(created);setPages([home]);setPage(home);setPublishedIds([]);setPublishedSignatures({});
    openDraft(home.draft);setTitle(home.title);setDescription(home.description);
-   setView("editor");setNotice("Diseño creado. Personalízalo y publícalo cuando esté listo.");
+   setView("editor");setNotice(seoPending?"Diseño creado. Revisa el título SEO en Ajustes antes de publicar.":"Diseño creado con SEO inicial. Revísalo y publícalo cuando esté listo.");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo crear");}
   finally{setBusy(false);}
  }
