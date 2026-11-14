@@ -77,8 +77,8 @@ const safeSite=(value:string)=>{
 // Technical API errors are not localized; never render their raw messages in either locale.
 const errorMessage=(_error:unknown,localizedFallback:string)=>localizedFallback;
 
-export default function MarketingActionCenter({businessName,industryId,website,onGoToVisibility,preselectedService,onWizardActiveChange}:{
- businessName:string;industryId:string;website:string;onGoToVisibility:()=>void;preselectedService?:ServiceCode;onWizardActiveChange?:(active:boolean)=>void
+export default function MarketingActionCenter({businessName,industryId,website,onGoToVisibility,preselectedService,onWizardActiveChange,requestsOnly=false}:{
+ businessName:string;industryId:string;website:string;onGoToVisibility:()=>void;preselectedService?:ServiceCode;onWizardActiveChange?:(active:boolean)=>void;requestsOnly?:boolean
 }){
  const {language,translate}=useInterfaceLanguage();
  const [contentLanguage]=useState(language);
@@ -690,10 +690,10 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   setQuoteNote(req.quote_note||"");setStageUpdate(req.staff_update||"");setEvidence(req.evidence_url||"");
  };
  return <div className={styles.root}>
-  {user&&businessId&&savedBusinesses.some(x=>x.id===businessId&&!x.source)?<div className={styles.activeBusiness}><MapPinned size={15}/>{en?"Active business: ":"Negocio activo: "}<strong>{savedBusinesses.find(x=>x.id===businessId)?.name||name}</strong></div>:null}
-  {wizardStep===0?<header className={styles.catalogHeading}><h2>{en?"What would you like to do?":"¿Qué quieres hacer hoy?"}</h2><p>{en?"Choose a service. We’ll guide you.":"Elige un servicio y te ayudamos paso a paso."}</p><a href="#vmv-marketing-history" className={styles.historyLink}><ClipboardList size={16}/> {translate("marketing.ui.requests")}</a>{pausedStep!==null?<button type="button" className={styles.resumeDraft} onClick={()=>{setWizardStep(pausedStep);setPausedStep(null);revealWizard();}}>{translate("marketing.request.continueDraft")}</button>:null}</header>:null}
-  {wizardStep>0&&wizardStep<4?<button type="button" className={styles.historyWizardAccess} onClick={()=>{setPausedStep(wizardStep);void saveCurrentDraft();setWizardStep(0);window.setTimeout(()=>document.getElementById("vmv-marketing-history")?.scrollIntoView({behavior:"smooth"}),0);}}><ClipboardList size={15}/> {translate("marketing.ui.requests")}</button>:null}
-  <section className={wizardStep===0?styles.catalogPanel:styles.wizardPanel} id="vmv-marketing-request" aria-label={translate("marketing.ui.createAria")}>
+  {!requestsOnly&&user&&businessId&&savedBusinesses.some(x=>x.id===businessId&&!x.source)?<div className={styles.activeBusiness}><MapPinned size={15}/>{en?"Active business: ":"Negocio activo: "}<strong>{savedBusinesses.find(x=>x.id===businessId)?.name||name}</strong></div>:null}
+  {!requestsOnly&&wizardStep===0?<header className={styles.catalogHeading}><h2>{en?"What would you like to do?":"¿Qué quieres hacer hoy?"}</h2><p>{en?"Choose a service. We’ll guide you.":"Elige un servicio y te ayudamos paso a paso."}</p><a href="/vista-app/marketing/requests" className={styles.historyLink}><ClipboardList size={16}/> {translate("marketing.ui.requests")}</a>{pausedStep!==null?<button type="button" className={styles.resumeDraft} onClick={()=>{setWizardStep(pausedStep);setPausedStep(null);revealWizard();}}>{translate("marketing.request.continueDraft")}</button>:null}</header>:null}
+  {!requestsOnly&&wizardStep>0&&wizardStep<4?<button type="button" className={styles.historyWizardAccess} onClick={()=>{void (async()=>{if(await saveCurrentDraft())window.location.assign("/vista-app/marketing/requests");})();}}><ClipboardList size={15}/> {translate("marketing.ui.requests")}</button>:null}
+  {!requestsOnly?<section className={wizardStep===0?styles.catalogPanel:styles.wizardPanel} id="vmv-marketing-request" aria-label={translate("marketing.ui.createAria")}>
    {wizardStep===4?<div className={styles.wizardSuccess} role="status">
     <div className={styles.successIcon}><CheckCircle2 size={33}/></div>
     <span className={styles.overline}>{translate("marketing.copy.request_received")}</span>
@@ -702,7 +702,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     <div className={styles.successReminder}><ShieldCheck size={17}/> {translate("marketing.copy.nothing_has_been_charged_or_published_any_cost_will_")}</div>
     <div className={styles.wizardButtons}>
      <button type="button" className={styles.wizardBack} onClick={()=>{setRequestId(crypto.randomUUID());setWizardStep(0);setSubmittedId(null);setWizardError("");setPausedStep(null);revealWizard();}}>{translate("marketing.copy.create_another_request")}</button>
-     <button type="button" className={styles.wizardPrimary} onClick={()=>document.getElementById("vmv-marketing-history")?.scrollIntoView({behavior:"smooth",block:"start"})}>{translate("marketing.copy.view_progress")} <ArrowRight size={16}/></button>
+     <button type="button" className={styles.wizardPrimary} onClick={()=>window.location.assign("/vista-app/marketing/requests")}>{translate("marketing.copy.view_progress")} <ArrowRight size={16}/></button>
     </div>
    </div>:<>
     {wizardStep>0?<div className={styles.wizardHeading}>
@@ -842,12 +842,12 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       <button type="button" className={styles.wizardPrimary} onClick={goNext}>{selected==="google_profile"&&wizardStep===2&&googleStep<googleStepNames.length-1?translate("marketing.action.next"):translate("marketing.action.continue")} <ArrowRight size={16}/></button>}
     </div>:null}
    </>}
-  </section>
-  {(wizardStep===0||wizardStep===4)?<section className={styles.panel} id="vmv-marketing-history">
-   <div className={styles.panelTop}><div><span>{translate("marketing.ui.tracking")}</span><h3>{translate("marketing.ui.requests")}</h3></div><button type="button" onClick={()=>void refresh()} disabled={loading||!user} className={styles.refresh}><RefreshCw size={16}/> {translate("marketing.ui.refresh")}</button></div>
+  </section>:null}
+  {requestsOnly?<section className={styles.panel} id="vmv-marketing-history">
+   <div className={styles.panelTop}><div><span>{translate("marketing.ui.tracking").replace(/^02\s*·\s*/,"")}</span><h3>{translate("marketing.ui.requests")}</h3></div><button type="button" onClick={()=>void refresh()} disabled={loading||!user} className={styles.refresh}><RefreshCw size={16}/> {translate("marketing.ui.refresh")}</button></div>
    {staff?<div className={styles.viewToggle}><button type="button" aria-pressed={!teamView} onClick={()=>setTeamView(false)}>{translate("marketing.ui.requests")}</button><button type="button" aria-pressed={teamView} onClick={()=>setTeamView(true)}>{translate("marketing.ui.teamInbox")}</button></div>:null}
    {!user?<p className={styles.muted}>{translate("marketing.ui.loginEmpty")}</p>:loading?<p className={styles.muted}>{translate("marketing.ui.loading")}</p>:
-    shown.length===0?<div className={styles.empty}><ClipboardList size={25}/><strong>{translate("marketing.ui.empty")}</strong><span>{translate("marketing.ui.emptyHint")}</span></div>:
+    shown.length===0?<div className={styles.empty}><ClipboardList size={25}/><strong>{translate("marketing.ui.empty")}</strong><a href="/vista-app/marketing" className={styles.reportLink}>{translate("marketing.report.back")}</a></div>:
     <div className={styles.requestList}>{shown.map(req=>{
      const approved=isAccepted(req);
      const service=serviceName(req.service_code);
@@ -923,7 +923,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     })}</div>
    }
   </section>:null}
-  {(wizardStep===0||wizardStep===4)?<div className={styles.bottomNote}><HandHeart size={17}/><p>{translate("marketing.ui.external")}</p></div>:null}
+  {!requestsOnly&&(wizardStep===0||wizardStep===4)?<div className={styles.bottomNote}><HandHeart size={17}/><p>{translate("marketing.ui.external")}</p></div>:null}
   {message?<p role="status" className={styles.notice}>{message}</p>:null}
   {error?<p role="alert" className={styles.error}>{error}</p>:null}
  </div>;
