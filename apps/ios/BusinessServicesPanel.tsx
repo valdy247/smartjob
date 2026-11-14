@@ -53,9 +53,10 @@ function OfferCard({item,onPress,compact=false}:{item:ServiceOffer;onPress?:()=>
   <View style={cardStyle}>{inner}</View>;
 }
 
-export function BusinessServicesPanel({session,focus="all",excludeFeatured=false,searchTerm=""}:{session:Session;focus?:"all"|"web";excludeFeatured?:boolean;searchTerm?:string}){
+export function BusinessServicesPanel({session,focus="all",excludeFeatured=false,searchTerm="",emptyLabel=""}:{session:Session;focus?:"all"|"web";excludeFeatured?:boolean;searchTerm?:string;emptyLabel?:string}){
  const [charge,setCharge]=useState<OfferCharge>("subscription");
  const normalizedSearch=searchTerm.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase();
+ const visibleOffers=(normalizedSearch?SERVICE_OFFERS:offersFor(charge)).filter(item=>(focus!=="web"||["site-care","local-seo","reviews","website-design","google-business-profile","seo-setup","domain-setup"].includes(item.id))&&(!excludeFeatured||!["smart-call","ai-agents"].includes(item.id))&&(!normalizedSearch||item.name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase().includes(normalizedSearch)));
  const [editing,setEditing]=useState(false);
  const [draft,setDraft]=useState<ProfileDraft>({...EMPTY});
  const [saved,setSaved]=useState(false);
@@ -220,15 +221,17 @@ export function BusinessServicesPanel({session,focus="all",excludeFeatured=false
     </Pressable>)}
   </View>:null}
   <View style={styles.grid}>
-   {(normalizedSearch?SERVICE_OFFERS:offersFor(charge)).filter(item=>(focus!=="web"||["site-care","local-seo","reviews","website-design","google-business-profile","seo-setup","domain-setup"].includes(item.id))&&(!excludeFeatured||!["smart-call","ai-agents"].includes(item.id))&&(!normalizedSearch||item.name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase().includes(normalizedSearch))).map(item=><OfferCard key={item.id} item={item} compact={excludeFeatured}
+   {visibleOffers.map(item=><OfferCard key={item.id} item={item} compact={excludeFeatured}
     onPress={item.id==="google-business-profile"?()=>setEditing(true):undefined}/>)}
   </View>
+  {normalizedSearch&&!visibleOffers.length&&emptyLabel?<Text style={styles.catalogEmpty}>{emptyLabel}</Text>:null}
  </View>;
 }
 
 const styles=StyleSheet.create({
  wrapper:{marginTop:25,paddingBottom:30},
  wrapperCompact:{marginTop:9,paddingBottom:10},
+ catalogEmpty:{fontSize:12,color:"#83768E",padding:13,textAlign:"center"},
  headingRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",marginBottom:15},
  heading:{fontSize:25,fontWeight:"900",letterSpacing:-1.1,color:colors.ink},
  smallSymbol:{width:37,height:37,borderRadius:13,backgroundColor:"#EEE3FF",justifyContent:"center",alignItems:"center"},
