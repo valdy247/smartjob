@@ -5,6 +5,8 @@ import {House,LayoutGrid,PhoneCall,Languages,UserRound,ArrowUpRight,ChevronLeft,
  RefreshCw,Settings2,LoaderCircle,LogOut,LockKeyhole,PhoneForwarded,MessageCircle,Monitor,Cpu,TrendingUp} from "lucide-react";
 import {LivePanel} from "@/components/LivePanel";
 import InitialServiceCard from "@/components/InitialServiceCard";
+import dynamic from "next/dynamic";
+const AccountBusinessAgent=dynamic(()=>import("./AccountBusinessAgent"));
 import ContactBook from "./ContactBook";
 import DialPad from "./DialPad";
 import BusinessServicesPreview from "./BusinessServicesPreview";
@@ -517,6 +519,7 @@ export default function VMVMobilePreview(){
         <span className={styles.accountHeroInfo}><strong>{business}</strong><small>{user?.email||"—"}</small></span>
         <span className={styles.accountHeroSpark} aria-hidden="true">✦</span>
        </div>
+       {user?<AccountBusinessAgent key={user.id} ownerId={user.id} initialName={profile?.business_name||""}/>:null}
        <div className={styles.accountStatGrid}>
         <button type="button" className={styles.accountStatTile} onClick={()=>showCall("minutes")}>
          <span><Clock3 size={19}/></span><strong>{num(available)} min</strong><small>{translate("home.minutesToTranslate")}</small>
