@@ -783,8 +783,42 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       <div className={styles.reviewItem}><span>{translate("marketing.copy.business")}</span><strong>{name.trim()}</strong><button type="button" onClick={()=>editWizardStep(1)}>{translate("marketing.copy.edit")}</button></div>
       <div className={styles.reviewItem}><span>{translate("marketing.copy.industry")}</span><strong>{marketingCategoryLabel(language,effectiveCategory,translate("marketing.action.not_specified"))}</strong></div>
       {site.trim()?<div className={styles.reviewItem}><span>{translate("marketing.copy.website")}</span><strong className={styles.wrapValue}>{site.trim()}</strong></div>:null}
-      {selected==="google_profile"?<div className={styles.googleReview}><strong>{translate("marketing.copy.google_profile_details")}</strong><span>{translate("marketing.copy.action")} {googleData.action==="create"?translate("marketing.action.create"):googleData.action==="claim"?translate("marketing.action.claim"):translate("marketing.action.improve")} · {googleData.kind==="storefront"?translate("marketing.action.storefront"):googleData.kind==="service_area"?translate("marketing.action.serviceArea"):translate("marketing.action.storefront_and_delivery")}</span><span>{translate("marketing.copy.category")} {googleData.googleCategory}</span><span>{googleData.kind==="service_area"?translate("marketing.action.serviceAreas")+googleData.serviceAreas:[googleData.street,googleData.unit,googleData.city,googleData.region,googleData.postal,googleData.country].filter(Boolean).join(", ")}</span>{googleData.phone?<span>{translate("marketing.copy.phone")} {googleData.phone}</span>:null}{googleData.hoursEnabled?<span>{translate("marketing.copy.hours")} {googleData.hours.filter(h=>!h.closed).length} {translate("marketing.action.openDays")}</span>:null}{googleData.description?<span>{translate("marketing.copy.description")} {googleData.description}</span>:null}<span>{en?"Business profile photos":"Fotos del perfil del negocio"}: {[businessDetails.logo_path,businessDetails.cover_path,...businessDetails.gallery_paths].filter(Boolean).length} · {en?"Additional request photos":"Fotos adicionales"}: {googleFiles.length}</span>
-        <span>{en?"Address visibility:":"Visibilidad de la dirección:"} {googleData.kind==="service_area"?(en?"Hidden from the Google request":"No se comparte la dirección residencial"):(en?"Storefront address may be shown publicly on Google":"Google puede mostrar públicamente la dirección del local")}</span><button type="button" onClick={()=>{setGoogleStep(0);editWizardStep(2);}}>{translate("marketing.copy.review_google_details")}</button></div>:null}
+      {selected==="google_profile"?<>
+       <div className={styles.googleReview}><strong>{en?"Google listing":"Gestión de Google"}</strong>
+        <span>{googleData.action==="create"?(en?"Create listing":"Crear perfil"):googleData.action==="claim"?(en?"Claim existing listing":"Reclamar perfil"):en?"Improve listing":"Mejorar perfil"} · {googleData.googleCategory}</span>
+        {googleData.action!=="create"&&googleData.existingProfileUrl?<span>{googleData.existingProfileUrl}</span>:null}
+        <button type="button" onClick={()=>{setGoogleStep(0);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
+       </div>
+       <div className={styles.googleReview}><strong>{en?"Location and address visibility":"Ubicación y visibilidad de la dirección"}</strong>
+        <span>{googleData.kind==="service_area"?(en?"Service area; residential address hidden":"Área de servicio; dirección residencial oculta"):
+         ([googleData.street,googleData.unit,googleData.city,googleData.region,googleData.postal,googleData.country].filter(Boolean).join(", ")||"—")}</span>
+        {googleData.serviceAreas?<span>{en?"Service areas: ":"Zonas de servicio: "}{googleData.serviceAreas}</span>:null}
+        <span>{googleData.kind==="service_area"?(en?"Not shared in this request":"No se comparte la dirección privada"):(en?"Storefront address may be visible on Google":"La dirección del local podrá aparecer en Google")}</span>
+        <button type="button" onClick={()=>{setGoogleStep(1);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
+       </div>
+       <div className={styles.googleReview}><strong>{en?"Contact and booking":"Contacto y reservas"}</strong>
+        <span>{googleData.phone||(en?"Phone pending":"Teléfono pendiente")}</span>
+        {googleData.secondaryPhone?<span>{googleData.secondaryPhone}</span>:null}
+        {site?<span>{websiteAddress(site)||site}</span>:null}
+        {googleData.bookingUrl?<span>{googleData.bookingUrl}</span>:null}
+        <button type="button" onClick={()=>{setGoogleStep(2);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
+       </div>
+       <div className={styles.googleReview}><strong>{en?"Opening hours":"Horarios"}</strong>
+        <span>{googleData.hoursEnabled?(googleData.hours.filter(h=>h&&!h.closed).length+" "+(en?"days open":"días abiertos")):(en?"To be confirmed":"Pendientes de confirmar")}</span>
+        {googleData.action==="create"&&googleData.openingDate?<span>{en?"Opening date: ":"Fecha de apertura: "}{googleData.openingDate}</span>:null}
+        <button type="button" onClick={()=>{setGoogleStep(3);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
+       </div>
+       <div className={styles.googleReview}><strong>{en?"Description, products and services":"Descripción, productos y servicios"}</strong>
+        <span>{googleData.description||"—"}</span>
+        {googleData.services?<span>{googleData.services}</span>:null}{googleData.products?<span>{googleData.products}</span>:null}
+        <button type="button" onClick={()=>{setGoogleStep(4);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
+       </div>
+       <div className={styles.googleReview}><strong>{en?"Private photos and files":"Fotos y archivos privados"}</strong>
+        <span>{en?"Saved business photos: ":"Fotos del negocio: "}{[businessDetails.logo_path,businessDetails.cover_path,...businessDetails.gallery_paths].filter(Boolean).length}</span>
+        <span>{en?"Additional request photos: ":"Fotos adicionales: "}{googleFiles.length}</span>
+        <button type="button" onClick={()=>{setGoogleStep(5);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
+       </div>
+      </>:null}
       {selected==="directory_listings"?<div className={styles.googleReview}><strong>{translate("marketing.copy.requested_directories")}</strong><span>{directoryData.city}, {directoryData.state}</span>{directoryData.selected.map(d=><span key={d.id}>{d.name} · {d.cost==="free"?translate("marketing.action.free_listing"):d.cost==="membership"?translate("marketing.action.membership_may_be_required"):translate("marketing.action.to_evaluate")}</span>)}<span>{translate("marketing.copy.vmv_will_confirm_requirements_and_pricing_before_tak")}</span><button type="button" onClick={()=>editWizardStep(2)}>{translate("marketing.copy.review_selection")}</button></div>:null}
       {selected==="review_strategy"?<div className={styles.googleReview}><strong>{translate("marketing.copy.my_reputation")}</strong>{reviewInput.trim()?<span>{translate("marketing.copy.real_review")} {reviewInput}</span>:null}{reviewInput.trim()?<span>{translate("marketing.copy.reviewed_response")} {reviewReply||reviewReplyTemplate(name,reviewInput,reviewTone)}</span>:null}{reviewLink?<span>{translate("marketing.copy.review_link")} {reviewLink}</span>:null}</div>:null}
       {selected==="seo_improvement"?<div className={styles.googleReview}><strong>{translate("marketing.copy.website_diagnosis")}</strong><span>{webRepair.audit?translate("marketing.action.speed")+(webRepair.audit.scores.performance??"—")+"/100; SEO: "+(webRepair.audit.scores.seo??"—")+"/100":translate("marketing.action.no_automated_analysis_technical_review_required")}</span><span>{translate("marketing.copy.platform")} {webRepair.platform==="other"?webRepair.otherPlatform:webRepair.platform}</span><span>{translate("marketing.copy.repository")} {webRepair.repositoryHost}</span><span>{webRepair.requestRepair?translate("marketing.action.i_want_a_quote"):translate("marketing.action.save_diagnosis_only")}</span><button type="button" onClick={()=>editWizardStep(2)}>{translate("marketing.copy.review_information")}</button></div>:null}
