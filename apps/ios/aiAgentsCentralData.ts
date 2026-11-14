@@ -9,7 +9,7 @@ export type NativeCentralBusiness={
  website_url:string|null;hours_enabled:boolean;hours:unknown;updated_at:string;
 };
 export type NativeAiWorkspace={
- id:string;owner_id:string;name:string;central_business_id:string|null;
+ id:string;owner_id:string;name:string;central_business_id:string|null;primary_agent_id:string|null;
 };
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const database=()=>{if(!supabase)throw Error("Supabase no está disponible.");return supabase;};
@@ -21,7 +21,7 @@ export async function centralChoices(session:Session):Promise<{
   database().from("vmv_marketing_businesses")
    .select("id,owner_id,name,category_id,description,city,region,country,service_areas,website_url,hours_enabled,hours,updated_at")
    .eq("owner_id",owner).order("created_at",{ascending:false}).limit(80),
-  database().from("vmv_ai_businesses").select("id,owner_id,name,central_business_id")
+  database().from("vmv_ai_businesses").select("id,owner_id,name,central_business_id,primary_agent_id")
    .eq("owner_id",owner).limit(80)
  ]);
  if(profiles.error||work.error)throw Error("No se pudieron cargar los negocios de VMV.");
@@ -90,4 +90,16 @@ export function prefillNativeAgent(b:NativeCentralBusiness,input:AgentDraft):Age
  if(additional.hours_mode&&hoursKeys.every(key=>config["h_"+key+"_active"]))prefilled.push("hours");
  config.central_prefill_fields=prefilled.join("|");
  return {...input,configuration:config};
+}
+
+/** The principal identity is separate from the active Twilio phone selection. */
+export async function chooseNativePrincipal(
+ session:Session,workspaceId:string,agentId:string|null,expectedId:string|null
+):Promise<void>{
+ if(!uuid.test(workspaceId)||(agentId!==null&&!uuid.test(agentId))||
+    (expectedId!==null&&!uuid.test(expectedId)))throw Error("Selección de agente inválida.");
+ const {data,error}=await database().rpc("vmv_ai_select_primary_agent",{
+  p_workspace_id:workspaceId,p_agent_id:agentId,p_expected_id:expectedId
+ });
+ if(error||data!==true)throw Error("El agente principal cambió o pertenece a otro negocio. Actualiza la pantalla.");
 }
