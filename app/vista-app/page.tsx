@@ -144,6 +144,53 @@ export default function VMVMobilePreview(){
  const lineState=line?.connectedToApp?translate("services.call.iphoneRoute"):line?.verified?translate("services.call.numberVerifiedValue"):route?.enabled?translate("services.call.routeRegistered"):translate("services.call.activationPending");
  const go=(next:Tab)=>{setServiceFocus("all");setCallbackConfirmSid(null);setTab(next);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("dial");setDialTarget(null);setCallFilter("all");}setError("");setNotice("");};
  const showCall=(next:Panel="overview")=>{setTab("services");setOpen(true);setPanel(next);setError("");setNotice("");};
+ // Home and Services reuse the same featured cards so labels, destinations and
+ // availability cannot drift. Commercial offers remain a separate catalog.
+ const featuredSmartCall=<button type="button" className={styles.homeSpotlight} onClick={()=>showCall("overview")}
+  aria-label={translate("services.openSmartCall")}>
+  <span className={styles.homeSpotlightKicker}>SMART CALL <span>● {translate("home.pilot")}</span></span>
+  <strong>{translate("home.businessConnected")}<span>.</span></strong>
+  <small>{translate("home.callsAndTranslation")}</small>
+  <span className={styles.homeSpotlightMinutes}>{num(available)} min <span>{translate("home.minutesToTranslate")}</span></span>
+  <span className={styles.homeSpotlightArt} aria-hidden="true">
+   <span className={styles.homeArtRingOne}></span>
+   <span className={styles.homeArtRingTwo}></span>
+   <span className={styles.homeArtPhone}><PhoneCall size={30} strokeWidth={2.2}/></span>
+   <span className={styles.homeArtMiniBubble}><Languages size={17}/></span>
+   <span className={styles.homeArtSpark}>✦</span>
+  </span>
+  <span className={styles.homeSpotlightGo}><ArrowUpRight size={20}/></span>
+ </button>;
+ const featuredServices=<div className={styles.homeProductsGrid}>
+  <button type="button" className={`${styles.homeProductCard} ${styles.homeProductMint}`}
+   onClick={()=>go("translator")} aria-label={translate("home.openInPerson")}>
+   <span className={styles.homeProductIcon}><Languages size={27}/></span>
+   <span className={styles.homeProductDecor} aria-hidden="true"><MessageCircle size={75} strokeWidth={1.5}/></span>
+   <span className={styles.homeProductBody}><strong>{translate("common.translator")}</strong><small>{translate("home.inPerson")}</small></span>
+   <span className={styles.homeProductArrow}>↗</span>
+  </button>
+  <button type="button" className={`${styles.homeProductCard} ${styles.homeProductYellow}`}
+   onClick={()=>{setOpen(false);setServiceFocus("web");setTab("services");}} aria-label={translate("home.explore")+": Web Services"}>
+   <span className={styles.homeProductIcon}><Globe size={27}/></span>
+   <span className={styles.homeProductBody}><strong>Web Services</strong><small>{translate("home.explore")}</small></span>
+   <span className={styles.homeProductDecor} aria-hidden="true"><Monitor size={83} strokeWidth={1.25}/></span>
+   <span className={styles.homeProductArrow}>↗</span>
+  </button>
+  <button type="button" className={`${styles.homeProductCard} ${styles.homeProductSky}`}
+   onClick={()=>window.location.assign("/vista-app/ai-agents")} aria-label={translate("home.explore")+": AI Agents"}>
+   <span className={styles.homeProductIcon}><Bot size={27}/></span>
+   <span className={styles.homeProductBody}><strong>AI Agents</strong><small>Beta</small></span>
+   <span className={styles.homeProductDecor} aria-hidden="true"><Cpu size={79} strokeWidth={1.3}/></span>
+   <span className={styles.homeProductArrow} aria-hidden="true">↗</span>
+  </button>
+  <button type="button" className={`${styles.homeProductCard} ${styles.homeProductPink}`}
+   onClick={()=>window.location.assign("/vista-app/marketing")} aria-label={translate("home.explore")+": Marketing"}>
+   <span className={styles.homeProductIcon}><BarChart3 size={27}/></span>
+   <span className={styles.homeProductBody}><strong>Marketing</strong><small>{translate("home.explore")}</small></span>
+   <span className={styles.homeProductDecor} aria-hidden="true"><TrendingUp size={82} strokeWidth={1.3}/></span>
+   <span className={styles.homeProductArrow}>↗</span>
+  </button>
+ </div>;
  const openContacts=(number="",startInForm=false)=>{setContactPhone(number);setContactStartForm(startInForm);setCallsView("contacts");setTab("calls");setError("");setNotice("");};
  const dialContact=(phone:string,name:string)=>{setDialTarget({phone,name});setCallsView("dial");setContactPhone("");setContactStartForm(false);setTab("calls");};
  async function login(e:FormEvent<HTMLFormElement>){e.preventDefault();await signIn(email,password);setPassword("");}
@@ -293,56 +340,13 @@ export default function VMVMobilePreview(){
         </button>
         <span className={styles.homeBrandPill}>BUSINESS <span>✦</span></span>
        </div>
-       <button type="button" className={styles.homeSpotlight} onClick={()=>showCall("overview")}
-        aria-label="Abrir Smart Call">
-        <span className={styles.homeSpotlightKicker}>SMART CALL <span>● EN PILOTO</span></span>
-        <strong>{translate("home.businessConnected")}<span>.</span></strong>
-        <small>{translate("home.callsAndTranslation")}</small>
-        <span className={styles.homeSpotlightMinutes}>{num(available)} min <span>{translate("home.minutesToTranslate")}</span></span>
-        <span className={styles.homeSpotlightArt} aria-hidden="true">
-         <span className={styles.homeArtRingOne}></span>
-         <span className={styles.homeArtRingTwo}></span>
-         <span className={styles.homeArtPhone}><PhoneCall size={30} strokeWidth={2.2}/></span>
-         <span className={styles.homeArtMiniBubble}><Languages size={17}/></span>
-         <span className={styles.homeArtSpark}>✦</span>
-        </span>
-        <span className={styles.homeSpotlightGo}><ArrowUpRight size={20}/></span>
-       </button>
+       {featuredSmartCall}
        <InitialServiceCard key={user?.id} value={user?.user_metadata?.initial_service} onTranslation={()=>go("calls")}/>
        <div className={styles.homeSectionHeading}>
         <h3>{translate("home.featured")}<span>.</span></h3>
         <button type="button" onClick={()=>go("services")}>{translate("home.seeAll")} <ArrowUpRight size={15}/></button>
        </div>
-       <div className={styles.homeProductsGrid}>
-        <button className={`${styles.homeProductCard} ${styles.homeProductMint}`}
-         onClick={()=>go("translator")} aria-label="Abrir traductor en persona">
-         <span className={styles.homeProductIcon}><Languages size={27}/></span>
-         <span className={styles.homeProductDecor} aria-hidden="true"><MessageCircle size={75} strokeWidth={1.5}/></span>
-         <span className={styles.homeProductBody}><strong>Traductor</strong><small>En persona</small></span>
-         <span className={styles.homeProductArrow}>↗</span>
-        </button>
-        <button type="button" className={`${styles.homeProductCard} ${styles.homeProductYellow}`}
-          onClick={()=>{setOpen(false);setServiceFocus("web");setTab("services");}} aria-label="Abrir Web Services">
-         <span className={styles.homeProductIcon}><Globe size={27}/></span>
-         <span className={styles.homeProductBody}><strong>Web Services</strong><small>Explorar</small></span>
-         <span className={styles.homeProductDecor} aria-hidden="true"><Monitor size={83} strokeWidth={1.25}/></span>
-         <span className={styles.homeProductArrow}>↗</span>
-        </button>
-        <button type="button" className={`${styles.homeProductCard} ${styles.homeProductSky}`}
-         onClick={()=>window.location.assign("/vista-app/ai-agents")} aria-label={`${translate("home.explore")}: AI Agents`}>
-         <span className={styles.homeProductIcon}><Bot size={27}/></span>
-         <span className={styles.homeProductBody}><strong>AI Agents</strong><small>Beta</small></span>
-         <span className={styles.homeProductDecor} aria-hidden="true"><Cpu size={79} strokeWidth={1.3}/></span>
-         <span className={styles.homeProductArrow} aria-hidden="true">↗</span>
-        </button>
-        <button type="button" className={`${styles.homeProductCard} ${styles.homeProductPink}`}
-         onClick={()=>window.location.assign("/vista-app/marketing")} aria-label="Abrir Marketing Studio en beta">
-         <span className={styles.homeProductIcon}><BarChart3 size={27}/></span>
-         <span className={styles.homeProductBody}><strong>Marketing</strong><small>Explorar beta</small></span>
-         <span className={styles.homeProductDecor} aria-hidden="true"><TrendingUp size={82} strokeWidth={1.3}/></span>
-         <span className={styles.homeProductArrow}>↗</span>
-        </button>
-       </div>
+       {featuredServices}
        <button className={styles.homeExplore} type="button" onClick={()=>go("services")}>
         <span className={styles.homeExploreCopy}>
          <small>VMV BUSINESS</small>
@@ -357,15 +361,15 @@ export default function VMVMobilePreview(){
         <button type="button" className={styles.back} onClick={()=>setServiceFocus("all")}><ChevronLeft size={17}/> {translate("native.totalServices")}</button>
         {user?<BusinessServicesPreview userId={user.id} focus="web"/>:null}
        </>:<>
-       <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>{translate("home.moreServices")}<span className={styles.mint}>.</span></h2>
-       <button type="button" className={styles.serviceHero} onClick={()=>showCall()} aria-label={translate("services.openSmartCall")}>
-        <span className={styles.serviceHeroTop}><span className={styles.serviceHeroIcon}><PhoneCall size={26}/></span><span className={styles.serviceHeroStatus}>{translate("home.pilot")}</span></span>
-        <strong>Smart Call<span>.</span></strong>
-        <small>{num(available)} min {translate("home.minutesToTranslate")}</small>
-        <span className={styles.serviceLink}>{translate("services.openService")} <ArrowUpRight size={17}/></span>
-        <span className={styles.serviceHeroDecoration} aria-hidden="true">✦</span>
-       </button>
-       {user?<BusinessServicesPreview userId={user.id}/>:null}
+        <span className={styles.screenEyebrow}>VMV BUSINESS</span>
+        <h2>{translate("home.moreServices")}<span className={styles.mint}>.</span></h2>
+        {featuredSmartCall}
+        <div className={styles.serviceGridHeading}><h3>{translate("home.featured")}<span>.</span></h3></div>
+        {featuredServices}
+        <details className={styles.servicesMoreCatalog}>
+         <summary>{translate("settings.otherServices")} <ChevronLeft size={18} aria-hidden="true"/></summary>
+         {user?<BusinessServicesPreview userId={user.id} excludeFeatured/>:null}
+        </details>
        </>}
       </div>:null}
       {ready&&tab==="services"&&open?<div className={styles.smartScreen}>
