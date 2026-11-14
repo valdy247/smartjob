@@ -79,6 +79,7 @@ export default function VMVMobilePreview(){
  const {client,user,phase,profile,settings,route,provisioning,calls,summary,preferences,setPreferences,
   loading,working,error,notice,setError,setNotice,refresh,signIn,signOut,saveBasic,savePremium}=account;
  const [tab,setTab]=useState<Tab>("home");
+ useEffect(()=>{if(new URLSearchParams(window.location.search).get("tab")==="account")setTab("account");},[]);
  const [open,setOpen]=useState(false);
  const [serviceFocus,setServiceFocus]=useState<"all"|"web">("all");
  const [panel,setPanel]=useState<Panel>("overview");
@@ -142,7 +143,7 @@ export default function VMVMobilePreview(){
  const business=profile?.business_name?.trim()||profile?.first_name||"Mi negocio";
  const lineNumber=line?.twilioPhone||route?.twilio_number||translate("services.call.noAssignedNumber");
  const lineState=line?.connectedToApp?translate("services.call.iphoneRoute"):line?.verified?translate("services.call.numberVerifiedValue"):route?.enabled?translate("services.call.routeRegistered"):translate("services.call.activationPending");
- const go=(next:Tab)=>{setServiceFocus("all");setCallbackConfirmSid(null);setTab(next);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("dial");setDialTarget(null);setCallFilter("all");}setError("");setNotice("");};
+ const go=(next:Tab)=>{if(next!=="account"){const url=new URL(window.location.href);if(url.searchParams.get("tab")==="account"){url.searchParams.delete("tab");url.searchParams.delete("setup");window.history.replaceState(null,"",url.pathname+url.search+url.hash);}}setServiceFocus("all");setCallbackConfirmSid(null);setTab(next);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("dial");setDialTarget(null);setCallFilter("all");}setError("");setNotice("");};
  const showCall=(next:Panel="overview")=>{setTab("services");setOpen(true);setPanel(next);setError("");setNotice("");};
  // Home and Services reuse the same featured cards so labels, destinations and
  // availability cannot drift. Commercial offers remain a separate catalog.

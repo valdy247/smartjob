@@ -1506,7 +1506,17 @@
     "services.history.callbackDisclaimer": "El cliente verá tu número Twilio empresarial. Esta llamada será normal, sin traducción, y puede generar cargos de voz de Twilio.",
     "services.history.callbackConfirm": "Devolver con VMV",
     "services.history.cancel": "Cancelar",
-    "services.call.testTag": "PRUEBA"
+    "services.call.testTag": "PRUEBA",
+    "marketing.visibility.loadingBusiness": "Cargando tu negocio…",
+    "marketing.visibility.loadBusinessError": "No pudimos cargar el perfil guardado. Vuelve a intentarlo.",
+    "marketing.visibility.savedBusiness": "Negocio guardado",
+    "marketing.visibility.chooseBusiness": "Selecciona tu negocio",
+    "marketing.visibility.noSavedBusiness": "Completa tu negocio para preparar su ficha.",
+    "marketing.visibility.profileLoaded": "Datos cargados de tu perfil de negocio.",
+    "marketing.visibility.editBusiness": "Editar perfil del negocio",
+    "marketing.visibility.createBusiness": "Configurar mi negocio",
+    "marketing.visibility.profileDraftEdits": "Los ajustes de esta ficha no cambian tu perfil guardado.",
+    "marketing.visibility.savedCategory": "Categoría del perfil guardado"
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -3015,6 +3025,16 @@
     "services.history.callbackDisclaimer": "The customer will see your business Twilio number. This will be a normal call without translation and may incur Twilio voice charges.",
     "services.history.callbackConfirm": "Call back with VMV",
     "services.history.cancel": "Cancel",
-    "services.call.testTag": "TEST"
+    "services.call.testTag": "TEST",
+    "marketing.visibility.loadingBusiness": "Loading your business…",
+    "marketing.visibility.loadBusinessError": "Could not load your saved business profile. Please try again.",
+    "marketing.visibility.savedBusiness": "Saved business",
+    "marketing.visibility.chooseBusiness": "Select your business",
+    "marketing.visibility.noSavedBusiness": "Set up your business to prepare its listing.",
+    "marketing.visibility.profileLoaded": "Details loaded from your business profile.",
+    "marketing.visibility.editBusiness": "Edit business profile",
+    "marketing.visibility.createBusiness": "Set up my business",
+    "marketing.visibility.profileDraftEdits": "Edits to this listing draft do not change your saved profile.",
+    "marketing.visibility.savedCategory": "Category from your saved business profile"
   }
 }

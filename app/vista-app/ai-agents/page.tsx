@@ -14,6 +14,7 @@ import CommerceStudio from "./CommerceStudio";
 import CallControl from "./CallControl";
 import AgentLiveTest from "./AgentLiveTest";
 import {inspectAgent} from "./agentQuality";
+import {agentSetupDestination} from "@/lib/agent-capability-access";
 import {getSupabase} from "@/lib/supabase";
 import {centralPrefill,businessMissing,choosePrincipalAgent,linkLegacyWorkspace,loadBusinessChoices,provisionAiWorkspace,type CentralBusiness,type AiWorkspace} from "./centralBusiness";
 import {loadAgents,loadPhoneSelection,selectPhoneAgent,setStudyStatus,storeAgent,type PersistedAgent,type PhoneSelection} from "./agentStore";
@@ -131,19 +132,10 @@ export default function AIAgentsPreview(){
   }
  };
  const start=async(kind:Kind)=>{
-  if(!selectedBusiness){setPendingKind(kind);setBusinessDialog(true);setNotice("");return;}
-  let agent=principal;
-  if(!agent&&proposal&&visibleAgents.length===1){
-   try{await designate(proposal);agent=proposal;}
-   catch(e){setNotice(e instanceof Error?e.message:"No se pudo elegir el agente principal.");return;}
-  }
-  if(agent){openFor(kind,agent);return;}
-  if(visibleAgents.length>0){
-   setNotice("Hay varios agentes existentes. Elige uno como principal antes de configurar funciones; no los fusionaremos.");return;
-  }
-  setPendingKind(kind);
-  setDraft(centralPrefill(selectedBusiness,blank("support")));
-  setSelected(null);setEditStep(0);setScreen("editor");setNotice("");
+  const destination=agentSetupDestination(principal,selectedBusiness?.id||null);
+  if(destination){window.location.assign(destination);return;}
+  if(!principal)return;
+  openFor(kind,principal);
  };
  const businessSaved=async(id:string)=>{
   const [list,profile]=await Promise.all([loadAgents(),loadBusinessChoices()]);

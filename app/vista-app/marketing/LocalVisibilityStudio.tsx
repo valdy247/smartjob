@@ -26,8 +26,8 @@ function Field({label,value,onChange,placeholder}:{label:string;value:string;onC
 }
 
 
-export default function LocalVisibilityStudio({profile,onChange,onRequestHelp}:{
- profile:LocalProfile;onChange:(key:EditableKey,value:string)=>void;
+export default function LocalVisibilityStudio({profile,onChange,onRequestHelp,fromSavedBusiness=false}:{
+ fromSavedBusiness?:boolean;profile:LocalProfile;onChange:(key:EditableKey,value:string)=>void;
  onRequestHelp?:(service:"google_profile"|"bing_places"|"apple_maps"|"yelp_profile")=>void;
 }){
  const {language,translate}=useInterfaceLanguage();
@@ -89,7 +89,7 @@ export default function LocalVisibilityStudio({profile,onChange,onRequestHelp}:{
    <p className={styles.muted}>{translate("marketing.visibility.use_the_same_official_business_name_phone_and_locati")}</p>
    <div className={styles.grid}>
     <Field label={translate("marketing.visibility.business_name")} value={profile.business} onChange={v=>onChange("business",v)} placeholder={translate("marketing.visibility.your_official_business_name")}/>
-    <div className={styles.readonlyField}><span>{translate("marketing.visibility.industry")}</span><strong>{profile.industry||translate("marketing.visibility.not_specified")}</strong><small>{translate("marketing.visibility.selected_in_diagnosis")}</small></div>
+    <div className={styles.readonlyField}><span>{translate("marketing.visibility.industry")}</span><strong>{profile.industry||translate("marketing.visibility.not_specified")}</strong><small>{translate(fromSavedBusiness?"marketing.visibility.savedCategory":"marketing.visibility.selected_in_diagnosis")}</small></div>
     <Field label={translate("marketing.visibility.business_phone")} value={profile.phone} onChange={v=>onChange("phone",v)} placeholder="+1 555 123 4567"/>
     <Field label={translate("marketing.visibility.city")} value={profile.city} onChange={v=>onChange("city",v)} placeholder={translate("marketing.visibility.city_where_you_operate")}/>
     <Field label={translate("marketing.visibility.state_or_region")} value={profile.region} onChange={v=>onChange("region",v)} placeholder="Georgia"/>

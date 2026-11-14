@@ -7,7 +7,7 @@ import styles from "./page.module.css";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
 import {t as contentText,type MessageKey} from "@/lib/i18n";
-import LocalVisibilityStudio from "./LocalVisibilityStudio";
+import SavedLocalVisibility from "./SavedLocalVisibility";
 import MarketingActionCenter, {type ServiceCode} from "./MarketingActionCenter";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
 import {marketingCategoryLabel,marketingGroupLabel} from "@/lib/marketing-taxonomy-i18n";
@@ -229,7 +229,7 @@ export default function MarketingPage(){
      {section==="actions"?<MarketingActionCenter onWizardActiveChange={setActionWizardActive} businessName={form.business}
       industryId={form.industry} website={form.website} preselectedService={requestedService||undefined}
       onGoToVisibility={()=>{setSection("presence");setNotice("");}}/>:null}
-     {section==="presence"?<LocalVisibilityStudio
+     {section==="presence"?<SavedLocalVisibility
       profile={{business:form.business,industry:industryName(form.industry),website:form.website,phone:form.phone,address:form.address,city:form.city,region:form.region,postal:form.postal,hours:form.hours,description:form.description}}
       onChange={(key,value)=>patch(key,value)}
       onRequestHelp={(service)=>{setRequestedService(service);setSection("actions");setNotice("");}}/>:null}
