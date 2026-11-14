@@ -1,4 +1,12 @@
 import {contactPhoneE164} from "./contact-phone";
+export function isKnownGoogleCountry(value:string):boolean{
+ const code=value.trim().toUpperCase();
+ if(!/^[A-Z]{2}$/.test(code)||["EU","EZ","UN","ZZ","QO","XA","XB","XK"].includes(code))return false;
+ try{
+  const name=new Intl.DisplayNames(["en"],{type:"region"}).of(code);
+  return Boolean(name&&name!==code&&name!=="Unknown Region");
+ }catch{return false;}
+}
 export type GoogleKind="storefront"|"service_area"|"hybrid";
 export type GoogleHour={closed:boolean;start:string;end:string};
 export type GoogleData={
@@ -12,7 +20,7 @@ export type GoogleValidationIssue={step:number;key:"googleCategory"|"address"|"s
 export function googleProfileIssue(v:GoogleData,step?:number):GoogleValidationIssue|null {
  const at=(s:number)=>step===undefined||step===s;
  if(at(0)&&!(v.googleCategoryId?.trim()&&v.googleCategory.trim())&&!v.categoryPendingReview)return {step:0,key:"googleCategory"};
- if(at(1)&&!/^([A-Z]{2})$/.test(v.country.trim().toUpperCase()))return {step:1,key:"country"};
+ if(at(1)&&!isKnownGoogleCountry(v.country))return {step:1,key:"country"};
  if(at(1)&&!(v.locationChecked||v.locationPendingReview))return {step:1,key:"address"};
  if(at(1)&&v.kind!=="service_area"&&[v.street,v.city,v.region,v.postal].some(x=>!x.trim()))return {step:1,key:"address"};
  if(at(1)&&v.kind!=="storefront"&&!v.serviceAreas.trim())return {step:1,key:"serviceAreas"};
