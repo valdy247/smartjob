@@ -1,27 +1,24 @@
 import ts from "typescript";
 import {readFileSync} from "node:fs";
-const read=(path)=>readFileSync(path,"utf8");
+const read=path=>readFileSync(path,"utf8");
 const main=read("app/vista-app/page.tsx");
-const begin=main.indexOf('{ready&&tab==="services"&&!open?');
-const end=main.indexOf('{ready&&tab==="calls"?',begin);
-if(begin<0||end<=begin)throw Error("Services route boundaries changed; review audit scope");
-const route=main.slice(begin,end);
-const sharedBegin=main.indexOf(" const featuredSmartCall=");
-const sharedEnd=main.indexOf(" const openContacts=",sharedBegin);
-if(sharedBegin<0||sharedEnd<=sharedBegin)throw Error("Shared featured service cards missing");
-const shared=main.slice(sharedBegin,sharedEnd);
 const homeBegin=main.indexOf('{ready&&tab==="home"?');
-const home=homeBegin>=0&&homeBegin<begin?main.slice(homeBegin,begin):"";
+const servicesBegin=main.indexOf('{ready&&tab==="services"&&!open?');
+const servicesEnd=main.indexOf('{ready&&tab==="calls"?',servicesBegin);
+if(homeBegin<0||servicesBegin<=homeBegin||servicesEnd<=servicesBegin)
+ throw Error("Home/Services route boundaries changed; review audit scope");
+const home=main.slice(homeBegin,servicesBegin);
+const route=main.slice(servicesBegin,servicesEnd);
 const preview=read("app/vista-app/BusinessServicesPreview.tsx");
 const catalog=JSON.parse(read("lib/i18n/messages.json"));
 const sources=[
+ {name:"Home dashboard",text:"const HomeAudited=()=> <main>"+home+"</main>;"},
  {name:"Services route",text:"const ServicesAudited=()=> <main>"+route+"</main>;"},
- {name:"Shared Home/Services cards",text:shared},
  {name:"BusinessServicesPreview",text:preview}
 ];
 const allowed=[
- /^VMV(?: BUSINESS| Business)?\s*\/?$/i,/^Smart Call$/i,/^AI Agents$/i,/^Marketing$/i,
- /^Web Services$/i,/^Web Care$/i,/^Smart Booking$/i,
+ /^VMV(?: BUSINESS| Business)?\s*\/?$/i,/^Smart Call$/i,/^AI Agents$/i,
+ /^Web Services$/i,/^Web Care$/i,/^Smart Booking$/i,/^Marketing$/i,
  /^Google Business Profile$/i,/^Beta$/i,/^SEO$/i,
  /^App iPhone$/i,/^English$/i,/^Español$/i,
  /^\d+$/, /^min$/i,/^USD(?:\s*·)?$/i,/^TEST$/i,
@@ -41,7 +38,7 @@ for(const item of sources){
  const visit=node=>{
   if(ts.isJsxText(node))check(source,node,node.getText(ast),"jsx");
   if(ts.isJsxAttribute(node)&&node.initializer&&ts.isStringLiteral(node.initializer)&&
-   ["title","aria-label","aria-description","alt","placeholder"].includes(node.name.text))
+    ["title","aria-label","aria-description","alt","placeholder"].includes(node.name.text))
    check(source,node,node.initializer.text,"attribute");
   if(ts.isJsxExpression(node)&&node.expression&&ts.isStringLiteral(node.expression))
    check(source,node,node.expression.text,"jsx-expression");
@@ -49,24 +46,38 @@ for(const item of sources){
  };
  visit(ast);
 }
-const refs=[...new Set([...route.matchAll(/translate\("(services\.[\w.-]+)"\)/g),
- ...preview.matchAll(/translate\("(services\.[\w.-]+)"\)/g)].map(x=>x[1]))];
+const refs=[...new Set([...home.matchAll(/translate\("([\w.-]+)"\)/g),
+ ...route.matchAll(/translate\("([\w.-]+)"\)/g),
+ ...preview.matchAll(/translate\("([\w.-]+)"\)/g)].map(x=>x[1]))];
 const missing=refs.filter(key=>!catalog.es[key]||!catalog.en[key]);
 const regressions=[];
-if(!home.includes("{featuredSmartCall}")||!home.includes("{featuredServices}")||
- !route.includes("{featuredSmartCall}")||!route.includes("{featuredServices}"))
- regressions.push("Home and Services must both render the same featured product cards");
-for(const [source,expected] of [[route+shared,["home.pilot","home.minutesToTranslate","services.openSmartCall","common.translator","home.inPerson"]],
- [preview,["services.inPlans","services.oneTime","services.serviceType","services.status.saved","services.offer.reviews"]]]){
+if(!home.includes("dashboardCallCard")||!home.includes("dashboardActivity")||
+ !home.includes("dashboard.quickActions")||!home.includes("calls.slice(0,2)"))
+ regressions.push("Home must show authenticated business activity and quick actions");
+if(home.includes("{featuredSmartCall}")||home.includes("{featuredServices}"))
+ regressions.push("Home must not duplicate the Services product catalog");
+if(!route.includes("catalogSearch")||!route.includes("catalogFilters")||
+ !route.includes("filteredCatalog.map(")||!route.includes("BusinessServicesPreview"))
+ regressions.push("Services must contain a searchable categorized catalog");
+if(route.includes("{featuredSmartCall}")||route.includes("{featuredServices}"))
+ regressions.push("Services must not render the former duplicated Home layout");
+for(const [source,expected] of [
+ [home,["dashboard.callCenter","dashboard.lineStatus","dashboard.minutes","dashboard.activity","dashboard.emptyActivity"]],
+ [route,["catalog.search","catalog.all","catalog.communication","catalog.digital","catalog.growth"]],
+ [preview,["services.inPlans","services.oneTime","services.serviceType","services.status.saved","services.offer.reviews"]]
+]){
  for(const key of expected)if(!source.includes('"'+key+'"'))regressions.push("Missing UI translation "+key);
 }
-if(!preview.includes('const {language,translate}=useInterfaceLanguage()'))regressions.push("Services not using VMV account language");
-if(!preview.includes('role="group" aria-label={translate("services.serviceType")}'))regressions.push("Services segmented control aria label not translated");
+if(!preview.includes('const {language,translate}=useInterfaceLanguage()'))
+ regressions.push("Services not using VMV account language");
+if(!preview.includes('role="group" aria-label={translate("services.serviceType")}'))
+ regressions.push("Services segmented control aria label not translated");
 if(!preview.includes('const [draft,setDraft]=useState<Draft>({...empty})')||
  !preview.includes('window.localStorage.setItem(key,JSON.stringify(draft))')||
  !preview.includes('},[key]);'))regressions.push("Saved business draft state unexpectedly changed");
-if(!main.includes('const lineState=line?.connectedToApp?translate('))regressions.push("Smart Call status ignores account language");
+if(!main.includes('const lineState=line?.connectedToApp?translate('))
+ regressions.push("Smart Call status ignores account language");
 if(missing.length)regressions.push("Missing catalog keys: "+missing.join(", "));
 console.error("SERVICES_I18N_AUDIT="+JSON.stringify({visibleLiteralCandidates:findings.length,missingCatalogKeys:missing.length,regressions}));
-if(findings.length){console.error(JSON.stringify(findings,null,2));process.exitCode=1;}
-if(regressions.length)process.exitCode=1;
+if(findings.length)console.error(JSON.stringify(findings,null,2));
+if(findings.length||regressions.length)process.exitCode=1;
