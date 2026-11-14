@@ -154,7 +154,9 @@ export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=fals
  const [error,setError]=useState("");
  const steps=useMemo(()=>sections(draft.kind,draft.setup),[draft.kind,draft.setup]);
  const current=steps[step];
- const shown=current.questions.filter(x=>!x.when||x.when(draft.setup));
+ const centralFields=new Set((draft.setup.central_prefill_fields||"").split("|").filter(Boolean));
+ const shown=current.questions.filter(x=>(!x.when||x.when(draft.setup))&&
+  !(draft.setup.central_business_id&&centralFields.has(x.id)));
  const value=(key:keyof WizardDraft,next:string)=>setDraft(d=>({...d,[key]:next}));
  const answer=(key:string,next:string)=>setDraft(d=>({
   ...d,
@@ -192,6 +194,14 @@ export default function AgentSetupWizard({initial,onSave,onCancel,isPreview=fals
   <div className={styles.titleGroup}><span className={styles.eyebrow}><Sparkles size={14}/> PASO {step+1}</span>
    <h1>{current.title}</h1><p>{current.subtitle}</p></div>
   {draftRestored?<p className={styles.reviewMessage} role="status">Recuperé el borrador temporal de esta pestaña. Todavía debes guardarlo en tu cuenta.</p>:null}
+  {step===1&&draft.setup.central_business_id?<div className={styles.reviewMessage}>
+   <ShieldCheck size={17}/><p><strong>Datos del perfil central:</strong> {[
+    draft.setup.business_name,draft.setup.industry,
+    draft.setup.city,draft.setup.state
+   ].filter(Boolean).join(" · ")}.
+   No volveremos a preguntarte lo que ya está guardado.
+   <a href="/vista-app/marketing"> Revisar negocio</a></p>
+  </div>:null}
   {authRequired?<div className={styles.reviewMessage} role="alert">
    <ShieldCheck size={18}/><p>Para guardar este agente debes iniciar sesión en VMV.
    Tu borrador se conservará temporalmente en esta pestaña. <a href="/vista-app">Iniciar sesión</a></p>
