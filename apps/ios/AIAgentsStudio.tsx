@@ -113,9 +113,8 @@ export function AIAgentsStudio({session,onBack}:Props){
     }
     else if(kind==="bookings")setScreen("agenda");
     else if(kind==="calls"){
-      if(phone?.agentId===agent.id)setScreen("phone");
-      else Alert.alert("Configurar llamadas",
-       "Asigna primero este mismo agente a tu línea mediante «Elegir línea». No se cambiará la línea sin tu aprobación.");
+      setScreen("phone");
+      if(phone?.agentId!==agent.id)setNotice("Este agente aún no está asignado a la línea. La asignación requiere tu aprobación.");
     }else if(kind==="support"){
       openTest(agent);
       setNotice("Chat privado de prueba. La conexión al sitio público todavía no está verificada.");
