@@ -1,7 +1,7 @@
 "use client";
 import {normalizeGoogleProfile,googlePhotoKey,googleProfileLink} from "@/lib/google-profile-request";
 import {websiteAddress} from "@/lib/website-address";
-import {businessGoogleSeed,mergeGoogleWithBusiness,googleChangesForProfile,businessRequestSnapshot,centralBusinessDefaults,centralBusinessWritePayload,validCentralBusiness,type CentralBusiness} from "@/lib/vmv-central-business";
+import {businessGoogleSeed,mergeGoogleWithBusiness,applyProfileEditsToGoogle,googleChangesForProfile,businessRequestSnapshot,centralBusinessDefaults,centralBusinessWritePayload,validCentralBusiness,type CentralBusiness} from "@/lib/vmv-central-business";
 import CentralBusinessEditor,{emptyBusinessFiles,type CentralBusinessFiles} from "./CentralBusinessEditor";
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 
@@ -751,7 +751,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       <label className={styles.wizardField}><span>{translate("marketing.copy.business_name")} <em>{translate("marketing.copy.required")}</em></span><input type="text" autoComplete="organization" value={name} maxLength={150} onChange={e=>{businessEditedRef.current=true;setName(e.target.value);setWizardError("");}} placeholder={translate("marketing.action.e_g_my_business")} /></label>
       <label className={styles.wizardField}><span>{translate("marketing.copy.what_does_your_business_do")}</span><BusinessCategoryPicker value={effectiveCategory} onChange={v=>{businessEditedRef.current=true;setChosenCategory(v);}}/></label>
       <label className={styles.wizardField}><span>{translate("marketing.copy.website")} <em>{selected==="seo_improvement"?translate("marketing.action.required"):translate("marketing.action.optional")}</em></span><input type="text" inputMode="url" autoCapitalize="none" autoCorrect="off" autoComplete="url" value={site} maxLength={500} onChange={e=>{businessEditedRef.current=true;setSite(e.target.value);setWizardError("");}} placeholder={translate("category.websiteExample")}/></label>
-      <CentralBusinessEditor business={businessDetails} onChange={v=>{businessEditedRef.current=true;setBusinessDetails(v);}} files={businessFiles} onFiles={setBusinessFiles}/>
+      <CentralBusinessEditor business={businessDetails} onChange={v=>{businessEditedRef.current=true;setGoogleData(g=>applyProfileEditsToGoogle(g,businessDetails,v));setBusinessDetails(v);}} files={businessFiles} onFiles={setBusinessFiles}/>
       <button type="button" className={styles.saveBusinessInline} disabled={businessBusy||!user} onClick={()=>void saveBusiness()}>{businessBusy?(en?"Saving…":"Guardando…"):savedBusinesses.some(x=>x.id===businessId&&!x.source)?(en?"Save business changes":translate("marketing.action.update_saved_business")):(en?"Save this business for next time":translate("marketing.action.save_this_business_for_future_requests"))}</button>
      </div>
      <p className={styles.wizardHint}><ShieldCheck size={15}/> {translate("marketing.copy.if_you_registered_your_business_with_vmv_available_d")}</p>
