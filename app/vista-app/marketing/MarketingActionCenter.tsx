@@ -114,6 +114,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [selected,setSelected]=useState<ServiceCode>(preselectedService||"google_profile");
  const [wizardStep,setWizardStep]=useState<WizardStep>(preselectedService?1:0);
  const [googleStep,setGoogleStep]=useState(0);
+ const [editLoadedGoogle,setEditLoadedGoogle]=useState(false);
  const [webStage,setWebStage]=useState(0);
  const [googleData,setGoogleData]=useState<GoogleData>(emptyGoogle);
  const [googleMedia,setGoogleMedia]=useState<GoogleMedia>(emptyMedia);
@@ -268,7 +269,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   setSaveAlsoInBusiness(false);
   if(code!==selected){setGoal("");setConsent(false);setReviewLink("");setReviewReply("");setReviewMode("respond");setReviewInput("");setWebRepair(emptyWebRepair);setDirectoryData(emptyDirectory);setGoogleStep(0);setGoogleMedia(emptyMedia);}
   const linked=savedBusinesses.some(x=>x.id===businessId&&!x.source);
-  setSelected(code);setWizardStep(code==="google_profile"&&linked?2:1);setGoogleStep(0);setWizardError("");setSubmittedId(null);revealWizard();
+  setEditLoadedGoogle(false);setSelected(code);setWizardStep(code==="google_profile"&&linked?2:1);setGoogleStep(0);setWizardError("");setSubmittedId(null);revealWizard();
  };
  const goNext=async()=>{
   setWizardError("");
@@ -282,13 +283,13 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    if(site.trim()&&!websiteAddress(site)){setWizardError(translate("category.invalidWebsite"));return;}
   }
   if(wizardStep===2&&selected==="google_profile"){
-   const missing=validateGoogleStep(googleStep,googleData,language)||validateGoogleLinks(googleData,language);
+   const missing=validateGoogleStep(googleStep,googleData,language);
    if(missing){setWizardError(missing);return;}
    if(googleStep<googleStepNames.length-1){
     const selectedRecord=savedBusinesses.find(x=>x.id===businessId&&!x.source);
     const steps=Array.from({length:5-googleStep},(_,i)=>googleStep+i+1);
     const incomplete=(index:number)=>{
-     if(!selectedRecord)return true;
+     if(!selectedRecord||validateGoogleStep(index,googleData,language))return true;
      if(index===1)return Boolean(validateGoogleStep(1,googleData,language));
      if(index===2)return !googleData.phone.trim()&&!googleData.secondaryPhone.trim();
      if(index===3)return !googleData.hoursEnabled;
@@ -298,7 +299,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     };
     const next=steps.find(incomplete);
     closeKeyboard();
-    if(next!==undefined){setGoogleStep(next);revealWizard();return;}
+    if(next!==undefined){setEditLoadedGoogle(false);setGoogleStep(next);revealWizard();return;}
     setWizardStep(3);revealWizard();return;
    }
   }
@@ -798,7 +799,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     </div>:null}
     {wizardStep===2?<div className={styles.wizardBody}>
      {selected==="google_profile"?<>
-      <GoogleProfileWizard step={googleStep} data={googleData} onData={setGoogleData} media={googleMedia} onMedia={setGoogleMedia} business={name} website={websiteAddress(site)||site}/>
+      <GoogleProfileWizard key={businessId+"-"+googleStep} editLoaded={editLoadedGoogle} loadedData={savedBusinesses.some(b=>b.id===businessId&&!b.source)?businessGoogleSeed(businessDetails,googleData.action):undefined} step={googleStep} data={googleData} onData={v=>{setGoogleData(v);setWizardError("");}} media={googleMedia} onMedia={setGoogleMedia} business={name} website={websiteAddress(site)||site}/>
       {googleStep===5&&[businessDetails.logo_path,businessDetails.cover_path,...businessDetails.gallery_paths].filter(Boolean).length>0?<div className={styles.googleReview}><strong>{en?"Photos already saved in your business profile":"Fotos guardadas en el perfil de tu negocio"}</strong>{[businessDetails.logo_path,businessDetails.cover_path,...businessDetails.gallery_paths].filter((p):p is string=>Boolean(p)).map((path,i)=><button key={path} type="button" onClick={()=>void openBusinessPhoto(path)}>{en?"View private photo ":"Ver foto privada "}{i+1}</button>)}<small>{en?"These images will be referenced in the approved request.":"Estas imágenes quedarán referenciadas en la solicitud aprobada."}</small></div>:null}
      </>:<>
      <div className={styles.selectedServiceBanner}><span className={styles.selectedServiceIcon}>{(()=>{const Icon=serviceIcons[selected];return <Icon size={23}/>;})()}</span><span><small>{translate("marketing.copy.preparing_your_request")}</small><strong>{serviceName(selected)}</strong></span></div>
@@ -825,38 +826,38 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       {site.trim()?<div className={styles.reviewItem}><span>{translate("marketing.copy.website")}</span><strong className={styles.wrapValue}>{site.trim()}</strong></div>:null}
       {selected==="google_profile"?<>
        <div className={styles.googleReview}><strong>{en?"Google listing":"Gestión de Google"}</strong>
-        <span>{googleData.action==="create"?(en?"Create listing":"Crear perfil"):googleData.action==="claim"?(en?"Claim existing listing":"Reclamar perfil"):en?"Improve listing":"Mejorar perfil"} · {googleData.googleCategory}</span>
+        <span>{googleData.action==="create"?(en?"Create listing":"Crear perfil"):googleData.action==="claim"?(en?"Claim existing listing":"Reclamar perfil"):en?"Improve listing":"Mejorar perfil"} · {googleData.googleCategory}</span>{googleData.googleCategorySource==="business_activity"?<small>{translate("marketing.google.categoryFromBusiness")}</small>:null}
         {googleData.action!=="create"&&googleData.existingProfileUrl?<span>{googleData.existingProfileUrl}</span>:null}
-        <button type="button" onClick={()=>{setGoogleStep(0);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
+        <button type="button" onClick={()=>{setEditLoadedGoogle(true);setGoogleStep(0);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
        </div>
        <div className={styles.googleReview}><strong>{en?"Location and address visibility":"Ubicación y visibilidad de la dirección"}</strong>
         <span>{googleData.kind==="service_area"?(en?"Service area; residential address hidden":"Área de servicio; dirección residencial oculta"):
          ([googleData.street,googleData.unit,googleData.city,googleData.region,googleData.postal,googleData.country].filter(Boolean).join(", ")||"—")}</span>
         {googleData.serviceAreas?<span>{en?"Service areas: ":"Zonas de servicio: "}{googleData.serviceAreas}</span>:null}
         <span>{googleData.kind==="service_area"?(en?"Not shared in this request":"No se comparte la dirección privada"):(en?"Storefront address may be visible on Google":"La dirección del local podrá aparecer en Google")}</span>
-        <button type="button" onClick={()=>{setGoogleStep(1);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
+        <button type="button" onClick={()=>{setEditLoadedGoogle(true);setGoogleStep(1);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
        </div>
        <div className={styles.googleReview}><strong>{en?"Contact and booking":"Contacto y reservas"}</strong>
         <span>{googleData.phone||(en?"Phone pending":"Teléfono pendiente")}</span>
         {googleData.secondaryPhone?<span>{googleData.secondaryPhone}</span>:null}
         {site?<span>{websiteAddress(site)||site}</span>:null}
         {googleData.bookingUrl?<span>{googleData.bookingUrl}</span>:null}
-        <button type="button" onClick={()=>{setGoogleStep(2);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
+        <button type="button" onClick={()=>{setEditLoadedGoogle(true);setGoogleStep(2);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
        </div>
        <div className={styles.googleReview}><strong>{en?"Opening hours":"Horarios"}</strong>
         <span>{googleData.hoursEnabled?(googleData.hours.filter(h=>h&&!h.closed).length+" "+(en?"days open":"días abiertos")):(en?"To be confirmed":"Pendientes de confirmar")}</span>
         {googleData.action==="create"&&googleData.openingDate?<span>{en?"Opening date: ":"Fecha de apertura: "}{googleData.openingDate}</span>:null}
-        <button type="button" onClick={()=>{setGoogleStep(3);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
+        <button type="button" onClick={()=>{setEditLoadedGoogle(true);setGoogleStep(3);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
        </div>
        <div className={styles.googleReview}><strong>{en?"Description, products and services":"Descripción, productos y servicios"}</strong>
         <span>{googleData.description||"—"}</span>
         {googleData.services?<span>{googleData.services}</span>:null}{googleData.products?<span>{googleData.products}</span>:null}
-        <button type="button" onClick={()=>{setGoogleStep(4);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
+        <button type="button" onClick={()=>{setEditLoadedGoogle(true);setGoogleStep(4);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
        </div>
        <div className={styles.googleReview}><strong>{en?"Private photos and files":"Fotos y archivos privados"}</strong>
         <span>{en?"Saved business photos: ":"Fotos del negocio: "}{[businessDetails.logo_path,businessDetails.cover_path,...businessDetails.gallery_paths].filter(Boolean).length}</span>
         <span>{en?"Additional request photos: ":"Fotos adicionales: "}{googleFiles.length}</span>
-        <button type="button" onClick={()=>{setGoogleStep(5);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
+        <button type="button" onClick={()=>{setEditLoadedGoogle(true);setGoogleStep(5);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
        </div>
       </>:null}
       {selected==="directory_listings"?<div className={styles.googleReview}><strong>{translate("marketing.copy.requested_directories")}</strong><span>{directoryData.city}, {directoryData.state}</span>{directoryData.selected.map(d=><span key={d.id}>{d.name} · {d.cost==="free"?translate("marketing.action.free_listing"):d.cost==="membership"?translate("marketing.action.membership_may_be_required"):translate("marketing.action.to_evaluate")}</span>)}<span>{translate("marketing.copy.vmv_will_confirm_requirements_and_pricing_before_tak")}</span><button type="button" onClick={()=>editWizardStep(2)}>{translate("marketing.copy.review_selection")}</button></div>:null}

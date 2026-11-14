@@ -69,7 +69,8 @@ export default function AIAgentsPreview(){
     setChosenBusiness(previous=>{
      if(previous&&profile.businesses.some(x=>x.id===previous))return previous;
      if(previous.startsWith("legacy:")&&profile.workspaces.some(x=>x.id===previous.slice(7)&&!x.central_business_id))return previous;
-     if(profile.businesses.length===1)return profile.businesses[0].id;
+     try{const saved=sessionStorage.getItem("vmv-active-business:"+profile.owner);if(profile.businesses.some(b=>b.id===saved))return saved!;}catch{/* Storage may be restricted. */}
+     if(profile.businesses.length>0)return profile.businesses[0].id;
      if(profile.businesses.length===0&&profile.workspaces.length===1)return "legacy:"+profile.workspaces[0].id;
      return "";
     });
@@ -132,7 +133,7 @@ export default function AIAgentsPreview(){
   }
  };
  const start=async(kind:Kind)=>{
-  const destination=agentSetupDestination(principal,selectedBusiness?.id||null);
+  const destination=agentSetupDestination(staleAgents.some(a=>a.id===principal?.id)?null:principal,selectedBusiness?.id||null);
   if(destination){window.location.assign(destination);return;}
   if(!principal)return;
   openFor(kind,principal);
@@ -321,59 +322,8 @@ export default function AIAgentsPreview(){
        <div className={styles.heroPills}><span>{principal?"Principal: "+principal.name:proposal?"Agente existente por elegir":"Principal sin configurar"}</span><span>{visibleAgents.length} identidades conservadas</span></div>
       </div>
       {notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
-      <section className={styles.businessPicker} aria-label="Negocio para AI Agents">
-       <div className={styles.businessHead}><BriefcaseBusiness size={19}/>
-        <span><strong>Negocio que estás configurando</strong>
-         <small>Tus datos se comparten entre los servicios de VMV</small></span>
-       </div>
-       {businesses.length>1||unlinked.length>0?<select aria-label="Elegir negocio"
-        value={chosenBusiness} onChange={e=>{setChosenBusiness(e.target.value);setSelected(null);setNotice("");}}>
-        <option value="">Seleccionar negocio</option>
-        {businesses.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
-        {unlinked.map(b=><option key={b.id} value={"legacy:"+b.id}>Agentes existentes · {b.name}</option>)}
-       </select>:selectedBusiness?<strong className={styles.businessName}>{selectedBusiness.name}</strong>:null}
-       {staleAgents.length>0?<p className={styles.businessHint} role="status">
-        {staleAgents.length} agente(s) requieren revisar datos del perfil central.
-        Sus instrucciones y permisos no se han cambiado automáticamente.
-       </p>:null}
-       {selectedBusiness?<div className={styles.businessSummary}>
-        <span>{selectedBusiness.category_id||"Actividad pendiente"} · {selectedBusiness.city||"Ubicación pendiente"}</span>
-        <span>{missingBusinessInfo.length?
-         "Para completar en el perfil: "+missingBusinessInfo.slice(0,3).join(", "):
-         "Datos comerciales disponibles"}</span>
-        <button type="button" className={styles.businessCreate} onClick={()=>setBusinessDialog(true)}>Editar negocio</button>
-       </div>:<p className={styles.businessHint}>Completa tu negocio para crear agentes nuevos. Tus agentes existentes siguen disponibles.</p>}
-       {!selectedBusiness?<button type="button" className={styles.businessCreate} onClick={()=>setBusinessDialog(true)}>Configurar mi negocio <ArrowUpRight size={14}/></button>:null}
-       {selectedBusiness&&!selectedWorkspace&&unlinked.length===1?
-        <button type="button" className={styles.businessLink} disabled={linkBusy}
-         onClick={()=>void linkPilot()}>
-         <ShieldCheck size={15}/>{linkBusy?"Vinculando…":"Vincular agentes existentes a este negocio"}</button>:null}
-      </section>
-      {phone?<div className={styles.info}>
-       <PhoneCall size={17}/> Línea de prueba {phone.maskedNumber} ·
-       {phone.agentId?" Agente seleccionado. Comprobar conexión.":" Sin agente seleccionado."}
-       {phone.agentId?<button type="button" className={styles.buttonSecondary}
-        onClick={()=>void checkPilot()} disabled={pilotChecking}>
-         {pilotChecking?"Comprobando…":"Verificar piloto"}</button>:null}
-       {phone.agentId?<button type="button" className={styles.buttonSecondary}
-        onClick={()=>void select(null)} disabled={busy}>Quitar selección</button>:null}
-      </div>:null}
-      {pilotChecks?<div className={styles.info} role="status">
-       <ShieldCheck size={17}/> Comprobaciones internas · No sustituyen una llamada real.
-       <div>{pilotChecks.map(c=><p key={c.key} style={{margin:"4px 0"}}>
-        {c.ok?"✓":"✕"} {c.label}</p>)}</div>
-      </div>:null}
       <div className={styles.sectionHeading}><div><h2>Tu agente: {principal?.name||proposal?.name||"Sin configurar"}</h2>
        <p>Negocio: {selectedBusiness?.name||"Selecciona tu negocio"} · Una identidad para todas las capacidades.</p></div></div>
-      {principal?<div className={styles.info} role="status"><Bot size={18}/>
-       Agente principal confirmado. {phone?.agentId===principal.id&&phone?.serverEnrolled?
-        "Llamadas: ruta lista para probar; falta prueba real.":"Llamadas: requiere conexión o verificación."}
-       {" "}Chat público: sin conectar. Ventas y reservas: requieren permisos y datos operativos.
-       </div>:proposal?<button type="button" className={styles.commerceLaunch}
-        onClick={()=>void designate(proposal).catch(e=>setNotice(e instanceof Error?e.message:"No se pudo guardar el principal."))}>
-        <Bot size={20}/><span><strong>Usar {proposal.name} como agente principal</strong>
-        <small>Conservar historial y permisos, sin cambiar la línea</small></span><ChevronRight size={16}/>
-       </button>:null}
       <div className={styles.sectionHeading}><div><h2>Capacidades de tu agente</h2>
        <p>Elige qué configurar; no se crea un asistente nuevo para cada función.</p></div></div>
       <div className={styles.tiles}>

@@ -143,7 +143,7 @@
     "home.primaryNavigation": "Navegación principal",
     "home.openCalls": "Abrir llamadas traducidas",
     "home.openInPerson": "Abrir traducción en persona",
-        "dashboard.business": "Tu negocio",
+    "dashboard.business": "Tu negocio",
     "dashboard.callCenter": "Tu centro de llamadas",
     "dashboard.lineStatus": "Estado de la línea",
     "dashboard.unavailable": "No disponible",
@@ -1538,7 +1538,10 @@
     "marketing.visibility.editBusiness": "Editar perfil del negocio",
     "marketing.visibility.createBusiness": "Configurar mi negocio",
     "marketing.visibility.profileDraftEdits": "Los ajustes de esta ficha no cambian tu perfil guardado.",
-    "marketing.visibility.savedCategory": "Categoría del perfil guardado"
+    "marketing.visibility.savedCategory": "Categoría del perfil guardado",
+    "marketing.google.profileLoadedShort": "Datos del negocio cargados",
+    "marketing.google.onlyMissing": "Solo lo que falta",
+    "marketing.google.categoryFromBusiness": "Usaremos la actividad guardada. VMV comprobará su categoría correspondiente en Google."
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -1684,7 +1687,7 @@
     "home.primaryNavigation": "Main navigation",
     "home.openCalls": "Open translated calls",
     "home.openInPerson": "Open in-person interpretation",
-        "dashboard.business": "Your business",
+    "dashboard.business": "Your business",
     "dashboard.callCenter": "Your call center",
     "dashboard.lineStatus": "Line status",
     "dashboard.unavailable": "Unavailable",
@@ -3079,6 +3082,9 @@
     "marketing.visibility.editBusiness": "Edit business profile",
     "marketing.visibility.createBusiness": "Set up my business",
     "marketing.visibility.profileDraftEdits": "Edits to this listing draft do not change your saved profile.",
-    "marketing.visibility.savedCategory": "Category from your saved business profile"
+    "marketing.visibility.savedCategory": "Category from your saved business profile",
+    "marketing.google.profileLoadedShort": "Business details loaded",
+    "marketing.google.onlyMissing": "Only missing details",
+    "marketing.google.categoryFromBusiness": "We will use your saved business activity. VMV will check the corresponding Google category."
   }
 }

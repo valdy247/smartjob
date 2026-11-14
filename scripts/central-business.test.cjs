@@ -12,10 +12,11 @@ const business=(kind="storefront")=>({
  service_areas:"Columbus",logo_path:"e30ea843-0a84-461f-b17d-f645bf0e36d2/5d98ee01-c48e-410d-801e-bdd0c99a595f/logo/photo.png",
  gallery_paths:[],hours_enabled:true,hours:Array.from({length:7},(_,i)=>({closed:i>4,start:"09:00",end:"17:00"}))
 });
-test("Google prefills known profile data without confusing VMV industry with official Google category",()=>{
+test("Google prefills activity as a staff-review proposal, not a verified Google category",()=>{
  const b=business();
  const google=businessGoogleSeed(b);
- assert.equal(google.googleCategory,"");
+ assert.equal(google.googleCategory,"Panadería y repostería");
+ assert.equal(google.googleCategorySource,"business_activity");
  assert.equal(google.phone,b.phone);
  assert.equal(google.street,b.street);
  assert.equal(google.hoursEnabled,true);

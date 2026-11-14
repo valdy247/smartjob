@@ -1,4 +1,6 @@
 "use client";
+import {contactPhoneE164} from "@/lib/contact-phone";
+import {googleProfileLink} from "@/lib/google-profile-request";
 import BusinessPhoneInput from "@/components/BusinessPhoneInput";
 import {useEffect,useMemo,useState,type ChangeEvent} from "react";
 import {CheckCircle2,MapPin,AlertCircle} from "lucide-react";
@@ -79,8 +81,19 @@ function FilePicker({label,value,onChange,multiple=false}:{label:string;value:Fi
   </figure>)}</div>:null}
  </section>;
 }
-export default function GoogleProfileWizard({step,data,onData,media,onMedia,business,website}:{step:number;data:GoogleData;onData:(v:GoogleData)=>void;media:GoogleMedia;onMedia:(v:GoogleMedia)=>void;business:string;website:string}){
+export default function GoogleProfileWizard({step,data,onData,media,onMedia,business,website,loadedData,editLoaded=false}:{loadedData?:GoogleData;editLoaded?:boolean;step:number;data:GoogleData;onData:(v:GoogleData)=>void;media:GoogleMedia;onMedia:(v:GoogleMedia)=>void;business:string;website:string}){
  const {language,translate}=useInterfaceLanguage();const en=language==="en";
+ const [editing,setEditing]=useState(editLoaded);
+ const hasSaved=(key:keyof GoogleData)=>{
+  if(!loadedData||editing||!data[key]||!loadedData[key]||(typeof loadedData[key]==="string"&&!String(loadedData[key]).trim()))return false;
+  if(key==="phone"||key==="secondaryPhone")return Boolean(contactPhoneE164(loadedData[key],loadedData.country));
+  if(key==="description")return loadedData.description.length<=750&&!/(https?:\/\/|www\.)/i.test(loadedData.description);
+  if(key==="products"||key==="services")return loadedData[key].length<=900;
+  if(key==="country")return /^[A-Z]{2}$/.test(loadedData.country);
+  if(key==="bookingUrl"||key==="existingProfileUrl")return Boolean(googleProfileLink(loadedData[key]));
+  return true;
+ };
+ const hideHours=hasSaved("hoursEnabled")&&!validateGoogleStep(3,loadedData!,language);
  const tx=(text:string)=>{const key=labelKeys[text];return key?translate(key):text;};
  const [checkingLocation,setCheckingLocation]=useState(false);
  const [locationMessage,setLocationMessage]=useState("");
@@ -120,27 +133,29 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
   }catch{setLocationMessage(en?"Google location checking is temporarily unavailable.":"La comprobación de Google no está disponible ahora.");}
   finally{setCheckingLocation(false);}
  };
- const field=(key:keyof GoogleData,label:string,placeholder:string,optional=true)=>(
+ const field=(key:keyof GoogleData,label:string,placeholder:string,optional=true)=>hasSaved(key)?null:(
   <label className={styles.field}><span>{tx(label)} <em>{tx(optional?"Opcional":"Necesario")}</em></span>
   <input value={String(data[key])} maxLength={250} placeholder={tx(placeholder)} onChange={e=>patch(key,e.target.value as GoogleData[typeof key])}/></label>
  );
  return <div className={styles.root}>
    <div className={styles.progress}><span>Google Business Profile</span><strong>{step+1} / {googleStepNames.length} · {tx(googleStepNames[step])}</strong></div>
+   {loadedData?<div className={styles.loadedProfile}><span>{translate("marketing.google.profileLoadedShort")}</span><button type="button" onClick={()=>setEditing(v=>!v)}>{translate(editing?"marketing.google.onlyMissing":"marketing.copy.edit")}</button></div>:null}
    {step===0?<div className={styles.group}>
     <h3>{tx("¿Qué necesitas hacer?")}</h3>
     <div className={styles.choices}>{([["create","Crear un perfil"],["claim","Reclamar uno existente"],["improve","Mejorar el actual"]] as const).map(([id,label])=>
      <button type="button" aria-pressed={data.action===id} key={id} onClick={()=>onData({...data,action:id,openingDate:id==="create"?data.openingDate:""})}>{tx(label)}</button>)}</div>
-    <label className={styles.field}><span>{tx("Nombre del negocio")} <em>{tx("Necesario")}</em></span><input value={business} disabled readOnly/></label>
-    <GoogleCategoryLookup key={data.country} data={data} onData={onData}/>
-    {data.action!=="create"?<label className={styles.field}><span>{tx("Enlace de tu perfil actual")} <em>{tx("Opcional")}</em></span><input type="url" inputMode="url" maxLength={500} value={data.existingProfileUrl||""} placeholder="https://maps.google.com/..." onChange={e=>patch("existingProfileUrl",e.target.value)}/></label>:null}
+    {!loadedData||editing?<label className={styles.field}><span>{tx("Nombre del negocio")} <em>{tx("Necesario")}</em></span><input value={business} disabled readOnly/></label>:null}
+    {!hasSaved("googleCategory")?<GoogleCategoryLookup key={data.country} data={data} onData={onData}/>:null}
+    {data.googleCategorySource==="business_activity"?<p className={styles.hint}>{translate("marketing.google.categoryFromBusiness")}</p>:null}
+    {data.action!=="create"&&!hasSaved("existingProfileUrl")?<label className={styles.field}><span>{tx("Enlace de tu perfil actual")} <em>{tx("Opcional")}</em></span><input type="url" inputMode="url" maxLength={500} value={data.existingProfileUrl||""} placeholder="https://maps.google.com/..." onChange={e=>patch("existingProfileUrl",e.target.value)}/></label>:null}
     <p className={styles.hint}>{en?"Additional categories will be checked by VMV against Google before submission.":"VMV comprobará las categorías adicionales con Google antes de gestionarlas."}</p>
     <p className={styles.hint}>{translate("marketing.google.eligibility")}</p>
     <p className={styles.hint}>{tx("La categoría debe existir en Google. Nuestro equipo comprobará que coincida antes de gestionarla.")}</p>
    </div>:null}
    {step===1?<div className={styles.group}>
     <h3>{tx("¿Dónde atiendes?")}</h3>
-    <div className={styles.choices}>{([["storefront","En un local"],["service_area","Voy al cliente / entregas"],["hybrid","Ambos"]] as const).map(([id,label])=>
-     <button type="button" key={id} aria-pressed={data.kind===id} onClick={()=>patch("kind",id)}>{tx(label)}</button>)}</div>
+    {!hasSaved("kind")?<div className={styles.choices}>{([["storefront","En un local"],["service_area","Voy al cliente / entregas"],["hybrid","Ambos"]] as const).map(([id,label])=>
+     <button type="button" key={id} aria-pressed={data.kind===id} onClick={()=>patch("kind",id)}>{tx(label)}</button>)}</div>:null}
     {data.kind!=="service_area"?<>
       {field("street","Calle y número","Dirección comercial",false)}
       {field("unit","Local / suite","Local 2")}
@@ -148,46 +163,46 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
       {field("postal","Código postal","31901",false)}
       <p className={styles.hint}>{tx("Solo ingresa una dirección donde realmente atiendes clientes. Google puede mostrarla públicamente.")}</p>
      </>:<p className={styles.hint}>{tx("La dirección residencial no se publicará ni te la pediremos para esta solicitud. Google puede solicitarla privadamente durante su verificación.")}</p>}
-    <label className={styles.field}><span>{en?"Country":"País"} <em>{en?"Required":"Necesario"}</em></span>
+    {!hasSaved("country")?<label className={styles.field}><span>{en?"Country":"País"} <em>{en?"Required":"Necesario"}</em></span>
      <select className={styles.countrySelect} value={data.country} onChange={e=>patch("country",e.target.value)}>
       {!countries.some(x=>x.code===data.country)?<option value={data.country}>{en?"Select a valid country":"Selecciona un país válido"}</option>:null}
       {countries.map(x=><option key={x.code} value={x.code}>{x.name} ({x.code})</option>)}
      </select>
-    </label>
-    <div className={styles.locationCheck}>
+    </label>:null}
+    {!loadedData||editing||!data.locationPendingReview?<div className={styles.locationCheck}>
      {data.kind!=="service_area"?<button type="button" disabled={checkingLocation||!data.city.trim()} onClick={()=>void verifyLocation()}><MapPin size={15}/>{checkingLocation?(en?"Checking…":"Comprobando…"):(en?"Check city, region and ZIP":"Comprobar ciudad, región y código postal")}</button>:null}
      {data.locationChecked?<p className={styles.locationVerified}><CheckCircle2 size={15}/>{en?"Location matched Google Maps":"Ubicación contrastada con Google Maps"}</p>:null}
      {locationMessage?<p className={styles.locationWarning} role="status"><AlertCircle size={15}/>{locationMessage}</p>:null}
      {!data.locationChecked?<button type="button" className={styles.manualLocation} aria-pressed={!!data.locationPendingReview} disabled={!!data.locationConflict} onClick={()=>patch("locationPendingReview",true)}>{en?"Request manual location verification":"Solicitar verificación manual de ubicación"}</button>:null}
      {data.locationPendingReview?<small>{en?"VMV will verify the location before any Google submission.":"VMV comprobará la ubicación antes de presentar cualquier dato a Google."}</small>:null}
-    </div>
-    {data.kind!=="storefront"?<label className={styles.field}><span>{tx("Áreas donde atiendes")} <em>{tx("Necesario")}</em></span>
+    </div>:null}
+    {data.kind!=="storefront"&&!hasSaved("serviceAreas")?<label className={styles.field}><span>{tx("Áreas donde atiendes")} <em>{tx("Necesario")}</em></span>
       <textarea rows={3} value={data.serviceAreas} onChange={e=>patch("serviceAreas",e.target.value)} maxLength={400} placeholder={tx("Ciudades o códigos postales separados por comas")}/></label>:null}
    </div>:null}
    {step===2?<div className={styles.group}>
     <h3>{tx("¿Cómo pueden contactarte?")}</h3>
-    <label className={styles.field}><span>{tx("Teléfono comercial")} <em>{tx("Opcional")}</em></span><BusinessPhoneInput value={data.phone} onChange={value=>patch("phone",value)} country={data.country} label={tx("Teléfono comercial")}/></label>
-    <label className={styles.field}><span>{tx("Teléfono adicional")} <em>{tx("Opcional")}</em></span><BusinessPhoneInput value={data.secondaryPhone} onChange={value=>patch("secondaryPhone",value)} country={data.country} label={tx("Teléfono adicional")}/></label>
-    <label className={styles.field}><span>{tx("Sitio web")} <em>{tx("Opcional")}</em></span><input value={website} disabled readOnly placeholder={tx("Sin página web")}/></label>
+    {!hasSaved("phone")?<label className={styles.field}><span>{tx("Teléfono comercial")} <em>{tx("Opcional")}</em></span><BusinessPhoneInput value={data.phone} onChange={value=>patch("phone",value)} country={data.country} label={tx("Teléfono comercial")}/></label>:null}
+    {!hasSaved("secondaryPhone")?<label className={styles.field}><span>{tx("Teléfono adicional")} <em>{tx("Opcional")}</em></span><BusinessPhoneInput value={data.secondaryPhone} onChange={value=>patch("secondaryPhone",value)} country={data.country} label={tx("Teléfono adicional")}/></label>:null}
+    {!loadedData||editing?<label className={styles.field}><span>{tx("Sitio web")} <em>{tx("Opcional")}</em></span><input value={website} disabled readOnly placeholder={tx("Sin página web")}/></label>:null}
     {field("bookingUrl","Enlace para reservar o pedir","https://...")}
     <p className={styles.hint}>{tx("Nunca necesitamos tu contraseña de Google. La conexión y verificación se hacen con tu autorización.")}</p>
    </div>:null}
    {step===3?<div className={styles.group}>
     <h3>{tx("Horarios habituales")}</h3>
-    <label className={styles.toggle}><input type="checkbox" checked={data.hoursEnabled} onChange={e=>patch("hoursEnabled",e.target.checked)}/><span>{tx("Quiero indicar mis horarios")}</span></label>
-    {data.hoursEnabled?<div className={styles.hours}>{data.hours.map((h,i)=><div key={tx(days[i])} className={styles.day}>
+    {!hasSaved("hoursEnabled")?<label className={styles.toggle}><input type="checkbox" checked={data.hoursEnabled} onChange={e=>patch("hoursEnabled",e.target.checked)}/><span>{tx("Quiero indicar mis horarios")}</span></label>:null}
+    {hideHours?null:data.hoursEnabled?<div className={styles.hours}>{data.hours.map((h,i)=><div key={tx(days[i])} className={styles.day}>
      <strong>{tx(days[i])}</strong><label><input type="checkbox" checked={!h.closed} onChange={e=>patch("hours",data.hours.map((x,j)=>j===i?{...x,closed:!e.target.checked}:x))}/> {tx("Abierto")}</label>
      {!h.closed?<><input aria-label={tx("Apertura")+" "+tx(days[i])} type="time" value={h.start} onChange={e=>patch("hours",data.hours.map((x,j)=>j===i?{...x,start:e.target.value}:x))}/><input aria-label={tx("Cierre")+" "+tx(days[i])} type="time" value={h.end} onChange={e=>patch("hours",data.hours.map((x,j)=>j===i?{...x,end:e.target.value}:x))}/></>:null}
     {h.end<h.start?<small>{translate("marketing.google.nextDay")}</small>:null}
     </div>)}</div>:<p className={styles.hint}>{tx("Puedes dejar los horarios pendientes si todavía no los tienes definidos.")}</p>}
-    {data.action==="create"?<label className={styles.field}><span>{tx("Fecha de apertura")} <em>{tx("Opcional")}</em></span><input type="date" value={data.openingDate} onChange={e=>patch("openingDate",e.target.value)}/></label>:null}
+    {data.action==="create"&&!hasSaved("openingDate")?<label className={styles.field}><span>{tx("Fecha de apertura")} <em>{tx("Opcional")}</em></span><input type="date" value={data.openingDate} onChange={e=>patch("openingDate",e.target.value)}/></label>:null}
     <p className={styles.hint}>{tx("Los horarios especiales de feriados se configuran después. Tu horario real debe coincidir con lo que ofreces.")}</p>
    </div>:null}
    {step===4?<div className={styles.group}>
     <h3>{tx("Cuéntales qué ofreces")}</h3>
-    <label className={styles.field}><span>{tx("Descripción comercial")} <em>{tx("Recomendada")}</em></span><textarea rows={5} value={data.description} onChange={e=>patch("description",e.target.value)} maxLength={750} placeholder={tx("Qué hace tu negocio, productos o servicios principales y qué lo distingue")}/><small>{data.description.length}/750</small></label>
-    <label className={styles.field}><span>{tx("Servicios")} <em>{tx("Opcional")}</em></span><textarea rows={3} value={data.services} onChange={e=>patch("services",e.target.value)} maxLength={900} placeholder={tx("Ej. pedidos personalizados, entregas, catering")}/></label>
-    <label className={styles.field}><span>{tx("Productos destacados")} <em>{tx("Opcional")}</em></span><textarea rows={3} value={data.products} onChange={e=>patch("products",e.target.value)} maxLength={900} placeholder={tx("Ej. chocoflan, pastel de cumpleaños, cupcakes")}/></label>
+    {!hasSaved("description")?<label className={styles.field}><span>{tx("Descripción comercial")} <em>{tx("Recomendada")}</em></span><textarea rows={5} value={data.description} onChange={e=>patch("description",e.target.value)} maxLength={750} placeholder={tx("Qué hace tu negocio, productos o servicios principales y qué lo distingue")}/><small>{data.description.length}/750</small></label>:null}
+    {!hasSaved("services")?<label className={styles.field}><span>{tx("Servicios")} <em>{tx("Opcional")}</em></span><textarea rows={3} value={data.services} onChange={e=>patch("services",e.target.value)} maxLength={900} placeholder={tx("Ej. pedidos personalizados, entregas, catering")}/></label>:null}
+    {!hasSaved("products")?<label className={styles.field}><span>{tx("Productos destacados")} <em>{tx("Opcional")}</em></span><textarea rows={3} value={data.products} onChange={e=>patch("products",e.target.value)} maxLength={900} placeholder={tx("Ej. chocoflan, pastel de cumpleaños, cupcakes")}/></label>:null}
     <p className={styles.hint}>{tx("La descripción no debe incluir enlaces, promociones ni afirmaciones falsas.")}</p>
    </div>:null}
    {step===5?<div className={styles.group}>

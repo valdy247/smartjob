@@ -33,6 +33,8 @@
 
 .photoField{display:grid;gap:12px;min-width:0}.photoGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px}.photoPreview{margin:0;min-width:0;background:white;border:1px solid #eadce8;border-radius:14px;padding:9px;display:grid;gap:8px}.photoPreview img{width:100%;height:130px;object-fit:contain;background:#f7f5f7;border-radius:9px}.photoPreview figcaption{font-size:11px;line-height:1.4;color:#654b6a;overflow-wrap:anywhere}.photoPreview button{min-height:40px;padding:8px;border:1px solid #e3cfe1;border-radius:9px;background:#fcf5fa;color:#7c3a72;font:inherit;font-size:12px;cursor:pointer}.photoPreview button:focus-visible{outline:3px solid #ad86ec;outline-offset:2px}
 
+.loadedProfile{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;background:#f6edf7;border-radius:12px;font-size:12px;color:#765880}
+.loadedProfile button{border:0;background:transparent;color:#87508e;font-weight:800;padding:8px;cursor:pointer}
 .countrySelect{width:100%;box-sizing:border-box;font:inherit;font-weight:600;font-size:16px;min-height:49px;padding:10px 12px;border-radius:12px;border:1px solid #e7d9e5;background:white;color:#392e40}
 .countrySelect:focus-visible{border-color:#a85d8b;outline:2px solid #edd5e7}
 .locationCheck{display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:12px;border:1px solid #eddfeb;border-radius:13px;background:#fffbfe}

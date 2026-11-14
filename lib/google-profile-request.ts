@@ -10,6 +10,7 @@ export function isKnownGoogleCountry(value:string):boolean{
 export type GoogleKind="storefront"|"service_area"|"hybrid";
 export type GoogleHour={closed:boolean;start:string;end:string};
 export type GoogleData={
+ googleCategorySource?:"business_activity"|"customer";
  action:"create"|"claim"|"improve";kind:GoogleKind;googleCategory:string;googleCategoryId?:string;categoryPendingReview?:boolean;locationChecked?:boolean;locationPendingReview?:boolean;locationConflict?:boolean;otherCategories:string;
  street:string;unit:string;city:string;region:string;postal:string;country:string;serviceAreas:string;
  phone:string;secondaryPhone:string;description:string;services:string;products:string;

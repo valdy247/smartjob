@@ -1,4 +1,5 @@
 import type {GoogleData,GoogleHour} from "./google-profile-request";
+import {BUSINESS_CATEGORIES} from "./vmv-business-categories";
 import {websiteAddress} from "./website-address";
 
 export type CentralBusiness={
@@ -21,7 +22,7 @@ export const centralBusinessDefaults=(name="",category_id="other",website_url:st
 });
 export function businessGoogleSeed(b:CentralBusiness,action:GoogleData["action"]="create"):GoogleData{
  return {
-  action,kind:b.kind,googleCategory:"",otherCategories:"",
+  action,kind:b.kind,googleCategory:b.category_id!=="other"?(BUSINESS_CATEGORIES.find(c=>c.id===b.category_id)?.label||""):"",googleCategorySource:"business_activity",categoryPendingReview:b.category_id!=="other"&&BUSINESS_CATEGORIES.some(c=>c.id===b.category_id),locationPendingReview:true,otherCategories:"",
   street:b.kind==="service_area"?"":b.street,unit:b.kind==="service_area"?"":b.unit,
   city:b.kind==="service_area"?"":b.city,region:b.kind==="service_area"?"":b.region,
   postal:b.kind==="service_area"?"":b.postal,country:b.country||"US",
@@ -35,6 +36,8 @@ export function mergeGoogleWithBusiness(current:GoogleData,b:CentralBusiness):Go
  const seed=businessGoogleSeed(b,current.action);
  const filled=(v:string|undefined,fallback:string)=>v?.trim()?v:fallback;
  return {...current,
+  googleCategory:filled(current.googleCategory,seed.googleCategory),
+  googleCategorySource:current.googleCategory?current.googleCategorySource:seed.googleCategorySource,
   kind:b.kind,country:seed.country,
   street:filled(current.street,seed.street),unit:filled(current.unit,seed.unit),
   city:filled(current.city,seed.city),region:filled(current.region,seed.region),
@@ -104,6 +107,9 @@ export function centralBusinessWritePayload(b:CentralBusiness){
 export function applyProfileEditsToGoogle(current:GoogleData,before:CentralBusiness,after:CentralBusiness):GoogleData{
  const changed=<K extends keyof CentralBusiness>(key:K)=>before[key]!==after[key];
  const next={...current};
+ if(changed("category_id")&&(!current.googleCategory||current.googleCategorySource==="business_activity")){
+  const seed=businessGoogleSeed(after,current.action);next.googleCategory=seed.googleCategory;next.googleCategorySource=seed.googleCategorySource;
+ }
  if(changed("kind"))next.kind=after.kind;
  if(changed("country"))next.country=after.country;
  if(changed("street"))next.street=after.street;

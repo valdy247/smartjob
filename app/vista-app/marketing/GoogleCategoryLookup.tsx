@@ -29,7 +29,7 @@ export default function GoogleCategoryLookup({data,onData}:{data:GoogleData;onDa
   },350);
   return()=>{cancelled=true;clearTimeout(timer);controller.abort();};
  },[query,data.country,language,data.googleCategoryId,data.googleCategory,en]);
- const select=(item:Result)=>{setQuery(item.label);setItems([]);setError("");onData({...data,googleCategory:item.label,googleCategoryId:item.id,categoryPendingReview:false,otherCategories:""});};
+ const select=(item:Result)=>{setQuery(item.label);setItems([]);setError("");onData({...data,googleCategory:item.label,googleCategoryId:item.id,googleCategorySource:"customer",categoryPendingReview:false,otherCategories:""});};
  return <div className={styles.root}>
   <label className={styles.label}>{en?"Official Google category":"Categoría oficial de Google"}
    <div className={styles.search}><Search size={17}/><input value={query} maxLength={80} autoComplete="off"

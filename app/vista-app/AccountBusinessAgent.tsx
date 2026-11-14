@@ -40,13 +40,20 @@ export default function AccountBusinessAgent({ownerId,initialName=""}:{ownerId:s
   if(!alive.current||sequence!==loadSequence.current)return;
   if(profile.status==="fulfilled"&&profile.value.owner===ownerId){
    setBusinesses(profile.value.businesses);setWorkspaces(profile.value.workspaces);
-   setBusinessId(current=>profile.value.businesses.some(b=>b.id===(prefer||current))?(prefer||current):profile.value.businesses[0]?.id||"");
+   setBusinessId(current=>{
+    let saved="";try{saved=sessionStorage.getItem("vmv-active-business:"+ownerId)||"";}catch{/* Optional preference only. */}
+    const choice=prefer||current||saved;
+    return profile.value.businesses.some(b=>b.id===choice)?choice:profile.value.businesses[0]?.id||"";
+   });
   }else setError(L("No pudimos cargar tus negocios.","Could not load your businesses."));
   if(list.status==="fulfilled")setAgents(list.value.filter(a=>a.owner_id===ownerId));
   else setAgentError(L("No pudimos cargar tu agente.","Could not load your agent."));
   setLoading(false);
  };
  useEffect(()=>{void reload();},[retry]);
+ useEffect(()=>{
+  if(businesses.some(b=>b.id===businessId))try{sessionStorage.setItem("vmv-active-business:"+ownerId,businessId);}catch{/* Optional preference only. */}
+ },[ownerId,businessId,businesses]);
  const openAgent=()=>{
   setNotice("");if(!business){setResumeAgent(true);setBusinessOpen(true);return;}
   setCandidate("");setEditing(principal);
