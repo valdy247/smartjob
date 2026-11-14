@@ -438,7 +438,7 @@ export default function AIAgentsPreview(){
      {screen==="bookings"&&active?<BookingStudio agent={active} onClose={back}
       onAgentUpdated={updated=>setAgents(old=>old.map(a=>a.id===updated.id?updated:a))}/>:null}
      {screen==="phone"?<CallControl onBack={back}/>:null}
-     {screen==="commerce"?<CommerceStudio agents={principal?[principal]:visibleAgents.filter(a=>a.revision>0)}
+     {screen==="commerce"?<CommerceStudio centralBusinessId={selectedBusiness?.id||""} agents={principal?[principal]:visibleAgents.filter(a=>a.revision>0)}
       initialAgentId={principal?.id||selected||""} initialTab={commerceTab} onAgentUpdated={updated=>
        setAgents(prev=>prev.map(a=>a.id===updated.id?updated:a))}
       onClose={()=>{void reload().catch(()=>{});back();}}/>:null}
