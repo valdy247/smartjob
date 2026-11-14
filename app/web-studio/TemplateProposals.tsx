@@ -56,7 +56,7 @@ export default function TemplateProposals({input,familyOverride,generated,busy,o
    </article>)}
   </div>
   <div className={styles.bottom}>
-   {!generated?<div className={styles.dots} aria-label="Posición de las propuestas">
+   {!generated?<><div className={styles.dots} aria-label="Posición de las propuestas">
     {proposals.map((p,i)=><button key={p.id} type="button"
      aria-label={"Ir a propuesta "+(i+1)} aria-current={index===i?"step":undefined}
      onClick={()=>move(i)} />)}
@@ -65,7 +65,7 @@ export default function TemplateProposals({input,familyOverride,generated,busy,o
     <button type="button" aria-label="Propuesta anterior" disabled={index===0} onClick={()=>move(index-1)}><ArrowLeft size={17}/></button>
     <span>{index+1} de {proposals.length}</span>
     <button type="button" aria-label="Propuesta siguiente" disabled={index===proposals.length-1} onClick={()=>move(index+1)}><ArrowRight size={17}/></button>
-   </div></div>:null}
+   </div></>:null}
   </div>
   <p className={styles.note}>Puedes cambiar títulos, fotografías, distribución y colores en el siguiente paso. La web no se publica hasta que lo autorices.</p>
  </section>;
