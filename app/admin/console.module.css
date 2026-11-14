@@ -274,3 +274,6 @@
  .table td{padding:7px 8px;border:0}
  .historyLine{display:grid;gap:3px}
 }
+
+/* Allow Testers as seventh navigation item without crushing mobile controls. */
+@media(max-width:750px){.sidebar nav{min-width:0;overflow-x:auto;scrollbar-width:thin;justify-content:flex-start}.sidebar .nav,.sidebar .navOn{flex:0 0 36px}}

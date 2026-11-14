@@ -146,6 +146,18 @@ export async function POST(req:NextRequest){
    return reply({ok:true,batchId,results,reused:Boolean((prepared.data as {reused?:boolean}).reused)});
   }catch(e){return reply({error:safeError(e)},409);}
  }
+ if(body.action==="resume"){
+  if(!uuid(body.batch_id))return reply({error:"Lote inválido."},400);
+  try{
+   const stored=await db.from("vmv_admin_tester_batches").select("*").eq("id",body.batch_id).single();
+   if(stored.error||!stored.data)return reply({error:"Lote inexistente."},404);
+   const {deployment}=await verifyTesterDeployment(stored.data.deployment_id);
+   if(deployment.sha!==stored.data.deployment_sha||deployment.url!==stored.data.deployment_url)
+    return reply({error:"La versión no coincide con el lote."},409);
+   const results=await batchSend(db,userId,stored.data.id,deployment);
+   return reply({ok:true,results});
+  }catch(e){return reply({error:safeError(e)},409);}
+ }
  if(body.action==="retry"){
   if(!uuid(body.delivery_id))return reply({error:"Envío inválido."},400);
   try{

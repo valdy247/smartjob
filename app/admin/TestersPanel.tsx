@@ -123,6 +123,16 @@ export default function TestersPanel(){
   }catch(e){setError(e instanceof Error?e.message:"El envío no pudo completarse. Reintenta con la misma solicitud.");}
   finally{setSending(false);busy.current=false;}
  };
+ const resume=async(batchId:string)=>{
+  if(sending||busy.current)return;
+  busy.current=true;setSending(true);setError("");setSuccess("");
+  try{
+   const r=await api<{results:{state:string}[]}>("",{action:"resume",batch_id:batchId});
+   setSuccess("Lote reanudado: "+r.results.length+" pendientes procesados.");
+   await reload();
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo continuar el lote.");}
+  finally{setSending(false);busy.current=false;}
+ };
  const retry=async(d:Delivery)=>{
   if(sending||busy.current||d.state!=="failed")return;
   busy.current=true;setSending(true);setError("");setSuccess("");
@@ -192,6 +202,10 @@ export default function TestersPanel(){
    {historyOpen&&(data?.batches||[]).map(b=><div className={styles.batch} key={b.id}>
     <div className={styles.batchHead}><strong>Versión {short(b.deployment_sha)}</strong><small>{format(b.created_at)}</small>
      <a href={b.deployment_url} target="_blank" rel="noopener noreferrer"><ExternalLink size={14}/>Abrir versión enviada</a></div>
+    {(data?.deliveries||[]).some(d=>d.batch_id===b.id&&d.state==="pending")?
+     <button type="button" className={styles.secondary} disabled={sending} onClick={()=>void resume(b.id)}>
+       <RefreshCw size={14}/>Continuar envíos pendientes
+     </button>:null}
     {(data?.deliveries||[]).filter(d=>d.batch_id===b.id).map(d=><div key={d.id} className={styles.delivery}>
      <span>{data?.testers.find(t=>t.id===d.tester_id)?.name||"Tester"} · {d.channel.toUpperCase()}</span>
      <small>{label(d.state)}{d.error_code?" · "+d.error_code:""}{d.provider_id?" · "+short(d.provider_id):""}</small>
@@ -202,6 +216,7 @@ export default function TestersPanel(){
   </section>
   {formOpen?<div className={styles.overlay} role="presentation"><div className={styles.dialog} role="dialog" aria-modal="true" aria-label={editing?"Editar tester":"Nuevo tester"}>
    <div className={styles.sectionHead}><h3>{editing?"Editar tester":"Agregar tester"}</h3><button className={styles.close} aria-label="Cerrar" onClick={()=>setFormOpen(false)}><X size={17}/></button></div>
+   {error?<p className={styles.error} role="alert">{error}</p>:null}
    <div className={styles.fields}>
     <label>Nombre<input maxLength={100} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Nombre del tester"/></label>
     <label>Correo<input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="tester@ejemplo.com"/></label>
