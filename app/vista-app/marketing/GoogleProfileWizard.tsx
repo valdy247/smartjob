@@ -97,7 +97,7 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
  },[en]);
  const patch=<K extends keyof GoogleData>(key:K,value:GoogleData[K])=>{
   const locationFields=["country","street","unit","city","region","postal","serviceAreas","kind"];
-  onData({...data,[key]:value,...(locationFields.includes(String(key))?{locationChecked:false,locationPendingReview:false}:{})});
+  onData({...data,[key]:value,...(locationFields.includes(String(key))?{locationChecked:false,locationPendingReview:false}:{}),...(key==="country"?{googleCategory:"",googleCategoryId:"",categoryPendingReview:false,otherCategories:""}:{})});
   if(locationFields.includes(String(key)))setLocationMessage("");
  };
  const verifyLocation=async()=>{
@@ -128,7 +128,7 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
     <div className={styles.choices}>{([["create","Crear un perfil"],["claim","Reclamar uno existente"],["improve","Mejorar el actual"]] as const).map(([id,label])=>
      <button type="button" aria-pressed={data.action===id} key={id} onClick={()=>onData({...data,action:id,openingDate:id==="create"?data.openingDate:""})}>{tx(label)}</button>)}</div>
     <label className={styles.field}><span>{tx("Nombre del negocio")} <em>{tx("Necesario")}</em></span><input value={business} disabled readOnly/></label>
-    <GoogleCategoryLookup data={data} onData={onData}/>
+    <GoogleCategoryLookup key={data.country} data={data} onData={onData}/>
     {data.action!=="create"?<label className={styles.field}><span>{tx("Enlace de tu perfil actual")} <em>{tx("Opcional")}</em></span><input type="url" inputMode="url" maxLength={500} value={data.existingProfileUrl||""} placeholder="https://maps.google.com/..." onChange={e=>patch("existingProfileUrl",e.target.value)}/></label>:null}
     <p className={styles.hint}>{en?"Additional categories will be checked by VMV against Google before submission.":"VMV comprobará las categorías adicionales con Google antes de gestionarlas."}</p>
     <p className={styles.hint}>{translate("marketing.google.eligibility")}</p>
