@@ -52,3 +52,11 @@ test('malformed opening-hours entries return a validation issue instead of crash
  v.hours[0]={closed:false,start:'09:00',end:'17:00'};
  assert.equal(googleProfileIssue(v),null);
 });
+
+test('creating a profile ignores an oversized hidden URL from a previous action',()=>{
+ const stale={...fixture(),action:'improve',existingProfileUrl:'x'.repeat(501)};
+ assert.equal(googleProfileIssue(stale).key,'length');
+ const create={...stale,action:'create'};
+ assert.equal(googleProfileIssue(create),null);
+ assert.equal(normalizeGoogleProfile(create).existingProfileUrl,'');
+});
