@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import type {LucideIcon} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
+import {useInterfaceLanguage} from "@/lib/i18n-web";
+import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
 import CaseAttachments from "@/components/CaseAttachments";
 import styles from "./console.module.css";
 
@@ -32,7 +34,8 @@ type Detail={case:CaseRow;record:Record<string,unknown>;meta:Record<string,unkno
 type Client={id:string;first_name:string|null;last_name:string|null;business_name:string|null;display_name:string;phone:string|null;website_url:string|null;city:string|null;state:string|null;created_at:string;billing:{plan_code:string;status:string;stripe_mode:string}|null};
 type Billing={user_id:string;plan_code:string;status:string;stripe_mode:string;current_period_end:string|null;included_minutes:number;used_minutes:number;reserved_minutes:number;rollover_minutes:number;topup_minutes:number;updated_at:string};
 type StaffPayload={staff:Operator[];canManage:boolean};
-type BillingPayload={accounts:Billing[];failures:{bridge_sid:string;owner_id:string;status:string;error_code:string;started_at:string}[];failureCount:number;note:string};
+type BillingPayload={accounts:Billing[];failures:{bridge_sid:string;owner_id:string;status:string;error_code:string;started_at:string}[];failureCount:number;note:string;
+ aiAgentsTotal:number;aiAgentsSampleStatuses:Record<string,number>;websitesTotal:number;linesTotal:number;activeLineSample:number};
 type SettingsPayload={settings:{key:string;value:Record<string,unknown>;updated_at:string}[]};
 type ClientPayload={clients:Client[];total:number;page:number;pages:number;size:number};
 type Overview={role:"admin"|"agent";actorId:string;cases:CaseRow[];staff:Operator[];total:number;truncated:boolean;
@@ -75,9 +78,9 @@ const localDateTime=(value:string|null|undefined)=>{
  const d=new Date(value),n=(v:number)=>String(v).padStart(2,"0");
  return [d.getFullYear(),n(d.getMonth()+1),n(d.getDate())].join("-")+"T"+n(d.getHours())+":"+n(d.getMinutes());
 };
-const formatDate=(value:string|null|undefined)=>{
+const formatDate=(value:string|null|undefined,locale="es-US")=>{
  if(!value||!Number.isFinite(Date.parse(value)))return "—";
- return new Intl.DateTimeFormat("es-US",{dateStyle:"medium",timeStyle:"short"}).format(new Date(value));
+ return new Intl.DateTimeFormat(locale,{dateStyle:"medium",timeStyle:"short"}).format(new Date(value));
 };
 const dollars=(v:number)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(v/100);
 const safeLink=(value:unknown)=>{
@@ -101,6 +104,24 @@ const metadataLabels:Record<string,string>={
 const activeClass=(enabled:boolean,yes:string,no:string)=>enabled?yes:no;
 
 export default function AdminConsole(){
+ const {language}=useInterfaceLanguage();
+ const en=language==="en";
+ const L=(es:string,english:string)=>en?english:es;
+ const date=(value:string|null|undefined)=>formatDate(value,en?"en-US":"es-US");
+ const statusesEn:Record<string,string>={
+  received:"Received",quoted:"Quote sent",approved:"Approved",in_progress:"In progress",
+  needs_customer:"Waiting for customer",verified:"Completed",cancelled:"Canceled",
+  new:"New",resolved:"Resolved",closed:"Closed",pending:"Pending",
+  contacted:"Contacted",activated:"Activated",active:"Active",low:"Low",normal:"Normal",
+  high:"High",urgent:"Urgent",test:"Test",live:"Live"
+ };
+ const status=(value:string)=>en?(statusesEn[value]||value.replaceAll("_"," ")):statusLabel(value);
+ const sourceName=(value:Source)=>en?({support:"Support",marketing:"Marketing",provisioning:"Phone lines",domain:"Domains"}[value]):sourceLabel(value);
+ const serviceName=(value:string)=>en?({
+  google_profile:"Google Business Profile",directory_listings:"Directories",seo_improvement:"Website improvements",
+  review_strategy:"Reputation",general:"General",billing:"Billing",company_formation:"Company formation",
+  web_services:"Web Services",smart_call:"Smart Call",ai_agents:"AI Agents",domain:"Domains"
+ } as Record<string,string>)[value]||serviceLabel(value):serviceLabel(value);
  const [phase,setPhase]=useState<"checking"|"ready"|"signed_out"|"forbidden"|"unconfigured"|"error">("checking");
  const [section,setSection]=useState<Section>("home");
  const [overview,setOverview]=useState<Overview|null>(null);
@@ -395,17 +416,17 @@ export default function AdminConsole(){
   setClientFilter(null);setDueOnly(false);navigate("inbox");
  };
  const stats:{title:string;value:number|null;hint:string;Icon:LucideIcon;call:()=>void}[]=[
-  {title:"Nuevos",value:counts.new,hint:"Por revisar",Icon:Inbox,call:()=>openInbox({state:"new"})},
-  {title:"Sin asignar",value:counts.unassigned,hint:"Necesitan responsable",Icon:UserRound,call:()=>openInbox({assignee:"unassigned"})},
-  {title:"En progreso",value:counts.progress,hint:"Trabajo del equipo",Icon:ClipboardCheck,call:()=>openInbox({state:"working"})},
-  {title:"Esperando cliente",value:counts.waiting,hint:"Aguardan respuesta o aprobación",Icon:MessageCircle,call:()=>openInbox({state:"waiting"})},
-  {title:"Próximos o vencidos",value:counts.soon,hint:"Plazo menor de 48 horas",Icon:CalendarClock,call:()=>{openInbox();setDueOnly(true);}},
-  {title:"Fallos de llamadas",value:counts.alerts,hint:"Con código de error · 30 días",Icon:TriangleAlert,call:()=>navigate("services")}
+  {title:L("Nuevos","New"),value:counts.new,hint:L("Por revisar","Needs review"),Icon:Inbox,call:()=>openInbox({state:"new"})},
+  {title:L("Sin asignar","Unassigned"),value:counts.unassigned,hint:L("Necesitan responsable","Needs an owner"),Icon:UserRound,call:()=>openInbox({assignee:"unassigned"})},
+  {title:L("En progreso","In progress"),value:counts.progress,hint:L("Trabajo del equipo","Team work"),Icon:ClipboardCheck,call:()=>openInbox({state:"working"})},
+  {title:L("Esperando cliente","Waiting for customer"),value:counts.waiting,hint:L("Aguardan respuesta o aprobación","Awaiting reply or approval"),Icon:MessageCircle,call:()=>openInbox({state:"waiting"})},
+  {title:L("Próximos o vencidos","Due soon or overdue"),value:counts.soon,hint:L("Plazo menor de 48 horas","Within 48 hours"),Icon:CalendarClock,call:()=>{openInbox();setDueOnly(true);}},
+  {title:L("Fallos de llamadas","Call failures"),value:counts.alerts,hint:L("Con código de error · 30 días","Error codes · past 30 days"),Icon:TriangleAlert,call:()=>navigate("services")}
  ];
  const nav:{id:Section;title:string;Icon:LucideIcon}[]=[
-  {id:"home",title:"Inicio",Icon:LayoutDashboard},{id:"inbox",title:"Bandeja",Icon:Inbox},
-  {id:"clients",title:"Clientes",Icon:Users},{id:"services",title:"Servicios",Icon:BriefcaseBusiness},
-  {id:"team",title:"Equipo",Icon:UserRoundCog},{id:"settings",title:"Configuración",Icon:Settings2}
+  {id:"home",title:L("Inicio","Home"),Icon:LayoutDashboard},{id:"inbox",title:L("Bandeja","Inbox"),Icon:Inbox},
+  {id:"clients",title:L("Clientes","Clients"),Icon:Users},{id:"services",title:L("Servicios","Services"),Icon:BriefcaseBusiness},
+  {id:"team",title:L("Equipo","Team"),Icon:UserRoundCog},{id:"settings",title:L("Configuración","Settings"),Icon:Settings2}
  ];
  const revoke=async(userId:string,nextRole:"admin"|"agent"|"remove"):Promise<boolean>=>{
   if(!window.confirm(nextRole==="remove"?"¿Revocar el acceso administrativo?":"¿Actualizar el rol del operador?"))return false;
@@ -485,14 +506,14 @@ export default function AdminConsole(){
   </aside>
   <main className={styles.main}>
    <header className={styles.header}>
-    <div><p className={styles.eyebrow}>VMV / OPERACIONES</p><h1>{({home:"Centro de operaciones",inbox:"Bandeja de trabajo",clients:"Clientes",services:"Servicios",team:"Equipo",settings:"Configuración"} as Record<Section,string>)[section]}</h1>
-     <p className={styles.subtitle}>{({home:"Todo lo importante, sin ruido.",inbox:"Una sola vista para los trabajos de VMV.",clients:"Cuentas y relaciones de servicio.",services:"Estado de los servicios de la plataforma.",team:"Responsables, permisos y colaboración.",settings:"Preferencias de operación y seguridad."} as Record<Section,string>)[section]}</p></div>
-    <div className={styles.headerActions}><span className={styles.mode}><span className={styles.greenDot}/> Acceso interno</span>
+    <div><p className={styles.eyebrow}>VMV / OPERACIONES</p><h1>{({home:L("Centro de operaciones","Operations center"),inbox:L("Bandeja de trabajo","Work inbox"),clients:L("Clientes","Clients"),services:L("Servicios","Services"),team:L("Equipo","Team"),settings:L("Configuración","Settings")} as Record<Section,string>)[section]}</h1>
+     <p className={styles.subtitle}>{({home:L("Todo lo importante, sin ruido.","Everything that matters, without noise."),inbox:L("Una sola vista para los trabajos de VMV.","One view for all VMV work."),clients:L("Cuentas y relaciones de servicio.","Accounts and services."),services:L("Estado de los servicios de la plataforma.","Service health and activity."),team:L("Responsables, permisos y colaboración.","Assignments and permissions."),settings:L("Preferencias de operación y seguridad.","Operations and security preferences.")} as Record<Section,string>)[section]}</p></div>
+    <div className={styles.headerActions}><InterfaceLanguagePicker compact/><span className={styles.mode}><span className={styles.greenDot}/> {L("Acceso interno","Internal access")}</span>
      <div className={styles.notificationWrap}>
       <button type="button" className={styles.iconButton} aria-label={"Notificaciones: "+noticeCount+" sin leer"} onClick={()=>setNoticesOpen(v=>!v)}><Bell size={18}/>{noticeCount>0?<span className={styles.notificationCount}>{noticeCount}</span>:null}</button>
       {noticesOpen?<div className={styles.notificationPanel}><strong>Actividad para ti</strong>
        {noticeList.length?noticeList.slice(0,20).map(n=><button key={n.id} type="button" className={n.read_at?styles.notificationRead:styles.notification} onClick={()=>void markNotice(n)}>
-        <span>{n.title}</span><small>{formatDate(n.created_at)} · {n.source}</small></button>)
+        <span>{n.title}</span><small>{date(n.created_at)} · {n.source}</small></button>)
        :<p>Sin notificaciones.</p>}</div>:null}
      </div>
      <button aria-label="Actualizar datos" type="button" className={styles.iconButton} disabled={loading||busy} onClick={()=>void refreshCurrent()}><RefreshCw size={18} className={loading?styles.spin:""}/></button></div>
@@ -502,21 +523,21 @@ export default function AdminConsole(){
    
 
    {section==="home"?<>
-    <div className={styles.sectionHeading}><div><span className={styles.eyebrow}>EN ESTE MOMENTO</span><h2>Prioridades del equipo</h2></div>
-     <button type="button" className={styles.textButton} onClick={()=>openInbox()}>Ver bandeja <ArrowUpRight size={16}/></button></div>
+    <div className={styles.sectionHeading}><div><span className={styles.eyebrow}>EN ESTE MOMENTO</span><h2>{L("Prioridades del equipo","Team priorities")}</h2></div>
+     <button type="button" className={styles.textButton} onClick={()=>openInbox()}>{L("Ver bandeja","Open inbox")} <ArrowUpRight size={16}/></button></div>
     <div className={styles.statGrid}>{stats.map(({title,value,hint,Icon,call})=><button type="button" key={title} className={styles.stat} onClick={call}>
       <div className={styles.statTop}><span className={styles.statIcon}><Icon size={20}/></span><ArrowUpRight size={17}/></div>
       <span>{title}</span><strong>{value===null?"—":value}</strong><small>{hint}</small>
     </button>)}</div>
     <div className={styles.homeGrid}>
-     <section className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>ACTIVIDAD</span><h3>Solicitudes recientes</h3></div><button type="button" className={styles.textButton} onClick={()=>openInbox()}>Ver todas <ChevronRight size={15}/></button></div>
+     <section className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>ACTIVIDAD</span><h3>{L("Solicitudes recientes","Recent requests")}</h3></div><button type="button" className={styles.textButton} onClick={()=>openInbox()}>{L("Ver todas","View all")} <ChevronRight size={15}/></button></div>
       {caseRows.length?caseRows.slice(0,6).map(c=><button type="button" key={caseKey(c)} className={styles.recent} onClick={()=>choose(c)}>
        <div className={styles.recentIcon}>{c.source==="marketing"?<Sparkles size={17}/>:c.source==="support"?<Headphones size={17}/>:c.source==="domain"?<Globe2 size={17}/>:<PhoneCall size={17}/>}</div>
-       <div><strong>{c.title}</strong><small>{sourceLabel(c.source)} · {c.client_name}</small></div>
-       <span className={styles.chip} data-status={c.status}>{statusLabel(c.status)}</span>
+       <div><strong>{c.title}</strong><small>{sourceName(c.source)} · {c.client_name}</small></div>
+       <span className={styles.chip} data-status={c.status}>{status(c.status)}</span>
       </button>):<div className={styles.blank}>Todavía no hay casos.</div>}
      </section>
-     <section className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>POR SERVICIO</span><h3>Entradas registradas</h3></div></div>
+     <section className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>POR SERVICIO</span><h3>{L("Entradas registradas","Recorded requests")}</h3></div></div>
       {sources.map(s=><button key={s.id} type="button" className={styles.serviceLine} onClick={()=>openInbox({source:s.id})}>
        <span className={styles.serviceIcon}><s.Icon size={18}/></span><span><strong>{s.label}</strong><small>{s.description}</small></span>
        <b>{overview?.sources[s.id]||0}</b><ChevronRight size={16}/></button>)}
@@ -527,26 +548,26 @@ export default function AdminConsole(){
    {section==="inbox"?<>
     <div className={styles.filters}>
      <label className={styles.search}><Search size={18}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar nombre, asunto, referencia…" aria-label="Buscar casos"/></label>
-     <select aria-label="Tipo de caso" value={sourceFilter} onChange={e=>setSourceFilter(e.target.value as Source|"all")}><option value="all">Todos los tipos</option>{sources.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select>
-     <select aria-label="Estado" value={stateFilter} onChange={e=>setStateFilter(e.target.value as typeof stateFilter)}><option value="all">Todos los estados</option><option value="new">Nuevos</option><option value="working">En progreso</option><option value="waiting">Esperando cliente</option><option value="done">Finalizados</option></select>
-     <select aria-label="Servicio" value={serviceFilter} onChange={e=>setServiceFilter(e.target.value)}><option value="all">Todos los servicios</option>{servicesInUse.map(v=><option key={v} value={v}>{serviceLabel(v)}</option>)}</select>
-     <select aria-label="Prioridad" value={priorityFilter} onChange={e=>setPriorityFilter(e.target.value)}><option value="all">Todas las prioridades</option>{["low","normal","high","urgent"].map(v=><option key={v} value={v}>{statusLabel(v)}</option>)}</select>
-     <select aria-label="Responsable" value={assigneeFilter} onChange={e=>setAssigneeFilter(e.target.value)}><option value="all">Todos los responsables</option><option value="unassigned">Sin asignar</option><option value="self">Asignados a mí</option>{operators.filter(o=>o.user_id!==overview?.actorId).map(o=><option key={o.user_id} value={o.user_id}>{o.user_id===operators[0]?.user_id?"Operador "+o.user_id.slice(0,6):o.user_id.slice(0,8)}</option>)}</select>
-     <select aria-label="Orden" value={order} onChange={e=>setOrder(e.target.value as typeof order)}><option value="updated">Actividad reciente</option><option value="oldest">Más antiguos</option></select>
+     <select aria-label="Tipo de caso" value={sourceFilter} onChange={e=>setSourceFilter(e.target.value as Source|"all")}><option value="all">{L("Todos los tipos","All types")}</option>{sources.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select>
+     <select aria-label="Estado" value={stateFilter} onChange={e=>setStateFilter(e.target.value as typeof stateFilter)}><option value="all">{L("Todos los estados","All statuses")}</option><option value="new">{L("Nuevos","New")}</option><option value="working">{L("En progreso","In progress")}</option><option value="waiting">{L("Esperando cliente","Waiting for customer")}</option><option value="done">{L("Finalizados","Completed")}</option></select>
+     <select aria-label="Servicio" value={serviceFilter} onChange={e=>setServiceFilter(e.target.value)}><option value="all">{L("Todos los servicios","All services")}</option>{servicesInUse.map(v=><option key={v} value={v}>{serviceName(v)}</option>)}</select>
+     <select aria-label="Prioridad" value={priorityFilter} onChange={e=>setPriorityFilter(e.target.value)}><option value="all">{L("Todas las prioridades","All priorities")}</option>{["low","normal","high","urgent"].map(v=><option key={v} value={v}>{status(v)}</option>)}</select>
+     <select aria-label="Responsable" value={assigneeFilter} onChange={e=>setAssigneeFilter(e.target.value)}><option value="all">{L("Todos los responsables","All assignees")}</option><option value="unassigned">{L("Sin asignar","Unassigned")}</option><option value="self">{L("Asignados a mí","Assigned to me")}</option>{operators.filter(o=>o.user_id!==overview?.actorId).map(o=><option key={o.user_id} value={o.user_id}>{o.user_id===operators[0]?.user_id?"Operador "+o.user_id.slice(0,6):o.user_id.slice(0,8)}</option>)}</select>
+     <select aria-label="Orden" value={order} onChange={e=>setOrder(e.target.value as typeof order)}><option value="updated">{L("Actividad reciente","Recent activity")}</option><option value="oldest">{L("Más antiguos","Oldest first")}</option></select>
      {(search||clientFilter||dueOnly||sourceFilter!=="all"||stateFilter!=="all"||serviceFilter!=="all"||priorityFilter!=="all"||assigneeFilter!=="all")?
-      <button type="button" className={styles.clear} onClick={()=>{setSearch("");setClientFilter(null);setDueOnly(false);setSourceFilter("all");setStateFilter("all");setServiceFilter("all");setPriorityFilter("all");setAssigneeFilter("all");}}><FilterX size={15}/>Limpiar</button>:null}
+      <button type="button" className={styles.clear} onClick={()=>{setSearch("");setClientFilter(null);setDueOnly(false);setSourceFilter("all");setStateFilter("all");setServiceFilter("all");setPriorityFilter("all");setAssigneeFilter("all");}}><FilterX size={15}/>{L("Limpiar","Clear")}</button>:null}
     </div>
     <div className={styles.inboxGrid} data-pane={pane}>
      <section className={styles.caseList}>
-      <div className={styles.paneHead}><strong>Bandeja</strong><span>{caseTotal} casos</span></div>
+      <div className={styles.paneHead}><strong>{L("Bandeja","Inbox")}</strong><span>{caseTotal} {L("casos","cases")}</span></div>
       <div className={styles.caseScroll}>{visible.length?visible.map(c=><button type="button" key={caseKey(c)} aria-pressed={selected===caseKey(c)}
        className={selected===caseKey(c)?styles.caseOn:styles.case} onClick={()=>choose(c)}>
-       <div className={styles.caseTop}><span className={styles.caseSource}>{sourceLabel(c.source)} · {serviceLabel(c.service)}</span><time>{formatDate(c.updated_at)}</time></div>
+       <div className={styles.caseTop}><span className={styles.caseSource}>{sourceName(c.source)} · {serviceName(c.service)}</span><time>{date(c.updated_at)}</time></div>
        <strong>{c.title}</strong><span className={styles.casePreview}>{c.description}</span>
-       <div className={styles.caseBottom}><span className={styles.chip} data-status={c.status}>{statusLabel(c.status)}</span><small>{shortRef(c)}</small></div>
-       <div className={styles.caseCustomer}><UserRound size={12}/>{c.client_name}{c.priority==="high"||c.priority==="urgent"?<span className={styles.urgent}>{statusLabel(c.priority)}</span>:null}</div>
+       <div className={styles.caseBottom}><span className={styles.chip} data-status={c.status}>{status(c.status)}</span><small>{shortRef(c)}</small></div>
+       <div className={styles.caseCustomer}><UserRound size={12}/>{c.client_name}{c.priority==="high"||c.priority==="urgent"?<span className={styles.urgent}>{status(c.priority)}</span>:null}</div>
       </button>):<div className={styles.blank}><Inbox size={26}/>No hay casos con esos filtros.</div>}
-      <div className={styles.pagination}><button type="button" disabled={casePage<=1} onClick={()=>void loadQueue(casePage-1)}><ArrowLeft size={14}/>Anterior</button><span>{casePage} / {casePages}</span><button type="button" disabled={casePage>=casePages} onClick={()=>void loadQueue(casePage+1)}>Siguiente <ArrowRight size={14}/></button></div>
+      <div className={styles.pagination}><button type="button" disabled={casePage<=1} onClick={()=>void loadQueue(casePage-1)}><ArrowLeft size={14}/>{L("Anterior","Previous")}</button><span>{casePage} / {casePages}</span><button type="button" disabled={casePage>=casePages} onClick={()=>void loadQueue(casePage+1)}>{L("Siguiente","Next")} <ArrowRight size={14}/></button></div>
      </div>
      </section>
      <section className={styles.caseDetail}>
@@ -554,29 +575,29 @@ export default function AdminConsole(){
         <button type="button" className={styles.backMobile} onClick={()=>setPane("list")}><ArrowLeft size={17}/>Bandeja</button>
         <strong>{shortRef(selectedRow)}</strong><button className={styles.contextMobile} type="button" onClick={()=>setPane("context")}>Información <ChevronRight size={16}/></button>
        </div>
-       <div className={styles.detailHeader}><p className={styles.eyebrow}>{sourceLabel(selectedRow.source).toUpperCase()} / {serviceLabel(selectedRow.service).toUpperCase()}</p>
-        <h2>{detail.case.title}</h2><div className={styles.flex}><span className={styles.chip} data-status={detail.case.status}>{statusLabel(detail.case.status)}</span><span className={styles.smallMuted}>{formatDate(detail.case.created_at)}</span></div>
+       <div className={styles.detailHeader}><p className={styles.eyebrow}>{sourceName(selectedRow.source).toUpperCase()} / {serviceName(selectedRow.service).toUpperCase()}</p>
+        <h2>{detail.case.title}</h2><div className={styles.flex}><span className={styles.chip} data-status={detail.case.status}>{status(detail.case.status)}</span><span className={styles.smallMuted}>{date(detail.case.created_at)}</span></div>
        </div>
-       <div className={styles.detailTabs}><button type="button" aria-pressed={detailTab==="conversation"} className={detailTab==="conversation"?styles.tabOn:styles.tab} onClick={()=>setDetailTab("conversation")}><MessageSquare size={15}/>Conversación</button>
-        <button type="button" aria-pressed={detailTab==="request"} className={detailTab==="request"?styles.tabOn:styles.tab} onClick={()=>setDetailTab("request")}><FileText size={15}/>Solicitud y acciones</button></div>
+       <div className={styles.detailTabs}><button type="button" aria-pressed={detailTab==="conversation"} className={detailTab==="conversation"?styles.tabOn:styles.tab} onClick={()=>setDetailTab("conversation")}><MessageSquare size={15}/>{L("Conversación","Conversation")}</button>
+        <button type="button" aria-pressed={detailTab==="request"} className={detailTab==="request"?styles.tabOn:styles.tab} onClick={()=>setDetailTab("request")}><FileText size={15}/>{L("Solicitud y acciones","Request & actions")}</button></div>
        {detailTab==="conversation"?<div className={styles.conversation}>
-        <div className={styles.initialMessage}><span className={styles.messageAvatar}><UserRound size={17}/></span><div><small>Solicitud original · {formatDate(detail.case.created_at)}</small>
+        <div className={styles.initialMessage}><span className={styles.messageAvatar}><UserRound size={17}/></span><div><small>Solicitud original · {date(detail.case.created_at)}</small>
          <p>{detail.case.description}</p></div></div>
-        {detail.messagesHasMore?<button type="button" className={styles.secondary} onClick={()=>void loadEarlier(false)}><FileClock size={14}/>Mostrar mensajes anteriores</button>:null}
+        {detail.messagesHasMore?<button type="button" className={styles.secondary} onClick={()=>void loadEarlier(false)}><FileClock size={14}/>{L("Mostrar mensajes anteriores","Load older messages")}</button>:null}
         {detail.messages.map(m=><div key={m.id} className={m.kind==="internal_note"?styles.internalMessage:styles.message}>
-          <div className={styles.messageHeading}><strong>{m.kind==="internal_note"?"Nota interna":m.author_id===detail.case.owner_id?"Cliente":"Equipo VMV"}</strong><span>{formatDate(m.created_at)}</span></div>
+          <div className={styles.messageHeading}><strong>{m.kind==="internal_note"?"Nota interna":m.author_id===detail.case.owner_id?"Cliente":"Equipo VMV"}</strong><span>{date(m.created_at)}</span></div>
           <p>{m.body}</p>{m.kind==="internal_note"?<small><LockKeyhole size={12}/> No visible para el cliente</small>:null}
         </div>)}
         <div className={styles.composer}><div className={styles.composerModes}>
-         <button type="button" aria-pressed={messageKind==="message"} className={messageKind==="message"?styles.modeOn:styles.modeButton} onClick={()=>setMessageKind("message")}>Mensaje al cliente</button>
-         <button type="button" aria-pressed={messageKind==="internal_note"} className={messageKind==="internal_note"?styles.modeOn:styles.modeButton} onClick={()=>setMessageKind("internal_note")}>Nota interna</button>
+         <button type="button" aria-pressed={messageKind==="message"} className={messageKind==="message"?styles.modeOn:styles.modeButton} onClick={()=>setMessageKind("message")}>{L("Mensaje al cliente","Message customer")}</button>
+         <button type="button" aria-pressed={messageKind==="internal_note"} className={messageKind==="internal_note"?styles.modeOn:styles.modeButton} onClick={()=>setMessageKind("internal_note")}>{L("Nota interna","Internal note")}</button>
         </div><textarea value={draftMessage} onChange={e=>{setDraftMessage(e.target.value);setSendingKey(null);if(detail)setDrafts(prev=>({...prev,[caseKey(detail.case)]:e.target.value}));}} maxLength={4000} rows={3} placeholder={messageKind==="internal_note"?"Anota algo para el equipo…":"Escribe una respuesta que el cliente verá en su portal…"} aria-label="Nuevo mensaje"/>
         <div className={styles.composerFooter}><small>{messageKind==="message"?"Visible en el portal del cliente. Sin SMS ni email automático.":"Solo para operadores de VMV."}</small>
-         <button type="button" className={styles.primary} onClick={()=>void send()} disabled={busy||!draftMessage.trim()}><Send size={15}/>Guardar</button></div></div>
+         <button type="button" className={styles.primary} onClick={()=>void send()} disabled={busy||!draftMessage.trim()}><Send size={15}/>{L("Guardar","Save")}</button></div></div>
         <CaseAttachments source={detail.case.source} caseId={detail.case.id} staff/>
-       </div>:<div className={styles.detailContent}><div className={styles.detailBox}><h3>Necesidad del cliente</h3><p>{detail.case.description}</p></div>
+       </div>:<div className={styles.detailContent}><div className={styles.detailBox}><h3>{L("Necesidad del cliente","Customer request")}</h3><p>{detail.case.description}</p></div>
         {detail.case.source==="marketing"?<><div className={styles.detailBox}>
-          <h3>Presupuesto</h3><p>{typeof detail.record.quoted_price_cents==="number"?dollars(detail.record.quoted_price_cents):"Todavía sin cotizar."}</p>
+          <h3>{L("Presupuesto","Quote")}</h3><p>{typeof detail.record.quoted_price_cents==="number"?dollars(detail.record.quoted_price_cents):"Todavía sin cotizar."}</p>
           {typeof detail.record.quote_note==="string"?<p>{detail.record.quote_note}</p>:null}
           {detail.acceptances.some(a=>a.quote_revision===detail.record.quote_revision&&a.quoted_price_cents===detail.record.quoted_price_cents)?
            <span className={styles.approved}><Check size={14}/>Aprobación vigente registrada</span>:null}
@@ -591,20 +612,20 @@ export default function AdminConsole(){
          <dl className={styles.dataList}>{["carrier","connection_mode","answer_method","customer_language","owner_language","phone_verified_at"].map(k=><div key={k}><dt>{k.replaceAll("_"," ")}</dt><dd>{detailText(detail.record[k])}</dd></div>)}</dl>
          <p className={styles.info}>La activación o compra de líneas se realiza únicamente desde el flujo telefónico autorizado, nunca desde este panel.</p></div>:null}
         {detail.case.source==="domain"?<div className={styles.detailBox}><h3>Solicitud de dominio</h3>
-         <p>{detailText(detail.record.hostname)}</p><p>Tipo: {detailText(detail.record.intent)} · Estado: {statusLabel(detail.case.status)}</p>
+         <p>{detailText(detail.record.hostname)}</p><p>Tipo: {detailText(detail.record.intent)} · Estado: {status(detail.case.status)}</p>
          <p className={styles.info}>La compra, DNS y publicación necesitan confirmación del proveedor y autorización del titular.</p></div>:null}
-        {["marketing","support"].includes(detail.case.source)?<div className={styles.detailBox}><h3>Actualizar estado</h3>
+        {["marketing","support"].includes(detail.case.source)?<div className={styles.detailBox}><h3>{L("Actualizar estado","Update status")}</h3>
          <div className={styles.actionBox}><label>Estado<select value={stage} onChange={e=>setStage(e.target.value)}>
           {(detail.case.source==="support"?["new","in_progress","needs_customer","resolved","closed"]:
-          ["received","approved","in_progress","needs_customer","verified","cancelled"]).map(v=><option key={v} value={v}>{statusLabel(v)}</option>)}</select></label>
+          ["received","approved","in_progress","needs_customer","verified","cancelled"]).map(v=><option key={v} value={v}>{status(v)}</option>)}</select></label>
           {detail.case.source==="marketing"?<><label>Actualización visible<textarea maxLength={1500} rows={3} value={stageNote} onChange={e=>setStageNote(e.target.value)} placeholder="Avance o información que falta…"/></label>
            {stage==="verified"?<label>Enlace HTTPS de evidencia<input value={proof} type="url" onChange={e=>setProof(e.target.value)} placeholder="https://…"/></label>:null}</>:null}
-          <button type="button" className={styles.primary} disabled={busy} onClick={()=>void saveState()}><CheckCircle2 size={16}/>Actualizar estado</button>
+          <button type="button" className={styles.primary} disabled={busy} onClick={()=>void saveState()}><CheckCircle2 size={16}/>{L("Actualizar estado","Update status")}</button>
          </div></div>:null}
-        <div className={styles.detailBox}><h3>Historial del caso</h3>
-          {detail.historyHasMore?<button type="button" className={styles.secondary} onClick={()=>void loadEarlier(true)}>Ver actividad anterior</button>:null}
+        <div className={styles.detailBox}><h3>{L("Historial del caso","Case history")}</h3>
+          {detail.historyHasMore?<button type="button" className={styles.secondary} onClick={()=>void loadEarlier(true)}>{L("Ver actividad anterior","Older activity")}</button>:null}
           {detail.history.length?detail.history.map(h=><div key={h.id} className={styles.historyLine}>
-           <span>{h.summary}</span><small>{formatDate(h.created_at)} · {h.visibility==="internal"?"Interno":"Compartido"}</small>
+           <span>{h.summary}</span><small>{date(h.created_at)} · {h.visibility==="internal"?"Interno":"Compartido"}</small>
           </div>):<p>Todavía no hay cambios registrados en el historial de esta etapa.</p>}
         </div>
        </div>}
@@ -614,19 +635,19 @@ export default function AdminConsole(){
       {detail&&selectedRow?<><div className={styles.paneHead}><button type="button" className={styles.backMobile} onClick={()=>setPane("detail")}><ArrowLeft size={17}/>Detalle</button><strong>Información</strong></div>
        <div className={styles.contextBody}><span className={styles.personAvatar}>{selectedRow.client_name.slice(0,1)}</span>
         <h3>{selectedRow.client_name}</h3><small>{detailText(detail.profile?.business_name||detail.case.title)}</small>
-        <div className={styles.contextSection}><h4>Información del caso</h4>
+        <div className={styles.contextSection}><h4>{L("Información del caso","Case details")}</h4>
          <dl className={styles.dataList}><div><dt>Referencia</dt><dd className={styles.mono}>{shortRef(selectedRow)}</dd></div>
-          <div><dt>Tipo</dt><dd>{sourceLabel(selectedRow.source)}</dd></div><div><dt>Creada</dt><dd>{formatDate(selectedRow.created_at)}</dd></div>
-          <div><dt>Actualizada</dt><dd>{formatDate(selectedRow.updated_at)}</dd></div>
+          <div><dt>Tipo</dt><dd>{sourceName(selectedRow.source)}</dd></div><div><dt>Creada</dt><dd>{date(selectedRow.created_at)}</dd></div>
+          <div><dt>Actualizada</dt><dd>{date(selectedRow.updated_at)}</dd></div>
           <div><dt>Cliente</dt><dd>{detailText(detail.profile?.first_name)} {detailText(detail.profile?.last_name)}</dd></div>
           {detail.profile?.phone?<div><dt>Teléfono</dt><dd>{detailText(detail.profile.phone)}</dd></div>:null}
           {detail.profile?.city?<div><dt>Ubicación</dt><dd>{detailText(detail.profile.city)} {detailText(detail.profile.state)}</dd></div>:null}
          </dl></div>
-        <div className={styles.contextSection}><h4>Organización del trabajo</h4>
+        <div className={styles.contextSection}><h4>{L("Organización del trabajo","Case management")}</h4>
          <label>Responsable<select value={assignee} onChange={e=>setAssignee(e.target.value)}>
           <option value="">Sin asignar</option>{operators.map(o=><option key={o.user_id} value={o.user_id}>{o.user_id.slice(0,8)} · {o.role}</option>)}
          </select></label>
-         <label>Prioridad<select value={priority} onChange={e=>setPriority(e.target.value)}>{["low","normal","high","urgent"].map(v=><option key={v} value={v}>{statusLabel(v)}</option>)}</select></label>
+         <label>Prioridad<select value={priority} onChange={e=>setPriority(e.target.value)}>{["low","normal","high","urgent"].map(v=><option key={v} value={v}>{status(v)}</option>)}</select></label>
          <label>Fecha límite <small>(hora de tu dispositivo)</small><input type="datetime-local" value={dueAt} onChange={e=>setDueAt(e.target.value)}/></label>
          <button type="button" className={styles.primaryWide} onClick={()=>void saveMeta()} disabled={busy}><Check size={15}/>Guardar organización</button>
         </div>
@@ -637,7 +658,7 @@ export default function AdminConsole(){
     </div>
    </>:null}
 
-   {section==="clients"?<section className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>RELACIONES</span><h3>Directorio de clientes</h3></div><span className={styles.count}>{clients?.total??"—"} cuentas</span></div>
+   {section==="clients"?<section className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>RELACIONES</span><h3>{L("Directorio de clientes","Client directory")}</h3></div><span className={styles.count}>{clients?.total??"—"} cuentas</span></div>
     {overview?.role!=="admin"?<p className={styles.info}>Solo los administradores pueden consultar el directorio completo.</p>:
     <><label className={styles.search}><Search size={17}/><input value={clientSearch} onChange={e=>setClientSearch(e.target.value)} placeholder="Buscar por nombre, negocio o ciudad…" aria-label="Buscar cliente"/></label>
 
@@ -656,9 +677,21 @@ export default function AdminConsole(){
     <div className={styles.serviceCards}>{sources.map(s=><button className={styles.serviceCard} type="button" key={s.id} onClick={()=>openInbox({source:s.id})}>
      <span className={styles.serviceIcon}><s.Icon size={20}/></span><span><strong>{s.label}</strong><small>{s.description}</small></span>
      <b>{overview?.sources[s.id]||0}</b><ArrowUpRight size={16}/></button>)}</div>
-    <div className={styles.sectionHeading}><div><span className={styles.eyebrow}>SUPERVISIÓN</span><h2>Facturación y operación</h2></div></div>
+
+    {overview?.role==="admin"?<div className={styles.serviceCards}>
+      <div className={styles.serviceCard}><span className={styles.serviceIcon}><Bot size={20}/></span>
+        <span><strong>AI Agents</strong><small>{L("Agentes registrados (no necesariamente activos)","Registered agents (not necessarily active)")}</small></span>
+        <b>{billing?.aiAgentsTotal??"—"}</b></div>
+      <div className={styles.serviceCard}><span className={styles.serviceIcon}><Globe2 size={20}/></span>
+        <span><strong>Web Studio</strong><small>{L("Sitios registrados","Registered sites")}</small></span>
+        <b>{billing?.websitesTotal??"—"}</b></div>
+      <div className={styles.serviceCard}><span className={styles.serviceIcon}><PhoneCall size={20}/></span>
+        <span><strong>Smart Call</strong><small>{L("Rutas telefónicas registradas","Recorded phone routes")}</small></span>
+        <b>{billing?.linesTotal??"—"}</b></div>
+    </div>:null}
+    <div className={styles.sectionHeading}><div><span className={styles.eyebrow}>SUPERVISIÓN</span><h2>{L("Facturación y operación","Billing and operations")}</h2></div></div>
     {overview?.role!=="admin"?<div className={styles.surface}><p className={styles.info}>La consulta de facturación requiere rol administrador.</p></div>:
-    <div className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>LECTURA SEGURA</span><h3>Suscripciones registradas</h3></div><span className={styles.count}>{billing?.accounts.length||0} cuentas</span></div>
+    <div className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>LECTURA SEGURA</span><h3>{L("Suscripciones registradas","Recorded subscriptions")}</h3></div><span className={styles.count}>{billing?.accounts.length||0} cuentas</span></div>
      <p className={styles.info}>Este resumen no permite alterar cobros, saldos ni activar servicios. Las suscripciones de prueba no son pagos reales.</p>
      <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Cuenta</th><th>Plan</th><th>Modo</th><th>Estado</th><th>Minutos restantes (contables)</th></tr></thead><tbody>
       {(billing?.accounts||[]).map(b=><tr key={b.user_id}><td className={styles.mono}>{b.user_id.slice(0,8)}</td><td>{b.plan_code}</td>
@@ -667,11 +700,11 @@ export default function AdminConsole(){
      </tbody></table></div>{!billing?<div className={styles.blank}>Cargando facturación…</div>:null}
      <div className={styles.subtleSeparator}/>
      <h3>Incidencias telefónicas</h3><p className={styles.info}>{billing?.failureCount||0} sesiones con código de error registradas. No se debe interpretar cada error como un cobro.</p>
-     {(billing?.failures||[]).slice(0,10).map(f=><div key={f.bridge_sid} className={styles.failure}><TriangleAlert size={15}/><span>{f.error_code||"Error"} · {formatDate(f.started_at)}</span><small>{f.bridge_sid.slice(0,15)}</small></div>)}
+     {(billing?.failures||[]).slice(0,10).map(f=><div key={f.bridge_sid} className={styles.failure}><TriangleAlert size={15}/><span>{f.error_code||"Error"} · {date(f.started_at)}</span><small>{f.bridge_sid.slice(0,15)}</small></div>)}
     </div>}
    </div>:null}
 
-   {section==="team"?<section className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>PERMISOS</span><h3>Personal autorizado</h3></div><span className={styles.count}>{team?.staff.length||0} operadores</span></div>
+   {section==="team"?<section className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>PERMISOS</span><h3>{L("Personal autorizado","Authorized staff")}</h3></div><span className={styles.count}>{team?.staff.length||0} operadores</span></div>
     <div className={styles.teamList}>{(team?.staff||[]).map(p=><div className={styles.teamRow} key={p.user_id}>
      <span className={styles.personAvatar}>{(p.name||"V").slice(0,1)}</span><div><strong>{p.name||"Operador VMV"}</strong><small>{p.user_id}</small></div>
      <span className={styles.chip}>{p.role==="admin"?"Administrador":"Operador"}</span>
@@ -686,21 +719,21 @@ export default function AdminConsole(){
    </section>:null}
 
    {section==="settings"?<div className={styles.settingsGrid}>
-    <section className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>OPERACIÓN</span><h3>Atención y soporte</h3></div></div>
+    <section className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>OPERACIÓN</span><h3>{L("Atención y soporte","Customer support")}</h3></div></div>
      {overview?.role!=="admin"?<p className={styles.info}>Los ajustes requieren rol administrador.</p>:<>
      <label className={styles.field}>Plazo objetivo de atención (días)<input type="number" min="1" max="30" value={slaDays} onChange={e=>setSlaDays(e.target.value)}/></label>
      <label className={styles.field}>Mensaje de bienvenida del equipo<textarea rows={4} maxLength={500} value={welcome} onChange={e=>setWelcome(e.target.value)} placeholder="Gracias por contactar a VMV…"/></label>
      <p className={styles.info}>El plazo objetivo se aplica automáticamente a los tickets de soporte nuevos. Para otros servicios, el responsable puede establecer la fecha límite de cada caso.</p>
-     <button type="button" disabled={busy} className={styles.primary} onClick={()=>void saveSettings()}><Check size={16}/>Guardar preferencias</button>
+     <button type="button" disabled={busy} className={styles.primary} onClick={()=>void saveSettings()}><Check size={16}/>{L("Guardar preferencias","Save preferences")}</button>
      </>}</section>
-    <section className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>SEGURIDAD</span><h3>Controles administrativos</h3></div></div>
+    <section className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>SEGURIDAD</span><h3>{L("Controles administrativos","Security controls")}</h3></div></div>
      <div className={styles.securityLine}><ShieldCheck size={18}/><div><strong>Autenticación existente</strong><small>Supabase Auth, sesión verificada y roles de personal</small></div><CheckCircle2 size={16}/></div>
      <div className={styles.securityLine}><LockKeyhole size={18}/><div><strong>Datos protegidos</strong><small>Las tablas conservan RLS y las mutaciones pasan por el servidor</small></div><CheckCircle2 size={16}/></div>
      <div className={styles.securityLine}><FileClock size={18}/><div><strong>Historial de eventos</strong><small>Mensajes append-only y bitácora de acciones administrativas</small></div><CheckCircle2 size={16}/></div>
      <div className={styles.securityLine}><CreditCard size={18}/><div><strong>Operaciones monetarias</strong><small>Solo consulta: sin reembolsos, compras ni cargos desde Admin</small></div><LockKeyhole size={16}/></div>
      <a className={styles.textButton} href="/vista-app/soporte">Abrir portal de soporte <ExternalLink size={15}/></a>
      {overview?.role==="admin"?<div className={styles.contextSection}><h4>Actividad reciente de administradores</h4>
-       {(audit?.events||[]).slice(0,15).map(e=><div key={e.id} className={styles.failure}><FileClock size={14}/><span>{e.action.replaceAll("_"," ")} · {e.source}</span><small>{formatDate(e.created_at)}</small></div>)}
+       {(audit?.events||[]).slice(0,15).map(e=><div key={e.id} className={styles.failure}><FileClock size={14}/><span>{e.action.replaceAll("_"," ")} · {e.source}</span><small>{date(e.created_at)}</small></div>)}
        {!audit?<p className={styles.info}>Cargando bitácora…</p>:audit.events.length===0?<p className={styles.info}>Todavía sin eventos registrados.</p>:null}
      </div>:null}
     </section>
