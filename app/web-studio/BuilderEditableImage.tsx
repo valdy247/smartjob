@@ -167,8 +167,8 @@ function ImageActions({id,target,label,settings,onPreview}:{id:string;target:Ima
 }
 /** The same frame is rendered in the editor, preview and published snapshot. */
 export default function BuilderEditableImage({id,target={field:"image"},src,alt,settings={},editing=false,
- className="",radius=16,position="center",ratio}:{id:string;target?:ImageTarget;src:unknown;alt:string;
- settings?:Record<string,unknown>;editing?:boolean;className?:string;radius?:number;position?:string;ratio?:string}){
+ className="",radius=16,position="center",ratio,priority=false}:{id:string;target?:ImageTarget;src:unknown;alt:string;
+ settings?:Record<string,unknown>;editing?:boolean;className?:string;radius?:number;position?:string;ratio?:string;priority?:boolean}){
  const [preview,setPreview]=useState<Record<string,unknown>>({});
  const stamp=JSON.stringify(settings);
  useEffect(()=>setPreview({}),[stamp]);
@@ -179,7 +179,7 @@ export default function BuilderEditableImage({id,target={field:"image"},src,alt,
   style={{...imageSettingsStyle({...settings,...preview},radius),
    "--vmv-image-position":["top","bottom","left","right"].includes(position)?position:"center"} as React.CSSProperties}>
   {editing?<EditableMedia id={id} target={target} url={url} alt={alt}/>:
-   url?<img src={url} alt={alt} loading="lazy"/>:null}
+   url?<img src={url} alt={alt} loading={priority?"eager":"lazy"} fetchPriority={priority?"high":undefined} decoding="async"/>:null}
   {editing?<ImageActions id={id} target={target} label={alt||"Imagen"} settings={{...settings,...preview}}
    onPreview={setPreview}/>:null}
  </div>;
