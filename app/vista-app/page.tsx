@@ -381,13 +381,13 @@ export default function VMVMobilePreview(){
           <summary>{translate("services.call.lineDetails")}</summary>
           <div className={styles.minuteBreakdown}>
            <Row label={translate("services.call.lineStatus")} value={lineState}/>
-           <Row label={translate("services.call.numberVerified")} value={line?.verified?"Sí":"Pendiente"}/>
-           <Row label={translate("services.call.contactNumber")} value={line?.publicPhone||"No configurado"}/>
-           <Row label={translate("services.call.carrier")} value={(!line?.carrier||line.carrier==="other")&&(!provisioning?.carrier||provisioning.carrier==="other")?"No especificado":line?.carrier||provisioning?.carrier||"No especificado"}/>
-           <Row label={translate("services.call.request")} value={({activated:"Activada",approved:"Aprobada",pending:"Pendiente",contacted:"En revisión",rejected:"Rechazada"} as Record<string,string>)[provisioning?.status||""]||"Sin solicitud"}/>
-           <Row label={translate("services.call.receiving")} value={route?.receive_method==="ios_app"?"App iPhone":route?.receive_method==="pstn"?"Otra línea":"Sin configurar"}/>
-           <Row label={translate("services.call.forwarding")} value={route?.forwarding_mode==="none"?"No configurado":route?.forwarding_mode==="conditional"?"Condicional":route?.forwarding_mode==="all_calls"?"Todas las llamadas":"No disponible"}/>
-           <Row label={translate("services.call.bilingualMenu")} value={line?.menuPrepared?"Preparado para pruebas":"No verificado"}/>
+           <Row label={translate("services.call.numberVerified")} value={line?.verified?translate("services.call.yes"):translate("services.call.pending")}/>
+           <Row label={translate("services.call.contactNumber")} value={line?.publicPhone||translate("services.call.notConfigured")}/>
+           <Row label={translate("services.call.carrier")} value={(!line?.carrier||line.carrier==="other")&&(!provisioning?.carrier||provisioning.carrier==="other")?translate("services.call.notSpecified"):line?.carrier||provisioning?.carrier||translate("services.call.notSpecified")}/>
+           <Row label={translate("services.call.request")} value={({activated:translate("services.call.activated"),approved:translate("services.call.approved"),pending:translate("services.call.pending"),contacted:translate("services.call.underReview"),rejected:translate("services.call.rejected")} as Record<string,string>)[provisioning?.status||""]||translate("services.call.noRequest")}/>
+           <Row label={translate("services.call.receiving")} value={route?.receive_method==="ios_app"?"App iPhone":route?.receive_method==="pstn"?translate("services.call.otherLine"):translate("services.call.notConfigured")}/>
+           <Row label={translate("services.call.forwarding")} value={route?.forwarding_mode==="none"?translate("services.call.notConfigured"):route?.forwarding_mode==="conditional"?translate("services.call.conditional"):route?.forwarding_mode==="all_calls"?translate("services.call.allCalls"):translate("services.call.notAvailable")}/>
+           <Row label={translate("services.call.bilingualMenu")} value={line?.menuPrepared?translate("services.call.preparedForTests"):translate("services.call.unverified")}/>
            
           </div>
          </details>
@@ -425,7 +425,7 @@ export default function VMVMobilePreview(){
          <a className={styles.plansLink} href="https://vmv-business-design-git-feat-vm-073e13-valdys-projects-b97fc7a6.vercel.app/es/planes/" target="_blank" rel="noopener noreferrer">{translate("services.call.viewPlans")} <ArrowUpRight size={15}/></a>
          <Row label={translate("services.call.included")} value={num(minuteData?.included)+" min"}/>
          <Row label={translate("services.call.used")} value={num(minuteData?.used)+" min"}/>
-         <Row label={translate("services.call.renewal")} value={date(billing?.periodEnd)}/>
+         <Row label={translate("services.call.renewal")} value={billing?.periodEnd?new Intl.DateTimeFormat(language==="es"?"es-US":"en-US",{year:"numeric",month:"short",day:"numeric"}).format(new Date(billing.periodEnd)):"—"}/>
          {billing?.topup?.available&&billing.billingMode==="test"?<div className={styles.topupOffer}>
           <div className={styles.topupOfferLine}>
            <strong>+{billing.topup.minutes} min</strong>
@@ -475,7 +475,7 @@ export default function VMVMobilePreview(){
         
         <History calls={calls} onSave={phone=>openContacts(phone,true)} onCallBack={sid=>setCallbackConfirmSid(sid)} onLookup={sid=>void lookupCustomer(sid)}
          canCallBack={callbackAvailable} callingSid={callbackBusy} lookupSid={lookupBusy}/>
-        {callbackMessage?<p className={styles.callbackFeedback} role="status">{callbackMessage}</p>:null}{refreshButton}
+        {callbackMessage?<p className={styles.callbackFeedback} role="status">{translate("services.call.callbackFeedback")}</p>:null}{refreshButton}
        </div>:null}
       </div>:null}
       {ready&&tab==="calls"?<section className={styles.screen}>
