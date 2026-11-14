@@ -2,20 +2,21 @@
 import {useEffect,useRef,useState} from "react";
 import {ArrowLeft,Bot,LoaderCircle,MessageCircle,Send,ShieldCheck} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
-import type {PersistedAgent} from "./agentStore";
+import {setAgentCatalogReadAccess,type PersistedAgent} from "./agentStore";
 import styles from "./AgentLiveTest.module.css";
 
 type Item={id:string;role:"user"|"assistant";content:string;created_at:string};
 type Conversation={id:string;title:string;created_at:string};
-type Props={agent:PersistedAgent;onClose:()=>void;onEdit:()=>void};
+type Props={agent:PersistedAgent;onClose:()=>void;onEdit:()=>void;onAgentUpdated?:(agent:PersistedAgent)=>void};
 const idValid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export default function AgentLiveTest({agent,onClose,onEdit}:Props){
+export default function AgentLiveTest({agent,onClose,onEdit,onAgentUpdated}:Props){
  const [message,setMessage]=useState("");
  const [conversations,setConversations]=useState<Conversation[]>([]);
  const [current,setCurrent]=useState<string|null>(null);
  const [messages,setMessages]=useState<Item[]>([]);
  const [sending,setSending]=useState(false);
+ const [savingCatalog,setSavingCatalog]=useState(false);
  const [loading,setLoading]=useState(true);
  const [notice,setNotice]=useState("");
  const listBottom=useRef<HTMLDivElement|null>(null);
@@ -55,6 +56,16 @@ export default function AgentLiveTest({agent,onClose,onEdit}:Props){
   try{await readMessages(conversationId);setCurrent(conversationId);}
   catch(e){setNotice(e instanceof Error?e.message:"No se pudo abrir.");}
   finally{setLoading(false);}
+ }
+ async function connectCatalog(){
+  if(savingCatalog||sending||agent.setup.cap_catalog==="Sí")return;
+  setSavingCatalog(true);setNotice("");
+  try{
+   const updated=await setAgentCatalogReadAccess(agent,true);
+   onAgentUpdated?.(updated);
+   setNotice("Inventario conectado a "+updated.name+". Pregunta nuevamente por los productos; los precios son aprobados y el stock manual necesita confirmación.");
+  }catch(e){setNotice(e instanceof Error?e.message:"No se pudo conectar el inventario.");}
+  finally{setSavingCatalog(false);}
  }
  async function send(){
   const prompt=message.trim().slice(0,1000);
@@ -99,6 +110,14 @@ export default function AgentLiveTest({agent,onClose,onEdit}:Props){
   </div>
   <div className={styles.notice}><ShieldCheck size={17}/>
    <span>Esta conversación usa un modelo de IA y se guarda en tu cuenta. No realiza llamadas, reservas, pedidos ni cobros.</span>
+  </div>
+  <div className={styles.catalogAccess}>
+   <div><strong>Inventario del negocio</strong>
+    <small>{agent.setup.cap_catalog==="Sí"?
+     "Conectado · El chat puede consultar productos activos y aprobados. La disponibilidad manual requiere confirmación.":
+     "Sin conectar · Autoriza acceso de solo lectura para que el agente sepa qué vendes."}</small></div>
+   {agent.setup.cap_catalog!=="Sí"?<button type="button" disabled={savingCatalog||sending}
+    onClick={()=>void connectCatalog()}>{savingCatalog?"Conectando…":"Conectar inventario"}</button>:null}
   </div>
   {conversations.length>0?<div className={styles.history}>
    <label htmlFor="agent-test-conversation">Conversaciones anteriores</label>
