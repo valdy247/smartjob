@@ -19,6 +19,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-      - run: npm ci --ignore-scripts
+          cache: ''
+      - run: npm install --ignore-scripts --no-package-lock --no-audit
       - run: node --test scripts/central-business.test.cjs scripts/google-profile-request.test.cjs
