@@ -686,6 +686,10 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     <div className={styles.requestList}>{shown.map(req=>{
      const approved=isAccepted(req);
      const service=serviceName(req.service_code);
+     const historyEntries:Array<{key:string;date:string;kind:string;note?:string;quoteCents?:number|null}>=[
+      ...(Array.isArray(req.activity_history)?req.activity_history:[]).map((ev,i)=>({key:"event-"+i,date:ev.date,kind:ev.kind,note:ev.note,quoteCents:ev.quoteCents})),
+      ...approvals.filter(a=>a.request_id===req.id).map(a=>({key:"acceptance-"+a.id,date:a.accepted_at,kind:"acceptance",quoteCents:a.quoted_price_cents}))
+     ].sort((a,b)=>new Date(a.date).getTime()-new Date(b.date).getTime());
      return <article className={styles.request} key={req.id}>
       <div className={styles.requestTop}><div><strong>{service}</strong><small>{req.business_name} · {date(req.created_at)} · #{req.id.slice(0,8)}</small></div>
        <span className={req.status==="verified"?styles.verified:styles.status}>{statusNames[req.status]}</span></div>
@@ -705,16 +709,15 @@ export default function MarketingActionCenter({businessName,industryId,website,o
         {req.google_profile_data.media?.map(photo=><button type="button" key={photo.path} onClick={()=>void openPrivatePhoto(photo.path)}>{translate("marketing.copy.view_image")} {photo.kind}</button>)}
        </div></details>:null}
       <details className={styles.activityTimeline}>
-       <summary>{en?"Request history":"Historial de la solicitud"} · {1+(Array.isArray(req.activity_history)?req.activity_history.length:0)+(approved?1:0)}</summary>
+       <summary>{en?"Request history":"Historial de la solicitud"} · {1+historyEntries.length}</summary>
        <ol>
         <li><span>{date(req.created_at)}</span><strong>{en?"Request received":"Solicitud recibida"}</strong></li>
-        {(Array.isArray(req.activity_history)?req.activity_history:[]).map((ev,i)=><li key={i}>
+        {historyEntries.map(ev=><li key={ev.key}>
          <span>{date(ev.date)}</span>
-         <strong>{ev.kind==="quote"?(en?"Quote prepared":"Presupuesto preparado"):ev.kind==="directories"?(en?"Directory progress updated":"Directorios actualizados"):ev.kind==="status"?(en?"Status updated":"Estado actualizado"):(en?"Team update":"Actualización de VMV")}</strong>
-         {ev.kind==="quote"&&typeof ev.quoteCents==="number"?<small>{money(ev.quoteCents)}</small>:null}
+         <strong>{ev.kind==="acceptance"?(en?"Quote accepted by customer":"Presupuesto aceptado por el cliente"):ev.kind==="quote"?(en?"Quote prepared":"Presupuesto preparado"):ev.kind==="directories"?(en?"Directory progress updated":"Directorios actualizados"):ev.kind==="status"?(en?"Status updated":"Estado actualizado"):(en?"Team update":"Actualización de VMV")}</strong>
+         {typeof ev.quoteCents==="number"?<small>{money(ev.quoteCents)}</small>:null}
          {ev.note?<small>{ev.note}</small>:null}
         </li>)}
-        {approvals.filter(a=>a.request_id===req.id).map(a=><li key={a.id}><span>{date(a.accepted_at)}</span><strong>{en?"Quote accepted by customer":"Presupuesto aceptado por el cliente"}</strong><small>{money(a.quoted_price_cents)}</small></li>)}
        </ol>
       </details>
       {req.staff_update?<div className={styles.staffNote}><strong>{translate("marketing.copy.vmv_update")}</strong> {req.staff_update}</div>:null}
