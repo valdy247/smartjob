@@ -32,28 +32,28 @@ const colors={ink:"#29213D",muted:"#8E83A1",accent:"#895DE4",line:"#E7DFF2",bg:"
 const iconName=(name:string):React.ComponentProps<typeof Ionicons>["name"]=>
   name as React.ComponentProps<typeof Ionicons>["name"];
 
-function OfferCard({item,onPress}:{item:ServiceOffer;onPress?:()=>void}){
+function OfferCard({item,onPress,compact=false}:{item:ServiceOffer;onPress?:()=>void;compact?:boolean}){
  const inner=<>
   <View style={[styles.offerIcon,{backgroundColor:"#FFFFFFA8"}]}>
    <Ionicons name={iconName(item.icon)} size={26} color={item.accent}/>
   </View>
   <View style={styles.offerBottom}>
    <Text style={styles.offerName}>{item.name}</Text>
-   <View style={styles.offerBadges}>
+   {!compact?<View style={styles.offerBadges}>
     <Text style={[styles.offerBadge,{color:item.accent}]}>{deliveryLabel(item.delivery)}</Text>
     <Text style={styles.offerState}>{item.state==="pilot"?"Piloto":"Próximamente"}</Text>
-   </View>
+   </View>:null}
   </View>
   {onPress?<Ionicons name="arrow-up-outline" size={17} color={item.accent} style={styles.offerArrow}/>:null}
  </>;
- const cardStyle=[styles.offerCard,{backgroundColor:item.background}];
+ const cardStyle=[styles.offerCard,compact&&styles.offerCardCompact,{backgroundColor:item.background}];
  return onPress?
   <Pressable accessibilityRole="button" accessibilityLabel={"Preparar "+item.name}
     style={cardStyle} onPress={onPress}>{inner}</Pressable>:
   <View style={cardStyle}>{inner}</View>;
 }
 
-export function BusinessServicesPanel({session}:{session:Session}){
+export function BusinessServicesPanel({session,focus="all",excludeFeatured=false}:{session:Session;focus?:"all"|"web";excludeFeatured?:boolean}){
  const [charge,setCharge]=useState<OfferCharge>("subscription");
  const [editing,setEditing]=useState(false);
  const [draft,setDraft]=useState<ProfileDraft>({...EMPTY});
@@ -205,11 +205,11 @@ export function BusinessServicesPanel({session}:{session:Session}){
   </View>
  </View>;
 
- return <View style={styles.wrapper}>
-  <View style={styles.headingRow}>
-   <Text style={styles.heading}>Servicios<Text style={{color:colors.accent}}>.</Text></Text>
+ return <View style={[styles.wrapper,excludeFeatured&&styles.wrapperCompact]}>
+  {!excludeFeatured?<View style={styles.headingRow}>
+   <Text style={styles.heading}>{focus==="web"?"Web Services":"Servicios"}<Text style={{color:colors.accent}}>.</Text></Text>
    <View style={styles.smallSymbol}><Ionicons name="apps-outline" size={19} color={colors.accent}/></View>
-  </View>
+  </View>:null}
   <View style={styles.segmented} accessibilityRole="tablist">
    {([{id:"subscription",label:"En planes"},{id:"one_time",label:"Pago único"}] as const).map(item=>
     <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected:charge===item.id}}
@@ -219,7 +219,7 @@ export function BusinessServicesPanel({session}:{session:Session}){
     </Pressable>)}
   </View>
   <View style={styles.grid}>
-   {offersFor(charge).map(item=><OfferCard key={item.id} item={item}
+   {offersFor(charge).filter(item=>(focus!=="web"||["site-care","local-seo","reviews","website-design","google-business-profile","seo-setup","domain-setup"].includes(item.id))&&(!excludeFeatured||!["smart-call","ai-agents"].includes(item.id))).map(item=><OfferCard key={item.id} item={item} compact={excludeFeatured}
     onPress={item.id==="google-business-profile"?()=>setEditing(true):undefined}/>)}
   </View>
  </View>;
@@ -227,6 +227,7 @@ export function BusinessServicesPanel({session}:{session:Session}){
 
 const styles=StyleSheet.create({
  wrapper:{marginTop:25,paddingBottom:30},
+ wrapperCompact:{marginTop:9,paddingBottom:10},
  headingRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",marginBottom:15},
  heading:{fontSize:25,fontWeight:"900",letterSpacing:-1.1,color:colors.ink},
  smallSymbol:{width:37,height:37,borderRadius:13,backgroundColor:"#EEE3FF",justifyContent:"center",alignItems:"center"},
@@ -237,6 +238,7 @@ const styles=StyleSheet.create({
  segmentTextActive:{color:"#6541AD"},
  grid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",rowGap:12},
  offerCard:{width:"48%",minHeight:158,borderRadius:22,padding:15,justifyContent:"space-between",overflow:"hidden"},
+ offerCardCompact:{minHeight:113,padding:13,borderRadius:18},
  offerIcon:{width:44,height:44,borderRadius:14,alignItems:"center",justifyContent:"center"},
  offerBottom:{gap:8},
  offerName:{color:colors.ink,fontSize:16,fontWeight:"900",letterSpacing:-.6},
