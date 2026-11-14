@@ -20,6 +20,27 @@
 .field input,.field textarea,.input{background:#fff;width:100%;border:1px solid #e4d9ee;border-radius:15px;padding:12px 13px;color:#322840;font:500 13px "DM Sans",system-ui,sans-serif;min-height:46px;outline:none}
 .field textarea,.input:is(textarea){min-height:99px;resize:vertical}
 .field input:focus,.field textarea:focus,.input:focus{border-color:#a97dee;box-shadow:0 0 0 3px #a97dee28}
+
+/* Compact native dropdowns keep each choice readable on narrow phone screens. */
+.selectField{display:flex;flex-direction:column;gap:8px;min-width:0}
+.selectWrap{position:relative;display:block;width:100%}
+.selectInput{appearance:none;-webkit-appearance:none;display:block;width:100%;min-height:49px;border:1px solid #e4d9ee;border-radius:15px;background:#fff;color:#39284e;padding:12px 46px 12px 14px;font:700 13px "DM Sans",system-ui,sans-serif;cursor:pointer;outline:0}
+.selectInput:focus-visible,.multiSummary:focus-visible{border-color:#9c73e7;outline:3px solid #a97dee48;outline-offset:2px}
+.selectWrap>svg{position:absolute;right:15px;top:50%;transform:translateY(-50%);pointer-events:none;color:#875dd2}
+.multiSelect{background:#fff;border:1px solid #e4d9ee;border-radius:15px;min-width:0;overflow:hidden}
+.multiSummary{display:flex;align-items:center;min-height:49px;padding:12px 14px;gap:10px;list-style:none;cursor:pointer;color:#39284e;font-size:12px;font-weight:750}
+.multiSummary::-webkit-details-marker{display:none}
+.multiValue{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.multiCount{flex:0 0 auto;background:#f0e8fe;color:#704cbb;border-radius:999px;font-size:10px;padding:4px 8px}
+.multiChevron{flex:0 0 auto;color:#875dd2;transition:transform .18s ease}
+.multiSelect[open] .multiChevron{transform:rotate(180deg)}
+.multiSelect[open] .multiSummary{border-bottom:1px solid #eee6f5}
+.multiMenu{display:flex;flex-direction:column;gap:3px;padding:7px;background:#fbf9ff}
+.multiOption{display:flex;align-items:center;gap:11px;padding:11px 10px;min-height:44px;border-radius:11px;cursor:pointer;font-size:12px;font-weight:650;color:#49365f}
+.multiOption:hover,.multiOption:focus-within{background:#f0e8ff}
+.multiOption input{width:18px;height:18px;margin:0;accent-color:#8655e7;flex-shrink:0}
+@media(prefers-reduced-motion:reduce){.multiChevron{transition:none}}
+
 .roles,.choices{display:flex;gap:8px;flex-wrap:wrap}
 .choice,.choiceActive{display:inline-flex;align-items:center;gap:7px;border:1px solid #e8ddf0;border-radius:13px;background:#fff;color:#75667f;padding:10px 12px;font-size:11px;line-height:1.4;font-weight:750;text-align:left}
 .choice:hover{border-color:#b59bdf}
