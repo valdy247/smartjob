@@ -11,6 +11,7 @@ import {InterpreterPanel} from "./InterpreterPanel";
 import {CallScreen} from "./CallScreen";
 import {SmartCallControlCenter} from "./SmartCallControlCenter";
 import {BusinessServicesPanel} from "./BusinessServicesPanel";
+import FinancesPanel from "./FinancesPanel";
 import {ContactsPanel} from "./ContactsPanel";
 import {DialPad} from "./DialPad";
 import {NativeActivation,type NativeProfile} from "./NativeActivation";
@@ -48,7 +49,7 @@ export default function App(){
  const [catalogQuery,setCatalogQuery]=useState("");
  const [catalogGroup,setCatalogGroup]=useState<"all"|"communication"|"digital"|"growth">("all");
  const [keyboardVisible,setKeyboardVisible]=useState(false),[forwardHelpOpen,setForwardHelpOpen]=useState(false);
- const [settingsPage,setSettingsPage]=useState<"menu"|"numbers"|"billing"|"history"|"security"|"profile"|"style"|"support"|"services">("menu");
+ const [settingsPage,setSettingsPage]=useState<"menu"|"numbers"|"billing"|"finances"|"history"|"security"|"profile"|"style"|"support"|"services">("menu");
  const [callHistory,setCallHistory]=useState<{bridge_sid:string;status:string;duration_seconds:number|null;started_at:string;call_mode:string;caller_phone:string|null}[]>([]);
  const [historyBusy,setHistoryBusy]=useState(false);
  const [callbackBusy,setCallbackBusy]=useState<string|null>(null);
@@ -983,6 +984,7 @@ export default function App(){
        <Text style={styles.groupTitle}>SUSCRIPCIÓN</Text>
        <SettingRow emoji="💎" label="Plan y minutos" onPress={()=>setSettingsPage("billing")}/>
        <Text style={styles.groupTitle}>VMV BUSINESS</Text>
+       <SettingRow emoji="💳" label="Finanzas · Stripe" onPress={()=>setSettingsPage("finances")}/>
        <SettingRow emoji="🖥️" label="Plataforma web" onPress={()=>void openBusinessWeb("smart-call")}/>
        <SettingRow emoji="🧩" label="Mis servicios" onPress={()=>{setActiveModule(null);setActiveTab("services");}}/>
        <Text style={styles.groupTitle}>{tr("settings.moreGroup")}</Text>
@@ -992,7 +994,7 @@ export default function App(){
        <Pressable style={styles.signout} onPress={()=>void logout()}><Text style={styles.signoutText}>{tr("common.signOut")}</Text></Pressable>
       </>:<>
        <Pressable style={styles.backRow} onPress={()=>setSettingsPage("menu")}><Text style={styles.backText}>‹  {tr("common.settings")}</Text></Pressable>
-       <Text style={styles.heading}>{({numbers:"Mi línea",billing:"Plan y minutos",history:"Historial",security:"Seguridad",profile:"Perfil",style:"Idiomas y asistente",support:"Soporte",services:"Otros servicios",menu:"Ajustes"} as Record<typeof settingsPage,string>)[settingsPage]}</Text>
+       <Text style={styles.heading}>{({numbers:"Mi línea",billing:"Plan y minutos",finances:"Finanzas",history:"Historial",security:"Seguridad",profile:"Perfil",style:"Idiomas y asistente",support:"Soporte",services:"Otros servicios",menu:"Ajustes"} as Record<typeof settingsPage,string>)[settingsPage]}</Text>
        {settingsPage==="numbers"?<>
         <View style={styles.card}><Text style={styles.cardTitle}>Verificación SMS</Text>
          {verificationLoading?<ActivityIndicator color={colors.accent}/>:phoneVerification?
@@ -1019,6 +1021,7 @@ export default function App(){
          </View>:null}
         </View>
        </>:null}
+       {settingsPage==="finances"?<FinancesPanel session={session}/>:null}
        {settingsPage==="billing"?<>
         <Text style={styles.kicker}>TU PLAN {billingOverview?.plan&&billingOverview.plan!=="none"?"· "+billingOverview.plan.toUpperCase():""}</Text>
         <View style={styles.card}>
