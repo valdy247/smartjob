@@ -34,6 +34,14 @@ test('profile links reject embedded control characters instead of silently rewri
  }
 });
 
+test('backslashes in external URLs are rejected rather than normalized by URL parsing',()=>{
+ for(const input of ['https:\\\\example.com\\path','https://example.com\\@evil.example/path']){
+  assert.equal(googleProfileLink(input),null);
+  assert.equal(googleProfileIssue({...fixture(),bookingUrl:input}).key,'booking');
+  assert.equal(googleProfileIssue({...fixture(),action:'improve',existingProfileUrl:input}).key,'existing');
+ }
+});
+
 test('shared intake validation rejects unsafe booking and existing-profile URLs',()=>{
  const base=fixture();
  for(const url of ['http://example.com','javascript:alert(1)','https://user:pass@example.com','not-a-url']){
