@@ -1,6 +1,8 @@
 "use client";
 import BusinessPhoneInput from "@/components/BusinessPhoneInput";
-import {useEffect,useState,type ChangeEvent} from "react";
+import {useEffect,useMemo,useState,type ChangeEvent} from "react";
+import {CheckCircle2,MapPin,AlertCircle} from "lucide-react";
+import GoogleCategoryLookup from "./GoogleCategoryLookup";
 import styles from "./GoogleProfileWizard.module.css";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {t as labelText,type MessageKey,type InterfaceLanguage} from "@/lib/i18n";
@@ -11,7 +13,7 @@ export type {GoogleKind,GoogleHour,GoogleData} from "@/lib/google-profile-reques
 import {googlePhotoKey,googleProfileIssue,type GoogleData} from "@/lib/google-profile-request";
 export type GoogleMedia={logo:File|null;cover:File|null;photos:File[]};
 export const emptyGoogle:GoogleData={
- action:"create",kind:"storefront",googleCategory:"",otherCategories:"",street:"",unit:"",city:"",region:"",postal:"",country:"US",serviceAreas:"",
+ action:"create",kind:"storefront",googleCategory:"",googleCategoryId:"",categoryPendingReview:false,locationChecked:false,locationPendingReview:false,otherCategories:"",street:"",unit:"",city:"",region:"",postal:"",country:"US",serviceAreas:"",
  phone:"",secondaryPhone:"",description:"",services:"",products:"",bookingUrl:"",existingProfileUrl:"",openingDate:"",hoursEnabled:false,
  hours:Array.from({length:7},()=>({closed:true,start:"09:00",end:"17:00"}))
 };
@@ -80,10 +82,44 @@ function FilePicker({label,value,onChange,multiple=false}:{label:string;value:Fi
 export default function GoogleProfileWizard({step,data,onData,media,onMedia,business,website}:{step:number;data:GoogleData;onData:(v:GoogleData)=>void;media:GoogleMedia;onMedia:(v:GoogleMedia)=>void;business:string;website:string}){
  const {language,translate}=useInterfaceLanguage();const en=language==="en";
  const tx=(text:string)=>{const key=labelKeys[text];return key?translate(key):text;};
- const patch=<K extends keyof GoogleData>(key:K,value:GoogleData[K])=>onData({...data,[key]:value});
+ const [checkingLocation,setCheckingLocation]=useState(false);
+ const [locationMessage,setLocationMessage]=useState("");
+ const countries=useMemo(()=>{
+  const intl=new Intl.DisplayNames([en?"en":"es"],{type:"region"});
+  const excluded=new Set(["EU","EZ","UN","ZZ","XA","XB","QO","XK"]);
+  const result:{code:string;name:string}[]=[];
+  for(let a=65;a<=90;a++)for(let b=65;b<=90;b++){
+   const code=String.fromCharCode(a,b),name=intl.of(code)||"";
+   if(!name||name===code||/unknown region|regi[oó]n desconocida/i.test(name)||excluded.has(code))continue;
+   result.push({code,name});
+  }
+  return result.sort((a,b)=>a.name.localeCompare(b.name,en?"en":"es"));
+ },[en]);
+ const patch=<K extends keyof GoogleData>(key:K,value:GoogleData[K])=>{
+  const locationFields=["country","street","unit","city","region","postal","serviceAreas","kind"];
+  onData({...data,[key]:value,...(locationFields.includes(String(key))?{locationChecked:false,locationPendingReview:false}:{})});
+  if(locationFields.includes(String(key)))setLocationMessage("");
+ };
+ const verifyLocation=async()=>{
+  if(!data.city.trim()||!data.country.trim()){setLocationMessage(en?"Enter a city and country first.":"Indica primero la ciudad y el país.");return;}
+  setCheckingLocation(true);setLocationMessage("");
+  try{
+   const q=new URLSearchParams({country:data.country,city:data.city,region:data.region,postal:data.postal});
+   const r=await fetch("/api/marketing/google-location?"+q,{cache:"no-store"});
+   const result=await r.json() as {verified?:boolean;error?:string};
+   if(r.ok&&result.verified){
+    onData({...data,locationChecked:true,locationPendingReview:false});
+    setLocationMessage(en?"City, region and postal code matched Google Maps. This does not verify the storefront or street address.":"Ciudad, región y código postal coinciden con Google Maps. Esto no verifica el local ni la dirección exacta.");
+   }else{
+    onData({...data,locationChecked:false,locationPendingReview:false});
+    setLocationMessage(r.status===503?(en?"Google location validation is not connected. Ask VMV for manual verification.":"La validación geográfica de Google no está conectada. Solicita revisión manual a VMV."):(en?"Google could not confirm these location details. Please check them.":"Google no pudo confirmar estos datos. Revísalos."));
+   }
+  }catch{setLocationMessage(en?"Google location checking is temporarily unavailable.":"La comprobación de Google no está disponible ahora.");}
+  finally{setCheckingLocation(false);}
+ };
  const field=(key:keyof GoogleData,label:string,placeholder:string,optional=true)=>(
   <label className={styles.field}><span>{tx(label)} <em>{tx(optional?"Opcional":"Necesario")}</em></span>
-  <input value={String(data[key])} maxLength={250} placeholder={tx(placeholder)} onChange={e=>onData({...data,[key]:key==="country"?e.target.value.toUpperCase():e.target.value})}/></label>
+  <input value={String(data[key])} maxLength={250} placeholder={tx(placeholder)} onChange={e=>patch(key,e.target.value as GoogleData[typeof key])}/></label>
  );
  return <div className={styles.root}>
    <div className={styles.progress}><span>Google Business Profile</span><strong>{step+1} / {googleStepNames.length} · {tx(googleStepNames[step])}</strong></div>
@@ -92,10 +128,9 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
     <div className={styles.choices}>{([["create","Crear un perfil"],["claim","Reclamar uno existente"],["improve","Mejorar el actual"]] as const).map(([id,label])=>
      <button type="button" aria-pressed={data.action===id} key={id} onClick={()=>onData({...data,action:id,openingDate:id==="create"?data.openingDate:""})}>{tx(label)}</button>)}</div>
     <label className={styles.field}><span>{tx("Nombre del negocio")} <em>{tx("Necesario")}</em></span><input value={business} disabled readOnly/></label>
-    <label className={styles.field}><span>{tx("Categoría principal en Google")} <em>{tx("Necesario")}</em></span>
-     <input value={data.googleCategory} maxLength={100} onChange={e=>patch("googleCategory",e.target.value)} placeholder={tx("Ej. Panadería, Pastelería, Restaurante")}/></label>
+    <GoogleCategoryLookup data={data} onData={onData}/>
     {data.action!=="create"?<label className={styles.field}><span>{tx("Enlace de tu perfil actual")} <em>{tx("Opcional")}</em></span><input type="url" inputMode="url" maxLength={500} value={data.existingProfileUrl||""} placeholder="https://maps.google.com/..." onChange={e=>patch("existingProfileUrl",e.target.value)}/></label>:null}
-    {field("otherCategories","Otras categorías","Separadas por comas")}
+    <p className={styles.hint}>{en?"Additional categories will be checked by VMV against Google before submission.":"VMV comprobará las categorías adicionales con Google antes de gestionarlas."}</p>
     <p className={styles.hint}>{translate("marketing.google.eligibility")}</p>
     <p className={styles.hint}>{tx("La categoría debe existir en Google. Nuestro equipo comprobará que coincida antes de gestionarla.")}</p>
    </div>:null}
@@ -110,7 +145,19 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
       {field("postal","Código postal","31901",false)}
       <p className={styles.hint}>{tx("Solo ingresa una dirección donde realmente atiendes clientes. Google puede mostrarla públicamente.")}</p>
      </>:<p className={styles.hint}>{tx("La dirección residencial no se publicará ni te la pediremos para esta solicitud. Google puede solicitarla privadamente durante su verificación.")}</p>}
-    {field("country","País","US",false)}
+    <label className={styles.field}><span>{en?"Country":"País"} <em>{en?"Required":"Necesario"}</em></span>
+     <select className={styles.countrySelect} value={data.country} onChange={e=>patch("country",e.target.value)}>
+      {!countries.some(x=>x.code===data.country)?<option value={data.country}>{en?"Select a valid country":"Selecciona un país válido"}</option>:null}
+      {countries.map(x=><option key={x.code} value={x.code}>{x.name} ({x.code})</option>)}
+     </select>
+    </label>
+    <div className={styles.locationCheck}>
+     {data.kind!=="service_area"?<button type="button" disabled={checkingLocation||!data.city.trim()} onClick={()=>void verifyLocation()}><MapPin size={15}/>{checkingLocation?(en?"Checking…":"Comprobando…"):(en?"Check city and postal code with Google":"Comprobar ciudad y código postal con Google")}</button>:null}
+     {data.locationChecked?<p className={styles.locationVerified}><CheckCircle2 size={15}/>{en?"Location matched Google Maps":"Ubicación contrastada con Google Maps"}</p>:null}
+     {locationMessage?<p className={styles.locationWarning} role="status"><AlertCircle size={15}/>{locationMessage}</p>:null}
+     {!data.locationChecked?<button type="button" className={styles.manualLocation} aria-pressed={!!data.locationPendingReview} onClick={()=>patch("locationPendingReview",true)}>{en?"Request manual location verification":"Solicitar verificación manual de ubicación"}</button>:null}
+     {data.locationPendingReview?<small>{en?"VMV will verify the location before any Google submission.":"VMV comprobará la ubicación antes de presentar cualquier dato a Google."}</small>:null}
+    </div>
     {data.kind!=="storefront"?<label className={styles.field}><span>{tx("Áreas donde atiendes")} <em>{tx("Necesario")}</em></span>
       <textarea rows={3} value={data.serviceAreas} onChange={e=>patch("serviceAreas",e.target.value)} maxLength={400} placeholder={tx("Ciudades o códigos postales separados por comas")}/></label>:null}
    </div>:null}
