@@ -30,7 +30,7 @@ export function AIAgentsBookingStudio({session,agents,selectedAgentId,onBack}:Pr
  const [services,setServices]=useState<BookingService[]>([]);
  const [slots,setSlots]=useState<BookingSlot[]>([]);
  const [bookings,setBookings]=useState<Booking[]>([]);
- const [agentId,setAgentId]=useState(selectedAgentId||agents[0]?.id||"");
+ const [agentId,setAgentId]=useState(agents.some(a=>a.id===selectedAgentId)?selectedAgentId!:agents[0]?.id||"");
  const [serviceId,setServiceId]=useState("");
  const [editing,setEditing]=useState<BookingService|null>(null);
  const [form,setForm]=useState<ServiceDraft>(draft);
