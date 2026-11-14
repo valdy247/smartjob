@@ -89,10 +89,17 @@ export function centralPrefill(b:CentralBusiness,input:WizardDraft):WizardDraft{
   additions.hours_mode="Personalizado";
  }
  const setup={...input.setup};
+ const fromCentral:string[]=[];
  for(const [key,value] of Object.entries(additions)){
-  if(key==="central_business_id"||key==="central_source_updated_at"||!setup[key]?.trim())
+  if(key==="central_business_id"||key==="central_source_updated_at"||!setup[key]?.trim()){
    setup[key]=value;
+   if(!key.startsWith("central_")&&key!=="hours_mode"&&!key.startsWith("h_"))
+    fromCentral.push(key);
+  }
  }
+ if(additions.hours_mode&&hoursKeys.every(k=>setup["h_"+k+"_active"]))
+  fromCentral.push("hours");
+ setup.central_prefill_fields=fromCentral.join("|");
  return {...input,setup};
 }
 export function businessMissing(b:CentralBusiness):string[]{
