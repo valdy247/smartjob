@@ -181,7 +181,7 @@ export default function App(){
   (async()=>{
    try{
     const {data:existing,error}=await client.from("smartjob_profiles")
-     .select("id,first_name,phone,owner_language,assistant_name,line_choice,line_carrier,preferred_plan,plan_prompt_seen,line_setup_completed")
+     .select("id,first_name,business_name,phone,owner_language,assistant_name,line_choice,line_carrier,preferred_plan,plan_prompt_seen,line_setup_completed")
      .eq("id",session.user.id).maybeSingle();
     if(!alive)return;
     if(error)throw error;
@@ -772,7 +772,7 @@ export default function App(){
         <View style={styles.homeAvatar}><Ionicons name="person-outline" size={23} color="#754BD0"/></View>
         <View style={{flex:1}}>
          <Text style={styles.homeEyebrow}>{tr("home.hello",{name:String(session.user.user_metadata?.first_name||"VMV").trim()||"VMV"})}</Text>
-         <Text style={styles.homeGreeting} numberOfLines={1}>{String(session.user.user_metadata?.business_name||"").trim()||tr("dashboard.business")}</Text>
+         <Text style={styles.homeGreeting} numberOfLines={1}>{String(activationProfile?.business_name||session.user.user_metadata?.business_name||"").trim()||tr("dashboard.business")}</Text>
         </View>
        </Pressable>
        <View style={styles.homeBrandBadge}><Text style={styles.homeBrandBadgeText}>VMV ✦</Text></View>
