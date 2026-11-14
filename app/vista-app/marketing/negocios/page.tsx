@@ -44,7 +44,7 @@ export default function MyBusinessesPage(){
     client.from("smartjob_profiles").select("business_name,website_url").eq("id",uid).maybeSingle(),
     client.from("smartjob_business_category_preferences").select("category_id").eq("owner_id",uid).maybeSingle()
    ]);
-   if(!alive)return;
+   if(!alive||currentUser.current!==uid)return;
    if(rows.error){setStatus("error");return;}
    const items=(rows.data||[]) as CentralBusiness[];
    setList(items);setOnboarding(p.data?.business_name?{name:p.data.business_name,website_url:p.data.website_url||null,category:category.data?.category_id||"other"}:null);
@@ -117,6 +117,7 @@ export default function MyBusinessesPage(){
     if(result.error)throw result.error;
     saved=result.data as CentralBusiness;
    }
+   if(currentUser.current!==userId)return;
    dirty.current=false;setActive(saved.id);setData(saved);setFiles(emptyBusinessFiles);
    setList(v=>v.some(x=>x.id===saved!.id)?v.map(x=>x.id===saved!.id?saved!:x):[...v,saved!]);
    setNotice(en?"Business saved privately. Past requests and published services are unchanged.":"Negocio guardado en privado. Las solicitudes anteriores y servicios publicados no cambiaron.");
