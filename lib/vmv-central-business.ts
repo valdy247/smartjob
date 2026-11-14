@@ -84,3 +84,19 @@ export function validCentralBusiness(b:Pick<CentralBusiness,"name"|"country"|"we
  if(b.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email))return "Please check your business email.";
  return "";
 }
+
+export function centralBusinessWritePayload(b:CentralBusiness){
+ return {
+  name:b.name.trim(),legal_name:b.legal_name||"",category_id:b.category_id||"other",
+  website_url:websiteAddress(b.website_url||""),description:b.description||"",
+  country:(b.country||"US").trim().toUpperCase(),street:b.street||"",unit:b.unit||"",
+  city:b.city||"",region:b.region||"",postal:b.postal||"",
+  address_visibility:b.address_visibility||"private",kind:b.kind||"storefront",
+  service_areas:b.service_areas||"",phone:b.phone||"",secondary_phone:b.secondary_phone||"",
+  email:b.email||"",social_links:b.social_links||{},booking_url:b.booking_url||"",
+  hours_enabled:b.hours_enabled===true,hours:b.hours||[],logo_path:b.logo_path||null,
+  cover_path:b.cover_path||null,gallery_paths:b.gallery_paths||[],
+  services:b.services||"",products:b.products||"",
+  source_system:b.source_system||null,source_record_id:b.source_record_id||null
+ };
+}
