@@ -43,3 +43,12 @@ test('switching from an existing listing to create ignores and clears a hidden s
  assert.equal(normalizeGoogleProfile(create).existingProfileUrl,'');
  assert.equal(normalizeGoogleProfile(stale).existingProfileUrl,'javascript:alert(1)');
 });
+
+test('malformed opening-hours entries return a validation issue instead of crashing',()=>{
+ const v=fixture();v.hoursEnabled=true;v.hours[0]=null;
+ assert.equal(googleProfileIssue(v).key,'hours');
+ v.hours[0]=undefined;
+ assert.equal(googleProfileIssue(v).key,'hours');
+ v.hours[0]={closed:false,start:'09:00',end:'17:00'};
+ assert.equal(googleProfileIssue(v),null);
+});
