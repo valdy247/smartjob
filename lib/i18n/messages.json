@@ -1464,7 +1464,22 @@
     "services.call.voiceBright": "Clara",
     "services.call.voiceCalm": "Serena",
     "services.call.realHistory": "HISTORIAL REAL",
-    "services.call.recentCalls": "Llamadas recientes"
+    "services.call.recentCalls": "Llamadas recientes",
+    "services.call.yes": "Sí",
+    "services.call.pending": "Pendiente",
+    "services.call.notSpecified": "No especificado",
+    "services.call.activated": "Activada",
+    "services.call.approved": "Aprobada",
+    "services.call.underReview": "En revisión",
+    "services.call.rejected": "Rechazada",
+    "services.call.noRequest": "Sin solicitud",
+    "services.call.otherLine": "Otra línea",
+    "services.call.conditional": "Condicional",
+    "services.call.allCalls": "Todas las llamadas",
+    "services.call.notAvailable": "No disponible",
+    "services.call.preparedForTests": "Preparado para pruebas",
+    "services.call.unverified": "No verificado",
+    "services.call.callbackFeedback": "Consulta el resultado de la devolución de llamada."
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -2931,6 +2946,21 @@
     "services.call.voiceBright": "Bright",
     "services.call.voiceCalm": "Calm",
     "services.call.realHistory": "REAL CALL HISTORY",
-    "services.call.recentCalls": "Recent calls"
+    "services.call.recentCalls": "Recent calls",
+    "services.call.yes": "Yes",
+    "services.call.pending": "Pending",
+    "services.call.notSpecified": "Not specified",
+    "services.call.activated": "Activated",
+    "services.call.approved": "Approved",
+    "services.call.underReview": "Under review",
+    "services.call.rejected": "Rejected",
+    "services.call.noRequest": "No request",
+    "services.call.otherLine": "Another line",
+    "services.call.conditional": "Conditional",
+    "services.call.allCalls": "All calls",
+    "services.call.notAvailable": "Unavailable",
+    "services.call.preparedForTests": "Ready for testing",
+    "services.call.unverified": "Not verified",
+    "services.call.callbackFeedback": "Check the callback result."
   }
 }
