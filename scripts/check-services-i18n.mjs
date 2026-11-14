@@ -6,10 +6,17 @@ const begin=main.indexOf('{ready&&tab==="services"&&!open?');
 const end=main.indexOf('{ready&&tab==="calls"?',begin);
 if(begin<0||end<=begin)throw Error("Services route boundaries changed; review audit scope");
 const route=main.slice(begin,end);
+const sharedBegin=main.indexOf(" const featuredSmartCall=");
+const sharedEnd=main.indexOf(" const openContacts=",sharedBegin);
+if(sharedBegin<0||sharedEnd<=sharedBegin)throw Error("Shared featured service cards missing");
+const shared=main.slice(sharedBegin,sharedEnd);
+const homeBegin=main.indexOf('{ready&&tab==="home"?');
+const home=homeBegin>=0&&homeBegin<begin?main.slice(homeBegin,begin):"";
 const preview=read("app/vista-app/BusinessServicesPreview.tsx");
 const catalog=JSON.parse(read("lib/i18n/messages.json"));
 const sources=[
  {name:"Services route",text:"const ServicesAudited=()=> <main>"+route+"</main>;"},
+ {name:"Shared Home/Services cards",text:shared},
  {name:"BusinessServicesPreview",text:preview}
 ];
 const allowed=[
@@ -46,7 +53,10 @@ const refs=[...new Set([...route.matchAll(/translate\("(services\.[\w.-]+)"\)/g)
  ...preview.matchAll(/translate\("(services\.[\w.-]+)"\)/g)].map(x=>x[1]))];
 const missing=refs.filter(key=>!catalog.es[key]||!catalog.en[key]);
 const regressions=[];
-for(const [source,expected] of [[route,["home.moreServices","home.pilot","home.minutesToTranslate","services.openService"]],
+if(!home.includes("{featuredSmartCall}")||!home.includes("{featuredServices}")||
+ !route.includes("{featuredSmartCall}")||!route.includes("{featuredServices}"))
+ regressions.push("Home and Services must both render the same featured product cards");
+for(const [source,expected] of [[route+shared,["home.pilot","home.minutesToTranslate","services.openSmartCall","common.translator","home.inPerson"]],
  [preview,["services.inPlans","services.oneTime","services.serviceType","services.status.saved","services.offer.reviews"]]]){
  for(const key of expected)if(!source.includes('"'+key+'"'))regressions.push("Missing UI translation "+key);
 }
