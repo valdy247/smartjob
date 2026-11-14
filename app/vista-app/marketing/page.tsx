@@ -1,6 +1,8 @@
 "use client";
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
-import {useMemo,useState} from "react";
+import {useEffect,useMemo,useState} from "react";
+import {getSupabase} from "@/lib/supabase";
+import {LockKeyhole,LoaderCircle} from "lucide-react";
 import Link from "next/link";
 import {ArrowLeft,ArrowUpRight,BarChart3,CheckCircle2,ChevronDown,ChevronUp,ClipboardCopy,Globe2,HeartHandshake,Workflow,Link2,Lightbulb,Mail,Megaphone,MessageCircle,Share2,ShieldCheck,Sparkles,Target,TrendingUp} from "lucide-react";
 import styles from "./page.module.css";
@@ -59,6 +61,35 @@ function Field({label,value,onChange,placeholder,type="text",hint,min,max}:{
   {hint?<small>{hint}</small>:null}</label>;
 }
 export default function MarketingPage(){
+ const {language}=useInterfaceLanguage();
+ const en=language==="en";
+ const [access,setAccess]=useState<"checking"|"ready"|"signed_out"|"unconfigured">("checking");
+ useEffect(()=>{
+  const client=getSupabase();
+  if(!client){setAccess("unconfigured");return;}
+  let active=true;
+  const check=async()=>{
+   try{
+    const {data,error}=await client.auth.getUser();
+    if(active)setAccess(!error&&data.user&&!data.user.is_anonymous?"ready":"signed_out");
+   }catch{if(active)setAccess("signed_out");}
+  };
+  const {data:listener}=client.auth.onAuthStateChange(()=>{queueMicrotask(()=>{if(active)void check();});});
+  void check();
+  return()=>{active=false;listener.subscription.unsubscribe();};
+ },[]);
+ if(access!=="ready")return <main className={styles.root} style={{minHeight:"100dvh",display:"grid",placeItems:"center",padding:20}}>
+  <section role={access==="checking"?"status":undefined} style={{maxWidth:440,width:"100%",background:"#fff",border:"1px solid #eadce8",borderRadius:20,padding:24,display:"grid",gap:14,textAlign:"center",justifyItems:"center"}}>
+   {access==="checking"?<LoaderCircle size={28} color="#884b79"/>:<LockKeyhole size={28} color="#884b79"/>}
+   <h1 style={{fontSize:21,margin:0}}>{access==="checking"?(en?"Checking your session…":"Comprobando tu sesión…"):(en?"Sign in to VMV Marketing":"Inicia sesión para entrar a VMV Marketing")}</h1>
+   <p style={{fontSize:13,lineHeight:1.6,margin:0,color:"#85738a"}}>{access==="checking"?(en?"Your business information is private.":"Los datos de tus negocios son privados."):access==="unconfigured"?(en?"Sign-in is unavailable in this environment.":"El inicio de sesión no está configurado en este entorno."):(en?"Your saved businesses and requests are only available after sign-in.":"Tus negocios guardados y solicitudes se muestran después de iniciar sesión.")}</p>
+   {access==="signed_out"?<Link href="/vista-app?returnTo=marketing" style={{background:"#884b79",color:"#fff",padding:"13px 22px",borderRadius:12,textDecoration:"none",fontSize:13,fontWeight:800}}>{en?"Sign in or create an account":"Iniciar sesión o crear cuenta"}</Link>:null}
+   {access==="unconfigured"?<button type="button" onClick={()=>window.location.reload()} style={{border:"1px solid #cbaac5",borderRadius:10,padding:10}}>{en?"Try again":"Reintentar"}</button>:null}
+  </section>
+ </main>;
+ return <MarketingWorkspace/>;
+}
+function MarketingWorkspace(){
  const {translate,language}=useInterfaceLanguage();
  const industryName=(id:string)=>marketingCategoryLabel(language,id,translate("marketing.category.unknown"));
  const localizedTabs=tabs.map(tab=>({...tab,label:translate(("marketing.tabs."+tab.id+".label") as import("@/lib/i18n").MessageKey),description:translate(("marketing.tabs."+tab.id+".desc") as import("@/lib/i18n").MessageKey)}));
