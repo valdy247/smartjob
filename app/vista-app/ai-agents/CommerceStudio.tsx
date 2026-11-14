@@ -21,7 +21,8 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
  const [human,setHuman]=useState<HumanRequest[]>([]);
  const [editing,setEditing]=useState<CatalogItem|null>(null);
  const [form,setForm]=useState<Form>(empty);
- const [agentId,setAgentId]=useState(initialAgentId);
+ const [agentId,setAgentId]=useState(agents.some(a=>a.id===initialAgentId)?initialAgentId:agents[0]?.id||"");
+ const businessId=agents[0]?.business_id||"";
  const [testItemId,setTestItemId]=useState("");
  const [qty,setQty]=useState(1);
  const [busy,setBusy]=useState(false);
@@ -61,21 +62,26 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
 
  const [tab,setTab]=useState<"setup"|"catalog"|"orders"|"human">(initialAgentId?"setup":"catalog");
  const refresh=async()=>{
-  const [catalog,history,requests,cards]=await Promise.all([listCatalog(),listTestOrders(),listHumanRequests(),listWebStudioCards()]);
+  if(!businessId){setItems([]);setOrders([]);setHuman([]);return;}
+  const [catalog,history,requests,cards]=await Promise.all([
+   listCatalog(businessId),listTestOrders(businessId),listHumanRequests(businessId),listWebStudioCards()
+  ]);
   setItems(catalog);setOrders(history);setHuman(requests);setWebCards(cards);
  };
  useEffect(()=>{let live=true;
-  void Promise.all([listCatalog(),listTestOrders(),listHumanRequests(),listWebStudioCards()])
+  if(!businessId){setItems([]);setOrders([]);setHuman([]);setLoading(false);return;}
+  setLoading(true);
+  void Promise.all([listCatalog(businessId),listTestOrders(businessId),listHumanRequests(businessId),listWebStudioCards()])
    .then(([cat,history,requests,cards])=>{if(live){setItems(cat);setOrders(history);setHuman(requests);setWebCards(cards);}})
    .catch(e=>{if(live)setNotice(e instanceof Error?e.message:"Inicia sesión para consultar tu negocio.");})
    .finally(()=>{if(live)setLoading(false);});
   return()=>{live=false;};
- },[]);
+ },[businessId]);
  const patch=<K extends keyof Form>(key:K,value:Form[K])=>setForm(prev=>({...prev,[key]:value}));
  const save=async()=>{
   if(busy)return;
   setBusy(true);try{
-   await saveCatalogItem(form,editing);await refresh();
+   await saveCatalogItem(form,editing,businessId);await refresh();
    setEditing(null);setForm(empty);setNotice("Producto guardado en tu negocio. Se compartirá con los agentes de esta cuenta.");
   }catch(e){setNotice(e instanceof Error?e.message:"No se pudo guardar.");}
   finally{setBusy(false);}
