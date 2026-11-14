@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
 import {ArrowLeft,CheckCircle2,Package,Plus,ReceiptText,ShieldCheck,ShoppingBag,UserRoundCheck,PhoneCall,Save} from "lucide-react";
-import type {PersistedAgent} from "./agentStore";
+import {setAgentCatalogReadAccess,type PersistedAgent} from "./agentStore";
 import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,saveCatalogItem,saveCommerceAgentPermissions,listWebStudioCards,importWebStudioCard,getVerifiedCatalog,
  type CatalogItem,type TestOrder,type HumanRequest,type CommerceAgentPermissions,type WebStudioCard,type VerifiedCatalogItem} from "./commerceStore";
 import styles from "./CommerceStudio.module.css";
@@ -47,6 +47,19 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
    perm_confirm_order:conf.perm_confirm_order==="Sí",perm_payment_link:conf.perm_payment_link==="Sí"
   });
  },[selectedAgent?.id,selectedAgent?.revision]);
+ const toggleCatalogRead=async()=>{
+  if(!selectedAgent||busy)return;
+  setBusy(true);
+  try{
+   const enabled=selectedAgent.setup.cap_catalog!=="Sí";
+   const updated=await setAgentCatalogReadAccess(selectedAgent,enabled);
+   setEditedAgent(updated);onAgentUpdated?.(updated);
+   setNotice(enabled?
+    "Catálogo conectado a "+updated.name+". El chat puede consultar productos aprobados y sus precios; la disponibilidad manual sigue requiriendo confirmación.":
+    "El chat ya no consultará el catálogo. Productos, precios e historial se conservaron.");
+  }catch(e){setNotice(e instanceof Error?e.message:"No se pudo actualizar el permiso de catálogo.");}
+  finally{setBusy(false);}
+ };
  const savePermissions=async()=>{
   if(!selectedAgent||busy)return;
   setBusy(true);
@@ -192,6 +205,18 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
    </div>
    <button type="button" className={styles.primary} onClick={()=>setTab("catalog")}><Package size={16}/> Ir al catálogo</button>
   </>:tab==="catalog"?<>
+   {!catalogOnly&&selectedAgent?<div className={styles.form}>
+    <strong>Inventario en el chat de {selectedAgent.name}</strong>
+    <p className={styles.hint}>{selectedAgent.setup.cap_catalog==="Sí"?
+     "Conectado · El agente puede consultar productos activos y aprobados con sus precios. La disponibilidad manual siempre requiere confirmación.":
+     "Desconectado · El chat no consulta los productos de este negocio hasta que lo autorices."}</p>
+    <button type="button" className={styles.primary} disabled={busy}
+     onClick={()=>void toggleCatalogRead()}>
+     <Package size={17}/> {busy?"Guardando…":selectedAgent.setup.cap_catalog==="Sí"?
+      "Desconectar inventario del chat":"Conectar inventario al chat"}
+    </button>
+    <p className={styles.hint}>Permiso de solo lectura para este agente. No activa ventas, pagos, cambios de existencias ni un chat público.</p>
+   </div>:null}
    {!catalogOnly?<>
    <div className={styles.heading}><h2>Productos de Web Studio</h2></div>
    <div className={styles.warning}><ShieldCheck size={17}/><p>
