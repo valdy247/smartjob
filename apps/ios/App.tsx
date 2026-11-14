@@ -957,9 +957,9 @@ export default function App(){
           <Ionicons name="arrow-up-outline" size={16} color="#685274" style={styles.nativeCatalogCardArrow}/>
          </Pressable>)}
         </View>
-        {!filteredCatalogItems.length?<Text style={styles.nativeCatalogEmpty}>{tr("catalog.noResults")}</Text>:null}
+        {!filteredCatalogItems.length&&(catalogGroup!=="all"||!catalogQuery.trim())?<Text style={styles.nativeCatalogEmpty}>{tr("catalog.noResults")}</Text>:null}
         {catalogGroup==="all"?(catalogQuery.trim()?
-         <BusinessServicesPanel session={session} excludeFeatured searchTerm={catalogQuery}/>:
+         <BusinessServicesPanel session={session} excludeFeatured searchTerm={catalogQuery} emptyLabel={filteredCatalogItems.length?"":tr("catalog.noResults")}/>:
          <>
           <Pressable accessibilityRole="button" accessibilityLabel={tr("settings.otherServices")}
            accessibilityState={{expanded:moreModulesOpen}} onPress={()=>setMoreModulesOpen(value=>!value)}
