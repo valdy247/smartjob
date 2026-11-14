@@ -51,3 +51,4 @@ button.tile:focus-visible,.toggle button:focus-visible,.back:focus-visible,.save
 .webActions .primary{width:100%;margin:0}
 .webActionSecondary{display:flex;align-items:center;justify-content:center;gap:9px;min-height:49px;color:#895de4;background:#fff;border:1px solid #e8dcf7;border-radius:15px;font-size:13px;font-weight:850;cursor:pointer}
 .webActionSecondary:focus-visible{outline:3px solid #8b60da;outline-offset:2px}
+.searchEmpty{padding:12px 4px 4px;text-align:center;color:#8b7e98;font-size:12px;line-height:1.5}
