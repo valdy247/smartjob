@@ -14,10 +14,11 @@ import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
 import CaseAttachments from "@/components/CaseAttachments";
+import TestersPanel from "./TestersPanel";
 import styles from "./console.module.css";
 
 type Source="marketing"|"support"|"provisioning"|"domain";
-type Section="home"|"inbox"|"clients"|"services"|"team"|"settings";
+type Section="home"|"inbox"|"clients"|"services"|"team"|"testers"|"settings";
 type Pane="list"|"detail"|"context";
 type CaseRow={
  source:Source;id:string;owner_id:string;title:string;client_name:string;
@@ -426,7 +427,7 @@ export default function AdminConsole(){
  const nav:{id:Section;title:string;Icon:LucideIcon}[]=[
   {id:"home",title:L("Inicio","Home"),Icon:LayoutDashboard},{id:"inbox",title:L("Bandeja","Inbox"),Icon:Inbox},
   {id:"clients",title:L("Clientes","Clients"),Icon:Users},{id:"services",title:L("Servicios","Services"),Icon:BriefcaseBusiness},
-  {id:"team",title:L("Equipo","Team"),Icon:UserRoundCog},{id:"settings",title:L("Configuración","Settings"),Icon:Settings2}
+  {id:"team",title:L("Equipo","Team"),Icon:UserRoundCog},...(overview?.role==="admin"?[{id:"testers" as Section,title:"Testers",Icon:Users}]:[]),{id:"settings",title:L("Configuración","Settings"),Icon:Settings2}
  ];
  const revoke=async(userId:string,nextRole:"admin"|"agent"|"remove"):Promise<boolean>=>{
   if(!window.confirm(nextRole==="remove"?"¿Revocar el acceso administrativo?":"¿Actualizar el rol del operador?"))return false;
@@ -506,8 +507,8 @@ export default function AdminConsole(){
   </aside>
   <main className={styles.main}>
    <header className={styles.header}>
-    <div><p className={styles.eyebrow}>VMV / OPERACIONES</p><h1>{({home:L("Centro de operaciones","Operations center"),inbox:L("Bandeja de trabajo","Work inbox"),clients:L("Clientes","Clients"),services:L("Servicios","Services"),team:L("Equipo","Team"),settings:L("Configuración","Settings")} as Record<Section,string>)[section]}</h1>
-     <p className={styles.subtitle}>{({home:L("Todo lo importante, sin ruido.","Everything that matters, without noise."),inbox:L("Una sola vista para los trabajos de VMV.","One view for all VMV work."),clients:L("Cuentas y relaciones de servicio.","Accounts and services."),services:L("Estado de los servicios de la plataforma.","Service health and activity."),team:L("Responsables, permisos y colaboración.","Assignments and permissions."),settings:L("Preferencias de operación y seguridad.","Operations and security preferences.")} as Record<Section,string>)[section]}</p></div>
+    <div><p className={styles.eyebrow}>VMV / OPERACIONES</p><h1>{({home:L("Centro de operaciones","Operations center"),inbox:L("Bandeja de trabajo","Work inbox"),clients:L("Clientes","Clients"),services:L("Servicios","Services"),team:L("Equipo","Team"),testers:"Testers",settings:L("Configuración","Settings")} as Record<Section,string>)[section]}</h1>
+     <p className={styles.subtitle}>{({home:L("Todo lo importante, sin ruido.","Everything that matters, without noise."),inbox:L("Una sola vista para los trabajos de VMV.","One view for all VMV work."),clients:L("Cuentas y relaciones de servicio.","Accounts and services."),services:L("Estado de los servicios de la plataforma.","Service health and activity."),team:L("Responsables, permisos y colaboración.","Assignments and permissions."),testers:L("Envía previews a destinatarios autorizados.","Send previews to authorized testers."),settings:L("Preferencias de operación y seguridad.","Operations and security preferences.")} as Record<Section,string>)[section]}</p></div>
     <div className={styles.headerActions}><InterfaceLanguagePicker compact/><span className={styles.mode}><span className={styles.greenDot}/> {L("Acceso interno","Internal access")}</span>
      <div className={styles.notificationWrap}>
       <button type="button" className={styles.iconButton} aria-label={"Notificaciones: "+noticeCount+" sin leer"} onClick={()=>setNoticesOpen(v=>!v)}><Bell size={18}/>{noticeCount>0?<span className={styles.notificationCount}>{noticeCount}</span>:null}</button>
@@ -717,6 +718,8 @@ export default function AdminConsole(){
      <select aria-label="Nuevo rol" value={staffRole} onChange={e=>setStaffRole(e.target.value as "agent"|"admin")}><option value="agent">Operador</option><option value="admin">Administrador</option></select>
      <button type="button" className={styles.primary} disabled={busy||!uuid(staffId)} onClick={()=>void addStaff()}><Plus size={16}/>Autorizar</button></div></div>:null}
    </section>:null}
+
+   {section==="testers"&&overview?.role==="admin"?<TestersPanel/>:null}
 
    {section==="settings"?<div className={styles.settingsGrid}>
     <section className={styles.surface}><div className={styles.surfaceHead}><div><span className={styles.eyebrow}>OPERACIÓN</span><h3>{L("Atención y soporte","Customer support")}</h3></div></div>
