@@ -1505,7 +1505,8 @@
     "services.history.callbackInstructions": "VMV llamará primero a tu iPhone. Cuando contestes, conectará con:",
     "services.history.callbackDisclaimer": "El cliente verá tu número Twilio empresarial. Esta llamada será normal, sin traducción, y puede generar cargos de voz de Twilio.",
     "services.history.callbackConfirm": "Devolver con VMV",
-    "services.history.cancel": "Cancelar"
+    "services.history.cancel": "Cancelar",
+    "services.call.testTag": "PRUEBA"
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -3013,6 +3014,7 @@
     "services.history.callbackInstructions": "VMV will call your iPhone first. When you answer, it will connect you with:",
     "services.history.callbackDisclaimer": "The customer will see your business Twilio number. This will be a normal call without translation and may incur Twilio voice charges.",
     "services.history.callbackConfirm": "Call back with VMV",
-    "services.history.cancel": "Cancel"
+    "services.history.cancel": "Cancel",
+    "services.call.testTag": "TEST"
   }
 }
