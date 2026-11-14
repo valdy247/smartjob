@@ -49,7 +49,7 @@ export default function MyBusinessesPage(){
    const items=(rows.data||[]) as CentralBusiness[];
    setList(items);setOnboarding(p.data?.business_name?{name:p.data.business_name,website_url:p.data.website_url||null,category:category.data?.category_id||"other"}:null);
    if(!dirty.current){
-    if(items.length===1){setActive(items[0].id);setData({...items[0]});}
+    if(items.length>=1){setActive(items[0].id);setData({...items[0]});}
     else if(items.length===0){
      setActive("");setData({id:"",owner_id:uid,...centralBusinessDefaults(p.data?.business_name||"",category.data?.category_id||"other",p.data?.website_url||null)});
     }
