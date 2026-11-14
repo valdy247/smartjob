@@ -120,9 +120,9 @@ export default function AIAgentsPreview(){
   setSelected(agent.id);
   if(kind==="sales"||kind==="inventory"){
    setCommerceTab(kind==="inventory"?"catalog":"setup");setScreen("commerce");
-  }else if(kind==="calls"&&phone?.agentId===agent.id)setScreen("phone");
-  else if(kind==="calls"){
-   setNotice("El agente principal no está asignado a la línea. Elige «Elegir para teléfono» explícitamente, después configura Llamadas.");
+  }else if(kind==="calls"){
+   setScreen("phone");
+   setNotice(phone?.agentId===agent.id?"":"Configura las llamadas aquí. Para que este agente atienda la línea, asígnalo explícitamente desde AI Agents.");
   }else if(kind==="bookings"){
    setScreen("bookings");setNotice("");
   }else if(kind==="support"){
