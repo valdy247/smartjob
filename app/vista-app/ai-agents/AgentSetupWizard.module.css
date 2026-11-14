@@ -83,3 +83,9 @@
 .dayTimes select{border:1px solid #e5dcec;border-radius:9px;background:#fff;padding:6px 4px;color:#41304f;font-size:11px;max-width:85px}
 .dayTimes span{font-size:10px;color:#817091}
 @media(max-width:420px){.dayTimes{margin-left:0;flex-basis:100%;justify-content:flex-end}}
+.context button{margin-left:auto;border:0;background:transparent;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}
+button.connection{width:100%;text-align:left;cursor:pointer}
+.inlineStudio{min-width:0;max-width:100%;overflow-x:hidden;background:#fff;border-radius:14px;padding:8px}
+.voiceSample{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.voiceSample button,.voiceSample select{border:1px solid #dfd1f5;border-radius:12px;padding:10px 12px;color:#7443bf;background:#fff;font:inherit;font-size:12px}
+.voiceSample button{display:flex;gap:7px;align-items:center;cursor:pointer}

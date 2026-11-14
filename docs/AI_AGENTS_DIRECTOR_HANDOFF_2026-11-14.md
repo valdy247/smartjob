@@ -24,3 +24,13 @@ En `/vista-app/ai-agents`, un negocio antiguo sin vínculo central dejaba las ta
 - No se declara una llamada real, cobro o activación telefónica comprobada como parte de este arreglo.
 
 Consultar el commit que incorpora este archivo, su diff y el preview correspondiente antes de continuar. Conservar estos cambios y comprobar el HEAD de la rama compartida `feat/vmv-smart-call-control-center`.
+
+## Actualización del Director: perfil, inventario y muestras de voz
+
+- El editor y Cuenta ahora aplican `centralPrefill` también al reabrir un agente existente. Los datos centrales actuales sustituyen la copia antigua, incluidas ubicación, horario y teléfono comercial. No se copian calle privada, email personal ni notas administrativas.
+- Con negocio central se omite «Conoce tu negocio». Se conservan las políticas específicas del agente dentro de supervisión. «Editar/Completar negocio» abre el editor compartido y conserva el borrador del agente.
+- `AgentConnections` abre el catálogo existente mediante `CommerceStudio catalogOnly`; se reutilizan `vmv_ai_catalog_items`, los controles de propietario y el espacio central. No se crea otro agente ni otro inventario. Guardar productos es inmediato; el permiso `cap_catalog` se guarda al finalizar el agente.
+- `cap_catalog` habilita consultas de solo lectura del catálogo aprobado en el simulador y en telefonía. Existencias descontadas de apartados vienen del snapshot canónico. No concede permisos de pedidos, pagos o modificaciones de stock. No afirmar que un calendario externo esté conectado: reservas conserva sus permisos y exige servicios/horarios reales.
+- `VoiceSample` permite escuchar muestras oficiales Amazon Polly estándar: Lupe/Miguel (es-US), Joanna/Matthew (en-US), con selector ES/EN para bilingüe. `voice-options.ts` comparte los identificadores con el runtime telefónico. Reproducir la muestra no llama a nadie. La voz predeterminada de la cuenta Twilio puede cambiar fuera de VMV; no se ofrece una muestra falsa para ella.
+- Pruebas: `node --test scripts/agent-profile-connections.test.cjs scripts/agent-capability-access.test.cjs scripts/central-business.test.cjs`; build completo sin prebuild de sincronización externa (`npm --ignore-scripts run build`). Las cuatro muestras devolvieron HTTP 200 y audio/mpeg.
+- Falta comprobación de extremo a extremo dentro de la sesión real del propietario y en llamada real; este cambio no activa números, cobra pagos ni publica chat externo. La aplicación iOS nativa no se actualiza con este preview web.

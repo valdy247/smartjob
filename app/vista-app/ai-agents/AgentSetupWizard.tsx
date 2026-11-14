@@ -1,6 +1,8 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
 import {ArrowLeft,ArrowRight,CalendarDays,Check,CheckCircle2,ChevronDown,Clock3,PlugZap,ShieldCheck,Sparkles} from "lucide-react";
+import VoiceSample from "./VoiceSample";
+import AgentConnections from "./AgentConnections";
 import styles from "./AgentSetupWizard.module.css";
 
 export type AgentKind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
@@ -10,7 +12,7 @@ export type WizardDraft={
 };
 type Question={id:string;title:string;hint?:string;kind?:"text"|"textarea"|"choice"|"multi"|"state"|"hours";options?:string[];required?:boolean;when?:(a:Record<string,string>)=>boolean};
 type Section={title:string;subtitle:string;questions:Question[]};
-type Props={onReviewBusiness?:()=>void;initial:WizardDraft;onSave:(updated:WizardDraft)=>Promise<void>|void;onCancel:()=>void;isPreview?:boolean;initialStep?:0|1|2|3;saving?:boolean;authRequired?:boolean;recoverDraft?:boolean};
+type Props={workspaceId?:string;onReviewBusiness?:(draft:WizardDraft)=>void;initial:WizardDraft;onSave:(updated:WizardDraft)=>Promise<void>|void;onCancel:()=>void;isPreview?:boolean;initialStep?:0|1|2|3;saving?:boolean;authRequired?:boolean;recoverDraft?:boolean};
 const q=(id:string,title:string,options:string[],required=false,when?:Question["when"]):Question=>({id,title,kind:"choice",options,required,when});
 const t=(id:string,title:string,required=false,hint?:string):Question=>({id,title,required,hint,kind:"text"});
 const a=(id:string,title:string,required=false,hint?:string):Question=>({id,title,required,hint,kind:"textarea"});
@@ -86,7 +88,7 @@ const roleQuestions:Record<AgentKind,Question[]>={
  ]
 };
 function sections(kind:AgentKind,answers:Record<string,string>):Section[]{
- return [
+ return ([
   {title:"Identidad del agente",subtitle:"Comencemos por definir su función y personalidad.",questions:[]},
   {title:"Conoce tu negocio",subtitle:"Lo esencial para que responda correctamente.",questions:[
    t("business_name","¿Cómo se llama el negocio?",true),
@@ -107,6 +109,7 @@ function sections(kind:AgentKind,answers:Record<string,string>):Section[]{
    ...(availableTools.inventory&&["inventory","sales"].includes(kind)?[q("inventory_needed","¿Deseas consultar el inventario autorizado?",["Sí","No"],true)]:[])
   ]}]:[]),
   {title:"Reglas y supervisión",subtitle:"Tú decides los límites de este agente.",questions:[
+   ...(answers.central_business_id?[q("policy_type","¿Tienes reglas de cambios o cancelaciones?",["No, ninguna especial","Sí, tengo reglas","Prefiero confirmarlas personalmente"],true),{...a("policies","¿Cuáles son esas reglas?",true),when:(x:Record<string,string>)=>x.policy_type==="Sí, tengo reglas"}]:[]),
    q("human_review","¿Qué hacer si no conoce la respuesta?",["Reconocerlo y derivar a un humano","Pedir datos y solicitar revisión humana"],true),
    q("data_scope","¿Qué datos personales puede solicitar?",["Solo nombre y medio de contacto con permiso","Ninguno"],true),
    q("call_disclosure","¿Aceptas que el agente avise que es una inteligencia artificial?",["Sí","Todavía no"],true,
@@ -114,7 +117,7 @@ function sections(kind:AgentKind,answers:Record<string,string>):Section[]{
    a("restrictions","¿Qué promesas o acciones debe evitar?",false,"No inventar precios, citas, disponibilidad...")
   ]},
   {title:"Revisar y preparar",subtitle:"Comprueba la información antes de crear tu agente.",questions:[]}
- ];
+ ] satisfies Section[]).filter(section=>!(answers.central_business_id&&section.title==="Conoce tu negocio"));
 }
 function inputValue(v:Record<string,string>,key:string){return v[key]||"";}
 
@@ -153,9 +156,9 @@ function MultipleChoiceSelect({label,options,isSelected,onToggle}:{
   </details>
  </div>;
 }
-export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusiness,isPreview=false,initialStep=0,saving=false,authRequired=false,recoverDraft=false}:Props){
+export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusiness,workspaceId,isPreview=false,initialStep=0,saving=false,authRequired=false,recoverDraft=false}:Props){
  const [draft,setDraft]=useState<WizardDraft>(()=>({...initial,setup:{...(initial.setup||{})}}));
- const [step,setStep]=useState<number>(initialStep);
+ const [step,setStep]=useState<number>(initial.setup.central_business_id&&initialStep>0?initialStep-1:initialStep);
  const [recoveryReady,setRecoveryReady]=useState(false);
  const [draftRestored,setDraftRestored]=useState(false);
  // This temporary recovery is per browser tab, never a published agent or server save.
@@ -228,13 +231,9 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
   <div className={styles.titleGroup}><span className={styles.eyebrow}><Sparkles size={14}/> PASO {step+1}</span>
    <h1>{current.title}</h1><p>{current.subtitle}</p></div>
   {draftRestored?<p className={styles.reviewMessage} role="status">Recuperé el borrador temporal de esta pestaña. Todavía debes guardarlo en tu cuenta.</p>:null}
-  {step===1&&draft.setup.central_business_id?<div className={styles.reviewMessage}>
-   <ShieldCheck size={17}/><p><strong>Datos del perfil central:</strong> {[
-    draft.setup.business_name,draft.setup.industry,
-    draft.setup.city,draft.setup.state
-   ].filter(Boolean).join(" · ")}.
-   No volveremos a preguntarte lo que ya está guardado.
-   {onReviewBusiness?<button type="button" onClick={onReviewBusiness}>Revisar negocio</button>:null}</p>
+  {step===0&&draft.setup.central_business_id?<div className={styles.context}>
+   <ShieldCheck size={17}/><strong>{draft.setup.business_name}</strong>
+   {onReviewBusiness?<button type="button" onClick={()=>onReviewBusiness(draft)}>{draft.setup.city&&draft.setup.state?"Editar negocio":"Completar negocio"}</button>:null}
   </div>:null}
   {authRequired?<div className={styles.reviewMessage} role="alert">
    <ShieldCheck size={18}/><p>Para guardar este agente debes iniciar sesión en VMV.
@@ -247,7 +246,7 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
    <ChoiceSelect label="Voz del teléfono" value={draft.setup.voice_preset||"default"}
     options={[["default","Predeterminada de Twilio"],["female","Femenina · Polly"],["male","Masculina · Polly"]]}
     onChange={next=>answer("voice_preset",next)}/>
-   <p className={styles.hint}>La voz elegida se usa únicamente al recibir llamadas de prueba con el agente; las voces Polly pueden tener costo del proveedor. No se realiza ninguna llamada al configurarla.</p>
+   <VoiceSample preset={draft.setup.voice_preset||"default"} language={draft.setup.language_rule||draft.language||"Español"}/>
    <ChoiceSelect label="Idioma de conversación" value={draft.setup.language_rule||draft.language||"Español"}
     options={[["Español","Español"],["English","English"],["Bilingüe","Bilingüe"]]}
     onChange={next=>answer("language_rule",next)}/>
@@ -260,8 +259,9 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
    <ChoiceSelect label="¿Dónde trabajará?" value={draft.setup.channel||"Chat"}
     options={[["Teléfono","Teléfono"],["Chat","Chat"],["Teléfono y chat","Teléfono y chat"]]}
     onChange={next=>answer("channel",next)}/>
+   <AgentConnections centralId={draft.setup.central_business_id} workspaceId={workspaceId} setup={draft.setup} onChange={answer}/>
    <MultipleChoiceSelect label="¿Qué tareas tendrá permitidas?"
-    options={[["cap_attend","Atender preguntas"],["cap_sales","Vender por teléfono o chat"],["cap_bookings","Solicitar reservas"],["cap_catalog","Consultar catálogo"]]}
+    options={[["cap_attend","Atender preguntas"],["cap_sales","Vender por teléfono o chat"],["cap_bookings","Solicitar reservas"]]}
     isSelected={key=>draft.setup[key]==="Sí"}
     onToggle={key=>answer(key,draft.setup[key]==="Sí"?"No":"Sí")}/>
    {draft.setup.cap_sales==="Sí"?<>
@@ -279,7 +279,7 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
     <p className={styles.hint}>Solo con horarios reales disponibles. No confirma pagos.</p></>}
   </div>:null}
   {step>0&&step<steps.length-1?<div className={styles.fields}>
-   {step===2&&draft.setup.industry?<div className={styles.context}><Sparkles size={15}/> Negocio: <strong>{draft.setup.industry}</strong> · {draft.setup.city||""}{draft.setup.state?", "+draft.setup.state:""}. No necesitas repetir esos datos.</div>:null}
+   {current.title==="Qué debe hacer"&&draft.setup.industry?<div className={styles.context}><Sparkles size={15}/> Negocio: <strong>{draft.setup.industry}</strong> · {draft.setup.city||""}{draft.setup.state?", "+draft.setup.state:""}. No necesitas repetir esos datos.</div>:null}
    {shown.map(question=><div className={styles.question} key={question.id}>
    <label className={styles.fieldTitle} htmlFor={question.kind==="text"||question.kind==="textarea"?"w-"+question.id:undefined}>{question.title}{question.required?<span className={styles.required}> *</span>:null}</label>
    {question.hint?<p className={styles.hint}>{question.hint}</p>:null}

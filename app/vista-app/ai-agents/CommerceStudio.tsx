@@ -12,7 +12,7 @@ type Form={
 };
 const empty:Form={name:"",sku:"",description:"",price:"",stock_mode:"manual",available_qty:"",
  approved:false,active:true};
-export default function CommerceStudio({agents,onClose,initialAgentId="",initialTab="catalog",onAgentUpdated}:{agents:PersistedAgent[];onClose:()=>void;initialAgentId?:string;initialTab?:"setup"|"catalog";onAgentUpdated?:(agent:PersistedAgent)=>void}){
+export default function CommerceStudio({agents,onClose,initialAgentId="",initialTab="catalog",onAgentUpdated,workspaceId,catalogOnly=false}:{catalogOnly?:boolean;workspaceId?:string;agents:PersistedAgent[];onClose:()=>void;initialAgentId?:string;initialTab?:"setup"|"catalog";onAgentUpdated?:(agent:PersistedAgent)=>void}){
  const [items,setItems]=useState<CatalogItem[]>([]);
  const [webCards,setWebCards]=useState<WebStudioCard[]>([]);
  const [verified,setVerified]=useState<VerifiedCatalogItem[]>([]);
@@ -22,7 +22,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
  const [editing,setEditing]=useState<CatalogItem|null>(null);
  const [form,setForm]=useState<Form>(empty);
  const [agentId,setAgentId]=useState(agents.some(a=>a.id===initialAgentId)?initialAgentId:agents[0]?.id||"");
- const businessId=agents[0]?.business_id||"";
+ const businessId=workspaceId||agents[0]?.business_id||"";
  const [testItemId,setTestItemId]=useState("");
  const [qty,setQty]=useState(1);
  const [busy,setBusy]=useState(false);
@@ -35,12 +35,12 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
  });
  const selectedAgent=(editedAgent?.id===agentId?editedAgent:null)||agents.find(a=>a.id===agentId)||null;
  useEffect(()=>{let live=true;setInventoryReady(false);
-  if(!selectedAgent?.business_id){setVerified([]);return;}
-  void getVerifiedCatalog(selectedAgent.business_id).then(products=>{
+  if(!businessId){setVerified([]);return;}
+  void getVerifiedCatalog(businessId).then(products=>{
    if(live){setVerified(products);setInventoryReady(true);}
   }).catch(e=>{if(live){setVerified([]);setNotice(e instanceof Error?e.message:"No se pudo verificar inventario.");}});
   return()=>{live=false;};
- },[selectedAgent?.business_id,items]);
+ },[businessId,items]);
  useEffect(()=>{
   const conf=selectedAgent?.setup||{};
   setPermissions({
@@ -64,14 +64,14 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
  const refresh=async()=>{
   if(!businessId){setItems([]);setOrders([]);setHuman([]);return;}
   const [catalog,history,requests,cards]=await Promise.all([
-   listCatalog(businessId),listTestOrders(businessId),listHumanRequests(businessId),listWebStudioCards()
+   listCatalog(businessId),catalogOnly?Promise.resolve([]):listTestOrders(businessId),catalogOnly?Promise.resolve([]):listHumanRequests(businessId),catalogOnly?Promise.resolve([]):listWebStudioCards()
   ]);
   setItems(catalog);setOrders(history);setHuman(requests);setWebCards(cards);
  };
  useEffect(()=>{let live=true;
   if(!businessId){setItems([]);setOrders([]);setHuman([]);setLoading(false);return;}
   setLoading(true);
-  void Promise.all([listCatalog(businessId),listTestOrders(businessId),listHumanRequests(businessId),listWebStudioCards()])
+  void Promise.all([listCatalog(businessId),catalogOnly?Promise.resolve([]):listTestOrders(businessId),catalogOnly?Promise.resolve([]):listHumanRequests(businessId),catalogOnly?Promise.resolve([]):listWebStudioCards()])
    .then(([cat,history,requests,cards])=>{if(live){setItems(cat);setOrders(history);setHuman(requests);setWebCards(cards);}})
    .catch(e=>{if(live)setNotice(e instanceof Error?e.message:"Inicia sesión para consultar tu negocio.");})
    .finally(()=>{if(live)setLoading(false);});
@@ -143,20 +143,22 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
  };
  const approved=items.filter(x=>verified.some(v=>v.id===x.id&&v.sellableInTest));
  return <div className={styles.root}>
-  <button type="button" onClick={onClose} className={styles.back}><ArrowLeft size={17}/> AI Agents</button>
+  <button type="button" onClick={onClose} className={styles.back}><ArrowLeft size={17}/> {catalogOnly?"Volver al agente":"AI Agents"}</button>
+  {!catalogOnly?<>
   <div className={styles.hero}><div><small>COMERCIO INTELIGENTE · TEST</small>
    <h1>Productos y pedidos</h1>
    <p>Precios verificables. Pedidos trazables. Cero pagos ficticios.</p></div><ShoppingBag size={28}/></div>
   <div className={styles.warning}><ShieldCheck size={17}/>
    <p>Este laboratorio crea únicamente pedidos de <strong>prueba</strong>. No cobra dinero, no confirma reservas reales ni altera la configuración de Smart Call.</p></div>
+  </>:null}
   {notice?<div className={styles.notice} role="status">{notice}</div>:null}
   {loading?<p className={styles.hint}>Cargando catálogo y pedidos…</p>:null}
-  <div className={styles.tabs}>
+  {!catalogOnly?<div className={styles.tabs}>
    <button type="button" className={tab==="setup"?styles.on:styles.off} onClick={()=>setTab("setup")}><PhoneCall size={15}/> Ventas</button>
    <button type="button" className={tab==="catalog"?styles.on:styles.off} onClick={()=>setTab("catalog")}><Package size={15}/> Catálogo ({items.length})</button>
    <button type="button" className={tab==="orders"?styles.on:styles.off} onClick={()=>setTab("orders")}><ReceiptText size={15}/> Pedidos ({orders.length})</button>
    <button type="button" className={tab==="human"?styles.on:styles.off} onClick={()=>setTab("human")}><UserRoundCheck size={15}/> Humano ({human.filter(x=>x.status==="new").length})</button>
-  </div>
+  </div>:null}
   {tab==="setup"?<>
    <div className={styles.heading}><h2>Preparar al agente para vender</h2></div>
    <div className={styles.form}>
@@ -202,6 +204,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
    </div>
    <button type="button" className={styles.primary} onClick={()=>setTab("catalog")}><Package size={16}/> Ir al catálogo</button>
   </>:tab==="catalog"?<>
+   {!catalogOnly?<>
    <div className={styles.heading}><h2>Productos de Web Studio</h2></div>
    <div className={styles.warning}><ShieldCheck size={17}/><p>
     Las fichas web son informativas. Importarlas no autoriza ventas ni crea existencias:
@@ -220,6 +223,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
        onClick={()=>void importFromWeb(card)}>
        {linked?"Vinculado":"Importar"}</button>
      </div>;})}</div>}
+   </>:null}
    <div className={styles.heading}><h2>{editing?"Editar producto":"Añadir producto"}</h2>
     {editing?<button type="button" onClick={()=>{setEditing(null);setForm(empty);}}>Cancelar edición</button>:null}</div>
    <div className={styles.form}>
@@ -256,6 +260,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
       {item.web_source_id?<small>Vinculado a Web Studio · cambios futuros requieren revisión</small>:null}</div>
      <button type="button" onClick={()=>beginEdit(item)}>Editar</button>
     </div>)}</div>}
+   {!catalogOnly?<>
    <div className={styles.heading}><h2>Cotización de prueba</h2></div>
    <div className={styles.form}>
     <label>Agente que preparará el pedido<select value={agentId} onChange={e=>setAgentId(e.target.value)}>
@@ -269,6 +274,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
       onClick={()=>void quote()}><ClipboardList size={17}/> Preparar cotización de prueba</button>
     <p className={styles.hint}>El total se calcula en Supabase usando el precio aprobado, no desde la interfaz ni el modelo de IA.</p>
    </div>
+   </>:null}
   </>:tab==="orders"?<>
    <h2 className={styles.ordersTitle}>Historial de prueba</h2>
    {orders.length===0?<div className={styles.empty}><ReceiptText size={26}/><p>Todavía no hay pedidos de prueba.</p></div>:

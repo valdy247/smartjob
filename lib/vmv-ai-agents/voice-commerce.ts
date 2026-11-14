@@ -57,7 +57,22 @@ function fallback(lang:"es"|"en",what:"missing"|"pending"|"human"){
 }
 export async function phoneCommerceTurn(db:SupabaseClient,session:VoiceCommerceSession,
  speech:string,lang:"es"|"en",turn:number):Promise<string|null>{
- if(!salesPermitted(session))return null;
+ const config=(session.agent_snapshot.configuration||{}) as Record<string,string>;
+ if(!salesPermitted(session)){
+  if(config.cap_catalog!=="Sí"||config.channel==="Chat")return null;
+  const inquiry=/\b(producto|productos|cat[aá]logo|precio|precios|existencia|stock|disponibilidad|disponible|venden|vendes|catalog|price|prices|products?|inventory|availability|available)\b/i.test(speech);
+  const products=await catalogForCall(db,session);
+  const normalize=(text:string)=>text.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+  const matching=products.filter(p=>normalize(speech).includes(normalize(p.name)));
+  if(!inquiry&&!matching.length)return null;
+  if(!products.length)return fallback(lang,"missing");
+  const selected=(matching.length?matching:products).slice(0,5);
+  const lines=selected.map(p=>p.name+": "+money(p.price_cents)+" USD; "+(
+   p.stock_mode==="tracked"?(lang==="es"?`${p.available_qty} unidades disponibles`:`${p.available_qty} units available`):
+   p.stock_mode==="manual"?(lang==="es"?"existencias por confirmar":"stock requires confirmation"):
+   (lang==="es"?"sin límite configurado":"configured without a unit limit")));
+  return (lang==="es"?"Catálogo verificado: ":"Verified catalog: ")+lines.join(". ")+".";
+ }
  const products=await catalogForCall(db,session);
  if(!products.length){
   // A sales-capable agent should still answer normal questions about the owner

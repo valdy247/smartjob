@@ -143,6 +143,7 @@ export default function AIAgentsPreview(){
   setAgents(list);setBusinesses(profile.businesses);setWorkspaces(profile.workspaces);setChosenBusiness(id);
   const saved=profile.businesses.find(b=>b.id===id);
   if(!saved)throw Error("El negocio se guardó, pero no se pudo actualizar la lista. Vuelve a intentarlo.");
+  if(screen==="editor")setDraft(current=>centralPrefill(saved,current));
   setBusinessDialog(false);setNotice("Negocio guardado. Puedes configurar su agente principal aquí.");
   if(pendingKind){
    const match=profile.workspaces.find(w=>w.central_business_id===id);
@@ -153,7 +154,7 @@ export default function AIAgentsPreview(){
    }else{setDraft(centralPrefill(saved,blank("support")));setSelected(null);setEditStep(0);setScreen("editor");}
   }
  };
- const edit=(agent:Agent,step:0|1|2|3=0)=>{setSelected(agent.id);setEditStep(step);setDraft({
+ const edit=(agent:Agent,step:0|1|2|3=0)=>{setSelected(agent.id);setEditStep(step);setDraft(selectedBusiness?centralPrefill(selectedBusiness,{...agent,setup:{...agent.setup}}):{
   name:agent.name,kind:agent.kind,purpose:agent.purpose,personality:agent.personality,
   language:agent.language,instructions:agent.instructions,knowledge:agent.knowledge,setup:{...agent.setup}
  });setScreen("editor");};
@@ -396,8 +397,8 @@ export default function AIAgentsPreview(){
      </>:null}
      {businessDialog?<BusinessProfileDialog businessId={selectedBusiness?.id} initialName={workspaces.find(w=>w.id===legacyId)?.name}
       legacy={selectedWorkspace?[]:unlinked} initialLegacyId={legacyId} onClose={()=>{setBusinessDialog(false);setPendingKind(null);}} onSaved={businessSaved}/>:null}
-     {screen==="editor"?<AgentSetupWizard key={(selected||draft.kind)+"-"+editStep}
-      initial={draft} onReviewBusiness={()=>setBusinessDialog(true)} initialStep={editStep} saving={busy} isPreview={false} authRequired={!authenticated} recoverDraft={!selected} onCancel={back}
+     {screen==="editor"?<AgentSetupWizard key={(selected||draft.kind)+"-"+editStep+"-"+draft.setup.central_source_updated_at}
+      initial={draft} workspaceId={active?.business_id||selectedWorkspace?.id} onReviewBusiness={current=>{setDraft(current);setBusinessDialog(true);}} initialStep={editStep} saving={busy} isPreview={false} authRequired={!authenticated} recoverDraft={!selected} onCancel={back}
       onSave={async updated=>{setDraft(updated);await save(updated);}}/>:null}
      {screen==="quality"&&active?<AgentQualityLab agent={active} onClose={back} onEdit={step=>edit(active,step)}/>:null}
      {screen==="phone"?<CallControl onBack={back}/>:null}

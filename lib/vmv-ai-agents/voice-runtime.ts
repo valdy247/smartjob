@@ -1,3 +1,4 @@
+import {phoneVoice} from "./voice-options";
 import {NextRequest} from "next/server";
 import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 import {verifyAiTestWebhook} from "@/lib/vmv-ai-agents/twilio-test";
@@ -26,8 +27,7 @@ const safe=(s:unknown)=>typeof s==="string"?s.trim():"";
 function speak(message:string,l:Lang,snapshot?:Record<string,unknown>){
  const config=(snapshot?.configuration||{}) as Record<string,unknown>;
  if(config.voice_preset!=="female"&&config.voice_preset!=="male")return say(message,locale(l));
- const voice=l==="es"?(config.voice_preset==="female"?"Polly.Lupe":"Polly.Miguel"):
-  (config.voice_preset==="female"?"Polly.Joanna":"Polly.Matthew");
+ const voice=phoneVoice(String(config.voice_preset),l)!.voice;
  return '<Say language="'+(l==="es"?"es-US":"en-US")+'" voice="'+voice+'">'+xmlEscape(message)+'</Say>';
 }
 function end(message:string,l:Lang,snapshot?:Record<string,unknown>){

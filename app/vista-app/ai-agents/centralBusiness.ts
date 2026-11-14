@@ -1,5 +1,6 @@
 import {getSupabase} from "@/lib/supabase";
 import {BUSINESS_CATEGORIES} from "@/lib/vmv-business-categories";
+import {publicMarketingWeek} from "@/lib/vmv-ai-agents/central-public-context";
 import type {WizardDraft} from "./AgentSetupWizard";
 
 export type CentralBusiness={
@@ -53,9 +54,8 @@ export async function linkLegacyWorkspace(workspaceId:string,centralId:string):P
  if(error||data!==true)throw Error("No se pudo vincular. Comprueba que ambos negocios sean tuyos y no estén vinculados.");
 }
 const hoursKeys=["mon","tue","wed","thu","fri","sat","sun"] as const;
-const timeOk=(s:unknown):s is string=>typeof s==="string"&&/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(s);
-/** Only documented public-facing Marketing fields. No private address or phone,
- * even when they exist in the owner's account, without separate disclosure approval. */
+/** Reuse the business contact and public-facing fields requested by the owner.
+ * Never include private street, personal email, legal data or administrative notes. */
 export function centralPrefill(b:CentralBusiness,input:WizardDraft):WizardDraft{
  const additions:Record<string,string>={
   central_business_id:b.id,central_source_updated_at:b.updated_at,
@@ -65,33 +65,26 @@ export function centralPrefill(b:CentralBusiness,input:WizardDraft):WizardDraft{
   }:{}),
   ...(b.country==="US"?{country:"Estados Unidos"}:{}),
   ...(b.city?{city:b.city}:{}),
-  ...(b.region?{state:b.region}:{}),
+  ...(b.region?{state:b.region,region_other:b.region}:{}),
+  ...(b.country&&b.country!=="US"?{country:"Otro país"}:{}),
+  ...(b.phone?.trim()?{contact:b.phone.trim()}:{}),
   ...(b.description?{business_description:b.description.slice(0,500)}:{}),
   ...(b.service_areas?{service_areas:b.service_areas.slice(0,500)}:{}),
   ...(b.website_url&&/^https:\/\//i.test(b.website_url)?{website:b.website_url.slice(0,500)}:{})
  };
- // Marketing stores hours Monday-first in an array of {closed,start,end}.
- if(b.hours_enabled&&Array.isArray(b.hours)&&b.hours.length===7){
-  for(let i=0;i<7;i++){
-   const record=b.hours[i] as Record<string,unknown>|null;
-   if(!record||typeof record.closed!=="boolean")continue;
-   const key=hoursKeys[i];
-   if(record.closed){
-    additions["h_"+key+"_active"]="No";
-    additions["h_"+key+"_open"]="09:00";
-    additions["h_"+key+"_close"]="17:00";
-   }else if(timeOk(record.start)&&timeOk(record.end)&&record.start!==record.end){
-    additions["h_"+key+"_active"]="Sí";
-    additions["h_"+key+"_open"]=record.start;
-    additions["h_"+key+"_close"]=record.end;
-   }
-  }
-  additions.hours_mode="Personalizado";
- }
+ // Never mark malformed or partial schedules as loaded.
+ const week=publicMarketingWeek(b);
+ if(week)Object.assign(additions,week,{hours_mode:"Personalizado"});
  const setup={...input.setup};
+ // Profile fields are authoritative even when reopening an existing agent.
+ if(setup.central_business_id===b.id){
+  for(const key of (setup.central_prefill_fields||" ").split("|"))delete setup[key];
+  for(const key of ["business_name","industry","city","state","region_other","country","contact","hours_mode"])delete setup[key];
+  for(const day of hoursKeys)for(const field of ["active","open","close"])delete setup[`h_${day}_${field}`];
+ }
  const fromCentral:string[]=[];
  for(const [key,value] of Object.entries(additions)){
-  if(key==="central_business_id"||key==="central_source_updated_at"||!setup[key]?.trim()){
+  if(value.trim()){
    setup[key]=value;
    if(!key.startsWith("central_")&&key!=="hours_mode"&&!key.startsWith("h_"))
     fromCentral.push(key);

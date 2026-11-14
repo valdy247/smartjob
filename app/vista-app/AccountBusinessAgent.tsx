@@ -26,6 +26,7 @@ export default function AccountBusinessAgent({ownerId,initialName=""}:{ownerId:s
  const [draft,setDraft]=useState<WizardDraft|null>(null),[editing,setEditing]=useState<PersistedAgent|null>(null),[candidate,setCandidate]=useState("");
  const [resumeAgent,setResumeAgent]=useState(false),[setupRequested,setSetupRequested]=useState(false);
  const setupHandled=useRef(false);
+ const wizardDraft=useRef<WizardDraft|null>(null);
  const [retry,setRetry]=useState(0);const alive=useRef(true),saving=useRef(false),loadSequence=useRef(0);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
  const business=businesses.find(b=>b.id===businessId)||null;
@@ -57,7 +58,7 @@ export default function AccountBusinessAgent({ownerId,initialName=""}:{ownerId:s
  const openAgent=()=>{
   setNotice("");if(!business){setResumeAgent(true);setBusinessOpen(true);return;}
   setCandidate("");setEditing(principal);
-  setDraft(principal?{...principal,setup:{...principal.setup}}:centralPrefill(business,{
+  setDraft(centralPrefill(business,principal?{...principal,setup:{...principal.setup}}:{
    name:L("Mi agente","My agent"),kind:"support",purpose:L("Atender a los clientes de mi negocio con información autorizada.","Help my business customers using approved information."),
    personality:L("Amable y profesional","Friendly and professional"),language:en?"English":"Español",instructions:"",knowledge:"",setup:{}
   }));setAgentOpen(true);
@@ -117,10 +118,10 @@ export default function AccountBusinessAgent({ownerId,initialName=""}:{ownerId:s
   {agentError?<div role="alert" className={styles.feedback}>{agentError}<button type="button" onClick={()=>setRetry(n=>n+1)}>{L("Reintentar","Retry")}</button></div>:null}
   {setupRequested?<p role="status" className={styles.feedback}>{L("Termina de configurar tu agente para usar sus funciones.","Finish setting up your agent to use its capabilities.")}</p>:null}
   {notice?<p role="status" className={styles.feedback}>{notice}</p>:null}
-  {businessOpen?<BusinessProfileDialog businessId={business?.id} initialName={initialName||unlinked[0]?.name} legacy={workspace?[]:unlinked} onClose={()=>{setBusinessOpen(false);setResumeAgent(false);finishSetup();}} onSaved={async id=>{setBusinessOpen(false);await reload(id);}}/>:null}
+  {businessOpen?<BusinessProfileDialog businessId={business?.id} initialName={initialName||unlinked[0]?.name} legacy={workspace?[]:unlinked} onClose={()=>{wizardDraft.current=null;setBusinessOpen(false);setResumeAgent(false);if(!agentOpen)finishSetup();}} onSaved={async id=>{const profile=await loadBusinessChoices();const refreshed=profile.businesses.find(b=>b.id===id);if(refreshed&&wizardDraft.current){setDraft(centralPrefill(refreshed,wizardDraft.current));wizardDraft.current=null;}setBusinessOpen(false);await reload(id);}}/>:null}
   {agentOpen&&draft?<AgentDialog title={setupRequested?L("Termina de configurar tu agente","Finish setting up your agent"):L("Mi agente","My agent")} busy={busy} onClose={()=>{setAgentOpen(false);finishSetup();}}>
    {!principal&&scopedAgents.length>0?<div className={styles.choose}><p>{L("Elige uno de tus agentes existentes. Sus datos e historial se conservarán.","Choose an existing agent. Its data and history will be preserved.")}</p><label>{L("Agente principal","Primary agent")}<select value={candidate} disabled={busy} onChange={e=>setCandidate(e.target.value)}><option value="">{L("Seleccionar","Select")}</option>{scopedAgents.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label><button type="button" disabled={busy||!candidate} onClick={()=>void designate()}>{L("Guardar selección","Save selection")}</button></div>:
-    <AgentSetupWizard initial={draft} onSave={save} saving={busy} onCancel={()=>{setAgentOpen(false);finishSetup();}} recoverDraft={false}/>}
+    <AgentSetupWizard key={draft.setup.central_source_updated_at} initial={draft} workspaceId={workspace?.id} onReviewBusiness={current=>{wizardDraft.current=current;setBusinessOpen(true);}} onSave={save} saving={busy} onCancel={()=>{setAgentOpen(false);finishSetup();}} recoverDraft={false}/>}
   </AgentDialog>:null}
  </section>;
 }
