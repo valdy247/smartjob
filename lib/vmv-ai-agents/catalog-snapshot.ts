@@ -29,7 +29,7 @@ export function buildCatalogSnapshot(items:Item[],holds:{item_id:string;qty:numb
     id:item.id,sku:item.sku,name:item.name,description:item.description||"",
     priceCents:item.price_cents,currency:"usd" as const,
     availableQuantity:available,availability:stock,
-    sellableInTest:compatible&&stock!=="manual"&&(!tracked||available!>0),
+    sellableInTest:compatible&&stock!=="manual"&&(!tracked||(available!==null&&available>0)),
     webSourceId:item.web_source_id||null
    };
   });
