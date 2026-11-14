@@ -725,6 +725,62 @@ export default function App(){
   </View>
   <Text style={styles.interfaceLanguageHint}>{tr("common.languageHint")}</Text>
  </View>;
+ // Home and Services use the same featured products, artwork and destinations.
+ const featuredSmartCall=(
+      <Pressable accessibilityRole="button" accessibilityLabel="Abrir Smart Call"
+       style={styles.homeSpotlightV2} onPress={()=>{setActiveModule("smart-call");setActiveTab("services");}}>
+       <View style={styles.homeSpotlightRingOuter}/>
+       <View style={styles.homeSpotlightRingInner}/>
+       <View style={styles.homeSpotlightPhone}>
+        <View style={styles.homeSpotlightPhoneShine}/>
+        <Ionicons name="call" size={29} color="#64339F"/>
+       </View>
+       <View style={styles.homeSpotlightMiniBubble}><Ionicons name="language-outline" size={17} color="#367E72"/></View>
+       <Text style={styles.homeSpotlightSpark}>✦</Text>
+       <Text style={styles.homeSpotlightKicker}>Smart Call · {tr("home.pilot")}</Text>
+       <Text style={styles.homeSpotlightHeadline}>{tr("home.businessConnected")}<Text style={{color:"#F9E28A"}}>.</Text></Text>
+       <Text style={styles.homeSpotlightCaption}>{tr("home.callsAndTranslation")}</Text>
+       <View style={styles.homeSpotlightMinutes}>
+        <Text style={styles.homeSpotlightMinutesText}>{billingOverview?.minutes?.available??"—"} min  <Text style={{fontSize:10,fontWeight:"600"}}>{tr("home.minutesToTranslate")}</Text></Text>
+       </View>
+       <View style={styles.homeSpotlightArrow}><Ionicons name="arrow-up-outline" size={20} color="#FFFFFF"/></View>
+      </Pressable>
+ );
+ const featuredServiceTiles=(
+      <View style={styles.homeProductGrid}>
+       <Pressable accessibilityRole="button" accessibilityLabel="Abrir traductor"
+        style={[styles.homeProductTile,styles.homeProductMint]} onPress={()=>setActiveTab("live")}>
+        <View style={styles.homeProductIconV2}><Ionicons name="language-outline" size={28} color="#105744"/></View>
+        <Ionicons name="chatbubbles-outline" size={73} color="#105744" style={styles.homeProductArt} accessible={false}/>
+        <View><Text style={[styles.homeProductTitle,{color:"#104A39"}]}>{tr("common.translator")}</Text>
+         <Text style={[styles.homeProductSub,{color:"#367E6A"}]}>{tr("home.inPerson")}</Text></View>
+       </Pressable>
+       <Pressable accessibilityRole="button" accessibilityLabel={"Web Services · "+tr("home.explore")}
+        onPress={()=>{setActiveModule("web-services");setActiveTab("services");}}
+        style={[styles.homeProductTile,styles.homeProductYellow]}>
+        <View style={styles.homeProductIconV2}><Ionicons name="globe-outline" size={28} color="#69471D"/></View>
+        <Ionicons name="browsers-outline" size={75} color="#69471D" style={styles.homeProductArt} accessible={false}/>
+        <View><Text style={[styles.homeProductTitle,{color:"#63451B"}]}>Web Services</Text>
+         <Text style={[styles.homeProductSub,{color:"#916F3C"}]}>{tr("home.explore")}</Text></View>
+       </Pressable>
+       <Pressable accessibilityRole="button" accessibilityLabel={"AI Agents · "+tr("home.explore")}
+        onPress={()=>{setActiveModule("ai-agents");setActiveTab("services");}}
+        style={[styles.homeProductTile,styles.homeProductSky]}>
+        <View style={styles.homeProductIconV2}><Ionicons name="sparkles-outline" size={28} color="#305D8B"/></View>
+        <Ionicons name="hardware-chip-outline" size={73} color="#294C78" style={styles.homeProductArt} accessible={false}/>
+        <View><Text style={[styles.homeProductTitle,{color:"#294C78"}]}>AI Agents</Text>
+         <Text style={[styles.homeProductSub,{color:"#547DA0"}]}>{tr("home.explore")}</Text></View>
+       </Pressable>
+       <Pressable accessibilityRole="button" accessibilityLabel={"Marketing · "+tr("home.explore")}
+        onPress={()=>{setActiveModule("marketing-analytics");setActiveTab("services");}}
+        style={[styles.homeProductTile,styles.homeProductPink]}>
+        <View style={styles.homeProductIconV2}><Ionicons name="trending-up-outline" size={28} color="#914B74"/></View>
+        <Ionicons name="stats-chart-outline" size={73} color="#82425F" style={styles.homeProductArt} accessible={false}/>
+        <View><Text style={[styles.homeProductTitle,{color:"#82425F"}]}>Marketing</Text>
+         <Text style={[styles.homeProductSub,{color:"#AD7692"}]}>{tr("home.explore")}</Text></View>
+       </Pressable>
+      </View>
+ );
  if(!uiLanguageReady)return <SafeAreaView style={styles.safe}>{languageError?<View style={{padding:24}}><Text>{tr("language.loadError")}</Text><Button label={tr("common.retry")} onPress={()=>void retryLanguage()}/></View>:<ActivityIndicator style={{marginTop:64}} color={colors.accent}/>}</SafeAreaView>;
  return <SafeAreaView style={styles.safe}>
   <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
@@ -764,24 +820,7 @@ export default function App(){
        </Pressable>
        <View style={styles.homeBrandBadge}><Text style={styles.homeBrandBadgeText}>BUSINESS ✦</Text></View>
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Abrir Smart Call"
-       style={styles.homeSpotlightV2} onPress={()=>{setActiveModule("smart-call");setActiveTab("services");}}>
-       <View style={styles.homeSpotlightRingOuter}/>
-       <View style={styles.homeSpotlightRingInner}/>
-       <View style={styles.homeSpotlightPhone}>
-        <View style={styles.homeSpotlightPhoneShine}/>
-        <Ionicons name="call" size={29} color="#64339F"/>
-       </View>
-       <View style={styles.homeSpotlightMiniBubble}><Ionicons name="language-outline" size={17} color="#367E72"/></View>
-       <Text style={styles.homeSpotlightSpark}>✦</Text>
-       <Text style={styles.homeSpotlightKicker}>Smart Call · {tr("home.pilot")}</Text>
-       <Text style={styles.homeSpotlightHeadline}>{tr("home.businessConnected")}<Text style={{color:"#F9E28A"}}>.</Text></Text>
-       <Text style={styles.homeSpotlightCaption}>{tr("home.callsAndTranslation")}</Text>
-       <View style={styles.homeSpotlightMinutes}>
-        <Text style={styles.homeSpotlightMinutesText}>{billingOverview?.minutes?.available??"—"} min  <Text style={{fontSize:10,fontWeight:"600"}}>{tr("home.minutesToTranslate")}</Text></Text>
-       </View>
-       <View style={styles.homeSpotlightArrow}><Ionicons name="arrow-up-outline" size={20} color="#FFFFFF"/></View>
-      </Pressable>
+      {featuredSmartCall}
       <View style={styles.homeSectionHead}>
        <Text style={styles.homeSectionTitle}>{tr("home.featured")}<Text style={{color:"#8959EB"}}>.</Text></Text>
        <Pressable accessibilityRole="button" accessibilityLabel="Ver todos los servicios" style={styles.homeSeeAll}
@@ -789,45 +828,12 @@ export default function App(){
         <Text style={styles.homeSeeAllText}>{tr("home.seeAll")}</Text><Ionicons name="arrow-up-outline" size={15} color="#8960D4"/>
        </Pressable>
       </View>
-      <View style={styles.homeProductGrid}>
-       <Pressable accessibilityRole="button" accessibilityLabel="Abrir traductor"
-        style={[styles.homeProductTile,styles.homeProductMint]} onPress={()=>setActiveTab("live")}>
-        <View style={styles.homeProductIconV2}><Ionicons name="language-outline" size={28} color="#105744"/></View>
-        <Ionicons name="chatbubbles-outline" size={73} color="#105744" style={styles.homeProductArt} accessible={false}/>
-        <View><Text style={[styles.homeProductTitle,{color:"#104A39"}]}>{tr("common.translator")}</Text>
-         <Text style={[styles.homeProductSub,{color:"#367E6A"}]}>{tr("home.inPerson")}</Text></View>
-       </Pressable>
-       <Pressable accessibilityRole="button" accessibilityLabel={"Web Services · "+tr("home.explore")}
-        onPress={()=>{setActiveModule(null);setActiveTab("services");}}
-        style={[styles.homeProductTile,styles.homeProductYellow]}>
-        <View style={styles.homeProductIconV2}><Ionicons name="globe-outline" size={28} color="#69471D"/></View>
-        <Ionicons name="browsers-outline" size={75} color="#69471D" style={styles.homeProductArt} accessible={false}/>
-        <View><Text style={[styles.homeProductTitle,{color:"#63451B"}]}>Web Services</Text>
-         <Text style={[styles.homeProductSub,{color:"#916F3C"}]}>{tr("home.explore")}</Text></View>
-       </Pressable>
-       <Pressable accessibilityRole="button" accessibilityLabel={"AI Agents · "+tr("home.explore")}
-        onPress={()=>{setActiveModule(null);setActiveTab("services");}}
-        style={[styles.homeProductTile,styles.homeProductSky]}>
-        <View style={styles.homeProductIconV2}><Ionicons name="sparkles-outline" size={28} color="#305D8B"/></View>
-        <Ionicons name="hardware-chip-outline" size={73} color="#294C78" style={styles.homeProductArt} accessible={false}/>
-        <View><Text style={[styles.homeProductTitle,{color:"#294C78"}]}>AI Agents</Text>
-         <Text style={[styles.homeProductSub,{color:"#547DA0"}]}>{tr("home.explore")}</Text></View>
-       </Pressable>
-       <Pressable accessibilityRole="button" accessibilityLabel={"Marketing · "+tr("home.explore")}
-        onPress={()=>{setActiveModule(null);setActiveTab("services");}}
-        style={[styles.homeProductTile,styles.homeProductPink]}>
-        <View style={styles.homeProductIconV2}><Ionicons name="trending-up-outline" size={28} color="#914B74"/></View>
-        <Ionicons name="stats-chart-outline" size={73} color="#82425F" style={styles.homeProductArt} accessible={false}/>
-        <View><Text style={[styles.homeProductTitle,{color:"#82425F"}]}>Marketing</Text>
-         <Text style={[styles.homeProductSub,{color:"#AD7692"}]}>{tr("home.explore")}</Text></View>
-       </Pressable>
-      </View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Explorar otros servicios"
-       onPress={()=>{setActiveModule(null);setActiveTab("services");}} style={styles.homeExploreV2}>
-       <Text style={styles.homeExploreSpark} accessible={false}>✦</Text>
-       <Text style={styles.homeExploreEyebrow}>VMV BUSINESS</Text>
-       <Text style={styles.homeExploreTitle}>Descubre lo que{"\n"}viene después.</Text>
-       <View style={styles.homeExploreAction}><Text style={styles.homeExploreActionText}>{tr("home.explore")} ↗</Text></View>
+      {featuredServiceTiles}
+      <Pressable accessibilityRole="button" accessibilityLabel={tr("native.totalServices")}
+       onPress={()=>{setActiveModule(null);setActiveTab("services");}} style={styles.homeExploreCompact}>
+       <Ionicons name="grid-outline" size={19} color="#764FC0"/>
+       <Text style={styles.homeExploreCompactText}>{tr("native.totalServices")}</Text>
+       <Ionicons name="arrow-up-outline" size={17} color="#764FC0"/>
       </Pressable>
      </>:null}
      {activeTab==="calls"?<>
@@ -905,42 +911,30 @@ export default function App(){
          <Text style={styles.backText}>‹ {tr("native.totalServices")}</Text>
         </Pressable>
         <SmartCallControlCenter session={session} onOpenCalls={()=>setActiveTab("calls")} onSettingsSaved={()=>void loadCustomization()}/>
-       </>:<>
-        <Text style={styles.kicker}>VMV BUSINESS</Text>
-        <Text style={styles.heading}>{tr("home.moreServices")}<Text style={{color:colors.accent}}>.</Text></Text>
-        <Pressable accessibilityRole="button" onPress={()=>setActiveModule("smart-call")}
-         style={styles.servicesSpotlight}>
-         <View style={styles.servicesSpotlightTop}>
-          <View style={styles.servicesSpotlightIcon}><Ionicons name="call" size={27} color="#6B409E"/></View>
-          <Text style={styles.servicesPilot}>EN PILOTO</Text>
-         </View>
-         <Text style={styles.servicesSpotlightTitle}>Smart Call<Text style={{color:"#FFE59D"}}>.</Text></Text>
-         <Text style={styles.servicesSpotlightNote}>{billingOverview?.minutes?.available??"—"} min para traducir</Text>
-         <View style={styles.servicesSpotlightLink}><Text style={styles.servicesSpotlightLinkText}>Abrir servicio  ↗</Text></View>
-         <Text style={styles.servicesSpotlightStar}>✦</Text>
+       </>:activeModule==="web-services"||activeModule==="ai-agents"||activeModule==="marketing-analytics"?<>
+        <Pressable accessibilityRole="button" style={styles.backRow} onPress={()=>setActiveModule(null)}>
+         <Text style={styles.backText}>‹ {tr("native.totalServices")}</Text>
         </Pressable>
-        <BusinessServicesPanel session={session}/>
+        {activeModule==="web-services"?<BusinessServicesPanel session={session} focus="web"/>:
+         <View style={styles.servicesModuleHandoff}>
+          <View style={styles.servicesTileIcon}>
+           <Ionicons name={activeModule==="ai-agents"?"sparkles-outline":"trending-up-outline"} size={26} color="#7650BC"/>
+          </View>
+          <Text style={styles.servicesModuleHandoffTitle}>{activeModule==="ai-agents"?"AI Agents":"Marketing"}</Text>
+          <Button label={tr("home.explore")+" ↗"} secondary
+           onPress={()=>void openBusinessWeb(activeModule)}/>
+         </View>}
+       </>:<>
+        <Text style={styles.servicesUnifiedTitle}>{tr("common.services")}<Text style={{color:colors.accent}}>.</Text></Text>
+        {featuredSmartCall}
+        {featuredServiceTiles}
         <Pressable accessibilityRole="button" accessibilityLabel={tr("settings.otherServices")}
          accessibilityState={{expanded:moreModulesOpen}} onPress={()=>setMoreModulesOpen(value=>!value)}
          style={styles.servicesMoreToggle}>
          <Text style={styles.servicesMoreToggleText}>{tr("settings.otherServices")}</Text>
          <Ionicons name={moreModulesOpen?"chevron-up-outline":"chevron-down-outline"} size={19} color="#8655CA"/>
         </Pressable>
-        {moreModulesOpen?<View style={styles.servicesProductGrid}>
-         {businessModules.filter(module=>module.id!=="smart-call").map((module,index)=>
-          <View key={module.id} style={[styles.servicesProductTile,
-           [styles.servicesTileBlue,styles.servicesTileYellow,styles.servicesTilePink,
-            styles.servicesTileMint,styles.servicesTileLavender,styles.servicesTilePeach][index%6]]}>
-           <View style={styles.servicesTileIcon}>
-            <Ionicons name={(["sparkles-outline","cube-outline","calendar-outline","people-outline","globe-outline","business-outline","megaphone-outline","flash-outline"] as const)[index%8]}
-             size={26} color="#46365A"/>
-           </View>
-           <View>
-            <Text style={styles.servicesTileTitle}>{module.name}</Text>
-            <Text style={styles.servicesTileCaption}>{tr("home.comingSoon")}</Text>
-           </View>
-          </View>)}
-        </View>:null}
+        {moreModulesOpen?<BusinessServicesPanel session={session} excludeFeatured/>:null}
        </>}
       </>:null}
      {activeTab==="settings"?<>
@@ -1127,6 +1121,11 @@ function Button({label,onPress,disabled,secondary,danger}:{label:string,onPress:
 }
 const styles=StyleSheet.create({
  // Services: same palette and spacious card hierarchy as the Home.
+ servicesUnifiedTitle:{color:"#28223C",fontSize:26,fontWeight:"800",letterSpacing:-1.1,marginBottom:15},
+ servicesModuleHandoff:{borderRadius:21,backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#E8DFF3",padding:20,gap:15,marginTop:10},
+ servicesModuleHandoffTitle:{fontSize:21,fontWeight:"800",color:"#2A2240"},
+ homeExploreCompact:{flexDirection:"row",alignItems:"center",justifyContent:"center",gap:10,borderRadius:15,minHeight:49,paddingVertical:12,paddingHorizontal:15,backgroundColor:"#F1EAFB",borderWidth:1,borderColor:"#E4D8F4",marginTop:15,marginBottom:6},
+ homeExploreCompactText:{fontSize:13,color:"#714CBC",fontWeight:"800"},
  servicesSpotlight:{backgroundColor:"#8655E1",borderRadius:25,padding:20,minHeight:222,overflow:"hidden",marginBottom:6,
   shadowColor:"#7548C0",shadowOpacity:.18,shadowRadius:14,shadowOffset:{width:0,height:8},elevation:4},
  servicesSpotlightTop:{flexDirection:"row",alignItems:"flex-start",justifyContent:"space-between",marginBottom:15},
