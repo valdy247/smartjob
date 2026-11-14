@@ -34,3 +34,12 @@ test('shared intake validation rejects unsafe booking and existing-profile URLs'
  }
  assert.equal(googleProfileIssue({...base,bookingUrl:'https://example.com/book',existingProfileUrl:'https://maps.google.com/?cid=123'}),null);
 });
+
+test('switching from an existing listing to create ignores and clears a hidden stale URL',()=>{
+ const stale={...fixture(),action:'improve',existingProfileUrl:'javascript:alert(1)'};
+ assert.equal(googleProfileIssue(stale).key,'existing');
+ const create={...stale,action:'create'};
+ assert.equal(googleProfileIssue(create),null);
+ assert.equal(normalizeGoogleProfile(create).existingProfileUrl,'');
+ assert.equal(normalizeGoogleProfile(stale).existingProfileUrl,'javascript:alert(1)');
+});
