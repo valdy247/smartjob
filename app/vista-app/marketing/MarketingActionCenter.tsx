@@ -1,6 +1,8 @@
 "use client";
 import {normalizeGoogleProfile,googlePhotoKey,googleProfileLink} from "@/lib/google-profile-request";
 import {websiteAddress} from "@/lib/website-address";
+import {businessGoogleSeed,mergeGoogleWithBusiness,googleChangesForProfile,businessRequestSnapshot,centralBusinessDefaults,validCentralBusiness,type CentralBusiness} from "@/lib/vmv-central-business";
+import CentralBusinessEditor,{emptyBusinessFiles,type CentralBusinessFiles} from "./CentralBusinessEditor";
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 
 import {useEffect,useMemo,useRef,useState} from "react";
@@ -33,7 +35,7 @@ type RequestRow={
  staff_update:string|null;evidence_url:string|null;verified_at:string|null;
  created_at:string;updated_at:string;activity_history?:ActivityEvent[];reputation_data?:{mode:string;reviewText:string;replyText:string;reviewLink:string}|null;google_profile_data?:GoogleData&{media?:{kind:string;path:string}[]}|null;web_repair_data?:WebRepairData|null;directory_data?:DirectoryData|null
 };
-type SavedBusiness={id:string;owner_id:string;name:string;category_id:string;website_url:string|null;source?:"profile"|"agent"};
+type SavedBusiness=CentralBusiness&{source?:"profile"|"agent"};
 type Acceptance={id:string;request_id:string;owner_id:string;quote_revision:number;quoted_price_cents:number;accepted_at:string};
 type Service={id:ServiceCode;name:string;why:string;mode:string};
 const services:Service[]=[
@@ -98,6 +100,10 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [savedCategory,setSavedCategory]=useState("");
  const [savedBusinesses,setSavedBusinesses]=useState<SavedBusiness[]>([]);
  const [businessId,setBusinessId]=useState("");
+ const [businessDetails,setBusinessDetails]=useState<CentralBusiness>({id:"",owner_id:"",...centralBusinessDefaults()});
+ const [businessFiles,setBusinessFiles]=useState<CentralBusinessFiles>(emptyBusinessFiles);
+ const [saveAlsoInBusiness,setSaveAlsoInBusiness]=useState(false);
+ const businessEditedRef=useRef(false);
  const [businessBusy,setBusinessBusy]=useState(false);
  const [businessMessage,setBusinessMessage]=useState("");
  const [businessError,setBusinessError]=useState("");
@@ -187,7 +193,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    const saved=uid?(transferGuestDraft(uid)||readMarketingDraft(uid)):readMarketingDraft(null);
    if(!saved&&resolvedDraftOwner.current!=="initial"&&resolvedDraftOwner.current!==uid){
     setRequestId(crypto.randomUUID());setWizardStep(0);setGoogleStep(0);setWebStage(0);
-    setSelected("google_profile");setBusinessId("");setSavedBusinesses([]);setName(businessName||"");setSite(website||"");setChosenCategory("");
+    setSelected("google_profile");setBusinessId("");setSavedBusinesses([]);setBusinessDetails({id:"",owner_id:"",...centralBusinessDefaults()});setBusinessFiles(emptyBusinessFiles);setName(businessName||"");setSite(website||"");setChosenCategory("");
     setGoal("");setReviewInput("");setReviewLink("");setReviewReply("");setReviewMode("respond");
     setGoogleData(emptyGoogle);setGoogleMedia(emptyMedia);setWebRepair(emptyWebRepair);setDirectoryData(emptyDirectory);
     setConsent(false);setDraftNotice("");
@@ -331,55 +337,95 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const loadSavedBusinesses=async(owner:string)=>{
   if(!client)return;
   const [saved,profile,agent,category]=await Promise.all([
-   client.from("vmv_marketing_businesses").select("id,owner_id,name,category_id,website_url").eq("owner_id",owner).order("created_at",{ascending:false}).limit(60),
-   client.from("smartjob_profiles").select("business_name,website_url").eq("id",owner).maybeSingle(),
+   client.from("vmv_marketing_businesses").select("*").eq("owner_id",owner).order("created_at",{ascending:true}).limit(60),
+   client.from("smartjob_profiles").select("business_name,website_url,city,state,country,phone").eq("id",owner).maybeSingle(),
    client.from("vmv_ai_businesses").select("id,name").eq("owner_id",owner).limit(60),
    client.from("smartjob_business_category_preferences").select("category_id").eq("owner_id",owner).maybeSingle()
   ]);
   if(activeBusinessOwnerRef.current!==owner)return;
   if(saved.error){setBusinessError(translate("marketing.action.couldn_t_load_saved_businesses_try_again"));return;}
   const records=(saved.data||[]) as SavedBusiness[];
-  const known=new Set(records.map(x=>x.name.trim().toLowerCase()));
-  const candidates:SavedBusiness[]=[];
+  const suggestions:SavedBusiness[]=[];
   const primary=profile.data?.business_name?.trim();
-  if(primary&&!known.has(primary.toLowerCase())){candidates.push({id:"profile:"+owner,owner_id:owner,name:primary,category_id:category.data?.category_id||industryId||"other",website_url:profile.data?.website_url||null,source:"profile"});known.add(primary.toLowerCase());}
-  for(const row of agent.data||[]){
-   const candidate=String(row.name||"").trim();
-   if(!candidate||known.has(candidate.toLowerCase()))continue;
-   candidates.push({id:"agent:"+row.id,owner_id:owner,name:candidate,category_id:"other",website_url:null,source:"agent"});
-   known.add(candidate.toLowerCase());
+  // An onboarding name or AI Agent name is a suggestion, not proof that two
+  // profiles are the same business. Only explicit selection can import it.
+  if(primary&&!records.some(x=>x.source_system==="profile"&&x.source_record_id===owner)){
+   suggestions.push({id:"profile:"+owner,owner_id:owner,...centralBusinessDefaults(primary,category.data?.category_id||industryId||"other",profile.data?.website_url||null),
+    city:profile.data?.city||"",region:profile.data?.state||"",country:(profile.data?.country||"US").toUpperCase(),phone:profile.data?.phone||"",source:"profile",source_system:"profile",source_record_id:owner});
   }
-  setSavedBusinesses([...records,...candidates]);
+  for(const row of agent.data||[]){
+   if(!row.name||records.some(x=>x.source_system==="ai_agent"&&x.source_record_id===row.id))continue;
+   suggestions.push({id:"agent:"+row.id,owner_id:owner,...centralBusinessDefaults(row.name),
+    source:"agent",source_system:"ai_agent",source_record_id:row.id});
+  }
+  setSavedBusinesses([...records,...suggestions]);
+  if(records.length===1&&!businessEditedRef.current&&!businessId&&draftReady){
+   const one=records[0];setBusinessId(one.id);setBusinessDetails({...one});setBusinessFiles(emptyBusinessFiles);
+   setName(one.name);setSite(one.website_url||"");setChosenCategory(one.category_id);
+   setGoogleData(v=>v.googleCategory||v.phone||v.street?mergeGoogleWithBusiness(v,one):businessGoogleSeed(one,v.action));
+  }
   setBusinessError("");
  };
  const pickBusiness=(id:string)=>{
-  if(!id)return;
-  const selectedBusiness=savedBusinesses.find(item=>item.id===id);
-  if(!selectedBusiness)return;
-  setBusinessId(id);setName(selectedBusiness.name);setSite(selectedBusiness.website_url||"");
-  setChosenCategory(selectedBusiness.category_id||"other");
-  setBusinessMessage(translate("marketing.action.business_loaded_you_can_edit_the_details_before_conti"));
+  const record=savedBusinesses.find(x=>x.id===id);
+  if(!record)return;
+  businessEditedRef.current=true;
+  setBusinessId(id);setBusinessDetails({...record});setBusinessFiles(emptyBusinessFiles);
+  setName(record.name);setSite(record.website_url||"");setChosenCategory(record.category_id||"other");
+  setSaveAlsoInBusiness(false);setConsent(false);
+  setGoogleData(v=>businessGoogleSeed(record,v.action));
+  setGoogleMedia(emptyMedia);
+  setBusinessMessage(en?"Business selected. Only missing details will be requested.":"Negocio seleccionado. Pediremos solo los datos que falten.");
   setBusinessError("");setWizardError("");
  };
- const saveBusiness=async()=>{
-  if(!client||!user){setBusinessError(translate("marketing.action.sign_in_to_save_this_business_to_your_account"));return;}
-  const cleanName=name.trim();const cleanSite=site.trim();
-  if(cleanName.length<2||cleanName.length>150){setBusinessError(translate("marketing.action.enter_a_business_name_between_2_and_150_characters"));return;}
-  if(cleanSite&&!websiteAddress(cleanSite)){setBusinessError(translate("category.invalidWebsite"));return;}
+ const saveBusiness=async():Promise<string|null>=>{
+  if(!client||!user){setBusinessError(en?"Sign in to save your business.":"Inicia sesión para guardar tu negocio.");return null;}
+  const draft:CentralBusiness={...businessDetails,name:name.trim(),category_id:effectiveCategory,website_url:websiteAddress(site),owner_id:user.id};
+  const invalid=validCentralBusiness(draft);
+  if(invalid){setBusinessError(invalid);return null;}
   setBusinessBusy(true);setBusinessError("");setBusinessMessage("");
   try{
-   const existing=savedBusinesses.find(x=>x.id===businessId&&!x.source&&x.owner_id===user.id);
-   const payload={name:cleanName,category_id:effectiveCategory,website_url:websiteAddress(cleanSite)};
-   const result=existing?
-    await client.from("vmv_marketing_businesses").update(payload).eq("id",existing.id).eq("owner_id",user.id).select("id").single():
-    await client.from("vmv_marketing_businesses").insert({owner_id:user.id,...payload}).select("id").single();
-   if(result.error)throw result.error;
-   if(activeBusinessOwnerRef.current!==user.id)return;
-   setBusinessId(String(result.data.id));
+   const current=savedBusinesses.find(x=>x.id===businessId&&!x.source&&x.owner_id===user.id);
+   const newId=current?.id||(/^[a-f0-9-]{36}$/i.test(businessId)?businessId:requestId);
+   const payload={...draft,id:newId,owner_id:user.id};
+   const result=current?
+    await client.from("vmv_marketing_businesses").update(payload).eq("id",current.id).eq("owner_id",user.id).select("*").single():
+    await client.from("vmv_marketing_businesses").insert(payload).select("*").single();
+   let saved=result.data as CentralBusiness|null;
+   if(result.error){
+    // An uncertain response can hide a successful creation. Reuse its stable id.
+    const check=await client.from("vmv_marketing_businesses").select("*").eq("id",newId).eq("owner_id",user.id).maybeSingle();
+    if(!check.data)throw result.error;
+    saved=check.data as CentralBusiness;
+   }
+   if(!saved)throw Error("Business did not save");
+   if(businessFiles.logo||businessFiles.cover||businessFiles.gallery.length){
+    const updates:{logo_path?:string;cover_path?:string;gallery_paths?:string[]}={};
+    for(const [kind,file] of [
+     ...(businessFiles.logo?[["logo",businessFiles.logo] as const]:[]),
+     ...(businessFiles.cover?[["cover",businessFiles.cover] as const]:[]),
+     ...businessFiles.gallery.map((f,i)=>["gallery-"+i,f] as const)
+    ]){
+     if(!["image/jpeg","image/png"].includes(file.type)||file.size<10240||file.size>5242880)throw Error(en?"Only JPG/PNG photos of 10 KB–5 MB are allowed.":"Fotos JPG o PNG, de 10 KB a 5 MB.");
+     const path=user.id+"/"+saved.id+"/"+kind+"-"+crypto.randomUUID()+"."+(file.type==="image/png"?"png":"jpg");
+     const upload=await client.storage.from("vmv-business-media").upload(path,file,{contentType:file.type,upsert:false});
+     if(upload.error)throw upload.error;
+     if(kind==="logo")updates.logo_path=path;
+     else if(kind==="cover")updates.cover_path=path;
+     else updates.gallery_paths=[...(updates.gallery_paths||saved.gallery_paths||[]),path].slice(-12);
+    }
+    const written=await client.from("vmv_marketing_businesses").update(updates).eq("id",saved.id).eq("owner_id",user.id).select("*").single();
+    if(written.error)throw written.error;
+    saved=written.data as CentralBusiness;
+   }
+   if(activeBusinessOwnerRef.current!==user.id)return null;
+   setBusinessId(saved.id);setBusinessDetails({...saved});setBusinessFiles(emptyBusinessFiles);
    await loadSavedBusinesses(user.id);
-   if(activeBusinessOwnerRef.current===user.id)setBusinessMessage(translate("marketing.action.business_saved_you_can_select_it_next_time"));
+   setBusinessMessage(en?"Business profile saved.":"Perfil de negocio guardado.");
+   return saved.id;
   }catch(e){
-   setBusinessError(errorMessage(e,translate("marketing.action.couldn_t_save_the_business_check_whether_one_with_tha")));
+   setBusinessError(errorMessage(e,en?"Could not save the business.":"No pudimos guardar el negocio."));
+   return null;
   }finally{setBusinessBusy(false);}
  };
  const refresh=async()=>{
