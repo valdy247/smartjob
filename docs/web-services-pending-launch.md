@@ -87,3 +87,16 @@ Esta solicitud se suma a todos los pendientes anteriores; no los sustituye. Se p
 - No se modificaron fotografías ni registros de clientes.
 
 Los anteriores pendientes de experiencia móvil, imágenes, contenido dinámico y funciones comerciales se mantienen intactos.
+
+
+## Incidencia UI: tocar «Agregar fotografía» no abría el selector (13 noviembre 2026)
+
+**Causa comprobada con Chromium/Playwright en el lienzo real de Puck (sin cuenta):** el texto aparecía en un contenedor con `pointer-events:none` a causa de las reglas de selección del canvas. Además, Puck recrea su iframe al seleccionar un bloque; un evento enviado únicamente después de `requestAnimationFrame` podía perderse.
+
+**Corrección de Web Services:** el placeholder es un botón con eventos táctiles/teclado; los blancos de imagen vuelven a admitir eventos de puntero solo en modo edición. Tras seleccionar el bloque, el evento de abrir biblioteca se reintenta desde el window anfitrión hasta que aparece el diálogo, incluso si Puck recrea el iframe. El selector utiliza la biblioteca compartida existente, mantiene el ID estable del producto y no elimina referencias guardadas en otras ubicaciones.
+
+**Prueba de interacción aislada (sin autenticación):** primer toque abre el diálogo «Seleccionar imagen» a **360, 390 y 430 px**, con pestañas «Mis imágenes» y «Subir fotos» y un input de archivo. No hubo errores JavaScript ni desplazamiento horizontal. Al tocar la segunda tarjeta, el inspector seleccionó «Torta» (índice 1) y no «Choco flan». Se probó usando el código actualizado en un entorno local con Next y Puck real; **no es una prueba de subida efectiva a Storage, guardado de draft o publicación desde una sesión autenticada**.
+
+**Preview del código corregido:** SHA `03d3cb349a5ddf984417d799e6626528525f38b9`, Vercel READY; `/web-studio` dio HTTP 200 y mostró el enlace de iniciar sesión sin errores JS en Chromium sin sesión. QA autenticada pendiente.
+
+Todos los pendientes anteriores de galería múltiple, portada, logo, seguridad de archivos, catálogo y rediseño móvil permanecen abiertos donde corresponda.
