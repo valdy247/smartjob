@@ -6,7 +6,7 @@ import type {SupabaseClient} from "@supabase/supabase-js";
 export type CommerceCatalogProduct={
  id:string;sku:string;name:string;description:string;priceCents:number;
  currency:"usd";availableQuantity:number|null;availability:"tracked"|"manual"|"unlimited";
- sellableInTest:boolean;webSourceId:string|null;
+ supportsSimpleOrder:boolean;sellableInTest:boolean;webSourceId:string|null;
 };
 type Item={
  id:string;sku:string;name:string;description:string|null;price_cents:number;
@@ -29,6 +29,7 @@ export function buildCatalogSnapshot(items:Item[],holds:{item_id:string;qty:numb
     id:item.id,sku:item.sku,name:item.name,description:item.description||"",
     priceCents:item.price_cents,currency:"usd" as const,
     availableQuantity:available,availability:stock,
+    supportsSimpleOrder:compatible,
     sellableInTest:compatible&&stock!=="manual"&&(!tracked||(available!==null&&available>0)),
     webSourceId:item.web_source_id||null
    };
