@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
-import {ArrowLeft,ArrowRight,CalendarDays,Check,CheckCircle2,Clock3,PlugZap,ShieldCheck,Sparkles} from "lucide-react";
+import {ArrowLeft,ArrowRight,CalendarDays,Check,CheckCircle2,ChevronDown,Clock3,PlugZap,ShieldCheck,Sparkles} from "lucide-react";
 import styles from "./AgentSetupWizard.module.css";
 
 export type AgentKind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
@@ -117,6 +117,42 @@ function sections(kind:AgentKind,answers:Record<string,string>):Section[]{
  ];
 }
 function inputValue(v:Record<string,string>,key:string){return v[key]||"";}
+
+type ChoiceOption=readonly [value:string,label:string];
+function ChoiceSelect({label,value,options,onChange}:{
+ label:string;value:string;options:readonly ChoiceOption[];onChange:(value:string)=>void
+}){
+ return <label className={styles.selectField}>
+  <span className={styles.fieldTitle}>{label}</span>
+  <span className={styles.selectWrap}>
+   <select className={styles.selectInput} value={value} onChange={e=>onChange(e.target.value)}>
+    {options.map(([optionValue,optionLabel])=><option key={optionValue} value={optionValue}>{optionLabel}</option>)}
+   </select>
+   <ChevronDown size={18} aria-hidden="true"/>
+  </span>
+ </label>;
+}
+function MultipleChoiceSelect({label,options,isSelected,onToggle}:{
+ label:string;options:readonly ChoiceOption[];isSelected:(value:string)=>boolean;onToggle:(value:string)=>void
+}){
+ const selected=options.filter(([key])=>isSelected(key));
+ return <div className={styles.selectField}>
+  <span className={styles.fieldTitle}>{label}</span>
+  <details className={styles.multiSelect}>
+   <summary className={styles.multiSummary}>
+    <span className={styles.multiValue}>{selected.length?selected.map(([,name])=>name).join(" · "):"Seleccionar opciones"}</span>
+    <span className={styles.multiCount}>{selected.length}/{options.length}</span>
+    <ChevronDown size={18} className={styles.multiChevron} aria-hidden="true"/>
+   </summary>
+   <div className={styles.multiMenu}>
+    {options.map(([key,name])=><label key={key} className={styles.multiOption}>
+     <input type="checkbox" checked={isSelected(key)} onChange={()=>onToggle(key)}/>
+     <span>{name}</span>
+    </label>)}
+   </div>
+  </details>
+ </div>;
+}
 export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusiness,isPreview=false,initialStep=0,saving=false,authRequired=false,recoverDraft=false}:Props){
  const [draft,setDraft]=useState<WizardDraft>(()=>({...initial,setup:{...(initial.setup||{})}}));
  const [step,setStep]=useState<number>(initialStep);
@@ -208,38 +244,31 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
    <label className={styles.field}>¿Cómo se llamará tu agente?<input maxLength={80} value={draft.name} onChange={e=>value("name",e.target.value)} placeholder="Ej. Luna, asistente de ventas"/></label>
    <label className={styles.field}>¿Cuál será su misión?<textarea maxLength={240} rows={3} value={draft.purpose} onChange={e=>value("purpose",e.target.value)} placeholder="¿Qué debe lograr para tu negocio?"/></label>
    <p className={styles.hint}>Una identidad compartida: llamadas, chat, ventas, inventario y reservas son capacidades del mismo agente. Los agentes antiguos conservan su configuración.</p>
-   <p className={styles.fieldTitle}>Voz del teléfono</p>
-   <div className={styles.choices}>{([["default","Predeterminada de Twilio"],["female","Femenina · Polly"],["male","Masculina · Polly"]] as const).map(([value,label])=>
-    <button type="button" key={value} className={(draft.setup.voice_preset||"default")===value?styles.choiceActive:styles.choice}
-     onClick={()=>answer("voice_preset",value)}>{label}</button>)}</div>
+   <ChoiceSelect label="Voz del teléfono" value={draft.setup.voice_preset||"default"}
+    options={[["default","Predeterminada de Twilio"],["female","Femenina · Polly"],["male","Masculina · Polly"]]}
+    onChange={next=>answer("voice_preset",next)}/>
    <p className={styles.hint}>La voz elegida se usa únicamente al recibir llamadas de prueba con el agente; las voces Polly pueden tener costo del proveedor. No se realiza ninguna llamada al configurarla.</p>
-   <p className={styles.fieldTitle}>Idioma de conversación</p>
-   <div className={styles.choices}>{["Español","English","Bilingüe"].map(x=><button type="button" key={x}
-     className={(draft.setup.language_rule||draft.language)===x?styles.choiceActive:styles.choice}
-     onClick={()=>answer("language_rule",x)}>{x}</button>)}</div>
-   <p className={styles.fieldTitle}>Personalidad</p>
-   <div className={styles.choices}>{["Amable y profesional","Cercano","Formal","Directo"].map(x=><button type="button" key={x}
-     className={(draft.setup.personality_rule||draft.personality)===x?styles.choiceActive:styles.choice}
-     onClick={()=>answer("personality_rule",x)}>{x}</button>)}</div>
-   <p className={styles.fieldTitle}>Extensión de respuesta</p>
-   <div className={styles.choices}>{([["brief","Breve"],["balanced","Equilibrada"],["detailed","Detallada"]] as const).map(([value,label])=>
-    <button type="button" key={value} className={(draft.setup.response_style||"balanced")===value?styles.choiceActive:styles.choice}
-     onClick={()=>answer("response_style",value)}>{label}</button>)}</div>
-   <p className={styles.fieldTitle}>¿Dónde trabajará?</p>
-   <div className={styles.choices}>{["Teléfono","Chat","Teléfono y chat"].map(x=><button type="button"
-    key={x} className={(draft.setup.channel||"Chat")===x?styles.choiceActive:styles.choice}
-    onClick={()=>answer("channel",x)}>{x}</button>)}</div>
-   <p className={styles.fieldTitle}>¿Qué tareas tendrá permitidas?</p>
-   <div className={styles.choices}>{([["cap_attend","Atender preguntas"],["cap_sales","Vender por teléfono o chat"],["cap_bookings","Solicitar reservas"],["cap_catalog","Consultar catálogo"]] as const).map(([key,label])=>
-    <button type="button" key={key} aria-pressed={draft.setup[key]==="Sí"}
-    className={draft.setup[key]==="Sí"?styles.choiceActive:styles.choice}
-    onClick={()=>answer(key,draft.setup[key]==="Sí"?"No":"Sí")}>{draft.setup[key]==="Sí"?"✓ ":""}{label}</button>)}</div>
+   <ChoiceSelect label="Idioma de conversación" value={draft.setup.language_rule||draft.language||"Español"}
+    options={[["Español","Español"],["English","English"],["Bilingüe","Bilingüe"]]}
+    onChange={next=>answer("language_rule",next)}/>
+   <ChoiceSelect label="Personalidad" value={draft.setup.personality_rule||draft.personality||"Amable y profesional"}
+    options={[["Amable y profesional","Amable y profesional"],["Cercano","Cercano"],["Formal","Formal"],["Directo","Directo"]]}
+    onChange={next=>answer("personality_rule",next)}/>
+   <ChoiceSelect label="Extensión de respuesta" value={draft.setup.response_style||"balanced"}
+    options={[["brief","Breve"],["balanced","Equilibrada"],["detailed","Detallada"]]}
+    onChange={next=>answer("response_style",next)}/>
+   <ChoiceSelect label="¿Dónde trabajará?" value={draft.setup.channel||"Chat"}
+    options={[["Teléfono","Teléfono"],["Chat","Chat"],["Teléfono y chat","Teléfono y chat"]]}
+    onChange={next=>answer("channel",next)}/>
+   <MultipleChoiceSelect label="¿Qué tareas tendrá permitidas?"
+    options={[["cap_attend","Atender preguntas"],["cap_sales","Vender por teléfono o chat"],["cap_bookings","Solicitar reservas"],["cap_catalog","Consultar catálogo"]]}
+    isSelected={key=>draft.setup[key]==="Sí"}
+    onToggle={key=>answer(key,draft.setup[key]==="Sí"?"No":"Sí")}/>
    {draft.setup.cap_sales==="Sí"?<>
-    <p className={styles.fieldTitle}>Autorizaciones de ventas</p>
-    <div className={styles.choices}>{([["perm_prepare_order","Preparar pedidos"],["perm_confirm_order","Confirmar tras aceptación"],["perm_payment_link","Ofrecer enlace de pago verificado"]] as const).map(([key,label])=>
-     <button type="button" key={key} aria-pressed={draft.setup[key]==="Sí"}
-      className={draft.setup[key]==="Sí"?styles.choiceActive:styles.choice}
-      onClick={()=>answer(key,draft.setup[key]==="Sí"?"No":"Sí")}>{draft.setup[key]==="Sí"?"✓ ":""}{label}</button>)}</div>
+    <MultipleChoiceSelect label="Autorizaciones de ventas"
+     options={[["perm_prepare_order","Preparar pedidos"],["perm_confirm_order","Confirmar tras aceptación"],["perm_payment_link","Ofrecer enlace de pago verificado"]]}
+     isSelected={key=>draft.setup[key]==="Sí"}
+     onToggle={key=>answer(key,draft.setup[key]==="Sí"?"No":"Sí")}/>
     <p className={styles.hint}>No tomará números de tarjeta por llamada. Los importes se calculan en el servidor.</p>
    </>:null}
    {draft.setup.cap_bookings==="Sí"&&<><p className={styles.fieldTitle}>Autorización de reservas</p>
