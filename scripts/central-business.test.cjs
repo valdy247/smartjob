@@ -2,7 +2,7 @@ const assert=require("node:assert/strict");
 const {test}=require("node:test");
 const fs=require("node:fs"),ts=require("typescript");
 require.extensions[".ts"]=(mod,path)=>mod._compile(ts.transpileModule(fs.readFileSync(path,"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,path);
-const {centralBusinessDefaults,businessGoogleSeed,mergeGoogleWithBusiness,googleChangesForProfile,businessRequestSnapshot,centralBusinessWritePayload}=require("../lib/vmv-central-business.ts");
+const {centralBusinessDefaults,businessGoogleSeed,mergeGoogleWithBusiness,applyProfileEditsToGoogle,googleChangesForProfile,businessRequestSnapshot,centralBusinessWritePayload}=require("../lib/vmv-central-business.ts");
 
 const business=(kind="storefront")=>({
  id:"5d98ee01-c48e-410d-801e-bdd0c99a595f",owner_id:"e30ea843-0a84-461f-b17d-f645bf0e36d2",
@@ -60,4 +60,12 @@ test("editable business fields are explicitly whitelisted",()=>{
  assert.equal(Object.hasOwn(payload,"created_at"),false);
  assert.equal(Object.hasOwn(payload,"source"),false);
  assert.equal(Object.hasOwn(payload,"owner_id"),false);
+});
+
+test("only profile fields explicitly changed in checkout overwrite corresponding Google data",()=>{
+ const before=business(),after={...before,phone:"7065555678"};
+ const google=businessGoogleSeed(before);google.description="Custom description for this request";
+ const result=applyProfileEditsToGoogle(google,before,after);
+ assert.equal(result.phone,"7065555678");
+ assert.equal(result.description,"Custom description for this request");
 });
