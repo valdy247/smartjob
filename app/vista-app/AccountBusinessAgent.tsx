@@ -1,7 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import {useEffect,useRef,useState} from "react";
-import {Bot,BriefcaseBusiness,ChevronRight,RefreshCw} from "lucide-react";
+import {Bot,BriefcaseBusiness,ChevronRight,RefreshCw,Wallet} from "lucide-react";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 const BusinessProfileDialog=dynamic(()=>import("./ai-agents/BusinessProfileDialog"));
 import type {WizardDraft} from "./ai-agents/AgentSetupWizard";
@@ -115,6 +115,14 @@ export default function AccountBusinessAgent({ownerId,initialName=""}:{ownerId:s
   <button type="button" className={styles.card} disabled={loading||Boolean(error)||Boolean(agentError)} onClick={openAgent}>
    <span className={styles.agentIcon}><Bot size={23}/></span><span className={styles.copy}><small>{L("Mi agente","My agent")}</small><strong>{loading?L("Cargando…","Loading…"):principal?.name||(scopedAgents.length?L("Elige tu agente principal","Choose your primary agent"):L("Configura tu agente","Set up your agent"))}</strong><span>{!business?L("Primero completa tu negocio","Complete your business first"):principal?(inspectAgent(principal).requiredPassed?L("Editar identidad y configuración","Edit identity and settings"):L("Completar configuración","Complete setup")):L("Nombre, personalidad y funciones","Name, personality and capabilities")}</span></span><ChevronRight size={18}/>
   </button>
+  <a className={styles.card} href={"/vista-app/finanzas"+(businessId?"?business="+encodeURIComponent(businessId):"")}
+   style={{textDecoration:"none"}}>
+   <span className={styles.financeIcon}><Wallet size={23}/></span>
+   <span className={styles.copy}><small>{L("Finanzas","Finances")}</small>
+    <strong>{L("Cobros y depósitos","Payments and payouts")}</strong>
+    <span>{L("Conecta Stripe con tu negocio","Connect your business to Stripe")}</span>
+   </span><ChevronRight size={18}/>
+  </a>
   {agentError?<div role="alert" className={styles.feedback}>{agentError}<button type="button" onClick={()=>setRetry(n=>n+1)}>{L("Reintentar","Retry")}</button></div>:null}
   {setupRequested?<p role="status" className={styles.feedback}>{L("Termina de configurar tu agente para usar sus funciones.","Finish setting up your agent to use its capabilities.")}</p>:null}
   {notice?<p role="status" className={styles.feedback}>{notice}</p>:null}
