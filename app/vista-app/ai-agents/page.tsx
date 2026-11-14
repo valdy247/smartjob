@@ -353,15 +353,6 @@ export default function AIAgentsPreview(){
          onClick={()=>void linkPilot()}>
          <ShieldCheck size={15}/>{linkBusy?"Vinculando…":"Vincular agentes existentes a este negocio"}</button>:null}
       </section>
-      {phone&&authenticated?<button type="button" className={styles.commerceLaunch}
-       onClick={()=>setScreen("phone")}>
-        <PhoneCall size={21}/><span><strong>Atención de llamadas</strong>
-         <small>Agente, traducción, horarios y prueba de configuración</small></span>
-         <ChevronRight size={16}/>
-      </button>:null}
-      {visibleAgents.length>0?<button type="button" className={styles.commerceLaunch} onClick={()=>void start("inventory")}>
-       <ShoppingBag size={21}/><span><strong>Catálogo y pedidos del negocio</strong><small>Comparte catálogo con el agente principal, sin crear otro</small></span><ArrowUpRight size={19}/>
-      </button>:null}
       {phone?<div className={styles.info}>
        <PhoneCall size={17}/> Línea de prueba {phone.maskedNumber} ·
        {phone.agentId?" Agente seleccionado. Comprobar conexión.":" Sin agente seleccionado."}
@@ -394,16 +385,29 @@ export default function AIAgentsPreview(){
         calls:"Llamadas",support:"Chat web",sales:"Ventas",bookings:"Reservas",
         inventory:"Catálogo e inventario",operations:"Actividad",custom:"Identidad"
        } as Record<Kind,string>)[type.id];
+       const configured=principal?.setup||{};
+       const status=!principal?"Sin configurar":
+        type.id==="calls"?(phone?.agentId===principal.id&&phone.serverEnrolled?
+         "Lista para probar":phone?.agentId===principal.id?"Requiere atención":"Sin configurar"):
+        type.id==="support"?"Requiere atención":
+        type.id==="inventory"?(configured.cap_catalog==="Sí"?"Requiere atención":"Sin configurar"):
+        type.id==="sales"?(configured.cap_sales==="Sí"?"Requiere atención":"Sin configurar"):
+        type.id==="bookings"?(configured.cap_bookings==="Sí"?"Requiere atención":"Sin configurar"):
+        "Lista para probar";
        const detail=({
-        calls:phone?.agentId===principal?.id&&phone?.serverEnrolled?"Lista para prueba":"Requiere conexión",
-        support:"Chat público sin conectar",sales:"Permisos y pedidos",bookings:"Agenda y disponibilidad",
-        inventory:"Productos y existencias",operations:"Historial y calidad",custom:"Nombre, voz y personalidad"
+        calls:"Número, horarios y traducción; falta prueba real",
+        support:"Chat público pendiente · prueba privada disponible",
+        sales:"Precios, permisos y pagos por verificar",
+        bookings:"Agenda y disponibilidad por comprobar",
+        inventory:"Catálogo y existencias autorizadas",
+        operations:"Historial y calidad del mismo agente",
+        custom:"Nombre, voz, idioma y personalidad"
        } as Record<Kind,string>)[type.id];
        return <button type="button" key={type.id} className={styles.tile}
           style={{background:type.bg,color:type.fg}} onClick={()=>void start(type.id)}>
           <span className={styles.tileIcon}><type.Icon size={24}/></span>
           <ArrowUpRight className={styles.tileArrow} size={20}/>
-          <strong>{label}</strong><small>{detail}</small>
+          <strong>{label}</strong><small>{status} · {detail}</small>
        </button>})}
       </div>
       <div className={styles.sectionHeading}><h2>Agentes existentes {principal?"y principal":""}</h2><span className={styles.agentCounter}>{visibleAgents.length}</span></div>
