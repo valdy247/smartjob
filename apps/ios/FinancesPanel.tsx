@@ -91,7 +91,7 @@ export default function FinancesPanel({session}:{session:Session}){
 }
 const styles=StyleSheet.create({
  body:{gap:13,paddingBottom:25},title:{fontSize:27,fontWeight:"900",color:"#282239"},
- heading:{fontSize:18,fontWeight:"850",color:"#282239"},sub:{fontSize:12,color:"#82758E",lineHeight:19},
+ heading:{fontSize:18,fontWeight:"800",color:"#282239"},sub:{fontSize:12,color:"#82758E",lineHeight:19},
  card:{padding:18,backgroundColor:"white",borderRadius:18,borderColor:"#e8e1f1",borderWidth:1,gap:10},
  state:{color:"#7150B5",fontSize:13,fontWeight:"800"},
  choice:{backgroundColor:"white",borderRadius:12,borderWidth:1,borderColor:"#e5dced",padding:12},
