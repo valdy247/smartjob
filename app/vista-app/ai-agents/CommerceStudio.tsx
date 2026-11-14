@@ -54,9 +54,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
    const enabled=selectedAgent.setup.cap_catalog!=="Sí";
    const updated=await setAgentCatalogReadAccess(selectedAgent,enabled);
    setEditedAgent(updated);onAgentUpdated?.(updated);
-   setNotice(enabled?
-    "Catálogo conectado a "+updated.name+". El chat puede consultar productos aprobados y sus precios; la disponibilidad manual sigue requiriendo confirmación.":
-    "El chat ya no consultará el catálogo. Productos, precios e historial se conservaron.");
+   setNotice(""); // The permission state is already visible in the catalog.
   }catch(e){setNotice(e instanceof Error?e.message:"No se pudo actualizar el permiso de catálogo.");}
   finally{setBusy(false);}
  };
@@ -146,11 +144,8 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
  return <div className={styles.root}>
   <button type="button" onClick={onClose} className={styles.back}><ArrowLeft size={17}/> {catalogOnly?"Volver al agente":"AI Agents"}</button>
   {!catalogOnly?<>
-  <div className={styles.hero}><div><small>COMERCIO INTELIGENTE · TEST</small>
-   <h1>Productos y pedidos</h1>
-   <p>Precios verificables. Pedidos trazables. Cero pagos ficticios.</p></div><ShoppingBag size={28}/></div>
-  <div className={styles.warning}><ShieldCheck size={17}/>
-   <p>Este laboratorio crea únicamente pedidos de <strong>prueba</strong>. No cobra dinero, no confirma reservas reales ni altera la configuración de Smart Call.</p></div>
+  <div className={styles.hero}><div><small>VMV BUSINESS</small><h1>Productos y pedidos</h1></div><ShoppingBag size={28}/></div>
+  {tab==="orders"?<p className={styles.hint}>Pedidos de prueba · Sin cobros reales</p>:null}
   </>:null}
   {notice?<div className={styles.notice} role="status">{notice}</div>:null}
   {loading?<p className={styles.hint}>Cargando catálogo y pedidos…</p>:null}
@@ -205,25 +200,19 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
    </div>
    <button type="button" className={styles.primary} onClick={()=>setTab("catalog")}><Package size={16}/> Ir al catálogo</button>
   </>:tab==="catalog"?<>
-   {!catalogOnly&&selectedAgent?<div className={styles.form}>
-    <strong>Inventario en el chat de {selectedAgent.name}</strong>
-    <p className={styles.hint}>{selectedAgent.setup.cap_catalog==="Sí"?
-     "Conectado · El agente puede consultar productos activos y aprobados con sus precios. La disponibilidad manual siempre requiere confirmación.":
-     "Desconectado · El chat no consulta los productos de este negocio hasta que lo autorices."}</p>
-    <button type="button" className={styles.primary} disabled={busy}
+   {!catalogOnly&&selectedAgent?<div className={styles.catalogConnection}>
+    <div className={styles.catalogConnectionInfo}>
+     <strong>Inventario del chat</strong>
+     <small>{selectedAgent.name} · {selectedAgent.setup.cap_catalog==="Sí"?"Conectado":"Sin conectar"}</small>
+    </div>
+    <button type="button" className={styles.catalogConnectionButton} disabled={busy}
      onClick={()=>void toggleCatalogRead()}>
-     <Package size={17}/> {busy?"Guardando…":selectedAgent.setup.cap_catalog==="Sí"?
-      "Desconectar inventario del chat":"Conectar inventario al chat"}
+     {busy?"Guardando…":selectedAgent.setup.cap_catalog==="Sí"?"Desconectar":"Conectar"}
     </button>
-    <p className={styles.hint}>Permiso de solo lectura para este agente. No activa ventas, pagos, cambios de existencias ni un chat público.</p>
    </div>:null}
-   {!catalogOnly?<>
-   <div className={styles.heading}><h2>Productos de Web Studio</h2></div>
-   <div className={styles.warning}><ShieldCheck size={17}/><p>
-    Las fichas web son informativas. Importarlas no autoriza ventas ni crea existencias:
-    revisa el precio fijo y la disponibilidad antes de aprobarlas. Los cambios futuros
-    en Web Studio requieren revisión para evitar datos contradictorios.</p></div>
-   {webCards.length===0?<p className={styles.hint}>Aún no hay fichas de productos guardadas en Web Studio.</p>:
+   {!catalogOnly&&webCards.length>0?<>
+    <div className={styles.heading}><h2>Productos de Web Studio</h2></div>
+    <p className={styles.hint}>Revisa precio y disponibilidad antes de aprobar.</p>
     <div className={styles.items}>{webCards.map(card=>{
      const linked=items.some(item=>item.web_source_id===card.id);
      return <div key={card.id} className={styles.item}>
@@ -235,7 +224,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
       <button type="button" disabled={busy||linked||!card.importable||!selectedAgent}
        onClick={()=>void importFromWeb(card)}>
        {linked?"Vinculado":"Importar"}</button>
-     </div>;})}</div>}
+     </div>;})}</div>
    </>:null}
    <div className={styles.heading}><h2>{editing?"Editar producto":"Añadir producto"}</h2>
     {editing?<button type="button" onClick={()=>{setEditing(null);setForm(empty);}}>Cancelar edición</button>:null}</div>
