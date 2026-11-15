@@ -44,7 +44,6 @@ function OfferCard({item,onPress,compact=false}:{item:ServiceOffer;onPress?:()=>
     <Text style={styles.offerState}>{item.state==="pilot"?"Piloto":"Próximamente"}</Text>
    </View>:null}
   </View>
-  {onPress?<Ionicons name="arrow-up-outline" size={17} color={item.accent} style={styles.offerArrow}/>:null}
  </>;
  const cardStyle=[styles.offerCard,compact&&styles.offerCardCompact,{backgroundColor:item.background}];
  return onPress?
@@ -249,7 +248,6 @@ const styles=StyleSheet.create({
  offerBadges:{flexDirection:"row",gap:6,flexWrap:"wrap",alignItems:"center"},
  offerBadge:{fontSize:10,fontWeight:"800",paddingHorizontal:8,paddingVertical:6,backgroundColor:"#FFFFFFBA",overflow:"hidden",borderRadius:9},
  offerState:{color:"#73667E",fontSize:10,fontWeight:"700"},
- offerArrow:{position:"absolute",right:14,top:17},
  back:{flexDirection:"row",alignItems:"center",gap:5,marginBottom:18},
  backText:{color:colors.accent,fontSize:14,fontWeight:"800"},
  formHead:{flexDirection:"row",gap:13,alignItems:"center",marginBottom:19},
