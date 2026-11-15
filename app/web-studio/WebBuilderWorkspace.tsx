@@ -255,6 +255,18 @@ export default function WebBuilderWorkspace(){
   }catch(e){setError(e instanceof Error?e.message:"No se pudo abrir");}
   finally{setBusy(false);}
  }
+ useEffect(()=>{
+  if(!userId||site)return;
+  const target=new URLSearchParams(window.location.search).get("open");
+  if(!target)return;
+  const selected=sites.find(entry=>entry.slug===target);
+  if(selected){
+   const url=new URL(window.location.href);url.searchParams.delete("open");
+   window.history.replaceState(null,"",url.pathname+url.search);
+   void selectSite(selected);
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[userId,sites,site]);
  async function deleteSite(target:Site){
   if(busy||!userId||deleteConfirmation!==target.slug)return;
   setBusy(true);setError("");setDeleteError("");setNotice("");
