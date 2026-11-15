@@ -37,6 +37,7 @@ export default function BuilderSelectedActions({children,label}:{
  const [pickerRequest,setPickerRequest]=useState(0);
  const [mobileSheet,setMobileSheet]=useState(false);
  const panelRef=useRef<HTMLDivElement|null>(null);
+ const id=item?.props?.id||"";
  useEffect(()=>{
   const media=window.matchMedia("(max-width:700px)");
   const update=()=>setMobileSheet(media.matches);
@@ -49,7 +50,6 @@ export default function BuilderSelectedActions({children,label}:{
   return()=>cancelAnimationFrame(frame);
  },[mobileSheet,open,id]);
  const [ctaSelection,setCtaSelection]=useState<{id:string;target:SectionTarget}|null>(null);
- const id=item?.props?.id||"";
  useEffect(()=>{
   const select=(event:Event)=>{
    const detail=(event as CustomEvent<{id:string;target:ImageTarget;openLibrary?:boolean}>).detail;
