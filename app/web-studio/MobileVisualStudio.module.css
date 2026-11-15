@@ -515,3 +515,37 @@
  .visualQuickScroll button{min-height:55px!important;font-size:15px!important}
  .visualQuickDetail{max-height:none!important;margin-left:36px!important}
 }
+
+/* Focus mode: large unboxed actions; exactly one editor option is shown at a time. */
+.visualQuickScroll{align-items:center!important;gap:5px!important}
+.visualQuickScroll button{
+ justify-content:center!important;flex-direction:column!important;
+ gap:8px!important;min-height:76px!important;
+ border:0!important;background:transparent!important;
+ font-size:17px!important;font-weight:650!important;text-align:center!important;
+ padding:12px 8px!important;
+}
+.visualQuickScroll button>svg:first-child{width:28px!important;height:28px!important}
+.visualQuickScroll button>span{flex:0 0 auto!important}
+.visualQuickScroll button:active{background:rgba(255,255,255,.11)!important;border-radius:16px!important}
+.visualDetailHeader{
+ position:relative;display:flex;align-items:center;justify-content:center;
+ min-height:58px;padding:6px 52px!important;
+ color:white;font-size:21px;font-weight:800;text-align:center;
+}
+.visualDetailHeader strong{font-size:21px;color:white}
+.visualBackButton{
+ position:absolute;left:0;top:7px;width:43px;height:43px;
+ display:grid;place-items:center;border:0;border-radius:50%;
+ background:rgba(255,255,255,.13);color:white;cursor:pointer;
+}
+.visualQuickDetail{
+ margin:3px 0 15px!important;padding:12px 10px!important;
+ width:100%;color:white;
+}
+.visualQuickDetail .chips button{min-height:42px}
+@media(max-width:760px){
+ .visualQuickScroll button{min-height:72px!important;font-size:17px!important}
+ .visualDetailHeader strong{font-size:20px}
+ .visualQuickDetail{margin-left:0!important;padding:12px 4px!important}
+}
