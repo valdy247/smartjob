@@ -5,6 +5,7 @@ import BusinessPhoneInput from "@/components/BusinessPhoneInput";
 import {useEffect,useMemo,useState,type ChangeEvent} from "react";
 import {CheckCircle2,MapPin,AlertCircle,Pencil} from "lucide-react";
 import GoogleCategoryLookup from "./GoogleCategoryLookup";
+import PlaceAddressLookup from "./PlaceAddressLookup";
 import styles from "./GoogleProfileWizard.module.css";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {t as labelText,type MessageKey,type InterfaceLanguage} from "@/lib/i18n";
@@ -160,6 +161,7 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
     {!hasSaved("kind")?<div className={styles.choices}>{([["storefront","En un local"],["service_area","Voy al cliente / entregas"],["hybrid","Ambos"]] as const).map(([id,label])=>
      <button type="button" key={id} aria-pressed={data.kind===id} onClick={()=>patch("kind",id)}>{tx(label)}</button>)}</div>:null}
     {data.kind!=="service_area"?<>
+      <PlaceAddressLookup country={data.country||"US"} onPick={v=>{onData({...data,street:v.street,city:v.city,region:v.region,postal:v.postal,country:v.country,locationChecked:false,locationPendingReview:true,locationConflict:false});setLocationMessage(en?"Address selected from Google. VMV will still review whether it is suitable for a public business listing.":"Dirección seleccionada en Google. VMV revisará si cumple los requisitos para mostrarse como local comercial.");}}/>
       {field("street","Calle y número","Dirección comercial",false)}
       {field("unit","Local / suite","Local 2")}
       <div className={styles.two}>{field("city","Ciudad","Columbus",false)}{field("region","Estado","Georgia",false)}</div>
