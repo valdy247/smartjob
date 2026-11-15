@@ -97,6 +97,17 @@ function MarketingWorkspace(){
  const [contentLanguage]=useState(language); // Freeze generated customer-facing copy when switching the VMV UI language.
  const [section,setSection]=useState<Section>("actions");
  const [requestedService,setRequestedService]=useState<ServiceCode|null>(null);
+ useEffect(()=>{
+  const params=new URLSearchParams(window.location.search);
+  const service=params.get("service");
+  if(service==="seo_improvement"||service==="other"){
+   setRequestedService(service);
+   setSection("actions");
+   const goal=params.get("goal");
+   if(service==="other"&&goal&&goal.length<250)
+    setForm(current=>({...current,offer:goal}));
+  }
+ },[]);
  const [actionWizardActive,setActionWizardActive]=useState(false);
  const [form,setForm]=useState<FormState>(initial);
  const [notice,setNotice]=useState("");
