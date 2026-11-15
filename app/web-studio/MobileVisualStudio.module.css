@@ -263,3 +263,19 @@
  padding:10px 16px;border:1px solid #ddd0e5;border-radius:10px;background:white;
  font-size:13px;font-weight:800;color:#4d3960;cursor:pointer}
 .confirmButtons .confirmRemove{background:#b72d4c;border-color:#b72d4c;color:white}
+
+/* Small, always-visible editor history actions on touch screens. */
+.historyBar{position:fixed;z-index:500;top:calc(max(env(safe-area-inset-top),10px) + 8px);
+ right:calc(max(env(safe-area-inset-right),9px) + 6px);
+ display:flex;align-items:center;gap:3px;padding:3px;
+ background:rgba(255,255,255,.97);border:1px solid #decdf0;border-radius:14px;
+ box-shadow:0 6px 20px #281b4326;backdrop-filter:blur(8px)}
+.historyBar button{display:flex;align-items:center;justify-content:center;gap:6px;
+ min-height:40px;padding:7px 10px;border:0;border-radius:10px;background:transparent;
+ color:#69449c;font-size:12px;font-weight:850;cursor:pointer}
+.historyBar button:disabled{opacity:.38;cursor:default}
+.historyBar button:not(:disabled):active{background:#f2ebfa}
+.insertBelow{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+ min-height:45px;border:1px solid #d9c5ee;border-radius:11px;
+ background:#f8f2ff;color:#69449c;font-size:13px;font-weight:800;cursor:pointer}
+@media(max-width:350px){.historyBar button{padding:7px 9px}.historyBar button span{display:none}}
