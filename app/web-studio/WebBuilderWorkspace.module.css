@@ -373,3 +373,17 @@
   min-width:0;
  }
 }
+
+/* Site library is its own destination: no intake form on this screen. */
+.libraryHeading{margin:0 0 21px}
+.libraryHeading small{font-size:11px;font-weight:900;letter-spacing:.12em;color:#9564cc}
+.libraryHeading h1{font-size:clamp(29px,5vw,46px);line-height:1.1;letter-spacing:-.055em;margin:9px 0}
+.libraryHeading p{font-size:13px;color:#81758d;line-height:1.55;margin:0}
+.libraryCreate{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-width:750px;margin:0 0 28px}
+.libraryCreate>a{display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;
+ border:1px solid #e3d5ee;border-radius:13px;padding:11px;background:#fff;color:#7850b5;
+ font-size:12px;font-weight:850;text-decoration:none;text-align:center}
+.libraryCreate>a:first-child{background:#8958dd;color:white;border-color:#8958dd}
+.libraryEmpty{grid-column:1/-1;margin:0;padding:20px;border:1px dashed #ddc9ed;border-radius:13px;
+ font-size:12px;color:#776786;text-align:center;background:#fff}
+@media(max-width:490px){.libraryCreate{gap:7px}.libraryCreate>a{font-size:11px;padding:9px}}
