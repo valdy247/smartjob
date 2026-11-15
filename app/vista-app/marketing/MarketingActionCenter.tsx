@@ -132,6 +132,11 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [name,setName]=useState(businessName);
  const [site,setSite]=useState(website);
  const [goal,setGoal]=useState("");
+ useEffect(()=>{
+  if(preselectedService!=="other")return;
+  const requested=new URLSearchParams(window.location.search).get("goal");
+  if(requested&&requested.length<=240)setGoal(requested);
+ },[preselectedService]);
  const [reviewInput,setReviewInput]=useState("");
  const [reviewMode,setReviewMode]=useState<ReviewMode>("respond");
  const [reviewLink,setReviewLink]=useState("");
