@@ -115,14 +115,14 @@ export default function BusinessServicesPreview({userId,focus="all",excludeFeatu
  if(siteEditor)return <WebServicesStudio ownerId={userId} onBack={()=>setSiteEditor(false)}/>;
  if(inboxOpen)return <WebServicesInbox ownerId={userId} onBack={()=>setInboxOpen(false)}/>;
  if(focus==="web"&&!editor)return <section className={styles.webHub} aria-label="Web Services">
-  <div className={styles.webHubHeading}><span>VMV WEB SERVICES</span><h2>Tu próxima web comienza aquí<span>.</span></h2><p>Elige cómo prefieres crearla. Tus datos siguen conectados al mismo negocio en VMV.</p></div>
+  <div className={styles.webHubHeading}><span>{translate("web.hub.kicker")}</span><h2>{translate("web.hub.title")}<span>.</span></h2><p>{translate("web.hub.intro")}</p></div>
   <div className={styles.webHubGrid}>
-   <a className={styles.webHubCard+" "+styles.webHubViolet} href="/web-studio?mode=templates"><LayoutTemplate size={27}/><strong>Plantillas</strong><small>Abre el Editor 2.0 y personaliza tu web.</small><span>Explorar plantillas <ArrowUpRight size={16}/></span></a>
-   <a className={styles.webHubCard+" "+styles.webHubMint} href="/web-studio?mode=ai"><Sparkles size={27}/><strong>Crea tu web con IA</strong><small>Tu negocio, tres colores, fuentes, imágenes y herramientas.</small><span>Comenzar con IA <ArrowUpRight size={16}/></span></a>
-   <a className={styles.webHubCard+" "+styles.webHubYellow} href="/vista-app/marketing?service=other&goal=Solicito%20una%20p%C3%A1gina%20web%20profesional%20para%20mi%20negocio"><BriefcaseBusiness size={27}/><strong>Solicita web profesional</strong><small>Un especialista revisará tu proyecto antes de cotizar.</small><span>Solicitar servicio <ArrowUpRight size={16}/></span></a>
-   <a className={styles.webHubCard+" "+styles.webHubSky} href="/vista-app/marketing?service=seo_improvement"><ScanSearch size={27}/><strong>Analiza mi web</strong><small>Reutiliza el diagnóstico web que ya existe en Marketing.</small><span>Analizar mi web <ArrowUpRight size={16}/></span></a>
+   <a className={styles.webHubCard+" "+styles.webHubViolet} href="/web-studio?mode=templates"><LayoutTemplate size={27}/><strong>{translate("web.hub.templates")}</strong><small>{translate("web.hub.templatesDesc")}</small><span>{translate("web.hub.templatesAction")} <ArrowUpRight size={16}/></span></a>
+   <a className={styles.webHubCard+" "+styles.webHubMint} href="/web-studio?mode=ai"><Sparkles size={27}/><strong>{translate("web.hub.ai")}</strong><small>{translate("web.hub.aiDesc")}</small><span>{translate("web.hub.aiAction")} <ArrowUpRight size={16}/></span></a>
+   <a className={styles.webHubCard+" "+styles.webHubYellow} href="/vista-app/marketing?service=other&goal=Solicito%20una%20p%C3%A1gina%20web%20profesional%20para%20mi%20negocio"><BriefcaseBusiness size={27}/><strong>{translate("web.hub.pro")}</strong><small>{translate("web.hub.proDesc")}</small><span>{translate("web.hub.proAction")} <ArrowUpRight size={16}/></span></a>
+   <a className={styles.webHubCard+" "+styles.webHubSky} href="/vista-app/marketing?service=seo_improvement"><ScanSearch size={27}/><strong>{translate("web.hub.audit")}</strong><small>{translate("web.hub.auditDesc")}</small><span>{translate("web.hub.auditAction")} <ArrowUpRight size={16}/></span></a>
   </div>
-  <div className={styles.webHubTools}><a href="/web-studio">Mis sitios y Editor 2.0 <ArrowUpRight size={15}/></a><button type="button" onClick={()=>setInboxOpen(true)}><Mail size={16}/> Solicitudes recibidas</button></div>
+  <div className={styles.webHubTools}><a href="/web-studio">{translate("web.hub.sites")} <ArrowUpRight size={15}/></a><button type="button" onClick={()=>setInboxOpen(true)}><Mail size={16}/> {translate("web.hub.requests")}</button></div>
  </section>;
  if(editor)return <section className={styles.root}>
    <button type="button" className={styles.back} onClick={()=>setEditor(false)}><ChevronLeft size={18}/> {translate("common.services")}</button>
