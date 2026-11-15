@@ -1,5 +1,6 @@
 "use client";
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
+import dynamic from "next/dynamic";
 import type {Data} from "@puckeditor/core";
 import {Puck,Render} from "@puckeditor/core";
 import {ArrowLeft,ChevronDown,ExternalLink,Eye,FilePlus2,Globe,History,Layers,Plus,RefreshCw,Save,Settings2,ShieldCheck,SlidersHorizontal,Trash2} from "lucide-react";
@@ -10,7 +11,9 @@ import {builderConfig,normalizeBuilderDocument,validateBuilderDocument,starterBu
 import {normalizeWebContent,type WebSiteContent} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
 import WebSiteIntake from "./WebSiteIntake";
-import WebAiWizard from "./WebAiWizard";
+const WebAiWizard=dynamic(()=>import("./WebAiWizard"),{ssr:false,loading:()=>
+ <div role="status" style={{padding:"30px 12px",fontSize:13,color:"#7555a8"}}>Preparando el creador de webs con IA…</div>
+});
 import WebChatLauncher from "./WebChatLauncher";
 import type {SiteIntake,SiteProposal} from "@/lib/web-builder-templates";
 import {WEBSITE_STYLES,restyleWebsiteDocument,type WebsiteStyleId} from "@/lib/web-builder-safe-styles";
