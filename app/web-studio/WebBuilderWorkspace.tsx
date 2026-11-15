@@ -69,6 +69,7 @@ export default function WebBuilderWorkspace(){
  const [document,setDocument]=useState<Data>(()=>starterBuilderDocument());
  const [initialDocument,setInitialDocument]=useState<Data>(()=>starterBuilderDocument());
  const [previewMode,setPreviewMode]=useState<"desktop"|"mobile"|null>(null);
+ const [advancedPuck,setAdvancedPuck]=useState(false);
  const [designChoice,setDesignChoice]=useState<WebsiteStyleId|null>(null);
  const [designUndo,setDesignUndo]=useState<{pageId:string;document:Data}|null>(null);
  const [savePhase,setSavePhase]=useState<SavePhase>("saved");
@@ -918,6 +919,10 @@ export default function WebBuilderWorkspace(){
         onClick={()=>{setDesignChoice(designChoice?null:"warm");setPreviewMode(null);}}>
         {designChoice?"Cerrar diseños":"Cambiar diseño"}
        </button>
+       <button type="button" disabled={busy||Boolean(previewMode)} aria-pressed={advancedPuck}
+        onClick={()=>setAdvancedPuck(v=>!v)}>
+        <Layers size={15}/> {advancedPuck?"Editor clásico":"Modo Puck Pro"}
+       </button>
        <button type="button" disabled={busy} onClick={()=>{setPreviewMode("desktop");setDesignChoice(null);}}>Vista previa</button>
        {publishedIds.includes(page.id)?<a href={pageUrl||"#"} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Página pública</a>:null}
       </div>
@@ -979,12 +984,46 @@ export default function WebBuilderWorkspace(){
       </div>
      </section>:null}
      <div ref={puckShellRef} data-advanced={mobileAdvanced?"true":"false"} className={compactStudio?styles.puckShell+" "+styles.compactPuck:styles.puckShell} style={{display:previewMode?"none":undefined}}>
-      <Puck key={page.id+"-"+refreshKey} dictionary={dictionary} config={builderConfig} dnd={{enableDragHandle:true}}
+      <Puck key={page.id+"-"+refreshKey+"-"+(advancedPuck?"pro":"normal")} dictionary={dictionary} config={builderConfig}
+       dnd={{behavior:"static",enableDragHandle:true,disableOutlineDrag:false}}
+       viewports={[
+        {width:390,icon:"Smartphone",height:"auto"},
+        {width:768,icon:"Tablet",height:"auto"},
+        {width:1440,icon:"Monitor",height:"auto"}
+       ]}
+       plugins={[{
+        name:"vmv-content-audit",
+        label:"Revisión web",
+        icon:<ShieldCheck size={18}/>,
+        render:()=>{const blocks=previewDocument.content;
+         const imageCount=blocks.filter(n=>["Image","ComposeImage","HeroVisual"].includes(n.type)).length;
+         const withoutAlt=blocks.filter(n=>["Image","ComposeImage","HeroVisual"].includes(n.type)&&
+          !String((n.props as Record<string,unknown>).alt||(n.props as Record<string,unknown>).imageAlt||"").trim()).length;
+         const hasContact=blocks.some(n=>["Contact","HoursArea","CTA","FAQList"].includes(n.type));
+         return <div className={styles.auditPanel}>
+          <strong>Revisión del borrador</strong>
+          <p>{blocks.length} secciones y bloques en esta página.</p>
+          <p>{imageCount} imágenes principales · {withoutAlt} sin texto alternativo.</p>
+          <p>{hasContact?"Hay una sección de contacto o información":"Añade información de contacto para tus visitantes."}</p>
+          <small>Los cambios se guardan como borrador y no se publican automáticamente.</small>
+         </div>;
+        }
+       }]}
        overrides={{headerActions:({children})=><><BuilderHistoryControls/><BuilderQuickAdd compact={compactStudio} enabled={!previewMode&&view==="editor"}/>{compactStudio?null:children}</>,
         actionBar:({children,label})=><BuilderSelectedActions label={label||"Elemento"}>{children}</BuilderSelectedActions>}}
        data={initialDocument} height={compactStudio?"max(850px, 135dvh)":"75vh"}
        onChange={data=>setDocument(data)}
-       onPublish={publish} />
+       onPublish={publish}>
+       {advancedPuck?<div className={styles.advancedPuckLayout}>
+        <aside className={styles.advancedPuckSidebar} aria-label="Insertar y organizar componentes">
+         <h3>Componentes</h3><Puck.Components/><h3>Capas de la página</h3><Puck.Outline/>
+        </aside>
+        <div className={styles.advancedPuckCanvas}><Puck.Preview/></div>
+        <aside className={styles.advancedPuckInspector} aria-label="Propiedades seleccionadas">
+         <h3>Editar elemento</h3><Puck.Fields wrapFields={false}/>
+        </aside>
+       </div>:null}
+      </Puck>
      </div>
     </div>:<p>Selecciona o crea una página.</p>}
    </section>:null}
