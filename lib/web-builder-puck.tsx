@@ -9,7 +9,7 @@ import {numericEditorField,colorEditorField,fontEditorField} from "@/app/web-stu
 import {BuilderSectionTargets} from "@/app/web-studio/BuilderSectionTargets";
 import {normalizeCalloutStyle,calloutButtonStyles,calloutSectionStyles,calloutHeadingStyles} from "./web-builder-callout-style";
 import ThemeSwatches,{AccentPicker} from "@/app/web-studio/ThemeSwatches";
-import {visualBlocks,VISUAL_BLOCK_NAMES,normalizeVisualProps,type VisualBlockName} from "./web-builder-visual-blocks";
+import {visualBlocks,VISUAL_BLOCK_NAMES,normalizeVisualProps,visualTextStyle,type VisualBlockName} from "./web-builder-visual-blocks";
 import {compositionBlocks,COMPOSE_BLOCK_NAMES,COMPOSE_SLOTS,normalizeComposeProps,type ComposeBlockName} from "./web-builder-composition";
 import {buttonAppearance} from "./web-builder-button-appearance";
 
@@ -113,6 +113,21 @@ export function normalizeBuilderDocument(input:unknown):Data{
    }
    if(kind==="Image")Object.assign(safe,normalizeImageSettings(source,23));
    if(kind==="CTA")Object.assign(safe,normalizeCalloutStyle(source));
+   // All legacy text fields retain their own independent typography settings.
+   for(const field of Object.keys(fieldSchema[kind]||{})){
+    if(["buttonText","buttonUrl","url","alt"].includes(field))continue;
+    for(const suffix of ["Font","Color","FontSize","Weight","Italic","Opacity","LetterSpacing"]){
+     const key=field+suffix,value=source[key];
+     if(value===undefined)continue;
+     if(suffix==="Font")safe[key]=["site","modern","editorial","rounded","geometric","mono"].includes(String(value))?value:"site";
+     if(suffix==="Color")safe[key]=typeof value==="string"&&/^#[\da-f]{6}$/i.test(value)?value:"";
+     if(suffix==="FontSize")safe[key]=typeof value==="number"&&Number.isFinite(value)?Math.max(0,Math.min(110,Math.round(value))):0;
+     if(suffix==="Weight")safe[key]=["light","normal","heavy"].includes(String(value))?value:"normal";
+     if(suffix==="Italic")safe[key]=value==="yes"?"yes":"no";
+     if(suffix==="Opacity")safe[key]=typeof value==="number"&&Number.isFinite(value)?Math.max(0,Math.min(100,Math.round(value))):100;
+     if(suffix==="LetterSpacing")safe[key]=typeof value==="number"&&Number.isFinite(value)?Math.max(-3,Math.min(12,Math.round(value))):0;
+    }
+   }
    if(kind==="Spacer"&&!["24","48","80"].includes(String(safe.height)))safe.height="48";
    return [{type:kind,props:safe}];
   });
@@ -240,8 +255,8 @@ export const builderConfig:Config={
    label:"Portada destacada",
    fields:{eyebrow:basicText,title:{type:"textarea"},description:{type:"textarea"},buttonText:basicText,buttonUrl:basicText},
    defaultProps:{eyebrow:"TU NEGOCIO",title:"Creamos algo extraordinario",description:"Una experiencia hecha para ti.",buttonText:"Hablemos",buttonUrl:"#contacto"},
-   render:({eyebrow,title,description,buttonText,buttonUrl})=><section className="vmv-site-hero">
-    <span className="vmv-site-kicker">{eyebrow}</span><h1>{title}</h1><p>{description}</p>
+   render:({eyebrow,title,description,buttonText,buttonUrl,...styling})=><section className="vmv-site-hero">
+    <span className="vmv-site-kicker" style={visualTextStyle(styling,"eyebrow")}>{eyebrow}</span><h1 style={visualTextStyle(styling,"title")}>{title}</h1><p style={visualTextStyle(styling,"description")}>{description}</p>
     <ContactButton label={buttonText} url={buttonUrl}/>
    </section>
   },
@@ -249,15 +264,15 @@ export const builderConfig:Config={
    label:"Título",
    fields:{text:basicText,subtitle:{type:"textarea"}},
    defaultProps:{text:"Un título memorable",subtitle:"Un subtítulo breve y claro"},
-   render:({text:heading,subtitle})=><section className="vmv-site-section vmv-site-heading">
-    <h2>{heading}</h2>{subtitle?<p>{subtitle}</p>:null}
+   render:({text:heading,subtitle,...styling})=><section className="vmv-site-section vmv-site-heading">
+    <h2 style={visualTextStyle(styling,"text")}>{heading}</h2>{subtitle?<p style={visualTextStyle(styling,"subtitle")}>{subtitle}</p>:null}
    </section>
   },
   Text:{
    label:"Texto",
    fields:{title:basicText,body:{type:"textarea"}},
    defaultProps:{title:"Acerca de nosotros",body:"Escribe aquí la historia de tu negocio."},
-   render:({title,body})=><section className="vmv-site-section vmv-site-copy"><h2>{title}</h2><p>{body}</p></section>
+   render:({title,body,...styling})=><section className="vmv-site-section vmv-site-copy"><h2 style={visualTextStyle(styling,"title")}>{title}</h2><p style={visualTextStyle(styling,"body")}>{body}</p></section>
   },
   Image:{
    label:"Imagen",
@@ -266,23 +281,23 @@ export const builderConfig:Config={
    render:({id,url,alt,caption,puck,...settings})=>!url&&!puck.isEditing?<></>:<figure className="vmv-site-image">
     <BuilderEditableImage id={id} target={{field:"url"}} src={url} alt={alt||"Imagen del negocio"}
      settings={settings} radius={23} editing={puck.isEditing}/>
-    {caption?<figcaption>{caption}</figcaption>:null}
+    {caption?<figcaption style={visualTextStyle(settings,"caption")}>{caption}</figcaption>:null}
    </figure>
   },
   Services:{
    label:"Servicios",
    fields:{title:basicText,first:basicText,second:basicText,third:basicText},
    defaultProps:{title:"Lo que hacemos",first:"Servicio uno",second:"Servicio dos",third:"Servicio tres"},
-   render:({title,first,second,third})=><section className="vmv-site-section vmv-site-services">
-    <h2>{title}</h2><div>{[first,second,third].filter(Boolean).map((service:string,i:number)=><article key={i}><small>0{i+1}</small><h3>{service}</h3></article>)}</div>
+   render:({title,first,second,third,...styling})=><section className="vmv-site-section vmv-site-services">
+    <h2 style={visualTextStyle(styling,"title")}>{title}</h2><div>{[first,second,third].map((service:string,i:number)=>service?<article key={i}><small>0{i+1}</small><h3 style={visualTextStyle(styling,["first","second","third"][i])}>{service}</h3></article>:null)}</div>
    </section>
   },
   Benefits:{
    label:"Beneficios",
    fields:{title:basicText,first:{type:"textarea"},second:{type:"textarea"},third:{type:"textarea"}},
    defaultProps:{title:"¿Por qué elegirnos?",first:"Calidad superior",second:"Atención cercana",third:"Resultados a medida"},
-   render:({title,first,second,third})=><section className="vmv-site-section vmv-site-benefits">
-    <h2>{title}</h2><div>{[first,second,third].filter(Boolean).map((s:string,i:number)=><article key={i}><span aria-hidden="true">✳</span><p>{s}</p></article>)}</div>
+   render:({title,first,second,third,...styling})=><section className="vmv-site-section vmv-site-benefits">
+    <h2 style={visualTextStyle(styling,"title")}>{title}</h2><div>{[first,second,third].map((value:string,i:number)=>value?<article key={i}><span aria-hidden="true">✳</span><p style={visualTextStyle(styling,["first","second","third"][i])}>{value}</p></article>:null)}</div>
    </section>
   },
   CTA:{
@@ -334,8 +349,8 @@ export const builderConfig:Config={
      kind="CTA" style={calloutSectionStyles(settings)}>
      <div className="vmv-cta-inner" data-align={settings.sectionAlign||"left"}
       data-spacing={settings.sectionPadding||"normal"}>
-      <h2 data-vmv-edit-target="title" style={calloutHeadingStyles(settings)}>{title}</h2>
-      {description?<p data-vmv-edit-target="title">{description}</p>:null}
+      <h2 data-vmv-edit-target="title" style={{...calloutHeadingStyles(settings),...visualTextStyle(settings,"title")}}>{title}</h2>
+      {description?<p data-vmv-edit-target="title" style={visualTextStyle(settings,"description")}>{description}</p>:null}
       <a data-vmv-edit-target="button" href={safeLink(buttonUrl)}
        className="vmv-site-button vmv-cta-button" data-button-style={settings.buttonStyle||"solid"}
        data-vmv-override-background={buttonAppearance(settings).hasBackground}
@@ -350,7 +365,7 @@ export const builderConfig:Config={
    label:"Testimonio",
    fields:{quote:{type:"textarea"},author:basicText},
    defaultProps:{quote:"",author:""},
-   render:({quote,author})=>quote?<blockquote className="vmv-site-quote"><p>“{quote}”</p>{author?<footer>{author}</footer>:null}</blockquote>:<></>
+   render:({quote,author,...styling})=>quote?<blockquote className="vmv-site-quote"><p style={visualTextStyle(styling,"quote")}>“{quote}”</p>{author?<footer style={visualTextStyle(styling,"author")}>{author}</footer>:null}</blockquote>:<></>
   },
   Spacer:{
    label:"Separador",
@@ -362,19 +377,19 @@ export const builderConfig:Config={
    label:"Preguntas frecuentes",
    fields:{title:basicText,q1:basicText,a1:{type:"textarea"},q2:basicText,a2:{type:"textarea"}},
    defaultProps:{title:"Preguntas frecuentes",q1:"¿Cómo puedo solicitar información?",a1:"Puedes escribirnos por correo.",q2:"¿Dónde nos encontramos?",a2:"Contáctanos para conocer más."},
-   render:({title,q1,a1,q2,a2})=><section className="vmv-site-section vmv-site-faq">
-    <h2>{title}</h2>{[[q1,a1],[q2,a2]].filter(([q])=>Boolean(q)).map(([q,a],i:number)=><details key={i}><summary>{q}</summary><p>{a}</p></details>)}
+   render:({title,q1,a1,q2,a2,...styling})=><section className="vmv-site-section vmv-site-faq">
+    <h2 style={visualTextStyle(styling,"title")}>{title}</h2>{[[q1,a1,"q1","a1"],[q2,a2,"q2","a2"]].filter(([q])=>Boolean(q)).map(([q,a,qKey,aKey],i:number)=><details key={i}><summary style={visualTextStyle(styling,qKey)}>{q}</summary><p style={visualTextStyle(styling,aKey)}>{a}</p></details>)}
    </section>
   },
   Contact:{
    label:"Información de contacto",
    fields:{title:basicText,description:{type:"textarea"},email:basicText,phone:basicText,address:{type:"textarea"}},
    defaultProps:{title:"Conversemos",description:"Estamos aquí para ayudarte.",email:"",phone:"",address:""},
-   render:({title,description,email,phone,address})=><section id="contacto" className="vmv-site-section vmv-site-contact">
-    <h2>{title}</h2><p>{description}</p>
-    {typeof email==="string"&&/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)?<a href={"mailto:"+email}>{email}</a>:null}
-    {typeof phone==="string"&&/^\+?[\d ()-]{7,36}$/.test(phone)?<a href={"tel:"+phone.replace(/[^\d+]/g,"")}>{phone}</a>:null}
-    {address?<p>{address}</p>:null}
+   render:({title,description,email,phone,address,...styling})=><section id="contacto" className="vmv-site-section vmv-site-contact">
+    <h2 style={visualTextStyle(styling,"title")}>{title}</h2><p style={visualTextStyle(styling,"description")}>{description}</p>
+    {typeof email==="string"&&/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)?<a style={visualTextStyle(styling,"email")} href={"mailto:"+email}>{email}</a>:null}
+    {typeof phone==="string"&&/^\+?[\d ()-]{7,36}$/.test(phone)?<a style={visualTextStyle(styling,"phone")} href={"tel:"+phone.replace(/[^\d+]/g,"")}>{phone}</a>:null}
+    {address?<p style={visualTextStyle(styling,"address")}>{address}</p>:null}
    </section>
   },
   ...visualBlocks,
