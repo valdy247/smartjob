@@ -91,7 +91,15 @@ export const visualBlocks:Config["components"]={
    const safeTitleLink=typeof titleLink==="string"&&
     /^(#[a-z0-9-]{1,70}|https:\/\/[^\s<>]+|mailto:[^\s<>]+|tel:\+?[\d ()-]{7,36})$/i.test(titleLink)?
     titleLink:"";
-   return <section className="vmv-hero-visual" data-layout={layout||"split"} data-align={align||"left"}
+    const heroVertical=Number(imageMoveY)||0;
+    const heroVerticalMobile=Number(responsive.imageMoveYMobile)||0;
+    const heroFlowStyle={
+     "--hero-space-before":Math.max(0,heroVertical)+"px",
+     "--hero-space-after":Math.max(0,-heroVertical)+"px",
+     "--hero-space-before-mobile":Math.max(0,heroVerticalMobile)+"px",
+     "--hero-space-after-mobile":Math.max(0,-heroVerticalMobile)+"px"
+    } as React.CSSProperties;
+    return <section className="vmv-hero-visual" style={heroFlowStyle} data-layout={layout||"split"} data-align={align||"left"}
     data-shade={shade||"medium"} data-height={height||"normal"} data-has-image={Boolean(media)||Boolean(puck.isEditing)}>
     {layout==="cover"?<div className="vmv-hero-cover">
      <BuilderEditableImage id={id} src={image} alt={imageAlt||"Imagen de portada"} settings={settings}
