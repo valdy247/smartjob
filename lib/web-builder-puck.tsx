@@ -13,6 +13,7 @@ import {visualBlocks,VISUAL_BLOCK_NAMES,normalizeVisualProps,visualTextStyle,typ
 import {compositionBlocks,COMPOSE_BLOCK_NAMES,COMPOSE_SLOTS,normalizeComposeProps,type ComposeBlockName} from "./web-builder-composition";
 import {buttonAppearance} from "./web-builder-button-appearance";
 import {getSupabase} from "./supabase";
+import {FieldTab} from "@/app/web-studio/PuckFieldLayout";
 
 type ButtonProps={label?:string;url?:string};
 function safeLink(value:unknown):string{
@@ -486,7 +487,7 @@ export const builderConfig:Config={
 /** Apply Puck's per-instance permissions without changing published markup.
  * "locked" is part of each node's data and survives normalization/rehydration.
  */
-for(const component of Object.values(builderConfig.components||{})){
+for(const [kind,component] of Object.entries(builderConfig.components||{})){
  const originalFields=component.fields||{};
  component.fields={
   ...originalFields,
@@ -497,7 +498,11 @@ for(const component of Object.values(builderConfig.components||{})){
  };
  const renderFields=component.renderFields;
  if(renderFields){
-  component.renderFields=(arg)=> <>{renderFields(arg)}<div className="vmv-puck-protection">{arg.fields.locked}</div></>;
+  const nativeTabs=VISUAL_BLOCK_NAMES.includes(kind as VisualBlockName)||["SectionLayout","ColumnsLayout"].includes(kind);
+  component.renderFields=(arg)=> <>{renderFields(arg)}{
+   nativeTabs?<FieldTab label="Protección">{arg.fields.locked}</FieldTab>:
+    <div className="vmv-puck-protection">{arg.fields.locked}</div>
+  }</>;
  }
  const originalPermissions=component.resolvePermissions;
  component.resolvePermissions=async(data,params)=>{
