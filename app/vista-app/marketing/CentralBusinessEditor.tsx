@@ -4,6 +4,7 @@ import {ImagePlus,ShieldCheck} from "lucide-react";
 import type {CentralBusiness} from "@/lib/vmv-central-business";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import styles from "./CentralBusinessEditor.module.css";
+import PlaceAddressLookup from "./PlaceAddressLookup";
 
 export type CentralBusinessFiles={logo:File|null;cover:File|null;gallery:File[]};
 export const emptyBusinessFiles:CentralBusinessFiles={logo:null,cover:null,gallery:[]};
@@ -42,6 +43,7 @@ export default function CentralBusinessEditor({business,onChange,files,onFiles,a
    <div className={styles.grid}>{input("city",en?"City":"Ciudad")}{input("region",en?"State / region":"Estado / región")}{input("country",en?"Country code":"Código de país","US")}{input("postal",en?"ZIP / postal code":"Código postal")}</div>
    <label className={styles.field}><span>{en?"Service areas":"Zonas de servicio"}</span><textarea value={business.service_areas} rows={2} maxLength={600} onChange={e=>patch("service_areas",e.target.value)}/></label>
    <details className={styles.privateAddress}><summary>{en?"Address (stored privately)":"Dirección (almacenamiento privado)"}</summary>
+    <PlaceAddressLookup country={business.country||"US"} onPick={address=>onChange({...business,street:address.street,city:address.city,region:address.region,postal:address.postal,country:address.country})}/>
     <div className={styles.grid}>{input("street",en?"Street address":"Calle y número")}{input("unit",en?"Suite / unit":"Local / unidad")}</div>
     <label className={styles.field}><span>{en?"May VMV mark this as a public storefront address?":"¿Es una dirección comercial que puede mostrarse públicamente?"}</span>
      <select value={business.address_visibility} onChange={e=>patch("address_visibility",e.target.value as "private"|"public")}>
