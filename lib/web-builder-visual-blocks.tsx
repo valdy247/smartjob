@@ -28,7 +28,8 @@ function Section({children,mode,padding,className=""}:{children:React.ReactNode;
 const titleField={type:"text" as const};
 const textArea={type:"textarea" as const};
 const listItemFields={
- title:titleField,description:textArea,image:imgField,alt:titleField,price:titleField
+ title:titleField,description:textArea,image:imgField,alt:titleField,price:titleField,
+ titleColor:colorEditorField("Color del título"),descriptionColor:colorEditorField("Color de la descripción"),priceColor:colorEditorField("Color del precio")
 };
 export const visualBlocks:Config["components"]={
  HeroVisual:{
@@ -140,9 +141,9 @@ export const visualBlocks:Config["components"]={
    <div className="vmv-offerings-items" data-layout={layout||"grid"} data-columns={columns||"3"}>
     {toList(items).map((item,index)=>!(item.title||item.description||item.price||photo(item.image))&&!puck.isEditing?null:<article key={visualItemId(item,index)} className="vmv-offering-card" data-has-photo={Boolean(photo(item.image))} style={imageSettingsStyle(item)}>
      <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
-     <div className="vmv-offering-copy">{item.title?<h3>{heading(item.title)}</h3>:<h3>Nuevo elemento</h3>}
-      {item.description?<p>{heading(item.description)}</p>:null}
-      {showPrices==="yes"&&item.price?<strong className="vmv-offering-price">{heading(item.price)}</strong>:null}
+     <div className="vmv-offering-copy">{item.title?<h3 style={{color:/^#[\da-f]{6}$/i.test(String(item.titleColor||""))?String(item.titleColor):undefined}}>{heading(item.title)}</h3>:<h3>Nuevo elemento</h3>}
+      {item.description?<p style={{color:/^#[\da-f]{6}$/i.test(String(item.descriptionColor||""))?String(item.descriptionColor):undefined}}>{heading(item.description)}</p>:null}
+      {showPrices==="yes"&&item.price?<strong className="vmv-offering-price" style={{color:/^#[\da-f]{6}$/i.test(String(item.priceColor||""))?String(item.priceColor):undefined}}>{heading(item.price)}</strong>:null}
      </div>
     </article>)}
    </div>
@@ -267,7 +268,7 @@ export const visualBlocks:Config["components"]={
 };
 const SCHEMA:Record<VisualBlockName,{strings:string[];images:string[];arrays?:Record<string,{strings:string[];images:string[]}>}>={
  HeroVisual:{strings:["layout","eyebrow","title","description","buttonText","buttonUrl","imageAlt","align","imagePosition","shade","height","buttonStyle","titleFont","titleColor","titleShadow","titleWeight","titleItalic","titleLink"],images:["image"]},
- OfferingGrid:{strings:["title","description","layout","padding","surface","columns","showPrices"],images:[],arrays:{items:{strings:["title","description","alt","price"],images:["image"]}}},
+ OfferingGrid:{strings:["title","description","layout","padding","surface","columns","showPrices"],images:[],arrays:{items:{strings:["title","description","alt","price","titleColor","descriptionColor","priceColor"],images:["image"]}}},
  PhotoGallery:{strings:["title","description","layout","padding","surface"],images:[],arrays:{items:{strings:["alt","caption"],images:["image"]}}},
  ProcessSteps:{strings:["title","padding","surface"],images:[],arrays:{items:{strings:["title","description"],images:[]}}},
  ProjectShowcase:{strings:["title","layout","padding","surface"],images:[],arrays:{items:{strings:["title","description","alt"],images:["image"]}}},
