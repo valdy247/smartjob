@@ -9,6 +9,7 @@ import {familyForCategory} from "@/lib/web-builder-templates";
 import {WebsiteChrome,websiteVisualStyle} from "@/lib/web-site-chrome";
 import type {CSSProperties} from "react";
 import RequestForm from "@/app/sites/[slug]/RequestForm";
+import WebChatLauncher from "@/app/web-studio/WebChatLauncher";
 import "../../../web-builder-public.css";
 
 export const dynamic="force-dynamic";
@@ -82,7 +83,7 @@ export default async function VMVPublishedPage({params}:Props){
  const rootData=(data.root?.props||{}) as Record<string,unknown>;
  const siteLanguage=rootData.language==="en"?"en":"es";
  const logo=safeWebImageUrl(typeof rootData.logo==="string"?rootData.logo:"");
- const visualStyle=websiteVisualStyle(rootData.palette,rootData.accentColor);
+ const visualStyle=websiteVisualStyle(rootData.palette,rootData.accentColor,rootData.secondaryColor,rootData.tertiaryColor);
  const family=typeof rootData.family==="string"&&["bakery","construction","professional","beauty","creative"].includes(rootData.family)?rootData.family:familyForCategory(result.page.category_id||"");
  const showForm=part==="home"&&result.page.inquiries_enabled===true;
  const host=requestHeaders.get("host")||"";
@@ -99,11 +100,12 @@ export default async function VMVPublishedPage({params}:Props){
  }:null;
  return <WebsiteChrome siteName={siteName} baseUrl={base} menu={result.menu}
   logo={logo} family={family} language={siteLanguage} siteStyle={String(rootData.style||"light")}
-  siteWidth={String(rootData.width||"regular")} socialLinks={rootData.socialLinks} visualStyle={visualStyle}>
+  siteWidth={String(rootData.width||"regular")} font={String(rootData.font||"modern")} socialLinks={rootData.socialLinks} visualStyle={visualStyle}>
   {organization?<script type="application/ld+json" dangerouslySetInnerHTML={{
    __html:JSON.stringify(organization).replace(/</g,"\\u003c")
   }}/>:null}
   <Render config={builderConfig} data={data}/>
+  {showForm&&rootData.chatMode==="inbox"?<WebChatLauncher slug={slug} business={siteName} categoryId={result.page.category_id||""} services={services}/>:null}
   {showForm?<section className="vmv-site-inquiry" id="solicitud" aria-label="Enviar solicitud al negocio">
    <small>CONTACTA CON NOSOTROS</small>
    <h2>¿Qué necesitas?</h2>
