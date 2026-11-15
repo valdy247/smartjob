@@ -353,3 +353,23 @@
  .mobileDraftStatus{display:none}
  .main{padding-top:5px}
 }
+
+
+/* VMV minimal phone canvas; advanced Puck panels remain opt-in via page menu. */
+@container vmv-studio (max-width:700px){
+ .compactPuck[data-advanced="false"] :global([class*="_PuckLayout-inner_"]){
+  grid-template-rows:0 minmax(0,1fr) 0 0 0!important;
+ }
+ .compactPuck[data-advanced="false"] :global([class*="_PuckLayout-header_"]),
+ .compactPuck[data-advanced="false"] :global([class*="_PuckHeader_"]),
+ .compactPuck[data-advanced="false"] :global([class*="_PuckLayout-nav_"]),
+ .compactPuck[data-advanced="false"] :global([class*="_PuckCanvas-controls_"]){
+  display:none!important;
+ }
+ .compactPuck[data-advanced="false"] :global([class*="_PuckCanvas_zw"]){
+  padding:0!important;
+ }
+ .compactPuck[data-advanced="false"] :global([class*="_PuckCanvas-inner_"]){
+  min-width:0;
+ }
+}
