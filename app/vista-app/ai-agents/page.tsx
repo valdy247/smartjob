@@ -386,7 +386,6 @@ export default function AIAgentsPreview(){
        return <button type="button" key={type.id} className={styles.tile}
           style={{background:type.bg,color:type.fg}} onClick={()=>void start(type.id)} aria-label={label+" · "+status+". "+detail}>
           <span className={styles.tileIcon}><type.Icon size={24}/></span>
-          <ArrowUpRight className={styles.tileArrow} size={20}/>
           <strong>{label}</strong><small>{status}</small>
        </button>})}
       </div>
