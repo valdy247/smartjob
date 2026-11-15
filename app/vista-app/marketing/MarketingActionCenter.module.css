@@ -326,3 +326,43 @@
 .activityTimeline li small{font-size:11px;line-height:1.5;color:#796b79}
 
 .activeBusiness{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:9px 12px;margin-bottom:8px;background:#fff8fc;color:#7c5775;border:1px solid #ebdce7;border-radius:10px;font-size:11px;font-weight:600}.activeBusiness strong{font-size:12px;color:#4a324e}
+
+/* Match the colorful VMV Home catalog; keep Marketing actions self-contained. */
+.catalogHeading{display:flex;flex-direction:column;align-items:flex-start;gap:13px;padding:8px 2px 3px}
+.catalogHeading h2{margin:0;font-size:clamp(23px,4vw,30px);line-height:1.12;letter-spacing:-.06em;color:#29213e}
+.catalogLinks{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.catalogLinks .historyLink{position:static;right:auto;top:auto;display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:9px 12px;border:1px solid #e7dff0;border-radius:12px;background:#fff;color:#7555b3;font-size:11px;font-weight:800;text-decoration:none}
+.catalogLinks .historyLink:hover{background:#f5f0ff;border-color:#cbb6ec}
+.servicePicker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.serviceTile{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;min-width:0;min-height:178px;padding:16px;border:0;border-radius:20px;box-shadow:none;background:#ffd2e7;color:#804364}
+.serviceTile:nth-child(3n+1){background:#ffd2e7;color:#804364;border:0}
+.serviceTile:nth-child(3n+2){background:#b9e2ff;color:#244b78;border:0}
+.serviceTile:nth-child(3n+3){background:#b6efdb;color:#104a39;border:0}
+.serviceTile:hover{transform:translateY(-2px);box-shadow:0 7px 19px rgba(35,25,54,.09);border:0}
+.serviceIcon,.serviceTile:nth-child(3n+1) .serviceIcon,.serviceTile:nth-child(3n+2) .serviceIcon,.serviceTile:nth-child(3n+3) .serviceIcon{display:grid;place-items:center;width:45px;height:45px;flex:0 0 45px;border:0;border-radius:15px;background:#ffffff8c;color:inherit}
+.serviceText{display:flex;flex-direction:column;gap:5px;min-width:0;width:100%;flex:none;margin-top:auto;padding:12px 0 0}
+.serviceText strong{font-size:17px;line-height:1.18;letter-spacing:-.045em;font-weight:850;color:inherit}
+.serviceText small{font-size:11px;line-height:1.38;font-weight:650;color:inherit;opacity:.78}
+.serviceCta,.serviceTile:nth-child(3n+2) .serviceCta,.serviceTile:nth-child(3n+3) .serviceCta{display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;min-height:31px;min-width:0;margin:11px 0 0;padding:6px 12px;border:0;border-radius:10px;background:#ffffffa6;box-shadow:none;color:inherit;font-size:11px;font-weight:850}
+.activeBusiness{background:#f5edff;border-color:#e7d7fa;color:#7551a5}
+.activeBusiness strong{color:#342442}
+.bottomNote{align-items:center;padding:11px 13px;border-radius:12px;background:#f6f1fb;color:#76628c}
+.bottomNote p{font-size:10px;line-height:1.5}
+@media(max-width:760px){
+ .servicePicker{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+ .serviceTile{display:flex;flex-direction:column;align-items:flex-start;min-height:173px;padding:15px;border-radius:19px;gap:0}
+ .serviceIcon{grid-row:auto;grid-column:auto}
+ .serviceText{grid-row:auto;grid-column:auto;padding:13px 0 0}
+ .serviceCta{grid-row:auto;grid-column:auto;justify-self:auto;min-height:31px}
+ .serviceTile:nth-child(3){grid-column:1/-1;min-height:135px}
+ .catalogHeading{padding:5px 1px 3px}
+}
+@media(max-width:420px){
+ .servicePicker{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .serviceTile{min-height:170px;padding:13px}
+ .serviceText strong{font-size:15px}
+ .serviceText small{font-size:10px}
+ .serviceCta{font-size:11px}
+ .catalogLinks .historyLink{padding:8px 10px}
+}
+@media(prefers-reduced-motion:reduce){.serviceTile{transition:none}.serviceTile:hover{transform:none}}
