@@ -311,7 +311,7 @@ export default function VMVMobilePreview(){
         {summary?.billing.ok&&billing?.subscriptionActive===false?<span className={styles.dashboardUpgrade}>{language==="en"?"Upgrade your plan to unlock Smart Call":"Mejorar plan para desbloquear Smart Call"} <ArrowUpRight size={14}/></span>:null}
         <span className={styles.dashboardMetrics}>
          <span><b>{summary?.billing.ok?num(available):"—"}</b><small>{translate("dashboard.minutes")}</small></span>
-         <span><b>{summary?.line.ok?num(summary.line.data?.usage.calls):"—"}</b><small>{translate("dashboard.calls")}</small></span>
+         <span><b>{summary?.line.ok?num(summary.line.data?.usage.directCalls):"—"}</b><small>{translate("dashboard.calls")}</small></span>
         </span>
        </button>
        <div className={styles.dashboardHeading}><h3>{translate("dashboard.quickActions")}</h3>
