@@ -75,3 +75,14 @@ button.tile:focus-visible,.toggle button:focus-visible,.back:focus-visible,.save
 .webHub a:focus-visible,.webHub button:focus-visible{outline:3px solid #9f7de4;outline-offset:3px}
 @media(max-width:530px){.webHubGrid{grid-template-columns:1fr}.webHubCard{min-height:130px;padding:15px 17px}.webHubCard strong{font-size:16px}.webHubHeading h2{font-size:27px}}
 @media(prefers-reduced-motion:reduce){.webHubCard{transition:none}.webHubCard:hover{transform:none}}
+
+/* Dedicated home for existing sites, separate from the four creation services. */
+.webHubLibrary{display:flex;align-items:center;gap:12px;margin-top:18px;padding:16px;
+ border:1px solid #e6d8f0;border-radius:17px;background:#fff;color:#4b3964;
+ text-decoration:none;min-height:78px}
+.webHubLibraryIcon{display:grid;place-items:center;flex:none;width:43px;height:43px;
+ border-radius:13px;background:#f0e8fc;color:#8353c7}
+.webHubLibrary>span:nth-child(2){display:flex;flex:1;flex-direction:column;gap:4px;min-width:0}
+.webHubLibrary strong{font-size:14px;font-weight:900}
+.webHubLibrary small{font-size:11px;color:#837492;line-height:1.4}
+.webHubLibrary>svg:last-child{flex:none;color:#8056bd}
