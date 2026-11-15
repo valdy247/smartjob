@@ -27,7 +27,8 @@ type Pick={id:string;kind:"image"|"text"|"button"|"section";target?:ImageTarget;
  key?:string;index?:number;x:number;y:number};
 type Section="home"|"pages"|"create"|"appearance"|"seo"|"connections"|"domain"|"history";
 type VisualTool="menu"|"content"|"size"|"color"|"background"|"font"|"weight"|"italic"|
- "spacing"|"opacity"|"align"|"image"|"shade"|"frame"|"shape"|"link"|"actions";
+ "spacing"|"opacity"|"align"|"image"|"shade"|"frame"|"shape"|"link"|"actions"|
+ "position"|"border"|"layout"|"arrange"|"add"|"duplicate"|"delete"|"items"|"surface"|"buttonStyle";
 
 const TEXT_KEYS=["title","description","body","text","eyebrow","subtitle","buttonText","label",
  "caption","quote","author","price","question","answer","q1","a1","q2","a2","hours","area","notes","first","second","third","phone","email","address"];
@@ -618,58 +619,77 @@ export default function MobileVisualStudio({
   else if(isButton)edit({[visualTool==="background"?"buttonColor":"buttonTextColor"]:value});
   if(/^#[a-f\\d]{6}$/i.test(value))setRecentColors(old=>[value,...old.filter(x=>x!==value)].slice(0,8));
  };
- const menuChoices:Array<{id:VisualTool;label:string;icon:React.ReactNode}> = isText?
-  [{id:"content",label:"Editar texto",icon:<Type size={21}/>},
-   ...(keys?[{id:"size" as const,label:"Tamaño",icon:<SlidersHorizontal size={21}/>},
-    {id:"color" as const,label:"Color",icon:<Palette size={21}/>},
-    {id:"font" as const,label:"Tipografía",icon:<Type size={21}/>},
-    {id:"opacity" as const,label:"Transparencia",icon:<Eye size={21}/>}]:[]),
-   ...(keys?.weight?[{id:"weight" as const,label:"Grosor",icon:<Type size={21}/>}]:[]),
-   ...(keys?.italic?[{id:"italic" as const,label:"Cursiva",icon:<Type size={21}/>}]:[]),
-   ...(keys?.spacing?[{id:"spacing" as const,label:"Espaciado",icon:<SlidersHorizontal size={21}/>}]:[]),
 
-   {id:"actions",label:"Más opciones",icon:<Settings2 size={21}/>}]:
-  isButton?
-  [{id:"content",label:"Texto",icon:<Type size={21}/>},
-   {id:"size",label:"Tamaño",icon:<SlidersHorizontal size={21}/>},
-   {id:"color",label:"Color",icon:<Palette size={21}/>},
-   {id:"background",label:"Fondo",icon:<Palette size={21}/>},
-   {id:"shape",label:"Forma",icon:<Layers size={21}/>},
-   {id:"link",label:"Enlace",icon:<Globe size={21}/>},
-   {id:"actions",label:"Más opciones",icon:<Settings2 size={21}/>}]:
-  isImage?
-  [{id:"image",label:"Cambiar foto",icon:<ImagePlus size={21}/>},
-   ...(block?.type==="HeroVisual"?[
-    {id:"shade" as const,label:"Oscuridad",icon:<SlidersHorizontal size={21}/>},
-    {id:"frame" as const,label:"Encuadre",icon:<Layers size={21}/>}]:[]),
-   {id:"opacity",label:"Transparencia",icon:<Eye size={21}/>},
-   {id:"actions",label:"Más opciones",icon:<Settings2 size={21}/>}]:
-  [{id:"actions",label:"Contenido",icon:<Settings2 size={21}/>},
-   ...(block?.type==="HeroVisual"?[{id:"shade" as const,label:"Oscuridad",icon:<SlidersHorizontal size={21}/>}]:[]),
-   {id:"content",label:"Duplicar",icon:<Copy size={21}/>},
-   {id:"link",label:"Eliminar",icon:<Trash2 size={21}/>}];
+ const menuChoices:Array<{id:VisualTool;label:string;icon:React.ReactNode}> = isText?[
+  {id:"content",label:"Editar texto",icon:<Type/>},{id:"size",label:"Tamaño",icon:<SlidersHorizontal/>},
+  {id:"color",label:"Color",icon:<Palette/>},{id:"font",label:"Tipografía",icon:<Type/>},
+  {id:"opacity",label:"Transparencia",icon:<Eye/>},{id:"weight",label:"Grosor",icon:<Type/>},
+  {id:"italic",label:"Cursiva",icon:<Type/>},{id:"spacing",label:"Espaciado",icon:<SlidersHorizontal/>},
+  {id:"arrange",label:"Organizar",icon:<Layers/>}
+ ]:isButton?[
+  {id:"content",label:"Editar botón",icon:<Type/>},{id:"size",label:"Tamaño",icon:<SlidersHorizontal/>},
+  {id:"color",label:"Color del texto",icon:<Palette/>},{id:"background",label:"Fondo",icon:<Palette/>},
+  {id:"shape",label:"Esquinas",icon:<Layers/>},{id:"buttonStyle",label:"Estilo",icon:<Settings2/>},
+  {id:"link",label:"Enlace",icon:<Globe/>},
+  ...(block?.type==="CTA"?[{id:"border" as const,label:"Borde",icon:<Layers/>}]:[]),
+  {id:"arrange",label:"Organizar sección",icon:<Layers/>}
+ ]:isImage?[
+  {id:"image",label:"Reemplazar imagen",icon:<ImagePlus/>},
+  {id:"position",label:block?.type==="OfferingGrid"?"Mover tarjeta":"Mover imagen",icon:<SlidersHorizontal/>},
+  {id:"size",label:block?.type==="OfferingGrid"?"Tamaño de tarjeta":"Tamaño",icon:<Layers/>},
+  {id:"frame",label:block?.type==="HeroVisual"?"Encuadre":"Esquinas",icon:<Layers/>},
+  ...(block?.type==="HeroVisual"?[
+    {id:"layout" as const,label:"Diseño de portada",icon:<Settings2/>},
+    {id:"shade" as const,label:"Oscuridad",icon:<SlidersHorizontal/>}
+   ]:[{id:"border" as const,label:"Borde",icon:<Palette/>}]),
+  {id:"opacity",label:"Transparencia",icon:<Eye/>},
+  {id:"arrange",label:"Organizar sección",icon:<Layers/>}
+ ]:[
+  {id:"content",label:"Editar contenido",icon:<Type/>},
+  ...(Array.isArray(props?.items)?[{id:"items" as const,label:"Editar elementos",icon:<Layers/>}]:[]),
+  ...(block?.type==="HeroVisual"?[
+    {id:"layout" as const,label:"Diseño de portada",icon:<ImagePlus/>},
+    {id:"shade" as const,label:"Oscuridad",icon:<SlidersHorizontal/>}
+   ]:("surface" in (props||{})||"sectionSurface" in (props||{}))?
+    [{id:"surface" as const,label:"Fondo",icon:<Palette/>}]:[]),
+  {id:"add",label:"Añadir sección",icon:<Plus/>},
+  {id:"duplicate",label:"Duplicar sección",icon:<Copy/>},
+  {id:"arrange",label:"Subir o bajar",icon:<ArrowUp/>},
+  {id:"delete",label:"Eliminar sección",icon:<Trash2/>}
+ ];
  const pickTool=(tool:VisualTool)=>{
-  if(selection?.kind==="section"&&props){
-   if(tool==="content"){
-    const copied=duplicateBlock(data,selection.id);
-    if(copied.newId){onChange(copied.data);setSelection({...selection,id:copied.newId});}
-    closePopup();return;
-   }
-   if(tool==="link"){
-    setDeleteTarget({id:selection.id,label:String(props.title||"esta sección").slice(0,70)});
-    setVisualTool("menu");return;
-   }
-  }
+  if(!selection||!props)return;
+  if(tool==="add"){setInsertAfterId(selection.id);setDrawer(true);setSection("create");closePopup();return;}
+  if(tool==="duplicate"){const result=duplicateBlock(data,selection.id);if(result.newId)onChange(result.data);closePopup();return;}
+  if(tool==="delete"){setDeleteTarget({id:selection.id,label:String(props.title||"esta sección").slice(0,70)});setVisualTool("menu");return;}
   setVisualTool(tool);
  };
- const toolName=({content:"Editar",size:"Tamaño",color:"Color del texto",
-  background:"Fondo del botón",font:"Tipografía",weight:"Grosor",italic:"Cursiva",
-  spacing:"Espaciado",opacity:"Transparencia",align:"Alineación",image:"Imagen",
-  shade:"Oscuridad del fondo",frame:"Encuadre",shape:"Forma del botón",
-  link:"Enlace",actions:"Opciones",menu:"Herramientas"} as Record<VisualTool,string>)[visualTool];
+ const toolName=({
+  content:isButton?"Editar botón":isText?"Editar texto":"Editar contenido",size:"Tamaño",
+  color:"Color",background:"Fondo",font:"Tipografía",weight:"Grosor",italic:"Cursiva",
+  spacing:"Espaciado",opacity:"Transparencia",align:"Alineación",image:"Reemplazar imagen",
+  shade:"Oscuridad",frame:block?.type==="HeroVisual"?"Encuadre":"Esquinas",shape:"Esquinas",
+  link:"Enlace",actions:"Opciones",menu:"Herramientas",position:"Mover",border:"Borde",
+  layout:"Diseño de portada",arrange:"Organizar sección",add:"Añadir",duplicate:"Duplicar",
+  delete:"Eliminar",items:"Editar elementos",surface:"Fondo",buttonStyle:"Estilo del botón"
+ } as Record<VisualTool,string>)[visualTool];
+ const imageSettings=isImage&&image?targetSettings(props||{},image):null;
+ const moveXKey=device==="mobile"?"imageMoveXMobile":"imageMoveX";
+ const moveYKey=device==="mobile"?"imageMoveYMobile":"imageMoveY";
+ const widthKey=device==="mobile"?"imageWidthMobile":"imageWidth";
+ const selectedValue=selection?.index!==undefined&&Array.isArray(props?.items)?
+  String((props.items[selection.index] as Record<string,unknown>)?.[selectedTextKey]||""):
+  String(props?.[selectedTextKey]||"");
+ const addListItem=()=>{
+  if(!props||!Array.isArray(props.items))return;
+  const item=block?.type==="PhotoGallery"?{id:crypto.randomUUID(),caption:"",image:"",alt:""}:
+   block?.type==="FAQList"?{id:crypto.randomUUID(),question:"Nueva pregunta",answer:"Respuesta"}:
+   {id:crypto.randomUUID(),title:"Nuevo elemento",description:"",image:"",alt:"",price:""};
+  edit({items:[...props.items,item]});
+ };
 
  return <div className={styles.stage} data-device={device} data-preview={preview}
-  data-inspecting={Boolean(selection&&!drawer&&!preview&&visualTool==="actions")}
+  data-inspecting={false}
   onClickCapture={event=>{
    if(!selection||drawer||preview||deleteTarget||dragRef.current)return;
    const target=event.target instanceof Element?event.target:null;
@@ -738,221 +758,136 @@ export default function MobileVisualStudio({
     </div>}
     <button type="button" className={styles.visualQuickClose} aria-label="Cerrar herramientas" onClick={closePopup}><X size={19}/></button>
    </div>
-   {visualTool!=="menu"&&visualTool!=="actions"?<div className={styles.visualQuickDetail} role="region" aria-label={toolName}>
-    {visualTool==="content"&&selection.kind!=="image"?<label className={styles.formLabel}>Contenido
-     <textarea rows={2} value={selection.index!==undefined&&Array.isArray(props.items)?
-      String((props.items[selection.index] as Record<string,unknown>)?.[selectedTextKey]||""):
-      String(props[selectedTextKey]||"")}
-      onChange={e=>editText(selectedTextKey,e.target.value,selection.index)}/></label>:null}
-    {visualTool==="size"&&(isButton||isText)?<RangeField label="Tamaño del texto" min={11} max={isButton?36:110} unit="px"
-     value={activeSize} onChange={v=>isButton?edit({buttonFontSize:v}):
-      keys?patchTypography({[keys.size]:v}):undefined}/>:null}
-    {(visualTool==="color"||visualTool==="background")?(isText||isButton)?<ColorField
-     label={visualTool==="background"?"Fondo del botón":"Color del texto y del ícono"}
-     value={currentColor} allowTransparent onChange={patchColor}/>:null:null}
-    {visualTool==="italic"&&isText&&keys?.italic?<div className={styles.chips}>
-     <button type="button" aria-pressed={String(values?.[keys.italic]||"no")==="no"} onClick={()=>patchTypography({[keys.italic!]: "no"})}>Normal</button>
-     <button type="button" aria-pressed={String(values?.[keys.italic]||"no")==="yes"} onClick={()=>patchTypography({[keys.italic!]: "yes"})}>Cursiva</button>
+   {visualTool!=="menu"?<div className={styles.visualQuickDetail} role="region" aria-label={toolName}>
+
+    {visualTool==="content"&&(isText||isButton)?<label className={styles.formLabel}>
+     {isButton?"Texto del botón":LABELS[selectedTextKey]||"Texto"}
+     <textarea rows={3} value={selectedValue} onChange={e=>editText(selectedTextKey,e.target.value,selection?.index)}/>
+    </label>:null}
+    {visualTool==="content"&&selection?.kind==="section"?<div className={styles.focusFields}>
+     {textFields.length?textFields.map(key=><label className={styles.formLabel} key={key}>{LABELS[key]||key}
+      <textarea rows={2} value={String(props[key]||"")} onChange={e=>editText(key,e.target.value)}/>
+     </label>):<p>Selecciona el texto directamente para editarlo.</p>}
     </div>:null}
-    {visualTool==="spacing"&&isText&&keys?.spacing?<RangeField label="Espaciado" min={-3} max={12} step={1} unit="px"
-     value={Number(values?.[keys.spacing]||0)} onChange={v=>patchTypography({[keys.spacing!]:v})}/>:null}
-    {visualTool==="opacity"&&isText&&keys?<RangeField label="Transparencia" min={0} max={100} unit="%"
-     value={Number(values?.[opacityKey]||100)} onChange={v=>patchTypography({[opacityKey]:v})}/>:null}
+    {visualTool==="items"&&Array.isArray(props.items)?<div className={styles.focusFields}>
+     {(props.items as Record<string,unknown>[]).map((item,index)=><div className={styles.focusItem} key={String(item.id||index)}>
+      <strong>Elemento {index+1}</strong>
+      {["title","description","price","caption","question","answer"].filter(k=>typeof item[k]==="string").map(key=>
+       <label className={styles.formLabel} key={key}>{LABELS[key]||key}
+        <textarea rows={2} value={String(item[key]||"")} onChange={e=>editText(key,e.target.value,index)}/>
+       </label>)}
+      {typeof item.image==="string"?<BuilderImageField value={item.image}
+       onChange={url=>onChange(patchBuilderImage(data,selection!.id,{field:"image",index},{image:url}))}/>:null}
+      <button type="button" className={styles.focusDestructive} onClick={()=>edit({items:(props.items as unknown[]).filter((_,i)=>i!==index)})}>
+       <Trash2 size={18}/> Quitar elemento</button>
+     </div>)}
+     <button type="button" className={styles.focusAction} onClick={addListItem}><Plus size={18}/> Agregar elemento</button>
+    </div>:null}
+    {visualTool==="size"&&(isText||isButton)?<RangeField label="Tamaño del texto" min={11} max={isButton?36:110} unit="px"
+     value={activeSize} onChange={v=>isButton?edit({buttonFontSize:v}):keys?patchTypography({[keys.size]:v}):undefined}/>:null}
+    {visualTool==="size"&&isImage&&image&&imageSettings?<RangeField
+     label={block?.type==="OfferingGrid"?"Ancho de la tarjeta":"Ancho de la imagen"} min={25} max={100} unit="%"
+     value={imageSettings[widthKey]??100} onChange={v=>editImage(image,{[widthKey]:v})}/>:null}
+    {(visualTool==="color"||visualTool==="background")&&(isText||isButton)?<ColorField
+     label={visualTool==="background"?"Color de fondo":"Color del texto y del ícono"}
+     value={currentColor} allowTransparent onChange={patchColor}/>:null}
     {visualTool==="font"&&isText&&keys?<FontField value={values?.[keys.font]||"site"}
      onChange={v=>patchTypography({[keys.font]:v})}/>:null}
-    {visualTool==="weight"&&isText&&keys?.weight?<RangeField label="Grosor" min={400} max={900} step={100}
-     value={values?.[keys.weight]==="heavy"?900:values?.[keys.weight]==="light"?400:700}
-     onChange={v=>patchTypography({[keys.weight!]:v<550?"light":v>750?"heavy":"normal"})}/>:null}
-    {visualTool==="opacity"&&isImage&&image?<RangeField label="Transparencia" min={0} max={100}
-     value={targetSettings(props,image).imageOpacity??0} onChange={v=>editImage(image,{imageOpacity:v})}/>:null}
+    {visualTool==="weight"&&isText&&keys?.weight?<div className={styles.focusChoices}>
+     {["light","normal","heavy"].map((weight,i)=><button type="button" key={weight}
+      aria-pressed={String(values?.[keys.weight!]||"normal")===weight}
+      onClick={()=>patchTypography({[keys.weight!]:weight})}>{["Ligero","Normal","Negrita"][i]}</button>)}
+    </div>:null}
+    {visualTool==="italic"&&isText&&keys?.italic?<div className={styles.focusChoices}>
+     <button type="button" aria-pressed={String(values?.[keys.italic]||"no")==="no"}
+      onClick={()=>patchTypography({[keys.italic!]:"no"})}>Normal</button>
+     <button type="button" aria-pressed={values?.[keys.italic]==="yes"}
+      onClick={()=>patchTypography({[keys.italic!]:"yes"})}>Cursiva</button>
+    </div>:null}
+    {visualTool==="spacing"&&isText&&keys?.spacing?<RangeField label="Espaciado" min={-3} max={12} unit="px"
+     value={values?.[keys.spacing]??0} onChange={v=>patchTypography({[keys.spacing!]:v})}/>:null}
+    {visualTool==="opacity"&&isText&&keys?<RangeField label="Transparencia" min={0} max={100} unit="%"
+     value={values?.[opacityKey]??100} onChange={v=>patchTypography({[opacityKey]:v})}/>:null}
+    {visualTool==="opacity"&&isImage&&image&&imageSettings?<RangeField label="Transparencia" min={0} max={100} unit="%"
+     value={imageSettings.imageOpacity??0} onChange={v=>editImage(image,{imageOpacity:v})}/>:null}
     {visualTool==="image"&&isImage&&image?<BuilderImageField value={targetImage(props,image)}
      onChange={url=>editImage(image,{[image.field]:url})}/>:null}
-    {visualTool==="link"&&isButton?<label className={styles.formLabel}>Destino
-     <input value={String(props[block.type==="ComposeButton"?"url":"buttonUrl"]||"")}
-      onChange={e=>edit({[block.type==="ComposeButton"?"url":"buttonUrl"]:e.target.value})}/></label>:null}
-    {visualTool==="shape"&&isButton?<div className={styles.chips}>
-     {["solid","outline","link"].map(shape=><button type="button" key={shape}
-      aria-pressed={String(props[block.type==="ComposeButton"?"style":"buttonStyle"]||"solid")===shape}
-      onClick={()=>edit({[block.type==="ComposeButton"?"style":"buttonStyle"]:shape})}>{shape==="solid"?"Sólido":shape==="outline"?"Contorno":"Enlace"}</button>)}
+    {visualTool==="position"&&isImage&&image&&imageSettings?<div className={styles.focusFields}>
+     {block?.type==="OfferingGrid"?<p>Se mueve la tarjeta completa, incluida la imagen y el texto.</p>:null}
+     <RangeField label="Mover horizontalmente" min={-250} max={250} unit="px"
+      value={imageSettings[moveXKey]??0} onChange={v=>editImage(image,{[moveXKey]:v})}/>
+     <RangeField label="Mover verticalmente" min={-250} max={250} unit="px"
+      value={imageSettings[moveYKey]??0} onChange={v=>editImage(image,{[moveYKey]:v})}/>
     </div>:null}
-    {visualTool==="shade"&&block.type==="HeroVisual"?<div className={styles.chips}>
-     {["soft","medium","strong"].map(shade=><button type="button" key={shade} aria-pressed={props.shade===shade}
-      onClick={()=>edit({shade})}>{shade==="soft"?"Suave":shade==="medium"?"Medio":"Fuerte"}</button>)}
+    {visualTool==="frame"&&isImage&&image&&imageSettings?
+     block?.type==="HeroVisual"?<label className={styles.formLabel}>Encuadre de portada
+      <select value={String(props.imagePosition||"center")} onChange={e=>edit({imagePosition:e.target.value})}>
+       {["center","top","bottom","left","right"].map((x,i)=><option value={x} key={x}>
+        {["Centro","Arriba","Abajo","Izquierda","Derecha"][i]}</option>)}
+      </select>
+     </label>:<RangeField label="Esquinas" min={0} max={80} unit="px"
+      value={imageSettings.imageRadius??16} onChange={v=>editImage(image,{imageRadius:v})}/>:null}
+    {visualTool==="border"&&isImage&&image&&imageSettings?<div className={styles.focusFields}>
+     <RangeField label="Grosor del borde" min={0} max={12} unit="px"
+      value={imageSettings.imageBorder??0} onChange={v=>editImage(image,{imageBorder:v})}/>
+     <ColorField label="Color del borde" value={imageSettings.borderColor}
+      onChange={v=>editImage(image,{borderColor:v})}/>
     </div>:null}
-    {visualTool==="frame"&&isImage&&image?<RangeField label="Esquinas" min={0} max={80} unit="px"
-     value={targetSettings(props,image).imageRadius??0}
-     onChange={v=>editImage(image,{imageRadius:v})}/>:null}
-    {!["content","size","color","background","font","weight","italic","spacing","opacity","image","link","shape","shade","frame"].includes(visualTool)?
-     <button type="button" onClick={()=>setVisualTool("actions")}>Más ajustes <ChevronRight size={16}/></button>:null}
+    {visualTool==="border"&&isButton&&block?.type==="CTA"?<div className={styles.focusFields}>
+     <RangeField label="Grosor del borde" min={0} max={12} unit="px"
+      value={props.buttonBorderWidth??0} onChange={v=>edit({buttonBorderWidth:v})}/>
+     <ColorField label="Color del borde" value={props.buttonBorderColor}
+      onChange={v=>edit({buttonBorderColor:v})}/>
+    </div>:null}
+    {visualTool==="shape"&&isButton?<div className={styles.focusChoices}>
+     {["pill","rounded","square"].map((shape,i)=><button key={shape} type="button"
+      aria-pressed={String(props.buttonShape||"pill")===shape} onClick={()=>edit({buttonShape:shape})}>
+      {["Redondo","Suave","Cuadrado"][i]}</button>)}
+    </div>:null}
+    {visualTool==="buttonStyle"&&isButton?<div className={styles.focusChoices}>
+     {["solid","outline","link"].map((style,i)=><button key={style} type="button"
+      aria-pressed={String(props[block?.type==="ComposeButton"?"style":"buttonStyle"]||"solid")===style}
+      onClick={()=>edit({[block?.type==="ComposeButton"?"style":"buttonStyle"]:style})}>
+      {["Sólido","Contorno","Enlace"][i]}</button>)}
+    </div>:null}
+    {visualTool==="link"&&isButton?<label className={styles.formLabel}>Enlace del botón
+     <input value={String(props[block?.type==="ComposeButton"?"url":"buttonUrl"]||"")}
+      onChange={e=>edit({[block?.type==="ComposeButton"?"url":"buttonUrl"]:e.target.value})}
+      placeholder="https://… o #contacto"/></label>:null}
+    {visualTool==="layout"&&block?.type==="HeroVisual"?<div className={styles.focusFields}>
+     <label className={styles.formLabel}>Diseño de portada
+      <select value={String(props.layout||"split")} onChange={e=>edit({layout:e.target.value})}>
+       <option value="cover">Imagen de fondo completo</option><option value="split">Imagen al lado</option>
+      </select>
+     </label>
+     <BuilderImageField value={String(props.image||"")} onChange={url=>edit({image:url,layout:"cover"})}/>
+    </div>:null}
+    {visualTool==="shade"&&block?.type==="HeroVisual"?<div className={styles.focusChoices}>
+     {["soft","medium","strong"].map((shade,i)=><button type="button" key={shade}
+      aria-pressed={String(props.shade||"medium")===shade} onClick={()=>edit({shade})}>
+      {["Suave","Medio","Intenso"][i]}</button>)}
+    </div>:null}
+    {visualTool==="surface"&&selection?.kind==="section"?<label className={styles.formLabel}>Fondo de sección
+     <select value={String(props[block?.type==="CTA"?"sectionSurface":"surface"]||"light")}
+      onChange={e=>edit({[block?.type==="CTA"?"sectionSurface":"surface"]:e.target.value})}>
+      <option value="light">Claro</option><option value="soft">Suave</option><option value="dark">Oscuro</option>
+      {block?.type==="CTA"?<option value="accent">Marca</option>:null}
+     </select></label>:null}
+    {visualTool==="arrange"?<div className={styles.focusFields}>
+     <div className={styles.focusChoices}>
+      <button type="button" onClick={()=>onChange(moveBlock(data,selection!.id,-1))}><ArrowUp size={18}/> Subir</button>
+      <button type="button" onClick={()=>onChange(moveBlock(data,selection!.id,1))}><ArrowDown size={18}/> Bajar</button>
+     </div>
+     <button className={styles.focusAction} type="button" onClick={()=>pickTool("duplicate")}><Copy size={18}/> Duplicar sección</button>
+     <button className={styles.focusAction} type="button" onClick={()=>pickTool("add")}><Plus size={18}/> Añadir debajo</button>
+     <button className={styles.focusDestructive} type="button" onClick={()=>pickTool("delete")}><Trash2 size={18}/> Eliminar sección</button>
+    </div>:null}
+
    </div>:null}
   </div>:null}
   {error&&errorDismissed!==error?<div className={styles.statusAlert} role="alert">
    <span>{error}</span><button aria-label="Cerrar aviso" onClick={()=>setErrorDismissed(error)}><X size={15}/></button>
   </div>:noticeVisible?<div className={styles.statusToast} role="status">{notice}</div>:null}
-    {selection&&!drawer&&!preview&&block&&props&&visualTool==="actions"?<div className={styles.floating}
-   role="dialog" aria-label="Editar elemento seleccionado"
-   style={{"--float-x":selection.x+"px","--float-y":selection.y+"px"} as CSSProperties}>
-   <div className={styles.floatHead}>
-    <span>{selection.kind==="image"?"Imagen":selection.kind==="button"?"Botón":selection.kind==="text"?"Texto":"Sección"}</span>
-    <button aria-label="Cerrar edición" onClick={closePopup}><X size={17}/></button>
-   </div>
-   <div className={styles.sectionQuickActions}>
-    <button type="button" aria-label="Añadir sección debajo" className={styles.insertBelow} onClick={()=>{
-     setInsertAfterId(selection.id);
-     setDrawer(true);
-     setSection("create");
-     closePopup();
-    }}><Plus size={17}/> Añadir</button>
-    <button type="button" className={styles.duplicateSection} onClick={()=>{
-     const copy=duplicateBlock(data,selection.id);
-     if(!copy.newId)return;
-     onChange(copy.data);
-     setSelection({...selection,id:copy.newId,kind:"section",target:undefined,index:undefined,key:undefined});
-    }}><Copy size={17}/> Duplicar</button>
-    <button type="button" className={styles.dragSection}
-     onPointerDown={beginDrag} onPointerMove={moveDrag}
-     onPointerUp={endDrag} onPointerCancel={cancelDrag}
-     onLostPointerCapture={cancelDrag} aria-label="Arrastrar sección para cambiar su posición">
-     <GripVertical size={18}/> Mover
-    </button>
-    {dragHint?<span className={styles.dragHint} role="status">{dragHint}</span>:null}
-    <button type="button" className={styles.deleteSection}
-     onClick={()=>setDeleteTarget({id:selection.id,label:String(props.title||"esta sección").slice(0,70)})}>
-     <Trash2 size={17}/> Eliminar
-    </button>
-   </div>
-   {selection.kind==="image"&&image?<div className={styles.floatContent}>
-    <div className={styles.chips}>
-     <button onClick={()=>setAdjust("actions")} aria-pressed={adjust==="actions"}><ImagePlus size={15}/> Reemplazar</button>
-     <button onClick={()=>setAdjust("image")} aria-pressed={adjust==="image"}><SlidersHorizontal size={15}/> Ajustar</button>
-     <button onClick={()=>setAdjust("move")} aria-pressed={adjust==="move"}><Layers size={15}/> {block.type==="OfferingGrid"?"Mover tarjeta":"Mover"}</button>
-    </div>
-    {adjust==="actions"?<BuilderImageField value={targetImage(props,image)}
-     onChange={url=>editImage(image,{[image.field]:url})}/>:null}
-    {adjust==="image"?<div className={styles.controls}>
-     {block.type==="HeroVisual"?<label className={styles.formLabel}>
-      Encuadre de la portada
-      <select value={String(props.imagePosition||"center")}
-       onChange={e=>edit({imagePosition:e.target.value})}>
-       <option value="center">Centro</option>
-       <option value="top">Arriba</option>
-       <option value="bottom">Abajo</option>
-       <option value="left">Izquierda</option>
-       <option value="right">Derecha</option>
-      </select>
-     </label>:null}
-     <RangeField label="Transparencia" min={0} max={100} value={targetSettings(props,image).imageOpacity??0}
-      onChange={v=>editImage(image,{imageOpacity:v})}/>
-     <RangeField label="Esquinas" min={0} max={80} unit="px" value={targetSettings(props,image).imageRadius??16}
-      onChange={v=>editImage(image,{imageRadius:v})}/>
-     <RangeField label="Grosor del borde" min={0} max={12} unit="px" value={targetSettings(props,image).imageBorder??0}
-      onChange={v=>editImage(image,{imageBorder:v})}/>
-     <ColorField label="Color del borde" value={targetSettings(props,image).borderColor}
-      onChange={v=>editImage(image,{borderColor:v})}/>
-    </div>:null}
-    {adjust==="move"?<div className={styles.controls}>
-     {block.type==="OfferingGrid"?<p>Estos controles ajustan la tarjeta completa, incluyendo foto, nombre, descripción y precio.</p>:null}
-     <RangeField label="Mover horizontalmente" min={-250} max={250} unit="px"
-      value={targetSettings(props,image)[device==="mobile"?"imageMoveXMobile":"imageMoveX"]??0}
-      onChange={v=>editImage(image,{[device==="mobile"?"imageMoveXMobile":"imageMoveX"]:v})}/>
-     <RangeField label="Mover verticalmente" min={-250} max={250} unit="px"
-      value={targetSettings(props,image)[device==="mobile"?"imageMoveYMobile":"imageMoveY"]??0}
-      onChange={v=>editImage(image,{[device==="mobile"?"imageMoveYMobile":"imageMoveY"]:v})}/>
-     <RangeField label="Tamaño" min={25} max={100}
-      value={targetSettings(props,image)[device==="mobile"?"imageWidthMobile":"imageWidth"]??100}
-      onChange={v=>editImage(image,{[device==="mobile"?"imageWidthMobile":"imageWidth"]:v})}/>
-    </div>:null}
-   </div>:null}
-   {selection.kind!=="image"?<div className={styles.floatContent}>
-    {selection.kind!=="section"?<div className={styles.controls}>
-     <label className={styles.formLabel}>Editar {LABELS[selection.key||""]||"texto"}
-      <textarea rows={2} value={selection.index!==undefined&&Array.isArray(props.items)?
-       String((props.items[selection.index] as Record<string,unknown>)?.[selection.key||"title"]||""):
-       String(props[selection.key||"title"]||"")}
-       onChange={e=>editText(selection.key||"title",e.target.value,selection.index)}/>
-     </label>
-
-     {selection.index===undefined&&textFields.length>1?<label className={styles.formLabel}>Campo
-      <select value={selection.key||"title"} onChange={e=>setSelection(v=>v?{...v,key:e.target.value}:null)}>
-       {textFields.map(key=><option key={key} value={key}>{LABELS[key]||key}</option>)}
-      </select></label>:null}
-     {selection.kind==="button"&&selection.index===undefined?<label className={styles.formLabel}>
-      Destino del botón
-      <input type="text" value={String(props[block.type==="ComposeButton"?"url":"buttonUrl"]||"")}
-       placeholder="https://... o #contacto"
-       onChange={e=>edit({[block.type==="ComposeButton"?"url":"buttonUrl"]:e.target.value})}/>
-     </label>:null}
-     {selection.kind==="button"&&selection.index===undefined&&
-      ["HeroVisual","ComposeButton","CTA"].includes(block.type)?<>
-      <div className={styles.buttonShape}>
-       <strong>Forma del botón</strong>
-       <div role="group" aria-label="Forma del botón">
-        {([{id:"pill",label:"Redondo"},{id:"rounded",label:"Suave"},{id:"square",label:"Cuadrado"}] as const).map(shape=>
-         <button key={shape.id} type="button" aria-pressed={String(props.buttonShape||"pill")===shape.id}
-          onClick={()=>edit({buttonShape:shape.id,...(block.type==="CTA"?{buttonRadius:0}:{})})}>
-          <span className={styles.buttonShapePreview} data-shape={shape.id}/>{shape.label}
-         </button>)}
-       </div>
-      </div>
-      <RangeField label="Tamaño del texto del botón" min={11} max={36} unit="px"
-       value={typeof props.buttonFontSize==="number"&&props.buttonFontSize>=11?props.buttonFontSize:13}
-       onChange={v=>edit({buttonFontSize:v})}/>
-      <ColorField label="Color del texto" value={props.buttonTextColor}
-       allowTransparent onChange={v=>edit({buttonTextColor:v})}/>
-      <ColorField label="Color de fondo del botón" value={props.buttonColor}
-       allowTransparent onChange={v=>edit({buttonColor:v})}/>
-     </>:null}
-     {activeTypography?<TextStyleEditor values={activeTypography.values} keys={activeTypography.keys}
-      onPatch={patch=>{
-       if(activeTypography.index!==null&&Array.isArray(props.items)){
-        const items=(props.items as Record<string,unknown>[]).map((entry,i)=>
-         i===activeTypography.index?{...entry,...patch}:entry);
-        edit({items},`style:${selection.id}:${activeTypography.index}`);
-       }else edit(patch,`style:${selection.id}:${selectedTextKey}`);
-      }}/>:null}
-    </div>:<div className={styles.controls}>
-     {textFields.slice(0,8).map(key=><label key={key} className={styles.formLabel}>{LABELS[key]||key}
-      <textarea rows={2} value={String(props[key]||"")} onChange={e=>editText(key,e.target.value)}/>
-     </label>)}
-     {Array.isArray(props.items)?<details><summary>Productos y elementos</summary>
-      {(props.items as Record<string,unknown>[]).map((entry,index)=><div key={index} className={styles.itemRow}>
-       <strong>Elemento {index+1}</strong>
-       {["title","description","price","caption"].filter(k=>typeof entry[k]==="string").map(key=>
-        <label key={key} className={styles.formLabel}>{LABELS[key]||key}
-         <input value={String(entry[key]||"")} onChange={e=>editText(key,e.target.value,index)}/>
-        </label>)}
-       {typeof entry.image==="string"?<BuilderImageField value={entry.image}
-        onChange={url=>onChange(patchBuilderImage(data,selection.id,{field:"image",index},{image:url}))}/>:null}
-       <button type="button" className={styles.removeItem} onClick={()=>edit({items:(props.items as Array<unknown>).filter((_,i)=>i!==index)})}>Quitar elemento</button>
-      </div>)}
-      <button type="button" onClick={()=>{
-       const node=block.type==="PhotoGallery"?{id:crypto.randomUUID(),caption:"",image:"",alt:""}:
-        block.type==="FAQList"?{id:crypto.randomUUID(),question:"Nueva pregunta",answer:"Respuesta"}:
-        {id:crypto.randomUUID(),title:"Nuevo elemento",description:"",image:"",alt:"",price:""};
-       edit({items:[...(props.items as Array<unknown>),node]});
-      }}><Plus size={15}/> Agregar elemento</button>
-     </details>:null}
-     {textFields.length===0&&!Array.isArray(props.items)?<p>Selecciona un texto o una imagen de esta sección para modificarla.</p>:null}
-    </div>}
-    <div className={styles.chips}>
-     <button type="button" onClick={()=>onChange(moveBlock(data,selection.id,-1))}><ArrowUp size={15}/> Subir</button>
-     <button type="button" onClick={()=>onChange(moveBlock(data,selection.id,1))}><ArrowDown size={15}/> Bajar</button>
-    </div>
-   </div>:null}
-   {block.type==="HeroVisual"?<div className={styles.floatContent}>
-    <label className={styles.formLabel}>Diseño de portada
-     <select value={props.layout==="cover"?"cover":"split"}
-      onChange={e=>edit({layout:e.target.value})}>
-      <option value="cover">Imagen de fondo</option>
-      <option value="split">Imagen al lado</option>
-     </select>
-    </label>
-    <span className={styles.formLabel}>Imagen de portada</span>
-    <BuilderImageField value={String(props.image||"")}
-     onChange={url=>edit({image:url,layout:"cover"})}/>
-   </div>:null}
-
-  </div>:null}
   {deleteTarget?<div className={styles.confirmScrim}>
    <section className={styles.confirmDialog} role="alertdialog" aria-modal="true"
     aria-labelledby="vmv-remove-section-title" aria-describedby="vmv-remove-section-description"
