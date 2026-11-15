@@ -6,7 +6,6 @@ import {imageSettingsField} from "@/app/web-studio/BuilderImageControls";
 import {normalizeImageSettings,imageSettingsStyle} from "./web-builder-images";
 import {safeWebImageUrl} from "./web-services-site";
 import {buttonAppearance} from "./web-builder-button-appearance";
-import {ArrowUpRight} from "lucide-react";
 
 export type VisualBlockName="HeroVisual"|"OfferingGrid"|"PhotoGallery"|"ProcessSteps"|"ProjectShowcase"|"HoursArea"|"TeamGrid"|"PricingList"|"BeforeAfter"|"FAQList";
 type VisualProps=Record<string,unknown>;
@@ -64,7 +63,7 @@ export const visualBlocks:Config["components"]={
    height:{type:"select",options:[{label:"Normal",value:"normal"},{label:"Alta",value:"tall"}]},
    buttonStyle:{type:"select",options:[{label:"Sólido",value:"solid"},{label:"Contorno",value:"outline"},{label:"Enlace",value:"link"}]},
     buttonColor:colorEditorField("Color de fondo del botón"),
-    buttonTextColor:colorEditorField("Color de texto y flecha"),
+    buttonTextColor:colorEditorField("Color del texto"),
     buttonFontSize:numericEditorField("fontSize")
   },
   defaultProps:{layout:"split",eyebrow:"",title:"Presenta tu negocio",description:"",buttonText:"Contactar",buttonUrl:"#contacto",image:"",imageAlt:"",align:"left",imagePosition:"center",shade:"medium",height:"normal",buttonStyle:"solid",buttonColor:"",buttonTextColor:"",buttonFontSize:0,imageWidth:100,imageRadius:0,imageOpacity:0,imageBorder:0,borderColor:"#30243F",imageMoveX:0,imageMoveY:0,titleFont:"site",titleColor:"",titleFontSize:0,titleShadow:"none",titleWeight:"normal",titleItalic:"no",titleLink:""},
@@ -122,7 +121,7 @@ export const visualBlocks:Config["components"]={
      {description?<p>{description}</p>:null}
      <a className="vmv-site-button" data-button-style={buttonStyle||"solid"}
        data-vmv-override-background={appearance.hasBackground} data-vmv-override-foreground={appearance.hasForeground}
-       style={appearance.style} href={href}>{buttonText||"Contactar"} <ArrowUpRight size={18} aria-hidden="true"/></a>
+       style={appearance.style} href={href}>{buttonText||"Contactar"}</a>
     </div>
     {layout!=="cover"&&(media||puck.isEditing)?<div className="vmv-hero-image">
      <BuilderEditableImage id={id} src={image} alt={imageAlt||"Imagen de portada"} settings={settings}
