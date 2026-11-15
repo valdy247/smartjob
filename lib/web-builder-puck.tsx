@@ -1,4 +1,4 @@
-import {FieldGroup,FieldTab,type Config,type Data} from "@puckeditor/core";
+import type {Config,Data} from "@puckeditor/core";
 import BuilderEditableImage from "@/app/web-studio/BuilderEditableImage";
 import {normalizeImageSettings} from "./web-builder-images";
 import type {CSSProperties} from "react";
