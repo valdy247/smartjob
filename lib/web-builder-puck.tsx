@@ -12,7 +12,6 @@ import ThemeSwatches,{AccentPicker} from "@/app/web-studio/ThemeSwatches";
 import {visualBlocks,VISUAL_BLOCK_NAMES,normalizeVisualProps,type VisualBlockName} from "./web-builder-visual-blocks";
 import {compositionBlocks,COMPOSE_BLOCK_NAMES,COMPOSE_SLOTS,normalizeComposeProps,type ComposeBlockName} from "./web-builder-composition";
 import {buttonAppearance} from "./web-builder-button-appearance";
-import {ArrowUpRight} from "lucide-react";
 
 type ButtonProps={label?:string;url?:string};
 function safeLink(value:unknown):string{
@@ -27,7 +26,7 @@ function safeLink(value:unknown):string{
  return "#contacto";
 }
 function ContactButton({label,url}:ButtonProps){
- return <a className="vmv-site-button" href={safeLink(url)}>{label||"Contáctanos"} <span>↗</span></a>;
+ return <a className="vmv-site-button" href={safeLink(url)}>{label||"Contáctanos"}</a>;
 }
 export const VMV_BUILDER_BLOCKS=[
  "Hero","Heading","Text","Image","Services","Benefits","CTA","Quote","Spacer","FAQ","Contact",...VISUAL_BLOCK_NAMES,...COMPOSE_BLOCK_NAMES
@@ -342,7 +341,7 @@ export const builderConfig:Config={
        data-vmv-override-background={buttonAppearance(settings).hasBackground}
        data-vmv-override-foreground={buttonAppearance(settings).hasForeground}
        style={{...calloutButtonStyles(settings),...buttonAppearance(settings).style}}>
-       {buttonText||"Contáctanos"} <ArrowUpRight size={18} aria-hidden="true"/>
+       {buttonText||"Contáctanos"}
       </a>
      </div>
     </BuilderSectionTargets>
