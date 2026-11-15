@@ -389,6 +389,12 @@ export default function MobileVisualStudio({
       <select value={selection.key||"title"} onChange={e=>setSelection(v=>v?{...v,key:e.target.value}:null)}>
        {textFields.map(key=><option key={key} value={key}>{LABELS[key]||key}</option>)}
       </select></label>:null}
+     {selection.kind==="button"&&selection.index===undefined?<label className={styles.formLabel}>
+      Destino del botón
+      <input type="text" value={String(props[block.type==="ComposeButton"?"url":"buttonUrl"]||"")}
+       placeholder="https://... o #contacto"
+       onChange={e=>edit({[block.type==="ComposeButton"?"url":"buttonUrl"]:e.target.value})}/>
+     </label>:null}
      {selection.index===undefined&&["ComposeHeading","ComposeText","HeroVisual"].includes(block.type)?<>
       <RangeField label="Tamaño de texto" min={12} max={100} unit="px" value={props.fontSize??props.titleFontSize??32}
        onChange={v=>edit(block.type==="HeroVisual"?{titleFontSize:v}:{fontSize:v})}/>
