@@ -168,3 +168,15 @@
 @media(max-width:370px){
  .floating{left:9px!important;width:calc(100vw - 18px)}
 }
+
+/* Image-first SEO editor: compact selectable thumbnails with an accessible detail field. */
+.seoImageGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:10px 4px;}
+.drawerBody .seoImageTile{display:flex;flex-direction:column;gap:5px;min-width:0;min-height:0;padding:5px;border:2px solid #e6dced;border-radius:12px;background:#fff;text-align:center;}
+.seoImageTile img,.seoImageEmpty{display:flex;width:100%;aspect-ratio:1.15;object-fit:cover;border-radius:7px;background:#f3edf8;align-items:center;justify-content:center;color:#756388;}
+.seoImageEmpty{flex-direction:column;gap:3px;font-size:10px;}
+.seoImageTile span:last-child{font-size:11px;font-weight:800;color:#5a496a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+.drawerBody .seoImageTile[aria-pressed="true"]{border-color:#8250d1;background:#f8f2ff;box-shadow:0 0 0 2px #e8d9fb;}
+.seoSelected{display:flex;flex-direction:column;gap:7px;margin:12px 4px;padding:12px;background:#faf7fd;border:1px solid #e7dbf3;border-radius:13px;}
+.seoSelected strong{font-size:13px;color:#38294b;}
+.seoSelected small{font-size:11px;color:#77688a;line-height:1.5;}
+.seoSelected .formLabel{margin:0;}
