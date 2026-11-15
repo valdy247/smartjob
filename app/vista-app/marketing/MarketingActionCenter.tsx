@@ -153,6 +153,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
 
  const [consent,setConsent]=useState(false);
  const [busy,setBusy]=useState(false);
+ const [submissionQuiz,setSubmissionQuiz]=useState<{seed:string;processing:boolean}|null>(null);
  const [loading,setLoading]=useState(false);
  const [message,setMessage]=useState("");
  const [error,setError]=useState("");
@@ -523,6 +524,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   if(selected==="seo_improvement"&&!site.trim()){setWizardStep(1);setWizardError(translate("marketing.action.enter_the_website_you_want_to_improve"));submitting.current=false;return;}
   if(site.trim()&&!websiteAddress(site)){setWizardStep(1);setWizardError(translate("marketing.action.the_website_url_must_be_valid"));submitting.current=false;return;}
   if(!consent){setWizardError(translate("marketing.action.check_the_authorization_box_so_we_can_process_your_re"));submitting.current=false;return;}
+  setSubmissionQuiz({seed:requestId,processing:true});
   setBusy(true);
   const uploaded:string[]=[];
   let insertAttempted=false;
@@ -648,7 +650,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   }catch(e){
    if(!inserted&&!insertAttempted&&uploaded.length)await client.storage.from("vmv-google-media").remove(uploaded);
    setWizardError(translate("marketing.feedback.submitFailed",{reason:errorMessage(e,translate("marketing.action.try_again"))}));
-  }finally{setBusy(false);submitting.current=false;}
+  }finally{setSubmissionQuiz(current=>current?{...current,processing:false}:null);setBusy(false);submitting.current=false;}
  };
  const accept=async(req:RequestRow)=>{
   if(!client||!user||req.owner_id!==user.id||req.status!=="quoted"||req.quoted_price_cents===null)return;
@@ -882,7 +884,6 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       <button type="button" className={styles.wizardPrimary} onClick={goNext}>{selected==="google_profile"&&wizardStep===2&&googleStep<googleStepNames.length-1?translate("marketing.action.next"):translate("marketing.action.continue")} <ArrowRight size={16}/></button>}
     </div>:null}
    </>}
-   {wizardStep===3&&busy?<ScienceWaitQuiz en={en} seed={requestId}/>:null}
   </section>:null}
   {requestsOnly?<section className={styles.panel} id="vmv-marketing-history">
    <div className={styles.panelTop}><div><span>{translate("marketing.ui.tracking").replace(/^02\s*·\s*/,"")}</span><h3>{translate("marketing.ui.requests")}</h3></div><button type="button" onClick={()=>void refresh()} disabled={loading||!user} className={styles.refresh}><RefreshCw size={16}/> {translate("marketing.ui.refresh")}</button></div>
@@ -965,6 +966,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    }
   </section>:null}
   {!requestsOnly&&(wizardStep===0||wizardStep===4)?<div className={styles.bottomNote}><HandHeart size={17}/><p>{translate("marketing.ui.external")}</p></div>:null}
+  {submissionQuiz?<ScienceWaitQuiz key={submissionQuiz.seed} en={en} seed={submissionQuiz.seed} processing={submissionQuiz.processing} onContinue={()=>setSubmissionQuiz(null)}/>:null}
   {message?<p role="status" className={styles.notice}>{message}</p>:null}
   {error?<p role="alert" className={styles.error}>{error}</p>:null}
  </div>;
