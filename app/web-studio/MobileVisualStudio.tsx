@@ -5,8 +5,8 @@ import {Render,type Config,type Data} from "@puckeditor/core";
 import {
  ArrowDown,ArrowLeft,ArrowUp,Check,ChevronDown,ChevronRight,Eye,EyeOff,
  FilePlus2,Globe,ImagePlus,Layers,Menu,MessageCircle,Monitor,Palette,
- Plus,Save,Settings2,SlidersHorizontal,Smartphone,
- Sparkles,Trash2,Type,Upload, X
+ Plus,Redo2,Save,Settings2,SlidersHorizontal,Smartphone,
+ Sparkles,Trash2,Type,Undo2,Upload, X
 } from "lucide-react";
 import {builderConfig,normalizeBuilderDocument} from "@/lib/web-builder-puck";
 import {imageTargets,imageTargetIndex,patchBuilderImage,targetImage,targetSettings,type ImageTarget} from "@/lib/web-builder-images";
@@ -92,6 +92,33 @@ function moveBlock(data:Data,id:string,step:number):Data{
  }
  const content=visit(data.content);
  return moved?{...data,content}:data;
+}
+/** Insert immediately after the selected block, including within column/container slots. */
+function insertBlockAfter(data:Data,id:string,newBlock:Item):Data{
+ let inserted=false;
+ function visit(nodes:Data["content"]):Data["content"]{
+  let changed=false;
+  const next:Data["content"]=[];
+  for(const node of nodes){
+   if(inserted){next.push(node);continue;}
+   const props=node.props as Record<string,unknown>;
+   if(props.id===id){
+    next.push(node,newBlock);inserted=true;changed=true;continue;
+   }
+   let updated=props;
+   for(const slot of ["content","left","right","third"]){
+    if(inserted)break;
+    if(Array.isArray(props[slot])){
+     const child=visit(props[slot] as Data["content"]);
+     if(child!==props[slot]){updated={...updated,[slot]:child};changed=true;}
+    }
+   }
+   next.push(updated===props?node:{...node,props:updated});
+  }
+  return changed?next:nodes;
+ }
+ const content=visit(data.content);
+ return inserted?{...data,content}:data;
 }
 function removeBlock(data:Data,id:string):Data{
  let removed=false;
@@ -180,7 +207,7 @@ function getTextTarget(p:Record<string,unknown>,clicked:Element,kind:string):{ke
 }
 
 export default function MobileVisualStudio({
- data,onChange,siteName,siteSlug,siteCategory,siteId,pages,pageId,
+ data,onChange:onDocumentChange,siteName,siteSlug,siteCategory,siteId,pages,pageId,
  onBack,onChoosePage,onCreatePage,onPublish,onSave,
  busy=false,title,description,onTitleChange,onDescriptionChange,
  inquiriesEnabled,onToggleInquiries,onDomains,onHistory,
@@ -207,12 +234,54 @@ export default function MobileVisualStudio({
  const [device,setDevice]=useState<"mobile"|"desktop">("mobile");
  const [preview,setPreview]=useState(false);
  const [selection,setSelection]=useState<Pick|null>(null);
+ const [insertAfterId,setInsertAfterId]=useState<string|null>(null);
  const [deleteTarget,setDeleteTarget]=useState<{id:string;label:string}|null>(null);
  const [adjust,setAdjust]=useState<"actions"|"image"|"move"|"text">("actions");
  const [seoImageKey,setSeoImageKey]=useState("");
  const [newName,setNewName]=useState("");
  const [noticeVisible,setNoticeVisible]=useState(false);
  const [errorDismissed,setErrorDismissed]=useState("");
+ const historyRef=useRef<{past:Data[];future:Data[];group:string|null;time:number}>({
+  past:[],future:[],group:null,time:0
+ });
+ const latestDocument=useRef(data);
+ const [historyAvailable,setHistoryAvailable]=useState({undo:false,redo:false});
+ // The mobile canvas is not Puck's editor, so give it a bounded, local draft history.
+ const onChange=(next:Data,group?:string)=>{
+  const current=latestDocument.current;
+  if(JSON.stringify(current)===JSON.stringify(next))return;
+  const h=historyRef.current;
+  const now=Date.now();
+  if(!group||h.group!==group||now-h.time>900)h.past=[...h.past.slice(-39),current];
+  h.future=[];
+  h.group=group||null;
+  h.time=now;
+  latestDocument.current=next;
+  setHistoryAvailable({undo:h.past.length>0,redo:false});
+  onDocumentChange(next);
+ };
+ const navigateHistory=(direction:"undo"|"redo")=>{
+  const h=historyRef.current;
+  const source=direction==="undo"?h.past:h.future;
+  const previous=source.pop();
+  if(!previous)return;
+  const destination=direction==="undo"?h.future:h.past;
+  destination.push(latestDocument.current);
+  if(destination.length>40)destination.shift();
+  latestDocument.current=previous;
+  h.group=null;h.time=0;
+  setHistoryAvailable({undo:h.past.length>0,redo:h.future.length>0});
+  onDocumentChange(previous);
+  setSelection(null);
+  setDeleteTarget(null);
+  setInsertAfterId(null);
+ };
+ // The selected website/page has its own independent undo history.
+ useEffect(()=>{
+  historyRef.current={past:[],future:[],group:null,time:0};
+  latestDocument.current=data;
+  setHistoryAvailable({undo:false,redo:false});
+ },[siteId,pageId]);
  useEffect(()=>{
   if(!notice){setNoticeVisible(false);return;}
   setNoticeVisible(true);
@@ -234,19 +303,21 @@ export default function MobileVisualStudio({
  const seoImage=imageList.find(item=>item.key===seoImageKey)||imageList[0];
  const page=pages.find(p=>p.id===pageId);
  const rootPatch=(patch:Record<string,unknown>)=>onChange({...data,root:{...data.root,props:{...data.root?.props,...patch}}});
- const edit=(patch:Record<string,unknown>)=>{if(selection)onChange(patchBlock(data,selection.id,patch));};
+ const edit=(patch:Record<string,unknown>,group?:string)=>{
+  if(selection)onChange(patchBlock(data,selection.id,patch),group);
+ };
  const editText=(key:string,value:string,index?:number)=>{
   if(!props)return;
   if(index!==undefined&&Array.isArray(props.items)){
    const items=props.items.map((entry:Record<string,unknown>,i:number)=>i===index?{...entry,[key]:value}:entry);
-   edit({items});
-  }else edit({[key]:value});
+   edit({items},`text:${selection?.id}:${index}:${key}`);
+  }else edit({[key]:value},`text:${selection?.id}:${key}`);
  };
  const editImage=(target:ImageTarget,patch:Record<string,unknown>)=>{
   if(selection)onChange(patchBuilderImage(data,selection.id,target,patch));
  };
  const closePopup=()=>{setSelection(null);setAdjust("actions");};
- const closeDrawer=()=>{setDrawer(false);setSection("home");};
+ const closeDrawer=()=>{setDrawer(false);setSection("home");setInsertAfterId(null);};
  function selectAt(target:Element,x:number,y:number){
   const wrapper=target.closest<HTMLElement>("[data-vmv-edit-block]");
   const id=wrapper?.dataset.vmvEditBlock;
@@ -335,7 +406,7 @@ export default function MobileVisualStudio({
     categoryId={siteCategory} services={[]}/>
   </section>:null}
  </WebsiteChrome>;
- const menuAction=(next:Section)=>{setSection(next);closePopup();if(next==="domain")onDomains();if(next==="history")onHistory();};
+ const menuAction=(next:Section)=>{setInsertAfterId(null);setSection(next);closePopup();if(next==="domain")onDomains();if(next==="history")onHistory();};
  const sectionLabel=(part:Section)=>({home:"Editor",pages:"Páginas",create:"Añadir elemento",
   appearance:"Colores y diseño",seo:"SEO e imágenes",connections:"Chat y agente",
   domain:"Dominio",history:"Versiones"})[part];
@@ -343,6 +414,16 @@ export default function MobileVisualStudio({
   <button className={styles.menuButton} type="button" aria-label="Abrir menú del editor"
    aria-expanded={drawer} onClick={()=>{setDrawer(true);closePopup();setSection("home");}}>
    <Menu size={23}/></button>
+  {!preview&&!drawer?<div className={styles.historyBar} role="group" aria-label="Historial del editor">
+   <button type="button" disabled={!historyAvailable.undo||Boolean(deleteTarget)}
+    aria-label="Deshacer último cambio" onClick={()=>navigateHistory("undo")}>
+    <Undo2 size={17}/><span>Deshacer</span>
+   </button>
+   <button type="button" disabled={!historyAvailable.redo||Boolean(deleteTarget)}
+    aria-label="Rehacer cambio" onClick={()=>navigateHistory("redo")}>
+    <Redo2 size={17}/><span>Rehacer</span>
+   </button>
+  </div>:null}
   <div className={device==="desktop"?styles.desktopFrame:styles.mobileFrame}>
    <div className={styles.viewport} ref={pageSurface}
     onPointerDownCapture={pointerDown} onPointerMoveCapture={pointerMove}
@@ -497,6 +578,12 @@ export default function MobileVisualStudio({
      onChange={url=>edit({image:url,layout:"cover"})}/>
    </div>:null}
    <div className={styles.floatContent}>
+    <button type="button" className={styles.insertBelow} onClick={()=>{
+     setInsertAfterId(selection.id);
+     setDrawer(true);
+     setSection("create");
+     closePopup();
+    }}><Plus size={17}/> Añadir debajo</button>
     <button type="button" className={styles.deleteSection}
      onClick={()=>setDeleteTarget({id:selection.id,label:String(props.title||"esta sección").slice(0,70)})}>
      <Trash2 size={17}/> Eliminar sección
@@ -563,12 +650,16 @@ export default function MobileVisualStudio({
       </form>
      </>:null}
      {section==="create"?<>
-      <p className={styles.help}>El nuevo elemento se añadirá al final de la página.</p>
+      <p className={styles.help}>{insertAfterId?"Añadir debajo de la sección seleccionada.":"El nuevo elemento se añadirá al final de la página."}</p>
       {ADDS.map(o=><button key={o.type} onClick={()=>{
        const spec=builderConfig.components?.[o.type] as {defaultProps?:Record<string,unknown>}|undefined;
        const defaults=JSON.parse(JSON.stringify(spec?.defaultProps||{})) as Record<string,unknown>;
-       const node={type:o.type,props:{...defaults,id:crypto.randomUUID()}};
-       onChange({...data,content:[...data.content,node]});
+       const node={type:o.type,props:{...defaults,id:crypto.randomUUID()}} as Item;
+       if(insertAfterId){
+        const next=insertBlockAfter(data,insertAfterId,node);
+        if(next===data)return;
+        onChange(next);
+       }else onChange({...data,content:[...data.content,node]});
        closeDrawer();
       }}><Plus/> {o.label}<ChevronRight/></button>)}
      </>:null}
