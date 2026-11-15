@@ -115,7 +115,7 @@ export function ContactsPanel({session,onBack,initialPhone="",startInForm=false,
   {!embedded?<Pressable accessibilityRole="button" onPress={onBack} style={styles.back}><Text style={styles.backText}>‹  Volver a llamadas</Text></Pressable>:null}
   <View style={embedded?styles.compactTitleRow:styles.titleRow}>
    {embedded?<Text style={styles.compactCount}>{contacts.length} contacto{contacts.length===1?"":"s"}</Text>:
-   <View style={{flex:1}}><Text style={styles.kicker}>SMART CALL / AGENDA</Text><Text style={styles.title}>Contactos<Text style={{color:"#00BB91"}}>.</Text></Text>
+   <View style={{flex:1}}><Text style={styles.title}>Contactos<Text style={{color:"#00BB91"}}>.</Text></Text>
    <Text style={styles.caption}>{contacts.length} contactos guardados en VMV</Text></View>}
    {!formOpen?<Pressable accessibilityRole="button" accessibilityLabel="Nuevo contacto" onPress={newContact} style={styles.plus}><Text style={styles.plusText}>+</Text></Pressable>:null}
   </View>
