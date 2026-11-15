@@ -30,12 +30,21 @@ function intakeFromBody(value:unknown):SiteIntake|null{
  }).filter(p=>p.title):[];
  const offeringItems=Array.isArray(v.offerings)?v.offerings.slice(0,25)
   .map((x:unknown)=>str(x,120)).filter(Boolean):[];
+ const visual=asRecord(v.design),features=asRecord(visual.features);
+ const colorValues=Array.isArray(visual.colors)?visual.colors.filter((x:unknown)=>typeof x==="string"&&/^#[0-9a-f]{6}$/i.test(x)).slice(0,3):[];
+ const design=colorValues.length===3&&new Set(colorValues.map(c=>c.toLowerCase())).size===3?{
+  colors:colorValues,
+  font:(["modern","editorial","rounded","geometric"].includes(String(visual.font))?visual.font:"modern") as "modern"|"editorial"|"rounded"|"geometric",
+  imageStyle:(["rounded","square","pill","bordered"].includes(String(visual.imageStyle))?visual.imageStyle:"rounded") as "rounded"|"square"|"pill"|"bordered",
+  features:{inventory:features.inventory===true,booking:features.booking===true,chat:features.chat===true},
+  chatMode:(features.chat===true&&visual.chatMode==="inbox"?"inbox":"off") as "inbox"|"off"
+ }:undefined;
  return {
   business,categoryId,objective,offering,products,
   phone:str(v.phone,36),email:str(v.email,180),city:str(v.city,180),
   about:str(v.about,500),logo:safeWebImageUrl(str(v.logo,500))||"",socials:normalizeSocialLinks(v.socials),
   photos:Array.isArray(v.photos)?v.photos.slice(0,12).map((x:unknown)=>safeWebImageUrl(str(x,500))||"").filter(Boolean):[],
-  offerings:offeringItems
+  offerings:offeringItems,design
  };
 }
 function configured(){
