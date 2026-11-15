@@ -77,6 +77,7 @@ export default function WebBuilderWorkspace(){
  const [creationMode,setCreationMode]=useState<"templates"|"ai">("templates");
  useEffect(()=>{setCreationMode(new URLSearchParams(window.location.search).get("mode")==="ai"?"ai":"templates");},[]);
  const [mobileSettings,setMobileSettings]=useState(false);
+ const [mobileAdvanced,setMobileAdvanced]=useState(false);
  const [mobilePageForm,setMobilePageForm]=useState(false);
  const [mobilePageMenu,setMobilePageMenu]=useState(false);
  const workspaceRef=useRef<HTMLDivElement|null>(null);
@@ -712,6 +713,10 @@ export default function WebBuilderWorkspace(){
        onClick={()=>{setMobilePageMenu(false);setMobileSettings(true);setMobilePageForm(false);}}>
        <Settings2 size={17}/> Ajustes y herramientas
       </button>
+      <button type="button" role="menuitem" className={styles.mobileAddPage}
+       onClick={()=>{setMobileAdvanced(v=>!v);setMobilePageMenu(false);}}>
+       <SlidersHorizontal size={17}/> {mobileAdvanced?"Ocultar paneles avanzados":"Paneles avanzados del editor"}
+      </button>
      </div>:null}
     </div>
     <button type="button" className={styles.mobileToolButton} title={previewMode?"Volver a editar":"Vista previa"}
@@ -925,7 +930,7 @@ export default function WebBuilderWorkspace(){
        </WebsiteChrome>
       </div>
      </section>:null}
-     <div ref={puckShellRef} className={compactStudio?styles.puckShell+" "+styles.compactPuck:styles.puckShell} style={{display:previewMode?"none":undefined}}>
+     <div ref={puckShellRef} data-advanced={mobileAdvanced?"true":"false"} className={compactStudio?styles.puckShell+" "+styles.compactPuck:styles.puckShell} style={{display:previewMode?"none":undefined}}>
       <Puck key={page.id+"-"+refreshKey} dictionary={dictionary} config={builderConfig} dnd={{enableDragHandle:true}}
        overrides={{headerActions:({children})=><><BuilderHistoryControls/><BuilderQuickAdd compact={compactStudio} enabled={!previewMode&&view==="editor"}/>{compactStudio?null:children}</>,
         actionBar:({children,label})=><BuilderSelectedActions label={label||"Elemento"}>{children}</BuilderSelectedActions>}}
