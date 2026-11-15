@@ -303,11 +303,12 @@ export default function VMVMobilePreview(){
         </button>
         <span className={styles.homeBrandPill}>VMV <span>✦</span></span>
        </div>
-       <button className={styles.dashboardCallCard} type="button" onClick={()=>showCall("overview")}
+       <button className={styles.dashboardCallCard} type="button" onClick={()=>showCall(summary?.billing.ok&&billing?.subscriptionActive===false?"minutes":"overview")}
         aria-label={translate("dashboard.manageCalls")}>
         <span className={styles.dashboardCallTop}><span>SMART CALL</span><PhoneCall size={24}/></span>
         <strong>{translate("dashboard.callCenter")}</strong>
         <span className={styles.dashboardLineState}>{translate("dashboard.lineStatus")}: {summary?.line.ok?lineState:translate("dashboard.unavailable")}</span>
+        {summary?.billing.ok&&billing?.subscriptionActive===false?<span className={styles.dashboardUpgrade}>{language==="en"?"Upgrade your plan to unlock Smart Call":"Mejorar plan para desbloquear Smart Call"} <ArrowUpRight size={14}/></span>:null}
         <span className={styles.dashboardMetrics}>
          <span><b>{summary?.billing.ok?num(available):"—"}</b><small>{translate("dashboard.minutes")}</small></span>
          <span><b>{summary?.line.ok?num(summary.line.data?.usage.calls):"—"}</b><small>{translate("dashboard.calls")}</small></span>
