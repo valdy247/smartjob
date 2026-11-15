@@ -9,3 +9,18 @@
 .dialog header button{width:40px;height:40px;flex-shrink:0;display:grid;place-items:center;border:1px solid #ece6f1;border-radius:12px;color:#72578c;background:#f9f6fd;cursor:pointer}
 .dialog footer{display:flex;gap:6px;align-items:center;color:#8e8498;font-size:10px}
 @media(max-width:600px){.overlay{padding:0}.dialog{max-height:94dvh;width:100%;border-radius:23px 23px 0 0;padding:18px 17px calc(22px + env(safe-area-inset-bottom))}.launcher{bottom:calc(17px + env(safe-area-inset-bottom))}}
+
+.dialog :global(.ws-inquiry-form){display:flex;flex-direction:column;gap:11px;max-width:100%;margin:0}
+.dialog :global(.ws-inquiry-field-row){display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.dialog :global(.ws-inquiry-form label){display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:800;color:#665377}
+.dialog :global(.ws-inquiry-form input),.dialog :global(.ws-inquiry-form textarea),.dialog :global(.ws-inquiry-form select){box-sizing:border-box;width:100%;min-width:0;min-height:40px;border:1px solid #e7dfed;border-radius:10px;padding:10px;font:inherit;font-size:12px;color:#342a43;background:#fff}
+.dialog :global(.ws-inquiry-form textarea){resize:vertical;min-height:75px}
+.dialog :global(.ws-inquiry-form .ws-inquiry-trap){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+.dialog :global(.ws-inquiry-privacy){font-size:10px;color:#8c829b;line-height:1.45;margin:0}
+.dialog :global(.ws-inquiry-submit),.dialog :global(.ws-inquiry-success button){display:flex;justify-content:center;align-items:center;gap:7px;min-height:44px;border:0;border-radius:12px;background:var(--vmv-accent,#8257d6);color:#fff;padding:12px;font-weight:850;cursor:pointer}
+.dialog :global(.ws-inquiry-submit:disabled){opacity:.5;cursor:not-allowed}
+.dialog :global(.ws-inquiry-error){font-size:11px;color:#a34360;background:#fff0f3;padding:9px;border-radius:8px}
+.dialog :global(.ws-inquiry-success){display:flex;flex-direction:column;gap:10px;padding:8px}
+.dialog :global(.ws-inquiry-success h3){margin:0;font-size:18px}
+.dialog :global(.ws-inquiry-success p){margin:0;font-size:12px;line-height:1.5}
+@media(max-width:420px){.dialog :global(.ws-inquiry-field-row){grid-template-columns:1fr}}
