@@ -125,7 +125,7 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
  return <div className={styles.root}>
   <p className={styles.tip}>{en?"Step":"Paso"} {step+1} {en?"of":"de"} {data.requestRepair?3:2}</p>
   {step===0?<div className={styles.section}>
-   <div className={styles.head}><ScanSearch size={21}/><div><strong>{en?"Your website report":"Diagnóstico de tu web"}</strong><small>{en?"First, we identify what may need improvement.":"Primero encontramos qué se puede mejorar."}</small></div></div>
+   <div className={styles.head}><ScanSearch size={21}/><div><strong>{en?"Your website report":"Diagnóstico de tu web"}</strong></div></div>
    <p className={styles.url}>{site}</p>
    <button type="button" className={styles.primary} onClick={()=>void scan()} disabled={loading}>{loading?(en?"Analyzing… up to 2 minutes":"Analizando… puede tardar hasta 2 minutos"):report?(en?"Scan again":"Repetir análisis"):(en?"Free scan":"Analizar gratis")}</button>
    {loading?<p role="status" className={styles.tip}>{translate("marketing.web.auditBusy")}</p>:null}
@@ -144,7 +144,7 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
      {report?<button type="button" className={styles.waitGameView} onClick={revealAudit}>{en?"View analysis":"Ver análisis"} <ArrowUpRight size={14}/></button>:null}
      {!report&&loading?<small>{en?"We're still checking your website.":"Seguimos revisando tu página."}</small>:null}
     </div>
-    {report?<p className={styles.waitGameReady} role="status"><CheckCircle2 size={15}/>{en?"Your analysis is ready. You can finish answering or view it now.":"Tu análisis está listo. Puedes terminar de responder o verlo ahora."}</p>:null}
+    {report?<p className={styles.waitGameReady} role="status"><CheckCircle2 size={15}/>{en?"Report ready.":"Informe listo."}</p>:null}
    </div>:null}
    {error?<div role="alert" className={styles.warning}><AlertCircle size={16}/><span>{error} {translate("marketing.web.errorHint")}</span></div>:null}
    {report&&showAudit?<div className={styles.report}>
@@ -166,7 +166,7 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
    {!report&&!gameVisible?<a className={styles.external} href={googleReport(site)} target="_blank" rel="noopener noreferrer">{translate("marketing.web.openPageSpeed")} <ArrowUpRight size={16}/></a>:null}
   </div>:null}
   {step===2&&data.requestRepair?<div className={styles.section}>
-   <div className={styles.head}><FileText size={21}/><div><strong>{en?"How is your website managed?":"¿Cómo está hecha tu página?"}</strong><small>{translate("marketing.web.repairReason")}</small></div></div>
+   <div className={styles.head}><FileText size={21}/><div><strong>{en?"How is your website managed?":"¿Cómo está hecha tu página?"}</strong></div></div>
    <label className={styles.field}>{translate("marketing.web.editorLabel")}
     <select value={data.platform} onChange={e=>patch("platform",e.target.value)}>
      {platforms.map(([v,label])=><option value={v} key={v}>{({unknown:translate("marketing.web.platformUnknown"),custom:translate("marketing.web.platformCustom"),other:translate("marketing.web.platformOther")} as Record<string,string>)[v]||label}</option>)}
