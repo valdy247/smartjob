@@ -165,7 +165,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
       {agents.filter(a=>a.revision>0).map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
      </select>
     </label>
-    {selectedAgent?<><p className={styles.hint}>Habilitar ventas no cambia qué agente atiende el teléfono. Debes mantener seleccionado el agente correcto para tu línea.</p>
+    {selectedAgent?<><p className={styles.hint}>Ventas no cambia el agente de tu línea.</p>
      <label>Canal del agente
       <select value={permissions.channel} onChange={e=>setPermissions(p=>({...p,channel:e.target.value as CommerceAgentPermissions["channel"]}))}>
        <option value="Chat">Solo chat</option><option value="Teléfono">Teléfono</option>
@@ -197,7 +197,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
     </>:<p className={styles.hint}>Guarda primero un agente y selecciónalo aquí.</p>}
    </div>
    <div className={styles.warning}><ShieldCheck size={18}/>
-    <p>Importante: un 97 % de configuración general no significa que el agente tenga productos autorizados. Tu siguiente paso es añadir al menos un producto con precio y unidades verificadas en <strong>Catálogo</strong>.</p>
+    <p>Añade productos con precio y unidades verificadas en <strong>Catálogo</strong>.</p>
    </div>
    <button type="button" className={styles.primary} onClick={()=>setTab("catalog")}><Package size={16}/> Ir al catálogo</button>
   </>:tab==="catalog"?<>
@@ -249,7 +249,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
       className={styles.primary} onClick={()=>void save()}><Plus size={18}/> {editing?"Guardar cambios":"Guardar producto"}</button>
    </div>
    <div className={styles.heading}><h2>Mis productos</h2></div>
-   {items.length===0?<div className={styles.empty}><Package size={26}/><p>Tu catálogo está vacío. No añadiré productos o precios inventados.</p></div>:
+   {items.length===0?<div className={styles.empty}><Package size={26}/><p>No hay productos aprobados.</p></div>:
     <div className={styles.items}>{items.map(item=><div key={item.id} className={styles.item}>
      <div><strong>{item.name}</strong><small>{item.sku} · {formatUsd(item.price_cents)}</small>
       <small>{item.approved?"Precio aprobado":"Pendiente de aprobación"} · {item.stock_mode==="tracked"?String(item.available_qty)+" unidades configuradas":item.stock_mode==="manual"?"Disponibilidad manual":"Sin límite configurado"}</small>
@@ -276,11 +276,11 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
        disabled={busy} onClick={()=>void checkout(order)}>Enlace test</button>:null}
      {checkoutLinks[order.id]?<button type="button" onClick={()=>void copyCheckout(checkoutLinks[order.id])}>Copiar enlace</button>:null}
     </div>)}</div>}
-   <div className={styles.warning}><ShieldCheck size={17}/><p>No se ofrece un enlace de pago hasta conectar y verificar una cuenta del negocio distinta de la facturación de VMV.</p></div>
+   <div className={styles.warning}><ShieldCheck size={17}/><p>Los enlaces de pago requieren una cuenta verificada del negocio, independiente de VMV.</p></div>
   </>:<>
    <h2 className={styles.ordersTitle}>Solicitudes de atención humana</h2>
-   <p className={styles.hint}>Registro de llamadas que pidieron una persona. No contiene grabaciones ni confirma que se realizó una transferencia.</p>
-   {human.length===0?<div className={styles.empty}><UserRoundCheck size={26}/><p>No hay solicitudes pendientes del agente telefónico.</p></div>:
+   <p className={styles.hint}>Solicitudes de atención humana · sin grabaciones ni transferencias confirmadas.</p>
+   {human.length===0?<div className={styles.empty}><UserRoundCheck size={26}/><p>Sin solicitudes pendientes.</p></div>:
     <div className={styles.items}>{human.map(req=><article className={styles.item} key={req.id}>
       <div><strong>Solicitud del agente</strong><small>{new Date(req.created_at).toLocaleString("es-US")} · {req.status==="new"?"Nueva":req.status==="reviewed"?"Revisada":"Cerrada"}</small>
        <small>{req.summary}</small></div>
