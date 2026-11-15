@@ -1,12 +1,15 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
 import dynamic from "next/dynamic";
+import dynamic from "next/dynamic";
 import {ArrowLeft,ArrowRight,Check,CheckCircle2,Image as ImageIcon,LoaderCircle,MessageCircle,Package,CalendarDays,Sparkles,ShieldCheck} from "lucide-react";
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {getSupabase} from "@/lib/supabase";
 import {normalizeSocialLinks} from "@/lib/web-builder-social";
 import type {SiteIntake,SiteProposal,SiteProduct,SiteDesignPreferences} from "@/lib/web-builder-templates";
-import TemplateProposals from "./TemplateProposals";
+const TemplateProposals=dynamic(()=>import("./TemplateProposals"),{ssr:false,loading:()=>
+ <div role="status" style={{padding:18,color:"#7e57b2"}}>Preparando vista previa de tu web…</div>
+});
 import BuilderImageField from "./BuilderImageField";
 import type {WebsiteAgentChoice} from "./WebAiAgentPanel";
 const WebAiAgentPanel=dynamic(()=>import("./WebAiAgentPanel"),{ssr:false,loading:()=>
