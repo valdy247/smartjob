@@ -732,7 +732,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  };
  return <div className={styles.root}>
   {!requestsOnly&&wizardStep===0&&user&&businessId&&savedBusinesses.some(x=>x.id===businessId&&!x.source)?<div className={styles.activeBusiness}><MapPinned size={15}/>{en?"Active business: ":"Negocio activo: "}<strong>{savedBusinesses.find(x=>x.id===businessId)?.name||name}</strong></div>:null}
-  {!requestsOnly&&wizardStep===0?<header className={styles.catalogHeading}><h2>{en?"What would you like to do?":"¿Qué quieres hacer hoy?"}</h2><p>{en?"Choose a service. We’ll guide you.":"Elige un servicio y te ayudamos paso a paso."}</p><a href="/vista-app/marketing/requests" className={styles.historyLink}><ClipboardList size={16}/> {translate("marketing.ui.requests")}</a><a href="/vista-app/marketing/negocios" className={styles.historyLink}><MapPinned size={16}/> {en?"My businesses":"Mis negocios"}</a>{pausedStep!==null?<button type="button" className={styles.resumeDraft} onClick={()=>{setWizardStep(pausedStep);setPausedStep(null);revealWizard();}}>{translate("marketing.request.continueDraft")}</button>:null}</header>:null}
+  {!requestsOnly&&wizardStep===0?<header className={styles.catalogHeading}><h2>{en?"What would you like to do?":"¿Qué quieres hacer hoy?"}</h2><a href="/vista-app/marketing/requests" className={styles.historyLink}><ClipboardList size={16}/> {translate("marketing.ui.requests")}</a><a href="/vista-app/marketing/negocios" className={styles.historyLink}><MapPinned size={16}/> {en?"My businesses":"Mis negocios"}</a>{pausedStep!==null?<button type="button" className={styles.resumeDraft} onClick={()=>{setWizardStep(pausedStep);setPausedStep(null);revealWizard();}}>{translate("marketing.request.continueDraft")}</button>:null}</header>:null}
   {!requestsOnly&&wizardStep>0&&wizardStep<4?<button type="button" className={styles.historyWizardAccess} onClick={()=>{void (async()=>{if(await saveCurrentDraft())window.location.assign("/vista-app/marketing/requests");})();}}><ClipboardList size={15}/> {translate("marketing.ui.requests")}</button>:null}
   {!requestsOnly?<section className={wizardStep===0?styles.catalogPanel:styles.wizardPanel} id="vmv-marketing-request" aria-label={translate("marketing.ui.createAria")}>
    {wizardStep===4?<div className={styles.wizardSuccess} role="status">
@@ -749,7 +749,6 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     {wizardStep>0?<div className={styles.wizardHeading}>
      <div><span className={styles.overline}><LayoutGrid size={15}/> {translate("marketing.copy.marketing_assistant")}</span>
       <h3>{wizardStep===1?translate("marketing.action.first_your_business"):wizardStep===2&&selected==="google_profile"?(en?"Your Google Business Profile":"Tu perfil en Google"):wizardStep===2?translate("marketing.action.what_do_you_want_to_achieve"):translate("marketing.action.confirm_your_request")}</h3>
-      {wizardStep===2&&selected==="google_profile"?null:<p>{wizardStep===1?translate("marketing.action.we_ll_use_the_information_we_already_have_to_save_you"):wizardStep===2?translate("marketing.action.choose_a_suggestion_or_briefly_describe_your_needs"):translate("marketing.action.review_everything_before_submitting_no_external_chang")}</p>}
      </div>
      <span className={styles.stepCount}>{wizardStep+1} / 4</span>
     </div>:null}
@@ -795,7 +794,6 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       <CentralBusinessEditor business={businessDetails} onChange={v=>{businessEditedRef.current=true;setGoogleData(g=>applyProfileEditsToGoogle(g,businessDetails,v));setBusinessDetails(v);}} files={businessFiles} onFiles={setBusinessFiles}/>
       <button type="button" className={styles.saveBusinessInline} disabled={businessBusy||!user} onClick={()=>void saveBusiness()}>{businessBusy?(en?"Saving…":"Guardando…"):savedBusinesses.some(x=>x.id===businessId&&!x.source)?(en?"Save business changes":translate("marketing.action.update_saved_business")):(en?"Save this business for next time":translate("marketing.action.save_this_business_for_future_requests"))}</button>
      </div>
-     <p className={styles.wizardHint}><ShieldCheck size={15}/> {translate("marketing.copy.if_you_registered_your_business_with_vmv_available_d")}</p>
     </div>:null}
     {wizardStep===2?<div className={styles.wizardBody}>
      {selected==="google_profile"?<>
@@ -826,7 +824,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       {site.trim()?<div className={styles.reviewItem}><span>{translate("marketing.copy.website")}</span><strong className={styles.wrapValue}>{site.trim()}</strong></div>:null}
       {selected==="google_profile"?<>
        <div className={styles.googleReview}><strong>{en?"Google listing":"Gestión de Google"}</strong>
-        <span>{googleData.action==="create"?(en?"Create listing":"Crear perfil"):googleData.action==="claim"?(en?"Claim existing listing":"Reclamar perfil"):en?"Improve listing":"Mejorar perfil"} · {googleData.googleCategory}</span>{googleData.googleCategorySource==="business_activity"?<small>{translate("marketing.google.categoryFromBusiness")}</small>:null}
+        <span>{googleData.action==="create"?(en?"Create listing":"Crear perfil"):googleData.action==="claim"?(en?"Claim existing listing":"Reclamar perfil"):en?"Improve listing":"Mejorar perfil"} · {googleData.googleCategory}</span>
         {googleData.action!=="create"&&googleData.existingProfileUrl?<span>{googleData.existingProfileUrl}</span>:null}
         <button type="button" onClick={()=>{setEditLoadedGoogle(true);setGoogleStep(0);editWizardStep(2);}}>{translate("marketing.copy.edit")}</button>
        </div>
