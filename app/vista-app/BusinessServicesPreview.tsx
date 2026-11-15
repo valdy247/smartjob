@@ -154,7 +154,7 @@ export default function BusinessServicesPreview({userId,focus="all",excludeFeatu
      {!excludeFeatured?<div className={styles.badges}>
       <small>{translate(o.delivery==="automatic"?"services.automatic":"services.assisted")}</small>
       <small>{o.id==="ai-agents"?"Beta":translate(o.state==="pilot"?"services.pilot":"services.comingSoon")}</small>
-     </div>:null}</div>{o.id==="google-business-profile"||o.id==="ai-agents"?<ArrowUpRight className={styles.arrow} size={17}/>:null}</>;
+     </div>:null}</div></>;
     return o.id==="ai-agents"?
      <button type="button" key={o.id} className={styles.tile+" "+styles[o.color]} onClick={()=>window.location.assign("/vista-app/ai-agents")} aria-label={translate("services.offer.ai-agents")+" — Beta"}>{inner}</button>:
      o.id==="google-business-profile"?
