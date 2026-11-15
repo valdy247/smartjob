@@ -6,7 +6,7 @@ import {
  ArrowDown,ArrowLeft,ArrowUp,Check,ChevronDown,ChevronRight,Eye,EyeOff,
  FilePlus2,Globe,ImagePlus,Layers,Menu,MessageCircle,Monitor,Palette,
  Plus,Save,Settings2,SlidersHorizontal,Smartphone,
- Sparkles,Type,Upload, X
+ Sparkles,Trash2,Type,Upload, X
 } from "lucide-react";
 import {builderConfig,normalizeBuilderDocument} from "@/lib/web-builder-puck";
 import {imageTargets,imageTargetIndex,patchBuilderImage,targetImage,targetSettings,type ImageTarget} from "@/lib/web-builder-images";
@@ -92,6 +92,24 @@ function moveBlock(data:Data,id:string,step:number):Data{
  }
  const content=visit(data.content);
  return moved?{...data,content}:data;
+}
+function removeBlock(data:Data,id:string):Data{
+ let removed=false;
+ function visit(nodes:Data["content"]):Data["content"]{
+  return nodes.flatMap(node=>{
+   if(node.props?.id===id){removed=true;return [];}
+   const props=node.props as Record<string,unknown>;
+   let updated=props;
+   for(const slot of ["content","left","right","third"])
+    if(Array.isArray(updated[slot])){
+     const children=visit(updated[slot] as Data["content"]);
+     if(children!==updated[slot])updated={...updated,[slot]:children};
+    }
+   return [updated===props?node:{...node,props:updated}];
+  });
+ }
+ const content=visit(data.content);
+ return removed?{...data,content}:data;
 }
 function editableConfig():Config{
  const blocks=Object.fromEntries(Object.entries(builderConfig.components||{}).map(([kind,block])=>{
@@ -189,6 +207,7 @@ export default function MobileVisualStudio({
  const [device,setDevice]=useState<"mobile"|"desktop">("mobile");
  const [preview,setPreview]=useState(false);
  const [selection,setSelection]=useState<Pick|null>(null);
+ const [deleteTarget,setDeleteTarget]=useState<{id:string;label:string}|null>(null);
  const [adjust,setAdjust]=useState<"actions"|"image"|"move"|"text">("actions");
  const [seoImageKey,setSeoImageKey]=useState("");
  const [newName,setNewName]=useState("");
@@ -280,7 +299,7 @@ export default function MobileVisualStudio({
   if(!p||p.id!==event.pointerId)return;
   window.clearTimeout(p.timer);p.active=false;press.current=null;
  }
- useEffect(()=>{closePopup();closeDrawer();},[pageId]);
+ useEffect(()=>{closePopup();closeDrawer();setDeleteTarget(null);},[pageId]);
  useEffect(()=>()=>{if(press.current)clearTimeout(press.current.timer);},[]);
  useEffect(()=>{
   if(!selection&&!drawer)return;
@@ -465,6 +484,38 @@ export default function MobileVisualStudio({
      <button onClick={()=>onChange(moveBlock(data,selection.id,1))}><ArrowDown size={15}/> Bajar</button>
     </div>
    </div>:null}
+   {block.type==="HeroVisual"?<div className={styles.floatContent}>
+    <label className={styles.formLabel}>Diseño de portada
+     <select value={props.layout==="cover"?"cover":"split"}
+      onChange={e=>edit({layout:e.target.value})}>
+      <option value="cover">Imagen de fondo</option>
+      <option value="split">Imagen al lado</option>
+     </select>
+    </label>
+    <span className={styles.formLabel}>Imagen de portada</span>
+    <BuilderImageField value={String(props.image||"")}
+     onChange={url=>edit({image:url,layout:"cover"})}/>
+   </div>:null}
+   <div className={styles.floatContent}>
+    <button type="button" className={styles.deleteSection}
+     onClick={()=>setDeleteTarget({id:selection.id,label:String(props.title||"esta sección").slice(0,70)})}>
+     <Trash2 size={17}/> Eliminar sección
+    </button>
+   </div>
+  </div>:null}
+  {deleteTarget?<div className={styles.confirmScrim}>
+   <section className={styles.confirmDialog} role="alertdialog" aria-modal="true"
+    aria-labelledby="vmv-remove-section-title" aria-describedby="vmv-remove-section-description"
+    onKeyDown={e=>{if(e.key==="Escape"){e.stopPropagation();setDeleteTarget(null);}}}>
+    <h2 id="vmv-remove-section-title">¿Eliminar sección?</h2>
+    <p id="vmv-remove-section-description">Se quitará «{deleteTarget.label}» del borrador. No se publicará automáticamente.</p>
+    <div className={styles.confirmButtons}>
+     <button type="button" autoFocus onClick={()=>setDeleteTarget(null)}>Cancelar</button>
+     <button type="button" className={styles.confirmRemove} onClick={()=>{
+      onChange(removeBlock(data,deleteTarget.id));setDeleteTarget(null);closePopup();
+     }}><Trash2 size={16}/> Eliminar</button>
+    </div>
+   </section>
   </div>:null}
   {drawer?<div className={styles.scrim} onPointerDown={e=>{if(e.target===e.currentTarget)closeDrawer();}}>
    <nav className={styles.drawer} aria-label="Herramientas de edición móvil">
