@@ -4,7 +4,7 @@ import {ArrowLeft,ArrowRight,Check,CheckCircle2,Image as ImageIcon,LoaderCircle,
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {getSupabase} from "@/lib/supabase";
 import {normalizeSocialLinks} from "@/lib/web-builder-social";
-import type {SiteIntake,SiteProposal,SiteProduct} from "@/lib/web-builder-templates";
+import type {SiteIntake,SiteProposal,SiteProduct,SiteDesignPreferences} from "@/lib/web-builder-templates";
 import TemplateProposals from "./TemplateProposals";
 import styles from "./WebAiWizard.module.css";
 
@@ -144,7 +144,7 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
   if(step===1&&colors.length!==3){setError("Selecciona exactamente tres colores.");return;}
   setError("");setStep(s=>Math.min(5,s+1));
  };
- const selectedDesign=useMemo(()=>({colors:colors as string[],font,imageStyle:shape,features:{inventory,booking,chat},
+ const selectedDesign=useMemo<SiteDesignPreferences>(()=>({colors,font,imageStyle:shape,features:{inventory,booking,chat},
   chatMode:chat?"inbox":"off"}),[colors,font,shape,inventory,booking,chat]);
  const input=useMemo<SiteIntake>(()=>{
   const services=toServices(form.services);
