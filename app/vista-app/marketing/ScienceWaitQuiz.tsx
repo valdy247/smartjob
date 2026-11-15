@@ -46,9 +46,11 @@ export default function ScienceWaitQuiz({en,seed,processing,onContinue,mode="req
    if(event.shiftKey&&(document.activeElement===first||document.activeElement===titleRef.current)){event.preventDefault();last.focus();}
    else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
   }}>
+  <button type="button" className={styles.skip} onClick={onContinue}
+   aria-label={en?"Skip optional quiz":"Omitir acertijo opcional"}>{en?"Skip":"Omitir"}</button>
   <div className={styles.content}>
-   <div className={styles.status} role="status">{processing?<span className={styles.spinner} aria-hidden="true"/>:<CheckCircle2 size={17} aria-hidden="true"/>}{processing?(isAudit?(en?"Analyzing your website…":"Analizando tu web…"):(en?"Sending your request…":"Enviando tu solicitud…")):(isAudit?(en?"Analysis ready. Answer to view the report.":"Análisis listo. Responde para ver el informe."):(en?"Submission finished. Answer to see the result.":"El envío terminó. Responde para ver el resultado."))}</div>
-   <p className={styles.eyebrow}>{en?"A science challenge":"Un acertijo de ciencia"}</p>
+   <div className={styles.status} role="status">{processing?<span className={styles.spinner} aria-hidden="true"/>:<CheckCircle2 size={17} aria-hidden="true"/>}{processing?(isAudit?(en?"Analyzing your website…":"Analizando tu web…"):(en?"Sending your request…":"Enviando tu solicitud…")):(isAudit?(en?"Analysis complete. You can continue.":"Análisis listo. Puedes continuar."):(en?"Submission finished. You can continue.":"El envío terminó. Puedes continuar."))}</div>
+   <p className={styles.eyebrow}>{en?"Optional science quiz":"Acertijo opcional"}</p>
    <h2 id="science-wait-heading" ref={titleRef} tabIndex={-1} className={styles.question}>{en?question.en:question.es}</h2>
    <div className={styles.choices} role="group" aria-label={en?"Choose your answer":"Elige tu respuesta"}>
     {choices.map((choice,i)=>{
@@ -66,8 +68,11 @@ export default function ScienceWaitQuiz({en,seed,processing,onContinue,mode="req
      :<><XCircle className={styles.answerIcon} size={17} aria-hidden="true"/><strong>{en?"Incorrect answer.":"Respuesta incorrecta."}</strong>{" "}{en?"You chose":"Elegiste"}: {choices[chosen]}. {en?"Correct":"Correcta"}: {choices[question.correct]}.</>}
     </p>
     <p className={styles.resultText}>{en?question.factEn:question.factEs}</p>
-    {processing?<button type="button" className={styles.next} onClick={()=>{setChosen(null);setIndex(i=>(i+1)%QUESTIONS.length);titleRef.current?.focus();}}>{en?"Next question":"Otra pregunta"}</button>:<button type="button" className={styles.next} onClick={onContinue}>{isAudit?(en?"View website analysis":"Ver análisis"):(en?"View submission result":"Ver resultado del envío")}</button>}
-   </div>:<p className={styles.helper}>{processing?(isAudit?(en?"Your website is still being analyzed while you play.":"Tu web sigue analizándose mientras juegas."):(en?"The request continues processing while you play.":"Tu solicitud sigue procesándose mientras juegas.")):(en?"Choose an answer to continue.":"Elige una respuesta para continuar.")}</p>}
+    {processing?<button type="button" className={styles.next} onClick={()=>{setChosen(null);setIndex(i=>(i+1)%QUESTIONS.length);titleRef.current?.focus();}}>{en?"Next question":"Otra pregunta"}</button>:null}
+   </div>:<p className={styles.helper}>{processing?(en?"The process continues whether you play or skip.":"El proceso continúa aunque omitas el juego."):(en?"The game is optional.":"El juego es opcional.")}</p>}
+   {!processing?<button type="button" className={styles.continue} onClick={onContinue}>
+    {en?"Continue":"Continuar"}
+   </button>:null}
   </div>
  </section>,document.body);
 }
