@@ -108,8 +108,8 @@ export default function BuilderSelectedActions({children,label}:{
  const simpleTextKeys=new Set(["title","description","body","text","eyebrow","caption","quote","author","first","second","third","phone","email","address","hours","area","notes"]);
  const simpleFields=Object.entries(props).filter(([key,value])=>simpleTextKeys.has(key)&&typeof value==="string").slice(0,10);
  function changeArrayField(index:number,key:string,value:string){
-  const items=Array.isArray(props.items)?props.items:[];
-  const next=items.map((entry,i)=>i===index&&entry&&typeof entry==="object"?{...entry,[key]:value}:entry);
+  const items:Array<Record<string,unknown>>=Array.isArray(props.items)?props.items:[];
+  const next=items.map((entry:Record<string,unknown>,i:number)=>i===index&&entry&&typeof entry==="object"?{...entry,[key]:value}:entry);
   change("items",next);
  }
 
