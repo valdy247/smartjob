@@ -10,6 +10,23 @@ import {buttonAppearance} from "./web-builder-button-appearance";
 export type VisualBlockName="HeroVisual"|"OfferingGrid"|"PhotoGallery"|"ProcessSteps"|"ProjectShowcase"|"HoursArea"|"TeamGrid"|"PricingList"|"BeforeAfter"|"FAQList";
 type VisualProps=Record<string,unknown>;
 const heading=(value:unknown)=>typeof value==="string"?value:"";
+const textFonts:Record<string,string>={site:"inherit",modern:"Arial,sans-serif",
+ editorial:"Georgia,serif",rounded:"Trebuchet MS,sans-serif",
+ geometric:"Avenir Next,Arial,sans-serif",mono:"ui-monospace,monospace"};
+const textStyle=(props:Record<string,unknown>,key:string):React.CSSProperties=>{
+ const color=props[key+"Color"];
+ const font=props[key+"Font"];
+ const size=props[key+"FontSize"];
+ const weight=props[key+"Weight"];
+ const italic=props[key+"Italic"];
+ return {
+  color:typeof color==="string"&&/^#[\da-f]{6}$/i.test(color)?color:undefined,
+  fontFamily:typeof font==="string"?textFonts[font]:undefined,
+  fontSize:typeof size==="number"&&Number.isFinite(size)&&size>=12?Math.min(110,size)+"px":undefined,
+  fontWeight:weight==="heavy"?850:weight==="light"?400:undefined,
+  fontStyle:italic==="yes"?"italic":italic==="no"?"normal":undefined
+ };
+};
 const photo=(url:unknown)=>typeof url==="string"?safeWebImageUrl(url):null;
 const imgField={type:"custom" as const,render:({value,onChange}:{value?:unknown;onChange:(url:string)=>void})=>
  <BuilderImageField value={typeof value==="string"?value:""} onChange={onChange}/>};
@@ -30,7 +47,9 @@ const titleField={type:"text" as const};
 const textArea={type:"textarea" as const};
 const listItemFields={
  title:titleField,description:textArea,image:imgField,alt:titleField,price:titleField,
- titleColor:colorEditorField("Color del título"),descriptionColor:colorEditorField("Color de la descripción"),priceColor:colorEditorField("Color del precio")
+ titleColor:colorEditorField("Color del título"),descriptionColor:colorEditorField("Color de la descripción"),priceColor:colorEditorField("Color del precio"),
+ titleFont:{type:"select",options:[{label:"Web",value:"site"},{label:"Moderna",value:"modern"},{label:"Editorial",value:"editorial"},{label:"Redondeada",value:"rounded"},{label:"Geométrica",value:"geometric"},{label:"Monoespaciada",value:"mono"}]},
+ titleFontSize:numericEditorField("fontSize"),descriptionFontSize:numericEditorField("fontSize"),priceFontSize:numericEditorField("fontSize")
 };
 export const visualBlocks:Config["components"]={
  HeroVisual:{
@@ -145,14 +164,14 @@ export const visualBlocks:Config["components"]={
    <fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.description}{fields.items}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.columns}{fields.padding}{fields.surface}{fields.showPrices}</fieldset>
   </>,
-  render:({id,title,description,items,layout,padding,surface,columns,showPrices,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-offerings">
-   <div className="vmv-section-heading"><h2>{title}</h2>{description?<p>{description}</p>:null}</div>
+  render:({id,title,description,items,layout,padding,surface,columns,showPrices,puck,...textStyling})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-offerings">
+   <div className="vmv-section-heading"><h2 style={textStyle(textStyling,"title")}>{title}</h2>{description?<p>{description}</p>:null}</div>
    <div className="vmv-offerings-items" data-layout={layout||"grid"} data-columns={columns||"3"}>
     {toList(items).map((item,index)=>!(item.title||item.description||item.price||photo(item.image))&&!puck.isEditing?null:<article key={visualItemId(item,index)} className="vmv-offering-card" data-has-photo={Boolean(photo(item.image))} style={imageSettingsStyle(item)}>
      <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
-     <div className="vmv-offering-copy">{item.title?<h3 style={{color:/^#[\da-f]{6}$/i.test(String(item.titleColor||""))?String(item.titleColor):undefined}}>{heading(item.title)}</h3>:<h3>Nuevo elemento</h3>}
-      {item.description?<p style={{color:/^#[\da-f]{6}$/i.test(String(item.descriptionColor||""))?String(item.descriptionColor):undefined}}>{heading(item.description)}</p>:null}
-      {showPrices==="yes"&&item.price?<strong className="vmv-offering-price" style={{color:/^#[\da-f]{6}$/i.test(String(item.priceColor||""))?String(item.priceColor):undefined}}>{heading(item.price)}</strong>:null}
+     <div className="vmv-offering-copy">{item.title?<h3 style={textStyle(item,"title")}>{heading(item.title)}</h3>:<h3>Nuevo elemento</h3>}
+      {item.description?<p style={textStyle(item,"description")}>{heading(item.description)}</p>:null}
+      {showPrices==="yes"&&item.price?<strong className="vmv-offering-price" style={textStyle(item,"price")}>{heading(item.price)}</strong>:null}
      </div>
     </article>)}
    </div>
@@ -169,11 +188,11 @@ export const visualBlocks:Config["components"]={
   defaultProps:{title:"Una mirada a nuestro trabajo",description:"",items:[],layout:"mosaic",padding:"normal",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.description}{fields.items}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.padding}{fields.surface}</fieldset></>,
-  render:({id,title,description,items,layout,padding,surface,puck})=>!toList(items).some(item=>photo(item.image))&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
-   <div className="vmv-section-heading"><h2>{title}</h2>{description?<p>{description}</p>:null}</div>
+  render:({id,title,description,items,layout,padding,surface,puck,...textStyling})=>!toList(items).some(item=>photo(item.image))&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
+   <div className="vmv-section-heading"><h2 style={textStyle(textStyling,"title")}>{title}</h2>{description?<p>{description}</p>:null}</div>
    <div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,index)=><figure key={visualItemId(item,index)}>
     <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.caption),heading(item.alt))} settings={item} editing={puck.isEditing}/>
-    {item.caption?<figcaption>{heading(item.caption)}</figcaption>:null}
+    {item.caption?<figcaption style={textStyle(item,"caption")}>{heading(item.caption)}</figcaption>:null}
    </figure>)}</div>
   </Section>
  },
@@ -185,9 +204,9 @@ export const visualBlocks:Config["components"]={
    padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Cómo trabajamos",items:[],padding:"normal",surface:"soft"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
-  render:({id,title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-process">
-   <h2>{title}</h2><ol>{toList(items).map((item,index)=><li key={index}>
-    <span>{String(index+1).padStart(2,"0")}</span><h3>{heading(item.title)}</h3><p>{heading(item.description)}</p>
+  render:({id,title,items,padding,surface,puck,...textStyling})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-process">
+   <h2 style={textStyle(textStyling,"title")}>{title}</h2><ol>{toList(items).map((item,index)=><li key={index}>
+    <span>{String(index+1).padStart(2,"0")}</span><h3 style={textStyle(item,"title")}>{heading(item.title)}</h3><p style={textStyle(item,"description")}>{heading(item.description)}</p>
    </li>)}</ol>
   </Section>
  },
@@ -199,10 +218,10 @@ export const visualBlocks:Config["components"]={
    layout:styleFields.layout,padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Proyectos",items:[],layout:"mosaic",padding:"spacious",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.padding}{fields.surface}</fieldset></>,
-  render:({id,title,items,layout,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
-   <h2>{title}</h2><div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,index)=><figure key={visualItemId(item,index)}>
+  render:({id,title,items,layout,padding,surface,puck,...textStyling})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
+   <h2 style={textStyle(textStyling,"title")}>{title}</h2><div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,index)=><figure key={visualItemId(item,index)}>
     <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
-    {item.title||item.description?<figcaption><strong>{heading(item.title)}</strong><p>{heading(item.description)}</p></figcaption>:null}
+    {item.title||item.description?<figcaption><strong style={textStyle(item,"title")}>{heading(item.title)}</strong><p style={textStyle(item,"description")}>{heading(item.description)}</p></figcaption>:null}
    </figure>)}</div>
   </Section>
  },
@@ -212,8 +231,8 @@ export const visualBlocks:Config["components"]={
    surface:styleFields.surface,padding:styleFields.padding},
   defaultProps:{title:"Horario y zona de atención",hours:"",area:"",notes:"",surface:"soft",padding:"normal"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.hours}{fields.area}{fields.notes}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.surface}{fields.padding}</fieldset></>,
-  render:({title,hours,area,notes,surface,padding,puck})=>!(hours||area||notes)&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-hours">
-   <h2>{title}</h2><div><article><small>HORARIO</small><p>{hours||"Consulta disponibilidad"}</p></article>
+  render:({title,hours,area,notes,surface,padding,puck,...textStyling})=>!(hours||area||notes)&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-hours">
+   <h2 style={textStyle(textStyling,"title")}>{title}</h2><div><article><small>HORARIO</small><p>{hours||"Consulta disponibilidad"}</p></article>
     <article><small>ZONA</small><p>{area||"Consulta nuestra área de atención"}</p></article></div>
    {notes?<p>{notes}</p>:null}
   </Section>
@@ -225,10 +244,10 @@ export const visualBlocks:Config["components"]={
    padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Nuestro equipo",items:[],padding:"normal",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
-  render:({id,title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-team">
-   <h2>{title}</h2><div>{toList(items).map((item,index)=><article key={visualItemId(item,index)}>
+  render:({id,title,items,padding,surface,puck,...textStyling})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-team">
+   <h2 style={textStyle(textStyling,"title")}>{title}</h2><div>{toList(items).map((item,index)=><article key={visualItemId(item,index)}>
     <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
-    <h3>{heading(item.title)}</h3><p>{heading(item.description)}</p>
+    <h3 style={textStyle(item,"title")}>{heading(item.title)}</h3><p style={textStyle(item,"description")}>{heading(item.description)}</p>
    </article>)}</div>
   </Section>
  },
@@ -240,10 +259,10 @@ export const visualBlocks:Config["components"]={
    padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Precios",items:[],padding:"normal",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
-  render:({id,title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-price-list">
-   <h2>{title}</h2><dl>{toList(items).map((item,i)=><div key={i}>
-    <dt>{heading(item.title)}{item.description?<small>{heading(item.description)}</small>:null}</dt>
-    <dd>{heading(item.price)||"Consultar"}</dd>
+  render:({id,title,items,padding,surface,puck,...textStyling})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-price-list">
+   <h2 style={textStyle(textStyling,"title")}>{title}</h2><dl>{toList(items).map((item,i)=><div key={i}>
+    <dt style={textStyle(item,"title")}>{heading(item.title)}{item.description?<small style={textStyle(item,"description")}>{heading(item.description)}</small>:null}</dt>
+    <dd style={textStyle(item,"price")}>{heading(item.price)||"Consultar"}</dd>
    </div>)}</dl>
   </Section>
  },
@@ -256,8 +275,8 @@ export const visualBlocks:Config["components"]={
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Imagen</legend>{fields.beforeImage}{fields.beforeAlt}{fields.beforeImageSettings}{fields.afterImage}{fields.afterAlt}{fields.afterImageSettings}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
-  render:({id,title,beforeImage,afterImage,beforeAlt,afterAlt,beforeImageSettings,afterImageSettings,padding,surface,puck})=>!photo(beforeImage)&&!photo(afterImage)&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-before-after">
-   <h2>{title}</h2><div><figure><BuilderEditableImage id={id} target={{field:"beforeImage"}} src={beforeImage} settings={beforeImageSettings} alt={heading(beforeAlt)||"Antes"} editing={puck.isEditing}/><figcaption>Antes</figcaption></figure>
+  render:({id,title,beforeImage,afterImage,beforeAlt,afterAlt,beforeImageSettings,afterImageSettings,padding,surface,puck,...textStyling})=>!photo(beforeImage)&&!photo(afterImage)&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-before-after">
+   <h2 style={textStyle(textStyling,"title")}>{title}</h2><div><figure><BuilderEditableImage id={id} target={{field:"beforeImage"}} src={beforeImage} settings={beforeImageSettings} alt={heading(beforeAlt)||"Antes"} editing={puck.isEditing}/><figcaption>Antes</figcaption></figure>
     <figure><BuilderEditableImage id={id} target={{field:"afterImage"}} src={afterImage} settings={afterImageSettings} alt={heading(afterAlt)||"Después"} editing={puck.isEditing}/><figcaption>Después</figcaption></figure></div>
   </Section>
  },
@@ -269,9 +288,9 @@ export const visualBlocks:Config["components"]={
   defaultProps:{title:"Preguntas frecuentes",items:[],padding:"normal",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
-  render:({id,title,items,padding,surface,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-site-faq">
-   <h2>{title}</h2>{toList(items).map((item,i)=><details key={i}><summary>{heading(item.question)}</summary>
-    <p>{heading(item.answer)}</p></details>)}
+  render:({id,title,items,padding,surface,puck,...textStyling})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-site-faq">
+   <h2 style={textStyle(textStyling,"title")}>{title}</h2>{toList(items).map((item,i)=><details key={i}><summary style={textStyle(item,"question")}>{heading(item.question)}</summary>
+    <p style={textStyle(item,"answer")}>{heading(item.answer)}</p></details>)}
   </Section>
  }
 };
@@ -295,6 +314,18 @@ export function normalizeVisualProps(type:VisualBlockName,props:Record<string,un
   let value=typeof props[field]==="string"?props[field].slice(0,max):"";
   if(field==="buttonUrl"&&value&&!/^(#[a-z0-9-]{1,70}|mailto:[^<> ]+|tel:\+?[\d ()-]{7,36})$/i.test(value))value="#contacto";
   safe[field]=value;
+ }
+ if(type!=="HeroVisual"){
+  const keys=["titleColor","titleFont","titleFontSize","titleWeight","titleItalic"] as const;
+  for(const key of keys){
+   const value=props[key];
+   if(value===undefined)continue;
+   safe[key]=key==="titleColor"?(/^#[\da-f]{6}$/i.test(String(value))?value:""):
+    key==="titleFont"?(Object.hasOwn(textFonts,String(value))?value:"site"):
+    key==="titleFontSize"?(typeof value==="number"&&Number.isFinite(value)?Math.max(0,Math.min(110,Math.round(value))):0):
+    key==="titleWeight"?(["light","normal","heavy"].includes(String(value))?value:"normal"):
+    value==="yes"?"yes":"no";
+  }
  }
  if(type==="HeroVisual"){
   for(const key of ["buttonColor","buttonTextColor"])
@@ -321,6 +352,17 @@ export function normalizeVisualProps(type:VisualBlockName,props:Record<string,un
    const fallback="item-"+String(props.id||type).replace(/[^a-z0-9-]/gi,"").slice(0,55)+"-"+index;
    const item:Record<string,unknown>={id:storedId||fallback};
    for(const field of itemFields.strings)item[field]=typeof raw[field]==="string"?raw[field].slice(0,700):"";
+   for(const textKey of ["title","description","price","caption","question","answer"]){
+    if(typeof item[textKey]!=="string")continue;
+    const font=raw[textKey+"Font"],color=raw[textKey+"Color"],size=raw[textKey+"FontSize"];
+    const weight=raw[textKey+"Weight"],italic=raw[textKey+"Italic"];
+    if(font!==undefined)item[textKey+"Font"]=Object.hasOwn(textFonts,String(font))?font:"site";
+    if(color!==undefined)item[textKey+"Color"]=/^#[\da-f]{6}$/i.test(String(color))?color:"";
+    if(size!==undefined)item[textKey+"FontSize"]=typeof size==="number"&&Number.isFinite(size)?
+     Math.max(0,Math.min(110,Math.round(size))):0;
+    if(weight!==undefined)item[textKey+"Weight"]=["light","normal","heavy"].includes(String(weight))?weight:"normal";
+    if(italic!==undefined)item[textKey+"Italic"]=italic==="yes"?"yes":"no";
+   }
    for(const field of itemFields.images)item[field]=photo(raw[field])||"";
    if(itemFields.images.length)Object.assign(item,normalizeImageSettings(raw));
    return item;
