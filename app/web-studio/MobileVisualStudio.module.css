@@ -140,3 +140,31 @@
 .toggle input{width:23px;height:23px;accent-color:#8451d4}
 .drawerLink{border-color:#e5d8f1}
 @media(prefers-reduced-motion:reduce){.drawer{animation:none}}
+
+.rotateHint{position:fixed;inset:0;z-index:700}
+.statusAlert,.statusToast{position:fixed;top:calc(env(safe-area-inset-top) + 70px);
+ left:50%;transform:translateX(-50%);width:min(520px,calc(100vw - 25px));
+ z-index:700;display:flex;align-items:center;gap:10px;box-sizing:border-box;
+ border:1px solid #f0bfcf;color:#8b2a4d;background:#fff5f8;
+ border-radius:13px;padding:12px 13px;line-height:1.5;font-size:12px;font-weight:700;
+ box-shadow:0 10px 30px #29143129}
+.statusAlert span{flex:1}
+.statusAlert button{display:grid;place-items:center;border:0;border-radius:8px;
+ background:#fce3ee;color:#90395b;min-width:34px;min-height:34px}
+.statusToast{background:#f2fff9;border-color:#b8dfd2;color:#206b52;justify-content:center}
+.recovery{border:1px solid #e9c99a;border-radius:13px;padding:10px;
+ background:#fff9ed;display:flex;flex-direction:column;gap:6px}
+.recovery p{margin:0 0 5px;font-size:12px;color:#775f42;line-height:1.5}
+.recovery strong{font-size:13px}
+.drawerBody .recovery button{background:white;border-color:#e7cda9;color:#66482b;min-height:39px}
+.saveStatus{display:block;font-size:11px;font-weight:800;color:#857092;
+ padding:8px 11px;border-radius:9px;background:#f8f4fc}
+.domainActions{display:flex;flex-direction:column;gap:5px}
+.domainRow{display:flex;flex-direction:column;gap:5px;border:1px solid #e8dff3;
+ border-radius:13px;padding:11px 12px;margin-bottom:7px}
+.domainRow strong{font-size:12px;color:#3f2b55;overflow-wrap:anywhere}
+.domainRow small{font-size:11px;color:#79658f;overflow-wrap:anywhere}
+.drawerBody .domainRow button{border-color:#e9d8f6;background:#f8f1fc;min-height:37px}
+@media(max-width:370px){
+ .floating{left:9px!important;width:calc(100vw - 18px)}
+}
