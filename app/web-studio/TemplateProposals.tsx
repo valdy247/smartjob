@@ -1,11 +1,20 @@
 "use client";
-import {useEffect,useMemo,useRef,useState} from "react";
+import {Component,useEffect,useMemo,useRef,useState,type ReactNode} from "react";
 import {Render} from "@puckeditor/core";
 import {ArrowLeft,ArrowRight,Check,LayoutTemplate} from "lucide-react";
 import {builderConfig} from "@/lib/web-builder-puck";
 import {createSiteProposals,FAMILIES,familyForCategory,type SiteFamily,type SiteIntake,type SiteProposal} from "@/lib/web-builder-templates";
 import styles from "./TemplateProposals.module.css";
 
+class SafePreview extends Component<{children:ReactNode},{failed:boolean}>{
+ state={failed:false};
+ static getDerivedStateFromError(){return {failed:true};}
+ render(){
+  return this.state.failed?<div role="status" style={{padding:24,textAlign:"center",color:"#79658c",fontSize:13,lineHeight:1.6}}>
+   La vista previa no se pudo dibujar, pero tu propuesta sigue disponible. Puedes abrirla en el editor para revisarla.
+  </div>:this.props.children;
+ }
+}
 type Props={input:SiteIntake;familyOverride?:SiteFamily;generated?:SiteProposal|null;busy:boolean;onBack:()=>void;onChoose:(proposal:SiteProposal)=>void};
 export default function TemplateProposals({input,familyOverride,generated,busy,onBack,onChoose}:Props){
  const family=familyOverride||familyForCategory(input.categoryId);
@@ -45,7 +54,7 @@ export default function TemplateProposals({input,familyOverride,generated,busy,o
      <small>{proposal.seoDescription}</small>
     </div>:null}
     <div className={styles.websiteFrame}>
-     <div className={styles.scale}><Render config={builderConfig} data={proposal.data}/></div>
+     <div className={styles.scale}><SafePreview><Render config={builderConfig} data={proposal.data}/></SafePreview></div>
     </div>
     <div className={styles.cardFooter}>
      <span><Check size={14}/> Personalizable</span>
