@@ -920,7 +920,7 @@ export default function WebBuilderWorkspace(){
         {designChoice?"Cerrar diseños":"Cambiar diseño"}
        </button>
        <button type="button" disabled={busy||Boolean(previewMode)} aria-pressed={advancedPuck}
-        onClick={()=>setAdvancedPuck(v=>!v)}>
+        onClick={()=>{setInitialDocument(normalizeBuilderDocument(document));setAdvancedPuck(v=>!v);}}>
         <Layers size={15}/> {advancedPuck?"Editor clásico":"Modo Puck Pro"}
        </button>
        <button type="button" disabled={busy} onClick={()=>{setPreviewMode("desktop");setDesignChoice(null);}}>Vista previa</button>
