@@ -45,3 +45,20 @@
 .error{background:#fff0f2;border:1px solid #f1cddd;color:#a54665;border-radius:11px;padding:13px;margin:0;font-size:12px}
 @media(max-width:800px){.choices{grid-template-columns:repeat(2,minmax(0,1fr))}.photos{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.root{gap:13px}.panel{padding:17px;border-radius:17px;gap:14px}.twoColumns{grid-template-columns:1fr;gap:13px}.choices{gap:7px}.choices button{padding:10px}.photos,.pathChoices{grid-template-columns:1fr}.finish{flex-direction:column;align-items:stretch}.finish button{width:100%}.pathChoices button{min-height:102px}}
+
+/* Focused progress: a quiet line instead of four competing bubbles. */
+.intro{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding-bottom:5px}
+.intro h2{margin:0;font-size:clamp(30px,5vw,43px)}
+.intro .stepMeta{color:#8b5ec3;font-size:11px;font-weight:850;letter-spacing:.05em}
+.backLink{display:inline-flex;align-items:center;min-height:38px;font-size:12px;
+ font-weight:800;color:#8054b9;text-decoration:none}
+.progressTrack{height:4px;width:100%;max-width:560px;background:#eae2f0;border-radius:999px;
+ overflow:hidden;margin:6px 0 10px}
+.progressTrack>span{display:block;height:100%;border-radius:999px;background:#8d5adb;
+ transition:width .2s ease-out}
+.fieldError{font-size:11px;color:#ac3456;line-height:1.5}
+.panel input[aria-invalid=true]{border-color:#c95777;background:#fff8fa}
+.wizardNavigation{display:flex;justify-content:flex-end;gap:8px;align-items:center}
+.finish .previous{background:#fff;color:#7655ac;border:1px solid #e0d1eb}
+@media(max-width:600px){.wizardNavigation{width:100%}.wizardNavigation>button{flex:1;
+ justify-content:center}.finish .previous{flex:0 1 35%}.intro{gap:7px}}
