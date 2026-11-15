@@ -94,7 +94,7 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
   }});
  }
  // Owner choices become verified editor properties, never arbitrary model-written CSS.
- const prefs=input.prefs;
+ const prefs=input.design;
  if(prefs?.features.inventory){
   const productBlock=content.find(item=>item.type==="OfferingGrid");
   if(productBlock&&input.products?.length)productBlock.props.title="Productos de "+input.business;
