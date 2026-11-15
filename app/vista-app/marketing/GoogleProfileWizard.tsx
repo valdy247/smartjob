@@ -3,7 +3,7 @@ import {contactPhoneE164} from "@/lib/contact-phone";
 import {googleProfileLink} from "@/lib/google-profile-request";
 import BusinessPhoneInput from "@/components/BusinessPhoneInput";
 import {useEffect,useMemo,useState,type ChangeEvent} from "react";
-import {CheckCircle2,MapPin,AlertCircle,Pencil} from "lucide-react";
+import {CheckCircle2,MapPin,AlertCircle,Pencil,CalendarDays,ChevronLeft,ChevronRight} from "lucide-react";
 import GoogleCategoryLookup from "./GoogleCategoryLookup";
 import PlaceAddressLookup from "./PlaceAddressLookup";
 import styles from "./GoogleProfileWizard.module.css";
@@ -86,6 +86,37 @@ function MoreInfo({children}:{children:import("react").ReactNode}){
  const {translate}=useInterfaceLanguage();
  return <details className={styles.moreInfo}><summary>{translate("marketing.google.moreInfo")}</summary>{children}</details>;
 }
+function OpeningDatePicker({value,onChange,en}:{value:string;onChange:(value:string)=>void;en:boolean}){
+ const today=new Date();
+ const parsed=/^\\d{4}-\\d{2}-\\d{2}$/.test(value)?new Date(value+"T12:00:00Z"):null;
+ const [open,setOpen]=useState(false);
+ const [view,setView]=useState({year:parsed&&!Number.isNaN(parsed.getTime())?parsed.getUTCFullYear():today.getFullYear(),month:parsed&&!Number.isNaN(parsed.getTime())?parsed.getUTCMonth():today.getMonth()});
+ const monthNames=useMemo(()=>Array.from({length:12},(_,m)=>new Intl.DateTimeFormat(en?"en-US":"es",{month:"long",timeZone:"UTC"}).format(new Date(Date.UTC(2024,m,1)))),[en]);
+ const locale=en?"en-US":"es";
+ const label=value?new Intl.DateTimeFormat(locale,{day:"numeric",month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(value+"T12:00:00Z")):(en?"Choose a date":"Elegir fecha");
+ const offset=(new Date(Date.UTC(view.year,view.month,1)).getUTCDay()+(en?0:6))%7;
+ const daysInMonth=new Date(Date.UTC(view.year,view.month+1,0)).getUTCDate();
+ const weekdays=en?["S","M","T","W","T","F","S"]:["L","M","X","J","V","S","D"];
+ const move=(delta:number)=>setView(current=>{const next=new Date(Date.UTC(current.year,current.month+delta,1));return {year:next.getUTCFullYear(),month:next.getUTCMonth()};});
+ return <div className={styles.dateField}>
+  <div className={styles.dateLabel}><strong>{en?"Opening date":"Fecha de apertura"}</strong><span>{en?"Optional":"Opcional"}</span></div>
+  <button className={styles.dateTrigger} type="button" aria-expanded={open} aria-label={en?"Choose opening date":"Seleccionar fecha de apertura"} onClick={()=>setOpen(v=>!v)}><CalendarDays size={19}/><span>{label}</span><ChevronRight size={16} aria-hidden="true"/></button>
+  {open?<div className={styles.dateCalendar} aria-label={en?"Opening date calendar":"Calendario de fecha de apertura"}>
+   <div className={styles.dateCalendarNav}>
+    <button type="button" onClick={()=>move(-1)} aria-label={en?"Previous month":"Mes anterior"}><ChevronLeft size={18}/></button>
+    <select value={view.month} onChange={event=>setView(v=>({...v,month:Number(event.target.value)}))} aria-label={en?"Month":"Mes"}>{monthNames.map((month,index)=><option key={index} value={index}>{month}</option>)}</select>
+    <select value={view.year} onChange={event=>setView(v=>({...v,year:Number(event.target.value)}))} aria-label={en?"Year":"Año"}>{Array.from({length:201},(_,i)=>1900+i).map(year=><option key={year} value={year}>{year}</option>)}</select>
+    <button type="button" onClick={()=>move(1)} aria-label={en?"Next month":"Mes siguiente"}><ChevronRight size={18}/></button>
+   </div>
+   <div className={styles.dateGrid}>{weekdays.map((day,i)=><span key={i} className={styles.dateWeekday}>{day}</span>)}
+    {Array.from({length:offset},(_,i)=><span key={"empty-"+i} aria-hidden="true"/>)}
+    {Array.from({length:daysInMonth},(_,i)=>{const day=i+1,iso=`${view.year}-${String(view.month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;return <button type="button" key={day} aria-label={new Intl.DateTimeFormat(locale,{dateStyle:"long",timeZone:"UTC"}).format(new Date(Date.UTC(view.year,view.month,day)))} aria-pressed={value===iso} className={styles.dateDay} onClick={()=>{onChange(iso);setOpen(false);}}>{day}</button>})}
+   </div>
+   <div className={styles.dateCalendarFooter}><button type="button" onClick={()=>{const now=new Date();onChange(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`);setOpen(false);}}>{en?"Today":"Hoy"}</button><button type="button" onClick={()=>{onChange("");setOpen(false);}}>{en?"Clear":"Borrar"}</button></div>
+  </div>:null}
+ </div>;
+}
+
 export default function GoogleProfileWizard({step,data,onData,media,onMedia,business,website,loadedData,editLoaded=false}:{loadedData?:GoogleData;editLoaded?:boolean;step:number;data:GoogleData;onData:(v:GoogleData)=>void;media:GoogleMedia;onMedia:(v:GoogleMedia)=>void;business:string;website:string}){
  const {language,translate}=useInterfaceLanguage();const en=language==="en";
  const [editing,setEditing]=useState(editLoaded);
@@ -200,7 +231,7 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
      {!h.closed?<><input aria-label={tx("Apertura")+" "+tx(days[i])} type="time" value={h.start} onChange={e=>patch("hours",data.hours.map((x,j)=>j===i?{...x,start:e.target.value}:x))}/><input aria-label={tx("Cierre")+" "+tx(days[i])} type="time" value={h.end} onChange={e=>patch("hours",data.hours.map((x,j)=>j===i?{...x,end:e.target.value}:x))}/></>:null}
     {h.end<h.start?<small>{translate("marketing.google.nextDay")}</small>:null}
     </div>)}</div>:null}
-    {data.action==="create"&&!hasSaved("openingDate")?<label className={styles.field}><span>{tx("Fecha de apertura")} <em>{tx("Opcional")}</em></span><input type="date" value={data.openingDate} onChange={e=>patch("openingDate",e.target.value)}/></label>:null}
+    {data.action==="create"&&!hasSaved("openingDate")?<OpeningDatePicker en={en} value={data.openingDate} onChange={value=>patch("openingDate",value)}/>:null}
     <MoreInfo><p className={styles.hint}>{tx("Los horarios especiales de feriados se configuran después. Tu horario real debe coincidir con lo que ofreces.")}</p></MoreInfo>
    </div>:null}
    {step===4?<div className={styles.group}>
