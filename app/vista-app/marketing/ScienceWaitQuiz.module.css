@@ -1,0 +1,21 @@
+.root{width:100%;flex:0 0 100%;box-sizing:border-box;display:flex;flex-direction:column;gap:9px;padding:12px 13px;border:1px solid #e7d8ef;border-radius:13px;background:linear-gradient(115deg,#fcf7ff,#f9f5fc);color:#563b60;font-family:inherit}
+.top{display:flex;align-items:center;gap:9px}
+.icon{width:32px;height:32px;flex:0 0 32px;display:grid;place-items:center;color:#795090;border-radius:10px;background:#eee3f5}
+.top>div{display:flex;flex-direction:column;gap:3px}
+.top strong{font-size:12px;line-height:1.3;font-weight:850}
+.top small{font-size:10px;line-height:1.3;color:#826d89}
+.question{font-size:12px;line-height:1.4;font-weight:750;margin:0}
+.choices{display:flex;flex-wrap:wrap;gap:6px}
+.choice,.right,.wrong{flex:1;min-width:90px;min-height:34px;border:1px solid #dfcde6;border-radius:9px;background:#fff;color:#644b6b;font:inherit;font-size:11px;font-weight:700;padding:7px 9px;cursor:pointer;transition:background .12s,border-color .12s}
+.choice:hover{background:#f1e6f5;border-color:#b99bcd}
+.choice:focus-visible,.result button:focus-visible{outline:3px solid #aa76ba;outline-offset:2px}
+.right{border-color:#8cc5a1;background:#e8f7ec;color:#235f3a}
+.wrong{border-color:#d9ada9;background:#fff0ef;color:#8c4141}
+.choice:disabled,.right:disabled,.wrong:disabled{cursor:default}
+.result{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;font-size:10px;line-height:1.45;color:#6f5973}
+.result span{display:inline;flex:1;min-width:170px}
+.result svg{display:inline;vertical-align:-3px;margin-right:3px;color:#558c6f}
+.result strong{font-weight:850}
+.result button{font:inherit;font-weight:850;color:#835387;background:#fff;border:1px solid #decee5;border-radius:8px;padding:7px 10px;cursor:pointer}
+@media(max-width:540px){.root{padding:10px;gap:7px}.top strong{font-size:11px}.top small{font-size:9px}.question{font-size:11px}.choice,.right,.wrong{min-width:80px;font-size:10px;padding:7px 6px}.result{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.choice,.right,.wrong{transition:none}}
