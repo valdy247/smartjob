@@ -1,7 +1,8 @@
 "use client";
 
-import {useState} from "react";
-import {BrainCircuit,CheckCircle2} from "lucide-react";
+import {useEffect,useRef,useState} from "react";
+import {createPortal} from "react-dom";
+import {CheckCircle2,XCircle} from "lucide-react";
 import styles from "./ScienceWaitQuiz.module.css";
 
 type Question={
@@ -21,15 +22,51 @@ const QUESTIONS:Question[]=[
 export default function ScienceWaitQuiz({en,seed}:{en:boolean;seed:string}){
  const [index,setIndex]=useState(()=>[...seed].reduce((n,c)=>n+c.charCodeAt(0),0)%QUESTIONS.length);
  const [chosen,setChosen]=useState<number|null>(null);
+ const titleRef=useRef<HTMLHeadingElement>(null);
  const question=QUESTIONS[index];
  const choices=en?question.choicesEn:question.choicesEs;
  const correct=chosen!==null&&chosen===question.correct;
- return <section className={styles.root} aria-label={en?"Science question while submitting":"Pregunta de ciencia mientras se envía"}>
-  <div className={styles.top}><span className={styles.icon}><BrainCircuit size={17}/></span><div><strong>{en?"A quick science challenge":"Un acertijo de ciencia"}</strong><small>{en?"Your request is still being sent. Play while you wait.":"Tu solicitud sigue enviándose. Juega mientras tanto."}</small></div></div>
-  <p className={styles.question}>{en?question.en:question.es}</p>
-  <div className={styles.choices} role="group" aria-label={en?question.en:question.es}>
-   {choices.map((choice,i)=><button key={i} type="button" disabled={chosen!==null} className={chosen!==null&&i===question.correct?styles.right:chosen===i?styles.wrong:styles.choice} onClick={()=>setChosen(i)}>{choice}</button>)}
+
+ useEffect(()=>{
+  const previous=document.activeElement instanceof HTMLElement?document.activeElement:null;
+  const before=document.body.style.overflow;
+  document.body.style.overflow="hidden";
+  titleRef.current?.focus();
+  return ()=>{document.body.style.overflow=before;previous?.focus();};
+ },[]);
+
+ if(typeof document==="undefined")return null;
+ return createPortal(<section className={styles.overlay} role="dialog" aria-modal="true" aria-labelledby="science-wait-heading"
+  onKeyDown={event=>{
+   if(event.key!=="Tab")return;
+   const focusables=Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
+   if(!focusables.length){event.preventDefault();return;}
+   const first=focusables[0],last=focusables[focusables.length-1];
+   if(event.shiftKey&&(document.activeElement===first||document.activeElement===titleRef.current)){event.preventDefault();last.focus();}
+   else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+  }}>
+  <div className={styles.content}>
+   <div className={styles.status} role="status"><span className={styles.spinner} aria-hidden="true"/>{en?"Sending your request…":"Enviando tu solicitud…"}</div>
+   <p className={styles.eyebrow}>{en?"A science challenge":"Un acertijo de ciencia"}</p>
+   <h2 id="science-wait-heading" ref={titleRef} tabIndex={-1} className={styles.question}>{en?question.en:question.es}</h2>
+   <div className={styles.choices} role="group" aria-label={en?"Choose your answer":"Elige tu respuesta"}>
+    {choices.map((choice,i)=>{
+     const isSelected=chosen===i;
+     const isCorrect=chosen!==null&&i===question.correct;
+     return <button key={i} type="button" disabled={chosen!==null} aria-pressed={isSelected}
+      className={isCorrect?styles.right:isSelected?styles.wrong:styles.choice} onClick={()=>setChosen(i)}>
+      {choice}{isSelected&&chosen!==null?(correct?<CheckCircle2 size={18} aria-hidden="true"/>:<XCircle size={18} aria-hidden="true"/>):null}
+     </button>;
+    })}
+   </div>
+   {chosen!==null?<div className={styles.result} aria-live="polite">
+    <p className={styles.resultText}>
+     {correct?<><CheckCircle2 className={styles.answerIcon} size={17} aria-hidden="true"/><strong>{en?"Correct answer!":"¡Respuesta correcta!"}</strong></>
+     :<><XCircle className={styles.answerIcon} size={17} aria-hidden="true"/><strong>{en?"Incorrect answer.":"Respuesta incorrecta."}</strong>{" "}{en?"You chose":"Elegiste"}: {choices[chosen]}. {en?"Correct":"Correcta"}: {choices[question.correct]}.</>}
+    </p>
+    <p className={styles.resultText}>{en?question.factEn:question.factEs}</p>
+    <button type="button" className={styles.next} onClick={()=>{setChosen(null);setIndex(i=>(i+1)%QUESTIONS.length);titleRef.current?.focus();}}>{en?"Next question":"Otra pregunta"}</button>
+   </div>:<p className={styles.helper}>{en?"The request continues processing while you play.":"Tu solicitud sigue procesándose mientras juegas."}</p>}
   </div>
-  {chosen!==null?<div className={styles.result} aria-live="polite"><span><CheckCircle2 size={14}/><strong>{correct?(en?"Correct!":"¡Correcto!"):(en?"Good try!":"¡Buen intento!")}</strong> {en?question.factEn:question.factEs}</span><button type="button" onClick={()=>{setChosen(null);setIndex(i=>(i+1)%QUESTIONS.length);}}>{en?"Another question":"Otra pregunta"}</button></div>:null}
- </section>;
+ </section>,document.body);
 }
