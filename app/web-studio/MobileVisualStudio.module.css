@@ -338,3 +338,42 @@
 .buttonShapePreview[data-shape="pill"]{border-radius:999px}
 .buttonShapePreview[data-shape="rounded"]{border-radius:7px}
 .buttonShapePreview[data-shape="square"]{border-radius:0}
+
+/* Restored touch-first contextual editor. Controls remain separate from the preview. */
+.mobileEditingTools{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));
+ z-index:810;width:min(480px,calc(100vw - 24px));display:flex;flex-direction:column;gap:7px;
+ font-family:ui-sans-serif,system-ui,sans-serif}
+.visualQuickBar{display:flex;align-items:center;gap:8px;min-width:0;
+ padding:8px;background:rgba(255,255,255,.98);border:1px solid #dcc7f1;
+ border-radius:18px;box-shadow:0 12px 44px #24153635}
+.visualQuickLabel{font-size:12px;font-weight:850;color:#49345e;white-space:nowrap;padding-left:6px}
+.visualQuickScroll{display:flex;gap:5px;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;
+ scrollbar-width:thin;flex:1}
+.visualQuickScroll button{display:flex;flex-direction:column;align-items:center;justify-content:center;
+ flex:0 0 auto;gap:3px;min-width:65px;min-height:57px;padding:6px 8px;
+ color:#604383;background:#f7f2fd;border:1px solid #e9d9f6;border-radius:11px;
+ font-size:10px;font-weight:800;cursor:pointer}
+.visualQuickScroll button[aria-pressed=true]{background:#8651d5;color:white;border-color:#8651d5}
+.visualQuickClose{flex-shrink:0;width:40px;height:43px;display:grid;place-items:center;border:0;
+ border-radius:11px;color:#684c82;background:#f5eefd}
+.visualQuickDetail{display:flex;flex-direction:column;gap:10px;min-width:0;max-height:33dvh;overflow-y:auto;
+ padding:13px;background:#fff;border:1px solid #dac7ee;border-radius:16px;
+ box-shadow:0 12px 36px #2415362b;color:#463254;font-size:13px}
+.visualQuickDetail>strong{font-size:14px;color:#392448}
+.visualQuickDetail :global(.vmv-inspector-color){display:flex;flex-direction:column;gap:9px}
+.visualQuickDetail :global(.vmv-inspector-range){display:flex;flex-direction:column;gap:8px}
+.visualQuickDetail :global(.vmv-inspector-range input){width:100%}
+.visualQuickDetail :global(.vmv-inspector-swatches){display:flex;flex-wrap:wrap;gap:6px}
+.visualQuickDetail :global(.vmv-inspector-swatches button){width:34px;height:34px;border-radius:9px}
+@media(max-width:760px){
+ .mobileEditingTools{left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));
+  width:auto}
+ .visualQuickBar{border-radius:16px;padding:6px;gap:5px}
+ .visualQuickLabel{display:none}
+ .visualQuickScroll button{min-width:62px}
+ .visualQuickDetail{max-height:29dvh}
+ .stage[data-inspecting=true] .mobileEditingTools{
+  bottom:calc(40dvh + 5px);
+ }
+ .stage[data-inspecting=true] .visualQuickDetail{display:none}
+}
