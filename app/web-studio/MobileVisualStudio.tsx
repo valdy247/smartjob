@@ -28,10 +28,10 @@ type Pick={id:string;kind:"image"|"text"|"button"|"section";target?:ImageTarget;
 type Section="home"|"pages"|"create"|"appearance"|"seo"|"connections"|"domain"|"history";
 
 const TEXT_KEYS=["title","description","body","text","eyebrow","subtitle","buttonText","label",
- "caption","quote","author","price","hours","area","notes","first","second","third","phone","email","address"];
+ "caption","quote","author","price","question","answer","hours","area","notes","first","second","third","phone","email","address"];
 const LABELS:Record<string,string>={title:"Título",description:"Descripción",body:"Texto",text:"Texto",
  eyebrow:"Encabezado",subtitle:"Subtítulo",buttonText:"Texto del botón",label:"Texto del botón",
- caption:"Pie de foto",quote:"Cita",author:"Autor",price:"Precio",hours:"Horario",area:"Zona",
+ caption:"Pie de foto",quote:"Cita",author:"Autor",price:"Precio",question:"Pregunta",answer:"Respuesta",hours:"Horario",area:"Zona",
  notes:"Notas",first:"Primer elemento",second:"Segundo elemento",third:"Tercer elemento",
  phone:"Teléfono",email:"Correo",address:"Dirección"};
 const ADDS=[
@@ -258,7 +258,7 @@ function getTextTarget(p:Record<string,unknown>,clicked:Element,kind:string):{ke
  }
  const fallback=clicked.closest("a,button")?
   kind==="ComposeButton"?"label":"buttonText":
-  clicked.matches("p")?"description":"title";
+  clicked.matches("p")?"description":clicked.matches("summary")?"question":"title";
  const matched=TEXT_KEYS.find(key=>{
   const value=p[key];
   return typeof value==="string"&&value.trim().length>0&&
@@ -514,7 +514,7 @@ export default function MobileVisualStudio({
    img=images[Math.max(0,Math.min(indexFound,images.length-1))]||images[0];
    kind="image";
   }else{
-   const content=target.closest("a,button,h1,h2,h3,h4,h5,p,small,figcaption,blockquote,strong,span,em,li");
+   const content=target.closest("a,button,h1,h2,h3,h4,h5,p,small,figcaption,blockquote,strong,span,em,li,summary");
    if(content){
     kind=content.matches("a,button")?"button":"text";
     const t=getTextTarget(p,content,node.type);key=t.key;index=t.index;
