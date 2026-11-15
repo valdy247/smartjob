@@ -1,4 +1,5 @@
 import type {Config} from "@puckeditor/core";
+import {FieldGroup,FieldTab} from "@/app/web-studio/PuckFieldLayout";
 import type {CSSProperties} from "react";
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
 import {colorEditorField,fontEditorField,numericEditorField} from "@/app/web-studio/BuilderContextFields";
@@ -106,9 +107,9 @@ const ImageField={
   <BuilderImageField value={typeof value==="string"?value:""} onChange={onChange}/>
 };
 function SettingsGroup({title,children}:{title:string;children:React.ReactNode}){
- return <details className="vmv-compose-settings" open={title==="Contenido"?true:undefined}>
-  <summary>{title}</summary><div className="vmv-compose-settings-fields">{children}</div>
- </details>;
+ return <FieldGroup label={title} variant="flush" defaultExpanded={title==="Contenido"}>
+  {children}
+ </FieldGroup>;
 }
 export const compositionBlocks:Config["components"]={
  SectionLayout:{
@@ -125,10 +126,12 @@ export const compositionBlocks:Config["components"]={
   defaultProps:{content:[],surface:"transparent",width:"normal",paddingDesktop:"normal",paddingMobile:"normal",
    gapDesktop:"normal",gapMobile:"compact",alignDesktop:"left",alignMobile:"left",visibility:"all"},
   renderFields:({fields:f})=><>
-   <SettingsGroup title="Contenido">{f.content}</SettingsGroup>
-   <SettingsGroup title="Diseño">{f.surface}{f.width}{f.visibility}</SettingsGroup>
-   <SettingsGroup title="Escritorio">{f.paddingDesktop}{f.gapDesktop}{f.alignDesktop}</SettingsGroup>
-   <SettingsGroup title="Móvil">{f.paddingMobile}{f.gapMobile}{f.alignMobile}</SettingsGroup>
+   <FieldTab label="Contenido">{f.content}</FieldTab>
+   <FieldTab label="Diseño">
+    <SettingsGroup title="Aspecto">{f.surface}{f.width}{f.visibility}</SettingsGroup>
+    <SettingsGroup title="Escritorio">{f.paddingDesktop}{f.gapDesktop}{f.alignDesktop}</SettingsGroup>
+    <SettingsGroup title="Móvil">{f.paddingMobile}{f.gapMobile}{f.alignMobile}</SettingsGroup>
+   </FieldTab>
   </>,
   render:({content:Content,surface,width,paddingDesktop,paddingMobile,gapDesktop,gapMobile,alignDesktop,alignMobile,visibility})=>
    <section className="vmv-compose-section" data-surface={surface||"transparent"}
@@ -158,10 +161,12 @@ export const compositionBlocks:Config["components"]={
   defaultProps:{left:[],right:[],third:[],columns:"2",proportion:"equal",mobileOrder:"normal",mobileColumns:"stack",
    gapDesktop:"normal",gapMobile:"compact",alignDesktop:"start",visibility:"all"},
   renderFields:({fields:f})=><>
-   <SettingsGroup title="Contenido">{f.left}{f.right}{f.third}</SettingsGroup>
-   <SettingsGroup title="Distribución">{f.columns}{f.proportion}{f.alignDesktop}{f.visibility}</SettingsGroup>
-   <SettingsGroup title="Escritorio">{f.gapDesktop}</SettingsGroup>
-   <SettingsGroup title="Móvil">{f.mobileColumns}{f.mobileOrder}{f.gapMobile}</SettingsGroup>
+   <FieldTab label="Contenido">{f.left}{f.right}{f.third}</FieldTab>
+   <FieldTab label="Distribución">
+    <SettingsGroup title="Diseño de columnas">{f.columns}{f.proportion}{f.alignDesktop}{f.visibility}</SettingsGroup>
+    <SettingsGroup title="Escritorio">{f.gapDesktop}</SettingsGroup>
+    <SettingsGroup title="Móvil">{f.mobileColumns}{f.mobileOrder}{f.gapMobile}</SettingsGroup>
+   </FieldTab>
   </>,
   render:({left:Left,right:Right,third:Third,columns,proportion,mobileOrder,mobileColumns,gapDesktop,gapMobile,alignDesktop,visibility})=>
    <div className="vmv-compose-columns" data-columns={columns||"2"}

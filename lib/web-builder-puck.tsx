@@ -12,6 +12,8 @@ import ThemeSwatches,{AccentPicker} from "@/app/web-studio/ThemeSwatches";
 import {visualBlocks,VISUAL_BLOCK_NAMES,normalizeVisualProps,visualTextStyle,type VisualBlockName} from "./web-builder-visual-blocks";
 import {compositionBlocks,COMPOSE_BLOCK_NAMES,COMPOSE_SLOTS,normalizeComposeProps,type ComposeBlockName} from "./web-builder-composition";
 import {buttonAppearance} from "./web-builder-button-appearance";
+import {getSupabase} from "./supabase";
+import {FieldTab} from "@/app/web-studio/PuckFieldLayout";
 
 type ButtonProps={label?:string;url?:string};
 function safeLink(value:unknown):string{
@@ -29,14 +31,41 @@ function ContactButton({label,url}:ButtonProps){
  return <a className="vmv-site-button" href={safeLink(url)}>{label||"Contáctanos"}</a>;
 }
 export const VMV_BUILDER_BLOCKS=[
- "Hero","Heading","Text","Image","Services","Benefits","CTA","Quote","Spacer","FAQ","Contact",...VISUAL_BLOCK_NAMES,...COMPOSE_BLOCK_NAMES
+ "Hero","Heading","Text","RichText","SitePageLink","Image","Services","Benefits","CTA","Quote","Spacer","FAQ","Contact",...VISUAL_BLOCK_NAMES,...COMPOSE_BLOCK_NAMES
 ] as const;
 type BlockName=typeof VMV_BUILDER_BLOCKS[number];
 const text=(limit:number)=>(value:unknown)=>typeof value==="string"?value.slice(0,limit):"";
+/** Allow only safe Tiptap formatting tags. Never preserve inline handlers or arbitrary HTML attributes. */
+function safeRichMarkup(input:unknown):string{
+ if(typeof input!=="string")return "";
+ const source=input.slice(0,8000)
+  .replace(/<!--([\s\S]*?)-->/g,"")
+  .replace(/<\s*(script|style|iframe|object|svg|math|form|template)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi,"");
+ const allowed=new Set(["p","br","strong","b","em","i","u","s","strike","blockquote","ul","ol","li","h1","h2","h3","h4","h5","h6","code","pre","hr","a"]);
+ return source.replace(/<\/?[a-z][^>]*>/gi,(tag)=>{
+  const name=/^<\s*\/?\s*([a-z0-9]+)/i.exec(tag)?.[1]?.toLowerCase();
+  if(!name||!allowed.has(name))return "";
+  const close=/^<\s*\//.test(tag);
+  if(name==="a"){
+   if(close)return "</a>";
+   const href=/\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(tag);
+   const url=safeLink(href?.[1]||href?.[2]||href?.[3]||"");
+   const escaped=url.replace(/&/g,"&amp;").replace(/"/g,"&quot;");
+   return '<a href="'+escaped+'" rel="nofollow noopener noreferrer">';
+  }
+  if(!close&&["p","h1","h2","h3","h4","h5","h6"].includes(name)){
+   const alignment=/text-align\s*:\s*(left|center|right|justify)\b/i.exec(tag);
+   if(alignment)return '<'+name+' style="text-align:'+alignment[1].toLowerCase()+'">';
+  }
+  return "<"+(close?"/":"")+name+">";
+ });
+}
 const fieldSchema:Partial<Record<BlockName,Record<string,(value:unknown)=>string>>>= {
  Hero:{eyebrow:text(70),title:text(160),description:text(650),buttonText:text(45),buttonUrl:text(450)},
  Heading:{text:text(170),subtitle:text(350)},
  Text:{title:text(120),body:text(1800)},
+ RichText:{body:safeRichMarkup},
+ SitePageLink:{label:text(110)},
  Image:{url:text(450),alt:text(140),caption:text(180)},
  Services:{title:text(120),first:text(85),second:text(85),third:text(85)},
  Benefits:{title:text(110),first:text(180),second:text(180),third:text(180)},
@@ -96,20 +125,25 @@ export function normalizeBuilderDocument(input:unknown):Data{
    while(seen.has(id))id="node-"+generated++;
    seen.add(id);
    if(COMPOSE_BLOCK_NAMES.includes(kind as ComposeBlockName)){
-    const props:Record<string,unknown>={id,...normalizeComposeProps(kind as ComposeBlockName,source)};
+    const props:Record<string,unknown>={id,...normalizeComposeProps(kind as ComposeBlockName,source),locked:source.locked==="yes"?"yes":"no"};
     for(const slot of COMPOSE_SLOTS[kind as ComposeBlockName]||[]){
      props[slot]=normalizeNodes(source[slot],depth+1);
     }
     return [{type:kind,props}];
    }
    if(VISUAL_BLOCK_NAMES.includes(kind as VisualBlockName)){
-    return [{type:kind,props:{id,...normalizeVisualProps(kind as VisualBlockName,source)}}];
+    return [{type:kind,props:{id,...normalizeVisualProps(kind as VisualBlockName,source),locked:source.locked==="yes"?"yes":"no"}}];
    }
-   const safe:Record<string,unknown>={id};
+   const safe:Record<string,unknown>={id,locked:source.locked==="yes"?"yes":"no"};
    for(const [field,sanitize] of Object.entries(fieldSchema[kind]||{})){
     if(field==="url")safe[field]=safeWebImageUrl(sanitize(source[field]))||"";
     else if(field==="buttonUrl")safe[field]=safeLink(sanitize(source[field]));
     else safe[field]=sanitize(source[field]);
+   }
+   if(kind==="SitePageLink"){
+    const item=source.page&&typeof source.page==="object"?source.page as Record<string,unknown>:null;
+    const url=typeof item?.url==="string"&&/^\/web\/[a-z0-9-]{1,80}(?:\/[a-z0-9-]{1,90})?$/i.test(item.url)?item.url:"";
+    safe.page=url?{url,title:typeof item?.title==="string"?item.title.slice(0,110):"Página"}:null;
    }
    if(kind==="Image")Object.assign(safe,normalizeImageSettings(source,23));
    if(kind==="CTA")Object.assign(safe,normalizeCalloutStyle(source));
@@ -194,7 +228,7 @@ const basicText={type:"text" as const};
 export const builderConfig:Config={
  categories:{
   composition:{title:"Composición libre",components:["SectionLayout","ColumnsLayout"],defaultExpanded:true},
-  elements:{title:"Elementos editables",components:["ComposeHeading","ComposeText","ComposeImage","ComposeButton"],defaultExpanded:true},
+  elements:{title:"Elementos editables",components:["ComposeHeading","ComposeText","RichText","SitePageLink","ComposeImage","ComposeButton"],defaultExpanded:true},
   sections:{title:"Secciones completas",components:[
    "HeroVisual","OfferingGrid","PhotoGallery","ProjectShowcase","ProcessSteps",
    "HoursArea","TeamGrid","PricingList","BeforeAfter","FAQList"
@@ -273,6 +307,59 @@ export const builderConfig:Config={
    fields:{title:basicText,body:{type:"textarea"}},
    defaultProps:{title:"Acerca de nosotros",body:"Escribe aquí la historia de tu negocio."},
    render:({title,body,...styling})=><section className="vmv-site-section vmv-site-copy"><h2 style={visualTextStyle(styling,"title")}>{title}</h2><p style={visualTextStyle(styling,"body")}>{body}</p></section>
+  },
+  SitePageLink:{
+   label:"Enlace a una página publicada",
+   fields:{
+    page:{
+     type:"external",
+     placeholder:"Selecciona una página publicada de tus sitios",
+     showSearch:true,cache:{enabled:false},
+     fetchList:async({query})=>{
+      const db=getSupabase();
+      if(!db)return [];
+      const {data:auth}=await db.auth.getUser();
+      if(!auth?.user)return [];
+      const uid=auth.user.id;
+      const [allPages,allSites,published]=await Promise.all([
+       db.from("smartjob_builder_pages").select("id,site_id,slug,title").eq("owner_id",uid).limit(100),
+       db.from("smartjob_builder_sites").select("id,slug,name").eq("owner_id",uid).limit(100),
+       db.from("smartjob_builder_public_pages").select("page_id").eq("owner_id",uid).limit(100)
+      ]);
+      if(allPages.error||allSites.error||published.error)return [];
+      const publishedIds=new Set((published.data||[]).map(row=>String(row.page_id)));
+      const sites=new Map((allSites.data||[]).map(row=>[String(row.id),row]));
+      const search=String(query||"").trim().toLocaleLowerCase();
+      return (allPages.data||[]).filter(row=>publishedIds.has(String(row.id)))
+       .flatMap(row=>{
+        const owner=sites.get(String(row.site_id));
+        if(!owner||typeof owner.slug!=="string")return [];
+        const title=String(row.title||row.slug).slice(0,110);
+        const site=String(owner.name||"Sitio").slice(0,100);
+        const url="/web/"+owner.slug+(row.slug==="home"?"":"/"+row.slug);
+        if(!/^\/web\/[a-z0-9-]{1,80}(?:\/[a-z0-9-]{1,90})?$/i.test(url))return [];
+        if(search&&!((title+" "+site).toLocaleLowerCase().includes(search)))return [];
+        return [{title,site,url}];
+       });
+     },
+     getItemSummary:(item)=>String(item?.title||"Selecciona una página")
+    },
+    label:{type:"text",placeholder:"Texto del enlace"}
+   },
+   defaultProps:{page:null,label:"Ver más"},
+   render:({page,label})=>{
+    const p=page&&typeof page==="object"?page as Record<string,unknown>:null;
+    const url=typeof p?.url==="string"&&/^\/web\/[a-z0-9-]{1,80}(?:\/[a-z0-9-]{1,90})?$/i.test(p.url)?p.url:"";
+    return url?<section className="vmv-site-section">
+     <a className="vmv-site-button" href={url}>{label||p?.title||"Ver página"}</a>
+    </section>:<></>;
+   }
+  },
+  RichText:{
+   label:"Texto con formato",
+   fields:{body:{type:"richtext",contentEditable:true,initialHeight:280}},
+   defaultProps:{body:"<p>Escribe aquí tu contenido.</p>"},
+   render:({body,...styling})=><section className="vmv-site-section vmv-site-richtext" style={visualTextStyle(styling,"body")}>{body}</section>
   },
   Image:{
    label:"Imagen",
@@ -396,3 +483,31 @@ export const builderConfig:Config={
   ...compositionBlocks
  }
 };
+
+/** Apply Puck's per-instance permissions without changing published markup.
+ * "locked" is part of each node's data and survives normalization/rehydration.
+ */
+for(const [kind,component] of Object.entries(builderConfig.components||{})){
+ const originalFields=component.fields||{};
+ component.fields={
+  ...originalFields,
+  locked:{type:"radio",options:[
+   {label:"Editable",value:"no"},
+   {label:"Protegido contra movimiento y eliminación",value:"yes"}
+  ]}
+ };
+ const renderFields=component.renderFields;
+ if(renderFields){
+  const nativeTabs=VISUAL_BLOCK_NAMES.includes(kind as VisualBlockName)||["SectionLayout","ColumnsLayout"].includes(kind);
+  component.renderFields=(arg)=> <>{renderFields(arg)}{
+   nativeTabs?<FieldTab label="Protección">{arg.fields.locked}</FieldTab>:
+    <div className="vmv-puck-protection">{arg.fields.locked}</div>
+  }</>;
+ }
+ const originalPermissions=component.resolvePermissions;
+ component.resolvePermissions=async(data,params)=>{
+  const previous=originalPermissions?await originalPermissions(data,params):{};
+  const locked=data.props.locked==="yes";
+  return {...previous,delete:!locked,drag:!locked,duplicate:!locked};
+ };
+}

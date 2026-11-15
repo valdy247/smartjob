@@ -1,4 +1,5 @@
 import type {Config} from "@puckeditor/core";
+import {FieldGroup,FieldTab} from "@/app/web-studio/PuckFieldLayout";
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
 import {numericEditorField,colorEditorField} from "@/app/web-studio/BuilderContextFields";
 import BuilderEditableImage from "@/app/web-studio/BuilderEditableImage";
@@ -99,17 +100,22 @@ export const visualBlocks:Config["components"]={
   },
   defaultProps:{layout:"split",eyebrow:"",title:"Presenta tu negocio",description:"",buttonText:"Contactar",buttonUrl:"#contacto",image:"",imageAlt:"",align:"left",imagePosition:"center",shade:"medium",shadeStrength:32,height:"normal",buttonStyle:"solid",buttonShape:"pill",buttonColor:"",buttonTextColor:"",buttonFontSize:0,imageWidth:100,imageRadius:0,imageOpacity:0,imageBorder:0,borderColor:"#30243F",imageMoveX:0,imageMoveY:0,titleFont:"site",titleColor:"",titleFontSize:0,titleShadow:"none",titleWeight:"normal",titleItalic:"no",titleLink:""},
   renderFields:({fields})=><>
-   <fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.eyebrow}{fields.title}{fields.description}{fields.buttonText}{fields.buttonUrl}</fieldset>
-   <fieldset className="vmv-puck-field-group"><legend>Estilo del título</legend>{fields.titleFont}{fields.titleColor}
-    {fields.titleFontSize}{fields.titleShadow}{fields.titleWeight}{fields.titleItalic}{fields.titleLink}</fieldset>
-   <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.align}{fields.height}{fields.buttonStyle}</fieldset>
-    <fieldset className="vmv-puck-field-group"><legend>Botón · Colores y tamaño</legend>
-     {fields.buttonShape}{fields.buttonTextColor}{fields.buttonColor}{fields.buttonFontSize}</fieldset>
-   <fieldset className="vmv-puck-field-group"><legend>Imagen · Reemplazar y ajustar</legend>
+   <FieldTab label="Contenido">{fields.eyebrow}{fields.title}{fields.description}{fields.buttonText}{fields.buttonUrl}</FieldTab>
+   <FieldTab label="Estilo del título"><FieldGroup label="Tipografía" variant="flush" defaultExpanded>{fields.titleFont}{fields.titleColor}
+    {fields.titleFontSize}{fields.titleShadow}{fields.titleWeight}{fields.titleItalic}{fields.titleLink}</FieldGroup></FieldTab>
+   <FieldTab label="Diseño">{fields.layout}{fields.align}{fields.height}{fields.buttonStyle}</FieldTab>
+    <FieldTab label="Botón · Colores y tamaño"><FieldGroup label="Aspecto del botón" variant="flush" defaultExpanded>
+     {fields.buttonShape}{fields.buttonTextColor}{fields.buttonColor}{fields.buttonFontSize}</FieldGroup></FieldTab>
+   <FieldTab label="Imagen · Reemplazar y ajustar"><FieldGroup label="Imagen y encuadre" variant="flush" defaultExpanded>
     {fields.image}{fields.imageAlt}{fields.imageWidth}{fields.imageRadius}{fields.imageOpacity}
     {fields.imageBorder}{fields.borderColor}{fields.imageMoveX}{fields.imageMoveY}
-    {fields.imagePosition}{fields.shadeStrength}</fieldset>
+    {fields.imagePosition}{fields.shadeStrength}</FieldGroup></FieldTab>
   </>,
+  resolveFields:({props},{fields})=>{
+   const cover=props.layout==="cover";
+   return Object.fromEntries(Object.entries(fields).filter(([key])=>
+    cover||!["shade","shadeStrength"].includes(key))) as typeof fields;
+  },
   render:({id,layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,shadeStrength,height,buttonStyle,buttonShape,buttonColor,buttonTextColor,buttonFontSize,imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,titleFont,titleColor,titleFontSize,titleShadow,titleWeight,titleItalic,titleLink,puck,...responsive})=>{
    const appearance=buttonAppearance({buttonShape,buttonColor,buttonTextColor,buttonFontSize});
    const href=typeof buttonUrl==="string"&&(buttonUrl.startsWith("#")||buttonUrl.startsWith("mailto:")||buttonUrl.startsWith("tel:"))?buttonUrl:"#contacto";
@@ -178,9 +184,12 @@ export const visualBlocks:Config["components"]={
   },
   defaultProps:{title:"Lo que ofrecemos",description:"",items:[],layout:"grid",padding:"normal",surface:"light",columns:"3",showPrices:"no"},
   renderFields:({fields})=><>
-   <fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.description}{fields.items}</fieldset>
-   <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.columns}{fields.padding}{fields.surface}{fields.showPrices}</fieldset>
+   <FieldTab label="Contenido">{fields.title}{fields.description}{fields.items}</FieldTab>
+   <FieldTab label="Diseño">{fields.layout}{fields.columns}{fields.padding}{fields.surface}{fields.showPrices}</FieldTab>
   </>,
+  resolveFields:({props},{fields})=>
+   Object.fromEntries(Object.entries(fields).filter(([key])=>
+    key!=="columns"||props.layout!=="list")) as typeof fields,
   render:({id,title,description,items,layout,padding,surface,columns,showPrices,puck,...textStyling})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-offerings">
    <div className="vmv-section-heading"><h2 style={visualTextStyle(textStyling,"title")}>{title}</h2>{description?<p style={visualTextStyle(textStyling,"description")}>{description}</p>:null}</div>
    <div className="vmv-offerings-items" data-layout={layout||"grid"} data-columns={columns||"3"}>
@@ -203,8 +212,8 @@ export const visualBlocks:Config["components"]={
    layout:styleFields.layout,padding:styleFields.padding,surface:styleFields.surface
   },
   defaultProps:{title:"Una mirada a nuestro trabajo",description:"",items:[],layout:"mosaic",padding:"normal",surface:"light"},
-  renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.description}{fields.items}</fieldset>
-   <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.padding}{fields.surface}</fieldset></>,
+  renderFields:({fields})=><><FieldTab label="Contenido">{fields.title}{fields.description}{fields.items}</FieldTab>
+   <FieldTab label="Diseño">{fields.layout}{fields.padding}{fields.surface}</FieldTab></>,
   render:({id,title,description,items,layout,padding,surface,puck,...textStyling})=>!toList(items).some(item=>photo(item.image))&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
    <div className="vmv-section-heading"><h2 style={visualTextStyle(textStyling,"title")}>{title}</h2>{description?<p style={visualTextStyle(textStyling,"description")}>{description}</p>:null}</div>
    <div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,index)=><figure key={visualItemId(item,index)}>
@@ -220,7 +229,7 @@ export const visualBlocks:Config["components"]={
     defaultItemProps:{title:"Paso",description:""},getItemSummary:(item)=>item.title||"Paso"},
    padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Cómo trabajamos",items:[],padding:"normal",surface:"soft"},
-  renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
+  renderFields:({fields})=><><FieldTab label="Contenido">{fields.title}{fields.items}</FieldTab><FieldTab label="Diseño">{fields.padding}{fields.surface}</FieldTab></>,
   render:({id,title,items,padding,surface,puck,...textStyling})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-process">
    <h2 style={visualTextStyle(textStyling,"title")}>{title}</h2><ol>{toList(items).map((item,index)=><li key={index}>
     <span>{String(index+1).padStart(2,"0")}</span><h3 style={visualTextStyle(item,"title")}>{heading(item.title)}</h3><p style={visualTextStyle(item,"description")}>{heading(item.description)}</p>
@@ -234,7 +243,7 @@ export const visualBlocks:Config["components"]={
     defaultItemProps:{title:"",description:"",image:"",alt:""},getItemSummary:(item)=>item.title||"Proyecto"},
    layout:styleFields.layout,padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Proyectos",items:[],layout:"mosaic",padding:"spacious",surface:"light"},
-  renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.padding}{fields.surface}</fieldset></>,
+  renderFields:({fields})=><><FieldTab label="Contenido">{fields.title}{fields.items}</FieldTab><FieldTab label="Diseño">{fields.layout}{fields.padding}{fields.surface}</FieldTab></>,
   render:({id,title,items,layout,padding,surface,puck,...textStyling})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
    <h2 style={visualTextStyle(textStyling,"title")}>{title}</h2><div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,index)=><figure key={visualItemId(item,index)}>
     <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
@@ -247,7 +256,7 @@ export const visualBlocks:Config["components"]={
   fields:{title:titleField,hours:textArea,area:textArea,notes:textArea,
    surface:styleFields.surface,padding:styleFields.padding},
   defaultProps:{title:"Horario y zona de atención",hours:"",area:"",notes:"",surface:"soft",padding:"normal"},
-  renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.hours}{fields.area}{fields.notes}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.surface}{fields.padding}</fieldset></>,
+  renderFields:({fields})=><><FieldTab label="Contenido">{fields.title}{fields.hours}{fields.area}{fields.notes}</FieldTab><FieldTab label="Diseño">{fields.surface}{fields.padding}</FieldTab></>,
   render:({title,hours,area,notes,surface,padding,puck,...textStyling})=>!(hours||area||notes)&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-hours">
    <h2 style={visualTextStyle(textStyling,"title")}>{title}</h2><div><article><small>HORARIO</small><p style={visualTextStyle(textStyling,"hours")}>{hours||"Consulta disponibilidad"}</p></article>
     <article><small>ZONA</small><p style={visualTextStyle(textStyling,"area")}>{area||"Consulta nuestra área de atención"}</p></article></div>
@@ -260,7 +269,7 @@ export const visualBlocks:Config["components"]={
    defaultItemProps:{title:"",description:"",image:"",alt:""},getItemSummary:(item)=>item.title||"Integrante"},
    padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Nuestro equipo",items:[],padding:"normal",surface:"light"},
-  renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
+  renderFields:({fields})=><><FieldTab label="Contenido">{fields.title}{fields.items}</FieldTab><FieldTab label="Diseño">{fields.padding}{fields.surface}</FieldTab></>,
   render:({id,title,items,padding,surface,puck,...textStyling})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-team">
    <h2 style={visualTextStyle(textStyling,"title")}>{title}</h2><div>{toList(items).map((item,index)=><article key={visualItemId(item,index)}>
     <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
@@ -275,7 +284,7 @@ export const visualBlocks:Config["components"]={
     defaultItemProps:{title:"",description:"",price:""},getItemSummary:(item)=>item.title||"Concepto"},
    padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Precios",items:[],padding:"normal",surface:"light"},
-  renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
+  renderFields:({fields})=><><FieldTab label="Contenido">{fields.title}{fields.items}</FieldTab><FieldTab label="Diseño">{fields.padding}{fields.surface}</FieldTab></>,
   render:({id,title,items,padding,surface,puck,...textStyling})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-price-list">
    <h2 style={visualTextStyle(textStyling,"title")}>{title}</h2><dl>{toList(items).map((item,i)=><div key={i}>
     <dt style={visualTextStyle(item,"title")}>{heading(item.title)}{item.description?<small style={visualTextStyle(item,"description")}>{heading(item.description)}</small>:null}</dt>
@@ -289,9 +298,9 @@ export const visualBlocks:Config["components"]={
    beforeImageSettings:imageSettingsField,afterImageSettings:imageSettingsField,
    padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Antes y después",beforeImage:"",afterImage:"",beforeAlt:"Antes",afterAlt:"Después",padding:"normal",surface:"light"},
-  renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}</fieldset>
-   <fieldset className="vmv-puck-field-group"><legend>Imagen</legend>{fields.beforeImage}{fields.beforeAlt}{fields.beforeImageSettings}{fields.afterImage}{fields.afterAlt}{fields.afterImageSettings}</fieldset>
-   <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
+  renderFields:({fields})=><><FieldTab label="Contenido">{fields.title}</FieldTab>
+   <FieldTab label="Imagen"><FieldGroup label="Imagen y encuadre" variant="flush" defaultExpanded>{fields.beforeImage}{fields.beforeAlt}{fields.beforeImageSettings}{fields.afterImage}{fields.afterAlt}{fields.afterImageSettings}</FieldGroup></FieldTab>
+   <FieldTab label="Diseño">{fields.padding}{fields.surface}</FieldTab></>,
   render:({id,title,beforeImage,afterImage,beforeAlt,afterAlt,beforeImageSettings,afterImageSettings,padding,surface,puck,...textStyling})=>!photo(beforeImage)&&!photo(afterImage)&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-before-after">
    <h2 style={visualTextStyle(textStyling,"title")}>{title}</h2><div><figure><BuilderEditableImage id={id} target={{field:"beforeImage"}} src={beforeImage} settings={beforeImageSettings} alt={heading(beforeAlt)||"Antes"} editing={puck.isEditing}/><figcaption>Antes</figcaption></figure>
     <figure><BuilderEditableImage id={id} target={{field:"afterImage"}} src={afterImage} settings={afterImageSettings} alt={heading(afterAlt)||"Después"} editing={puck.isEditing}/><figcaption>Después</figcaption></figure></div>
@@ -303,8 +312,8 @@ export const visualBlocks:Config["components"]={
    defaultItemProps:{question:"",answer:""},getItemSummary:(item)=>item.question||"Pregunta"},
    padding:styleFields.padding,surface:styleFields.surface},
   defaultProps:{title:"Preguntas frecuentes",items:[],padding:"normal",surface:"light"},
-  renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset>
-   <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
+  renderFields:({fields})=><><FieldTab label="Contenido">{fields.title}{fields.items}</FieldTab>
+   <FieldTab label="Diseño">{fields.padding}{fields.surface}</FieldTab></>,
   render:({id,title,items,padding,surface,puck,...textStyling})=>{
    // Incomplete drafts remain editable but do not appear on the published site.
    const complete=toList(items).filter(item=>heading(item.question).trim()&&heading(item.answer).trim());
