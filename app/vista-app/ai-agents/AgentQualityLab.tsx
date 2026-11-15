@@ -52,7 +52,7 @@ export default function AgentQualityLab({agent,onClose,onEdit}:Props){
    <h2>Lo que aún necesita</h2>
    <p className={styles.sub}>Cada recomendación te lleva a la sección correcta del asistente.</p>
    {report.missing.length===0?<div className={styles.allGood}><CheckCircle2 size={23}/><strong>Ficha de negocio completa</strong>
-     <p>El siguiente paso es probar las respuestas reales con clientes ficticios antes de habilitar canales.</p></div>:
+     <p>Prueba con clientes ficticios antes de activar canales.</p></div>:
      <div className={styles.issueList}>
       {report.missing.map(c=><div key={c.id} className={styles.issue}>
        <span className={c.priority==="required"?styles.requiredIcon:styles.suggestedIcon}>
@@ -71,7 +71,7 @@ export default function AgentQualityLab({agent,onClose,onEdit}:Props){
   </section>:null}
   {tab==="tests"?<section className={styles.tabContent}>
    <h2>Ensayo con clientes</h2>
-   <p className={styles.sub}>Preguntas generadas para tu tipo de negocio. Úsalas en el simulador cuando esté conectado y compara con los resultados esperados.</p>
+   <p className={styles.sub}>Úsalas en el simulador cuando esté disponible.</p>
    <div className={styles.testList}>{report.tests.map((test,i)=><article className={styles.testCard} key={test.id}>
     <div className={styles.testHeader}><span>{String(i+1).padStart(2,"0")} · {test.area}</span>
      <button type="button" title="Copiar pregunta" aria-label={"Copiar: "+test.question} onClick={()=>void copy(test.question,test.id)}>
@@ -86,7 +86,7 @@ export default function AgentQualityLab({agent,onClose,onEdit}:Props){
   </section>:null}
   {tab==="brief"?<section className={styles.tabContent}>
    <h2>Ficha de entrenamiento</h2>
-   <p className={styles.sub}>Un resumen organizado a partir de lo que ya respondiste; listo para revisar y compartir con tu equipo.</p>
+   <p className={styles.sub}>Resumen de tu configuración.</p>
    <div className={styles.briefHead}><BookCheck size={20}/><strong>{agent.name}</strong>
     <button type="button" onClick={()=>void copy(report.brief,"brief")}>
      {copied==="brief"?<Check size={15}/>:<Clipboard size={15}/>}
