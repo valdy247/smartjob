@@ -50,3 +50,14 @@
 .moreInfo summary{width:fit-content;min-height:40px;display:list-item;align-content:center;cursor:pointer;font-weight:650;padding:4px 0;box-sizing:border-box}
 .moreInfo summary:focus-visible{outline:2px solid #a85d8b;outline-offset:3px;border-radius:4px}
 .moreInfo p{margin:8px 0 0}
+
+.loadedBusinessHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #eadce6;background:#fbf7fa;border-radius:13px;padding:11px 13px;min-width:0}
+.loadedBusinessInfo{display:flex;align-items:center;gap:10px;min-width:0;color:#915680}
+.loadedBusinessInfo>svg{flex:none;color:#518d68}
+.loadedBusinessInfo>span{display:flex;flex-direction:column;min-width:0;gap:3px}
+.loadedBusinessInfo small{color:#956b88;font-size:10px;font-weight:750}
+.loadedBusinessInfo strong{color:#47314b;font-size:13px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.loadedBusinessHeader>button{display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid #e4cfe0;border-radius:9px;background:#fff;color:#88557d;padding:9px 11px;min-height:40px;flex:none;font-size:11px;font-weight:800;cursor:pointer}
+.loadedBusinessHeader>button[aria-pressed=true]{background:#f4e7f1;border-color:#aa7fa1}
+.loadedBusinessHeader>button:focus-visible{outline:2px solid #aa7fa1;outline-offset:2px}
+@media(max-width:520px){.loadedBusinessHeader{padding:10px}.loadedBusinessInfo strong{font-size:12px}.loadedBusinessHeader>button{padding:8px}}
