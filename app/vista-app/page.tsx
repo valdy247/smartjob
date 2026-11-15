@@ -262,10 +262,6 @@ export default function VMVMobilePreview(){
    <aside className={styles.intro}>
     <span className={styles.kicker}>VMV BUSINESS / SMART CALL</span>
     <h1>{translate("native.introBusiness")}<br/><em>{translate("native.introPocket")}</em></h1>
-    <p>{translate("native.introLead")}</p>
-    <div className={styles.feature}><span>01</span><div><strong>{translate("native.introMinutesTitle")}</strong><small>{translate("native.introMinutesBody")}</small></div></div>
-    <div className={styles.feature}><span>02</span><div><strong>{translate("native.introSyncTitle")}</strong><small>{translate("native.introSyncBody")}</small></div></div>
-    <div className={styles.feature}><span>03</span><div><strong>{translate("native.introLineTitle")}</strong><small>{translate("native.introLineBody")}</small></div></div>
     <div className={styles.disclaimer}><ShieldCheck size={17}/><span>{translate("native.introDisclaimer")}</span></div>
    </aside>
    <div className={styles.phoneFrame}>
@@ -283,7 +279,6 @@ export default function VMVMobilePreview(){
       {phase==="unconfigured"?<div className={styles.loadingScreen}><LockKeyhole/><p>{translate("native.supabaseMissing")}</p></div>:null}
       {phase==="signed_out"?<div className={styles.signinScreen}>
        <span className={styles.screenEyebrow}>{translate("native.secureAccess")}</span><h2>{translate("native.welcome")}<span className={styles.mint}>.</span></h2>
-       <p className={styles.screenLead}>{translate("native.signInExplanation")}</p>
        <form className={styles.signinForm} onSubmit={login}>
         <label htmlFor="login-email">{translate("common.email")}</label><input required type="email" id="login-email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={translate("native.emailPlaceholder")}/>
         <label htmlFor="login-password">{translate("common.password")}</label><input required type="password" id="login-password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={translate("native.passwordPlaceholder")}/>
