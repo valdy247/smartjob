@@ -5,7 +5,7 @@ import {Render,type Config,type Data} from "@puckeditor/core";
 import {
  ArrowDown,ArrowLeft,ArrowUp,Check,ChevronDown,ChevronRight,Eye,EyeOff,
  FilePlus2,Globe,ImagePlus,Layers,Menu,MessageCircle,Monitor,Palette,
- Plus,RotateCw,Save,Settings2,SlidersHorizontal,Smartphone,
+ Plus,Save,Settings2,SlidersHorizontal,Smartphone,
  Sparkles,Type,Upload, X
 } from "lucide-react";
 import {builderConfig,normalizeBuilderDocument} from "@/lib/web-builder-puck";
@@ -187,7 +187,6 @@ export default function MobileVisualStudio({
  const [section,setSection]=useState<Section>("home");
  const [device,setDevice]=useState<"mobile"|"desktop">("mobile");
  const [preview,setPreview]=useState(false);
- const [orientation,setOrientation]=useState<"portrait"|"landscape">("portrait");
  const [selection,setSelection]=useState<Pick|null>(null);
  const [adjust,setAdjust]=useState<"actions"|"image"|"move"|"text">("actions");
  const [seoImageKey,setSeoImageKey]=useState("");
@@ -280,10 +279,6 @@ export default function MobileVisualStudio({
   if(!p||p.id!==event.pointerId)return;
   window.clearTimeout(p.timer);p.active=false;press.current=null;
  }
- useEffect(()=>{
-  const detect=()=>setOrientation(window.matchMedia("(orientation: landscape)").matches?"landscape":"portrait");
-  detect();window.addEventListener("resize",detect);return()=>window.removeEventListener("resize",detect);
- },[]);
  useEffect(()=>{closePopup();closeDrawer();},[pageId]);
  useEffect(()=>()=>{if(press.current)clearTimeout(press.current.timer);},[]);
  useEffect(()=>{
@@ -318,10 +313,6 @@ export default function MobileVisualStudio({
    aria-expanded={drawer} onClick={()=>{setDrawer(true);closePopup();setSection("home");}}>
    <Menu size={23}/></button>
   <div className={device==="desktop"?styles.desktopFrame:styles.mobileFrame}>
-   {device==="desktop"&&orientation==="portrait"?<div className={styles.rotateHint} role="status">
-    <RotateCw size={32}/> Gira tu teléfono para editar en horizontal
-    <small>Vista de escritorio · 16:9</small>
-   </div>:null}
    <div className={styles.viewport} ref={pageSurface}
     onPointerDownCapture={pointerDown} onPointerMoveCapture={pointerMove}
     onPointerUpCapture={pointerUp} onPointerCancelCapture={pointerUp}
