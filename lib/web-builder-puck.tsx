@@ -128,11 +128,13 @@ export function normalizeBuilderDocument(input:unknown):Data{
  const secondary=typeof rawProps.secondaryColor==="string"&&/^#[0-9a-f]{6}$/i.test(rawProps.secondaryColor)?rawProps.secondaryColor:"";
  const tertiary=typeof rawProps.tertiaryColor==="string"&&/^#[0-9a-f]{6}$/i.test(rawProps.tertiaryColor)?rawProps.tertiaryColor:"";
  const chatMode=rawProps.chatMode==="inbox"?"inbox":"off";
+ const webAgentId=typeof rawProps.webAgentId==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawProps.webAgentId)?rawProps.webAgentId:"";
+ const webAgentName=webAgentId&&typeof rawProps.webAgentName==="string"?rawProps.webAgentName.trim().slice(0,80):"";
  const logo=safeWebImageUrl(String(rawProps.logo||""))||"";
  const family=["bakery","construction","professional","beauty","creative"].includes(String(rawProps.family))?String(rawProps.family):"";
  const language=rawProps.language==="en"?"en":"es";
  const socialLinks=normalizeSocialLinks(rawProps.socialLinks);
- return {content,root:{props:{palette,font,style,width,motion,accentColor:accent,secondaryColor:secondary,tertiaryColor:tertiary,chatMode,logo,family,language,socialLinks}}} as Data;
+ return {content,root:{props:{palette,font,style,width,motion,accentColor:accent,secondaryColor:secondary,tertiaryColor:tertiary,chatMode,webAgentId,webAgentName,logo,family,language,socialLinks}}} as Data;
 }
 export function starterBuilderDocument(name="Mi negocio",categoryId=""):Data{
  const bakery=["bakery","catering","cafe","restaurant","food-truck"].includes(categoryId);
