@@ -12,7 +12,10 @@ export default function WebStudioError({error,reset}:{error:Error & {digest?:str
   if(!window.location.hostname.endsWith(".vercel.app"))return;
   const code=error?.name||"ClientError";
   const message=(error?.message||"Sin detalles").replace(/https?:\/\/\S+/g,"[URL]").replace(/[a-f0-9]{8}-[a-f0-9-]{27,}/gi,"[id]").slice(0,350);
-  setDiagnostic(code+": "+message+(error?.digest?" · "+error.digest:""));
+  const frames=(error?.stack||"").split("\n").slice(1,7)
+   .map(line=>line.replace(/https?:\/\/[^/\s]+/g,"[host]").replace(/\b[a-f0-9]{8}-[a-f0-9-]{27,}\b/gi,"[id]"))
+   .join("\n");
+  setDiagnostic(code+": "+message+(error?.digest?" · "+error.digest:"")+(frames?"\n"+frames:""));
  },[error]);
  return <main style={{minHeight:"100dvh",background:"#faf7ff",padding:"48px 20px",fontFamily:"system-ui",color:"#30233e"}}>
   <section aria-labelledby="studio-recovery-title" style={{maxWidth:480,margin:"0 auto",padding:28,borderRadius:24,background:"white",border:"1px solid #e9ddf7"}}>
