@@ -732,15 +732,20 @@ export default function MobileVisualStudio({
   {selection&&!drawer&&!preview&&block&&props?<div className={styles.visualBackdrop} aria-hidden="true" onClick={closePopup}/> :null}
   {selection&&!drawer&&!preview&&block&&props?<div className={styles.mobileEditingTools}>
    <div className={styles.visualQuickBar} role="toolbar" aria-label="Herramientas del elemento seleccionado">
-    <span className={styles.visualQuickLabel}>Modificar {selection.kind==="button"?"botón":selection.kind==="image"?"imagen":selection.kind==="text"?"texto":"sección"}</span>
-    <div className={styles.visualQuickScroll}>
-     {menuChoices.map(tool=><button type="button" key={tool.id} aria-pressed={visualTool===tool.id}
-       onClick={()=>pickTool(visualTool===tool.id?"menu":tool.id)}>{tool.icon}<span>{tool.label}</span><ChevronDown size={16} className={styles.visualToolChevron}/></button>)}
-    </div>
+    {visualTool==="menu"?<>
+     <span className={styles.visualQuickLabel}>Modificar {selection.kind==="button"?"botón":selection.kind==="image"?"imagen":selection.kind==="text"?"texto":"sección"}</span>
+     <div className={styles.visualQuickScroll}>
+      {menuChoices.map(tool=><button type="button" key={tool.id}
+       onClick={()=>pickTool(tool.id)}>{tool.icon}<span>{tool.label}</span></button>)}
+     </div>
+    </>:<div className={styles.visualDetailHeader}>
+     <button type="button" className={styles.visualBackButton} aria-label="Volver a herramientas"
+      onClick={()=>setVisualTool("menu")}><ArrowLeft size={23}/></button>
+     <strong>{toolName}</strong>
+    </div>}
     <button type="button" className={styles.visualQuickClose} aria-label="Cerrar herramientas" onClick={closePopup}><X size={19}/></button>
    </div>
    {visualTool!=="menu"&&visualTool!=="actions"?<div className={styles.visualQuickDetail} role="region" aria-label={toolName}>
-    <strong>{toolName}</strong>
     {visualTool==="content"&&selection.kind!=="image"?<label className={styles.formLabel}>Contenido
      <textarea rows={2} value={selection.index!==undefined&&Array.isArray(props.items)?
       String((props.items[selection.index] as Record<string,unknown>)?.[selectedTextKey]||""):
@@ -784,7 +789,7 @@ export default function MobileVisualStudio({
     {visualTool==="frame"&&isImage&&image?<RangeField label="Esquinas" min={0} max={80} unit="px"
      value={targetSettings(props,image).imageRadius??0}
      onChange={v=>editImage(image,{imageRadius:v})}/>:null}
-    {!["content","size","color","background","font","weight","opacity","image","link","shape","shade","frame"].includes(visualTool)?
+    {!["content","size","color","background","font","weight","italic","spacing","opacity","image","link","shape","shade","frame"].includes(visualTool)?
      <button type="button" onClick={()=>setVisualTool("actions")}>Más ajustes <ChevronRight size={16}/></button>:null}
    </div>:null}
   </div>:null}
