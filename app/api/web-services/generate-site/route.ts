@@ -51,6 +51,15 @@ function configured(){
  return aiAgentModelPathAvailable()&&Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL&&
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY&&process.env.SUPABASE_SECRET_KEY);
 }
+function adminClient(){
+ return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SECRET_KEY!,{auth:{persistSession:false,autoRefreshToken:false}});
+}
+async function trialQuotaExempt(ownerId:string){
+ const {data,error}=await adminClient().from("smartjob_builder_quota_exemptions")
+  .select("owner_id").eq("owner_id",ownerId).gt("expires_at",new Date().toISOString()).maybeSingle();
+ return !error&&Boolean(data);
+}
 async function authorize(req:NextRequest){
  const value=req.headers.get("authorization")||"";
  const token=value.startsWith("Bearer ")?value.slice(7):"";
@@ -66,8 +75,8 @@ export async function GET(req:NextRequest){
  if(!configured())return response({enabled:false,reason:"La conexión de IA no está disponible."});
  const user=await authorize(req);
  if(!user)return response({enabled:false,reason:"Inicia sesión para usar IA."},401);
- const ready=await probeAiAgentModel();
- return response({enabled:ready,dailyLimit:2,
+ const [ready,trial]=await Promise.all([probeAiAgentModel(),trialQuotaExempt(user.id)]);
+ return response({enabled:ready,dailyLimit:trial?null:2,testing:trial,
   ...(!ready?{reason:"La IA no está respondiendo. Puedes usar plantillas y volver a comprobar más tarde."}:{})});
 }
 export async function POST(req:NextRequest){
@@ -84,11 +93,14 @@ export async function POST(req:NextRequest){
  const direction=str(fields.direction,400);
  const pageName=str(fields.pageName,80);
  // Limit provider spending in Postgres, atomically across all server instances.
- const admin=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SECRET_KEY!,{auth:{persistSession:false,autoRefreshToken:false}});
- const claimed=await admin.rpc("smartjob_web_site_ai_claim_slot",{p_owner:user.id});
+ const claimed=await adminClient().rpc("smartjob_web_site_ai_claim_slot",{p_owner:user.id});
  if(claimed.error)return response({error:"No se pudo verificar el límite de uso de IA."},503);
- if(claimed.data!==true)return response({error:"Llegaste al límite de 2 webs con IA por día. Puedes utilizar las plantillas."},429);
+ if(claimed.data!==true){
+  const trial=await trialQuotaExempt(user.id);
+  return response({error:trial?
+   "La capacidad diaria compartida del generador de IA se agotó. Vuelve a intentarlo mañana.":
+   "Llegaste al límite de 2 webs con IA por día. Puedes utilizar las plantillas."},429);
+ }
  try{
   const factual=aiSiteRequestContext(intake,direction,pageName);
   const system=`Eres director creativo, redactor SEO y diseñador senior de sitios web comerciales. Responde en ESPAÑOL con un objeto JSON puro, sin Markdown ni explicaciones, usando EXACTAMENTE las claves del esquema siguiente:
