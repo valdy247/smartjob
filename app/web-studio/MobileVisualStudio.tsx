@@ -16,6 +16,7 @@ import {ColorField,FontField,RangeField} from "./BuilderContextFields";
 import {WebsiteChrome,websiteVisualStyle} from "@/lib/web-site-chrome";
 import {familyForCategory} from "@/lib/web-builder-templates";
 import WebChatLauncher from "./WebChatLauncher";
+import WebSiteAgentSelector from "./WebSiteAgentSelector";
 import RequestForm from "@/app/sites/[slug]/RequestForm";
 import styles from "./MobileVisualStudio.module.css";
 
@@ -557,8 +558,10 @@ export default function MobileVisualStudio({
         }}/></label>
       <p className={styles.help}>Los mensajes de los visitantes llegan a VMV. No se publican cambios hasta que apruebes la web.</p>
       <h3>Agente IA</h3>
-      <p className={styles.help}>Puedes preparar tu agente en VMV. Las respuestas automáticas del chat público requieren conectar ese canal primero.</p>
-      <a className={styles.drawerLink} href="/vista-app/ai-agents" target="_blank" rel="noopener noreferrer"><Sparkles size={18}/> Configurar agente IA <ChevronRight size={17}/></a>
+      <WebSiteAgentSelector siteName={siteName} selectedId={String(root.webAgentId||"")}
+       onSelect={agent=>rootPatch({webAgentId:agent?.id||"",webAgentName:agent?.name||""})}/>
+      <p className={styles.help}>La selección queda guardada en el borrador de esta página. El chat público todavía recibe mensajes en la bandeja; las respuestas automáticas de IA requieren habilitar el canal web.</p>
+      <a className={styles.drawerLink} href="/vista-app/ai-agents" target="_blank" rel="noopener noreferrer"><Sparkles size={18}/> Administrar mis agentes <ChevronRight size={17}/></a>
      </>:null}
      {section==="domain"?<>
       <h3>Dominio de tu web</h3>
