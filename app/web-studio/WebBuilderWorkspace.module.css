@@ -22,12 +22,16 @@
 .createSite button,.addPage button,.domainForm button{display:flex;align-items:center;justify-content:center;gap:7px;border:0;border-radius:12px;padding:10px 18px;min-height:44px;font-size:12px;font-weight:900;color:#fff;background:#8d5bdf;white-space:nowrap}
 .landing h2{font-size:23px;letter-spacing:-.04em}
 .siteList{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:14px}
-.siteCard{text-align:left;display:flex;flex-direction:column;align-items:flex-start;min-height:190px;gap:12px;background:#fff;border:1px solid #e9dff4;border-radius:21px;padding:21px}
-.siteCard svg{color:#8d5bdf}
-.siteCard strong{font-size:21px;letter-spacing:-.04em;overflow-wrap:anywhere}
-.siteCard small{font-size:12px;color:#8c80a0;overflow-wrap:anywhere}
-.siteCard>span{font-size:12px;color:#8b54cf;font-weight:800;margin-top:auto}
+.siteCard{text-align:left;display:flex;flex-direction:column;min-height:190px;background:#fff;border:1px solid #e9dff4;border-radius:21px;overflow:hidden}
 .siteCard:hover{border-color:#b59be2}
+.siteOpen{display:flex;flex:1;flex-direction:column;align-items:flex-start;gap:12px;width:100%;min-width:0;padding:21px;text-align:left;border:0;background:transparent;color:inherit}
+.siteOpen svg{color:#8d5bdf}
+.siteOpen strong{font-size:21px;letter-spacing:-.04em;overflow-wrap:anywhere}
+.siteOpen small{font-size:12px;color:#8c80a0;overflow-wrap:anywhere}
+.siteOpen>span{font-size:12px;color:#8b54cf;font-weight:800;margin-top:auto}
+.siteDelete{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:43px;padding:11px 15px;border:0;border-top:1px solid #f0e7f3;background:#fffbfc;color:#a84d63;font-size:12px;font-weight:850}
+.siteDelete svg{color:inherit}
+.siteDelete:hover{background:#fff0f2;color:#96364c}
 .siteHeading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px}
 .siteHeading h1{font-size:clamp(28px,5vw,44px);line-height:1.1;letter-spacing:-.06em;margin:6px 0;overflow-wrap:anywhere}
 .sitePreview{display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;border-radius:12px;padding:12px 15px;background:#f0e5ff;color:#754bc0;font-size:12px;font-weight:850;white-space:nowrap}
