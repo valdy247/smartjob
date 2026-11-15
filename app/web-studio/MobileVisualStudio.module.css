@@ -180,3 +180,23 @@
 .seoSelected strong{font-size:13px;color:#38294b;}
 .seoSelected small{font-size:11px;color:#77688a;line-height:1.5;}
 .seoSelected .formLabel{margin:0;}
+
+/* Keep the complete element editor within the visible viewport on laptops and phones. */
+.floating{
+ top:50%;
+ transform:translateY(-50%);
+ max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+ overscroll-behavior:contain;
+ scrollbar-gutter:stable;
+}
+@media(max-width:600px){
+ .floating{
+  top:calc(env(safe-area-inset-top) + 10px);
+  bottom:calc(env(safe-area-inset-bottom) + 10px);
+  transform:none;
+  height:auto;
+  max-height:none;
+  left:10px;
+  width:min(420px,calc(100vw - 20px));
+ }
+}
