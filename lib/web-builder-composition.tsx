@@ -1,4 +1,5 @@
-import {FieldGroup,FieldTab,type Config} from "@puckeditor/core";
+import type {Config} from "@puckeditor/core";
+import {FieldGroup,FieldTab} from "@/app/web-studio/PuckFieldLayout";
 import type {CSSProperties} from "react";
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
 import {colorEditorField,fontEditorField,numericEditorField} from "@/app/web-studio/BuilderContextFields";
