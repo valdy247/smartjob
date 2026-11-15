@@ -172,13 +172,13 @@ export function SmartCallControlCenter({session,onOpenCalls,onSettingsSaved}:{
   {!loading&&section==="overview"?<>
    <View style={s.card}><Text style={s.sectionLabel}>TU LÍNEA DE NEGOCIO</Text>
     <Text style={s.number}>{route?.public_number||route?.twilio_number||"Aún sin número asignado"}</Text>
-    <Text style={s.helper}>{route?.enabled?"Hay una ruta guardada. La recepción real debe verificarse con una llamada de prueba.":"Completa la activación antes de desviar llamadas."}</Text>
+    <Text style={s.helper}>{route?.enabled?"Ruta guardada. Comprueba la recepción con una llamada real.":"Activa la línea antes de desviar."}</Text>
     <View style={s.divider}/>
     <View style={s.infoRow}><Text style={s.infoLabel}>Idioma del cliente</Text><Text style={s.infoValue}>{readableLanguage(settings.caller_language)}</Text></View>
     <View style={s.infoRow}><Text style={s.infoLabel}>Tu idioma</Text><Text style={s.infoValue}>{readableLanguage(settings.desired_language)}</Text></View>
     <View style={s.infoRow}><Text style={s.infoLabel}>Asistente</Text><Text style={s.infoValue}>{settings.assistant_name||"Sin configurar"}</Text></View>
     <View style={s.infoRow}><Text style={s.infoLabel}>Minutos para traducir llamadas</Text><Text style={s.infoValue}>{minutes===null?"No disponible":String(minutes)+" min"}</Text></View>
-    <Text style={s.helper}>Este saldo se usa para llamadas con traducción. No es el tiempo total de llamadas entrantes ni el del traductor en persona.</Text>
+    <Text style={s.helper}>Solo traducción telefónica; no incluye llamadas normales ni traductor presencial.</Text>
     <Action label="Ir a llamadas" onPress={onOpenCalls}/>
    </View>
    <View style={s.metricRow}><View style={s.metric}><Text style={s.metricValue}>{calls.length}</Text><Text style={s.metricLabel}>Llamadas registradas</Text></View>
