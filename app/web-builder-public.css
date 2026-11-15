@@ -747,11 +747,20 @@
  transform:none!important;
 }
 
-/* Hero imagery remains within a section whose height grows to preserve all content. */
+/* Hero image spacing belongs to the image row, never to the title or section header.
+   The image container stays in flow so following sections move down naturally. */
 .vmv-site .vmv-hero-visual{
- padding-block-start:var(--hero-space-before,0px);
- padding-block-end:var(--hero-space-after,0px);
+ padding-block-start:0;
+ padding-block-end:0;
  box-sizing:border-box;
+}
+.vmv-site .vmv-hero-visual:not([data-layout=cover]) .vmv-hero-image{
+ margin-block-start:var(--hero-space-before,0px);
+ margin-block-end:var(--hero-space-after,0px);
+}
+/* In split layout the headline has an independent row; only the picture gets spacing. */
+.vmv-site .vmv-hero-visual[data-layout=split] .vmv-hero-content{
+ align-self:start;
 }
 .vmv-site .vmv-hero-image>.vmv-managed-image,
 .vmv-site .vmv-hero-cover>.vmv-managed-image{
@@ -759,12 +768,18 @@
  transform:translateX(var(--image-x,0px));
 }
 @container(max-width:700px){
- .vmv-site .vmv-hero-visual{
-  padding-block-start:var(--hero-space-before-mobile,0px);
-  padding-block-end:var(--hero-space-after-mobile,0px);
+ .vmv-site .vmv-hero-visual:not([data-layout=cover]) .vmv-hero-image{
+  margin-block-start:var(--hero-space-before-mobile,0px);
+  margin-block-end:var(--hero-space-after-mobile,0px);
  }
  .vmv-site .vmv-hero-image>.vmv-managed-image,
  .vmv-site .vmv-hero-cover>.vmv-managed-image{
   transform:translateX(var(--image-x-mobile,0px));
+ }
+}
+@media(max-width:700px){
+ .vmv-site .vmv-hero-visual:not([data-layout=cover]) .vmv-hero-image{
+  margin-block-start:var(--hero-space-before-mobile,0px);
+  margin-block-end:var(--hero-space-after-mobile,0px);
  }
 }
