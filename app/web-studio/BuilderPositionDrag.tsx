@@ -65,8 +65,11 @@ export function MovableContent({id,x=0,y=0,editing=false,xKey,yKey,className="",
 }){
  const [at,setAt]=useState({x,y});
  useEffect(()=>setAt({x,y}),[x,y]);
+ // Vertical spacing participates in document flow instead of overlapping adjacent blocks.
  return <div className={"vmv-compose-movable "+className} style={{...style,
-  transform:"translate("+at.x+"px, "+at.y+"px)"}}>
+  transform:"translateX("+at.x+"px)",
+  marginBlockStart:Math.max(0,at.y)+"px",
+  marginBlockEnd:Math.max(0,-at.y)+"px"}}>
   {editing?<EditorMoveHandle id={id} x={at.x} y={at.y} xKey={xKey} yKey={yKey}
    onPreview={setAt}/>:null}
   {children}
