@@ -22,7 +22,7 @@ type PageChoice={id:string;slug:string;title:string};
 type Item=Data["content"][number];
 type Pick={id:string;kind:"image"|"text"|"button"|"section";target?:ImageTarget;
  key?:string;index?:number;x:number;y:number};
-type Section="home"|"pages"|"create"|"appearance"|"seo"|"connections"|"domain";
+type Section="home"|"pages"|"create"|"appearance"|"seo"|"connections"|"domain"|"history";
 
 const TEXT_KEYS=["title","description","body","text","eyebrow","subtitle","buttonText","label",
  "caption","quote","author","price","hours","area","notes","first","second","third","phone","email","address"];
@@ -154,13 +154,24 @@ export default function MobileVisualStudio({
  data,onChange,siteName,siteSlug,siteCategory,siteId,pages,pageId,
  onBack,onChoosePage,onCreatePage,onPublish,onSave,
  busy=false,title,description,onTitleChange,onDescriptionChange,
- inquiriesEnabled,onToggleInquiries,onDomains,onHistory
+ inquiriesEnabled,onToggleInquiries,onDomains,onHistory,
+ domains,domainRequests,domainInput,domainQuote,quote,onDomainInput,onCheckDomain,onSubmitDomainRequest,onVerifyDomain,
+ revisions,onRestoreRevision,error,notice,savePhase,recoveryAvailable,onRecover,onDiscardRecovery
 }:{
  data:Data;onChange:(next:Data)=>void;siteName:string;siteSlug:string;siteCategory:string;siteId:string;
  pages:PageChoice[];pageId:string;onBack:()=>void;onChoosePage:(id:string)=>void;onCreatePage:(name:string)=>void;
  onPublish:()=>void;onSave:()=>void;busy?:boolean;title:string;description:string;
  onTitleChange:(v:string)=>void;onDescriptionChange:(v:string)=>void;
  inquiriesEnabled:boolean;onToggleInquiries:(enabled:boolean)=>void;onDomains:()=>void;onHistory:()=>void;
+ domains:Array<{id:string;hostname:string;state:string}>;
+ domainRequests:Array<{id:string;hostname:string;intent:string;status:string}>;
+ domainInput:string;domainQuote:{domain:string;available:boolean;priceDisplay:string}|null;quote:string;
+ onDomainInput:(value:string)=>void;onCheckDomain:()=>void;
+ onSubmitDomainRequest:(intent:"buy"|"connect")=>void;
+ onVerifyDomain:(hostname:string,action:"connect"|"verify")=>void;
+ revisions:Array<{id:string;version:number;title:string;description:string;created_at:string;document:unknown}>;
+ onRestoreRevision:(r:{id:string;version:number;title:string;description:string;created_at:string;document:unknown})=>void;
+ error:string;notice:string;savePhase:string;recoveryAvailable:boolean;onRecover:()=>void;onDiscardRecovery:()=>void;
 }){
  const [drawer,setDrawer]=useState(false);
  const [section,setSection]=useState<Section>("home");
@@ -170,6 +181,14 @@ export default function MobileVisualStudio({
  const [selection,setSelection]=useState<Pick|null>(null);
  const [adjust,setAdjust]=useState<"actions"|"image"|"move"|"text">("actions");
  const [newName,setNewName]=useState("");
+ const [noticeVisible,setNoticeVisible]=useState(false);
+ const [errorDismissed,setErrorDismissed]=useState("");
+ useEffect(()=>{
+  if(!notice){setNoticeVisible(false);return;}
+  setNoticeVisible(true);
+  const timer=window.setTimeout(()=>setNoticeVisible(false),4800);
+  return()=>window.clearTimeout(timer);
+ },[notice]);
  const press=useRef<{id:number;timer:number;x:number;y:number;active:boolean}|null>(null);
  const suppressed=useRef(0);
  const pageSurface=useRef<HTMLDivElement>(null);
@@ -269,10 +288,10 @@ export default function MobileVisualStudio({
   socialLinks={root.socialLinks} visualStyle={withSiteStyle}>
   <Render config={preview?builderConfig:config} data={clean}/>
  </WebsiteChrome>;
- const menuAction=(next:Section)=>{setSection(next);closePopup();};
+ const menuAction=(next:Section)=>{setSection(next);closePopup();if(next==="domain")onDomains();if(next==="history")onHistory();};
  const sectionLabel=(part:Section)=>({home:"Editor",pages:"Páginas",create:"Añadir elemento",
   appearance:"Colores y diseño",seo:"SEO e imágenes",connections:"Chat y agente",
-  domain:"Dominio"})[part];
+  domain:"Dominio",history:"Versiones"})[part];
  return <div className={styles.stage} data-device={device} data-preview={preview}>
   <button className={styles.menuButton} type="button" aria-label="Abrir menú del editor"
    aria-expanded={drawer} onClick={()=>{setDrawer(true);closePopup();setSection("home");}}>
@@ -288,8 +307,10 @@ export default function MobileVisualStudio({
     onClickCapture={e=>{
      if(preview)return;
      const target=e.target instanceof Element?e.target:null;
-     if(!target?.closest("[data-vmv-edit-block]"))return;
-     if(target.closest("a,button,input,select,textarea,[role=button]")||Date.now()<suppressed.current){
+     if(!target)return;
+     // The real-looking canvas must not navigate or submit anything while editing.
+     if(target.closest("a,button,input[type=submit],select,textarea,[role=button]")||
+        Date.now()<suppressed.current){
       e.preventDefault();e.stopPropagation();
      }
     }}
@@ -297,7 +318,10 @@ export default function MobileVisualStudio({
     {mainCanvas}
    </div>
   </div>
-  {selection&&!drawer&&!preview&&block&&props?<div className={styles.floating}
+  {error&&errorDismissed!==error?<div className={styles.statusAlert} role="alert">
+   <span>{error}</span><button aria-label="Cerrar aviso" onClick={()=>setErrorDismissed(error)}><X size={15}/></button>
+  </div>:noticeVisible?<div className={styles.statusToast} role="status">{notice}</div>:null}
+    {selection&&!drawer&&!preview&&block&&props?<div className={styles.floating}
    role="dialog" aria-label="Editar elemento seleccionado"
    style={{"--float-x":selection.x+"px","--float-y":selection.y+"px"} as CSSProperties}>
    <div className={styles.floatHead}>
@@ -377,6 +401,13 @@ export default function MobileVisualStudio({
      <button type="button" aria-label="Cerrar menú" onClick={closeDrawer}><X size={20}/></button>
     </header>
     {section==="home"?<div className={styles.drawerBody}>
+     {recoveryAvailable?<div className={styles.recovery}>
+      <strong>Encontramos cambios sin guardar</strong>
+      <p>Recupéralos antes de continuar para evitar perder el borrador.</p>
+      <button onClick={()=>{onRecover();closeDrawer();}}>Recuperar cambios</button>
+      <button onClick={onDiscardRecovery}>Descartar copia local</button>
+     </div>:null}
+     <small className={styles.saveStatus}>{savePhase==="saving"?"Guardando cambios…":savePhase==="error"?"Error al guardar":"Guardado automático activado"}</small>
      <small className={styles.groupLabel}>CONTENIDO</small>
      <button onClick={()=>menuAction("create")}><Plus/> Agregar elemento o sección <ChevronRight/></button>
      <button onClick={()=>menuAction("pages")}><Layers/> Seleccionar página <ChevronRight/></button>
@@ -394,7 +425,7 @@ export default function MobileVisualStudio({
      <small className={styles.groupLabel}>PUBLICACIÓN</small>
      <button onClick={()=>{onSave();closeDrawer();}} disabled={busy}><Save/> Guardar borrador <ChevronRight/></button>
      <button className={styles.publish} onClick={()=>{onPublish();closeDrawer();}} disabled={busy}><Upload/> Publicar web <ChevronRight/></button>
-     <button onClick={()=>{closeDrawer();onHistory();}}><Layers/> Historial de versiones <ChevronRight/></button>
+     <button onClick={()=>menuAction("history")}><Layers/> Historial de versiones <ChevronRight/></button>
      <button onClick={()=>{closeDrawer();onBack();}}><ArrowLeft/> Mis sitios</button>
     </div>:<div className={styles.drawerBody}>
      <button className={styles.drawerBack} onClick={()=>setSection("home")}><ArrowLeft/> {sectionLabel(section)}</button>
@@ -472,8 +503,37 @@ export default function MobileVisualStudio({
       <a className={styles.drawerLink} href="/vista-app/ai-agents" target="_blank" rel="noopener noreferrer"><Sparkles size={18}/> Configurar agente IA <ChevronRight size={17}/></a>
      </>:null}
      {section==="domain"?<>
-      <h3>Dominio de tu web</h3><p className={styles.help}>Conecta o solicita un dominio desde el módulo de dominios de VMV.</p>
-      <button onClick={()=>{closeDrawer();onDomains();}}><Globe/> Administrar dominios <ChevronRight/></button>
+      <h3>Dominio de tu web</h3>
+      <p className={styles.help}>Consulta disponibilidad antes de solicitar un dominio. No se compra nada automáticamente.</p>
+      <label className={styles.formLabel}>Dominio
+       <input type="text" placeholder="minegocio.com" autoCapitalize="none"
+        value={domainInput} maxLength={253} spellCheck={false}
+        onChange={e=>onDomainInput(e.target.value.toLowerCase())}/>
+      </label>
+      <button disabled={busy||domainInput.trim().length<4} onClick={onCheckDomain}><Globe/> Consultar disponibilidad <ChevronRight/></button>
+      {quote?<p className={styles.help} role="status">{quote}</p>:null}
+      {domainQuote?.available?<div className={styles.domainActions}>
+       <button disabled={busy} onClick={()=>onSubmitDomainRequest("buy")}>Solicitar compra sin pagar ahora</button>
+       <button disabled={busy} onClick={()=>onSubmitDomainRequest("connect")}>Ya tengo este dominio</button>
+      </div>:null}
+      {domainRequests.length>0?<><h3>Solicitudes</h3>{domainRequests.map(entry=>
+       <div className={styles.domainRow} key={entry.id}>
+        <strong>{entry.hostname}</strong><small>{entry.status} · {entry.intent==="buy"?"Compra":"Conexión"}</small>
+        {entry.intent==="connect"?<button disabled={busy} onClick={()=>onVerifyDomain(entry.hostname,"connect")}>Conectar DNS</button>:null}
+       </div>)}</>:null}
+      {domains.length>0?<><h3>Dominios conectados</h3>{domains.map(entry=>
+       <div className={styles.domainRow} key={entry.id}>
+        <strong>{entry.hostname}</strong><small>{entry.state}</small>
+        {entry.state==="verifying"?<button disabled={busy} onClick={()=>onVerifyDomain(entry.hostname,"verify")}>Verificar DNS</button>:null}
+       </div>)}</>:null}
+     </>:null}
+     {section==="history"?<>
+      <p className={styles.help}>Puedes restaurar una versión anterior como borrador. La web pública no cambiará hasta que publiques.</p>
+      {revisions.length?revisions.map(entry=><div className={styles.domainRow} key={entry.id}>
+       <strong>Versión {entry.version} · {entry.title}</strong>
+       <small>{new Date(entry.created_at).toLocaleDateString("es-US")}</small>
+       <button onClick={()=>{onRestoreRevision(entry);closeDrawer();}} disabled={busy}>Restaurar</button>
+      </div>):<p className={styles.help}>No hay versiones anteriores.</p>}
      </>:null}
     </div>}
    </nav>
