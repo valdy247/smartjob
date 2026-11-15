@@ -338,3 +338,18 @@
 .deleteActions .deleteConfirm{background:#b43f61;border-color:#b43f61;color:white}
 .deleteActions button:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:520px){.deleteDialog{padding:18px}.deleteActions{flex-direction:column}}
+
+
+/* One compact mobile header: back, page chooser, preview, publish. */
+@container vmv-studio (max-width:700px){
+ .topbar[data-site=true]{display:flex;align-items:center;gap:6px;padding:8px;min-height:58px}
+ .topbar[data-site=true] .mobileSiteName{display:none}
+ .topbar[data-site=true] .mobileStudioTools{display:contents}
+ .topbar[data-site=true] .mobileBack{width:40px;height:42px}
+ .topbar[data-site=true] .mobilePageSwitcher{display:block;flex:1 1 auto;min-width:0;max-width:100%}
+ .topbar[data-site=true] .mobilePageTrigger{min-height:42px;padding:8px 10px;font-size:12px}
+ .topbar[data-site=true] .mobileToolButton{min-height:42px;min-width:42px;width:42px;padding:7px}
+ .topbar[data-site=true] .mobilePublish{min-height:42px;min-width:75px;padding:8px 11px;font-size:12px}
+ .mobileDraftStatus{display:none}
+ .main{padding-top:5px}
+}
