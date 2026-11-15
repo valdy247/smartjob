@@ -32,7 +32,7 @@ export default function TemplateProposals({input,familyOverride,generated,busy,o
   <header className={styles.heading}>
    <span><LayoutTemplate size={16}/> {activeFamily?.name||"Diseño web"}</span>
    <h2>{generated?"Tu web creada con IA. Lista para revisar.":"Tres estilos. Tu identidad."}</h2>
-   <p>{generated?"Textos, diseño y SEO personalizados sobre componentes rápidos y editables. Comprueba la información y las fotos antes de publicar.":"Diseños editables con el contenido que acabas de proporcionar. Ningún precio, reseña o dato comercial se ha inventado."}</p>
+   <p>{generated?"Revisa los datos y fotos antes de publicar.":"Diseños editables con tus datos reales."}</p>
   </header>
   <div className={styles.carousel} data-single={Boolean(generated)} ref={scrollRef} onScroll={onScroll}>
    {proposals.map((proposal,i)=><article key={proposal.id} className={styles.card}>
@@ -67,6 +67,6 @@ export default function TemplateProposals({input,familyOverride,generated,busy,o
     <button type="button" aria-label="Propuesta siguiente" disabled={index===proposals.length-1} onClick={()=>move(index+1)}><ArrowRight size={17}/></button>
    </div></>:null}
   </div>
-  <p className={styles.note}>Puedes cambiar títulos, fotografías, distribución y colores en el siguiente paso. La web no se publica hasta que lo autorices.</p>
+  <p className={styles.note}>Podrás editar todo antes de publicar. Sin publicación automática.</p>
  </section>;
 }
