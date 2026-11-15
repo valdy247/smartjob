@@ -68,7 +68,7 @@ export default function BusinessProfileDialog({businessId,initialName,legacy,ini
  };
  return <dialog ref={dialog} className={styles.businessDialog} aria-labelledby="agent-business-title" onCancel={e=>{e.preventDefault();if(!saving)onClose();}}>
   <header className={styles.businessDialogHead}><h2 id="agent-business-title">{businessId?L("Editar negocio","Edit business"):L("Configura tu negocio","Set up your business")}</h2><button type="button" disabled={saving} onClick={onClose} aria-label={L("Cerrar configuración del negocio","Close business setup")}>×</button></header>
-  <p>{L("Se guarda en tu cuenta y se reutiliza en los demás servicios de VMV.","Saved to your account and reused across VMV services.")}</p>
+  
   {error?<p role="alert" className={styles.businessError}>{error}</p>:null}
   {loading?<p role="status">{L("Cargando negocio…","Loading business…")}</p>:<form onSubmit={e=>{e.preventDefault();void save();}}>
    <fieldset disabled={saving||Boolean(businessId&&!stamp)} className={styles.businessFields}>
