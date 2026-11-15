@@ -575,3 +575,72 @@
 .vmv-context-sheet-overlay .vmv-context-mobile-sheet select{font-size:16px;max-width:100%;box-sizing:border-box}
 .vmv-context-sheet-overlay .vmv-context-mobile-sheet input[type=range]{width:100%}
 @media(min-width:701px){.vmv-context-sheet-overlay{display:none}}
+
+/* Theme palettes color the entire site, not just typography and action buttons.
+   Keep the existing site-style contrast while tinting backgrounds and cards. */
+.vmv-site{
+ --vmv-theme-page:color-mix(in srgb,var(--vmv-pale) 24%,white);
+ --vmv-theme-nav:color-mix(in srgb,var(--vmv-pale) 46%,white);
+ --vmv-theme-card:color-mix(in srgb,var(--vmv-pale) 70%,white);
+ --vmv-theme-soft:color-mix(in srgb,var(--vmv-pale) 90%,white);
+ --vmv-theme-dark:color-mix(in srgb,var(--vmv-accent) 25%,#202027);
+ --vmv-surface:var(--vmv-theme-page);
+ --vmv-card:var(--vmv-theme-card);
+ background:var(--vmv-surface);
+}
+.vmv-site[data-site-style=dark]{
+ --vmv-surface:color-mix(in srgb,var(--vmv-accent) 10%,#181721);
+ --vmv-card:color-mix(in srgb,var(--vmv-accent) 17%,#2b2938);
+ --vmv-theme-nav:color-mix(in srgb,var(--vmv-accent) 12%,#181721);
+ --vmv-theme-soft:color-mix(in srgb,var(--vmv-accent) 16%,#24212a);
+}
+.vmv-site[data-site-style=warm]{
+ --vmv-surface:color-mix(in srgb,var(--vmv-pale) 40%,#fffaf3);
+ --vmv-card:color-mix(in srgb,var(--vmv-pale) 76%,#fff4e7);
+}
+.vmv-site[data-site-style=editorial]{
+ --vmv-surface:color-mix(in srgb,var(--vmv-pale) 34%,#f7f4ef);
+ --vmv-card:color-mix(in srgb,var(--vmv-pale) 70%,#eae4db);
+}
+.vmv-site[data-site-style=bold]{
+ --vmv-surface:color-mix(in srgb,var(--vmv-pale) 20%,white);
+ --vmv-card:color-mix(in srgb,var(--vmv-pale) 67%,#f0f0ee);
+}
+.vmv-site .vmv-site-nav,
+.vmv-site .vmv-site-nav[data-header-family]{
+ background:var(--vmv-theme-nav);
+ border-bottom-color:color-mix(in srgb,var(--vmv-accent) 24%,transparent);
+}
+.vmv-site .vmv-visual-section[data-surface=light],
+.vmv-site .vmv-compose-section[data-surface=light]{
+ background:var(--vmv-surface);
+ color:var(--vmv-ink);
+}
+.vmv-site .vmv-visual-section[data-surface=soft],
+.vmv-site .vmv-compose-section[data-surface=soft]{
+ background:var(--vmv-theme-soft);
+ color:var(--vmv-ink);
+}
+.vmv-site .vmv-visual-section[data-surface=dark],
+.vmv-site .vmv-compose-section[data-surface=dark]{
+ background:var(--vmv-theme-dark);
+ color:#fff;
+}
+.vmv-site .vmv-hero-visual:not([data-layout=cover]){
+ background:var(--vmv-theme-soft);
+}
+.vmv-site .vmv-hero-visual[data-layout=editorial]{
+ background:var(--vmv-theme-page);
+}
+.vmv-site .vmv-site-contact,
+.vmv-site .vmv-site-inquiry{
+ background:var(--vmv-theme-soft);
+}
+.vmv-site .vmv-site-footer{
+ background:var(--vmv-theme-nav);
+}
+.vmv-site[data-site-style=dark] .vmv-site-nav,
+.vmv-site[data-site-style=dark] .vmv-site-nav a,
+.vmv-site[data-site-style=dark] .vmv-site-mark{
+ color:var(--vmv-ink);
+}
