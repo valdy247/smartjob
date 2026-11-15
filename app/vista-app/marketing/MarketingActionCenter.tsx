@@ -24,6 +24,7 @@ import ReputationStudio,{reviewReplyTemplate,type ReviewMode} from "./Reputation
 import DirectoryDiscovery,{emptyDirectory,validateDirectory,directoryStatusNames,localizedDirectoryStatus,safeDirectoryUrl,type DirectoryData,type DirectoryProgress} from "./DirectoryDiscovery";
 import {readMarketingDraft,writeMarketingDraft,readDraftMedia,saveDraftMedia,clearMarketingDraft,markGuestLoginPending,transferGuestDraft,readBusinessDraftMedia,saveBusinessDraftMedia,type StoredMarketingDraft} from "./MarketingDraftStore";
 import GoogleProfileWizard,{emptyGoogle,emptyMedia,googleStepNames,validateGoogleStep,validateGoogleLinks,validateGoogleAll,type GoogleData,type GoogleMedia} from "./GoogleProfileWizard";
+import ScienceWaitQuiz from "./ScienceWaitQuiz";
 
 export type ServiceCode="directory_listings"|"google_profile"|"apple_maps"|"bing_places"|"yelp_profile"|"search_console"|"seo_improvement"|"campaign_setup"|"review_strategy"|"other";
 type Status="received"|"quoted"|"approved"|"in_progress"|"needs_customer"|"verified"|"cancelled";
@@ -875,7 +876,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     {draftNotice?<p role="status" className={styles.draftNotice}>{draftNotice}</p>:null}
     {photoNotice?<p role="status" className={styles.photoNotice}>{photoNotice}</p>:null}
     {wizardError?<p role="alert" className={styles.wizardError}>{wizardError}</p>:null}
-    {wizardStep>0?<div className={styles.wizardFooter}>
+    {wizardStep>0?<div className={styles.wizardFooter} style={wizardStep===3&&busy?{flexWrap:"wrap"}:undefined}>
+     {wizardStep===3&&busy?<ScienceWaitQuiz en={en} seed={requestId}/>:null}
      <button type="button" className={styles.wizardBack} onClick={goBack} disabled={busy}><ArrowLeft size={16}/> {translate("marketing.copy.previous")}</button>
      {wizardStep===3?<button type="button" className={styles.wizardPrimary} disabled={busy||loading||authState!=="ready"} onClick={()=>void submit()}><Send size={16}/>{busy?translate("marketing.action.submitting"):translate("marketing.action.submit_request")}</button>:
       <button type="button" className={styles.wizardPrimary} onClick={goNext}>{selected==="google_profile"&&wizardStep===2&&googleStep<googleStepNames.length-1?translate("marketing.action.next"):translate("marketing.action.continue")} <ArrowRight size={16}/></button>}
