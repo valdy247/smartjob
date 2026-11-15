@@ -72,6 +72,8 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const [socialStatus,setSocialStatus]=useState<SocialSaveStatus>("loading");
  const [family,setFamily]=useState<SiteFamily|null>(null);
  const [stage,setStage]=useState<"details"|"proposals">("details");
+ const [step,setStep]=useState(0);
+ const stepLabels=["Tu negocio","Qué ofreces","Fotos y redes","Diseño"];
  const [mode,setMode]=useState<"templates"|"ai">("templates");
  const [aiDirection,setAiDirection]=useState("");
  const [aiProposal,setAiProposal]=useState<SiteProposal|null>(null);
@@ -242,6 +244,24 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
   socials:normalizeSocialLinks(socialLinks)
  }),[name,category,kind,goal,phone,email,city,about,logo,photos,services,products,socialLinks]);
  const suggestedFamily=family||familyForCategory(category);
+ function nextStep(){
+  if(step===0){
+   if(name.trim().length<2){setError("Escribe el nombre de tu negocio.");return;}
+   if(!category){setError("Selecciona la categoría del negocio.");return;}
+   if(email.trim()&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.trim())){
+    setError("Comprueba el correo de contacto.");return;
+   }
+  }
+  if(step===1&&kind!=="services"&&productStatus!=="saved"){
+   setError("Espera a que se guarden los productos.");return;
+  }
+  setError("");setStep(value=>Math.min(3,value+1));
+  window.scrollTo({top:0,behavior:"smooth"});
+ }
+ function previousStep(){
+  setError("");setStep(value=>Math.max(0,value-1));
+  window.scrollTo({top:0,behavior:"smooth"});
+ }
  function addService(event:FormEvent){
   event.preventDefault();
   const value=newItem.trim().slice(0,120);
@@ -295,11 +315,24 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
    generated={mode==="ai"?aiProposal:null} busy={busy} onBack={()=>setStage("details")}
    onChoose={proposal=>onChoose(intake,proposal)}/>;
  return <section className={styles.root}>
-  <div className={styles.intro}><small>WEB STUDIO · NUEVO SITIO</small><h2>Empecemos por tu negocio<span>.</span></h2>
-</div>
+  <div className={styles.intro}>
+   <a href="/web-studio?mode=sites" className={styles.backLink}>‹ Mis sitios</a>
+   <small>WEB STUDIO · PLANTILLAS</small>
+   <h2>{stepLabels[step]}<span>.</span></h2>
+   <p>Solo lo necesario para crear tu web.</p>
+  </div>
+  <nav className={styles.steps} aria-label="Progreso de creación">
+   {stepLabels.map((label,index)=><button key={label} type="button"
+    aria-current={step===index?"step":undefined}
+    aria-label={`Paso ${index+1} de 4: ${label}`}
+    disabled={index>step} onClick={()=>{if(index<step){setError("");setStep(index);}}}
+    data-active={step===index} data-complete={index<step}>
+    <span>{index+1}</span><small>{label}</small>
+   </button>)}
+  </nav>
   <div className={styles.form}>
-   <div className={styles.panel}>
-    <h3><span>01</span> Información</h3>
+   {step===0?<div className={styles.panel}>
+    <h3><span>01</span> Tu negocio</h3>
     <div className={styles.twoColumns}>
      <label>Nombre del negocio<input value={name} maxLength={100} placeholder="Nombre comercial" onChange={e=>setName(e.target.value)}/></label>
      <label>Categoría<BusinessCategoryPicker value={category} onChange={value=>{setCategory(value);setFamily(null);}}/></label>
@@ -309,11 +342,9 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
     <label>Ciudad o zona atendida<input value={city} maxLength={180} placeholder="Ciudad, estado" onChange={e=>setCity(e.target.value)}/></label>
     <label>Descripción aprobada<textarea value={about} maxLength={500} rows={3}
      placeholder="¿Qué hace tu negocio? Incluye solamente información real." onChange={e=>setAbout(e.target.value)}/></label>
-    <WebIntakeSocials ownerId={ownerId} links={socialLinks}
-     onChange={setSocialLinks} onStatusChange={setSocialStatus}/>
-   </div>
-   <div className={styles.panel}>
-    <h3><span>02</span> Oferta y objetivo</h3>
+   </div>:null}
+   {step===1?<div className={styles.panel}>
+    <h3><span>02</span> Qué ofreces</h3>
     <label>¿Qué ofreces?</label>
     <div className={styles.choices}>
      {offeringOptions.map(item=><button key={item.id} type="button" data-active={kind===item.id}
@@ -335,9 +366,9 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
       <button type="button" aria-label={"Eliminar "+item} onClick={()=>setServices(old=>old.filter((_,i)=>i!==index))}><Trash2 size={12}/></button>
      </span>)}</div>
     </form>:null}
-   </div>
-   <div className={styles.panel}>
-    <h3><span>03</span> Identidad visual</h3>
+   </div>:null}
+   {step===2?<div className={styles.panel}>
+    <h3><span>03</span> Fotos y redes</h3>
     <p>Fotos opcionales. Puedes añadirlas después.</p>
     {mediaSaving||!mediaReady||mediaMessage?<p role="status" aria-live="polite">{mediaSaving?"Guardando imágenes…":!mediaReady?"Cargando imágenes…":mediaMessage}</p>:null}
     {mediaError&&!mediaReady?<button type="button" onClick={()=>window.location.reload()}
@@ -354,17 +385,11 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
         onChange={url=>saveMedia(i===0?{cover_url:url}:{work_url:url})}/></div>)}
      </div>
     </fieldset>
-   </div>
-   <div className={styles.panel}>
-    <h3><span>04</span> Diseño inicial</h3>
-    <div className={styles.pathChoices}>
-     <button type="button" data-active={mode==="templates"} onClick={()=>setMode("templates")}>
-      <ImagePlus size={20}/><strong>Elegir una plantilla</strong><small>Tres propuestas basadas en tu contenido.</small>
-     </button>
-     <button type="button" data-active={mode==="ai"} onClick={()=>setMode("ai")}>
-      <Sparkles size={20}/><strong>Diseñar con IA</strong><small>Textos, diseño y SEO personalizados. 2 generaciones diarias.</small>
-     </button>
-    </div>
+    <WebIntakeSocials ownerId={ownerId} links={socialLinks}
+     onChange={setSocialLinks} onStatusChange={setSocialStatus}/>
+   </div>:null}
+   {step===3?<div className={styles.panel}>
+    <h3><span>04</span> Elige tu estilo</h3>
     {mode==="templates"?<label>Familia de diseño<select value={suggestedFamily} onChange={e=>setFamily(e.target.value as SiteFamily)}>
       {FAMILIES.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
      </select></label>:<div className={styles.aiUnavailable}>
@@ -382,13 +407,18 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
         <button type="button" disabled={generatingAi} onClick={()=>setAiCheck(n=>n+1)}>Recomprobar IA</button>
        </div>}
      </div>}
-   </div>
+   </div>:null}
    {error?<p className={styles.error} role="alert">{error}</p>:null}
    <div className={styles.finish}>
-    <span><ShieldCheck size={16}/> Tus datos no se publicarán todavía.</span>
-    <button type="button" disabled={busy||generatingAi||(mode==="ai"&&aiStatus!=="ready")||!mediaReady||mediaSaving||Boolean(mediaError)||socialStatus!=="saved"||(kind!=="services"&&productStatus!=="saved")} onClick={()=>void preview()}>
-     {generatingAi?"Creando tu web con IA…":mode==="ai"?"Generar web con IA":"Ver propuestas"} <ArrowRight size={17}/>
-    </button>
+    <span><ShieldCheck size={16}/> Tu web no se publicará sin tu autorización.</span>
+    <div className={styles.wizardNavigation}>
+     {step>0?<button type="button" className={styles.previous} onClick={previousStep} disabled={busy||generatingAi}>Atrás</button>:null}
+     {step<3?<button type="button" onClick={nextStep} disabled={busy||generatingAi}>
+      Continuar <ArrowRight size={17}/></button>:
+      <button type="button" disabled={busy||generatingAi||(mode==="ai"&&aiStatus!=="ready")||!mediaReady||mediaSaving||Boolean(mediaError)||socialStatus!=="saved"||(kind!=="services"&&productStatus!=="saved")} onClick={()=>void preview()}>
+       {generatingAi?"Creando tu web con IA…":mode==="ai"?"Generar web con IA":"Ver propuestas"} <ArrowRight size={17}/>
+      </button>}
+    </div>
    </div>
   </div>
  </section>;
