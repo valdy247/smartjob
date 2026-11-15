@@ -704,3 +704,45 @@
   flex:0 0 auto;
  }
 }
+
+/* Vertical editing is flow spacing, never a transform that hides or overlaps content.
+   Positive values reserve space before; negative values reserve space after. */
+.vmv-site .vmv-managed-image{
+ transform:translateX(var(--image-x,0px));
+ margin-block-start:max(0px,var(--image-y,0px));
+ margin-block-end:max(0px,calc(-1 * var(--image-y,0px)));
+}
+.vmv-site .vmv-offerings-items .vmv-offering-card{
+ transform:translateX(var(--image-x,0px));
+ margin-block-start:max(0px,var(--image-y,0px));
+ margin-block-end:max(0px,calc(-1 * var(--image-y,0px)));
+}
+@container(max-width:700px){
+ .vmv-site .vmv-managed-image{
+  transform:translateX(var(--image-x-mobile,0px));
+  margin-block-start:max(0px,var(--image-y-mobile,0px));
+  margin-block-end:max(0px,calc(-1 * var(--image-y-mobile,0px)));
+ }
+ .vmv-site .vmv-offerings-items .vmv-offering-card{
+  transform:translateX(var(--image-x-mobile,0px));
+  margin-block-start:max(0px,var(--image-y-mobile,0px));
+  margin-block-end:max(0px,calc(-1 * var(--image-y-mobile,0px)));
+ }
+}
+@media(max-width:700px){
+ .vmv-site .vmv-managed-image{
+  transform:translateX(var(--image-x-mobile,0px));
+  margin-block-start:max(0px,var(--image-y-mobile,0px));
+  margin-block-end:max(0px,calc(-1 * var(--image-y-mobile,0px)));
+ }
+ .vmv-site .vmv-offerings-items .vmv-offering-card{
+  transform:translateX(var(--image-x-mobile,0px));
+  margin-block-start:max(0px,var(--image-y-mobile,0px));
+  margin-block-end:max(0px,calc(-1 * var(--image-y-mobile,0px)));
+ }
+}
+/* Product images must stay inside the card; the whole card owns its spacing. */
+.vmv-site .vmv-offerings-items .vmv-offering-card>.vmv-managed-image{
+ margin-block:0!important;
+ transform:none!important;
+}
