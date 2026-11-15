@@ -79,6 +79,13 @@ export const visualBlocks:Config["components"]={
    align:{type:"select",options:[{label:"Izquierda",value:"left"},{label:"Centro",value:"center"}]},
    imagePosition:{type:"select",options:[{label:"Centro",value:"center"},{label:"Arriba",value:"top"},{label:"Abajo",value:"bottom"},{label:"Izquierda",value:"left"},{label:"Derecha",value:"right"}]},
    shade:{type:"select",options:[{label:"Suave",value:"soft"},{label:"Medio",value:"medium"},{label:"Alto contraste",value:"strong"}]},
+   shadeStrength:{type:"custom",render:({value,onChange}:{value?:unknown;onChange:(v:number)=>void})=>
+    <div className="vmv-inspector-shade"><label>Oscuridad de la imagen</label>
+     <input type="range" min={0} max={90} step={1}
+      value={typeof value==="number"?Math.min(90,Math.max(0,value)):32}
+      onChange={e=>onChange(Number(e.target.value))}/>
+     <strong>{typeof value==="number"?Math.round(value):32}%</strong>
+    </div>},
    height:{type:"select",options:[{label:"Normal",value:"normal"},{label:"Alta",value:"tall"}]},
    buttonStyle:{type:"select",options:[{label:"Sólido",value:"solid"},{label:"Contorno",value:"outline"},{label:"Enlace",value:"link"}]},
    buttonShape:{type:"select",options:[{label:"Redondo",value:"pill"},{label:"Esquinas suaves",value:"rounded"},{label:"Cuadrado",value:"square"}]},
@@ -86,7 +93,7 @@ export const visualBlocks:Config["components"]={
     buttonTextColor:colorEditorField("Color del texto"),
     buttonFontSize:numericEditorField("fontSize")
   },
-  defaultProps:{layout:"split",eyebrow:"",title:"Presenta tu negocio",description:"",buttonText:"Contactar",buttonUrl:"#contacto",image:"",imageAlt:"",align:"left",imagePosition:"center",shade:"medium",height:"normal",buttonStyle:"solid",buttonShape:"pill",buttonColor:"",buttonTextColor:"",buttonFontSize:0,imageWidth:100,imageRadius:0,imageOpacity:0,imageBorder:0,borderColor:"#30243F",imageMoveX:0,imageMoveY:0,titleFont:"site",titleColor:"",titleFontSize:0,titleShadow:"none",titleWeight:"normal",titleItalic:"no",titleLink:""},
+  defaultProps:{layout:"split",eyebrow:"",title:"Presenta tu negocio",description:"",buttonText:"Contactar",buttonUrl:"#contacto",image:"",imageAlt:"",align:"left",imagePosition:"center",shade:"medium",shadeStrength:32,height:"normal",buttonStyle:"solid",buttonShape:"pill",buttonColor:"",buttonTextColor:"",buttonFontSize:0,imageWidth:100,imageRadius:0,imageOpacity:0,imageBorder:0,borderColor:"#30243F",imageMoveX:0,imageMoveY:0,titleFont:"site",titleColor:"",titleFontSize:0,titleShadow:"none",titleWeight:"normal",titleItalic:"no",titleLink:""},
   renderFields:({fields})=><>
    <fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.eyebrow}{fields.title}{fields.description}{fields.buttonText}{fields.buttonUrl}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Estilo del título</legend>{fields.titleFont}{fields.titleColor}
@@ -97,9 +104,9 @@ export const visualBlocks:Config["components"]={
    <fieldset className="vmv-puck-field-group"><legend>Imagen · Reemplazar y ajustar</legend>
     {fields.image}{fields.imageAlt}{fields.imageWidth}{fields.imageRadius}{fields.imageOpacity}
     {fields.imageBorder}{fields.borderColor}{fields.imageMoveX}{fields.imageMoveY}
-    {fields.imagePosition}{fields.shade}</fieldset>
+    {fields.imagePosition}{fields.shadeStrength}</fieldset>
   </>,
-  render:({id,layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,height,buttonStyle,buttonShape,buttonColor,buttonTextColor,buttonFontSize,imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,titleFont,titleColor,titleFontSize,titleShadow,titleWeight,titleItalic,titleLink,puck,...responsive})=>{
+  render:({id,layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,shadeStrength,height,buttonStyle,buttonShape,buttonColor,buttonTextColor,buttonFontSize,imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,titleFont,titleColor,titleFontSize,titleShadow,titleWeight,titleItalic,titleLink,puck,...responsive})=>{
    const appearance=buttonAppearance({buttonShape,buttonColor,buttonTextColor,buttonFontSize});
    const href=typeof buttonUrl==="string"&&(buttonUrl.startsWith("#")||buttonUrl.startsWith("mailto:")||buttonUrl.startsWith("tel:"))?buttonUrl:"#contacto";
    const position=["top","bottom","left","right"].includes(imagePosition)?imagePosition:"center";
@@ -121,7 +128,10 @@ export const visualBlocks:Config["components"]={
     titleLink:"";
     const heroVertical=Number(imageMoveY)||0;
     const heroVerticalMobile=Number(responsive.imageMoveYMobile)||0;
+    const darkness=typeof shadeStrength==="number"&&Number.isFinite(shadeStrength)?Math.max(0,Math.min(90,shadeStrength)):32;
     const heroFlowStyle={
+     "--hero-shade-start":(darkness/100).toFixed(2),
+     "--hero-shade-end":(darkness/320).toFixed(3),
      "--hero-space-before":Math.max(0,heroVertical)+"px",
      "--hero-space-after":Math.max(0,-heroVertical)+"px",
      "--hero-space-before-mobile":Math.max(0,heroVerticalMobile)+"px",
@@ -328,6 +338,8 @@ export function normalizeVisualProps(type:VisualBlockName,props:Record<string,un
  }
  if(type==="HeroVisual"){
   safe.buttonShape=["pill","rounded","square"].includes(String(safe.buttonShape))?safe.buttonShape:"pill";
+  safe.shadeStrength=typeof props.shadeStrength==="number"&&Number.isFinite(props.shadeStrength)?
+   Math.max(0,Math.min(90,Math.round(props.shadeStrength))):32;
   for(const key of ["buttonColor","buttonTextColor"])
    safe[key]=/^#[\da-f]{6}$/i.test(String(safe[key]))?safe[key]:"";
   safe.buttonFontSize=typeof props.buttonFontSize==="number"&&Number.isFinite(props.buttonFontSize)?
