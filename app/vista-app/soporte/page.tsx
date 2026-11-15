@@ -208,7 +208,7 @@ export default function SupportPage(){
     <p>{L("Sin notificaciones.","No notifications.")}</p>}</section>:null}
   <div className={styles.intro}><div><span className={styles.eyebrow}>{L("CENTRO DE AYUDA","HELP CENTER")}</span>
    <h1>{L("Estamos aquí para ayudarte","We're here to help")}<span>.</span></h1>
-   <p>{welcome||L("Consulta tus solicitudes, comparte archivos y habla con el equipo.","Track requests, share files and talk with our team.")}</p></div>
+   {welcome?<p>{welcome}</p>:null}</div>
    <button type="button" className={styles.refresh} onClick={()=>void reload(page)}><RefreshCw size={16}/>{L("Actualizar","Refresh")}</button></div>
   {error?<div className={styles.alert} role="alert"><TriangleAlert size={16}/>{error}<button type="button" onClick={()=>setError("")} aria-label="Cerrar"><X size={14}/></button></div>:null}
   {notice?<div className={styles.notice} role="status"><CheckCircle2 size={16}/>{notice}</div>:null}
@@ -235,12 +235,11 @@ export default function SupportPage(){
     <strong>{formOpen?L("Abrir ticket","Open ticket"):active?"#"+active.id.slice(0,8).toUpperCase():L("Conversación","Conversation")}</strong></div>
     {formOpen?<div className={styles.form}><span className={styles.eyebrow}>{L("NUEVA SOLICITUD","NEW REQUEST")}</span>
      <h2>{related?L("Continuar un caso cerrado","Follow up on a resolved case"):L("¿En qué podemos ayudarte?","How can we help?")}</h2>
-     {related?<p>{L("Se creará un ticket relacionado con el expediente anterior.","A linked follow-up ticket will be created.")}</p>:null}
      <label>{L("Servicio","Service")}<select value={service} onChange={e=>{setService(e.target.value);createKey.current=null;}}>
        {services.map(x=><option key={x.id} value={x.id}>{en?x.en:x.es}</option>)}</select></label>
      <label>{L("Asunto","Subject")}<input value={subject} maxLength={140} onChange={e=>{setSubject(e.target.value);createKey.current=null;}} placeholder={L("Describe brevemente tu necesidad…","Briefly describe your issue…")}/></label>
      <label>{L("Descripción","Description")}<textarea rows={6} maxLength={4000} value={description} onChange={e=>{setDescription(e.target.value);createKey.current=null;}} placeholder={L("Incluye el contexto y lo que necesitas…","Include context and what you need…")}/></label>
-     <p>{L("Este formulario contacta al equipo de VMV, no a los clientes de tu negocio.","This form contacts VMV staff, not your business's customers.")}</p>
+     <p>{L("Mensaje al equipo VMV.","Message to the VMV team.")}</p>
      <button type="button" className={styles.primary} disabled={busy||subject.trim().length<5||description.trim().length<10} onClick={()=>void create()}><Send size={16}/>{L("Enviar solicitud","Submit request")}</button>
     </div>:active?<><div className={styles.caseHeader}><span className={styles.eyebrow}>{active.source.toUpperCase()}</span>
      <h2>{active.title}</h2><span className={styles.badge}>{label(active.status)}</span>
@@ -252,21 +251,20 @@ export default function SupportPage(){
        {historyMore?<button type="button" className={styles.more} onClick={()=>void loadOlder(true)}>{L("Actividad anterior","Older activity")}</button>:null}
        {history.map(h=><p key={h.id}>{h.summary} · {fmt(h.created_at)}</p>)}</details>:null}
      </div>
-     <div className={styles.composer}>{resolved?<><p className={styles.readOnly}>{L("Este caso finalizó. Abre un ticket relacionado si necesitas continuar.","This case is closed. Open a linked follow-up ticket to continue.")}</p>
+     <div className={styles.composer}>{resolved?<><p className={styles.readOnly}>{L("Caso cerrado.","Case closed.")}</p>
       <button className={styles.primary} type="button" onClick={()=>{setRelated(active.source==="support"?active.id:null);setSelected(null);currentKey.current=null;setFormOpen(true);setMobile("detail");}}>
        <Plus size={15}/>{L("Nueva solicitud de seguimiento","Create follow-up")}</button></>:<>
       <textarea rows={3} maxLength={4000} value={message}
        onChange={e=>{setMessage(e.target.value);messageKey.current=null;setDrafts(prev=>({...prev,[active.source+":"+active.id]:e.target.value}));}}
        placeholder={L("Escribe tu respuesta…","Write your reply…")} aria-label={L("Responder a VMV","Reply to VMV")}/>
-      <div className={styles.composeActions}><small>{L("Queda guardado en tu expediente.","Saved in your case.")}</small>
+      <div className={styles.composeActions}>
        <button type="button" className={styles.primary} disabled={busy||!message.trim()} onClick={()=>void send()}><Send size={15}/>{L("Enviar","Send")}</button></div>
      </>}</div>
      <CaseAttachments source={active.source} caseId={active.id} readOnly={resolved}/>
     </>:<div className={styles.empty}><MessageCircle size={33}/><h2>{L("Tu conversación con VMV","Your conversation with VMV")}</h2>
-      <p>{L("Abre una solicitud o crea un ticket de soporte.","Select a request or create a support ticket.")}</p>
       <button type="button" className={styles.primary} onClick={()=>{setFormOpen(true);setMobile("detail");}}>{L("Nuevo ticket","New ticket")} <ChevronRight size={16}/></button></div>}
    </section>
   </div>}
-  <footer className={styles.footer}><ShieldCheck size={15}/>{L("Tus solicitudes son privadas. El equipo comparte avisos dentro de VMV; no se envían correos o SMS automáticamente.","Your requests are private. Updates appear inside VMV; no automatic email or SMS is sent.")}</footer>
+  <footer className={styles.footer}><ShieldCheck size={15}/>{L("Solicitudes privadas. Avisos solo dentro de VMV; sin correos ni SMS automáticos.","Private requests. Updates stay in VMV; no automatic emails or SMS.")}</footer>
  </div></main>;
 }
