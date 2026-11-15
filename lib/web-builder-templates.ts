@@ -9,6 +9,12 @@ export type SiteProduct={id:string;title:string;description:string;image:string;
 export type SiteDesignPreferences={
  colors:string[];font:"modern"|"editorial"|"rounded"|"geometric";
  imageStyle:"rounded"|"square"|"pill"|"bordered";
+ // Visual choices are optional so old templates and saved drafts remain compatible.
+ mood?:"minimal"|"bold"|"editorial"|"warm";
+ heroLayout?:"cover"|"split"|"editorial";
+ contentFocus?:"offerings"|"gallery"|"story"|"contact";
+ copyTone?:"friendly"|"premium"|"direct"|"energetic";
+ spacing?:"airy"|"balanced"|"compact";
  features:{inventory:boolean;booking:boolean;chat:boolean};
  chatMode:"off"|"inbox";
 };
