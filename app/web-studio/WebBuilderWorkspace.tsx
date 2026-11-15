@@ -10,6 +10,7 @@ import {builderConfig,normalizeBuilderDocument,validateBuilderDocument,starterBu
 import {normalizeWebContent,type WebSiteContent} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
 import WebSiteIntake from "./WebSiteIntake";
+import WebAiWizard from "./WebAiWizard";
 import type {SiteIntake,SiteProposal} from "@/lib/web-builder-templates";
 import {WEBSITE_STYLES,restyleWebsiteDocument,type WebsiteStyleId} from "@/lib/web-builder-safe-styles";
 import BuilderHistoryControls from "./BuilderHistoryControls";
@@ -68,6 +69,8 @@ export default function WebBuilderWorkspace(){
  const [recovery,setRecovery]=useState<LocalBackup|null>(null);
  const blockedAutosaveRef=useRef("");
  const [view,setView]=useState<View>("sites");
+ const [creationMode,setCreationMode]=useState<"templates"|"ai">("templates");
+ useEffect(()=>{setCreationMode(new URLSearchParams(window.location.search).get("mode")==="ai"?"ai":"templates");},[]);
  const [mobileSettings,setMobileSettings]=useState(false);
  const [mobilePageForm,setMobilePageForm]=useState(false);
  const [mobilePageMenu,setMobilePageMenu]=useState(false);
@@ -669,7 +672,7 @@ export default function WebBuilderWorkspace(){
   {error?<div className={styles.error} role="alert">{error}</div>:null}
   {notice?<div className={styles.notice} role="status">{notice}</div>:null}
   {!site?<main className={styles.landing}>
-   <WebSiteIntake ownerId={userId} busy={busy} onChoose={(input,proposal)=>void createSite(input,proposal)}/>
+   {creationMode==="ai"?<WebAiWizard ownerId={userId} busy={busy} onChoose={(input,proposal)=>void createSite(input,proposal)}/>:<WebSiteIntake ownerId={userId} busy={busy} onChoose={(input,proposal)=>void createSite(input,proposal)}/>}
    {classicDraft?<button type="button" className={styles.importClassic} disabled={busy}
     onClick={()=>void importClassic()}><Layers size={18}/> Importar mi web actual al editor visual</button>:null}
    <h2>Mis sitios</h2>
