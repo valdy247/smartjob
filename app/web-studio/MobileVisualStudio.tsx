@@ -742,6 +742,16 @@ export default function MobileVisualStudio({
      </label>:null}
      {selection.kind==="button"&&selection.index===undefined&&
       ["HeroVisual","ComposeButton","CTA"].includes(block.type)?<>
+      <div className={styles.buttonShape}>
+       <strong>Forma del botón</strong>
+       <div role="group" aria-label="Forma del botón">
+        {([{id:"pill",label:"Redondo"},{id:"rounded",label:"Suave"},{id:"square",label:"Cuadrado"}] as const).map(shape=>
+         <button key={shape.id} type="button" aria-pressed={String(props.buttonShape||"pill")===shape.id}
+          onClick={()=>edit({buttonShape:shape.id,...(block.type==="CTA"?{buttonRadius:0}:{})})}>
+          <span className={styles.buttonShapePreview} data-shape={shape.id}/>{shape.label}
+         </button>)}
+       </div>
+      </div>
       <RangeField label="Tamaño del texto del botón" min={11} max={36} unit="px"
        value={typeof props.buttonFontSize==="number"&&props.buttonFontSize>=11?props.buttonFontSize:13}
        onChange={v=>edit({buttonFontSize:v})}/>
