@@ -163,7 +163,8 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
     {data.kind!=="service_area"?<>
       <PlaceAddressLookup country={data.country||"US"} onPick={v=>{onData({...data,street:v.street,city:v.city,region:v.region,postal:v.postal,country:v.country,locationChecked:false,locationPendingReview:true,locationConflict:false});setLocationMessage(en?"Address selected from Google. VMV will still review whether it is suitable for a public business listing.":"Dirección seleccionada en Google. VMV revisará si cumple los requisitos para mostrarse como local comercial.");}}/>
       {field("street","Calle y número","Dirección comercial",false)}
-      {field("unit","Local / suite","Local 2")}
+      {field("unit",en?"Apartment, suite or unit":"Apartamento, suite o local","")}
+      <p className={styles.hint}>{en?"Leave this blank if your address has no apartment, suite or unit number.":"Déjalo vacío si tu dirección no tiene apartamento, suite o número de local."}</p>
       <div className={styles.two}>{field("city","Ciudad","Columbus",false)}{field("region","Estado","Georgia",false)}</div>
       {field("postal","Código postal","31901",false)}
       <p className={styles.hint}>{tx("Solo ingresa una dirección donde realmente atiendes clientes. Google puede mostrarla públicamente.")}</p>
