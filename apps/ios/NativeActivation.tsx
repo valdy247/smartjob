@@ -73,14 +73,14 @@ export function NativeActivation({session,profile,onComplete}:{session:Session;p
      <Text style={styles.brand}>VMV <Text style={{color:"#07B894"}}>CALL</Text></Text></View>
     {phase==="plans"?<>
      <Text style={styles.eyebrow}>PRIMER ACCESO</Text><Text style={styles.title}>Elige tu plan.</Text>
-     <Text style={styles.subtitle}>{pilotActive?"Tu plan de prueba ya está activo. No necesitas comprar otro para probar OpenAI Realtime.":"Puedes decidirlo después. No se cobrarán planes hasta habilitar pagos reales."}</Text>
+     <Text style={styles.subtitle}>{pilotActive?"Prueba activa. No necesitas comprar otro plan.":"Puedes decidirlo después. Sin cobros reales por ahora."}</Text>
      {loading?<ActivityIndicator color={colors.mint}/>:plans.map(p=><Pressable key={p.id}
       accessibilityRole="button" style={styles.plan} onPress={()=>{setPlan(p.id);setPhase("configure");setStep(0);setError("");}}>
       <View style={styles.between}><Text style={styles.planTitle}>{p.name}</Text>
        <Text style={styles.price}>{"$"}{(p.priceCents/100).toFixed(2)}/mes</Text></View>
       <Text style={styles.details}>{p.minutes} minutos traducidos · Configurar →</Text>
      </Pressable>)}
-     {pilotActive?<Text style={styles.pilotNotice}>✓ Prueba privada activa. Entra a Llamadas para conectar tu iPhone y consultar tus minutos VMV.</Text>:<Text style={styles.warning}>Estos precios son de referencia. Los cobros reales aún no están habilitados.</Text>}
+     {pilotActive?<Text style={styles.pilotNotice}>✓ Prueba activa. Abre Llamadas para conectar tu iPhone.</Text>:<Text style={styles.warning}>Precios de referencia · sin cobros reales.</Text>}
      <Pressable accessibilityRole="button" style={styles.secondary} onPress={()=>void skip()} disabled={busy}>
       <Text style={styles.secondaryText}>{busy?"Guardando…":pilotActive?"Continuar a VMV Call →":"Omitir por ahora →"}</Text></Pressable>
     </>:<>
@@ -106,7 +106,7 @@ export function NativeActivation({session,profile,onComplete}:{session:Session;p
      </>:<><Text style={styles.title}>Casi listo.</Text>
       <Text style={styles.subtitle}>{plan?.toUpperCase()} · {line==="keep"?"Tu número":"Número nuevo"} · {language==="es"?"Español":"English"}</Text>
       <Pressable accessibilityRole="checkbox" accessibilityState={{checked:ack}} style={styles.consent} onPress={()=>setAck(!ack)}>
-       <Text style={{fontSize:24,color:"#0AA784"}}>{ack?"☑":"☐"}</Text><Text style={styles.consentText}>Entiendo que primero se debe confirmar un pago real, verificar el número y aprobar la línea. No habrá compras automáticas.</Text>
+       <Text style={{fontSize:24,color:"#0AA784"}}>{ack?"☑":"☐"}</Text><Text style={styles.consentText}>Entiendo: se requiere pago real confirmado, número verificado y aprobación. Sin compras automáticas.</Text>
       </Pressable>
      </>}
      <Pressable accessibilityRole="button" disabled={busy||(step===2&&!ack)} style={[styles.primary,busy&&styles.disabled]}
