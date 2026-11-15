@@ -12,6 +12,7 @@ import ThemeSwatches,{AccentPicker} from "@/app/web-studio/ThemeSwatches";
 import {visualBlocks,VISUAL_BLOCK_NAMES,normalizeVisualProps,visualTextStyle,type VisualBlockName} from "./web-builder-visual-blocks";
 import {compositionBlocks,COMPOSE_BLOCK_NAMES,COMPOSE_SLOTS,normalizeComposeProps,type ComposeBlockName} from "./web-builder-composition";
 import {buttonAppearance} from "./web-builder-button-appearance";
+import {getSupabase} from "./supabase";
 
 type ButtonProps={label?:string;url?:string};
 function safeLink(value:unknown):string{
@@ -29,7 +30,7 @@ function ContactButton({label,url}:ButtonProps){
  return <a className="vmv-site-button" href={safeLink(url)}>{label||"Contáctanos"}</a>;
 }
 export const VMV_BUILDER_BLOCKS=[
- "Hero","Heading","Text","RichText","Image","Services","Benefits","CTA","Quote","Spacer","FAQ","Contact",...VISUAL_BLOCK_NAMES,...COMPOSE_BLOCK_NAMES
+ "Hero","Heading","Text","RichText","SitePageLink","Image","Services","Benefits","CTA","Quote","Spacer","FAQ","Contact",...VISUAL_BLOCK_NAMES,...COMPOSE_BLOCK_NAMES
 ] as const;
 type BlockName=typeof VMV_BUILDER_BLOCKS[number];
 const text=(limit:number)=>(value:unknown)=>typeof value==="string"?value.slice(0,limit):"";
@@ -52,6 +53,7 @@ const fieldSchema:Partial<Record<BlockName,Record<string,(value:unknown)=>string
  Heading:{text:text(170),subtitle:text(350)},
  Text:{title:text(120),body:text(1800)},
  RichText:{body:safeRichMarkup},
+ SitePageLink:{label:text(110)},
  Image:{url:text(450),alt:text(140),caption:text(180)},
  Services:{title:text(120),first:text(85),second:text(85),third:text(85)},
  Benefits:{title:text(110),first:text(180),second:text(180),third:text(180)},
@@ -125,6 +127,11 @@ export function normalizeBuilderDocument(input:unknown):Data{
     if(field==="url")safe[field]=safeWebImageUrl(sanitize(source[field]))||"";
     else if(field==="buttonUrl")safe[field]=safeLink(sanitize(source[field]));
     else safe[field]=sanitize(source[field]);
+   }
+   if(kind==="SitePageLink"){
+    const item=source.page&&typeof source.page==="object"?source.page as Record<string,unknown>:null;
+    const url=typeof item?.url==="string"&&/^\/web\/[a-z0-9-]{1,80}(?:\/[a-z0-9-]{1,90})?$/i.test(item.url)?item.url:"";
+    safe.page=url?{url,title:typeof item?.title==="string"?item.title.slice(0,110):"Página"}:null;
    }
    if(kind==="Image")Object.assign(safe,normalizeImageSettings(source,23));
    if(kind==="CTA")Object.assign(safe,normalizeCalloutStyle(source));
@@ -209,7 +216,7 @@ const basicText={type:"text" as const};
 export const builderConfig:Config={
  categories:{
   composition:{title:"Composición libre",components:["SectionLayout","ColumnsLayout"],defaultExpanded:true},
-  elements:{title:"Elementos editables",components:["ComposeHeading","ComposeText","RichText","ComposeImage","ComposeButton"],defaultExpanded:true},
+  elements:{title:"Elementos editables",components:["ComposeHeading","ComposeText","RichText","SitePageLink","ComposeImage","ComposeButton"],defaultExpanded:true},
   sections:{title:"Secciones completas",components:[
    "HeroVisual","OfferingGrid","PhotoGallery","ProjectShowcase","ProcessSteps",
    "HoursArea","TeamGrid","PricingList","BeforeAfter","FAQList"
@@ -288,6 +295,53 @@ export const builderConfig:Config={
    fields:{title:basicText,body:{type:"textarea"}},
    defaultProps:{title:"Acerca de nosotros",body:"Escribe aquí la historia de tu negocio."},
    render:({title,body,...styling})=><section className="vmv-site-section vmv-site-copy"><h2 style={visualTextStyle(styling,"title")}>{title}</h2><p style={visualTextStyle(styling,"body")}>{body}</p></section>
+  },
+  SitePageLink:{
+   label:"Enlace a una página publicada",
+   fields:{
+    page:{
+     type:"external",
+     placeholder:"Selecciona una página publicada de tus sitios",
+     showSearch:true,cache:{enabled:false},
+     fetchList:async({query})=>{
+      const db=getSupabase();
+      if(!db)return [];
+      const {data:auth}=await db.auth.getUser();
+      if(!auth?.user)return [];
+      const uid=auth.user.id;
+      const [allPages,allSites,published]=await Promise.all([
+       db.from("smartjob_builder_pages").select("id,site_id,slug,title").eq("owner_id",uid).limit(100),
+       db.from("smartjob_builder_sites").select("id,slug,name").eq("owner_id",uid).limit(100),
+       db.from("smartjob_builder_public_pages").select("page_id").eq("owner_id",uid).limit(100)
+      ]);
+      if(allPages.error||allSites.error||published.error)return [];
+      const publishedIds=new Set((published.data||[]).map(row=>String(row.page_id)));
+      const sites=new Map((allSites.data||[]).map(row=>[String(row.id),row]));
+      const search=String(query||"").trim().toLocaleLowerCase();
+      return (allPages.data||[]).filter(row=>publishedIds.has(String(row.id)))
+       .flatMap(row=>{
+        const owner=sites.get(String(row.site_id));
+        if(!owner||typeof owner.slug!=="string")return [];
+        const title=String(row.title||row.slug).slice(0,110);
+        const site=String(owner.name||"Sitio").slice(0,100);
+        const url="/web/"+owner.slug+(row.slug==="home"?"":"/"+row.slug);
+        if(!/^\/web\/[a-z0-9-]{1,80}(?:\/[a-z0-9-]{1,90})?$/i.test(url))return [];
+        if(search&&!((title+" "+site).toLocaleLowerCase().includes(search)))return [];
+        return [{title,site,url}];
+       });
+     },
+     getItemSummary:(item)=>String(item?.title||"Selecciona una página")
+    },
+    label:{type:"text",placeholder:"Texto del enlace"}
+   },
+   defaultProps:{page:null,label:"Ver más"},
+   render:({page,label})=>{
+    const p=page&&typeof page==="object"?page as Record<string,unknown>:null;
+    const url=typeof p?.url==="string"&&/^\/web\/[a-z0-9-]{1,80}(?:\/[a-z0-9-]{1,90})?$/i.test(p.url)?p.url:"";
+    return url?<section className="vmv-site-section">
+     <a className="vmv-site-button" href={url}>{label||p?.title||"Ver página"}</a>
+    </section>:<></>;
+   }
   },
   RichText:{
    label:"Texto con formato",
