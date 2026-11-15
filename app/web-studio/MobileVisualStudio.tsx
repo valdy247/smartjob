@@ -287,6 +287,17 @@ export default function MobileVisualStudio({
   const key=(event:KeyboardEvent)=>{if(event.key==="Escape"){closePopup();closeDrawer();}};
   window.addEventListener("keydown",key);return()=>window.removeEventListener("keydown",key);
  },[selection,drawer]);
+ // When the controls dock, keep the selected object visible in the remaining canvas.
+ useEffect(()=>{
+  if(!selection||drawer||preview)return;
+  const frame=pageSurface.current;
+  if(!frame)return;
+  const selected=Array.from(frame.querySelectorAll<HTMLElement>("[data-vmv-edit-block]"))
+   .find(el=>el.dataset.vmvEditBlock===selection.id);
+  const target=selection.kind==="image"&&selected?
+   Array.from(selected.querySelectorAll<HTMLElement>(".vmv-managed-image"))[selection.target?.index??0]||selected:selected;
+  target?.scrollIntoView({block:"center",inline:"nearest",behavior:"auto"});
+ },[selection?.id,selection?.kind,selection?.target?.index,drawer,preview]);
  const withSiteStyle=websiteVisualStyle(root.palette,root.accentColor,root.secondaryColor,root.tertiaryColor);
  const mainCanvas=<WebsiteChrome siteName={siteName} baseUrl={"/web/"+siteSlug}
   menu={pages.map(p=>({title:p.title,page_slug:p.slug}))}
@@ -309,7 +320,7 @@ export default function MobileVisualStudio({
  const sectionLabel=(part:Section)=>({home:"Editor",pages:"Páginas",create:"Añadir elemento",
   appearance:"Colores y diseño",seo:"SEO e imágenes",connections:"Chat y agente",
   domain:"Dominio",history:"Versiones"})[part];
- return <div className={styles.stage} data-device={device} data-preview={preview}>
+ return <div className={styles.stage} data-device={device} data-preview={preview} data-inspecting={Boolean(selection&&!drawer&&!preview)}>
   <button className={styles.menuButton} type="button" aria-label="Abrir menú del editor"
    aria-expanded={drawer} onClick={()=>{setDrawer(true);closePopup();setSection("home");}}>
    <Menu size={23}/></button>
