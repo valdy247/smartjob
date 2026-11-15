@@ -600,3 +600,13 @@
  .focusChoices>button{flex:1;min-width:105px}
  .visualQuickDetail{padding:8px 4px 18px!important}
 }
+
+
+/* Navigable page outline, including nested/locked elements. */
+.drawerBody .layerItem{display:flex;align-items:center;gap:11px;min-height:48px;text-align:left;
+ border-bottom:1px solid #efe7f6;border-radius:0;background:transparent}
+.layerItem span{display:block;flex:1;min-width:0;overflow-wrap:anywhere;line-height:1.3}
+.layerItem>svg{flex:none}
+.syncCount{display:block;text-align:center;font-size:23px;font-weight:850;color:#fff;
+ letter-spacing:-.035em;padding:10px 0}
+.focusChoices>button:disabled{opacity:.38;cursor:default}
