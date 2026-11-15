@@ -43,7 +43,7 @@ const ADDS=[
  {type:"HeroVisual",label:"Portada"},{type:"OfferingGrid",label:"Productos / servicios"},
  {type:"PhotoGallery",label:"Galería"},{type:"Contact",label:"Contacto"},
  {type:"CTA",label:"Llamada a la acción"},{type:"SectionLayout",label:"Contenedor"},
- {type:"ColumnsLayout",label:"Columnas"},{type:"FAQList",label:"Preguntas"},
+ {type:"ColumnsLayout",label:"Columnas"},{type:"FAQList",label:"Preguntas frecuentes (FAQ)"},
  {type:"TeamGrid",label:"Equipo"},{type:"HoursArea",label:"Horarios"}
 ] as const;
 
@@ -208,14 +208,17 @@ function editableConfig():Config{
   const original=block as unknown as {render:(props:Record<string,unknown>)=>React.ReactNode};
   return [kind,{...block,render:(props:Record<string,unknown>)=>{
    const emptyImage=(["ComposeImage","Image"].includes(kind)&&!String(props.image||props.url||""));
-   const emptySection=(["OfferingGrid","PhotoGallery","ProjectShowcase","TeamGrid"].includes(kind)&&
+   const emptySection=(["OfferingGrid","PhotoGallery","ProjectShowcase","TeamGrid","FAQList"].includes(kind)&&
     (!Array.isArray(props.items)||props.items.length===0||
-     kind==="PhotoGallery"&&!(props.items as Array<Record<string,unknown>>).some(item=>item.image)));
+     kind==="PhotoGallery"&&!(props.items as Array<Record<string,unknown>>).some(item=>item.image)||
+     kind==="FAQList"&&!(props.items as Array<Record<string,unknown>>).some(item=>String(item.question||"").trim())));
    return <div data-vmv-edit-block={String(props.id||"")} data-vmv-block-type={kind} style={{display:"contents"}}>
     {emptyImage||emptySection?
      <div data-vmv-empty="true" style={{padding:"50px 20px",textAlign:"center",border:"1px dashed #bc9bda",
       borderRadius:12,background:"#faf6ff",color:"#7956a9",fontSize:14}}>
-      {emptyImage?"Mantén pulsado aquí para agregar una imagen":"Mantén pulsado aquí para editar esta sección"}
+      {emptyImage?"Toca para agregar una imagen":
+       kind==="FAQList"?"Toca para añadir preguntas frecuentes con sus respuestas":
+       "Toca para editar esta sección"}
      </div>:original.render(props)}
    </div>;
   }}];
@@ -646,7 +649,9 @@ export default function MobileVisualStudio({
   {id:"arrange",label:"Organizar sección",icon:<Layers/>}
  ]:[
   {id:"content",label:"Editar contenido",icon:<Type/>},
-  ...(Array.isArray(props?.items)?[{id:"items" as const,label:"Editar elementos",icon:<Layers/>}]:[]),
+  ...(Array.isArray(props?.items)?[{id:"items" as const,
+    label:block?.type==="FAQList"?"Preguntas y respuestas":"Editar elementos",
+    icon:block?.type==="FAQList"?<MessageCircle/>:<Layers/>}]:[]),
   ...(block?.type==="HeroVisual"?[
     {id:"layout" as const,label:"Diseño de portada",icon:<ImagePlus/>},
     {id:"shade" as const,label:"Oscuridad",icon:<SlidersHorizontal/>}
@@ -671,7 +676,8 @@ export default function MobileVisualStudio({
   shade:"Oscuridad",frame:block?.type==="HeroVisual"?"Encuadre":"Esquinas",shape:"Esquinas",
   link:"Enlace",actions:"Opciones",menu:"Herramientas",position:"Mover",border:"Borde",
   layout:"Diseño de portada",arrange:"Organizar sección",add:"Añadir",duplicate:"Duplicar",
-  delete:"Eliminar",items:"Editar elementos",surface:"Fondo",buttonStyle:"Estilo del botón"
+  delete:"Eliminar",items:block?.type==="FAQList"?"Preguntas y respuestas":"Editar elementos",
+  surface:"Fondo",buttonStyle:"Estilo del botón"
  } as Record<VisualTool,string>)[visualTool];
  const imageSettings=isImage&&image?targetSettings(props||{},image):null;
  const moveXKey=device==="mobile"?"imageMoveXMobile":"imageMoveX";
@@ -681,11 +687,29 @@ export default function MobileVisualStudio({
   String((props.items[selection.index] as Record<string,unknown>)?.[selectedTextKey]||""):
   String(props?.[selectedTextKey]||"");
  const addListItem=()=>{
-  if(!props||!Array.isArray(props.items))return;
+  if(!props||!Array.isArray(props.items)||props.items.length>=40)return;
   const item=block?.type==="PhotoGallery"?{id:crypto.randomUUID(),caption:"",image:"",alt:""}:
-   block?.type==="FAQList"?{id:crypto.randomUUID(),question:"Nueva pregunta",answer:"Respuesta"}:
+   block?.type==="FAQList"?{id:crypto.randomUUID(),question:"",answer:""}:
    {id:crypto.randomUUID(),title:"Nuevo elemento",description:"",image:"",alt:"",price:""};
   edit({items:[...props.items,item]});
+ };
+ const moveListItem=(index:number,step:number)=>{
+  if(!props||!Array.isArray(props.items))return;
+  const dest=index+step;
+  if(dest<0||dest>=props.items.length)return;
+  const next=[...props.items];
+  [next[index],next[dest]]=[next[dest],next[index]];
+  edit({items:next});
+ };
+ const addFAQSection=()=>{
+  const spec=builderConfig.components?.FAQList as {defaultProps?:Record<string,unknown>}|undefined;
+  const defaults=JSON.parse(JSON.stringify(spec?.defaultProps||{})) as Record<string,unknown>;
+  const id=crypto.randomUUID();
+  const node={type:"FAQList",props:{...defaults,id,items:[]}} as Item;
+  onChange({...data,content:[...data.content,node]});
+  closeDrawer();
+  setSelection({id,kind:"section",x:window.innerWidth/2,y:window.innerHeight/2});
+  setVisualTool("items");
  };
 
  return <div className={styles.stage} data-device={device} data-preview={preview}
@@ -769,7 +793,44 @@ export default function MobileVisualStudio({
       <textarea rows={2} value={String(props[key]||"")} onChange={e=>editText(key,e.target.value)}/>
      </label>):<p>Selecciona el texto directamente para editarlo.</p>}
     </div>:null}
-    {visualTool==="items"&&Array.isArray(props.items)?<div className={styles.focusFields}>
+    {visualTool==="items"&&block?.type==="FAQList"&&Array.isArray(props.items)?<div className={styles.focusFields}>
+     <label className={styles.formLabel}>Título de la sección
+      <input value={String(props.title||"")} maxLength={180}
+       onChange={e=>editText("title",e.target.value)} placeholder="Preguntas frecuentes"/>
+     </label>
+     {props.items.length===0?<p>Añade una pregunta y escribe su respuesta. Puedes crear tantas como necesites.</p>:null}
+     {(props.items as Record<string,unknown>[]).map((item,index)=><div className={styles.focusItem}
+      key={String(item.id||index)}>
+      <strong>Pregunta {index+1}</strong>
+      <label className={styles.formLabel}>Pregunta
+       <input value={String(item.question||"")} maxLength={700}
+        placeholder="Escribe la pregunta"
+        onChange={e=>editText("question",e.target.value,index)}/>
+      </label>
+      <label className={styles.formLabel}>Respuesta
+       <textarea rows={4} maxLength={700} placeholder="Escribe la respuesta"
+        value={String(item.answer||"")}
+        onChange={e=>editText("answer",e.target.value,index)}/>
+      </label>
+      <div className={styles.focusChoices}>
+       <button type="button" disabled={index===0} aria-label={`Subir pregunta ${index+1}`}
+        onClick={()=>moveListItem(index,-1)}><ArrowUp size={18}/> Subir</button>
+       <button type="button" disabled={index===props.items.length-1}
+        aria-label={`Bajar pregunta ${index+1}`}
+        onClick={()=>moveListItem(index,1)}><ArrowDown size={18}/> Bajar</button>
+      </div>
+      <button type="button" className={styles.focusDestructive}
+       onClick={()=>edit({items:(props.items as unknown[]).filter((_,i)=>i!==index)})}>
+       <Trash2 size={18}/> Eliminar pregunta
+      </button>
+     </div>)}
+     <button type="button" className={styles.focusAction}
+      onClick={addListItem} disabled={props.items.length>=40}>
+      <Plus size={18}/> Añadir pregunta y respuesta
+     </button>
+     {props.items.length>=40?<p>Máximo de 40 preguntas por sección.</p>:null}
+    </div>:null}
+    {visualTool==="items"&&block?.type!=="FAQList"&&Array.isArray(props.items)?<div className={styles.focusFields}>
      {(props.items as Record<string,unknown>[]).map((item,index)=><div className={styles.focusItem} key={String(item.id||index)}>
       <strong>Elemento {index+1}</strong>
       {["title","description","price","caption","question","answer"].filter(k=>typeof item[k]==="string").map(key=>
@@ -918,6 +979,7 @@ export default function MobileVisualStudio({
      <small className={styles.saveStatus}>{savePhase==="saving"?"Guardando cambios…":savePhase==="error"?"Error al guardar":savePhase==="pending"?"Cambios pendientes":"Borrador guardado"}</small>
      <small className={styles.groupLabel}>CONTENIDO</small>
      <button onClick={()=>menuAction("create")}><Plus/> Agregar elemento o sección <ChevronRight/></button>
+     <button onClick={addFAQSection}><MessageCircle/> Añadir preguntas frecuentes <ChevronRight/></button>
      <button onClick={()=>menuAction("pages")}><Layers/> Seleccionar página <ChevronRight/></button>
      <button onClick={()=>menuAction("pages")}><FilePlus2/> Agregar página <ChevronRight/></button>
      <small className={styles.groupLabel}>DISEÑO</small>
@@ -959,6 +1021,10 @@ export default function MobileVisualStudio({
         onChange(next);
        }else onChange({...data,content:[...data.content,node]});
        closeDrawer();
+       if(o.type==="FAQList"){
+        setSelection({id:String(node.props.id),kind:"section",x:window.innerWidth/2,y:window.innerHeight/2});
+        setVisualTool("items");
+       }
       }}><Plus/> {o.label}<ChevronRight/></button>)}
      </>:null}
      {section==="appearance"?<>
