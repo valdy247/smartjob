@@ -24,3 +24,11 @@
 .dialog :global(.ws-inquiry-success h3){margin:0;font-size:18px}
 .dialog :global(.ws-inquiry-success p){margin:0;font-size:12px;line-height:1.5}
 @media(max-width:420px){.dialog :global(.ws-inquiry-field-row){grid-template-columns:1fr}}
+
+/* Preserve readable chat icon and label across inherited website theme styles. */
+.vmv-site .launcher,.launcher{
+ background:var(--vmv-accent,#8054d0);
+ color:#fff!important;
+ border:1px solid transparent;
+}
+.launcher svg,.launcher span{color:inherit!important;opacity:1;visibility:visible}
