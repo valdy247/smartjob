@@ -32,14 +32,18 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
  if(!raw.hero||!raw.seo||!raw.design)throw new Error("La IA no devolvió un diseño válido.");
  const hero=record(raw.hero),seo=record(raw.seo),sections=record(raw.sections),design=record(raw.design);
  const family=familyForCategory(input.categoryId);
- const variant=["luminous","immersive","editorial"].indexOf(String(design.variant||""));
+ const suggestedVariant=["luminous","immersive","editorial"].indexOf(String(design.variant||""));
+ // The click-to-choose visual identity takes precedence over the model's suggestion.
+ const variantByMood={minimal:0,bold:1,editorial:2,warm:0} as const;
+ const chosenMood=input.design?.mood;
+ const variant=chosenMood?variantByMood[chosenMood]:suggestedVariant;
  if(variant<0)throw new Error("La IA no eligió un estilo disponible.");
  const base=createSiteProposals(input,family)[variant];
  const cta=ctaLink(input);
  const offerings=[...(input.products||[]).map(p=>p.title),...input.offerings].filter(Boolean).slice(0,5);
  const contactLabel=input.objective==="calls"?"Llámanos":input.objective==="bookings"?"Solicitar cita":
   input.objective==="quotes"?"Solicitar presupuesto":"Consultar pedido";
- const content=(base.data.content as Array<{type:string;props:Record<string,unknown>}>).map(item=>{
+ let content=(base.data.content as Array<{type:string;props:Record<string,unknown>}>).map(item=>{
   const props={...item.props};
   switch(item.type){
    case "HeroVisual":
@@ -116,12 +120,49 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
  };
  if(prefs){
   const imageFrame=frame[prefs.imageStyle]||frame.rounded;
+  const requestedPadding=prefs.spacing==="airy"?"spacious":prefs.spacing==="compact"?"compact":"normal";
+  const hasPhotos=input.photos.some(Boolean);
   for(const item of content){
    if(item.type==="HeroVisual"||item.type==="Image"){
     item.props.imageRadius=imageFrame.radius;
     item.props.imageBorder=imageFrame.border;
     item.props.borderColor=prefs.colors[2];
    }
+   if(item.type==="HeroVisual"){
+    const chosenLayout=prefs.heroLayout||"split";
+    // A cover without a photograph would be a blank banner; use editorial instead.
+    item.props.layout=chosenLayout==="cover"&&!hasPhotos?"editorial":chosenLayout;
+    item.props.height=chosenLayout==="cover"&&hasPhotos?"tall":"normal";
+    item.props.align=chosenLayout==="cover"&&hasPhotos?"center":"left";
+    item.props.shadeStrength=chosenLayout==="cover"&&hasPhotos?(prefs.mood==="bold"?55:42):24;
+    item.props.buttonShape=prefs.mood==="editorial"?"rounded":"pill";
+    if(prefs.mood==="editorial")item.props.buttonStyle="outline";
+   }
+   if(item.type==="OfferingGrid"){
+    const hasProductPhotos=Array.isArray(item.props.items)&&item.props.items.some((entry:unknown)=>
+     Boolean(entry&&typeof entry==="object"&&(entry as Record<string,unknown>).image));
+    item.props.layout=prefs.mood==="editorial"?"list":prefs.mood==="bold"&&hasProductPhotos?"mosaic":"grid";
+    item.props.columns=prefs.spacing==="compact"?"3":"2";
+    item.props.surface=prefs.mood==="bold"?"soft":"light";
+   }
+   if(item.type==="PhotoGallery"||item.type==="ProjectShowcase"){
+    item.props.layout=prefs.mood==="editorial"?"list":"mosaic";
+   }
+   if(["OfferingGrid","PhotoGallery","ProjectShowcase","CTA","FAQList","TeamGrid","HoursArea"].includes(item.type)){
+    item.props.padding=requestedPadding;
+   }
+  }
+  const favored:Record<string,readonly string[]>={
+   offerings:["OfferingGrid","PricingList"],gallery:["PhotoGallery","ProjectShowcase"],
+   story:["Text","ProcessSteps","TeamGrid"],contact:["CTA"]
+  };
+  const priorities=favored[prefs.contentFocus||"offerings"];
+  if(priorities){
+   // Preserve every section and its content. Only reorganize the verified blocks.
+   const rank=(type:string)=>type==="HeroVisual"?0:type==="Contact"?100:
+    priorities.includes(type)?1:type==="FAQList"?70:10;
+   content=content.map((item,index)=>({item,index})).sort((a,b)=>
+    rank(a.item.type)-rank(b.item.type)||a.index-b.index).map(x=>x.item);
   }
  }
  const rootProps={...(base.data.root?.props||{}) as Record<string,unknown>};
@@ -131,6 +172,8 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
   rootProps.secondaryColor=prefs.colors[1];
   rootProps.tertiaryColor=prefs.colors[2];
   rootProps.chatMode=prefs.chatMode;
+  rootProps.style=({minimal:"light",bold:"bold",editorial:"editorial",warm:"warm"} as Record<string,string>)[prefs.mood||"minimal"]||"light";
+  rootProps.width=prefs.spacing==="airy"?"wide":"regular";
  }
  const data=normalizeBuilderDocument({root:{props:rootProps},content});
  const issue=validateBuilderDocument(data);
@@ -190,7 +233,12 @@ export function aiSiteRequestContext(input:SiteIntake,creativeDirection:string,p
   products:(input.products||[]).slice(0,24).map(x=>({name:x.title.slice(0,120),
    description:x.description.slice(0,320)})),
   imagesAvailable:input.photos.filter(Boolean).length,
-  preferences:input.design?{colors:input.design.colors,font:input.design.font,imageStyle:input.design.imageStyle,features:input.design.features}:undefined,
+  preferences:input.design?{
+   colors:input.design.colors,font:input.design.font,imageStyle:input.design.imageStyle,
+   visualMood:input.design.mood,heroLayout:input.design.heroLayout,
+   contentPriority:input.design.contentFocus,copyTone:input.design.copyTone,
+   sectionSpacing:input.design.spacing,features:input.design.features
+  }:undefined,
   direction:creativeDirection.slice(0,400),pageName:pageName.slice(0,80)
  };
 }
