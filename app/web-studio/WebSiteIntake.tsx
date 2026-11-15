@@ -296,7 +296,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
    onChoose={proposal=>onChoose(intake,proposal)}/>;
  return <section className={styles.root}>
   <div className={styles.intro}><small>WEB STUDIO · NUEVO SITIO</small><h2>Empecemos por tu negocio<span>.</span></h2>
-   <p>Usaremos tus datos para preparar propuestas editables. Revisa que sean correctos antes de continuar.</p></div>
+</div>
   <div className={styles.form}>
    <div className={styles.panel}>
     <h3><span>01</span> Información</h3>
@@ -328,7 +328,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
      onChange={setProducts} onStatusChange={setProductStatus}/>
     {kind!=="products"?<form className={styles.addItem} onSubmit={addService}>
      <label>Servicios (opcional)
-      <span>Uno por campo. Sin precios inventados.</span></label>
+     </label>
      <div><input maxLength={120} value={newItem} placeholder="Ej. Pasteles personalizados"
       onChange={e=>setNewItem(e.target.value)}/><button type="submit"><Plus size={16}/> Agregar</button></div>
      <div className={styles.tokens}>{services.map((item,index)=><span key={index}>{item}
@@ -338,8 +338,8 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
    </div>
    <div className={styles.panel}>
     <h3><span>03</span> Identidad visual</h3>
-    <p>Usa fotografías propias. También puedes continuar sin ellas y añadirlas desde el editor antes de publicar.</p>
-    <p role="status" aria-live="polite">{mediaError?"Hubo un problema con tus imágenes.":mediaReady?(mediaSaving?"Guardando imágenes…":mediaMessage||"Las imágenes se conservan después de recargar."):"Recuperando imágenes guardadas…"}</p>
+    <p>Fotos opcionales. Puedes añadirlas después.</p>
+    {mediaSaving||!mediaReady||mediaMessage?<p role="status" aria-live="polite">{mediaSaving?"Guardando imágenes…":!mediaReady?"Cargando imágenes…":mediaMessage}</p>:null}
     {mediaError&&!mediaReady?<button type="button" onClick={()=>window.location.reload()}
      style={{alignSelf:"flex-start",border:"1px solid #d5c5eb",borderRadius:10,padding:"9px 13px",
       background:"#f7f1ff",color:"#7853b3",fontSize:12,fontWeight:850,cursor:"pointer"}}>
