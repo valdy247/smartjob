@@ -9,6 +9,7 @@ import {
  Sparkles,Copy,GripVertical,Trash2,Type,Undo2,Upload, X
 } from "lucide-react";
 import {builderConfig,normalizeBuilderDocument} from "@/lib/web-builder-puck";
+import {VISUAL_BLOCK_NAMES} from "@/lib/web-builder-visual-blocks";
 import {imageTargets,imageTargetIndex,patchBuilderImage,targetImage,targetSettings,type ImageTarget} from "@/lib/web-builder-images";
 import {WEBSITE_STYLES,restyleWebsiteDocument,type WebsiteStyleId} from "@/lib/web-builder-safe-styles";
 import BuilderImageField from "./BuilderImageField";
@@ -243,10 +244,10 @@ function listImages(data:Data):Array<{id:string;type:string;target:ImageTarget;n
 function getTextTarget(p:Record<string,unknown>,clicked:Element,kind:string):{key:string;index?:number}{
  const text=(clicked.textContent||"").replace(/\s+/g," ").trim();
  const items=Array.isArray(p.items)?p.items as Record<string,unknown>[]:[];
- const article=clicked.closest("article,figure,li");
+ const article=clicked.closest("article,figure,li,details");
  const outer=clicked.closest("[data-vmv-edit-block]");
  if(article&&outer){
-  const rows=Array.from(outer.querySelectorAll("article,figure,li")).filter(el=>el.closest("[data-vmv-edit-block]")===outer);
+  const rows=Array.from(outer.querySelectorAll("article,figure,li,details")).filter(el=>el.closest("[data-vmv-edit-block]")===outer);
   const index=rows.indexOf(article);
   if(index>=0&&index<items.length){
    const entry=items[index]||{};
@@ -267,6 +268,40 @@ function getTextTarget(p:Record<string,unknown>,clicked:Element,kind:string):{ke
  return {key:matched||fallback};
 }
 
+type TextStyleKeys={color:string;size:string;font:string;weight?:string;italic?:string;spacing?:string};
+function TextStyleEditor({values,keys,onPatch}:{values:Record<string,unknown>;
+ keys:TextStyleKeys;onPatch:(patch:Record<string,unknown>)=>void}){
+ return <div className={styles.typographyEditor}>
+  <strong className={styles.typographyHeading}>Estilo del texto</strong>
+  <ColorField label="Color del texto" value={values[keys.color]}
+   allowTransparent onChange={v=>onPatch({[keys.color]:v})}/>
+  <RangeField label="Tamaño del texto" min={12} max={110} unit="px"
+   value={values[keys.size]||16} onChange={v=>onPatch({[keys.size]:v})}/>
+  <span className={styles.typographyLabel}>Tipografía</span>
+  <FontField value={values[keys.font]||"site"} onChange={v=>onPatch({[keys.font]:v})}/>
+  {keys.weight?<label className={styles.formLabel}>Grosor
+   <select value={String(values[keys.weight]||"normal")}
+    onChange={e=>onPatch({[keys.weight!]:e.target.value})}>
+    <option value="light">Ligero</option><option value="normal">Normal</option>
+    <option value="heavy">Negrita</option>
+   </select>
+  </label>:null}
+  {keys.italic?<label className={styles.formLabel}>Estilo
+   <select value={String(values[keys.italic]||"no")}
+    onChange={e=>onPatch({[keys.italic!]:e.target.value})}>
+    <option value="no">Normal</option><option value="yes">Cursiva</option>
+   </select>
+  </label>:null}
+  {keys.spacing?<RangeField label="Separación de letras" min={-3} max={12} unit="px"
+   value={values[keys.spacing]||0} onChange={v=>onPatch({[keys.spacing!]:v})}/>:null}
+ </div>;
+}
+function textStyleKeys(prefix:string):TextStyleKeys{
+ return prefix===""?{color:"textColor",size:"fontSize",font:"font",
+  weight:"weight",italic:"italic",spacing:"letterSpacing"}:
+  {color:prefix+"Color",size:prefix+"FontSize",font:prefix+"Font",
+   weight:prefix+"Weight",italic:prefix+"Italic"};
+}
 export default function MobileVisualStudio({
  data,onChange:onDocumentChange,siteName,siteSlug,siteCategory,siteId,pages,pageId,
  onBack,onChoosePage,onCreatePage,onPublish,onSave,
@@ -378,6 +413,25 @@ export default function MobileVisualStudio({
  const image=selection?.kind==="image"&&block?
   selection.target||imageTargets(block.type,props||{})[0]:undefined;
  const textFields=props?fieldsFor(props):[];
+ const selectedTextKey=selection?.key||"title";
+ const activeTypography=selection?.kind==="text"&&block&&props?(()=>{
+  if(selection.index!==undefined&&Array.isArray(props.items)&&
+   ["title","description","price","caption","question","answer"].includes(selectedTextKey)&&
+   VISUAL_BLOCK_NAMES.some(kind=>kind===block.type)){
+   const item=(props.items as Record<string,unknown>[])[selection.index];
+   return item?{values:item,keys:textStyleKeys(selectedTextKey),index:selection.index}:null;
+  }
+  if(selection.index!==undefined)return null;
+  if(["ComposeHeading","ComposeText"].includes(block.type))return {
+   values:props,keys:textStyleKeys(""),index:null};
+  if(block.type==="HeroVisual"&&["title","description","eyebrow"].includes(selectedTextKey))
+   return {values:props,keys:textStyleKeys(selectedTextKey),index:null};
+  if(block.type==="CTA"&&selectedTextKey==="title")
+   return {values:props,keys:{color:"titleColor",size:"titleFontSize",font:"titleFont"},index:null};
+  if(VISUAL_BLOCK_NAMES.some(kind=>kind===block.type)&&["title","description"].includes(selectedTextKey))
+   return {values:props,keys:textStyleKeys(selectedTextKey),index:null};
+  return null;
+ })():null;
  const imageList=useMemo(()=>listImages(clean),[clean]);
  const seoImage=imageList.find(item=>item.key===seoImageKey)||imageList[0];
  const page=pages.find(p=>p.id===pageId);
@@ -675,16 +729,7 @@ export default function MobileVisualStudio({
        String(props[selection.key||"title"]||"")}
        onChange={e=>editText(selection.key||"title",e.target.value,selection.index)}/>
      </label>
-     {selection.index!==undefined&&block.type==="OfferingGrid"&&["title","description","price"].includes(selection.key||"")?<ColorField
-      label={"Color del "+(selection.key==="price"?"precio":selection.key==="title"?"título":"texto")}
-      value={(props.items as Record<string,unknown>[])[selection.index]?.[(selection.key||"title")+"Color"]}
-      allowTransparent
-      onChange={value=>{
-       const index=selection.index!;
-       const key=(selection.key||"title")+"Color";
-       const items=(props.items as Record<string,unknown>[]).map((entry,i)=>i===index?{...entry,[key]:value}:entry);
-       edit({items});
-      }}/>:null}
+
      {selection.index===undefined&&textFields.length>1?<label className={styles.formLabel}>Campo
       <select value={selection.key||"title"} onChange={e=>setSelection(v=>v?{...v,key:e.target.value}:null)}>
        {textFields.map(key=><option key={key} value={key}>{LABELS[key]||key}</option>)}
@@ -705,13 +750,14 @@ export default function MobileVisualStudio({
       <ColorField label="Color de fondo del botón" value={props.buttonColor}
        allowTransparent onChange={v=>edit({buttonColor:v})}/>
      </>:null}
-     {selection.kind==="text"&&selection.index===undefined&&
-      ["ComposeHeading","ComposeText","HeroVisual"].includes(block.type)?<>
-      <RangeField label="Tamaño de texto" min={12} max={100} unit="px" value={props.fontSize??props.titleFontSize??32}
-       onChange={v=>edit(block.type==="HeroVisual"?{titleFontSize:v}:{fontSize:v})}/>
-      <ColorField label="Color del texto" value={props.textColor??props.titleColor}
-       onChange={v=>edit(block.type==="HeroVisual"?{titleColor:v}:{textColor:v})}/>
-     </>:null}
+     {activeTypography?<TextStyleEditor values={activeTypography.values} keys={activeTypography.keys}
+      onPatch={patch=>{
+       if(activeTypography.index!==null&&Array.isArray(props.items)){
+        const items=(props.items as Record<string,unknown>[]).map((entry,i)=>
+         i===activeTypography.index?{...entry,...patch}:entry);
+        edit({items},`style:${selection.id}:${activeTypography.index}`);
+       }else edit(patch,`style:${selection.id}:${selectedTextKey}`);
+      }}/>:null}
     </div>:<div className={styles.controls}>
      {textFields.slice(0,8).map(key=><label key={key} className={styles.formLabel}>{LABELS[key]||key}
       <textarea rows={2} value={String(props[key]||"")} onChange={e=>editText(key,e.target.value)}/>
