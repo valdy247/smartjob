@@ -657,3 +657,50 @@
  border-color:#fff;
 }
 .vmv-site .vmv-site-button>span[aria-hidden=true]{color:inherit!important;opacity:1}
+
+/* Product editing: position and size the complete card, never its photo alone.
+   Existing saved imageWidth/imageMove values now govern the card and its content. */
+.vmv-offerings-items .vmv-offering-card{
+ box-sizing:border-box;
+ width:var(--image-width,100%);
+ max-width:none;
+ transform:translate(var(--image-x,0px),var(--image-y,0px));
+ margin-left:var(--image-left,0);
+ margin-right:var(--image-right,auto);
+ align-self:start;
+}
+.vmv-offerings-items .vmv-offering-card>.vmv-managed-image{
+ width:100%!important;
+ max-width:100%;
+ flex-shrink:0;
+ transform:none!important;
+ margin:0!important;
+}
+.vmv-offerings-items[data-layout=list] .vmv-offering-card>.vmv-managed-image{
+ width:33%!important;
+ flex:0 0 33%;
+}
+@container(max-width:700px){
+ .vmv-offerings-items .vmv-offering-card{
+  width:var(--image-width-mobile,100%);
+  transform:translate(var(--image-x-mobile,0px),var(--image-y-mobile,0px));
+  margin-left:var(--image-left-mobile,0);
+  margin-right:var(--image-right-mobile,auto);
+ }
+ .vmv-offerings-items[data-layout=list] .vmv-offering-card>.vmv-managed-image{
+  width:100%!important;
+  flex:0 0 auto;
+ }
+}
+@media(max-width:700px){
+ .vmv-offerings-items .vmv-offering-card{
+  width:var(--image-width-mobile,100%);
+  transform:translate(var(--image-x-mobile,0px),var(--image-y-mobile,0px));
+  margin-left:var(--image-left-mobile,0);
+  margin-right:var(--image-right-mobile,auto);
+ }
+ .vmv-offerings-items[data-layout=list] .vmv-offering-card>.vmv-managed-image{
+  width:100%!important;
+  flex:0 0 auto;
+ }
+}
