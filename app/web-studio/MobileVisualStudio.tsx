@@ -114,8 +114,8 @@ function editableConfig():Config{
 function fieldsFor(props:Record<string,unknown>):string[]{
  return TEXT_KEYS.filter(key=>typeof props[key]==="string"&&key!=="address"||key==="address"&&typeof props[key]==="string");
 }
-function listImages(data:Data):Array<{id:string;type:string;target:ImageTarget;name:string;alt:string}>{
- const result:Array<{id:string;type:string;target:ImageTarget;name:string;alt:string}>=[];
+function listImages(data:Data):Array<{id:string;type:string;target:ImageTarget;name:string;alt:string;src:string;key:string}>{
+ const result:Array<{id:string;type:string;target:ImageTarget;name:string;alt:string;src:string;key:string}>=[];
  function walk(nodes:Data["content"]){
   for(const node of nodes){
    const p=node.props as Record<string,unknown>;const id=String(p.id||"");
@@ -124,7 +124,7 @@ function listImages(data:Data):Array<{id:string;type:string;target:ImageTarget;n
      const alt=target.index!==undefined&&Array.isArray(p.items)?
       String((p.items[target.index] as Record<string,unknown>)?.alt||""):
       String(p[node.type==="HeroVisual"?"imageAlt":target.field==="beforeImage"?"beforeAlt":target.field==="afterImage"?"afterAlt":"alt"]||"");
-     result.push({id,type:node.type,target,name:String(p.title||target.label||node.type),alt});
+     result.push({id,type:node.type,target,name:String(p.title||target.label||node.type),alt,src:targetImage(p,target),key:`${id}:${target.field}:${target.index??""}`});
     }
    }
    for(const slot of ["content","left","right","third"])if(Array.isArray(p[slot]))walk(p[slot] as Data["content"]);
@@ -190,6 +190,7 @@ export default function MobileVisualStudio({
  const [orientation,setOrientation]=useState<"portrait"|"landscape">("portrait");
  const [selection,setSelection]=useState<Pick|null>(null);
  const [adjust,setAdjust]=useState<"actions"|"image"|"move"|"text">("actions");
+ const [seoImageKey,setSeoImageKey]=useState("");
  const [newName,setNewName]=useState("");
  const [noticeVisible,setNoticeVisible]=useState(false);
  const [errorDismissed,setErrorDismissed]=useState("");
@@ -211,6 +212,7 @@ export default function MobileVisualStudio({
   selection.target||imageTargets(block.type,props||{})[0]:undefined;
  const textFields=props?fieldsFor(props):[];
  const imageList=useMemo(()=>listImages(clean),[clean]);
+ const seoImage=imageList.find(item=>item.key===seoImageKey)||imageList[0];
  const page=pages.find(p=>p.id===pageId);
  const rootPatch=(patch:Record<string,unknown>)=>onChange({...data,root:{...data.root,props:{...data.root?.props,...patch}}});
  const edit=(patch:Record<string,unknown>)=>{if(selection)onChange(patchBlock(data,selection.id,patch));};
@@ -527,17 +529,32 @@ export default function MobileVisualStudio({
       <label className={styles.formLabel}>Descripción para Google
        <textarea value={description} maxLength={300} rows={4} onChange={e=>onDescriptionChange(e.target.value)}/></label>
       <h3>Textos alternativos de imágenes</h3>
-      <p className={styles.help}>Describe cada imagen para mejorar la accesibilidad y el SEO.</p>
-      {imageList.map((item,n)=><label key={item.id+"-"+n} className={styles.formLabel}>
-       {item.name} · Imagen {n+1}
-       <input maxLength={140} value={item.alt} onChange={e=>{
-        const p= item.target.index!==undefined?{alt:e.target.value}:
-         item.target.field==="beforeImage"?{beforeAlt:e.target.value}:
-         item.target.field==="afterImage"?{afterAlt:e.target.value}:
-         item.type==="HeroVisual"?{imageAlt:e.target.value}:{alt:e.target.value};
-        onChange(item.target.index!==undefined?
-         patchBuilderImage(data,item.id,item.target,p):patchBlock(data,item.id,p));
-       }}/></label>)}
+      <p className={styles.help}>Selecciona una miniatura para editar su descripción para accesibilidad y SEO.</p>
+      {imageList.length?<div className={styles.seoImageGrid} aria-label="Seleccionar imagen para SEO">
+       {imageList.map((item,n)=><button type="button" key={item.key}
+        className={styles.seoImageTile} aria-pressed={seoImage?.key===item.key}
+        onClick={()=>setSeoImageKey(item.key)}
+        aria-label={`Seleccionar imagen ${n+1}: ${item.name}`}>
+        {item.src?<img src={item.src} alt="" loading="lazy"/>:<span className={styles.seoImageEmpty}><ImagePlus size={19}/> Sin foto</span>}
+        <span>Imagen {n+1}</span>
+       </button>)}
+      </div>:<p className={styles.help}>Todavía no hay imágenes para describir en esta página.</p>}
+      {seoImage?<div className={styles.seoSelected}>
+       <strong>{seoImage.name}</strong>
+       <label className={styles.formLabel}>Texto alternativo de la imagen
+        <textarea rows={3} maxLength={140} placeholder="Describe lo que se ve en esta imagen"
+         value={seoImage.alt} onChange={e=>{
+          const item=seoImage;
+          const patch=item.target.index!==undefined?{alt:e.target.value}:
+           item.target.field==="beforeImage"?{beforeAlt:e.target.value}:
+           item.target.field==="afterImage"?{afterAlt:e.target.value}:
+           item.type==="HeroVisual"?{imageAlt:e.target.value}:{alt:e.target.value};
+          onChange(item.target.index!==undefined?
+           patchBuilderImage(data,item.id,item.target,patch):patchBlock(data,item.id,patch));
+         }}/>
+       </label>
+       <small>{seoImage.alt.length}/140 caracteres · No cambia el nombre del archivo.</small>
+      </div>:null}
      </>:null}
      {section==="connections"?<>
       <h3>Chat en la página</h3>
