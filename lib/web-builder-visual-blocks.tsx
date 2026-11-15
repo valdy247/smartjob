@@ -133,11 +133,11 @@ export const visualBlocks:Config["components"]={
       radius={0} editing={puck.isEditing} position={position} priority={!puck.isEditing}/>
     </div>:null}
     <div className="vmv-hero-content">
-     {eyebrow?<span className="vmv-hero-eyebrow">{eyebrow}</span>:null}
+     {eyebrow?<span className="vmv-hero-eyebrow" style={textStyle(responsive,"eyebrow")}>{eyebrow}</span>:null}
      <h1 style={titleStyle}>{safeTitleLink&&!puck.isEditing?
       <a href={safeTitleLink} style={{color:"inherit",textDecoration:"inherit"}}>{title||"Presenta tu negocio"}</a>:
       title||"Presenta tu negocio"}</h1>
-     {description?<p>{description}</p>:null}
+     {description?<p style={textStyle(responsive,"description")}>{description}</p>:null}
      <a className="vmv-site-button" data-button-style={buttonStyle||"solid"}
        data-vmv-override-background={appearance.hasBackground} data-vmv-override-foreground={appearance.hasForeground}
        style={appearance.style} href={href}>{buttonText||"Contactar"}</a>
@@ -165,7 +165,7 @@ export const visualBlocks:Config["components"]={
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.columns}{fields.padding}{fields.surface}{fields.showPrices}</fieldset>
   </>,
   render:({id,title,description,items,layout,padding,surface,columns,showPrices,puck,...textStyling})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-offerings">
-   <div className="vmv-section-heading"><h2 style={textStyle(textStyling,"title")}>{title}</h2>{description?<p>{description}</p>:null}</div>
+   <div className="vmv-section-heading"><h2 style={textStyle(textStyling,"title")}>{title}</h2>{description?<p style={textStyle(textStyling,"description")}>{description}</p>:null}</div>
    <div className="vmv-offerings-items" data-layout={layout||"grid"} data-columns={columns||"3"}>
     {toList(items).map((item,index)=>!(item.title||item.description||item.price||photo(item.image))&&!puck.isEditing?null:<article key={visualItemId(item,index)} className="vmv-offering-card" data-has-photo={Boolean(photo(item.image))} style={imageSettingsStyle(item)}>
      <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
@@ -189,7 +189,7 @@ export const visualBlocks:Config["components"]={
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.description}{fields.items}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.padding}{fields.surface}</fieldset></>,
   render:({id,title,description,items,layout,padding,surface,puck,...textStyling})=>!toList(items).some(item=>photo(item.image))&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
-   <div className="vmv-section-heading"><h2 style={textStyle(textStyling,"title")}>{title}</h2>{description?<p>{description}</p>:null}</div>
+   <div className="vmv-section-heading"><h2 style={textStyle(textStyling,"title")}>{title}</h2>{description?<p style={textStyle(textStyling,"description")}>{description}</p>:null}</div>
    <div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,index)=><figure key={visualItemId(item,index)}>
     <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.caption),heading(item.alt))} settings={item} editing={puck.isEditing}/>
     {item.caption?<figcaption style={textStyle(item,"caption")}>{heading(item.caption)}</figcaption>:null}
@@ -315,17 +315,15 @@ export function normalizeVisualProps(type:VisualBlockName,props:Record<string,un
   if(field==="buttonUrl"&&value&&!/^(#[a-z0-9-]{1,70}|mailto:[^<> ]+|tel:\+?[\d ()-]{7,36})$/i.test(value))value="#contacto";
   safe[field]=value;
  }
- if(type!=="HeroVisual"){
-  const keys=["titleColor","titleFont","titleFontSize","titleWeight","titleItalic"] as const;
-  for(const key of keys){
-   const value=props[key];
-   if(value===undefined)continue;
-   safe[key]=key==="titleColor"?(/^#[\da-f]{6}$/i.test(String(value))?value:""):
-    key==="titleFont"?(Object.hasOwn(textFonts,String(value))?value:"site"):
-    key==="titleFontSize"?(typeof value==="number"&&Number.isFinite(value)?Math.max(0,Math.min(110,Math.round(value))):0):
-    key==="titleWeight"?(["light","normal","heavy"].includes(String(value))?value:"normal"):
-    value==="yes"?"yes":"no";
-  }
+ for(const textKey of type==="HeroVisual"?["description","eyebrow"]:["title","description"]){
+  const font=props[textKey+"Font"],color=props[textKey+"Color"],size=props[textKey+"FontSize"];
+  const weight=props[textKey+"Weight"],italic=props[textKey+"Italic"];
+  if(font!==undefined)safe[textKey+"Font"]=Object.hasOwn(textFonts,String(font))?font:"site";
+  if(color!==undefined)safe[textKey+"Color"]=/^#[\\da-f]{6}$/i.test(String(color))?color:"";
+  if(size!==undefined)safe[textKey+"FontSize"]=typeof size==="number"&&Number.isFinite(size)?
+   Math.max(0,Math.min(110,Math.round(size))):0;
+  if(weight!==undefined)safe[textKey+"Weight"]=["light","normal","heavy"].includes(String(weight))?weight:"normal";
+  if(italic!==undefined)safe[textKey+"Italic"]=italic==="yes"?"yes":"no";
  }
  if(type==="HeroVisual"){
   for(const key of ["buttonColor","buttonTextColor"])
