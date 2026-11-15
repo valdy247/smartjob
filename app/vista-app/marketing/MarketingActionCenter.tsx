@@ -764,7 +764,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
        return <button type="button" key={service.id} onClick={()=>chooseService(service.id)} className={styles.serviceTile} aria-label={translate("marketing.action.chooseServiceAria",{service:serviceName(service.id)})}>
         <span className={styles.serviceIcon}><ServiceIcon size={23} strokeWidth={1.8}/></span>
         <span className={styles.serviceText}><strong>{serviceName(service.id)}</strong><small>{serviceWhy(service.id)}</small></span>
-        <span className={styles.serviceCta}>{en?"Start":"Empezar"} <ArrowUpRight size={14}/></span>
+        <span className={styles.serviceCta}>{en?"Start":"Empezar"}</span>
        </button>;
       })}
      </div>
