@@ -935,8 +935,9 @@ export default function WebBuilderWorkspace(){
       <Puck key={page.id+"-"+refreshKey} dictionary={dictionary} config={builderConfig} dnd={{enableDragHandle:true}}
        overrides={{headerActions:({children})=><><BuilderHistoryControls/><BuilderQuickAdd compact={compactStudio} enabled={!previewMode&&view==="editor"}/>{compactStudio?null:children}</>,
         actionBar:({children,label})=><BuilderSelectedActions label={label||"Elemento"}>{children}</BuilderSelectedActions>}}
-       _experimentalFullScreenCanvas={compactStudio}
-       data={initialDocument} height={compactStudio?"100%":"75vh"}
+       // Puck's experimental full-screen canvas collapses the editable frame in
+       // mobile embedded browsers. Use the stable mobile layout with a real height.
+       data={initialDocument} height={compactStudio?"calc(100dvh - 225px)":"75vh"}
        onChange={data=>setDocument(data)}
        onPublish={publish} />
      </div>
