@@ -70,7 +70,7 @@ export default function PlaceAddressLookup({country,onPick}:{country:string;onPi
    {choices.map(c=><button type="button" role="option" aria-selected={false} key={c.placeId} onClick={()=>void choose(c)}>
     <MapPin size={16}/><span><strong>{c.main}</strong><small>{c.secondary}</small></span>
    </button>)}
-   <small className={styles.attribution}>Google Maps</small>
+   <small className={styles.attribution}>{en?"Address suggestions by Google Maps":"Direcciones sugeridas por Google Maps"}</small>
   </div>:null}
   {notice?<p role="status" className={styles.message}>{notice}</p>:null}
   <p className={styles.helper}>{en?"Optional. You can always fill the fields manually.":"Opcional. También puedes completar los campos manualmente."}</p>
