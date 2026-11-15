@@ -399,6 +399,16 @@ export default function MobileVisualStudio({
        String(props[selection.key||"title"]||"")}
        onChange={e=>editText(selection.key||"title",e.target.value,selection.index)}/>
      </label>
+     {selection.index!==undefined&&block.type==="OfferingGrid"&&["title","description","price"].includes(selection.key||"")?<ColorField
+      label={"Color del "+(selection.key==="price"?"precio":selection.key==="title"?"título":"texto")}
+      value={(props.items as Record<string,unknown>[])[selection.index]?.[(selection.key||"title")+"Color"]}
+      allowTransparent
+      onChange={value=>{
+       const index=selection.index!;
+       const key=(selection.key||"title")+"Color";
+       const items=(props.items as Record<string,unknown>[]).map((entry,i)=>i===index?{...entry,[key]:value}:entry);
+       edit({items});
+      }}/>:null}
      {selection.index===undefined&&textFields.length>1?<label className={styles.formLabel}>Campo
       <select value={selection.key||"title"} onChange={e=>setSelection(v=>v?{...v,key:e.target.value}:null)}>
        {textFields.map(key=><option key={key} value={key}>{LABELS[key]||key}</option>)}
