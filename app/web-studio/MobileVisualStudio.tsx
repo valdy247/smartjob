@@ -6,7 +6,7 @@ import {
  ArrowDown,ArrowLeft,ArrowUp,Check,ChevronDown,ChevronRight,Eye,EyeOff,
  FilePlus2,Globe,ImagePlus,Layers,Menu,MessageCircle,Monitor,Palette,
  Plus,Redo2,Save,Settings2,SlidersHorizontal,Smartphone,
- Sparkles,Trash2,Type,Undo2,Upload, X
+ Sparkles,Copy,GripVertical,Trash2,Type,Undo2,Upload, X
 } from "lucide-react";
 import {builderConfig,normalizeBuilderDocument} from "@/lib/web-builder-puck";
 import {imageTargets,imageTargetIndex,patchBuilderImage,targetImage,targetSettings,type ImageTarget} from "@/lib/web-builder-images";
@@ -119,6 +119,67 @@ function insertBlockAfter(data:Data,id:string,newBlock:Item):Data{
  }
  const content=visit(data.content);
  return inserted?{...data,content}:data;
+}
+
+/** Duplicates a section without reusing Puck/array-item identifiers. */
+function duplicateBlock(data:Data,id:string):{data:Data;newId:string|null}{
+ const original=findBlock(data,id);
+ if(!original)return {data,newId:null};
+ const regenerate=(value:unknown):unknown=>{
+  if(Array.isArray(value))return value.map(regenerate);
+  if(value&&typeof value==="object"){
+   return Object.fromEntries(Object.entries(value as Record<string,unknown>).map(([key,part])=>
+    [key,key==="id"&&typeof part==="string"?crypto.randomUUID():regenerate(part)]));
+  }
+  return value;
+ };
+ const duplicate=regenerate(original) as Item;
+ const next=insertBlockAfter(data,id,duplicate);
+ return {data:next,newId:next===data?null:String(duplicate.props.id)};
+}
+/** Only reorder peers in the same page or layout slot; never orphan nested content. */
+function siblingBlocks(data:Data,sourceId:string,targetId:string):boolean{
+ function walk(nodes:Data["content"]):boolean{
+  if(nodes.some(node=>node.props?.id===sourceId)&&nodes.some(node=>node.props?.id===targetId))return true;
+  return nodes.some(node=>{
+   const props=node.props as Record<string,unknown>;
+   return ["content","left","right","third"].some(slot=>Array.isArray(props[slot])&&
+    walk(props[slot] as Data["content"]));
+  });
+ }
+ return walk(data.content);
+}
+function reorderBlock(data:Data,sourceId:string,targetId:string,before:boolean):Data{
+ if(sourceId===targetId||!siblingBlocks(data,sourceId,targetId))return data;
+ let changed=false;
+ function visit(nodes:Data["content"]):Data["content"]{
+  const from=nodes.findIndex(node=>node.props?.id===sourceId);
+  const to=nodes.findIndex(node=>node.props?.id===targetId);
+  if(from>=0&&to>=0){
+   const next=[...nodes];
+   const [source]=next.splice(from,1);
+   const anchor=next.findIndex(node=>node.props?.id===targetId);
+   next.splice(anchor+(before?0:1),0,source);
+   changed=true;
+   return next;
+  }
+  let touched=false;
+  const next=nodes.map(node=>{
+   const original=node.props as Record<string,unknown>;
+   let props=original;
+   for(const slot of ["content","left","right","third"]){
+    if(changed)break;
+    if(Array.isArray(props[slot])){
+     const updated=visit(props[slot] as Data["content"]);
+     if(updated!==props[slot]){props={...props,[slot]:updated};touched=true;}
+    }
+   }
+   return props===original?node:{...node,props};
+  });
+  return touched?next:nodes;
+ }
+ const content=visit(data.content);
+ return changed?{...data,content}:data;
 }
 function removeBlock(data:Data,id:string):Data{
  let removed=false;
@@ -236,6 +297,9 @@ export default function MobileVisualStudio({
  const [selection,setSelection]=useState<Pick|null>(null);
  const [insertAfterId,setInsertAfterId]=useState<string|null>(null);
  const [deleteTarget,setDeleteTarget]=useState<{id:string;label:string}|null>(null);
+ const dragRef=useRef<{pointer:number;source:string;target:string|null;before:boolean}|null>(null);
+ const highlightRef=useRef<HTMLElement|null>(null);
+ const [dragHint,setDragHint]=useState("");
  const [adjust,setAdjust]=useState<"actions"|"image"|"move"|"text">("actions");
  const [seoImageKey,setSeoImageKey]=useState("");
  const [newName,setNewName]=useState("");
@@ -331,7 +395,54 @@ export default function MobileVisualStudio({
  const editImage=(target:ImageTarget,patch:Record<string,unknown>)=>{
   if(selection)onChange(patchBuilderImage(data,selection.id,target,patch));
  };
- const closePopup=()=>{setSelection(null);setAdjust("actions");};
+
+ const clearDrag=()=>{
+  highlightRef.current?.removeAttribute("data-vmv-drop-target");
+  highlightRef.current=null;
+  dragRef.current=null;
+  setDragHint("");
+ };
+ const beginDrag=(event:ReactPointerEvent<HTMLButtonElement>)=>{
+  if(!selection||preview||drawer)return;
+  event.preventDefault();event.stopPropagation();
+  clearDrag();
+  dragRef.current={pointer:event.pointerId,source:selection.id,target:null,before:false};
+  try{event.currentTarget.setPointerCapture(event.pointerId);}catch{/* Capture is optional. */}
+  setDragHint("Arrastra hasta otra sección de la página");
+ };
+ const moveDrag=(event:ReactPointerEvent<HTMLButtonElement>)=>{
+  const gesture=dragRef.current;
+  if(!gesture||gesture.pointer!==event.pointerId)return;
+  event.preventDefault();
+  const hit=document.elementFromPoint(event.clientX,event.clientY);
+  const wrapper=hit instanceof Element?hit.closest<HTMLElement>("[data-vmv-edit-block]"):null;
+  const id=wrapper?.dataset.vmvEditBlock;
+  highlightRef.current?.removeAttribute("data-vmv-drop-target");
+  highlightRef.current=null;
+  if(!id||id===gesture.source||!siblingBlocks(data,gesture.source,id)){
+   gesture.target=null;
+   setDragHint("Arrastra sobre otra sección");
+   return;
+  }
+  const box=wrapper?.firstElementChild?.getBoundingClientRect()||wrapper?.getBoundingClientRect();
+  gesture.before=Boolean(box&&event.clientY<box.top+box.height/2);
+  gesture.target=id;
+  const node=findBlock(data,id);
+  const label=String((node?.props as Record<string,unknown>|undefined)?.title||node?.type||"sección").slice(0,38);
+  setDragHint((gesture.before?"Antes de ":"Después de ")+label);
+  const visual=(wrapper?.firstElementChild||wrapper) as HTMLElement|undefined;
+  if(visual){visual.setAttribute("data-vmv-drop-target",gesture.before?"before":"after");highlightRef.current=visual;}
+ };
+ const endDrag=(event:ReactPointerEvent<HTMLButtonElement>)=>{
+  const gesture=dragRef.current;
+  if(!gesture||gesture.pointer!==event.pointerId)return;
+  event.preventDefault();event.stopPropagation();
+  const result=gesture.target?reorderBlock(data,gesture.source,gesture.target,gesture.before):data;
+  clearDrag();
+  if(result!==data){onChange(result);setSelection(null);}
+ };
+ const cancelDrag=()=>clearDrag();
+ const closePopup=()=>{setSelection(null);setAdjust("actions");clearDrag();};
  const closeDrawer=()=>{setDrawer(false);setSection("home");setInsertAfterId(null);};
  function selectAt(target:Element,x:number,y:number){
   const wrapper=target.closest<HTMLElement>("[data-vmv-edit-block]");
@@ -349,7 +460,7 @@ export default function MobileVisualStudio({
    img=images[Math.max(0,Math.min(indexFound,images.length-1))]||images[0];
    kind="image";
   }else{
-   const content=target.closest("a,button,h1,h2,h3,h4,h5,p,small,figcaption,blockquote,strong");
+   const content=target.closest("a,button,h1,h2,h3,h4,h5,p,small,figcaption,blockquote,strong,span,em,li");
    if(content){
     kind=content.matches("a,button")?"button":"text";
     const t=getTextTarget(p,content,node.type);key=t.key;index=t.index;
@@ -452,13 +563,16 @@ export default function MobileVisualStudio({
      selectAt(target,e.clientX,e.clientY);
     }}
     onClickCapture={e=>{
-     if(preview)return;
+     if(preview||drawer)return;
      const target=e.target instanceof Element?e.target:null;
      if(!target)return;
-     // The real-looking canvas must not navigate or submit anything while editing.
-     if(target.closest("a,button,input[type=submit],select,textarea,[role=button]")||
-        Date.now()<suppressed.current){
+     // A tap chooses what to edit, never activates links or forms on the draft.
+     const blocked=Boolean(target.closest("a,button,input,select,textarea,[role=button]"));
+     if(blocked){e.preventDefault();e.stopPropagation();}
+     if(Date.now()<suppressed.current||dragRef.current)return;
+     if(target.closest("[data-vmv-edit-block]")){
       e.preventDefault();e.stopPropagation();
+      selectAt(target,e.clientX,e.clientY);
      }
     }}
     onContextMenu={e=>{if(!preview)e.preventDefault();}}>
@@ -576,8 +690,8 @@ export default function MobileVisualStudio({
      {textFields.length===0&&!Array.isArray(props.items)?<p>Selecciona un texto o una imagen de esta sección para modificarla.</p>:null}
     </div>}
     <div className={styles.chips}>
-     <button onClick={()=>onChange(moveBlock(data,selection.id,-1))}><ArrowUp size={15}/> Subir</button>
-     <button onClick={()=>onChange(moveBlock(data,selection.id,1))}><ArrowDown size={15}/> Bajar</button>
+     <button type="button" onClick={()=>onChange(moveBlock(data,selection.id,-1))}><ArrowUp size={15}/> Subir</button>
+     <button type="button" onClick={()=>onChange(moveBlock(data,selection.id,1))}><ArrowDown size={15}/> Bajar</button>
     </div>
    </div>:null}
    {block.type==="HeroVisual"?<div className={styles.floatContent}>
@@ -599,6 +713,19 @@ export default function MobileVisualStudio({
      setSection("create");
      closePopup();
     }}><Plus size={17}/> Añadir debajo</button>
+    <button type="button" className={styles.duplicateSection} onClick={()=>{
+     const copy=duplicateBlock(data,selection.id);
+     if(!copy.newId)return;
+     onChange(copy.data);
+     setSelection({...selection,id:copy.newId,kind:"section",target:undefined,index:undefined,key:undefined});
+    }}><Copy size={17}/> Duplicar sección</button>
+    <button type="button" className={styles.dragSection}
+     onPointerDown={beginDrag} onPointerMove={moveDrag}
+     onPointerUp={endDrag} onPointerCancel={cancelDrag}
+     onLostPointerCapture={cancelDrag} aria-label="Arrastrar sección para cambiar su posición">
+     <GripVertical size={18}/> Mantén y arrastra para mover
+    </button>
+    {dragHint?<span className={styles.dragHint} role="status">{dragHint}</span>:null}
     <button type="button" className={styles.deleteSection}
      onClick={()=>setDeleteTarget({id:selection.id,label:String(props.title||"esta sección").slice(0,70)})}>
      <Trash2 size={17}/> Eliminar sección
