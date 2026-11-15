@@ -20,6 +20,7 @@ import {WEBSITE_STYLES,restyleWebsiteDocument,type WebsiteStyleId} from "@/lib/w
 import BuilderHistoryControls from "./BuilderHistoryControls";
 import BuilderQuickAdd from "./BuilderQuickAdd";
 import BuilderSelectedActions from "./BuilderSelectedActions";
+import useMobileCanvasLongPress from "./useMobileCanvasLongPress";
 import {WebsiteChrome,websiteVisualStyle} from "@/lib/web-site-chrome";
 import {familyForCategory} from "@/lib/web-builder-templates";
 import RequestForm from "@/app/sites/[slug]/RequestForm";
@@ -80,6 +81,8 @@ export default function WebBuilderWorkspace(){
  const [mobilePageMenu,setMobilePageMenu]=useState(false);
  const workspaceRef=useRef<HTMLDivElement|null>(null);
  const [compactStudio,setCompactStudio]=useState(false);
+ const puckShellRef=useRef<HTMLDivElement|null>(null);
+ useMobileCanvasLongPress(puckShellRef,compactStudio&&view==="editor"&&!previewMode);
  useEffect(()=>{
   const element=workspaceRef.current;
   if(!element)return;
@@ -931,7 +934,7 @@ export default function WebBuilderWorkspace(){
        </WebsiteChrome>
       </div>
      </section>:null}
-     <div className={compactStudio?styles.puckShell+" "+styles.compactPuck:styles.puckShell} style={{display:previewMode?"none":undefined}}>
+     <div ref={puckShellRef} className={compactStudio?styles.puckShell+" "+styles.compactPuck:styles.puckShell} style={{display:previewMode?"none":undefined}}>
       <Puck key={page.id+"-"+refreshKey} dictionary={dictionary} config={builderConfig} dnd={{enableDragHandle:true}}
        overrides={{headerActions:({children})=><><BuilderHistoryControls/><BuilderQuickAdd compact={compactStudio} enabled={!previewMode&&view==="editor"}/>{compactStudio?null:children}</>,
         actionBar:({children,label})=><BuilderSelectedActions label={label||"Elemento"}>{children}</BuilderSelectedActions>}}
