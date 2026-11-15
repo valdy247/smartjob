@@ -109,7 +109,7 @@ export default function ContactBook({client,ownerId,initialPhone="",startInForm=
  return <section className={styles.contactsPage} aria-label="Agenda de contactos VMV">
   {!embedded?<button type="button" className={styles.back} onClick={onClose}><ArrowLeft size={16}/> Volver a llamadas</button>:null}
   <div className={embedded?styles.contactsHeaderCompact:styles.contactsHeader}>
-   {embedded?<span className={styles.contactsMiniCount}>{entries.length} contacto{entries.length===1?"":"s"}</span>:<div><span className={styles.smallKicker}>SMART CALL / AGENDA</span><h2>Contactos<span className={styles.mint}>.</span></h2>
+   {embedded?<span className={styles.contactsMiniCount}>{entries.length} contacto{entries.length===1?"":"s"}</span>:<div><h2>Contactos<span className={styles.mint}>.</span></h2>
     <p>{entries.length} guardado{entries.length===1?"":"s"} en tu cuenta VMV</p></div>}
    {!formOpen?<button type="button" className={styles.contactAdd} onClick={startNew} aria-label="Nuevo contacto"><Plus size={22}/></button>:null}
   </div>
