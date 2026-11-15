@@ -644,3 +644,16 @@
 .vmv-site[data-site-style=dark] .vmv-site-mark{
  color:var(--vmv-ink);
 }
+
+/* Maintain readable CTA labels and their arrow icons on light hero backgrounds. */
+.vmv-site .vmv-hero-visual:not([data-layout=cover]) .vmv-site-button[data-button-style=outline]{
+ color:var(--vmv-accent)!important;
+ border-color:var(--vmv-accent);
+ background:color-mix(in srgb,var(--vmv-pale) 28%,white);
+}
+.vmv-site .vmv-hero-visual[data-layout=cover] .vmv-site-button[data-button-style=outline]{
+ color:#fff!important;
+ background:rgba(25,19,33,.65);
+ border-color:#fff;
+}
+.vmv-site .vmv-site-button>span[aria-hidden=true]{color:inherit!important;opacity:1}
