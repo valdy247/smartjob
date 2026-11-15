@@ -245,6 +245,7 @@ export default function MobileVisualStudio({
   past:[],future:[],group:null,time:0
  });
  const latestDocument=useRef(data);
+ const lastDispatched=useRef<Data|null>(null);
  const [historyAvailable,setHistoryAvailable]=useState({undo:false,redo:false});
  // The mobile canvas is not Puck's editor, so give it a bounded, local draft history.
  const onChange=(next:Data,group?:string)=>{
@@ -257,6 +258,7 @@ export default function MobileVisualStudio({
   h.group=group||null;
   h.time=now;
   latestDocument.current=next;
+  lastDispatched.current=next;
   setHistoryAvailable({undo:h.past.length>0,redo:false});
   onDocumentChange(next);
  };
@@ -269,6 +271,7 @@ export default function MobileVisualStudio({
   destination.push(latestDocument.current);
   if(destination.length>40)destination.shift();
   latestDocument.current=previous;
+  lastDispatched.current=previous;
   h.group=null;h.time=0;
   setHistoryAvailable({undo:h.past.length>0,redo:h.future.length>0});
   onDocumentChange(previous);
@@ -282,6 +285,18 @@ export default function MobileVisualStudio({
   latestDocument.current=data;
   setHistoryAvailable({undo:false,redo:false});
  },[siteId,pageId]);
+ // A restored/recovered draft must not inherit undo entries from an older revision.
+ useEffect(()=>{
+  if(data===lastDispatched.current)return;
+  if(JSON.stringify(data)===JSON.stringify(latestDocument.current)){
+   latestDocument.current=data;return;
+  }
+  historyRef.current={past:[],future:[],group:null,time:0};
+  latestDocument.current=data;
+  setHistoryAvailable({undo:false,redo:false});
+  setSelection(null);
+  setInsertAfterId(null);
+ },[data]);
  useEffect(()=>{
   if(!notice){setNoticeVisible(false);return;}
   setNoticeVisible(true);
