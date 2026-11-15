@@ -78,7 +78,7 @@ export default function VMVFinanzas(){
    <a href="/vista-app" className={styles.back}><ArrowLeft size={17}/> VMV Business</a>
    <header className={styles.heading}>
     <div className={styles.logo}><Wallet size={25}/></div>
-    <div><small>VMV BUSINESS</small><h1>Finanzas</h1><p>Pagos y depósitos de tu negocio.</p></div>
+    <div><h1>Finanzas</h1></div>
    </header>
    {businesses.length>1?<label className={styles.selectLabel}>Negocio
     <select value={businessId} onChange={e=>{setBusinessId(e.target.value);setStatus(null);}}>
@@ -91,7 +91,7 @@ export default function VMVFinanzas(){
    {businessId&&status&&!loading?<>
     <section className={styles.card}>
      <div className={styles.cardHead}>
-      <div><h2>Stripe Connect</h2><span>Cuenta de cobros del negocio</span></div>
+      <div><h2>Stripe Connect</h2></div>
       <span className={status.ready?styles.ready:styles.pending}>
        {status.ready?"Lista para pruebas":status.connected?"Verificación pendiente":"Sin conectar"}
       </span>
@@ -100,10 +100,7 @@ export default function VMVFinanzas(){
       <span>{status.configured?"Entorno de prueba · Sin dinero real":
        "Pruebas pendientes de configuración técnica"}</span>
      </div>
-     <p className={styles.note}>{!status.connected?
-      "Stripe verificará tu identidad y la cuenta bancaria.":
-      status.ready?"La cuenta está habilitada para probar pagos. No hay cobros reales activos.":
-      "Continúa la verificación en Stripe para habilitar cobros y depósitos."}</p>
+     {!status.connected?<p className={styles.note}>Stripe verificará tu identidad y banco.</p>:null}
      <button type="button" className={styles.cta} disabled={busy||!status.configured}
       onClick={()=>void go(status.ready?"dashboard":"onboard")}>
       {busy?<LoaderCircle size={17}/>:status.ready?<ArrowUpRight size={17}/>:<LockKeyhole size={17}/>}
@@ -131,7 +128,7 @@ export default function VMVFinanzas(){
       <p className={styles.note}>Aquí aparecerán los depósitos verificados por Stripe.</p>}
     </section>
    </>:null}
-   <p className={styles.footnote}>Stripe procesa los pagos y envía los depósitos al banco del negocio. VMV no guarda los fondos.</p>
+   <p className={styles.footnote}>Stripe procesa pagos y depósitos. VMV no custodia fondos.</p>
   </div>
  </main>;
 }
