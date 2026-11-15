@@ -392,7 +392,6 @@ export function AIAgentsStudio({session,onBack}:Props){
               <Text style={[styles.templateTitle,{color:template.fg}]}>{label}</Text>
               <Text style={[styles.templateCaption,{color:template.fg}]}>{status}</Text>
             </View>
-            <Ionicons name="arrow-up-outline" color={template.fg} size={18} style={styles.templateArrow}/>
            </Pressable>;
           })}
         </View>
@@ -557,7 +556,6 @@ const styles=StyleSheet.create({
     backgroundColor:"#FFFFFFAA"},
   templateTitle:{fontWeight:"900",fontSize:17,letterSpacing:-0.5},
   templateCaption:{fontSize:10,opacity:0.85,marginTop:3},
-  templateArrow:{position:"absolute",right:15,top:16},
   listHeading:{flexDirection:"row",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4},
   listCount:{fontSize:12,fontWeight:"800",color:C.purple,backgroundColor:"#EFE6FF",
     paddingHorizontal:10,paddingVertical:6,borderRadius:12},
