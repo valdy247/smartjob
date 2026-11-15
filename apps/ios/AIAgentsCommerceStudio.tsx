@@ -219,7 +219,7 @@ export function AIAgentsCommerceStudio({session,agents,phoneAgentId,selectedAgen
   <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
    <View style={[styles.notice,{backgroundColor:C.yellow}]}>
     <Ionicons name="flask-outline" size={18} color="#987120"/>
-    <Text style={styles.noticeText}>MODO PRUEBA. Los pedidos de este piloto no generan cobros reales. Una venta solo estará pagada tras validación del proveedor.</Text>
+    <Text style={styles.noticeText}>PRUEBA · Sin cobros reales. Pago solo tras validación del proveedor.</Text>
    </View>
    {notice?<View style={styles.notice}><Ionicons name="information-circle-outline" size={17} color={C.deep}/>
     <Text style={styles.noticeText}>{notice}</Text></View>:null}
@@ -387,12 +387,12 @@ export function AIAgentsCommerceStudio({session,agents,phoneAgentId,selectedAgen
        <SmallButton label="Crear enlace de pago de PRUEBA" icon="card-outline"
         disabled={busy} solid onPress={()=>void checkout(order)}/>:null}
       {order.call_sid&&order.status==="awaiting_confirmation"?
-       <Text style={styles.warning}>El comprador debe confirmar el pedido durante la llamada; no lo marques como aceptado desde la app.</Text>:null}
+       <Text style={styles.warning}>El cliente debe aceptar durante la llamada. No confirmes aquí.</Text>:null}
      </View>:null}
     </View>)}
     <View style={[styles.notice,{backgroundColor:C.mint}]}>
      <Ionicons name="shield-checkmark-outline" color={C.green} size={20}/>
-     <Text style={styles.noticeText}>La confirmación de pago nunca depende de lo que diga el cliente. Requiere la verificación del proveedor y deja evidencia en Supabase.</Text>
+     <Text style={styles.noticeText}>Pago confirmado solo por el proveedor, con registro en VMV.</Text>
     </View>
    </>:null}
 
