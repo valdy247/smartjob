@@ -2,6 +2,7 @@
 import {useState,type Dispatch,type SetStateAction} from "react";
 import {AlertCircle,ArrowUpRight,CheckCircle2,ExternalLink,FileText,ScanSearch} from "lucide-react";
 import styles from "./WebRepairStudio.module.css";
+import ScienceWaitQuiz from "./ScienceWaitQuiz";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {t as msg,type MessageKey,type InterfaceLanguage} from "@/lib/i18n";
 
@@ -86,26 +87,12 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
  const {language,translate}=useInterfaceLanguage();const en=language==="en";
  const [loading,setLoading]=useState(false);
  const [error,setError]=useState("");
- const [gameVisible,setGameVisible]=useState(false);
- const [gameIndex,setGameIndex]=useState(0);
- const [gameAnswer,setGameAnswer]=useState("");
- const [gameChecked,setGameChecked]=useState(false);
+ const [quizVisible,setQuizVisible]=useState(false);
  const [showAudit,setShowAudit]=useState(true);
- const trivia=[
-  {es:"¿Cuántos minutos tarda aproximadamente la luz del Sol en llegar a la Tierra?",en:"About how many minutes does sunlight take to reach Earth?",answer:/^(8|ocho)(\s*(min|minutes|minutos)?)?$/i,solutionEs:"Unos 8 minutos y 20 segundos.",solutionEn:"About 8 minutes and 20 seconds."},
-  {es:"¿Cuántos planetas tiene nuestro sistema solar?",en:"How many planets are in our solar system?",answer:/^(8|ocho)$/i,solutionEs:"8 planetas.",solutionEn:"8 planets."},
-  {es:"¿Qué planeta es conocido como el planeta rojo?",en:"Which planet is known as the Red Planet?",answer:/^(marte|mars)$/i,solutionEs:"Marte.",solutionEn:"Mars."},
-  {es:"¿Cuál es el símbolo químico del agua?",en:"What is the chemical formula for water?",answer:/^h\s*2\s*o$/i,solutionEs:"H₂O.",solutionEn:"H₂O."}
- ];
- const currentQuestion=trivia[gameIndex%trivia.length];
- const advanceGame=()=>{setGameIndex(v=>v+1);setGameAnswer("");setGameChecked(false);};
- const normalizeGuess=(value:string)=>value.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
- const correctGuess=currentQuestion.answer.test(normalizeGuess(gameAnswer));
- const revealAudit=()=>{setGameVisible(false);setShowAudit(true);};
 
  const patch=<K extends keyof WebRepairData>(k:K,v:WebRepairData[K])=>onChange(prev=>({...prev,[k]:v}));
  const scan=async()=>{
-  setLoading(true);setError("");setGameVisible(true);setShowAudit(false);setGameIndex(0);setGameAnswer("");setGameChecked(false);
+  setLoading(true);setError("");setQuizVisible(true);setShowAudit(false);
   try{
    const res=await fetch("/api/marketing/site-audit?url="+encodeURIComponent(site)+"&lang="+language,{cache:"no-store"});
    const json=await res.json();
@@ -118,7 +105,7 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
      if(ai.ok){const result=await ai.json();onChange(prev=>({...prev,audit:{...audit,explanation:result.explanation,explanationSource:result.source}}));}
     }catch{/* Technical report remains usable if interpretation is unavailable. */}
    }
-  }catch(e){setError(translate("marketing.web.auditFailed"));setGameVisible(false);setShowAudit(true);}
+  }catch(e){setError(translate("marketing.web.auditFailed"));setQuizVisible(false);setShowAudit(true);}
   finally{setLoading(false);}
  };
  const report=data.audit;
@@ -129,23 +116,8 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
    <p className={styles.url}>{site}</p>
    <button type="button" className={styles.primary} onClick={()=>void scan()} disabled={loading}>{loading?(en?"Analyzing… up to 2 minutes":"Analizando… puede tardar hasta 2 minutos"):report?(en?"Scan again":"Repetir análisis"):(en?"Free scan":"Analizar gratis")}</button>
    {loading?<p role="status" className={styles.tip}>{translate("marketing.web.auditBusy")}</p>:null}
-   {gameVisible?<div className={styles.waitGame} aria-label={en?"Science while you wait":"Ciencia mientras esperas"}>
-    <div className={styles.waitGameHead}><span>{en?"While we analyze…":"Mientras analizamos…"}</span><strong>{en?"Let's play!":"¿Jugamos?"}</strong></div>
-    <p className={styles.waitGameQuestion}>{en?currentQuestion.en:currentQuestion.es}</p>
-    <form className={styles.waitGameForm} onSubmit={e=>{e.preventDefault();if(gameAnswer.trim())setGameChecked(true);}}>
-     <input aria-label={en?"Your answer":"Tu respuesta"} value={gameAnswer} disabled={gameChecked}
-      onChange={e=>setGameAnswer(e.target.value)} maxLength={55} autoComplete="off"
-      placeholder={en?"Write your answer…":"Escribe tu respuesta…"}/>
-     {!gameChecked?<button type="submit" disabled={!gameAnswer.trim()}>{en?"Answer":"Responder"}</button>:null}
-    </form>
-    {gameChecked?<p className={styles.waitGameFeedback} role="status">{correctGuess?(en?"You got it!":"¡Acertaste!"):(en?"Nice try!":"¡Buen intento!")} {en?currentQuestion.solutionEn:currentQuestion.solutionEs}</p>:null}
-    <div className={styles.waitGameActions}>
-     <button type="button" onClick={advanceGame}>{gameChecked?(en?"Next question":"Otra pregunta"):(en?"Skip":"Omitir")}</button>
-     {report?<button type="button" className={styles.waitGameView} onClick={revealAudit}>{en?"View analysis":"Ver análisis"} <ArrowUpRight size={14}/></button>:null}
-     {!report&&loading?<small>{en?"We're still checking your website.":"Seguimos revisando tu página."}</small>:null}
-    </div>
-    {report?<p className={styles.waitGameReady} role="status"><CheckCircle2 size={15}/>{en?"Report ready.":"Informe listo."}</p>:null}
-   </div>:null}
+   {quizVisible?<ScienceWaitQuiz mode="audit" en={en} seed={site} processing={loading}
+    onContinue={()=>{setQuizVisible(false);setShowAudit(true);}}/>:null}
    {error?<div role="alert" className={styles.warning}><AlertCircle size={16}/><span>{error} {translate("marketing.web.errorHint")}</span></div>:null}
    {report&&showAudit?<div className={styles.report}>
      <div className={styles.head}><CheckCircle2 size={18}/><strong>{en?"Technical report available":"Informe técnico disponible"}</strong></div>
@@ -163,7 +135,7 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
      </details>
      <a className={styles.external} href={report.reportUrl||googleReport(site)} target="_blank" rel="noopener noreferrer">{en?"Check Google PageSpeed report":"Contrastar diagnóstico en Google"} <ExternalLink size={15}/></a>
     </div>:null}
-   {!report&&!gameVisible?<a className={styles.external} href={googleReport(site)} target="_blank" rel="noopener noreferrer">{translate("marketing.web.openPageSpeed")} <ArrowUpRight size={16}/></a>:null}
+   {!report&&!quizVisible?<a className={styles.external} href={googleReport(site)} target="_blank" rel="noopener noreferrer">{translate("marketing.web.openPageSpeed")} <ArrowUpRight size={16}/></a>:null}
   </div>:null}
   {step===2&&data.requestRepair?<div className={styles.section}>
    <div className={styles.head}><FileText size={21}/><div><strong>{en?"How is your website managed?":"¿Cómo está hecha tu página?"}</strong></div></div>
