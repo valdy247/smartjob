@@ -22,7 +22,7 @@ export default function GoogleCategoryLookup({data,onData}:{data:GoogleData;onDa
     const r=await fetch("/api/marketing/google-categories?q="+encodeURIComponent(query.trim())+"&country="+encodeURIComponent(data.country||"US")+"&lang="+language,{signal:controller.signal,cache:"no-store"});
     const j=await r.json() as {categories?:Result[];error?:string};
     if(cancelled)return;
-    if(!r.ok){setItems([]);setError(en?"Official Google categories are not connected. VMV can verify your category manually.":"La consulta oficial de Google no está conectada. VMV puede verificar la categoría manualmente.");return;}
+    if(!r.ok){setItems([]);setError(en?"Google categories unavailable. VMV can review manually.":"Categorías de Google no disponibles. VMV puede revisarlas.");return;}
     setItems(j.categories||[]);
    }catch{if(!cancelled){setItems([]);setError(en?"Google category search is temporarily unavailable.":"La búsqueda de Google no está disponible ahora.");}}
    finally{if(!cancelled)setBusy(false);}
@@ -38,13 +38,13 @@ export default function GoogleCategoryLookup({data,onData}:{data:GoogleData;onDa
   </label>
   {busy?<p role="status" className={styles.hint}>{en?"Checking Google…":"Consultando Google…"}</p>:null}
   {items.length>0?<div className={styles.results} role="listbox" aria-label={en?"Official Google categories":"Categorías oficiales de Google"}>{items.map(item=><button key={item.id} type="button" role="option" aria-selected={data.googleCategoryId===item.id} onClick={()=>select(item)}>{item.label}</button>)}</div>:null}
-  {data.googleCategoryId&&data.googleCategory?<p className={styles.verified}><CheckCircle2 size={15}/>{en?"Selected from the Google Business Profile catalog.":"Seleccionada del catálogo de Google Business Profile."}</p>:null}
+  {data.googleCategoryId&&data.googleCategory?<p className={styles.verified}><CheckCircle2 size={15}/>{en?"Google category selected":"Categoría de Google seleccionada"}</p>:null}
   {error?<p className={styles.warning}><AlertCircle size={14}/>{error}</p>:null}
   {!data.googleCategoryId?<div className={styles.pending}>
    <button type="button" aria-pressed={!!data.categoryPendingReview} onClick={()=>onData({...data,googleCategory:"",googleCategoryId:"",categoryPendingReview:true,otherCategories:""})}>
-    {en?"Continue with manual category verification":"Continuar con revisión manual de categoría"}
+    {en?"Request manual review":"Solicitar revisión manual"}
    </button>
-   {data.categoryPendingReview?<small>{en?"VMV will confirm the official Google category before managing your listing; no category is marked verified.":"VMV confirmará la categoría oficial antes de gestionar la ficha; ninguna se marca como validada."}</small>:null}
+   {data.categoryPendingReview?<small>{en?"Not yet verified":"Sin verificar"}</small>:null}
   </div>:null}
  </div>;
 }
