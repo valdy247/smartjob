@@ -920,7 +920,7 @@ export default function WebBuilderWorkspace(){
         {designChoice?"Cerrar diseños":"Cambiar diseño"}
        </button>
        <button type="button" disabled={busy||Boolean(previewMode)} aria-pressed={advancedPuck}
-        onClick={()=>{setInitialDocument(normalizeBuilderDocument(document));setAdvancedPuck(v=>!v);}}>
+        onClick={()=>setAdvancedPuck(v=>!v)}>
         <Layers size={15}/> {advancedPuck?"Editor clásico":"Modo Puck Pro"}
        </button>
        <button type="button" disabled={busy} onClick={()=>{setPreviewMode("desktop");setDesignChoice(null);}}>Vista previa</button>
@@ -984,7 +984,7 @@ export default function WebBuilderWorkspace(){
       </div>
      </section>:null}
      <div ref={puckShellRef} data-advanced={mobileAdvanced?"true":"false"} className={compactStudio?styles.puckShell+" "+styles.compactPuck:styles.puckShell} style={{display:previewMode?"none":undefined}}>
-      <Puck key={page.id+"-"+refreshKey+"-"+(advancedPuck?"pro":"normal")} dictionary={dictionary} config={builderConfig}
+      <Puck key={page.id+"-"+refreshKey} dictionary={dictionary} config={builderConfig}
        dnd={{behavior:"static",enableDragHandle:true,disableOutlineDrag:false}}
        viewports={[
         {width:390,icon:"Smartphone",height:"auto"},
@@ -1022,7 +1022,7 @@ export default function WebBuilderWorkspace(){
         <aside className={styles.advancedPuckInspector} aria-label="Propiedades seleccionadas">
          <h3>Editar elemento</h3><Puck.Fields wrapFields={false}/>
         </aside>
-       </div>:null}
+       </div>:<Puck.Layout/>}
       </Puck>
      </div>
     </div>:<p>Selecciona o crea una página.</p>}
