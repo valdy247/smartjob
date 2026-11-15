@@ -59,12 +59,11 @@ export default function FinancesPanel({session}:{session:Session}){
  }
  return <View style={styles.body}>
   <Text style={styles.title}>Finanzas</Text>
-  <Text style={styles.sub}>Pagos y depósitos de tus negocios</Text>
   {businesses.map(b=><Pressable key={b.id} onPress={()=>{setBusinessId(b.id);setStatus(null);}}
    style={[styles.choice,businessId===b.id&&styles.selected]}>
    <Text style={styles.choiceText}>{b.name}{businessId===b.id?" ✓":""}</Text>
   </Pressable>)}
-  {!businesses.length&&!loading?<Text style={styles.sub}>Primero crea un negocio en VMV Business.</Text>:null}
+  {!businesses.length&&!loading?<Text style={styles.sub}>Añade un negocio para continuar.</Text>:null}
   {loading?<ActivityIndicator color="#8555DB"/>:null}
   {error?<Text style={styles.error}>{error}</Text>:null}
   {status&&!loading?<View style={styles.card}>
@@ -86,7 +85,7 @@ export default function FinancesPanel({session}:{session:Session}){
    <View style={styles.balance}><Text style={styles.sub}>Pendiente</Text>
     <Text style={styles.money}>{usd(status?.pendingCents)}</Text></View>
   </View>
-  <Text style={styles.foot}>Stripe gestiona los cobros y los depósitos bancarios. VMV no custodia los fondos.</Text>
+  <Text style={styles.foot}>Stripe gestiona cobros y depósitos. VMV no custodia fondos.</Text>
  </View>;
 }
 const styles=StyleSheet.create({
