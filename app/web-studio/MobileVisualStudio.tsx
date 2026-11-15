@@ -26,6 +26,8 @@ type Item=Data["content"][number];
 type Pick={id:string;kind:"image"|"text"|"button"|"section";target?:ImageTarget;
  key?:string;index?:number;x:number;y:number};
 type Section="home"|"pages"|"create"|"appearance"|"seo"|"connections"|"domain"|"history";
+type VisualTool="menu"|"content"|"size"|"color"|"background"|"font"|"weight"|"italic"|
+ "spacing"|"opacity"|"align"|"image"|"shade"|"frame"|"shape"|"link"|"actions";
 
 const TEXT_KEYS=["title","description","body","text","eyebrow","subtitle","buttonText","label",
  "caption","quote","author","price","question","answer","hours","area","notes","first","second","third","phone","email","address"];
@@ -330,6 +332,8 @@ export default function MobileVisualStudio({
  const [device,setDevice]=useState<"mobile"|"desktop">("mobile");
  const [preview,setPreview]=useState(false);
  const [selection,setSelection]=useState<Pick|null>(null);
+ const [visualTool,setVisualTool]=useState<VisualTool>("menu");
+ const [recentColors,setRecentColors]=useState<string[]>([]);
  const [insertAfterId,setInsertAfterId]=useState<string|null>(null);
  const [deleteTarget,setDeleteTarget]=useState<{id:string;label:string}|null>(null);
  const dragRef=useRef<{pointer:number;source:string;target:string|null;before:boolean}|null>(null);
@@ -496,7 +500,7 @@ export default function MobileVisualStudio({
   if(result!==data){onChange(result);setSelection(null);}
  };
  const cancelDrag=()=>clearDrag();
- const closePopup=()=>{setSelection(null);setAdjust("actions");clearDrag();};
+ const closePopup=()=>{setSelection(null);setAdjust("actions");setVisualTool("menu");clearDrag();};
  const closeDrawer=()=>{setDrawer(false);setSection("home");setInsertAfterId(null);};
  function selectAt(target:Element,x:number,y:number){
   const wrapper=target.closest<HTMLElement>("[data-vmv-edit-block]");
@@ -523,7 +527,7 @@ export default function MobileVisualStudio({
   if(navigator.vibrate)navigator.vibrate(12);
   setSelection({id,kind,target:img,key,index,x:Math.max(16,Math.min(window.innerWidth-16,x)),
    y:Math.max(12,Math.min(window.innerHeight-18,y))});
-  setAdjust("actions");
+  setAdjust("actions");setVisualTool("menu");
  }
  function pointerDown(event:ReactPointerEvent<HTMLDivElement>){
   if(preview||drawer||event.pointerType!=="touch")return;
@@ -591,14 +595,14 @@ export default function MobileVisualStudio({
   appearance:"Colores y diseño",seo:"SEO e imágenes",connections:"Chat y agente",
   domain:"Dominio",history:"Versiones"})[part];
  return <div className={styles.stage} data-device={device} data-preview={preview}
-  data-inspecting={Boolean(selection&&!drawer&&!preview)}
+  data-inspecting={Boolean(selection&&!drawer&&!preview&&visualTool==="actions")}
   onClickCapture={event=>{
    if(!selection||drawer||preview||deleteTarget||dragRef.current)return;
    const target=event.target instanceof Element?event.target:null;
    if(!target)return;
    // Tapping blank page chrome dismisses the inspector; tapping an editable
    // block leaves the selection flow alone so another block can open directly.
-   if(target.closest(`.${styles.floating},.${styles.menuButton},.${styles.historyBar}`))return;
+   if(target.closest(`.${styles.floating},.${styles.visualMenuScrim},.${styles.visualToolTray},.${styles.sizeRail},.${styles.menuButton},.${styles.historyBar}`))return;
    if(target.closest("[data-vmv-edit-block]"))return;
    closePopup();
   }}>
@@ -647,7 +651,7 @@ export default function MobileVisualStudio({
   {error&&errorDismissed!==error?<div className={styles.statusAlert} role="alert">
    <span>{error}</span><button aria-label="Cerrar aviso" onClick={()=>setErrorDismissed(error)}><X size={15}/></button>
   </div>:noticeVisible?<div className={styles.statusToast} role="status">{notice}</div>:null}
-    {selection&&!drawer&&!preview&&block&&props?<div className={styles.floating}
+    {selection&&!drawer&&!preview&&block&&props&&visualTool==="actions"?<div className={styles.floating}
    role="dialog" aria-label="Editar elemento seleccionado"
    style={{"--float-x":selection.x+"px","--float-y":selection.y+"px"} as CSSProperties}>
    <div className={styles.floatHead}>
