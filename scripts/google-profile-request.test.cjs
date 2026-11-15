@@ -123,3 +123,13 @@ test('external links reject bidirectional control characters that disguise desti
   assert.equal(googleProfileIssue({...fixture(),action:'improve',existingProfileUrl:url}).key,'existing');
  }
 });
+
+test('validated external links are canonicalized before saving without changing invalid values',()=>{
+ const v={...fixture(),action:'improve',bookingUrl:'  HTTPS://Example.COM/book  ',existingProfileUrl:' https://maps.google.com/?cid=123 '};
+ const n=normalizeGoogleProfile(v);
+ assert.equal(n.bookingUrl,'https://example.com/book');
+ assert.equal(n.existingProfileUrl,'https://maps.google.com/?cid=123');
+ assert.equal(v.bookingUrl,'  HTTPS://Example.COM/book  ');
+ assert.equal(normalizeGoogleProfile({...v,bookingUrl:'javascript:alert(1)'}).bookingUrl,'javascript:alert(1)');
+ assert.equal(normalizeGoogleProfile({...v,action:'create'}).existingProfileUrl,'');
+});
