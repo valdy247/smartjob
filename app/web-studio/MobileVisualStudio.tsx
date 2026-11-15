@@ -222,7 +222,8 @@ function synchronizedStyle(data:Data,choice:Pick,source:Item):StyleSync{
  const srcKeys=["Color","Font","FontSize","Weight","Italic","LetterSpacing","Opacity"].map(suffix=>
   [srcPrefix?srcPrefix+suffix:({Color:"textColor",Font:"font",FontSize:"fontSize",Weight:"weight",Italic:"italic",LetterSpacing:"letterSpacing",Opacity:"textOpacity"} as Record<string,string>)[suffix],suffix] as const);
  const textStyle:Record<string,unknown>={};
- for(const [k,suffix] of srcKeys)if(nested[k]!==undefined)textStyle[suffix]=nested[k];
+ const defaultStyle:Record<string,unknown>={Color:"",Font:"site",FontSize:0,Weight:"normal",Italic:"no",LetterSpacing:0,Opacity:100};
+ for(const [k,suffix] of srcKeys)textStyle[suffix]=nested[k]??defaultStyle[suffix];
  const buttonStyle:Record<string,unknown>={};
  for(const k of ["buttonColor","buttonTextColor","buttonFontSize","buttonShape"])
   if(p[k]!==undefined)buttonStyle[k]=p[k];
@@ -252,7 +253,7 @@ function synchronizedStyle(data:Data,choice:Pick,source:Item):StyleSync{
     semantic(key)===semantic(textKey)&&["title","text","body","description","subtitle","eyebrow","price","caption"].includes(key));
    if(node.type==="ComposeHeading"&&semantic(textKey)==="heading"&&typeof props.title==="string"&&!fields.includes("title"))fields.push("title");
    let patch:Record<string,unknown>={};
-   for(const key of fields)if(!same||choice.index!==undefined){Object.assign(patch,styleFor(node.type,key));matched++;}
+   for(const key of fields)if(!same){Object.assign(patch,styleFor(node.type,key));matched++;}
    if(Object.keys(patch).length)props={...props,...patch};
    if(Array.isArray(props.items)){
     const items=(props.items as Record<string,unknown>[]).map((item,i)=>{
