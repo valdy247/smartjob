@@ -455,3 +455,63 @@
 @media(prefers-reduced-motion:reduce){
  .visualBackdrop,.mobileEditingTools{animation:none}
 }
+
+/* One-column, frameless contextual tool list. Vertical scrolling replaces the old carousel. */
+.mobileEditingTools{
+ width:min(420px,calc(100vw - 28px))!important;
+ max-height:min(78dvh,690px)!important;
+ overflow-y:auto;overflow-x:hidden;
+ scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.4) transparent;
+ gap:0!important;
+}
+.visualQuickBar{
+ flex-direction:column!important;align-items:stretch!important;
+ padding:0 5px!important;gap:0!important;
+ background:transparent!important;border:0!important;border-radius:0!important;
+ box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+}
+.visualQuickLabel{
+ display:block!important;position:relative;
+ padding:8px 48px 17px 12px!important;
+ font-size:20px!important;font-weight:800!important;
+ letter-spacing:-.025em;white-space:normal!important;
+ color:#fff!important;text-shadow:0 2px 14px rgba(0,0,0,.35);
+}
+.visualQuickScroll{
+ width:100%;display:flex!important;flex-direction:column!important;
+ overflow:visible!important;gap:0!important;flex:none!important;
+}
+.visualQuickScroll button{
+ flex:0 0 auto!important;display:flex!important;flex-direction:row!important;
+ justify-content:flex-start!important;align-items:center!important;
+ min-width:0!important;min-height:57px!important;width:100%!important;
+ gap:15px!important;padding:10px 14px!important;
+ background:transparent!important;border:0!important;
+ border-bottom:1px solid rgba(255,255,255,.18)!important;
+ border-radius:0!important;color:#fff!important;
+ font-size:15px!important;font-weight:650!important;text-align:left!important;
+}
+.visualQuickScroll button>svg:first-child{width:21px;height:21px;flex:none}
+.visualQuickScroll button>span{flex:1}
+.visualQuickScroll button:hover,.visualQuickScroll button[aria-pressed=true]{
+ background:rgba(255,255,255,.12)!important;
+}
+.visualToolChevron{flex:none;opacity:.72}
+.visualQuickScroll button[aria-pressed=true] .visualToolChevron{transform:rotate(180deg)}
+.visualQuickClose{
+ position:absolute;top:5px;right:6px;width:42px;height:42px;
+ border-radius:50%;background:rgba(255,255,255,.13);
+}
+.visualQuickDetail{
+ flex:none!important;max-height:none!important;overflow:visible!important;
+ margin:10px 4px 10px 40px!important;padding:10px 10px 18px!important;
+ background:transparent!important;border:0!important;border-radius:0!important;
+ box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+}
+.visualQuickDetail>strong{font-size:13px!important;color:#e9d9ff!important}
+@media(max-width:760px){
+ .mobileEditingTools{width:calc(100vw - 40px)!important;max-height:76dvh!important}
+ .visualQuickBar{padding:0!important}
+ .visualQuickScroll button{min-height:55px!important;font-size:15px!important}
+ .visualQuickDetail{max-height:none!important;margin-left:36px!important}
+}
