@@ -876,13 +876,13 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     {draftNotice?<p role="status" className={styles.draftNotice}>{draftNotice}</p>:null}
     {photoNotice?<p role="status" className={styles.photoNotice}>{photoNotice}</p>:null}
     {wizardError?<p role="alert" className={styles.wizardError}>{wizardError}</p>:null}
-    {wizardStep>0?<div className={styles.wizardFooter} style={wizardStep===3&&busy?{flexWrap:"wrap"}:undefined}>
-     {wizardStep===3&&busy?<ScienceWaitQuiz en={en} seed={requestId}/>:null}
+    {wizardStep>0?<div className={styles.wizardFooter}>
      <button type="button" className={styles.wizardBack} onClick={goBack} disabled={busy}><ArrowLeft size={16}/> {translate("marketing.copy.previous")}</button>
      {wizardStep===3?<button type="button" className={styles.wizardPrimary} disabled={busy||loading||authState!=="ready"} onClick={()=>void submit()}><Send size={16}/>{busy?translate("marketing.action.submitting"):translate("marketing.action.submit_request")}</button>:
       <button type="button" className={styles.wizardPrimary} onClick={goNext}>{selected==="google_profile"&&wizardStep===2&&googleStep<googleStepNames.length-1?translate("marketing.action.next"):translate("marketing.action.continue")} <ArrowRight size={16}/></button>}
     </div>:null}
    </>}
+   {wizardStep===3&&busy?<ScienceWaitQuiz en={en} seed={requestId}/>:null}
   </section>:null}
   {requestsOnly?<section className={styles.panel} id="vmv-marketing-history">
    <div className={styles.panelTop}><div><span>{translate("marketing.ui.tracking").replace(/^02\s*·\s*/,"")}</span><h3>{translate("marketing.ui.requests")}</h3></div><button type="button" onClick={()=>void refresh()} disabled={loading||!user} className={styles.refresh}><RefreshCw size={16}/> {translate("marketing.ui.refresh")}</button></div>
