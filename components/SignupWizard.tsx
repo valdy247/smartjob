@@ -264,7 +264,7 @@ const colorChoices=[["mint",t("signup.mint"),"#08b99b"],["blue",t("signup.blue")
    </aside>
    <section className="vmv-signup-card">
     <div className={setupStyles.srOnly} role="status">{t("signup.progress",{step:step+1,total:4})}</div>
-    <div className="vmv-signup-title"><span>{steps[step].tag}</span><h1>{steps[step].title}</h1><p>{steps[step].description}</p></div>
+    <div className="vmv-signup-title"><span>{steps[step].tag}</span><h1>{steps[step].title}</h1></div>
 
     {step===0&&<div className="vmv-signup-fields">
      <div className="vmv-signup-two">
