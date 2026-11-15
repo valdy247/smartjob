@@ -6,6 +6,8 @@ import {MovableContent} from "@/app/web-studio/BuilderPositionDrag";
 import BuilderEditableImage from "@/app/web-studio/BuilderEditableImage";
 import {normalizeImageSettings} from "./web-builder-images";
 import {safeWebImageUrl} from "./web-services-site";
+import {buttonAppearance} from "./web-builder-button-appearance";
+import {validColor} from "./web-builder-callout-style";
 
 export const COMPOSE_BLOCK_NAMES=["SectionLayout","ColumnsLayout","ComposeHeading","ComposeText","ComposeImage","ComposeButton"] as const;
 export type ComposeBlockName=(typeof COMPOSE_BLOCK_NAMES)[number];
@@ -274,19 +276,24 @@ export const compositionBlocks:Config["components"]={
    label:{type:"text",contentEditable:true,placeholder:"Texto del botón"},
    url:{type:"text"},
    style:{type:"radio",options:[{label:"Sólido",value:"solid"},{label:"Contorno",value:"outline"},{label:"Enlace",value:"link"}]},
+   buttonColor:colorEditorField("Fondo del botón"),buttonTextColor:colorEditorField("Texto del botón"),
+   buttonFontSize:numericEditorField("fontSize"),
    alignDesktop:fields.alignment,alignMobile:fields.alignment,visibility:fields.visibility
   },
-  defaultProps:{label:"Solicitar información",url:"#solicitud",style:"solid",alignDesktop:"left",alignMobile:"left",visibility:"all"},
+  defaultProps:{label:"Solicitar información",url:"#solicitud",style:"solid",buttonColor:"",buttonTextColor:"",buttonFontSize:0,alignDesktop:"left",alignMobile:"left",visibility:"all"},
   renderFields:({fields:f})=><>
    <SettingsGroup title="Contenido">{f.label}{f.url}</SettingsGroup>
-   <SettingsGroup title="Diseño">{f.style}{f.visibility}</SettingsGroup>
+   <SettingsGroup title="Diseño">{f.style}{f.buttonColor}{f.buttonTextColor}{f.buttonFontSize}{f.visibility}</SettingsGroup>
    <SettingsGroup title="Escritorio">{f.alignDesktop}</SettingsGroup>
    <SettingsGroup title="Móvil">{f.alignMobile}</SettingsGroup>
   </>,
-  render:({label,url,style,alignDesktop,alignMobile,visibility})=><div className="vmv-compose-button-wrap"
+  render:({label,url,style,buttonColor,buttonTextColor,buttonFontSize,alignDesktop,alignMobile,visibility})=><div className="vmv-compose-button-wrap"
    data-align-desktop={alignDesktop||"left"} data-align-mobile={alignMobile||"left"}
    data-mobile-visibility={visibility||"all"}>
-   <a href={safeButtonLink(url)} className="vmv-site-button" data-button-style={style||"solid"}>{label||"Contactar"}</a>
+   <a href={safeButtonLink(url)} className="vmv-site-button" data-button-style={style||"solid"}
+    data-vmv-override-background={Boolean(validColor(buttonColor))}
+    data-vmv-override-foreground={buttonAppearance({buttonColor,buttonTextColor}).hasForeground}
+    style={buttonAppearance({buttonColor,buttonTextColor,buttonFontSize}).style}>{label||"Contactar"}</a>
   </div>
  }
 };
@@ -336,6 +343,9 @@ export function normalizeComposeProps(kind:ComposeBlockName,source:Record<string
   props.label=str(source.label,90);
   props.url=safeButtonLink(source.url);
   props.style=select(["solid","outline","link"],"solid")(source.style);
+  props.buttonColor=validColor(source.buttonColor);
+  props.buttonTextColor=validColor(source.buttonTextColor);
+  props.buttonFontSize=numberField(source.buttonFontSize,0,0,36);
   for(const key of ["alignDesktop","alignMobile"])props[key]=select(alignment,"left")(source[key]);
  }
  props.visibility=select(visibility,"all")(source.visibility);
