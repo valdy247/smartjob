@@ -228,21 +228,18 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
   <div className={styles.stepDots}>{steps.map((s,i)=><button key={s.title} type="button" className={i===step?styles.stepActive:i<step?styles.stepDone:styles.stepDot}
     onClick={()=>{if(i<step){setStep(i);setError("");}}} aria-label={"Paso "+(i+1)+": "+s.title}>
     {i<step?<Check size={13}/>:i+1}</button>)}</div>
-  <div className={styles.titleGroup}><span className={styles.eyebrow}><Sparkles size={14}/> PASO {step+1}</span>
-   <h1>{current.title}</h1><p>{current.subtitle}</p></div>
-  {draftRestored?<p className={styles.reviewMessage} role="status">Recuperé el borrador temporal de esta pestaña. Todavía debes guardarlo en tu cuenta.</p>:null}
+  <div className={styles.titleGroup}><h1>{current.title}</h1></div>
+  {draftRestored?<p className={styles.reviewMessage} role="status">Borrador recuperado · sin guardar.</p>:null}
   {step===0&&draft.setup.central_business_id?<div className={styles.context}>
    <ShieldCheck size={17}/><strong>{draft.setup.business_name}</strong>
    {onReviewBusiness?<button type="button" onClick={()=>onReviewBusiness(draft)}>{draft.setup.city&&draft.setup.state?"Editar negocio":"Completar negocio"}</button>:null}
   </div>:null}
   {authRequired?<div className={styles.reviewMessage} role="alert">
-   <ShieldCheck size={18}/><p>Para guardar este agente debes iniciar sesión en VMV.
-   Tu borrador se conservará temporalmente en esta pestaña. <a href="/vista-app">Iniciar sesión</a></p>
+   <ShieldCheck size={18}/><p>Inicia sesión para guardar. El borrador sigue en esta pestaña. <a href="/vista-app">Iniciar sesión</a></p>
   </div>:null}
   {step===0?<div className={styles.fields}>
    <label className={styles.field}>¿Cómo se llamará tu agente?<input maxLength={80} value={draft.name} onChange={e=>value("name",e.target.value)} placeholder="Ej. Luna, asistente de ventas"/></label>
    <label className={styles.field}>¿Cuál será su misión?<textarea maxLength={240} rows={3} value={draft.purpose} onChange={e=>value("purpose",e.target.value)} placeholder="¿Qué debe lograr para tu negocio?"/></label>
-   <p className={styles.hint}>Una identidad compartida: llamadas, chat, ventas, inventario y reservas son capacidades del mismo agente. Los agentes antiguos conservan su configuración.</p>
    <ChoiceSelect label="Voz del teléfono" value={draft.setup.voice_preset||"default"}
     options={[["default","Predeterminada de Twilio"],["female","Femenina · Polly"],["male","Masculina · Polly"]]}
     onChange={next=>answer("voice_preset",next)}/>
@@ -269,14 +266,14 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
      options={[["perm_prepare_order","Preparar pedidos"],["perm_confirm_order","Confirmar tras aceptación"],["perm_payment_link","Ofrecer enlace de pago verificado"]]}
      isSelected={key=>draft.setup[key]==="Sí"}
      onToggle={key=>answer(key,draft.setup[key]==="Sí"?"No":"Sí")}/>
-    <p className={styles.hint}>No tomará números de tarjeta por llamada. Los importes se calculan en el servidor.</p>
+    <p className={styles.hint}>Sin tarjetas por llamada. Los importes se calculan en el servidor.</p>
    </>:null}
    {draft.setup.cap_bookings==="Sí"&&<><p className={styles.fieldTitle}>Autorización de reservas</p>
     <button type="button" aria-pressed={draft.setup.perm_book_service==="Sí"}
      className={draft.setup.perm_book_service==="Sí"?styles.choiceActive:styles.choice}
      onClick={()=>answer("perm_book_service",draft.setup.perm_book_service==="Sí"?"No":"Sí")}>
      {draft.setup.perm_book_service==="Sí"?"✓ ":""}Guardar citas aceptadas en la agenda VMV</button>
-    <p className={styles.hint}>Solo con horarios reales disponibles. No confirma pagos.</p></>}
+    <p className={styles.hint}>Solo con horarios disponibles. Sin cobros.</p></>}
   </div>:null}
   {step>0&&step<steps.length-1?<div className={styles.fields}>
    {current.title==="Qué debe hacer"&&draft.setup.industry?<div className={styles.context}><Sparkles size={15}/> Negocio: <strong>{draft.setup.industry}</strong> · {draft.setup.city||""}{draft.setup.state?", "+draft.setup.state:""}. No necesitas repetir esos datos.</div>:null}
@@ -308,7 +305,7 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
    {false?<div className={styles.connections}>
     <div className={styles.connection}><CalendarDays size={21}/><span><strong>VMV Scheduling</strong><small>Conector no disponible todavía</small></span><b>NO CONECTADO</b></div>
     <div className={styles.connection}><PlugZap size={21}/><span><strong>VMV Inventory</strong><small>Conector no disponible todavía</small></span><b>NO CONECTADO</b></div>
-    {(yesCalendar||yesInventory)?<p className={styles.connectionNote}>Guardaremos esta necesidad en el diseño. No podemos verificar citas ni existencias hasta que estas integraciones estén operativas y autorizadas.</p>:null}
+    {(yesCalendar||yesInventory)?<p className={styles.connectionNote}>Citas e inventario requieren integraciones autorizadas.</p>:null}
    </div>:null}
   </div>:null}
   {step===steps.length-1?<div className={styles.review}>
