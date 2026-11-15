@@ -106,6 +106,9 @@ export default function WebBuilderWorkspace(){
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
  const [notice,setNotice]=useState("");
+ const [deleteTarget,setDeleteTarget]=useState<Site|null>(null);
+ const [deleteConfirmation,setDeleteConfirmation]=useState("");
+ const [deleteError,setDeleteError]=useState("");
  const [refreshKey,setRefreshKey]=useState(0);
  const [origin,setOrigin]=useState("");
  const previewDocument=useMemo(()=>normalizeBuilderDocument(document),[document]);
@@ -246,13 +249,8 @@ export default function WebBuilderWorkspace(){
   finally{setBusy(false);}
  }
  async function deleteSite(target:Site){
-  if(busy||!userId)return;
-  const confirmation=window.prompt(
-   "Eliminar «"+target.name+"» es permanente: se borrarán sus páginas, borradores, historial y versiones publicadas.\n"+
-   "Escribe este identificador para confirmar: "+target.slug
-  );
-  if(confirmation!==target.slug)return;
-  setBusy(true);setError("");setNotice("");
+  if(busy||!userId||deleteConfirmation!==target.slug)return;
+  setBusy(true);setError("");setDeleteError("");setNotice("");
   try{
    const db=await authorized();
    const [domainCheck,requestCheck,pageCheck]=await Promise.all([
@@ -273,7 +271,8 @@ export default function WebBuilderWorkspace(){
    setSites(current=>current.filter(item=>item.id!==target.id));
    if(site?.id===target.id){setSite(null);setPage(null);setPages([]);setView("sites");}
    setNotice("Sitio eliminado. Sus páginas publicadas ya no estarán disponibles.");
-  }catch(e){setError(e instanceof Error?e.message:"No se pudo eliminar el sitio");}
+   setDeleteTarget(null);setDeleteConfirmation("");
+  }catch(e){setDeleteError(e instanceof Error?e.message:"No se pudo eliminar el sitio");}
   finally{setBusy(false);}
  }
  async function loadCreatedSite(c:NonNullable<ReturnType<typeof getSupabase>>,ids:{siteId:string;pageId:string}){
@@ -670,6 +669,25 @@ export default function WebBuilderWorkspace(){
    </button>:null}
    {site?<button type="button" className={styles.back} onClick={back}><ArrowLeft size={16}/> Mis sitios</button>:null}
   </header>
+  {deleteTarget?<div className={styles.deleteOverlay} role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)setDeleteTarget(null);}}>
+   <section role="alertdialog" aria-modal="true" aria-labelledby="delete-site-title" aria-describedby="delete-site-description" className={styles.deleteDialog}
+    onKeyDown={e=>{if(e.key==="Escape"&&!busy){setDeleteTarget(null);setDeleteConfirmation("");setDeleteError("");}}}>
+    <div className={styles.deleteSymbol}><Trash2 size={25}/></div>
+    <h2 id="delete-site-title">¿Eliminar este sitio?</h2>
+    <p id="delete-site-description">Se borrarán definitivamente «{deleteTarget.name}», sus páginas, borradores, historial y publicaciones. No se puede deshacer.</p>
+    <p className={styles.deleteSlug}>Para confirmar, escribe: <strong>{deleteTarget.slug}</strong></p>
+    <label htmlFor="delete-site-confirmation">Identificador del sitio</label>
+    <input id="delete-site-confirmation" autoFocus autoComplete="off" spellCheck={false}
+     value={deleteConfirmation} onChange={e=>{setDeleteConfirmation(e.target.value);setDeleteError("");}}
+     placeholder={deleteTarget.slug} disabled={busy}/>
+    {deleteError?<p className={styles.deleteError} role="alert">{deleteError}</p>:null}
+    <div className={styles.deleteActions}>
+     <button type="button" disabled={busy} onClick={()=>{setDeleteTarget(null);setDeleteConfirmation("");setDeleteError("");}}>Cancelar</button>
+     <button type="button" className={styles.deleteConfirm} disabled={busy||deleteConfirmation!==deleteTarget.slug}
+      onClick={()=>void deleteSite(deleteTarget)}>{busy?"Eliminando…":"Eliminar definitivamente"}</button>
+    </div>
+   </section>
+  </div>:null}
   {error?<div className={styles.error} role="alert">{error}</div>:null}
   {notice?<div className={styles.notice} role="status">{notice}</div>:null}
   {!site?<main className={styles.landing}>
@@ -684,7 +702,7 @@ export default function WebBuilderWorkspace(){
       <Globe size={23}/><strong>{s.name}</strong><small>{s.slug}</small><span>Abrir ↗</span>
      </button>
      <button type="button" className={styles.siteDelete} disabled={busy}
-      onClick={()=>void deleteSite(s)} aria-label={"Eliminar sitio "+s.name+" "+s.slug}>
+      onClick={()=>{setDeleteTarget(s);setDeleteConfirmation("");setDeleteError("");}} aria-label={"Eliminar sitio "+s.name+" "+s.slug}>
       <Trash2 size={15}/> Eliminar
      </button>
     </article>)}
