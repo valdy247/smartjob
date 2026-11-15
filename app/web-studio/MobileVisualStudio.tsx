@@ -30,10 +30,10 @@ type VisualTool="menu"|"content"|"size"|"color"|"background"|"font"|"weight"|"it
  "spacing"|"opacity"|"align"|"image"|"shade"|"frame"|"shape"|"link"|"actions";
 
 const TEXT_KEYS=["title","description","body","text","eyebrow","subtitle","buttonText","label",
- "caption","quote","author","price","question","answer","hours","area","notes","first","second","third","phone","email","address"];
+ "caption","quote","author","price","question","answer","q1","a1","q2","a2","hours","area","notes","first","second","third","phone","email","address"];
 const LABELS:Record<string,string>={title:"Título",description:"Descripción",body:"Texto",text:"Texto",
  eyebrow:"Encabezado",subtitle:"Subtítulo",buttonText:"Texto del botón",label:"Texto del botón",
- caption:"Pie de foto",quote:"Cita",author:"Autor",price:"Precio",question:"Pregunta",answer:"Respuesta",hours:"Horario",area:"Zona",
+ caption:"Pie de foto",quote:"Cita",author:"Autor",price:"Precio",question:"Pregunta",answer:"Respuesta",q1:"Primera pregunta",a1:"Primera respuesta",q2:"Segunda pregunta",a2:"Segunda respuesta",hours:"Horario",area:"Zona",
  notes:"Notas",first:"Primer elemento",second:"Segundo elemento",third:"Tercer elemento",
  phone:"Teléfono",email:"Correo",address:"Dirección"};
 const ADDS=[
@@ -302,7 +302,7 @@ function textStyleKeys(prefix:string):TextStyleKeys{
  return prefix===""?{color:"textColor",size:"fontSize",font:"font",
   weight:"weight",italic:"italic",spacing:"letterSpacing"}:
   {color:prefix+"Color",size:prefix+"FontSize",font:prefix+"Font",
-   weight:prefix+"Weight",italic:prefix+"Italic"};
+   weight:prefix+"Weight",italic:prefix+"Italic",spacing:prefix+"LetterSpacing"};
 }
 export default function MobileVisualStudio({
  data,onChange:onDocumentChange,siteName,siteSlug,siteCategory,siteId,pages,pageId,
@@ -419,22 +419,16 @@ export default function MobileVisualStudio({
  const textFields=props?fieldsFor(props):[];
  const selectedTextKey=selection?.key||"title";
  const activeTypography=selection?.kind==="text"&&block&&props?(()=>{
-  if(selection.index!==undefined&&Array.isArray(props.items)&&
-   ["title","description","price","caption","question","answer"].includes(selectedTextKey)&&
-   VISUAL_BLOCK_NAMES.some(kind=>kind===block.type)){
+  // The same complete text toolkit is available for every editable field,
+  // whether it belongs to a legacy block, a visual section, or an item card.
+  if(selection.index!==undefined&&Array.isArray(props.items)){
    const item=(props.items as Record<string,unknown>[])[selection.index];
-   return item?{values:item,keys:textStyleKeys(selectedTextKey),index:selection.index}:null;
+   return item&&typeof item[selectedTextKey]==="string"?
+    {values:item,keys:textStyleKeys(selectedTextKey),index:selection.index}:null;
   }
   if(selection.index!==undefined)return null;
-  if(["ComposeHeading","ComposeText"].includes(block.type))return {
-   values:props,keys:textStyleKeys(""),index:null};
-  if(block.type==="HeroVisual"&&["title","description","eyebrow"].includes(selectedTextKey))
-   return {values:props,keys:textStyleKeys(selectedTextKey),index:null};
-  if(block.type==="CTA"&&selectedTextKey==="title")
-   return {values:props,keys:{color:"titleColor",size:"titleFontSize",font:"titleFont"},index:null};
-  if(VISUAL_BLOCK_NAMES.some(kind=>kind===block.type)&&["title","description"].includes(selectedTextKey))
-   return {values:props,keys:textStyleKeys(selectedTextKey),index:null};
-  return null;
+  const prefix=["ComposeHeading","ComposeText"].includes(block.type)?"":selectedTextKey;
+  return {values:props,keys:textStyleKeys(prefix),index:null};
  })():null;
  const imageList=useMemo(()=>listImages(clean),[clean]);
  const seoImage=imageList.find(item=>item.key===seoImageKey)||imageList[0];
@@ -520,7 +514,7 @@ export default function MobileVisualStudio({
   }else{
    const content=target.closest("a,button,h1,h2,h3,h4,h5,p,small,figcaption,blockquote,strong,span,em,li,summary");
    if(content){
-    kind=content.matches("a,button")?"button":"text";
+    kind=content.closest(".vmv-site-button,button")?"button":"text";
     const t=getTextTarget(p,content,node.type);key=t.key;index=t.index;
    }
   }
@@ -605,7 +599,6 @@ export default function MobileVisualStudio({
  const isImage=selection?.kind==="image";
  const keys=activeTypography?.keys;
  const values=activeTypography?.values;
- const canOpacity=Boolean(isText&&keys);
  const opacityKey=keys?keys.color==="textColor"?"textOpacity":selectedTextKey+"Opacity":"";
  const patchTypography=(patch:Record<string,unknown>)=>{
   if(!selection||!activeTypography||!props)return;
