@@ -7,6 +7,7 @@ import {normalizeSocialLinks} from "@/lib/web-builder-social";
 import type {SiteIntake,SiteProposal,SiteProduct,SiteDesignPreferences} from "@/lib/web-builder-templates";
 import TemplateProposals from "./TemplateProposals";
 import BuilderImageField from "./BuilderImageField";
+import WebAiAgentPanel,{type WebsiteAgentChoice} from "./WebAiAgentPanel";
 import styles from "./WebAiWizard.module.css";
 
 type Business={
@@ -55,6 +56,8 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
  const [inventory,setInventory]=useState(false);
  const [booking,setBooking]=useState(false);
  const [chat,setChat]=useState(false);
+ const [replyMode,setReplyMode]=useState<"manual"|"agent">("manual");
+ const [agentChoice,setAgentChoice]=useState<WebsiteAgentChoice|null>(null);
  const [agentCount,setAgentCount]=useState(0);
  const [catalog,setCatalog]=useState<SiteProduct[]>([]);
  const [logo,setLogo]=useState("");
@@ -68,6 +71,7 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
  const [generating,setGenerating]=useState(false);
  const [proposal,setProposal]=useState<SiteProposal|null>(null);
  const applyBusiness=(b:Business)=>{
+  setAgentChoice(null);setReplyMode("manual");
   setBusinessId(b.id);setForm({business:b.name||"",categoryId:b.category_id||"",phone:b.phone||"",
    email:b.email||"",city:[b.city,b.region].filter(Boolean).join(", "),about:b.description||"",
    services:b.services||"",objective:"quotes"});
@@ -253,8 +257,11 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
    <label className={styles.feature}><input type="checkbox" checked={chat} onChange={e=>setChat(e.target.checked)}/><MessageCircle size={24}/>
     <span><strong>Botón de chat en la web</strong><small>Recibe las consultas en la bandeja de Web Services dentro de VMV.</small></span></label>
    {chat?<div className={styles.chatOptions}><strong>¿Quién responde?</strong>
-    <label><input type="radio" checked readOnly name="chat-mode"/> Tú, desde tu bandeja de VMV</label>
-    <label className={styles.disabled}><input type="radio" disabled name="chat-mode"/> Agente IA {agentCount?"("+agentCount+" activo"+(agentCount===1?"":"s")+")":""} · requiere habilitar el canal público de chat</label>
+    <label><input type="radio" checked={replyMode==="manual"} onChange={()=>setReplyMode("manual")} name="chat-mode"/> Tú, desde tu bandeja de VMV</label>
+    <label><input type="radio" checked={replyMode==="agent"} onChange={()=>setReplyMode("agent")} name="chat-mode"/>
+     <span>Preparar un agente IA aquí {agentCount?"("+agentCount+" activo"+(agentCount===1?"":"s")+")":""}<small>Por ahora, las consultas web seguirán llegando a tu bandeja.</small></span>
+    </label>
+    {replyMode==="agent"?<WebAiAgentPanel businessId={businessId} ownerId={ownerId} selected={agentChoice} onSelect={setAgentChoice}/>:null}
    </div>:null}
   </div>:null}
   {step===5?<div className={styles.panel}>
@@ -269,6 +276,7 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
     <div><small>Fuente</small><strong>{fonts.find(f=>f.id===font)?.label}</strong></div>
     <div><small>Imágenes</small><strong>{shapes.find(f=>f.id===shape)?.label} · {[cover,...gallery].filter(Boolean).length} fotos</strong></div>
     <div><small>Secciones</small><strong>{[inventory?"Productos":"",booking?"Citas":"",chat?"Chat":"", "Contacto"].filter(Boolean).join(" · ")}</strong></div>
+    {chat&&replyMode==="agent"&&agentChoice?<div><small>Agente preparado</small><strong>{agentChoice.name} · Chat manual hasta habilitar canal web</strong></div>:null}
    </div>
    <div className={styles.connection} role="status">{aiState==="checking"?<><LoaderCircle size={16}/> Comprobando IA…</>:
     aiState==="ready"?<><CheckCircle2 size={16}/> Generador de VMV conectado. Hasta 2 generaciones de IA por día.</>:
