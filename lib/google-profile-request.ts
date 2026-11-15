@@ -40,7 +40,7 @@ export function googleProfileIssue(v:GoogleData,step?:number):GoogleValidationIs
 }
 export function normalizeGoogleProfile(v:GoogleData):GoogleData {
  const country=v.country.trim().toUpperCase();
- const clean={...v,country,existingProfileUrl:v.action==="create"?"":v.existingProfileUrl,openingDate:v.action==="create"?v.openingDate:"",
+ const clean={...v,country,openingDate:v.action==="create"?v.openingDate:"",
  phone:v.phone.trim()?contactPhoneE164(v.phone,country)||v.phone:"",
  secondaryPhone:v.secondaryPhone.trim()?contactPhoneE164(v.secondaryPhone,country)||v.secondaryPhone:"",
  bookingUrl:googleProfileLink(v.bookingUrl)||v.bookingUrl,
