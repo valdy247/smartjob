@@ -94,8 +94,8 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
   }});
  }
  // Owner choices become verified editor properties, never arbitrary model-written CSS.
- const design=input.design;
- if(design?.features.inventory){
+ const prefs=input.prefs;
+ if(prefs?.features.inventory){
   const productBlock=content.find(item=>item.type==="OfferingGrid");
   if(productBlock&&input.products?.length)productBlock.props.title="Productos de "+input.business;
   else if(productBlock&&!input.offerings.length){
@@ -103,7 +103,7 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
    productBlock.props.description="Catálogo editable. Agrega productos desde el Editor 2.0.";
   }
  }
- if(design?.features.booking&&!content.some(item=>item.type==="CTA"&&String(item.props.id)==="ai-booking")){
+ if(prefs?.features.booking&&!content.some(item=>item.type==="CTA"&&String(item.props.id)==="ai-booking")){
   const idx=content.findIndex(item=>item.type==="Contact");
   content.splice(idx<0?content.length:idx,0,{type:"CTA",props:{
    id:"ai-booking",title:"¿Quieres reservar una cita?",description:"Cuéntanos qué necesitas y confirmaremos la disponibilidad.",
@@ -114,23 +114,23 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
   rounded:{radius:22,border:0},square:{radius:0,border:0},
   pill:{radius:70,border:0},bordered:{radius:14,border:5}
  };
- if(design){
-  const imageFrame=frame[design.imageStyle]||frame.rounded;
+ if(prefs){
+  const imageFrame=frame[prefs.imageStyle]||frame.rounded;
   for(const item of content){
    if(item.type==="HeroVisual"||item.type==="Image"){
     item.props.imageRadius=imageFrame.radius;
     item.props.imageBorder=imageFrame.border;
-    item.props.borderColor=design.colors[2];
+    item.props.borderColor=prefs.colors[2];
    }
   }
  }
  const rootProps={...(base.data.root?.props||{}) as Record<string,unknown>};
- if(design){
-  rootProps.font=design.font;
-  rootProps.accentColor=design.colors[0];
-  rootProps.secondaryColor=design.colors[1];
-  rootProps.tertiaryColor=design.colors[2];
-  rootProps.chatMode=design.chatMode;
+ if(prefs){
+  rootProps.font=prefs.font;
+  rootProps.accentColor=prefs.colors[0];
+  rootProps.secondaryColor=prefs.colors[1];
+  rootProps.tertiaryColor=prefs.colors[2];
+  rootProps.chatMode=prefs.chatMode;
  }
  const data=normalizeBuilderDocument({root:{props:rootProps},content});
  const issue=validateBuilderDocument(data);
