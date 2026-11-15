@@ -305,10 +305,15 @@ export const visualBlocks:Config["components"]={
   defaultProps:{title:"Preguntas frecuentes",items:[],padding:"normal",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.padding}{fields.surface}</fieldset></>,
-  render:({id,title,items,padding,surface,puck,...textStyling})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-site-faq">
-   <h2 style={visualTextStyle(textStyling,"title")}>{title}</h2>{toList(items).map((item,i)=><details key={i}><summary style={visualTextStyle(item,"question")}>{heading(item.question)}</summary>
-    <p style={visualTextStyle(item,"answer")}>{heading(item.answer)}</p></details>)}
-  </Section>
+  render:({id,title,items,padding,surface,puck,...textStyling})=>{
+   // Incomplete drafts remain editable but do not appear on the published site.
+   const complete=toList(items).filter(item=>heading(item.question).trim()&&heading(item.answer).trim());
+   return !complete.length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-site-faq">
+    <h2 style={visualTextStyle(textStyling,"title")}>{title}</h2>{complete.map((item,i)=><details key={visualItemId(item,i)}>
+     <summary style={visualTextStyle(item,"question")}>{heading(item.question)}</summary>
+     <p style={visualTextStyle(item,"answer")}>{heading(item.answer)}</p></details>)}
+   </Section>;
+  }
  }
 };
 const SCHEMA:Record<VisualBlockName,{strings:string[];images:string[];arrays?:Record<string,{strings:string[];images:string[]}>}>={
