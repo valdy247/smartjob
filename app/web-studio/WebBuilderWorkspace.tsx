@@ -648,7 +648,7 @@ export default function WebBuilderWorkspace(){
    </div>
    <label className={styles.siteLeadsSwitch}>
     <span><strong>Solicitudes {site.inquiries_enabled?"configuradas":"desactivadas"}</strong>
-     <small>{site.inquiries_enabled?"Se muestran cuando la página Inicio esté publicada":"No se recibirán desde este sitio"}</small></span>
+     <small>{site.inquiries_enabled?"Visibles al publicar Inicio":"Desactivado"}</small></span>
     <input type="checkbox" role="switch" checked={site.inquiries_enabled}
      disabled={busy} onChange={e=>void toggleRequests(e.target.checked)}/>
    </label>
@@ -721,7 +721,7 @@ export default function WebBuilderWorkspace(){
     </div>
     <label className={styles.mobileRequests}>
      <span><strong>Recibir solicitudes</strong>
-      <small>{site.inquiries_enabled?"Configurado · verifica que Inicio esté publicado":
+      <small>{site.inquiries_enabled?"Pendiente de publicar Inicio":
        "Desactivadas"}</small></span>
      <input type="checkbox" role="switch" checked={site.inquiries_enabled}
       disabled={busy} onChange={e=>void toggleRequests(e.target.checked)}/>
@@ -737,7 +737,6 @@ export default function WebBuilderWorkspace(){
         placeholder="Describe tu negocio y lo que ofreces"
         onChange={e=>setDescription(e.target.value)}/>
       </label>
-      <small>Estos textos no cambian el contenido que el visitante ve dentro de la página.</small>
      </div>
     </details>
    </section>:null}
@@ -759,7 +758,7 @@ export default function WebBuilderWorkspace(){
     {page?<div className={styles.editing}>
      {recovery?.pageId===page.id?<div className={styles.recoveryBanner} role="status">
       <div><strong>Encontramos cambios que no llegaron a guardarse.</strong>
-       <span>Elige qué versión quieres conservar. La web pública no cambiará.</span></div>
+       <span>Elige una versión. La web pública no cambia.</span></div>
       <div className={styles.recoveryActions}>
        <button type="button" onClick={recoverLocal}>Recuperar cambios</button>
        <button type="button" onClick={discardLocal}>Usar versión guardada</button>
@@ -796,7 +795,7 @@ export default function WebBuilderWorkspace(){
      {designChoice?<section className={styles.designPanel} aria-label="Comparar cambios de diseño">
       <div className={styles.designPanelHead}>
        <div><strong>Cambiar diseño sin perder contenido</strong>
-        <p>Compara sobre tu página actual. Conservaremos cada sección, imagen, producto, texto y enlace.</p></div>
+        <p>Previsualiza el diseño sin borrar contenido.</p></div>
        <button type="button" onClick={()=>setDesignChoice(null)}>Cancelar</button>
       </div>
       <div className={styles.designChoices} role="group" aria-label="Estilo visual">
@@ -865,7 +864,7 @@ export default function WebBuilderWorkspace(){
    </section>:null}
    {view==="domains"?<section className={styles.subPanel}>
     <div className={styles.panelTitle}><Globe size={19}/><h2>Dominios del sitio</h2></div>
-    <p>Busca un dominio para tu negocio. La compra requiere confirmar precio, titular y pago antes de registrar.</p>
+    <p>Antes de comprar, confirmarás precio, titular y pago.</p>
     <div className={styles.domainForm}><input placeholder="minegocio.com" value={domainInput} onChange={e=>{setDomainInput(e.target.value);setQuote("");}}
      spellCheck={false} autoComplete="off" maxLength={253}/>
      <button type="button" disabled={busy} onClick={()=>void checkDomain()}>Consultar</button></div>
