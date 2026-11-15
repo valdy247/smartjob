@@ -11,6 +11,8 @@ import {normalizeCalloutStyle,calloutButtonStyles,calloutSectionStyles,calloutHe
 import ThemeSwatches,{AccentPicker} from "@/app/web-studio/ThemeSwatches";
 import {visualBlocks,VISUAL_BLOCK_NAMES,normalizeVisualProps,type VisualBlockName} from "./web-builder-visual-blocks";
 import {compositionBlocks,COMPOSE_BLOCK_NAMES,COMPOSE_SLOTS,normalizeComposeProps,type ComposeBlockName} from "./web-builder-composition";
+import {buttonAppearance} from "./web-builder-button-appearance";
+import {ArrowUpRight} from "lucide-react";
 
 type ButtonProps={label?:string;url?:string};
 function safeLink(value:unknown):string{
@@ -336,8 +338,11 @@ export const builderConfig:Config={
       <h2 data-vmv-edit-target="title" style={calloutHeadingStyles(settings)}>{title}</h2>
       {description?<p data-vmv-edit-target="title">{description}</p>:null}
       <a data-vmv-edit-target="button" href={safeLink(buttonUrl)}
-       className="vmv-site-button vmv-cta-button" style={calloutButtonStyles(settings)}>
-       {buttonText||"Contáctanos"} <span aria-hidden="true">↗</span>
+       className="vmv-site-button vmv-cta-button" data-button-style={settings.buttonStyle||"solid"}
+       data-vmv-override-background={buttonAppearance(settings).hasBackground}
+       data-vmv-override-foreground={buttonAppearance(settings).hasForeground}
+       style={{...calloutButtonStyles(settings),...buttonAppearance(settings).style}}>
+       {buttonText||"Contáctanos"} <ArrowUpRight size={18} aria-hidden="true"/>
       </a>
      </div>
     </BuilderSectionTargets>
