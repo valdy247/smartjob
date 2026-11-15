@@ -70,7 +70,7 @@ function History({calls,onSave,onCallBack,onLookup,canCallBack=false,callingSid=
    onClick={()=>onCallBack(item.bridge_sid)}><PhoneCall size={13}/>{callingSid===item.bridge_sid?translate("services.history.connecting"):translate("services.history.callBack")}</button>:null}
   {onSave?<button className={styles.saveFromCall} type="button" onClick={()=>onSave(item.caller_phone||"")}>
    <UserRoundPlus size={13}/>{item.caller_phone?translate("services.history.saveContact"):translate("services.history.addContact")}</button>:null}</span>
- </div>)}</div>:<div className={styles.emptyHistory}><Clock3 size={28}/><strong>{translate("services.history.empty")}</strong><p>{translate("services.history.emptyHint")}</p></div>;
+ </div>)}</div>:<div className={styles.emptyHistory}><Clock3 size={28}/><strong>{translate("services.history.empty")}</strong></div>;
 }
 export default function VMVMobilePreview(){
  const {translate,language}=useInterfaceLanguage();
@@ -380,7 +380,7 @@ export default function VMVMobilePreview(){
       </div>:null}
       {ready&&tab==="services"&&open?<div className={styles.smartScreen}>
        <button className={styles.back} onClick={()=>setOpen(false)}><ChevronLeft size={17}/> {translate("native.totalServices")}</button>
-       <div className={styles.smartHero}><span>VMV BUSINESS / {translate("services.call.communication")}</span><h2>Smart Call<span>.</span></h2><div className={styles.smartBadge}><span/>{lineState}</div></div>
+       <div className={styles.smartHero}><h2>Smart Call<span>.</span></h2><div className={styles.smartBadge}><span/>{lineState}</div></div>
        <div className={styles.switcher}>{([{id:"overview",label:translate("services.call.overview")},{id:"minutes",label:translate("common.minutes")},{id:"settings",label:translate("common.settings")},{id:"activity",label:translate("services.call.activity")}] as const).map(item=><button key={item.id} onClick={()=>setPanel(item.id)} className={panel===item.id?styles.selected:""}>{item.label}</button>)}</div>
        {panel==="overview"?<>
         <div className={styles.smartCard}>
@@ -528,7 +528,7 @@ export default function VMVMobilePreview(){
        {client&&profile?<div className={styles.interpreterWrap}><LivePanel supabase={client} profile={profile} apiStatus={apiStatus}/></div>:null}
       </div>:null}
       {ready&&tab==="account"?<div className={`${styles.screen} ${styles.accountV3}`}>
-       <span className={styles.screenEyebrow}>VMV BUSINESS</span><h2>{translate("home.viewAccount")}<span className={styles.mint}>.</span></h2>
+       <h2>{translate("home.viewAccount")}<span className={styles.mint}>.</span></h2>
        {/* Interface language is already available from the shared app header; do not duplicate it here. */}
        <div className={styles.accountHero}><span className={styles.accountHeroAvatar}><UserRound size={29}/></span>
         <span className={styles.accountHeroInfo}><strong>{business}</strong><small>{user?.email||"—"}</small></span>
