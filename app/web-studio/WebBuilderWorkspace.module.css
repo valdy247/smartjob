@@ -319,3 +319,22 @@
  .compactPuck :global(.vmv-context-action-panel textarea),
  .compactPuck :global(.vmv-context-action-panel select){font-size:16px}
 }
+
+
+/* In-app destructive confirmation works in embedded browsers where window.prompt is blocked. */
+.deleteOverlay{position:fixed;inset:0;z-index:2147482000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(20,12,35,.66);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.deleteDialog{display:flex;flex-direction:column;gap:13px;width:min(100%,470px);max-height:92dvh;overflow:auto;box-sizing:border-box;padding:24px;border:1px solid #ecdde8;border-radius:23px;background:#fff;color:#2e223c;box-shadow:0 20px 80px #140c2855}
+.deleteSymbol{display:grid;place-items:center;width:49px;height:49px;border-radius:16px;background:#fff0f3;color:#b43e63}
+.deleteDialog h2{margin:0;font-size:25px;line-height:1.2;letter-spacing:-.045em}
+.deleteDialog p{margin:0;font-size:13px;line-height:1.6;color:#685875}
+.deleteDialog .deleteSlug{padding:10px 12px;background:#f8f4fc;border:1px solid #e7daef;border-radius:10px;overflow-wrap:anywhere}
+.deleteSlug strong{display:block;margin-top:5px;color:#493258;font-family:ui-monospace,monospace;font-size:13px}
+.deleteDialog label{font-weight:850;font-size:12px}
+.deleteDialog input{width:100%;min-height:48px;box-sizing:border-box;border:1px solid #d5c9e1;border-radius:12px;background:#fff;color:#2b2236;padding:11px 13px;font:inherit;font-size:13px}
+.deleteDialog input:focus-visible,.deleteActions button:focus-visible{outline:3px solid #a68bda;outline-offset:2px}
+.deleteDialog .deleteError{padding:9px 12px;border:1px solid #f0bac8;background:#fff1f4;border-radius:10px;color:#9f3151}
+.deleteActions{display:flex;gap:10px}
+.deleteActions button{flex:1;min-height:45px;border:1px solid #dfd6e8;background:#fff;color:#624978;border-radius:11px;padding:10px;cursor:pointer;font:inherit;font-weight:800;font-size:12px}
+.deleteActions .deleteConfirm{background:#b43f61;border-color:#b43f61;color:white}
+.deleteActions button:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:520px){.deleteDialog{padding:18px}.deleteActions{flex-direction:column}}
