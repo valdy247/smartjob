@@ -180,7 +180,7 @@ export function AIAgentsCallControl({session,onBack}:Props){
       placeholder="Mensaje de cierre" placeholderTextColor="#A69AB1"/>}
     </View>
     <View style={s.banner}><Ionicons name="shield-checkmark-outline" size={20} color="#467B60"/>
-     <Text style={[s.hint,{flex:1,color:"#3B765B"}]}>Los cambios se aplican a nuevas llamadas. La configuración de traducción existente no se modifica.</Text></View>
+     <Text style={[s.hint,{flex:1,color:"#3B765B"}]}>Solo nuevas llamadas; traducción sin cambios.</Text></View>
     <Pressable accessibilityRole="button" disabled={busy} onPress={()=>void save()}
      style={[s.primary,busy&&{opacity:.5}]}><Ionicons name="save-outline" color="#FFF" size={18}/>
      <Text style={s.primaryText}>{busy?"Procesando…":"Guardar atención de llamadas"}</Text></Pressable>
