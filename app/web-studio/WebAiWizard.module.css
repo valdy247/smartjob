@@ -73,3 +73,8 @@
 @media(max-width:780px){.steps{grid-template-columns:repeat(3,minmax(0,1fr))}.colorGrid{grid-template-columns:repeat(4,minmax(0,1fr))}.panel{padding:18px}}
 @media(max-width:510px){.fields,.fontGrid,.shapeGrid,.summary{grid-template-columns:1fr}.colorGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.fontGrid button{min-height:100px}.steps button{font-size:9px;min-height:61px}.steps button b{width:24px;height:24px}.footer{flex-direction:column-reverse;align-items:stretch}.footer>div{justify-content:flex-end}.footer button{flex:1}.heading h1{font-size:30px}.panel{gap:14px}}
 @media(prefers-reduced-motion:reduce){.webHubCard{transition:none}}
+
+.imageSelectors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.imageSelectors>div{display:flex;flex-direction:column;gap:9px;padding:13px;border:1px solid #e8deef;border-radius:14px;background:#fcfaff;min-width:0}
+.imageSelectors>div>strong{font-size:12px;color:#564270}
+@media(max-width:580px){.imageSelectors{grid-template-columns:1fr}}
