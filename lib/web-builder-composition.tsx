@@ -43,14 +43,15 @@ const fonts:Record<string,string>={
 const textShadow:Record<string,string>={
  none:"none",soft:"0 2px 6px rgba(16,12,32,.22)",strong:"0 4px 12px rgba(16,12,32,.44)"
 };
-const styleText=(font:string,color:string,shadow:string,weight:string,italic:string,fontSize:number,letterSpacing:number):React.CSSProperties=>({
+const styleText=(font:string,color:string,shadow:string,weight:string,italic:string,fontSize:number,letterSpacing:number,textOpacity:number=100):React.CSSProperties=>({
  fontFamily:fonts[font]||"inherit",
  color:/^#[\da-f]{6}$/i.test(color)?color:undefined,
  textShadow:textShadow[shadow]||"none",
  fontWeight:weight==="heavy"?850:weight==="light"?400:700,
  fontStyle:italic==="yes"?"italic":"normal",
  ...(fontSize>=12?{fontSize:fontSize+"px"}:{}),
- letterSpacing:letterSpacing+"px"
+ letterSpacing:letterSpacing+"px",
+ opacity:Math.max(0,Math.min(100,textOpacity))/100
 });
 const typographyFields={
  font:fontEditorField,
@@ -76,6 +77,7 @@ const numericTypography=(source:Record<string,unknown>)=>({
  italic:select(["yes","no"],"no")(source.italic),
  fontSize:numberField(source.fontSize,0,0,110),
  letterSpacing:numberField(source.letterSpacing,0,-3,12),
+ textOpacity:numberField(source.textOpacity,100,0,100),
  moveX:numberField(source.moveX,0,-150,150),
  moveY:numberField(source.moveY,0,-150,150),
  linkUrl:source.linkUrl?safeButtonLink(source.linkUrl):""
@@ -185,7 +187,7 @@ export const compositionBlocks:Config["components"]={
   },
   defaultProps:{title:"Escribe tu título",level:"h2",sizeDesktop:"large",sizeMobile:"medium",
    font:"site",textColor:"",textShadow:"none",weight:"normal",italic:"no",
-   fontSize:0,letterSpacing:0,moveX:0,moveY:0,linkUrl:"",
+   fontSize:0,letterSpacing:0,textOpacity:100,moveX:0,moveY:0,linkUrl:"",
    alignDesktop:"left",alignMobile:"left",visibility:"all"},
   renderFields:({fields:f})=><>
    <SettingsGroup title="Texto y enlace">{f.title}{f.level}{f.linkUrl}</SettingsGroup>
@@ -194,12 +196,12 @@ export const compositionBlocks:Config["components"]={
    <SettingsGroup title="Por dispositivo">{f.sizeDesktop}{f.sizeMobile}{f.visibility}</SettingsGroup>
   </>,
   render:({id,title,level,sizeDesktop,sizeMobile,alignDesktop,alignMobile,visibility,
-    font,textColor,textShadow:shadow,weight,italic,fontSize,letterSpacing,moveX,moveY,linkUrl,puck})=>{
+    font,textColor,textShadow:shadow,weight,italic,fontSize,letterSpacing,textOpacity,moveX,moveY,linkUrl,puck})=>{
    const Tag=level==="h3"?"h3":"h2";
    const inner=<Tag className="vmv-compose-heading" data-size-desktop={sizeDesktop||"large"}
     data-size-mobile={sizeMobile||"medium"} data-align-desktop={alignDesktop||"left"}
     data-align-mobile={alignMobile||"left"} data-mobile-visibility={visibility||"all"}
-    style={styleText(font,textColor,shadow,weight,italic,Number(fontSize)||0,Number(letterSpacing)||0)}>{title}</Tag>;
+    style={styleText(font,textColor,shadow,weight,italic,Number(fontSize)||0,Number(letterSpacing)||0,Number(textOpacity??100))}>{title}</Tag>;
    return <MovableContent id={id} editing={puck.isEditing} x={Number(moveX)||0} y={Number(moveY)||0}
     xKey="moveX" yKey="moveY">
     {linkUrl&&!puck.isEditing?<a className="vmv-compose-text-link" href={safeButtonLink(linkUrl)}>{inner}</a>:inner}
@@ -215,7 +217,7 @@ export const compositionBlocks:Config["components"]={
    alignDesktop:fields.alignment,alignMobile:fields.alignment,visibility:fields.visibility
   },
   defaultProps:{text:"Escribe aquí",size:"medium",font:"site",textColor:"",
-   textShadow:"none",weight:"normal",italic:"no",fontSize:0,letterSpacing:0,
+   textShadow:"none",weight:"normal",italic:"no",fontSize:0,letterSpacing:0,textOpacity:100,
    moveX:0,moveY:0,linkUrl:"",alignDesktop:"left",alignMobile:"left",visibility:"all"},
   renderFields:({fields:f})=><>
    <SettingsGroup title="Texto y enlace">{f.text}{f.linkUrl}</SettingsGroup>
@@ -224,11 +226,11 @@ export const compositionBlocks:Config["components"]={
    <SettingsGroup title="Por dispositivo">{f.size}{f.visibility}</SettingsGroup>
   </>,
   render:({id,text,size,alignDesktop,alignMobile,visibility,font,textColor,
-    textShadow:shadow,weight,italic,fontSize,letterSpacing,moveX,moveY,linkUrl,puck})=>{
+    textShadow:shadow,weight,italic,fontSize,letterSpacing,textOpacity,moveX,moveY,linkUrl,puck})=>{
    const content=<p className="vmv-compose-copy" data-size={size||"medium"}
     data-align-desktop={alignDesktop||"left"} data-align-mobile={alignMobile||"left"}
     data-mobile-visibility={visibility||"all"}
-    style={styleText(font,textColor,shadow,weight,italic,Number(fontSize)||0,Number(letterSpacing)||0)}>{text}</p>;
+    style={styleText(font,textColor,shadow,weight,italic,Number(fontSize)||0,Number(letterSpacing)||0,Number(textOpacity??100))}>{text}</p>;
    return <MovableContent id={id} editing={puck.isEditing} x={Number(moveX)||0} y={Number(moveY)||0}
     xKey="moveX" yKey="moveY">
     {linkUrl&&!puck.isEditing?<a className="vmv-compose-text-link" href={safeButtonLink(linkUrl)}>{content}</a>:content}
