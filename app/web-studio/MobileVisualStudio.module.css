@@ -549,3 +549,54 @@
  .visualDetailHeader strong{font-size:20px}
  .visualQuickDetail{margin-left:0!important;padding:12px 4px!important}
 }
+
+
+/* Modern focused adjustments replace the legacy white inspector completely. */
+.focusFields{display:flex;flex-direction:column;gap:18px;min-width:0;width:100%}
+.focusFields>p{font-size:13px;line-height:1.55;margin:4px 0;color:#e7daf6;text-align:center}
+.focusItem{display:flex;flex-direction:column;gap:11px;padding:12px 0 18px;border-bottom:1px solid rgba(255,255,255,.18)}
+.focusItem>strong{font-size:15px;font-weight:800;text-align:center;color:#fff}
+.focusChoices{display:flex;gap:9px;flex-wrap:wrap;align-items:center;justify-content:center}
+.focusChoices>button,.focusAction,.focusDestructive{
+ display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;
+ min-height:48px;padding:12px 17px;font:inherit;font-size:14px;font-weight:800;
+ color:white;border:1px solid rgba(255,255,255,.25);
+ border-radius:12px;background:rgba(255,255,255,.12);
+}
+.focusChoices>button[aria-pressed=true]{background:#8557d8;border-color:#b49aed}
+.focusChoices>button:hover,.focusAction:hover{background:rgba(255,255,255,.22)}
+.focusAction{width:100%;background:rgba(122,85,200,.27)}
+.focusDestructive{width:100%;border-color:rgba(255,146,166,.45);color:#ffced8;background:rgba(153,30,65,.19)}
+.visualQuickDetail .formLabel{font-size:14px;line-height:1.4;color:#fff}
+.visualQuickDetail :global(.vmv-inspector-range){width:100%;color:#fff;gap:13px}
+.visualQuickDetail :global(.vmv-inspector-range)>span{display:flex;justify-content:space-between;gap:14px;font-size:14px;font-weight:750}
+.visualQuickDetail :global(.vmv-inspector-range input[type=range]){accent-color:#ab7bfa;min-height:36px;cursor:pointer}
+.visualQuickDetail :global(.vmv-inspector-color){gap:13px;color:#fff}
+.visualQuickDetail :global(.vmv-inspector-color label){display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:750}
+.visualQuickDetail :global(.vmv-inspector-color input[type=color]){width:54px;height:46px;border-radius:10px;border:2px solid #ddd0f8;background:transparent;padding:4px}
+.visualQuickDetail :global(.vmv-inspector-swatches button){border:1px solid rgba(255,255,255,.65);min-width:35px;min-height:35px}
+.visualQuickDetail :global(.vmv-inspector-swatches button[aria-pressed=true]){outline:2px solid #c39aff;outline-offset:3px}
+.visualQuickDetail :global(.vmv-inspector-auto-color){
+ width:auto!important;min-width:88px!important;padding:0 10px;border-radius:11px;
+ color:white;background:rgba(255,255,255,.13);font-weight:750
+}
+.visualQuickDetail :global(.vmv-inspector-fonts){
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px
+}
+.visualQuickDetail :global(.vmv-inspector-fonts button){
+ min-height:49px;border:1px solid rgba(255,255,255,.26);border-radius:12px;
+ padding:9px 8px;color:#fff;background:rgba(255,255,255,.1);
+ cursor:pointer;font-size:13px
+}
+.visualQuickDetail :global(.vmv-inspector-fonts button[aria-pressed=true]){border-color:#c3a6ff;background:#8557d8}
+.visualQuickDetail img{background:transparent!important;max-height:190px;width:100%;object-fit:contain}
+.visualQuickDetail select,.visualQuickDetail textarea,.visualQuickDetail input[type=text]{
+ width:100%;border:1px solid rgba(255,255,255,.35)!important;border-radius:11px;
+ background:rgba(255,255,255,.96)!important;color:#282039!important;
+ padding:12px 13px;box-sizing:border-box;font-size:16px
+}
+.visualQuickDetail button{touch-action:manipulation}
+@media(max-width:760px){
+ .focusChoices>button{flex:1;min-width:105px}
+ .visualQuickDetail{padding:8px 4px 18px!important}
+}
