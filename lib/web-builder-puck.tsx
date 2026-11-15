@@ -125,11 +125,14 @@ export function normalizeBuilderDocument(input:unknown):Data{
  const width=["regular","wide"].includes(String(rawProps.width))?String(rawProps.width):"regular";
  const motion=rawProps.motion==="subtle"?"subtle":"off";
  const accent=typeof rawProps.accentColor==="string"&&/^#[0-9a-f]{6}$/i.test(rawProps.accentColor)?rawProps.accentColor:"";
+ const secondary=typeof rawProps.secondaryColor==="string"&&/^#[0-9a-f]{6}$/i.test(rawProps.secondaryColor)?rawProps.secondaryColor:"";
+ const tertiary=typeof rawProps.tertiaryColor==="string"&&/^#[0-9a-f]{6}$/i.test(rawProps.tertiaryColor)?rawProps.tertiaryColor:"";
+ const chatMode=rawProps.chatMode==="inbox"?"inbox":"off";
  const logo=safeWebImageUrl(String(rawProps.logo||""))||"";
  const family=["bakery","construction","professional","beauty","creative"].includes(String(rawProps.family))?String(rawProps.family):"";
  const language=rawProps.language==="en"?"en":"es";
  const socialLinks=normalizeSocialLinks(rawProps.socialLinks);
- return {content,root:{props:{palette,font,style,width,motion,accentColor:accent,logo,family,language,socialLinks}}} as Data;
+ return {content,root:{props:{palette,font,style,width,motion,accentColor:accent,secondaryColor:secondary,tertiaryColor:tertiary,chatMode,logo,family,language,socialLinks}}} as Data;
 }
 export function starterBuilderDocument(name="Mi negocio",categoryId=""):Data{
  const bakery=["bakery","catering","cafe","restaurant","food-truck"].includes(categoryId);
@@ -196,12 +199,15 @@ export const builderConfig:Config={
    ]},
    width:{type:"select",options:[{label:"Cómodo",value:"regular"},{label:"Amplio",value:"wide"}]},
    accentColor:{type:"custom",render:({value,onChange})=><AccentPicker value={value} onChange={onChange}/>},
+   secondaryColor:{type:"custom",render:({value,onChange})=><AccentPicker value={value} onChange={onChange}/>},
+   tertiaryColor:{type:"custom",render:({value,onChange})=><AccentPicker value={value} onChange={onChange}/>},
+   chatMode:{type:"select",options:[{label:"Sin botón de chat",value:"off"},{label:"Chat / recibir mensajes en VMV",value:"inbox"}]},
    motion:{type:"select",options:[{label:"Sin animaciones",value:"off"},{label:"Suaves",value:"subtle"}]},
    logo:{type:"custom",render:({value,onChange})=><BuilderImageField value={typeof value==="string"?value:""} onChange={onChange}/>}
 
   },
-  defaultProps:{palette:"violet",font:"modern",style:"light",width:"regular",motion:"off",accentColor:"",logo:"",language:"es"},
-  render:({children,palette,font,style,width,motion,accentColor}:{children?:React.ReactNode;palette?:string;font?:string;style?:string;width?:string;motion?:string;accentColor?:string})=>{
+  defaultProps:{palette:"violet",font:"modern",style:"light",width:"regular",motion:"off",accentColor:"",secondaryColor:"",tertiaryColor:"",chatMode:"off",logo:"",language:"es"},
+  render:({children,palette,font,style,width,motion,accentColor,secondaryColor,tertiaryColor}:{children?:React.ReactNode;palette?:string;font?:string;style?:string;width?:string;motion?:string;accentColor?:string;secondaryColor?:string;tertiaryColor?:string})=>{
    const colors:Record<string,{accent:string,pale:string}>={
     violet:{accent:"#8e5de4",pale:"#f0e9fd"},mint:{accent:"#198d74",pale:"#e5f8f0"},
     amber:{accent:"#a97b26",pale:"#fff4d8"},ink:{accent:"#30283a",pale:"#eae8ed"},
@@ -217,7 +223,10 @@ export const builderConfig:Config={
     geometric:'"Avenir Next",Montserrat,ui-sans-serif,system-ui,sans-serif'
    };
    const css={"--vmv-accent":/^#[0-9a-f]{6}$/i.test(accentColor||"")?accentColor:color.accent,
-    "--vmv-pale":color.pale,fontFamily:fontFamily[font||"modern"]||fontFamily.modern
+    "--vmv-pale":color.pale,
+    "--vmv-secondary":/^#[0-9a-f]{6}$/i.test(secondaryColor||"")?secondaryColor:color.pale,
+    "--vmv-tertiary":/^#[0-9a-f]{6}$/i.test(tertiaryColor||"")?tertiaryColor:color.accent,
+    fontFamily:fontFamily[font||"modern"]||fontFamily.modern
    } as CSSProperties;
    return <div className="vmv-site vmv-site-editor-canvas" data-site-style={style||"light"}
     data-site-width={width||"regular"} data-motion={motion||"off"} style={css}>{children}</div>;
