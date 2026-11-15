@@ -974,7 +974,7 @@ export default function App(){
       </>:null}
      {activeTab==="settings"?<>
       {settingsPage==="menu"?<>
-       <Text style={styles.kicker}>TU CUENTA</Text><Text style={styles.heading}>{tr("common.settings")}<Text style={{color:colors.accent}}>.</Text></Text>
+       <Text style={styles.heading}>{tr("common.settings")}<Text style={{color:colors.accent}}>.</Text></Text>
        <Text style={styles.groupTitle}>{tr("settings.accountGroup")}</Text>
        <SettingRow emoji="👤" label={tr("common.profile")} onPress={()=>setSettingsPage("profile")}/>
        <SettingRow emoji="🔒" label={tr("common.security")} onPress={()=>setSettingsPage("security")}/>
