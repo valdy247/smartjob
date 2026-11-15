@@ -324,7 +324,7 @@ export function AIAgentsStudio({session,onBack}:Props){
           <View style={{flexDirection:"row",gap:9,alignItems:"center"}}>
            <Ionicons name="briefcase-outline" color={C.purple} size={20}/>
            <View style={{flex:1}}><Text style={styles.businessTitle}>Negocio en AI Agents</Text>
-            <Text style={styles.help}>Datos del perfil central de VMV</Text></View>
+</View>
           </View>
           {businesses.length===1&&unlinked.length===0?
            <Text style={styles.businessName}>{businesses[0].name}</Text>:
@@ -338,11 +338,7 @@ export function AIAgentsStudio({session,onBack}:Props){
           {staleAgents.length>0?<Text style={styles.help}>
             {staleAgents.length} agente(s) necesitan revisión por cambios en el perfil central.
           </Text>:null}
-          {activeBusiness?<Text style={styles.help}>{
-            (activeBusiness.category_id||"Actividad pendiente")+" · "+
-            (activeBusiness.city||"Ubicación pendiente")
-          }</Text>:
-          <Text style={styles.help}>Crea o selecciona un negocio en Marketing antes de añadir agentes nuevos.</Text>}
+          {!activeBusiness?<Text style={styles.help}>Selecciona un negocio para continuar.</Text>:null}
           {businesses.length===0?<Action label="Ir a VMV Business" icon="arrow-back-outline" onPress={onBack}/>:null}
           {activeBusiness&&!linkedWorkspace&&unlinked.length===1?
            <Action label="Vincular agentes existentes" icon="shield-checkmark-outline"
@@ -358,14 +354,11 @@ export function AIAgentsStudio({session,onBack}:Props){
          </View>:null}
         {notice?<View style={styles.warning}><Ionicons name="information-circle-outline" size={18} color="#76559C"/>
           <Text style={[styles.help,{flex:1}]}>{notice}</Text></View>:null}
-        <SectionTitle title={"Tu agente: "+(principal?.name||proposal?.name||"Sin configurar")}
-          caption={"Negocio: "+(activeBusiness?.name||"Selecciona tu negocio")+". Una identidad para todas las funciones."}/>
-        {principal?<Text style={styles.help}>Llamadas: {phone?.agentId===principal.id&&phone?.prepared?
-          "ruta lista para prueba":"requiere conexión"} · Chat público: sin conectar · Ventas y reservas: verificar permisos y fuentes.</Text>:null}
+        <SectionTitle title={"Tu agente: "+(principal?.name||proposal?.name||"Sin configurar")}/>
         {proposal&&!principal&&linkedWorkspace?<Action label={"Usar "+proposal.name+" como agente principal"}
           icon="person-circle-outline" disabled={busy} onPress={()=>void designate(proposal).catch(e=>
            Alert.alert("Selección",e instanceof Error?e.message:"No disponible."))}/>:null}
-        <SectionTitle title="Capacidades de tu agente" caption="Configura cada función sin crear otro asistente."/>
+        <SectionTitle title="Capacidades"/>
         <View style={styles.templateGrid}>
           {templates.map(template=>{
            const label=({
@@ -391,13 +384,13 @@ export function AIAgentsStudio({session,onBack}:Props){
             custom:"Voz, idioma y personalidad"
            } as Record<AgentKind,string>)[template.kind];
            return <Pressable key={template.kind} accessibilityRole="button"
-            accessibilityLabel={"Configurar "+label} disabled={!activeBusiness}
+            accessibilityLabel={"Configurar "+label+" · "+status+" · "+description} disabled={!activeBusiness}
             onPress={()=>void startCapability(template.kind)}
             style={[styles.template,{backgroundColor:template.bg}]}>
             <View style={styles.templateIcon}><Ionicons name={template.icon} size={23} color={template.fg}/></View>
             <View style={{flex:1,justifyContent:"flex-end"}}>
               <Text style={[styles.templateTitle,{color:template.fg}]}>{label}</Text>
-              <Text style={[styles.templateCaption,{color:template.fg}]}>{status+" · "+description}</Text>
+              <Text style={[styles.templateCaption,{color:template.fg}]}>{status}</Text>
             </View>
             <Ionicons name="arrow-up-outline" color={template.fg} size={18} style={styles.templateArrow}/>
            </Pressable>;
@@ -411,7 +404,6 @@ export function AIAgentsStudio({session,onBack}:Props){
           <View style={styles.empty}>
             <Ionicons name="cube-outline" size={27} color={C.purple}/>
             <Text style={styles.emptyTitle}>Aquí vivirán tus agentes</Text>
-            <Text style={styles.help}>Elige una capacidad para configurar el primer agente principal.</Text>
           </View>:visibleAgents.map(agent=>{
             const info=kindInfo(agent.kind);
             return <View key={agent.id} style={styles.agentCard}>
@@ -454,7 +446,7 @@ export function AIAgentsStudio({session,onBack}:Props){
               </Pressable>
             </View>;
           })}
-        <Text style={styles.footerNote}>Los agentes se guardan en tu cuenta. Elegir uno para la línea no cambia el webhook de Twilio, ni confirma ventas o pagos.</Text>
+        <Text style={styles.footerNote}>Elegir un agente no activa llamadas, ventas ni pagos.</Text>
       </ScrollView>:null}
 
       {screen==="agenda"?<AIAgentsBookingStudio session={session} agents={principal?[principal]:visibleAgents}
