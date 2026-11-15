@@ -6,7 +6,7 @@ import {
  ArrowDown,ArrowLeft,ArrowUp,Check,ChevronDown,ChevronRight,Eye,EyeOff,
  FilePlus2,Globe,ImagePlus,Layers,Menu,MessageCircle,Monitor,Palette,
  Plus,Redo2,Save,Settings2,SlidersHorizontal,Smartphone,
- Sparkles,Copy,GripVertical,Trash2,Type,Undo2,Upload,Lock,Unlock, X
+ Sparkles,Copy,GripVertical,Trash2,Type,Undo2,Upload,Lock,Unlock,Paintbrush, X
 } from "lucide-react";
 import {builderConfig,normalizeBuilderDocument} from "@/lib/web-builder-puck";
 import {VISUAL_BLOCK_NAMES} from "@/lib/web-builder-visual-blocks";
@@ -28,7 +28,7 @@ type Pick={id:string;kind:"image"|"text"|"button"|"section";target?:ImageTarget;
 type Section="home"|"pages"|"create"|"layers"|"appearance"|"seo"|"connections"|"domain"|"history";
 type VisualTool="menu"|"content"|"size"|"color"|"background"|"font"|"weight"|"italic"|
  "spacing"|"opacity"|"align"|"image"|"shade"|"frame"|"shape"|"link"|"actions"|
- "position"|"border"|"layout"|"arrange"|"add"|"duplicate"|"delete"|"items"|"surface"|"buttonStyle"|"lock";
+ "position"|"border"|"layout"|"arrange"|"add"|"duplicate"|"delete"|"items"|"surface"|"buttonStyle"|"lock"|"sync";
 
 const TEXT_KEYS=["title","description","body","text","eyebrow","subtitle","buttonText","label",
  "caption","quote","author","price","question","answer","q1","a1","q2","a2","hours","area","notes","first","second","third","phone","email","address"];
@@ -205,6 +205,96 @@ function removeBlock(data:Data,id:string):Data{
  }
  const content=visit(data.content);
  return removed?{...data,content}:data;
+}
+
+type StyleSync={next:Data;matched:number};
+/** One-time style copy between equivalent blocks. Only style fields are patched.
+ * Never touches the text, image URL, link or layout; protected targets are skipped.
+ */
+function synchronizedStyle(data:Data,choice:Pick,source:Item):StyleSync{
+ const p=source.props as Record<string,unknown>;
+ const nested=choice.index!==undefined&&Array.isArray(p.items)?
+  (p.items[choice.index] as Record<string,unknown>):p;
+ const textKey=choice.key||"title";
+ const srcPrefix=["ComposeHeading","ComposeText"].includes(source.type)?"":textKey;
+ const semantic=(key:string)=>["title","text"].includes(key)?"heading":
+  ["body","description","subtitle"].includes(key)?"paragraph":key;
+ const srcKeys=["Color","Font","FontSize","Weight","Italic","LetterSpacing","Opacity"].map(suffix=>
+  [srcPrefix?srcPrefix+suffix:({Color:"textColor",Font:"font",FontSize:"fontSize",Weight:"weight",Italic:"italic",LetterSpacing:"letterSpacing",Opacity:"textOpacity"} as Record<string,string>)[suffix],suffix] as const);
+ const textStyle:Record<string,unknown>={};
+ for(const [k,suffix] of srcKeys)if(nested[k]!==undefined)textStyle[suffix]=nested[k];
+ const buttonStyle:Record<string,unknown>={};
+ for(const k of ["buttonColor","buttonTextColor","buttonFontSize","buttonShape"])
+  if(p[k]!==undefined)buttonStyle[k]=p[k];
+ const variant=String(p[source.type==="ComposeButton"?"style":"buttonStyle"]||"");
+ const imageTarget=choice.target||imageTargets(source.type,p)[0];
+ const imageProps=imageTarget?targetSettings(p,imageTarget):{};
+ const imageStyle:Record<string,unknown>={};
+ for(const k of ["imageRadius","imageBorder","borderColor","imageOpacity"])
+  if(imageProps[k]!==undefined)imageStyle[k]=imageProps[k];
+ let matched=0;
+ const styleFor=(componentType:string,key:string)=>{
+  const prefix=["ComposeHeading","ComposeText"].includes(componentType)?"":key;
+  const result:Record<string,unknown>={};
+  for(const [suffix,value] of Object.entries(textStyle)){
+   const field=prefix?prefix+suffix:({Color:"textColor",Font:"font",FontSize:"fontSize",Weight:"weight",Italic:"italic",LetterSpacing:"letterSpacing",Opacity:"textOpacity"} as Record<string,string>)[suffix];
+   if(field)result[field]=value;
+  }
+  return result;
+ };
+ const walk=(list:Data["content"]):Data["content"]=>list.map(node=>{
+  const original=node.props as Record<string,unknown>;
+  let props=original;
+  const locked=props.locked==="yes",same=String(props.id)===choice.id;
+  if(!locked&&choice.kind==="text"){
+   // Headings and paragraphs can use different field names but share a style.
+   const fields=Object.keys(props).filter(key=>typeof props[key]==="string"&&
+    semantic(key)===semantic(textKey)&&["title","text","body","description","subtitle","eyebrow","price","caption"].includes(key));
+   if(node.type==="ComposeHeading"&&semantic(textKey)==="heading"&&typeof props.title==="string"&&!fields.includes("title"))fields.push("title");
+   let patch:Record<string,unknown>={};
+   for(const key of fields)if(!same||choice.index!==undefined){Object.assign(patch,styleFor(node.type,key));matched++;}
+   if(Object.keys(patch).length)props={...props,...patch};
+   if(Array.isArray(props.items)){
+    const items=(props.items as Record<string,unknown>[]).map((item,i)=>{
+     const childFields=Object.keys(item).filter(key=>typeof item[key]==="string"&&semantic(key)===semantic(textKey)&&
+      ["title","description","price","caption","question","answer"].includes(key));
+     if(!childFields.length)return item;
+     let change:Record<string,unknown>={};
+     for(const key of childFields){
+      if(same&&i===choice.index)continue;
+      Object.assign(change,styleFor(node.type,key));matched++;
+     }
+     return Object.keys(change).length?{...item,...change}:item;
+    });
+    props={...props,items};
+   }
+  }
+  if(!locked&&choice.kind==="button"&&["ComposeButton","HeroVisual","CTA"].includes(node.type)&&!same){
+   props={...props,...buttonStyle,...(variant?{[node.type==="ComposeButton"?"style":"buttonStyle"]:variant}:{})};
+   matched++;
+  }
+  if(!locked&&choice.kind==="image"&&node.type!=="HeroVisual"&&Object.keys(imageStyle).length){
+   const targets=imageTargets(node.type,props);
+   let patched=false;
+   for(const t of targets){
+    if(same&&t.field===imageTarget?.field&&t.index===imageTarget?.index)continue;
+    const current=targetSettings(props,t);
+    if(t.index!==undefined&&Array.isArray(props.items)){
+     props={...props,items:(props.items as Record<string,unknown>[]).map((entry,i)=>
+      i===t.index?{...entry,...imageStyle}:entry)};
+    }else if(t.field==="beforeImage"||t.field==="afterImage"){
+     props={...props,[t.field+"Settings"]:{...current,...imageStyle}};
+    }else props={...props,...imageStyle};
+    matched++;patched=true;
+   }
+   if(!patched)props=original;
+  }
+  for(const slot of ["content","left","right","third"])
+   if(Array.isArray(props[slot]))props={...props,[slot]:walk(props[slot] as Data["content"])};
+  return props===original?node:{...node,props};
+ });
+ const content=walk(data.content);
+ return {next:{...data,content},matched};
 }
 function editableConfig():Config{
  const blocks=Object.fromEntries(Object.entries(builderConfig.components||{}).map(([kind,block])=>{
@@ -632,6 +722,7 @@ export default function MobileVisualStudio({
   {id:"opacity",label:"Transparencia",icon:<Eye/>},{id:"weight",label:"Grosor",icon:<Type/>},
   {id:"italic",label:"Cursiva",icon:<Type/>},{id:"spacing",label:"Espaciado",icon:<SlidersHorizontal/>},
   {id:"arrange",label:"Organizar",icon:<Layers/>},
+  {id:"sync",label:"Sincronizar estilo",icon:<Paintbrush/>},
   {id:"lock",label:props?.locked==="yes"?"Desbloquear":"Proteger",icon:props?.locked==="yes"?<Unlock/>:<Lock/>}
  ]:isButton?[
   {id:"content",label:"Editar botón",icon:<Type/>},{id:"size",label:"Tamaño",icon:<SlidersHorizontal/>},
@@ -640,6 +731,7 @@ export default function MobileVisualStudio({
   {id:"link",label:"Enlace",icon:<Globe/>},
   ...(block?.type==="CTA"?[{id:"border" as const,label:"Borde",icon:<Layers/>}]:[]),
   {id:"arrange",label:"Organizar sección",icon:<Layers/>},
+  {id:"sync",label:"Sincronizar estilo",icon:<Paintbrush/>},
   {id:"lock",label:props?.locked==="yes"?"Desbloquear":"Proteger",icon:props?.locked==="yes"?<Unlock/>:<Lock/>}
  ]:isImage?[
   {id:"image",label:"Reemplazar imagen",icon:<ImagePlus/>},
@@ -652,6 +744,7 @@ export default function MobileVisualStudio({
    ]:[{id:"border" as const,label:"Borde",icon:<Palette/>}]),
   {id:"opacity",label:"Transparencia",icon:<Eye/>},
   {id:"arrange",label:"Organizar sección",icon:<Layers/>},
+  {id:"sync",label:"Sincronizar estilo",icon:<Paintbrush/>},
   {id:"lock",label:props?.locked==="yes"?"Desbloquear":"Proteger",icon:props?.locked==="yes"?<Unlock/>:<Lock/>}
  ]:[
   {id:"content",label:"Editar contenido",icon:<Type/>},
@@ -685,10 +778,12 @@ export default function MobileVisualStudio({
   shade:"Oscuridad",frame:block?.type==="HeroVisual"?"Encuadre":"Esquinas",shape:"Esquinas",
   link:"Enlace",actions:"Opciones",menu:"Herramientas",position:"Mover",border:"Borde",
   layout:"Diseño de portada",arrange:"Organizar sección",add:"Añadir",duplicate:"Duplicar",
-  delete:"Eliminar",lock:props?.locked==="yes"?"Desbloquear":"Proteger",items:block?.type==="FAQList"?"Preguntas y respuestas":"Editar elementos",
+  delete:"Eliminar",sync:"Sincronizar estilo",lock:props?.locked==="yes"?"Desbloquear":"Proteger",items:block?.type==="FAQList"?"Preguntas y respuestas":"Editar elementos",
   surface:"Fondo",buttonStyle:"Estilo del botón"
  } as Record<VisualTool,string>)[visualTool];
  const imageSettings=isImage&&image?targetSettings(props||{},image):null;
+ const styleSync=selection&&block&&["text","button","image"].includes(selection.kind)?
+  synchronizedStyle(data,selection,block):null;
  const moveXKey=device==="mobile"?"imageMoveXMobile":"imageMoveX";
  const moveYKey=device==="mobile"?"imageMoveYMobile":"imageMoveY";
  const widthKey=device==="mobile"?"imageWidthMobile":"imageWidth";
@@ -943,6 +1038,16 @@ export default function MobileVisualStudio({
       <option value="light">Claro</option><option value="soft">Suave</option><option value="dark">Oscuro</option>
       {block?.type==="CTA"?<option value="accent">Marca</option>:null}
      </select></label>:null}
+    {visualTool==="sync"?<div className={styles.focusFields}>
+     <p>Copiará únicamente el aspecto visual de este elemento a otros del mismo tipo en esta página. No modificará sus textos, fotografías ni enlaces.</p>
+     <strong className={styles.syncCount}>{styleSync?.matched||0} elementos similares</strong>
+     <button type="button" className={styles.focusAction} disabled={!styleSync?.matched}
+      onClick={()=>{if(styleSync?.matched){onChange(styleSync.next);setVisualTool("menu");}}}>
+      <Paintbrush size={18}/> Aplicar estilo a esta página
+     </button>
+     <button type="button" className={styles.focusAction} onClick={()=>setVisualTool("menu")}>Volver sin aplicar</button>
+     <p>Puedes usar Deshacer para revertirlo. Los cambios posteriores no quedarán vinculados automáticamente.</p>
+    </div>:null}
     {visualTool==="arrange"?<div className={styles.focusFields}>
      <div className={styles.focusChoices}>
       <button type="button" onClick={()=>onChange(moveBlock(data,selection!.id,-1))}><ArrowUp size={18}/> Subir</button>
