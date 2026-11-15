@@ -3,7 +3,7 @@ import {contactPhoneE164} from "@/lib/contact-phone";
 import {googleProfileLink} from "@/lib/google-profile-request";
 import BusinessPhoneInput from "@/components/BusinessPhoneInput";
 import {useEffect,useMemo,useState,type ChangeEvent} from "react";
-import {CheckCircle2,MapPin,AlertCircle} from "lucide-react";
+import {CheckCircle2,MapPin,AlertCircle,Pencil} from "lucide-react";
 import GoogleCategoryLookup from "./GoogleCategoryLookup";
 import styles from "./GoogleProfileWizard.module.css";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
@@ -142,10 +142,13 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
   <input value={String(data[key])} maxLength={250} placeholder={tx(placeholder)} onChange={e=>patch(key,e.target.value as GoogleData[typeof key])}/></label>
  );
  return <div className={styles.root}>
+   {loadedData?<div className={styles.loadedBusinessHeader}>
+    <div className={styles.loadedBusinessInfo}><CheckCircle2 size={18}/><span><small>{en?"Business loaded":"Negocio cargado"}</small><strong>{business}</strong></span></div>
+    <button type="button" aria-label={editing?(en?"Show only missing fields":"Mostrar solo campos pendientes"):(en?"Edit loaded business information":"Editar datos cargados del negocio")} aria-pressed={editing} onClick={()=>setEditing(v=>!v)}><Pencil size={15}/>{editing?(en?"Done":"Listo"):(en?"Edit":"Editar")}</button>
+   </div>:null}
    <div className={styles.progress}><span>Google Business Profile</span><strong>{step+1} / {googleStepNames.length} · {tx(googleStepNames[step])}</strong></div>
-   {loadedData?<div className={styles.loadedProfile}><span>{translate("marketing.google.profileLoadedShort")}</span><button type="button" onClick={()=>setEditing(v=>!v)}>{translate(editing?"marketing.google.onlyMissing":"marketing.copy.edit")}</button></div>:null}
    {step===0?<div className={styles.group}>
-    <h3>{tx("¿Qué necesitas hacer?")}</h3>
+    <h3>{en?"Select what you want to do":"Selecciona la gestión"}</h3>
     <div className={styles.choices}>{([["create","Crear un perfil"],["claim","Reclamar uno existente"],["improve","Mejorar el actual"]] as const).map(([id,label])=>
      <button type="button" aria-pressed={data.action===id} key={id} onClick={()=>onData({...data,action:id,openingDate:id==="create"?data.openingDate:""})}>{tx(label)}</button>)}</div>
     {!hasSaved("googleCategory")?<GoogleCategoryLookup key={data.country} data={data} onData={onData}/>:null}
