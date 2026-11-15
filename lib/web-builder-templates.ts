@@ -6,10 +6,17 @@ export type SiteFamily="bakery"|"construction"|"professional"|"beauty"|"creative
 export type SiteObjective="calls"|"quotes"|"bookings"|"orders";
 export type SiteOffering="products"|"services"|"both";
 export type SiteProduct={id:string;title:string;description:string;image:string;price:string};
+export type SiteDesignPreferences={
+ colors:string[];font:"modern"|"editorial"|"rounded"|"geometric";
+ imageStyle:"rounded"|"square"|"pill"|"bordered";
+ features:{inventory:boolean;booking:boolean;chat:boolean};
+ chatMode:"off"|"inbox";
+};
 export type SiteIntake={
  business:string;categoryId:string;offering:SiteOffering;objective:SiteObjective;
  phone:string;email:string;city:string;about:string;logo:string;photos:string[];
  offerings:string[];products?:SiteProduct[];socials?:BusinessSocialLinks;
+ design?:SiteDesignPreferences;
 };
 export type SiteProposal={id:string;family:SiteFamily;name:string;subtitle:string;data:Data;layout:string;palette:string;
  seoTitle?:string;seoDescription?:string;aiGenerated?:boolean};
