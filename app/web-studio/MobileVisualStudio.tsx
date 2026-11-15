@@ -211,7 +211,7 @@ function editableConfig():Config{
    const emptySection=(["OfferingGrid","PhotoGallery","ProjectShowcase","TeamGrid","FAQList"].includes(kind)&&
     (!Array.isArray(props.items)||props.items.length===0||
      kind==="PhotoGallery"&&!(props.items as Array<Record<string,unknown>>).some(item=>item.image)||
-     kind==="FAQList"&&!(props.items as Array<Record<string,unknown>>).some(item=>String(item.question||"").trim())));
+     kind==="FAQList"&&!(props.items as Array<Record<string,unknown>>).some(item=>String(item.question||"").trim()&&String(item.answer||"").trim())));
    return <div data-vmv-edit-block={String(props.id||"")} data-vmv-block-type={kind} style={{display:"contents"}}>
     {emptyImage||emptySection?
      <div data-vmv-empty="true" style={{padding:"50px 20px",textAlign:"center",border:"1px dashed #bc9bda",
