@@ -131,7 +131,7 @@ export default function CallControl({onBack}:{onBack:()=>void}){
      aria-label="Mensaje de cierre" value={policy.closed_message}
      onChange={e=>patch("closed_message",e.target.value)}/>}
    </section>
-   <div className={styles.summary}><ShieldCheck size={17}/><p>Las reglas se aplican en el servidor a nuevas llamadas. El traductor existente no se modifica.</p></div>
+   <div className={styles.summary}><ShieldCheck size={17}/><p>Reglas para nuevas llamadas; traductor sin cambios.</p></div>
    <button className={styles.primary} type="button" disabled={busy} onClick={()=>void submit()}>
     <Check size={17}/> {busy?"Procesando…":"Guardar configuración"}</button>
   </div>}
