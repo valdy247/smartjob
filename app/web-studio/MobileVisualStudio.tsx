@@ -589,6 +589,31 @@ export default function MobileVisualStudio({
     <span>{selection.kind==="image"?"Imagen":selection.kind==="button"?"Botón":selection.kind==="text"?"Texto":"Sección"}</span>
     <button aria-label="Cerrar edición" onClick={closePopup}><X size={17}/></button>
    </div>
+   <div className={styles.floatContent}>
+    <button type="button" className={styles.insertBelow} onClick={()=>{
+     setInsertAfterId(selection.id);
+     setDrawer(true);
+     setSection("create");
+     closePopup();
+    }}><Plus size={17}/> Añadir debajo</button>
+    <button type="button" className={styles.duplicateSection} onClick={()=>{
+     const copy=duplicateBlock(data,selection.id);
+     if(!copy.newId)return;
+     onChange(copy.data);
+     setSelection({...selection,id:copy.newId,kind:"section",target:undefined,index:undefined,key:undefined});
+    }}><Copy size={17}/> Duplicar sección</button>
+    <button type="button" className={styles.dragSection}
+     onPointerDown={beginDrag} onPointerMove={moveDrag}
+     onPointerUp={endDrag} onPointerCancel={cancelDrag}
+     onLostPointerCapture={cancelDrag} aria-label="Arrastrar sección para cambiar su posición">
+     <GripVertical size={18}/> Mantén y arrastra para mover
+    </button>
+    {dragHint?<span className={styles.dragHint} role="status">{dragHint}</span>:null}
+    <button type="button" className={styles.deleteSection}
+     onClick={()=>setDeleteTarget({id:selection.id,label:String(props.title||"esta sección").slice(0,70)})}>
+     <Trash2 size={17}/> Eliminar sección
+    </button>
+   </div>
    {selection.kind==="image"&&image?<div className={styles.floatContent}>
     <div className={styles.chips}>
      <button onClick={()=>setAdjust("actions")} aria-pressed={adjust==="actions"}><ImagePlus size={15}/> Reemplazar</button>
@@ -598,6 +623,17 @@ export default function MobileVisualStudio({
     {adjust==="actions"?<BuilderImageField value={targetImage(props,image)}
      onChange={url=>editImage(image,{[image.field]:url})}/>:null}
     {adjust==="image"?<div className={styles.controls}>
+     {block.type==="HeroVisual"?<label className={styles.formLabel}>
+      Encuadre de la portada
+      <select value={String(props.imagePosition||"center")}
+       onChange={e=>edit({imagePosition:e.target.value})}>
+       <option value="center">Centro</option>
+       <option value="top">Arriba</option>
+       <option value="bottom">Abajo</option>
+       <option value="left">Izquierda</option>
+       <option value="right">Derecha</option>
+      </select>
+     </label>:null}
      <RangeField label="Transparencia" min={0} max={100} value={targetSettings(props,image).imageOpacity??0}
       onChange={v=>editImage(image,{imageOpacity:v})}/>
      <RangeField label="Esquinas" min={0} max={80} unit="px" value={targetSettings(props,image).imageRadius??16}
@@ -653,7 +689,7 @@ export default function MobileVisualStudio({
       <RangeField label="Tamaño del texto del botón" min={11} max={36} unit="px"
        value={typeof props.buttonFontSize==="number"&&props.buttonFontSize>=11?props.buttonFontSize:13}
        onChange={v=>edit({buttonFontSize:v})}/>
-      <ColorField label="Color del texto y del ícono" value={props.buttonTextColor}
+      <ColorField label="Color del texto" value={props.buttonTextColor}
        allowTransparent onChange={v=>edit({buttonTextColor:v})}/>
       <ColorField label="Color de fondo del botón" value={props.buttonColor}
        allowTransparent onChange={v=>edit({buttonColor:v})}/>
@@ -706,31 +742,7 @@ export default function MobileVisualStudio({
     <BuilderImageField value={String(props.image||"")}
      onChange={url=>edit({image:url,layout:"cover"})}/>
    </div>:null}
-   <div className={styles.floatContent}>
-    <button type="button" className={styles.insertBelow} onClick={()=>{
-     setInsertAfterId(selection.id);
-     setDrawer(true);
-     setSection("create");
-     closePopup();
-    }}><Plus size={17}/> Añadir debajo</button>
-    <button type="button" className={styles.duplicateSection} onClick={()=>{
-     const copy=duplicateBlock(data,selection.id);
-     if(!copy.newId)return;
-     onChange(copy.data);
-     setSelection({...selection,id:copy.newId,kind:"section",target:undefined,index:undefined,key:undefined});
-    }}><Copy size={17}/> Duplicar sección</button>
-    <button type="button" className={styles.dragSection}
-     onPointerDown={beginDrag} onPointerMove={moveDrag}
-     onPointerUp={endDrag} onPointerCancel={cancelDrag}
-     onLostPointerCapture={cancelDrag} aria-label="Arrastrar sección para cambiar su posición">
-     <GripVertical size={18}/> Mantén y arrastra para mover
-    </button>
-    {dragHint?<span className={styles.dragHint} role="status">{dragHint}</span>:null}
-    <button type="button" className={styles.deleteSection}
-     onClick={()=>setDeleteTarget({id:selection.id,label:String(props.title||"esta sección").slice(0,70)})}>
-     <Trash2 size={17}/> Eliminar sección
-    </button>
-   </div>
+
   </div>:null}
   {deleteTarget?<div className={styles.confirmScrim}>
    <section className={styles.confirmDialog} role="alertdialog" aria-modal="true"
