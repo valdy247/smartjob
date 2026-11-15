@@ -746,3 +746,25 @@
  margin-block:0!important;
  transform:none!important;
 }
+
+/* Hero imagery remains within a section whose height grows to preserve all content. */
+.vmv-site .vmv-hero-visual{
+ padding-block-start:var(--hero-space-before,0px);
+ padding-block-end:var(--hero-space-after,0px);
+ box-sizing:border-box;
+}
+.vmv-site .vmv-hero-image>.vmv-managed-image,
+.vmv-site .vmv-hero-cover>.vmv-managed-image{
+ margin-block:0!important;
+ transform:translateX(var(--image-x,0px));
+}
+@container(max-width:700px){
+ .vmv-site .vmv-hero-visual{
+  padding-block-start:var(--hero-space-before-mobile,0px);
+  padding-block-end:var(--hero-space-after-mobile,0px);
+ }
+ .vmv-site .vmv-hero-image>.vmv-managed-image,
+ .vmv-site .vmv-hero-cover>.vmv-managed-image{
+  transform:translateX(var(--image-x-mobile,0px));
+ }
+}
