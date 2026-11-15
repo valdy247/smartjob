@@ -75,8 +75,11 @@ export default function WebBuilderWorkspace(){
  const [recovery,setRecovery]=useState<LocalBackup|null>(null);
  const blockedAutosaveRef=useRef("");
  const [view,setView]=useState<View>("sites");
- const [creationMode,setCreationMode]=useState<"templates"|"ai">("templates");
- useEffect(()=>{setCreationMode(new URLSearchParams(window.location.search).get("mode")==="ai"?"ai":"templates");},[]);
+ const [creationMode,setCreationMode]=useState<"sites"|"templates"|"ai">("sites");
+ useEffect(()=>{
+  const param=new URLSearchParams(window.location.search).get("mode");
+  setCreationMode(param==="ai"?"ai":param==="templates"?"templates":"sites");
+ },[]);
  const [mobileSettings,setMobileSettings]=useState(false);
  const [mobileAdvanced,setMobileAdvanced]=useState(false);
  const [mobilePageForm,setMobilePageForm]=useState(false);
@@ -676,7 +679,7 @@ export default function WebBuilderWorkspace(){
  }
  function back(){
   if(dirty&&!window.confirm("Hay cambios sin guardar. ¿Salir?"))return;
-  setSite(null);setPage(null);setPublishedIds([]);setPublishedSignatures({});setView("sites");setMobileSettings(false);setMobilePageForm(false);setMobilePageMenu(false);setError("");setNotice("");
+  setSite(null);setPage(null);setPublishedIds([]);setPublishedSignatures({});setView("sites");setCreationMode("sites");setMobileSettings(false);setMobilePageForm(false);setMobilePageMenu(false);setError("");setNotice("");
  }
  if(loading)return <main className={styles.loading}>Cargando Web Studio…</main>;
  if(compactStudio&&site&&page&&view==="editor")return <MobileVisualStudio
@@ -779,24 +782,43 @@ export default function WebBuilderWorkspace(){
   {error?<div className={styles.error} role="alert">{error}</div>:null}
   {notice?<div className={styles.notice} role="status">{notice}</div>:null}
   {!site?<main className={styles.landing}>
-   {creationMode==="ai"?<WebAiWizard ownerId={userId} busy={busy} onChoose={(input,proposal)=>void createSite(input,proposal)}/>:<WebSiteIntake ownerId={userId} busy={busy} onChoose={(input,proposal)=>void createSite(input,proposal)}/>}
-   {classicDraft?<button type="button" className={styles.importClassic} disabled={busy}
-    onClick={()=>void importClassic()}><Layers size={18}/> Importar mi web actual al editor visual</button>:null}
-   <h2>Mis sitios</h2>
-   <div className={styles.siteList}>
-    {sites.map(s=><article key={s.id} className={styles.siteCard}>
-     <button type="button" className={styles.siteOpen} disabled={busy}
-      onClick={()=>void selectSite(s)} aria-label={"Abrir sitio "+s.name+" "+s.slug}>
-      <Globe size={23}/><strong>{s.name}</strong><small>{s.slug}</small><span>Abrir ↗</span>
-     </button>
-     <button type="button" className={styles.siteDelete} disabled={busy}
-      onClick={()=>{setDeleteTarget(s);setDeleteConfirmation("");setDeleteError("");}} aria-label={"Eliminar sitio "+s.name+" "+s.slug}>
-      <Trash2 size={15}/> Eliminar
-     </button>
-    </article>)}
-    {!sites.length?<p>Tu primer sitio comienza aquí.</p>:null}
-   </div>
-  </main>:<main className={styles.main}>
+   {creationMode==="templates"?<WebSiteIntake ownerId={userId} busy={busy}
+    onChoose={(input,proposal)=>void createSite(input,proposal)}/>:
+    creationMode==="ai"?<WebAiWizard ownerId={userId} busy={busy}
+    onChoose={(input,proposal)=>void createSite(input,proposal)}/>:null}
+   {creationMode==="sites"?<>
+    <header className={styles.libraryHeading}>
+     <div><small>WEB STUDIO</small>
+      <h1>{language==="en"?"My sites & drafts":"Mis sitios y borradores"}</h1>
+      <p>{language==="en"?"Open an existing website or create a new one.":"Abre una web existente o crea una nueva."}</p>
+     </div>
+    </header>
+    <div className={styles.libraryCreate}>
+     <a href="/web-studio?mode=templates"><Plus size={18}/>
+      {language==="en"?"Create with templates":"Crear con plantillas"}</a>
+     <a href="/web-studio?mode=ai"><Plus size={18}/>
+      {language==="en"?"Create with AI":"Crear con IA"}</a>
+    </div>
+    {classicDraft?<button type="button" className={styles.importClassic} disabled={busy}
+     onClick={()=>void importClassic()}><Layers size={18}/> Importar mi web actual al editor visual</button>:null}
+    <div className={styles.siteList}>
+     {sites.map(s=><article key={s.id} className={styles.siteCard}>
+      <button type="button" className={styles.siteOpen} disabled={busy}
+       onClick={()=>void selectSite(s)} aria-label={"Abrir sitio "+s.name+" "+s.slug}>
+       <Globe size={23}/><strong>{s.name}</strong><small>{s.slug}</small>
+       <span>{language==="en"?"Open editor":"Abrir editor"} ↗</span>
+      </button>
+      <button type="button" className={styles.siteDelete} disabled={busy}
+       onClick={()=>{setDeleteTarget(s);setDeleteConfirmation("");setDeleteError("");}}
+       aria-label={"Eliminar sitio "+s.name+" "+s.slug}>
+       <Trash2 size={15}/> {language==="en"?"Delete":"Eliminar"}
+      </button>
+     </article>)}
+     {!sites.length?<p className={styles.libraryEmpty}>{language==="en"?
+      "No websites yet. Create one with templates or AI.":
+      "Todavía no tienes sitios. Empieza con plantillas o IA."}</p>:null}
+    </div>
+   </>:null}  </main>:<main className={styles.main}>
    <div className={styles.desktopSiteControls}>
    <div className={styles.siteHeading}>
     <div><small>SITIO WEB</small><h1>{site.name}</h1></div>
