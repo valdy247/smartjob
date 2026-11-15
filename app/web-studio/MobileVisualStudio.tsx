@@ -684,7 +684,7 @@ export default function MobileVisualStudio({
    if(!target)return;
    // Tapping blank page chrome dismisses the inspector; tapping an editable
    // block leaves the selection flow alone so another block can open directly.
-   if(target.closest(`.${styles.floating},.${styles.visualMenuScrim},.${styles.visualToolTray},.${styles.sizeRail},.${styles.menuButton},.${styles.historyBar}`))return;
+   if(target.closest(`.${styles.mobileEditingTools},.${styles.floating},.${styles.visualMenuScrim},.${styles.visualToolTray},.${styles.sizeRail},.${styles.menuButton},.${styles.historyBar}`))return;
    if(target.closest("[data-vmv-edit-block]"))return;
    closePopup();
   }}>
