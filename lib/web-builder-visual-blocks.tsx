@@ -5,6 +5,8 @@ import BuilderEditableImage from "@/app/web-studio/BuilderEditableImage";
 import {imageSettingsField} from "@/app/web-studio/BuilderImageControls";
 import {normalizeImageSettings,imageSettingsStyle} from "./web-builder-images";
 import {safeWebImageUrl} from "./web-services-site";
+import {buttonAppearance} from "./web-builder-button-appearance";
+import {ArrowUpRight} from "lucide-react";
 
 export type VisualBlockName="HeroVisual"|"OfferingGrid"|"PhotoGallery"|"ProcessSteps"|"ProjectShowcase"|"HoursArea"|"TeamGrid"|"PricingList"|"BeforeAfter"|"FAQList";
 type VisualProps=Record<string,unknown>;
@@ -60,20 +62,26 @@ export const visualBlocks:Config["components"]={
    imagePosition:{type:"select",options:[{label:"Centro",value:"center"},{label:"Arriba",value:"top"},{label:"Abajo",value:"bottom"},{label:"Izquierda",value:"left"},{label:"Derecha",value:"right"}]},
    shade:{type:"select",options:[{label:"Suave",value:"soft"},{label:"Medio",value:"medium"},{label:"Alto contraste",value:"strong"}]},
    height:{type:"select",options:[{label:"Normal",value:"normal"},{label:"Alta",value:"tall"}]},
-   buttonStyle:{type:"select",options:[{label:"Sólido",value:"solid"},{label:"Contorno",value:"outline"},{label:"Enlace",value:"link"}]}
+   buttonStyle:{type:"select",options:[{label:"Sólido",value:"solid"},{label:"Contorno",value:"outline"},{label:"Enlace",value:"link"}]},
+    buttonColor:colorEditorField("Color de fondo del botón"),
+    buttonTextColor:colorEditorField("Color de texto y flecha"),
+    buttonFontSize:numericEditorField("fontSize")
   },
-  defaultProps:{layout:"split",eyebrow:"",title:"Presenta tu negocio",description:"",buttonText:"Contactar",buttonUrl:"#contacto",image:"",imageAlt:"",align:"left",imagePosition:"center",shade:"medium",height:"normal",buttonStyle:"solid",imageWidth:100,imageRadius:0,imageOpacity:0,imageBorder:0,borderColor:"#30243F",imageMoveX:0,imageMoveY:0,titleFont:"site",titleColor:"",titleFontSize:0,titleShadow:"none",titleWeight:"normal",titleItalic:"no",titleLink:""},
+  defaultProps:{layout:"split",eyebrow:"",title:"Presenta tu negocio",description:"",buttonText:"Contactar",buttonUrl:"#contacto",image:"",imageAlt:"",align:"left",imagePosition:"center",shade:"medium",height:"normal",buttonStyle:"solid",buttonColor:"",buttonTextColor:"",buttonFontSize:0,imageWidth:100,imageRadius:0,imageOpacity:0,imageBorder:0,borderColor:"#30243F",imageMoveX:0,imageMoveY:0,titleFont:"site",titleColor:"",titleFontSize:0,titleShadow:"none",titleWeight:"normal",titleItalic:"no",titleLink:""},
   renderFields:({fields})=><>
    <fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.eyebrow}{fields.title}{fields.description}{fields.buttonText}{fields.buttonUrl}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Estilo del título</legend>{fields.titleFont}{fields.titleColor}
     {fields.titleFontSize}{fields.titleShadow}{fields.titleWeight}{fields.titleItalic}{fields.titleLink}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.align}{fields.height}{fields.buttonStyle}</fieldset>
+    <fieldset className="vmv-puck-field-group"><legend>Botón · Colores y tamaño</legend>
+     {fields.buttonTextColor}{fields.buttonColor}{fields.buttonFontSize}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Imagen · Reemplazar y ajustar</legend>
     {fields.image}{fields.imageAlt}{fields.imageWidth}{fields.imageRadius}{fields.imageOpacity}
     {fields.imageBorder}{fields.borderColor}{fields.imageMoveX}{fields.imageMoveY}
     {fields.imagePosition}{fields.shade}</fieldset>
   </>,
-  render:({id,layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,height,buttonStyle,imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,titleFont,titleColor,titleFontSize,titleShadow,titleWeight,titleItalic,titleLink,puck,...responsive})=>{
+  render:({id,layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,height,buttonStyle,buttonColor,buttonTextColor,buttonFontSize,imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,titleFont,titleColor,titleFontSize,titleShadow,titleWeight,titleItalic,titleLink,puck,...responsive})=>{
+   const appearance=buttonAppearance({buttonColor,buttonTextColor,buttonFontSize});
    const href=typeof buttonUrl==="string"&&(buttonUrl.startsWith("#")||buttonUrl.startsWith("mailto:")||buttonUrl.startsWith("tel:"))?buttonUrl:"#contacto";
    const position=["top","bottom","left","right"].includes(imagePosition)?imagePosition:"center";
    const media=photo(image);
@@ -112,7 +120,9 @@ export const visualBlocks:Config["components"]={
       <a href={safeTitleLink} style={{color:"inherit",textDecoration:"inherit"}}>{title||"Presenta tu negocio"}</a>:
       title||"Presenta tu negocio"}</h1>
      {description?<p>{description}</p>:null}
-     <a className="vmv-site-button" data-button-style={buttonStyle||"solid"} href={href}>{buttonText||"Contactar"} <span aria-hidden="true">↗</span></a>
+     <a className="vmv-site-button" data-button-style={buttonStyle||"solid"}
+       data-vmv-override-background={appearance.hasBackground} data-vmv-override-foreground={appearance.hasForeground}
+       style={appearance.style} href={href}>{buttonText||"Contactar"} <ArrowUpRight size={18} aria-hidden="true"/></a>
     </div>
     {layout!=="cover"&&(media||puck.isEditing)?<div className="vmv-hero-image">
      <BuilderEditableImage id={id} src={image} alt={imageAlt||"Imagen de portada"} settings={settings}
@@ -267,7 +277,7 @@ export const visualBlocks:Config["components"]={
  }
 };
 const SCHEMA:Record<VisualBlockName,{strings:string[];images:string[];arrays?:Record<string,{strings:string[];images:string[]}>}>={
- HeroVisual:{strings:["layout","eyebrow","title","description","buttonText","buttonUrl","imageAlt","align","imagePosition","shade","height","buttonStyle","titleFont","titleColor","titleShadow","titleWeight","titleItalic","titleLink"],images:["image"]},
+ HeroVisual:{strings:["layout","eyebrow","title","description","buttonText","buttonUrl","imageAlt","align","imagePosition","shade","height","buttonStyle","buttonColor","buttonTextColor","titleFont","titleColor","titleShadow","titleWeight","titleItalic","titleLink"],images:["image"]},
  OfferingGrid:{strings:["title","description","layout","padding","surface","columns","showPrices"],images:[],arrays:{items:{strings:["title","description","alt","price","titleColor","descriptionColor","priceColor"],images:["image"]}}},
  PhotoGallery:{strings:["title","description","layout","padding","surface"],images:[],arrays:{items:{strings:["alt","caption"],images:["image"]}}},
  ProcessSteps:{strings:["title","padding","surface"],images:[],arrays:{items:{strings:["title","description"],images:[]}}},
@@ -288,6 +298,10 @@ export function normalizeVisualProps(type:VisualBlockName,props:Record<string,un
   safe[field]=value;
  }
  if(type==="HeroVisual"){
+  for(const key of ["buttonColor","buttonTextColor"])
+   safe[key]=/^#[\da-f]{6}$/i.test(String(safe[key]))?safe[key]:"";
+  safe.buttonFontSize=typeof props.buttonFontSize==="number"&&Number.isFinite(props.buttonFontSize)?
+   Math.max(0,Math.min(36,Math.round(props.buttonFontSize))):0;
   safe.titleFontSize=typeof props.titleFontSize==="number"&&Number.isFinite(props.titleFontSize)?
    Math.max(0,Math.min(110,Math.round(props.titleFontSize))):0;
   safe.titleFont=["site","modern","editorial","rounded","geometric","mono"].includes(String(safe.titleFont))?
