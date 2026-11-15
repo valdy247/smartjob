@@ -244,7 +244,7 @@ export default function WebBuilderWorkspace(){
  async function deleteSite(target:Site){
   if(busy||!userId)return;
   const confirmation=window.prompt(
-   "Eliminar «"+target.name+"» es permanente: se borrarán sus páginas, borradores, historial y versiones publicadas.\\n"+
+   "Eliminar «"+target.name+"» es permanente: se borrarán sus páginas, borradores, historial y versiones publicadas.\n"+
    "Escribe este identificador para confirmar: "+target.slug
   );
   if(confirmation!==target.slug)return;
@@ -298,7 +298,10 @@ export default function WebBuilderWorkspace(){
     p_home_draft:normalizeBuilderDocument(proposal.data),
     p_home_description:(proposal.seoDescription||intake.about).slice(0,300),p_legacy_source_slug:null
    });
-   if(rpcError||!ids?.siteId||!ids?.pageId)throw new Error("No se pudo crear el sitio. Revisa el límite de sitios.");
+   if(rpcError||!ids?.siteId||!ids?.pageId){
+    const reachedLimit=/límite de cinco sitios/i.test(String(rpcError?.message||""));
+    throw new Error(reachedLimit?"Has alcanzado el máximo de sitios para tu cuenta.":"No se pudo crear el sitio. Inténtalo de nuevo o revisa los datos del negocio.");
+   }
    const loaded=await loadCreatedSite(db,ids);
    const created=loaded.created;
    let home=loaded.home;
