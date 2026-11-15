@@ -1,4 +1,4 @@
-import type {Config,Data} from "@puckeditor/core";
+import {FieldGroup,FieldTab,type Config,type Data} from "@puckeditor/core";
 import BuilderEditableImage from "@/app/web-studio/BuilderEditableImage";
 import {normalizeImageSettings} from "./web-builder-images";
 import type {CSSProperties} from "react";
@@ -29,14 +29,29 @@ function ContactButton({label,url}:ButtonProps){
  return <a className="vmv-site-button" href={safeLink(url)}>{label||"Contáctanos"}</a>;
 }
 export const VMV_BUILDER_BLOCKS=[
- "Hero","Heading","Text","Image","Services","Benefits","CTA","Quote","Spacer","FAQ","Contact",...VISUAL_BLOCK_NAMES,...COMPOSE_BLOCK_NAMES
+ "Hero","Heading","Text","RichText","Image","Services","Benefits","CTA","Quote","Spacer","FAQ","Contact",...VISUAL_BLOCK_NAMES,...COMPOSE_BLOCK_NAMES
 ] as const;
 type BlockName=typeof VMV_BUILDER_BLOCKS[number];
 const text=(limit:number)=>(value:unknown)=>typeof value==="string"?value.slice(0,limit):"";
+/** Allow only safe Tiptap formatting tags. Never preserve inline handlers or arbitrary HTML attributes. */
+function safeRichMarkup(input:unknown):string{
+ if(typeof input!=="string")return "";
+ const source=input.slice(0,8000)
+  .replace(/<!--([\s\S]*?)-->/g,"")
+  .replace(/<\s*(script|style|iframe|object|svg|math|form|template)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi,"");
+ const allowed=new Set(["p","br","strong","b","em","i","u","s","strike","blockquote","ul","ol","li","h2","h3","h4","code","pre","hr"]);
+ return source.replace(/<\/?[a-z][^>]*>/gi,(tag)=>{
+  const name=/^<\s*\/?\s*([a-z0-9]+)/i.exec(tag)?.[1]?.toLowerCase();
+  if(!name||!allowed.has(name))return "";
+  const close=/^<\s*\//.test(tag);
+  return "<"+(close?"/":"")+name+">";
+ });
+}
 const fieldSchema:Partial<Record<BlockName,Record<string,(value:unknown)=>string>>>= {
  Hero:{eyebrow:text(70),title:text(160),description:text(650),buttonText:text(45),buttonUrl:text(450)},
  Heading:{text:text(170),subtitle:text(350)},
  Text:{title:text(120),body:text(1800)},
+ RichText:{body:safeRichMarkup},
  Image:{url:text(450),alt:text(140),caption:text(180)},
  Services:{title:text(120),first:text(85),second:text(85),third:text(85)},
  Benefits:{title:text(110),first:text(180),second:text(180),third:text(180)},
@@ -194,7 +209,7 @@ const basicText={type:"text" as const};
 export const builderConfig:Config={
  categories:{
   composition:{title:"Composición libre",components:["SectionLayout","ColumnsLayout"],defaultExpanded:true},
-  elements:{title:"Elementos editables",components:["ComposeHeading","ComposeText","ComposeImage","ComposeButton"],defaultExpanded:true},
+  elements:{title:"Elementos editables",components:["ComposeHeading","ComposeText","RichText","ComposeImage","ComposeButton"],defaultExpanded:true},
   sections:{title:"Secciones completas",components:[
    "HeroVisual","OfferingGrid","PhotoGallery","ProjectShowcase","ProcessSteps",
    "HoursArea","TeamGrid","PricingList","BeforeAfter","FAQList"
@@ -273,6 +288,12 @@ export const builderConfig:Config={
    fields:{title:basicText,body:{type:"textarea"}},
    defaultProps:{title:"Acerca de nosotros",body:"Escribe aquí la historia de tu negocio."},
    render:({title,body,...styling})=><section className="vmv-site-section vmv-site-copy"><h2 style={visualTextStyle(styling,"title")}>{title}</h2><p style={visualTextStyle(styling,"body")}>{body}</p></section>
+  },
+  RichText:{
+   label:"Texto con formato",
+   fields:{body:{type:"richtext",contentEditable:true,initialHeight:280}},
+   defaultProps:{body:"<p>Escribe aquí tu contenido.</p>"},
+   render:({body})=><section className="vmv-site-section vmv-site-richtext">{body}</section>
   },
   Image:{
    label:"Imagen",
