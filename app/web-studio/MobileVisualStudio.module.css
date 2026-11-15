@@ -310,3 +310,17 @@
  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
  font-size:11px;font-weight:800;border-radius:10px}
 .sectionQuickActions>.dragHint{grid-column:1/-1}
+
+/* Text styling belongs beside editing, without covering the website canvas. */
+.typographyEditor{display:flex;flex-direction:column;gap:12px;padding:12px;
+ background:#fbf9fe;border:1px solid #e8dcf3;border-radius:12px;min-width:0}
+.typographyHeading{font-size:13px;color:#4a3166;font-weight:850}
+.typographyLabel{font-size:12px;color:#57406b;font-weight:800}
+.typographyEditor :global(.vmv-inspector-fonts){
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.typographyEditor :global(.vmv-inspector-fonts button){
+ min-width:0;min-height:39px;padding:7px 8px;border:1px solid #dfd1eb;
+ border-radius:10px;background:#fff;color:#543b70;font-size:11px;cursor:pointer}
+.typographyEditor :global(.vmv-inspector-fonts button[aria-pressed="true"]){
+ border-color:#8755c8;background:#f2eafd;box-shadow:inset 0 0 0 1px #8755c8}
+.typographyEditor :global(.vmv-inspector-color){min-width:0}
