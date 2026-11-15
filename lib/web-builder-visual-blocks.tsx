@@ -81,25 +81,26 @@ export const visualBlocks:Config["components"]={
    shade:{type:"select",options:[{label:"Suave",value:"soft"},{label:"Medio",value:"medium"},{label:"Alto contraste",value:"strong"}]},
    height:{type:"select",options:[{label:"Normal",value:"normal"},{label:"Alta",value:"tall"}]},
    buttonStyle:{type:"select",options:[{label:"Sólido",value:"solid"},{label:"Contorno",value:"outline"},{label:"Enlace",value:"link"}]},
+   buttonShape:{type:"select",options:[{label:"Redondo",value:"pill"},{label:"Esquinas suaves",value:"rounded"},{label:"Cuadrado",value:"square"}]},
     buttonColor:colorEditorField("Color de fondo del botón"),
     buttonTextColor:colorEditorField("Color del texto"),
     buttonFontSize:numericEditorField("fontSize")
   },
-  defaultProps:{layout:"split",eyebrow:"",title:"Presenta tu negocio",description:"",buttonText:"Contactar",buttonUrl:"#contacto",image:"",imageAlt:"",align:"left",imagePosition:"center",shade:"medium",height:"normal",buttonStyle:"solid",buttonColor:"",buttonTextColor:"",buttonFontSize:0,imageWidth:100,imageRadius:0,imageOpacity:0,imageBorder:0,borderColor:"#30243F",imageMoveX:0,imageMoveY:0,titleFont:"site",titleColor:"",titleFontSize:0,titleShadow:"none",titleWeight:"normal",titleItalic:"no",titleLink:""},
+  defaultProps:{layout:"split",eyebrow:"",title:"Presenta tu negocio",description:"",buttonText:"Contactar",buttonUrl:"#contacto",image:"",imageAlt:"",align:"left",imagePosition:"center",shade:"medium",height:"normal",buttonStyle:"solid",buttonShape:"pill",buttonColor:"",buttonTextColor:"",buttonFontSize:0,imageWidth:100,imageRadius:0,imageOpacity:0,imageBorder:0,borderColor:"#30243F",imageMoveX:0,imageMoveY:0,titleFont:"site",titleColor:"",titleFontSize:0,titleShadow:"none",titleWeight:"normal",titleItalic:"no",titleLink:""},
   renderFields:({fields})=><>
    <fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.eyebrow}{fields.title}{fields.description}{fields.buttonText}{fields.buttonUrl}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Estilo del título</legend>{fields.titleFont}{fields.titleColor}
     {fields.titleFontSize}{fields.titleShadow}{fields.titleWeight}{fields.titleItalic}{fields.titleLink}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.align}{fields.height}{fields.buttonStyle}</fieldset>
     <fieldset className="vmv-puck-field-group"><legend>Botón · Colores y tamaño</legend>
-     {fields.buttonTextColor}{fields.buttonColor}{fields.buttonFontSize}</fieldset>
+     {fields.buttonShape}{fields.buttonTextColor}{fields.buttonColor}{fields.buttonFontSize}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Imagen · Reemplazar y ajustar</legend>
     {fields.image}{fields.imageAlt}{fields.imageWidth}{fields.imageRadius}{fields.imageOpacity}
     {fields.imageBorder}{fields.borderColor}{fields.imageMoveX}{fields.imageMoveY}
     {fields.imagePosition}{fields.shade}</fieldset>
   </>,
-  render:({id,layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,height,buttonStyle,buttonColor,buttonTextColor,buttonFontSize,imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,titleFont,titleColor,titleFontSize,titleShadow,titleWeight,titleItalic,titleLink,puck,...responsive})=>{
-   const appearance=buttonAppearance({buttonColor,buttonTextColor,buttonFontSize});
+  render:({id,layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,height,buttonStyle,buttonShape,buttonColor,buttonTextColor,buttonFontSize,imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,titleFont,titleColor,titleFontSize,titleShadow,titleWeight,titleItalic,titleLink,puck,...responsive})=>{
+   const appearance=buttonAppearance({buttonShape,buttonColor,buttonTextColor,buttonFontSize});
    const href=typeof buttonUrl==="string"&&(buttonUrl.startsWith("#")||buttonUrl.startsWith("mailto:")||buttonUrl.startsWith("tel:"))?buttonUrl:"#contacto";
    const position=["top","bottom","left","right"].includes(imagePosition)?imagePosition:"center";
    const media=photo(image);
@@ -295,7 +296,7 @@ export const visualBlocks:Config["components"]={
  }
 };
 const SCHEMA:Record<VisualBlockName,{strings:string[];images:string[];arrays?:Record<string,{strings:string[];images:string[]}>}>={
- HeroVisual:{strings:["layout","eyebrow","title","description","buttonText","buttonUrl","imageAlt","align","imagePosition","shade","height","buttonStyle","buttonColor","buttonTextColor","titleFont","titleColor","titleShadow","titleWeight","titleItalic","titleLink"],images:["image"]},
+ HeroVisual:{strings:["layout","eyebrow","title","description","buttonText","buttonUrl","imageAlt","align","imagePosition","shade","height","buttonStyle","buttonShape","buttonColor","buttonTextColor","titleFont","titleColor","titleShadow","titleWeight","titleItalic","titleLink"],images:["image"]},
  OfferingGrid:{strings:["title","description","layout","padding","surface","columns","showPrices"],images:[],arrays:{items:{strings:["title","description","alt","price","titleColor","descriptionColor","priceColor"],images:["image"]}}},
  PhotoGallery:{strings:["title","description","layout","padding","surface"],images:[],arrays:{items:{strings:["alt","caption"],images:["image"]}}},
  ProcessSteps:{strings:["title","padding","surface"],images:[],arrays:{items:{strings:["title","description"],images:[]}}},
@@ -319,13 +320,14 @@ export function normalizeVisualProps(type:VisualBlockName,props:Record<string,un
   const font=props[textKey+"Font"],color=props[textKey+"Color"],size=props[textKey+"FontSize"];
   const weight=props[textKey+"Weight"],italic=props[textKey+"Italic"];
   if(font!==undefined)safe[textKey+"Font"]=Object.hasOwn(textFonts,String(font))?font:"site";
-  if(color!==undefined)safe[textKey+"Color"]=/^#[\\da-f]{6}$/i.test(String(color))?color:"";
+  if(color!==undefined)safe[textKey+"Color"]=/^#[\da-f]{6}$/i.test(String(color))?color:"";
   if(size!==undefined)safe[textKey+"FontSize"]=typeof size==="number"&&Number.isFinite(size)?
    Math.max(0,Math.min(110,Math.round(size))):0;
   if(weight!==undefined)safe[textKey+"Weight"]=["light","normal","heavy"].includes(String(weight))?weight:"normal";
   if(italic!==undefined)safe[textKey+"Italic"]=italic==="yes"?"yes":"no";
  }
  if(type==="HeroVisual"){
+  safe.buttonShape=["pill","rounded","square"].includes(String(safe.buttonShape))?safe.buttonShape:"pill";
   for(const key of ["buttonColor","buttonTextColor"])
    safe[key]=/^#[\da-f]{6}$/i.test(String(safe[key]))?safe[key]:"";
   safe.buttonFontSize=typeof props.buttonFontSize==="number"&&Number.isFinite(props.buttonFontSize)?
