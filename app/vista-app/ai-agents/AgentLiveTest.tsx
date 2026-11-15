@@ -106,7 +106,7 @@ export default function AgentLiveTest({agent,onClose,onEdit,onAgentUpdated}:Prop
   <button type="button" className={styles.back} onClick={onClose}><ArrowLeft size={17}/> Mis agentes</button>
   <div className={styles.hero}>
    <span className={styles.avatar}><Bot size={24}/></span>
-   <div><strong>{agent.name}</strong><small>Simulación real · IA conectada · Sin acciones comerciales</small></div>
+   <div><strong>{agent.name}</strong><small>Prueba de IA · sin acciones comerciales</small></div>
   </div>
   <div className={styles.notice}><ShieldCheck size={17}/>
    <span>Esta conversación usa un modelo de IA y se guarda en tu cuenta. No realiza llamadas, reservas, pedidos ni cobros.</span>
@@ -129,7 +129,7 @@ export default function AgentLiveTest({agent,onClose,onEdit,onAgentUpdated}:Prop
   </div>:null}
   <div className={styles.chat} aria-live="polite">
    {loading?<p className={styles.empty}><LoaderCircle size={17}/> Cargando…</p>:messages.length===0?
-    <p className={styles.empty}><MessageCircle size={19}/> Escribe una pregunta real como si fueras un cliente.</p>:
+    <p className={styles.empty}><MessageCircle size={19}/> Escribe una pregunta para probar el agente.</p>:
     messages.map(item=><p key={item.id} className={item.role==="user"?styles.customer:styles.agentReply}>
      <small>{item.role==="user"?"CLIENTE":"AGENTE IA"}</small>
      <span>{item.content}</span>
