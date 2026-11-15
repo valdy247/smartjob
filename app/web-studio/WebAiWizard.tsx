@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
 import dynamic from "next/dynamic";
-import {ArrowLeft,ArrowRight,Check,CheckCircle2,Image as ImageIcon,LoaderCircle,MessageCircle,Package,CalendarDays,Sparkles,ShieldCheck,LayoutTemplate,BookOpen,Layers3} from "lucide-react";
+import {ArrowLeft,ArrowRight,Check,CheckCircle2,Image as ImageIcon,LoaderCircle,MessageCircle,Package,CalendarDays,Sparkles,ShieldCheck,BookOpen,PhoneCall} from "lucide-react";
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {getSupabase} from "@/lib/supabase";
 import {normalizeSocialLinks} from "@/lib/web-builder-social";
@@ -78,7 +78,13 @@ const colorSets=[
  {name:"Elegante",colors:["#76507E","#F3E9D7","#BC954A"]},
  {name:"Vibrante",colors:["#377FC4","#F17969","#E2CF61"]}
 ] as const;
-const stepNames=["Tu negocio","3 colores","Tipografía","Fotos y marcos","Conexiones","Confirmar"];
+const goalOptions=[
+ {id:"quotes",label:"Presupuestos",description:"Que te pidan cotizaciones",icon:MessageCircle},
+ {id:"calls",label:"Llamadas",description:"Que te contacten por teléfono",icon:PhoneCall},
+ {id:"bookings",label:"Citas",description:"Que soliciten una cita",icon:CalendarDays},
+ {id:"orders",label:"Pedidos",description:"Que consulten productos",icon:Package}
+] as const;
+const stepNames=["Tu negocio","Colores","Tu diseño","Fotografías","Conexiones","Confirmar"];
 const toServices=(s:string)=>s.split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean).slice(0,20);
 const fmtPrice=(cents:number)=>"$"+(cents/100).toFixed(2);
 export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy:boolean;onChoose:(input:SiteIntake,proposal:SiteProposal)=>void}){
@@ -253,9 +259,14 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
     <label>Teléfono<input type="tel" maxLength={36} value={form.phone} onChange={e=>patch("phone",e.target.value)}/></label>
     <label>Correo<input type="email" maxLength={180} value={form.email} onChange={e=>patch("email",e.target.value)}/></label>
     <label>Ciudad y zona<input maxLength={180} value={form.city} onChange={e=>patch("city",e.target.value)}/></label>
-    <label>Objetivo<select value={form.objective} onChange={e=>patch("objective",e.target.value)}>
-     <option value="quotes">Conseguir consultas y presupuestos</option><option value="calls">Recibir llamadas</option>
-     <option value="bookings">Solicitar citas</option><option value="orders">Consultar pedidos</option></select></label>
+
+   </div>
+   <h3 className={styles.choiceHeading}>¿Qué quieres conseguir con tu web?</h3>
+   <div className={styles.goalGrid} role="group" aria-label="Objetivo principal de tu página">
+    {goalOptions.map(item=><button type="button" key={item.id}
+     aria-pressed={form.objective===item.id} onClick={()=>patch("objective",item.id)}>
+     <item.icon size={20}/><strong>{item.label}</strong><small>{item.description}</small>
+    </button>)}
    </div>
    <label>Descripción del negocio<textarea value={form.about} rows={3} maxLength={500} onChange={e=>patch("about",e.target.value)}/></label>
    <label>Servicios principales (uno por línea)<textarea value={form.services} rows={3} maxLength={1000} onChange={e=>patch("services",e.target.value)}/></label>
