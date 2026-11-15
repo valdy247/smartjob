@@ -783,3 +783,18 @@
   margin-block-end:var(--hero-space-after-mobile,0px);
  }
 }
+
+/* The selected button owns its foreground and background across every palette
+   and layout. Both overrides are independent; default theme styling remains. */
+.vmv-site a.vmv-site-button[data-vmv-override-foreground="true"]{
+ color:var(--vmv-button-foreground)!important;
+ -webkit-text-fill-color:var(--vmv-button-foreground);
+}
+.vmv-site a.vmv-site-button[data-vmv-override-background="true"]{
+ background:var(--vmv-button-background)!important;
+}
+.vmv-site .vmv-site-button svg{
+ color:inherit!important;
+ stroke:currentColor;
+ flex-shrink:0;
+}
