@@ -730,6 +730,56 @@ export default function MobileVisualStudio({
     {mainCanvas}
    </div>
   </div>
+  {selection&&!drawer&&!preview&&block&&props?<div className={styles.mobileEditingTools}>
+   <div className={styles.visualQuickBar} role="toolbar" aria-label="Herramientas del elemento seleccionado">
+    <span className={styles.visualQuickLabel}>{selection.kind==="button"?"Botón":selection.kind==="image"?"Imagen":selection.kind==="text"?"Texto":"Sección"}</span>
+    <div className={styles.visualQuickScroll}>
+     {menuChoices.map(tool=><button type="button" key={tool.id} aria-pressed={visualTool===tool.id}
+       onClick={()=>pickTool(tool.id)}>{tool.icon}<span>{tool.label}</span></button>)}
+    </div>
+    <button type="button" className={styles.visualQuickClose} aria-label="Cerrar herramientas" onClick={closePopup}><X size={19}/></button>
+   </div>
+   {visualTool!=="menu"&&visualTool!=="actions"?<div className={styles.visualQuickDetail} role="region" aria-label={toolName}>
+    <strong>{toolName}</strong>
+    {visualTool==="content"&&selection.kind!=="image"?<label className={styles.formLabel}>Contenido
+     <textarea rows={2} value={selection.index!==undefined&&Array.isArray(props.items)?
+      String((props.items[selection.index] as Record<string,unknown>)?.[selectedTextKey]||""):
+      String(props[selectedTextKey]||"")}
+      onChange={e=>editText(selectedTextKey,e.target.value,selection.index)}/></label>:null}
+    {visualTool==="size"&&(isButton||isText)?<RangeField label="Tamaño del texto" min={11} max={isButton?36:110} unit="px"
+     value={activeSize} onChange={v=>isButton?edit({buttonFontSize:v}):
+      keys?patchTypography({[keys.size]:v}):undefined}/>:null}
+    {(visualTool==="color"||visualTool==="background")?(isText||isButton)?<ColorField
+     label={visualTool==="background"?"Fondo del botón":"Color del texto y del ícono"}
+     value={currentColor} allowTransparent onChange={patchColor}/>:null:null}
+    {visualTool==="font"&&isText&&keys?<FontField value={values?.[keys.font]||"site"}
+     onChange={v=>patchTypography({[keys.font]:v})}/>:null}
+    {visualTool==="weight"&&isText&&keys?.weight?<RangeField label="Grosor" min={400} max={900} step={100}
+     value={values?.[keys.weight]==="heavy"?900:values?.[keys.weight]==="light"?400:700}
+     onChange={v=>patchTypography({[keys.weight!]:v<550?"light":v>750?"heavy":"normal"})}/>:null}
+    {visualTool==="opacity"&&isImage&&image?<RangeField label="Transparencia" min={0} max={100}
+     value={targetSettings(props,image).imageOpacity??0} onChange={v=>editImage(image,{imageOpacity:v})}/>:null}
+    {visualTool==="image"&&isImage&&image?<BuilderImageField value={targetImage(props,image)}
+     onChange={url=>editImage(image,{[image.field]:url})}/>:null}
+    {visualTool==="link"&&isButton?<label className={styles.formLabel}>Destino
+     <input value={String(props[block.type==="ComposeButton"?"url":"buttonUrl"]||"")}
+      onChange={e=>edit({[block.type==="ComposeButton"?"url":"buttonUrl"]:e.target.value})}/></label>:null}
+    {visualTool==="shape"&&isButton?<div className={styles.chips}>
+     {["solid","outline","link"].map(shape=><button type="button" key={shape}
+      aria-pressed={String(props[block.type==="ComposeButton"?"style":"buttonStyle"]||"solid")===shape}
+      onClick={()=>edit({[block.type==="ComposeButton"?"style":"buttonStyle"]:shape})}>{shape==="solid"?"Sólido":shape==="outline"?"Contorno":"Enlace"}</button>)}
+    </div>:null}
+    {visualTool==="shade"&&block.type==="HeroVisual"?<div className={styles.chips}>
+     {["soft","medium","strong"].map(shade=><button type="button" key={shade} aria-pressed={props.shade===shade}
+      onClick={()=>edit({shade})}>{shade==="soft"?"Suave":shade==="medium"?"Medio":"Fuerte"}</button>)}
+    </div>:null}
+    {visualTool==="frame"&&isImage&&image?<RangeField label="Esquinas" min={0} max={80} unit="px"
+     value={targetSettings(props,image).imageRadius??0}
+     onChange={v=>editImage(image,{imageRadius:v})}/>:null}
+    {!["content","size","color","background","font","weight","opacity","image","link","shape","shade","frame"].includes(visualTool)?
+     <button type="button" onClick={()=>setVisualTool("actions")}>Más ajustes <ChevronRight size={16}/></button>:null}
+   </div>:null}
+  </div>:null}
   {error&&errorDismissed!==error?<div className={styles.statusAlert} role="alert">
    <span>{error}</span><button aria-label="Cerrar aviso" onClick={()=>setErrorDismissed(error)}><X size={15}/></button>
   </div>:noticeVisible?<div className={styles.statusToast} role="status">{notice}</div>:null}
