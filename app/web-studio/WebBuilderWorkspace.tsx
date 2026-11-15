@@ -935,7 +935,7 @@ export default function WebBuilderWorkspace(){
       <Puck key={page.id+"-"+refreshKey} dictionary={dictionary} config={builderConfig} dnd={{enableDragHandle:true}}
        overrides={{headerActions:({children})=><><BuilderHistoryControls/><BuilderQuickAdd compact={compactStudio} enabled={!previewMode&&view==="editor"}/>{compactStudio?null:children}</>,
         actionBar:({children,label})=><BuilderSelectedActions label={label||"Elemento"}>{children}</BuilderSelectedActions>}}
-       data={initialDocument} height={compactStudio?"calc(100dvh - 225px)":"75vh"}
+       data={initialDocument} height={compactStudio?"max(850px, 135dvh)":"75vh"}
        onChange={data=>setDocument(data)}
        onPublish={publish} />
      </div>
