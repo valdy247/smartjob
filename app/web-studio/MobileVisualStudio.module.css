@@ -248,3 +248,18 @@
  }
  .stage[data-inspecting=true] .floatHead{min-height:45px;}
 }
+
+/* Confirm a mobile block removal before editing the saved draft. */
+.deleteSection{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;min-height:45px;
+ border:1px solid #e6b9c1;border-radius:11px;background:#fff5f6;color:#a12e45;font-weight:800;font-size:13px;cursor:pointer}
+.confirmScrim{position:fixed;inset:0;z-index:1600;display:grid;place-items:center;padding:18px;
+ background:rgba(29,20,40,.6);box-sizing:border-box}
+.confirmDialog{width:min(430px,100%);padding:22px 18px;background:white;border-radius:17px;
+ border:1px solid #e6d8ec;box-shadow:0 20px 60px #21172f55;box-sizing:border-box}
+.confirmDialog h2{margin:0 0 8px;font-size:18px;color:#34263e}
+.confirmDialog p{font-size:13px;line-height:1.5;color:#6b5978;margin:0 0 21px}
+.confirmButtons{display:flex;gap:10px;justify-content:flex-end}
+.confirmButtons button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:44px;
+ padding:10px 16px;border:1px solid #ddd0e5;border-radius:10px;background:white;
+ font-size:13px;font-weight:800;color:#4d3960;cursor:pointer}
+.confirmButtons .confirmRemove{background:#b72d4c;border-color:#b72d4c;color:white}
