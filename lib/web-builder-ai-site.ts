@@ -93,7 +93,46 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
    id:"ai-faq",title:"Preguntas frecuentes",items:faqs,padding:"normal",surface:"soft"
   }});
  }
- const data=normalizeBuilderDocument({root:base.data.root,content});
+ // Owner choices become verified editor properties, never arbitrary model-written CSS.
+ const design=input.design;
+ if(design?.features.inventory){
+  const productBlock=content.find(item=>item.type==="OfferingGrid");
+  if(productBlock&&input.products?.length)productBlock.props.title="Productos de "+input.business;
+  else if(productBlock&&!input.offerings.length){
+   productBlock.props.title="Nuestros productos";
+   productBlock.props.description="Catálogo editable. Agrega productos desde el Editor 2.0.";
+  }
+ }
+ if(design?.features.booking&&!content.some(item=>item.type==="CTA"&&String(item.props.id)==="ai-booking")){
+  const idx=content.findIndex(item=>item.type==="Contact");
+  content.splice(idx<0?content.length:idx,0,{type:"CTA",props:{
+   id:"ai-booking",title:"¿Quieres reservar una cita?",description:"Cuéntanos qué necesitas y confirmaremos la disponibilidad.",
+   buttonText:"Solicitar cita",buttonUrl:"#solicitud"
+  }});
+ }
+ const frame:Record<string,{radius:number;border:number}>={
+  rounded:{radius:22,border:0},square:{radius:0,border:0},
+  pill:{radius:70,border:0},bordered:{radius:14,border:5}
+ };
+ if(design){
+  const imageFrame=frame[design.imageStyle]||frame.rounded;
+  for(const item of content){
+   if(item.type==="HeroVisual"||item.type==="Image"){
+    item.props.imageRadius=imageFrame.radius;
+    item.props.imageBorder=imageFrame.border;
+    item.props.borderColor=design.colors[2];
+   }
+  }
+ }
+ const rootProps={...(base.data.root?.props||{}) as Record<string,unknown>};
+ if(design){
+  rootProps.font=design.font;
+  rootProps.accentColor=design.colors[0];
+  rootProps.secondaryColor=design.colors[1];
+  rootProps.tertiaryColor=design.colors[2];
+  rootProps.chatMode=design.chatMode;
+ }
+ const data=normalizeBuilderDocument({root:{props:rootProps},content});
  const issue=validateBuilderDocument(data);
  if(issue)throw new Error(issue);
  const seoTitle=titleForSearch(seo.title,input);
@@ -151,6 +190,7 @@ export function aiSiteRequestContext(input:SiteIntake,creativeDirection:string,p
   products:(input.products||[]).slice(0,24).map(x=>({name:x.title.slice(0,120),
    description:x.description.slice(0,320)})),
   imagesAvailable:input.photos.filter(Boolean).length,
+  preferences:input.design?{colors:input.design.colors,font:input.design.font,imageStyle:input.design.imageStyle,features:input.design.features}:undefined,
   direction:creativeDirection.slice(0,400),pageName:pageName.slice(0,80)
  };
 }
