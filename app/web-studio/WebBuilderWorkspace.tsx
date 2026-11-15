@@ -520,7 +520,7 @@ export default function WebBuilderWorkspace(){
   }catch(e){setError(e instanceof Error?e.message:"No se pudo publicar");}
   finally{setBusy(false);}
  }
- async function openHistory(){
+ async function openHistory(navigate=true){
   if(!page)return;
   setBusy(true);setError("");
   try{
@@ -529,7 +529,7 @@ export default function WebBuilderWorkspace(){
     .select("id,page_id,version,title,description,document,created_at")
     .eq("page_id",page.id).eq("owner_id",userId).order("version",{ascending:false}).limit(25);
    if(error)throw new Error("No se pudo cargar el historial");
-   setRevisions((data||[]) as Revision[]);setView("history");
+   setRevisions((data||[]) as Revision[]);if(navigate)setView("history");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo cargar");}
   finally{setBusy(false);}
  }
@@ -557,7 +557,7 @@ export default function WebBuilderWorkspace(){
   }catch(e){setError(e instanceof Error?e.message:"No se pudo recuperar");}
   finally{setBusy(false);}
  }
- async function openDomains(){
+ async function openDomains(navigate=true){
   if(!site)return;
   setBusy(true);setError("");
   try{
@@ -573,7 +573,7 @@ export default function WebBuilderWorkspace(){
    if(result.error||requests.error)throw new Error("No se pudieron consultar los dominios");
    setDomains((result.data||[]) as Domain[]);
    setDomainRequests((requests.data||[]) as DomainRequest[]);
-   setView("domains");
+   if(navigate)setView("domains");
   }catch(e){setError(e instanceof Error?e.message:"No se pudieron cargar");}
   finally{setBusy(false);}
  }
@@ -693,7 +693,15 @@ export default function WebBuilderWorkspace(){
   title={title} description={description} onTitleChange={setTitle} onDescriptionChange={setDescription}
   inquiriesEnabled={site.inquiries_enabled}
   onToggleInquiries={enabled=>void toggleRequests(enabled)}
-  onDomains={()=>void openDomains()} onHistory={()=>void openHistory()}
+  domains={domains} domainRequests={domainRequests} domainInput={domainInput}
+  domainQuote={domainQuote} quote={quote} onDomainInput={setDomainInput}
+  onCheckDomain={()=>void checkDomain()} onSubmitDomainRequest={intent=>void submitDomainRequest(intent)}
+  onVerifyDomain={(hostname,action)=>void requestDomainVerification(hostname,action)}
+  revisions={revisions} onRestoreRevision={revision=>void restore(revision)}
+  error={error} notice={notice} savePhase={savePhase}
+  recoveryAvailable={Boolean(recovery?.pageId===page.id)}
+  onRecover={recoverLocal} onDiscardRecovery={discardLocal}
+  onDomains={()=>void openDomains(false)} onHistory={()=>void openHistory(false)}
  />;
 
  if(!userId)return <main className={styles.loading}><h2>Inicia sesión para crear tu web</h2>
