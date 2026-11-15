@@ -200,10 +200,7 @@ function MarketingWorkspace(){
     <div className={styles.heroIntro}>
      <span className={styles.eyebrow}><TrendingUp size={16}/> {translate("marketing.copy.more_customers_smarter_decisions")}</span>
      <h1>{translate("marketing.copy.marketing_that_drives")} <em>{translate("marketing.copy.growth")}</em></h1>
-     <p>{translate("marketing.copy.stop_guessing_what_to_publish_define_your_offer_take_pr")}</p>
-     <div className={styles.heroPills}><span>{translate("marketing.copy.no_fabricated_metrics")}</span><span>{translate("marketing.copy.results_focused")}</span><span>{translate("marketing.copy.built_for_small_businesses")}</span></div>
     </div>
-    <div className={styles.heroShape}><div><Target size={38}/><strong>{translate("marketing.copy.your_next_customer")}</strong><span>{translate("marketing.copy.start_with_a_clear_strategy")}</span></div></div>
    </section>:null}
    {section!=="actions"?<div className={styles.noticeBand}><ShieldCheck size={18}/><p><strong>{translate("marketing.copy.local_planning")}</strong> {translate("marketing.copy.drafts_and_calculations_on_this_screen_are_not_saved_on")}</p></div>:null}
    <div className={section==="actions"?styles.catalogWorkspace:styles.workspace}>
@@ -212,15 +209,14 @@ function MarketingWorkspace(){
      {localizedTabs.map(tab=><button type="button" key={tab.id} onClick={()=>{setSection(tab.id);setNotice("");}}
       className={section===tab.id?styles.tabActive:styles.tab} aria-current={section===tab.id?"page":undefined}>
        <tab.Icon size={20}/><span><strong>{tab.label}</strong><small>{tab.description}</small></span><ArrowUpRight size={14}/></button>)}
-     <div className={styles.sidebarNote}><Lightbulb size={19}/><strong>{translate("marketing.copy.growth_principle")}</strong><p>{translate("marketing.copy.views_alone_do_not_make_a_successful_campaign_customers")}</p></div>
     </aside>:null}
     <div className={section==="actions"?styles.catalogContent:styles.content}>
      {section==="strategy"?<>
-      <div className={styles.sectionTop}><span>{translate("marketing.copy.step_01_foundations")}</span><h2>{translate("marketing.copy.let_s_understand_your_business")}</h2><p>{translate("marketing.copy.the_best_strategy_depends_on_who_buys_what_they_need_an")}</p></div>
+      <div className={styles.sectionTop}><span>{translate("marketing.copy.step_01_foundations")}</span><h2>{translate("marketing.copy.let_s_understand_your_business")}</h2></div>
       <div className={styles.formGrid}>
        <Field label={translate("marketing.copy.business_name_2")} value={form.business} onChange={v=>patch("business",v)} placeholder={translate("marketing.copy.e_g_my_business")}/>
        <label className={styles.field}><span>{translate("marketing.copy.industry_or_service")}</span>
-        <BusinessCategoryPicker value={form.industry} onChange={value=>patch("industry",value)}/><small>{translate("marketing.copy.standardized_options_help_create_more_consistent_strate")}</small>
+        <BusinessCategoryPicker value={form.industry} onChange={value=>patch("industry",value)}/>
        </label>
        <Field label={translate("marketing.copy.ideal_customer")} value={form.audience} onChange={v=>patch("audience",v)} placeholder={translate("marketing.copy.who_typically_buys_and_why")}/>
        <Field label={translate("marketing.copy.main_offer")} value={form.offer} onChange={v=>patch("offer",v)} placeholder={translate("marketing.copy.what_do_you_sell_and_what_problem_does_it_solve")}/>
