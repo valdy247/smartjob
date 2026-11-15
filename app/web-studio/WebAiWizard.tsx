@@ -66,6 +66,7 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
  const [skipPhotos,setSkipPhotos]=useState(false);
  const [context,setContext]=useState("");
  const [aiState,setAiState]=useState<"checking"|"ready"|"unavailable">("checking");
+ const [aiDailyLimit,setAiDailyLimit]=useState<number|null>(2);
  const [aiError,setAiError]=useState("");
  const [error,setError]=useState("");
  const [generating,setGenerating]=useState(false);
@@ -112,9 +113,9 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
     const {data:{session}}=await db.auth.getSession();
     if(!session?.access_token)throw new Error("Inicia sesión para utilizar IA");
     const res=await fetch("/api/web-services/generate-site",{headers:{Authorization:"Bearer "+session.access_token},cache:"no-store",signal:abort.signal});
-    const info=await res.json() as {enabled?:boolean;reason?:string};
+    const info=await res.json() as {enabled?:boolean;reason?:string;dailyLimit?:number|null};
     if(!res.ok||!info.enabled)throw new Error(info.reason||"La generación de IA no está conectada");
-    if(active)setAiState("ready");
+    if(active){setAiDailyLimit(info.dailyLimit===null?null:typeof info.dailyLimit==="number"?info.dailyLimit:2);setAiState("ready");}
    }catch(e){if(active){setAiState("unavailable");setAiError(e instanceof Error?e.message:"IA no disponible");}}
   })();
   return()=>{active=false;abort.abort();};
@@ -279,7 +280,7 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
     {chat&&replyMode==="agent"&&agentChoice?<div><small>Agente preparado</small><strong>{agentChoice.name} · Chat manual hasta habilitar canal web</strong></div>:null}
    </div>
    <div className={styles.connection} role="status">{aiState==="checking"?<><LoaderCircle size={16}/> Comprobando IA…</>:
-    aiState==="ready"?<><CheckCircle2 size={16}/> Generador de VMV conectado. Hasta 2 generaciones de IA por día.</>:
+    aiState==="ready"?<><CheckCircle2 size={16}/> {aiDailyLimit===null?"Modo de pruebas: sin límite diario por cuenta. Sujeto a la capacidad compartida de IA.":`Generador de VMV conectado. Hasta ${aiDailyLimit} generaciones de IA por día.`}</>:
     <><ShieldCheck size={16}/> {aiError||"La IA no está disponible."} <a href="/web-studio?mode=templates">Usar plantillas</a></>}</div>
    <button type="button" className={styles.generate} disabled={aiState!=="ready"||generating||busy} onClick={()=>void generate()}>
     {generating?<LoaderCircle size={18}/>:<Sparkles size={18}/>} {generating?"Creando tu diseño…":"Generar mi web con IA"} <ArrowRight size={17}/></button>
