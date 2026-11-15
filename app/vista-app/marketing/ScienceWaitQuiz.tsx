@@ -19,11 +19,12 @@ const QUESTIONS:Question[]=[
  {es:"A presión atmosférica normal, ¿a qué temperatura hierve el agua?",en:"At standard atmospheric pressure, at what temperature does water boil?",choicesEs:["80 °C","100 °C","120 °C"],choicesEn:["80 °C","100 °C","120 °C"],correct:1,factEs:"A nivel del mar el agua pura hierve cerca de 100 °C.",factEn:"At sea level, pure water boils at about 100 °C."}
 ];
 
-export default function ScienceWaitQuiz({en,seed,processing,onContinue,mode="request"}:{en:boolean;seed:string;processing:boolean;onContinue:()=>void;mode?:"request"|"audit"}){
+export default function ScienceWaitQuiz({en,seed,processing,onContinue,mode="request"}:{en:boolean;seed:string;processing:boolean;onContinue:()=>void;mode?:"request"|"audit"|"web"}){
  const [index,setIndex]=useState(()=>[...seed].reduce((n,c)=>n+c.charCodeAt(0),0)%QUESTIONS.length);
  const [chosen,setChosen]=useState<number|null>(null);
  const titleRef=useRef<HTMLHeadingElement>(null);
  const isAudit=mode==="audit";
+ const isWeb=mode==="web";
  const question=QUESTIONS[index];
  const choices=en?question.choicesEn:question.choicesEs;
  const correct=chosen!==null&&chosen===question.correct;
@@ -47,10 +48,10 @@ export default function ScienceWaitQuiz({en,seed,processing,onContinue,mode="req
    else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
   }}>
   <button type="button" className={styles.skip} onClick={onContinue}
-   aria-label={en?"Skip optional quiz":"Omitir acertijo opcional"}>{en?"Skip":"Omitir"}</button>
+   aria-label={en?"Skip optional science question":"Omitir pregunta de ciencia opcional"}>{en?"Skip":"Omitir"}</button>
   <div className={styles.content}>
-   <div className={styles.status} role="status">{processing?<span className={styles.spinner} aria-hidden="true"/>:<CheckCircle2 size={17} aria-hidden="true"/>}{processing?(isAudit?(en?"Analyzing your website…":"Analizando tu web…"):(en?"Sending your request…":"Enviando tu solicitud…")):(isAudit?(en?"Analysis complete. You can continue.":"Análisis listo. Puedes continuar."):(en?"Submission finished. You can continue.":"El envío terminó. Puedes continuar."))}</div>
-   <p className={styles.eyebrow}>{en?"Optional science quiz":"Acertijo opcional"}</p>
+   <div className={styles.status} role="status">{processing?<span className={styles.spinner} aria-hidden="true"/>:<CheckCircle2 size={17} aria-hidden="true"/>}{processing?(isWeb?(en?"Creating your website…":"Creando tu página con IA…"):isAudit?(en?"Analyzing your website…":"Analizando tu web…"):(en?"Sending your request…":"Enviando tu solicitud…")):(isWeb?(en?"Your website is ready!":"¡Tu página está lista!"):isAudit?(en?"Analysis complete. You can continue.":"Análisis listo. Puedes continuar."):(en?"Submission finished. You can continue.":"El envío terminó. Puedes continuar."))}</div>
+   <p className={styles.eyebrow}>{en?"Optional science quiz":"Pregunta de ciencia opcional"}</p>
    <h2 id="science-wait-heading" ref={titleRef} tabIndex={-1} className={styles.question}>{en?question.en:question.es}</h2>
    <div className={styles.choices} role="group" aria-label={en?"Choose your answer":"Elige tu respuesta"}>
     {choices.map((choice,i)=>{
@@ -71,7 +72,7 @@ export default function ScienceWaitQuiz({en,seed,processing,onContinue,mode="req
     {processing?<button type="button" className={styles.next} onClick={()=>{setChosen(null);setIndex(i=>(i+1)%QUESTIONS.length);titleRef.current?.focus();}}>{en?"Next question":"Otra pregunta"}</button>:null}
    </div>:<p className={styles.helper}>{processing?(en?"The process continues whether you play or skip.":"El proceso continúa aunque omitas el juego."):(en?"The game is optional.":"El juego es opcional.")}</p>}
    {!processing?<button type="button" className={styles.continue} onClick={onContinue}>
-    {en?"Continue":"Continuar"}
+    {isWeb?(en?"See my website":"Ver mi página"):(en?"Continue":"Continuar")}
    </button>:null}
   </div>
  </section>,document.body);

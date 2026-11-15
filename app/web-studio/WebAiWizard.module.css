@@ -92,3 +92,63 @@
 .skipPhotos input{width:18px;height:18px;flex:none;accent-color:#8d5dde}
 .frameHeading{font-size:15px;font-weight:850;margin:3px 0 -6px;letter-spacing:-.025em}
 @media(max-width:580px){.photoGrid{grid-template-columns:1fr}.photoGallery{padding:12px}}
+
+
+/* A predominantly click-to-choose website design questionnaire. */
+.paletteSets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.paletteSets button{display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;padding:12px 8px;
+ min-height:86px;border:1px solid #e9deef;background:#fdfbff;border-radius:15px;color:#493655;cursor:pointer}
+.paletteDots{display:flex;justify-content:center;min-width:0}
+.paletteDots i{display:block;width:23px;height:28px;margin-left:-4px;border:2px solid #fff;border-radius:8px;box-shadow:0 1px 5px #321e4925}
+.paletteSets button strong{font-size:11px}
+.paletteSets button[aria-pressed=true]{border-color:#946be4;background:#f3edff;box-shadow:inset 0 0 0 1px #946be4}
+.choiceHeading{font-size:15px;letter-spacing:-.035em;color:#483357;margin:9px 0 -9px}
+.moodGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.moodGrid>button,.choiceGrid>button,.focusGrid>button{display:flex;align-items:flex-start;flex-direction:column;gap:7px;
+ min-width:0;min-height:90px;padding:10px;border:1px solid #e9e0ed;border-radius:15px;background:#fff;color:#45364d;
+ text-align:left;cursor:pointer}
+.moodGrid>button>strong,.choiceGrid>button>strong,.focusGrid>button>strong{font-size:12px}
+.moodGrid>button>small,.choiceGrid>button>small,.focusGrid>button>small{font-size:10px;line-height:1.45;color:#83748e}
+.moodGrid>button[aria-pressed=true],.choiceGrid>button[aria-pressed=true],.focusGrid>button[aria-pressed=true],
+.chipGrid>button[aria-pressed=true]{border-color:#8d5dde;background:#f4eeff;box-shadow:inset 0 0 0 1px #8d5dde}
+.moodPreview{width:100%;height:115px;border-radius:9px;padding:12px;display:flex;flex-direction:column;
+ gap:6px;align-items:flex-start;overflow:hidden}
+.moodPreview i{width:25px;height:7px;border-radius:10px;display:block}
+.moodPreview strong{font-size:17px;letter-spacing:-.075em;line-height:1.2}
+.moodPreview b{height:5px;width:77%;border-radius:5px}
+.moodPreview em{height:5px;width:51%;border-radius:5px}
+.moodPreview span{width:44%;height:16px;border-radius:8px;margin-top:auto}
+.choiceGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.heroDiagram{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:35px 25px;gap:5px;
+ width:100%;height:76px;padding:8px;border-radius:9px;background:#f3edf9}
+.heroDiagram i,.heroDiagram b,.heroDiagram em{display:block;border-radius:5px;background:#be9de4}
+.heroDiagram i{background:#7d58b4}.heroDiagram b{background:#dbcaed}
+.heroDiagram em{background:#9e7ec5}
+.heroDiagram[data-hero=cover] i{grid-column:1/3;grid-row:1/3}
+.heroDiagram[data-hero=cover] b{grid-column:1;grid-row:2;z-index:1;opacity:.8}
+.heroDiagram[data-hero=cover] em{display:none}
+.heroDiagram[data-hero=split] i{grid-column:2;grid-row:1/3}
+.heroDiagram[data-hero=split] b{grid-column:1;grid-row:1}
+.heroDiagram[data-hero=split] em{grid-column:1;grid-row:2}
+.heroDiagram[data-hero=editorial] i{grid-column:1/3;grid-row:1}
+.heroDiagram[data-hero=editorial] b{grid-column:1;grid-row:2}
+.heroDiagram[data-hero=editorial] em{grid-column:2;grid-row:2;opacity:.45}
+.focusGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.focusGrid svg{color:#9462d8}
+.chipGrid{display:flex;flex-wrap:wrap;gap:9px}
+.chipGrid button{border:1px solid #e7dbee;background:#fff;border-radius:999px;
+ padding:11px 15px;min-height:43px;color:#5a4570;font:inherit;font-weight:800;font-size:12px;cursor:pointer}
+@media(max-width:760px){.moodGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:510px){.paletteSets{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .choiceGrid{grid-template-columns:1fr}.choiceGrid>button{min-height:0}
+ .heroDiagram{max-width:180px}.moodGrid>button{padding:8px}}
+
+.goalGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.goalGrid button{display:flex;align-items:flex-start;flex-direction:column;gap:9px;min-width:0;
+ padding:14px 12px;min-height:120px;border:1px solid #e9dfef;border-radius:15px;background:#fff;
+ color:#534269;text-align:left;cursor:pointer}
+.goalGrid svg{color:#9462d8}
+.goalGrid strong{font-size:12px}
+.goalGrid small{color:#867894;font-size:10px;line-height:1.35}
+.goalGrid button[aria-pressed=true]{border-color:#8d5dde;background:#f4eeff;box-shadow:inset 0 0 0 1px #8d5dde}
+@media(max-width:660px){.goalGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}

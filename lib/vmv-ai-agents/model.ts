@@ -8,6 +8,7 @@ type AskOptions={
  maxOutputTokens?:number;
  temperature?:number;
  timeoutMs?:number;
+ modelTier?:"standard"|"web-premium";
 };
 
 /**
@@ -20,7 +21,8 @@ export function aiAgentModelPathAvailable(){
    (process.env.VERCEL_ENV==="preview"&&process.env.VERCEL==="1"));
 }
 
-function modelName(){
+function modelName(modelTier:"standard"|"web-premium"="standard"){
+ if(modelTier==="web-premium")return "openai/gpt-4.1";
  const requested=(process.env.VMV_AI_VOICE_MODEL||"openai/gpt-4.1-mini").trim();
  // Keep the pilot confined to its audited, budgeted text model.
  return requested==="gpt-4.1-mini"||requested==="openai/gpt-4.1-mini"
@@ -28,14 +30,14 @@ function modelName(){
 }
 
 export async function askAiAgent({system,messages,maxOutputTokens=170,temperature=0.2,
- timeoutMs=7000}:AskOptions):Promise<string>{
+ timeoutMs=7000,modelTier="standard"}:AskOptions):Promise<string>{
  if(!aiAgentModelPathAvailable())throw Error("AI provider authentication not configured");
- const model=modelName();
+ const model=modelName(modelTier);
  if(process.env.OPENAI_API_KEY){
   const response=await fetch("https://api.openai.com/v1/chat/completions",{
    method:"POST",cache:"no-store",
    headers:{"Content-Type":"application/json",Authorization:"Bearer "+process.env.OPENAI_API_KEY},
-   body:JSON.stringify({model:"gpt-4.1-mini",
+   body:JSON.stringify({model:modelTier==="web-premium"?"gpt-4.1":"gpt-4.1-mini",
     messages:[{role:"system",content:system},...messages],
     max_tokens:maxOutputTokens,temperature,store:false}),
    signal:AbortSignal.timeout(timeoutMs)
