@@ -815,7 +815,7 @@ export default function MobileVisualStudio({
       <div className={styles.focusChoices}>
        <button type="button" disabled={index===0} aria-label={`Subir pregunta ${index+1}`}
         onClick={()=>moveListItem(index,-1)}><ArrowUp size={18}/> Subir</button>
-       <button type="button" disabled={index===props.items.length-1}
+       <button type="button" disabled={index===(props.items as Record<string,unknown>[]).length-1}
         aria-label={`Bajar pregunta ${index+1}`}
         onClick={()=>moveListItem(index,1)}><ArrowDown size={18}/> Bajar</button>
       </div>
