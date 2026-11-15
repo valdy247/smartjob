@@ -153,12 +153,10 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false,initialStep=
     {i<step?<Ionicons name="checkmark" size={12} color="#277858"/>:
       <Text style={[styles.dotText,i===step&&{color:"#FFF"}]}>{i+1}</Text>}
   </View>)}</View>
-  <Text style={styles.eyebrow}>PASO {step+1}</Text>
   <Text style={styles.title}>{curr.title}</Text>
-  <Text style={styles.subtitle}>{curr.description}</Text>
   {step===1&&answers.central_business_id?<View style={styles.notice}>
    <Ionicons name="shield-checkmark-outline" size={18} color="#6840B5"/>
-   <Text style={styles.subtitle}>Datos de {answers.business_name||"tu negocio"} precargados del perfil central de VMV. Solo completaremos lo que falta.</Text>
+   <Text style={styles.subtitle}>Negocio: {answers.business_name||"tu negocio"} · datos cargados.</Text>
   </View>:null}
 
   {step===0?<View style={styles.fields}>
@@ -170,12 +168,11 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false,initialStep=
     <TextInput accessibilityLabel="Misión del agente" style={styles.textarea} multiline
       maxLength={240} value={draft.purpose} onChangeText={purpose=>setDraft(s=>({...s,purpose}))}
       placeholder="Explica la misión en una frase" placeholderTextColor="#AB9DB9"/>
-    <Text style={styles.subtitle}>Este negocio tendrá una identidad principal. Llamadas, chat, ventas, inventario y reservas se activan como capacidades, sin crear otros agentes.</Text>
     <Text style={styles.label}>Voz telefónica</Text>
     <View style={styles.choices}>{([["default","Predeterminada de Twilio"],["female","Femenina · Polly"],["male","Masculina · Polly"]] as const).map(([value,label])=>
       <Tag key={value} title={label} selected={(answers.voice_preset||"default")===value}
        onPress={()=>update("voice_preset",value)}/>)}</View>
-    <Text style={styles.subtitle}>Se aplicará en llamadas nuevas autorizadas; las voces Polly pueden generar cargos del proveedor. Esta pantalla no realiza llamadas.</Text>
+    <Text style={styles.subtitle}>Las voces Polly pueden generar cargos. Aquí no se realizan llamadas.</Text>
     <Text style={styles.label}>Extensión de respuesta</Text>
     <View style={styles.choices}>{([["brief","Breve"],["balanced","Equilibrada"],["detailed","Detallada"]] as const).map(([value,label])=>
       <Tag key={value} title={label} selected={(answers.response_style||"balanced")===value}
@@ -199,7 +196,7 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false,initialStep=
      <View style={styles.choices}><Tag title="Guardar citas aceptadas en la agenda VMV"
       selected={answers.perm_book_service==="Sí"}
       onPress={()=>update("perm_book_service",answers.perm_book_service==="Sí"?"No":"Sí")}/></View>
-     <Text style={styles.subtitle}>Solo con horario disponible y aprobación del negocio. No confirma pagos.</Text>
+     <Text style={styles.subtitle}>Requiere horarios y aprobación. Sin cobros.</Text>
     </>:null}
     <Text style={styles.label}>¿Cómo hablará?</Text>
     <View style={styles.choices}>{["Español","English","Bilingüe"].map(x=><Tag key={x} title={x}
@@ -214,7 +211,7 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false,initialStep=
   {step>0&&step<steps.length-1?<View style={styles.fields}>
     {step===2&&answers.industry?<View style={styles.contextBox}>
       <Ionicons name="sparkles-outline" size={18} color={C.purple}/>
-      <Text style={styles.contextText}>Tu negocio: <Text style={{fontWeight:"900"}}>{answers.industry}</Text>. {answers.city}{answers.state?", "+answers.state:""}. No es necesario repetirlo.</Text>
+      <Text style={styles.contextText}>Negocio: <Text style={{fontWeight:"900"}}>{answers.industry}</Text> · {answers.city}{answers.state?", "+answers.state:""}.</Text>
     </View>:null}
     {questions.map(item=><View key={item.id} style={styles.question}>
       <Text style={styles.label}>{item.label}{item.required?" *":""}</Text>
@@ -281,7 +278,7 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false,initialStep=
       <Text style={styles.summaryLabel}>{label}</Text><Text style={styles.summaryValue}>{value}</Text>
     </View>)}
     <View style={styles.notice}><Ionicons name="shield-checkmark-outline" color="#237C63" size={22}/>
-      <Text style={styles.noticeText}>Guardar no conecta una línea ni permite cobrar, reservar o modificar inventario sin los permisos y servicios verificados.</Text>
+      <Text style={styles.noticeText}>Guardar no activa llamadas, cobros ni reservas sin autorización.</Text>
     </View>
   </View>:null}
   {error?<Text accessibilityRole="alert" style={styles.error}>{error}</Text>:null}
