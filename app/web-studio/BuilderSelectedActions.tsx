@@ -121,6 +121,10 @@ export default function BuilderSelectedActions({children,label}:{
    italic:"titleItalic",linkUrl:"titleLink"};
   return props[heroTextNames[key]||key];
  };
+ const portalBody=mobileSheet&&typeof document!=="undefined"?(()=>{
+  try{return window.parent!==window?window.parent.document.body:document.body;}
+  catch{return document.body;}
+ })():null;
  const controlsPanel=(isImage||isText||isCta||isButton||isGeneric)&&open?<div className={mobileSheet?"vmv-context-action-panel vmv-context-mobile-sheet":"vmv-context-action-panel"}
     ref={panelRef} tabIndex={mobileSheet?-1:undefined} role={mobileSheet?"dialog":"region"} aria-modal={mobileSheet||undefined}
     onKeyDown={e=>{if(e.key==="Escape"){e.stopPropagation();setOpen(false);}}} aria-label={isButton?"Ajustes del botón seleccionado":isImage&&mode!=="text"?"Ajustes de la imagen seleccionada":"Ajustes del elemento seleccionado"}
@@ -360,9 +364,9 @@ export default function BuilderSelectedActions({children,label}:{
    </ActionBar.Group>:null}
   </ActionBar>
 
-  {mobileSheet&&controlsPanel&&typeof document!=="undefined"?
+  {mobileSheet&&controlsPanel&&portalBody?
    createPortal(<div className="vmv-context-sheet-overlay" onClick={e=>{if(e.target===e.currentTarget)setOpen(false);}}>
     {controlsPanel}
-   </div>,document.body):controlsPanel}
+   </div>,portalBody):controlsPanel}
  </div>;
 }
