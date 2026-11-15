@@ -82,6 +82,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const [aiStatusMessage,setAiStatusMessage]=useState("");
  const [aiCheck,setAiCheck]=useState(0);
  const [error,setError]=useState("");
+ const [emailError,setEmailError]=useState("");
  useEffect(()=>{
   if(mode!=="ai"){setAiStatus("idle");return;}
   const controller=new AbortController();
@@ -244,13 +245,16 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
   socials:normalizeSocialLinks(socialLinks)
  }),[name,category,kind,goal,phone,email,city,about,logo,photos,services,products,socialLinks]);
  const suggestedFamily=family||familyForCategory(category);
+ const validContactEmail=(value:string)=>!value.trim()||/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
  function nextStep(){
   if(step===0){
    if(name.trim().length<2){setError("Escribe el nombre de tu negocio.");return;}
    if(!category){setError("Selecciona la categoría del negocio.");return;}
-   if(email.trim()&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.trim())){
-    setError("Comprueba el correo de contacto.");return;
+   if(!validContactEmail(email)){
+    setEmailError("Revisa el correo, por ejemplo: hola@negocio.com.");
+    setError("");return;
    }
+   setEmailError("");
   }
   if(step===1&&kind!=="services"&&productStatus!=="saved"){
    setError("Espera a que se guarden los productos.");return;
@@ -317,19 +321,13 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  return <section className={styles.root}>
   <div className={styles.intro}>
    <a href="/web-studio?mode=sites" className={styles.backLink}>‹ Mis sitios</a>
-   <small>WEB STUDIO · PLANTILLAS</small>
+   <span className={styles.stepMeta}>Paso {step+1} de 4</span>
    <h2>{stepLabels[step]}<span>.</span></h2>
-   <p>Solo lo necesario para crear tu web.</p>
+   <div className={styles.progressTrack} role="progressbar" aria-label="Progreso de creación"
+    aria-valuemin={0} aria-valuemax={4} aria-valuenow={step+1}>
+    <span style={{width:`${((step+1)/4)*100}%`}}/>
+   </div>
   </div>
-  <nav className={styles.steps} aria-label="Progreso de creación">
-   {stepLabels.map((label,index)=><button key={label} type="button"
-    aria-current={step===index?"step":undefined}
-    aria-label={`Paso ${index+1} de 4: ${label}`}
-    disabled={index>step} onClick={()=>{if(index<step){setError("");setStep(index);}}}
-    data-active={step===index} data-complete={index<step}>
-    <span>{index+1}</span><small>{label}</small>
-   </button>)}
-  </nav>
   <div className={styles.form}>
    {step===0?<div className={styles.panel}>
     <h3><span>01</span> Tu negocio</h3>
@@ -337,7 +335,12 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
      <label>Nombre del negocio<input value={name} maxLength={100} placeholder="Nombre comercial" onChange={e=>setName(e.target.value)}/></label>
      <label>Categoría<BusinessCategoryPicker value={category} onChange={value=>{setCategory(value);setFamily(null);}}/></label>
      <label>Teléfono de negocio<input value={phone} maxLength={36} type="tel" placeholder="+1 000 000 0000" onChange={e=>setPhone(e.target.value)}/></label>
-     <label>Correo de contacto<input value={email} maxLength={180} type="email" placeholder="hola@minegocio.com" onChange={e=>setEmail(e.target.value)}/></label>
+     <label>Correo de contacto (opcional)<input value={email} maxLength={180} type="email" inputMode="email"
+      placeholder="hola@minegocio.com" aria-invalid={Boolean(emailError)}
+      aria-describedby={emailError?"vmv-email-error":undefined}
+      onChange={e=>{setEmail(e.target.value);setEmailError("");}}/>
+      {emailError?<small className={styles.fieldError} id="vmv-email-error" role="alert">{emailError}</small>:null}
+     </label>
     </div>
     <label>Ciudad o zona atendida<input value={city} maxLength={180} placeholder="Ciudad, estado" onChange={e=>setCity(e.target.value)}/></label>
     <label>Descripción aprobada<textarea value={about} maxLength={500} rows={3}
