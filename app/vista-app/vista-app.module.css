@@ -351,7 +351,6 @@ button.homeProductCard:hover{transform:translateY(-2px)}
 .dashboardMetrics>span{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;padding:10px 12px;border:1px solid #ffffff40;border-radius:13px;background:#ffffff23}
 .dashboardMetrics b{font-size:22px;line-height:1.1;font-weight:900;color:#fff}
 .dashboardMetrics small{font-size:10px;font-weight:650;line-height:1.25;color:#f1e6ff}
-.dashboardCardArrow{position:absolute;right:15px;top:51px;display:grid;place-items:center;height:30px;width:30px;border-radius:50%;background:#ffffff29}
 .dashboardHeading,.dashboardActivityHeading{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .dashboardHeading{margin:23px 0 12px}
 .dashboardHeading h3,.dashboardActivityHeading h3{margin:0;color:#29203e;font-size:18px;font-weight:850;letter-spacing:-.05em}
@@ -359,7 +358,6 @@ button.homeProductCard:hover{transform:translateY(-2px)}
 .dashboardQuickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
 .dashboardQuickGrid button{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:13px;min-height:112px;padding:16px;border:0;border-radius:19px;text-align:left;cursor:pointer}
 .dashboardQuickGrid button strong{font-size:16px;font-weight:850;letter-spacing:-.04em}
-.dashboardQuickGrid button svg:last-child{position:absolute;right:13px;top:15px}
 .dashboardQuickMint{background:#bfefdc;color:#185b48}
 .dashboardQuickSky{background:#c8e6ff;color:#2b5482}
 .dashboardActivity{border:1px solid #e8e0f1;border-radius:21px;padding:16px;margin:18px 0 7px;background:#fff}
@@ -386,7 +384,6 @@ button.homeProductCard:hover{transform:translateY(-2px)}
 .catalogCardCopy{display:flex;flex-direction:column;gap:5px;max-width:100%;margin-top:14px}
 .catalogCardCopy strong{font-size:16px;line-height:1.17;font-weight:870;letter-spacing:-.045em;overflow-wrap:anywhere}
 .catalogCardCopy small{font-size:10px;font-weight:750;opacity:.7}
-.catalogCardArrow{position:absolute;right:14px;top:15px;opacity:.65}
 .catalogViolet{background:#e4d7ff;color:#6542ab}
 .catalogMint{background:#bcefdc;color:#155a45}
 .catalogYellow{background:#ffe4a5;color:#704b22}
