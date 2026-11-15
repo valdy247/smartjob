@@ -812,13 +812,11 @@ export default function App(){
         style={[styles.nativeDashboardQuick,styles.nativeCatalogMint]} onPress={()=>setActiveTab("live")}>
         <Ionicons name="language-outline" size={27} color="#145945"/>
         <Text style={styles.nativeDashboardQuickTitle}>{tr("common.translator")}</Text>
-        <Ionicons name="arrow-up-outline" size={16} color="#145945" style={styles.nativeDashboardQuickArrow}/>
        </Pressable>
        <Pressable accessibilityRole="button" accessibilityLabel="AI Agents"
         style={[styles.nativeDashboardQuick,styles.nativeCatalogSky]} onPress={()=>{setActiveModule("ai-agents");setActiveTab("services");}}>
         <Ionicons name="sparkles-outline" size={27} color="#2B527B"/>
         <Text style={styles.nativeDashboardQuickTitle}>AI Agents</Text>
-        <Ionicons name="arrow-up-outline" size={16} color="#2B527B" style={styles.nativeDashboardQuickArrow}/>
        </Pressable>
       </View>
       <View style={styles.nativeDashboardActivity}>
@@ -955,7 +953,6 @@ export default function App(){
           <View style={styles.nativeCatalogIcon}><Ionicons name={item.Icon} size={26} color="#47345E"/></View>
           <View><Text style={styles.nativeCatalogCardTitle}>{item.name}</Text>
            <Text style={styles.nativeCatalogCardStatus}>{item.status}</Text></View>
-          <Ionicons name="arrow-up-outline" size={16} color="#685274" style={styles.nativeCatalogCardArrow}/>
          </Pressable>)}
         </View>
         {!filteredCatalogItems.length&&(catalogGroup!=="all"||!catalogQuery.trim())?<Text style={styles.nativeCatalogEmpty}>{tr("catalog.noResults")}</Text>:null}
@@ -1172,7 +1169,6 @@ const styles=StyleSheet.create({
  nativeDashboardQuickGrid:{flexDirection:"row",justifyContent:"space-between",gap:11},
  nativeDashboardQuick:{width:"48%",minHeight:115,borderRadius:20,padding:16,justifyContent:"space-between",alignItems:"flex-start",position:"relative"},
  nativeDashboardQuickTitle:{fontSize:16,fontWeight:"800",color:"#302745",letterSpacing:-.5,marginTop:10},
- nativeDashboardQuickArrow:{position:"absolute",right:13,top:14},
  nativeDashboardActivity:{backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#E8E0F1",borderRadius:21,padding:16,marginTop:18,marginBottom:10},
  nativeDashboardActivityHead:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:7,marginBottom:11},
  nativeDashboardHistoryRow:{flexDirection:"row",alignItems:"center",gap:11,borderTopWidth:1,borderTopColor:"#F0EAF6",paddingVertical:11},
@@ -1193,7 +1189,6 @@ const styles=StyleSheet.create({
  nativeCatalogIcon:{width:44,height:44,borderRadius:14,backgroundColor:"#FFFFFF96",alignItems:"center",justifyContent:"center"},
  nativeCatalogCardTitle:{fontSize:16,fontWeight:"800",letterSpacing:-.5,color:"#332744"},
  nativeCatalogCardStatus:{fontSize:10,fontWeight:"700",color:"#756587",marginTop:5},
- nativeCatalogCardArrow:{position:"absolute",right:13,top:15},
  nativeCatalogViolet:{backgroundColor:"#E5D8FF"},
  nativeCatalogMint:{backgroundColor:"#BDEFD9"},
  nativeCatalogYellow:{backgroundColor:"#FFE4A6"},
