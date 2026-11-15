@@ -530,7 +530,7 @@ export default function MobileVisualStudio({
       <button onClick={()=>{onRecover();closeDrawer();}}>Recuperar cambios</button>
       <button onClick={onDiscardRecovery}>Descartar copia local</button>
      </div>:null}
-     <small className={styles.saveStatus}>{savePhase==="saving"?"Guardando cambios…":savePhase==="error"?"Error al guardar":"Guardado automático activado"}</small>
+     <small className={styles.saveStatus}>{savePhase==="saving"?"Guardando cambios…":savePhase==="error"?"Error al guardar":savePhase==="pending"?"Cambios pendientes":"Borrador guardado"}</small>
      <small className={styles.groupLabel}>CONTENIDO</small>
      <button onClick={()=>menuAction("create")}><Plus/> Agregar elemento o sección <ChevronRight/></button>
      <button onClick={()=>menuAction("pages")}><Layers/> Seleccionar página <ChevronRight/></button>
