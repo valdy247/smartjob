@@ -32,7 +32,7 @@ export default function TemplateProposals({input,familyOverride,generated,busy,o
   <header className={styles.heading}>
    <span><LayoutTemplate size={16}/> {activeFamily?.name||"Diseño web"}</span>
    <h2>{generated?"Tu web creada con IA. Lista para revisar.":"Tres estilos. Tu identidad."}</h2>
-   <p>{generated?"Revisa los datos y fotos antes de publicar.":"Diseños editables con tus datos reales."}</p>
+   <p>{generated?"Revisa los datos y fotos antes de publicar.":"Diseños editables con tus datos, sin inventar precios ni reseñas."}</p>
   </header>
   <div className={styles.carousel} data-single={Boolean(generated)} ref={scrollRef} onScroll={onScroll}>
    {proposals.map((proposal,i)=><article key={proposal.id} className={styles.card}>
