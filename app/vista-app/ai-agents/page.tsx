@@ -353,14 +353,13 @@ export default function AIAgentsPreview(){
       <div className={styles.hero}>
        <div className={styles.heroEyebrow}><span>UN AGENTE POR NEGOCIO</span><Sparkles size={22}/></div>
        <h1>Un agente.<br/>Todas tus funciones.</h1>
-       <p>Configura una identidad y activa solamente las capacidades que necesites.</p>
-       <div className={styles.heroPills}><span>{principal?"Principal: "+principal.name:proposal?"Agente existente por elegir":"Principal sin configurar"}</span><span>{visibleAgents.length} identidades conservadas</span></div>
+       <div className={styles.heroPills}><span>{principal?"Principal: "+principal.name:proposal?"Elige tu agente":"Sin configurar"}</span></div>
       </div>
       {notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
       <div className={styles.sectionHeading}><div><h2>Tu agente: {principal?.name||proposal?.name||"Sin configurar"}</h2>
-       <p>Negocio: {selectedBusiness?.name||"Selecciona tu negocio"} · Una identidad para todas las capacidades.</p></div></div>
+       <p>{selectedBusiness?.name||"Selecciona tu negocio"}</p></div></div>
       <div className={styles.sectionHeading}><div><h2>Capacidades de tu agente</h2>
-       <p>Elige qué configurar; no se crea un asistente nuevo para cada función.</p></div></div>
+       </div></div>
       <div className={styles.tiles}>
        {types.map(type=>{const label=({
         calls:"Llamadas",support:"Chat web",sales:"Ventas",bookings:"Reservas",
@@ -385,16 +384,16 @@ export default function AIAgentsPreview(){
         custom:"Nombre, voz, idioma y personalidad"
        } as Record<Kind,string>)[type.id];
        return <button type="button" key={type.id} className={styles.tile}
-          style={{background:type.bg,color:type.fg}} onClick={()=>void start(type.id)}>
+          style={{background:type.bg,color:type.fg}} onClick={()=>void start(type.id)} aria-label={label+" · "+status+". "+detail}>
           <span className={styles.tileIcon}><type.Icon size={24}/></span>
           <ArrowUpRight className={styles.tileArrow} size={20}/>
-          <strong>{label}</strong><small>{status} · {detail}</small>
+          <strong>{label}</strong><small>{status}</small>
        </button>})}
       </div>
       <div className={styles.sectionHeading}><h2>Agentes existentes {principal?"y principal":""}</h2><span className={styles.agentCounter}>{visibleAgents.length}</span></div>
       {visibleAgents.length===0?<div className={styles.empty}>
        <Bot size={30}/><strong>Aquí vivirán tus agentes</strong>
-       <p>Elige una capacidad para configurar un solo agente principal.</p>
+       
        <button type="button" className={styles.demoButton} onClick={demo}><Sparkles size={16}/> Explorar ejemplo de taxi</button>
       </div>:<div className={styles.agents}>
        {visibleAgents.map(a=>{const t=typeInfo(a.kind);return <article className={styles.agent} key={a.id}>
