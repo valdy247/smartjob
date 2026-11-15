@@ -1,5 +1,6 @@
 "use client";
-import {useEffect,useState} from "react";
+import {useEffect,useRef,useState} from "react";
+import {createPortal} from "react-dom";
 import {ActionBar,createUsePuck,useGetPuck,type Data} from "@puckeditor/core";
 import {ImagePlus,Settings2,SlidersHorizontal,Trash2,Type} from "lucide-react";
 import BuilderImageField from "./BuilderImageField";
@@ -34,6 +35,19 @@ export default function BuilderSelectedActions({children,label}:{
  const [mode,setMode]=useState<"controls"|"library"|"text">("controls");
  const [chosen,setChosen]=useState<{id:string;target:ImageTarget}|null>(null);
  const [pickerRequest,setPickerRequest]=useState(0);
+ const [mobileSheet,setMobileSheet]=useState(false);
+ const panelRef=useRef<HTMLDivElement|null>(null);
+ useEffect(()=>{
+  const media=window.matchMedia("(max-width:700px)");
+  const update=()=>setMobileSheet(media.matches);
+  update();media.addEventListener("change",update);
+  return()=>media.removeEventListener("change",update);
+ },[]);
+ useEffect(()=>{
+  if(!mobileSheet||!open)return;
+  const frame=requestAnimationFrame(()=>panelRef.current?.focus({preventScroll:true}));
+  return()=>cancelAnimationFrame(frame);
+ },[mobileSheet,open,id]);
  const [ctaSelection,setCtaSelection]=useState<{id:string;target:SectionTarget}|null>(null);
  const id=item?.props?.id||"";
  useEffect(()=>{
@@ -99,17 +113,9 @@ export default function BuilderSelectedActions({children,label}:{
    italic:"titleItalic",linkUrl:"titleLink"};
   return props[heroTextNames[key]||key];
  };
- return <div className="vmv-context-action-wrap">
-  <ActionBar label={label}>
-   <ActionBar.Group>{children}</ActionBar.Group>
-   {(isImage||isText||isCta||isButton)?<ActionBar.Group>
-    <ActionBar.Action label={isCta?"Editar sección":isButton?"Editar botón":isImage?"Editar imagen":"Editar texto"} onClick={()=>setOpen(v=>!v)}>
-     {isCta?<Settings2 size={16}/>:isButton?<SlidersHorizontal size={16}/>:isImage?<ImagePlus size={16}/>:<Type size={16}/>}
-    </ActionBar.Action>
-   </ActionBar.Group>:null}
-  </ActionBar>
-  {(isImage||isText||isCta||isButton)&&open?<div className="vmv-context-action-panel"
-    role="region" aria-label={isButton?"Ajustes del botón seleccionado":isImage&&mode!=="text"?"Ajustes de la imagen seleccionada":"Ajustes del elemento seleccionado"}
+ const controlsPanel=(isImage||isText||isCta||isButton)&&open?<div className={mobileSheet?"vmv-context-action-panel vmv-context-mobile-sheet":"vmv-context-action-panel"}
+    ref={panelRef} tabIndex={mobileSheet?-1:undefined} role={mobileSheet?"dialog":"region"} aria-modal={mobileSheet||undefined}
+    onKeyDown={e=>{if(e.key==="Escape"){e.stopPropagation();setOpen(false);}}} aria-label={isButton?"Ajustes del botón seleccionado":isImage&&mode!=="text"?"Ajustes de la imagen seleccionada":"Ajustes del elemento seleccionado"}
     onPointerDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()}>
    <header><strong>{isCta?"Editar "+(ctaTarget==="section"?"sección":ctaTarget==="title"?"título":"botón"):isButton?"Editar botón":isImage&&mode!=="text"?"Imagen seleccionada":"Texto seleccionado"}</strong>
     <button type="button" aria-label="Cerrar ajustes" onClick={()=>setOpen(false)}>✕</button>
@@ -305,6 +311,20 @@ export default function BuilderSelectedActions({children,label}:{
     {item?.type!=="HeroVisual"?<p className="vmv-context-hint">Arrastra el control Mover sobre el elemento para desplazarlo.
      Usa el arrastre de Puck para colocarlo en otra columna.</p>:null}
    </div>:null}
-  </div>:null}
+  </div>:null;
+ return <div className="vmv-context-action-wrap">
+  <ActionBar label={label}>
+   <ActionBar.Group>{children}</ActionBar.Group>
+   {(isImage||isText||isCta||isButton)?<ActionBar.Group>
+    <ActionBar.Action label={isCta?"Editar sección":isButton?"Editar botón":isImage?"Editar imagen":"Editar texto"} onClick={()=>setOpen(v=>!v)}>
+     {isCta?<Settings2 size={16}/>:isButton?<SlidersHorizontal size={16}/>:isImage?<ImagePlus size={16}/>:<Type size={16}/>}
+    </ActionBar.Action>
+   </ActionBar.Group>:null}
+  </ActionBar>
+
+  {mobileSheet&&controlsPanel&&typeof document!=="undefined"?
+   createPortal(<div className="vmv-context-sheet-overlay" onClick={e=>{if(e.target===e.currentTarget)setOpen(false);}}>
+    {controlsPanel}
+   </div>,document.body):controlsPanel}
  </div>;
 }
