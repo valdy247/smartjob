@@ -11,6 +11,7 @@ import {normalizeWebContent,type WebSiteContent} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
 import WebSiteIntake from "./WebSiteIntake";
 import WebAiWizard from "./WebAiWizard";
+import WebChatLauncher from "./WebChatLauncher";
 import type {SiteIntake,SiteProposal} from "@/lib/web-builder-templates";
 import {WEBSITE_STYLES,restyleWebsiteDocument,type WebsiteStyleId} from "@/lib/web-builder-safe-styles";
 import BuilderHistoryControls from "./BuilderHistoryControls";
@@ -878,10 +879,11 @@ export default function WebBuilderWorkspace(){
         menu={pages.filter(p=>publishedIds.includes(p.id)).map(p=>({title:p.title,page_slug:p.slug}))}
         logo={typeof previewRoot.logo==="string"?previewRoot.logo:""} family={previewFamily}
         language={previewRoot.language==="en"?"en":"es"}
-        siteStyle={String(previewRoot.style||"light")} siteWidth={String(previewRoot.width||"regular")}
+        siteStyle={String(previewRoot.style||"light")} siteWidth={String(previewRoot.width||"regular")} font={String(previewRoot.font||"modern")}
         socialLinks={previewRoot.socialLinks}
-        visualStyle={websiteVisualStyle(previewRoot.palette,previewRoot.accentColor)}>
+        visualStyle={websiteVisualStyle(previewRoot.palette,previewRoot.accentColor,previewRoot.secondaryColor,previewRoot.tertiaryColor)}>
         <Render config={builderConfig} data={previewDocument}/>
+        {site?.inquiries_enabled&&page.slug==="home"&&previewRoot.chatMode==="inbox"?<WebChatLauncher preview slug={site.slug} business={site.name} categoryId={site.category_id} services={previewServices}/>:null}
         {site?.inquiries_enabled&&page.slug==="home"?<section className="vmv-site-inquiry"
          id="solicitud" aria-label="Vista previa del formulario">
          <small>CONTACTA CON NOSOTROS</small>
