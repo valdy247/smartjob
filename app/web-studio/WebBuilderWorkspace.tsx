@@ -237,6 +237,37 @@ export default function WebBuilderWorkspace(){
   }catch(e){setError(e instanceof Error?e.message:"No se pudo abrir");}
   finally{setBusy(false);}
  }
+ async function deleteSite(target:Site){
+  if(busy||!userId)return;
+  const confirmation=window.prompt(
+   "Eliminar «"+target.name+"» es permanente: se borrarán sus páginas, borradores, historial y versiones publicadas.\\n"+
+   "Escribe este identificador para confirmar: "+target.slug
+  );
+  if(confirmation!==target.slug)return;
+  setBusy(true);setError("");setNotice("");
+  try{
+   const db=await authorized();
+   const [domainCheck,requestCheck,pageCheck]=await Promise.all([
+    db.from("smartjob_builder_domains").select("id").eq("owner_id",userId).eq("site_id",target.id).limit(1),
+    db.from("smartjob_builder_domain_requests").select("id").eq("owner_id",userId).eq("site_id",target.id).limit(1),
+    db.from("smartjob_builder_pages").select("id").eq("owner_id",userId).eq("site_id",target.id)
+   ]);
+   if(domainCheck.error||requestCheck.error||pageCheck.error)
+    throw new Error("No se pudieron verificar los datos del sitio. No se eliminó.");
+   if(domainCheck.data?.length||requestCheck.data?.length)
+    throw new Error("Este sitio tiene un dominio o solicitud de dominio. Resuélvelo antes de eliminarlo.");
+   const {data,error:deleteError}=await db.from("smartjob_builder_sites")
+    .delete().eq("id",target.id).eq("owner_id",userId).select("id").maybeSingle();
+   if(deleteError||!data)throw new Error("No se pudo eliminar el sitio. Comprueba tu sesión y vuelve a intentar.");
+   for(const item of pageCheck.data||[]){
+    try{window.localStorage.removeItem(backupKey(userId,item.id));}catch{/* Browser storage is optional. */}
+   }
+   setSites(current=>current.filter(item=>item.id!==target.id));
+   if(site?.id===target.id){setSite(null);setPage(null);setPages([]);setView("sites");}
+   setNotice("Sitio eliminado. Sus páginas publicadas ya no estarán disponibles.");
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo eliminar el sitio");}
+  finally{setBusy(false);}
+ }
  async function loadCreatedSite(c:NonNullable<ReturnType<typeof getSupabase>>,ids:{siteId:string;pageId:string}){
   const [siteResult,pageResult]=await Promise.all([
    c.from("smartjob_builder_sites").select(
@@ -636,8 +667,16 @@ export default function WebBuilderWorkspace(){
     onClick={()=>void importClassic()}><Layers size={18}/> Importar mi web actual al editor visual</button>:null}
    <h2>Mis sitios</h2>
    <div className={styles.siteList}>
-    {sites.map(s=><button type="button" key={s.id} className={styles.siteCard}
-     onClick={()=>void selectSite(s)}><Globe size={23}/><strong>{s.name}</strong><small>{s.slug}</small><span>Abrir ↗</span></button>)}
+    {sites.map(s=><article key={s.id} className={styles.siteCard}>
+     <button type="button" className={styles.siteOpen} disabled={busy}
+      onClick={()=>void selectSite(s)} aria-label={"Abrir sitio "+s.name+" "+s.slug}>
+      <Globe size={23}/><strong>{s.name}</strong><small>{s.slug}</small><span>Abrir ↗</span>
+     </button>
+     <button type="button" className={styles.siteDelete} disabled={busy}
+      onClick={()=>void deleteSite(s)} aria-label={"Eliminar sitio "+s.name+" "+s.slug}>
+      <Trash2 size={15}/> Eliminar
+     </button>
+    </article>)}
     {!sites.length?<p>Tu primer sitio comienza aquí.</p>:null}
    </div>
   </main>:<main className={styles.main}>
