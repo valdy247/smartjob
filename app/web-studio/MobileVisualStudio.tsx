@@ -634,8 +634,7 @@ export default function MobileVisualStudio({
    ...(keys?.weight?[{id:"weight" as const,label:"Grosor",icon:<Type size={21}/>}]:[]),
    ...(keys?.italic?[{id:"italic" as const,label:"Cursiva",icon:<Type size={21}/>}]:[]),
    ...(keys?.spacing?[{id:"spacing" as const,label:"Espaciado",icon:<SlidersHorizontal size={21}/>}]:[]),
-   ...(["ComposeHeading","ComposeText","HeroVisual"].includes(block?.type||"")?
-    [{id:"align" as const,label:"Alinear",icon:<Layers size={21}/>}]:[]),
+
    {id:"actions",label:"Más opciones",icon:<Settings2 size={21}/>}]:
   isButton?
   [{id:"content",label:"Texto",icon:<Type size={21}/>},
@@ -730,6 +729,7 @@ export default function MobileVisualStudio({
     {mainCanvas}
    </div>
   </div>
+  {selection&&!drawer&&!preview&&block&&props?<div className={styles.visualBackdrop} aria-hidden="true" onClick={closePopup}/> :null}
   {selection&&!drawer&&!preview&&block&&props?<div className={styles.mobileEditingTools}>
    <div className={styles.visualQuickBar} role="toolbar" aria-label="Herramientas del elemento seleccionado">
     <span className={styles.visualQuickLabel}>{selection.kind==="button"?"Botón":selection.kind==="image"?"Imagen":selection.kind==="text"?"Texto":"Sección"}</span>
@@ -752,6 +752,14 @@ export default function MobileVisualStudio({
     {(visualTool==="color"||visualTool==="background")?(isText||isButton)?<ColorField
      label={visualTool==="background"?"Fondo del botón":"Color del texto y del ícono"}
      value={currentColor} allowTransparent onChange={patchColor}/>:null:null}
+    {visualTool==="italic"&&isText&&keys?.italic?<div className={styles.chips}>
+     <button type="button" aria-pressed={String(values?.[keys.italic]||"no")==="no"} onClick={()=>patchTypography({[keys.italic!]: "no"})}>Normal</button>
+     <button type="button" aria-pressed={String(values?.[keys.italic]||"no")==="yes"} onClick={()=>patchTypography({[keys.italic!]: "yes"})}>Cursiva</button>
+    </div>:null}
+    {visualTool==="spacing"&&isText&&keys?.spacing?<RangeField label="Espaciado" min={-3} max={12} step={1} unit="px"
+     value={Number(values?.[keys.spacing]||0)} onChange={v=>patchTypography({[keys.spacing!]:v})}/>:null}
+    {visualTool==="opacity"&&isText&&keys?<RangeField label="Transparencia" min={0} max={100} unit="%"
+     value={Number(values?.[opacityKey]||100)} onChange={v=>patchTypography({[opacityKey]:v})}/>:null}
     {visualTool==="font"&&isText&&keys?<FontField value={values?.[keys.font]||"site"}
      onChange={v=>patchTypography({[keys.font]:v})}/>:null}
     {visualTool==="weight"&&isText&&keys?.weight?<RangeField label="Grosor" min={400} max={900} step={100}
