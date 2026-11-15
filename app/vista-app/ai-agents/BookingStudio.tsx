@@ -127,8 +127,8 @@ export default function BookingStudio({agent,onClose,onAgentUpdated}:{
  return <section className={styles.root}>
   <button type="button" onClick={onClose} className={styles.back}><ArrowLeft size={17}/> AI Agents</button>
   <div className={styles.hero}><div><small>AGENTE PRINCIPAL · AGENDA VMV</small>
-   <h1>Reservas</h1><p>{current.name} · Servicios, disponibilidad y citas de este negocio.</p></div><CalendarDays size={30}/></div>
-  <div className={styles.warning}><ShieldCheck size={18}/><p>Es el mismo agente de tu negocio. La agenda interna no está sincronizada automáticamente con calendarios externos. No se generan cobros.</p></div>
+   <h1>Reservas</h1><p>{current.name}</p></div><CalendarDays size={30}/></div>
+  <div className={styles.warning}><ShieldCheck size={18}/><p>Agenda VMV sin sincronización externa. Sin cobros.</p></div>
   {notice?<div className={styles.notice} role="status">{notice}</div>:null}
   <div className={styles.tabs} role="tablist">{([["services","Servicios"],["slots","Horarios"],["bookings","Citas"],["permissions","Permisos"]] as [Tab,string][]).map(([id,name])=>
    <button type="button" role="tab" aria-selected={tab===id} key={id}
@@ -147,7 +147,7 @@ export default function BookingStudio({agent,onClose,onAgentUpdated}:{
     <label className={styles.check}><input type="checkbox" checked={form.auto_confirm} onChange={e=>patch("auto_confirm",e.target.checked)}/> Permitir confirmación automática solo con plaza y autorización del agente</label>
     <button type="button" disabled={busy} className={styles.primary} onClick={()=>void saveService()}><Save size={16}/> Guardar servicio</button>
    </div>:null}
-   {services.length===0&&!loading?<div className={styles.empty}><CalendarDays size={24}/><p>No hay servicios reservables. Puedes añadir el primero aquí, sin crear otro agente.</p></div>:null}
+   {services.length===0&&!loading?<div className={styles.empty}><CalendarDays size={24}/><p>Sin servicios. Añade uno para empezar.</p></div>:null}
    <div className={styles.items}>{services.map(x=><div className={styles.item} key={x.id}><div><strong>{x.name}</strong>
     <small>{x.duration_minutes} min · {x.price_cents===null?"Precio por confirmar":"$"+(x.price_cents/100).toFixed(2)} · {x.approved?"Aprobado":"Pendiente"}</small>
     <small>{x.time_zone} · {x.active?"Activo":"Inactivo"}</small></div>
@@ -168,7 +168,7 @@ export default function BookingStudio({agent,onClose,onAgentUpdated}:{
    <div className={styles.items}>{bookings.map(b=><div key={b.id} className={styles.item}><div><strong>{b.customer_name}</strong><small>{services.find(s=>s.id===b.service_id)?.name||"Servicio"} · {b.status}</small><small>{new Date(b.created_at).toLocaleString("es-US")} · {b.agent_id===current.id?"Tu agente":"Agente anterior del negocio"}</small></div><CheckCircle2 size={17}/></div>)}</div>
   </>:null}
   {tab==="permissions"?<div className={styles.form}>
-   <p className={styles.hint}>Los permisos pertenecen a {current.name}, no a otro agente. Se comprueban nuevamente antes de realizar una reserva real.</p>
+   <p className={styles.hint}>Los permisos de {current.name} se verifican antes de reservar.</p>
    <label className={styles.check}><input type="checkbox" checked={enabled} onChange={e=>{setEnabled(e.target.checked);if(!e.target.checked)setAllowConfirm(false);}}/> Permitir a este agente atender solicitudes de reserva</label>
    <label className={styles.check}><input type="checkbox" disabled={!enabled} checked={allowConfirm} onChange={e=>setAllowConfirm(e.target.checked)}/> Autorizar registro de citas aceptadas, solo con disponibilidad confirmada</label>
    <button type="button" disabled={busy} className={styles.primary} onClick={()=>void savePermissions()}><Save size={16}/> Guardar permisos del agente</button>
