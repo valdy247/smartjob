@@ -52,6 +52,7 @@ export default function WebBuilderWorkspace(){
  const dictionary=useMemo(()=>puckDictionary(language),[language]);
  const [userId,setUserId]=useState("");
  const [sites,setSites]=useState<Site[]>([]);
+ const [expandedQuota,setExpandedQuota]=useState(false);
  const [site,setSite]=useState<Site|null>(null);
  const [pages,setPages]=useState<Page[]>([]);
  const [publishedIds,setPublishedIds]=useState<string[]>([]);
@@ -145,6 +146,9 @@ export default function WebBuilderWorkspace(){
      .select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug").eq("owner_id",data.user.id).order("created_at",{ascending:false});
     if(error)throw new Error("No se pudieron cargar tus sitios");
     if(active){setUserId(data.user.id);setSites((rows||[]) as Site[]);}
+    const {data:quota,error:quotaError}=await client.from("smartjob_builder_quota_exemptions")
+     .select("expires_at").eq("owner_id",data.user.id).maybeSingle();
+    if(active)setExpandedQuota(!quotaError&&Boolean(quota&&Date.parse(quota.expires_at)>Date.now()));
     const {data:classic}=await client.from("smartjob_web_sites")
      .select("slug,draft").eq("owner_id",data.user.id).maybeSingle();
     if(classic?.draft&&active&&!rows?.some(row=>row.legacy_source_slug===classic.slug)){
@@ -365,7 +369,7 @@ export default function WebBuilderWorkspace(){
   const requested=slugify(name);
   if(name.length<2||requested.length<2){setError("Escribe un nombre para la página");return;}
   if(pages.some(p=>p.slug===requested)){setError("Ya existe esa página");return;}
-  if(pages.length>=15){setError("Máximo 15 páginas por sitio en esta versión");return;}
+  if(!expandedQuota&&pages.length>=15){setError("Máximo 15 páginas por sitio en esta versión");return;}
   if(dirty&&!window.confirm("Hay cambios sin guardar. ¿Crear otra página?"))return;
   setBusy(true);setError("");
   try{
