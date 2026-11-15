@@ -16,6 +16,7 @@ import {ColorField,FontField,RangeField} from "./BuilderContextFields";
 import {WebsiteChrome,websiteVisualStyle} from "@/lib/web-site-chrome";
 import {familyForCategory} from "@/lib/web-builder-templates";
 import WebChatLauncher from "./WebChatLauncher";
+import RequestForm from "@/app/sites/[slug]/RequestForm";
 import styles from "./MobileVisualStudio.module.css";
 
 type PageChoice={id:string;slug:string;title:string};
@@ -94,10 +95,18 @@ function moveBlock(data:Data,id:string,step:number):Data{
 function editableConfig():Config{
  const blocks=Object.fromEntries(Object.entries(builderConfig.components||{}).map(([kind,block])=>{
   const original=block as unknown as {render:(props:Record<string,unknown>)=>React.ReactNode};
-  return [kind,{...block,render:(props:Record<string,unknown>)=>
-   <div data-vmv-edit-block={String(props.id||"")} data-vmv-block-type={kind} style={{display:"contents"}}>
-    {original.render(props)}
-   </div>}];
+  return [kind,{...block,render:(props:Record<string,unknown>)=>{
+   const emptyImage=(["ComposeImage","Image"].includes(kind)&&!String(props.image||props.url||""));
+   const emptySection=(["OfferingGrid","PhotoGallery","ProjectShowcase","TeamGrid"].includes(kind)&&
+    (!Array.isArray(props.items)||props.items.length===0));
+   return <div data-vmv-edit-block={String(props.id||"")} data-vmv-block-type={kind} style={{display:"contents"}}>
+    {emptyImage||emptySection?
+     <div data-vmv-empty="true" style={{padding:"50px 20px",textAlign:"center",border:"1px dashed #bc9bda",
+      borderRadius:12,background:"#faf6ff",color:"#7956a9",fontSize:14}}>
+      {emptyImage?"Mantén pulsado aquí para agregar una imagen":"Mantén pulsado aquí para editar esta sección"}
+     </div>:original.render(props)}
+   </div>;
+  }}];
  }));
  return {...builderConfig,components:blocks} as Config;
 }
@@ -225,7 +234,7 @@ export default function MobileVisualStudio({
   const p=node.props as Record<string,unknown>;
   let kind:Pick["kind"]="section";let key:string|undefined;let index:number|undefined;let img:ImageTarget|undefined;
   const images=imageTargets(node.type,p);
-  const picture=target.closest("img,.vmv-managed-image");
+  const picture=target.closest("img,.vmv-managed-image,.vmv-hero-cover,.vmv-hero-image,.vmv-visual-media,[data-vmv-empty]");
   if(picture&&images.length){
    const ordered=wrapper?Array.from(wrapper.querySelectorAll(".vmv-managed-image")):[];
    const indexFound=ordered.findIndex(el=>el===picture||el.contains(picture));
@@ -287,6 +296,15 @@ export default function MobileVisualStudio({
   siteWidth={String(root.width||"regular")} font={String(root.font||"modern")}
   socialLinks={root.socialLinks} visualStyle={withSiteStyle}>
   <Render config={preview?builderConfig:config} data={clean}/>
+  {inquiriesEnabled&&page?.slug==="home"&&root.chatMode==="inbox"?
+   <WebChatLauncher preview slug={siteSlug} business={siteName} categoryId={siteCategory}
+    services={clean.content.flatMap(c=>c.type==="OfferingGrid"&&Array.isArray(c.props.items)?
+     (c.props.items as Array<{title?:unknown}>).map(x=>String(x.title||"")).filter(Boolean):[])}/>:null}
+  {inquiriesEnabled&&page?.slug==="home"?<section className="vmv-site-inquiry" id="solicitud">
+   <small>CONTACTA CON NOSOTROS</small><h2>¿Qué necesitas?</h2>
+   <RequestForm preview source="builder" slug={siteSlug} business={siteName}
+    categoryId={siteCategory} services={[]}/>
+  </section>:null}
  </WebsiteChrome>;
  const menuAction=(next:Section)=>{setSection(next);closePopup();if(next==="domain")onDomains();if(next==="history")onHistory();};
  const sectionLabel=(part:Section)=>({home:"Editor",pages:"Páginas",create:"Añadir elemento",
@@ -443,7 +461,8 @@ export default function MobileVisualStudio({
       <p className={styles.help}>El nuevo elemento se añadirá al final de la página.</p>
       {ADDS.map(o=><button key={o.type} onClick={()=>{
        const spec=builderConfig.components?.[o.type] as {defaultProps?:Record<string,unknown>}|undefined;
-       const node={type:o.type,props:{...spec?.defaultProps,id:crypto.randomUUID()}};
+       const defaults=JSON.parse(JSON.stringify(spec?.defaultProps||{})) as Record<string,unknown>;
+       const node={type:o.type,props:{...defaults,id:crypto.randomUUID()}};
        onChange({...data,content:[...data.content,node]});
        closeDrawer();
       }}><Plus/> {o.label}<ChevronRight/></button>)}
