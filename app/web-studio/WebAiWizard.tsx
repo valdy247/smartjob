@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
 import dynamic from "next/dynamic";
-import {ArrowLeft,ArrowRight,Check,CheckCircle2,Image as ImageIcon,LoaderCircle,MessageCircle,Package,CalendarDays,Sparkles,ShieldCheck} from "lucide-react";
+import {ArrowLeft,ArrowRight,Check,CheckCircle2,Image as ImageIcon,LoaderCircle,MessageCircle,Package,CalendarDays,Sparkles,ShieldCheck,LayoutTemplate,BookOpen,Layers3} from "lucide-react";
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {getSupabase} from "@/lib/supabase";
 import {normalizeSocialLinks} from "@/lib/web-builder-social";
@@ -14,6 +14,7 @@ import type {WebsiteAgentChoice} from "./WebAiAgentPanel";
 const WebAiAgentPanel=dynamic(()=>import("./WebAiAgentPanel"),{ssr:false,loading:()=>
  <p role="status" style={{padding:12,color:"#7652aa",fontSize:12}}>Cargando configuración del agente…</p>
 });
+const ScienceWaitQuiz=dynamic(()=>import("@/app/vista-app/marketing/ScienceWaitQuiz"),{ssr:false});
 import styles from "./WebAiWizard.module.css";
 
 type Business={
@@ -45,6 +46,38 @@ const shapes:{id:ImageShape;label:string;description:string}[]=[
  {id:"pill",label:"Orgánicas",description:"Curvas pronunciadas"},
  {id:"bordered",label:"Con marco",description:"Contorno destacado"}
 ];
+const moodOptions=[
+ {id:"minimal",name:"Minimalista",desc:"Limpia, aireada y con mucho espacio",bg:"#f8f7f3",ink:"#45434d",accent:"#bfaeaa"},
+ {id:"bold",name:"Impactante",desc:"Contrastes grandes y estilo atrevido",bg:"#211b28",ink:"#ffffff",accent:"#ee9c56"},
+ {id:"editorial",name:"Editorial",desc:"Elegancia, tipografía y ritmo visual",bg:"#f6eee5",ink:"#3a3132",accent:"#a37a62"},
+ {id:"warm",name:"Cercana",desc:"Amable, luminosa y con personalidad",bg:"#f7e9ec",ink:"#513d53",accent:"#b56c91"}
+] as const;
+const heroOptions=[
+ {id:"cover",name:"Foto protagonista",desc:"Una portada grande e inmersiva"},
+ {id:"split",name:"Foto + contenido",desc:"Texto e imagen lado a lado"},
+ {id:"editorial",name:"Mensaje primero",desc:"Diseño elegante que prioriza el titular"}
+] as const;
+const focusOptions=[
+ {id:"offerings",name:"Productos y servicios",desc:"Mostrar qué vendes",icon:Package},
+ {id:"gallery",name:"Fotografías y proyectos",desc:"Enseñar tus trabajos",icon:ImageIcon},
+ {id:"story",name:"Historia y confianza",desc:"Presentar tu negocio",icon:BookOpen},
+ {id:"contact",name:"Contactos y conversiones",desc:"Facilitar la consulta",icon:MessageCircle}
+] as const;
+const toneOptions=[
+ {id:"friendly",name:"Cercano"},{id:"premium",name:"Exclusivo"},
+ {id:"direct",name:"Directo"},{id:"energetic",name:"Dinámico"}
+] as const;
+const spaceOptions=[
+ {id:"airy",name:"Mucho espacio"},{id:"balanced",name:"Equilibrado"},{id:"compact",name:"Compacto"}
+] as const;
+const colorSets=[
+ {name:"Sofisticado",colors:["#293F77","#F3E9D7","#BC954A"]},
+ {name:"Natural",colors:["#239C83","#79CEB8","#705345"]},
+ {name:"Cálido",colors:["#C13D68","#F9A08B","#705345"]},
+ {name:"Moderno",colors:["#3D4052","#A18CE9","#81CEDE"]},
+ {name:"Elegante",colors:["#76507E","#F3E9D7","#BC954A"]},
+ {name:"Vibrante",colors:["#377FC4","#F17969","#E2CF61"]}
+] as const;
 const stepNames=["Tu negocio","3 colores","Tipografía","Fotos y marcos","Conexiones","Confirmar"];
 const toServices=(s:string)=>s.split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean).slice(0,20);
 const fmtPrice=(cents:number)=>"$"+(cents/100).toFixed(2);
@@ -58,6 +91,11 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
  const [loading,setLoading]=useState(true);
  const [colors,setColors]=useState<string[]>([]);
  const [font,setFont]=useState<FontId>("modern");
+ const [mood,setMood]=useState<NonNullable<SiteDesignPreferences["mood"]>>("minimal");
+ const [heroLayout,setHeroLayout]=useState<NonNullable<SiteDesignPreferences["heroLayout"]>>("cover");
+ const [contentFocus,setContentFocus]=useState<NonNullable<SiteDesignPreferences["contentFocus"]>>("offerings");
+ const [copyTone,setCopyTone]=useState<NonNullable<SiteDesignPreferences["copyTone"]>>("friendly");
+ const [spacing,setSpacing]=useState<NonNullable<SiteDesignPreferences["spacing"]>>("balanced");
  const [shape,setShape]=useState<ImageShape>("rounded");
  const [inventory,setInventory]=useState(false);
  const [booking,setBooking]=useState(false);
@@ -76,6 +114,7 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
  const [aiError,setAiError]=useState("");
  const [error,setError]=useState("");
  const [generating,setGenerating]=useState(false);
+ const [showQuiz,setShowQuiz]=useState(false);
  const [proposal,setProposal]=useState<SiteProposal|null>(null);
  const applyBusiness=(b:Business)=>{
   setAgentChoice(null);setReplyMode("manual");
@@ -161,8 +200,10 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
   if(step===3&&!cover&&!skipPhotos){setError("Agrega una foto real de portada o marca «Continuar sin fotos por ahora».");return;}
   setError("");setStep(s=>Math.min(5,s+1));
  };
- const selectedDesign=useMemo<SiteDesignPreferences>(()=>({colors,font,imageStyle:shape,features:{inventory,booking,chat},
-  chatMode:chat?"inbox":"off"}),[colors,font,shape,inventory,booking,chat]);
+ const selectedDesign=useMemo<SiteDesignPreferences>(()=>({
+  colors,font,imageStyle:shape,mood,heroLayout,contentFocus,copyTone,spacing,
+  features:{inventory,booking,chat},chatMode:chat?"inbox":"off"
+ }),[colors,font,shape,mood,heroLayout,contentFocus,copyTone,spacing,inventory,booking,chat]);
  const input=useMemo<SiteIntake>(()=>{
   const services=toServices(form.services);
   const products=inventory?(catalog.length?catalog:toServices(selectedBusiness?.products||"").map((title,i)=>({id:"business-product-"+i,title,description:"",price:"",image:""}))):[];
@@ -175,7 +216,7 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
   if(busy||generating)return;
   if(colors.length!==3){setError("Selecciona tres colores.");setStep(1);return;}
   if(aiState!=="ready"){setError(aiError||"No se ha conectado el generador de IA.");return;}
-  setGenerating(true);setError("");
+  setGenerating(true);setShowQuiz(true);setError("");
   try{
    const db=getSupabase();if(!db)throw Error("Inicia sesión");
    const {data:{session}}=await db.auth.getSession();
@@ -187,10 +228,10 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
    const result=await res.json() as {proposal?:SiteProposal;error?:string};
    if(!res.ok||!result.proposal?.data)throw Error(result.error||"No pudimos crear el diseño.");
    setProposal(result.proposal);
-  }catch(e){setError(e instanceof Error?e.message:"No se pudo crear el diseño.");}
+  }catch(e){setShowQuiz(false);setError(e instanceof Error?e.message:"No se pudo crear el diseño.");}
   finally{setGenerating(false);}
  };
- if(proposal)return <TemplateProposals input={input} generated={proposal} busy={busy} onBack={()=>setProposal(null)}
+ if(proposal&&!showQuiz)return <TemplateProposals input={input} generated={proposal} busy={busy} onBack={()=>setProposal(null)}
   onChoose={p=>onChoose(input,p)}/>;
  return <section className={styles.root}>
   <header className={styles.heading}><span><Sparkles size={16}/> VMV AI WEB STUDIO</span>
@@ -221,7 +262,16 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
    {selectedBusiness?.products?<small className={styles.note}>VMV también conserva los productos descritos en tu perfil. El catálogo verificado se carga si activas Inventario.</small>:null}
   </div>:null}
   {step===1?<div className={styles.panel}>
-   <h2>02 · Selecciona 3 colores para tu web</h2><p>El orden importa: principal, secundario y detalles. Puedes cambiar cualquiera.</p>
+   <h2>02 · Colores que representan tu negocio</h2>
+   <p>Elige una combinación completa de un toque o personaliza los tres colores debajo.</p>
+   <div className={styles.paletteSets} role="group" aria-label="Paletas recomendadas">
+    {colorSets.map(p=><button key={p.name} type="button" aria-pressed={p.colors.every((c,i)=>colors[i]===c)}
+     onClick={()=>{setColors([...p.colors]);setError("");}}>
+     <span className={styles.paletteDots}>{p.colors.map(c=><i key={c} style={{background:c}}/>)}</span>
+     <strong>{p.name}</strong>
+    </button>)}
+   </div>
+   <p>O selecciona cada color. El orden importa: principal, secundario y detalles.</p>
    <div className={styles.colorGrid}>{palette.map(([name,hex])=>{const rank=colors.indexOf(hex);
     return <button key={hex} type="button" className={styles.colorTile} aria-pressed={rank>=0}
      onClick={()=>toggleColor(hex)} title={name+" · "+hex}>
@@ -231,7 +281,47 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
     <div>{colors.map((hex,i)=><span key={hex} style={{background:hex,color:i===0?"#fff":"#201a29"}}>{["Principal","Secundario","Detalle"][i]}</span>)}</div></div>
   </div>:null}
   {step===2?<div className={styles.panel}>
-   <h2>03 · ¿Qué tipografía te representa?</h2><p>Prueba estas fuentes populares. Quedará disponible para ajustar en el Editor 2.0.</p>
+   <h2>03 · Elige cómo quieres que se vea tu web</h2>
+   <p>Solo toca las tarjetas que más te gusten. La IA respetará tus decisiones sin necesidad de escribir instrucciones.</p>
+   <h3 className={styles.choiceHeading}>¿Qué personalidad visual prefieres?</h3>
+   <div className={styles.moodGrid} role="group" aria-label="Personalidad visual">
+    {moodOptions.map(item=><button type="button" key={item.id} aria-pressed={mood===item.id}
+     onClick={()=>{setMood(item.id);setError("");}}>
+     <span className={styles.moodPreview} style={{background:item.bg,color:item.ink}}>
+      <i style={{background:item.accent}}/>
+      <strong>Tu marca</strong><b style={{background:item.ink,opacity:.7}}/>
+      <em style={{background:item.ink,opacity:.2}}/>
+      <span style={{background:item.accent}}/>
+     </span>
+     <strong>{item.name}</strong><small>{item.desc}</small>
+    </button>)}
+   </div>
+   <h3 className={styles.choiceHeading}>¿Cómo quieres tu portada?</h3>
+   <div className={styles.choiceGrid} role="group" aria-label="Diseño de portada">
+    {heroOptions.map(item=><button type="button" key={item.id} aria-pressed={heroLayout===item.id}
+     onClick={()=>setHeroLayout(item.id)}>
+      <span className={styles.heroDiagram} data-hero={item.id}><i/><b/><em/></span>
+      <strong>{item.name}</strong><small>{item.desc}</small>
+    </button>)}
+   </div>
+   <h3 className={styles.choiceHeading}>¿Qué debería destacar?</h3>
+   <div className={styles.focusGrid} role="group" aria-label="Prioridad del contenido">
+    {focusOptions.map(item=><button type="button" key={item.id} aria-pressed={contentFocus===item.id}
+     onClick={()=>setContentFocus(item.id)}><item.icon size={21}/><strong>{item.name}</strong>
+     <small>{item.desc}</small></button>)}
+   </div>
+   <h3 className={styles.choiceHeading}>¿Cómo quieres que hable tu web?</h3>
+   <div className={styles.chipGrid} role="group" aria-label="Tono de la marca">
+    {toneOptions.map(item=><button type="button" key={item.id} aria-pressed={copyTone===item.id}
+     onClick={()=>setCopyTone(item.id)}>{item.name}</button>)}
+   </div>
+   <h3 className={styles.choiceHeading}>Espacio entre secciones</h3>
+   <div className={styles.chipGrid} role="group" aria-label="Espaciado del sitio">
+    {spaceOptions.map(item=><button type="button" key={item.id} aria-pressed={spacing===item.id}
+     onClick={()=>setSpacing(item.id)}>{item.name}</button>)}
+   </div>
+   <h3 className={styles.choiceHeading}>Tipografía</h3>
+   <p>Prueba estas fuentes. Podrás ajustarlas después en el editor.</p>
    <div className={styles.fontGrid}>{fonts.map(item=><button type="button" key={item.id} aria-pressed={font===item.id}
     onClick={()=>setFont(item.id)}><small>{item.label}</small><strong style={{fontFamily:item.css}}>{item.sample}</strong></button>)}</div>
   </div>:null}
@@ -280,6 +370,9 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
    <div className={styles.summary}>
     <div><small>Negocio</small><strong>{form.business}</strong></div>
     <div><small>Colores</small><span className={styles.miniColors}>{colors.map(c=><i key={c} style={{background:c}}/>)}</span></div>
+    <div><small>Estilo</small><strong>{moodOptions.find(v=>v.id===mood)?.name} · {heroOptions.find(v=>v.id===heroLayout)?.name}</strong></div>
+    <div><small>Prioridad</small><strong>{focusOptions.find(v=>v.id===contentFocus)?.name}</strong></div>
+    <div><small>Tono</small><strong>{toneOptions.find(v=>v.id===copyTone)?.name} · {spaceOptions.find(v=>v.id===spacing)?.name}</strong></div>
     <div><small>Fuente</small><strong>{fonts.find(f=>f.id===font)?.label}</strong></div>
     <div><small>Imágenes</small><strong>{shapes.find(f=>f.id===shape)?.label} · {[cover,...gallery].filter(Boolean).length} fotos</strong></div>
     <div><small>Secciones</small><strong>{[inventory?"Productos":"",booking?"Citas":"",chat?"Chat":"", "Contacto"].filter(Boolean).join(" · ")}</strong></div>
@@ -292,6 +385,8 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
     {generating?<LoaderCircle size={18}/>:<Sparkles size={18}/>} {generating?"Creando tu diseño…":"Generar mi web con IA"} <ArrowRight size={17}/></button>
   </div>:null}
   {error?<p className={styles.error} role="alert">{error}</p>:null}
+  {showQuiz?<ScienceWaitQuiz en={false} seed={form.business||"VMV"} processing={generating}
+   mode="web" onContinue={()=>setShowQuiz(false)}/>:null}
   <footer className={styles.footer}>
    <small><ShieldCheck size={15}/> Nada se publica sin tu aprobación.</small>
    <div>{step>0?<button type="button" className={styles.back} disabled={busy||generating} onClick={()=>{setStep(s=>Math.max(0,s-1));setError("");}}><ArrowLeft size={17}/> Anterior</button>:null}
