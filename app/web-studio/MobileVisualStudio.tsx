@@ -594,6 +594,82 @@ export default function MobileVisualStudio({
  const sectionLabel=(part:Section)=>({home:"Editor",pages:"Páginas",create:"Añadir elemento",
   appearance:"Colores y diseño",seo:"SEO e imágenes",connections:"Chat y agente",
   domain:"Dominio",history:"Versiones"})[part];
+ const isText=selection?.kind==="text";
+ const isButton=selection?.kind==="button";
+ const isImage=selection?.kind==="image";
+ const keys=activeTypography?.keys;
+ const values=activeTypography?.values;
+ const canOpacity=Boolean(isText&&keys);
+ const opacityKey=keys?keys.color==="textColor"?"textOpacity":selectedTextKey+"Opacity":"";
+ const patchTypography=(patch:Record<string,unknown>)=>{
+  if(!selection||!activeTypography||!props)return;
+  if(activeTypography.index!==null&&Array.isArray(props.items)){
+   const items=(props.items as Record<string,unknown>[]).map((entry,i)=>
+    i===activeTypography.index?{...entry,...patch}:entry);
+   edit({items},`visual:${selection.id}:${activeTypography.index}`);
+  }else edit(patch,`visual:${selection.id}:${selectedTextKey}`);
+ };
+ const activeSize=isText?Number(keys&&values?.[keys.size])||(
+  selectedTextKey==="title"?32:17):
+  isButton?Number(props?.buttonFontSize)||13:18;
+ const currentColor=isText?String(keys&&values?.[keys.color]||""):
+  isButton?String(props?.[visualTool==="background"?"buttonColor":"buttonTextColor"]||""):"";
+ const patchColor=(value:string)=>{
+  if(isText&&keys)patchTypography({[keys.color]:value});
+  else if(isButton)edit({[visualTool==="background"?"buttonColor":"buttonTextColor"]:value});
+  if(/^#[a-f\\d]{6}$/i.test(value))setRecentColors(old=>[value,...old.filter(x=>x!==value)].slice(0,8));
+ };
+ const menuChoices:Array<{id:VisualTool;label:string;icon:React.ReactNode}> = isText?
+  [{id:"content",label:"Editar texto",icon:<Type size={21}/>},
+   ...(keys?[{id:"size" as const,label:"Tamaño",icon:<SlidersHorizontal size={21}/>},
+    {id:"color" as const,label:"Color",icon:<Palette size={21}/>},
+    {id:"font" as const,label:"Tipografía",icon:<Type size={21}/>},
+    {id:"opacity" as const,label:"Transparencia",icon:<Eye size={21}/>}]:[]),
+   ...(keys?.weight?[{id:"weight" as const,label:"Grosor",icon:<Type size={21}/>}]:[]),
+   ...(keys?.italic?[{id:"italic" as const,label:"Cursiva",icon:<Type size={21}/>}]:[]),
+   ...(keys?.spacing?[{id:"spacing" as const,label:"Espaciado",icon:<SlidersHorizontal size={21}/>}]:[]),
+   ...(["ComposeHeading","ComposeText","HeroVisual"].includes(block?.type||"")?
+    [{id:"align" as const,label:"Alinear",icon:<Layers size={21}/>}]:[]),
+   {id:"actions",label:"Más opciones",icon:<Settings2 size={21}/>}]:
+  isButton?
+  [{id:"content",label:"Texto",icon:<Type size={21}/>},
+   {id:"size",label:"Tamaño",icon:<SlidersHorizontal size={21}/>},
+   {id:"color",label:"Color",icon:<Palette size={21}/>},
+   {id:"background",label:"Fondo",icon:<Palette size={21}/>},
+   {id:"shape",label:"Forma",icon:<Layers size={21}/>},
+   {id:"link",label:"Enlace",icon:<Globe size={21}/>},
+   {id:"actions",label:"Más opciones",icon:<Settings2 size={21}/>}]:
+  isImage?
+  [{id:"image",label:"Cambiar foto",icon:<ImagePlus size={21}/>},
+   ...(block?.type==="HeroVisual"?[
+    {id:"shade" as const,label:"Oscuridad",icon:<SlidersHorizontal size={21}/>},
+    {id:"frame" as const,label:"Encuadre",icon:<Layers size={21}/>}]:[]),
+   {id:"opacity",label:"Transparencia",icon:<Eye size={21}/>},
+   {id:"actions",label:"Más opciones",icon:<Settings2 size={21}/>}]:
+  [{id:"actions",label:"Contenido",icon:<Settings2 size={21}/>},
+   ...(block?.type==="HeroVisual"?[{id:"shade" as const,label:"Oscuridad",icon:<SlidersHorizontal size={21}/>}]:[]),
+   {id:"content",label:"Duplicar",icon:<Copy size={21}/>},
+   {id:"link",label:"Eliminar",icon:<Trash2 size={21}/>}];
+ const pickTool=(tool:VisualTool)=>{
+  if(selection?.kind==="section"&&props){
+   if(tool==="content"){
+    const copied=duplicateBlock(data,selection.id);
+    if(copied.newId){onChange(copied.data);setSelection({...selection,id:copied.newId});}
+    closePopup();return;
+   }
+   if(tool==="link"){
+    setDeleteTarget({id:selection.id,label:String(props.title||"esta sección").slice(0,70)});
+    setVisualTool("menu");return;
+   }
+  }
+  setVisualTool(tool);
+ };
+ const toolName=({content:"Editar",size:"Tamaño",color:"Color del texto",
+  background:"Fondo del botón",font:"Tipografía",weight:"Grosor",italic:"Cursiva",
+  spacing:"Espaciado",opacity:"Transparencia",align:"Alineación",image:"Imagen",
+  shade:"Oscuridad del fondo",frame:"Encuadre",shape:"Forma del botón",
+  link:"Enlace",actions:"Opciones",menu:"Herramientas"} as Record<VisualTool,string>)[visualTool];
+
  return <div className={styles.stage} data-device={device} data-preview={preview}
   data-inspecting={Boolean(selection&&!drawer&&!preview&&visualTool==="actions")}
   onClickCapture={event=>{
