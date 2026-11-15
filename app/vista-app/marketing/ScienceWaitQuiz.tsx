@@ -19,7 +19,7 @@ const QUESTIONS:Question[]=[
  {es:"A presión atmosférica normal, ¿a qué temperatura hierve el agua?",en:"At standard atmospheric pressure, at what temperature does water boil?",choicesEs:["80 °C","100 °C","120 °C"],choicesEn:["80 °C","100 °C","120 °C"],correct:1,factEs:"A nivel del mar el agua pura hierve cerca de 100 °C.",factEn:"At sea level, pure water boils at about 100 °C."}
 ];
 
-export default function ScienceWaitQuiz({en,seed}:{en:boolean;seed:string}){
+export default function ScienceWaitQuiz({en,seed,processing,onContinue}:{en:boolean;seed:string;processing:boolean;onContinue:()=>void}){
  const [index,setIndex]=useState(()=>[...seed].reduce((n,c)=>n+c.charCodeAt(0),0)%QUESTIONS.length);
  const [chosen,setChosen]=useState<number|null>(null);
  const titleRef=useRef<HTMLHeadingElement>(null);
@@ -46,7 +46,7 @@ export default function ScienceWaitQuiz({en,seed}:{en:boolean;seed:string}){
    else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
   }}>
   <div className={styles.content}>
-   <div className={styles.status} role="status"><span className={styles.spinner} aria-hidden="true"/>{en?"Sending your request…":"Enviando tu solicitud…"}</div>
+   <div className={styles.status} role="status">{processing?<span className={styles.spinner} aria-hidden="true"/>:<CheckCircle2 size={17} aria-hidden="true"/>}{processing?(en?"Sending your request…":"Enviando tu solicitud…"):(en?"Submission finished. Answer to see the result.":"El envío terminó. Responde para ver el resultado.")}</div>
    <p className={styles.eyebrow}>{en?"A science challenge":"Un acertijo de ciencia"}</p>
    <h2 id="science-wait-heading" ref={titleRef} tabIndex={-1} className={styles.question}>{en?question.en:question.es}</h2>
    <div className={styles.choices} role="group" aria-label={en?"Choose your answer":"Elige tu respuesta"}>
@@ -65,8 +65,8 @@ export default function ScienceWaitQuiz({en,seed}:{en:boolean;seed:string}){
      :<><XCircle className={styles.answerIcon} size={17} aria-hidden="true"/><strong>{en?"Incorrect answer.":"Respuesta incorrecta."}</strong>{" "}{en?"You chose":"Elegiste"}: {choices[chosen]}. {en?"Correct":"Correcta"}: {choices[question.correct]}.</>}
     </p>
     <p className={styles.resultText}>{en?question.factEn:question.factEs}</p>
-    <button type="button" className={styles.next} onClick={()=>{setChosen(null);setIndex(i=>(i+1)%QUESTIONS.length);titleRef.current?.focus();}}>{en?"Next question":"Otra pregunta"}</button>
-   </div>:<p className={styles.helper}>{en?"The request continues processing while you play.":"Tu solicitud sigue procesándose mientras juegas."}</p>}
+    {processing?<button type="button" className={styles.next} onClick={()=>{setChosen(null);setIndex(i=>(i+1)%QUESTIONS.length);titleRef.current?.focus();}}>{en?"Next question":"Otra pregunta"}</button>:<button type="button" className={styles.next} onClick={onContinue}>{en?"View submission result":"Ver resultado del envío"}</button>}
+   </div>:<p className={styles.helper}>{processing?(en?"The request continues processing while you play.":"Tu solicitud sigue procesándose mientras juegas."):(en?"Choose an answer to continue.":"Elige una respuesta para continuar.")}</p>}
   </div>
  </section>,document.body);
 }
