@@ -276,24 +276,25 @@ export const compositionBlocks:Config["components"]={
    label:{type:"text",contentEditable:true,placeholder:"Texto del botón"},
    url:{type:"text"},
    style:{type:"radio",options:[{label:"Sólido",value:"solid"},{label:"Contorno",value:"outline"},{label:"Enlace",value:"link"}]},
+   buttonShape:{type:"radio",options:[{label:"Redondo",value:"pill"},{label:"Suave",value:"rounded"},{label:"Cuadrado",value:"square"}]},
    buttonColor:colorEditorField("Fondo del botón"),buttonTextColor:colorEditorField("Texto del botón"),
    buttonFontSize:numericEditorField("fontSize"),
    alignDesktop:fields.alignment,alignMobile:fields.alignment,visibility:fields.visibility
   },
-  defaultProps:{label:"Solicitar información",url:"#solicitud",style:"solid",buttonColor:"",buttonTextColor:"",buttonFontSize:0,alignDesktop:"left",alignMobile:"left",visibility:"all"},
+  defaultProps:{label:"Solicitar información",url:"#solicitud",style:"solid",buttonShape:"pill",buttonColor:"",buttonTextColor:"",buttonFontSize:0,alignDesktop:"left",alignMobile:"left",visibility:"all"},
   renderFields:({fields:f})=><>
    <SettingsGroup title="Contenido">{f.label}{f.url}</SettingsGroup>
-   <SettingsGroup title="Diseño">{f.style}{f.buttonColor}{f.buttonTextColor}{f.buttonFontSize}{f.visibility}</SettingsGroup>
+   <SettingsGroup title="Diseño">{f.style}{f.buttonShape}{f.buttonColor}{f.buttonTextColor}{f.buttonFontSize}{f.visibility}</SettingsGroup>
    <SettingsGroup title="Escritorio">{f.alignDesktop}</SettingsGroup>
    <SettingsGroup title="Móvil">{f.alignMobile}</SettingsGroup>
   </>,
-  render:({label,url,style,buttonColor,buttonTextColor,buttonFontSize,alignDesktop,alignMobile,visibility})=><div className="vmv-compose-button-wrap"
+  render:({label,url,style,buttonShape,buttonColor,buttonTextColor,buttonFontSize,alignDesktop,alignMobile,visibility})=><div className="vmv-compose-button-wrap"
    data-align-desktop={alignDesktop||"left"} data-align-mobile={alignMobile||"left"}
    data-mobile-visibility={visibility||"all"}>
    <a href={safeButtonLink(url)} className="vmv-site-button" data-button-style={style||"solid"}
     data-vmv-override-background={Boolean(validColor(buttonColor))}
     data-vmv-override-foreground={buttonAppearance({buttonColor,buttonTextColor}).hasForeground}
-    style={buttonAppearance({buttonColor,buttonTextColor,buttonFontSize}).style}>{label||"Contactar"}</a>
+    style={buttonAppearance({buttonShape,buttonColor,buttonTextColor,buttonFontSize}).style}>{label||"Contactar"}</a>
   </div>
  }
 };
@@ -343,6 +344,7 @@ export function normalizeComposeProps(kind:ComposeBlockName,source:Record<string
   props.label=str(source.label,90);
   props.url=safeButtonLink(source.url);
   props.style=select(["solid","outline","link"],"solid")(source.style);
+  props.buttonShape=select(["pill","rounded","square"],"pill")(source.buttonShape);
   props.buttonColor=validColor(source.buttonColor);
   props.buttonTextColor=validColor(source.buttonTextColor);
   props.buttonFontSize=numberField(source.buttonFontSize,0,0,36);
