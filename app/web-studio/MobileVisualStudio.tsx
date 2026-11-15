@@ -536,7 +536,18 @@ export default function MobileVisualStudio({
  const sectionLabel=(part:Section)=>({home:"Editor",pages:"Páginas",create:"Añadir elemento",
   appearance:"Colores y diseño",seo:"SEO e imágenes",connections:"Chat y agente",
   domain:"Dominio",history:"Versiones"})[part];
- return <div className={styles.stage} data-device={device} data-preview={preview} data-inspecting={Boolean(selection&&!drawer&&!preview)}>
+ return <div className={styles.stage} data-device={device} data-preview={preview}
+  data-inspecting={Boolean(selection&&!drawer&&!preview)}
+  onClickCapture={event=>{
+   if(!selection||drawer||preview||deleteTarget||dragRef.current)return;
+   const target=event.target instanceof Element?event.target:null;
+   if(!target)return;
+   // Tapping blank page chrome dismisses the inspector; tapping an editable
+   // block leaves the selection flow alone so another block can open directly.
+   if(target.closest(`.${styles.floating},.${styles.menuButton},.${styles.historyBar}`))return;
+   if(target.closest("[data-vmv-edit-block]"))return;
+   closePopup();
+  }}>
   <button className={styles.menuButton} type="button" aria-label="Abrir menú del editor"
    aria-expanded={drawer} onClick={()=>{setDrawer(true);closePopup();setSection("home");}}>
    <Menu size={23}/></button>
