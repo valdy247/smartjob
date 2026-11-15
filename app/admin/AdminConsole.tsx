@@ -496,7 +496,6 @@ export default function AdminConsole(){
  return <div className={styles.shell}>
   <aside className={styles.sidebar}>
    <a href="/vista-app" className={styles.brand}><span className={styles.brandMark}>V</span><span><b>VMV Business</b><small>ADMIN WORKSPACE</small></span></a>
-   <span className={styles.navCaption}>ESPACIO DE TRABAJO</span>
    <nav aria-label="Administración de VMV">
     {nav.map(item=><button type="button" key={item.id} className={section===item.id?styles.navOn:styles.nav}
      aria-current={section===item.id?"page":undefined} onClick={()=>navigate(item.id)} title={item.title}>
@@ -507,8 +506,8 @@ export default function AdminConsole(){
   </aside>
   <main className={styles.main}>
    <header className={styles.header}>
-    <div><p className={styles.eyebrow}>VMV / OPERACIONES</p><h1>{({home:L("Centro de operaciones","Operations center"),inbox:L("Bandeja de trabajo","Work inbox"),clients:L("Clientes","Clients"),services:L("Servicios","Services"),team:L("Equipo","Team"),testers:"Testers",settings:L("Configuración","Settings")} as Record<Section,string>)[section]}</h1>
-     <p className={styles.subtitle}>{({home:L("Todo lo importante, sin ruido.","Everything that matters, without noise."),inbox:L("Una sola vista para los trabajos de VMV.","One view for all VMV work."),clients:L("Cuentas y relaciones de servicio.","Accounts and services."),services:L("Estado de los servicios de la plataforma.","Service health and activity."),team:L("Responsables, permisos y colaboración.","Assignments and permissions."),testers:L("Envía previews a destinatarios autorizados.","Send previews to authorized testers."),settings:L("Preferencias de operación y seguridad.","Operations and security preferences.")} as Record<Section,string>)[section]}</p></div>
+    <div><h1>{({home:L("Centro de operaciones","Operations center"),inbox:L("Bandeja de trabajo","Work inbox"),clients:L("Clientes","Clients"),services:L("Servicios","Services"),team:L("Equipo","Team"),testers:"Testers",settings:L("Configuración","Settings")} as Record<Section,string>)[section]}</h1>
+    </div>
     <div className={styles.headerActions}><InterfaceLanguagePicker compact/><span className={styles.mode}><span className={styles.greenDot}/> {L("Acceso interno","Internal access")}</span>
      <div className={styles.notificationWrap}>
       <button type="button" className={styles.iconButton} aria-label={"Notificaciones: "+noticeCount+" sin leer"} onClick={()=>setNoticesOpen(v=>!v)}><Bell size={18}/>{noticeCount>0?<span className={styles.notificationCount}>{noticeCount}</span>:null}</button>
@@ -524,7 +523,7 @@ export default function AdminConsole(){
    
 
    {section==="home"?<>
-    <div className={styles.sectionHeading}><div><span className={styles.eyebrow}>EN ESTE MOMENTO</span><h2>{L("Prioridades del equipo","Team priorities")}</h2></div>
+    <div className={styles.sectionHeading}><div><h2>{L("Prioridades del equipo","Team priorities")}</h2></div>
      <button type="button" className={styles.textButton} onClick={()=>openInbox()}>{L("Ver bandeja","Open inbox")} <ArrowUpRight size={16}/></button></div>
     <div className={styles.statGrid}>{stats.map(({title,value,hint,Icon,call})=><button type="button" key={title} className={styles.stat} onClick={call}>
       <div className={styles.statTop}><span className={styles.statIcon}><Icon size={20}/></span><ArrowUpRight size={17}/></div>
