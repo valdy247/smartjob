@@ -312,16 +312,15 @@ export default function VMVMobilePreview(){
          <span><b>{summary?.billing.ok?num(available):"—"}</b><small>{translate("dashboard.minutes")}</small></span>
          <span><b>{summary?.line.ok?num(summary.line.data?.usage.calls):"—"}</b><small>{translate("dashboard.calls")}</small></span>
         </span>
-        <span className={styles.dashboardCardArrow}><ArrowUpRight size={18}/></span>
        </button>
        <div className={styles.dashboardHeading}><h3>{translate("dashboard.quickActions")}</h3>
         <button type="button" onClick={()=>go("services")}>{translate("home.seeAll")} <ArrowUpRight size={14}/></button></div>
        <div className={styles.dashboardQuickGrid}>
         <button type="button" className={styles.dashboardQuickMint} onClick={()=>go("translator")}>
-         <Languages size={26}/><strong>{translate("common.translator")}</strong><ArrowUpRight size={15}/>
+         <Languages size={26}/><strong>{translate("common.translator")}</strong>
         </button>
         <button type="button" className={styles.dashboardQuickSky} onClick={()=>window.location.assign("/vista-app/ai-agents")}>
-         <Bot size={26}/><strong>AI Agents</strong><ArrowUpRight size={15}/>
+         <Bot size={26}/><strong>AI Agents</strong>
         </button>
        </div>
        <section className={styles.dashboardActivity} aria-label={translate("dashboard.activity")}>
@@ -364,7 +363,6 @@ export default function VMVMobilePreview(){
           aria-label={item.name+" · "+item.state}>
           <span className={styles.catalogIcon}><item.Icon size={26}/></span>
           <span className={styles.catalogCardCopy}><strong>{item.name}</strong><small>{item.state}</small></span>
-          <ArrowUpRight className={styles.catalogCardArrow} size={16}/>
          </button>)}
         </div>
         {!filteredCatalog.length&&(catalogGroup!=="all"||!catalogSearch)?<p className={styles.catalogEmpty}>{translate("catalog.noResults")}</p>:null}
