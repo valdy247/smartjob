@@ -142,3 +142,13 @@
 @media(max-width:510px){.paletteSets{grid-template-columns:repeat(2,minmax(0,1fr))}
  .choiceGrid{grid-template-columns:1fr}.choiceGrid>button{min-height:0}
  .heroDiagram{max-width:180px}.moodGrid>button{padding:8px}}
+
+.goalGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.goalGrid button{display:flex;align-items:flex-start;flex-direction:column;gap:9px;min-width:0;
+ padding:14px 12px;min-height:120px;border:1px solid #e9dfef;border-radius:15px;background:#fff;
+ color:#534269;text-align:left;cursor:pointer}
+.goalGrid svg{color:#9462d8}
+.goalGrid strong{font-size:12px}
+.goalGrid small{color:#867894;font-size:10px;line-height:1.35}
+.goalGrid button[aria-pressed=true]{border-color:#8d5dde;background:#f4eeff;box-shadow:inset 0 0 0 1px #8d5dde}
+@media(max-width:660px){.goalGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
