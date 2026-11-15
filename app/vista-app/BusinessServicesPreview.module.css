@@ -18,7 +18,6 @@ button.tile:focus-visible,.toggle button:focus-visible,.back:focus-visible,.save
 .badges{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
 .badges small{background:#ffffffb7;border-radius:8px;padding:6px;font-size:10px;line-height:1;font-weight:800;color:#695979}
 .badges small+small{background:transparent;padding:6px 1px;color:#746883}
-.arrow{position:absolute;right:14px;top:17px;color:#6541ad}
 .violet{background:#dfd0ff}.yellow{background:#ffe39c}.blue{background:#c4e8ff}
 .mint{background:#bcefdc}.pink{background:#ffd5e7}.lilac{background:#e5dafe}
 .back{border:0;background:transparent;display:flex;align-items:center;gap:3px;color:#895de4;font-size:13px;font-weight:800;padding:4px 0 15px;cursor:pointer}
