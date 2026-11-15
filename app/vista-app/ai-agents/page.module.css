@@ -46,7 +46,6 @@
 .tile:hover{transform:translateY(-3px)}
 .tile:focus-visible,.agent button:focus-visible,.backIcon:focus-visible,.saveButton:focus-visible{outline:3px solid #5e2fbb;outline-offset:3px}
 .tileIcon{height:43px;width:43px;display:grid;place-items:center;background:#ffffffa9;border-radius:15px;margin-bottom:auto}
-.tileArrow{position:absolute;right:15px;top:15px;opacity:.65}
 .tile strong{font-size:17px;font-weight:900;line-height:1.15;letter-spacing:-.4px;margin-top:25px}
 .tile small{font-size:10px;opacity:.8;margin-top:5px;font-weight:600}
 .agentCounter{background:#efe7ff;color:#8757dd;padding:6px 11px;border-radius:15px;font-size:12px;font-weight:900}
