@@ -546,3 +546,32 @@
 .vmv-managed-image[data-editing=true] .vmv-image-tools button{
  pointer-events:auto!important;
 }
+
+/* Portal out of Puck's scaled iframe so mobile settings stay on screen. */
+.vmv-context-sheet-overlay{
+ position:fixed;inset:0;z-index:2147482500;
+ display:flex;align-items:flex-end;justify-content:center;
+ padding:0;background:rgba(24,14,37,.53);box-sizing:border-box;
+ -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
+}
+.vmv-context-sheet-overlay>.vmv-context-mobile-sheet{
+ position:relative!important;left:auto!important;right:auto!important;
+ top:auto!important;bottom:auto!important;transform:none!important;
+ display:block;box-sizing:border-box;width:min(100%,540px)!important;max-width:100%!important;
+ max-height:min(86dvh,780px)!important;overflow-y:auto;overflow-x:hidden;
+ overscroll-behavior:contain;background:#fff;
+ border:1px solid #e5d9ef;border-bottom:0;border-radius:22px 22px 0 0;
+ padding:0 16px calc(20px + env(safe-area-inset-bottom));
+ box-shadow:0 -14px 54px rgba(34,20,50,.3);
+ touch-action:pan-y;
+}
+.vmv-context-sheet-overlay>.vmv-context-mobile-sheet:focus{outline:none}
+.vmv-context-sheet-overlay .vmv-context-mobile-sheet>header{
+ position:sticky;top:0;z-index:4;min-height:57px;background:#fff;
+}
+.vmv-context-sheet-overlay .vmv-context-mobile-sheet>header button{min-height:44px;min-width:44px}
+.vmv-context-sheet-overlay .vmv-context-mobile-sheet input,
+.vmv-context-sheet-overlay .vmv-context-mobile-sheet textarea,
+.vmv-context-sheet-overlay .vmv-context-mobile-sheet select{font-size:16px;max-width:100%;box-sizing:border-box}
+.vmv-context-sheet-overlay .vmv-context-mobile-sheet input[type=range]{width:100%}
+@media(min-width:701px){.vmv-context-sheet-overlay{display:none}}
