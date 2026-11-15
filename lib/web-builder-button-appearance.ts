@@ -13,13 +13,18 @@ export function buttonAppearance(input:Record<string,unknown>){
   return luminance>.18?"#241a30":"#ffffff";
  })():"";
  const foreground=chosenText||contrastText;
+ const shape=String(input.buttonShape||"");
+ const radius=shape==="square"?0:shape==="rounded"?14:shape==="pill"?999:null;
+ // CTA retains its explicit custom radius, if present.
+ const customRadius=typeof input.buttonRadius==="number"&&Number.isFinite(input.buttonRadius)&&input.buttonRadius>0;
  const size=typeof input.buttonFontSize==="number"&&Number.isFinite(input.buttonFontSize)&&input.buttonFontSize>=11?
   Math.min(36,Math.round(input.buttonFontSize)):0;
  return {
   style:{
    ...(background?{"--vmv-button-background":background}:{}),
    ...(foreground?{"--vmv-button-foreground":foreground}:{}),
-   ...(size?{fontSize:size+"px"}:{})
+   ...(size?{fontSize:size+"px"}:{}),
+   ...(radius!==null&&!customRadius?{borderRadius:radius+"px"}:{})
   } as CSSProperties,
   hasBackground:Boolean(background),
   hasForeground:Boolean(foreground)
