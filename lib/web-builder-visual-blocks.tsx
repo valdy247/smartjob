@@ -1,4 +1,5 @@
-import {FieldGroup,FieldTab,type Config} from "@puckeditor/core";
+import type {Config} from "@puckeditor/core";
+import {FieldGroup,FieldTab} from "@/app/web-studio/PuckFieldLayout";
 import BuilderImageField from "@/app/web-studio/BuilderImageField";
 import {numericEditorField,colorEditorField} from "@/app/web-studio/BuilderContextFields";
 import BuilderEditableImage from "@/app/web-studio/BuilderEditableImage";
