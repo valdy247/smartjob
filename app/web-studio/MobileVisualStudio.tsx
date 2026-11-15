@@ -353,7 +353,7 @@ export default function MobileVisualStudio({
     <div className={styles.chips}>
      <button onClick={()=>setAdjust("actions")} aria-pressed={adjust==="actions"}><ImagePlus size={15}/> Reemplazar</button>
      <button onClick={()=>setAdjust("image")} aria-pressed={adjust==="image"}><SlidersHorizontal size={15}/> Ajustar</button>
-     <button onClick={()=>setAdjust("move")} aria-pressed={adjust==="move"}><Layers size={15}/> Mover</button>
+     <button onClick={()=>setAdjust("move")} aria-pressed={adjust==="move"}><Layers size={15}/> {block.type==="OfferingGrid"?"Mover tarjeta":"Mover"}</button>
     </div>
     {adjust==="actions"?<BuilderImageField value={targetImage(props,image)}
      onChange={url=>editImage(image,{[image.field]:url})}/>:null}
@@ -368,6 +368,7 @@ export default function MobileVisualStudio({
       onChange={v=>editImage(image,{borderColor:v})}/>
     </div>:null}
     {adjust==="move"?<div className={styles.controls}>
+     {block.type==="OfferingGrid"?<p>Estos controles ajustan la tarjeta completa, incluyendo foto, nombre, descripción y precio.</p>:null}
      <RangeField label="Mover horizontalmente" min={-250} max={250} unit="px"
       value={targetSettings(props,image)[device==="mobile"?"imageMoveXMobile":"imageMoveX"]??0}
       onChange={v=>editImage(image,{[device==="mobile"?"imageMoveXMobile":"imageMoveX"]:v})}/>
