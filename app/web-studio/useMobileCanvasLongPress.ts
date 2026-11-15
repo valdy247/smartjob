@@ -52,7 +52,7 @@ export default function useMobileCanvasLongPress(root:RefObject<HTMLElement|null
    };
    const move=(event:PointerEvent)=>{
     if(!gesture||gesture.id!==event.pointerId)return;
-    if(Math.hypot(event.clientX-gesture.x,event.clientY-gesture.y)>MOVE_TOLERANCE)reset();
+    if(Math.hypot(event.clientX-gesture.x,event.clientY-gesture.y)>MOVE_TOLERANCE){suppressUntil=performance.now()+850;reset();}
    };
    const up=(event:PointerEvent)=>{
     if(!gesture||gesture.id!==event.pointerId)return;
@@ -61,11 +61,16 @@ export default function useMobileCanvasLongPress(root:RefObject<HTMLElement|null
     event.stopPropagation();
     reset();
    };
-   const cancel=()=>reset();
+   const cancel=()=>{if(gesture)suppressUntil=performance.now()+850;reset();};
    const click=(event:MouseEvent)=>{
-    if(!event.isTrusted||event.detail===0||performance.now()>suppressUntil)return;
     const target=event.target instanceof Element?event.target:null;
     if(!target?.closest(CONTENT_SELECTOR)||target.closest(TOOL_SELECTOR))return;
+    // Keep long-press selection of links inside the editor from navigating.
+    if(!event.isTrusted){
+     if(target.closest("a"))event.preventDefault();
+     return;
+    }
+    if(performance.now()>suppressUntil)return;
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
@@ -81,7 +86,7 @@ export default function useMobileCanvasLongPress(root:RefObject<HTMLElement|null
    doc.addEventListener("click",click,true);
    doc.addEventListener("contextmenu",context,true);
    const stylesheet=doc.createElement("style");
-   stylesheet.textContent="@media (pointer:coarse){.vmv-site-editor-canvas :is(img,h1,h2,h3,h4,p){-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}}";
+   stylesheet.textContent="@media (pointer:coarse){.vmv-site :is(img,h1,h2,h3,h4,p,figcaption),.vmv-site-editor-canvas :is(img,h1,h2,h3,h4,p){-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}}";
    (doc.head||doc.documentElement).appendChild(stylesheet);
    attached.set(doc,()=>{
     reset();
