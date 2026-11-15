@@ -38,7 +38,7 @@ const shapes:{id:ImageShape;label:string;description:string}[]=[
  {id:"pill",label:"Orgánicas",description:"Curvas pronunciadas"},
  {id:"bordered",label:"Con marco",description:"Contorno destacado"}
 ];
-const stepNames=["Tu negocio","3 colores","Tipografía","Imágenes","Conexiones","Confirmar"];
+const stepNames=["Tu negocio","3 colores","Tipografía","Fotos y marcos","Conexiones","Confirmar"];
 const toServices=(s:string)=>s.split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean).slice(0,20);
 const fmtPrice=(cents:number)=>"$"+(cents/100).toFixed(2);
 export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy:boolean;onChoose:(input:SiteIntake,proposal:SiteProposal)=>void}){
@@ -59,6 +59,8 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
  const [catalog,setCatalog]=useState<SiteProduct[]>([]);
  const [logo,setLogo]=useState("");
  const [cover,setCover]=useState("");
+ const [gallery,setGallery]=useState<string[]>(["","","",""]);
+ const [skipPhotos,setSkipPhotos]=useState(false);
  const [context,setContext]=useState("");
  const [aiState,setAiState]=useState<"checking"|"ready"|"unavailable">("checking");
  const [aiError,setAiError]=useState("");
@@ -145,6 +147,7 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
    if(form.email.trim()&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())){setError("Revisa el correo comercial.");return;}
   }
   if(step===1&&colors.length!==3){setError("Selecciona exactamente tres colores.");return;}
+  if(step===3&&!cover&&!skipPhotos){setError("Agrega una foto real de portada o marca «Continuar sin fotos por ahora».");return;}
   setError("");setStep(s=>Math.min(5,s+1));
  };
  const selectedDesign=useMemo<SiteDesignPreferences>(()=>({colors,font,imageStyle:shape,features:{inventory,booking,chat},
@@ -154,9 +157,9 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
   const products=inventory?(catalog.length?catalog:toServices(selectedBusiness?.products||"").map((title,i)=>({id:"business-product-"+i,title,description:"",price:"",image:""}))):[];
   return {business:form.business.trim(),categoryId:form.categoryId,offering:inventory?(services.length?"both":"products"):"services",
    objective:booking?"bookings":form.objective,phone:form.phone.trim(),email:form.email.trim(),
-   city:form.city.trim(),about:form.about.trim(),logo,photos:cover?[cover]:[],offerings:services,
+   city:form.city.trim(),about:form.about.trim(),logo,photos:Array.from(new Set([cover,...gallery].filter(Boolean))).slice(0,12),offerings:services,
    products,socials:normalizeSocialLinks(socials),design:selectedDesign};
- },[form,inventory,booking,catalog,socials,selectedDesign,logo,cover,selectedBusiness]);
+ },[form,inventory,booking,catalog,socials,selectedDesign,logo,cover,gallery,selectedBusiness]);
  const generate=async()=>{
   if(busy||generating)return;
   if(colors.length!==3){setError("Selecciona tres colores.");setStep(1);return;}
@@ -222,11 +225,20 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
     onClick={()=>setFont(item.id)}><small>{item.label}</small><strong style={{fontFamily:item.css}}>{item.sample}</strong></button>)}</div>
   </div>:null}
   {step===3?<div className={styles.panel}>
-   <h2>04 · ¿Cómo quieres presentar tus imágenes?</h2><p>El marco elegido se aplicará a la imagen principal y podrás ajustarlo después.</p>
+   <h2>04 · Tus fotografías, tu identidad</h2><p>La IA utilizará las fotos reales que selecciones para la portada y la galería. No inventará imágenes ni precios de tus productos.</p>
    <div className={styles.imageSelectors}>
-    <div><strong>Logo del negocio</strong><BuilderImageField kind="logo" value={logo} onChange={setLogo}/></div>
-    <div><strong>Foto de portada</strong><BuilderImageField value={cover} onChange={setCover}/></div>
+    <div><strong>Logo del negocio (opcional)</strong><BuilderImageField kind="logo" value={logo} onChange={setLogo}/></div>
+    <div><strong>Tu mejor fotografía de portada *</strong><small>Producto, local o trabajo propio, en horizontal y con buena luz.</small><BuilderImageField value={cover} onChange={url=>{setCover(url);if(url)setSkipPhotos(false);}}/></div>
    </div>
+   <div className={styles.photoGallery}>
+    <div><strong>Fotos adicionales para galería y secciones</strong><small>Puedes elegir hasta 4 imágenes más de tus productos, trabajos o negocio.</small></div>
+    <div className={styles.photoGrid}>{gallery.map((url,index)=><div key={index} className={styles.photoSlot}>
+      <strong>{["Productos destacados","Tu negocio o equipo","Trabajos realizados","Otra fotografía"][index]}</strong>
+      <BuilderImageField value={url} onChange={next=>setGallery(current=>current.map((item,i)=>i===index?next:item))}/>
+    </div>)}</div>
+   </div>
+   <label className={styles.skipPhotos}><input type="checkbox" checked={skipPhotos} onChange={e=>setSkipPhotos(e.target.checked)}/> Continuar sin fotos por ahora; las agregaré antes de publicar.</label>
+   <h3 className={styles.frameHeading}>Estilo del borde de las imágenes</h3>
    <div className={styles.shapeGrid}>{shapes.map(item=><button type="button" key={item.id}
     aria-pressed={shape===item.id} onClick={()=>setShape(item.id)}>
     <span className={styles.shapePreview} data-shape={item.id}><ImageIcon size={33}/></span>
@@ -255,7 +267,7 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
     <div><small>Negocio</small><strong>{form.business}</strong></div>
     <div><small>Colores</small><span className={styles.miniColors}>{colors.map(c=><i key={c} style={{background:c}}/>)}</span></div>
     <div><small>Fuente</small><strong>{fonts.find(f=>f.id===font)?.label}</strong></div>
-    <div><small>Imágenes</small><strong>{shapes.find(f=>f.id===shape)?.label}</strong></div>
+    <div><small>Imágenes</small><strong>{shapes.find(f=>f.id===shape)?.label} · {[cover,...gallery].filter(Boolean).length} fotos</strong></div>
     <div><small>Secciones</small><strong>{[inventory?"Productos":"",booking?"Citas":"",chat?"Chat":"", "Contacto"].filter(Boolean).join(" · ")}</strong></div>
    </div>
    <div className={styles.connection} role="status">{aiState==="checking"?<><LoaderCircle size={16}/> Comprobando IA…</>:
