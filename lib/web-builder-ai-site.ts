@@ -114,6 +114,26 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
    buttonText:"Solicitar cita",buttonUrl:"#solicitud"
   }});
  }
+ // A gallery is only generated when the client provided actual photos.
+ if(prefs?.contentFocus==="gallery"&&input.photos.some(Boolean)&&
+  !content.some(item=>["PhotoGallery","ProjectShowcase"].includes(item.type))){
+  const items=input.photos.filter(Boolean).slice(0,12).map((image,index)=>({
+   id:"ai-gallery-"+index,image,alt:"Foto "+(index+1)+" de "+input.business,caption:""
+  }));
+  content.splice(1,0,{type:"PhotoGallery",props:{
+   id:"ai-gallery",title:safeString(sections.galleryTitle,85,"Nuestro trabajo"),
+   description:"",items,layout:"mosaic",padding:"spacious",surface:"light"
+  }});
+ }
+ // A contact-first preference must produce a useful action even for layouts
+ // that normally have no separate CTA section.
+ if(prefs?.contentFocus==="contact"&&!content.some(item=>item.type==="CTA")){
+  content.splice(1,0,{type:"CTA",props:{
+   id:"ai-contact-cta",title:safeString(sections.ctaTitle,110,"¿Hablamos de tu proyecto?"),
+   description:safeString(sections.ctaDescription,230,"Cuéntanos qué necesitas y nos pondremos en contacto."),
+   buttonText:contactLabel,buttonUrl:cta
+  }});
+ }
  const frame:Record<string,{radius:number;border:number}>={
   rounded:{radius:22,border:0},square:{radius:0,border:0},
   pill:{radius:70,border:0},bordered:{radius:14,border:5}
@@ -137,6 +157,11 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
     item.props.shadeStrength=chosenLayout==="cover"&&hasPhotos?(prefs.mood==="bold"?55:42):24;
     item.props.buttonShape=prefs.mood==="editorial"?"rounded":"pill";
     if(prefs.mood==="editorial")item.props.buttonStyle="outline";
+   }
+   if(["OfferingGrid","PhotoGallery","ProjectShowcase","TeamGrid"].includes(item.type)&&Array.isArray(item.props.items)){
+    item.props.items=(item.props.items as Array<Record<string,unknown>>).map(entry=>
+     entry.image?{...entry,imageRadius:imageFrame.radius,imageBorder:imageFrame.border,
+      borderColor:prefs.colors[2]}:entry);
    }
    if(item.type==="OfferingGrid"){
     const hasProductPhotos=Array.isArray(item.props.items)&&item.props.items.some((entry:unknown)=>
