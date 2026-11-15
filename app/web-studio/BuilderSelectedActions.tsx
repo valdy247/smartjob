@@ -86,6 +86,7 @@ export default function BuilderSelectedActions({children,label}:{
  const isText=Boolean(item&&(textTypes.has(item.type)||item.type==="HeroVisual"));
  const isCta=item?.type==="CTA";
  const isButton=item?.type==="ComposeButton";
+ const isGeneric=Boolean(item&&!isImage&&!isText&&!isCta&&!isButton);
  const ctaTarget:SectionTarget=ctaSelection&&ctaSelection.id===id?ctaSelection.target:"section";
  function change(field:string,value:unknown){
   if(!item||!id)return;
@@ -104,6 +105,13 @@ export default function BuilderSelectedActions({children,label}:{
   if(next!==api.appState.data)api.dispatch({type:"setData",data:next});
  }
  const props=item?.props||{};
+ const simpleTextKeys=new Set(["title","description","body","text","eyebrow","caption","quote","author","first","second","third","phone","email","address","hours","area","notes"]);
+ const simpleFields=Object.entries(props).filter(([key,value])=>simpleTextKeys.has(key)&&typeof value==="string").slice(0,10);
+ function changeArrayField(index:number,key:string,value:string){
+  const items=Array.isArray(props.items)?props.items:[];
+  const next=items.map((entry,i)=>i===index&&entry&&typeof entry==="object"?{...entry,[key]:value}:entry);
+  change("items",next);
+ }
 
  const textKey=item?.type==="ComposeHeading"||item?.type==="HeroVisual"?"title":"text";
  const textProp=(key:string)=>{
@@ -113,7 +121,7 @@ export default function BuilderSelectedActions({children,label}:{
    italic:"titleItalic",linkUrl:"titleLink"};
   return props[heroTextNames[key]||key];
  };
- const controlsPanel=(isImage||isText||isCta||isButton)&&open?<div className={mobileSheet?"vmv-context-action-panel vmv-context-mobile-sheet":"vmv-context-action-panel"}
+ const controlsPanel=(isImage||isText||isCta||isButton||isGeneric)&&open?<div className={mobileSheet?"vmv-context-action-panel vmv-context-mobile-sheet":"vmv-context-action-panel"}
     ref={panelRef} tabIndex={mobileSheet?-1:undefined} role={mobileSheet?"dialog":"region"} aria-modal={mobileSheet||undefined}
     onKeyDown={e=>{if(e.key==="Escape"){e.stopPropagation();setOpen(false);}}} aria-label={isButton?"Ajustes del botón seleccionado":isImage&&mode!=="text"?"Ajustes de la imagen seleccionada":"Ajustes del elemento seleccionado"}
     onPointerDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()}>
@@ -124,6 +132,10 @@ export default function BuilderSelectedActions({children,label}:{
     aria-label="Elemento de portada">
     <button type="button" aria-pressed={mode!=="text"} onClick={()=>setMode("controls")}>Foto</button>
     <button type="button" aria-pressed={mode==="text"} onClick={()=>setMode("text")}>Título</button>
+   </div>:null}
+   {isImage&&item?.type!=="HeroVisual"&&simpleFields.length>0?<div className="vmv-context-switch" role="group" aria-label="Editar imagen o textos de la sección">
+    <button type="button" aria-pressed={mode!=="text"} onClick={()=>setMode("controls")}>Imagen</button>
+    <button type="button" aria-pressed={mode==="text"} onClick={()=>setMode("text")}>Texto</button>
    </div>:null}
    {isImage&&target&&mode!=="text"?<div className="vmv-context-content">
     <div className="vmv-context-switch" role="group" aria-label="Modo de imagen">
@@ -159,6 +171,32 @@ export default function BuilderSelectedActions({children,label}:{
       {destinations.map((d,index)=><option key={d.id+d.slot} value={index}>{d.label}</option>)}
      </select>
     </label>:null}
+   </div>:null}
+   {(isGeneric||(isImage&&mode==="text"&&!isText))?<div className="vmv-context-content" aria-label="Editar contenido de la sección">
+    {simpleFields.map(([key,value])=><label key={key} className="vmv-context-text-label">
+     {({title:"Título",description:"Descripción",body:"Texto",text:"Texto",eyebrow:"Encabezado",
+      caption:"Pie de foto",quote:"Cita",author:"Autor",first:"Primer elemento",
+      second:"Segundo elemento",third:"Tercer elemento",phone:"Teléfono",email:"Correo",
+      address:"Dirección",hours:"Horario",area:"Zona",notes:"Notas"} as Record<string,string>)[key]||key}
+     {["body","text","description","notes","quote"].includes(key)?
+      <textarea rows={2} maxLength={2000} value={String(value)} onChange={e=>change(key,e.target.value)}/>:
+      <input type="text" maxLength={300} value={String(value)} onChange={e=>change(key,e.target.value)}/>}
+    </label>)}
+    {Array.isArray(props.items)?<details><summary>Editar productos y elementos</summary>
+     {(props.items as Array<Record<string,unknown>>).slice(0,12).map((entry,index)=>
+      <fieldset className="vmv-context-item-fields" key={index}>
+       <legend>Elemento {index+1}</legend>
+       {(["title","description","caption","price"] as const).filter(key=>typeof entry?.[key]==="string").map(key=>
+        <label className="vmv-context-text-label" key={key}>
+         {key==="title"?"Nombre":key==="description"?"Descripción":key==="caption"?"Pie de foto":"Precio"}
+         <input type="text" maxLength={key==="description"?600:140} value={String(entry[key]||"")}
+          onChange={e=>changeArrayField(index,key,e.target.value)}/>
+        </label>)}
+      </fieldset>)}
+    </details>:null}
+    {!simpleFields.length&&!Array.isArray(props.items)?<p className="vmv-context-hint">
+     Selecciona «Propiedades» en el editor para modificar el diseño de esta sección.
+    </p>:null}
    </div>:null}
    {isButton?<div className="vmv-context-content" aria-label="Editar el botón seleccionado">
     <label className="vmv-context-text-label">Texto
@@ -315,8 +353,8 @@ export default function BuilderSelectedActions({children,label}:{
  return <div className="vmv-context-action-wrap">
   <ActionBar label={label}>
    <ActionBar.Group>{children}</ActionBar.Group>
-   {(isImage||isText||isCta||isButton)?<ActionBar.Group>
-    <ActionBar.Action label={isCta?"Editar sección":isButton?"Editar botón":isImage?"Editar imagen":"Editar texto"} onClick={()=>setOpen(v=>!v)}>
+   {(isImage||isText||isCta||isButton||isGeneric)?<ActionBar.Group>
+    <ActionBar.Action label={isCta?"Editar sección":isButton?"Editar botón":isImage?"Editar imagen":isGeneric?"Editar contenido":"Editar texto"} onClick={()=>setOpen(v=>!v)}>
      {isCta?<Settings2 size={16}/>:isButton?<SlidersHorizontal size={16}/>:isImage?<ImagePlus size={16}/>:<Type size={16}/>}
     </ActionBar.Action>
    </ActionBar.Group>:null}
