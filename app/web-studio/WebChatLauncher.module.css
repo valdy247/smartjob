@@ -1,0 +1,11 @@
+.launcher{position:fixed;right:clamp(16px,4vw,35px);bottom:clamp(20px,4vw,38px);z-index:100;display:flex;align-items:center;justify-content:center;gap:8px;min-height:53px;padding:13px 18px;border:0;border-radius:99px;background:var(--vmv-accent,#8054d0);color:#fff;font-size:13px;font-weight:850;box-shadow:0 8px 25px #20182f55;cursor:pointer}
+.launcher:focus-visible,.dialog button:focus-visible,.dialog input:focus-visible,.dialog textarea:focus-visible{outline:3px solid #b79fff;outline-offset:3px}
+.overlay{position:fixed;inset:0;z-index:101;display:flex;justify-content:flex-end;align-items:flex-end;padding:18px;background:#1410218a;backdrop-filter:blur(4px)}
+.dialog{display:flex;flex-direction:column;gap:13px;max-height:calc(100dvh - 36px);overflow-y:auto;width:min(420px,100%);padding:19px;border:1px solid #e8dff2;border-radius:20px;background:white;color:#302640;box-shadow:0 19px 60px #100a2466}
+.dialog header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.dialog header small{font-size:10px;letter-spacing:.12em;color:var(--vmv-accent,#8054d0);font-weight:850}
+.dialog header h2{font-size:19px;margin:6px 0;letter-spacing:-.04em;line-height:1.22}
+.dialog header p{font-size:11px;color:#82788b;line-height:1.45;margin:0}
+.dialog header button{width:40px;height:40px;flex-shrink:0;display:grid;place-items:center;border:1px solid #ece6f1;border-radius:12px;color:#72578c;background:#f9f6fd;cursor:pointer}
+.dialog footer{display:flex;gap:6px;align-items:center;color:#8e8498;font-size:10px}
+@media(max-width:600px){.overlay{padding:0}.dialog{max-height:94dvh;width:100%;border-radius:23px 23px 0 0;padding:18px 17px calc(22px + env(safe-area-inset-bottom))}.launcher{bottom:calc(17px + env(safe-area-inset-bottom))}}
