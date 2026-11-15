@@ -6,6 +6,7 @@ import {getSupabase} from "@/lib/supabase";
 import {normalizeSocialLinks} from "@/lib/web-builder-social";
 import type {SiteIntake,SiteProposal,SiteProduct,SiteDesignPreferences} from "@/lib/web-builder-templates";
 import TemplateProposals from "./TemplateProposals";
+import BuilderImageField from "./BuilderImageField";
 import styles from "./WebAiWizard.module.css";
 
 type Business={
@@ -56,6 +57,8 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
  const [chat,setChat]=useState(false);
  const [agentCount,setAgentCount]=useState(0);
  const [catalog,setCatalog]=useState<SiteProduct[]>([]);
+ const [logo,setLogo]=useState("");
+ const [cover,setCover]=useState("");
  const [context,setContext]=useState("");
  const [aiState,setAiState]=useState<"checking"|"ready"|"unavailable">("checking");
  const [aiError,setAiError]=useState("");
@@ -148,12 +151,12 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
   chatMode:chat?"inbox":"off"}),[colors,font,shape,inventory,booking,chat]);
  const input=useMemo<SiteIntake>(()=>{
   const services=toServices(form.services);
-  const products=inventory?catalog:[];
+  const products=inventory?(catalog.length?catalog:toServices(selectedBusiness?.products||"").map((title,i)=>({id:"business-product-"+i,title,description:"",price:"",image:""}))):[];
   return {business:form.business.trim(),categoryId:form.categoryId,offering:inventory?(services.length?"both":"products"):"services",
    objective:booking?"bookings":form.objective,phone:form.phone.trim(),email:form.email.trim(),
-   city:form.city.trim(),about:form.about.trim(),logo:"",photos:[],offerings:services,
+   city:form.city.trim(),about:form.about.trim(),logo,photos:cover?[cover]:[],offerings:services,
    products,socials:normalizeSocialLinks(socials),design:selectedDesign};
- },[form,inventory,booking,catalog,socials,selectedDesign]);
+ },[form,inventory,booking,catalog,socials,selectedDesign,logo,cover,selectedBusiness]);
  const generate=async()=>{
   if(busy||generating)return;
   if(colors.length!==3){setError("Selecciona tres colores.");setStep(1);return;}
@@ -220,6 +223,10 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
   </div>:null}
   {step===3?<div className={styles.panel}>
    <h2>04 · ¿Cómo quieres presentar tus imágenes?</h2><p>El marco elegido se aplicará a la imagen principal y podrás ajustarlo después.</p>
+   <div className={styles.imageSelectors}>
+    <div><strong>Logo del negocio</strong><BuilderImageField kind="logo" value={logo} onChange={setLogo}/></div>
+    <div><strong>Foto de portada</strong><BuilderImageField value={cover} onChange={setCover}/></div>
+   </div>
    <div className={styles.shapeGrid}>{shapes.map(item=><button type="button" key={item.id}
     aria-pressed={shape===item.id} onClick={()=>setShape(item.id)}>
     <span className={styles.shapePreview} data-shape={item.id}><ImageIcon size={33}/></span>
