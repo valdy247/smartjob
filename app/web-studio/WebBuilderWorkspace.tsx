@@ -21,6 +21,7 @@ import BuilderHistoryControls from "./BuilderHistoryControls";
 import BuilderQuickAdd from "./BuilderQuickAdd";
 import BuilderSelectedActions from "./BuilderSelectedActions";
 import useMobileCanvasLongPress from "./useMobileCanvasLongPress";
+import MobileVisualStudio from "./MobileVisualStudio";
 import {WebsiteChrome,websiteVisualStyle} from "@/lib/web-site-chrome";
 import {familyForCategory} from "@/lib/web-builder-templates";
 import RequestForm from "@/app/sites/[slug]/RequestForm";
@@ -392,9 +393,9 @@ export default function WebBuilderWorkspace(){
   }catch(e){setError(e instanceof Error?e.message:"Error al guardar");}
   finally{setBusy(false);}
  }
- async function createPage(){
+ async function createPage(overrideName?:string){
   if(!site||busy||!userId)return;
-  const name=newPageName.trim().slice(0,100);
+  const name=(overrideName??newPageName).trim().slice(0,100);
   const requested=slugify(name);
   if(name.length<2||requested.length<2){setError("Escribe un nombre para la página");return;}
   if(pages.some(p=>p.slug===requested)){setError("Ya existe esa página");return;}
@@ -678,6 +679,23 @@ export default function WebBuilderWorkspace(){
   setSite(null);setPage(null);setPublishedIds([]);setPublishedSignatures({});setView("sites");setMobileSettings(false);setMobilePageForm(false);setMobilePageMenu(false);setError("");setNotice("");
  }
  if(loading)return <main className={styles.loading}>Cargando Web Studio…</main>;
+ if(compactStudio&&site&&page&&view==="editor")return <MobileVisualStudio
+  key={page.id}
+  data={document} onChange={setDocument}
+  siteName={site.name} siteSlug={site.slug} siteCategory={site.category_id} siteId={site.id}
+  pages={pages.map(p=>({id:p.id,slug:p.slug,title:p.title}))} pageId={page.id}
+  onBack={back}
+  onChoosePage={id=>{const target=pages.find(p=>p.id===id);if(target)choosePage(target);}}
+  onCreatePage={name=>void createPage(name)}
+  onPublish={()=>void publish(document)}
+  onSave={()=>void save()}
+  busy={busy||Boolean(recovery)}
+  title={title} description={description} onTitleChange={setTitle} onDescriptionChange={setDescription}
+  inquiriesEnabled={site.inquiries_enabled}
+  onToggleInquiries={enabled=>void toggleRequests(enabled)}
+  onDomains={()=>void openDomains()} onHistory={()=>void openHistory()}
+ />;
+
  if(!userId)return <main className={styles.loading}><h2>Inicia sesión para crear tu web</h2>
   <p>{error}</p><a href="/vista-app?returnTo=web-studio">Iniciar sesión en VMV Business</a></main>;
  return <div className={styles.workspace} ref={workspaceRef}>
