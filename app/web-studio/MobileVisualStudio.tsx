@@ -732,10 +732,10 @@ export default function MobileVisualStudio({
   {selection&&!drawer&&!preview&&block&&props?<div className={styles.visualBackdrop} aria-hidden="true" onClick={closePopup}/> :null}
   {selection&&!drawer&&!preview&&block&&props?<div className={styles.mobileEditingTools}>
    <div className={styles.visualQuickBar} role="toolbar" aria-label="Herramientas del elemento seleccionado">
-    <span className={styles.visualQuickLabel}>{selection.kind==="button"?"Botón":selection.kind==="image"?"Imagen":selection.kind==="text"?"Texto":"Sección"}</span>
+    <span className={styles.visualQuickLabel}>Modificar {selection.kind==="button"?"botón":selection.kind==="image"?"imagen":selection.kind==="text"?"texto":"sección"}</span>
     <div className={styles.visualQuickScroll}>
      {menuChoices.map(tool=><button type="button" key={tool.id} aria-pressed={visualTool===tool.id}
-       onClick={()=>pickTool(tool.id)}>{tool.icon}<span>{tool.label}</span></button>)}
+       onClick={()=>pickTool(visualTool===tool.id?"menu":tool.id)}>{tool.icon}<span>{tool.label}</span><ChevronDown size={16} className={styles.visualToolChevron}/></button>)}
     </div>
     <button type="button" className={styles.visualQuickClose} aria-label="Cerrar herramientas" onClick={closePopup}><X size={19}/></button>
    </div>
