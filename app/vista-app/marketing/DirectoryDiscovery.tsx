@@ -12,12 +12,12 @@ export type DirectoryTarget={id:string;name:string;type:"national"|"state"|"loca
 export type DirectoryData={city:string;state:string;postal:string;industry:string;serviceArea:boolean;selected:DirectoryTarget[];notes:string};
 export const emptyDirectory:DirectoryData={city:"",state:"",postal:"",industry:"",serviceArea:false,selected:[],notes:""};
 const list=[
- {id:"yelp",name:"Yelp",type:"national",url:"https://biz.yelp.com/",cost:"free",scope:"all",description:"Ficha gratuita; Yelp debe aceptar el negocio."},
- {id:"apple",name:"Apple Business",type:"national",url:"https://businessconnect.apple.com/",cost:"free",scope:"all",description:"Ficha de negocio en Mapas de Apple; requiere verificación."},
- {id:"bing",name:"Bing Places",type:"national",url:"https://www.bingplaces.com/",cost:"free",scope:"all",description:"Ficha en Bing Maps; requiere verificación."},
- {id:"tripadvisor",name:"Tripadvisor",type:"national",url:"https://www.tripadvisor.com/Owners",cost:"free",scope:"travel",description:"Para establecimientos elegibles de comida, turismo, alojamiento y experiencias."},
- {id:"explore-ga",name:"Explore Georgia",type:"state",url:"https://industry.exploregeorgia.org/partner-extranet",cost:"free",scope:"ga-travel",description:"Directorio turístico de Georgia; alta gratis para negocios elegibles."},
- {id:"chamber-columbus",name:"Greater Columbus Chamber",type:"local",url:"https://columbusgachamber.com/membership-directory/",cost:"membership",scope:"columbus",description:"Directorio de miembros; revisar membresía y condiciones."}
+ {id:"yelp",name:"Yelp",type:"national",url:"https://biz.yelp.com/",cost:"free",scope:"all",description:"Alta sujeta a revisión."},
+ {id:"apple",name:"Apple Business",type:"national",url:"https://businessconnect.apple.com/",cost:"free",scope:"all",description:"Verificación requerida."},
+ {id:"bing",name:"Bing Places",type:"national",url:"https://www.bingplaces.com/",cost:"free",scope:"all",description:"Verificación requerida."},
+ {id:"tripadvisor",name:"Tripadvisor",type:"national",url:"https://www.tripadvisor.com/Owners",cost:"free",scope:"travel",description:"Solo negocios elegibles."},
+ {id:"explore-ga",name:"Explore Georgia",type:"state",url:"https://industry.exploregeorgia.org/partner-extranet",cost:"free",scope:"ga-travel",description:"Solo negocios elegibles de Georgia."},
+ {id:"chamber-columbus",name:"Greater Columbus Chamber",type:"local",url:"https://columbusgachamber.com/membership-directory/",cost:"membership",scope:"columbus",description:"Puede requerir membresía."}
 ] as const;
 const costNames={free:"Ficha sin tarifa de alta",membership:"Puede requerir membresía",unknown:"Por verificar"};
 const normalize=(v:string)=>v.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
@@ -72,7 +72,7 @@ export default function DirectoryDiscovery({data,onChange,industry}:{data:Direct
  };
  return <div className={styles.root}>
   <div className={styles.section}>
-   <div className={styles.heading}><MapPin size={19}/><div><strong>{tx("¿Dónde está tu negocio?")}</strong><small>{tx("Buscamos opciones relevantes para tu ciudad y sector.")}</small></div></div>
+   <div className={styles.heading}><MapPin size={19}/><div><strong>{tx("¿Dónde está tu negocio?")}</strong></div></div>
    <div className={styles.two}>
     <label>{tx("Ciudad")}<input value={data.city} maxLength={100} onChange={e=>patch("city",e.target.value)} placeholder="Columbus"/></label>
     <label>{tx("Estado")}<input value={data.state} maxLength={100} onChange={e=>patch("state",e.target.value)} placeholder={tx("Georgia o GA")}/></label>
@@ -82,7 +82,7 @@ export default function DirectoryDiscovery({data,onChange,industry}:{data:Direct
    <p className={styles.hint}>{tx("No pedimos tu dirección residencial. Los directorios pueden tener reglas de elegibilidad distintas.")}</p>
   </div>
   <div className={styles.section}>
-   <div className={styles.heading}><SearchCheck size={19}/><div><strong>{tx("Directorios que podemos revisar")}</strong><small>{tx("Selecciona los que te interesan. Antes comprobaremos si ya tienes ficha.")}</small></div></div>
+   <div className={styles.heading}><SearchCheck size={19}/><div><strong>{tx("Directorios que podemos revisar")}</strong></div></div>
    <div className={styles.options}>
     {options.map(d=><div key={d.id} className={styles.optionRow}>
      <button type="button" aria-pressed={selectedIds.has(d.id)} onClick={()=>toggle(d.id)} className={styles.option}>
@@ -93,7 +93,7 @@ export default function DirectoryDiscovery({data,onChange,industry}:{data:Direct
     </div>)}
     <button type="button" aria-pressed={selectedIds.has("research-local")} onClick={()=>toggle("research-local")} className={styles.option}>
      <span className={styles.checkbox}>{selectedIds.has("research-local")?<Check size={13}/>:null}</span>
-     <span className={styles.optionText}><strong>{tx("Encontrar otros directorios locales")}</strong><small>{tx("VMV investigará directorios de tu estado, ciudad, cámaras de comercio y sector.")}</small><em>{tx("Revisión y precio de gestión sujetos a cotización")}</em></span>
+     <span className={styles.optionText}><strong>{tx("Encontrar otros directorios locales")}</strong><em>{tx("Revisión y precio de gestión sujetos a cotización")}</em></span>
     </button>
    </div>
    {data.selected.filter(t=>t.id!=="research-local").map(t=><label key={t.id} className={styles.existingField}>{en?"Already listed on ":"¿Ya apareces en "}{t.name}{en?"? Add the URL (optional)":"? Comparte el enlace (opcional)"}<input type="url" inputMode="url" maxLength={750} value={t.existingUrl||""} placeholder="https://..." onChange={e=>onChange({...data,selected:data.selected.map(x=>x.id===t.id?{...x,existingUrl:e.target.value}:x)})}/></label>)}
@@ -102,7 +102,6 @@ export default function DirectoryDiscovery({data,onChange,industry}:{data:Direct
   <div className={styles.section}>
    <strong>{tx("¿Algún dato que debamos conocer? (opcional)")}</strong>
    <textarea rows={3} value={data.notes} onChange={e=>patch("notes",e.target.value)} maxLength={800} placeholder={tx("Ej. Ya aparezco en Yelp, pero los horarios están incorrectos.")}/>
-   <p className={styles.hint}>{tx("VMV comprobará duplicados y requisitos; nunca creará fichas ni pagará membresías sin tu autorización.")}</p>
   </div>
  </div>;
 }
