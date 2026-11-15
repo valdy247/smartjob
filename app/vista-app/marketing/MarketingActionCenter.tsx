@@ -731,7 +731,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   setQuoteNote(req.quote_note||"");setStageUpdate(req.staff_update||"");setEvidence(req.evidence_url||"");
  };
  return <div className={styles.root}>
-  {!requestsOnly&&user&&businessId&&savedBusinesses.some(x=>x.id===businessId&&!x.source)?<div className={styles.activeBusiness}><MapPinned size={15}/>{en?"Active business: ":"Negocio activo: "}<strong>{savedBusinesses.find(x=>x.id===businessId)?.name||name}</strong></div>:null}
+  {!requestsOnly&&wizardStep===0&&user&&businessId&&savedBusinesses.some(x=>x.id===businessId&&!x.source)?<div className={styles.activeBusiness}><MapPinned size={15}/>{en?"Active business: ":"Negocio activo: "}<strong>{savedBusinesses.find(x=>x.id===businessId)?.name||name}</strong></div>:null}
   {!requestsOnly&&wizardStep===0?<header className={styles.catalogHeading}><h2>{en?"What would you like to do?":"¿Qué quieres hacer hoy?"}</h2><p>{en?"Choose a service. We’ll guide you.":"Elige un servicio y te ayudamos paso a paso."}</p><a href="/vista-app/marketing/requests" className={styles.historyLink}><ClipboardList size={16}/> {translate("marketing.ui.requests")}</a><a href="/vista-app/marketing/negocios" className={styles.historyLink}><MapPinned size={16}/> {en?"My businesses":"Mis negocios"}</a>{pausedStep!==null?<button type="button" className={styles.resumeDraft} onClick={()=>{setWizardStep(pausedStep);setPausedStep(null);revealWizard();}}>{translate("marketing.request.continueDraft")}</button>:null}</header>:null}
   {!requestsOnly&&wizardStep>0&&wizardStep<4?<button type="button" className={styles.historyWizardAccess} onClick={()=>{void (async()=>{if(await saveCurrentDraft())window.location.assign("/vista-app/marketing/requests");})();}}><ClipboardList size={15}/> {translate("marketing.ui.requests")}</button>:null}
   {!requestsOnly?<section className={wizardStep===0?styles.catalogPanel:styles.wizardPanel} id="vmv-marketing-request" aria-label={translate("marketing.ui.createAria")}>
@@ -748,8 +748,8 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    </div>:<>
     {wizardStep>0?<div className={styles.wizardHeading}>
      <div><span className={styles.overline}><LayoutGrid size={15}/> {translate("marketing.copy.marketing_assistant")}</span>
-      <h3>{wizardStep===0?translate("marketing.action.how_can_we_help_today"):wizardStep===1?translate("marketing.action.first_your_business"):wizardStep===2?translate("marketing.action.what_do_you_want_to_achieve"):translate("marketing.action.confirm_your_request")}</h3>
-      <p>{wizardStep===0?translate("marketing.action.choose_an_option_to_begin_we_ll_guide_you_step_by_ste"):wizardStep===1?translate("marketing.action.we_ll_use_the_information_we_already_have_to_save_you"):wizardStep===2?translate("marketing.action.choose_a_suggestion_or_briefly_describe_your_needs"):translate("marketing.action.review_everything_before_submitting_no_external_chang")}</p>
+      <h3>{wizardStep===1?translate("marketing.action.first_your_business"):wizardStep===2&&selected==="google_profile"?(en?"Your Google Business Profile":"Tu perfil en Google"):wizardStep===2?translate("marketing.action.what_do_you_want_to_achieve"):translate("marketing.action.confirm_your_request")}</h3>
+      {wizardStep===2&&selected==="google_profile"?null:<p>{wizardStep===1?translate("marketing.action.we_ll_use_the_information_we_already_have_to_save_you"):wizardStep===2?translate("marketing.action.choose_a_suggestion_or_briefly_describe_your_needs"):translate("marketing.action.review_everything_before_submitting_no_external_chang")}</p>}
      </div>
      <span className={styles.stepCount}>{wizardStep+1} / 4</span>
     </div>:null}
