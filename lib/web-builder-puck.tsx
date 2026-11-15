@@ -111,16 +111,16 @@ export function normalizeBuilderDocument(input:unknown):Data{
    while(seen.has(id))id="node-"+generated++;
    seen.add(id);
    if(COMPOSE_BLOCK_NAMES.includes(kind as ComposeBlockName)){
-    const props:Record<string,unknown>={id,...normalizeComposeProps(kind as ComposeBlockName,source)};
+    const props:Record<string,unknown>={id,...normalizeComposeProps(kind as ComposeBlockName,source),locked:source.locked==="yes"?"yes":"no"};
     for(const slot of COMPOSE_SLOTS[kind as ComposeBlockName]||[]){
      props[slot]=normalizeNodes(source[slot],depth+1);
     }
     return [{type:kind,props}];
    }
    if(VISUAL_BLOCK_NAMES.includes(kind as VisualBlockName)){
-    return [{type:kind,props:{id,...normalizeVisualProps(kind as VisualBlockName,source)}}];
+    return [{type:kind,props:{id,...normalizeVisualProps(kind as VisualBlockName,source),locked:source.locked==="yes"?"yes":"no"}}];
    }
-   const safe:Record<string,unknown>={id};
+   const safe:Record<string,unknown>={id,locked:source.locked==="yes"?"yes":"no"};
    for(const [field,sanitize] of Object.entries(fieldSchema[kind]||{})){
     if(field==="url")safe[field]=safeWebImageUrl(sanitize(source[field]))||"";
     else if(field==="buttonUrl")safe[field]=safeLink(sanitize(source[field]));
@@ -417,3 +417,27 @@ export const builderConfig:Config={
   ...compositionBlocks
  }
 };
+
+/** Apply Puck's per-instance permissions without changing published markup.
+ * "locked" is part of each node's data and survives normalization/rehydration.
+ */
+for(const component of Object.values(builderConfig.components||{})){
+ const originalFields=component.fields||{};
+ component.fields={
+  ...originalFields,
+  locked:{type:"radio",options:[
+   {label:"Editable",value:"no"},
+   {label:"Protegido contra movimiento y eliminación",value:"yes"}
+  ]}
+ };
+ const renderFields=component.renderFields;
+ if(renderFields){
+  component.renderFields=(arg)=> <>{renderFields(arg)}<div className="vmv-puck-protection">{arg.fields.locked}</div></>;
+ }
+ const originalPermissions=component.resolvePermissions;
+ component.resolvePermissions=async(data,params)=>{
+  const previous=originalPermissions?await originalPermissions(data,params):{};
+  const locked=data.props.locked==="yes";
+  return {...previous,delete:!locked,drag:!locked,duplicate:!locked};
+ };
+}
