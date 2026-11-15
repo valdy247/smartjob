@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
+import dynamic from "next/dynamic";
 import {ArrowLeft,ArrowRight,Check,CheckCircle2,Image as ImageIcon,LoaderCircle,MessageCircle,Package,CalendarDays,Sparkles,ShieldCheck} from "lucide-react";
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {getSupabase} from "@/lib/supabase";
@@ -7,7 +8,10 @@ import {normalizeSocialLinks} from "@/lib/web-builder-social";
 import type {SiteIntake,SiteProposal,SiteProduct,SiteDesignPreferences} from "@/lib/web-builder-templates";
 import TemplateProposals from "./TemplateProposals";
 import BuilderImageField from "./BuilderImageField";
-import WebAiAgentPanel,{type WebsiteAgentChoice} from "./WebAiAgentPanel";
+import type {WebsiteAgentChoice} from "./WebAiAgentPanel";
+const WebAiAgentPanel=dynamic(()=>import("./WebAiAgentPanel"),{ssr:false,loading:()=>
+ <p role="status" style={{padding:12,color:"#7652aa",fontSize:12}}>Cargando configuración del agente…</p>
+});
 import styles from "./WebAiWizard.module.css";
 
 type Business={
