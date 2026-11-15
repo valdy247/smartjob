@@ -8,7 +8,7 @@ import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {useEffect,useMemo,useRef,useState} from "react";
 import type {SupabaseClient,User} from "@supabase/supabase-js";
 import {
- ArrowLeft,ArrowRight,ArrowUpRight,Apple,Check,CheckCircle2,ClipboardList,ExternalLink,
+ ArrowLeft,ArrowRight,Apple,Check,CheckCircle2,ClipboardList,ExternalLink,
  FileCheck2,Gauge,Globe2,HandHeart,LayoutGrid,LockKeyhole,MapPinned,
  Megaphone,MessageSquareHeart,Navigation,RefreshCw,Search,Send,ShieldCheck,
  Sparkles,Star,Wallet,Workflow
