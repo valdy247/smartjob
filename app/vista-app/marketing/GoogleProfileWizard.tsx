@@ -148,13 +148,9 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
     <h3>{tx("¿Qué necesitas hacer?")}</h3>
     <div className={styles.choices}>{([["create","Crear un perfil"],["claim","Reclamar uno existente"],["improve","Mejorar el actual"]] as const).map(([id,label])=>
      <button type="button" aria-pressed={data.action===id} key={id} onClick={()=>onData({...data,action:id,openingDate:id==="create"?data.openingDate:""})}>{tx(label)}</button>)}</div>
-    {!loadedData||editing?<label className={styles.field}><span>{tx("Nombre del negocio")} <em>{tx("Necesario")}</em></span><input value={business} disabled readOnly/></label>:null}
     {!hasSaved("googleCategory")?<GoogleCategoryLookup key={data.country} data={data} onData={onData}/>:null}
     {data.action!=="create"&&!hasSaved("existingProfileUrl")?<label className={styles.field}><span>{tx("Enlace de tu perfil actual")} <em>{tx("Opcional")}</em></span><input type="url" inputMode="url" maxLength={500} value={data.existingProfileUrl||""} placeholder="https://maps.google.com/..." onChange={e=>patch("existingProfileUrl",e.target.value)}/></label>:null}
-    <MoreInfo>
-     <p className={styles.hint}>{data.googleCategorySource==="business_activity"?translate("marketing.google.categoryFromBusiness"):tx("La categoría debe existir en Google. Nuestro equipo comprobará que coincida antes de gestionarla.")}</p>
-     <p className={styles.hint}>{translate("marketing.google.eligibility")}</p>
-    </MoreInfo>
+    <MoreInfo><p className={styles.hint}>{translate("marketing.google.eligibility")}</p></MoreInfo>
    </div>:null}
    {step===1?<div className={styles.group}>
     <h3>{tx("¿Dónde atiendes?")}</h3>
@@ -178,7 +174,7 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
      {data.locationChecked?<p className={styles.locationVerified}><CheckCircle2 size={15}/>{en?"Location matched Google Maps":"Ubicación contrastada con Google Maps"}</p>:null}
      {locationMessage?<p className={styles.locationWarning} role="status"><AlertCircle size={15}/>{locationMessage}</p>:null}
      {!data.locationChecked?<button type="button" className={styles.manualLocation} aria-pressed={!!data.locationPendingReview} disabled={!!data.locationConflict} onClick={()=>patch("locationPendingReview",true)}>{en?"Request manual location verification":"Solicitar verificación manual de ubicación"}</button>:null}
-     {data.locationPendingReview?<small>{en?"VMV will verify the location before any Google submission.":"VMV comprobará la ubicación antes de presentar cualquier dato a Google."}</small>:null}
+     {data.locationPendingReview?<small>{en?"Pending VMV review":"Pendiente de revisión por VMV"}</small>:null}
     </div>:null}
     {data.kind!=="storefront"&&!hasSaved("serviceAreas")?<label className={styles.field}><span>{tx("Áreas donde atiendes")} <em>{tx("Necesario")}</em></span>
       <textarea rows={3} value={data.serviceAreas} onChange={e=>patch("serviceAreas",e.target.value)} maxLength={400} placeholder={tx("Ciudades o códigos postales separados por comas")}/></label>:null}
@@ -187,7 +183,6 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
     <h3>{tx("¿Cómo pueden contactarte?")}</h3>
     {!hasSaved("phone")?<label className={styles.field}><span>{tx("Teléfono comercial")} <em>{tx("Opcional")}</em></span><BusinessPhoneInput value={data.phone} onChange={value=>patch("phone",value)} country={data.country} label={tx("Teléfono comercial")}/></label>:null}
     {!hasSaved("secondaryPhone")?<label className={styles.field}><span>{tx("Teléfono adicional")} <em>{tx("Opcional")}</em></span><BusinessPhoneInput value={data.secondaryPhone} onChange={value=>patch("secondaryPhone",value)} country={data.country} label={tx("Teléfono adicional")}/></label>:null}
-    {!loadedData||editing?<label className={styles.field}><span>{tx("Sitio web")} <em>{tx("Opcional")}</em></span><input value={website} disabled readOnly placeholder={tx("Sin página web")}/></label>:null}
     {field("bookingUrl","Enlace para reservar o pedir","https://...")}
     <MoreInfo><p className={styles.hint}>{tx("Nunca necesitamos tu contraseña de Google. La conexión y verificación se hacen con tu autorización.")}</p></MoreInfo>
    </div>:null}
@@ -198,7 +193,7 @@ export default function GoogleProfileWizard({step,data,onData,media,onMedia,busi
      <strong>{tx(days[i])}</strong><label><input type="checkbox" checked={!h.closed} onChange={e=>patch("hours",data.hours.map((x,j)=>j===i?{...x,closed:!e.target.checked}:x))}/> {tx("Abierto")}</label>
      {!h.closed?<><input aria-label={tx("Apertura")+" "+tx(days[i])} type="time" value={h.start} onChange={e=>patch("hours",data.hours.map((x,j)=>j===i?{...x,start:e.target.value}:x))}/><input aria-label={tx("Cierre")+" "+tx(days[i])} type="time" value={h.end} onChange={e=>patch("hours",data.hours.map((x,j)=>j===i?{...x,end:e.target.value}:x))}/></>:null}
     {h.end<h.start?<small>{translate("marketing.google.nextDay")}</small>:null}
-    </div>)}</div>:<p className={styles.hint}>{tx("Puedes dejar los horarios pendientes si todavía no los tienes definidos.")}</p>}
+    </div>)}</div>:null}
     {data.action==="create"&&!hasSaved("openingDate")?<label className={styles.field}><span>{tx("Fecha de apertura")} <em>{tx("Opcional")}</em></span><input type="date" value={data.openingDate} onChange={e=>patch("openingDate",e.target.value)}/></label>:null}
     <MoreInfo><p className={styles.hint}>{tx("Los horarios especiales de feriados se configuran después. Tu horario real debe coincidir con lo que ofreces.")}</p></MoreInfo>
    </div>:null}
