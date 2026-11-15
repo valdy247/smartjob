@@ -100,7 +100,7 @@ export function AIAgentsBookingStudio({session,agents,selectedAgentId,onBack}:Pr
  <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
   {loading?<ActivityIndicator color={C.violet}/>:null}
   <View style={s.notice}><Ionicons name="shield-checkmark-outline" size={19} color="#357E5A"/>
-   <Text style={[s.hint,{flex:1,color:"#326B51"}]}>Agenda interna de VMV. No está sincronizada con Google Calendar ni con otro calendario externo.</Text></View>
+   <Text style={[s.hint,{flex:1,color:"#326B51"}]}>Agenda VMV · sin conexión a calendarios externos.</Text></View>
   {notice?<Text style={s.alert}>{notice}</Text>:null}
   {tab==="services"&&<>
    <Text style={s.sectionTitle}>Servicios reservables</Text>
