@@ -71,11 +71,13 @@ function info(input:SiteIntake,headline:string){
 }
 function hero(input:SiteIntake,family:SiteFamily,layout:"split"|"cover"|"editorial",position:string){
  const m=messages[family],button=cta(input.objective,input.phone);
+ // Owner-provided photos belong in the hero background instead of a separate split image.
+ const heroLayout=input.photos.some(Boolean)?"cover":layout;
  return node("HeroVisual","intro-hero",{
   eyebrow:input.business.toUpperCase().slice(0,65),
   title:m.headline,description:input.about||m.lead,
   buttonText:button.label,buttonUrl:button.url,image:input.photos[0]||"",
-  imageAlt:"Imagen principal de "+input.business,layout,align:layout==="split"?"left":"center",
+  imageAlt:"Imagen principal de "+input.business,layout:heroLayout,align:heroLayout==="split"?"left":"center",
   imagePosition:position,shade:"strong",height:"normal",buttonStyle:layout==="editorial"?"outline":"solid"
  });
 }
