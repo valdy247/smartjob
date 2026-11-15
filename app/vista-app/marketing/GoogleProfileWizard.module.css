@@ -61,3 +61,25 @@
 .loadedBusinessHeader>button[aria-pressed=true]{background:#f4e7f1;border-color:#aa7fa1}
 .loadedBusinessHeader>button:focus-visible{outline:2px solid #aa7fa1;outline-offset:2px}
 @media(max-width:520px){.loadedBusinessHeader{padding:10px}.loadedBusinessInfo strong{font-size:12px}.loadedBusinessHeader>button{padding:8px}}
+
+/* Easy-to-use opening date calendar, including on mobile browsers. */
+.dateField{display:flex;flex-direction:column;gap:8px;min-width:0}
+.dateLabel{display:flex;justify-content:space-between;align-items:center;gap:10px;color:#5a425d;font-size:12px}
+.dateLabel strong{font-weight:850}
+.dateLabel span{color:#a47b9a;font-size:10px;font-weight:650}
+.dateTrigger{display:flex;align-items:center;gap:10px;width:100%;min-height:51px;padding:11px 13px;border:1px solid #e7d9e5;border-radius:12px;background:#fff;color:#47364d;font-size:15px;font-weight:650;text-align:left;cursor:pointer}
+.dateTrigger>span{flex:1;min-width:0}
+.dateTrigger>svg:first-child{color:#91508a;flex:none}
+.dateTrigger:focus-visible,.dateCalendar button:focus-visible,.dateCalendar select:focus-visible{outline:3px solid #c99cbd;outline-offset:2px}
+.dateCalendar{display:flex;flex-direction:column;gap:13px;padding:14px;border:1px solid #e7d6e7;border-radius:17px;background:#fefbff;box-shadow:0 10px 23px rgba(56,32,59,.06)}
+.dateCalendarNav{display:grid;grid-template-columns:39px minmax(0,1fr) minmax(86px,1fr) 39px;align-items:center;gap:7px}
+.dateCalendarNav button{display:grid;place-items:center;min-height:39px;border:1px solid #e9dce9;border-radius:11px;background:#fff;color:#79527c;cursor:pointer}
+.dateCalendarNav select{width:100%;min-width:0;min-height:39px;padding:8px;border:1px solid #e9dce9;border-radius:11px;background:#fff;color:#563a58;font:inherit;font-size:13px;font-weight:750}
+.dateGrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.dateWeekday{display:grid;place-items:center;min-height:29px;color:#9b7f9a;font-size:11px;font-weight:850}
+.dateDay{display:grid;place-items:center;aspect-ratio:1/1;min-height:35px;border:1px solid transparent;border-radius:10px;background:#f4eef7;color:#533d5b;font:inherit;font-size:13px;font-weight:750;cursor:pointer}
+.dateDay:hover{background:#e7d8f5;border-color:#cba6d9}
+.dateDay[aria-pressed=true]{background:#86478b;color:#fff;border-color:#86478b}
+.dateCalendarFooter{display:flex;justify-content:space-between;gap:10px}
+.dateCalendarFooter button{min-height:39px;padding:8px 12px;border:1px solid #e6d5e6;border-radius:10px;background:#fff;color:#764977;font-size:12px;font-weight:800;cursor:pointer}
+@media(max-width:420px){.dateCalendar{padding:10px}.dateCalendarNav{gap:4px;grid-template-columns:34px minmax(0,1fr) minmax(72px,.8fr) 34px}.dateCalendarNav select{padding:6px 3px;font-size:12px}.dateDay{font-size:12px;min-height:32px}.dateGrid{gap:3px}}
