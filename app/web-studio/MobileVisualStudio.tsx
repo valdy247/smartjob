@@ -169,8 +169,8 @@ export default function MobileVisualStudio({
  onDomainInput:(value:string)=>void;onCheckDomain:()=>void;
  onSubmitDomainRequest:(intent:"buy"|"connect")=>void;
  onVerifyDomain:(hostname:string,action:"connect"|"verify")=>void;
- revisions:Array<{id:string;version:number;title:string;description:string;created_at:string;document:unknown}>;
- onRestoreRevision:(r:{id:string;version:number;title:string;description:string;created_at:string;document:unknown})=>void;
+ revisions:Array<{id:string;page_id:string;version:number;title:string;description:string;created_at:string;document:unknown}>;
+ onRestoreRevision:(r:{id:string;page_id:string;version:number;title:string;description:string;created_at:string;document:unknown})=>void;
  error:string;notice:string;savePhase:string;recoveryAvailable:boolean;onRecover:()=>void;onDiscardRecovery:()=>void;
 }){
  const [drawer,setDrawer]=useState(false);
