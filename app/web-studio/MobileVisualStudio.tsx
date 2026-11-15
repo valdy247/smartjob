@@ -6,7 +6,7 @@ import {
  ArrowDown,ArrowLeft,ArrowUp,Check,ChevronDown,ChevronRight,Eye,EyeOff,
  FilePlus2,Globe,ImagePlus,Layers,Menu,MessageCircle,Monitor,Palette,
  Plus,Redo2,Save,Settings2,SlidersHorizontal,Smartphone,
- Sparkles,Copy,GripVertical,Trash2,Type,Undo2,Upload, X
+ Sparkles,Copy,GripVertical,Trash2,Type,Undo2,Upload,Lock,Unlock, X
 } from "lucide-react";
 import {builderConfig,normalizeBuilderDocument} from "@/lib/web-builder-puck";
 import {VISUAL_BLOCK_NAMES} from "@/lib/web-builder-visual-blocks";
@@ -25,10 +25,10 @@ type PageChoice={id:string;slug:string;title:string};
 type Item=Data["content"][number];
 type Pick={id:string;kind:"image"|"text"|"button"|"section";target?:ImageTarget;
  key?:string;index?:number;x:number;y:number};
-type Section="home"|"pages"|"create"|"appearance"|"seo"|"connections"|"domain"|"history";
+type Section="home"|"pages"|"create"|"layers"|"appearance"|"seo"|"connections"|"domain"|"history";
 type VisualTool="menu"|"content"|"size"|"color"|"background"|"font"|"weight"|"italic"|
  "spacing"|"opacity"|"align"|"image"|"shade"|"frame"|"shape"|"link"|"actions"|
- "position"|"border"|"layout"|"arrange"|"add"|"duplicate"|"delete"|"items"|"surface"|"buttonStyle";
+ "position"|"border"|"layout"|"arrange"|"add"|"duplicate"|"delete"|"items"|"surface"|"buttonStyle"|"lock";
 
 const TEXT_KEYS=["title","description","body","text","eyebrow","subtitle","buttonText","label",
  "caption","quote","author","price","question","answer","q1","a1","q2","a2","hours","area","notes","first","second","third","phone","email","address"];
@@ -39,6 +39,7 @@ const LABELS:Record<string,string>={title:"Título",description:"Descripción",b
  phone:"Teléfono",email:"Correo",address:"Dirección"};
 const ADDS=[
  {type:"ComposeHeading",label:"Título"},{type:"ComposeText",label:"Descripción"},
+ {type:"RichText",label:"Texto con formato"},
  {type:"ComposeImage",label:"Imagen"},{type:"ComposeButton",label:"Botón"},
  {type:"HeroVisual",label:"Portada"},{type:"OfferingGrid",label:"Productos / servicios"},
  {type:"PhotoGallery",label:"Galería"},{type:"Contact",label:"Contacto"},
@@ -76,6 +77,7 @@ function patchBlock(data:Data,id:string,patch:Record<string,unknown>):Data{
  return {...data,content:visit(data.content)};
 }
 function moveBlock(data:Data,id:string,step:number):Data{
+ if((findBlock(data,id)?.props as Record<string,unknown>|undefined)?.locked==="yes")return data;
  let moved=false;
  function visit(nodes:Data["content"]):Data["content"]{
   const index=nodes.findIndex(node=>node.props?.id===id);
@@ -128,7 +130,7 @@ function insertBlockAfter(data:Data,id:string,newBlock:Item):Data{
 /** Duplicates a section without reusing Puck/array-item identifiers. */
 function duplicateBlock(data:Data,id:string):{data:Data;newId:string|null}{
  const original=findBlock(data,id);
- if(!original)return {data,newId:null};
+ if(!original||(original.props as Record<string,unknown>).locked==="yes")return {data,newId:null};
  const regenerate=(value:unknown):unknown=>{
   if(Array.isArray(value))return value.map(regenerate);
   if(value&&typeof value==="object"){
@@ -186,6 +188,7 @@ function reorderBlock(data:Data,sourceId:string,targetId:string,before:boolean):
  return changed?{...data,content}:data;
 }
 function removeBlock(data:Data,id:string):Data{
+ if((findBlock(data,id)?.props as Record<string,unknown>|undefined)?.locked==="yes")return data;
  let removed=false;
  function visit(nodes:Data["content"]):Data["content"]{
   return nodes.flatMap(node=>{
@@ -459,7 +462,7 @@ export default function MobileVisualStudio({
   setDragHint("");
  };
  const beginDrag=(event:ReactPointerEvent<HTMLButtonElement>)=>{
-  if(!selection||preview||drawer)return;
+  if(!selection||preview||drawer||(props?.locked==="yes"))return;
   event.preventDefault();event.stopPropagation();
   clearDrag();
   dragRef.current={pointer:event.pointerId,source:selection.id,target:null,before:false};
@@ -596,7 +599,7 @@ export default function MobileVisualStudio({
  </WebsiteChrome>;
  const menuAction=(next:Section)=>{setInsertAfterId(null);setSection(next);closePopup();if(next==="domain")onDomains();if(next==="history")onHistory();};
  const sectionLabel=(part:Section)=>({home:"Editor",pages:"Páginas",create:"Añadir elemento",
-  appearance:"Colores y diseño",seo:"SEO e imágenes",connections:"Chat y agente",
+  appearance:"Colores y diseño",layers:"Capas y secciones",seo:"SEO e imágenes",connections:"Chat y agente",
   domain:"Dominio",history:"Versiones"})[part];
  const isText=selection?.kind==="text";
  const isButton=selection?.kind==="button";
@@ -628,14 +631,16 @@ export default function MobileVisualStudio({
   {id:"color",label:"Color",icon:<Palette/>},{id:"font",label:"Tipografía",icon:<Type/>},
   {id:"opacity",label:"Transparencia",icon:<Eye/>},{id:"weight",label:"Grosor",icon:<Type/>},
   {id:"italic",label:"Cursiva",icon:<Type/>},{id:"spacing",label:"Espaciado",icon:<SlidersHorizontal/>},
-  {id:"arrange",label:"Organizar",icon:<Layers/>}
+  {id:"arrange",label:"Organizar",icon:<Layers/>},
+  {id:"lock",label:props?.locked==="yes"?"Desbloquear":"Proteger",icon:props?.locked==="yes"?<Unlock/>:<Lock/>}
  ]:isButton?[
   {id:"content",label:"Editar botón",icon:<Type/>},{id:"size",label:"Tamaño",icon:<SlidersHorizontal/>},
   {id:"color",label:"Color del texto",icon:<Palette/>},{id:"background",label:"Fondo",icon:<Palette/>},
   {id:"shape",label:"Esquinas",icon:<Layers/>},{id:"buttonStyle",label:"Estilo",icon:<Settings2/>},
   {id:"link",label:"Enlace",icon:<Globe/>},
   ...(block?.type==="CTA"?[{id:"border" as const,label:"Borde",icon:<Layers/>}]:[]),
-  {id:"arrange",label:"Organizar sección",icon:<Layers/>}
+  {id:"arrange",label:"Organizar sección",icon:<Layers/>},
+  {id:"lock",label:props?.locked==="yes"?"Desbloquear":"Proteger",icon:props?.locked==="yes"?<Unlock/>:<Lock/>}
  ]:isImage?[
   {id:"image",label:"Reemplazar imagen",icon:<ImagePlus/>},
   {id:"position",label:block?.type==="OfferingGrid"?"Mover tarjeta":"Mover imagen",icon:<SlidersHorizontal/>},
@@ -646,7 +651,8 @@ export default function MobileVisualStudio({
     {id:"shade" as const,label:"Oscuridad",icon:<SlidersHorizontal/>}
    ]:[{id:"border" as const,label:"Borde",icon:<Palette/>}]),
   {id:"opacity",label:"Transparencia",icon:<Eye/>},
-  {id:"arrange",label:"Organizar sección",icon:<Layers/>}
+  {id:"arrange",label:"Organizar sección",icon:<Layers/>},
+  {id:"lock",label:props?.locked==="yes"?"Desbloquear":"Proteger",icon:props?.locked==="yes"?<Unlock/>:<Lock/>}
  ]:[
   {id:"content",label:"Editar contenido",icon:<Type/>},
   ...(Array.isArray(props?.items)?[{id:"items" as const,
@@ -660,10 +666,13 @@ export default function MobileVisualStudio({
   {id:"add",label:"Añadir sección",icon:<Plus/>},
   {id:"duplicate",label:"Duplicar sección",icon:<Copy/>},
   {id:"arrange",label:"Subir o bajar",icon:<ArrowUp/>},
-  {id:"delete",label:"Eliminar sección",icon:<Trash2/>}
+  {id:"delete",label:"Eliminar sección",icon:<Trash2/>},
+  {id:"lock",label:props?.locked==="yes"?"Desbloquear":"Proteger",icon:props?.locked==="yes"?<Unlock/>:<Lock/>}
  ];
  const pickTool=(tool:VisualTool)=>{
   if(!selection||!props)return;
+  if(tool==="lock"){edit({locked:props.locked==="yes"?"no":"yes"});setVisualTool("menu");return;}
+  if(props.locked==="yes"&&["duplicate","delete","arrange"].includes(tool))return;
   if(tool==="add"){setInsertAfterId(selection.id);setDrawer(true);setSection("create");closePopup();return;}
   if(tool==="duplicate"){const result=duplicateBlock(data,selection.id);if(result.newId)onChange(result.data);closePopup();return;}
   if(tool==="delete"){setDeleteTarget({id:selection.id,label:String(props.title||"esta sección").slice(0,70)});setVisualTool("menu");return;}
@@ -676,7 +685,7 @@ export default function MobileVisualStudio({
   shade:"Oscuridad",frame:block?.type==="HeroVisual"?"Encuadre":"Esquinas",shape:"Esquinas",
   link:"Enlace",actions:"Opciones",menu:"Herramientas",position:"Mover",border:"Borde",
   layout:"Diseño de portada",arrange:"Organizar sección",add:"Añadir",duplicate:"Duplicar",
-  delete:"Eliminar",items:block?.type==="FAQList"?"Preguntas y respuestas":"Editar elementos",
+  delete:"Eliminar",lock:props?.locked==="yes"?"Desbloquear":"Proteger",items:block?.type==="FAQList"?"Preguntas y respuestas":"Editar elementos",
   surface:"Fondo",buttonStyle:"Estilo del botón"
  } as Record<VisualTool,string>)[visualTool];
  const imageSettings=isImage&&image?targetSettings(props||{},image):null;
@@ -981,6 +990,7 @@ export default function MobileVisualStudio({
      <button onClick={()=>menuAction("create")}><Plus/> Agregar elemento o sección <ChevronRight/></button>
      <button onClick={addFAQSection}><MessageCircle/> Añadir preguntas frecuentes <ChevronRight/></button>
      <button onClick={()=>menuAction("pages")}><Layers/> Seleccionar página <ChevronRight/></button>
+     <button onClick={()=>menuAction("layers")}><Layers/> Capas de esta página <ChevronRight/></button>
      <button onClick={()=>menuAction("pages")}><FilePlus2/> Agregar página <ChevronRight/></button>
      <small className={styles.groupLabel}>DISEÑO</small>
      <button onClick={()=>menuAction("appearance")}><Palette/> Paleta, fuentes y estilos <ChevronRight/></button>
@@ -999,6 +1009,36 @@ export default function MobileVisualStudio({
      <button onClick={()=>{closeDrawer();onBack();}}><ArrowLeft/> Mis sitios</button>
     </div>:<div className={styles.drawerBody}>
      <button className={styles.drawerBack} onClick={()=>setSection("home")}><ArrowLeft/> {sectionLabel(section)}</button>
+     {section==="layers"?<>
+      <p className={styles.help}>Selecciona un elemento incluso cuando esté oculto detrás de otros. La indentación indica su contenedor.</p>
+      {(()=>{const rows:Array<{id:string;type:string;label:string;level:number;locked:boolean}>=[];
+       const visit=(nodes:Data["content"],level:number)=>{
+        for(const node of nodes){
+         const props=node.props as Record<string,unknown>;
+         rows.push({id:String(props.id||""),type:node.type,
+          label:String(props.title||props.text||props.label||props.question||node.type).slice(0,60),
+          level,locked:props.locked==="yes"});
+         for(const slot of ["content","left","right","third"])
+          if(Array.isArray(props[slot]))visit(props[slot] as Data["content"],level+1);
+        }
+       };
+       visit(clean.content,0);
+       return rows.map(item=><button type="button" key={item.id}
+        className={styles.layerItem}
+        style={{paddingLeft:Math.min(item.level,5)*16+12}}
+        onClick={()=>{
+         closeDrawer();
+         const nodes=pageSurface.current?.querySelectorAll<HTMLElement>("[data-vmv-edit-block]");
+         const el=Array.from(nodes||[]).find(node=>node.dataset.vmvEditBlock===item.id);
+         el?.scrollIntoView({block:"center",behavior:"smooth"});
+         setSelection({id:item.id,kind:"section",x:window.innerWidth/2,y:window.innerHeight/2});
+         setVisualTool("menu");
+        }}>
+        <Layers size={17}/> <span>{item.label}</span>
+        {item.locked?<Lock size={14}/>:<ChevronRight size={15}/>}
+       </button>);
+      })()}
+     </>:null}
      {section==="pages"?<>
       {pages.map(p=><button key={p.id} onClick={()=>{onChoosePage(p.id);closeDrawer();}}>
        <Layers/> {p.slug==="home"?"Inicio":p.title}{pageId===p.id?<Check/>:<ChevronRight/>}</button>)}
