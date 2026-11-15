@@ -42,7 +42,9 @@ export function normalizeGoogleProfile(v:GoogleData):GoogleData {
  const country=v.country.trim().toUpperCase();
  const clean={...v,country,existingProfileUrl:v.action==="create"?"":v.existingProfileUrl,openingDate:v.action==="create"?v.openingDate:"",
  phone:v.phone.trim()?contactPhoneE164(v.phone,country)||v.phone:"",
- secondaryPhone:v.secondaryPhone.trim()?contactPhoneE164(v.secondaryPhone,country)||v.secondaryPhone:""};
+ secondaryPhone:v.secondaryPhone.trim()?contactPhoneE164(v.secondaryPhone,country)||v.secondaryPhone:"",
+ bookingUrl:googleProfileLink(v.bookingUrl)||v.bookingUrl,
+ existingProfileUrl:v.action==="create"?"":googleProfileLink(v.existingProfileUrl)||v.existingProfileUrl};
  return v.kind==="service_area"?{...clean,street:"",unit:"",city:"",region:"",postal:""}:clean;
 }
 export function googlePhotoHeader(bytes:Uint8Array,mime:string):boolean {
