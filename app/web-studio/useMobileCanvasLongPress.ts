@@ -13,8 +13,9 @@ const TOOL_SELECTOR=".vmv-image-tools,.vmv-move-handle,.vmv-context-action-panel
  */
 export default function useMobileCanvasLongPress(root:RefObject<HTMLElement|null>,enabled:boolean){
  useEffect(()=>{
-  const container=root.current;
-  if(!enabled||!container)return;
+  const element=root.current;
+  if(!enabled||!element)return;
+  const container:HTMLElement=element;
   const attached=new Map<Document,()=>void>();
   const loading=new Map<HTMLIFrameElement,()=>void>();
   function attach(doc:Document){
