@@ -40,11 +40,22 @@ function safeRichMarkup(input:unknown):string{
  const source=input.slice(0,8000)
   .replace(/<!--([\s\S]*?)-->/g,"")
   .replace(/<\s*(script|style|iframe|object|svg|math|form|template)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi,"");
- const allowed=new Set(["p","br","strong","b","em","i","u","s","strike","blockquote","ul","ol","li","h2","h3","h4","code","pre","hr"]);
+ const allowed=new Set(["p","br","strong","b","em","i","u","s","strike","blockquote","ul","ol","li","h1","h2","h3","h4","h5","h6","code","pre","hr","a"]);
  return source.replace(/<\/?[a-z][^>]*>/gi,(tag)=>{
   const name=/^<\s*\/?\s*([a-z0-9]+)/i.exec(tag)?.[1]?.toLowerCase();
   if(!name||!allowed.has(name))return "";
   const close=/^<\s*\//.test(tag);
+  if(name==="a"){
+   if(close)return "</a>";
+   const href=/\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(tag);
+   const url=safeLink(href?.[1]||href?.[2]||href?.[3]||"");
+   const escaped=url.replace(/&/g,"&amp;").replace(/"/g,"&quot;");
+   return '<a href="'+escaped+'" rel="nofollow noopener noreferrer">';
+  }
+  if(!close&&["p","h1","h2","h3","h4","h5","h6"].includes(name)){
+   const alignment=/text-align\s*:\s*(left|center|right|justify)\b/i.exec(tag);
+   if(alignment)return '<'+name+' style="text-align:'+alignment[1].toLowerCase()+'">';
+  }
   return "<"+(close?"/":"")+name+">";
  });
 }
@@ -347,7 +358,7 @@ export const builderConfig:Config={
    label:"Texto con formato",
    fields:{body:{type:"richtext",contentEditable:true,initialHeight:280}},
    defaultProps:{body:"<p>Escribe aquí tu contenido.</p>"},
-   render:({body})=><section className="vmv-site-section vmv-site-richtext">{body}</section>
+   render:({body,...styling})=><section className="vmv-site-section vmv-site-richtext" style={visualTextStyle(styling,"body")}>{body}</section>
   },
   Image:{
    label:"Imagen",
