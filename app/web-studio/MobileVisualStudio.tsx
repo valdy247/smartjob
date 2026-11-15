@@ -589,29 +589,29 @@ export default function MobileVisualStudio({
     <span>{selection.kind==="image"?"Imagen":selection.kind==="button"?"Botón":selection.kind==="text"?"Texto":"Sección"}</span>
     <button aria-label="Cerrar edición" onClick={closePopup}><X size={17}/></button>
    </div>
-   <div className={styles.floatContent}>
-    <button type="button" className={styles.insertBelow} onClick={()=>{
+   <div className={styles.sectionQuickActions}>
+    <button type="button" aria-label="Añadir sección debajo" className={styles.insertBelow} onClick={()=>{
      setInsertAfterId(selection.id);
      setDrawer(true);
      setSection("create");
      closePopup();
-    }}><Plus size={17}/> Añadir debajo</button>
+    }}><Plus size={17}/> Añadir</button>
     <button type="button" className={styles.duplicateSection} onClick={()=>{
      const copy=duplicateBlock(data,selection.id);
      if(!copy.newId)return;
      onChange(copy.data);
      setSelection({...selection,id:copy.newId,kind:"section",target:undefined,index:undefined,key:undefined});
-    }}><Copy size={17}/> Duplicar sección</button>
+    }}><Copy size={17}/> Duplicar</button>
     <button type="button" className={styles.dragSection}
      onPointerDown={beginDrag} onPointerMove={moveDrag}
      onPointerUp={endDrag} onPointerCancel={cancelDrag}
      onLostPointerCapture={cancelDrag} aria-label="Arrastrar sección para cambiar su posición">
-     <GripVertical size={18}/> Mantén y arrastra para mover
+     <GripVertical size={18}/> Mover
     </button>
     {dragHint?<span className={styles.dragHint} role="status">{dragHint}</span>:null}
     <button type="button" className={styles.deleteSection}
      onClick={()=>setDeleteTarget({id:selection.id,label:String(props.title||"esta sección").slice(0,70)})}>
-     <Trash2 size={17}/> Eliminar sección
+     <Trash2 size={17}/> Eliminar
     </button>
    </div>
    {selection.kind==="image"&&image?<div className={styles.floatContent}>
