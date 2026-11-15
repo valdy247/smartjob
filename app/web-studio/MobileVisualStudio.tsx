@@ -98,7 +98,8 @@ function editableConfig():Config{
   return [kind,{...block,render:(props:Record<string,unknown>)=>{
    const emptyImage=(["ComposeImage","Image"].includes(kind)&&!String(props.image||props.url||""));
    const emptySection=(["OfferingGrid","PhotoGallery","ProjectShowcase","TeamGrid"].includes(kind)&&
-    (!Array.isArray(props.items)||props.items.length===0));
+    (!Array.isArray(props.items)||props.items.length===0||
+     kind==="PhotoGallery"&&!(props.items as Array<Record<string,unknown>>).some(item=>item.image)));
    return <div data-vmv-edit-block={String(props.id||"")} data-vmv-block-type={kind} style={{display:"contents"}}>
     {emptyImage||emptySection?
      <div data-vmv-empty="true" style={{padding:"50px 20px",textAlign:"center",border:"1px dashed #bc9bda",
@@ -365,12 +366,15 @@ export default function MobileVisualStudio({
       onChange={v=>editImage(image,{borderColor:v})}/>
     </div>:null}
     {adjust==="move"?<div className={styles.controls}>
-     <RangeField label="Mover horizontalmente" min={-250} max={250} unit="px" value={targetSettings(props,image).imageMoveX??0}
-      onChange={v=>editImage(image,{imageMoveX:v})}/>
-     <RangeField label="Mover verticalmente" min={-250} max={250} unit="px" value={targetSettings(props,image).imageMoveY??0}
-      onChange={v=>editImage(image,{imageMoveY:v})}/>
-     <RangeField label="Tamaño" min={25} max={100} value={targetSettings(props,image).imageWidth??100}
-      onChange={v=>editImage(image,{imageWidth:v})}/>
+     <RangeField label="Mover horizontalmente" min={-250} max={250} unit="px"
+      value={targetSettings(props,image)[device==="mobile"?"imageMoveXMobile":"imageMoveX"]??0}
+      onChange={v=>editImage(image,{[device==="mobile"?"imageMoveXMobile":"imageMoveX"]:v})}/>
+     <RangeField label="Mover verticalmente" min={-250} max={250} unit="px"
+      value={targetSettings(props,image)[device==="mobile"?"imageMoveYMobile":"imageMoveY"]??0}
+      onChange={v=>editImage(image,{[device==="mobile"?"imageMoveYMobile":"imageMoveY"]:v})}/>
+     <RangeField label="Tamaño" min={25} max={100}
+      value={targetSettings(props,image)[device==="mobile"?"imageWidthMobile":"imageWidth"]??100}
+      onChange={v=>editImage(image,{[device==="mobile"?"imageWidthMobile":"imageWidth"]:v})}/>
     </div>:null}
    </div>:null}
    {selection.kind!=="image"?<div className={styles.floatContent}>
@@ -402,7 +406,16 @@ export default function MobileVisualStudio({
         <label key={key} className={styles.formLabel}>{LABELS[key]||key}
          <input value={String(entry[key]||"")} onChange={e=>editText(key,e.target.value,index)}/>
         </label>)}
+       {typeof entry.image==="string"?<BuilderImageField value={entry.image}
+        onChange={url=>onChange(patchBuilderImage(data,selection.id,{field:"image",index},{image:url}))}/>:null}
+       <button type="button" className={styles.removeItem} onClick={()=>edit({items:(props.items as Array<unknown>).filter((_,i)=>i!==index)})}>Quitar elemento</button>
       </div>)}
+      <button type="button" onClick={()=>{
+       const node=block.type==="PhotoGallery"?{id:crypto.randomUUID(),caption:"",image:"",alt:""}:
+        block.type==="FAQList"?{id:crypto.randomUUID(),question:"Nueva pregunta",answer:"Respuesta"}:
+        {id:crypto.randomUUID(),title:"Nuevo elemento",description:"",image:"",alt:"",price:""};
+       edit({items:[...(props.items as Array<unknown>),node]});
+      }}><Plus size={15}/> Agregar elemento</button>
      </details>:null}
      {textFields.length===0&&!Array.isArray(props.items)?<p>Selecciona un texto o una imagen de esta sección para modificarla.</p>:null}
     </div>}
@@ -478,6 +491,10 @@ export default function MobileVisualStudio({
       <ColorField label="Color principal" value={root.accentColor} onChange={v=>rootPatch({accentColor:v})}/>
       <ColorField label="Color secundario" value={root.secondaryColor} onChange={v=>rootPatch({secondaryColor:v})}/>
       <ColorField label="Color de apoyo" value={root.tertiaryColor} onChange={v=>rootPatch({tertiaryColor:v})}/>
+      <label className={styles.formLabel}>Logotipo del sitio
+       <BuilderImageField kind="logo" value={String(root.logo||"")}
+        onChange={v=>rootPatch({logo:v})}/>
+      </label>
       <label className={styles.formLabel}>Tipografía
        <select value={String(root.font||"modern")} onChange={e=>rootPatch({font:e.target.value})}>
         <option value="modern">Moderna</option><option value="editorial">Editorial</option>
