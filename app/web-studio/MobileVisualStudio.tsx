@@ -406,7 +406,7 @@ export default function MobileVisualStudio({
   const timer=window.setTimeout(()=>setNoticeVisible(false),4800);
   return()=>window.clearTimeout(timer);
  },[notice]);
- const press=useRef<{id:number;timer:number;x:number;y:number;active:boolean}|null>(null);
+ const press=useRef<{id:number;timer:number;x:number;y:number;active:boolean;target:Element;selected:boolean}|null>(null);
  const suppressed=useRef(0);
  const pageSurface=useRef<HTMLDivElement>(null);
  const config=useMemo(()=>editableConfig(),[]);
@@ -534,12 +534,13 @@ export default function MobileVisualStudio({
   const t=event.target instanceof Element?event.target:null;
   if(!t?.closest("[data-vmv-edit-block]"))return;
   if(press.current)window.clearTimeout(press.current.timer);
-  const p={id:event.pointerId,x:event.clientX,y:event.clientY,timer:0,active:true};
+  const p={id:event.pointerId,x:event.clientX,y:event.clientY,timer:0,active:true,target:t,selected:false};
   press.current=p;
   p.timer=window.setTimeout(()=>{
    if(!p.active||press.current!==p)return;
+   p.selected=true;
    suppressed.current=Date.now()+900;
-   selectAt(t,p.x,p.y);
+   selectAt(p.target,p.x,p.y);
   },530);
  }
  function pointerMove(event:ReactPointerEvent<HTMLDivElement>){
@@ -553,6 +554,11 @@ export default function MobileVisualStudio({
   const p=press.current;
   if(!p||p.id!==event.pointerId)return;
   window.clearTimeout(p.timer);p.active=false;press.current=null;
+  // iOS WebViews sometimes skip synthetic click events; use pointerup for a simple tap.
+  if(event.type==="pointerup"&&!p.selected&&!preview&&!drawer){
+   suppressed.current=Date.now()+450;
+   selectAt(p.target,event.clientX,event.clientY);
+  }
  }
  useEffect(()=>{closePopup();closeDrawer();setDeleteTarget(null);},[pageId]);
  useEffect(()=>()=>{if(press.current)clearTimeout(press.current.timer);},[]);
