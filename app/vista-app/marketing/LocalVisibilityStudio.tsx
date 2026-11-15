@@ -76,17 +76,14 @@ export default function LocalVisibilityStudio({profile,onChange,onRequestHelp,fr
  };
  return <div className={styles.root}>
   <header className={styles.header}>
-   <span className={styles.overline}><MapPinned size={16}/> {translate("marketing.visibility.local_visibility_pilot")}</span>
    <h2>{translate("marketing.visibility.help_customers_find_your_business")}</h2>
-   <p>{translate("marketing.visibility.a_consistent_business_listing_for_search_engines_and")}</p>
   </header>
   <div className={styles.summary}>
    <div><strong>{ready} de {details.length}</strong><span>{translate("marketing.visibility.essential_details_completed")}</span></div>
    <div><strong>{Object.values(listingStatus).filter(v=>v==="in_progress"||v==="self_reported").length} de {directories.length}</strong><span>{translate("marketing.visibility.directories_started_self_reported")}</span></div>
   </div>
   <section className={styles.panel}>
-   <div className={styles.sectionHeader}><div><span>{translate("marketing.visibility.01_one_business_profile")}</span><h3>{translate("marketing.visibility.information_for_directories")}</h3></div><button type="button" onClick={()=>void copyProfile()} className={styles.copy}><ClipboardCopy size={16}/> {translate("marketing.visibility.copy_business_profile")}</button></div>
-   <p className={styles.muted}>{translate("marketing.visibility.use_the_same_official_business_name_phone_and_locati")}</p>
+   <div className={styles.sectionHeader}><div><h3>{translate("marketing.visibility.information_for_directories")}</h3></div><button type="button" onClick={()=>void copyProfile()} className={styles.copy}><ClipboardCopy size={16}/> {translate("marketing.visibility.copy_business_profile")}</button></div>
    <div className={styles.grid}>
     <Field label={translate("marketing.visibility.business_name")} value={profile.business} onChange={v=>onChange("business",v)} placeholder={translate("marketing.visibility.your_official_business_name")}/>
     <div className={styles.readonlyField}><span>{translate("marketing.visibility.industry")}</span><strong>{profile.industry||translate("marketing.visibility.not_specified")}</strong><small>{translate(fromSavedBusiness?"marketing.visibility.savedCategory":"marketing.visibility.selected_in_diagnosis")}</small></div>
@@ -96,7 +93,7 @@ export default function LocalVisibilityStudio({profile,onChange,onRequestHelp,fr
     <Field label={translate("marketing.visibility.website_optional")} value={profile.website} onChange={v=>{onChange("website",v);setAudit(null);setAuditError("");}} placeholder="https://tusitio.com"/>
    </div>
    <details className={styles.extras}>
-    <summary><span><strong>{translate("marketing.visibility.hours_address_and_description")}</strong><small>{translate("marketing.visibility.optional_details_finish_them_later")}</small></span><ChevronDown size={18}/></summary>
+    <summary><span><strong>{translate("marketing.visibility.hours_address_and_description")}</strong></span><ChevronDown size={18}/></summary>
     <div className={styles.extraBody}>
      <Field label={translate("marketing.visibility.business_hours")} value={profile.hours} onChange={v=>onChange("hours",v)} placeholder={translate("marketing.visibility.hoursExample")}/>
      <div className={styles.hoursPresets} aria-label={translate("marketing.visibility.typical_hours")}>
@@ -113,7 +110,7 @@ export default function LocalVisibilityStudio({profile,onChange,onRequestHelp,fr
    {notice?<p className={styles.notice} role="status">{notice}</p>:null}
   </section>
   <section className={styles.panel}>
-   <div className={styles.sectionHeader}><div><span>{translate("marketing.visibility.02_free_directories")}</span><h3>{translate("marketing.visibility.be_where_customers_search")}</h3></div></div>
+   <div className={styles.sectionHeader}><div><h3>{translate("marketing.visibility.be_where_customers_search")}</h3></div></div>
    <p className={styles.muted}>{translate("marketing.visibility.before_creating_a_listing_check_whether_one_already_")}</p>
    <div className={styles.directories}>
     {directories.map(item=><article key={item.id} className={styles.directory}>
@@ -133,8 +130,7 @@ export default function LocalVisibilityStudio({profile,onChange,onRequestHelp,fr
    <p className={styles.fine}>{translate("marketing.visibility.statuses_are_shown_only_in_this_trial_session_they_d")}</p>
   </section>
   <section className={styles.panel}>
-   <div className={styles.sectionHeader}><div><span>{translate("marketing.visibility.03_free_api")}</span><h3>{translate("marketing.visibility.technical_website_audit")}</h3></div><span className={styles.apiTag}><Globe2 size={14}/> PageSpeed Insights</span></div>
-   <p className={styles.muted}>{translate("marketing.visibility.we_analyze_technical_seo_and_mobile_speed_opportunit")}</p>
+   <div className={styles.sectionHeader}><div><h3>{translate("marketing.visibility.technical_website_audit")}</h3></div><span className={styles.apiTag}><Globe2 size={14}/> PageSpeed Insights</span></div>
    <button type="button" className={styles.auditButton} disabled={auditing} onClick={()=>void auditSite()}><Search size={17}/>{auditing?translate("marketing.visibility.analyzing_website"):translate("marketing.visibility.analyze_my_site_for_free")}{auditing?<RefreshCw className={styles.spin} size={15}/>:<ArrowUpRight size={15}/>}</button>
    {auditError?<div className={styles.auditFallback} role="alert"><p className={styles.error}>{auditError}</p>
     <a href="https://pagespeed.web.dev/" target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> {translate("marketing.visibility.open_free_google_pagespeed")}</a>
