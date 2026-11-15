@@ -419,7 +419,18 @@ export default function MobileVisualStudio({
        placeholder="https://... o #contacto"
        onChange={e=>edit({[block.type==="ComposeButton"?"url":"buttonUrl"]:e.target.value})}/>
      </label>:null}
-     {selection.index===undefined&&["ComposeHeading","ComposeText","HeroVisual"].includes(block.type)?<>
+     {selection.kind==="button"&&selection.index===undefined&&
+      ["HeroVisual","ComposeButton","CTA"].includes(block.type)?<>
+      <RangeField label="Tamaño del texto del botón" min={11} max={36} unit="px"
+       value={typeof props.buttonFontSize==="number"&&props.buttonFontSize>=11?props.buttonFontSize:13}
+       onChange={v=>edit({buttonFontSize:v})}/>
+      <ColorField label="Color del texto y del ícono" value={props.buttonTextColor}
+       allowTransparent onChange={v=>edit({buttonTextColor:v})}/>
+      <ColorField label="Color de fondo del botón" value={props.buttonColor}
+       allowTransparent onChange={v=>edit({buttonColor:v})}/>
+     </>:null}
+     {selection.kind==="text"&&selection.index===undefined&&
+      ["ComposeHeading","ComposeText","HeroVisual"].includes(block.type)?<>
       <RangeField label="Tamaño de texto" min={12} max={100} unit="px" value={props.fontSize??props.titleFontSize??32}
        onChange={v=>edit(block.type==="HeroVisual"?{titleFontSize:v}:{fontSize:v})}/>
       <ColorField label="Color del texto" value={props.textColor??props.titleColor}
