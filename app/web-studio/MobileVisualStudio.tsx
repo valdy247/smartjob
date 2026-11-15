@@ -323,6 +323,14 @@ export default function MobileVisualStudio({
    <div className={styles.viewport} ref={pageSurface}
     onPointerDownCapture={pointerDown} onPointerMoveCapture={pointerMove}
     onPointerUpCapture={pointerUp} onPointerCancelCapture={pointerUp}
+    onDoubleClickCapture={e=>{
+     if(preview||drawer)return;
+     const target=e.target instanceof Element?e.target:null;
+     if(!target?.closest("[data-vmv-edit-block]"))return;
+     e.preventDefault();e.stopPropagation();
+     suppressed.current=Date.now()+600;
+     selectAt(target,e.clientX,e.clientY);
+    }}
     onClickCapture={e=>{
      if(preview)return;
      const target=e.target instanceof Element?e.target:null;
@@ -488,7 +496,7 @@ export default function MobileVisualStudio({
      </>:null}
      {section==="appearance"?<>
       <label className={styles.formLabel}>Paleta
-       <select value={String(root.palette||"violet")} onChange={e=>rootPatch({palette:e.target.value})}>
+       <select value={String(root.palette||"violet")} onChange={e=>rootPatch({palette:e.target.value,accentColor:"",secondaryColor:"",tertiaryColor:""})}>
         {["violet","mint","amber","ink","rose","forest","ocean","terracotta","charcoal"].map(p=>
          <option key={p} value={p}>{({violet:"Violeta",mint:"Menta",amber:"Ámbar",ink:"Tinta",rose:"Rosa",
           forest:"Bosque",ocean:"Océano",terracotta:"Terracota",charcoal:"Carbón"} as Record<string,string>)[p]}</option>)}
