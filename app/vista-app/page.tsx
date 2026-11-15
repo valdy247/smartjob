@@ -279,6 +279,7 @@ export default function VMVMobilePreview(){
       {phase==="unconfigured"?<div className={styles.loadingScreen}><LockKeyhole/><p>{translate("native.supabaseMissing")}</p></div>:null}
       {phase==="signed_out"?<div className={styles.signinScreen}>
        <span className={styles.screenEyebrow}>{translate("native.secureAccess")}</span><h2>{translate("native.welcome")}<span className={styles.mint}>.</span></h2>
+       <p className={styles.screenLead}>{translate("native.signInExplanation")}</p>
        <form className={styles.signinForm} onSubmit={login}>
         <label htmlFor="login-email">{translate("common.email")}</label><input required type="email" id="login-email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={translate("native.emailPlaceholder")}/>
         <label htmlFor="login-password">{translate("common.password")}</label><input required type="password" id="login-password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={translate("native.passwordPlaceholder")}/>
