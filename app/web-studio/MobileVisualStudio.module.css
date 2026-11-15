@@ -279,3 +279,25 @@
  min-height:45px;border:1px solid #d9c5ee;border-radius:11px;
  background:#f8f2ff;color:#69449c;font-size:13px;font-weight:800;cursor:pointer}
 @media(max-width:350px){.historyBar button{padding:7px 9px}.historyBar button span{display:none}}
+
+/* Contextual, touch-friendly actions: keep the canvas visible above the sheet. */
+.duplicateSection,.dragSection{
+ display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:44px;
+ border:1px solid #d9c5ee;border-radius:11px;background:#fff;color:#69449c;
+ font-size:13px;font-weight:800;cursor:pointer}
+.dragSection{background:#f7f2fc;border-style:dashed;touch-action:none;
+ -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.dragSection:active{background:#ebe0f8}
+.dragHint{display:block;font-size:12px;font-weight:750;color:#70519b;
+ text-align:center;min-height:18px;pointer-events:none}
+.viewport :global([data-vmv-drop-target]){outline:3px dashed #8b53d3!important;
+ outline-offset:-3px;scroll-margin-top:65px}
+.viewport :global([data-vmv-drop-target="before"]){border-top:4px solid #8b53d3!important}
+.viewport :global([data-vmv-drop-target="after"]){border-bottom:4px solid #8b53d3!important}
+@media(max-width:760px){
+ .stage[data-inspecting=true] .desktopFrame,
+ .stage[data-inspecting=true] .mobileFrame{height:60dvh;max-height:60dvh}
+ .stage[data-inspecting=true] .floating{height:40dvh;max-height:40dvh;
+  padding-bottom:env(safe-area-inset-bottom)}
+ .stage[data-inspecting=true] .floatHead{min-height:48px}
+}
