@@ -3,7 +3,7 @@ import BuilderImageField from "@/app/web-studio/BuilderImageField";
 import {numericEditorField,colorEditorField} from "@/app/web-studio/BuilderContextFields";
 import BuilderEditableImage from "@/app/web-studio/BuilderEditableImage";
 import {imageSettingsField} from "@/app/web-studio/BuilderImageControls";
-import {normalizeImageSettings} from "./web-builder-images";
+import {normalizeImageSettings,imageSettingsStyle} from "./web-builder-images";
 import {safeWebImageUrl} from "./web-services-site";
 
 export type VisualBlockName="HeroVisual"|"OfferingGrid"|"PhotoGallery"|"ProcessSteps"|"ProjectShowcase"|"HoursArea"|"TeamGrid"|"PricingList"|"BeforeAfter"|"FAQList";
@@ -130,7 +130,7 @@ export const visualBlocks:Config["components"]={
   render:({id,title,description,items,layout,padding,surface,columns,showPrices,puck})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-offerings">
    <div className="vmv-section-heading"><h2>{title}</h2>{description?<p>{description}</p>:null}</div>
    <div className="vmv-offerings-items" data-layout={layout||"grid"} data-columns={columns||"3"}>
-    {toList(items).map((item,index)=>!(item.title||item.description||item.price||photo(item.image))&&!puck.isEditing?null:<article key={visualItemId(item,index)} className="vmv-offering-card" data-has-photo={Boolean(photo(item.image))}>
+    {toList(items).map((item,index)=>!(item.title||item.description||item.price||photo(item.image))&&!puck.isEditing?null:<article key={visualItemId(item,index)} className="vmv-offering-card" data-has-photo={Boolean(photo(item.image))} style={imageSettingsStyle(item)}>
      <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
      <div className="vmv-offering-copy">{item.title?<h3>{heading(item.title)}</h3>:<h3>Nuevo elemento</h3>}
       {item.description?<p>{heading(item.description)}</p>:null}
