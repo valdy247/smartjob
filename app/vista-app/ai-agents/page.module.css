@@ -214,17 +214,15 @@
  padding:22px;background:#fff;border:1px solid #e5d8ef;border-radius:20px;margin-bottom:15px}
 .quickAgentEmpty strong{font-size:14px;color:#4f3868}
 .quickAgentEmpty small{font-size:10px;color:#947e9e}
-.quickAgentMore{margin:3px 0 18px}
-.quickAgentMore summary{display:flex;justify-content:space-between;align-items:center;
- padding:9px 4px;color:#866bb3;font-size:11px;font-weight:850;cursor:pointer;list-style:none}
-.quickAgentMore summary::-webkit-details-marker{display:none}
-.quickAgentMore[open] summary svg{transform:rotate(90deg)}
-.quickAgentMore .tiles{margin-top:10px;margin-bottom:10px}
+.quickAgentMore{display:flex;flex-direction:column;gap:12px;margin:8px 0 23px}
+.quickAgentMore h2{margin:0;padding:3px 2px;color:#6d4a9a;
+ font-size:15px;font-weight:900;letter-spacing:-.02em}
+.quickAgentMore .tiles{margin-top:0;margin-bottom:0}
 .quickAgentMore .tile{min-height:100px}
 .quickAgentMore .tile strong{font-size:12px;margin-top:13px}
 .quickAgentMore .tileIcon{width:32px;height:32px}
 .quickAgentSwitchRow>input:focus-visible,.quickAgentConnectButton:focus-visible,
-.quickAgentMore summary:focus-visible{outline:3px solid #a77de3;outline-offset:3px}
+.quickAgentMore .tile:focus-visible,.quickAgentMore .agent button:focus-visible{outline:3px solid #a77de3;outline-offset:3px}
 @media(max-width:390px){.quickAgentCard{padding:12px}.quickAgentTop{gap:10px}
  .quickAgentAvatar{width:62px;height:62px;border-radius:19px}
  .quickAgentConnectButton{font-size:10px;padding:9px 8px}}
