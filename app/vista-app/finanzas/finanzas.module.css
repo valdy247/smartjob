@@ -36,3 +36,14 @@
 .loading{display:flex;align-items:center;gap:9px;color:#7750b6;font-size:12px}
 .error{background:#fff0ee;color:#a0404b;border-radius:13px;padding:12px;font-size:12px;line-height:1.5}
 @media(max-width:450px){.grid{gap:8px}.balance{padding:13px}.balance strong{font-size:19px}.card{padding:15px}.cardHead{align-items:flex-start}.pending,.ready{max-width:135px;white-space:normal;text-align:center}}
+
+
+/* VMV unified lavender/mint/pink dashboard palette. */
+.root{background:#fdfcff;color:#171127}
+.back{color:#7650c6}
+.card{border-color:#eee5f5;background:#fff;border-radius:21px;box-shadow:0 7px 18px #3520460b}
+.balance{border-color:#eee5f5;border-radius:20px;background:#f0e5ff}
+.balance:nth-child(2){background:#e1f9e1}
+.balance:nth-child(3){background:#fce2ed}
+.logo{background:#e9dbff;color:#7547c9}
+.selectLabel select{border-color:#e7d9f2;border-radius:14px}
