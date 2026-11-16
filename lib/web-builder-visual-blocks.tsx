@@ -200,14 +200,14 @@ export const visualBlocks:Config["components"]={
    title:titleField,description:textArea,
    items:{type:"array",arrayFields:{image:imgField,alt:titleField,caption:titleField},
     defaultItemProps:{image:"",alt:"",caption:""},getItemSummary:(item)=>item.caption||"Fotografía"},
-   layout:styleFields.layout,padding:styleFields.padding,surface:styleFields.surface
+   layout:styleFields.layout,columns:{type:"select",options:[{label:"Una columna",value:"1"},{label:"Dos columnas",value:"2"},{label:"Tres columnas",value:"3"},{label:"Cuatro columnas",value:"4"}]},padding:styleFields.padding,surface:styleFields.surface
   },
-  defaultProps:{title:"Una mirada a nuestro trabajo",description:"",items:[],layout:"mosaic",padding:"normal",surface:"light"},
+  defaultProps:{title:"Una mirada a nuestro trabajo",description:"",items:[],layout:"mosaic",columns:"3",padding:"normal",surface:"light"},
   renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.description}{fields.items}</fieldset>
-   <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.padding}{fields.surface}</fieldset></>,
-  render:({id,title,description,items,layout,padding,surface,puck,...textStyling})=>!toList(items).some(item=>photo(item.image))&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
+   <fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.columns}{fields.padding}{fields.surface}</fieldset></>,
+  render:({id,title,description,items,layout,columns,padding,surface,puck,...textStyling})=>!toList(items).some(item=>photo(item.image))&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
    <div className="vmv-section-heading"><h2 style={visualTextStyle(textStyling,"title")}>{title}</h2>{description?<p style={visualTextStyle(textStyling,"description")}>{description}</p>:null}</div>
-   <div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,index)=><figure key={visualItemId(item,index)}>
+   <div className="vmv-gallery-items" data-layout={layout||"mosaic"} data-columns={["1","2","3","4"].includes(String(columns))?String(columns):"3"}>{toList(items).map((item,index)=><figure key={visualItemId(item,index)}>
     <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.caption),heading(item.alt))} settings={item} editing={puck.isEditing}/>
     {item.caption?<figcaption style={visualTextStyle(item,"caption")}>{heading(item.caption)}</figcaption>:null}
    </figure>)}</div>
@@ -232,11 +232,11 @@ export const visualBlocks:Config["components"]={
   fields:{title:titleField,
    items:{type:"array",arrayFields:{title:titleField,description:textArea,image:imgField,alt:titleField},
     defaultItemProps:{title:"",description:"",image:"",alt:""},getItemSummary:(item)=>item.title||"Proyecto"},
-   layout:styleFields.layout,padding:styleFields.padding,surface:styleFields.surface},
-  defaultProps:{title:"Proyectos",items:[],layout:"mosaic",padding:"spacious",surface:"light"},
-  renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.padding}{fields.surface}</fieldset></>,
-  render:({id,title,items,layout,padding,surface,puck,...textStyling})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
-   <h2 style={visualTextStyle(textStyling,"title")}>{title}</h2><div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,index)=><figure key={visualItemId(item,index)}>
+   layout:styleFields.layout,columns:{type:"select",options:[{label:"Una columna",value:"1"},{label:"Dos columnas",value:"2"},{label:"Tres columnas",value:"3"},{label:"Cuatro columnas",value:"4"}]},padding:styleFields.padding,surface:styleFields.surface},
+  defaultProps:{title:"Proyectos",items:[],layout:"mosaic",columns:"3",padding:"spacious",surface:"light"},
+  renderFields:({fields})=><><fieldset className="vmv-puck-field-group"><legend>Contenido</legend>{fields.title}{fields.items}</fieldset><fieldset className="vmv-puck-field-group"><legend>Diseño</legend>{fields.layout}{fields.columns}{fields.padding}{fields.surface}</fieldset></>,
+  render:({id,title,items,layout,columns,padding,surface,puck,...textStyling})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
+   <h2 style={visualTextStyle(textStyling,"title")}>{title}</h2><div className="vmv-gallery-items" data-layout={layout||"mosaic"} data-columns={["1","2","3","4"].includes(String(columns))?String(columns):"3"}>{toList(items).map((item,index)=><figure key={visualItemId(item,index)}>
     <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
     {item.title||item.description?<figcaption><strong style={visualTextStyle(item,"title")}>{heading(item.title)}</strong><p style={visualTextStyle(item,"description")}>{heading(item.description)}</p></figcaption>:null}
    </figure>)}</div>
@@ -319,9 +319,9 @@ export const visualBlocks:Config["components"]={
 const SCHEMA:Record<VisualBlockName,{strings:string[];images:string[];arrays?:Record<string,{strings:string[];images:string[]}>}>={
  HeroVisual:{strings:["layout","eyebrow","title","description","buttonText","buttonUrl","imageAlt","align","imagePosition","shade","height","buttonStyle","buttonShape","buttonColor","buttonTextColor","titleFont","titleColor","titleShadow","titleWeight","titleItalic","titleLink"],images:["image"]},
  OfferingGrid:{strings:["title","description","layout","padding","surface","columns","showPrices"],images:[],arrays:{items:{strings:["title","description","alt","price","titleColor","descriptionColor","priceColor"],images:["image"]}}},
- PhotoGallery:{strings:["title","description","layout","padding","surface"],images:[],arrays:{items:{strings:["alt","caption"],images:["image"]}}},
+ PhotoGallery:{strings:["title","description","layout","columns","padding","surface"],images:[],arrays:{items:{strings:["alt","caption"],images:["image"]}}},
  ProcessSteps:{strings:["title","padding","surface"],images:[],arrays:{items:{strings:["title","description"],images:[]}}},
- ProjectShowcase:{strings:["title","layout","padding","surface"],images:[],arrays:{items:{strings:["title","description","alt"],images:["image"]}}},
+ ProjectShowcase:{strings:["title","layout","columns","padding","surface"],images:[],arrays:{items:{strings:["title","description","alt"],images:["image"]}}},
  HoursArea:{strings:["title","hours","area","notes","padding","surface"],images:[]},
  TeamGrid:{strings:["title","padding","surface"],images:[],arrays:{items:{strings:["title","description","alt"],images:["image"]}}},
  PricingList:{strings:["title","padding","surface"],images:[],arrays:{items:{strings:["title","description","price"],images:[]}}},
@@ -371,6 +371,7 @@ export function normalizeVisualProps(type:VisualBlockName,props:Record<string,un
    /^(#[a-z0-9-]{1,70}|https:\/\/[^\s<>]+|mailto:[^\s<>]+|tel:\+?[\d ()-]{7,36})$/i.test(safe.titleLink)?safe.titleLink:"";
   Object.assign(safe,normalizeImageSettings(props,0));
  }
+ if(type==="PhotoGallery"||type==="ProjectShowcase")safe.columns=["1","2","3","4"].includes(String(props.columns))?String(props.columns):"3";
  for(const field of schema.images)safe[field]=photo(props[field])||"";
  if(schema.arrays)for(const [key,itemFields] of Object.entries(schema.arrays)){
   const items=Array.isArray(props[key])?props[key].slice(0,40):[];
