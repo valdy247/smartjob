@@ -617,7 +617,7 @@ button.homeProductCard:hover{transform:translateY(-2px)}
 .homeGrowCopy p{font-size:12px;line-height:1.48;color:#423355;margin:0}
 .homeGrowStart{display:inline-flex;align-items:center;gap:7px;border-radius:999px;
  background:#fff;color:#181023;box-shadow:0 6px 15px #71529d28;
- margin-top:19px;padding:10px 14px;font-size:13px;font-weight:900;white-space:nowrap;cursor:default;user-select:none}
+ margin-top:19px;padding:10px 14px;font-size:13px;font-weight:900;white-space:nowrap;border:0;cursor:pointer;font-family:inherit}
 .homeGrowStart svg{transform:rotate(45deg)}
 .homeRocketArt{position:absolute;display:grid;place-items:center;right:4%;top:22%;width:39%;height:72%;
  color:#8352d3;transform:rotate(21deg);pointer-events:none}
