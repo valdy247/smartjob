@@ -88,3 +88,57 @@ button:focus-visible{outline:3px solid #ad86ec;outline-offset:2px}
 .inventoryWebLink .inventoryWebSuccess{color:#26754c;font-weight:750}
 .inventoryWebLink .inventoryWebError{color:#bc3251;font-weight:750}
 @media(max-width:450px){.inventoryWebLinkHeader{flex-wrap:wrap}.inventoryWebConnected{margin-left:51px}}
+
+
+/* Compact connection hub: status first, controls only when needed. */
+.connectionsHub{display:flex;flex-direction:column;gap:0;border:1px solid #e9e0f0;
+ border-radius:18px;background:#fff;overflow:hidden}
+.connectionsHub>h2{font-size:15px;font-weight:900;color:#32283f;margin:0;
+ padding:15px 15px 8px}
+.connectionUnit{display:flex;flex-direction:column;margin:0 13px;
+ padding:12px 0;border-bottom:1px solid #f0eaf4;min-width:0}
+.connectionUnit:last-child{border-bottom:0}
+.connectionRow{display:grid;grid-template-columns:36px minmax(0,1fr) auto;
+ align-items:center;gap:10px;min-width:0}
+.connectionIcon{width:36px;height:36px;border-radius:12px;color:#8256c4;
+ background:#f3edfa;display:grid;place-items:center}
+.connectionIdentity{display:flex;flex-direction:column;gap:4px;min-width:0}
+.connectionIdentity strong{font-size:12px;line-height:1.3;color:#382a44;font-weight:850}
+.connectionIdentity small{font-size:10px;color:#85778f;line-height:1.4;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.connectionIdentity select{padding:4px 7px;max-width:100%;border:1px solid #eee5f4;
+ border-radius:8px;background:#fff;color:#665079;font:inherit;font-size:11px}
+.connectionControls{display:flex;flex-direction:column;align-items:flex-end;gap:7px;
+ justify-content:center;min-width:81px}
+.connectionOnline,.connectionOffline{display:inline-flex;align-items:center;gap:4px;
+ font-size:10px;font-weight:800;white-space:nowrap}
+.connectionOnline{color:#367c58}.connectionOffline{color:#877a92}
+.connectionChange{display:inline-flex;gap:4px;align-items:center;justify-content:center;
+ border:1px solid #e6d9f1;background:#f8f4fc;color:#784fae;cursor:pointer;
+ min-height:30px;padding:5px 9px;border-radius:9px;font-size:10px;font-weight:850}
+.connectionChange:disabled{opacity:.5;cursor:not-allowed}
+.connectionEditor{margin:11px 0 2px 46px;padding:12px;border:1px solid #ece4f2;
+ border-radius:12px;background:#fcfaff;display:flex;flex-direction:column;gap:10px}
+.connectionEditor label{display:flex;flex-direction:column;gap:6px;font-size:11px;
+ color:#554464;font-weight:750}
+.connectionEditor select{width:100%;min-height:40px;padding:8px 10px;border:1px solid #e4d8ee;
+ border-radius:9px;color:#43324c;background:#fff;font:inherit}
+.connectionEditor small{font-size:10px;color:#8d7697;line-height:1.5}
+.connectionActions{display:flex;gap:8px}
+.connectionActions button{display:inline-flex;align-items:center;gap:6px;
+ padding:10px 13px;border:1px solid #dfd2ee;background:#f3ecfa;
+ color:#6b499c;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer}
+.connectionActions button:disabled{opacity:.5}
+.connectionSuccess,.connectionError{margin:7px 0 0 46px;font-size:11px;
+ line-height:1.4;font-weight:700}
+.connectionSuccess{color:#36845a}.connectionError{color:#bc3d5e}
+@media(max-width:420px){
+ .connectionsHub>h2{padding-left:12px}
+ .connectionUnit{margin:0 10px}
+ .connectionRow{gap:7px;grid-template-columns:34px minmax(0,1fr) auto}
+ .connectionIcon{height:34px;width:34px}
+ .connectionIdentity strong{font-size:11px}
+ .connectionControls{min-width:77px}
+ .connectionChange{padding:5px 7px}
+ .connectionEditor{margin-left:0}
+}
