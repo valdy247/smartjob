@@ -1,7 +1,7 @@
 "use client";
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {useEffect,useMemo,useRef,useState,type FormEvent} from "react";
-import {ArrowRight,ImagePlus,Plus,ShieldCheck,Sparkles,Trash2} from "lucide-react";
+import {ArrowRight,CalendarDays,Check,ClipboardList,FileText,Layers3,PhoneCall,Plus,Search,ShieldCheck,ShoppingBag,Store,X} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
@@ -34,16 +34,16 @@ function ownImageFilename(value:string,ownerId:string):string{
  return asset.startsWith(ownerId+"/")?asset.slice(ownerId.length+1):"";
 }
 
-const offeringOptions:{id:SiteOffering;title:string;hint:string}[]=[
- {id:"products",title:"Productos",hint:"Catálogo y consultas"},
- {id:"services",title:"Servicios",hint:"Especialidades y contacto"},
- {id:"both",title:"Ambos",hint:"Productos y servicios"}
+const offeringOptions:{id:SiteOffering;title:string;hint:string;Icon:typeof ShoppingBag}[]=[
+ {id:"products",title:"Productos",hint:"Catálogo y consultas",Icon:ShoppingBag},
+ {id:"services",title:"Servicios",hint:"Especialidades y contacto",Icon:Store},
+ {id:"both",title:"Ambos",hint:"Productos y servicios",Icon:Layers3}
 ];
-const goals:{id:SiteObjective;label:string;details:string}[]=[
- {id:"calls",label:"Recibir llamadas",details:"Botón de llamada"},
- {id:"quotes",label:"Pedir presupuestos",details:"Formulario de consulta"},
- {id:"bookings",label:"Solicitar citas",details:"Solicitud, no agenda automática"},
- {id:"orders",label:"Consultar pedidos",details:"Solicitud, sin cobro"}
+const goals:{id:SiteObjective;label:string;details:string;Icon:typeof PhoneCall}[]=[
+ {id:"calls",label:"Recibir llamadas",details:"Botón de llamada",Icon:PhoneCall},
+ {id:"quotes",label:"Pedir presupuestos",details:"Formulario de consulta",Icon:FileText},
+ {id:"bookings",label:"Solicitar citas",details:"Solicitud, no agenda automática",Icon:CalendarDays},
+ {id:"orders",label:"Consultar pedidos",details:"Solicitud, sin cobro",Icon:ClipboardList}
 ];
 export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const [name,setName]=useState("");
@@ -318,8 +318,28 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  if(stage==="proposals")return <TemplateProposals input={intake} familyOverride={suggestedFamily}
    generated={mode==="ai"?aiProposal:null} busy={busy} onBack={()=>setStage("details")}
    onChoose={proposal=>onChoose(intake,proposal)}/>;
- return <section className={styles.root}>
-  <div className={styles.intro}>
+ return <section className={`${styles.root} ${step===1?styles.offeringsRoot:""}`}>
+  {step===1?<header className={styles.offeringsIntro}>
+   <div className={styles.offeringsBrandRow}>
+    <div className={styles.offeringsBrand}>
+     <span className={styles.offeringsBrandMark} aria-hidden="true">V</span>
+     <strong>VMV Business</strong>
+    </div>
+    <span className={styles.offeringsBag} aria-hidden="true">
+     <ShoppingBag size={33} strokeWidth={1.8}/>
+    </span>
+   </div>
+   <div className={styles.offeringsProgress} role="progressbar" aria-label="Progreso de creación"
+    aria-valuemin={0} aria-valuemax={4} aria-valuenow={step+1}>
+    {stepLabels.map((label,i)=><span key={label} className={styles.offeringsStage}
+     data-state={i<step?"done":i===step?"current":"upcoming"}
+     aria-hidden="true">
+     <span className={styles.offeringsStageDot}>{i<step?<Check size={15} strokeWidth={3}/>:i===step?String(i+1).padStart(2,"0"):""}</span>
+    </span>)}
+   </div>
+   <h2>Qué ofreces</h2>
+   <p>Cuéntanos qué ofreces en tu negocio para personalizar tu experiencia.</p>
+  </header>:<div className={styles.intro}>
    <a href="/web-studio?mode=sites" className={styles.backLink}>‹ Mis sitios</a>
    <span className={styles.stepMeta}>Paso {step+1} de 4</span>
    <h2>{stepLabels[step]}<span>.</span></h2>
@@ -327,7 +347,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
     aria-valuemin={0} aria-valuemax={4} aria-valuenow={step+1}>
     <span style={{width:`${((step+1)/4)*100}%`}}/>
    </div>
-  </div>
+  </div>}
   <div className={styles.form}>
    {step===0?<div className={styles.panel}>
     <h3><span>01</span> Tu negocio</h3>
@@ -346,28 +366,48 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
     <label>Descripción aprobada<textarea value={about} maxLength={500} rows={3}
      placeholder="¿Qué hace tu negocio? Incluye solamente información real." onChange={e=>setAbout(e.target.value)}/></label>
    </div>:null}
-   {step===1?<div className={styles.panel}>
-    <h3><span>02</span> Qué ofreces</h3>
-    <label>¿Qué ofreces?</label>
-    <div className={styles.choices}>
-     {offeringOptions.map(item=><button key={item.id} type="button" data-active={kind===item.id}
-      onClick={()=>setKind(item.id)}><strong>{item.title}</strong><small>{item.hint}</small></button>)}
+   {step===1?<div className={styles.offeringsPanel}>
+    <h3 className={styles.offeringsSectionTitle}>¿Qué ofreces?</h3>
+    <div className={styles.offeringsChoices} role="group" aria-label="Tipo de productos o servicios">
+     {offeringOptions.map(item=><button key={item.id} type="button" className={styles.offeringCard}
+      data-active={kind===item.id} aria-pressed={kind===item.id}
+      onClick={()=>{setKind(item.id);setError("");}}>
+      <span className={styles.offeringIcon}><item.Icon size={28} strokeWidth={1.9}/></span>
+      <strong>{item.title}</strong>
+      <small>{item.hint}</small>
+      {kind===item.id?<span className={styles.offeringCheck} aria-hidden="true"><Check size={15} strokeWidth={3}/></span>:null}
+     </button>)}
     </div>
-    <label>Objetivo principal</label>
-    <div className={styles.choices}>
-     {goals.map(item=><button key={item.id} type="button" data-active={goal===item.id}
-      onClick={()=>setGoal(item.id)}><strong>{item.label}</strong><small>{item.details}</small></button>)}
+    <h3 className={styles.offeringsSectionTitle}>Objetivo principal</h3>
+    <div className={styles.goalChoices} role="group" aria-label="Objetivo principal">
+     {goals.map(item=><button key={item.id} type="button" className={styles.goalCard}
+      data-active={goal===item.id} aria-pressed={goal===item.id}
+      onClick={()=>setGoal(item.id)}>
+      <span className={styles.goalIcon}><item.Icon size={24} strokeWidth={1.9}/></span>
+      <span className={styles.goalCopy}><strong>{item.label}</strong><small>{item.details}</small></span>
+      {goal===item.id?<span className={styles.goalCheck} aria-hidden="true"><Check size={14} strokeWidth={3}/></span>:null}
+     </button>)}
     </div>
     <WebIntakeProducts ownerId={ownerId} items={products} visible={kind!=="services"}
      onChange={setProducts} onStatusChange={setProductStatus}/>
-    {kind!=="products"?<form className={styles.addItem} onSubmit={addService}>
-     <label>Servicios (opcional)
-     </label>
-     <div><input maxLength={120} value={newItem} placeholder="Ej. Pasteles personalizados"
-      onChange={e=>setNewItem(e.target.value)}/><button type="submit"><Plus size={16}/> Agregar</button></div>
-     <div className={styles.tokens}>{services.map((item,index)=><span key={index}>{item}
-      <button type="button" aria-label={"Eliminar "+item} onClick={()=>setServices(old=>old.filter((_,i)=>i!==index))}><Trash2 size={12}/></button>
-     </span>)}</div>
+    {kind!=="products"?<form className={`${styles.addItem} ${styles.offeringsAdd}`} onSubmit={addService}>
+     <label htmlFor="vmv-intake-service">Servicios (opcional)</label>
+     <div className={styles.offeringsAddRow}>
+      <span className={styles.offeringsInputWrap}><Search size={18} aria-hidden="true"/>
+       <input id="vmv-intake-service" maxLength={120} value={newItem}
+        placeholder="Ej. Pasteles personalizados"
+        onChange={e=>setNewItem(e.target.value)}/></span>
+      <button type="submit" disabled={!newItem.trim()||services.length>=25}>
+       <Plus size={20} strokeWidth={2.5}/> Agregar
+      </button>
+     </div>
+     <div className={`${styles.tokens} ${styles.offeringsTokens}`}>
+      {services.map((item,index)=><span key={index}>{item}
+       <button type="button" aria-label={"Eliminar "+item} onClick={()=>setServices(old=>old.filter((_,i)=>i!==index))}>
+        <X size={14} strokeWidth={2.5}/>
+       </button>
+      </span>)}
+     </div>
     </form>:null}
    </div>:null}
    {step===2?<div className={styles.panel}>
@@ -412,7 +452,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
      </div>}
    </div>:null}
    {error?<p className={styles.error} role="alert">{error}</p>:null}
-   <div className={styles.finish}>
+   <div className={`${styles.finish} ${step===1?styles.offeringsFinish:""}`}>
     <span><ShieldCheck size={16}/> Tu web no se publicará sin tu autorización.</span>
     <div className={styles.wizardNavigation}>
      {step>0?<button type="button" className={styles.previous} onClick={previousStep} disabled={busy||generatingAi}>Atrás</button>:null}
