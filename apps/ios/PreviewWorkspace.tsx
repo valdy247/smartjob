@@ -1,7 +1,7 @@
 import React,{useRef,useState} from "react";
 import {ActivityIndicator,Linking,Pressable,StyleSheet,Text,View} from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import WebView,{type WebViewNavigation} from "react-native-webview";
+import WebView from "react-native-webview";
 
 /**
  * Private iPhone beta: present the exact responsive VMV Business Preview,
@@ -75,7 +75,7 @@ export function PreviewWorkspace({onOpenNative}:{onOpenNative:()=>void}){
    startInLoadingState
    onLoadStart={()=>{setFailed(false);setLoading(true);}}
    onLoadEnd={()=>setLoading(false)}
-   onNavigationStateChange={(state:WebViewNavigation)=>setCanGoBack(state.canGoBack)}
+   onNavigationStateChange={state=>setCanGoBack(state.canGoBack)}
    onShouldStartLoadWithRequest={allowNavigation}
    onError={()=>{setFailed(true);setLoading(false);}}
    onContentProcessDidTerminate={()=>{setFailed(true);setLoading(false);}}
