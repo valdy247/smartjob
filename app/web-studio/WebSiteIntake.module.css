@@ -310,7 +310,7 @@
  display:flex;align-items:center;justify-content:space-between;gap:12px;
  min-height:51px;width:100%;padding:11px 15px;border:0;border-radius:13px;
  background:transparent;color:#392057;text-align:left;
- font:750 clamp(15px,2.6vw,18px)/1.3 inherit;
+ font-family:inherit;font-size:clamp(15px,2.6vw,18px);font-weight:750;line-height:1.3;
  cursor:pointer;
 }
 .compactDropdownOption[aria-pressed=true]{
