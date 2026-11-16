@@ -36,7 +36,7 @@ export function applyPublishedInventory(document:Data,products:ApprovedInventory
   const serviceCards=existing.flatMap((item:unknown)=>{
    if(!item||typeof item!=="object")return [];
    const card=item as {id?:unknown;title?:unknown};
-   if(typeof card.id!=="string"||!/^service-\\d{1,2}$/.test(card.id)||
+   if(typeof card.id!=="string"||!/^service-\d{1,2}$/.test(card.id)||
       typeof card.title!=="string"||!card.title.trim())return [];
    return [{id:card.id,title:card.title.slice(0,120),description:"",price:"",
     alt:card.title.slice(0,120),image:""}];
