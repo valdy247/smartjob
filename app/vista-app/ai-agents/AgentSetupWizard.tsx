@@ -4,6 +4,8 @@ import {ArrowLeft,ArrowRight,CalendarDays,Check,CheckCircle2,ChevronDown,Clock3,
 import VoiceSample from "./VoiceSample";
 import AgentConnections from "./AgentConnections";
 import styles from "./AgentSetupWizard.module.css";
+import {useInterfaceLanguage} from "@/lib/i18n-web";
+import type {MessageKey} from "@/lib/i18n";
 
 export type AgentKind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 export type WizardDraft={
@@ -125,11 +127,12 @@ type ChoiceOption=readonly [value:string,label:string];
 function ChoiceSelect({label,value,options,onChange}:{
  label:string;value:string;options:readonly ChoiceOption[];onChange:(value:string)=>void
 }){
+ const {translate}=useInterfaceLanguage();
  return <label className={styles.selectField}>
   <span className={styles.fieldTitle}>{label}</span>
   <span className={styles.selectWrap}>
    <select className={styles.selectInput} value={value} onChange={e=>onChange(e.target.value)}>
-    {options.map(([optionValue,optionLabel])=><option key={optionValue} value={optionValue}>{optionLabel}</option>)}
+    {options.map(([optionValue,optionLabel])=><option key={optionValue} value={optionValue}>{translate(("agents.wizard.option."+optionLabel) as MessageKey)}</option>)}
    </select>
    <ChevronDown size={18} aria-hidden="true"/>
   </span>
@@ -138,25 +141,27 @@ function ChoiceSelect({label,value,options,onChange}:{
 function MultipleChoiceSelect({label,options,isSelected,onToggle}:{
  label:string;options:readonly ChoiceOption[];isSelected:(value:string)=>boolean;onToggle:(value:string)=>void
 }){
+ const {translate}=useInterfaceLanguage();
  const selected=options.filter(([key])=>isSelected(key));
  return <div className={styles.selectField}>
   <span className={styles.fieldTitle}>{label}</span>
   <details className={styles.multiSelect}>
    <summary className={styles.multiSummary}>
-    <span className={styles.multiValue}>{selected.length?selected.map(([,name])=>name).join(" · "):"Seleccionar opciones"}</span>
+    <span className={styles.multiValue}>{selected.length?selected.map(([,name])=>translate(("agents.wizard.option."+name) as MessageKey)).join(" · "):translate("agents.wizard.selectOptions")}</span>
     <span className={styles.multiCount}>{selected.length}/{options.length}</span>
     <ChevronDown size={18} className={styles.multiChevron} aria-hidden="true"/>
    </summary>
    <div className={styles.multiMenu}>
     {options.map(([key,name])=><label key={key} className={styles.multiOption}>
      <input type="checkbox" checked={isSelected(key)} onChange={()=>onToggle(key)}/>
-     <span>{name}</span>
+     <span>{translate(("agents.wizard.option."+name) as MessageKey)}</span>
     </label>)}
    </div>
   </details>
  </div>;
 }
 export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusiness,workspaceId,isPreview=false,initialStep=0,saving=false,authRequired=false,recoverDraft=false}:Props){
+ const {translate}=useInterfaceLanguage();
  const [draft,setDraft]=useState<WizardDraft>(()=>({...initial,setup:{...(initial.setup||{})}}));
  const [step,setStep]=useState<number>(initial.setup.central_business_id&&initialStep>0?initialStep-1:initialStep);
  const [recoveryReady,setRecoveryReady]=useState(false);
@@ -192,6 +197,9 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
  const steps=useMemo(()=>sections(draft.kind,draft.setup),[draft.kind,draft.setup]);
  const current=steps[step];
  const centralFields=new Set((draft.setup.central_prefill_fields||"").split("|").filter(Boolean));
+ const questionTitle=(question:Question)=>translate(("agents.wizard.q."+question.id) as MessageKey);
+ const questionHint=(question:Question)=>question.hint?(question.id==="booking_services"?translate("agents.wizard.hint.booking_services",{industry:draft.setup.industry||"consultation, service, appointment"}):translate(("agents.wizard.hint."+question.id) as MessageKey)):"";
+ const choiceLabel=(value:string)=>{try{return translate(("agents.wizard.option."+value) as MessageKey);}catch{return value;}};
  const shown=current.questions.filter(x=>(!x.when||x.when(draft.setup))&&
   !(draft.setup.central_business_id&&centralFields.has(x.id)));
  const value=(key:keyof WizardDraft,next:string)=>setDraft(d=>({...d,[key]:next}));
@@ -204,11 +212,11 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
  }));
  const next=async()=>{
   const missing=step===0?(!draft.name.trim()||!draft.purpose.trim()):shown.some(q=>q.required&&!inputValue(draft.setup,q.id).trim());
-  if(missing){setError("Completa las preguntas obligatorias antes de continuar.");return;}
+  if(missing){setError(translate("agents.wizard.mandatory"));return;}
   setError("");if(step===steps.length-1){
    if(saving)return;
    try{await onSave(draft);}catch(e){
-    setError(e instanceof Error?e.message:"No se pudo guardar. Intenta de nuevo.");
+    setError(translate("agents.wizard.saveFailed"));
    }
    return;
   }setStep(x=>x+1);
@@ -223,57 +231,57 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
   setDraft(d=>({...d,setup:{...d.setup,...pairs,hours_mode:mode}}));
  };
  return <section className={styles.root}>
-  <div className={styles.progressHead}><span>CONFIGURAR AGENTE</span><strong>{step+1} / {steps.length}</strong></div>
+  <div className={styles.progressHead}><span>{translate("agents.wizard.configure")}</span><strong>{step+1} / {steps.length}</strong></div>
   <div className={styles.progressTrack}><div className={styles.progressBar} style={{width:((step+1)/steps.length*100)+"%"}}/></div>
   <div className={styles.stepDots}>{steps.map((s,i)=><button key={s.title} type="button" className={i===step?styles.stepActive:i<step?styles.stepDone:styles.stepDot}
-    onClick={()=>{if(i<step){setStep(i);setError("");}}} aria-label={"Paso "+(i+1)+": "+s.title}>
+    onClick={()=>{if(i<step){setStep(i);setError("");}}} aria-label={translate("agents.wizard.step")+" "+(i+1)+": "+translate(("agents.wizard.section."+s.title) as MessageKey)}>
     {i<step?<Check size={13}/>:i+1}</button>)}</div>
-  <div className={styles.titleGroup}><h1>{current.title}</h1></div>
-  {draftRestored?<p className={styles.reviewMessage} role="status">Borrador recuperado · sin guardar.</p>:null}
+  <div className={styles.titleGroup}><h1>{translate(("agents.wizard.section."+current.title) as MessageKey)}</h1></div>
+  {draftRestored?<p className={styles.reviewMessage} role="status">{translate("agents.wizard.restored")}</p>:null}
   {step===0&&draft.setup.central_business_id?<div className={styles.context}>
    <ShieldCheck size={17}/><strong>{draft.setup.business_name}</strong>
-   {onReviewBusiness?<button type="button" onClick={()=>onReviewBusiness(draft)}>{draft.setup.city&&draft.setup.state?"Editar negocio":"Completar negocio"}</button>:null}
+   {onReviewBusiness?<button type="button" onClick={()=>onReviewBusiness(draft)}>{draft.setup.city&&draft.setup.state?translate("agents.wizard.editBusiness"):translate("agents.wizard.completeBusiness")}</button>:null}
   </div>:null}
   {authRequired?<div className={styles.reviewMessage} role="alert">
-   <ShieldCheck size={18}/><p>Inicia sesión para guardar. El borrador sigue en esta pestaña. <a href="/vista-app">Iniciar sesión</a></p>
+   <ShieldCheck size={18}/><p>{translate("agents.wizard.loginRequired")} <a href="/vista-app">{translate("common.signIn")}</a></p>
   </div>:null}
   {step===0?<div className={styles.fields}>
-   <label className={styles.field}>¿Cómo se llamará tu agente?<input maxLength={80} value={draft.name} onChange={e=>value("name",e.target.value)} placeholder="Ej. Luna, asistente de ventas"/></label>
-   <label className={styles.field}>¿Cuál será su misión?<textarea maxLength={240} rows={3} value={draft.purpose} onChange={e=>value("purpose",e.target.value)} placeholder="¿Qué debe lograr para tu negocio?"/></label>
-   <ChoiceSelect label="Voz del teléfono" value={draft.setup.voice_preset||"default"}
+   <label className={styles.field}>{translate("agents.wizard.agentName")}<input maxLength={80} value={draft.name} onChange={e=>value("name",e.target.value)} placeholder={translate("agents.wizard.agentNamePlaceholder")}/></label>
+   <label className={styles.field}>{translate("agents.wizard.mission")}<textarea maxLength={240} rows={3} value={draft.purpose} onChange={e=>value("purpose",e.target.value)} placeholder={translate("agents.wizard.missionPlaceholder")}/></label>
+   <ChoiceSelect label={translate("agents.wizard.phoneVoice")} value={draft.setup.voice_preset||"default"}
     options={[["default","Predeterminada de Twilio"],["female","Femenina · Polly"],["male","Masculina · Polly"]]}
     onChange={next=>answer("voice_preset",next)}/>
    <VoiceSample preset={draft.setup.voice_preset||"default"} language={draft.setup.language_rule||draft.language||"Español"}/>
-   <ChoiceSelect label="Idioma de conversación" value={draft.setup.language_rule||draft.language||"Español"}
+   <ChoiceSelect label={translate("agents.wizard.conversationLanguage")} value={draft.setup.language_rule||draft.language||"Español"}
     options={[["Español","Español"],["English","English"],["Bilingüe","Bilingüe"]]}
     onChange={next=>answer("language_rule",next)}/>
-   <ChoiceSelect label="Personalidad" value={draft.setup.personality_rule||draft.personality||"Amable y profesional"}
+   <ChoiceSelect label={translate("agents.wizard.personality")} value={draft.setup.personality_rule||draft.personality||"Amable y profesional"}
     options={[["Amable y profesional","Amable y profesional"],["Cercano","Cercano"],["Formal","Formal"],["Directo","Directo"]]}
     onChange={next=>answer("personality_rule",next)}/>
-   <ChoiceSelect label="Extensión de respuesta" value={draft.setup.response_style||"balanced"}
+   <ChoiceSelect label={translate("agents.wizard.responseLength")} value={draft.setup.response_style||"balanced"}
     options={[["brief","Breve"],["balanced","Equilibrada"],["detailed","Detallada"]]}
     onChange={next=>answer("response_style",next)}/>
-   <ChoiceSelect label="¿Dónde trabajará?" value={draft.setup.channel||"Chat"}
+   <ChoiceSelect label={translate("agents.wizard.channel")} value={draft.setup.channel||"Chat"}
     options={[["Teléfono","Teléfono"],["Chat","Chat"],["Teléfono y chat","Teléfono y chat"]]}
     onChange={next=>answer("channel",next)}/>
    <AgentConnections centralId={draft.setup.central_business_id} workspaceId={workspaceId} setup={draft.setup} onChange={answer}/>
-   <MultipleChoiceSelect label="¿Qué tareas tendrá permitidas?"
+   <MultipleChoiceSelect label={translate("agents.wizard.allowedTasks")}
     options={[["cap_attend","Atender preguntas"],["cap_sales","Vender por teléfono o chat"],["cap_bookings","Solicitar reservas"]]}
     isSelected={key=>draft.setup[key]==="Sí"}
     onToggle={key=>answer(key,draft.setup[key]==="Sí"?"No":"Sí")}/>
    {draft.setup.cap_sales==="Sí"?<>
-    <MultipleChoiceSelect label="Autorizaciones de ventas"
+    <MultipleChoiceSelect label={translate("agents.wizard.salesAuthorizations")}
      options={[["perm_prepare_order","Preparar pedidos"],["perm_confirm_order","Confirmar tras aceptación"],["perm_payment_link","Ofrecer enlace de pago verificado"]]}
      isSelected={key=>draft.setup[key]==="Sí"}
      onToggle={key=>answer(key,draft.setup[key]==="Sí"?"No":"Sí")}/>
-    <p className={styles.hint}>Sin tarjetas por llamada. Los importes se calculan en el servidor.</p>
+    <p className={styles.hint}>{translate("agents.wizard.salesSafety")}</p>
    </>:null}
-   {draft.setup.cap_bookings==="Sí"&&<><p className={styles.fieldTitle}>Autorización de reservas</p>
+   {draft.setup.cap_bookings==="Sí"&&<><p className={styles.fieldTitle}>{translate("agents.wizard.bookingsAuthorization")}</p>
     <button type="button" aria-pressed={draft.setup.perm_book_service==="Sí"}
      className={draft.setup.perm_book_service==="Sí"?styles.choiceActive:styles.choice}
      onClick={()=>answer("perm_book_service",draft.setup.perm_book_service==="Sí"?"No":"Sí")}>
-     {draft.setup.perm_book_service==="Sí"?"✓ ":""}Guardar citas aceptadas en la agenda VMV</button>
-    <p className={styles.hint}>Solo con horarios disponibles. Sin cobros.</p></>}
+     {draft.setup.perm_book_service==="Sí"?"✓ ":""}{translate("agents.wizard.saveApprovedBookings")}</button>
+    <p className={styles.hint}>{translate("agents.wizard.bookingsSafety")}</p></>}
   </div>:null}
   {step>0&&step<steps.length-1?<div className={styles.fields}>
    {current.title==="Qué debe hacer"&&draft.setup.industry?<div className={styles.context}><Sparkles size={15}/> Negocio: <strong>{draft.setup.industry}</strong> · {draft.setup.city||""}{draft.setup.state?", "+draft.setup.state:""}. No necesitas repetir esos datos.</div>:null}
