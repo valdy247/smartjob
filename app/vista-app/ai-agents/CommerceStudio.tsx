@@ -16,7 +16,7 @@ const empty:Form={name:"",sku:"",description:"",price:"",stock_mode:"manual",ava
  approved:false,active:true,image_path:""};
 export default function CommerceStudio({agents,onClose,initialAgentId="",initialTab="catalog",onAgentUpdated,workspaceId,centralBusinessId="",catalogOnly=false}:{
  catalogOnly?:boolean;workspaceId?:string;centralBusinessId?:string;agents:PersistedAgent[];
- onClose:()=>void;initialAgentId?:string;initialTab?:"setup"|"catalog";
+ onClose:()=>void;initialAgentId?:string;initialTab?:"setup"|"catalog"|"services";
  onAgentUpdated?:(agent:PersistedAgent)=>void;
 }){
  const [items,setItems]=useState<CatalogItem[]>([]);
@@ -152,7 +152,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
  return <div className={styles.root}>
   <button type="button" onClick={onClose} className={styles.back}><ArrowLeft size={17}/> {catalogOnly?"Volver al agente":"AI Agents"}</button>
   {!catalogOnly?<>
-  <div className={styles.hero}><div><small>VMV BUSINESS</small><h1>Productos y pedidos</h1></div><ShoppingBag size={28}/></div>
+  <div className={styles.hero}><div><small>VMV BUSINESS</small><h1>Catálogos y pedidos</h1></div><ShoppingBag size={28}/></div>
   {tab==="orders"?<p className={styles.hint}>Pedidos de prueba · Sin cobros reales</p>:null}
   </>:null}
   {notice?<div className={styles.notice} role="status">{notice}</div>:null}
