@@ -27,7 +27,7 @@ import {familyForCategory} from "@/lib/web-builder-templates";
 import RequestForm from "@/app/sites/[slug]/RequestForm";
 import styles from "./WebBuilderWorkspace.module.css";
 
-type Site={id:string;owner_id:string;slug:string;name:string;category_id:string;inquiries_enabled:boolean;legacy_source_slug:string|null;inventory_business_id:string|null};
+type Site={id:string;owner_id:string;slug:string;name:string;category_id:string;inquiries_enabled:boolean;legacy_source_slug:string|null;inventory_business_id:string|null;inventory_connection_enabled:boolean;services_business_id:string|null;services_connection_enabled:boolean};
 type InventorySource={id:string;name:string};
 // The inventory migration is deployed separately. Existing previews and published
 // sites must continue loading before inventory_business_id is available.
@@ -176,14 +176,14 @@ export default function WebBuilderWorkspace(){
     if(authError||!data.user||data.user.is_anonymous)throw new Error("Inicia sesión en VMV Business para continuar");
     if(active)setUserId(data.user.id);
     const primary=await client.from("smartjob_builder_sites")
-     .select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug,inventory_business_id").eq("owner_id",data.user.id).order("created_at",{ascending:false});
+     .select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug,inventory_business_id,inventory_connection_enabled,services_business_id,services_connection_enabled").eq("owner_id",data.user.id).order("created_at",{ascending:false});
     let rows=(primary.data||[]) as Site[];
     let siteError=primary.error;
     if(inventoryColumnPending(siteError)){
      // Don't mistake a pending database migration for an expired user session.
      const legacy=await client.from("smartjob_builder_sites")
       .select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug").eq("owner_id",data.user.id).order("created_at",{ascending:false});
-     rows=(legacy.data||[]).map(row=>({...row,inventory_business_id:null})) as Site[];
+     rows=(legacy.data||[]).map(row=>({...row,inventory_business_id:null,inventory_connection_enabled:true,services_business_id:null,services_connection_enabled:false})) as Site[];
      siteError=legacy.error;
      if(active)setInventorySchemaReady(false);
     }else if(active)setInventorySchemaReady(true);
@@ -328,7 +328,7 @@ export default function WebBuilderWorkspace(){
  }
  async function loadCreatedSite(c:NonNullable<ReturnType<typeof getSupabase>>,ids:{siteId:string;pageId:string}){
   const [siteResult,pageResult]=await Promise.all([
-   c.from("smartjob_builder_sites").select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug,inventory_business_id")
+   c.from("smartjob_builder_sites").select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug,inventory_business_id,inventory_connection_enabled,services_business_id,services_connection_enabled")
     .eq("id",ids.siteId).eq("owner_id",userId).single(),
    c.from("smartjob_builder_pages").select(
     "id,site_id,owner_id,slug,title,description,draft,revision,updated_at"
@@ -339,7 +339,7 @@ export default function WebBuilderWorkspace(){
   if(inventoryColumnPending(siteError)){
    const legacy=await c.from("smartjob_builder_sites").select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug")
     .eq("id",ids.siteId).eq("owner_id",userId).single();
-   siteData=legacy.data?{...(legacy.data as Omit<Site,"inventory_business_id">),inventory_business_id:null}:null;
+   siteData=legacy.data?{...legacy.data,inventory_business_id:null,inventory_connection_enabled:true,services_business_id:null,services_connection_enabled:false}:null;
    siteError=legacy.error;
    setInventorySchemaReady(false);
   }
@@ -364,13 +364,15 @@ export default function WebBuilderWorkspace(){
     const reachedLimit=/límite de cinco sitios/i.test(String(rpcError?.message||""));
     throw new Error(reachedLimit?"Has alcanzado el máximo de sitios para tu cuenta.":"No se pudo crear el sitio. Inténtalo de nuevo o revisa los datos del negocio.");
    }
-   let inventoryNotLinked=false;
-   if(intake.inventoryBusinessId){
-    const {error:linkError}=await db.from("smartjob_builder_sites")
-     .update({inventory_business_id:intake.inventoryBusinessId})
-     .eq("id",ids.siteId).eq("owner_id",userId);
-    if(linkError)inventoryNotLinked=true;
-   }
+   let connectionsNotSaved=false;
+   const {error:linkError}=await db.from("smartjob_builder_sites")
+    .update({
+     inventory_business_id:intake.inventoryBusinessId||null,
+     inventory_connection_enabled:Boolean(intake.inventoryBusinessId),
+     services_business_id:intake.servicesBusinessId||null,
+     services_connection_enabled:Boolean(intake.servicesBusinessId)
+    }).eq("id",ids.siteId).eq("owner_id",userId);
+   if(linkError)connectionsNotSaved=true;
    const loaded=await loadCreatedSite(db,ids);
    const created=loaded.created;
    let home=loaded.home;
@@ -390,7 +392,7 @@ export default function WebBuilderWorkspace(){
    setSites(current=>[created,...current]);
    setSite(created);setPages([home]);setPage(home);setPublishedIds([]);setPublishedSignatures({});
    openDraft(home.draft);setTitle(home.title);setDescription(home.description);
-   setView("editor");setNotice(inventoryNotLinked?"Web creada. Conecta el inventario manualmente en Ajustes antes de publicar.":seoPending?"Diseño creado. Revisa el título SEO en Ajustes antes de publicar.":"Diseño creado con SEO inicial. Revísalo y publícalo cuando esté listo.");
+   setView("editor");setNotice(connectionsNotSaved?"Web creada, pero no pudimos guardar las conexiones. Revísalas antes de publicar.":seoPending?"Diseño creado. Revisa el título SEO en Ajustes antes de publicar.":"Diseño creado con SEO inicial. Revísalo y publícalo cuando esté listo.");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo crear");}
   finally{setBusy(false);}
  }
@@ -447,7 +449,7 @@ export default function WebBuilderWorkspace(){
   try{
    const db=await authorized();
    const {data:linked,error:linkError}=await db.from("smartjob_builder_sites")
-    .update({inventory_business_id:inventoryId||null,updated_at:new Date().toISOString()})
+    .update({inventory_business_id:inventoryId||null,inventory_connection_enabled:Boolean(inventoryId),updated_at:new Date().toISOString()})
     .eq("id",site.id).eq("owner_id",userId)
     .select("inventory_business_id").maybeSingle();
    if(linkError||!linked)throw Error("No se pudo cambiar el inventario conectado.");
