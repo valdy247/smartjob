@@ -122,22 +122,22 @@ export function NativeActivation({session,profile,onComplete}:{session:Session;p
  </Modal>;
 }
 const styles=StyleSheet.create({
- safe:{flex:1,backgroundColor:"#F7FCFA"},content:{paddingHorizontal:24,paddingTop:18,paddingBottom:65,maxWidth:660,width:"100%",alignSelf:"center"},
+ safe:{flex:1,backgroundColor:"#FDFCFF"},content:{paddingHorizontal:24,paddingTop:18,paddingBottom:65,maxWidth:660,width:"100%",alignSelf:"center"},
  mark:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:43},
- wave:{backgroundColor:"#27E7C4",width:50,height:50,borderRadius:16,justifyContent:"center",alignItems:"center",flexDirection:"row",gap:3},
+ wave:{backgroundColor:"#C9A9F8",width:50,height:50,borderRadius:16,justifyContent:"center",alignItems:"center",flexDirection:"row",gap:3},
  
- brand:{fontSize:25,color:"#16222D",fontWeight:"900",letterSpacing:-1},
- eyebrow:{color:"#0DAA87",fontSize:11,letterSpacing:2,fontWeight:"800",marginBottom:12},
- title:{fontSize:34,fontWeight:"800",letterSpacing:-1.2,color:"#16222D",marginBottom:9},
- subtitle:{fontSize:14,lineHeight:21,color:"#6C827C",marginBottom:23},
- plan:{borderWidth:1,borderColor:"#D8EDE5",borderRadius:21,padding:19,backgroundColor:"#FFF",marginBottom:12},
+ brand:{fontSize:25,color:"#171127",fontWeight:"900",letterSpacing:-1},
+ eyebrow:{color:"#8559D8",fontSize:11,letterSpacing:2,fontWeight:"800",marginBottom:12},
+ title:{fontSize:34,fontWeight:"800",letterSpacing:-1.2,color:"#171127",marginBottom:9},
+ subtitle:{fontSize:14,lineHeight:21,color:"#74677F",marginBottom:23},
+ plan:{borderWidth:1,borderColor:"#EAE2F3",borderRadius:21,padding:19,backgroundColor:"#FFF",marginBottom:12},
  between:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
  planTitle:{fontSize:19,color:"#16222D",fontWeight:"800"},price:{fontSize:15,color:"#08765F",fontWeight:"800"},
  details:{fontSize:12,lineHeight:18,color:"#68847C",marginTop:7},
  warning:{fontSize:12,lineHeight:20,color:"#9B7144",backgroundColor:"#FFF6E8",borderRadius:13,padding:13,marginVertical:12},
  pilotNotice:{fontSize:12,lineHeight:20,color:"#08765F",backgroundColor:"#E6FAF1",borderRadius:13,padding:13,marginVertical:12},
  option:{borderRadius:18,borderWidth:1,borderColor:"#D6EAE2",backgroundColor:"#FFF",padding:18,marginBottom:12},
- selected:{borderWidth:2,borderColor:"#16CC9F",backgroundColor:"#E9FFF6"},
+ selected:{borderWidth:2,borderColor:"#9D72E7",backgroundColor:"#F0E5FF"},
  optionTitle:{fontSize:15,color:"#18352F",fontWeight:"800"},
  row:{flexDirection:"row",gap:12,marginBottom:12},smallOption:{flex:1,borderRadius:15,borderWidth:1,borderColor:"#D6EAE2",padding:16},
  label:{fontSize:12,color:"#567A6C",fontWeight:"800",marginTop:13,marginBottom:9},
@@ -146,8 +146,8 @@ const styles=StyleSheet.create({
  chipText:{fontSize:12,fontWeight:"700",color:"#355B4F"},
  consent:{flexDirection:"row",alignItems:"flex-start",gap:9,borderRadius:16,padding:16,backgroundColor:"#E9FFF6"},
  consentText:{fontSize:12,lineHeight:18,color:"#466A5D",flex:1},
- primary:{backgroundColor:"#2CE1BA",minHeight:52,justifyContent:"center",alignItems:"center",borderRadius:16,marginTop:22},
- disabled:{opacity:.5},primaryText:{color:"#064535",fontSize:15,fontWeight:"900"},
- secondary:{padding:16,alignItems:"center",marginTop:12},secondaryText:{fontSize:13,color:"#0C9473",fontWeight:"800"},
+ primary:{backgroundColor:"#C9A6F6",minHeight:52,justifyContent:"center",alignItems:"center",borderRadius:16,marginTop:22},
+ disabled:{opacity:.5},primaryText:{color:"#21132F",fontSize:15,fontWeight:"900"},
+ secondary:{padding:16,alignItems:"center",marginTop:12},secondaryText:{fontSize:13,color:"#794FC5",fontWeight:"800"},
  error:{marginTop:12,fontSize:12,color:"#AE4160",backgroundColor:"#FFF1F4",padding:13,borderRadius:12}
 });
