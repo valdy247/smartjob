@@ -406,3 +406,14 @@
 @media(max-width:780px){.advancedPuckLayout{grid-template-columns:minmax(0,1fr);height:auto;min-height:700px;overflow-y:auto}
  .advancedPuckSidebar,.advancedPuckInspector{border:0;border-bottom:1px solid #e9def4;max-height:240px}
  .advancedPuckCanvas{min-height:600px}}
+
+.inventorySiteConnection{display:flex;align-items:center;justify-content:space-between;gap:13px;
+ padding:11px 13px;margin:8px 0;border:1px solid #e9dfef;background:#fdfaff;border-radius:13px}
+.inventorySiteConnection span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.inventorySiteConnection strong{font-size:12px;color:#58416e}
+.inventorySiteConnection small{font-size:10px;color:#887791;line-height:1.4}
+.inventorySiteConnection select{max-width:245px;min-width:170px;min-height:42px;border:1px solid #e3d6ed;
+ border-radius:10px;padding:9px 11px;background:#fff;color:#4d3865;font:inherit;font-size:12px}
+.inventorySiteConnection select:disabled{opacity:.55}
+@media(max-width:600px){.inventorySiteConnection{flex-direction:column;align-items:stretch}
+ .inventorySiteConnection select{max-width:none;width:100%}}
