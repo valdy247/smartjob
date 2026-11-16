@@ -284,60 +284,60 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
     <p className={styles.hint}>{translate("agents.wizard.bookingsSafety")}</p></>}
   </div>:null}
   {step>0&&step<steps.length-1?<div className={styles.fields}>
-   {current.title==="Qué debe hacer"&&draft.setup.industry?<div className={styles.context}><Sparkles size={15}/> Negocio: <strong>{draft.setup.industry}</strong> · {draft.setup.city||""}{draft.setup.state?", "+draft.setup.state:""}. No necesitas repetir esos datos.</div>:null}
+   {current.title==="Qué debe hacer"&&draft.setup.industry?<div className={styles.context}><Sparkles size={15}/> {translate("agents.wizard.business")}: <strong>{draft.setup.industry}</strong> · {draft.setup.city||""}{draft.setup.state?", "+draft.setup.state:""}. {translate("agents.wizard.businessHint")}</div>:null}
    {shown.map(question=><div className={styles.question} key={question.id}>
-   <label className={styles.fieldTitle} htmlFor={question.kind==="text"||question.kind==="textarea"?"w-"+question.id:undefined}>{question.title}{question.required?<span className={styles.required}> *</span>:null}</label>
-   {question.hint?<p className={styles.hint}>{question.hint}</p>:null}
+   <label className={styles.fieldTitle} htmlFor={question.kind==="text"||question.kind==="textarea"?"w-"+question.id:undefined}>{questionTitle(question)}{question.required?<span className={styles.required}> *</span>:null}</label>
+   {question.hint?<p className={styles.hint}>{questionHint(question)}</p>:null}
    {question.kind==="hours"?<div className={styles.hours}>
     <div className={styles.choices}>{["24/7","Lunes a viernes · 9–5","Todos los días · 9–5","Personalizado"].map(mode=><button type="button" key={mode}
-     className={draft.setup.hours_mode===mode?styles.choiceActive:styles.choice} onClick={()=>setHours(mode)}>{mode}</button>)}</div>
+     className={draft.setup.hours_mode===mode?styles.choiceActive:styles.choice} onClick={()=>setHours(mode)}>{choiceLabel(mode)}</button>)}</div>
     {draft.setup.hours_mode&&<div className={styles.daySchedule}>{days.map(([key,day])=><div className={styles.dayRow} key={key}>
-      <strong>{day}</strong><label className={styles.dayToggle}><input type="checkbox"
-       checked={draft.setup["h_"+key+"_active"]==="Sí"} onChange={e=>{answer("h_"+key+"_active",e.target.checked?"Sí":"No");}}/> Abierto</label>
+      <strong>{translate(("agents.wizard.weekday."+key) as MessageKey)}</strong><label className={styles.dayToggle}><input type="checkbox"
+       checked={draft.setup["h_"+key+"_active"]==="Sí"} onChange={e=>{answer("h_"+key+"_active",e.target.checked?"Sí":"No");}}/> {translate("agents.wizard.dayOpen")}</label>
       {draft.setup["h_"+key+"_active"]==="Sí"&&<div className={styles.dayTimes}>
-       <select aria-label={"Apertura "+day} value={draft.setup["h_"+key+"_open"]||"09:00"} onChange={e=>answer("h_"+key+"_open",e.target.value)}>{times.slice(0,48).map(x=><option key={x}>{x}</option>)}</select>
-       <span>a</span>
-       <select aria-label={"Cierre "+day} value={draft.setup["h_"+key+"_close"]||"17:00"} onChange={e=>answer("h_"+key+"_close",e.target.value)}>{times.slice(1).map(x=><option key={x}>{x}</option>)}</select>
+       <select aria-label={translate("agents.wizard.opening")+" "+translate(("agents.wizard.weekday."+key) as MessageKey)} value={draft.setup["h_"+key+"_open"]||"09:00"} onChange={e=>answer("h_"+key+"_open",e.target.value)}>{times.slice(0,48).map(x=><option key={x}>{x}</option>)}</select>
+       <span>{translate("agents.wizard.to")}</span>
+       <select aria-label={translate("agents.wizard.closing")+" "+translate(("agents.wizard.weekday."+key) as MessageKey)} value={draft.setup["h_"+key+"_close"]||"17:00"} onChange={e=>answer("h_"+key+"_close",e.target.value)}>{times.slice(1).map(x=><option key={x}>{x}</option>)}</select>
       </div>}</div>)}</div>}
-    </div>:question.kind==="state"?<select id={"w-"+question.id} className={styles.input} aria-label={question.title} value={draft.setup.state||""} onChange={e=>answer("state",e.target.value)}>
-     <option value="">Selecciona el estado...</option>{US_STATES.map(x=><option key={x} value={x}>{x}</option>)}</select>:
+    </div>:question.kind==="state"?<select id={"w-"+question.id} className={styles.input} aria-label={questionTitle(question)} value={draft.setup.state||""} onChange={e=>answer("state",e.target.value)}>
+     <option value="">{translate("agents.wizard.chooseState")}</option>{US_STATES.map(x=><option key={x} value={x}>{x}</option>)}</select>:
     question.kind==="choice"?<div className={styles.choices}>{(question.options||[]).map(opt=><button key={opt} type="button"
     className={inputValue(draft.setup,question.id)===opt?styles.choiceActive:styles.choice}
     aria-pressed={inputValue(draft.setup,question.id)===opt}
-    onClick={()=>answer(question.id,opt)}>{inputValue(draft.setup,question.id)===opt?<CheckCircle2 size={15}/>:null}{opt}</button>)}</div>:
+    onClick={()=>answer(question.id,opt)}>{inputValue(draft.setup,question.id)===opt?<CheckCircle2 size={15}/>:null}{choiceLabel(opt)}</button>)}</div>:
     question.kind==="textarea"?<textarea id={"w-"+question.id} rows={3} maxLength={500} className={styles.input}
-     placeholder="Escribe una respuesta breve..." value={inputValue(draft.setup,question.id)} onChange={e=>answer(question.id,e.target.value)}/>:
+     placeholder={translate("agents.wizard.shortAnswer")} value={inputValue(draft.setup,question.id)} onChange={e=>answer(question.id,e.target.value)}/>:
     <input id={"w-"+question.id} type="text" maxLength={200} className={styles.input}
-     placeholder={question.hint||"Escribe aquí..."} value={inputValue(draft.setup,question.id)} onChange={e=>answer(question.id,e.target.value)}/>}
+     placeholder={question.hint?questionHint(question):translate("agents.wizard.writeHere")} value={inputValue(draft.setup,question.id)} onChange={e=>answer(question.id,e.target.value)}/>}
    </div>)}
    {false?<div className={styles.connections}>
-    <div className={styles.connection}><CalendarDays size={21}/><span><strong>VMV Scheduling</strong><small>Conector no disponible todavía</small></span><b>NO CONECTADO</b></div>
-    <div className={styles.connection}><PlugZap size={21}/><span><strong>VMV Inventory</strong><small>Conector no disponible todavía</small></span><b>NO CONECTADO</b></div>
-    {(yesCalendar||yesInventory)?<p className={styles.connectionNote}>Citas e inventario requieren integraciones autorizadas.</p>:null}
+    <div className={styles.connection}><CalendarDays size={21}/><span><strong>VMV Scheduling</strong><small>{translate("agents.wizard.connectorUnavailable")}</small></span><b>{translate("agents.wizard.notConnected")}</b></div>
+    <div className={styles.connection}><PlugZap size={21}/><span><strong>VMV Inventory</strong><small>{translate("agents.wizard.connectorUnavailable")}</small></span><b>{translate("agents.wizard.notConnected")}</b></div>
+    {(yesCalendar||yesInventory)?<p className={styles.connectionNote}>{translate("agents.wizard.connectorNote")}</p>:null}
    </div>:null}
   </div>:null}
   {step===steps.length-1?<div className={styles.review}>
-    <div className={styles.reviewCard}><strong>{draft.name||"Sin nombre"}</strong><span>{draft.purpose||"Sin propósito"}</span></div>
-    <div className={styles.reviewLine}><span>Negocio</span><b>{draft.setup.business_name||"—"}</b></div>
-    <div className={styles.reviewLine}><span>Ubicación</span><b>{[draft.setup.city,draft.setup.country==="Otro país"?draft.setup.region_other:draft.setup.state,draft.setup.country].filter(Boolean).join(", ")||"—"}</b></div>
-    <div className={styles.reviewLine}><span>Horario</span><b>{draft.setup.hours_mode||"Sin definir"}</b></div>
-    {draft.kind==="bookings"&&<div className={styles.reviewLine}><span>Reserva anticipada</span><b>{draft.setup.booking_lead||"—"}</b></div>}
-    <div className={styles.reviewLine}><span>Voz telefónica</span><b>{draft.setup.voice_preset==="female"?"Femenina · Polly":draft.setup.voice_preset==="male"?"Masculina · Polly":"Predeterminada"}</b></div>
-    <div className={styles.reviewLine}><span>Personalidad</span><b>{draft.personality||"Amable y profesional"}</b></div>
-    <div className={styles.reviewLine}><span>Respuestas</span><b>{draft.setup.response_style==="brief"?"Breves":draft.setup.response_style==="detailed"?"Detalladas":"Equilibradas"}</b></div>
-    <div className={styles.reviewLine}><span>Idioma</span><b>{draft.setup.language_rule||"Español"}</b></div>
-    <div className={styles.reviewLine}><span>Reservas</span><b>{draft.setup.cap_bookings==="Sí"?"Capacidad elegida · confirmar agenda":"Sin configurar"}</b></div>
-    <div className={styles.reviewLine}><span>Inventario</span><b>{draft.setup.cap_catalog==="Sí"?"Consulta elegida · verificar catálogo":"Sin configurar"}</b></div>
-    <div className={styles.reviewLine}><span>Supervisión</span><b>{draft.setup.human_review||"Humana"}</b></div>
-    <div className={styles.reviewMessage}><ShieldCheck size={20}/><p>Guardar la configuración no activa nuevas líneas ni permite cobros, reservas o modificaciones de inventario sin las conexiones y permisos correspondientes.</p></div>
-    {isPreview?<p className={styles.previewNote}>Esta es una vista previa; inicia sesión para guardar tu agente.</p>:<p className={styles.previewNote}>Tu agente se guardará en tu cuenta VMV. Podrás editarlo desde la web o el iPhone.</p>}
+    <div className={styles.reviewCard}><strong>{draft.name||translate("agents.wizard.unnamed")}</strong><span>{draft.purpose||translate("agents.wizard.noPurpose")}</span></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.business")}</span><b>{draft.setup.business_name||"—"}</b></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.location")}</span><b>{[draft.setup.city,draft.setup.country==="Otro país"?draft.setup.region_other:draft.setup.state,draft.setup.country].filter(Boolean).join(", ")||"—"}</b></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.hours")}</span><b>{draft.setup.hours_mode?choiceLabel(draft.setup.hours_mode):translate("agents.wizard.notDefined")}</b></div>
+    {draft.kind==="bookings"&&<div className={styles.reviewLine}><span>{translate("agents.wizard.advanceBooking")}</span><b>{draft.setup.booking_lead||"—"}</b></div>}
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.reviewVoice")}</span><b>{draft.setup.voice_preset==="female"?choiceLabel("Femenina · Polly"):draft.setup.voice_preset==="male"?choiceLabel("Masculina · Polly"):translate("agents.wizard.phoneDefault")}</b></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.personality")}</span><b>{draft.personality?choiceLabel(draft.personality):choiceLabel("Amable y profesional")}</b></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.answers")}</span><b>{draft.setup.response_style==="brief"?choiceLabel("Breves"):draft.setup.response_style==="detailed"?choiceLabel("Detalladas"):choiceLabel("Equilibradas")}</b></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.language")}</span><b>{choiceLabel(draft.setup.language_rule||"Español")}</b></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.bookings")}</span><b>{draft.setup.cap_bookings==="Sí"?translate("agents.wizard.bookingsChoice"):translate("agents.notConfigured")}</b></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.inventory")}</span><b>{draft.setup.cap_catalog==="Sí"?translate("agents.wizard.catalogChoice"):translate("agents.notConfigured")}</b></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.oversight")}</span><b>{draft.setup.human_review?choiceLabel(draft.setup.human_review):translate("agents.wizard.human")}</b></div>
+    <div className={styles.reviewMessage}><ShieldCheck size={20}/><p>{translate("agents.wizard.reviewCaution")}</p></div>
+    {isPreview?<p className={styles.previewNote}>{translate("agents.wizard.previewNotice")}</p>:<p className={styles.previewNote}>{translate("agents.wizard.saveAccountNotice")}</p>}
   </div>:null}
   {error?<p className={styles.error} role="alert">{error}</p>:null}
-  <div className={styles.actions}><button type="button" className={styles.prev} onClick={back}><ArrowLeft size={17}/>{step===0?"Cancelar":"Atrás"}</button>
+  <div className={styles.actions}><button type="button" className={styles.prev} onClick={back}><ArrowLeft size={17}/>{step===0?translate("agents.wizard.cancel"):translate("agents.wizard.back")}</button>
    {recoverDraft&&step===0?<button type="button" className={styles.prev} disabled={saving||!draft.name.trim()}
-    onClick={()=>{void Promise.resolve(onSave(draft)).catch((e:unknown)=>setError(e instanceof Error?e.message:"No se pudo guardar el borrador."));}}>
-    Guardar borrador</button>:null}
-   <button type="button" disabled={saving} className={styles.next} onClick={()=>void next()}>{saving?"Guardando…":step===steps.length-1?"Guardar agente":"Continuar"}
+    onClick={()=>{void Promise.resolve(onSave(draft)).catch((e:unknown)=>setError(translate("agents.wizard.draftSaveError")));}}>
+    {translate("agents.wizard.saveDraft")}</button>:null}
+   <button type="button" disabled={saving} className={styles.next} onClick={()=>void next()}>{saving?translate("agents.wizard.saving"):step===steps.length-1?translate("agents.wizard.saveAgent"):translate("agents.wizard.continue")}
    {step===steps.length-1?<Check size={17}/>:<ArrowRight size={17}/>}</button></div>
  </section>;
 }
