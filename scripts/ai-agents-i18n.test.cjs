@@ -47,3 +47,36 @@ test("AI Agents route parses as valid TSX",()=>{
  const source=ts.createSourceFile("ai-agents/page.tsx",page,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
  assert.deepEqual(source.parseDiagnostics.map(x=>String(x.messageText)),[]);
 });
+
+test("AI Agents wizard uses VMV language for questions, controls and accessibility",()=>{
+ const wizard=fs.readFileSync("app/vista-app/ai-agents/AgentSetupWizard.tsx","utf8");
+ const connections=fs.readFileSync("app/vista-app/ai-agents/AgentConnections.tsx","utf8");
+ const voiceSample=fs.readFileSync("app/vista-app/ai-agents/VoiceSample.tsx","utf8");
+ for(const source of [wizard,connections,voiceSample])assert.match(source,/useInterfaceLanguage/);
+ const ids=[...new Set([...wizard.matchAll(/\b[qat]\("([a-z_]+)"/g)].map(m=>m[1])),"state","hours"];
+ for(const id of ids){
+  const key="agents.wizard.q."+id;
+  assert.ok(catalog.es[key]&&catalog.en[key],"Bilingual question missing "+key);
+ }
+ for(const key of ["agents.wizard.configure","agents.wizard.agentName","agents.wizard.mission",
+  "agents.wizard.phoneVoice","agents.wizard.allowedTasks","agents.wizard.saveDraft","agents.wizard.saveAgent"]){
+  assert.ok(wizard.includes('"'+key+'"'),"Wizard control not localized: "+key);
+ }
+ assert.match(wizard,/\{choiceLabel\(opt\)\}/);
+ assert.match(wizard,/onClick=\{\(\)=>answer\(question.id,opt\)\}/);
+ assert.match(wizard,/onChange=\{next=>answer\("language_rule",next\)\}/);
+ assert.match(wizard,/onChange=\{next=>answer\("voice_preset",next\)\}/);
+ assert.ok(!wizard.includes("key={language}"),"Locale may not remount a draft");
+ assert.ok(connections.includes("agents.connections.allowInventory"));
+ assert.ok(voiceSample.includes("agents.voiceSample.listenNamed"));
+});
+test("AI Agents known source option values retain ids while translating displayed labels",()=>{
+ const wizard=fs.readFileSync("app/vista-app/ai-agents/AgentSetupWizard.tsx","utf8");
+ for(const value of ["Sí","No","Español","English","Bilingüe","Teléfono y chat",
+  "Amable y profesional","Varios conductores","Reconocerlo y derivar a un humano"]){
+  const key="agents.wizard.option."+value;
+  assert.ok(catalog.es[key]&&catalog.en[key],key);
+ }
+ assert.ok(wizard.includes('value={optionValue}'),'Original option value must remain unchanged');
+ assert.ok(wizard.includes('onChange={e=>onChange(e.target.value)}'),'Selection must store original value');
+});
