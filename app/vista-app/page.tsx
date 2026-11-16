@@ -2,7 +2,7 @@
 import {useEffect,useState,type FormEvent} from "react";
 import {House,LayoutGrid,PhoneCall,Languages,UserRound,ArrowUpRight,ChevronLeft,Clock3,ContactRound,UserRoundPlus,
  ShieldCheck,Mic,Package,CalendarDays,Users,BarChart3,Workflow,Globe,Bot,
- RefreshCw,Settings2,LoaderCircle,LogOut,LockKeyhole,PhoneForwarded,MessageCircle,Monitor,Cpu,TrendingUp,Search} from "lucide-react";
+ RefreshCw,Settings2,LoaderCircle,LogOut,LockKeyhole,PhoneForwarded,MessageCircle,Monitor,Cpu,TrendingUp,Search,Bell,Rocket,Megaphone} from "lucide-react";
 import {LivePanel} from "@/components/LivePanel";
 import InitialServiceCard from "@/components/InitialServiceCard";
 import dynamic from "next/dynamic";
@@ -295,50 +295,37 @@ export default function VMVMobilePreview(){
        <p>{translate(loading?"native.profileLoadingHint":"native.profileMissingHint")}</p>
        {!loading?<><button className={styles.mainAction} onClick={()=>void refresh()}>{translate("common.retry")}</button><a className={styles.registerLink} href="/registro">{translate("native.finishRegistration")}</a><button className={styles.logoutLink} onClick={()=>void signOut()}>{translate("common.signOut")}</button></>:null}
       </div>:null}
-      {ready&&tab==="home"?<div className={`${styles.screen} ${styles.homeV2}`}>
-       <div className={styles.homeWelcome}>
-        <button type="button" className={styles.homeProfile} onClick={()=>go("account")} aria-label={translate("home.viewAccount")}>
-         <span className={styles.homeProfileAvatar}><UserRound size={21}/></span>
-         <span><small>{translate("dashboard.business")}</small><strong>{business}</strong></span>
-        </button>
-        <span className={styles.homeBrandPill}>VMV <span>✦</span></span>
+      {ready&&tab==="home"?<div className={`${styles.screen} ${styles.homeV2} ${styles.homeConcept}`}>
+       <header className={styles.homeIdentity}>
+        <span className={styles.homeIdentityBrand}><span className={styles.homeIdentityV} aria-hidden="true">V</span><strong>VMV Business</strong></span>
+        <span className={styles.homeIdentityActions}><InterfaceLanguagePicker compact/><span className={styles.homeBell} aria-hidden="true"><Bell size={21}/></span></span>
+       </header>
+       <div className={styles.homeHello}>
+        <h2>{language==="en"?"Hi":"Hola"}, {name} 👋</h2>
+        <p>{language==="en"?"Your whole business, in one place.":"Todo tu negocio, en un solo lugar."}</p>
        </div>
-       <button className={styles.dashboardCallCard} type="button" onClick={()=>showCall(summary?.billing.ok&&billing?.subscriptionActive===false?"minutes":"overview")}
-        aria-label={translate("dashboard.manageCalls")}>
-        <span className={styles.dashboardCallTop}><span>SMART CALL</span><PhoneCall size={24}/></span>
-        <strong>{translate("dashboard.callCenter")}</strong>
-        <span className={styles.dashboardLineState}>{translate("dashboard.lineStatus")}: {summary?.line.ok?lineState:translate("dashboard.unavailable")}</span>
-        {summary?.billing.ok&&billing?.subscriptionActive===false?<span className={styles.dashboardUpgrade}>{language==="en"?"Upgrade your plan to unlock Smart Call":"Mejorar plan para desbloquear Smart Call"} <ArrowUpRight size={14}/></span>:null}
-        <span className={styles.dashboardMetrics}>
-         <span><b>{summary?.billing.ok?num(available):"—"}</b><small>{translate("dashboard.minutes")}</small></span>
-         <span><b>{summary?.line.ok?num(summary.line.data?.usage.directCalls):"—"}</b><small>{translate("dashboard.calls")}</small></span>
-        </span>
-       </button>
-       <div className={styles.dashboardHeading}><h3>{translate("dashboard.quickActions")}</h3>
-        <button type="button" onClick={()=>go("services")}>{translate("home.seeAll")} <ArrowUpRight size={14}/></button></div>
-       <div className={styles.dashboardQuickGrid}>
-        <button type="button" className={styles.dashboardQuickMint} onClick={()=>go("translator")}>
-         <Languages size={26}/><strong>{translate("common.translator")}</strong>
-        </button>
-        <button type="button" className={styles.dashboardQuickSky} onClick={()=>window.location.assign("/vista-app/ai-agents")}>
-         <Bot size={26}/><strong>AI Agents</strong>
-        </button>
-       </div>
-       <section className={styles.dashboardActivity} aria-label={translate("dashboard.activity")}>
-        <div className={styles.dashboardActivityHeading}>
-         <h3>{translate("dashboard.activity")}</h3>
-         <button type="button" onClick={()=>showCall("activity")}>{translate("dashboard.viewActivity")} <ArrowUpRight size={14}/></button>
+       <section className={styles.homeGrowHero} aria-label={language==="en"?"Grow your business":"Haz crecer tu negocio"}>
+        <div className={styles.homeGrowCopy}>
+         <h3>{language==="en"?<>Grow your<br/>business</>:<>Haz crecer<br/>tu negocio</>}</h3>
+         <p>{language==="en"?"Tools, services and AI for entrepreneurs.":"Herramientas, servicios y IA para emprendedores."}</p>
+         <span className={styles.homeGrowStart} aria-disabled="true">{language==="en"?"Get started":"Comenzar"} <ArrowUpRight size={18} aria-hidden="true"/></span>
         </div>
-        {calls.length?<div className={styles.dashboardActivityList}>{calls.slice(0,2).map(item=>
-         <div className={styles.dashboardActivityItem} key={item.bridge_sid}>
-          <span className={styles.dashboardActivityIcon}><PhoneCall size={17}/></span>
-          <span><strong>{translate(item.call_mode==="translated"?"services.history.translated":"services.history.direct")}</strong>
-           <small>{new Date(item.started_at).toLocaleDateString(language==="es"?"es-US":"en-US",{month:"short",day:"numeric"})} · {callStatusKeys[item.status]?translate(callStatusKeys[item.status]):item.status}</small>
-          </span>
-         </div>)}</div>:
-         <p className={styles.dashboardEmpty}>{loading?translate("marketing.ui.loading"):translate("dashboard.emptyActivity")}</p>}
+        <div className={styles.homeRocketArt} aria-hidden="true"><span className={styles.homeRocketHalo}/><Rocket size={104} strokeWidth={1.35}/><span className={styles.homeRocketCloud}/></div>
        </section>
-       <InitialServiceCard key={user?.id} value={user?.user_metadata?.initial_service} onTranslation={()=>go("calls")}/>
+       <div className={styles.homeServiceTiles}>
+        <button type="button" className={styles.homeTileMint} onClick={()=>showCall(summary?.billing.ok&&billing?.subscriptionActive===false?"minutes":"overview")}><PhoneCall size={31}/><strong>Smart Call</strong></button>
+        <button type="button" className={styles.homeTilePink} onClick={()=>{setOpen(false);setServiceFocus("web");setTab("services");}}><Monitor size={31}/><strong>Web Services</strong></button>
+        <button type="button" className={styles.homeTileLavender} onClick={()=>window.location.assign("/vista-app/ai-agents")}><Bot size={31}/><strong>AI Agents</strong></button>
+        <button type="button" className={styles.homeTileGreen} onClick={()=>window.location.assign("/vista-app/marketing")}><Megaphone size={31}/><strong>Marketing</strong></button>
+       </div>
+       <section className={styles.homeBusinessArea}>
+        <h3>{language==="en"?"My Business":"Mi Negocio"}</h3>
+        <button type="button" className={styles.homeSummaryCard} onClick={()=>go("account")}>
+         <span className={styles.homeSummaryIcon}><TrendingUp size={24}/></span>
+         <span><strong>{language==="en"?"Overview":"Resumen"}</strong><small>{language==="en"?"Activity and results":"Actividad y resultados"}</small></span>
+         <ChevronLeft size={21} className={styles.homeSummaryChevron} aria-hidden="true"/>
+        </button>
+       </section>
       </div>:null}
       {ready&&tab==="services"&&!open?<div className={`${styles.screen} ${styles.servicesV3}`}>
        {serviceFocus==="web"?<>
