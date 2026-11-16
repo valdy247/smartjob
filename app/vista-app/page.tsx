@@ -340,7 +340,7 @@ export default function VMVMobilePreview(){
        <div className={styles.homeServiceTiles}>
         {showHomeOffer("smart-call")?<button type="button" className={styles.homeTileMint} onClick={()=>showCall(summary?.billing.ok&&billing?.subscriptionActive===false?"minutes":"overview")}><PhoneCall size={31}/><strong>Smart Call</strong></button>:null}
         {showHomeOffer("web-services")?<button type="button" className={styles.homeTilePink} onClick={()=>{setOpen(false);setServiceFocus("web");setTab("services");}}><Monitor size={31}/><strong>Web Services</strong></button>:null}
-        {showHomeOffer("ai-agents")?<button type="button" className={styles.homeTileLavender} onClick={()=>window.location.assign("/vista-app/ai-agents")}><Bot size={31}/><strong>AI Agents</strong></button>:null}
+        <button type="button" className={styles.homeTileLavender} onClick={()=>window.location.assign("/vista-app/ai-agents")}><Bot size={31}/><strong>AI Agents</strong></button>
         {showHomeOffer("marketing")?<button type="button" className={styles.homeTileGreen} onClick={()=>window.location.assign("/vista-app/marketing")}><Megaphone size={31}/><strong>Marketing</strong></button>:null}
         {homeRecommendations?.some(item=>item.id==="google-business")?<button type="button" className={styles.homeTileLavender} onClick={()=>window.location.assign("/vista-app/marketing")}><Globe size={31}/><strong>Google Business</strong></button>:null}
         {homeRecommendations?.length===0?<button type="button" className={styles.homeTileLavender} onClick={()=>go("services")}><LayoutGrid size={31}/><strong>{language==="en"?"All services":"Todos los servicios"}</strong></button>:null}
