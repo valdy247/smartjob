@@ -414,7 +414,10 @@ export default function VMVMobilePreview(){
       </div>:null}
       {ready&&tab==="services"&&open?<div className={styles.smartScreen}>
        <button className={styles.back} onClick={()=>setOpen(false)}><ChevronLeft size={17}/> {translate("native.totalServices")}</button>
-       <div className={styles.smartHero}><h2>Smart Call<span>.</span></h2><div className={styles.smartBadge}><span/>{lineState}</div></div>
+       <header className={styles.smartHeading}>
+        <h2>Smart Call<span>.</span></h2>
+        <p className={styles.smartLineStatus}><span aria-hidden="true"/>{lineState}</p>
+       </header>
        <div className={styles.switcher}>{([{id:"overview",label:translate("services.call.overview")},{id:"minutes",label:translate("common.minutes")},{id:"settings",label:translate("common.settings")},{id:"activity",label:translate("services.call.activity")}] as const).map(item=><button key={item.id} onClick={()=>setPanel(item.id)} className={panel===item.id?styles.selected:""}>{item.label}</button>)}</div>
        {panel==="overview"?<>
         <div className={styles.smartCard}>
