@@ -376,7 +376,8 @@ export default function AIAgentsPreview(){
         </button>})}
        </div>
       </details>
-      <div className={styles.sectionHeading}><h2>Administrar agentes</h2><span className={styles.agentCounter}>{visibleAgents.length}</span></div>
+      <details className={styles.quickAgentMore} open={!principal&&!proposal}>
+       <summary>Administrar agentes ({visibleAgents.length}) <ChevronRight size={15}/></summary>
       {visibleAgents.length===0?<div className={styles.empty}>
        <Bot size={30}/><strong>Aquí vivirán tus agentes</strong>
        
@@ -412,6 +413,7 @@ export default function AIAgentsPreview(){
         </div>
        </article>})}
       </div>}
+      </details>
       <div className={styles.disclaimer}><ShieldCheck size={16}/> Los agentes se guardan en tu cuenta. Elegir uno no conecta Twilio ni autoriza pagos. El ejemplo ficticio es temporal.</div>
      </>:null}
      {businessDialog?<BusinessProfileDialog businessId={selectedBusiness?.id} initialName={workspaces.find(w=>w.id===legacyId)?.name}
