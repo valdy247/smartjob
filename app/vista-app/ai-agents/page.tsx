@@ -368,71 +368,60 @@ export default function AIAgentsPreview(){
       <div className={styles.sectionHeading}><div><h2>{translate("agents.capabilities")}</h2>
        </div></div>
       <div className={styles.tiles}>
-       {types.map(type=>{const label=({
-        calls:"Llamadas",support:"Chat web",sales:"Ventas",bookings:"Reservas",
-        inventory:"Catálogo e inventario",operations:"Actividad",custom:"Identidad"
-       } as Record<Kind,string>)[type.id];
+       {types.map(type=>{const title=label(type.id);
        const configured=principal?.setup||{};
-       const status=!principal?"Sin configurar":
+       const status=!principal?translate("agents.status.notConfigured"):
         type.id==="calls"?(phone?.agentId===principal.id&&phone.serverEnrolled?
-         "Lista para probar":phone?.agentId===principal.id?"Requiere atención":"Sin configurar"):
-        type.id==="support"?"Requiere atención":
-        type.id==="inventory"?(configured.cap_catalog==="Sí"?"Requiere atención":"Sin configurar"):
-        type.id==="sales"?(configured.cap_sales==="Sí"?"Requiere atención":"Sin configurar"):
-        type.id==="bookings"?(configured.cap_bookings==="Sí"?"Requiere atención":"Sin configurar"):
-        "Lista para probar";
-       const detail=({
-        calls:"Número, horarios y traducción; falta prueba real",
-        support:"Chat público pendiente · prueba privada disponible",
-        sales:"Precios, permisos y pagos por verificar",
-        bookings:"Agenda y disponibilidad por comprobar",
-        inventory:"Catálogo y existencias autorizadas",
-        operations:"Historial y calidad del mismo agente",
-        custom:"Nombre, voz, idioma y personalidad"
-       } as Record<Kind,string>)[type.id];
+         translate("agents.status.readyToTest"):phone?.agentId===principal.id?translate("agents.status.needsAttention"):translate("agents.status.notConfigured")):
+        type.id==="support"?translate("agents.status.needsAttention"):
+        type.id==="inventory"?(configured.cap_catalog==="Sí"?translate("agents.status.needsAttention"):translate("agents.status.notConfigured")):
+        type.id==="sales"?(configured.cap_sales==="Sí"?translate("agents.status.needsAttention"):translate("agents.status.notConfigured")):
+        type.id==="bookings"?(configured.cap_bookings==="Sí"?translate("agents.status.needsAttention"):translate("agents.status.notConfigured")):
+        translate("agents.status.readyToTest");
+       const detail=description(type.id);
        return <button type="button" key={type.id} className={styles.tile}
-          style={{background:type.bg,color:type.fg}} onClick={()=>void start(type.id)} aria-label={label+" · "+status+". "+detail}>
+          style={{background:type.bg,color:type.fg}} onClick={()=>void start(type.id)} aria-label={title+" · "+status+". "+detail}>
           <span className={styles.tileIcon}><type.Icon size={24}/></span>
-          <strong>{label}</strong><small>{status}</small>
+          <strong>{title}</strong><small>{status}</small>
        </button>})}
       </div>
-      <div className={styles.sectionHeading}><h2>Agentes existentes {principal?"y principal":""}</h2><span className={styles.agentCounter}>{visibleAgents.length}</span></div>
+      <div className={styles.sectionHeading}><h2>{translate("agents.existing")}{principal?" "+translate("agents.andPrincipal"):""}</h2><span className={styles.agentCounter}>{visibleAgents.length}</span></div>
       {visibleAgents.length===0?<div className={styles.empty}>
-       <Bot size={30}/><strong>Aquí vivirán tus agentes</strong>
+       <Bot size={30}/><strong>{translate("agents.emptyTitle")}</strong>
        
-       <button type="button" className={styles.demoButton} onClick={demo}><Sparkles size={16}/> Explorar ejemplo de taxi</button>
+       <button type="button" className={styles.demoButton} onClick={demo}><Sparkles size={16}/> {translate("agents.exploreTaxi")}</button>
       </div>:<div className={styles.agents}>
        {visibleAgents.map(a=>{const t=typeInfo(a.kind);return <article className={styles.agent} key={a.id}>
         <div className={styles.agentTop}><span style={{background:t.bg,color:t.fg}} className={styles.agentIcon}><t.Icon size={21}/></span>
-         <span className={styles.agentMeta}><strong>{a.name}</strong><small>{t.title} · {a.language}</small></span>
-         <span className={styles.agentState}>{principal?.id===a.id?"Principal":a.status==="paused"?"Pausado":phone?.agentId===a.id?"Seleccionado":a.status==="active"?"Activo en estudio":inspectAgent(a).requiredPassed?"Listo para configurar":"Borrador"}</span>
+         <span className={styles.agentMeta}><strong>{a.name}</strong><small>{agentKind(a.kind)} · {a.language}</small></span>
+         <span className={styles.agentState}>{principal?.id===a.id?translate("agents.state.principal"):a.status==="paused"?translate("agents.state.paused"):phone?.agentId===a.id?translate("agents.state.selected"):a.status==="active"?translate("agents.state.activeStudio"):inspectAgent(a).requiredPassed?translate("agents.state.readyToConfigure"):translate("agents.state.draft")}</span>
         </div>
         <p>{a.purpose}</p>
         <div className={styles.readinessMini}>
-         <span className={styles.readinessText}>Configuración: {inspectAgent(a).percent}%</span>
+         <span className={styles.readinessText}>{translate("agents.readiness")}: {inspectAgent(a).percent}%</span>
          <span className={styles.readinessTrack}><span style={{width:inspectAgent(a).percent+"%"}}/></span>
         </div>
         <div className={styles.agentButtons}>
-         <button type="button" className={styles.buttonPrimary} onClick={()=>test(a)}><MessageCircle size={15}/> Probar</button>
+         <button type="button" className={styles.buttonPrimary} onClick={()=>test(a)}><MessageCircle size={15}/> {translate("agents.test")}</button>
          {phone&&a.revision>0&&(!selectedWorkspace||principal?.id===a.id)?<button type="button" disabled={busy} className={styles.buttonSecondary}
-           onClick={()=>void select(a)}><PhoneCall size={15}/>{phone.agentId===a.id?"Elegido para la línea":"Elegir para teléfono"}</button>:null}
-         <button type="button" className={styles.buttonSecondary} onClick={()=>quality(a)}><BookCheck size={15}/> Calidad</button>
+           onClick={()=>void select(a)}><PhoneCall size={15}/>{phone.agentId===a.id?translate("agents.phoneSelected"):translate("agents.chooseForPhone")}</button>:null}
+         <button type="button" className={styles.buttonSecondary} onClick={()=>quality(a)}><BookCheck size={15}/> {translate("agents.quality")}</button>
          {!principal||principal.id!==a.id?<button type="button" className={styles.buttonSecondary}
           disabled={!selectedWorkspace||busy||!a.revision}
           onClick={()=>void designate(a).catch(e=>setNotice(e instanceof Error?e.message:"No se pudo elegir."))}>
-          <Bot size={15}/> Hacer principal</button>:null}
-         <button type="button" className={styles.buttonSecondary} onClick={()=>edit(a)}><ClipboardList size={15}/> Editar identidad</button>
+          <Bot size={15}/> {translate("agents.makePrincipal")}</button>:null}
+         <button type="button" className={styles.buttonSecondary} onClick={()=>edit(a)}><ClipboardList size={15}/> {translate("agents.editIdentity")}</button>
          {a.revision>0&&(a.kind==="sales"||a.setup.cap_sales==="Sí"||phone?.agentId===a.id)?
           <button type="button" className={styles.buttonSecondary}
            onClick={()=>{setSelected(a.id);setScreen("commerce");}}>
-           <ShoppingBag size={15}/> Preparar ventas</button>:null}
+           <ShoppingBag size={15}/> {translate("agents.prepareSales")}</button>:null}
          <button type="button" className={styles.buttonSecondary} onClick={()=>void toggleStatus(a)}>
-          {a.status==="active"?<PauseCircle size={15}/>:<PlayCircle size={15}/>} {a.status==="active"?"Pausar":"Activar en estudio"}
+          {a.status==="active"?<PauseCircle size={15}/>:<PlayCircle size={15}/>} {a.status==="active"?translate("agents.pause"):translate("agents.activateStudio")}
          </button>
         </div>
        </article>})}
       </div>}
-      <div className={styles.disclaimer}><ShieldCheck size={16}/> Los agentes se guardan en tu cuenta. Elegir uno no conecta Twilio ni autoriza pagos. El ejemplo ficticio es temporal.</div>
+      <div className={styles.disclaimer}><ShieldCheck size={16}/> {translate("agents.disclaimer")}</div>
      </>:null}
      {businessDialog?<BusinessProfileDialog businessId={selectedBusiness?.id} initialName={workspaces.find(w=>w.id===legacyId)?.name}
       legacy={selectedWorkspace?[]:unlinked} initialLegacyId={legacyId} onClose={()=>{setBusinessDialog(false);setPendingKind(null);}} onSaved={businessSaved}/>:null}
@@ -456,8 +445,8 @@ export default function AIAgentsPreview(){
      <span>VMV Business <Sparkles size={12}/></span></div>
    </section>
    <div className={styles.externalFooter}>
-    <span><ShieldCheck size={16}/> Módulo aislado · No modifica Smart Call</span>
-    <a href="/vista-app">Volver a VMV <ArrowUpRight size={15}/></a>
+    <span><ShieldCheck size={16}/> {translate("agents.isolationNotice")}</span>
+    <a href="/vista-app">{translate("agents.backVMV")} <ArrowUpRight size={15}/></a>
    </div>
   </div>
  </main>;
