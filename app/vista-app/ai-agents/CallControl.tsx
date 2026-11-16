@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
-import {ArrowLeft,Check,PhoneCall,ShieldCheck} from "lucide-react";
+import {ArrowLeft,Check,Languages,PhoneCall,ShieldCheck} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {checkCallPolicy,days,initialCallPolicy,zoneOptions,type CallPolicy,type DayName} from "@/lib/vmv-ai-agents/call-policy";
 import styles from "./CallControl.module.css";
@@ -45,13 +45,22 @@ export default function CallControl({onBack}:{onBack:()=>void}){
  };
  return <div className={styles.root}>
   <button type="button" className={styles.back} onClick={onBack}><ArrowLeft size={16}/> AI Agents</button>
-  <header className={styles.hero}><PhoneCall size={24}/><div><small>CONFIGURACIÓN DE LÍNEA</small>
-   <h1>Atención de llamadas</h1><p>{line?"Número "+line:"Tu número de VMV"}</p></div></header>
+  <header className={styles.hero}>
+   <span className={styles.heroEyebrow}>CONFIGURACIÓN DE LÍNEA</span>
+   <h1>Atención de llamadas<span>.</span></h1>
+   <p>Decide cómo quieres atender a tus clientes.</p>
+   <span className={styles.lineChip}><PhoneCall size={15}/>{line?"Número "+line:"Tu número de VMV"}</span>
+  </header>
   {notice&&<p className={styles.notice} role="status">{notice}</p>}
   {loading?<p>Cargando configuración…</p>:<div className={styles.stack}>
-   <section className={styles.section}><h2>Agente IA</h2>
-    <label className={styles.toggle}>Atender con IA <input type="checkbox" checked={policy.agent_enabled} onChange={e=>patch("agent_enabled",e.target.checked)}/></label>
-    <small>{ready?"Agente elegido y activo":"Selecciona y activa un agente antes de guardar"}</small>
+   <section className={`${styles.section} ${styles.featureSection}`}>
+    <span className={styles.featureEyebrow}>AGENTE IA</span>
+    <div className={styles.featureTop}>
+     <span className={styles.featureIcon}><PhoneCall size={24}/></span>
+     <div className={styles.featureTitle}><h2>Atender con IA</h2><p>Tu agente responde las llamadas por ti.</p></div>
+     <label className={styles.switch}><span className={styles.srOnly}>Atender con IA</span><input type="checkbox" checked={policy.agent_enabled} onChange={e=>patch("agent_enabled",e.target.checked)}/></label>
+    </div>
+    <small className={styles.featureHint}>{ready?"Agente elegido y activo":"Selecciona y activa un agente antes de guardar"}</small>
     {policy.agent_enabled&&<>
      <label>Modalidad<select value={policy.agent_mode} onChange={e=>patch("agent_mode",e.target.value as CallPolicy["agent_mode"])}>
       <option value="always">Siempre</option><option value="schedule">Por horario</option>
@@ -84,9 +93,14 @@ export default function CallControl({onBack}:{onBack:()=>void}){
      </div>}
     </>}
    </section>
-   <section className={styles.section}><h2>Traducción</h2>
-    <label className={styles.toggle}>Activar traducción <input type="checkbox" checked={policy.translation_enabled}
-     onChange={e=>{patch("translation_enabled",e.target.checked);if(!e.target.checked)patch("outside_action","message");}}/></label>
+   <section className={`${styles.section} ${styles.featureSection}`}>
+    <span className={styles.featureEyebrow}>SMART CALL</span>
+    <div className={styles.featureTop}>
+     <span className={styles.featureIcon}><Languages size={24}/></span>
+     <div className={styles.featureTitle}><h2>Traducción</h2><p>Conversa con clientes en otros idiomas.</p></div>
+     <label className={styles.switch}><span className={styles.srOnly}>Activar traducción</span><input type="checkbox" checked={policy.translation_enabled}
+      onChange={e=>{patch("translation_enabled",e.target.checked);if(!e.target.checked)patch("outside_action","message");}}/></label>
+    </div>
     {policy.translation_enabled&&<label>Disponibilidad<select value={policy.translation_mode}
      onChange={e=>patch("translation_mode",e.target.value as CallPolicy["translation_mode"])}>
      <option value="always">Siempre</option><option value="schedule">Por horario</option>
@@ -112,7 +126,7 @@ export default function CallControl({onBack}:{onBack:()=>void}){
       <small>Los turnos nocturnos continúan hasta el cierre del día siguiente.</small>
      </div>}
    </section>
-   {policy.agent_enabled&&policy.translation_enabled&&<section className={styles.section}>
+   {policy.agent_enabled&&policy.translation_enabled&&<section className={`${styles.section} ${styles.rulesSection}`}>
     <h2>Si ambos están disponibles</h2>
     <select aria-label="Prioridad" value={policy.coexistence}
      onChange={e=>patch("coexistence",e.target.value as CallPolicy["coexistence"])}>
@@ -121,7 +135,7 @@ export default function CallControl({onBack}:{onBack:()=>void}){
      <option value="translation_first">Inicia Smart Call con traducción</option>
     </select>
    </section>}
-   <section className={styles.section}><h2>Fuera de horario</h2>
+   <section className={`${styles.section} ${styles.rulesSection}`}><h2>Fuera de horario</h2>
     <label>Si no hay atención<select value={policy.outside_action}
      onChange={e=>patch("outside_action",e.target.value as CallPolicy["outside_action"])}>
      {policy.translation_enabled&&<option value="translation">Usar Smart Call si está disponible</option>}
