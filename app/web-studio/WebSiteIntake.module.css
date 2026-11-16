@@ -62,3 +62,176 @@
 .finish .previous{background:#fff;color:#7655ac;border:1px solid #e0d1eb}
 @media(max-width:600px){.wizardNavigation{width:100%}.wizardNavigation>button{flex:1;
  justify-content:center}.finish .previous{flex:0 1 35%}.intro{gap:7px}}
+
+
+/* VMV premium onboarding · Qué ofreces
+   Styles are scoped to this step; existing product and wizard logic is unchanged. */
+.offeringsRoot{
+ --offer-ink:#23143f;--offer-purple:#8350d7;--offer-muted:#82719c;
+ width:100%;max-width:920px;margin:0 auto;gap:20px;
+ padding:clamp(16px,3vw,34px);
+ border-radius:30px;
+ background:
+  radial-gradient(circle at 99% 17%,rgba(186,149,248,.20),transparent 40%),
+  radial-gradient(circle at 4% 94%,rgba(208,179,252,.17),transparent 44%),
+  #fcf9ff;
+ color:var(--offer-ink);
+}
+.offeringsRoot .form{max-width:unset;gap:15px}
+.offeringsIntro{display:flex;flex-direction:column;gap:0;min-width:0}
+.offeringsBrandRow{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;min-height:86px}
+.offeringsBrand{display:flex;align-items:center;gap:11px;padding-top:7px;color:var(--offer-ink)}
+.offeringsBrandMark{width:39px;height:39px;display:grid;place-items:center;
+ border-radius:12px;background:linear-gradient(140deg,#ab79fb,#7434cb);color:white;
+ box-shadow:0 7px 18px rgba(116,52,203,.24);font-weight:950;font-size:23px}
+.offeringsBrand strong{font-size:clamp(17px,2.7vw,22px);letter-spacing:-.055em;font-weight:900}
+.offeringsBag{position:relative;width:92px;height:80px;flex:none;display:grid;place-items:center;
+ border-radius:21px;background:linear-gradient(145deg,#daccff,#e8ddff 55%,#bda6f1);
+ transform:rotate(4deg);color:#8052d0;box-shadow:0 11px 28px rgba(112,70,186,.14)}
+.offeringsBag:before{content:"";position:absolute;inset:13px 18px -7px 18px;
+ border-radius:12px 12px 16px 16px;background:linear-gradient(145deg,#fff,#d9c9f8);
+ box-shadow:0 9px 20px #7c59c136;transform:rotate(-7deg)}
+.offeringsBag svg{position:relative;z-index:1;transform:rotate(-7deg)}
+.offeringsProgress{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;
+ width:min(380px,72%);margin:4px 0 23px}
+.offeringsStage{position:relative;display:flex;justify-content:flex-start;padding-top:12px;height:46px}
+.offeringsStage:before{content:"";position:absolute;top:0;left:0;right:0;height:4px;
+ border-radius:999px;background:#e7deee}
+.offeringsStage[data-state=done]:before{background:#65b39a}
+.offeringsStage[data-state=current]:before{background:linear-gradient(90deg,#a279ed,#7d48d7)}
+.offeringsStageDot{height:26px;width:26px;display:grid;place-items:center;
+ border-radius:50%;background:#ebe4f4;color:transparent;font-size:11px;font-weight:900}
+.offeringsStage[data-state=done] .offeringsStageDot{background:#e0f4eb;color:#288e6a}
+.offeringsStage[data-state=current] .offeringsStageDot{background:#8850da;
+ color:#fff;box-shadow:0 4px 12px #7c4ac339}
+.offeringsIntro h2{margin:0 0 9px;font-size:clamp(31px,5.8vw,45px);
+ line-height:1.07;letter-spacing:-.075em;font-weight:950;color:#211238}
+.offeringsIntro p{margin:0;max-width:550px;color:#7c649b;
+ font-size:clamp(13px,2vw,16px);line-height:1.48;font-weight:500}
+.offeringsPanel{display:flex;flex-direction:column;gap:15px;padding:6px 0 0}
+.offeringsSectionTitle{font-size:clamp(17px,2.9vw,21px);font-weight:950;
+ letter-spacing:-.045em;color:#24143d;line-height:1.25;margin:17px 0 0}
+.offeringsSectionTitle:first-child{margin-top:0}
+.offeringsChoices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.offeringCard{position:relative;display:flex;flex-direction:column;align-items:center;
+ justify-content:center;text-align:center;gap:9px;min-height:165px;padding:20px 13px 15px;
+ color:#2c1c4a;background:linear-gradient(145deg,#fff,#fbf8ff);
+ border:1.5px solid #e9def5;border-radius:19px;
+ box-shadow:0 8px 19px rgba(92,51,144,.07);cursor:pointer;
+ transition:border-color .15s,box-shadow .15s,transform .15s}
+.offeringCard:hover{transform:translateY(-2px)}
+.offeringCard[data-active=true]{border-color:#8750dc;background:linear-gradient(150deg,#f4eaff,#eadeff);
+ box-shadow:inset 0 0 0 1px #9d6aeb,0 10px 23px #8858d32b}
+.offeringIcon{width:51px;height:49px;display:grid;place-items:center;
+ border-radius:15px;color:#8954d5;background:#f0e6ff}
+.offeringCard strong{font-size:clamp(13px,2.2vw,17px);font-weight:900;
+ letter-spacing:-.035em;line-height:1.22}
+.offeringCard small{font-size:clamp(10px,1.7vw,13px);line-height:1.35;
+ color:#806a9c;max-width:155px}
+.offeringCheck,.goalCheck{position:absolute;display:grid;place-items:center;
+ width:24px;height:24px;border-radius:50%;background:#8351d9;color:white;
+ box-shadow:0 3px 9px #7644bd42}
+.offeringCheck{top:11px;right:11px}
+.goalChoices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.goalCard{position:relative;display:flex;align-items:center;min-height:109px;gap:12px;
+ border-radius:18px;padding:17px 16px;border:1.5px solid #e9dff4;
+ background:linear-gradient(145deg,#fff,#fcf9ff);text-align:left;color:#2e1e4b;
+ box-shadow:0 6px 17px #62419a0c;cursor:pointer;
+ transition:border-color .15s,box-shadow .15s,transform .15s}
+.goalCard:hover{transform:translateY(-2px)}
+.goalCard[data-active=true]{border-color:#9159e3;background:linear-gradient(130deg,#f6edff,#eee1ff);
+ box-shadow:inset 0 0 0 1px #ad82f2,0 7px 17px #8858d326}
+.goalIcon{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;
+ color:#8550d4;background:#f1e8ff;border-radius:13px}
+.goalCopy{display:flex;flex-direction:column;gap:5px;min-width:0}
+.goalCopy strong{font-size:clamp(12px,2vw,16px);font-weight:900;line-height:1.2;
+ letter-spacing:-.035em}
+.goalCopy small{color:#7e6b97;font-size:clamp(10px,1.65vw,12px);line-height:1.35}
+.goalCheck{top:9px;right:10px;width:22px;height:22px}
+.offeringsAdd{gap:12px;margin-top:8px}
+.offeringsAdd>label{display:block;font-size:clamp(17px,2.9vw,21px);
+ font-weight:950;letter-spacing:-.045em;color:#24143d}
+.offeringsAddRow{display:flex;align-items:stretch;gap:11px}
+.offeringsInputWrap{display:flex;align-items:center;flex:1;min-width:0;gap:8px;
+ border:1.5px solid #e5d9f3;border-radius:16px;padding:0 12px;
+ background:linear-gradient(145deg,#fff,#fbf8ff);color:#9773c6;
+ box-shadow:0 4px 13px #62419a08}
+.offeringsInputWrap input{flex:1;min-width:0;width:100%;border:0;background:transparent;
+ color:#312148;font-size:13px;padding:13px 0;outline:0}
+.offeringsInputWrap input::placeholder{color:#aaa1b5}
+.offeringsInputWrap:focus-within{border-color:#9d69e9;box-shadow:0 0 0 3px #a477ed1b}
+.offeringsAdd .offeringsAddRow>button{display:inline-flex;align-items:center;justify-content:center;
+ gap:8px;min-width:116px;background:linear-gradient(145deg,#a169ef,#7939d0);
+ color:white;border:0;border-radius:15px;padding:12px 17px;min-height:53px;
+ box-shadow:0 6px 14px #8f5adb26;font-size:13px;font-weight:900;cursor:pointer}
+.offeringsAdd .offeringsAddRow>button:disabled{opacity:.5;cursor:not-allowed}
+.offeringsTokens{margin-top:4px;gap:9px}
+.offeringsTokens>span{background:#dff3e9;color:#226f4d;border-radius:999px;
+ padding:9px 9px 9px 14px;font-size:13px;font-weight:900;gap:11px}
+.offeringsTokens>span button{background:transparent;color:#277e56;width:21px;height:21px;
+ display:grid;place-items:center;padding:0}
+.offeringsFinish{margin-top:2px;padding:13px 0 max(8px,env(safe-area-inset-bottom));
+ display:flex;flex-direction:column;align-items:stretch;gap:16px}
+.offeringsFinish>span{font-size:12px;color:#806a9b;font-weight:700;gap:8px}
+.offeringsFinish>span svg{width:20px;height:20px;color:#9874c9;flex:none}
+.offeringsFinish .wizardNavigation{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.7fr);
+ gap:12px;width:100%}
+.offeringsFinish .wizardNavigation>button{width:100%;min-height:59px;border-radius:17px;
+ justify-content:center;font-size:16px;font-weight:900}
+.offeringsFinish .wizardNavigation>button:not(.previous){
+ justify-content:space-between;padding:16px 23px;
+ background:linear-gradient(145deg,#a16af0,#7835cd);
+ box-shadow:0 10px 23px #8552d226}
+.offeringsFinish .wizardNavigation>.previous{background:rgba(255,255,255,.66);
+ color:#402461;border:1.5px solid #e1d3f0;box-shadow:0 4px 13px #62419a08}
+.offeringsRoot .offeringCard:focus-visible,.offeringsRoot .goalCard:focus-visible,
+.offeringsRoot .offeringsAdd button:focus-visible,.offeringsRoot .offeringsAdd input:focus-visible{
+ outline:3px solid #a77bea;outline-offset:2px}
+@media(max-width:600px){
+ .offeringsRoot{padding:17px 16px 22px;border-radius:22px;gap:15px}
+ .offeringsBrandRow{min-height:72px}
+ .offeringsBrandMark{width:34px;height:34px;font-size:20px}
+ .offeringsBrand strong{font-size:17px}
+ .offeringsBag{width:70px;height:65px;border-radius:17px}
+ .offeringsBag:before{inset:11px 13px -5px}
+ .offeringsProgress{margin:2px 0 15px;width:min(320px,85%)}
+ .offeringsIntro h2{font-size:35px}
+ .offeringsPanel{gap:12px}
+ .offeringsSectionTitle{margin-top:12px}
+ .offeringsChoices,.goalChoices{gap:9px}
+ .offeringCard{min-height:143px;gap:7px;padding:14px 6px 12px;border-radius:16px}
+ .offeringIcon{width:43px;height:42px}
+ .offeringIcon svg{width:23px;height:23px}
+ .offeringCard strong{font-size:13px}
+ .offeringCard small{font-size:10px}
+ .offeringCheck{top:6px;right:6px;width:19px;height:19px}
+ .goalCard{min-height:95px;gap:9px;padding:12px 9px;border-radius:16px}
+ .goalIcon{flex-basis:35px;width:35px;height:35px;border-radius:11px}
+ .goalIcon svg{width:19px;height:19px}
+ .goalCopy strong{font-size:12px;padding-right:8px}
+ .goalCopy small{font-size:10px}
+ .goalCheck{top:5px;right:5px;width:18px;height:18px}
+ .offeringsAddRow{gap:8px}
+ .offeringsAdd .offeringsAddRow>button{min-width:91px;padding:10px 9px;font-size:12px}
+ .offeringsInputWrap{padding:0 10px}
+ .offeringsInputWrap input{font-size:12px}
+ .offeringsTokens>span{font-size:12px}
+ .offeringsFinish .wizardNavigation{gap:9px}
+ .offeringsFinish .wizardNavigation>button{min-height:55px;font-size:14px;padding:12px}
+ .offeringsFinish .wizardNavigation>button:not(.previous){padding:12px 16px}
+}
+@media(max-width:370px){
+ .offeringsRoot{padding:14px 11px}
+ .offeringsIntro h2{font-size:32px}
+ .offeringCard{padding-left:3px;padding-right:3px}
+ .offeringCard strong{font-size:12px}
+ .offeringCard small{font-size:9px}
+ .goalCard{gap:7px;padding:10px 7px}
+ .goalIcon{flex-basis:31px;width:31px;height:31px}
+ .goalCopy strong{font-size:11px}
+ .offeringsAddRow{gap:7px}
+ .offeringsAdd .offeringsAddRow>button{min-width:79px;font-size:11px;gap:3px}
+}
+@media(prefers-reduced-motion:reduce){
+ .offeringsRoot .offeringCard,.offeringsRoot .goalCard{transition:none}
+}
