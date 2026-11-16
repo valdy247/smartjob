@@ -14,8 +14,8 @@ import {AI_AGENT_TEMPLATES,createConversation,emptyAgent,getAgents,getConversati
   choosePhoneAgent,getPhoneSelection,saveAgent,simulateAgent,updateAgentStatus,type NativePhoneSelection,type Agent,type AgentConversation,
   type AgentDraft,type AgentKind,type AgentMessage,type AgentStatus,type Language} from "./aiAgentsData";
 
-const C={bg:"#F9FAFC",paper:"#FFFFFF",ink:"#201C35",muted:"#817A91",
-  purple:"#8959ED",purpleDark:"#7040C8",line:"#ECE8F3",pink:"#FCE4F0",mint:"#DDF8EE"};
+const C={bg:"#FDFCFF",paper:"#FFFFFF",ink:"#171127",muted:"#817A91",
+  purple:"#8959ED",purpleDark:"#7040C8",line:"#ECE8F3",pink:"#FBE0ED",mint:"#DFFBDD"};
 type Screen="home"|"edit"|"chat"|"history"|"quality"|"commerce"|"phone"|"agenda";
 type Props={session:Session;onBack:()=>void};
 type IconName=React.ComponentProps<typeof Ionicons>["name"];
@@ -540,13 +540,13 @@ const styles=StyleSheet.create({
   headerTitle:{fontSize:24,fontWeight:"900",color:C.ink,letterSpacing:-0.9},
   headIcon:{width:43,height:43,borderRadius:17,backgroundColor:"#F1E9FF",alignItems:"center",justifyContent:"center"},
   scroll:{paddingHorizontal:20,paddingVertical:19,paddingBottom:90},
-  hero:{backgroundColor:C.purple,borderRadius:29,padding:22,marginBottom:27,overflow:"hidden"},
+  hero:{backgroundColor:"#E5D2FB",borderRadius:24,padding:22,marginBottom:27,overflow:"hidden"},
   heroTop:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
-  heroKicker:{color:"#F7EDFF",fontWeight:"900",fontSize:10,letterSpacing:1.3},
-  heroTitle:{fontSize:29,lineHeight:32,color:"#FFF",fontWeight:"900",letterSpacing:-1.1,marginTop:18},
-  heroSub:{color:"#F3E9FF",fontSize:13,lineHeight:20,marginTop:10,maxWidth:"92%"},
+  heroKicker:{color:"#68409F",fontWeight:"900",fontSize:10,letterSpacing:1.3},
+  heroTitle:{fontSize:29,lineHeight:32,color:"#181028",fontWeight:"900",letterSpacing:-1.1,marginTop:18},
+  heroSub:{color:"#4B3D64",fontSize:13,lineHeight:20,marginTop:10,maxWidth:"92%"},
   heroStats:{flexDirection:"row",gap:10,marginTop:21,flexWrap:"wrap"},
-  heroStat:{color:"#FFF",backgroundColor:"#A57BF1",overflow:"hidden",borderRadius:25,
+  heroStat:{color:"#5C378F",backgroundColor:"#FFFFFFB9",overflow:"hidden",borderRadius:25,
     paddingHorizontal:13,paddingVertical:8,fontSize:11,fontWeight:"800"},
   sectionTitle:{fontSize:20,fontWeight:"900",letterSpacing:-0.6,color:C.ink},
   help:{fontSize:12,lineHeight:18,color:C.muted,marginTop:4},
