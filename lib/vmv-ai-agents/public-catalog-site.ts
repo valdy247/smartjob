@@ -14,7 +14,7 @@ export type ApprovedInventoryProduct={
  id:string;name:string;description:string|null;price_cents:number;currency:string;
  image_path:string|null;
 };
-export function usePublishedInventory(document:Data,products:ApprovedInventoryProduct[],
+export function applyPublishedInventory(document:Data,products:ApprovedInventoryProduct[],
  owner:string,business:string,supabaseUrl:string):Data{
  const catalog=products.filter(p=>p.currency==="usd"&&p.name&&Number.isInteger(p.price_cents)&&
   p.price_cents>0).slice(0,40).map(p=>({
