@@ -387,3 +387,14 @@
 .libraryEmpty{grid-column:1/-1;margin:0;padding:20px;border:1px dashed #ddc9ed;border-radius:13px;
  font-size:12px;color:#776786;text-align:center;background:#fff}
 @media(max-width:490px){.libraryCreate{gap:7px}.libraryCreate>a{font-size:11px;padding:9px}}
+
+
+/* Shared VMV shell for Web Services; intentionally not applied to website preview canvases. */
+.workspace{--ws-accent:#8054d9;--ws-ink:#171127;background:#fdfcff}
+.topbar{background:#fdfcff;border-color:#eee5f5}
+.brand{color:#171127}
+.brand span{color:#8557db}
+.back{background:#eee1ff;color:#6e46b5;border-radius:14px}
+.siteCard,.editorSection,.subPanel{border-color:#ece4f3;border-radius:21px;background:#fff}
+.createSite{border-radius:22px}
+.workspace button:focus-visible,.workspace input:focus-visible,.workspace a:focus-visible{outline-color:#8c60db}
