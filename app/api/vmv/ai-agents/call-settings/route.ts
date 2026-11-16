@@ -126,7 +126,7 @@ export async function PUT(req:NextRequest){
   }
   if(!saved.data)return reply({error:"La configuración cambió en otra sesión. Recarga antes de guardar."},409);
   return reply({ok:true,version:saved.data.version,
-   policy:checkCallPolicy(saved.data),notice:"Guardado para la siguiente llamada. No se modificó Twilio."});
+   policy:checkCallPolicy(saved.data),notice:"Reglas guardadas en VMV. No se modificó la ruta de Twilio."});
  }catch(e){return failure(e);}
 }
 export async function POST(req:NextRequest){
