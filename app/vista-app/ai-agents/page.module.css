@@ -171,3 +171,62 @@
 .businessDialogActions button[type=submit]{background:#8958df;color:#fff;border-color:#8958df}
 .businessDialogActions button:disabled{opacity:.5;cursor:wait}
 .businessError{color:#a12d50!important;background:#fff0f3;padding:12px;border-radius:12px}
+
+
+/* One compact agent identity card. Live controls appear only on request. */
+.quickAgentCard{border:1px solid #e9e0f4;background:linear-gradient(143deg,#fff,#f8f4ff);
+ border-radius:25px;box-shadow:0 13px 30px #7763a210;padding:17px;margin-bottom:18px}
+.quickAgentTop{display:flex;align-items:center;gap:14px;min-width:0}
+.quickAgentAvatar{width:78px;height:78px;flex:none;display:grid;place-items:center;
+ border-radius:24px;background:linear-gradient(130deg,#915cea,#b291f2);
+ color:#fff;box-shadow:0 8px 17px #945ac930}
+.quickAgentIdentity{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0}
+.quickAgentIdentity small{letter-spacing:1.1px;font-size:10px;font-weight:950;color:#8f7caa}
+.quickAgentIdentity strong{font-size:clamp(19px,5.2vw,25px);font-weight:940;
+ letter-spacing:-.055em;color:#30233f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.quickAgentConnectButton{display:flex;gap:6px;align-items:center;justify-content:center;
+ border:1px solid #e6d9f6;background:#fff;color:#7951b9;border-radius:12px;
+ padding:10px 11px;min-height:40px;font:800 11px system-ui,sans-serif;cursor:pointer}
+.quickAgentConnectButton[aria-expanded=true]{background:#f0e8fb;border-color:#d8c7f0}
+.quickAgentConnections{display:flex;flex-direction:column;gap:0;padding-top:14px;margin-top:14px;
+ border-top:1px solid #e9e0ee}
+.quickAgentSwitchRow{min-height:59px;display:flex;align-items:center;gap:11px;
+ padding:8px 2px;border-bottom:1px solid #eee7f4}
+.quickAgentSwitchRow:last-of-type{border-bottom:0}
+.quickAgentRowIcon{width:34px;height:34px;display:grid;place-items:center;flex:none;
+ border-radius:11px;background:#eee7f9;color:#8856cb}
+.quickAgentRowName{flex:1;min-width:0;font-size:13px;color:#3c2e4d;font-weight:850;
+ display:flex;flex-direction:column;gap:4px}
+.quickAgentRowName small{font-weight:550;color:#867593;font-size:10px;line-height:1.3}
+.quickAgentSwitchRow>input[type=checkbox]{appearance:none;position:relative;flex:none;
+ width:45px;height:27px;border:0;border-radius:25px;cursor:pointer;
+ background:#dcd5e7;transition:background .15s}
+.quickAgentSwitchRow>input[type=checkbox]::after{content:"";position:absolute;top:3px;left:3px;
+ width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 1px 4px #36234432;
+ transition:transform .15s}
+.quickAgentSwitchRow>input[type=checkbox]:checked{background:#8b57dc}
+.quickAgentSwitchRow>input[type=checkbox]:checked::after{transform:translateX(18px)}
+.quickAgentSwitchRow>input[type=checkbox]:disabled{opacity:.48;cursor:not-allowed}
+.quickAgentSetup{border:1px solid #e2d6ef;background:#fff;color:#7d55b1;
+ border-radius:10px;padding:9px 10px;font-size:11px;font-weight:800}
+.quickAgentError{color:#b43c59;font-size:11px;line-height:1.4;padding:7px 1px}
+.quickAgentEmpty{display:flex;align-items:center;gap:12px;color:#8f62cf;
+ padding:22px;background:#fff;border:1px solid #e5d8ef;border-radius:20px;margin-bottom:15px}
+.quickAgentEmpty strong{font-size:14px;color:#4f3868}
+.quickAgentEmpty small{font-size:10px;color:#947e9e}
+.quickAgentMore{margin:3px 0 18px}
+.quickAgentMore summary{display:flex;justify-content:space-between;align-items:center;
+ padding:9px 4px;color:#866bb3;font-size:11px;font-weight:850;cursor:pointer;list-style:none}
+.quickAgentMore summary::-webkit-details-marker{display:none}
+.quickAgentMore[open] summary svg{transform:rotate(90deg)}
+.quickAgentMore .tiles{margin-top:10px;margin-bottom:10px}
+.quickAgentMore .tile{min-height:100px}
+.quickAgentMore .tile strong{font-size:12px;margin-top:13px}
+.quickAgentMore .tileIcon{width:32px;height:32px}
+.quickAgentSwitchRow>input:focus-visible,.quickAgentConnectButton:focus-visible,
+.quickAgentMore summary:focus-visible{outline:3px solid #a77de3;outline-offset:3px}
+@media(max-width:390px){.quickAgentCard{padding:12px}.quickAgentTop{gap:10px}
+ .quickAgentAvatar{width:62px;height:62px;border-radius:19px}
+ .quickAgentConnectButton{font-size:10px;padding:9px 8px}}
+@media(prefers-reduced-motion:reduce){.quickAgentSwitchRow>input[type=checkbox],
+ .quickAgentSwitchRow>input[type=checkbox]::after{transition:none}}
