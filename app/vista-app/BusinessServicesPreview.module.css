@@ -86,3 +86,15 @@ button.tile:focus-visible,.toggle button:focus-visible,.back:focus-visible,.save
 .webHubLibrary strong{font-size:14px;font-weight:900}
 .webHubLibrary small{font-size:11px;color:#837492;line-height:1.4}
 .webHubLibrary>svg:last-child{flex:none;color:#8056bd}
+
+
+/* VMV pastel catalog consistency across the Services journey. */
+.root{color:#171127}
+.tile{border-radius:21px}
+.violet,.webHubViolet{background:#e7d7ff}
+.mint,.webHubMint{background:#dff9df}
+.webHubYellow{background:#fff0ca}
+.webHubSky{background:#dceaff}
+.webHubLibrary{border-color:#eee6f4;border-radius:20px;box-shadow:0 6px 15px #2913400b}
+.webHubCard{border-radius:21px}
+.webHubTools>a,.webHubTools>button{border-radius:14px}
