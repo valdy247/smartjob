@@ -22,6 +22,8 @@ function descriptionForSearch(value:unknown,input:SiteIntake){
  return picked(value,160,backup).slice(0,160);
 }
 function ctaLink(input:SiteIntake){
+ if(input.objective==="chat")return "#vmv-chat";
+ if(input.objective==="showcase")return "#vmv-offerings";
  if(input.objective==="calls"&&/^\+?[\d ()-]{7,36}$/.test(input.phone))
   return "tel:"+input.phone.replace(/[^\d+]/g,"");
  return "#solicitud";
@@ -41,7 +43,7 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
  const base=createSiteProposals(input,family)[variant];
  const cta=ctaLink(input);
  const offerings=[...(input.products||[]).map(p=>p.title),...input.offerings].filter(Boolean).slice(0,5);
- const contactLabel=input.objective==="calls"?"Llámanos":input.objective==="bookings"?"Solicitar cita":
+ const contactLabel=input.objective==="chat"?"Hablar por chat":input.objective==="showcase"?"Ver productos":input.objective==="calls"?"Llámanos":input.objective==="bookings"?"Solicitar cita":
   input.objective==="quotes"?"Solicitar presupuesto":"Consultar pedido";
  let content=(base.data.content as Array<{type:string;props:Record<string,unknown>}>).map(item=>{
   const props={...item.props};
@@ -202,7 +204,7 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
   rootProps.accentColor=prefs.colors[0];
   rootProps.secondaryColor=prefs.colors[1];
   rootProps.tertiaryColor=prefs.colors[2];
-  rootProps.chatMode=prefs.chatMode;
+  rootProps.chatMode=input.objective==="chat"?"inbox":prefs.chatMode;
   rootProps.style=({minimal:"light",bold:"bold",editorial:"editorial",warm:"warm"} as Record<string,string>)[prefs.mood||"minimal"]||"light";
   rootProps.width=prefs.spacing==="airy"?"wide":"regular";
  }
