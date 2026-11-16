@@ -30,6 +30,7 @@ export async function POST(req:NextRequest){
   const agentId=String(body.agentId||"");
   const conversationId=String(body.conversationId||"");
   const message=typeof body.message==="string"?body.message.trim():"";
+  const phonePreview=body.phonePreview===true;
   if(!uuid.test(agentId)||!uuid.test(conversationId)||message.length<1||message.length>1000)
     return fail("Comprueba el agente, la conversación y el mensaje.",400);
 
@@ -81,7 +82,9 @@ export async function POST(req:NextRequest){
     custom:"Ayuda exclusivamente dentro de la finalidad aprobada por la empresa."
   };
   const style=configuration.response_style;
-  const responseGuide=style==="brief"?"Responde en una o dos frases breves.":
+  const responseGuide=phonePreview?
+    "SIMULACIÓN DE ATENCIÓN TELEFÓNICA: habla como si el cliente estuviera al teléfono. Responde directamente en tono natural, en UNA o DOS frases de máximo 40 palabras. No uses listas numeradas, viñetas, Markdown, títulos ni textos largos. Evita ofrecer todo el catálogo de una vez. Menciona solo lo necesario para resolver la pregunta y haz como máximo una pregunta breve de seguimiento. Los datos de existencias manuales requieren confirmación. No afirmes que esta simulación es una llamada real.":
+    style==="brief"?"Responde en una o dos frases breves.":
    style==="detailed"?"Da una respuesta clara con detalles útiles, sin inventar datos.":
    "Responde con equilibrio entre claridad y brevedad.";
   const system=[
@@ -96,7 +99,9 @@ export async function POST(req:NextRequest){
     "Solo puedes conversar y orientar. Nunca puedes modificar existencias, preparar pedidos, cobrar ni confirmar citas desde este simulador.",
     configuration.cap_catalog==="Sí"?
      (catalog.length?
-      "Inventario conectado: tienes acceso a "+catalog.length+" producto(s) activos y aprobados. Ante preguntas sobre qué venden, enumera los productos presentes y sus precios aprobados. No digas que no tienes acceso al catálogo si aparece información aquí. Si un producto indica disponibilidad manual, explica que existe en catálogo pero que deben confirmar sus unidades antes de prometer entrega. Prioriza los datos actuales frente a respuestas antiguas en la conversación.":
+      (phonePreview?
+       "Inventario conectado: puedes consultar "+catalog.length+" productos aprobados. Si preguntan qué vende el negocio, responde con uno o dos ejemplos concretos como máximo, y pregunta cuál interesa. Da precios solo de productos específicos solicitados; no anuncies cantidades de stock ni listas extensas por iniciativa propia. Las disponibilidades manuales deben confirmarse. No inventes ni niegues el catálogo aprobado.":
+       "Inventario conectado: tienes acceso a "+catalog.length+" producto(s) activos y aprobados. Ante preguntas sobre qué venden, enumera los productos presentes y sus precios aprobados. No digas que no tienes acceso al catálogo si aparece información aquí. Si un producto indica disponibilidad manual, explica que existe en catálogo pero que deben confirmar sus unidades antes de prometer entrega. Prioriza los datos actuales frente a respuestas antiguas en la conversación."):
       "El permiso del inventario está activado, pero ahora mismo no hay productos activos y aprobados visibles. No inventes productos ni precios."):
      "No está autorizado el acceso al catálogo en esta conversación. Invita al propietario a conectar el inventario desde AI Agents, sin adivinar productos.",
     "Catálogo autorizado de este negocio, consultado ahora (sin límite significa configuración del negocio, disponibilidad manual requiere confirmación, cantidad descontados apartados):\n"+JSON.stringify(catalog).slice(0,18000),
@@ -111,7 +116,7 @@ export async function POST(req:NextRequest){
     const reply=(await askAiAgent({
       system,
       messages:[...history,{role:"user" as const,content:message}],
-      maxOutputTokens:450,temperature:0.25,timeoutMs:12000
+      maxOutputTokens:phonePreview?190:450,temperature:0.25,timeoutMs:12000
     })).slice(0,3500);
     if(!reply)return fail("El agente no pudo responder.",502);
     const {error:saveError}=await db.from("vmv_ai_messages").insert({
