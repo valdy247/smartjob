@@ -11,6 +11,7 @@ import BusinessProfileDialog from "./BusinessProfileDialog";
 import AgentSetupWizard,{type WizardDraft} from "./AgentSetupWizard";
 import AgentQualityLab from "./AgentQualityLab";
 import CommerceStudio from "./CommerceStudio";
+import AgentQuickConnections from "./AgentQuickConnections";
 import BookingStudio from "./BookingStudio";
 import CallControl from "./CallControl";
 import AgentLiveTest from "./AgentLiveTest";
@@ -350,46 +351,32 @@ export default function AIAgentsPreview(){
      {authenticated?<>
      {screen!=="home"&&notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
      {screen==="home"?<>
-      <div className={styles.hero}>
-       <div className={styles.heroEyebrow}><span>UN AGENTE POR NEGOCIO</span><Sparkles size={22}/></div>
-       <h1>Un agente.<br/>Todas tus funciones.</h1>
-       <div className={styles.heroPills}><span>{principal?"Principal: "+principal.name:proposal?"Elige tu agente":"Sin configurar"}</span></div>
-      </div>
+      {principal||proposal?
+       <AgentQuickConnections key={(principal||proposal)!.id}
+        agent={(principal||proposal)!} phone={phone}
+        onUpdated={updated=>setAgents(previous=>previous.map(item=>
+         item.id===updated.id?updated:item))}
+        onConfigureCalls={()=>{setSelected((principal||proposal)!.id);setScreen("phone");}}/>:
+       <div className={styles.quickAgentEmpty}>
+        <Bot size={32}/>
+        <strong>Mi agente</strong><small>Aún no tienes uno seleccionado.</small>
+       </div>}
       {notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
-      <div className={styles.sectionHeading}><div><h2>Tu agente: {principal?.name||proposal?.name||"Sin configurar"}</h2>
-       <p>{selectedBusiness?.name||"Selecciona tu negocio"}</p></div></div>
-      <div className={styles.sectionHeading}><div><h2>Capacidades de tu agente</h2>
-       </div></div>
-      <div className={styles.tiles}>
-       {types.map(type=>{const label=({
-        calls:"Llamadas",support:"Chat web",sales:"Ventas",bookings:"Reservas",
-        inventory:"Catálogo e inventario",operations:"Actividad",custom:"Identidad"
-       } as Record<Kind,string>)[type.id];
-       const configured=principal?.setup||{};
-       const status=!principal?"Sin configurar":
-        type.id==="calls"?(phone?.agentId===principal.id&&phone.serverEnrolled?
-         "Lista para probar":phone?.agentId===principal.id?"Requiere atención":"Sin configurar"):
-        type.id==="support"?"Requiere atención":
-        type.id==="inventory"?(configured.cap_catalog==="Sí"?"Requiere atención":"Sin configurar"):
-        type.id==="sales"?(configured.cap_sales==="Sí"?"Requiere atención":"Sin configurar"):
-        type.id==="bookings"?(configured.cap_bookings==="Sí"?"Requiere atención":"Sin configurar"):
-        "Lista para probar";
-       const detail=({
-        calls:"Número, horarios y traducción; falta prueba real",
-        support:"Chat público pendiente · prueba privada disponible",
-        sales:"Precios, permisos y pagos por verificar",
-        bookings:"Agenda y disponibilidad por comprobar",
-        inventory:"Catálogo y existencias autorizadas",
-        operations:"Historial y calidad del mismo agente",
-        custom:"Nombre, voz, idioma y personalidad"
-       } as Record<Kind,string>)[type.id];
-       return <button type="button" key={type.id} className={styles.tile}
-          style={{background:type.bg,color:type.fg}} onClick={()=>void start(type.id)} aria-label={label+" · "+status+". "+detail}>
-          <span className={styles.tileIcon}><type.Icon size={24}/></span>
-          <strong>{label}</strong><small>{status}</small>
-       </button>})}
-      </div>
-      <div className={styles.sectionHeading}><h2>Agentes existentes {principal?"y principal":""}</h2><span className={styles.agentCounter}>{visibleAgents.length}</span></div>
+      <details className={styles.quickAgentMore}>
+       <summary>Más funciones <ChevronRight size={15}/></summary>
+       <div className={styles.tiles}>
+        {types.map(type=>{const label=({
+         calls:"Llamadas",support:"Chat web",sales:"Ventas",bookings:"Reservas",
+         inventory:"Catálogo e inventario",operations:"Actividad",custom:"Identidad"
+        } as Record<Kind,string>)[type.id];
+        return <button type="button" key={type.id} className={styles.tile}
+         style={{background:type.bg,color:type.fg}} onClick={()=>void start(type.id)}>
+         <span className={styles.tileIcon}><type.Icon size={21}/></span>
+         <strong>{label}</strong>
+        </button>})}
+       </div>
+      </details>
+      <div className={styles.sectionHeading}><h2>Administrar agentes</h2><span className={styles.agentCounter}>{visibleAgents.length}</span></div>
       {visibleAgents.length===0?<div className={styles.empty}>
        <Bot size={30}/><strong>Aquí vivirán tus agentes</strong>
        
