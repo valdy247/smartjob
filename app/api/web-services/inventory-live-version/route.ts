@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from "next/server";
 import {createClient} from "@supabase/supabase-js";
 import {publishedCatalogVersion} from "@/lib/vmv-ai-agents/public-catalog-version";
+import {resolveInventoryForPublishedSite} from "@/lib/vmv-ai-agents/site-inventory-resolution";
 
 export const dynamic="force-dynamic";
 const validSlug=/^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -19,21 +20,15 @@ export async function GET(request:NextRequest){
  if(!url||!publicKey||!secret)return json({error:"unavailable"},503);
  const anon=createClient(url,publicKey,{auth:{persistSession:false,autoRefreshToken:false}});
  const {data:page,error:pageError}=await anon.from("smartjob_builder_public_pages")
-  .select("site_id,owner_id").eq("site_slug",slug).limit(1).maybeSingle();
+  .select("site_id,owner_id,site_name").eq("site_slug",slug).limit(1).maybeSingle();
  if(pageError||!page)return json({error:"not_found"},404);
  const server=createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}});
- const {data:site,error:siteError}=await server.from("smartjob_builder_sites")
-  .select("inventory_business_id").eq("id",page.site_id)
-  .eq("owner_id",page.owner_id).maybeSingle();
- if(siteError)return json({error:"unavailable"},503);
- if(!site?.inventory_business_id)return json({linked:false,version:null});
- const {data:business,error:businessError}=await server.from("vmv_ai_businesses")
-  .select("id").eq("id",site.inventory_business_id)
-  .eq("owner_id",page.owner_id).maybeSingle();
- if(businessError||!business)return json({error:"unavailable"},503);
+ const businessId=await resolveInventoryForPublishedSite(
+  server,page.site_id,page.owner_id,page.site_name||"");
+ if(!businessId)return json({linked:false,version:null});
  const {data:items,error:itemsError}=await server.from("vmv_ai_catalog_items")
   .select("id,updated_at").eq("owner_id",page.owner_id)
-  .eq("business_id",business.id).eq("active",true).eq("approved",true)
+  .eq("business_id",businessId).eq("active",true).eq("approved",true)
   .order("name",{ascending:true}).limit(40);
  if(itemsError)return json({error:"unavailable"},503);
  return json({linked:true,version:publishedCatalogVersion(items||[])});
