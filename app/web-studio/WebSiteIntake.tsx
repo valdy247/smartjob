@@ -1,7 +1,7 @@
 "use client";
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {useEffect,useMemo,useRef,useState,type FormEvent} from "react";
-import {ArrowRight,CalendarDays,Check,ClipboardList,FileText,Layers3,PhoneCall,Plus,Search,ShieldCheck,ShoppingBag,Store,X} from "lucide-react";
+import {ArrowRight,CalendarDays,ChevronDown,ClipboardList,FileText,Layers3,PhoneCall,Plus,Search,ShieldCheck,ShoppingBag,Store,X} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
@@ -35,16 +35,16 @@ function ownImageFilename(value:string,ownerId:string):string{
  return asset.startsWith(ownerId+"/")?asset.slice(ownerId.length+1):"";
 }
 
-const offeringOptions:{id:SiteOffering;title:string;hint:string;Icon:typeof ShoppingBag}[]=[
- {id:"products",title:"Productos",hint:"Catálogo y consultas",Icon:ShoppingBag},
- {id:"services",title:"Servicios",hint:"Especialidades y contacto",Icon:Store},
- {id:"both",title:"Ambos",hint:"Productos y servicios",Icon:Layers3}
+const offeringOptions:{id:SiteOffering;title:string}[]=[
+ {id:"products",title:"Productos"},
+ {id:"services",title:"Servicios"},
+ {id:"both",title:"Ambos"}
 ];
-const goals:{id:SiteObjective;label:string;details:string;Icon:typeof PhoneCall}[]=[
- {id:"calls",label:"Recibir llamadas",details:"Botón de llamada",Icon:PhoneCall},
- {id:"quotes",label:"Pedir presupuestos",details:"Formulario de consulta",Icon:FileText},
- {id:"bookings",label:"Solicitar citas",details:"Solicitud, no agenda automática",Icon:CalendarDays},
- {id:"orders",label:"Consultar pedidos",details:"Solicitud, sin cobro",Icon:ClipboardList}
+const goals:{id:SiteObjective;label:string}[]=[
+ {id:"calls",label:"Recibir llamadas"},
+ {id:"quotes",label:"Pedir presupuestos"},
+ {id:"bookings",label:"Solicitar citas"},
+ {id:"orders",label:"Consultar pedidos"}
 ];
 export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const [name,setName]=useState("");
@@ -337,26 +337,16 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
    generated={mode==="ai"?aiProposal:null} busy={busy} onBack={()=>setStage("details")}
    onChoose={proposal=>onChoose(intake,proposal)}/>;
  return <section className={`${styles.root} ${step===1?styles.offeringsRoot:""}`}>
-  {step===1?<header className={styles.offeringsIntro}>
-   <div className={styles.offeringsBrandRow}>
-    <div className={styles.offeringsBrand}>
-     <span className={styles.offeringsBrandMark} aria-hidden="true">V</span>
-     <strong>VMV Business</strong>
+  {step===1?<header className={styles.compactIntro}>
+   <div className={styles.compactProgress}>
+    <span>PASO 02 DE 04</span>
+    <div role="progressbar" aria-label="Progreso de creación"
+     aria-valuemin={0} aria-valuemax={4} aria-valuenow={step+1}>
+     {stepLabels.map((label,i)=><span key={label}
+      data-state={i<step?"done":i===step?"current":"upcoming"}/>)}
     </div>
-    <span className={styles.offeringsBag} aria-hidden="true">
-     <ShoppingBag size={33} strokeWidth={1.8}/>
-    </span>
    </div>
-   <div className={styles.offeringsProgress} role="progressbar" aria-label="Progreso de creación"
-    aria-valuemin={0} aria-valuemax={4} aria-valuenow={step+1}>
-    {stepLabels.map((label,i)=><span key={label} className={styles.offeringsStage}
-     data-state={i<step?"done":i===step?"current":"upcoming"}
-     aria-hidden="true">
-     <span className={styles.offeringsStageDot}>{i<step?<Check size={15} strokeWidth={3}/>:i===step?String(i+1).padStart(2,"0"):""}</span>
-    </span>)}
-   </div>
-   <h2>Qué ofreces</h2>
-   <p>Cuéntanos qué ofreces en tu negocio para personalizar tu experiencia.</p>
+   <h2>¿Qué ofreces?</h2>
   </header>:<div className={styles.intro}>
    <a href="/web-studio?mode=sites" className={styles.backLink}>‹ Mis sitios</a>
    <span className={styles.stepMeta}>Paso {step+1} de 4</span>
@@ -385,26 +375,35 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
      placeholder="¿Qué hace tu negocio? Incluye solamente información real." onChange={e=>setAbout(e.target.value)}/></label>
    </div>:null}
    {step===1?<div className={styles.offeringsPanel}>
-    <h3 className={styles.offeringsSectionTitle}>¿Qué ofreces?</h3>
-    <div className={styles.offeringsChoices} role="group" aria-label="Tipo de productos o servicios">
-     {offeringOptions.map(item=><button key={item.id} type="button" className={styles.offeringCard}
-      data-active={kind===item.id} aria-pressed={kind===item.id}
-      onClick={()=>{setKind(item.id);setError("");}}>
-      <span className={styles.offeringIcon}><item.Icon size={28} strokeWidth={1.9}/></span>
-      <strong>{item.title}</strong>
-      <small>{item.hint}</small>
-      {kind===item.id?<span className={styles.offeringCheck} aria-hidden="true"><Check size={15} strokeWidth={3}/></span>:null}
-     </button>)}
+    <div className={styles.compactSelectField}>
+     <div className={styles.compactPicker}>
+      <span className={styles.compactIcon} aria-hidden="true">
+       {kind==="products"?<ShoppingBag size={25} strokeWidth={1.9}/>:
+        kind==="both"?<Layers3 size={25} strokeWidth={1.9}/>:
+        <Store size={25} strokeWidth={1.9}/>}
+      </span>
+      <select id="vmv-web-offering" aria-label="¿Qué ofreces?"
+       value={kind} onChange={event=>{setKind(event.target.value as SiteOffering);setError("");}}>
+       {offeringOptions.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}
+      </select>
+      <ChevronDown className={styles.compactChevron} size={23} strokeWidth={2.4} aria-hidden="true"/>
+     </div>
     </div>
-    <h3 className={styles.offeringsSectionTitle}>Objetivo principal</h3>
-    <div className={styles.goalChoices} role="group" aria-label="Objetivo principal">
-     {goals.map(item=><button key={item.id} type="button" className={styles.goalCard}
-      data-active={goal===item.id} aria-pressed={goal===item.id}
-      onClick={()=>setGoal(item.id)}>
-      <span className={styles.goalIcon}><item.Icon size={24} strokeWidth={1.9}/></span>
-      <span className={styles.goalCopy}><strong>{item.label}</strong><small>{item.details}</small></span>
-      {goal===item.id?<span className={styles.goalCheck} aria-hidden="true"><Check size={14} strokeWidth={3}/></span>:null}
-     </button>)}
+    <div className={styles.compactSelectField}>
+     <label htmlFor="vmv-web-goal">Objetivo principal</label>
+     <div className={styles.compactPicker}>
+      <span className={styles.compactIcon} aria-hidden="true">
+       {goal==="calls"?<PhoneCall size={24} strokeWidth={1.9}/>:
+        goal==="bookings"?<CalendarDays size={24} strokeWidth={1.9}/>:
+        goal==="orders"?<ClipboardList size={24} strokeWidth={1.9}/>:
+        <FileText size={24} strokeWidth={1.9}/>}
+      </span>
+      <select id="vmv-web-goal" value={goal}
+       onChange={event=>setGoal(event.target.value as SiteObjective)}>
+       {goals.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}
+      </select>
+      <ChevronDown className={styles.compactChevron} size={23} strokeWidth={2.4} aria-hidden="true"/>
+     </div>
     </div>
     <div hidden={kind==="services"}>
      <WebInventoryPicker ownerId={ownerId} businessName={name}
