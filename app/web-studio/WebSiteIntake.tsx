@@ -1,7 +1,7 @@
 "use client";
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {useEffect,useMemo,useRef,useState,type FormEvent} from "react";
-import {ArrowRight,CalendarDays,ChevronDown,ClipboardList,FileText,Layers3,PhoneCall,Plus,Search,ShieldCheck,ShoppingBag,Store,X} from "lucide-react";
+import {ArrowRight,CalendarDays,ClipboardList,FileText,Layers3,PhoneCall,Plus,Search,ShieldCheck,ShoppingBag,Store,X} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
@@ -10,6 +10,7 @@ import BuilderImageField from "./BuilderImageField";
 import TemplateProposals from "./TemplateProposals";
 import WebIntakeProducts,{type ProductSaveStatus} from "./WebIntakeProducts";
 import WebInventoryPicker,{type InventoryLoadStatus} from "./WebInventoryPicker";
+import InlinePastelSelect from "./InlinePastelSelect";
 import WebIntakeSocials,{type SocialSaveStatus} from "./WebIntakeSocials";
 import {EMPTY_SOCIAL_LINKS,SOCIAL_PLATFORMS,normalizeSocialLinks,normalizeSocialUrl,type BusinessSocialLinks} from "@/lib/web-builder-social";
 import styles from "./WebSiteIntake.module.css";
@@ -375,36 +376,19 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
      placeholder="¿Qué hace tu negocio? Incluye solamente información real." onChange={e=>setAbout(e.target.value)}/></label>
    </div>:null}
    {step===1?<div className={styles.offeringsPanel}>
-    <div className={styles.compactSelectField}>
-     <div className={styles.compactPicker}>
-      <span className={styles.compactIcon} aria-hidden="true">
-       {kind==="products"?<ShoppingBag size={25} strokeWidth={1.9}/>:
-        kind==="both"?<Layers3 size={25} strokeWidth={1.9}/>:
-        <Store size={25} strokeWidth={1.9}/>}
-      </span>
-      <select id="vmv-web-offering" aria-label="¿Qué ofreces?"
-       value={kind} onChange={event=>{setKind(event.target.value as SiteOffering);setError("");}}>
-       {offeringOptions.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}
-      </select>
-      <ChevronDown className={styles.compactChevron} size={23} strokeWidth={2.4} aria-hidden="true"/>
-     </div>
-    </div>
-    <div className={styles.compactSelectField}>
-     <label htmlFor="vmv-web-goal">Objetivo principal</label>
-     <div className={styles.compactPicker}>
-      <span className={styles.compactIcon} aria-hidden="true">
-       {goal==="calls"?<PhoneCall size={24} strokeWidth={1.9}/>:
-        goal==="bookings"?<CalendarDays size={24} strokeWidth={1.9}/>:
-        goal==="orders"?<ClipboardList size={24} strokeWidth={1.9}/>:
-        <FileText size={24} strokeWidth={1.9}/>}
-      </span>
-      <select id="vmv-web-goal" value={goal}
-       onChange={event=>setGoal(event.target.value as SiteObjective)}>
-       {goals.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}
-      </select>
-      <ChevronDown className={styles.compactChevron} size={23} strokeWidth={2.4} aria-hidden="true"/>
-     </div>
-    </div>
+    <InlinePastelSelect label="¿Qué ofreces?" value={kind}
+     options={offeringOptions.map(item=>({id:item.id,label:item.title}))}
+     icon={kind==="products"?<ShoppingBag size={25} strokeWidth={1.9}/>:
+      kind==="both"?<Layers3 size={25} strokeWidth={1.9}/>:
+      <Store size={25} strokeWidth={1.9}/>}
+     onChange={next=>{setKind(next as SiteOffering);setError("");}}/>
+    <InlinePastelSelect label="Objetivo principal" showLabel value={goal}
+     options={goals.map(item=>({id:item.id,label:item.label}))}
+     icon={goal==="calls"?<PhoneCall size={24} strokeWidth={1.9}/>:
+      goal==="bookings"?<CalendarDays size={24} strokeWidth={1.9}/>:
+      goal==="orders"?<ClipboardList size={24} strokeWidth={1.9}/>:
+      <FileText size={24} strokeWidth={1.9}/>}
+     onChange={next=>setGoal(next as SiteObjective)}/>
     <div hidden={kind==="services"}>
      <WebInventoryPicker ownerId={ownerId} businessName={name}
       selectedBusinessId={inventoryBusinessId} onSelect={setInventoryBusinessId}
