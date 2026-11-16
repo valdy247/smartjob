@@ -6,6 +6,7 @@ import {Render} from "@puckeditor/core";
 import {builderConfig,normalizeBuilderDocument} from "@/lib/web-builder-puck";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import {familyForCategory} from "@/lib/web-builder-templates";
+import {applyPublishedInventory,type ApprovedInventoryProduct} from "@/lib/vmv-ai-agents/public-catalog-site";
 import {WebsiteChrome,websiteVisualStyle} from "@/lib/web-site-chrome";
 import type {CSSProperties} from "react";
 import RequestForm from "@/app/sites/[slug]/RequestForm";
@@ -23,13 +24,38 @@ async function findPage(slug:string,part:string){
  const client=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
  const [page,menu]=await Promise.all([
   client.from("smartjob_builder_public_pages")
-   .select("site_name,title,description,document,site_slug,page_slug,inquiries_enabled,category_id")
+   .select("site_id,owner_id,site_name,title,description,document,site_slug,page_slug,inquiries_enabled,category_id")
    .eq("site_slug",slug).eq("page_slug",part).maybeSingle(),
   client.from("smartjob_builder_public_pages")
    .select("title,page_slug").eq("site_slug",slug).order("page_slug")
  ]);
  if(page.error||menu.error||!page.data)return null;
  return {page:page.data,menu:menu.data||[]};
+}
+/** An explicitly linked inventory is read server-side, never by an AI agent.
+ * The public visitor cannot access the owner's private catalog API.
+ * Fail closed when a linked business cannot be verified.
+ */
+async function publishedInventory(siteId:string,ownerId:string):Promise<
+ {businessId:string;products:ApprovedInventoryProduct[]}|null>{
+ const base=process.env.NEXT_PUBLIC_SUPABASE_URL;
+ const secret=process.env.SUPABASE_SECRET_KEY;
+ if(!base||!secret)return null;
+ const db=createClient(base,secret,{auth:{persistSession:false,autoRefreshToken:false}});
+ const {data:site,error:siteError}=await db.from("smartjob_builder_sites")
+  .select("inventory_business_id").eq("id",siteId).eq("owner_id",ownerId).maybeSingle();
+ if(siteError||!site?.inventory_business_id)return null;
+ const businessId=String(site.inventory_business_id);
+ const {data:business,error:businessError}=await db.from("vmv_ai_businesses")
+  .select("id").eq("id",businessId).eq("owner_id",ownerId).maybeSingle();
+ if(businessError||!business)return {businessId,products:[]};
+ const {data:products,error}=await db.from("vmv_ai_catalog_items")
+  .select("id,name,description,price_cents,currency,image_path")
+  .eq("owner_id",ownerId).eq("business_id",businessId)
+  .eq("approved",true).eq("active",true)
+  .order("name",{ascending:true}).limit(40);
+ // Empty rather than stale image/card data on failure.
+ return {businessId,products:error?[]:(products||[]) as ApprovedInventoryProduct[]};
 }
 export async function generateMetadata({params}:Props):Promise<Metadata>{
  const {slug,page=[]}=await params;
@@ -73,7 +99,10 @@ export default async function VMVPublishedPage({params}:Props){
  const custom=requestHeaders.get("x-vmv-custom-domain")==="1";
  const base=custom?"":"/web/"+slug;
  const siteName=result.page.site_name||slug.replace(/-/g," ");
- const data=normalizeBuilderDocument(result.page.document);
+ const original=normalizeBuilderDocument(result.page.document);
+ const inventory=await publishedInventory(result.page.site_id,result.page.owner_id);
+ const data=inventory?applyPublishedInventory(original,inventory.products,result.page.owner_id,
+  inventory.businessId,process.env.NEXT_PUBLIC_SUPABASE_URL||""):original;
  const classicServices=data.content.filter(b=>b.type==="Services").flatMap(b=>
   ["first","second","third"].map(k=>b.props?.[k]).filter((s):s is string=>typeof s==="string"&&Boolean(s.trim())));
  const visualServices=data.content.filter(b=>b.type==="OfferingGrid").flatMap(b=>
