@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
 import {
- ArrowLeft,ArrowUpRight,Bot,BookOpen,BookCheck,BriefcaseBusiness,CalendarDays,Check,
+ ArrowLeft,ArrowUpRight,Bot,BookOpen,BookCheck,BriefcaseBusiness,CalendarDays,Check,Store,
  ChevronRight,ClipboardList,Headphones,MessageCircle,Package,PauseCircle,
  PhoneCall,PlayCircle,ShieldCheck,ShoppingBag,Sparkles,WandSparkles
 } from "lucide-react";
@@ -51,7 +51,7 @@ export default function AIAgentsPreview(){
  const [linkBusy,setLinkBusy]=useState(false);
  const [businessDialog,setBusinessDialog]=useState(false);
  const [pendingKind,setPendingKind]=useState<Kind|null>(null);
- const [commerceTab,setCommerceTab]=useState<"setup"|"catalog">("catalog");
+ const [commerceTab,setCommerceTab]=useState<"setup"|"catalog"|"services">("catalog");
  const [phone,setPhone]=useState<PhoneSelection|null>(null);
  const [pilotChecks,setPilotChecks]=useState<{key:string;label:string;ok:boolean}[]|null>(null);
  const [pilotChecking,setPilotChecking]=useState(false);
@@ -374,6 +374,16 @@ export default function AIAgentsPreview(){
          <span className={styles.tileIcon}><type.Icon size={21}/></span>
          <strong>{label}</strong>
         </button>})}
+        <button type="button" className={styles.tile}
+         style={{background:"#e8d8fb",color:"#7140ac"}}
+         onClick={()=>{
+          const ownerAgent=principal||visibleAgents.find(a=>a.revision>0);
+          if(!ownerAgent){setNotice("Crea un agente del negocio para abrir sus servicios.");return;}
+          setSelected(ownerAgent.id);setCommerceTab("services");setScreen("commerce");
+         }}>
+         <span className={styles.tileIcon}><Store size={21}/></span>
+         <strong>Servicios</strong>
+        </button>
        </div>
       </details>
       <details className={styles.quickAgentMore} open={!principal&&!proposal}>
