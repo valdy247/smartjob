@@ -1155,7 +1155,7 @@ export default function App(){
     <Ionicons name="globe-outline" size={16} color="#FFFFFF"/>
     <Text style={{color:"#FFFFFF",fontSize:11,fontWeight:"800"}}>Preview</Text>
    </Pressable>:null}
-  {session&&activationProfile&&activationProfile.id===session.user.id&&!activationProfile.plan_prompt_seen?
+  {(!WEB_BETA_ENABLED||nativeBetaMode)&&session&&activationProfile&&activationProfile.id===session.user.id&&!activationProfile.plan_prompt_seen?
    <NativeActivation session={session} profile={activationProfile} onComplete={setActivationProfile}/>:null}
   <Modal visible={!!invite||!!call} animationType="fade" presentationStyle="fullScreen"
     onRequestClose={()=>{}}>
