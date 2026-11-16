@@ -18,7 +18,7 @@ function intakeFromBody(value:unknown):SiteIntake|null{
  const v=asRecord(value);
  const business=str(v.business,100),categoryId=str(v.categoryId,60);
  if(business.length<2||!BUSINESS_CATEGORIES.some(item=>item.id===categoryId))return null;
- const objective=["calls","quotes","bookings","orders"].includes(String(v.objective))?
+ const objective=["chat","showcase","calls","quotes","bookings","orders"].includes(String(v.objective))?
   v.objective as SiteIntake["objective"]:"quotes";
  const offering=["products","services","both"].includes(String(v.offering))?
   v.offering as SiteIntake["offering"]:"services";
