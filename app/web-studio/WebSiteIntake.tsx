@@ -7,6 +7,7 @@ import {safeWebImageUrl} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
 import {FAMILIES,familyForCategory,type SiteFamily,type SiteIntake,type SiteProduct,type SiteOffering,type SiteObjective,type SiteProposal} from "@/lib/web-builder-templates";
 import BuilderImageField from "./BuilderImageField";
+import WebIntakeGallery,{type GalleryColumns} from "./WebIntakeGallery";
 import TemplateProposals from "./TemplateProposals";
 import WebIntakeProducts,{type ProductSaveStatus} from "./WebIntakeProducts";
 import WebInventoryPicker,{type InventoryLoadStatus} from "./WebInventoryPicker";
@@ -58,6 +59,14 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const [about,setAbout]=useState("");
  const [logo,setLogo]=useState("");
  const [photos,setPhotos]=useState<string[]>(["",""]);
+ const [galleryUrls,setGalleryUrls]=useState<string[]>([]);
+ const [galleryColumns,setGalleryColumns]=useState<GalleryColumns>(2);
+ const [gallerySaving,setGallerySaving]=useState(false);
+ const [galleryUploading,setGalleryUploading]=useState(false);
+ const [galleryError,setGalleryError]=useState("");
+ const galleryQueue=useRef<Promise<void>>(Promise.resolve());
+ const galleryPending=useRef(0);
+ const galleryActive=useRef(true);
  const [mediaReady,setMediaReady]=useState(false);
  const [mediaSaving,setMediaSaving]=useState(false);
  const [mediaMessage,setMediaMessage]=useState("");
@@ -116,6 +125,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  useEffect(()=>{
   let alive=true;
   mediaActive.current=true;
+  galleryActive.current=true;
   setMediaReady(false);setMediaError("");setMediaMessage("");
   void(async()=>{
    const client=getSupabase();if(!client){if(alive)setMediaError("No se pudo cargar tu biblioteca.");return;}
@@ -128,7 +138,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
     client.from("smartjob_profiles").select("business_name,phone,city,state").eq("id",ownerId).maybeSingle(),
     client.from("smartjob_business_category_preferences").select("category_id").eq("owner_id",ownerId).maybeSingle(),
     client.from("smartjob_web_sites").select("draft").eq("owner_id",ownerId).maybeSingle(),
-    client.from("smartjob_web_intake_media").select("logo_url,cover_url,work_url")
+    client.from("smartjob_web_intake_media").select("logo_url,cover_url,work_url,gallery_urls,gallery_columns")
      .eq("owner_id",ownerId).maybeSingle()
    ]);
    if(!alive)return;
@@ -150,12 +160,12 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
      // The old classic draft may contain photos the owner already deleted.
      // Do NOT auto-reimport its logo/gallery. Empty slots are intentional.
      const inserted=await client.from("smartjob_web_intake_media")
-      .insert({owner_id:ownerId,...EMPTY_MEDIA}).select("logo_url,cover_url,work_url").single();
+      .insert({owner_id:ownerId,...EMPTY_MEDIA}).select("logo_url,cover_url,work_url,gallery_urls,gallery_columns").single();
      if(inserted.error){
       // A second tab may have initialized the row first; read its authoritative values.
       if(inserted.error.code!=="23505")throw new Error("No se pudo preparar el guardado de imágenes.");
       const current=await client.from("smartjob_web_intake_media")
-       .select("logo_url,cover_url,work_url").eq("owner_id",ownerId).single();
+       .select("logo_url,cover_url,work_url,gallery_urls,gallery_columns").eq("owner_id",ownerId).single();
       if(current.error)throw new Error("No se pudieron recuperar tus fotos.");
       row=current.data;
      }else row=inserted.data;
@@ -185,12 +195,18 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
     if(!alive)return;
     mediaRef.current=cleaned;
     setLogo(cleaned.logo_url);setPhotos([cleaned.cover_url,cleaned.work_url]);
+    setGalleryUrls((Array.isArray(row?.gallery_urls)?row.gallery_urls:[])
+     .filter((url:string)=>Boolean(safeWebImageUrl(url)&&ownImageFilename(url,ownerId)))
+     .slice(0,24));
+    setGalleryColumns(([1,2,3] as number[]).includes(row?.gallery_columns)?
+     row.gallery_columns as GalleryColumns:2);
+    setGalleryError("");
     setMediaReady(true);
    }catch(e){
     if(alive)setMediaError(e instanceof Error?e.message:"No se pudieron cargar las fotos.");
    }
   })();
-  return()=>{alive=false;mediaActive.current=false;};
+  return()=>{alive=false;mediaActive.current=false;galleryActive.current=false;};
  },[ownerId]);
 
  function saveMedia(patch:Partial<MediaSelection>){
@@ -228,6 +244,41 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
   });
  }
 
+ function saveGallery(nextImages:string[],nextColumns:GalleryColumns){
+  if(!mediaReady||gallerySaving||galleryUploading)return;
+  const valid=nextImages.filter(url=>Boolean(safeWebImageUrl(url)&&ownImageFilename(url,ownerId)))
+   .slice(0,24);
+  if(valid.length!==nextImages.length){setGalleryError("Las fotos deben pertenecer a tu biblioteca.");return;}
+  const cols=([1,2,3] as number[]).includes(nextColumns)?nextColumns:2;
+  const previousImages=galleryUrls,previousColumns=galleryColumns;
+  setGalleryUrls(valid);setGalleryColumns(cols);setGallerySaving(true);setGalleryError("");
+  galleryPending.current++;
+  galleryQueue.current=galleryQueue.current.catch(()=>{}).then(async()=>{
+   try{
+    const client=getSupabase();if(!client)throw Error("No se pudo guardar la galería.");
+    const {data:auth,error:authError}=await client.auth.getUser();
+    if(authError||!auth.user||auth.user.is_anonymous||auth.user.id!==ownerId)
+     throw Error("Tu sesión expiró. Inicia sesión de nuevo.");
+    const {data,error}=await client.from("smartjob_web_intake_media")
+     .update({gallery_urls:valid,gallery_columns:cols,updated_at:new Date().toISOString()})
+     .eq("owner_id",ownerId).select("gallery_urls,gallery_columns").maybeSingle();
+    if(error||!data)throw Error("No pudimos guardar la galería. Intenta otra vez.");
+    if(galleryActive.current){
+     setGalleryUrls(data.gallery_urls||[]);
+     setGalleryColumns(data.gallery_columns as GalleryColumns);
+     setGalleryError("");
+    }
+   }catch(e){
+    if(galleryActive.current){
+     setGalleryUrls(previousImages);setGalleryColumns(previousColumns);
+     setGalleryError(e instanceof Error?e.message:"No se guardaron los cambios.");
+    }
+   }finally{
+    galleryPending.current=Math.max(0,galleryPending.current-1);
+    if(galleryActive.current&&galleryPending.current===0)setGallerySaving(false);
+   }
+  });
+ }
  useEffect(()=>{
   if(!mediaReady)return;
   const onLibraryDeleted=(event:Event)=>{
@@ -244,7 +295,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const intake=useMemo<SiteIntake>(()=>({
   business:name.trim(),categoryId:category,offering:kind,objective:goal,
   phone:phone.trim(),email:email.trim(),city:city.trim(),about:about.trim(),
-  logo,photos:photos.slice(0,2),
+  logo,photos:photos.slice(0,1),gallery:galleryUrls,galleryColumns,
   offerings:kind==="products"?[]:services.filter(Boolean),
   products:kind==="services"?[]:inventoryBusinessId?inventoryProducts:products.filter(p=>p.title.trim()),
   // The site stores an owner-scoped catalog link. The listed items are only
@@ -252,10 +303,13 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
   inventoryBusinessId:kind!=="services"&&inventoryBusinessId?inventoryBusinessId:undefined,
   socials:normalizeSocialLinks(socialLinks)
  }),[name,category,kind,goal,phone,email,city,about,logo,photos,services,
-  products,inventoryBusinessId,inventoryProducts,socialLinks]);
+  products,inventoryBusinessId,inventoryProducts,socialLinks,galleryUrls,galleryColumns]);
  const suggestedFamily=family||familyForCategory(category);
  const validContactEmail=(value:string)=>!value.trim()||/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
  function nextStep(){
+  if(step===2&&(mediaSaving||gallerySaving||galleryUploading||galleryError)){
+   setError(galleryError||"Espera a que terminen de guardarse tus fotografías.");return;
+  }
   if(step===0){
    if(name.trim().length<2){setError("Escribe el nombre de tu negocio.");return;}
    if(!category){setError("Selecciona la categoría del negocio.");return;}
@@ -291,7 +345,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  }
  async function preview(){
   if(generatingAi||busy)return;
-  if(!mediaReady||mediaSaving||mediaError){setError("Confirma que las fotografías terminaron de guardarse.");return;}
+  if(!mediaReady||mediaSaving||mediaError||gallerySaving||galleryUploading||galleryError){setError(galleryError||"Confirma que las fotografías terminaron de guardarse.");return;}
   if(intake.business.length<2){setError("Escribe el nombre del negocio.");return;}
   if(!category){setError("Selecciona la categoría del negocio.");return;}
   if(kind!=="services"&&inventoryBusinessId&&inventoryStatus!=="ready"){
@@ -430,11 +484,16 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
     <fieldset disabled={!mediaReady||mediaSaving} style={{border:0,padding:0,margin:0,minWidth:0}}>
      <div className={styles.photos}>
       <div><strong>Logo</strong><BuilderImageField kind="logo" value={logo} onChange={url=>saveMedia({logo_url:url})}/></div>
-      {[0,1].map(i=><div key={i}><strong>{i===0?"Foto de portada":"Foto de productos o trabajos"}</strong>
-       <BuilderImageField value={photos[i]||""}
-        onChange={url=>saveMedia(i===0?{cover_url:url}:{work_url:url})}/></div>)}
+      <div><strong>Foto de portada</strong>
+       <BuilderImageField value={photos[0]||""} onChange={url=>saveMedia({cover_url:url})}/></div>
      </div>
     </fieldset>
+    <WebIntakeGallery ownerId={ownerId} images={galleryUrls}
+     columns={galleryColumns} onChange={saveGallery}
+     onUploadingChange={setGalleryUploading}
+     disabled={!mediaReady||mediaSaving||gallerySaving}/>
+    {gallerySaving?<p role="status">Guardando galería…</p>:null}
+    {galleryError?<p role="alert" className={styles.error}>{galleryError}</p>:null}
     <WebIntakeSocials ownerId={ownerId} links={socialLinks}
      onChange={setSocialLinks} onStatusChange={setSocialStatus}/>
    </div>:null}
