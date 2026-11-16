@@ -425,7 +425,6 @@ export default function AIAgentsPreview(){
      {screen==="phone"?<CallControl onBack={back}/>:null}
      {screen==="commerce"?<CommerceStudio centralBusinessId={selectedBusiness?.id||""} agents={visibleAgents.filter(a=>a.revision>0)}
       initialAgentId={principal?.id||selected||""} initialTab={commerceTab}
-      phoneConnection={phone} onManageCalls={()=>setScreen("phone")}
       onAgentUpdated={updated=>setAgents(prev=>prev.map(a=>a.id===updated.id?updated:a))}
       onClose={()=>{void reload().catch(()=>{});back();}}/>:null}
      {screen==="test"&&active?<AgentLiveTest agent={active}
