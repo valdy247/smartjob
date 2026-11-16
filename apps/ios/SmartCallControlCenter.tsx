@@ -234,13 +234,13 @@ export function SmartCallControlCenter({session,onOpenCalls,onSettingsSaved}:{
  </View>;
 }
 const s=StyleSheet.create({
- root:{paddingBottom:16},hero:{backgroundColor:"#6E47B7",padding:23,borderRadius:25,marginBottom:14,shadowColor:"#50317C",shadowOpacity:.14,shadowRadius:13,shadowOffset:{width:0,height:7},elevation:3},
- eyebrow:{color:"#DEC9FF",fontSize:10,fontWeight:"800",letterSpacing:1.7},
- title:{color:"#FFFFFF",fontSize:36,fontWeight:"900",letterSpacing:-1.6,marginTop:8},
- subtitle:{color:"#E3D6F8",fontSize:12,lineHeight:19,marginTop:6},
+ root:{paddingBottom:16},hero:{backgroundColor:"#E5D2FB",padding:23,borderRadius:24,marginBottom:14,shadowColor:"#50317C",shadowOpacity:.14,shadowRadius:13,shadowOffset:{width:0,height:7},elevation:3},
+ eyebrow:{color:"#7046AD",fontSize:10,fontWeight:"800",letterSpacing:1.7},
+ title:{color:"#171127",fontSize:36,fontWeight:"900",letterSpacing:-1.6,marginTop:8},
+ subtitle:{color:"#574466",fontSize:12,lineHeight:19,marginTop:6},
  statusPill:{flexDirection:"row",alignItems:"center",marginTop:22,alignSelf:"flex-start",borderRadius:30,
-  paddingHorizontal:12,paddingVertical:9,backgroundColor:"#FFFFFF25"},
- statusDot:{width:8,height:8,borderRadius:4,marginRight:8},statusText:{fontSize:11,fontWeight:"700",color:"#FFFFFF"},
+  paddingHorizontal:12,paddingVertical:9,backgroundColor:"#FFFFFFA8"},
+ statusDot:{width:8,height:8,borderRadius:4,marginRight:8},statusText:{fontSize:11,fontWeight:"700",color:"#2B1C40"},
  tabs:{flexDirection:"row",backgroundColor:"#EEE7F9",borderRadius:18,padding:5,marginBottom:18},
  tab:{flex:1,alignItems:"center",paddingVertical:12,borderRadius:14},activeTab:{backgroundColor:"#FFFFFF"},
  tabText:{fontSize:12,fontWeight:"700",color:"#917EA9"},activeTabText:{color:"#734DBA"},
@@ -254,7 +254,7 @@ const s=StyleSheet.create({
  infoLabel:{color:palette.muted,fontSize:12,flex:1},
  infoValue:{color:palette.ink,fontSize:12,fontWeight:"700",textAlign:"right",flex:1},
  metricRow:{flexDirection:"row",gap:10},
- metric:{flex:1,borderColor:"#DFD3F3",borderWidth:1,backgroundColor:"#F1EAFF",borderRadius:20,padding:15,marginBottom:15},
+ metric:{flex:1,borderColor:"#E9DDF5",borderWidth:1,backgroundColor:"#E5D2FB",borderRadius:20,padding:15,marginBottom:15},
  metricValue:{fontSize:27,fontWeight:"900",color:palette.ink},
  metricLabel:{fontSize:11,color:palette.muted,marginTop:6},
  action:{backgroundColor:palette.mint,borderRadius:16,minHeight:49,paddingHorizontal:16,
