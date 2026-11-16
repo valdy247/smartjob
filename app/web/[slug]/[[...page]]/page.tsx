@@ -14,6 +14,8 @@ import {WebsiteChrome,websiteVisualStyle} from "@/lib/web-site-chrome";
 import type {CSSProperties} from "react";
 import RequestForm from "@/app/sites/[slug]/RequestForm";
 import WebChatLauncher from "@/app/web-studio/WebChatLauncher";
+import PublicAgentChat from "@/app/web-studio/PublicAgentChat";
+import {findPublicChatAgent} from "@/lib/vmv-ai-agents/public-chat-connection";
 import "../../../web-builder-public.css";
 
 export const dynamic="force-dynamic";
@@ -99,6 +101,12 @@ export default async function VMVPublishedPage({params}:Props){
  const siteName=result.page.site_name||slug.replace(/-/g," ");
  const original=normalizeBuilderDocument(result.page.document);
  const inventory=await publishedInventory(result.page.site_id,result.page.owner_id,siteName);
+ // Only published, activated and opted-in agents are exposed in public chat.
+ const liveAgent=part==="home"&&process.env.VERCEL_ENV==="preview"&&
+  process.env.SUPABASE_SECRET_KEY?await findPublicChatAgent(
+   createClient(process.env.NEXT_PUBLIC_SUPABASE_URL||"",
+    process.env.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}}),
+   {site_id:result.page.site_id,owner_id:result.page.owner_id,site_name:siteName}):null;
  const data=inventory?applyPublishedInventory(original,inventory.products,result.page.owner_id,
   inventory.businessId,process.env.NEXT_PUBLIC_SUPABASE_URL||""):original;
  const classicServices=data.content.filter(b=>b.type==="Services").flatMap(b=>
@@ -134,7 +142,8 @@ export default async function VMVPublishedPage({params}:Props){
   <Render config={builderConfig} data={data}/>
   {inventory?<LiveInventoryRefresh siteSlug={slug}
    version={publishedCatalogVersion(inventory.products)}/>:null}
-  {showForm&&rootData.chatMode==="inbox"?<WebChatLauncher slug={slug} business={siteName} categoryId={result.page.category_id||""} services={services}/>:null}
+  {liveAgent?<PublicAgentChat slug={slug} agentName={liveAgent.name}/>:
+   showForm&&rootData.chatMode==="inbox"?<WebChatLauncher slug={slug} business={siteName} categoryId={result.page.category_id||""} services={services}/>:null}
   {showForm?<section className="vmv-site-inquiry" id="solicitud" aria-label="Enviar solicitud al negocio">
    <small>CONTACTA CON NOSOTROS</small>
    <h2>¿Qué necesitas?</h2>
