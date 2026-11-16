@@ -22,8 +22,8 @@ async function validatePhoto(file:File){
  return jpg?"jpg":png?"png":"webp";
 }
 export default function CatalogProductImageField({
- businessId,value,onChange,disabled=false,onBusy
-}:{businessId:string;value:string;onChange:(path:string)=>void;disabled?:boolean;onBusy?:(busy:boolean)=>void}){
+ businessId,value,onChange,disabled=false,onBusy,kind="producto"
+}:{businessId:string;value:string;onChange:(path:string)=>void;disabled?:boolean;onBusy?:(busy:boolean)=>void;kind?:"producto"|"servicio"}){
  const fileInput=useRef<HTMLInputElement>(null);
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
@@ -50,7 +50,7 @@ export default function CatalogProductImageField({
  }
  return <div className={styles.catalogImagePicker}>
   <div className={styles.catalogImagePreview}>
-   {url?<img src={url} alt="Fotografía original del producto" loading="lazy"/>:
+   {url?<img src={url} alt={"Fotografía original del "+kind} loading="lazy"/>:
     <div className={styles.catalogImagePlaceholder}><ImagePlus size={32}/><small>Sin fotografía</small></div>}
   </div>
   <div className={styles.catalogImageButtons}>
@@ -62,7 +62,7 @@ export default function CatalogProductImageField({
     <Upload size={15}/> {busy?"Subiendo…":url?"Reemplazar foto":"Subir foto"}
    </button>
    {url?<button type="button" disabled={disabled||busy} onClick={()=>onChange("")}>
-    <Trash2 size={14}/> Quitar del producto
+    <Trash2 size={14}/> Quitar del {kind}
    </button>:null}
    {error?<small role="alert" className={styles.catalogImageError}>{error}</small>:null}
   </div>
