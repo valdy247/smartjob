@@ -17,7 +17,7 @@ import {DialPad} from "./DialPad";
 import {NativeActivation,type NativeProfile} from "./NativeActivation";
 import {FALLBACK_MODULES,loadBusinessModules,openBusinessWorkspace,type BusinessModule} from "./businessWorkspace";
 
-const colors={bg:"#FBFAFF",card:"#FFFFFF",line:"#ECE6F3",text:"#28223C",
+const colors={bg:"#FDFCFF",card:"#FFFFFF",line:"#ECE6F3",text:"#171127",
  muted:"#827991",accent:"#8D5EE6",accentText:"#FFFFFF",red:"#E25673"};
 const voice=new Voice();
 let pushRegistryInit:Promise<void>|null=null;
@@ -751,7 +751,7 @@ export default function App(){
        <View style={[styles.brandWaveBar,{height:13}]}/>
       </View>
      </View>
-     <Text style={styles.brandText}>VMV<Text style={{color:"#00AD8D"}}> BUSINESS</Text></Text>
+     <Text style={styles.brandText}>VMV<Text style={{color:"#8A59D8"}}> BUSINESS</Text></Text>
      {session?<Pressable accessibilityRole="button" accessibilityLabel={tr("home.openSettings")} onPress={()=>{setActiveTab("settings");setSettingsPage("menu");}} style={styles.headerAvatar}><Text style={styles.headerAvatarText}>{String(session.user.user_metadata?.first_name||"V").charAt(0).toUpperCase()}</Text></Pressable>:null}
     </View>}
     {!configured?<View style={styles.alert}><Text style={styles.alertText}>Configura el acceso de la app para iniciar sesión.</Text></View>:
@@ -767,76 +767,53 @@ export default function App(){
      </View>:
     <>
      {activeTab==="home"?<>
-      <View style={styles.homeWelcomeV2}>
-       <Pressable accessibilityRole="button" accessibilityLabel={tr("home.viewAccount")}
-        onPress={()=>{setSettingsPage("menu");setActiveTab("settings");}} style={styles.homeUser}>
-        <View style={styles.homeAvatar}><Ionicons name="person-outline" size={23} color="#754BD0"/></View>
-        <View style={{flex:1}}>
-         <Text style={styles.homeEyebrow}>{tr("home.hello",{name:String(session.user.user_metadata?.first_name||"VMV").trim()||"VMV"})}</Text>
-         <Text style={styles.homeGreeting} numberOfLines={1}>{String(activationProfile?.business_name||session.user.user_metadata?.business_name||"").trim()||tr("dashboard.business")}</Text>
-        </View>
-       </Pressable>
-       <View style={styles.homeBrandBadge}><Text style={styles.homeBrandBadgeText}>VMV ✦</Text></View>
+      <View style={styles.conceptHeader}>
+       <View style={styles.conceptBrand}><Text style={styles.conceptV}>V</Text><Text style={styles.conceptBrandName}>VMV Business</Text></View>
+       <Ionicons name="notifications-outline" size={25} color="#20152D" accessibilityLabel="Notificaciones"/>
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel={tr("dashboard.manageCalls")}
-       style={styles.nativeDashboardHero} onPress={()=>{setActiveModule("smart-call");setActiveTab("services");}}>
-       <View style={styles.nativeDashboardHeroTop}>
-        <Text style={styles.nativeDashboardKicker}>SMART CALL</Text>
-        <Ionicons name="call-outline" size={25} color="#FFE49D"/>
-       </View>
-       <Text style={styles.nativeDashboardTitle}>{tr("dashboard.callCenter")}</Text>
-       <Text style={styles.nativeDashboardStatus}>{tr("dashboard.lineStatus")}: {accountOverview?
-        (accountOverview.connectedToApp?tr("services.call.iphoneRoute"):
-         accountOverview.verified?tr("services.call.numberVerifiedValue"):tr("services.call.activationPending")):
-        tr("dashboard.unavailable")}</Text>
-       <View style={styles.nativeDashboardMetrics}>
-        <View style={styles.nativeDashboardMetric}>
-         <Text style={styles.nativeDashboardNumber}>{billingOverview?.minutes?.available??"—"}</Text>
-         <Text style={styles.nativeDashboardMetricLabel}>{tr("dashboard.minutes")}</Text>
-        </View>
-        <View style={styles.nativeDashboardMetric}>
-         <Text style={styles.nativeDashboardNumber}>{accountOverview?.usage.calls??"—"}</Text>
-         <Text style={styles.nativeDashboardMetricLabel}>{tr("dashboard.calls")}</Text>
+      <View style={styles.conceptWelcome}>
+       <Text style={styles.conceptGreeting} numberOfLines={2}>{uiLanguage==="en"?"Hi":"Hola"}, {String(session.user.user_metadata?.first_name||"VMV").trim()||"VMV"} 👋</Text>
+       <Text style={styles.conceptSubtitle}>{uiLanguage==="en"?"Your whole business, in one place.":"Todo tu negocio, en un solo lugar."}</Text>
+      </View>
+      <View style={styles.conceptGrowthHero}>
+       <View style={styles.conceptRocketHalo}/>
+       <View style={styles.conceptRocket}><Ionicons name="rocket-outline" size={95} color="#7D4BC6"/></View>
+       <View style={styles.conceptHeroCopy}>
+        <Text style={styles.conceptHeroTitle}>{uiLanguage==="en"?"Grow your\nbusiness":"Haz crecer\ntu negocio"}</Text>
+        <Text style={styles.conceptHeroSub}>{uiLanguage==="en"?"Tools, services and AI for entrepreneurs.":"Herramientas, servicios y IA para emprendedores."}</Text>
+        {/* Deliberately non-interactive until the next product decision. */}
+        <View style={styles.conceptStartLabel} accessibilityLabel={uiLanguage==="en"?"Get started, coming soon":"Comenzar, sin acción por ahora"}>
+         <Text style={styles.conceptStartText}>{uiLanguage==="en"?"Get started":"Comenzar"}</Text>
+         <Ionicons name="arrow-forward-outline" size={18} color="#181026"/>
         </View>
        </View>
+      </View>
+      <View style={styles.conceptTiles}>
+       <Pressable accessibilityRole="button" accessibilityLabel="Smart Call" style={[styles.conceptTile,styles.conceptMint]}
+        onPress={()=>{setActiveModule("smart-call");setActiveTab("services");}}>
+        <Ionicons name="call-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>Smart Call</Text>
+       </Pressable>
+       <Pressable accessibilityRole="button" accessibilityLabel="Web Services" style={[styles.conceptTile,styles.conceptPink]}
+        onPress={()=>{setActiveModule("web-services");setActiveTab("services");}}>
+        <Ionicons name="desktop-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>Web Services</Text>
+       </Pressable>
+       <Pressable accessibilityRole="button" accessibilityLabel="AI Agents" style={[styles.conceptTile,styles.conceptLavender]}
+        onPress={()=>{setActiveModule("ai-agents");setActiveTab("services");}}>
+        <Ionicons name="hardware-chip-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>AI Agents</Text>
+       </Pressable>
+       <Pressable accessibilityRole="button" accessibilityLabel="Marketing" style={[styles.conceptTile,styles.conceptGreen]}
+        onPress={()=>{setActiveModule("marketing-analytics");setActiveTab("services");}}>
+        <Ionicons name="megaphone-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>Marketing</Text>
+       </Pressable>
+      </View>
+      <Text style={styles.conceptBusinessTitle}>{uiLanguage==="en"?"My Business":"Mi Negocio"}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={uiLanguage==="en"?"Overview":"Resumen"}
+       style={styles.conceptSummary} onPress={()=>{setSettingsPage("menu");setActiveTab("settings");}}>
+       <View style={styles.conceptSummaryIcon}><Ionicons name="trending-up-outline" size={25} color="#6F48BC"/></View>
+       <View style={{flex:1}}><Text style={styles.conceptSummaryTitle}>{uiLanguage==="en"?"Overview":"Resumen"}</Text>
+        <Text style={styles.conceptSummarySub}>{uiLanguage==="en"?"Activity and results":"Actividad y resultados"}</Text></View>
+       <Ionicons name="chevron-forward" size={23} color="#21142D"/>
       </Pressable>
-      <View style={styles.nativeDashboardHeading}>
-       <Text style={styles.nativeDashboardHeadingText}>{tr("dashboard.quickActions")}</Text>
-       <Pressable accessibilityRole="button" onPress={()=>{setActiveModule(null);setActiveTab("services");}} style={styles.homeSeeAll}>
-        <Text style={styles.homeSeeAllText}>{tr("home.seeAll")}</Text>
-        <Ionicons name="arrow-up-outline" size={15} color="#8960D4"/>
-       </Pressable>
-      </View>
-      <View style={styles.nativeDashboardQuickGrid}>
-       <Pressable accessibilityRole="button" accessibilityLabel={tr("common.translator")}
-        style={[styles.nativeDashboardQuick,styles.nativeCatalogMint]} onPress={()=>setActiveTab("live")}>
-        <Ionicons name="language-outline" size={27} color="#145945"/>
-        <Text style={styles.nativeDashboardQuickTitle}>{tr("common.translator")}</Text>
-       </Pressable>
-       <Pressable accessibilityRole="button" accessibilityLabel="AI Agents"
-        style={[styles.nativeDashboardQuick,styles.nativeCatalogSky]} onPress={()=>{setActiveModule("ai-agents");setActiveTab("services");}}>
-        <Ionicons name="sparkles-outline" size={27} color="#2B527B"/>
-        <Text style={styles.nativeDashboardQuickTitle}>AI Agents</Text>
-       </Pressable>
-      </View>
-      <View style={styles.nativeDashboardActivity}>
-       <View style={styles.nativeDashboardActivityHead}>
-        <Text style={styles.nativeDashboardHeadingText}>{tr("dashboard.activity")}</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel={tr("dashboard.viewActivity")}
-         onPress={()=>{setCallsView("history");setActiveTab("calls");}} style={styles.homeSeeAll}>
-         <Text style={styles.homeSeeAllText}>{tr("dashboard.viewActivity")}</Text>
-         <Ionicons name="arrow-up-outline" size={15} color="#8960D4"/>
-        </Pressable>
-       </View>
-       {callHistory.length?callHistory.slice(0,2).map(item=><View key={item.bridge_sid} style={styles.nativeDashboardHistoryRow}>
-        <View style={styles.nativeDashboardHistoryIcon}><Ionicons name="call-outline" size={16} color="#7B51C9"/></View>
-        <View style={{flex:1}}>
-         <Text style={styles.nativeDashboardHistoryTitle}>{tr(item.call_mode==="translated"?"services.history.translated":"services.history.direct")}</Text>
-         <Text style={styles.nativeDashboardHistoryDate}>{new Date(item.started_at).toLocaleDateString(uiLanguage==="es"?"es-US":"en-US",{month:"short",day:"numeric"})}</Text>
-        </View>
-       </View>):
-        <Text style={styles.nativeDashboardEmpty}>{historyBusy?tr("marketing.ui.loading"):tr("dashboard.emptyActivity")}</Text>}
-      </View>
      </>:null}
      {activeTab==="calls"?<>
        <View style={styles.callsTabs}>
@@ -1120,11 +1097,11 @@ export default function App(){
        <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={item.label}
         accessibilityState={{selected:activeTab===item.id}}
         onPress={()=>{setError("");setActiveTab(item.id);if(item.id==="services")setActiveModule(null);if(item.id==="settings")setSettingsPage("menu");}}
-        style={[styles.bottomItem,item.id==="calls"&&styles.bottomItemCenter]}>
+        style={[styles.bottomItem,activeTab===item.id&&styles.bottomItemSelected,item.id==="calls"&&styles.bottomItemCenter]}>
         <View style={[styles.bottomOrb,activeTab===item.id&&styles.bottomOrbActive,item.id==="calls"&&styles.bottomOrbCenter,
           item.id==="calls"&&activeTab===item.id&&styles.bottomOrbCenterActive]}>
          <Ionicons name={item.icon} size={item.id==="calls"?25:22}
-          color={item.id==="calls"?"#FFFFFF":activeTab===item.id?"#211D36":"#B7B4CA"}/>
+          color={activeTab===item.id?"#20142E":"#FFFFFF"}/>
         </View>
         <Text numberOfLines={1} style={[styles.bottomLabel,item.id==="calls"&&styles.bottomLabelCenter,
          activeTab===item.id&&styles.bottomLabelActive]}>{item.label}</Text>
@@ -1154,6 +1131,35 @@ function Button({label,onPress,disabled,secondary,danger}:{label:string,onPress:
  </Pressable>;
 }
 const styles=StyleSheet.create({
+
+ conceptHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:29,minHeight:42},
+ conceptBrand:{flexDirection:"row",alignItems:"center",gap:8},
+ conceptV:{fontSize:37,lineHeight:43,color:"#9969EB",fontWeight:"900",fontStyle:"italic",letterSpacing:-5,textShadowColor:"#E0C7FF",textShadowOffset:{width:-3,height:-2},textShadowRadius:1},
+ conceptBrandName:{color:"#171127",fontSize:21,fontWeight:"900",letterSpacing:-.8},
+ conceptWelcome:{marginBottom:23},
+ conceptGreeting:{fontSize:32,lineHeight:38,color:"#171127",fontWeight:"900",letterSpacing:-1.2},
+ conceptSubtitle:{color:"#5D5668",fontSize:15,lineHeight:22,marginTop:8},
+ conceptGrowthHero:{minHeight:225,borderRadius:24,backgroundColor:"#E2CDFB",padding:22,marginBottom:17,position:"relative",overflow:"hidden",justifyContent:"center"},
+ conceptHeroCopy:{position:"relative",zIndex:2,width:"64%",alignItems:"flex-start"},
+ conceptHeroTitle:{color:"#171127",fontSize:30,lineHeight:31,fontWeight:"900",letterSpacing:-1.25},
+ conceptHeroSub:{color:"#423354",fontSize:13,lineHeight:19,marginTop:13},
+ conceptStartLabel:{flexDirection:"row",alignItems:"center",gap:9,borderRadius:24,backgroundColor:"#FFFFFF",paddingVertical:11,paddingHorizontal:15,marginTop:19,shadowColor:"#71529D",shadowOpacity:.13,shadowRadius:10,shadowOffset:{width:0,height:4},elevation:2},
+ conceptStartText:{color:"#181026",fontSize:14,fontWeight:"900"},
+ conceptRocketHalo:{position:"absolute",right:-8,top:26,width:150,height:150,borderRadius:75,backgroundColor:"#C5A4F3",opacity:.55},
+ conceptRocket:{position:"absolute",right:5,top:52,transform:[{rotate:"24deg"}],opacity:.94},
+ conceptTiles:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",rowGap:12},
+ conceptTile:{width:"48%",minHeight:143,padding:14,alignItems:"center",justifyContent:"center",gap:14,borderRadius:22},
+ conceptTileText:{fontSize:17,color:"#171127",fontWeight:"900",textAlign:"center",letterSpacing:-.5},
+ conceptMint:{backgroundColor:"#DFFBDD"},
+ conceptPink:{backgroundColor:"#FBE0ED"},
+ conceptLavender:{backgroundColor:"#E7D7FF"},
+ conceptGreen:{backgroundColor:"#E0F9DD"},
+ conceptBusinessTitle:{fontSize:23,fontWeight:"900",color:"#171127",marginTop:24,marginBottom:13,letterSpacing:-.8},
+ conceptSummary:{flexDirection:"row",alignItems:"center",gap:13,backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#EEE7F5",borderRadius:21,padding:13,shadowColor:"#28134A",shadowOpacity:.04,shadowRadius:14,shadowOffset:{width:0,height:6}},
+ conceptSummaryIcon:{width:52,height:52,borderRadius:16,alignItems:"center",justifyContent:"center",backgroundColor:"#EEE0FF"},
+ conceptSummaryTitle:{fontSize:18,fontWeight:"900",color:"#181127"},
+ conceptSummarySub:{fontSize:12,color:"#6E6877",marginTop:4},
+
  // Business Home: real operational status and recent activity, not a second catalog.
  nativeDashboardHero:{width:"100%",borderRadius:23,padding:19,backgroundColor:"#7D4DDA",marginTop:2,marginBottom:3,overflow:"hidden",shadowColor:"#7243BD",shadowOpacity:.17,shadowRadius:11,shadowOffset:{width:0,height:6},elevation:3},
  nativeDashboardHeroTop:{flexDirection:"row",alignItems:"center",justifyContent:"space-between"},
@@ -1308,7 +1314,7 @@ const styles=StyleSheet.create({
  safe:{flex:1,backgroundColor:colors.bg},
  content:{flexGrow:1,paddingHorizontal:22,paddingTop:22,paddingBottom:46,maxWidth:620,width:"100%",alignSelf:"center"},
  brand:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:30},
- brandMark:{width:50,height:50,borderRadius:16,backgroundColor:"#1CE0BC",alignItems:"center",justifyContent:"center"},
+ brandMark:{width:50,height:50,borderRadius:16,backgroundColor:"#C7A6F8",alignItems:"center",justifyContent:"center"},
  brandIcon:{fontSize:23,fontWeight:"900",color:colors.accentText},
  brandText:{color:colors.text,fontSize:24,fontWeight:"900",letterSpacing:-1.3},
  kicker:{color:"#06A887",fontSize:11,fontWeight:"800",letterSpacing:2.6,marginBottom:12},
@@ -1360,16 +1366,17 @@ const styles=StyleSheet.create({
  quickRow:{flexDirection:"row",gap:10,marginVertical:10},
  quickButton:{flex:1,borderRadius:14,padding:15,backgroundColor:"#1A363E",alignItems:"center"},
  quickButtonText:{color:colors.text,fontSize:14,fontWeight:"800"},
- bottomDock:{position:"absolute",bottom:13,left:15,right:15,height:78,backgroundColor:"#1C1A2B",borderRadius:28,borderWidth:1,borderColor:"#333048",flexDirection:"row",alignItems:"center",justifyContent:"space-around",paddingHorizontal:5,paddingVertical:5,shadowColor:"#171326",shadowOpacity:.15,shadowRadius:9,shadowOffset:{width:0,height:6},elevation:6},
- bottomItem:{flex:1,minWidth:0,alignItems:"center",justifyContent:"center",height:68},
- bottomItemCenter:{transform:[{translateY:-1}]},
+ bottomDock:{position:"absolute",bottom:13,left:15,right:15,height:78,backgroundColor:"#080809",borderRadius:28,borderWidth:1,borderColor:"#080809",flexDirection:"row",alignItems:"center",justifyContent:"space-around",paddingHorizontal:5,paddingVertical:5,shadowColor:"#171326",shadowOpacity:.15,shadowRadius:9,shadowOffset:{width:0,height:6},elevation:6},
+ bottomItem:{flex:1,minWidth:0,alignItems:"center",justifyContent:"center",height:68,borderRadius:22},
+ bottomItemCenter:{},
  bottomOrb:{width:42,height:39,borderRadius:15,alignItems:"center",justifyContent:"center"},
- bottomOrbActive:{backgroundColor:"#FFFFFF"},
- bottomOrbCenter:{width:44,height:40,borderRadius:15,backgroundColor:"#8E5CE7",borderColor:"#E1D1FF",borderWidth:1.5,shadowColor:"#442A91",shadowOpacity:.21,shadowRadius:5,shadowOffset:{width:0,height:3},elevation:3},
- bottomOrbCenterActive:{backgroundColor:"#A174F2",borderColor:"#F0E6FF"},
- bottomLabel:{color:"#BEB5D3",fontSize:9,fontWeight:"700",marginTop:2,textAlign:"center",maxWidth:"100%"},
- bottomLabelActive:{color:"#FFFFFF"},
- bottomLabelCenter:{color:"#E1D4F5"},
+ bottomItemSelected:{backgroundColor:"#C7A3F6"},
+ bottomOrbActive:{backgroundColor:"transparent"},
+ bottomOrbCenter:{width:42,height:39,borderRadius:15,backgroundColor:"transparent",borderWidth:0},
+ bottomOrbCenterActive:{backgroundColor:"transparent"},
+ bottomLabel:{color:"#FFFFFF",fontSize:9,fontWeight:"700",marginTop:2,textAlign:"center",maxWidth:"100%"},
+ bottomLabelActive:{color:"#20142E"},
+ bottomLabelCenter:{color:"#FFFFFF"},
  groupTitle:{color:"#9B77D4",fontSize:10,fontWeight:"800",letterSpacing:1.7,marginTop:22,marginBottom:11},
  languageChoice:{flexDirection:"row",gap:10,marginVertical:11},
  languageOption:{flex:1,alignItems:"center",justifyContent:"center",padding:13,backgroundColor:"#F4EFFB",borderRadius:15,borderWidth:1,borderColor:"#E5D9F2"},
