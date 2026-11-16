@@ -22,7 +22,7 @@ export default function PublicAgentChat({slug,agentName}:{slug:string;agentName:
   if(!text||sending)return;
   setSending(true);setError("");setMessage("");
   const previous=turns.slice(-6);
-  setTurns(old=>[...old,{role:"user",content:text}]);
+  setTurns(old=>[...old,{role:"user" as const,content:text}]);
   try{
    const response=await fetch("/api/vmv/ai-agents/public-chat",{
     method:"POST",cache:"no-store",
@@ -31,7 +31,7 @@ export default function PublicAgentChat({slug,agentName}:{slug:string;agentName:
    });
    const payload=await response.json() as {reply?:string;error?:string};
    if(!response.ok||!payload.reply)throw Error(payload.error||"No se pudo responder.");
-   setTurns(old=>[...old,{role:"assistant",content:payload.reply!}].slice(-30));
+   setTurns(old=>[...old,{role:"assistant" as const,content:payload.reply!}].slice(-30));
   }catch(e){setError(e instanceof Error?e.message:"No se pudo enviar.");
   }finally{setSending(false);}
  }
