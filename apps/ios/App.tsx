@@ -9,6 +9,7 @@ import {api,supabase,configured} from "./session";
 import {useNativeInterfaceLanguage} from "./useInterfaceLanguage";
 import {InterpreterPanel} from "./InterpreterPanel";
 import {CallScreen} from "./CallScreen";
+import {PreviewWorkspace} from "./PreviewWorkspace";
 import {SmartCallControlCenter} from "./SmartCallControlCenter";
 import {BusinessServicesPanel} from "./BusinessServicesPanel";
 import {BusinessDiagnostic} from "./BusinessDiagnostic";
@@ -22,6 +23,9 @@ import {FALLBACK_MODULES,loadBusinessModules,openBusinessWorkspace,type Business
 const colors={bg:"#FDFCFF",card:"#FFFFFF",line:"#ECE6F3",text:"#171127",
  muted:"#827991",accent:"#8D5EE6",accentText:"#FFFFFF",red:"#E25673"};
 const voice=new Voice();
+// The first two testers see the same live VMV web Preview inside the native shell.
+// Twilio/PushKit/CallKit are still initialized by this component.
+const WEB_BETA_ENABLED=process.env.EXPO_PUBLIC_VMV_WEB_BETA==="true";
 let pushRegistryInit:Promise<void>|null=null;
 function ensurePushRegistry():Promise<void>{
  if(Platform.OS!=="ios")return Promise.resolve();
@@ -36,6 +40,8 @@ function ensurePushRegistry():Promise<void>{
 
 export default function App(){
  const [session,setSession]=useState<Session|null>(null);
+ const [nativeBetaMode,setNativeBetaMode]=useState(false);
+ useEffect(()=>{setNativeBetaMode(false);},[session?.user.id]);
  const [authBootstrapped,setAuthBootstrapped]=useState(false);
  const {language:uiLanguage,ready:uiLanguageReady,saving:languageSaving,error:languageError,retry:retryLanguage,changeLanguage,translate:tr}=useNativeInterfaceLanguage(session,authBootstrapped);
  const [activationProfile,setActivationProfile]=useState<NativeProfile|null>(null);
@@ -763,7 +769,9 @@ export default function App(){
  if(!uiLanguageReady)return <SafeAreaView style={styles.safe}>{languageError?<View style={{padding:24}}><Text>{tr("language.loadError")}</Text><Button label={tr("common.retry")} onPress={()=>void retryLanguage()}/></View>:<ActivityIndicator style={{marginTop:64}} color={colors.accent}/>}</SafeAreaView>;
  return <SafeAreaView style={styles.safe}>
   <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
-  <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":undefined}>
+  {WEB_BETA_ENABLED&&session&&!nativeBetaMode?
+   <PreviewWorkspace onOpenNative={()=>setNativeBetaMode(true)}/>:
+   <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":undefined}>
    <ScrollView style={activeTab==="home"?styles.homeScrollSurface:undefined} scrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content,session&&{paddingBottom:150}]}>
     {session&&activeTab==="home"?null:<View style={styles.brand}><View style={styles.brandMark}>
       <View style={styles.brandWave}>
@@ -1140,7 +1148,13 @@ export default function App(){
          activeTab===item.id&&styles.bottomLabelActive]}>{item.label}</Text>
        </Pressable>)}
     </View>:null}
-  </KeyboardAvoidingView>
+  </KeyboardAvoidingView>}
+  {WEB_BETA_ENABLED&&session&&nativeBetaMode?
+   <Pressable accessibilityRole="button" accessibilityLabel="Volver a la vista Preview"
+    onPress={()=>setNativeBetaMode(false)} style={styles.betaReturn}>
+    <Ionicons name="globe-outline" size={16} color="#FFFFFF"/>
+    <Text style={{color:"#FFFFFF",fontSize:11,fontWeight:"800"}}>Preview</Text>
+   </Pressable>:null}
   {session&&activationProfile&&activationProfile.id===session.user.id&&!activationProfile.plan_prompt_seen?
    <NativeActivation session={session} profile={activationProfile} onComplete={setActivationProfile}/>:null}
   <Modal visible={!!invite||!!call} animationType="fade" presentationStyle="fullScreen"
@@ -1164,6 +1178,8 @@ function Button({label,onPress,disabled,secondary,danger}:{label:string,onPress:
  </Pressable>;
 }
 const styles=StyleSheet.create({
+ betaReturn:{position:"absolute",right:14,top:6,zIndex:150,flexDirection:"row",alignItems:"center",gap:5,
+  paddingHorizontal:10,paddingVertical:9,borderRadius:13,backgroundColor:"#8555D9",borderWidth:1,borderColor:"#B69BE8"},
 
  conceptHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:29,minHeight:42},
  conceptBrand:{flexDirection:"row",alignItems:"center",gap:8},
