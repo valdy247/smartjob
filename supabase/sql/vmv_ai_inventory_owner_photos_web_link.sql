@@ -15,7 +15,7 @@ create policy vmv_catalog_photos_owner_insert on storage.objects
   and split_part(name,'/',1)=auth.uid()::text
   and exists (
    select 1 from public.vmv_ai_businesses b
-    where b.owner_id=auth.uid() and b.id::text=split_part(name,'/',2)
+    where b.owner_id=auth.uid() and b.id::text=split_part(storage.objects.name,'/',2)
   )
  );
 drop policy if exists vmv_catalog_photos_owner_select on storage.objects;
