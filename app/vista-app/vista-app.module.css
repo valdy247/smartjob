@@ -667,3 +667,26 @@ button.homeProductCard:hover{transform:translateY(-2px)}
 .homeLiveDetails .dashboardMetrics small{color:#5f4b73}
 .homeLiveDetails .dashboardMetrics>span{background:#ffffff80;border-color:#ffffffb3}
 .homeLiveDetails .dashboardActivity{margin:12px 14px}
+
+
+/* Secondary VMV screens carry the same light pastel treatment as the new Home. */
+.servicesV3 .serviceHero{background:linear-gradient(135deg,#e7d4ff,#d0b3fa);color:#171127;box-shadow:0 10px 22px #5a2e8e1a}
+.servicesV3 .serviceHero>strong{color:#171127}
+.servicesV3 .serviceHero>strong span{color:#7346b9}
+.servicesV3 .serviceHero>small{color:#57466e}
+.servicesV3 .serviceHeroStatus{color:#5f3b9e;border-color:#ffffffc7;background:#ffffffa1}
+.servicesV3 .serviceLink{background:#ffffffcf;color:#6541a0}
+.servicesV3 .serviceHeroIcon{background:#f3eaff;box-shadow:none}
+.servicesV3 .serviceHeroDecoration{color:#ffffff85}
+.smartHero{background:linear-gradient(135deg,#e6d3ff,#d2b5fb);color:#171127;border-radius:23px}
+.smartHero h2{color:#171127}
+.smartHero h2 span{color:#8656ce}
+.smartHero p,.smartHero>span{color:#5e4776}
+.smartBadge{background:#ffffffb8;color:#4c316a}
+.minuteHero{background:linear-gradient(130deg,#e5d2ff,#ccadf9);color:#171127}
+.minuteHero .smallKicker{color:#6f49a3}
+.minuteHero p{color:#573f73}
+.smartScreen .smartCard,.screen .smartCard{border-color:#ece4f4;border-radius:21px;background:#fff}
+.translatorV3{background:#fdfcff}
+.callViewTabs{background:#f1e9fa}
+.accountV3{background:#fdfcff}
