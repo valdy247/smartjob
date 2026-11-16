@@ -2,7 +2,7 @@ import ts from "typescript";
 import {readFileSync} from "node:fs";
 const read=path=>readFileSync(path,"utf8");
 const main=read("app/vista-app/page.tsx");
-const homeBegin=main.indexOf('{ready&&tab==="home"?<div className=');
+const homeBegin=main.indexOf('{ready&&tab==="home"&&diagnosticOpen?<BusinessDiagnostic');
 const servicesBegin=main.indexOf('{ready&&tab==="services"&&!open?');
 const servicesEnd=main.indexOf('{ready&&tab==="calls"?',servicesBegin);
 if(homeBegin<0||servicesBegin<=homeBegin||servicesEnd<=servicesBegin)
@@ -19,7 +19,7 @@ const sources=[
 const allowed=[
  /^VMV(?: BUSINESS| Business)?\s*\/?$/i,/^Smart Call$/i,/^AI Agents$/i,
  /^Web Services$/i,/^Web Care$/i,/^Smart Booking$/i,/^Marketing$/i,
- /^Google Business Profile$/i,/^Beta$/i,/^SEO$/i,
+ /^Google Business(?: Profile)?$/i,/^Beta$/i,/^SEO$/i,
  /^App iPhone$/i,/^English$/i,/^Español$/i,
  /^\d+$/, /^min$/i,/^USD(?:\s*·)?$/i,/^TEST$/i,
  /^[\p{P}\p{S}\s\d]+$/u
@@ -51,6 +51,8 @@ const refs=[...new Set([...home.matchAll(/translate\("([\w.-]+)"\)/g),
  ...preview.matchAll(/translate\("([\w.-]+)"\)/g)].map(x=>x[1]))];
 const missing=refs.filter(key=>!catalog.es[key]||!catalog.en[key]);
 const regressions=[];
+if(!home.includes("BusinessDiagnostic")||!home.includes("onClick={()=>setDiagnosticOpen(true)}"))
+ regressions.push("Home needs assessment button or component missing");
 if(!home.includes("dashboardCallCard")||!home.includes("dashboardActivity")||
  !home.includes("dashboard.quickActions")||!home.includes("calls.slice(0,2)"))
  regressions.push("Home must show authenticated business activity and quick actions");
