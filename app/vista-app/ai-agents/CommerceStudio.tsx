@@ -6,6 +6,7 @@ import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders
  type CatalogItem,type TestOrder,type HumanRequest,type CommerceAgentPermissions,type WebStudioCard,type VerifiedCatalogItem} from "./commerceStore";
 import styles from "./CommerceStudio.module.css";
 import CatalogProductImageField,{catalogImageUrl} from "./CatalogProductImageField";
+import ServiceCatalogEditor from "./ServiceCatalogEditor";
 
 type Form={
  name:string;sku:string;description:string;price:string;stock_mode:CatalogItem["stock_mode"];
@@ -75,7 +76,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
   finally{setBusy(false);}
  };
 
- const [tab,setTab]=useState<"setup"|"catalog"|"orders"|"human">(initialTab);
+ const [tab,setTab]=useState<"setup"|"catalog"|"services"|"orders"|"human">(initialTab);
  const refresh=async()=>{
   if(!businessId){setItems([]);setOrders([]);setHuman([]);return;}
   const [catalog,history,requests,cards]=await Promise.all([
@@ -158,11 +159,16 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
   {loading?<p className={styles.hint}>Cargando catálogo y pedidos…</p>:null}
   {!catalogOnly?<div className={styles.tabs}>
    <button type="button" className={tab==="setup"?styles.on:styles.off} onClick={()=>setTab("setup")}><PhoneCall size={15}/> Ventas</button>
-   <button type="button" className={tab==="catalog"?styles.on:styles.off} onClick={()=>setTab("catalog")}><Package size={15}/> Catálogo ({items.length})</button>
+   <button type="button" className={tab==="catalog"?styles.on:styles.off} onClick={()=>setTab("catalog")}><Package size={15}/> Productos ({items.length})</button>
+   <button type="button" className={tab==="services"?styles.on:styles.off} onClick={()=>setTab("services")}><ShoppingBag size={15}/> Servicios</button>
    <button type="button" className={tab==="orders"?styles.on:styles.off} onClick={()=>setTab("orders")}><ReceiptText size={15}/> Pedidos ({orders.length})</button>
    <button type="button" className={tab==="human"?styles.on:styles.off} onClick={()=>setTab("human")}><UserRoundCheck size={15}/> Humano ({human.filter(x=>x.status==="new").length})</button>
   </div>:null}
-  {tab==="setup"?<>
+  {catalogOnly?<div className={styles.catalogTabs} role="group" aria-label="Catálogos del negocio">
+   <button type="button" data-active={tab!=="services"} onClick={()=>setTab("catalog")}>Productos</button>
+   <button type="button" data-active={tab==="services"} onClick={()=>setTab("services")}>Servicios</button>
+  </div>:null}
+  {tab==="services"?<ServiceCatalogEditor businessId={businessId}/>:tab==="setup"?<>
    <div className={styles.heading}><h2>Preparar al agente para vender</h2></div>
    {centralBusinessId?<a className={styles.financeLink} href={"/vista-app/finanzas?business="+encodeURIComponent(centralBusinessId)}>💳 Conectar Stripe para cobrar desde VMV →</a>:null}
    <div className={styles.form}>
