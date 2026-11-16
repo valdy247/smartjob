@@ -56,6 +56,12 @@ export default function WebAiStandalone(){
     throw Error(/límite de cinco sitios/i.test(String(rpcError?.message||""))?
      "Has alcanzado el límite de sitios de tu cuenta.":
      "No se pudo crear el sitio. Tus preferencias siguen disponibles para volver a intentarlo.");
+   if(input.inventoryBusinessId){
+    const {error:linkError}=await db.from("smartjob_builder_sites")
+     .update({inventory_business_id:input.inventoryBusinessId})
+     .eq("id",ids.siteId).eq("owner_id",ownerId);
+    if(linkError)setError("El sitio se creó, pero el inventario debe conectarse manualmente desde Ajustes.");
+   }
    if(proposal.seoTitle){
     const page=await db.from("smartjob_builder_pages").select("revision")
      .eq("id",ids.pageId).eq("owner_id",ownerId).maybeSingle();

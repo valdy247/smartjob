@@ -854,3 +854,7 @@
  position:relative;
  z-index:2;
 }
+
+/* Canonical catalog photography is displayed without filters or cropping. */
+.vmv-offering-card[data-catalog-original=true] .vmv-visual-media>img{object-fit:contain!important;object-position:center!important;transform:none!important;filter:none!important;opacity:1!important}
+.vmv-offering-card[data-catalog-original=true] .vmv-managed-image{transform:none!important}

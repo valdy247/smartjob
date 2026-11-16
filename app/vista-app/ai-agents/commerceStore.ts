@@ -4,7 +4,7 @@ export type CatalogItem={
  id:string;owner_id:string;business_id:string;sku:string;name:string;description:string;
  price_cents:number;currency:"usd";stock_mode:"manual"|"tracked"|"unlimited";
  available_qty:number|null;approved:boolean;active:boolean;updated_at:string;
- variants:unknown[];extras:unknown[];web_source_id?:string|null;
+ variants:unknown[];extras:unknown[];web_source_id?:string|null;image_path?:string|null;
 };
 export type TestOrder={
  id:string;order_no:number;owner_id:string;business_id:string;agent_id:string;status:string;
@@ -38,7 +38,7 @@ export async function listCatalog(businessId:string):Promise<CatalogItem[]>{
 export async function saveCatalogItem(input:{
  name:string;sku:string;description:string;price:string;
  stock_mode:CatalogItem["stock_mode"];available_qty:string;
- approved:boolean;active:boolean;
+ approved:boolean;active:boolean;image_path:string;
 },previous:CatalogItem|null,businessId:string){
  if(!uuid.test(businessId))throw Error("Selecciona un negocio.");
  const {db,owner}=await current();
@@ -52,6 +52,10 @@ export async function saveCatalogItem(input:{
  const sku=input.sku.trim().toUpperCase().slice(0,45);
  const name=input.name.trim().slice(0,120);
  if(!sku||!name)throw Error("Introduce nombre y código del producto.");
+ const photo=input.image_path.trim();
+ if(photo&&(!photo.startsWith(owner+"/"+businessId+"/")||
+  !/^[a-f0-9-]{36}[.](jpg|png|webp)$/.test(photo.slice((owner+"/"+businessId+"/").length))))
+  throw Error("La foto debe pertenecer a este negocio. Vuelve a subirla.");
  const tracked=input.stock_mode==="tracked";
  const qty=tracked?Number(input.available_qty):null;
  if(tracked&&(!Number.isSafeInteger(qty)||qty===null||qty<0||qty>1000000))
@@ -61,6 +65,7 @@ export async function saveCatalogItem(input:{
   sku,name,description:input.description.trim().slice(0,700),
   price_cents,currency:"usd",stock_mode:input.stock_mode,
   available_qty:qty,approved:input.approved,active:input.active,
+  image_path:input.image_path||null,
   updated_at:new Date().toISOString()
  };
  if(previous){

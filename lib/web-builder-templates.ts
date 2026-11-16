@@ -22,6 +22,7 @@ export type SiteIntake={
  business:string;categoryId:string;offering:SiteOffering;objective:SiteObjective;
  phone:string;email:string;city:string;about:string;logo:string;photos:string[];
  offerings:string[];products?:SiteProduct[];socials?:BusinessSocialLinks;
+ inventoryBusinessId?:string; // Owner-owned catalog workspace chosen in the wizard; not sent to AI.
  design?:SiteDesignPreferences;
 };
 export type SiteProposal={id:string;family:SiteFamily;name:string;subtitle:string;data:Data;layout:string;palette:string;
