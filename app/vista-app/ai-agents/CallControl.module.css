@@ -67,7 +67,7 @@
 .switch input[type=checkbox]:checked{background:#8652df}
 .switch input[type=checkbox]:checked::before{transform:translateX(20px)}
 .switch input[type=checkbox]:focus-visible{outline:3px solid #6c36cb}
-.section label:not(.switch){
+.section label:not(.switch):not(.toggle){
  display:flex;flex-direction:column;gap:8px;color:#514062;
  font-size:12px;font-weight:800;line-height:1.4;
 }
