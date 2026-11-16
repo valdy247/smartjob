@@ -62,3 +62,11 @@
 .finish .previous{background:#fff;color:#7655ac;border:1px solid #e0d1eb}
 @media(max-width:600px){.wizardNavigation{width:100%}.wizardNavigation>button{flex:1;
  justify-content:center}.finish .previous{flex:0 1 35%}.intro{gap:7px}}
+
+
+/* VMV pastels apply to intake controls, never to the client's website theme. */
+.root{color:#171127}
+.intro small,.intro h2 span{color:#8355cd}
+.panel{border-color:#eee5f5;border-radius:21px;background:#fff}
+.panel h3 span{background:#eee1ff;color:#7b4bc8}
+.panel input,.panel select,.panel textarea{background:#fdfcff;border-color:#e8def2;border-radius:13px}
