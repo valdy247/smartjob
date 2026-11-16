@@ -10,7 +10,12 @@
 import {Linking} from "react-native";
 
 // Internal builds use the matching VMV Business preview; released builds retain the stable domain.
-export const BUSINESS_WEB_ORIGIN=process.env.EXPO_PUBLIC_SMARTJOB_PREVIEW==="true"
+const betaPreview=process.env.EXPO_PUBLIC_VMV_WEB_BETA==="true";
+const exactBetaPreview=process.env.EXPO_PUBLIC_VMV_BETA_WEB_URL||
+  "https://smartjob-n60sd49pz-valdys-projects-b97fc7a6.vercel.app";
+export const BUSINESS_WEB_ORIGIN=betaPreview
+  ?exactBetaPreview
+  :process.env.EXPO_PUBLIC_SMARTJOB_PREVIEW==="true"
   ?"https://vmv-business-design-git-feat-vm-073e13-valdys-projects-b97fc7a6.vercel.app"
   :"https://vmv-business-design.vercel.app";
 const catalogUrl=BUSINESS_WEB_ORIGIN+"/service-catalog.json";
@@ -94,7 +99,11 @@ export async function loadBusinessModules():Promise<BusinessModule[]> {
 
 export async function openBusinessWorkspace(serviceId?:string):Promise<void> {
   const allowed=serviceId && isAllowed(serviceId)?serviceId:null;
-  const path=allowed==="smart-call"?"/es/workspace/smart-call/":"/es/workspace/"+(allowed?"?service="+encodeURIComponent(allowed):"");
+  const path=betaPreview
+    ?allowed==="ai-agents"?"/vista-app/ai-agents"
+      :allowed==="marketing-analytics"?"/vista-app/marketing":"/vista-app"
+    :allowed==="smart-call"?"/es/workspace/smart-call/"
+      :"/es/workspace/"+(allowed?"?service="+encodeURIComponent(allowed):"");
   // Browser independently verifies the user's Supabase session and RLS.
   // Native SecureStore tokens are NEVER transported across app/browser.
   await Linking.openURL(BUSINESS_WEB_ORIGIN+path);
