@@ -27,7 +27,8 @@ import {familyForCategory} from "@/lib/web-builder-templates";
 import RequestForm from "@/app/sites/[slug]/RequestForm";
 import styles from "./WebBuilderWorkspace.module.css";
 
-type Site={id:string;owner_id:string;slug:string;name:string;category_id:string;inquiries_enabled:boolean;legacy_source_slug:string|null};
+type Site={id:string;owner_id:string;slug:string;name:string;category_id:string;inquiries_enabled:boolean;legacy_source_slug:string|null;inventory_business_id:string|null};
+type InventorySource={id:string;name:string};
 type Page={id:string;site_id:string;owner_id:string;slug:string;title:string;description:string;draft:unknown;revision:number;updated_at:string};
 type Revision={id:string;page_id:string;version:number;title:string;description:string;document:unknown;created_at:string};
 type Domain={id:string;hostname:string;state:string;last_error:string;verification:unknown;last_checked_at:string|null};
@@ -59,6 +60,7 @@ export default function WebBuilderWorkspace(){
  const dictionary=useMemo(()=>puckDictionary(language),[language]);
  const [userId,setUserId]=useState("");
  const [sites,setSites]=useState<Site[]>([]);
+ const [inventorySources,setInventorySources]=useState<InventorySource[]>([]);
  const [expandedQuota,setExpandedQuota]=useState(false);
  const [site,setSite]=useState<Site|null>(null);
  const [pages,setPages]=useState<Page[]>([]);
@@ -166,9 +168,12 @@ export default function WebBuilderWorkspace(){
     const {data,error:authError}=await client.auth.getUser();
     if(authError||!data.user||data.user.is_anonymous)throw new Error("Inicia sesión en VMV Business para continuar");
     const {data:rows,error}=await client.from("smartjob_builder_sites")
-     .select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug").eq("owner_id",data.user.id).order("created_at",{ascending:false});
+     .select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug,inventory_business_id").eq("owner_id",data.user.id).order("created_at",{ascending:false});
     if(error)throw new Error("No se pudieron cargar tus sitios");
     if(active){setUserId(data.user.id);setSites((rows||[]) as Site[]);}
+    const {data:ownedInventory}=await client.from("vmv_ai_businesses")
+     .select("id,name").eq("owner_id",data.user.id).order("created_at",{ascending:false}).limit(50);
+    if(active)setInventorySources((ownedInventory||[]) as InventorySource[]);
     const {data:quota,error:quotaError}=await client.from("smartjob_builder_quota_exemptions")
      .select("expires_at").eq("owner_id",data.user.id).maybeSingle();
     if(active)setExpandedQuota(!quotaError&&Boolean(quota&&Date.parse(quota.expires_at)>Date.now()));
@@ -306,7 +311,7 @@ export default function WebBuilderWorkspace(){
  async function loadCreatedSite(c:NonNullable<ReturnType<typeof getSupabase>>,ids:{siteId:string;pageId:string}){
   const [siteResult,pageResult]=await Promise.all([
    c.from("smartjob_builder_sites").select(
-    "id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug"
+    "id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug,inventory_business_id"
    ).eq("id",ids.siteId).eq("owner_id",userId).single(),
    c.from("smartjob_builder_pages").select(
     "id,site_id,owner_id,slug,title,description,draft,revision,updated_at"
@@ -395,6 +400,29 @@ export default function WebBuilderWorkspace(){
    setSites(old=>old.map(s=>s.id===site.id?{...s,inquiries_enabled:enabled}:s));
    setNotice("Configuración guardada. Publica la página Inicio para aplicar el cambio.");
   }catch(e){setError(e instanceof Error?e.message:"Error al guardar");}
+  finally{setBusy(false);}
+ }
+ async function connectInventory(inventoryId:string){
+  if(!site||busy||!userId)return;
+  if(inventoryId&&!inventorySources.some(item=>item.id===inventoryId)){
+   setError("Este inventario no pertenece a tu negocio.");return;
+  }
+  if(inventoryId&&!window.confirm(
+   "La sección principal de productos mostrará los productos activos y aprobados del inventario, incluidas sus imágenes originales. Los cambios aparecerán en la web pública sin volver a publicarla. ¿Conectar?"))return;
+  setBusy(true);setError("");setNotice("");
+  try{
+   const db=await authorized();
+   const {data:linked,error:linkError}=await db.from("smartjob_builder_sites")
+    .update({inventory_business_id:inventoryId||null,updated_at:new Date().toISOString()})
+    .eq("id",site.id).eq("owner_id",userId)
+    .select("inventory_business_id").maybeSingle();
+   if(linkError||!linked)throw Error("No se pudo cambiar el inventario conectado.");
+   setSite(previous=>previous?{...previous,inventory_business_id:linked.inventory_business_id}:previous);
+   setSites(previous=>previous.map(entry=>entry.id===site.id?{
+    ...entry,inventory_business_id:linked.inventory_business_id
+   }:entry));
+   setNotice(inventoryId?"Inventario conectado. Solo el dueño puede cambiar las fotos originales.":"Inventario desconectado. La web vuelve a mostrar los productos publicados anteriormente.");
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo actualizar el inventario.");}
   finally{setBusy(false);}
  }
  async function createPage(overrideName?:string){
@@ -697,6 +725,8 @@ export default function WebBuilderWorkspace(){
   title={title} description={description} onTitleChange={setTitle} onDescriptionChange={setDescription}
   inquiriesEnabled={site.inquiries_enabled}
   onToggleInquiries={enabled=>void toggleRequests(enabled)}
+  inventorySources={inventorySources} inventoryBusinessId={site.inventory_business_id||""}
+  onConnectInventory={id=>void connectInventory(id)}
   domains={domains} domainRequests={domainRequests} domainInput={domainInput}
   domainQuote={domainQuote} quote={quote} onDomainInput={setDomainInput}
   onCheckDomain={()=>void checkDomain()} onSubmitDomainRequest={intent=>void submitDomainRequest(intent)}
@@ -830,6 +860,15 @@ export default function WebBuilderWorkspace(){
      <small>{site.inquiries_enabled?"Visibles al publicar Inicio":"Desactivado"}</small></span>
     <input type="checkbox" role="switch" checked={site.inquiries_enabled}
      disabled={busy} onChange={e=>void toggleRequests(e.target.checked)}/>
+   </label>
+   <label className={styles.inventorySiteConnection}>
+    <span><strong>Inventario de productos</strong>
+     <small>Fotos originales y datos aprobados · sin edición de IA</small></span>
+    <select aria-label="Inventario conectado a esta web" value={site.inventory_business_id||""}
+     disabled={busy} onChange={e=>void connectInventory(e.target.value)}>
+     <option value="">Sin inventario conectado</option>
+     {inventorySources.map(source=><option key={source.id} value={source.id}>{source.name}</option>)}
+    </select>
    </label>
    <div className={styles.sections}>
     <button type="button" className={view==="editor"?styles.selected:""} onClick={()=>{setView("editor");setError("");}}>Editor</button>
