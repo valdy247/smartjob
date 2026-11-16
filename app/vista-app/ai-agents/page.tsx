@@ -362,8 +362,8 @@ export default function AIAgentsPreview(){
         <strong>Mi agente</strong><small>Aún no tienes uno seleccionado.</small>
        </div>}
       {notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
-      <details className={styles.quickAgentMore}>
-       <summary>Más funciones <ChevronRight size={15}/></summary>
+      <section className={styles.quickAgentMore} aria-label="Más funciones">
+       <h2>Más funciones</h2>
        <div className={styles.tiles}>
         {types.map(type=>{const label=({
          calls:"Llamadas",support:"Chat web",sales:"Ventas",bookings:"Reservas",
@@ -385,9 +385,9 @@ export default function AIAgentsPreview(){
          <strong>Servicios</strong>
         </button>
        </div>
-      </details>
-      <details className={styles.quickAgentMore} open={!principal&&!proposal}>
-       <summary>Administrar agentes ({visibleAgents.length}) <ChevronRight size={15}/></summary>
+      </section>
+      <section className={styles.quickAgentMore} aria-label="Administrar agentes">
+       <h2>Administrar agentes ({visibleAgents.length})</h2>
       {visibleAgents.length===0?<div className={styles.empty}>
        <Bot size={30}/><strong>Aquí vivirán tus agentes</strong>
        
@@ -423,7 +423,7 @@ export default function AIAgentsPreview(){
         </div>
        </article>})}
       </div>}
-      </details>
+      </section>
       <div className={styles.disclaimer}><ShieldCheck size={16}/> Los agentes se guardan en tu cuenta. Elegir uno no conecta Twilio ni autoriza pagos. El ejemplo ficticio es temporal.</div>
      </>:null}
      {businessDialog?<BusinessProfileDialog businessId={selectedBusiness?.id} initialName={workspaces.find(w=>w.id===legacyId)?.name}
