@@ -11,7 +11,7 @@ create policy vmv_catalog_photos_owner_insert on storage.objects
  for insert to authenticated
  with check (
   bucket_id='vmv-catalog-images'
-  and name ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}/[0-9a-f-]{36}\\.(jpg|png|webp)$'
+  and name ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}/[0-9a-f-]{36}[.](jpg|png|webp)$'
   and split_part(name,'/',1)=auth.uid()::text
   and exists (
    select 1 from public.vmv_ai_businesses b
@@ -41,7 +41,7 @@ begin
  end if;
  p:=new.image_path;
  if p is null then return new; end if;
- if p !~ '^[0-9a-f-]{36}/[0-9a-f-]{36}/[0-9a-f-]{36}\\.(jpg|png|webp)$'
+ if p !~ '^[0-9a-f-]{36}/[0-9a-f-]{36}/[0-9a-f-]{36}[.](jpg|png|webp)$'
     or split_part(p,'/',1)<>new.owner_id::text
     or split_part(p,'/',2)<>new.business_id::text then
   raise exception 'Invalid product image path';
