@@ -146,7 +146,7 @@ export default function CallPreviewChat({policy,selectedAgentId,onClose}:{
    const response=await fetch("/api/vmv/ai-agents/simulate",{
     method:"POST",cache:"no-store",
     headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
-    body:JSON.stringify({agentId:agent.id,conversationId:id,message:prompt})
+    body:JSON.stringify({agentId:agent.id,conversationId:id,message:prompt,phonePreview:true})
    });
    const result=await response.json() as {reply?:string;error?:string};
    if(!response.ok||!result.reply)throw Error(result.error||"El agente no respondió.");
@@ -177,6 +177,8 @@ export default function CallPreviewChat({policy,selectedAgentId,onClose}:{
     </select>
    </label>:null}
   {routeNote?<p className={styles.routeNote}>{routeNote}</p>:null}
+  {agent&&agent.status!=="active"&&(scenario==="agent"||scenario==="menu")?
+   <p className={styles.inactiveNote} role="status">{agent.name} está inactivo. Puedes probarlo aquí, pero no atiende llamadas reales.</p>:null}
   <div className={styles.chat} aria-live="polite" aria-relevant="additions text">
    {loading?<p className={styles.wait}>Preparando llamada de prueba…</p>:null}
    {lines.map(item=><div key={item.id} className={item.who==="caller"?styles.userBubble:styles.botBubble}>
@@ -195,7 +197,7 @@ export default function CallPreviewChat({policy,selectedAgentId,onClose}:{
    <button type="button" onClick={()=>{setRoute("message");setLines(v=>[...v,line("caller","Contesta una persona"),line("system","La llamada continuaría con la persona autorizada.")]);}}><Check size={16}/> Contesta una persona</button>
   </div>:null}
   {!loading&&route==="agent"&&agent?<form className={styles.write} onSubmit={e=>{e.preventDefault();void send();}}>
-   <input aria-label="Mensaje del cliente" placeholder="Escribe como si fueras el cliente…" maxLength={1000}
+   <input aria-label="Mensaje del cliente" placeholder="Escribe como cliente…" maxLength={1000}
     value={entry} onChange={e=>setEntry(e.target.value)} disabled={sending}/>
    <button type="submit" disabled={sending||!entry.trim()} aria-label="Enviar al agente"><Send size={18}/></button>
   </form>:null}
