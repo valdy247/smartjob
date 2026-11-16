@@ -7,6 +7,9 @@ import {
 } from "lucide-react";
 import type {LucideIcon} from "lucide-react";
 import styles from "./page.module.css";
+import {useInterfaceLanguage} from "@/lib/i18n-web";
+import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
+import type {MessageKey} from "@/lib/i18n";
 import BusinessProfileDialog from "./BusinessProfileDialog";
 import AgentSetupWizard,{type WizardDraft} from "./AgentSetupWizard";
 import AgentQualityLab from "./AgentQualityLab";
@@ -40,6 +43,7 @@ function blank(kind:Kind):AgentDraft{
   instructions:"",knowledge:"",setup:{}};
 }
 export default function AIAgentsPreview(){
+ const {language,translate}=useInterfaceLanguage();
  const [screen,setScreen]=useState<Screen>("home");
  const [editStep,setEditStep]=useState<0|1|2|3>(0);
  const [draft,setDraft]=useState<AgentDraft>(()=>blank("support"));
@@ -106,6 +110,9 @@ export default function AIAgentsPreview(){
   a.setup.central_source_updated_at!==selectedBusiness.updated_at):[];
 
  const typeInfo=(kind:Kind)=>types.find(t=>t.id===kind)||types[6];
+ const label=(kind:Kind)=>translate(("agents.capability."+kind) as MessageKey);
+ const description=(kind:Kind)=>translate(("agents.capabilityDetail."+kind) as MessageKey);
+ const agentKind=(kind:Kind)=>translate(("agents.type."+kind) as MessageKey);
  const principal=visibleAgents.find(a=>a.id===selectedWorkspace?.primary_agent_id)||null;
  const proposal=principal?null:
   (visibleAgents.find(a=>a.id===phone?.agentId)|| (visibleAgents.length===1?visibleAgents[0]:null));
@@ -326,39 +333,39 @@ export default function AIAgentsPreview(){
  return <main className={styles.canvas}>
   <div className={styles.layout}>
    <div className={styles.externalHeader}>
-    <a href="/vista-app" className={styles.returnLink}><ArrowLeft size={17}/> VMV Business</a>
+    <a href="/vista-app" className={styles.returnLink}><ArrowLeft size={17}/> VMV Business</a><InterfaceLanguagePicker compact/>
     <span className={styles.previewBadge}>PREVIEW · AI AGENTS</span>
    </div>
-   <section className={styles.phone} aria-label="Vista previa de AI Agents para iPhone">
+   <section className={styles.phone} aria-label={translate("agents.phonePreview")}>
     <div className={styles.phoneTop}>
      <b>VMV</b><span className={styles.dynamicIsland}/><span className={styles.phoneSignal}>◢ ▰</span>
     </div>
     <div className={styles.appHeader}>
      <button type="button" className={styles.backIcon} onClick={screen==="home"?()=>{window.location.href="/vista-app";}:back}
-      aria-label={screen==="home"?"Volver a VMV":"Volver a AI Agents"}><ArrowLeft size={20}/></button>
+      aria-label={screen==="home"?translate("agents.backVMV"):translate("agents.backAgents")}><ArrowLeft size={20}/></button>
      <div className={styles.appTitle}><small>VMV BUSINESS</small><strong>AI Agents<span>.</span></strong></div>
      <span className={styles.sparkleBadge}><Sparkles size={21}/></span>
     </div>
     <div className={styles.scroller}>
-     {loading?<div className={styles.info} role="status">Cargando tu espacio de trabajo…</div>:null}
+     {loading?<div className={styles.info} role="status">{translate("agents.loadingWorkspace")}</div>:null}
      {!loading&&!authenticated?<div className={styles.info} role="alert">
-      <ShieldCheck size={17}/> No pudimos cargar tu cuenta.
+      <ShieldCheck size={17}/> {translate("agents.accountError")}
       <button type="button" className={styles.buttonSecondary}
        onClick={()=>{setNotice("");setLoading(true);setRetryAccount(n=>n+1);}}>
-       Reintentar</button>
+       {translate("common.retry")}</button>
      </div>:null}
      {authenticated?<>
      {screen!=="home"&&notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
      {screen==="home"?<>
       <div className={styles.hero}>
-       <div className={styles.heroEyebrow}><span>UN AGENTE POR NEGOCIO</span><Sparkles size={22}/></div>
-       <h1>Un agente.<br/>Todas tus funciones.</h1>
-       <div className={styles.heroPills}><span>{principal?"Principal: "+principal.name:proposal?"Elige tu agente":"Sin configurar"}</span></div>
+       <div className={styles.heroEyebrow}><span>{translate("agents.onePerBusiness")}</span><Sparkles size={22}/></div>
+       <h1>{translate("agents.oneAgent")}<br/>{translate("agents.allFunctions")}</h1>
+       <div className={styles.heroPills}><span>{principal?translate("agents.principalPrefix")+": "+principal.name:proposal?translate("agents.chooseAgent"):translate("agents.notConfigured")}</span></div>
       </div>
       {notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
-      <div className={styles.sectionHeading}><div><h2>Tu agente: {principal?.name||proposal?.name||"Sin configurar"}</h2>
-       <p>{selectedBusiness?.name||"Selecciona tu negocio"}</p></div></div>
-      <div className={styles.sectionHeading}><div><h2>Capacidades de tu agente</h2>
+      <div className={styles.sectionHeading}><div><h2>{translate("agents.yourAgent")}: {principal?.name||proposal?.name||translate("agents.notConfigured")}</h2>
+       <p>{selectedBusiness?.name||translate("agents.selectBusiness")}</p></div></div>
+      <div className={styles.sectionHeading}><div><h2>{translate("agents.capabilities")}</h2>
        </div></div>
       <div className={styles.tiles}>
        {types.map(type=>{const label=({
