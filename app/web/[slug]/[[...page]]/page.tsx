@@ -7,6 +7,8 @@ import {builderConfig,normalizeBuilderDocument} from "@/lib/web-builder-puck";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import {familyForCategory} from "@/lib/web-builder-templates";
 import {applyPublishedInventory,type ApprovedInventoryProduct} from "@/lib/vmv-ai-agents/public-catalog-site";
+import {publishedCatalogVersion} from "@/lib/vmv-ai-agents/public-catalog-version";
+import LiveInventoryRefresh from "@/app/web-studio/LiveInventoryRefresh";
 import {WebsiteChrome,websiteVisualStyle} from "@/lib/web-site-chrome";
 import type {CSSProperties} from "react";
 import RequestForm from "@/app/sites/[slug]/RequestForm";
@@ -50,7 +52,7 @@ async function publishedInventory(siteId:string,ownerId:string):Promise<
   .select("id").eq("id",businessId).eq("owner_id",ownerId).maybeSingle();
  if(businessError||!business)return {businessId,products:[]};
  const {data:products,error}=await db.from("vmv_ai_catalog_items")
-  .select("id,name,description,price_cents,currency,image_path")
+  .select("id,name,description,price_cents,currency,image_path,updated_at")
   .eq("owner_id",ownerId).eq("business_id",businessId)
   .eq("approved",true).eq("active",true)
   .order("name",{ascending:true}).limit(40);
@@ -134,6 +136,8 @@ export default async function VMVPublishedPage({params}:Props){
    __html:JSON.stringify(organization).replace(/</g,"\\u003c")
   }}/>:null}
   <Render config={builderConfig} data={data}/>
+  {inventory?<LiveInventoryRefresh siteSlug={slug}
+   version={publishedCatalogVersion(inventory.products)}/>:null}
   {showForm&&rootData.chatMode==="inbox"?<WebChatLauncher slug={slug} business={siteName} categoryId={result.page.category_id||""} services={services}/>:null}
   {showForm?<section className="vmv-site-inquiry" id="solicitud" aria-label="Enviar solicitud al negocio">
    <small>CONTACTA CON NOSOTROS</small>
