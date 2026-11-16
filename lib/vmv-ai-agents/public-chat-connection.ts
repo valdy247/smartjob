@@ -1,5 +1,6 @@
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {resolveInventoryForPublishedSite} from "@/lib/vmv-ai-agents/site-inventory-resolution";
+import {publicChatReadiness} from "@/lib/vmv-ai-agents/public-chat-readiness";
 
 export type PublicChatAgent={
  id:string;owner_id:string;business_id:string;name:string;kind:string;purpose:string;
@@ -24,8 +25,9 @@ export async function findPublicChatAgent(db:SupabaseClient,
   .select("id,owner_id,business_id,name,kind,purpose,personality,language,instructions,knowledge,configuration,status")
   .eq("id",business.primary_agent_id).eq("owner_id",site.owner_id)
   .eq("business_id",businessId).maybeSingle();
- if(error||!agent||agent.status!=="active"||
-  (agent.configuration as Record<string,string>|null)?.cap_chat!=="Sí")return null;
+ if(error||!agent||agent.status==="paused"||
+  (agent.configuration as Record<string,string>|null)?.cap_chat!=="Sí"||
+  !publicChatReadiness({...agent,configuration:agent.configuration as Record<string,string>}).ready)return null;
  return {...agent,configuration:agent.configuration as Record<string,string>,
   business_name:String(business.name)} as PublicChatAgent;
 }
