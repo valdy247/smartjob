@@ -1,0 +1,38 @@
+.launcher{position:fixed;bottom:max(22px,env(safe-area-inset-bottom));right:20px;z-index:2140;
+ display:inline-flex;align-items:center;gap:8px;background:#8255d9;color:#fff;
+ padding:14px 18px;border:0;border-radius:60px;box-shadow:0 9px 30px #543a8b44;
+ font:800 13px system-ui,sans-serif;cursor:pointer}
+.backdrop{position:fixed;inset:0;z-index:2150;display:flex;align-items:flex-end;
+ justify-content:flex-end;background:#1c152d33;padding:16px}
+.dialog{display:flex;flex-direction:column;width:min(385px,100%);
+ height:min(590px,calc(100dvh - 42px));background:#fff;border-radius:23px;
+ overflow:hidden;box-shadow:0 12px 42px #30204245;color:#352a40;
+ font-family:system-ui,sans-serif}
+.header{display:flex;align-items:center;gap:11px;padding:15px 18px;
+ border-bottom:1px solid #eee6f5}
+.avatar{width:39px;height:39px;border-radius:13px;background:#f1eafb;
+ display:grid;place-items:center;color:#8255d9}
+.header>div{display:flex;flex:1;flex-direction:column;gap:3px;min-width:0}
+.header strong{font-size:15px;font-weight:850}
+.header small{font-size:11px;color:#877b92}
+.header button{display:grid;place-items:center;border:0;background:transparent;
+ color:#806b9c;padding:5px;cursor:pointer}
+.messages{flex:1;min-height:0;overflow:auto;padding:16px;display:flex;
+ flex-direction:column;gap:10px;align-items:flex-start}
+.welcome,.agent,.me,.wait,.error{margin:0;font-size:13px;line-height:1.5;
+ padding:11px 13px;max-width:88%;border-radius:15px;white-space:pre-wrap;overflow-wrap:anywhere}
+.welcome,.agent{background:#f2edf9;color:#382a4b;border-bottom-left-radius:5px}
+.me{align-self:flex-end;background:#8556d9;color:#fff;border-bottom-right-radius:5px}
+.wait{color:#857595;background:#f8f4fc}
+.error{background:#fff1f3;color:#a22c4b}
+.entry{display:flex;gap:8px;border-top:1px solid #eee7f4;padding:12px}
+.entry input{flex:1;min-width:0;border:1px solid #e9dff2;background:#fcfaff;
+ border-radius:13px;padding:12px 13px;outline:0;font-size:13px;color:#34283f}
+.entry input:focus{border-color:#a986e2;box-shadow:0 0 0 3px #a986e226}
+.entry button{border:0;border-radius:13px;background:#8254d7;color:#fff;
+ width:42px;display:grid;place-items:center;cursor:pointer}
+.entry button:disabled{opacity:.45}
+.footnote{color:#91839e;text-align:center;padding:0 10px 11px;font-size:10px}
+@media(max-width:580px){.backdrop{padding:0;align-items:flex-end}
+ .dialog{width:100%;height:min(76dvh,650px);border-radius:22px 22px 0 0;
+ padding-bottom:env(safe-area-inset-bottom)}}
