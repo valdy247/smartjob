@@ -5,13 +5,14 @@ import {setAgentCatalogReadAccess,type PersistedAgent} from "./agentStore";
 import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,saveCatalogItem,saveCommerceAgentPermissions,listWebStudioCards,importWebStudioCard,getVerifiedCatalog,
  type CatalogItem,type TestOrder,type HumanRequest,type CommerceAgentPermissions,type WebStudioCard,type VerifiedCatalogItem} from "./commerceStore";
 import styles from "./CommerceStudio.module.css";
+import CatalogProductImageField,{catalogImageUrl} from "./CatalogProductImageField";
 
 type Form={
  name:string;sku:string;description:string;price:string;stock_mode:CatalogItem["stock_mode"];
- available_qty:string;approved:boolean;active:boolean;
+ available_qty:string;approved:boolean;active:boolean;image_path:string;
 };
 const empty:Form={name:"",sku:"",description:"",price:"",stock_mode:"manual",available_qty:"",
- approved:false,active:true};
+ approved:false,active:true,image_path:""};
 export default function CommerceStudio({agents,onClose,initialAgentId="",initialTab="catalog",onAgentUpdated,workspaceId,centralBusinessId="",catalogOnly=false}:{catalogOnly?:boolean;workspaceId?:string;centralBusinessId?:string;agents:PersistedAgent[];onClose:()=>void;initialAgentId?:string;initialTab?:"setup"|"catalog";onAgentUpdated?:(agent:PersistedAgent)=>void}){
  const [items,setItems]=useState<CatalogItem[]>([]);
  const [webCards,setWebCards]=useState<WebStudioCard[]>([]);
@@ -21,6 +22,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
  const [human,setHuman]=useState<HumanRequest[]>([]);
  const [editing,setEditing]=useState<CatalogItem|null>(null);
  const [form,setForm]=useState<Form>(empty);
+ const [imageUploading,setImageUploading]=useState(false);
  const [agentId,setAgentId]=useState(agents.some(a=>a.id===initialAgentId)?initialAgentId:agents[0]?.id||"");
  const businessId=workspaceId||agents[0]?.business_id||"";
  const [busy,setBusy]=useState(false);
@@ -88,7 +90,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
  },[businessId]);
  const patch=<K extends keyof Form>(key:K,value:Form[K])=>setForm(prev=>({...prev,[key]:value}));
  const save=async()=>{
-  if(busy)return;
+  if(busy||imageUploading)return;
   setBusy(true);try{
    await saveCatalogItem(form,editing,businessId);await refresh();
    setEditing(null);setForm(empty);setNotice("Producto guardado en este negocio. El agente principal podrá consultarlo solo con permisos válidos.");
@@ -108,7 +110,8 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
  const beginEdit=(item:CatalogItem)=>{
   setEditing(item);setForm({name:item.name,sku:item.sku,description:item.description,
    price:(item.price_cents/100).toFixed(2),stock_mode:item.stock_mode,
-   available_qty:String(item.available_qty??""),approved:item.approved,active:item.active});
+   available_qty:String(item.available_qty??""),approved:item.approved,active:item.active,
+   image_path:item.image_path||""});
  };
  const confirm=async(order:TestOrder)=>{
   setBusy(true);try{await confirmTestOrder(order.id);await refresh();
@@ -230,6 +233,8 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
    <div className={styles.heading}><h2>{editing?"Editar producto":"Añadir producto"}</h2>
     {editing?<button type="button" onClick={()=>{setEditing(null);setForm(empty);}}>Cancelar edición</button>:null}</div>
    <div className={styles.form}>
+    <CatalogProductImageField businessId={businessId} value={form.image_path}
+     onChange={path=>patch("image_path",path)} onBusy={setImageUploading} disabled={busy}/>
     <label>Nombre real aprobado<input maxLength={120} value={form.name} onChange={e=>patch("name",e.target.value)} placeholder="Nombre del producto"/></label>
     <label>Código único (SKU)<input maxLength={45} value={form.sku} onChange={e=>patch("sku",e.target.value)} placeholder="Ej. PASTEL-01"/></label>
     <label>Precio aprobado (USD)<input inputMode="decimal" value={form.price}
@@ -245,12 +250,14 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
       <span>Confirmo que el precio y los datos del producto están aprobados por el negocio.</span></label>
     <label className={styles.check}><input type="checkbox" checked={form.active} onChange={e=>patch("active",e.target.checked)}/>
       <span>Producto disponible en el catálogo</span></label>
-    <button type="button" disabled={busy||!form.name.trim()||!form.sku.trim()||!form.price.trim()}
+    <button type="button" disabled={busy||imageUploading||!form.name.trim()||!form.sku.trim()||!form.price.trim()}
       className={styles.primary} onClick={()=>void save()}><Plus size={18}/> {editing?"Guardar cambios":"Guardar producto"}</button>
    </div>
    <div className={styles.heading}><h2>Mis productos</h2></div>
    {items.length===0?<div className={styles.empty}><Package size={26}/><p>No hay productos aprobados.</p></div>:
     <div className={styles.items}>{items.map(item=><div key={item.id} className={styles.item}>
+     {item.image_path&&catalogImageUrl(item.image_path)?<img className={styles.catalogThumb}
+      src={catalogImageUrl(item.image_path)} alt={"Foto de "+item.name} loading="lazy"/>:null}
      <div><strong>{item.name}</strong><small>{item.sku} · {formatUsd(item.price_cents)}</small>
       <small>{item.approved?"Precio aprobado":"Pendiente de aprobación"} · {item.stock_mode==="tracked"?String(item.available_qty)+" unidades configuradas":item.stock_mode==="manual"?"Disponibilidad manual":"Sin límite configurado"}</small>
       {item.approved&&item.active&&inventoryReady?<small>{
