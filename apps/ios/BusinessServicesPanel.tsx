@@ -28,7 +28,7 @@ const fields:{key:Exclude<keyof ProfileDraft,"authorized"|"category"|"categoryId
   {key:"assets",label:"Logo / fotos (enlace)",max:150,keyboard:"url"}
 ];
 
-const colors={ink:"#29213D",muted:"#8E83A1",accent:"#895DE4",line:"#E7DFF2",bg:"#FBFAFF"};
+const colors={ink:"#171127",muted:"#82768D",accent:"#8054D9",line:"#ECE5F4",bg:"#FDFCFF"};
 const iconName=(name:string):React.ComponentProps<typeof Ionicons>["name"]=>
   name as React.ComponentProps<typeof Ionicons>["name"];
 
@@ -251,7 +251,7 @@ const styles=StyleSheet.create({
  back:{flexDirection:"row",alignItems:"center",gap:5,marginBottom:18},
  backText:{color:colors.accent,fontSize:14,fontWeight:"800"},
  formHead:{flexDirection:"row",gap:13,alignItems:"center",marginBottom:19},
- formIcon:{width:54,height:54,borderRadius:19,backgroundColor:"#DED0FF",alignItems:"center",justifyContent:"center"},
+ formIcon:{width:54,height:54,borderRadius:19,backgroundColor:"#E7D7FF",alignItems:"center",justifyContent:"center"},
  formTitle:{fontSize:20,fontWeight:"900",letterSpacing:-.8,color:colors.ink,flexShrink:1},
  formChip:{fontSize:11,color:"#7D68A4",fontWeight:"700",marginTop:5},
  formCard:{backgroundColor:"#FFFFFF",borderColor:colors.line,borderWidth:1,borderRadius:23,padding:17},
