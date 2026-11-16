@@ -49,6 +49,10 @@ function intakeFromBody(value:unknown):SiteIntake|null{
   phone:str(v.phone,36),email:str(v.email,180),city:str(v.city,180),
   about:str(v.about,500),logo:safeWebImageUrl(str(v.logo,500))||"",socials:normalizeSocialLinks(v.socials),
   photos:Array.isArray(v.photos)?v.photos.slice(0,12).map((x:unknown)=>safeWebImageUrl(str(x,500))||"").filter(Boolean):[],
+  gallery:Array.isArray(v.gallery)?v.gallery.slice(0,24)
+   .map((x:unknown)=>safeWebImageUrl(str(x,500))||"").filter(Boolean):undefined,
+  galleryColumns:([1,2,3] as number[]).includes(Number(v.galleryColumns))?
+   Number(v.galleryColumns) as 1|2|3:undefined,
   offerings:offeringItems,design
  };
 }
