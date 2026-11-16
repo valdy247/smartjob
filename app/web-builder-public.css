@@ -858,3 +858,22 @@
 /* Canonical catalog photography is displayed without filters or cropping. */
 .vmv-offering-card[data-catalog-original=true] .vmv-visual-media>img{object-fit:contain!important;object-position:center!important;transform:none!important;filter:none!important;opacity:1!important}
 .vmv-offering-card[data-catalog-original=true] .vmv-managed-image{transform:none!important}
+
+
+/* Explicit gallery choices from the owner are preserved on desktop and mobile.
+   Legacy galleries without data-columns keep their original responsive layout. */
+.vmv-gallery-items[data-layout="grid"][data-columns="1"]{
+ grid-template-columns:minmax(0,1fr);
+}
+.vmv-gallery-items[data-layout="grid"][data-columns="2"]{
+ grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.vmv-gallery-items[data-layout="grid"][data-columns="3"]{
+ grid-template-columns:repeat(3,minmax(0,1fr));
+}
+@media(max-width:540px){
+ .vmv-gallery-items[data-layout="grid"][data-columns="1"]{gap:12px}
+ .vmv-gallery-items[data-layout="grid"][data-columns="2"]{gap:8px}
+ .vmv-gallery-items[data-layout="grid"][data-columns="3"]{gap:5px}
+ .vmv-gallery-items[data-layout="grid"][data-columns="3"] figcaption{font-size:10px;padding:4px}
+}
