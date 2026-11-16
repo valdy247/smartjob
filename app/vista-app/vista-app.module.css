@@ -564,3 +564,91 @@ button.homeProductCard:hover{transform:translateY(-2px)}
  .scrollArea{min-height:0;scrollbar-width:none}
  .bottomNav{margin:0 10px max(10px,env(safe-area-inset-bottom,0px))}
 }
+
+
+/* VMV pastel identity — shared with the native app. No operational statuses are mocked. */
+.stage{--vmv-ink:#171127;--vmv-lavender:#e9dcff;--vmv-mint:#e3fadd;--vmv-pink:#fde1ee;--vmv-border:#ece5f4;--vmv-violet:#8054d9;background:#f9f8fe;color:var(--vmv-ink)}
+.device{background:#fdfcff;border-color:#17131d;box-shadow:0 26px 70px #29213620}
+.scrollArea{background:#fdfcff}
+.screen,.smartScreen{color:var(--vmv-ink)}
+.screen h2,.smartScreen h2,.smartCard h3{color:var(--vmv-ink)}
+.appTop{background:#fdfcff;border-color:var(--vmv-border)}
+.appLogo .mark{background:linear-gradient(145deg,#c9a7ff,#8e5ae6);color:#fff}
+.appLogo b{color:var(--vmv-ink);letter-spacing:-.035em}
+.appLogo b span{color:#7855c5}
+.appTop>button{background:#f1eaff;color:#7851c0}
+.smartCard,.dashboardActivity,.listEntry,.accountHero,.accountStatTile{border-color:var(--vmv-border);background:#fff;border-radius:20px}
+.smartHero,.minuteHero{border-radius:22px}
+.catalogViolet{background:#e8dcff;color:#39205f}
+.catalogMint{background:#ddf8df;color:#1c573f}
+.catalogYellow{background:#fff0cb;color:#725625}
+.catalogSky{background:#dcedff;color:#2d5279}
+.catalogPink{background:#fde1ee;color:#873b63}
+.catalogCard,.serviceModuleTile,.dashboardQuickGrid button{border-radius:19px}
+.catalogFilterActive{background:#8054d9;border-color:#8054d9}
+.bottomNav{background:#080809;border-color:#080809;border-radius:29px;height:71px;margin:0 12px 12px;padding:7px 8px;box-shadow:0 10px 21px #120e1626}
+.bottomNav button{height:56px;min-height:56px;color:#fff;border-radius:20px;gap:2px}
+.bottomNav button>span{color:inherit;width:42px;height:33px}
+.bottomNav button small{font-size:9px;color:inherit}
+.bottomNav button.activeNav{background:linear-gradient(145deg,#d8c0ff,#ac83f1);color:#211139}
+.bottomNav button.activeNav>span{background:transparent;color:#211139}
+.bottomNav .navCallAction{transform:none}
+.bottomNav .navCallAction>span,.bottomNav .navCallAction.activeNav>span{
+ width:42px;height:33px;border:0;border-radius:17px;box-shadow:none;background:transparent;color:inherit
+}
+.bottomNav .navCallAction small{color:inherit}
+.homeConcept{background:#fdfcff;padding:16px 18px 30px;min-height:100%;color:var(--vmv-ink)}
+.homeIdentity{display:flex;align-items:center;justify-content:space-between;gap:9px;margin:0 0 29px}
+.homeIdentityBrand{display:inline-flex;align-items:center;gap:9px;min-width:0}
+.homeIdentityBrand strong{font-size:19px;letter-spacing:-.05em;font-weight:900;white-space:nowrap}
+.homeIdentityV{font-weight:950;font-size:36px;letter-spacing:-.11em;font-style:italic;line-height:1;
+ color:#9664ed;text-shadow:-4px -2px 0 #dbc1ff}
+.homeIdentityActions{display:flex;align-items:center;gap:8px}
+.homeBell{display:grid;place-items:center;flex:0 0 35px;width:35px;height:35px;background:#f8f5ff;border-radius:50%;color:#24142e}
+.homeHello{margin:0 0 22px}
+.homeHello h2{font-size:clamp(27px,7vw,34px);line-height:1.12;letter-spacing:-.066em;font-weight:900;margin:0 0 8px}
+.homeHello p{font-size:13px;line-height:1.5;color:#5d5769;margin:0}
+.homeGrowHero{position:relative;min-height:205px;overflow:hidden;isolation:isolate;
+ border-radius:23px;padding:23px 20px;margin:0 0 16px;
+ background:radial-gradient(circle at 75% 75%,#bd93fa88,transparent 48%),linear-gradient(135deg,#e7d3ff,#d7b8fb);
+ color:#151026}
+.homeGrowCopy{position:relative;z-index:2;display:flex;align-items:flex-start;flex-direction:column;max-width:62%}
+.homeGrowCopy h3{font-size:clamp(25px,7vw,32px);line-height:1.01;letter-spacing:-.067em;font-weight:900;margin:0 0 14px}
+.homeGrowCopy p{font-size:12px;line-height:1.48;color:#423355;margin:0}
+.homeGrowStart{display:inline-flex;align-items:center;gap:7px;border-radius:999px;
+ background:#fff;color:#181023;box-shadow:0 6px 15px #71529d28;
+ margin-top:19px;padding:10px 14px;font-size:13px;font-weight:900;white-space:nowrap;cursor:default;user-select:none}
+.homeGrowStart svg{transform:rotate(45deg)}
+.homeRocketArt{position:absolute;display:grid;place-items:center;right:4%;top:22%;width:39%;height:72%;
+ color:#8352d3;transform:rotate(21deg);pointer-events:none}
+.homeRocketArt>svg{position:relative;z-index:2;filter:drop-shadow(5px 12px 6px #7957ab47);fill:#f6efff;stroke:#8759d5}
+.homeRocketHalo{position:absolute;width:92px;height:92px;border-radius:50%;
+ background:#ffffff85;filter:blur(13px);top:15%;right:12%}
+.homeRocketCloud{position:absolute;bottom:3px;left:6px;width:79px;height:28px;border-radius:50%;
+ background:#ffffffb3;filter:blur(8px)}
+.homeServiceTiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.homeServiceTiles button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;
+ min-width:0;min-height:130px;padding:13px 7px;border:0;border-radius:22px;text-align:center;
+ color:#171127;cursor:pointer;font:inherit}
+.homeServiceTiles button strong{font-size:16px;line-height:1.2;font-weight:900;letter-spacing:-.04em}
+.homeServiceTiles button svg{stroke-width:1.8}
+.homeTileMint{background:#dcfbdc}
+.homeTilePink{background:#fce0ed}
+.homeTileLavender{background:#e8d8ff}
+.homeTileGreen{background:#ddfade}
+.homeBusinessArea{margin-top:23px}
+.homeBusinessArea h3{font-size:22px;line-height:1.2;letter-spacing:-.055em;font-weight:900;margin:0 0 12px}
+.homeSummaryCard{display:flex;align-items:center;gap:12px;text-align:left;width:100%;border:1px solid #f0eaf6;
+ border-radius:21px;padding:12px 13px;background:#fff;box-shadow:0 8px 17px #28134a0d;cursor:pointer;color:inherit}
+.homeSummaryIcon{height:52px;width:52px;flex:0 0 52px;display:grid;place-items:center;
+ border-radius:17px;background:#eee1ff;color:#6743bf}
+.homeSummaryCard>span:nth-child(2){display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.homeSummaryCard strong{font-size:17px;font-weight:900}
+.homeSummaryCard small{font-size:12px;color:#716a7c}
+.homeSummaryChevron{transform:rotate(180deg);color:#21152f}
+.homeConcept :is(button,.homeSummaryCard):focus-visible{outline:3px solid #8857d9;outline-offset:3px}
+@media(max-width:360px){.homeConcept{padding:13px 13px 25px}.homeIdentityBrand strong{font-size:17px}
+ .homeIdentity{margin-bottom:22px}.homeServiceTiles button{min-height:115px}
+ .homeGrowHero{padding:20px 16px}.homeRocketArt{right:0;opacity:.8}}
+@media(max-width:600px){.bottomNav{margin:0 10px max(8px,env(safe-area-inset-bottom,0px))}}
+@media(prefers-reduced-motion:reduce){.homeServiceTiles button{transition:none}}
