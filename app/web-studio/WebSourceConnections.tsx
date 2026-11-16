@@ -17,6 +17,7 @@ type Props={
  onInventory:(id:string)=>void;onServices:(id:string)=>void;
  onProducts:(items:SiteProduct[])=>void;onServiceItems:(items:SiteProduct[])=>void;
  onInventoryStatus:(v:LinkStatus)=>void;onServicesStatus:(v:LinkStatus)=>void;
+ inventoryStatus:LinkStatus;servicesStatus:LinkStatus;
  onChooseType?:(kind:Kind)=>void;
 };
 
@@ -25,10 +26,10 @@ function safeCatalogImage(path:string|null,owner:string,business:string,base:str
  if(!path||!new RegExp("^"+owner+"/"+business+"/[a-f0-9-]{36}\\.(jpg|png|webp)$","i").test(path))return "";
  return safeWebImageUrl(base+"/storage/v1/object/public/vmv-catalog-images/"+path)||"";
 }
-function ConnectionRow({kind,businesses,businessName,selected,loading,busy,status,error,onToggle,onChoose}:{
+function ConnectionRow({kind,businesses,businessName,selected,loading,busy,status,error,onChoose}:{
  kind:Kind;businesses:Business[];businessName:string;selected:string;
  loading:boolean;busy:boolean;status:LinkStatus;error:string;
- onToggle:()=>void;onChoose:(id:string)=>void;
+ onChoose:(id:string)=>void;
 }){
  const [choosing,setChoosing]=useState(false);
  const title=kind==="products"?"Conectar inventario":"Conectar servicios";
@@ -68,7 +69,7 @@ function ConnectionRow({kind,businesses,businessName,selected,loading,busy,statu
 export default function WebSourceConnections({
  ownerId,businessName,inventoryId,servicesId,
  onInventory,onServices,onProducts,onServiceItems,
- onInventoryStatus,onServicesStatus,onChooseType
+ onInventoryStatus,onServicesStatus,inventoryStatus,servicesStatus,onChooseType
 }:Props){
  const [businesses,setBusinesses]=useState<Business[]>([]);
  const [loading,setLoading]=useState(true);
@@ -136,12 +137,12 @@ export default function WebSourceConnections({
  return <section className={styles.root} aria-label="Conexiones de productos y servicios">
   <ConnectionRow kind="products" businesses={businesses} businessName={businessName}
    selected={inventoryId} loading={loading} busy={false}
-   status={inventoryId?"ready":"idle"} error={issues.products}
-   onToggle={()=>{}} onChoose={id=>toggle("products",id)}/>
+   status={inventoryStatus} error={issues.products}
+   onChoose={id=>toggle("products",id)}/>
   <ConnectionRow kind="services" businesses={businesses} businessName={businessName}
    selected={servicesId} loading={loading} busy={false}
-   status={servicesId?"ready":"idle"} error={issues.services}
-   onToggle={()=>{}} onChoose={id=>toggle("services",id)}/>
+   status={servicesStatus} error={issues.services}
+   onChoose={id=>toggle("services",id)}/>
   {error?<div className={styles.error}>{error}
    <button type="button" onClick={()=>setRetry(v=>v+1)}><RefreshCw size={14}/> Reintentar</button>
   </div>:null}
