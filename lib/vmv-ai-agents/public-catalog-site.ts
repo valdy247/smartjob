@@ -12,7 +12,7 @@ export function canonicalCatalogImageUrl(path:string|null|undefined,owner:string
 }
 export type ApprovedInventoryProduct={
  id:string;name:string;description:string|null;price_cents:number;currency:string;
- image_path:string|null;
+ image_path:string|null;updated_at:string;
 };
 export function applyPublishedInventory(document:Data,products:ApprovedInventoryProduct[],
  owner:string,business:string,supabaseUrl:string):Data{
