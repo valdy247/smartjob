@@ -53,7 +53,8 @@ export async function saveCatalogItem(input:{
  const name=input.name.trim().slice(0,120);
  if(!sku||!name)throw Error("Introduce nombre y código del producto.");
  const photo=input.image_path.trim();
- if(photo&&(!photo.startsWith(owner+"/"+businessId+"/")||\n  !/^[a-f0-9-]{36}[.](jpg|png|webp)$/.test(photo.slice((owner+"/"+businessId+"/").length))))
+ if(photo&&(!photo.startsWith(owner+"/"+businessId+"/")||
+  !/^[a-f0-9-]{36}[.](jpg|png|webp)$/.test(photo.slice((owner+"/"+businessId+"/").length))))
   throw Error("La foto debe pertenecer a este negocio. Vuelve a subirla.");
  const tracked=input.stock_mode==="tracked";
  const qty=tracked?Number(input.available_qty):null;
