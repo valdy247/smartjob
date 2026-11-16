@@ -652,3 +652,18 @@ button.homeProductCard:hover{transform:translateY(-2px)}
  .homeGrowHero{padding:20px 16px}.homeRocketArt{right:0;opacity:.8}}
 @media(max-width:600px){.bottomNav{margin:0 10px max(8px,env(safe-area-inset-bottom,0px))}}
 @media(prefers-reduced-motion:reduce){.homeServiceTiles button{transition:none}}
+
+/* Real operational data stays available, while the reference Home remains concise. */
+.homeGrowCopy h3{white-space:pre-line}
+.homeLiveDetails{margin-top:14px;border:1px solid #eee7f5;background:#fff;border-radius:19px;overflow:hidden}
+.homeLiveDetails>summary{list-style:none;padding:15px 17px;font-size:12px;color:#7851bf;font-weight:850;cursor:pointer}
+.homeLiveDetails>summary::-webkit-details-marker{display:none}
+.homeLiveDetails[open]>summary{border-bottom:1px solid #eee7f5}
+.homeLiveDetails .dashboardHeading{padding:0 14px;margin:15px 0 8px}
+.homeLiveDetails .dashboardCallCard{width:calc(100% - 28px);margin:0 14px;background:linear-gradient(135deg,#e1d0ff,#c5a6fc);color:#22112f;box-shadow:none;min-height:0}
+.homeLiveDetails .dashboardCallCard>strong{color:#22112f;font-size:18px;margin:0 0 9px}
+.homeLiveDetails .dashboardLineState{color:#543f67}
+.homeLiveDetails .dashboardMetrics b{color:#251934}
+.homeLiveDetails .dashboardMetrics small{color:#5f4b73}
+.homeLiveDetails .dashboardMetrics>span{background:#ffffff80;border-color:#ffffffb3}
+.homeLiveDetails .dashboardActivity{margin:12px 14px}
