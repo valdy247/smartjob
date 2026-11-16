@@ -92,3 +92,14 @@
 .skipPhotos input{width:18px;height:18px;flex:none;accent-color:#8d5dde}
 .frameHeading{font-size:15px;font-weight:850;margin:3px 0 -6px;letter-spacing:-.025em}
 @media(max-width:580px){.photoGrid{grid-template-columns:1fr}.photoGallery{padding:12px}}
+
+/* The AI photo step shares the visual editor's gallery options. */
+.galleryControls{display:flex;flex-direction:column;gap:9px;padding:13px;border-radius:13px;background:#fff;border:1px solid #e9e0f4}
+.galleryControlsLabel{font-size:12px;font-weight:850;color:#51416a}
+.galleryColumnChoices{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.galleryColumnChoices button{min-height:42px;border-radius:12px;border:1px solid #e2d4f0;background:#faf6ff;color:#6a5293;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.galleryColumnChoices button[aria-pressed=true]{background:#e5d5fd;color:#4e248c;border-color:#a981df;box-shadow:inset 0 0 0 1px #ac83e7}
+.galleryColumnChoices button:focus-visible,.addPhotoSlot:focus-visible,.removePhotoSlot:focus-visible{outline:3px solid #9d76e9;outline-offset:3px}
+.addPhotoSlot{align-self:flex-start;min-height:41px;padding:10px 14px;border-radius:12px;background:#ede5fa;border:1px solid #d8c8ef;color:#68449d;font-size:12px;font-weight:850;cursor:pointer}
+.removePhotoSlot{align-self:flex-start;border:0;background:none;color:#8257b8;padding:8px 0;font-size:11px;font-weight:800;cursor:pointer}
+@media(max-width:510px){.galleryColumnChoices{grid-template-columns:repeat(2,minmax(0,1fr))}}
