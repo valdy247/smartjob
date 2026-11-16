@@ -348,3 +348,10 @@
 @media(prefers-reduced-motion:reduce){
  .compactPicker,.compactChevron{transition:none}
 }
+
+
+.manualToggle{border:0;background:transparent;color:#8056b4;font-size:12px;
+ font-weight:850;align-self:flex-start;padding:5px 2px;cursor:pointer}
+.manualToggle:focus-visible{outline:3px solid #a17ce5;outline-offset:3px}
+.manualSection{display:flex;flex-direction:column;gap:15px;
+ padding:15px;border:1px solid #eadef7;background:#fcf9ff;border-radius:17px}
