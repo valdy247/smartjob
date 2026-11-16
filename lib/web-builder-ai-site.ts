@@ -115,14 +115,17 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
   }});
  }
  // A gallery is only generated when the client provided actual photos.
- if(prefs?.contentFocus==="gallery"&&input.photos.some(Boolean)&&
+ if(prefs?.contentFocus==="gallery"&&(input.gallery?.some(Boolean)||input.photos.some(Boolean))&&
   !content.some(item=>["PhotoGallery","ProjectShowcase"].includes(item.type))){
-  const items=input.photos.filter(Boolean).slice(0,12).map((image,index)=>({
+  const items=(input.gallery!==undefined?input.gallery:input.photos)
+   .filter(Boolean).slice(0,24).map((image,index)=>({
    id:"ai-gallery-"+index,image,alt:"Foto "+(index+1)+" de "+input.business,caption:""
   }));
   content.splice(1,0,{type:"PhotoGallery",props:{
    id:"ai-gallery",title:safeString(sections.galleryTitle,85,"Nuestro trabajo"),
-   description:"",items,layout:"mosaic",padding:"spacious",surface:"light"
+   description:"",items,layout:input.galleryColumns?"grid":"mosaic",
+   columns:input.galleryColumns?String(input.galleryColumns):undefined,
+   padding:"spacious",surface:"light"
   }});
  }
  // A contact-first preference must produce a useful action even for layouts
@@ -171,7 +174,10 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
     item.props.surface=prefs.mood==="bold"?"soft":"light";
    }
    if(item.type==="PhotoGallery"||item.type==="ProjectShowcase"){
-    item.props.layout=prefs.mood==="editorial"?"list":"mosaic";
+    if(item.type==="PhotoGallery"&&input.galleryColumns){
+     item.props.layout="grid";
+     item.props.columns=String(input.galleryColumns);
+    }else item.props.layout=prefs.mood==="editorial"?"list":"mosaic";
    }
    if(["OfferingGrid","PhotoGallery","ProjectShowcase","CTA","FAQList","TeamGrid","HoursArea"].includes(item.type)){
     item.props.padding=requestedPadding;
@@ -257,7 +263,8 @@ export function aiSiteRequestContext(input:SiteIntake,creativeDirection:string,p
   offerings:input.offerings.slice(0,16).map(x=>x.slice(0,120)),
   products:(input.products||[]).slice(0,24).map(x=>({name:x.title.slice(0,120),
    description:x.description.slice(0,320)})),
-  imagesAvailable:input.photos.filter(Boolean).length,
+  imagesAvailable:input.photos.filter(Boolean).length+
+   (input.gallery||[]).filter(Boolean).length,
   preferences:input.design?{
    colors:input.design.colors,font:input.design.font,imageStyle:input.design.imageStyle,
    visualMood:input.design.mood,heroLayout:input.design.heroLayout,
