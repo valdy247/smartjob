@@ -7,6 +7,8 @@ import {builderConfig,normalizeBuilderDocument} from "@/lib/web-builder-puck";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import {familyForCategory} from "@/lib/web-builder-templates";
 import {applyPublishedInventory,type ApprovedInventoryProduct} from "@/lib/vmv-ai-agents/public-catalog-site";
+import {applyPublishedServices,type ApprovedBusinessService} from "@/lib/vmv-ai-agents/public-services-site";
+import {resolveServicesForPublishedSite} from "@/lib/vmv-ai-agents/site-services-resolution";
 import {publishedCatalogVersion} from "@/lib/vmv-ai-agents/public-catalog-version";
 import {resolveInventoryForPublishedSite} from "@/lib/vmv-ai-agents/site-inventory-resolution";
 import LiveInventoryRefresh from "@/app/web-studio/LiveInventoryRefresh";
@@ -57,6 +59,21 @@ async function publishedInventory(siteId:string,ownerId:string,siteName:string):
  // Empty rather than stale image/card data on failure.
  return {businessId,products:error?[]:(products||[]) as ApprovedInventoryProduct[]};
 }
+async function publishedServices(siteId:string,ownerId:string):Promise<
+ {businessId:string;items:ApprovedBusinessService[]}|null>{
+ const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
+ const secret=process.env.SUPABASE_SECRET_KEY;
+ if(!url||!secret)return null;
+ const db=createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}});
+ const businessId=await resolveServicesForPublishedSite(db,siteId,ownerId);
+ if(!businessId)return null;
+ const {data,error}=await db.from("vmv_ai_services")
+  .select("id,name,description,price_cents,currency,image_path,updated_at")
+  .eq("owner_id",ownerId).eq("business_id",businessId)
+  .eq("approved",true).eq("active",true)
+  .order("name",{ascending:true}).limit(40);
+ return {businessId,items:error?[]:(data||[]) as ApprovedBusinessService[]};
+}
 export async function generateMetadata({params}:Props):Promise<Metadata>{
  const {slug,page=[]}=await params;
  const part=page.length===0?"home":page.length===1?page[0]:"";
@@ -100,15 +117,24 @@ export default async function VMVPublishedPage({params}:Props){
  const base=custom?"":"/web/"+slug;
  const siteName=result.page.site_name||slug.replace(/-/g," ");
  const original=normalizeBuilderDocument(result.page.document);
- const inventory=await publishedInventory(result.page.site_id,result.page.owner_id,siteName);
+ const [inventory,linkedServices]=await Promise.all([
+  publishedInventory(result.page.site_id,result.page.owner_id,siteName),
+  publishedServices(result.page.site_id,result.page.owner_id)
+ ]);
  // Only published, activated and opted-in agents are exposed in public chat.
  const liveAgent=part==="home"&&process.env.VERCEL_ENV==="preview"&&
   process.env.SUPABASE_SECRET_KEY?await findPublicChatAgent(
    createClient(process.env.NEXT_PUBLIC_SUPABASE_URL||"",
     process.env.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}}),
    {site_id:result.page.site_id,owner_id:result.page.owner_id,site_name:siteName}):null;
- const data=inventory?applyPublishedInventory(original,inventory.products,result.page.owner_id,
+ const withProducts=inventory?applyPublishedInventory(original,inventory.products,result.page.owner_id,
   inventory.businessId,process.env.NEXT_PUBLIC_SUPABASE_URL||""):original;
+ const data=linkedServices?applyPublishedServices(withProducts,linkedServices.items,result.page.owner_id,
+  linkedServices.businessId,process.env.NEXT_PUBLIC_SUPABASE_URL||""):withProducts;
+ const linkedVersion=publishedCatalogVersion([
+  ...(inventory?.products||[]).map(item=>({id:"p:"+item.id,updated_at:item.updated_at})),
+  ...(linkedServices?.items||[]).map(item=>({id:"s:"+item.id,updated_at:item.updated_at}))
+ ]);
  const classicServices=data.content.filter(b=>b.type==="Services").flatMap(b=>
   ["first","second","third"].map(k=>b.props?.[k]).filter((s):s is string=>typeof s==="string"&&Boolean(s.trim())));
  const visualServices=data.content.filter(b=>b.type==="OfferingGrid").flatMap(b=>
@@ -140,8 +166,8 @@ export default async function VMVPublishedPage({params}:Props){
    __html:JSON.stringify(organization).replace(/</g,"\\u003c")
   }}/>:null}
   <Render config={builderConfig} data={data}/>
-  {inventory?<LiveInventoryRefresh siteSlug={slug}
-   version={publishedCatalogVersion(inventory.products)}/>:null}
+  {inventory||linkedServices?<LiveInventoryRefresh siteSlug={slug}
+   version={linkedVersion}/>:null}
   {liveAgent?<PublicAgentChat slug={slug} agentName={liveAgent.name}/>:
    showForm&&rootData.chatMode==="inbox"?<WebChatLauncher slug={slug} business={siteName} categoryId={result.page.category_id||""} services={services}/>:null}
   {showForm?<section className="vmv-site-inquiry" id="solicitud" aria-label="Enviar solicitud al negocio">
