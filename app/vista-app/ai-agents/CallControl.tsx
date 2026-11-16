@@ -1,9 +1,10 @@
 "use client";
 import {useEffect,useState} from "react";
-import {ArrowLeft,Check,Languages,PhoneCall,ShieldCheck} from "lucide-react";
+import {ArrowLeft,Check,Languages,MessageCircle,PhoneCall,ShieldCheck} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {checkCallPolicy,days,initialCallPolicy,zoneOptions,type CallPolicy,type DayName} from "@/lib/vmv-ai-agents/call-policy";
 import styles from "./CallControl.module.css";
+import CallPreviewChat from "./CallPreviewChat";
 const weekLabels:Record<DayName,string>={sun:"Domingo",mon:"Lunes",tue:"Martes",wed:"Miércoles",thu:"Jueves",fri:"Viernes",sat:"Sábado"};
 type Info={policy:CallPolicy;version:number;maskedPhone:string;agentActive:boolean;selectedAgentId:string|null;forwardReady:boolean;businessHoursReady:boolean;error?:string};
 async function request(method:"GET"|"POST"|"PUT",payload?:object){
@@ -20,6 +21,8 @@ export default function CallControl({onBack}:{onBack:()=>void}){
  const [policy,setPolicy]=useState<CallPolicy>(initialCallPolicy);
  const [version,setVersion]=useState(0);
  const [line,setLine]=useState("");
+ const [selectedAgentId,setSelectedAgentId]=useState<string|null>(null);
+ const [preview,setPreview]=useState(false);
  const [ready,setReady]=useState(false);
  const [forward,setForward]=useState(false);
  const [business,setBusiness]=useState(false);
@@ -29,7 +32,8 @@ export default function CallControl({onBack}:{onBack:()=>void}){
  const patch=<K extends keyof CallPolicy>(k:K,v:CallPolicy[K])=>setPolicy(x=>({...x,[k]:v}));
  useEffect(()=>{let active=true;void request("GET").then((x:Info)=>{
   if(!active)return;setPolicy(checkCallPolicy(x.policy));setVersion(x.version);
-  setLine(x.maskedPhone);setReady(Boolean(x.selectedAgentId&&x.agentActive));
+  setLine(x.maskedPhone);setSelectedAgentId(x.selectedAgentId);
+  setReady(Boolean(x.selectedAgentId&&x.agentActive));
   setForward(x.forwardReady);setBusiness(x.businessHoursReady);
  }).catch(e=>{if(active)setNotice(String(e.message));}).finally(()=>{if(active)setLoading(false);});
  return()=>{active=false;};},[]);
@@ -126,6 +130,10 @@ export default function CallControl({onBack}:{onBack:()=>void}){
       <small>Los turnos nocturnos continúan hasta el cierre del día siguiente.</small>
      </div>}
    </section>
+   <button type="button" className={styles.secondary} onClick={()=>setPreview(value=>!value)}>
+    <MessageCircle size={17}/> {preview?"Cerrar prueba":"Probar llamada"}
+   </button>
+   {preview?<CallPreviewChat policy={policy} selectedAgentId={selectedAgentId} onClose={()=>setPreview(false)}/>:null}
    {policy.agent_enabled&&policy.translation_enabled&&<section className={`${styles.section} ${styles.rulesSection}`}>
     <h2>Si ambos están disponibles</h2>
     <select aria-label="Prioridad" value={policy.coexistence}
