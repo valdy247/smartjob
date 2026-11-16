@@ -110,6 +110,7 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
  const [agentChoice,setAgentChoice]=useState<WebsiteAgentChoice|null>(null);
  const [agentCount,setAgentCount]=useState(0);
  const [catalog,setCatalog]=useState<SiteProduct[]>([]);
+ const [inventoryWorkspace,setInventoryWorkspace]=useState("");
  const [logo,setLogo]=useState("");
  const [cover,setCover]=useState("");
  const [gallery,setGallery]=useState<string[]>(["","","",""]);
@@ -172,22 +173,26 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
   return()=>{active=false;abort.abort();};
  },[ownerId]);
  useEffect(()=>{
-  if(!businessId){setCatalog([]);setAgentCount(0);return;}
+  if(!businessId){setCatalog([]);setInventoryWorkspace("");setAgentCount(0);return;}
   let active=true;
   void(async()=>{
    const db=getSupabase();if(!db)return;
    try{
     const {data:workspaces}=await db.from("vmv_ai_businesses").select("id").eq("owner_id",ownerId).eq("central_business_id",businessId).limit(1);
-    const workspace=workspaces?.[0]?.id;if(!workspace)return;
+    const workspace=workspaces?.[0]?.id;if(!workspace){if(active)setInventoryWorkspace("");return;}
+    if(active)setInventoryWorkspace(workspace);
     const [items,agents]=await Promise.all([
-     db.from("vmv_ai_catalog_items").select("id,name,description,price_cents,active,approved").eq("owner_id",ownerId).eq("business_id",workspace).eq("active",true).eq("approved",true).limit(30),
+     db.from("vmv_ai_catalog_items").select("id,name,description,price_cents,image_path,active,approved").eq("owner_id",ownerId).eq("business_id",workspace).eq("active",true).eq("approved",true).limit(30),
      db.from("vmv_ai_agents").select("id").eq("owner_id",ownerId).eq("business_id",workspace).eq("status","active").limit(10)
     ]);
     if(!active)return;
     setCatalog((items.data||[]).map(p=>({id:p.id,title:p.name,description:p.description||"",
-     price:typeof p.price_cents==="number"?fmtPrice(p.price_cents):"",image:""})));
+     price:typeof p.price_cents==="number"?fmtPrice(p.price_cents):"",
+     image:typeof p.image_path==="string"&&
+      p.image_path.startsWith(ownerId+"/"+workspace+"/")?
+       db.storage.from("vmv-catalog-images").getPublicUrl(p.image_path).data.publicUrl:""})));
     setAgentCount((agents.data||[]).length);
-   }catch{if(active){setCatalog([]);setAgentCount(0);}}
+   }catch{if(active){setCatalog([]);setInventoryWorkspace("");setAgentCount(0);}}
   })();
   return()=>{active=false;};
  },[ownerId,businessId]);
@@ -216,8 +221,9 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
   return {business:form.business.trim(),categoryId:form.categoryId,offering:inventory?(services.length?"both":"products"):"services",
    objective:booking?"bookings":form.objective,phone:form.phone.trim(),email:form.email.trim(),
    city:form.city.trim(),about:form.about.trim(),logo,photos:Array.from(new Set([cover,...gallery].filter(Boolean))).slice(0,12),offerings:services,
-   products,socials:normalizeSocialLinks(socials),design:selectedDesign};
- },[form,inventory,booking,catalog,socials,selectedDesign,logo,cover,gallery,selectedBusiness]);
+   products,socials:normalizeSocialLinks(socials),design:selectedDesign,
+   inventoryBusinessId:inventory&&inventoryWorkspace?inventoryWorkspace:undefined};
+ },[form,inventory,inventoryWorkspace,booking,catalog,socials,selectedDesign,logo,cover,gallery,selectedBusiness]);
  const generate=async()=>{
   if(busy||generating)return;
   if(colors.length!==3){setError("Selecciona tres colores.");setStep(1);return;}
