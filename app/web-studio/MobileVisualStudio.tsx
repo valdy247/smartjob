@@ -406,7 +406,7 @@ export default function MobileVisualStudio({
  data,onChange:onDocumentChange,siteName,siteSlug,siteCategory,siteId,pages,pageId,
  onBack,onChoosePage,onCreatePage,onPublish,onSave,
  busy=false,title,description,onTitleChange,onDescriptionChange,
- inquiriesEnabled,onToggleInquiries,inventorySources,inventoryBusinessId,onConnectInventory,onDomains,onHistory,
+ inquiriesEnabled,onToggleInquiries,inventorySources,inventoryBusinessId,inventoryAvailable,onConnectInventory,onDomains,onHistory,
  domains,domainRequests,domainInput,domainQuote,quote,onDomainInput,onCheckDomain,onSubmitDomainRequest,onVerifyDomain,
  revisions,onRestoreRevision,error,notice,savePhase,recoveryAvailable,onRecover,onDiscardRecovery
 }:{
@@ -415,7 +415,7 @@ export default function MobileVisualStudio({
  onPublish:()=>void;onSave:()=>void;busy?:boolean;title:string;description:string;
  onTitleChange:(v:string)=>void;onDescriptionChange:(v:string)=>void;
  inquiriesEnabled:boolean;onToggleInquiries:(enabled:boolean)=>void;
- inventorySources:Array<{id:string;name:string}>;inventoryBusinessId:string;
+ inventorySources:Array<{id:string;name:string}>;inventoryBusinessId:string;inventoryAvailable:boolean;
  onConnectInventory:(businessId:string)=>void;onDomains:()=>void;onHistory:()=>void;
  domains:Array<{id:string;hostname:string;state:string}>;
  domainRequests:Array<{id:string;hostname:string;intent:string;status:string}>;
@@ -1237,9 +1237,9 @@ export default function MobileVisualStudio({
      </>:null}
      {section==="connections"?<>
       <h3>Inventario conectado</h3>
-      <p className={styles.help}>La web pública muestra los productos aprobados y sus fotos originales desde AI Agents. La IA no puede modificar estas fotos.</p>
+      <p className={styles.help}>{inventoryAvailable?"La web pública muestra productos aprobados y fotos originales desde AI Agents. La IA no puede modificar estas fotos.":"El inventario protegido todavía está pendiente de activación. Puedes seguir editando tus sitios normalmente."}</p>
       <label className={styles.formLabel}>Elegir inventario
-       <select value={inventoryBusinessId} disabled={busy} onChange={event=>onConnectInventory(event.target.value)}>
+       <select value={inventoryBusinessId} disabled={busy||!inventoryAvailable} onChange={event=>onConnectInventory(event.target.value)}>
         <option value="">Sin inventario conectado</option>
         {inventorySources.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
        </select>
