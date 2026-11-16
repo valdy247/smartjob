@@ -638,6 +638,7 @@ export default function MobileVisualStudio({
   {id:"arrange",label:"Organizar sección",icon:<Layers/>}
  ]:isImage?[
   {id:"image",label:"Reemplazar imagen",icon:<ImagePlus/>},
+  ...(["PhotoGallery","ProjectShowcase"].includes(block?.type||"")?[{id:"gallery" as const,label:"Fotos y columnas",icon:<Layers/>}]:[]),
   {id:"position",label:block?.type==="OfferingGrid"?"Mover tarjeta":"Mover imagen",icon:<SlidersHorizontal/>},
   {id:"size",label:block?.type==="OfferingGrid"?"Tamaño de tarjeta":"Tamaño",icon:<Layers/>},
   {id:"frame",label:block?.type==="HeroVisual"?"Encuadre":"Esquinas",icon:<Layers/>},
