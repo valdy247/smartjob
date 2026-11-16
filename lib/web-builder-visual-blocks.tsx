@@ -191,7 +191,7 @@ export const visualBlocks:Config["components"]={
    Object.fromEntries(Object.entries(fields).filter(([key])=>
     key!=="columns"||props.layout!=="list")) as typeof fields,
   render:({id,title,description,items,layout,padding,surface,columns,showPrices,puck,...textStyling})=>!toList(items).length&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-offerings">
-   <div className="vmv-section-heading"><h2 style={visualTextStyle(textStyling,"title")}>{title}</h2>{description?<p style={visualTextStyle(textStyling,"description")}>{description}</p>:null}</div>
+   <div className="vmv-section-heading" id="vmv-offerings"><h2 style={visualTextStyle(textStyling,"title")}>{title}</h2>{description?<p style={visualTextStyle(textStyling,"description")}>{description}</p>:null}</div>
    <div className="vmv-offerings-items" data-layout={layout||"grid"} data-columns={columns||"3"}>
     {toList(items).map((item,index)=>!(item.title||item.description||item.price||photo(item.image))&&!puck.isEditing?null:<article key={visualItemId(item,index)} className="vmv-offering-card" data-has-photo={Boolean(photo(item.image))} data-catalog-original={item.catalogOriginal===true} style={imageSettingsStyle(item)}>
      <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.title),heading(item.alt))} settings={item} editing={puck.isEditing}/>
