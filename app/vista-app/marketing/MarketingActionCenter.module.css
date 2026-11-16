@@ -277,7 +277,7 @@
 @media(max-width:520px){.serviceCta{font-size:11px;padding:9px}.serviceTile{flex-wrap:wrap}.serviceText{flex:1;min-width:140px}}
 
 /* VMV launch action cards: compact hierarchy, warm pastel surfaces and mobile-first spacing. */
-.servicePicker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.servicePicker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .serviceTile{display:flex;flex-direction:column;align-items:flex-start;min-width:0;min-height:200px;gap:12px;padding:21px 19px 17px;border-radius:21px;border:1px solid #e9d8e4;background:#fcf2f8;box-shadow:0 3px 13px rgba(74,45,72,.035);text-align:left;transition:transform .16s,border-color .16s,box-shadow .16s}
 .serviceTile:nth-child(3n+1){background:#fbeef5;border-color:#efd8e5}
 .serviceTile:nth-child(3n+2){background:#f0eefb;border-color:#e3ddf5}
@@ -366,3 +366,20 @@
  .catalogLinks .historyLink{padding:8px 10px}
 }
 @media(prefers-reduced-motion:reduce){.serviceTile{transition:none}.serviceTile:hover{transform:none}}
+
+
+/* Marketing expansion roadmap: clear upcoming state, no simulated actions. */
+.futureSection{display:flex;flex-direction:column;gap:17px;margin-top:24px;border-top:1px solid #e9dce7;padding-top:24px}
+.futureHeading>div>span{display:inline-block;font-size:10px;font-weight:900;letter-spacing:.12em;color:#a26d95}
+.futureHeading h3{margin:6px 0 4px;font-size:21px;letter-spacing:-.5px;line-height:1.2;color:#35293e}
+.futureHeading p{margin:0;color:#917f92;font-size:12px;line-height:1.5}
+.futureGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:11px}
+.futureCard{display:flex;align-items:flex-start;flex-direction:column;min-width:0;gap:9px;padding:17px;border:1px solid #e9e3ee;border-radius:17px;background:#fff;box-shadow:0 3px 12px #53385908}
+.futureIcon{display:grid;place-items:center;width:41px;height:41px;border-radius:13px;color:#755e9a;background:#f1eef9}
+.futureCard:nth-child(3n+2) .futureIcon{color:#9c6288;background:#faedf4}
+.futureCard:nth-child(3n+3) .futureIcon{color:#5a8c73;background:#edf8f1}
+.futureCard strong{font-size:13px;color:#46364f;line-height:1.4}
+.futureCard p{flex:1;margin:0;font-size:11px;line-height:1.55;color:#8c7b91}
+.futureCard small{display:inline-flex;padding:6px 9px;border-radius:9px;background:#f7f4f9;color:#806e87;font-size:10px;font-weight:850}
+@media(max-width:700px){.futureSection{margin-top:18px;padding-top:19px}.futureGrid{grid-template-columns:1fr 1fr;gap:9px}.futureCard{padding:13px;border-radius:14px}.futureHeading h3{font-size:19px}}
+@media(max-width:440px){.futureGrid{grid-template-columns:1fr}.futureCard{display:grid;grid-template-columns:41px 1fr;gap:5px 12px}.futureIcon{grid-row:1/4}.futureCard p{grid-column:2}.futureCard small{grid-column:2;justify-self:start}}
