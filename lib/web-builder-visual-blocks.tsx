@@ -332,7 +332,7 @@ export const visualBlocks:Config["components"]={
 const SCHEMA:Record<VisualBlockName,{strings:string[];images:string[];arrays?:Record<string,{strings:string[];images:string[]}>}>={
  HeroVisual:{strings:["layout","eyebrow","title","description","buttonText","buttonUrl","imageAlt","align","imagePosition","shade","height","buttonStyle","buttonShape","buttonColor","buttonTextColor","titleFont","titleColor","titleShadow","titleWeight","titleItalic","titleLink"],images:["image"]},
  OfferingGrid:{strings:["title","description","layout","padding","surface","columns","showPrices"],images:[],arrays:{items:{strings:["title","description","alt","price","titleColor","descriptionColor","priceColor"],images:["image"]}}},
- PhotoGallery:{strings:["title","description","layout","padding","surface"],images:[],arrays:{items:{strings:["alt","caption"],images:["image"]}}},
+ PhotoGallery:{strings:["title","description","layout","columns","padding","surface"],images:[],arrays:{items:{strings:["alt","caption"],images:["image"]}}},
  ProcessSteps:{strings:["title","padding","surface"],images:[],arrays:{items:{strings:["title","description"],images:[]}}},
  ProjectShowcase:{strings:["title","layout","padding","surface"],images:[],arrays:{items:{strings:["title","description","alt"],images:["image"]}}},
  HoursArea:{strings:["title","hours","area","notes","padding","surface"],images:[]},
