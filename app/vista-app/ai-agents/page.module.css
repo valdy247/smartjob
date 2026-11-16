@@ -171,3 +171,23 @@
 .businessDialogActions button[type=submit]{background:#8958df;color:#fff;border-color:#8958df}
 .businessDialogActions button:disabled{opacity:.5;cursor:wait}
 .businessError{color:#a12d50!important;background:#fff0f3;padding:12px;border-radius:12px}
+
+
+/* Unified VMV Business pastel theme: functionality and capability rules unchanged. */
+.canvas{background:#fdfcff;color:#171127}
+.phone{border-color:#121016;background:#fdfcff;box-shadow:0 20px 50px #20162e20,0 0 0 1px #121016}
+.phoneTop{background:#fdfcff;color:#171127}
+.dynamicIsland{background:#0b0a0e}
+.appHeader{background:#fdfcff;border-color:#eee5f5}
+.backIcon{background:#f0e5ff;color:#734bc5}
+.scroller{background:#fdfcff}
+.hero{background:linear-gradient(130deg,#e6d2ff,#d5b6fc);color:#1a1229;box-shadow:0 10px 22px #5a348e1b;border-radius:24px}
+.hero h1{color:#191128}
+.hero p{color:#544468}
+.heroEyebrow{color:#634792}
+.heroPills span{color:#392252;background:#ffffff8a;border-color:#ffffffb0}
+.tile{border-radius:21px}
+.sectionHeading h2{color:#171127}
+.agent,.formSection,.empty{border-color:#ece4f4;border-radius:20px;background:#fff}
+.previewBadge{background:#eee1ff;color:#7248c1}
+.buttonPrimary,.saveButton{border-radius:13px}
