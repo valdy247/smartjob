@@ -5,7 +5,7 @@
 .back{
  display:inline-flex;align-items:center;gap:9px;align-self:flex-start;width:max-content;
  border:0;background:none;padding:4px 0 6px;color:#8151ce;
- font:800 13px/1.4 inherit;cursor:pointer;
+ font-family:inherit;font-size:13px;font-weight:800;line-height:1.4;cursor:pointer;
 }
 .back svg{flex:none}
 .hero{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:5px 1px 7px}
@@ -74,7 +74,7 @@
 .section select,.section textarea,.section input[type=time]{
  min-height:48px;max-width:100%;width:100%;padding:12px 14px;
  border:1px solid #e4d8ef;border-radius:15px;background:#fdfbff;
- color:#2c203d;font:750 14px/1.4 inherit;box-sizing:border-box;
+ color:#2c203d;font-family:inherit;font-size:14px;font-weight:750;line-height:1.4;box-sizing:border-box;
 }
 .section select{cursor:pointer}
 .section textarea{resize:vertical;line-height:1.5;min-height:100px}
