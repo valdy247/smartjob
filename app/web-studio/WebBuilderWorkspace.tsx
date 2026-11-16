@@ -31,8 +31,6 @@ type Site={id:string;owner_id:string;slug:string;name:string;category_id:string;
 type InventorySource={id:string;name:string};
 // The inventory migration is deployed separately. Existing previews and published
 // sites must continue loading before inventory_business_id is available.
-const legacySiteFields="id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug";
-const linkedSiteFields=legacySiteFields+",inventory_business_id";
 function inventoryColumnPending(error:{code?:string;message?:string}|null):boolean{
  return Boolean(error&&["42703","PGRST204"].includes(error.code||"")&&
   /inventory_business_id/i.test(error.message||""));
@@ -178,13 +176,13 @@ export default function WebBuilderWorkspace(){
     if(authError||!data.user||data.user.is_anonymous)throw new Error("Inicia sesión en VMV Business para continuar");
     if(active)setUserId(data.user.id);
     const primary=await client.from("smartjob_builder_sites")
-     .select(linkedSiteFields).eq("owner_id",data.user.id).order("created_at",{ascending:false});
+     .select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug,inventory_business_id").eq("owner_id",data.user.id).order("created_at",{ascending:false});
     let rows=(primary.data||[]) as Site[];
     let siteError=primary.error;
     if(inventoryColumnPending(siteError)){
      // Don't mistake a pending database migration for an expired user session.
      const legacy=await client.from("smartjob_builder_sites")
-      .select(legacySiteFields).eq("owner_id",data.user.id).order("created_at",{ascending:false});
+      .select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug").eq("owner_id",data.user.id).order("created_at",{ascending:false});
      rows=(legacy.data||[]).map(row=>({...row,inventory_business_id:null})) as Site[];
      siteError=legacy.error;
      if(active)setInventorySchemaReady(false);
@@ -330,7 +328,7 @@ export default function WebBuilderWorkspace(){
  }
  async function loadCreatedSite(c:NonNullable<ReturnType<typeof getSupabase>>,ids:{siteId:string;pageId:string}){
   const [siteResult,pageResult]=await Promise.all([
-   c.from("smartjob_builder_sites").select(linkedSiteFields)
+   c.from("smartjob_builder_sites").select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug,inventory_business_id")
     .eq("id",ids.siteId).eq("owner_id",userId).single(),
    c.from("smartjob_builder_pages").select(
     "id,site_id,owner_id,slug,title,description,draft,revision,updated_at"
@@ -339,7 +337,7 @@ export default function WebBuilderWorkspace(){
   let siteData=siteResult.data as Site|null;
   let siteError=siteResult.error;
   if(inventoryColumnPending(siteError)){
-   const legacy=await c.from("smartjob_builder_sites").select(legacySiteFields)
+   const legacy=await c.from("smartjob_builder_sites").select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug")
     .eq("id",ids.siteId).eq("owner_id",userId).single();
    siteData=legacy.data?{...(legacy.data as Omit<Site,"inventory_business_id">),inventory_business_id:null}:null;
    siteError=legacy.error;
