@@ -822,10 +822,10 @@ export default function App(){
         onPress={()=>{setActiveModule("web-services");setActiveTab("services");}}>
         <Ionicons name="desktop-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>Web Services</Text>
        </Pressable>:null}
-       {showHomeOffer("ai-agents")?<Pressable accessibilityRole="button" accessibilityLabel="AI Agents" style={[styles.conceptTile,styles.conceptLavender]}
+       <Pressable accessibilityRole="button" accessibilityLabel="AI Agents" style={[styles.conceptTile,styles.conceptLavender]}
         onPress={()=>{setActiveModule("ai-agents");setActiveTab("services");}}>
         <Ionicons name="hardware-chip-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>AI Agents</Text>
-       </Pressable>:null}
+       </Pressable>
        {showHomeOffer("marketing")?<Pressable accessibilityRole="button" accessibilityLabel="Marketing" style={[styles.conceptTile,styles.conceptGreen]}
         onPress={()=>{setActiveModule("marketing-analytics");setActiveTab("services");}}>
         <Ionicons name="megaphone-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>Marketing</Text>
