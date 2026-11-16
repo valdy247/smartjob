@@ -7,7 +7,7 @@ import styles from "./CallPreviewChat.module.css";
 
 type Route=CallDecision["action"];
 type Scenario="actual"|"menu"|"agent"|"translation";
-type Agent={id:string;name:string;language:string;configuration:Record<string,string>};
+type Agent={id:string;name:string;language:string;status:string;configuration:Record<string,string>};
 type Line={id:number;who:"system"|"caller"|"agent";text:string};
 const copy=(text:string)=>text.trim().slice(0,1000);
 function agentGreeting(agent:Agent|null){
@@ -30,6 +30,8 @@ export default function CallPreviewChat({policy,selectedAgentId,onClose}:{
  const [scenario,setScenario]=useState<Scenario>("actual");
  const [routeNote,setRouteNote]=useState("");
  const [agent,setAgent]=useState<Agent|null>(null);
+ const [agents,setAgents]=useState<Agent[]>([]);
+ const [agentChoice,setAgentChoice]=useState("");
  const [entry,setEntry]=useState("");
  const [loading,setLoading]=useState(true);
  const [sending,setSending]=useState(false);
@@ -62,15 +64,19 @@ export default function CallPreviewChat({policy,selectedAgentId,onClose}:{
     decision=payload.decision;
     agentReadyForCalls=Boolean(payload.selectedAgentReady);
    }
-   let found:Agent|null=null;
-   if(selectedAgentId){
-    const {data}=await db.from("vmv_ai_agents")
-     .select("id,name,language,configuration")
-     .eq("id",selectedAgentId).eq("owner_id",user.id).maybeSingle();
-    if(data)found={id:data.id,name:data.name,language:data.language,
-     configuration:(data.configuration||{}) as Record<string,string>};
-   }
+   const {data:rows,error:agentsError}=await db.from("vmv_ai_agents")
+    .select("id,name,language,configuration,status")
+    .eq("owner_id",user.id).limit(25);
+   if(agentsError)throw Error("No se pudieron cargar tus agentes.");
+   const options:Agent[]=(rows||[]).map(row=>({
+    id:row.id,name:row.name,language:row.language,status:row.status,
+    configuration:(row.configuration||{}) as Record<string,string>
+   }));
+   const picked=scenario==="actual"?selectedAgentId:
+    (agentChoice||selectedAgentId||(options.length===1?options[0].id:null));
+   const found=options.find(a=>a.id===picked)||null;
    if(!alive)return;
+   setAgents(options);
    setAgent(found);
    const action:Route=scenario==="actual"?decision!.action:scenario;
    if(scenario!=="actual")setRouteNote("Escenario de prueba · no modifica la línea.");
@@ -102,7 +108,7 @@ export default function CallPreviewChat({policy,selectedAgentId,onClose}:{
   void load().catch(e=>{if(alive)setError(e instanceof Error?e.message:"No se pudo cargar la prueba.");})
    .finally(()=>{if(alive)setLoading(false);});
   return()=>{alive=false;};
- },[policy,selectedAgentId,restart,scenario]);
+ },[policy,selectedAgentId,restart,scenario,agentChoice]);
  const select=(digit:1|2)=>{
   if(route!=="menu")return;
   const next:Route=digit===1?(agent?"agent":"message"):"translation";
@@ -161,6 +167,15 @@ export default function CallPreviewChat({policy,selectedAgentId,onClose}:{
      disabled={loading||sending} className={scenario===value?styles.scenarioActive:styles.scenario}
      onClick={()=>setScenario(value)}>{label}</button>)}
   </div>
+  {(scenario==="agent"||scenario==="menu")&&agents.length>0?
+   <label className={styles.agentPicker}>Agente de prueba
+    <select value={agentChoice||selectedAgentId||(agents.length===1?agents[0].id:"")}
+     disabled={loading||sending}
+     onChange={e=>setAgentChoice(e.target.value)}>
+     {agents.length>1&&!agentChoice&&!selectedAgentId?<option value="">Elige un agente</option>:null}
+     {agents.map(a=><option key={a.id} value={a.id}>{a.name}{a.status!=="active"?" · inactivo":""}</option>)}
+    </select>
+   </label>:null}
   {routeNote?<p className={styles.routeNote}>{routeNote}</p>:null}
   <div className={styles.chat} aria-live="polite" aria-relevant="additions text">
    {loading?<p className={styles.wait}>Preparando llamada de prueba…</p>:null}
