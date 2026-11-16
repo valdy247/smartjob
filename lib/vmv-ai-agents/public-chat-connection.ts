@@ -1,5 +1,6 @@
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {resolveInventoryForPublishedSite} from "@/lib/vmv-ai-agents/site-inventory-resolution";
+import {resolveServicesForPublishedSite} from "@/lib/vmv-ai-agents/site-services-resolution";
 import {publicChatReadiness} from "@/lib/vmv-ai-agents/public-chat-readiness";
 
 export type PublicChatAgent={
@@ -15,7 +16,8 @@ export async function findPublicChatAgent(db:SupabaseClient,
  site:{site_id:string;owner_id:string;site_name:string}
 ):Promise<PublicChatAgent|null>{
  const businessId=await resolveInventoryForPublishedSite(
-  db,site.site_id,site.owner_id,site.site_name);
+  db,site.site_id,site.owner_id,site.site_name)||
+  await resolveServicesForPublishedSite(db,site.site_id,site.owner_id);
  if(!businessId)return null;
  const {data:business,error:businessError}=await db.from("vmv_ai_businesses")
   .select("id,name,primary_agent_id").eq("id",businessId)
