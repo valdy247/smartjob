@@ -99,7 +99,7 @@ export default function AgentQuickConnections({agent,phone,onUpdated,onConfigure
    <div className={styles.quickAgentSwitchRow}>
     <span className={styles.quickAgentRowIcon}><MessageCircle size={18}/></span>
     <span className={styles.quickAgentRowName}>Chat
-     {chatOn&&agent.status!=="active"?<small>Preparado · Activa el agente para publicarlo</small>:null}
+     {chatOn&&agent.status==="paused"?<small>Agente pausado</small>:null}
     </span>
     <input type="checkbox" role="switch" aria-label="Chat público"
      checked={chatOn} disabled={Boolean(busy)}
