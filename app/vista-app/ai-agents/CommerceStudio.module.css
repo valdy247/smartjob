@@ -63,3 +63,28 @@ button:focus-visible{outline:3px solid #ad86ec;outline-offset:2px}
 @media(max-width:450px){.catalogImagePicker{grid-template-columns:1fr}
  .catalogImagePreview{max-width:190px;width:100%}
  .catalogThumb{width:56px;height:56px}}
+
+
+/* Owner-only connection from AI Agents inventory to a published Web Studio site. */
+.inventoryWebLink{display:flex;flex-direction:column;gap:12px;padding:15px;
+ border:1px solid #e4daf0;border-radius:17px;background:linear-gradient(140deg,#fff,#faf7ff)}
+.inventoryWebLinkHeader{display:flex;align-items:center;gap:11px;min-width:0}
+.inventoryWebLinkIcon{display:grid;place-items:center;width:40px;height:40px;flex-shrink:0;
+ color:#7e55b7;background:#f0e9fb;border-radius:12px}
+.inventoryWebLinkHeader>div{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.inventoryWebLinkHeader strong{font-size:13px;color:#342542;font-weight:900}
+.inventoryWebLinkHeader small{font-size:10px;color:#867695;line-height:1.4}
+.inventoryWebLink p{display:flex;align-items:center;gap:7px;margin:0;color:#756684;font-size:11px;line-height:1.5}
+.inventoryWebConnected{display:flex;align-items:center;gap:4px;color:#2b7957;
+ font-size:10px;white-space:nowrap;font-weight:850}
+.inventoryWebLabel{display:flex;flex-direction:column;gap:7px;color:#58456a;font-size:11px;font-weight:850}
+.inventoryWebLabel select{min-height:42px;width:100%;border:1px solid #e7dbee;border-radius:11px;
+ background:#fff;color:#493758;padding:9px 11px;font:inherit;font-size:12px}
+.inventoryWebActions button{display:inline-flex;align-items:center;gap:8px;min-height:42px;
+ border:1px solid #d6c4e9;background:#f2ebfb;color:#6b459c;border-radius:11px;
+ padding:11px 14px;font-size:12px;font-weight:900}
+.inventoryWebActions button:disabled{opacity:.55;cursor:wait}
+.inventoryWebSecurity{display:flex;align-items:center;gap:7px;font-size:10px;color:#776584;line-height:1.4}
+.inventoryWebLink .inventoryWebSuccess{color:#26754c;font-weight:750}
+.inventoryWebLink .inventoryWebError{color:#bc3251;font-weight:750}
+@media(max-width:450px){.inventoryWebLinkHeader{flex-wrap:wrap}.inventoryWebConnected{margin-left:51px}}
