@@ -383,3 +383,18 @@
 .futureCard small{display:inline-flex;padding:6px 9px;border-radius:9px;background:#f7f4f9;color:#806e87;font-size:10px;font-weight:850}
 @media(max-width:700px){.futureSection{margin-top:18px;padding-top:19px}.futureGrid{grid-template-columns:1fr 1fr;gap:9px}.futureCard{padding:13px;border-radius:14px}.futureHeading h3{font-size:19px}}
 @media(max-width:440px){.futureGrid{grid-template-columns:1fr}.futureCard{display:grid;grid-template-columns:41px 1fr;gap:5px 12px}.futureIcon{grid-row:1/4}.futureCard p{grid-column:2}.futureCard small{grid-column:2;justify-self:start}}
+
+
+/* VMV pastel theme — request and price workflows retain their behavior. */
+.root{color:#171127}
+.hero{background:linear-gradient(132deg,#e6d2ff,#eac4ea);color:#20142e;border-radius:24px;box-shadow:0 10px 24px #68419b1b}
+.hero>span{color:#71489e}
+.hero h2{color:#1c112b}
+.hero p{color:#574768}
+.quickActions button{border-color:#eee3f4;border-radius:20px}
+.quickActions button:nth-child(1){background:#e7d7ff}
+.quickActions button:nth-child(2){background:#e1f9df}
+.quickActions button strong{color:#281637}
+.quickActions button small{color:#68577a}
+.panel,.wizardPanel,.reviewCard{border-color:#eee5f4;border-radius:21px;background:#fff}
+.serviceTile{border-radius:18px}
