@@ -6,6 +6,7 @@ import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders
  type CatalogItem,type TestOrder,type HumanRequest,type CommerceAgentPermissions,type WebStudioCard,type VerifiedCatalogItem} from "./commerceStore";
 import styles from "./CommerceStudio.module.css";
 import CatalogProductImageField,{catalogImageUrl} from "./CatalogProductImageField";
+import InventoryWebsiteLink from "./InventoryWebsiteLink";
 
 type Form={
  name:string;sku:string;description:string;price:string;stock_mode:CatalogItem["stock_mode"];
