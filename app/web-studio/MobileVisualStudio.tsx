@@ -406,7 +406,7 @@ export default function MobileVisualStudio({
  data,onChange:onDocumentChange,siteName,siteSlug,siteCategory,siteId,pages,pageId,
  onBack,onChoosePage,onCreatePage,onPublish,onSave,
  busy=false,title,description,onTitleChange,onDescriptionChange,
- inquiriesEnabled,onToggleInquiries,onDomains,onHistory,
+ inquiriesEnabled,onToggleInquiries,inventorySources,inventoryBusinessId,onConnectInventory,onDomains,onHistory,
  domains,domainRequests,domainInput,domainQuote,quote,onDomainInput,onCheckDomain,onSubmitDomainRequest,onVerifyDomain,
  revisions,onRestoreRevision,error,notice,savePhase,recoveryAvailable,onRecover,onDiscardRecovery
 }:{
@@ -414,7 +414,9 @@ export default function MobileVisualStudio({
  pages:PageChoice[];pageId:string;onBack:()=>void;onChoosePage:(id:string)=>void;onCreatePage:(name:string)=>void;
  onPublish:()=>void;onSave:()=>void;busy?:boolean;title:string;description:string;
  onTitleChange:(v:string)=>void;onDescriptionChange:(v:string)=>void;
- inquiriesEnabled:boolean;onToggleInquiries:(enabled:boolean)=>void;onDomains:()=>void;onHistory:()=>void;
+ inquiriesEnabled:boolean;onToggleInquiries:(enabled:boolean)=>void;
+ inventorySources:Array<{id:string;name:string}>;inventoryBusinessId:string;
+ onConnectInventory:(businessId:string)=>void;onDomains:()=>void;onHistory:()=>void;
  domains:Array<{id:string;hostname:string;state:string}>;
  domainRequests:Array<{id:string;hostname:string;intent:string;status:string}>;
  domainInput:string;domainQuote:{domain:string;available:boolean;priceDisplay:string}|null;quote:string;
@@ -1234,6 +1236,17 @@ export default function MobileVisualStudio({
       </div>:null}
      </>:null}
      {section==="connections"?<>
+      <h3>Inventario conectado</h3>
+      <p className={styles.help}>La web pública muestra los productos aprobados y sus fotos originales desde AI Agents. La IA no puede modificar estas fotos.</p>
+      <label className={styles.formLabel}>Elegir inventario
+       <select value={inventoryBusinessId} disabled={busy} onChange={event=>onConnectInventory(event.target.value)}>
+        <option value="">Sin inventario conectado</option>
+        {inventorySources.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
+       </select>
+      </label>
+      <a className={styles.drawerLink} href="/vista-app/ai-agents" target="_blank" rel="noopener noreferrer">
+       <Lock size={18}/> Administrar fotos de productos <ChevronRight size={17}/>
+      </a>
       <h3>Chat en la página</h3>
       <label className={styles.toggle}><span>Mostrar botón para recibir mensajes</span>
        <input type="checkbox" checked={root.chatMode==="inbox"&&inquiriesEnabled}
