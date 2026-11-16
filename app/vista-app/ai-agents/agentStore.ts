@@ -103,6 +103,24 @@ export async function setAgentCatalogReadAccess(agent:PersistedAgent,enabled:boo
  if(!data)throw Error("El agente cambió en otro dispositivo. Actualiza antes de conectar el inventario.");
  return asAgent(data as DbAgent);
 }
+/** Owner opt-in for public AI chat on a published site.
+ * A draft or paused agent cannot publicly answer until separately activated.
+ * Never authorizes phone, payments, bookings or inventory modification.
+ */
+export async function setAgentPublicChatAccess(agent:PersistedAgent,enabled:boolean):Promise<PersistedAgent>{
+ const {client,user}=await currentUser();
+ if(agent.owner_id!==user.id||!uuid.test(agent.id)||!uuid.test(agent.business_id))
+  throw Error("El agente no pertenece a tu cuenta.");
+ const {data,error}=await client.from("vmv_ai_agents")
+  .update({configuration:{...agent.setup,cap_chat:enabled?"Sí":"No"}})
+  .eq("id",agent.id).eq("owner_id",user.id)
+  .eq("business_id",agent.business_id).eq("revision",agent.revision)
+  .select("*").maybeSingle();
+ if(error)throw Error("No se pudo guardar el permiso de chat.");
+ if(!data)throw Error("Luis cambió en otro dispositivo. Recarga y vuelve a intentar.");
+ return asAgent(data as DbAgent);
+}
+
 export async function setStudyStatus(agent:PersistedAgent,status:PersistedAgent["status"]){
  const {client,user}=await currentUser();
  const {data,error}=await client.from("vmv_ai_agents").update({status})
