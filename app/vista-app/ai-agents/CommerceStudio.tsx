@@ -1,12 +1,11 @@
 "use client";
 import {useEffect,useState} from "react";
-import {ArrowLeft,CheckCircle2,Package,Plus,ReceiptText,ShieldCheck,ShoppingBag,UserRoundCheck,PhoneCall,MessageCircle,Save,Settings2} from "lucide-react";
-import {setAgentCatalogReadAccess,type PersistedAgent,type PhoneSelection} from "./agentStore";
+import {ArrowLeft,CheckCircle2,Package,Plus,ReceiptText,ShieldCheck,ShoppingBag,UserRoundCheck,PhoneCall,Save} from "lucide-react";
+import {setAgentCatalogReadAccess,type PersistedAgent} from "./agentStore";
 import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,saveCatalogItem,saveCommerceAgentPermissions,listWebStudioCards,importWebStudioCard,getVerifiedCatalog,
  type CatalogItem,type TestOrder,type HumanRequest,type CommerceAgentPermissions,type WebStudioCard,type VerifiedCatalogItem} from "./commerceStore";
 import styles from "./CommerceStudio.module.css";
 import CatalogProductImageField,{catalogImageUrl} from "./CatalogProductImageField";
-import InventoryWebsiteLink from "./InventoryWebsiteLink";
 
 type Form={
  name:string;sku:string;description:string;price:string;stock_mode:CatalogItem["stock_mode"];
@@ -14,11 +13,10 @@ type Form={
 };
 const empty:Form={name:"",sku:"",description:"",price:"",stock_mode:"manual",available_qty:"",
  approved:false,active:true,image_path:""};
-export default function CommerceStudio({agents,onClose,initialAgentId="",initialTab="catalog",onAgentUpdated,workspaceId,centralBusinessId="",catalogOnly=false,phoneConnection,onManageCalls}:{
+export default function CommerceStudio({agents,onClose,initialAgentId="",initialTab="catalog",onAgentUpdated,workspaceId,centralBusinessId="",catalogOnly=false}:{
  catalogOnly?:boolean;workspaceId?:string;centralBusinessId?:string;agents:PersistedAgent[];
  onClose:()=>void;initialAgentId?:string;initialTab?:"setup"|"catalog";
  onAgentUpdated?:(agent:PersistedAgent)=>void;
- phoneConnection?:PhoneSelection|null;onManageCalls?:()=>void;
 }){
  const [items,setItems]=useState<CatalogItem[]>([]);
  const [webCards,setWebCards]=useState<WebStudioCard[]>([]);
@@ -210,53 +208,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
    </div>
    <button type="button" className={styles.primary} onClick={()=>setTab("catalog")}><Package size={16}/> Ir al catálogo</button>
   </>:tab==="catalog"?<>
-   <section className={styles.connectionsHub} aria-label="Conexiones del negocio">
-    <h2>Conexiones</h2>
-    <InventoryWebsiteLink businessId={businessId}/>
-    {!catalogOnly?<div className={styles.connectionUnit}>
-     <div className={styles.connectionRow}>
-      <span className={styles.connectionIcon}><MessageCircle size={19}/></span>
-      <div className={styles.connectionIdentity}>
-       <strong>Inventario del chat</strong>
-       {agents.filter(agent=>agent.revision>0).length>1?
-        <select aria-label="Seleccionar agente del chat" value={agentId}
-         onChange={event=>{setAgentId(event.target.value);setEditedAgent(null);}}>
-         <option value="">Seleccionar agente</option>
-         {agents.filter(agent=>agent.revision>0).map(agent=>
-          <option key={agent.id} value={agent.id}>{agent.name}</option>)}
-        </select>:<small>{selectedAgent?.name||"Sin agente seleccionado"}</small>}
-      </div>
-      <div className={styles.connectionControls}>
-       <span className={selectedAgent?.setup.cap_catalog==="Sí"?styles.connectionOnline:styles.connectionOffline}>
-        {selectedAgent?.setup.cap_catalog==="Sí"?"Conectado":"Sin conectar"}
-       </span>
-       <button className={styles.connectionChange} type="button" disabled={busy||!selectedAgent}
-        onClick={()=>void toggleCatalogRead()}>
-        {busy?"Guardando…":selectedAgent?.setup.cap_catalog==="Sí"?"Desconectar":"Conectar"}
-       </button>
-      </div>
-     </div>
-    </div>:null}
-    {!catalogOnly&&onManageCalls?<div className={styles.connectionUnit}>
-     <div className={styles.connectionRow}>
-      <span className={styles.connectionIcon}><PhoneCall size={19}/></span>
-      <div className={styles.connectionIdentity}>
-       <strong>Llamadas del agente</strong>
-       <small>{phoneConnection?.maskedNumber||"Sin línea configurada"}</small>
-      </div>
-      <div className={styles.connectionControls}>
-       <span className={phoneConnection?.serverEnrolled&&phoneConnection.agentId===selectedAgent?.id?
-        styles.connectionOnline:styles.connectionOffline}>
-        {phoneConnection?.serverEnrolled&&phoneConnection.agentId===selectedAgent?.id?
-         "Conectado":phoneConnection?.agentId?"Revisar":"Sin conectar"}
-       </span>
-       <button className={styles.connectionChange} type="button" onClick={onManageCalls}>
-        <Settings2 size={14}/> Configurar
-       </button>
-      </div>
-     </div>
-    </div>:null}
-   </section>
+
    {!catalogOnly&&webCards.length>0?<>
     <div className={styles.heading}><h2>Productos de Web Studio</h2></div>
     <p className={styles.hint}>Revisa precio y disponibilidad antes de aprobar.</p>
