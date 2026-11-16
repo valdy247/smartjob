@@ -10,8 +10,8 @@ export async function resolveInventoryForPublishedSite(
  siteId:string,ownerId:string,siteName:string
 ):Promise<string|null>{
  const {data:site,error}=await db.from("smartjob_builder_sites")
-  .select("inventory_business_id").eq("id",siteId).eq("owner_id",ownerId).maybeSingle();
- if(error||!site)return null;
+  .select("inventory_business_id,inventory_connection_enabled").eq("id",siteId).eq("owner_id",ownerId).maybeSingle();
+ if(error||!site||site.inventory_connection_enabled===false)return null;
  if(site.inventory_business_id){
   const {data:authorized,error:authError}=await db.from("vmv_ai_businesses")
    .select("id").eq("id",site.inventory_business_id)
