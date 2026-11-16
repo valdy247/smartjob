@@ -10,6 +10,24 @@ export default function WebChatLauncher({slug,business,categoryId,services,previ
  const [open,setOpen]=useState(false);
  const closeRef=useRef<HTMLButtonElement>(null);
  const openRef=useRef<HTMLButtonElement>(null);
+ useEffect(()=>{
+  const openFromHash=()=>{if(window.location.hash==="#vmv-chat")setOpen(true);};
+  const onChatLink=(event:MouseEvent)=>{
+   const target=event.target;
+   if(!(target instanceof Element))return;
+   const link=target.closest('a[href="#vmv-chat"]');
+   if(!link)return;
+   event.preventDefault();
+   setOpen(true);
+  };
+  openFromHash();
+  window.addEventListener("hashchange",openFromHash);
+  document.addEventListener("click",onChatLink,true);
+  return()=>{
+   window.removeEventListener("hashchange",openFromHash);
+   document.removeEventListener("click",onChatLink,true);
+  };
+ },[]);
  useEffect(()=>{if(open)closeRef.current?.focus();},[open]);
  const close=()=>{setOpen(false);openRef.current?.focus();};
  return <>
