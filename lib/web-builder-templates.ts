@@ -21,6 +21,7 @@ export type SiteDesignPreferences={
 export type SiteIntake={
  business:string;categoryId:string;offering:SiteOffering;objective:SiteObjective;
  phone:string;email:string;city:string;about:string;logo:string;photos:string[];
+ gallery?:string[];galleryColumns?:1|2|3;
  offerings:string[];products?:SiteProduct[];socials?:BusinessSocialLinks;
  inventoryBusinessId?:string; // Owner-owned catalog workspace chosen in the wizard; not sent to AI.
  design?:SiteDesignPreferences;
@@ -70,7 +71,12 @@ function previewOfferings(input:SiteIntake){
  return legacy.slice(0,30);
 }
 function gallery(input:SiteIntake){
- return input.photos.filter(Boolean).map((image,index)=>({image,alt:"Foto "+(index+1)+" de "+input.business,caption:""}));
+ // The cover image and gallery are independent placements. Older templates may
+ // still supply only photos, so retain that fallback for backwards compatibility.
+ const images=input.gallery!==undefined?input.gallery:input.photos;
+ return images.filter(Boolean).slice(0,24).map((image,index)=>({
+  image,alt:"Foto "+(index+1)+" de "+input.business,caption:""
+ }));
 }
 function info(input:SiteIntake,headline:string){
  return node("Contact","contact-main",{title:headline,description:"Envíanos tu consulta para conocer opciones y disponibilidad.",
@@ -97,8 +103,10 @@ function offerings(input:SiteIntake,family:SiteFamily,layout:"grid"|"mosaic"|"li
  });
 }
 function portfolio(input:SiteIntake,family:SiteFamily,layout:"grid"|"mosaic"|"list",id="gallery-main"){
+ const columns=input.galleryColumns;
  return node("PhotoGallery",id,{title:messages[family].gallery,description:"",
-  items:gallery(input),layout,padding:"spacious",surface:"light"});
+  items:gallery(input),layout:columns?"grid":layout,
+  columns:columns?String(columns):undefined,padding:"spacious",surface:"light"});
 }
 function process(){
  return node("ProcessSteps","work-steps",{title:"Cómo trabajamos",items:[],padding:"normal",surface:"soft"});
@@ -126,11 +134,13 @@ function assemble(input:SiteIntake,family:SiteFamily,variant:number):Data{
   blocks.push(node("CTA","order-contact",{title:"¿Tienes una idea en mente?",description:"Cuéntanos la fecha y los detalles de tu pedido.",buttonText:cta(input.objective,input.phone).label,buttonUrl:cta(input.objective,input.phone).url}),contact(input,family));
  }else if(family==="construction"){
   blocks.push(first,offerings(input,family,variant===2?"list":"grid","soft"));
-  if(media.length)blocks.push(node("ProjectShowcase","projects-main",{title:"Proyectos en imágenes",items:media.map(x=>({image:x.image,title:"",description:"",alt:x.alt})),layout:"mosaic",surface:"light",padding:"spacious"}));
+  if(media.length)blocks.push(portfolio(input,family,"mosaic"));
   blocks.push(process(),contact(input,family));
  }else if(family==="professional"){
   blocks.push(first,node("Text","intro-story",{title:"Sobre "+input.business,body:input.about||"Describe aquí tu forma de trabajar y qué servicios ofreces."}),
-   offerings(input,family,variant===1?"grid":"list","light"),contact(input,family));
+   offerings(input,family,variant===1?"grid":"list","light"));
+  if(media.length)blocks.push(portfolio(input,family,"grid"));
+  blocks.push(contact(input,family));
  }else if(family==="beauty"){
   blocks.push(first);
   if(media.length)blocks.push(portfolio(input,family,"mosaic"));
