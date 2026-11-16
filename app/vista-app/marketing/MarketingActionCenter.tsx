@@ -784,10 +784,10 @@ export default function MarketingActionCenter({businessName,industryId,website,o
         <span className={styles.serviceCta}>{en?"Start":"Empezar"}</span>
        </button>;
       })}
-      <button type="button" onClick={()=>setSocialPreviewOpen(true)} className={styles.serviceTile} aria-label={en?"View upcoming social media captions":"Ver descripciones para redes próximamente"}>
+      <button type="button" onClick={()=>setSocialPreviewOpen(true)} className={styles.serviceTile} aria-label={en?"Create social media captions":"Crear descripciones para redes"}>
        <span className={styles.serviceIcon}><Video size={23} strokeWidth={1.8}/></span>
        <span className={styles.serviceText}><strong>{en?"Social media captions":"Descripciones para redes"}</strong><small>{en?"Caption suggestions from your videos.":"Descripciones recomendadas a partir de tus videos."}</small></span>
-       <span className={styles.serviceCta}>{en?"Coming soon":"Próximamente"}</span>
+       <span className={styles.serviceCta}>{en?"Start":"Empezar"}</span>
       </button>
      </div>
      <p className={styles.wizardHint}><ShieldCheck size={15}/> {translate("marketing.ui.requestFree")}</p>
