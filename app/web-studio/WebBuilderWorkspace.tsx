@@ -338,11 +338,12 @@ export default function WebBuilderWorkspace(){
     const reachedLimit=/límite de cinco sitios/i.test(String(rpcError?.message||""));
     throw new Error(reachedLimit?"Has alcanzado el máximo de sitios para tu cuenta.":"No se pudo crear el sitio. Inténtalo de nuevo o revisa los datos del negocio.");
    }
+   let inventoryNotLinked=false;
    if(intake.inventoryBusinessId){
     const {error:linkError}=await db.from("smartjob_builder_sites")
      .update({inventory_business_id:intake.inventoryBusinessId})
      .eq("id",ids.siteId).eq("owner_id",userId);
-    if(linkError)throw Error("El sitio se creó, pero el inventario no se pudo conectar. Actualiza Mis sitios y conéctalo desde Ajustes.");
+    if(linkError)inventoryNotLinked=true;
    }
    const loaded=await loadCreatedSite(db,ids);
    const created=loaded.created;
@@ -363,7 +364,7 @@ export default function WebBuilderWorkspace(){
    setSites(current=>[created,...current]);
    setSite(created);setPages([home]);setPage(home);setPublishedIds([]);setPublishedSignatures({});
    openDraft(home.draft);setTitle(home.title);setDescription(home.description);
-   setView("editor");setNotice(seoPending?"Diseño creado. Revisa el título SEO en Ajustes antes de publicar.":"Diseño creado con SEO inicial. Revísalo y publícalo cuando esté listo.");
+   setView("editor");setNotice(inventoryNotLinked?"Web creada. Conecta el inventario manualmente en Ajustes antes de publicar.":seoPending?"Diseño creado. Revisa el título SEO en Ajustes antes de publicar.":"Diseño creado con SEO inicial. Revísalo y publícalo cuando esté listo.");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo crear");}
   finally{setBusy(false);}
  }
