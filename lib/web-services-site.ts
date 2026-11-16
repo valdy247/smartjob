@@ -69,11 +69,17 @@ export function safeWebImageUrl(value:string):string|null{
   if(!expected||value.length>450)return null;
   const url=new URL(value);
   if(url.origin!==new URL(expected).origin||url.search||url.hash)return null;
-  const path="/storage/v1/object/public/smartjob-web-images/";
-  if(!url.pathname.startsWith(path))return null;
-  const asset=url.pathname.slice(path.length);
-  if(!/^[a-f0-9-]{36}\/[a-f0-9-]{36}\.(jpg|png|webp)$/.test(asset))return null;
-  return url.toString();
+  const webPath="/storage/v1/object/public/smartjob-web-images/";
+  const catalogPath="/storage/v1/object/public/vmv-catalog-images/";
+  if(url.pathname.startsWith(webPath)){
+   const asset=url.pathname.slice(webPath.length);
+   return /^[a-f0-9-]{36}\/[a-f0-9-]{36}\.(jpg|png|webp)$/.test(asset)?url.toString():null;
+  }
+  if(url.pathname.startsWith(catalogPath)){
+   const asset=url.pathname.slice(catalogPath.length);
+   return /^[a-f0-9-]{36}\/[a-f0-9-]{36}\/[a-f0-9-]{36}\.(jpg|png|webp)$/.test(asset)?url.toString():null;
+  }
+  return null;
  }catch{return null;}
 }
 export function webCategory(content:WebSiteContent):string{
