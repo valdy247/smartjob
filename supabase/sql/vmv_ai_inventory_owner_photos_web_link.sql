@@ -32,6 +32,7 @@ create or replace function public.vmv_ai_catalog_owner_image_guard()
 returns trigger language plpgsql security invoker set search_path=public,storage,pg_temp as $$
 declare p text;
 begin
+ if tg_op='INSERT' and new.image_path is null then return new; end if;
  if tg_op='UPDATE' and new.image_path is not distinct from old.image_path then
   return new;
  end if;
@@ -59,6 +60,7 @@ create trigger vmv_ai_catalog_owner_image_guard
 create or replace function public.vmv_site_inventory_owner_guard()
 returns trigger language plpgsql security invoker set search_path=public,pg_temp as $$
 begin
+ if tg_op='INSERT' and new.inventory_business_id is null then return new; end if;
  if tg_op='UPDATE' and new.inventory_business_id is not distinct from old.inventory_business_id then
   return new;
  end if;
