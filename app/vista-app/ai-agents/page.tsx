@@ -96,6 +96,8 @@ export default function AIAgentsPreview(){
  const [message,setMessage]=useState("");
  const [messageNotice,setMessageNotice]=useState("");
  const [notice,setNotice]=useState("");
+ // Switching UI locale only clears transient interface feedback; agent drafts and saved content remain unchanged.
+ useEffect(()=>{setNotice("");},[language]);
  const active=agents.find(a=>a.id===selected)||null;
  const selectedBusiness=businesses.find(x=>x.id===chosenBusiness)||null;
  const selectedWorkspace=workspaces.find(x=>x.central_business_id===chosenBusiness)||null;
@@ -118,10 +120,10 @@ export default function AIAgentsPreview(){
   (visibleAgents.find(a=>a.id===phone?.agentId)|| (visibleAgents.length===1?visibleAgents[0]:null));
  const designate=async(agent:Agent)=>{
   if(!selectedWorkspace||!agent.revision||agent.business_id!==selectedWorkspace.id)
-   throw Error("Vincula primero el negocio y guarda un agente real.");
+   throw Error(translate("agents.notice.linkBusinessFirst"));
   await choosePrincipalAgent(selectedWorkspace.id,agent.id,selectedWorkspace.primary_agent_id||null);
   setWorkspaces(old=>old.map(w=>w.id===selectedWorkspace.id?{...w,primary_agent_id:agent.id}:w));
-  setNotice("Agente principal guardado para este negocio. La selección telefónica no ha cambiado.");
+  setNotice(translate("agents.notice.principalSavedPhoneSame"));
  };
  const openFor=(kind:Kind,agent:Agent)=>{
   setSelected(agent.id);
@@ -129,13 +131,13 @@ export default function AIAgentsPreview(){
    setCommerceTab(kind==="inventory"?"catalog":"setup");setScreen("commerce");
   }else if(kind==="calls"){
    setScreen("phone");
-   setNotice(phone?.agentId===agent.id?"":"Configura las llamadas aquí. Para que este agente atienda la línea, asígnalo explícitamente desde AI Agents.");
+   setNotice(phone?.agentId===agent.id?"":translate("agents.notice.configureCalls"));
   }else if(kind==="bookings"){
    setScreen("bookings");setNotice("");
   }else if(kind==="support"){
-   test(agent);setNotice("Prueba privada. El chat público de Web Services todavía requiere una conexión verificada.");
+   test(agent);setNotice(translate("agents.notice.privateChat"));
   }else if(kind==="operations"){
-   quality(agent);setNotice("Actividad: consulta el historial telefónico y la calidad del agente.");
+   quality(agent);setNotice(translate("agents.notice.activityInfo"));
   }else{
    edit(agent,0);
   }
@@ -146,7 +148,7 @@ export default function AIAgentsPreview(){
   if(principal){openFor(kind,principal);return;}
   if(!selectedBusiness){
    setPendingKind(kind);setBusinessDialog(true);
-   setNotice("Selecciona o vincula tu negocio para continuar con su agente existente.");
+   setNotice(translate("agents.notice.selectOrLinkBusiness"));
    return;
   }
   try{
@@ -163,12 +165,12 @@ export default function AIAgentsPreview(){
     openFor(kind,existing);return;
    }
    if(candidates.length>1){
-    setNotice("Ya tienes agentes. Selecciona «Hacer principal» en el agente que quieres usar; no crearemos otro.");
+    setNotice(translate("agents.notice.chooseExistingPrincipal"));
     return;
    }
    if(!workspace&&profile.workspaces.some(w=>!w.central_business_id)){
     setPendingKind(kind);setBusinessDialog(true);
-    setNotice("Ya hay agentes de un espacio anterior. Vincula el negocio para reutilizarlos sin crear otro.");
+    setNotice(translate("agents.notice.linkLegacyWorkspace"));
     return;
    }
    // Only a genuinely empty workspace may start the one-time identity wizard.
@@ -176,22 +178,22 @@ export default function AIAgentsPreview(){
    setDraft(centralPrefill(selectedBusiness,blank("support")));
    setSelected(null);setEditStep(0);setScreen("editor");setNotice("");
   }catch(e){
-   setNotice(e instanceof Error?e.message:"No se pudo comprobar tu agente. Intenta actualizar la página.");
+   setNotice(translate("agents.notice.verifyAgentError"));
   }
  };
  const businessSaved=async(id:string)=>{
   const [list,profile]=await Promise.all([loadAgents(),loadBusinessChoices()]);
   setAgents(list);setBusinesses(profile.businesses);setWorkspaces(profile.workspaces);setChosenBusiness(id);
   const saved=profile.businesses.find(b=>b.id===id);
-  if(!saved)throw Error("El negocio se guardó, pero no se pudo actualizar la lista. Vuelve a intentarlo.");
+  if(!saved)throw Error(translate("agents.notice.businessListError"));
   if(screen==="editor")setDraft(current=>centralPrefill(saved,current));
-  setBusinessDialog(false);setNotice("Negocio guardado. Puedes configurar su agente principal aquí.");
+  setBusinessDialog(false);setNotice(translate("agents.notice.businessSaved"));
   if(pendingKind){
    const match=profile.workspaces.find(w=>w.central_business_id===id);
    const candidate=list.find(a=>a.id===match?.primary_agent_id);
    if(candidate){setPendingKind(null);openFor(pendingKind,candidate);}
    else if(match&&list.filter(a=>a.business_id===match.id).length>0){
-    setNotice("Elige qué agente existente será el principal; conserva sus capacidades y llamadas.");setPendingKind(null);
+    setNotice(translate("agents.notice.choosePrincipalAfterLink"));setPendingKind(null);
    }else{setDraft(centralPrefill(saved,blank("support")));setSelected(null);setEditStep(0);setScreen("editor");}
   }
  };
@@ -200,8 +202,8 @@ export default function AIAgentsPreview(){
   language:agent.language,instructions:agent.instructions,knowledge:agent.knowledge,setup:{...agent.setup}
  });setScreen("editor");};
  const save=async(nextDraft:AgentDraft=draft)=>{
-  if(busy)throw Error("Ya estamos guardando tu agente.");
-  if(!nextDraft.name.trim())throw Error("Escribe el nombre del agente.");
+  if(busy)throw Error(translate("agents.notice.alreadySaving"));
+  if(!nextDraft.name.trim())throw Error(translate("agents.notice.agentNameRequired"));
   setBusy(true);
   try{
    const before=selected?agents.find(a=>a.id===selected):null;
@@ -226,13 +228,13 @@ export default function AIAgentsPreview(){
      setWorkspaces(old=>old.map(w=>w.id===workspaceId?{...w,primary_agent_id:saved.id}:w));
     }catch{assigned=false;}
    }
-   setNotice(assigned?"Agente principal guardado. Sus capacidades requieren permisos y pruebas independientes.":
-    "Agente guardado, pero otra sesión cambió el principal. Revisa tu selección.");
+   setNotice(assigned?translate("agents.notice.agentSaved"):
+    translate("agents.notice.primaryChanged"));
    if(assigned&&pendingKind){const chosen=pendingKind;setPendingKind(null);openFor(chosen,saved);}
    else{setPendingKind(null);setScreen("home");}
    void reload().catch(()=>{/* saved record already returned by Supabase */});
   }catch(e){
-   const message=e instanceof Error?e.message:"No se pudo guardar el agente.";
+   const message=translate("agents.notice.saveFailed");
    setNotice(message);
    throw Error(message);
   }finally{setBusy(false);}
@@ -257,26 +259,26 @@ export default function AIAgentsPreview(){
    }
   };
   setAgents(current=>current.some(a=>a.id===sample.id)?current:[sample,...current]);
-  setNotice("Ejemplo ficticio cargado solo en tu navegador. Puedes abrir Calidad y probar el diseño.");
+  setNotice(translate("agents.notice.demoLoaded"));
  };
  const test=(agent:Agent)=>{setSelected(agent.id);setScreen("test");setMessage("");setMessageNotice("");};
  const quality=(agent:Agent)=>{setSelected(agent.id);setScreen("quality");};
  const toggleStatus=async(agent:Agent)=>{
   if(busy)return;
-  if(!agent.revision){setNotice("Guarda el ejemplo en tu cuenta antes de activarlo.");return;}
+  if(!agent.revision){setNotice(translate("agents.notice.saveExampleFirst"));return;}
   if(agent.status!=="active"&&staleAgents.some(x=>x.id===agent.id)){
-   setNotice("El perfil central cambió. Revisa y guarda las instrucciones del agente antes de activarlo.");
+   setNotice(translate("agents.notice.centralChanged"));
    edit(agent);return;
   }
   if(agent.status!=="active"&&!inspectAgent(agent).requiredPassed){
-   setNotice("Completa los requisitos antes de activar en estudio.");quality(agent);return;
+   setNotice(translate("agents.notice.completeRequirements"));quality(agent);return;
   }
   setBusy(true);
   try{
    await setStudyStatus(agent,agent.status==="active"?"paused":"active");
    await reload();
-   setNotice("Estado de estudio guardado. Esto no cambia la recepción de llamadas.");
-  }catch(e){setNotice(e instanceof Error?e.message:"No fue posible cambiar el estado.");}
+   setNotice(translate("agents.notice.studyStatusSaved"));
+  }catch(e){setNotice(translate("agents.notice.studyStatusError"));}
   finally{setBusy(false);}
  };
  const checkPilot=async()=>{
@@ -286,46 +288,46 @@ export default function AIAgentsPreview(){
    const client=getSupabase();
    const {data}=client?await client.auth.getSession():{data:{session:null}};
    const token=data.session?.access_token;
-   if(!token)throw Error("Inicia sesión para comprobar tu línea.");
+   if(!token)throw Error(translate("agents.notice.signInForCheck"));
    const response=await fetch("/api/vmv/ai-agents/pilot-status",{
     headers:{Authorization:"Bearer "+token},cache:"no-store"
    });
    const status=await response.json() as {
     checks?:{key:string;label:string;ok:boolean}[];error?:string
    };
-   if(!response.ok||!status.checks)throw Error(status.error||"No se pudo comprobar la línea.");
+   if(!response.ok||!status.checks)throw Error(translate("agents.notice.phoneCheckError"));
    setPilotChecks(status.checks);
    setNotice(status.checks.every(c=>c.ok)?
-     "El piloto tiene sus requisitos configurados. Aún falta la prueba real y verificar el webhook de Twilio.":
-     "Hay requisitos pendientes. Consulta la lista de verificación telefónica.");
-  }catch(e){setNotice(e instanceof Error?e.message:"No se pudo comprobar la conexión.");}
+     translate("agents.notice.pilotReady"):
+     translate("agents.notice.pilotPending"));
+  }catch(e){setNotice(translate("agents.notice.connectionError"));}
   finally{setPilotChecking(false);}
  };
  const linkPilot=async()=>{
   if(!selectedBusiness||unlinked.length!==1||linkBusy)return;
   const legacy=unlinked[0];
-  if(!window.confirm('¿Vincular el espacio «'+legacy.name+'» con «'+selectedBusiness.name+'»? Se conservarán sus agentes, llamadas y pedidos. Esta acción no cambia la línea telefónica.'))return;
+  if(!window.confirm(translate("agents.notice.linkConfirm",{space:legacy.name,business:selectedBusiness.name})))return;
   setLinkBusy(true);
   try{
    await linkLegacyWorkspace(legacy.id,selectedBusiness.id);
    await reload();
-   setNotice("Negocio vinculado. Los agentes y las llamadas anteriores se conservaron.");
-  }catch(e){setNotice(e instanceof Error?e.message:"No se pudo vincular el negocio.");}
+   setNotice(translate("agents.notice.linked"));
+  }catch(e){setNotice(translate("agents.notice.linkError"));}
   finally{setLinkBusy(false);}
  };
  const select=async(agent:Agent|null)=>{
   if(!phone||busy)return;
-  if(agent&&!agent.revision){setNotice("Guarda primero un agente real.");return;}
+  if(agent&&!agent.revision){setNotice(translate("agents.notice.saveRealFirst"));return;}
   if(agent&&selectedWorkspace&&agent.id!==principal?.id){
-    setNotice("Selecciona este agente como principal antes de asignarlo a la línea. La selección no cambia tu número automáticamente.");
+    setNotice(translate("agents.notice.makePrimaryFirst"));
     return;
   }
   setBusy(true);
   try{
    await selectPhoneAgent(phone.routeId,agent);
    await reload();
-   setNotice(agent?"Agente seleccionado para tu línea de prueba. La conexión con Twilio sigue pendiente de verificación.":"Selección telefónica retirada.");
-  }catch(e){setNotice(e instanceof Error?e.message:"No fue posible guardar el agente seleccionado.");}
+   setNotice(agent?translate("agents.notice.phoneAssigned"):translate("agents.notice.phoneUnassigned"));
+  }catch(e){setNotice(translate("agents.notice.phoneSaveError"));}
   finally{setBusy(false);}
  };
  const back=()=>{setScreen("home");setMessageNotice("");};
@@ -408,7 +410,7 @@ export default function AIAgentsPreview(){
          <button type="button" className={styles.buttonSecondary} onClick={()=>quality(a)}><BookCheck size={15}/> {translate("agents.quality")}</button>
          {!principal||principal.id!==a.id?<button type="button" className={styles.buttonSecondary}
           disabled={!selectedWorkspace||busy||!a.revision}
-          onClick={()=>void designate(a).catch(e=>setNotice(e instanceof Error?e.message:"No se pudo elegir."))}>
+          onClick={()=>void designate(a).catch(e=>setNotice(translate("agents.notice.designateError")))}>
           <Bot size={15}/> {translate("agents.makePrincipal")}</button>:null}
          <button type="button" className={styles.buttonSecondary} onClick={()=>edit(a)}><ClipboardList size={15}/> {translate("agents.editIdentity")}</button>
          {a.revision>0&&(a.kind==="sales"||a.setup.cap_sales==="Sí"||phone?.agentId===a.id)?
