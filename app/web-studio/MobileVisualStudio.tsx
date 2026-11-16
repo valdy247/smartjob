@@ -28,7 +28,7 @@ type Pick={id:string;kind:"image"|"text"|"button"|"section";target?:ImageTarget;
 type Section="home"|"pages"|"create"|"appearance"|"seo"|"connections"|"domain"|"history";
 type VisualTool="menu"|"content"|"size"|"color"|"background"|"font"|"weight"|"italic"|
  "spacing"|"opacity"|"align"|"image"|"shade"|"frame"|"shape"|"link"|"actions"|
- "position"|"border"|"layout"|"arrange"|"add"|"duplicate"|"delete"|"items"|"surface"|"buttonStyle";
+ "position"|"border"|"layout"|"arrange"|"add"|"duplicate"|"delete"|"items"|"gallery"|"surface"|"buttonStyle";
 
 const TEXT_KEYS=["title","description","body","text","eyebrow","subtitle","buttonText","label",
  "caption","quote","author","price","question","answer","q1","a1","q2","a2","hours","area","notes","first","second","third","phone","email","address"];
@@ -649,7 +649,8 @@ export default function MobileVisualStudio({
   {id:"arrange",label:"Organizar sección",icon:<Layers/>}
  ]:[
   {id:"content",label:"Editar contenido",icon:<Type/>},
-  ...(Array.isArray(props?.items)?[{id:"items" as const,
+  ...(["PhotoGallery","ProjectShowcase"].includes(block?.type||"")?[{id:"gallery" as const,label:"Galería: fotos y columnas",icon:<ImagePlus/>}]:[]),
+  ...(Array.isArray(props?.items)&&!["PhotoGallery","ProjectShowcase"].includes(block?.type||"")?[{id:"items" as const,
     label:block?.type==="FAQList"?"Preguntas y respuestas":"Editar elementos",
     icon:block?.type==="FAQList"?<MessageCircle/>:<Layers/>}]:[]),
   ...(block?.type==="HeroVisual"?[
@@ -676,7 +677,7 @@ export default function MobileVisualStudio({
   shade:"Oscuridad",frame:block?.type==="HeroVisual"?"Encuadre":"Esquinas",shape:"Esquinas",
   link:"Enlace",actions:"Opciones",menu:"Herramientas",position:"Mover",border:"Borde",
   layout:"Diseño de portada",arrange:"Organizar sección",add:"Añadir",duplicate:"Duplicar",
-  delete:"Eliminar",items:block?.type==="FAQList"?"Preguntas y respuestas":"Editar elementos",
+  delete:"Eliminar",items:block?.type==="FAQList"?"Preguntas y respuestas":"Editar elementos",gallery:"Fotos y columnas",
   surface:"Fondo",buttonStyle:"Estilo del botón"
  } as Record<VisualTool,string>)[visualTool];
  const imageSettings=isImage&&image?targetSettings(props||{},image):null;
@@ -830,7 +831,20 @@ export default function MobileVisualStudio({
      </button>
      {props.items.length>=40?<p>Máximo de 40 preguntas por sección.</p>:null}
     </div>:null}
-    {visualTool==="items"&&block?.type!=="FAQList"&&Array.isArray(props.items)?<div className={styles.focusFields}>
+    {visualTool==="gallery"&&["PhotoGallery","ProjectShowcase"].includes(block?.type||"")?<div className={styles.focusFields}>
+     <strong>Columnas de la galería</strong>
+     <div className={styles.focusChoices} role="group" aria-label="Número de columnas">
+      {(["1","2","3","4"] as const).map(n=><button type="button" key={n}
+       aria-pressed={String(props.columns||"3")===n} onClick={()=>edit({columns:n})}>{n} {n==="1"?"columna":"columnas"}</button>)}
+     </div>
+     <label className={styles.formLabel}>Distribución
+      <select value={String(props.layout||"mosaic")} onChange={e=>edit({layout:e.target.value})}>
+       <option value="grid">Cuadrícula</option><option value="mosaic">Mosaico</option><option value="list">Lista</option>
+      </select>
+     </label>
+     <p>Sube fotos o elige las guardadas en Mis imágenes. Se conservan al guardar el borrador.</p>
+    </div>:null}
+    {(visualTool==="items"||visualTool==="gallery")&&block?.type!=="FAQList"&&Array.isArray(props.items)?<div className={styles.focusFields}>
      {(props.items as Record<string,unknown>[]).map((item,index)=><div className={styles.focusItem} key={String(item.id||index)}>
       <strong>Elemento {index+1}</strong>
       {["title","description","price","caption","question","answer"].filter(k=>typeof item[k]==="string").map(key=>
@@ -842,7 +856,7 @@ export default function MobileVisualStudio({
       <button type="button" className={styles.focusDestructive} onClick={()=>edit({items:(props.items as unknown[]).filter((_,i)=>i!==index)})}>
        <Trash2 size={18}/> Quitar elemento</button>
      </div>)}
-     <button type="button" className={styles.focusAction} onClick={addListItem}><Plus size={18}/> Agregar elemento</button>
+     <button type="button" className={styles.focusAction} disabled={props.items.length>=40} onClick={addListItem}><Plus size={18}/> {visualTool==="gallery"?"Agregar foto":"Agregar elemento"}</button>
     </div>:null}
     {visualTool==="size"&&(isText||isButton)?<RangeField label="Tamaño del texto" min={11} max={isButton?36:110} unit="px"
      value={activeSize} onChange={v=>isButton?edit({buttonFontSize:v}):keys?patchTypography({[keys.size]:v}):undefined}/>:null}
