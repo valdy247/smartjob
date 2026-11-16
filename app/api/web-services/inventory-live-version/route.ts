@@ -34,7 +34,7 @@ export async function GET(request:NextRequest){
  const {data:items,error:itemsError}=await server.from("vmv_ai_catalog_items")
   .select("id,updated_at").eq("owner_id",page.owner_id)
   .eq("business_id",business.id).eq("active",true).eq("approved",true)
-  .order("id",{ascending:true}).limit(1000);
+  .order("name",{ascending:true}).limit(40);
  if(itemsError)return json({error:"unavailable"},503);
  return json({linked:true,version:publishedCatalogVersion(items||[])});
 }
