@@ -98,3 +98,33 @@ test('untrusted text is bounded and HTML is not accepted as Puck source',()=>{
  assert.ok(hero.props.title.length<=104);
  assert.ok(!JSON.stringify(result.data).includes("<script"));
 });
+
+test('AI gallery preserves selected columns, uploaded photos and mobile editor field after normalization',()=>{
+ const chosen={...intake,photos:[photo],design:{
+  colors:["#835CD5","#79CEB8","#F3E9D7"],font:"modern",imageStyle:"rounded",
+  galleryColumns:"4",features:{inventory:false,booking:false,chat:false},chatMode:"off"
+ }};
+ const generatedSite=buildAiSiteProposal(chosen,generated);
+ const gallery=generatedSite.data.content.find(item=>item.type==="PhotoGallery");
+ assert.ok(gallery,"bakery must include a photo gallery with owner photos");
+ assert.equal(gallery.props.columns,"4");
+ assert.equal(gallery.props.items[0].image,photo);
+ const normalized=normalizeBuilderDocument(generatedSite.data);
+ assert.equal(normalized.content.find(item=>item.type==="PhotoGallery").props.columns,"4");
+ const html=renderToStaticMarkup(React.createElement(Render,{config:builderConfig,data:normalized}));
+ assert.match(html,/class="vmv-gallery-items"[^>]*data-columns="4"/);
+ const invalid=structuredClone(normalized);
+ invalid.content.find(item=>item.type==="PhotoGallery").props.columns="200";
+ assert.equal(normalizeBuilderDocument(invalid).content.find(item=>item.type==="PhotoGallery").props.columns,"3");
+ const wizard=fs.readFileSync(path.join(root,"app/web-studio/WebAiWizard.tsx"),"utf8");
+ assert.match(wizard,/onClick=\{\(\)=>setGalleryColumns\(n\)\}/);
+ assert.match(wizard,/BuilderImageField value=\{url\}/);
+});
+test('AI construction projects honor the same column setting',()=>{
+ const chosen={...intake,categoryId:"construction",design:{
+  colors:["#835CD5","#79CEB8","#F3E9D7"],font:"modern",imageStyle:"rounded",
+  galleryColumns:"2",features:{inventory:false,booking:false,chat:false},chatMode:"off"
+ }};
+ const doc=buildAiSiteProposal(chosen,generated).data;
+ assert.equal(doc.content.find(item=>item.type==="ProjectShowcase").props.columns,"2");
+});
