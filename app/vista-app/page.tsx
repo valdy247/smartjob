@@ -306,7 +306,7 @@ export default function VMVMobilePreview(){
        </div>
        <section className={styles.homeGrowHero} aria-label={language==="en"?"Grow your business":"Haz crecer tu negocio"}>
         <div className={styles.homeGrowCopy}>
-         <h3>{language==="en"?<>Grow your<br/>business</>:<>Haz crecer<br/>tu negocio</>}</h3>
+         <h3>{language==="en"?"Grow your\nbusiness":"Haz crecer\ntu negocio"}</h3>
          <p>{language==="en"?"Tools, services and AI for entrepreneurs.":"Herramientas, servicios y IA para emprendedores."}</p>
          <span className={styles.homeGrowStart} aria-disabled="true">{language==="en"?"Get started":"Comenzar"} <ArrowUpRight size={18} aria-hidden="true"/></span>
         </div>
@@ -325,6 +325,27 @@ export default function VMVMobilePreview(){
          <span><strong>{language==="en"?"Overview":"Resumen"}</strong><small>{language==="en"?"Activity and results":"Actividad y resultados"}</small></span>
          <ChevronLeft size={21} className={styles.homeSummaryChevron} aria-hidden="true"/>
         </button>
+        <details className={styles.homeLiveDetails}>
+         <summary>{language==="en"?"See live activity":"Ver actividad real"}</summary>
+         <div className={styles.dashboardHeading}><h3>{translate("dashboard.quickActions")}</h3></div>
+         <button className={styles.dashboardCallCard} type="button" onClick={()=>showCall("overview")}>
+          <strong>{translate("dashboard.callCenter")}</strong>
+          <span className={styles.dashboardLineState}>{translate("dashboard.lineStatus")}: {summary?.line.ok?lineState:translate("dashboard.unavailable")}</span>
+          <span className={styles.dashboardMetrics}>
+           <span><b>{summary?.billing.ok?num(available):"—"}</b><small>{translate("dashboard.minutes")}</small></span>
+           <span><b>{summary?.line.ok?num(summary.line.data?.usage.directCalls):"—"}</b><small>{translate("dashboard.calls")}</small></span>
+          </span>
+         </button>
+         <section className={styles.dashboardActivity}>
+          <div className={styles.dashboardActivityHeading}><h3>{translate("dashboard.activity")}</h3></div>
+          {calls.length?<div className={styles.dashboardActivityList}>{calls.slice(0,2).map(item=>
+           <div className={styles.dashboardActivityItem} key={item.bridge_sid}>
+            <span className={styles.dashboardActivityIcon}><PhoneCall size={16}/></span>
+            <span><strong>{translate(item.call_mode==="translated"?"services.history.translated":"services.history.direct")}</strong>
+             <small>{new Date(item.started_at).toLocaleDateString(language==="es"?"es-US":"en-US",{month:"short",day:"numeric"})}</small></span>
+           </div>)}</div>:<p className={styles.dashboardEmpty}>{translate("dashboard.emptyActivity")}</p>}
+         </section>
+        </details>
        </section>
       </div>:null}
       {ready&&tab==="services"&&!open?<div className={`${styles.screen} ${styles.servicesV3}`}>
