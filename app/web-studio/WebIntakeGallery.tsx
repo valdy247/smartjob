@@ -12,6 +12,7 @@ export type GalleryColumns=1|2|3;
 type Props={
  ownerId:string;images:string[];columns:GalleryColumns;
  onChange:(images:string[],columns:GalleryColumns)=>void;
+ onUploadingChange?:(uploading:boolean)=>void;
  disabled?:boolean;
 };
 
@@ -39,7 +40,7 @@ async function optimizedPhoto(file:File):Promise<Blob>{
  }finally{bitmap.close();}
 }
 
-export default function WebIntakeGallery({ownerId,images,columns,onChange,disabled=false}:Props){
+export default function WebIntakeGallery({ownerId,images,columns,onChange,onUploadingChange,disabled=false}:Props){
  const input=useRef<HTMLInputElement>(null);
  const [uploading,setUploading]=useState(false);
  const [error,setError]=useState("");
@@ -50,7 +51,7 @@ export default function WebIntakeGallery({ownerId,images,columns,onChange,disabl
   if(!files.length||uploading||disabled)return;
   const slots=MAX-images.length;
   if(slots<=0){setError("La galería admite hasta 24 fotografías.");return;}
-  setUploading(true);setError("");setNotice("");
+  setUploading(true);onUploadingChange?.(true);setError("");setNotice("");
   const uploaded:string[]=[];
   const failed:string[]=[];
   try{
@@ -77,7 +78,7 @@ export default function WebIntakeGallery({ownerId,images,columns,onChange,disabl
    if(failed.length)setError(failed.slice(0,3).join(" · "));
    if(uploaded.length)setNotice(uploaded.length+" "+(uploaded.length===1?"foto añadida":"fotos añadidas")+".");
   }catch(e){setError(e instanceof Error?e.message:"No se pudieron subir las fotografías.");}
-  finally{setUploading(false);}
+  finally{setUploading(false);onUploadingChange?.(false);}
  }
  function move(index:number,offset:number){
   const next=[...images],destination=index+offset;
