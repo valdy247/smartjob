@@ -1,0 +1,41 @@
+.root{display:flex;flex-direction:column;gap:12px}
+.unit{display:flex;flex-direction:column;gap:6px}
+.card{display:flex;align-items:center;gap:13px;min-height:78px;
+ padding:12px 15px;border-radius:21px;background:#e8d8fb;
+ color:#291448;box-shadow:0 8px 20px #8156bb16}
+.icon{display:grid;place-items:center;flex:0 0 49px;height:49px;border-radius:15px;
+ color:#8752d6;background:#fff;box-shadow:0 5px 13px #7646ac0c}
+.name{flex:1;min-width:0;font-size:clamp(15px,3vw,19px);font-weight:900;
+ letter-spacing:-.035em;line-height:1.25}
+.switch{display:flex;align-items:center;flex:0 0 58px;width:58px;height:34px;
+ border:0;border-radius:99px;background:#cab8dd;padding:4px;
+ transition:background .18s ease;cursor:pointer}
+.switch span{display:block;width:26px;height:26px;flex:none;background:white;
+ border-radius:50%;box-shadow:0 2px 6px #27113b27;transition:transform .18s ease}
+.switch[aria-checked=true]{background:#8451d9}
+.switch[aria-checked=true] span{transform:translateX(24px)}
+.switch:disabled{opacity:.5;cursor:wait}
+.pick{display:flex;flex-direction:column;gap:9px;padding:12px;
+ border-radius:14px;background:#f7f0ff;border:1px solid #e8d9f7}
+.pick label{font-size:12px;font-weight:850;color:#5b3d7d}
+.pick select{border:1px solid #ddc9ef;border-radius:10px;min-height:44px;
+ padding:9px;background:#fff;color:#3b2257;font-size:12px}
+.pick>button{align-self:flex-start;border:0;background:transparent;color:#8255b6;font-weight:800;font-size:11px}
+.pick p{font-size:11px;color:#78618f}
+.status{display:flex;align-items:center;gap:5px;margin:0 0 0 11px;
+ font-size:11px;color:#32795d;font-weight:750}
+.error{margin:0;padding:9px;border-radius:10px;background:#fff2f5;color:#ab365c;
+ font-size:11px;line-height:1.5}
+.error button{margin-left:8px;background:#fff;border:0;border-radius:6px;padding:6px;
+ color:#a14269;font-size:11px;font-weight:800}
+.manage{align-self:flex-start;text-decoration:none;color:#7652ab;font-weight:800;font-size:11px;
+ padding:4px 7px}
+.root button:focus-visible,.root select:focus-visible,.root a:focus-visible{
+ outline:3px solid #a17bdf;outline-offset:3px}
+@media(max-width:460px){.card{min-height:74px;border-radius:19px;padding:10px 12px}
+ .icon{flex-basis:46px;height:46px}
+ .name{font-size:16px}
+ .switch{flex-basis:54px;width:54px;height:33px}
+ .switch span{height:25px;width:25px}
+ .switch[aria-checked=true] span{transform:translateX(21px)}}
+@media(prefers-reduced-motion:reduce){.switch,.switch span{transition:none}}
