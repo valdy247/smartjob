@@ -1905,7 +1905,9 @@
     "agents.wizard.weekday.thu": "Jueves",
     "agents.wizard.weekday.fri": "Viernes",
     "agents.wizard.weekday.sat": "Sábado",
-    "agents.wizard.weekday.sun": "Domingo"
+    "agents.wizard.weekday.sun": "Domingo",
+    "agents.wizard.q.state": "¿En qué estado está tu negocio?",
+    "agents.wizard.q.hours": "¿Cuándo atiendes a los clientes?"
   },
   "en": {
     "meta.title": "VMV Business | Your business, connected",
@@ -3813,6 +3815,8 @@
     "agents.wizard.weekday.thu": "Thursday",
     "agents.wizard.weekday.fri": "Friday",
     "agents.wizard.weekday.sat": "Saturday",
-    "agents.wizard.weekday.sun": "Sunday"
+    "agents.wizard.weekday.sun": "Sunday",
+    "agents.wizard.q.state": "Which state is your business in?",
+    "agents.wizard.q.hours": "When do you serve customers?"
   }
 }
