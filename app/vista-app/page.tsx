@@ -10,6 +10,8 @@ const AccountBusinessAgent=dynamic(()=>import("./AccountBusinessAgent"));
 import ContactBook from "./ContactBook";
 import DialPad from "./DialPad";
 import BusinessServicesPreview from "./BusinessServicesPreview";
+import BusinessDiagnostic from "./BusinessDiagnostic";
+import {DIAGNOSTIC_METADATA_KEY,getDiagnosticRecommendations,makeDiagnosticRecord,readDiagnosticRecord,type DiagnosticAnswers,type DiagnosticRecord,type DiagnosticService} from "@/lib/business-diagnostic";
 import {useSmartCallAccount,type Tab,type Panel,type CallSettings,type CallRecord,type Voice} from "./useSmartCallAccount";
 import styles from "./vista-app.module.css";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
@@ -79,6 +81,8 @@ export default function VMVMobilePreview(){
  const {client,user,phase,profile,settings,route,provisioning,calls,summary,preferences,setPreferences,
   loading,working,error,notice,setError,setNotice,refresh,signIn,signOut,saveBasic,savePremium}=account;
  const [tab,setTab]=useState<Tab>("home");
+ const [diagnosticOpen,setDiagnosticOpen]=useState(false);
+ const [diagnosticSaved,setDiagnosticSaved]=useState<DiagnosticRecord|null>(null);
  useEffect(()=>{if(new URLSearchParams(window.location.search).get("tab")==="account")setTab("account");},[]);
  const [open,setOpen]=useState(false);
  const [serviceFocus,setServiceFocus]=useState<"all"|"web">("all");
@@ -143,10 +147,28 @@ export default function VMVMobilePreview(){
  const available=minuteData?.available;
  const name=profile?.first_name||"bienvenido";
  const business=profile?.business_name?.trim()||profile?.first_name||"Mi negocio";
+ const diagnostic=diagnosticSaved?.businessId===profile?.id?diagnosticSaved:readDiagnosticRecord(user?.user_metadata,profile?.id||"");
+ const homeRecommendations=diagnostic?getDiagnosticRecommendations(diagnostic.answers):null;
+ const showHomeOffer=(service:DiagnosticService)=>!homeRecommendations||homeRecommendations.some(item=>item.id===service);
  const lineNumber=line?.twilioPhone||route?.twilio_number||translate("services.call.noAssignedNumber");
  const lineState=line?.connectedToApp?translate("services.call.iphoneRoute"):line?.verified?translate("services.call.numberVerifiedValue"):route?.enabled?translate("services.call.routeRegistered"):translate("services.call.activationPending");
- const go=(next:Tab)=>{if(next!=="account"){const url=new URL(window.location.href);if(url.searchParams.get("tab")==="account"){url.searchParams.delete("tab");url.searchParams.delete("setup");window.history.replaceState(null,"",url.pathname+url.search+url.hash);}}setServiceFocus("all");setCallbackConfirmSid(null);setTab(next);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("dial");setDialTarget(null);setCallFilter("all");}setError("");setNotice("");};
- const showCall=(next:Panel="overview")=>{setTab("services");setOpen(true);setPanel(next);setError("");setNotice("");};
+ const go=(next:Tab)=>{setDiagnosticOpen(false);if(next!=="account"){const url=new URL(window.location.href);if(url.searchParams.get("tab")==="account"){url.searchParams.delete("tab");url.searchParams.delete("setup");window.history.replaceState(null,"",url.pathname+url.search+url.hash);}}setServiceFocus("all");setCallbackConfirmSid(null);setTab(next);if(next!=="services")setOpen(false);if(next==="calls"){setCallsView("dial");setDialTarget(null);setCallFilter("all");}setError("");setNotice("");};
+ const showCall=(next:Panel="overview")=>{setDiagnosticOpen(false);setTab("services");setOpen(true);setPanel(next);setError("");setNotice("");};
+ const saveNeedsAssessment=async(answers:DiagnosticAnswers)=>{
+  if(!client||!user||!profile)throw new Error("Not signed in");
+  const {data:identity,error:authError}=await client.auth.getUser();
+  if(authError||identity.user?.id!==user.id)throw new Error("Session expired");
+  const next=makeDiagnosticRecord(profile.id,answers);
+  const {error:saveError}=await client.auth.updateUser({data:{[DIAGNOSTIC_METADATA_KEY]:next}});
+  if(saveError)throw saveError;
+  setDiagnosticSaved(next);
+ };
+ const exploreDiagnosticService=(service:DiagnosticService)=>{
+  setDiagnosticOpen(false);
+  if(service==="smart-call"){showCall("overview");return;}
+  if(service==="web-services"){setOpen(false);setServiceFocus("web");setTab("services");return;}
+  window.location.assign(service==="ai-agents"?"/vista-app/ai-agents":"/vista-app/marketing");
+ };
  // Services are discoverable products; Home uses authenticated operational data instead.
  const catalogItems=[
   {id:"smart-call",name:"Smart Call",search:"calls llamadas teléfono",group:"communication",Icon:PhoneCall,tone:styles.catalogViolet,state:translate("home.pilot"),action:()=>showCall("overview")},
@@ -295,7 +317,10 @@ export default function VMVMobilePreview(){
        <p>{translate(loading?"native.profileLoadingHint":"native.profileMissingHint")}</p>
        {!loading?<><button className={styles.mainAction} onClick={()=>void refresh()}>{translate("common.retry")}</button><a className={styles.registerLink} href="/registro">{translate("native.finishRegistration")}</a><button className={styles.logoutLink} onClick={()=>void signOut()}>{translate("common.signOut")}</button></>:null}
       </div>:null}
-      {ready&&tab==="home"?<div className={`${styles.screen} ${styles.homeV2} ${styles.homeConcept}`}>
+      {ready&&tab==="home"&&diagnosticOpen?<BusinessDiagnostic key={user?.id||"account"} language={language==="en"?"en":"es"}
+       businessName={business} record={diagnostic} onSave={saveNeedsAssessment}
+       onClose={()=>setDiagnosticOpen(false)} onExplore={exploreDiagnosticService}/>:null}
+      {ready&&tab==="home"&&!diagnosticOpen?<div className={`${styles.screen} ${styles.homeV2} ${styles.homeConcept}`}>
        <header className={styles.homeIdentity}>
         <span className={styles.homeIdentityBrand}><span className={styles.homeIdentityV} aria-hidden="true">V</span><strong>VMV Business</strong></span>
         <span className={styles.homeIdentityActions}><InterfaceLanguagePicker compact/><span className={styles.homeBell} aria-hidden="true"><Bell size={21}/></span></span>
@@ -308,15 +333,17 @@ export default function VMVMobilePreview(){
         <div className={styles.homeGrowCopy}>
          <h3>{language==="en"?"Grow your\nbusiness":"Haz crecer\ntu negocio"}</h3>
          <p>{language==="en"?"Tools, services and AI for entrepreneurs.":"Herramientas, servicios y IA para emprendedores."}</p>
-         <span className={styles.homeGrowStart} aria-disabled="true">{language==="en"?"Get started":"Comenzar"} <ArrowUpRight size={18} aria-hidden="true"/></span>
+         <button type="button" className={styles.homeGrowStart} onClick={()=>setDiagnosticOpen(true)}>{language==="en"?(diagnostic?"Update needs":"Get started"):(diagnostic?"Actualizar necesidades":"Comenzar")} <ArrowUpRight size={18} aria-hidden="true"/></button>
         </div>
         <div className={styles.homeRocketArt} aria-hidden="true"><span className={styles.homeRocketHalo}/><Rocket size={104} strokeWidth={1.35}/><span className={styles.homeRocketCloud}/></div>
        </section>
        <div className={styles.homeServiceTiles}>
-        <button type="button" className={styles.homeTileMint} onClick={()=>showCall(summary?.billing.ok&&billing?.subscriptionActive===false?"minutes":"overview")}><PhoneCall size={31}/><strong>Smart Call</strong></button>
-        <button type="button" className={styles.homeTilePink} onClick={()=>{setOpen(false);setServiceFocus("web");setTab("services");}}><Monitor size={31}/><strong>Web Services</strong></button>
-        <button type="button" className={styles.homeTileLavender} onClick={()=>window.location.assign("/vista-app/ai-agents")}><Bot size={31}/><strong>AI Agents</strong></button>
-        <button type="button" className={styles.homeTileGreen} onClick={()=>window.location.assign("/vista-app/marketing")}><Megaphone size={31}/><strong>Marketing</strong></button>
+        {showHomeOffer("smart-call")?<button type="button" className={styles.homeTileMint} onClick={()=>showCall(summary?.billing.ok&&billing?.subscriptionActive===false?"minutes":"overview")}><PhoneCall size={31}/><strong>Smart Call</strong></button>:null}
+        {showHomeOffer("web-services")?<button type="button" className={styles.homeTilePink} onClick={()=>{setOpen(false);setServiceFocus("web");setTab("services");}}><Monitor size={31}/><strong>Web Services</strong></button>:null}
+        {showHomeOffer("ai-agents")?<button type="button" className={styles.homeTileLavender} onClick={()=>window.location.assign("/vista-app/ai-agents")}><Bot size={31}/><strong>AI Agents</strong></button>:null}
+        {showHomeOffer("marketing")?<button type="button" className={styles.homeTileGreen} onClick={()=>window.location.assign("/vista-app/marketing")}><Megaphone size={31}/><strong>Marketing</strong></button>:null}
+        {homeRecommendations?.some(item=>item.id==="google-business")?<button type="button" className={styles.homeTileLavender} onClick={()=>window.location.assign("/vista-app/marketing")}><Globe size={31}/><strong>Google Business</strong></button>:null}
+        {homeRecommendations?.length===0?<button type="button" className={styles.homeTileLavender} onClick={()=>go("services")}><LayoutGrid size={31}/><strong>{language==="en"?"All services":"Todos los servicios"}</strong></button>:null}
        </div>
        <section className={styles.homeBusinessArea}>
         <h3>{language==="en"?"My Business":"Mi Negocio"}</h3>
