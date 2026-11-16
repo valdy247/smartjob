@@ -5,7 +5,7 @@ import {ArrowLeft,Check,ClipboardCopy,FileVideo2,LockKeyhole,LoaderCircle,Refres
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import ScienceWaitQuiz from "./ScienceWaitQuiz";
-import {extractVideoAudio,MAX_SOCIAL_VIDEO_BYTES,MAX_SOCIAL_VIDEO_SECONDS} from "./extractVideoAudio";
+import {extractVideoAudio,MAX_SOCIAL_VIDEO_BYTES} from "./extractVideoAudio";
 import styles from "./SocialCaptionPreview.module.css";
 
 const networks=["Instagram","TikTok","Facebook","YouTube","LinkedIn","X"] as const;
@@ -74,17 +74,24 @@ export default function SocialCaptionPreview({onBack}:{onBack:()=>void}){
  const generate=async()=>{
   if(!canGenerate)return;
   const client=getSupabase();
-  const {data:{session},error:sessionError}=client?await client.auth.getSession():{data:{session:null},error:true};
-  if(sessionError||!session?.access_token){setError(userError("sign_in_required",en));return;}
+  if(!client){setError(userError("sign_in_required",en));return;}
   const abortController=new AbortController();
   controllerRef.current=abortController;
   setBusy(true);setError("");setNotice("");setCaption("");
   setSeed(crypto.randomUUID());setStage(mode==="speech"&&video&&!transcript.trim()?"extract":"generate");
   setQuizOpen(true);
+  // Start local media playback before the first await, preserving the tap gesture on iOS Safari.
+  const needsExtraction=mode==="speech"&&!!video&&!transcript.trim();
+  const extraction=needsExtraction&&video?extractVideoAudio(video,abortController.signal)
+   .then(blob=>({blob,error:null as unknown})).catch((error:unknown)=>({blob:null as Blob|null,error})):null;
   try{
+   const {data:{session},error:sessionError}=await client.auth.getSession();
+   if(sessionError||!session?.access_token){abortController.abort();throw new Error("sign_in_required");}
    let spoken=mode==="speech"?transcript.trim():"";
-   if(mode==="speech"&&video&&!spoken){
-    const audio=await extractVideoAudio(video,abortController.signal);
+   if(needsExtraction&&extraction){
+    const {blob:audio,error:extractError}=await extraction;
+    if(extractError)throw extractError;
+    if(!audio)throw new Error("audio_missing");
     if(abortController.signal.aborted)throw new Error("cancelled");
     setStage("transcribe");
     const data=new FormData();
@@ -109,7 +116,7 @@ export default function SocialCaptionPreview({onBack}:{onBack:()=>void}){
    if(!value)throw new Error("generation_unavailable");
    setCaption(value);
   }catch(e){
-   const code=abortController.signal.aborted?"cancelled":e instanceof Error?e.message:"server_unavailable";
+   const code=e instanceof Error&&e.message==="sign_in_required"?"sign_in_required":abortController.signal.aborted?"cancelled":e instanceof Error?e.message:"server_unavailable";
    setError(userError(code,en));setQuizOpen(false);
   }finally{
    controllerRef.current=null;setBusy(false);
