@@ -6,7 +6,7 @@ import {checkCallPolicy,days,initialCallPolicy,zoneOptions,type CallPolicy,type 
 import styles from "./CallControl.module.css";
 import CallPreviewChat from "./CallPreviewChat";
 const weekLabels:Record<DayName,string>={sun:"Domingo",mon:"Lunes",tue:"Martes",wed:"Miércoles",thu:"Jueves",fri:"Viernes",sat:"Sábado"};
-type Info={policy:CallPolicy;version:number;maskedPhone:string;agentActive:boolean;selectedAgentId:string|null;forwardReady:boolean;businessHoursReady:boolean;error?:string};
+type Info={policy:CallPolicy;version:number;maskedPhone:string;agentActive:boolean;selectedAgentId:string|null;forwardReady:boolean;businessHoursReady:boolean;source?:"saved"|"legacy_menu";error?:string};
 async function request(method:"GET"|"POST"|"PUT",payload?:object){
  const db=getSupabase();if(!db)throw Error("Supabase no disponible.");
  const {data}=await db.auth.getSession();if(!data.session?.access_token)throw Error("Inicia sesión en VMV.");
@@ -19,6 +19,8 @@ async function request(method:"GET"|"POST"|"PUT",payload?:object){
 }
 export default function CallControl({onBack}:{onBack:()=>void}){
  const [policy,setPolicy]=useState<CallPolicy>(initialCallPolicy);
+ const [savedPolicy,setSavedPolicy]=useState<CallPolicy|null>(null);
+ const [legacyMenu,setLegacyMenu]=useState(false);
  const [version,setVersion]=useState(0);
  const [line,setLine]=useState("");
  const [selectedAgentId,setSelectedAgentId]=useState<string|null>(null);
@@ -29,9 +31,11 @@ export default function CallControl({onBack}:{onBack:()=>void}){
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState(false);
  const [notice,setNotice]=useState("");
+ const pending=Boolean(savedPolicy&&JSON.stringify(policy)!==JSON.stringify(savedPolicy));
  const patch=<K extends keyof CallPolicy>(k:K,v:CallPolicy[K])=>setPolicy(x=>({...x,[k]:v}));
  useEffect(()=>{let active=true;void request("GET").then((x:Info)=>{
-  if(!active)return;setPolicy(checkCallPolicy(x.policy));setVersion(x.version);
+  if(!active)return;const current=checkCallPolicy(x.policy);setPolicy(current);
+  setSavedPolicy(current);setLegacyMenu(x.source==="legacy_menu");setVersion(x.version);
   setLine(x.maskedPhone);setSelectedAgentId(x.selectedAgentId);
   setReady(Boolean(x.selectedAgentId&&x.agentActive));
   setForward(x.forwardReady);setBusiness(x.businessHoursReady);
@@ -42,9 +46,12 @@ export default function CallControl({onBack}:{onBack:()=>void}){
   setPolicy(x=>({...x,[target]:{...x[target],[d]:{...x[target][d],[k]:v}}}));
  };
  const submit=async()=>{
-  if(busy)return;setBusy(true);setNotice("");
+  if(busy)return;
+  if(policy.agent_enabled&&!ready){setNotice("No se guardó: selecciona y activa un agente telefónico. La línea no cambió.");return;}
+  setBusy(true);setNotice("");
   try{const x=await request("PUT",{policy:checkCallPolicy(policy),version});
-   setPolicy(x.policy);setVersion(x.version);setNotice("Guardado. Se aplicará a las próximas llamadas.");
+   const next=checkCallPolicy(x.policy);setPolicy(next);setSavedPolicy(next);
+   setLegacyMenu(false);setVersion(x.version);setNotice("Reglas guardadas en VMV. No se modificó la ruta telefónica de Twilio.");
   }catch(e){setNotice(e instanceof Error?e.message:"No se pudo guardar.");}finally{setBusy(false);}
  };
  return <div className={styles.root}>
@@ -56,6 +63,7 @@ export default function CallControl({onBack}:{onBack:()=>void}){
    <span className={styles.lineChip}><PhoneCall size={15}/>{line?"Número "+line:"Tu número de VMV"}</span>
   </header>
   {notice&&<p className={styles.notice} role="status">{notice}</p>}
+  {!loading&&legacyMenu?<p className={styles.routeWarning} role="status">Esta línea no tiene reglas guardadas: continúa con el menú telefónico anterior.</p>:null}
   {loading?<p>Cargando configuración…</p>:<div className={styles.stack}>
    <section className={`${styles.section} ${styles.featureSection}`}>
     <span className={styles.featureEyebrow}>AGENTE IA</span>
@@ -105,6 +113,7 @@ export default function CallControl({onBack}:{onBack:()=>void}){
      <label className={styles.switch}><span className={styles.srOnly}>Activar traducción</span><input type="checkbox" checked={policy.translation_enabled}
       onChange={e=>{patch("translation_enabled",e.target.checked);if(!e.target.checked)patch("outside_action","message");}}/></label>
     </div>
+    {!policy.translation_enabled&&pending?<p className={styles.pendingWarning} role="status">Traducción apagada, pero el cambio aún no está guardado.</p>:null}
     {policy.translation_enabled&&<label>Disponibilidad<select value={policy.translation_mode}
      onChange={e=>patch("translation_mode",e.target.value as CallPolicy["translation_mode"])}>
      <option value="always">Siempre</option><option value="schedule">Por horario</option>
@@ -153,9 +162,10 @@ export default function CallControl({onBack}:{onBack:()=>void}){
      aria-label="Mensaje de cierre" value={policy.closed_message}
      onChange={e=>patch("closed_message",e.target.value)}/>}
    </section>
-   <div className={styles.summary}><ShieldCheck size={17}/><p>Reglas para nuevas llamadas; traductor sin cambios.</p></div>
+   {pending?<p className={styles.pendingWarning} role="status">Tienes cambios sin guardar.</p>:null}
+   <div className={styles.summary}><ShieldCheck size={17}/><p>El menú real depende de la ruta de Twilio; guardar aquí no la modifica.</p></div>
    <button className={styles.primary} type="button" disabled={busy} onClick={()=>void submit()}>
-    <Check size={17}/> {busy?"Procesando…":"Guardar configuración"}</button>
+    <Check size={17}/> {busy?"Procesando…":pending?"Guardar cambios":"Guardar configuración"}</button>
   </div>}
  </div>;
 }
