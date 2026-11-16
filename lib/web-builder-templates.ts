@@ -3,7 +3,7 @@ import {normalizeBuilderDocument} from "./web-builder-puck";
 import type {BusinessSocialLinks} from "./web-builder-social";
 
 export type SiteFamily="bakery"|"construction"|"professional"|"beauty"|"creative";
-export type SiteObjective="calls"|"quotes"|"bookings"|"orders";
+export type SiteObjective="chat"|"showcase"|"calls"|"quotes"|"bookings"|"orders";
 export type SiteOffering="products"|"services"|"both";
 export type SiteProduct={id:string;title:string;description:string;image:string;price:string};
 export type SiteDesignPreferences={
@@ -22,7 +22,8 @@ export type SiteIntake={
  business:string;categoryId:string;offering:SiteOffering;objective:SiteObjective;
  phone:string;email:string;city:string;about:string;logo:string;photos:string[];
  gallery?:string[];galleryColumns?:1|2|3;
- offerings:string[];products?:SiteProduct[];socials?:BusinessSocialLinks;
+ offerings:string[];products?:SiteProduct[];services?:SiteProduct[];socials?:BusinessSocialLinks;
+ servicesBusinessId?:string;
  inventoryBusinessId?:string; // Owner-owned catalog workspace chosen in the wizard; not sent to AI.
  design?:SiteDesignPreferences;
 };
@@ -50,6 +51,8 @@ const messages:Record<SiteFamily,{eyebrow:string;headline:string;lead:string;off
  creative:{eyebrow:"IMÁGENES CON IDENTIDAD",headline:"Cada imagen tiene una historia.",lead:"Explora nuestro portafolio y cuéntanos tu proyecto.",offerings:"Nuestros formatos",gallery:"Portafolio seleccionado",contact:"Conversemos sobre tu idea"}
 };
 function cta(goal:SiteObjective,phone:string):{label:string;url:string}{
+ if(goal==="chat")return {label:"Hablar por chat",url:"#vmv-chat"};
+ if(goal==="showcase")return {label:"Ver productos",url:"#vmv-offerings"};
  if(goal==="calls")return {label:"Consultar por teléfono",url:/^\+?[\d ()-]{7,36}$/.test(phone)? "tel:"+phone.replace(/[^\d+]/g,""):"#solicitud"};
  if(goal==="quotes")return {label:"Solicitar presupuesto",url:"#solicitud"};
  if(goal==="bookings")return {label:"Solicitar cita",url:"#solicitud"};
@@ -63,9 +66,15 @@ function previewOfferings(input:SiteIntake){
  }));
  // A gallery or cover photo is not automatically a product photo. A historical
  // positional fallback could put a person's portrait on an unrelated product.
- const legacy=input.offerings.map((title,i)=>({
-  id:"service-"+i,title:title.slice(0,120),description:"",image:"",alt:title.slice(0,120),price:""
- }));
+ const legacy=input.services!==undefined?input.services.filter(item=>item.title.trim())
+  .map(item=>({
+   id:"service-"+item.id,title:item.title.slice(0,120),
+   description:item.description.slice(0,400),image:item.image||"",
+   alt:item.title.slice(0,120),price:item.price.slice(0,32)
+  })):input.offerings.map((title,i)=>({
+   id:"service-"+i,title:title.slice(0,120),
+   description:"",image:"",alt:title.slice(0,120),price:""
+  }));
  if(input.offering==="products")return (products.length?products:legacy).slice(0,30);
  if(input.offering==="both")return [...products,...legacy].slice(0,30);
  return legacy.slice(0,30);
@@ -158,7 +167,7 @@ function assemble(input:SiteIntake,family:SiteFamily,variant:number):Data{
  const palette=familyThemes[family][variant]||"violet";
  return normalizeBuilderDocument({root:{props:{
   palette,font:p.font,style:p.style,width:variant===1?"wide":"regular",logo:input.logo,motion:"off",family,
-  socialLinks:input.socials
+  socialLinks:input.socials,chatMode:input.objective==="chat"?"inbox":"off"
  }},content:blocks});
 }
 export function createSiteProposals(input:SiteIntake,family=familyForCategory(input.categoryId)):SiteProposal[]{
