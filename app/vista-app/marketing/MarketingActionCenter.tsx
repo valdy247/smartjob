@@ -39,7 +39,7 @@ type RequestRow={
 type SavedBusiness=CentralBusiness&{source?:"profile"|"agent"};
 // A source suggestion may refer to a business already in the owner's central
 // profile. Reuse only a single exact owner/name match after explicit selection.
-const normalizedBusinessName=(name:string)=>name.normalize("NFKC").trim().replace(/\\s+/g," ").toLocaleLowerCase("en-US");
+const normalizedBusinessName=(name:string)=>name.normalize("NFKC").trim().replace(/\s+/g," ").toLocaleLowerCase("en-US");
 function existingForSuggestion(id:string,records:SavedBusiness[]):SavedBusiness|null{
  const suggestion=records.find(item=>item.id===id&&Boolean(item.source));
  if(!suggestion)return null;
