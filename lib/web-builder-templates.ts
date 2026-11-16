@@ -9,6 +9,7 @@ export type SiteProduct={id:string;title:string;description:string;image:string;
 export type SiteDesignPreferences={
  colors:string[];font:"modern"|"editorial"|"rounded"|"geometric";
  imageStyle:"rounded"|"square"|"pill"|"bordered";
+ galleryColumns?:"1"|"2"|"3"|"4";
  features:{inventory:boolean;booking:boolean;chat:boolean};
  chatMode:"off"|"inbox";
 };
@@ -91,7 +92,7 @@ function offerings(input:SiteIntake,family:SiteFamily,layout:"grid"|"mosaic"|"li
 }
 function portfolio(input:SiteIntake,family:SiteFamily,layout:"grid"|"mosaic"|"list",id="gallery-main"){
  return node("PhotoGallery",id,{title:messages[family].gallery,description:"",
-  items:gallery(input),layout,padding:"spacious",surface:"light"});
+  items:gallery(input),layout,columns:input.design?.galleryColumns||"3",padding:"spacious",surface:"light"});
 }
 function process(){
  return node("ProcessSteps","work-steps",{title:"Cómo trabajamos",items:[],padding:"normal",surface:"soft"});
@@ -119,7 +120,7 @@ function assemble(input:SiteIntake,family:SiteFamily,variant:number):Data{
   blocks.push(node("CTA","order-contact",{title:"¿Tienes una idea en mente?",description:"Cuéntanos la fecha y los detalles de tu pedido.",buttonText:cta(input.objective,input.phone).label,buttonUrl:cta(input.objective,input.phone).url}),contact(input,family));
  }else if(family==="construction"){
   blocks.push(first,offerings(input,family,variant===2?"list":"grid","soft"));
-  if(media.length)blocks.push(node("ProjectShowcase","projects-main",{title:"Proyectos en imágenes",items:media.map(x=>({image:x.image,title:"",description:"",alt:x.alt})),layout:"mosaic",surface:"light",padding:"spacious"}));
+  if(media.length)blocks.push(node("ProjectShowcase","projects-main",{title:"Proyectos en imágenes",items:media.map(x=>({image:x.image,title:"",description:"",alt:x.alt})),layout:"mosaic",columns:input.design?.galleryColumns||"3",surface:"light",padding:"spacious"}));
   blocks.push(process(),contact(input,family));
  }else if(family==="professional"){
   blocks.push(first,node("Text","intro-story",{title:"Sobre "+input.business,body:input.about||"Describe aquí tu forma de trabajar y qué servicios ofreces."}),
