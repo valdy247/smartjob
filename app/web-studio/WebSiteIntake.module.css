@@ -235,3 +235,96 @@
 @media(prefers-reduced-motion:reduce){
  .offeringsRoot .offeringCard,.offeringsRoot .goalCard{transition:none}
 }
+
+
+/* Compact, functional native dropdowns inspired by the approved iPhone mockup.
+   Keep selections accessible and the existing catalogue flow intact. */
+.offeringsRoot{
+ --offer-ink:#25124b;
+ background:#fff;
+ width:100%;
+ max-width:760px;
+ border-radius:23px;
+ padding:clamp(17px,3vw,32px);
+ gap:23px;
+ box-shadow:0 12px 40px rgba(83,45,136,.045);
+}
+.compactIntro{display:flex;flex-direction:column;gap:17px}
+.compactProgress{display:flex;align-items:center;gap:15px;justify-content:space-between}
+.compactProgress>span{font-size:10px;letter-spacing:.12em;font-weight:900;color:#8e6ab5}
+.compactProgress>div{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;min-width:100px;width:34%;max-width:160px}
+.compactProgress>div>span{height:5px;border-radius:10px;background:#eee7f3}
+.compactProgress>div>span[data-state=done]{background:#72c0a5}
+.compactProgress>div>span[data-state=current]{background:#9763e6}
+.compactIntro h2{
+ color:#21103f;
+ font-size:clamp(29px,5.8vw,40px);
+ letter-spacing:-.065em;
+ line-height:1.12;
+ margin:5px 0 0;
+ font-weight:950;
+}
+.offeringsRoot .offeringsPanel{padding:0;gap:24px}
+.compactSelectField{display:flex;flex-direction:column;gap:12px}
+.compactSelectField>label{font-size:18px;font-weight:900;letter-spacing:-.035em;color:#271447}
+.compactPicker{
+ display:flex;position:relative;align-items:center;gap:15px;
+ width:100%;min-height:81px;border-radius:21px;
+ padding:11px 19px;
+ background:#ebddfb; /* solid pastel, not gradient */
+ box-shadow:0 13px 25px rgba(123,77,191,.075);
+ border:1px solid #ebddfb;
+ transition:border-color .15s,box-shadow .15s;
+}
+.compactPicker:hover{border-color:#cfb5f3}
+.compactPicker:focus-within{
+ border-color:#8954d6;
+ box-shadow:0 0 0 3px rgba(149,95,230,.19),0 13px 25px rgba(123,77,191,.075);
+}
+.compactIcon{
+ display:grid;place-items:center;flex:0 0 53px;
+ height:53px;width:53px;border-radius:17px;
+ background:#fff;color:#8755d5;
+ box-shadow:0 4px 12px rgba(114,63,180,.055);
+ pointer-events:none;
+}
+.compactPicker select{
+ appearance:none;
+ -webkit-appearance:none;
+ position:absolute;inset:0;
+ width:100%;height:100%;margin:0;
+ padding:0 53px 0 89px;
+ border:0;background:transparent;
+ font-family:inherit;font-size:clamp(17px,3vw,22px);
+ font-weight:850;color:#261348;letter-spacing:-.035em;
+ line-height:normal;cursor:pointer;
+ outline:none;
+ text-overflow:ellipsis;
+}
+.compactPicker select option{font-weight:550;background:#fff;color:#2e1c49}
+.compactChevron{margin-left:auto;color:#28144d;pointer-events:none;flex:none}
+.offeringsRoot .offeringsAdd{margin-top:0;gap:12px}
+.offeringsRoot .offeringsAdd>label{font-size:18px}
+.offeringsRoot .offeringsFinish{margin-top:0;padding-top:4px;gap:15px}
+.offeringsRoot .offeringsFinish>span{font-size:11px}
+@media(max-width:600px){
+ .offeringsRoot{padding:19px 15px 18px;border-radius:20px;gap:19px}
+ .compactIntro{gap:14px}
+ .compactIntro h2{font-size:33px}
+ .offeringsRoot .offeringsPanel{gap:20px}
+ .compactPicker{min-height:74px;border-radius:19px;padding:10px 14px;gap:12px}
+ .compactIcon{flex-basis:49px;height:49px;width:49px;border-radius:15px}
+ .compactPicker select{font-size:19px;padding-left:77px;padding-right:47px}
+ .compactSelectField>label{font-size:17px}
+ .compactChevron{width:20px;height:20px}
+}
+@media(max-width:370px){
+ .offeringsRoot{padding:16px 12px}
+ .compactPicker{min-height:70px;padding:8px 10px}
+ .compactIcon{flex-basis:44px;width:44px;height:44px}
+ .compactPicker select{padding-left:66px;padding-right:37px;font-size:17px}
+ .compactIntro h2{font-size:31px}
+}
+@media(prefers-reduced-motion:reduce){
+ .compactPicker{transition:none}
+}
