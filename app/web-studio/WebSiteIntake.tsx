@@ -1,7 +1,7 @@
 "use client";
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {useEffect,useMemo,useRef,useState,type FormEvent} from "react";
-import {ArrowRight,CalendarDays,ClipboardList,FileText,Layers3,PhoneCall,Plus,Search,ShieldCheck,ShoppingBag,Store,X} from "lucide-react";
+import {ArrowRight,CalendarDays,ClipboardList,FileText,Layers3,MessageCircle,PhoneCall,Plus,Search,ShieldCheck,ShoppingBag,Store,X} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
@@ -10,7 +10,7 @@ import BuilderImageField from "./BuilderImageField";
 import WebIntakeGallery,{type GalleryColumns} from "./WebIntakeGallery";
 import TemplateProposals from "./TemplateProposals";
 import WebIntakeProducts,{type ProductSaveStatus} from "./WebIntakeProducts";
-import WebInventoryPicker,{type InventoryLoadStatus} from "./WebInventoryPicker";
+import WebSourceConnections,{type LinkStatus} from "./WebSourceConnections";
 import InlinePastelSelect from "./InlinePastelSelect";
 import WebIntakeSocials,{type SocialSaveStatus} from "./WebIntakeSocials";
 import {EMPTY_SOCIAL_LINKS,SOCIAL_PLATFORMS,normalizeSocialLinks,normalizeSocialUrl,type BusinessSocialLinks} from "@/lib/web-builder-social";
@@ -43,10 +43,12 @@ const offeringOptions:{id:SiteOffering;title:string}[]=[
  {id:"both",title:"Ambos"}
 ];
 const goals:{id:SiteObjective;label:string}[]=[
+ {id:"chat",label:"Vender por chat"},
  {id:"calls",label:"Recibir llamadas"},
+ {id:"showcase",label:"Mostrar productos"},
+ {id:"orders",label:"Recibir pedidos"},
  {id:"quotes",label:"Pedir presupuestos"},
- {id:"bookings",label:"Solicitar citas"},
- {id:"orders",label:"Consultar pedidos"}
+ {id:"bookings",label:"Solicitar citas"}
 ];
 export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const [name,setName]=useState("");
@@ -81,7 +83,11 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const [productStatus,setProductStatus]=useState<ProductSaveStatus>("loading");
  const [inventoryBusinessId,setInventoryBusinessId]=useState("");
  const [inventoryProducts,setInventoryProducts]=useState<SiteProduct[]>([]);
- const [inventoryStatus,setInventoryStatus]=useState<InventoryLoadStatus>("idle");
+ const [inventoryStatus,setInventoryStatus]=useState<LinkStatus>("idle");
+ const [servicesBusinessId,setServicesBusinessId]=useState("");
+ const [serviceItems,setServiceItems]=useState<SiteProduct[]>([]);
+ const [servicesStatus,setServicesStatus]=useState<LinkStatus>("idle");
+ const [manualEnabled,setManualEnabled]=useState(false);
  const [socialLinks,setSocialLinks]=useState<BusinessSocialLinks>({...EMPTY_SOCIAL_LINKS});
  const [socialStatus,setSocialStatus]=useState<SocialSaveStatus>("loading");
  const [family,setFamily]=useState<SiteFamily|null>(null);
@@ -296,14 +302,16 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
   business:name.trim(),categoryId:category,offering:kind,objective:goal,
   phone:phone.trim(),email:email.trim(),city:city.trim(),about:about.trim(),
   logo,photos:photos.slice(0,1),gallery:galleryUrls,galleryColumns,
-  offerings:kind==="products"?[]:services.filter(Boolean),
-  products:kind==="services"?[]:inventoryBusinessId?inventoryProducts:products.filter(p=>p.title.trim()),
-  // The site stores an owner-scoped catalog link. The listed items are only
-  // preview snapshots; the public web will read approved products live.
+  offerings:kind==="products"?[]:servicesBusinessId?[]:manualEnabled?services.filter(Boolean):[],
+  services:kind!=="products"&&servicesBusinessId?serviceItems:undefined,
+  products:kind==="services"?[]:inventoryBusinessId?inventoryProducts:manualEnabled?products.filter(p=>p.title.trim()):[],
+  // Site creation persists two independent owner-approved catalog connections.
   inventoryBusinessId:kind!=="services"&&inventoryBusinessId?inventoryBusinessId:undefined,
+  servicesBusinessId:kind!=="products"&&servicesBusinessId?servicesBusinessId:undefined,
   socials:normalizeSocialLinks(socialLinks)
  }),[name,category,kind,goal,phone,email,city,about,logo,photos,services,
-  products,inventoryBusinessId,inventoryProducts,socialLinks,galleryUrls,galleryColumns]);
+  products,inventoryBusinessId,inventoryProducts,servicesBusinessId,serviceItems,
+  manualEnabled,socialLinks,galleryUrls,galleryColumns]);
  const suggestedFamily=family||familyForCategory(category);
  const validContactEmail=(value:string)=>!value.trim()||/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
  function nextStep(){
@@ -319,13 +327,14 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
    }
    setEmailError("");
   }
-  if(step===1&&kind!=="services"){
-   if(inventoryBusinessId&&inventoryStatus!=="ready"){
-    setError(inventoryStatus==="error"?
-     "No se pudo leer el inventario. Reintenta la conexión.":
-     "Espera a que se cargue el inventario.");return;
+  if(step===1){
+   if(kind!=="services"&&inventoryBusinessId&&inventoryStatus!=="ready"){
+    setError("Espera a que se conecte el inventario.");return;
    }
-   if(!inventoryBusinessId&&productStatus!=="saved"){
+   if(kind!=="products"&&servicesBusinessId&&servicesStatus!=="ready"){
+    setError("Espera a que se conecten los servicios.");return;
+   }
+   if(manualEnabled&&kind!=="services"&&!inventoryBusinessId&&productStatus!=="saved"){
     setError("Espera a que se guarden los productos.");return;
    }
   }
@@ -349,12 +358,15 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
   if(intake.business.length<2){setError("Escribe el nombre del negocio.");return;}
   if(!category){setError("Selecciona la categoría del negocio.");return;}
   if(kind!=="services"&&inventoryBusinessId&&inventoryStatus!=="ready"){
-   setError("Espera a que se cargue correctamente el inventario.");return;
+   setError("Espera a que se conecte el inventario.");return;
   }
-  if(kind!=="services"&&!inventoryBusinessId&&productStatus!=="saved"){
+  if(kind!=="products"&&servicesBusinessId&&servicesStatus!=="ready"){
+   setError("Espera a que se conecten los servicios.");return;
+  }
+  if(manualEnabled&&kind!=="services"&&!inventoryBusinessId&&productStatus!=="saved"){
    setError("Espera a que termine de guardar los productos antes de continuar.");return;
   }
-  if(kind!=="services"&&!inventoryBusinessId&&products.some(p=>!p.title.trim())){
+  if(manualEnabled&&kind!=="services"&&!inventoryBusinessId&&products.some(p=>!p.title.trim())){
    setError("Escribe el nombre de cada producto o elimina las fichas vacías.");return;
   }
   if(socialStatus!=="saved"){setError("Espera a que se guarden las redes sociales.");return;}
@@ -435,41 +447,61 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
      icon={kind==="products"?<ShoppingBag size={25} strokeWidth={1.9}/>:
       kind==="both"?<Layers3 size={25} strokeWidth={1.9}/>:
       <Store size={25} strokeWidth={1.9}/>}
-     onChange={next=>{setKind(next as SiteOffering);setError("");}}/>
+     onChange={next=>{
+      const chosen=next as SiteOffering;
+      setKind(chosen);
+      if(chosen==="products")setServicesBusinessId("");
+      if(chosen==="services")setInventoryBusinessId("");
+      setError("");
+     }}/>
     <InlinePastelSelect label="Objetivo principal" showLabel value={goal}
      options={goals.map(item=>({id:item.id,label:item.label}))}
-     icon={goal==="calls"?<PhoneCall size={24} strokeWidth={1.9}/>:
+     icon={goal==="chat"?<MessageCircle size={24} strokeWidth={1.9}/>:
+      goal==="calls"?<PhoneCall size={24} strokeWidth={1.9}/>:
+      goal==="showcase"?<ShoppingBag size={24} strokeWidth={1.9}/>:
       goal==="bookings"?<CalendarDays size={24} strokeWidth={1.9}/>:
       goal==="orders"?<ClipboardList size={24} strokeWidth={1.9}/>:
       <FileText size={24} strokeWidth={1.9}/>}
      onChange={next=>setGoal(next as SiteObjective)}/>
-    <div hidden={kind==="services"}>
-     <WebInventoryPicker ownerId={ownerId} businessName={name}
-      selectedBusinessId={inventoryBusinessId} onSelect={setInventoryBusinessId}
-      onProducts={setInventoryProducts} onStatus={setInventoryStatus}/>
-    </div>
-    <WebIntakeProducts ownerId={ownerId} items={products}
-     visible={kind!=="services"&&!inventoryBusinessId}
-     onChange={setProducts} onStatusChange={setProductStatus}/>
-    {kind!=="products"?<form className={`${styles.addItem} ${styles.offeringsAdd}`} onSubmit={addService}>
-     <label htmlFor="vmv-intake-service">Servicios (opcional)</label>
-     <div className={styles.offeringsAddRow}>
-      <span className={styles.offeringsInputWrap}><Search size={18} aria-hidden="true"/>
-       <input id="vmv-intake-service" maxLength={120} value={newItem}
-        placeholder="Ej. Pasteles personalizados"
-        onChange={e=>setNewItem(e.target.value)}/></span>
-      <button type="submit" disabled={!newItem.trim()||services.length>=25}>
-       <Plus size={20} strokeWidth={2.5}/> Agregar
-      </button>
-     </div>
-     <div className={`${styles.tokens} ${styles.offeringsTokens}`}>
-      {services.map((item,index)=><span key={index}>{item}
-       <button type="button" aria-label={"Eliminar "+item} onClick={()=>setServices(old=>old.filter((_,i)=>i!==index))}>
-        <X size={14} strokeWidth={2.5}/>
-       </button>
-      </span>)}
-     </div>
-    </form>:null}
+    <WebSourceConnections ownerId={ownerId} businessName={name}
+     inventoryId={inventoryBusinessId} servicesId={servicesBusinessId}
+     onInventory={setInventoryBusinessId} onServices={setServicesBusinessId}
+     onProducts={setInventoryProducts} onServiceItems={setServiceItems}
+     inventoryStatus={inventoryStatus} servicesStatus={servicesStatus}
+     onInventoryStatus={setInventoryStatus} onServicesStatus={setServicesStatus}
+     onChooseType={source=>setKind(k=>source==="products"&&k==="services"?"both":
+      source==="services"&&k==="products"?"both":k)}/>
+    {!inventoryBusinessId||!servicesBusinessId?
+     <button type="button" className={styles.manualToggle}
+      aria-expanded={manualEnabled} onClick={()=>setManualEnabled(v=>!v)}>
+      {manualEnabled?"Ocultar edición manual":"Añadir elementos manualmente (opcional)"}
+     </button>:null}
+    {manualEnabled?<div className={styles.manualSection}>
+     <WebIntakeProducts ownerId={ownerId} items={products}
+      visible={kind!=="services"&&!inventoryBusinessId}
+      onChange={setProducts} onStatusChange={setProductStatus}/>
+     {kind!=="products"&&!servicesBusinessId?
+      <form className={`${styles.addItem} ${styles.offeringsAdd}`} onSubmit={addService}>
+       <label htmlFor="vmv-intake-service">Servicios manuales</label>
+       <div className={styles.offeringsAddRow}>
+        <span className={styles.offeringsInputWrap}><Search size={18} aria-hidden="true"/>
+         <input id="vmv-intake-service" maxLength={120} value={newItem}
+          placeholder="Ej. Pasteles personalizados"
+          onChange={e=>setNewItem(e.target.value)}/></span>
+        <button type="submit" disabled={!newItem.trim()||services.length>=25}>
+         <Plus size={20} strokeWidth={2.5}/> Agregar
+        </button>
+       </div>
+       <div className={`${styles.tokens} ${styles.offeringsTokens}`}>
+        {services.map((item,index)=><span key={index}>{item}
+         <button type="button" aria-label={"Eliminar "+item}
+          onClick={()=>setServices(old=>old.filter((_,i)=>i!==index))}>
+          <X size={14} strokeWidth={2.5}/>
+         </button>
+        </span>)}
+       </div>
+      </form>:null}
+    </div>:null}
    </div>:null}
    {step===2?<div className={styles.panel}>
     <h3><span>03</span> Fotos y redes</h3>
@@ -524,7 +556,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
      {step>0?<button type="button" className={styles.previous} onClick={previousStep} disabled={busy||generatingAi}>Atrás</button>:null}
      {step<3?<button type="button" onClick={nextStep} disabled={busy||generatingAi}>
       Continuar <ArrowRight size={17}/></button>:
-      <button type="button" disabled={busy||generatingAi||(mode==="ai"&&aiStatus!=="ready")||!mediaReady||mediaSaving||Boolean(mediaError)||socialStatus!=="saved"||(kind!=="services"&&(inventoryBusinessId?inventoryStatus!=="ready":productStatus!=="saved"))} onClick={()=>void preview()}>
+      <button type="button" disabled={busy||generatingAi||(mode==="ai"&&aiStatus!=="ready")||!mediaReady||mediaSaving||Boolean(mediaError)||socialStatus!=="saved"||(kind!=="services"&&(inventoryBusinessId?inventoryStatus!=="ready":manualEnabled&&productStatus!=="saved"))||(kind!=="products"&&Boolean(servicesBusinessId)&&servicesStatus!=="ready")} onClick={()=>void preview()}>
        {generatingAi?"Creando tu web con IA…":mode==="ai"?"Generar web con IA":"Ver propuestas"} <ArrowRight size={17}/>
       </button>}
     </div>
