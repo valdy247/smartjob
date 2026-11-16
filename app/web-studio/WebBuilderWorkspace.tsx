@@ -29,6 +29,14 @@ import styles from "./WebBuilderWorkspace.module.css";
 
 type Site={id:string;owner_id:string;slug:string;name:string;category_id:string;inquiries_enabled:boolean;legacy_source_slug:string|null;inventory_business_id:string|null};
 type InventorySource={id:string;name:string};
+// The inventory migration is deployed separately. Existing previews and published
+// sites must continue loading before inventory_business_id is available.
+const legacySiteFields="id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug";
+const linkedSiteFields=legacySiteFields+",inventory_business_id";
+function inventoryColumnPending(error:{code?:string;message?:string}|null):boolean{
+ return Boolean(error&&["42703","PGRST204"].includes(error.code||"")&&
+  /inventory_business_id/i.test(error.message||""));
+}
 type Page={id:string;site_id:string;owner_id:string;slug:string;title:string;description:string;draft:unknown;revision:number;updated_at:string};
 type Revision={id:string;page_id:string;version:number;title:string;description:string;document:unknown;created_at:string};
 type Domain={id:string;hostname:string;state:string;last_error:string;verification:unknown;last_checked_at:string|null};
@@ -61,6 +69,7 @@ export default function WebBuilderWorkspace(){
  const [userId,setUserId]=useState("");
  const [sites,setSites]=useState<Site[]>([]);
  const [inventorySources,setInventorySources]=useState<InventorySource[]>([]);
+ const [inventorySchemaReady,setInventorySchemaReady]=useState(true);
  const [expandedQuota,setExpandedQuota]=useState(false);
  const [site,setSite]=useState<Site|null>(null);
  const [pages,setPages]=useState<Page[]>([]);
@@ -167,10 +176,21 @@ export default function WebBuilderWorkspace(){
     if(!client)throw new Error("Supabase no está configurado");
     const {data,error:authError}=await client.auth.getUser();
     if(authError||!data.user||data.user.is_anonymous)throw new Error("Inicia sesión en VMV Business para continuar");
-    const {data:rows,error}=await client.from("smartjob_builder_sites")
-     .select("id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug,inventory_business_id").eq("owner_id",data.user.id).order("created_at",{ascending:false});
-    if(error)throw new Error("No se pudieron cargar tus sitios");
-    if(active){setUserId(data.user.id);setSites((rows||[]) as Site[]);}
+    if(active)setUserId(data.user.id);
+    const primary=await client.from("smartjob_builder_sites")
+     .select(linkedSiteFields).eq("owner_id",data.user.id).order("created_at",{ascending:false});
+    let rows=(primary.data||[]) as Site[];
+    let siteError=primary.error;
+    if(inventoryColumnPending(siteError)){
+     // Don't mistake a pending database migration for an expired user session.
+     const legacy=await client.from("smartjob_builder_sites")
+      .select(legacySiteFields).eq("owner_id",data.user.id).order("created_at",{ascending:false});
+     rows=(legacy.data||[]).map(row=>({...row,inventory_business_id:null})) as Site[];
+     siteError=legacy.error;
+     if(active)setInventorySchemaReady(false);
+    }else if(active)setInventorySchemaReady(true);
+    if(siteError)throw new Error("No se pudieron cargar tus sitios. Intenta actualizar la página.");
+    if(active)setSites(rows);
     const {data:ownedInventory}=await client.from("vmv_ai_businesses")
      .select("id,name").eq("owner_id",data.user.id).order("created_at",{ascending:false}).limit(50);
     if(active)setInventorySources((ownedInventory||[]) as InventorySource[]);
@@ -310,16 +330,24 @@ export default function WebBuilderWorkspace(){
  }
  async function loadCreatedSite(c:NonNullable<ReturnType<typeof getSupabase>>,ids:{siteId:string;pageId:string}){
   const [siteResult,pageResult]=await Promise.all([
-   c.from("smartjob_builder_sites").select(
-    "id,owner_id,slug,name,category_id,inquiries_enabled,legacy_source_slug,inventory_business_id"
-   ).eq("id",ids.siteId).eq("owner_id",userId).single(),
+   c.from("smartjob_builder_sites").select(linkedSiteFields)
+    .eq("id",ids.siteId).eq("owner_id",userId).single(),
    c.from("smartjob_builder_pages").select(
     "id,site_id,owner_id,slug,title,description,draft,revision,updated_at"
    ).eq("id",ids.pageId).eq("owner_id",userId).single()
   ]);
-  if(siteResult.error||pageResult.error||!siteResult.data||!pageResult.data)
+  let siteData=siteResult.data as Site|null;
+  let siteError=siteResult.error;
+  if(inventoryColumnPending(siteError)){
+   const legacy=await c.from("smartjob_builder_sites").select(legacySiteFields)
+    .eq("id",ids.siteId).eq("owner_id",userId).single();
+   siteData=legacy.data?{...(legacy.data as Omit<Site,"inventory_business_id">),inventory_business_id:null}:null;
+   siteError=legacy.error;
+   setInventorySchemaReady(false);
+  }
+  if(siteError||pageResult.error||!siteData||!pageResult.data)
    throw new Error("Sitio creado, pero no pudo abrirse. Recarga Mis sitios.");
-  return {created:siteResult.data as Site,home:pageResult.data as Page};
+  return {created:siteData,home:pageResult.data as Page};
  }
  async function createSite(intake:SiteIntake,proposal:SiteProposal){
   if(busy||!userId)return;
@@ -411,6 +439,7 @@ export default function WebBuilderWorkspace(){
  }
  async function connectInventory(inventoryId:string){
   if(!site||busy||!userId)return;
+  if(!inventorySchemaReady){setError("El inventario aún no está habilitado en esta versión. Tus sitios siguen disponibles.");return;}
   if(inventoryId&&!inventorySources.some(item=>item.id===inventoryId)){
    setError("Este inventario no pertenece a tu negocio.");return;
   }
@@ -733,6 +762,7 @@ export default function WebBuilderWorkspace(){
   inquiriesEnabled={site.inquiries_enabled}
   onToggleInquiries={enabled=>void toggleRequests(enabled)}
   inventorySources={inventorySources} inventoryBusinessId={site.inventory_business_id||""}
+  inventoryAvailable={inventorySchemaReady}
   onConnectInventory={id=>void connectInventory(id)}
   domains={domains} domainRequests={domainRequests} domainInput={domainInput}
   domainQuote={domainQuote} quote={quote} onDomainInput={setDomainInput}
@@ -870,9 +900,9 @@ export default function WebBuilderWorkspace(){
    </label>
    <label className={styles.inventorySiteConnection}>
     <span><strong>Inventario de productos</strong>
-     <small>Fotos originales y datos aprobados · sin edición de IA</small></span>
+     <small>{inventorySchemaReady?"Fotos originales y datos aprobados · sin edición de IA":"Inventario protegido pendiente de activación"}</small></span>
     <select aria-label="Inventario conectado a esta web" value={site.inventory_business_id||""}
-     disabled={busy} onChange={e=>void connectInventory(e.target.value)}>
+     disabled={busy||!inventorySchemaReady} onChange={e=>void connectInventory(e.target.value)}>
      <option value="">Sin inventario conectado</option>
      {inventorySources.map(source=><option key={source.id} value={source.id}>{source.name}</option>)}
     </select>
