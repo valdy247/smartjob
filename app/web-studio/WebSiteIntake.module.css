@@ -288,21 +288,40 @@
  box-shadow:0 4px 12px rgba(114,63,180,.055);
  pointer-events:none;
 }
-.compactPicker select{
- appearance:none;
- -webkit-appearance:none;
- position:absolute;inset:0;
- width:100%;height:100%;margin:0;
- padding:0 53px 0 89px;
- border:0;background:transparent;
- font-family:inherit;font-size:clamp(17px,3vw,22px);
- font-weight:850;color:#261348;letter-spacing:-.035em;
- line-height:normal;cursor:pointer;
- outline:none;
- text-overflow:ellipsis;
+.compactPicker{
+ font:inherit;text-align:left;cursor:pointer;color:#261348;
 }
-.compactPicker select option{font-weight:550;background:#fff;color:#2e1c49}
-.compactChevron{margin-left:auto;color:#28144d;pointer-events:none;flex:none}
+.compactPickerValue{
+ flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ font-size:clamp(17px,3vw,22px);font-weight:850;letter-spacing:-.035em;
+ line-height:1.3;
+}
+.compactChevron{margin-left:auto;color:#28144d;pointer-events:none;flex:none;
+ transition:transform .18s ease}
+.compactChevron[data-open=true]{transform:rotate(180deg)}
+.compactPicker:focus-visible{outline:3px solid #aa80e9;outline-offset:3px}
+.compactDropdownList{
+ display:flex;flex-direction:column;gap:5px;
+ margin-top:-4px;padding:8px;
+ border:1px solid #e1cef9;border-radius:19px;
+ background:#f5edff;box-shadow:0 12px 25px rgba(100,58,160,.11);
+}
+.compactDropdownOption{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ min-height:51px;width:100%;padding:11px 15px;border:0;border-radius:13px;
+ background:transparent;color:#392057;text-align:left;
+ font:750 clamp(15px,2.6vw,18px)/1.3 inherit;
+ cursor:pointer;
+}
+.compactDropdownOption[aria-pressed=true]{
+ background:#e8d8fb;color:#512a86;font-weight:900;
+}
+.compactDropdownOption:hover{background:#eadcfb}
+.compactDropdownOption:focus-visible{outline:3px solid #aa80e9;outline-offset:-3px}
+.compactDropdownSelected{
+ display:grid;place-items:center;flex:none;width:28px;height:28px;
+ border-radius:50%;background:#8651d8;color:white;
+}
 .offeringsRoot .offeringsAdd{margin-top:0;gap:12px}
 .offeringsRoot .offeringsAdd>label{font-size:18px}
 .offeringsRoot .offeringsFinish{margin-top:0;padding-top:4px;gap:15px}
@@ -314,7 +333,7 @@
  .offeringsRoot .offeringsPanel{gap:20px}
  .compactPicker{min-height:74px;border-radius:19px;padding:10px 14px;gap:12px}
  .compactIcon{flex-basis:49px;height:49px;width:49px;border-radius:15px}
- .compactPicker select{font-size:19px;padding-left:77px;padding-right:47px}
+ .compactPickerValue{font-size:19px}
  .compactSelectField>label{font-size:17px}
  .compactChevron{width:20px;height:20px}
 }
@@ -322,9 +341,10 @@
  .offeringsRoot{padding:16px 12px}
  .compactPicker{min-height:70px;padding:8px 10px}
  .compactIcon{flex-basis:44px;width:44px;height:44px}
- .compactPicker select{padding-left:66px;padding-right:37px;font-size:17px}
+ .compactPickerValue{font-size:17px}
+ .compactDropdownOption{min-height:48px;padding:10px 12px}
  .compactIntro h2{font-size:31px}
 }
 @media(prefers-reduced-motion:reduce){
- .compactPicker{transition:none}
+ .compactPicker,.compactChevron{transition:none}
 }
