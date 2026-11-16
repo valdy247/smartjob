@@ -220,3 +220,22 @@
 .headerIdentity .back{white-space:nowrap;flex-shrink:0}
 @media(max-width:650px){.headerIdentity{gap:6px}.headerIdentity .back{font-size:11px}}
 @media(max-width:370px){.header .marker{font-size:7px;padding:6px;letter-spacing:0}.headerIdentity{gap:4px}.headerIdentity .back{font-size:10px;gap:3px}}
+
+
+/* Shared VMV pastel surfaces, rounded cards and accessible violet navigation. */
+.page{background:#fdfcff;color:#171127}
+.back{color:#6844ac}
+.marker{background:#fde1ee;color:#853f68}
+.hero{background:linear-gradient(120deg,#e8d4ff,#d6b7fb);color:#1b122c;border-radius:24px;box-shadow:0 12px 27px #794eac18}
+.hero h1{color:#1b122c}
+.hero h1 em{color:#794ac3}
+.hero p{color:#523e68}
+.eyebrow{color:#6846a0}
+.heroPills span{color:#4e3671;background:#ffffff7a;border-color:#ffffffa0}
+.sidebar,.content{background:#fff;border:1px solid #ece4f5;border-radius:22px}
+.sectionTop h2{color:#171127}
+.sectionTop>span{color:#8456ce}
+.primary{background:#8054d9;color:#fff}
+.secondary{background:#eee2ff;color:#6742b0}
+.tabActive{background:#ede0ff;color:#6137a7}
+.page :is(button,input,textarea,select,a):focus-visible{outline-color:#9d78dd}
