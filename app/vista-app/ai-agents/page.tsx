@@ -344,7 +344,7 @@ export default function AIAgentsPreview(){
      <button type="button" className={styles.backIcon} onClick={screen==="home"?()=>{window.location.href="/vista-app";}:back}
       aria-label={screen==="home"?translate("agents.backVMV"):translate("agents.backAgents")}><ArrowLeft size={20}/></button>
      <div className={styles.appTitle}><small>VMV BUSINESS</small><strong>AI Agents<span>.</span></strong></div>
-     <span className={styles.sparkleBadge}><Sparkles size={21}/></span>
+     <InterfaceLanguagePicker compact/>
     </div>
     <div className={styles.scroller}>
      {loading?<div className={styles.info} role="status">{translate("agents.loadingWorkspace")}</div>:null}
