@@ -135,3 +135,8 @@
 @media(prefers-reduced-motion:reduce){
  .switch input[type=checkbox],.switch input[type=checkbox]::before{transition:none}
 }
+
+/* Call settings change tracking, distinct from the actual Twilio route. */
+.routeWarning,.pendingWarning{margin:0;padding:11px 13px;border-radius:14px;font-size:12px;line-height:1.45;font-weight:700}
+.routeWarning{background:#fff6e9;border:1px solid #f2dec5;color:#87613d}
+.pendingWarning{background:#faf4ff;border:1px solid #e8daf4;color:#7752a3}
