@@ -245,7 +245,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  }
 
  function saveGallery(nextImages:string[],nextColumns:GalleryColumns){
-  if(!mediaReady||gallerySaving||galleryUploading)return;
+  if(!mediaReady||gallerySaving)return;
   const valid=nextImages.filter(url=>Boolean(safeWebImageUrl(url)&&ownImageFilename(url,ownerId)))
    .slice(0,24);
   if(valid.length!==nextImages.length){setGalleryError("Las fotos deben pertenecer a tu biblioteca.");return;}
