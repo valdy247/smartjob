@@ -1,4 +1,5 @@
 import React,{useRef,useState} from "react";
+import "react-native-url-polyfill/auto";
 import {ActivityIndicator,Linking,Pressable,StyleSheet,Text,View} from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import WebView from "react-native-webview";
@@ -33,7 +34,6 @@ const startUrl=origin?origin+"/vista-app":null;
 
 export function PreviewWorkspace({onOpenNative}:{onOpenNative:()=>void}){
  const web=useRef<WebView>(null);
- const [loading,setLoading]=useState(true);
  const [failed,setFailed]=useState(false);
  const [canGoBack,setCanGoBack]=useState(false);
  const [showControls,setShowControls]=useState(false);
@@ -73,12 +73,11 @@ export function PreviewWorkspace({onOpenNative}:{onOpenNative:()=>void}){
    incognito
    allowsBackForwardNavigationGestures
    startInLoadingState
-   onLoadStart={()=>{setFailed(false);setLoading(true);}}
-   onLoadEnd={()=>setLoading(false)}
+   onLoadStart={()=>setFailed(false)}
    onNavigationStateChange={state=>setCanGoBack(state.canGoBack)}
    onShouldStartLoadWithRequest={allowNavigation}
-   onError={()=>{setFailed(true);setLoading(false);}}
-   onContentProcessDidTerminate={()=>{setFailed(true);setLoading(false);}}
+   onError={()=>setFailed(true)}
+   onContentProcessDidTerminate={()=>setFailed(true)}
    renderLoading={()=><View style={styles.loading}><ActivityIndicator size="large" color="#8754DA"/></View>}
   />
   {failed?<View style={styles.errorPanel}>
