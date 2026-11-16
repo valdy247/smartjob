@@ -30,7 +30,18 @@ export function applyPublishedInventory(document:Data,products:ApprovedInventory
   // Explicit site-level link replaces only the main product section.
   if(node.type!=="OfferingGrid"||replaced)return node;
   replaced=true;
-  return {...node,props:{...node.props,items:catalog,showPrices:"yes"}};
+  // The "Ambos" wizard generates explicit service-* entries alongside products.
+  // Preserve those service cards when live catalog products replace the snapshot.
+  const existing=Array.isArray(node.props?.items)?node.props.items:[];
+  const serviceCards=existing.flatMap((item:unknown)=>{
+   if(!item||typeof item!=="object")return [];
+   const card=item as {id?:unknown;title?:unknown};
+   if(typeof card.id!=="string"||!/^service-\\d{1,2}$/.test(card.id)||
+      typeof card.title!=="string"||!card.title.trim())return [];
+   return [{id:card.id,title:card.title.slice(0,120),description:"",price:"",
+    alt:card.title.slice(0,120),image:""}];
+  });
+  return {...node,props:{...node.props,items:[...catalog,...serviceCards].slice(0,40),showPrices:"yes"}};
  });
  if(!replaced&&catalog.length){
   // An existing site can connect an inventory even if it has no product grid.
