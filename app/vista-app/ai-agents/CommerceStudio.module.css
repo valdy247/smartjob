@@ -1,4 +1,12 @@
 .root{display:flex;flex-direction:column;gap:14px;padding-bottom:28px;color:#2b223b}
+.catalogTabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;background:#f1e9ff;border-radius:16px;padding:5px}
+.catalogTabs button{border:0;padding:12px;border-radius:12px;background:transparent;color:#74559b;font-size:12px;font-weight:900}
+.catalogTabs button[data-active=true]{background:#fff;color:#7947cd;box-shadow:0 3px 10px #62359c13}
+.servicesStudio{display:flex;flex-direction:column;gap:14px}
+.servicesError{background:#fff1f4;color:#a83a5d;border-radius:12px;padding:11px;font-size:12px}
+.servicesStudio>.hint:last-child{display:flex;align-items:center;gap:6px}
+.tabs{overflow-x:auto}
+.tabs button{white-space:nowrap;min-width:0}
 .back{display:flex;align-items:center;gap:8px;color:#7f55c3;border:0;background:transparent;font-weight:800;padding:5px 0;width:fit-content;font-size:12px}
 .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px;border-radius:24px;background:linear-gradient(128deg,#8551df,#ba88fa);color:#fff}
 .hero small{font-size:10px;font-weight:900;letter-spacing:.8px;color:#f5eaff}
