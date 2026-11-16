@@ -11,7 +11,7 @@ import {
  ArrowLeft,ArrowRight,ArrowUpRight,Apple,Check,CheckCircle2,ClipboardList,ExternalLink,
  FileCheck2,Gauge,Globe2,HandHeart,LayoutGrid,LockKeyhole,MapPinned,
  Megaphone,MessageSquareHeart,Navigation,RefreshCw,Search,Send,ShieldCheck,
- Sparkles,Star,Wallet,Workflow
+ Sparkles,Star,Wallet,Workflow,Video,Users,BarChart3
 } from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
@@ -25,6 +25,7 @@ import DirectoryDiscovery,{emptyDirectory,validateDirectory,directoryStatusNames
 import {readMarketingDraft,writeMarketingDraft,readDraftMedia,saveDraftMedia,clearMarketingDraft,markGuestLoginPending,transferGuestDraft,readBusinessDraftMedia,saveBusinessDraftMedia,type StoredMarketingDraft} from "./MarketingDraftStore";
 import GoogleProfileWizard,{emptyGoogle,emptyMedia,googleStepNames,validateGoogleStep,validateGoogleLinks,validateGoogleAll,type GoogleData,type GoogleMedia} from "./GoogleProfileWizard";
 import ScienceWaitQuiz from "./ScienceWaitQuiz";
+import SocialCaptionPreview from "./SocialCaptionPreview";
 
 export type ServiceCode="directory_listings"|"google_profile"|"apple_maps"|"bing_places"|"yelp_profile"|"search_console"|"seo_improvement"|"campaign_setup"|"review_strategy"|"other";
 type Status="received"|"quoted"|"approved"|"in_progress"|"needs_customer"|"verified"|"cancelled";
@@ -51,6 +52,13 @@ const services:Service[]=[
  {id:"review_strategy",name:"Mi reputación",why:"Responde reseñas y encuentra directorios.",mode:"Herramientas y asistencia"},
  {id:"other",name:"Otra necesidad de marketing",why:"Explica el resultado que deseas conseguir.",mode:"Evaluación individual"}
 ];
+const comingSoonCards=[
+ {id:"crm",Icon:Users,es:"CRM y embudos de venta",en:"CRM & sales funnels",esDesc:"De cada llamada o visita web a una venta, con seguimiento por etapas.",enDesc:"Turn calls and website contacts into tracked sales opportunities."},
+ {id:"omnichannel",Icon:Send,es:"Automatización omnicanal",en:"Omnichannel automation",esDesc:"Seguimiento autorizado por email, SMS y WhatsApp.",enDesc:"Permission-based follow-ups by email, SMS and WhatsApp."},
+ {id:"social_ads",Icon:Megaphone,es:"Redes y anuncios",en:"Social media & ads",esDesc:"Programar publicaciones y gestionar campañas de Meta y Google.",enDesc:"Schedule posts and manage Meta and Google campaigns."},
+ {id:"seo_reputation",Icon:Globe2,es:"SEO y reputación automáticos",en:"Automated SEO & reputation",esDesc:"Conectar la web y las reseñas a acciones de mejora continuas.",enDesc:"Connect website SEO and reviews to ongoing improvements."},
+ {id:"attribution",Icon:BarChart3,es:"Analítica y atribución",en:"Analytics & attribution",esDesc:"Saber qué anuncio generó cada llamada, cliente y venta.",enDesc:"See which ad drove each call, customer and sale."}
+] as const;
 type WizardStep=0|1|2|3|4;
 
 const serviceIcons:Record<ServiceCode,typeof MapPinned>={
@@ -114,12 +122,13 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [approvals,setApprovals]=useState<Acceptance[]>([]);
  const [selected,setSelected]=useState<ServiceCode>(preselectedService||"google_profile");
  const [wizardStep,setWizardStep]=useState<WizardStep>(preselectedService?1:0);
+ const [socialPreviewOpen,setSocialPreviewOpen]=useState(false);
  const [googleStep,setGoogleStep]=useState(0);
  const [editLoadedGoogle,setEditLoadedGoogle]=useState(false);
  const [webStage,setWebStage]=useState(0);
  const [googleData,setGoogleData]=useState<GoogleData>(emptyGoogle);
  const [googleMedia,setGoogleMedia]=useState<GoogleMedia>(emptyMedia);
- useEffect(()=>{onWizardActiveChange?.(wizardStep>0&&wizardStep<4);},[wizardStep,onWizardActiveChange]);
+ useEffect(()=>{onWizardActiveChange?.((wizardStep>0&&wizardStep<4)||socialPreviewOpen);},[wizardStep,socialPreviewOpen,onWizardActiveChange]);
  const [wizardError,setWizardError]=useState("");
  const [submittedId,setSubmittedId]=useState<string|null>(null);
  const [chosenCategory,setChosenCategory]=useState("");
@@ -765,7 +774,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       <span className={styles.stepBubble}>{index<wizardStep?<Check size={14}/>:index+1}</span><span>{label}</span>
      </li>)}
     </ol>:null}
-    {wizardStep===0?<div className={styles.wizardBody}>
+    {wizardStep===0?(socialPreviewOpen?<SocialCaptionPreview onBack={()=>setSocialPreviewOpen(false)}/>:<div className={styles.wizardBody}>
      <div className={styles.servicePicker}>
       {services.filter(service=>["google_profile","seo_improvement","review_strategy"].includes(service.id)).map(service=>{
        const ServiceIcon=serviceIcons[service.id];
@@ -775,9 +784,23 @@ export default function MarketingActionCenter({businessName,industryId,website,o
         <span className={styles.serviceCta}>{en?"Start":"Empezar"}</span>
        </button>;
       })}
+      <button type="button" onClick={()=>setSocialPreviewOpen(true)} className={styles.serviceTile} aria-label={en?"View upcoming social media captions":"Ver descripciones para redes próximamente"}>
+       <span className={styles.serviceIcon}><Video size={23} strokeWidth={1.8}/></span>
+       <span className={styles.serviceText}><strong>{en?"Social media captions":"Descripciones para redes"}</strong><small>{en?"Caption suggestions from your videos.":"Descripciones recomendadas a partir de tus videos."}</small></span>
+       <span className={styles.serviceCta}>{en?"Coming soon":"Próximamente"}</span>
+      </button>
      </div>
      <p className={styles.wizardHint}><ShieldCheck size={15}/> {translate("marketing.ui.requestFree")}</p>
-    </div>:null}
+     <section className={styles.futureSection} aria-labelledby="vmv-marketing-next">
+      <div className={styles.futureHeading}><div><span>{en?"WHAT'S NEXT":"LO QUE VIENE"}</span><h3 id="vmv-marketing-next">{en?"More tools for your business":"Más herramientas para tu negocio"}</h3><p>{en?"Planned features. Not available yet.":"Funciones previstas. Todavía no están disponibles."}</p></div></div>
+      <div className={styles.futureGrid}>{comingSoonCards.map(feature=><article key={feature.id} className={styles.futureCard}>
+       <div className={styles.futureIcon}><feature.Icon size={20}/></div>
+       <strong>{en?feature.en:feature.es}</strong>
+       <p>{en?feature.enDesc:feature.esDesc}</p>
+       <small>{en?"Coming soon":"Próximamente"}</small>
+      </article>)}</div>
+     </section>
+    </div>):null}
     {wizardStep===1?<div className={styles.wizardBody}>
      <div className={styles.selectedServiceBanner}><span className={styles.selectedServiceIcon}>{(()=>{const Icon=serviceIcons[selected];return <Icon size={23}/>;})()}</span><span><small>{translate("marketing.copy.selected_service")}</small><strong>{serviceName(selected)}</strong></span><button type="button" onClick={()=>{setWizardStep(0);setWizardError("");}}>{translate("marketing.copy.change")}</button></div>
      <div className={styles.wizardFields}>
