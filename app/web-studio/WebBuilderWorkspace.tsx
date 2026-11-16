@@ -338,6 +338,12 @@ export default function WebBuilderWorkspace(){
     const reachedLimit=/límite de cinco sitios/i.test(String(rpcError?.message||""));
     throw new Error(reachedLimit?"Has alcanzado el máximo de sitios para tu cuenta.":"No se pudo crear el sitio. Inténtalo de nuevo o revisa los datos del negocio.");
    }
+   if(intake.inventoryBusinessId){
+    const {error:linkError}=await db.from("smartjob_builder_sites")
+     .update({inventory_business_id:intake.inventoryBusinessId})
+     .eq("id",ids.siteId).eq("owner_id",userId);
+    if(linkError)throw Error("El sitio se creó, pero el inventario no se pudo conectar. Actualiza Mis sitios y conéctalo desde Ajustes.");
+   }
    const loaded=await loadCreatedSite(db,ids);
    const created=loaded.created;
    let home=loaded.home;
