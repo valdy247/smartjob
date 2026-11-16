@@ -121,7 +121,7 @@ test('AI gallery preserves selected columns, uploaded photos and mobile editor f
  assert.match(wizard,/BuilderImageField value=\{url\}/);
 });
 test('AI construction projects honor the same column setting',()=>{
- const chosen={...intake,categoryId:"construction",design:{
+ const chosen={...intake,categoryId:"home-builder",design:{
   colors:["#835CD5","#79CEB8","#F3E9D7"],font:"modern",imageStyle:"rounded",
   galleryColumns:"2",features:{inventory:false,booking:false,chat:false},chatMode:"off"
  }};
