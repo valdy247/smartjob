@@ -8,6 +8,7 @@ import {safeWebImageUrl} from "@/lib/web-services-site";
 import {familyForCategory} from "@/lib/web-builder-templates";
 import {applyPublishedInventory,type ApprovedInventoryProduct} from "@/lib/vmv-ai-agents/public-catalog-site";
 import {publishedCatalogVersion} from "@/lib/vmv-ai-agents/public-catalog-version";
+import {resolveInventoryForPublishedSite} from "@/lib/vmv-ai-agents/site-inventory-resolution";
 import LiveInventoryRefresh from "@/app/web-studio/LiveInventoryRefresh";
 import {WebsiteChrome,websiteVisualStyle} from "@/lib/web-site-chrome";
 import type {CSSProperties} from "react";
@@ -38,19 +39,14 @@ async function findPage(slug:string,part:string){
  * The public visitor cannot access the owner's private catalog API.
  * Fail closed when a linked business cannot be verified.
  */
-async function publishedInventory(siteId:string,ownerId:string):Promise<
+async function publishedInventory(siteId:string,ownerId:string,siteName:string):Promise<
  {businessId:string;products:ApprovedInventoryProduct[]}|null>{
  const base=process.env.NEXT_PUBLIC_SUPABASE_URL;
  const secret=process.env.SUPABASE_SECRET_KEY;
  if(!base||!secret)return null;
  const db=createClient(base,secret,{auth:{persistSession:false,autoRefreshToken:false}});
- const {data:site,error:siteError}=await db.from("smartjob_builder_sites")
-  .select("inventory_business_id").eq("id",siteId).eq("owner_id",ownerId).maybeSingle();
- if(siteError||!site?.inventory_business_id)return null;
- const businessId=String(site.inventory_business_id);
- const {data:business,error:businessError}=await db.from("vmv_ai_businesses")
-  .select("id").eq("id",businessId).eq("owner_id",ownerId).maybeSingle();
- if(businessError||!business)return {businessId,products:[]};
+ const businessId=await resolveInventoryForPublishedSite(db,siteId,ownerId,siteName);
+ if(!businessId)return null;
  const {data:products,error}=await db.from("vmv_ai_catalog_items")
   .select("id,name,description,price_cents,currency,image_path,updated_at")
   .eq("owner_id",ownerId).eq("business_id",businessId)
@@ -102,7 +98,7 @@ export default async function VMVPublishedPage({params}:Props){
  const base=custom?"":"/web/"+slug;
  const siteName=result.page.site_name||slug.replace(/-/g," ");
  const original=normalizeBuilderDocument(result.page.document);
- const inventory=await publishedInventory(result.page.site_id,result.page.owner_id);
+ const inventory=await publishedInventory(result.page.site_id,result.page.owner_id,siteName);
  const data=inventory?applyPublishedInventory(original,inventory.products,result.page.owner_id,
   inventory.businessId,process.env.NEXT_PUBLIC_SUPABASE_URL||""):original;
  const classicServices=data.content.filter(b=>b.type==="Services").flatMap(b=>
