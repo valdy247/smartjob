@@ -9,6 +9,7 @@ import {FAMILIES,familyForCategory,type SiteFamily,type SiteIntake,type SiteProd
 import BuilderImageField from "./BuilderImageField";
 import TemplateProposals from "./TemplateProposals";
 import WebIntakeProducts,{type ProductSaveStatus} from "./WebIntakeProducts";
+import WebInventoryPicker,{type InventoryLoadStatus} from "./WebInventoryPicker";
 import WebIntakeSocials,{type SocialSaveStatus} from "./WebIntakeSocials";
 import {EMPTY_SOCIAL_LINKS,SOCIAL_PLATFORMS,normalizeSocialLinks,normalizeSocialUrl,type BusinessSocialLinks} from "@/lib/web-builder-social";
 import styles from "./WebSiteIntake.module.css";
@@ -68,6 +69,9 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
  const [newItem,setNewItem]=useState("");
  const [products,setProducts]=useState<SiteProduct[]>([]);
  const [productStatus,setProductStatus]=useState<ProductSaveStatus>("loading");
+ const [inventoryBusinessId,setInventoryBusinessId]=useState("");
+ const [inventoryProducts,setInventoryProducts]=useState<SiteProduct[]>([]);
+ const [inventoryStatus,setInventoryStatus]=useState<InventoryLoadStatus>("idle");
  const [socialLinks,setSocialLinks]=useState<BusinessSocialLinks>({...EMPTY_SOCIAL_LINKS});
  const [socialStatus,setSocialStatus]=useState<SocialSaveStatus>("loading");
  const [family,setFamily]=useState<SiteFamily|null>(null);
@@ -241,9 +245,13 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
   phone:phone.trim(),email:email.trim(),city:city.trim(),about:about.trim(),
   logo,photos:photos.slice(0,2),
   offerings:kind==="products"?[]:services.filter(Boolean),
-  products:kind==="services"?[]:products.filter(p=>p.title.trim()),
+  products:kind==="services"?[]:inventoryBusinessId?inventoryProducts:products.filter(p=>p.title.trim()),
+  // The site stores an owner-scoped catalog link. The listed items are only
+  // preview snapshots; the public web will read approved products live.
+  inventoryBusinessId:kind!=="services"&&inventoryBusinessId?inventoryBusinessId:undefined,
   socials:normalizeSocialLinks(socialLinks)
- }),[name,category,kind,goal,phone,email,city,about,logo,photos,services,products,socialLinks]);
+ }),[name,category,kind,goal,phone,email,city,about,logo,photos,services,
+  products,inventoryBusinessId,inventoryProducts,socialLinks]);
  const suggestedFamily=family||familyForCategory(category);
  const validContactEmail=(value:string)=>!value.trim()||/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
  function nextStep(){
@@ -256,8 +264,15 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
    }
    setEmailError("");
   }
-  if(step===1&&kind!=="services"&&productStatus!=="saved"){
-   setError("Espera a que se guarden los productos.");return;
+  if(step===1&&kind!=="services"){
+   if(inventoryBusinessId&&inventoryStatus!=="ready"){
+    setError(inventoryStatus==="error"?
+     "No se pudo leer el inventario. Reintenta la conexión.":
+     "Espera a que se cargue el inventario.");return;
+   }
+   if(!inventoryBusinessId&&productStatus!=="saved"){
+    setError("Espera a que se guarden los productos.");return;
+   }
   }
   setError("");setStep(value=>Math.min(3,value+1));
   window.scrollTo({top:0,behavior:"smooth"});
@@ -278,10 +293,13 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
   if(!mediaReady||mediaSaving||mediaError){setError("Confirma que las fotografías terminaron de guardarse.");return;}
   if(intake.business.length<2){setError("Escribe el nombre del negocio.");return;}
   if(!category){setError("Selecciona la categoría del negocio.");return;}
-  if(kind!=="services"&&productStatus!=="saved"){
+  if(kind!=="services"&&inventoryBusinessId&&inventoryStatus!=="ready"){
+   setError("Espera a que se cargue correctamente el inventario.");return;
+  }
+  if(kind!=="services"&&!inventoryBusinessId&&productStatus!=="saved"){
    setError("Espera a que termine de guardar los productos antes de continuar.");return;
   }
-  if(kind!=="services"&&products.some(p=>!p.title.trim())){
+  if(kind!=="services"&&!inventoryBusinessId&&products.some(p=>!p.title.trim())){
    setError("Escribe el nombre de cada producto o elimina las fichas vacías.");return;
   }
   if(socialStatus!=="saved"){setError("Espera a que se guarden las redes sociales.");return;}
@@ -388,7 +406,13 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
       {goal===item.id?<span className={styles.goalCheck} aria-hidden="true"><Check size={14} strokeWidth={3}/></span>:null}
      </button>)}
     </div>
-    <WebIntakeProducts ownerId={ownerId} items={products} visible={kind!=="services"}
+    <div hidden={kind==="services"}>
+     <WebInventoryPicker ownerId={ownerId} businessName={name}
+      selectedBusinessId={inventoryBusinessId} onSelect={setInventoryBusinessId}
+      onProducts={setInventoryProducts} onStatus={setInventoryStatus}/>
+    </div>
+    <WebIntakeProducts ownerId={ownerId} items={products}
+     visible={kind!=="services"&&!inventoryBusinessId}
      onChange={setProducts} onStatusChange={setProductStatus}/>
     {kind!=="products"?<form className={`${styles.addItem} ${styles.offeringsAdd}`} onSubmit={addService}>
      <label htmlFor="vmv-intake-service">Servicios (opcional)</label>
@@ -458,7 +482,7 @@ export default function WebSiteIntake({ownerId,busy,onChoose}:Props){
      {step>0?<button type="button" className={styles.previous} onClick={previousStep} disabled={busy||generatingAi}>Atrás</button>:null}
      {step<3?<button type="button" onClick={nextStep} disabled={busy||generatingAi}>
       Continuar <ArrowRight size={17}/></button>:
-      <button type="button" disabled={busy||generatingAi||(mode==="ai"&&aiStatus!=="ready")||!mediaReady||mediaSaving||Boolean(mediaError)||socialStatus!=="saved"||(kind!=="services"&&productStatus!=="saved")} onClick={()=>void preview()}>
+      <button type="button" disabled={busy||generatingAi||(mode==="ai"&&aiStatus!=="ready")||!mediaReady||mediaSaving||Boolean(mediaError)||socialStatus!=="saved"||(kind!=="services"&&(inventoryBusinessId?inventoryStatus!=="ready":productStatus!=="saved"))} onClick={()=>void preview()}>
        {generatingAi?"Creando tu web con IA…":mode==="ai"?"Generar web con IA":"Ver propuestas"} <ArrowRight size={17}/>
       </button>}
     </div>
