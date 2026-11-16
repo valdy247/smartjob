@@ -44,7 +44,7 @@ export default function InventoryWebsiteLink({businessId}:{businessId:string}){
     if(live){
      setSites(websites);
      setSelected(websites.find(site=>site.published&&site.inventory_business_id===businessId)?.id||
-      websites.find(site=>site.published&&site.name.toLowerCase().includes("mayuli"))?.id||
+
       websites.find(site=>site.published)?.id||
       websites[0]?.id||"");
     }
