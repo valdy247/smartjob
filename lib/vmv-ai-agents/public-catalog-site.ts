@@ -32,5 +32,16 @@ export function applyPublishedInventory(document:Data,products:ApprovedInventory
   replaced=true;
   return {...node,props:{...node.props,items:catalog,showPrices:"yes"}};
  });
+ if(!replaced&&catalog.length){
+  // An existing site can connect an inventory even if it has no product grid.
+  const contactIndex=content.findIndex(node=>node.type==="Contact");
+  const location=contactIndex<0?content.length:contactIndex;
+  content.splice(location,0,{type:"OfferingGrid",props:{
+   id:"linked-inventory-catalog",title:"Nuestros productos",description:"",
+   items:catalog,layout:"grid",padding:"normal",surface:"light",
+   columns:"3",showPrices:"yes"
+  }});
+  replaced=true;
+ }
  return replaced?{...document,content}:document;
 }
