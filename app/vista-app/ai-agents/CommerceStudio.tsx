@@ -205,6 +205,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",initial
    </div>
    <button type="button" className={styles.primary} onClick={()=>setTab("catalog")}><Package size={16}/> Ir al catálogo</button>
   </>:tab==="catalog"?<>
+   <InventoryWebsiteLink businessId={businessId}/>
    {!catalogOnly&&selectedAgent?<div className={styles.catalogConnection}>
     <div className={styles.catalogConnectionInfo}>
      <strong>Inventario del chat</strong>
