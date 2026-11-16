@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/vmv-smart-call-control-center
+      - feat/vmv-ios-preview-beta
   pull_request:
     paths:
       - "apps/ios/**"
