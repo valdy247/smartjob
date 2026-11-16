@@ -11,6 +11,8 @@ import {InterpreterPanel} from "./InterpreterPanel";
 import {CallScreen} from "./CallScreen";
 import {SmartCallControlCenter} from "./SmartCallControlCenter";
 import {BusinessServicesPanel} from "./BusinessServicesPanel";
+import {BusinessDiagnostic} from "./BusinessDiagnostic";
+import {DIAGNOSTIC_METADATA_KEY,getDiagnosticRecommendations,makeDiagnosticRecord,readDiagnosticRecord,type DiagnosticAnswers,type DiagnosticRecord,type DiagnosticService} from "../../lib/business-diagnostic";
 import FinancesPanel from "./FinancesPanel";
 import {ContactsPanel} from "./ContactsPanel";
 import {DialPad} from "./DialPad";
@@ -38,6 +40,8 @@ export default function App(){
  const {language:uiLanguage,ready:uiLanguageReady,saving:languageSaving,error:languageError,retry:retryLanguage,changeLanguage,translate:tr}=useNativeInterfaceLanguage(session,authBootstrapped);
  const [activationProfile,setActivationProfile]=useState<NativeProfile|null>(null);
  const [activeTab,setActiveTab]=useState<"home"|"services"|"calls"|"live"|"settings">("home");
+ const [diagnosticOpen,setDiagnosticOpen]=useState(false);
+ const [diagnosticSaved,setDiagnosticSaved]=useState<DiagnosticRecord|null>(null);
   const [callsView,setCallsView]=useState<"dial"|"history"|"contacts">("dial");
   const [callTypeFilter,setCallTypeFilter]=useState<"all"|"direct"|"translated">("all");
   const [contactsPhone,setContactsPhone]=useState("");
@@ -737,6 +741,23 @@ export default function App(){
   {id:"marketing",name:"Marketing",group:"growth",Icon:"trending-up-outline" as const,tone:styles.nativeCatalogPink,status:tr("catalog.beta"),open:()=>{setActiveModule("marketing-analytics");setActiveTab("services");}}
  ] as const;
  const normalizedCatalogQuery=catalogQuery.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase();
+ const nativeDiagnostic=diagnosticSaved?.businessId===session?.user.id?diagnosticSaved:readDiagnosticRecord(session?.user.user_metadata,session?.user.id||"");
+ const homeRecommendations=nativeDiagnostic?getDiagnosticRecommendations(nativeDiagnostic.answers):null;
+ const showHomeOffer=(id:DiagnosticService)=>!homeRecommendations||homeRecommendations.some(item=>item.id===id);
+ const saveNeedsAssessment=async(answers:DiagnosticAnswers)=>{
+  if(!supabase||!session?.user.id)throw new Error("Not signed in");
+  const {data:identity,error:authError}=await supabase.auth.getUser();
+  if(authError||identity.user?.id!==session.user.id)throw new Error("Session expired");
+  const next=makeDiagnosticRecord(session.user.id,answers);
+  const {error:saveError}=await supabase.auth.updateUser({data:{[DIAGNOSTIC_METADATA_KEY]:next}});
+  if(saveError)throw saveError;
+  setDiagnosticSaved(next);
+ };
+ const exploreNeedsService=(id:DiagnosticService)=>{
+  setDiagnosticOpen(false);setActiveTab("services");
+  setActiveModule(id==="smart-call"?"smart-call":id==="web-services"?"web-services":
+   id==="ai-agents"?"ai-agents":"marketing-analytics");
+ };
  const filteredCatalogItems=catalogItems.filter(item=>(catalogGroup==="all"||item.group===catalogGroup)&&
   (!normalizedCatalogQuery||item.name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase().includes(normalizedCatalogQuery)));
  if(!uiLanguageReady)return <SafeAreaView style={styles.safe}>{languageError?<View style={{padding:24}}><Text>{tr("language.loadError")}</Text><Button label={tr("common.retry")} onPress={()=>void retryLanguage()}/></View>:<ActivityIndicator style={{marginTop:64}} color={colors.accent}/>}</SafeAreaView>;
@@ -766,7 +787,12 @@ export default function App(){
       {localePicker}
      </View>:
     <>
-     {activeTab==="home"?<>
+     {activeTab==="home"?(diagnosticOpen?
+      <BusinessDiagnostic key={session.user.id} language={uiLanguage==="en"?"en":"es"}
+       businessName={activationProfile?.business_name?.trim()||String(session.user.user_metadata?.business_name||"VMV Business")}
+       record={nativeDiagnostic} onSave={saveNeedsAssessment}
+       onClose={()=>setDiagnosticOpen(false)} onExplore={exploreNeedsService}/>:
+      <>
       <View style={styles.conceptHeader}>
        <View style={styles.conceptBrand}><Text style={styles.conceptV}>V</Text><Text style={styles.conceptBrandName}>VMV Business</Text></View>
        <Ionicons name="notifications-outline" size={25} color="#20152D" accessibilityLabel="Notificaciones"/>
@@ -781,30 +807,37 @@ export default function App(){
        <View style={styles.conceptHeroCopy}>
         <Text style={styles.conceptHeroTitle}>{uiLanguage==="en"?"Grow your\nbusiness":"Haz crecer\ntu negocio"}</Text>
         <Text style={styles.conceptHeroSub}>{uiLanguage==="en"?"Tools, services and AI for entrepreneurs.":"Herramientas, servicios y IA para emprendedores."}</Text>
-        {/* Deliberately non-interactive until the next product decision. */}
-        <View style={styles.conceptStartLabel} accessibilityLabel={uiLanguage==="en"?"Get started, coming soon":"Comenzar, sin acción por ahora"}>
-         <Text style={styles.conceptStartText}>{uiLanguage==="en"?"Get started":"Comenzar"}</Text>
+        <Pressable accessibilityRole="button" style={styles.conceptStartLabel} onPress={()=>setDiagnosticOpen(true)} accessibilityLabel={uiLanguage==="en"?"Business needs assessment":"Diagnóstico de necesidades del negocio"}>
+         <Text style={styles.conceptStartText}>{uiLanguage==="en"?(nativeDiagnostic?"Update needs":"Get started"):(nativeDiagnostic?"Actualizar necesidades":"Comenzar")}</Text>
          <Ionicons name="arrow-forward-outline" size={18} color="#181026"/>
-        </View>
+        </Pressable>
        </View>
       </View>
       <View style={styles.conceptTiles}>
-       <Pressable accessibilityRole="button" accessibilityLabel="Smart Call" style={[styles.conceptTile,styles.conceptMint]}
+       {showHomeOffer("smart-call")?<Pressable accessibilityRole="button" accessibilityLabel="Smart Call" style={[styles.conceptTile,styles.conceptMint]}
         onPress={()=>{setActiveModule("smart-call");setActiveTab("services");}}>
         <Ionicons name="call-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>Smart Call</Text>
-       </Pressable>
-       <Pressable accessibilityRole="button" accessibilityLabel="Web Services" style={[styles.conceptTile,styles.conceptPink]}
+       </Pressable>:null}
+       {showHomeOffer("web-services")?<Pressable accessibilityRole="button" accessibilityLabel="Web Services" style={[styles.conceptTile,styles.conceptPink]}
         onPress={()=>{setActiveModule("web-services");setActiveTab("services");}}>
         <Ionicons name="desktop-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>Web Services</Text>
-       </Pressable>
-       <Pressable accessibilityRole="button" accessibilityLabel="AI Agents" style={[styles.conceptTile,styles.conceptLavender]}
+       </Pressable>:null}
+       {showHomeOffer("ai-agents")?<Pressable accessibilityRole="button" accessibilityLabel="AI Agents" style={[styles.conceptTile,styles.conceptLavender]}
         onPress={()=>{setActiveModule("ai-agents");setActiveTab("services");}}>
         <Ionicons name="hardware-chip-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>AI Agents</Text>
-       </Pressable>
-       <Pressable accessibilityRole="button" accessibilityLabel="Marketing" style={[styles.conceptTile,styles.conceptGreen]}
+       </Pressable>:null}
+       {showHomeOffer("marketing")?<Pressable accessibilityRole="button" accessibilityLabel="Marketing" style={[styles.conceptTile,styles.conceptGreen]}
         onPress={()=>{setActiveModule("marketing-analytics");setActiveTab("services");}}>
         <Ionicons name="megaphone-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>Marketing</Text>
-       </Pressable>
+       </Pressable>:null}
+       {homeRecommendations?.some(item=>item.id==="google-business")?<Pressable accessibilityRole="button" accessibilityLabel="Google Business" style={[styles.conceptTile,styles.conceptLavender]}
+        onPress={()=>{setActiveModule("marketing-analytics");setActiveTab("services");}}>
+        <Ionicons name="location-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>Google Business</Text>
+       </Pressable>:null}
+       {homeRecommendations?.length===0?<Pressable accessibilityRole="button" accessibilityLabel={uiLanguage==="en"?"All services":"Todos los servicios"} style={[styles.conceptTile,styles.conceptLavender]}
+        onPress={()=>{setActiveModule(null);setActiveTab("services");}}>
+        <Ionicons name="grid-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>{uiLanguage==="en"?"All services":"Todos los servicios"}</Text>
+       </Pressable>:null}
       </View>
       <Text style={styles.conceptBusinessTitle}>{uiLanguage==="en"?"My Business":"Mi Negocio"}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={uiLanguage==="en"?"Overview":"Resumen"}
@@ -814,7 +847,7 @@ export default function App(){
         <Text style={styles.conceptSummarySub}>{uiLanguage==="en"?"Activity and results":"Actividad y resultados"}</Text></View>
        <Ionicons name="chevron-forward" size={23} color="#21142D"/>
       </Pressable>
-     </>:null}
+     </>):null}
      {activeTab==="calls"?<>
        <View style={styles.callsTabs}>
         {([{id:"dial",emoji:"⌨️",key:"native.dialpad"},{id:"history",emoji:"🕘",key:"common.history"},{id:"contacts",emoji:"👥",key:"native.contacts"}] as const).map(item=>
