@@ -191,3 +191,10 @@
 .agent,.formSection,.empty{border-color:#ece4f4;border-radius:20px;background:#fff}
 .previewBadge{background:#eee1ff;color:#7248c1}
 .buttonPrimary,.saveButton{border-radius:13px}
+
+
+/* Native-width AI Agents view: no simulated status bar in a real phone browser. */
+@media(max-width:540px){
+ .phoneTop{display:none}
+ .phone{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+}
