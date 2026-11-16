@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run bridge:test && npm run business-diagnostic:test && npm run web-ai:test && npm run i18n:check && npm run i18n:coverage && npm run i18n:marketing && npm run i18n:services && npm run i18n:test && npm run testers:test && npm run google-profile:test && npm run marketing-support:test && npm run finanzas:test && next build",
+    "build": "npm run bridge:test && npm run business-diagnostic:test && npm run web-ai:test && npm run i18n:check && npm run i18n:coverage && npm run i18n:marketing && npm run i18n:services && npm run i18n:agents && npm run i18n:test && npm run testers:test && npm run google-profile:test && npm run marketing-support:test && npm run finanzas:test && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "i18n:check": "node scripts/check-i18n.mjs",
@@ -22,7 +22,8 @@
     "google-profile:test": "node --test scripts/google-profile-request.test.cjs",
     "marketing-support:test": "node --test scripts/marketing-support-api.test.cjs",
     "i18n:services": "node scripts/check-services-i18n.mjs",
-    "finanzas:test": "node --test scripts/vmv-finances-connect.test.cjs"
+    "finanzas:test": "node --test scripts/vmv-finances-connect.test.cjs",
+    "i18n:agents": "node --test scripts/ai-agents-i18n.test.cjs"
   },
   "engines": {
     "node": ">=20.9"
