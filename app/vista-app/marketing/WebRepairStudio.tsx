@@ -10,7 +10,7 @@ export type WebAudit={
  source:string;website:string;analyzedAt:string;
  scores:{performance:number|null;seo:number|null;accessibility:number|null};
  recommendations:string[];findings?:{id:string;title:string;description:string;score:number|null}[];
- reportUrl?:string;status?:"complete"|"unavailable";
+ reportUrl?:string;status?:"complete"|"partial"|"unavailable";
  explanation?:string;explanationSource?:"ai"|"automatic";
 };
 export type WebRepairData={
@@ -96,16 +96,18 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
   try{
    const res=await fetch("/api/marketing/site-audit?url="+encodeURIComponent(site)+"&lang="+language,{cache:"no-store"});
    const json=await res.json();
-   if(!res.ok)throw new Error(translate("marketing.web.auditFailed"));
-   const audit:WebAudit={...json,reportUrl:json.reportUrl||googleReport(site),status:"complete"};
+   if(!res.ok)throw new Error(typeof json.error==="string"?json.error:translate("marketing.web.auditFailed"));
+   const partial=json.status==="partial";
+   const audit:WebAudit={...json,reportUrl:json.reportUrl||googleReport(site),status:partial?"partial":"complete"};
    onChange(prev=>({...prev,audit}));
-   if(accessToken){
+   if(partial){setQuizVisible(false);setShowAudit(true);}
+   if(!partial&&accessToken){
     try{
      const ai=await fetch("/api/marketing/explain-audit",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+accessToken},body:JSON.stringify({audit,locale:language})});
      if(ai.ok){const result=await ai.json();onChange(prev=>({...prev,audit:{...audit,explanation:result.explanation,explanationSource:result.source}}));}
     }catch{/* Technical report remains usable if interpretation is unavailable. */}
    }
-  }catch(e){setError(translate("marketing.web.auditFailed"));setQuizVisible(false);setShowAudit(true);}
+  }catch(e){setError(e instanceof Error&&e.message?e.message:translate("marketing.web.auditFailed"));setQuizVisible(false);setShowAudit(true);}
   finally{setLoading(false);}
  };
  const report=data.audit;
@@ -120,12 +122,14 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
     onContinue={()=>{setQuizVisible(false);setShowAudit(true);}}/>:null}
    {error?<div role="alert" className={styles.warning}><AlertCircle size={16}/><span>{error} {translate("marketing.web.errorHint")}</span></div>:null}
    {report&&showAudit?<div className={styles.report}>
-     <div className={styles.head}><CheckCircle2 size={18}/><strong>{en?"Technical report available":"Informe técnico disponible"}</strong></div>
-     <div className={styles.scores}>
+     <div className={styles.head}><CheckCircle2 size={18}/><strong>{report.status==="partial"?
+      (en?"Basic verification available":"Revisión básica disponible"):
+      (en?"Technical report available":"Informe técnico disponible")}</strong></div>
+     {report.status!=="partial"?<div className={styles.scores}>
       <span>{en?"Speed":"Velocidad"} <strong>{report.scores.performance??"—"}/100</strong></span>
       <span>SEO <strong>{report.scores.seo??"—"}/100</strong></span>
       <span>{en?"Accessibility":"Accesibilidad"} <strong>{report.scores.accessibility??"—"}/100</strong></span>
-     </div>
+     </div>:null}
      <div className={styles.explain}><strong>{report.explanationSource==="ai"?(en?"AI recommendations":"Qué te recomienda la IA"):(en?"What can improve":"Qué podemos mejorar")}</strong>
       <p>{report.explanation||practicalExplanation(report,en)}</p>
      </div>
@@ -133,7 +137,9 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
       <div className={styles.findings}>{(report.findings||[]).length?(report.findings||[]).map(f=><article key={f.id}><strong>{f.title}</strong><p>{f.description}</p><small>{f.id} · {translate("marketing.web.scoreLabel")} {f.score===null?translate("marketing.web.noScore"):Math.round(f.score*100)+"%"}</small></article>):report.recommendations.map((x,i)=><p key={i}>{i+1}. {x}</p>)}</div>
       <small>{translate("marketing.web.source")} {report.source} · {new Date(report.analyzedAt).toLocaleDateString("es-US")}{translate("marketing.web.savedWithRequest")}</small>
      </details>
-     <a className={styles.external} href={report.reportUrl||googleReport(site)} target="_blank" rel="noopener noreferrer">{en?"Check Google PageSpeed report":"Contrastar diagnóstico en Google"} <ExternalLink size={15}/></a>
+     <a className={styles.external} href={report.reportUrl||googleReport(site)} target="_blank" rel="noopener noreferrer">{report.status==="partial"?
+      (en?"Try Google PageSpeed":"Intentar medición con Google"):
+      (en?"Check Google PageSpeed report":"Contrastar diagnóstico en Google")} <ExternalLink size={15}/></a>
     </div>:null}
    {!report&&!quizVisible?<a className={styles.external} href={googleReport(site)} target="_blank" rel="noopener noreferrer">{translate("marketing.web.openPageSpeed")} <ArrowUpRight size={16}/></a>:null}
   </div>:null}
