@@ -60,7 +60,7 @@ export default function WebAiStandalone(){
     const {error:linkError}=await db.from("smartjob_builder_sites")
      .update({inventory_business_id:input.inventoryBusinessId})
      .eq("id",ids.siteId).eq("owner_id",ownerId);
-    if(linkError)throw Error("Sitio creado, pero no se pudo conectar el inventario. Abre los ajustes del sitio para conectarlo.");
+    if(linkError)setError("El sitio se creó, pero el inventario debe conectarse manualmente desde Ajustes.");
    }
    if(proposal.seoTitle){
     const page=await db.from("smartjob_builder_pages").select("revision")
