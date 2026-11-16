@@ -3,7 +3,7 @@
 import {useEffect,useState} from "react";
 import {Bot,CalendarClock,MessageCircle,Package,PhoneCall,Settings2,X} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
-import {setAgentCatalogReadAccess,type PersistedAgent,type PhoneSelection} from "./agentStore";
+import {setAgentCatalogReadAccess,setAgentPublicChatAccess,type PersistedAgent,type PhoneSelection} from "./agentStore";
 import styles from "./page.module.css";
 
 type Policy={agent_enabled:boolean;[key:string]:unknown};
@@ -15,7 +15,7 @@ type Props={
 
 export default function AgentQuickConnections({agent,phone,onUpdated,onConfigureCalls}:Props){
  const [open,setOpen]=useState(false);
- const [busy,setBusy]=useState<"inventory"|"calls"|null>(null);
+ const [busy,setBusy]=useState<"inventory"|"calls"|"chat"|null>(null);
  const [error,setError]=useState("");
  const [callStatus,setCallStatus]=useState<CallStatus|null>(null);
  const [callLoading,setCallLoading]=useState(false);
@@ -69,6 +69,18 @@ export default function AgentQuickConnections({agent,phone,onUpdated,onConfigure
   }catch(e){setError(e instanceof Error?e.message:"No se pudo guardar Llamadas.");}
   finally{setBusy(null);}
  }
+ async function chatToggle(enabled:boolean){
+  if(busy)return;
+  if(enabled&&!window.confirm("Permitir que clientes reales hablen con "+agent.name+
+   " mediante IA en la web del negocio. No puede realizar cobros, pedidos ni reservas. ¿Continuar?"))return;
+  setBusy("chat");setError("");
+  try{
+   const updated=await setAgentPublicChatAccess(agent,enabled);
+   onUpdated(updated);
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo guardar Chat.");}
+  finally{setBusy(null);}
+ }
+ const chatOn=agent.setup.cap_chat==="Sí";
  const inventoryOn=agent.setup.cap_catalog==="Sí";
  return <section className={styles.quickAgentCard} aria-label={"Mi agente "+agent.name}>
   <div className={styles.quickAgentTop}>
@@ -86,9 +98,12 @@ export default function AgentQuickConnections({agent,phone,onUpdated,onConfigure
   {open?<div id="vmv-agent-quick-connections" className={styles.quickAgentConnections}>
    <div className={styles.quickAgentSwitchRow}>
     <span className={styles.quickAgentRowIcon}><MessageCircle size={18}/></span>
-    <span className={styles.quickAgentRowName}>Chat<small>Chat público en preparación</small></span>
-    <input type="checkbox" role="switch" aria-label="Chat público: aún no disponible"
-     checked={false} disabled/>
+    <span className={styles.quickAgentRowName}>Chat
+     {chatOn&&agent.status!=="active"?<small>Preparado · Activa el agente para publicarlo</small>:null}
+    </span>
+    <input type="checkbox" role="switch" aria-label="Chat público"
+     checked={chatOn} disabled={Boolean(busy)}
+     onChange={e=>void chatToggle(e.target.checked)}/>
    </div>
    <div className={styles.quickAgentSwitchRow}>
     <span className={styles.quickAgentRowIcon}><PhoneCall size={18}/></span>
