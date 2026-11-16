@@ -94,3 +94,20 @@
 .caseHeader a{display:inline-flex;align-items:center;gap:5px;color:#528251;font-size:11px;font-weight:850;margin-left:8px;text-decoration:underline}
 .alert button{margin-left:auto;border:0;background:none;color:inherit}
 @media(max-width:730px){.notices{position:relative;top:auto;right:auto;width:100%;margin:8px 0}.headerActions{gap:5px}.headerActions>[class]{min-width:0}}
+
+
+/* Shared VMV pastel identity for support screens. */
+.page{--line:#ebe3f3;background:#fdfcff;color:#171127}
+.header{border-color:#eee5f4}
+.brand{color:#20142e}
+.brand:first-letter{color:#9261dc}
+.back,.help{color:#724db5}
+.eyebrow{color:#845ac4}
+.intro h1 span{color:#8054d9}
+.intro p{color:#71687e}
+.grid{border-color:#ece4f3;background:#fff;border-radius:22px;box-shadow:0 10px 22px #3020460b}
+.list{background:#fcfaff;border-color:#ede7f5}
+.detail{background:#fff}
+.paneHead{border-color:#eee7f6}
+.add,.primary{background:#e3d2ff;color:#4f2a89;border-color:#d8c2f8}
+.refresh{color:#6b44b3;border-color:#e9ddf4}
