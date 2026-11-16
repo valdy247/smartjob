@@ -1,5 +1,6 @@
 import {getSupabase} from "@/lib/supabase";
 import type {WizardDraft} from "./AgentSetupWizard";
+import {publicChatReadiness} from "@/lib/vmv-ai-agents/public-chat-readiness";
 
 export type PersistedAgent=WizardDraft&{
  id:string;revision:number;status:"draft"|"active"|"paused";owner_id:string;
@@ -111,6 +112,8 @@ export async function setAgentPublicChatAccess(agent:PersistedAgent,enabled:bool
  const {client,user}=await currentUser();
  if(agent.owner_id!==user.id||!uuid.test(agent.id)||!uuid.test(agent.business_id))
   throw Error("El agente no pertenece a tu cuenta.");
+ if(enabled){const readiness=publicChatReadiness({...agent,configuration:agent.setup});
+  if(!readiness.ready)throw Error(readiness.reason);}
  const {data,error}=await client.from("vmv_ai_agents")
   .update({configuration:{...agent.setup,cap_chat:enabled?"Sí":"No"}})
   .eq("id",agent.id).eq("owner_id",user.id)
