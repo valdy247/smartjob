@@ -209,14 +209,18 @@ export const visualBlocks:Config["components"]={
    title:titleField,description:textArea,
    items:{type:"array",arrayFields:{image:imgField,alt:titleField,caption:titleField},
     defaultItemProps:{image:"",alt:"",caption:""},getItemSummary:(item)=>item.caption||"Fotografía"},
-   layout:styleFields.layout,padding:styleFields.padding,surface:styleFields.surface
+   layout:styleFields.layout,
+   columns:{type:"select",options:[
+    {label:"Una columna",value:"1"},{label:"Dos columnas",value:"2"},{label:"Tres columnas",value:"3"}
+   ]},
+   padding:styleFields.padding,surface:styleFields.surface
   },
-  defaultProps:{title:"Una mirada a nuestro trabajo",description:"",items:[],layout:"mosaic",padding:"normal",surface:"light"},
+  defaultProps:{title:"Una mirada a nuestro trabajo",description:"",items:[],layout:"grid",columns:"2",padding:"normal",surface:"light"},
   renderFields:({fields})=><><FieldTab label="Contenido">{fields.title}{fields.description}{fields.items}</FieldTab>
-   <FieldTab label="Diseño">{fields.layout}{fields.padding}{fields.surface}</FieldTab></>,
-  render:({id,title,description,items,layout,padding,surface,puck,...textStyling})=>!toList(items).some(item=>photo(item.image))&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
+   <FieldTab label="Diseño">{fields.layout}{fields.columns}{fields.padding}{fields.surface}</FieldTab></>,
+  render:({id,title,description,items,layout,columns,padding,surface,puck,...textStyling})=>!toList(items).some(item=>photo(item.image))&&!puck.isEditing?<></>:<Section mode={surface} padding={padding} className="vmv-gallery-section">
    <div className="vmv-section-heading"><h2 style={visualTextStyle(textStyling,"title")}>{title}</h2>{description?<p style={visualTextStyle(textStyling,"description")}>{description}</p>:null}</div>
-   <div className="vmv-gallery-items" data-layout={layout||"mosaic"}>{toList(items).map((item,index)=><figure key={visualItemId(item,index)}>
+   <div className="vmv-gallery-items" data-layout={layout||"mosaic"} data-columns={columns||undefined}>{toList(items).map((item,index)=><figure key={visualItemId(item,index)}>
     <BuilderEditableImage id={id} target={{field:"image",index,itemId:typeof item.id==="string"?item.id:undefined}} src={item.image} alt={imageAlt(heading(item.caption),heading(item.alt))} settings={item} editing={puck.isEditing}/>
     {item.caption?<figcaption style={visualTextStyle(item,"caption")}>{heading(item.caption)}</figcaption>:null}
    </figure>)}</div>
