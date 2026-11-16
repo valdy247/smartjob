@@ -6,6 +6,7 @@ import {checkCallPolicy,type CallPolicy,type CallDecision} from "@/lib/vmv-ai-ag
 import styles from "./CallPreviewChat.module.css";
 
 type Route=CallDecision["action"];
+type Scenario="actual"|"menu"|"agent"|"translation";
 type Agent={id:string;name:string;language:string;configuration:Record<string,string>};
 type Line={id:number;who:"system"|"caller"|"agent";text:string};
 const copy=(text:string)=>text.trim().slice(0,1000);
@@ -26,6 +27,8 @@ export default function CallPreviewChat({policy,selectedAgentId,onClose}:{
 }){
  const [lines,setLines]=useState<Line[]>([]);
  const [route,setRoute]=useState<Route|null>(null);
+ const [scenario,setScenario]=useState<Scenario>("actual");
+ const [routeNote,setRouteNote]=useState("");
  const [agent,setAgent]=useState<Agent|null>(null);
  const [entry,setEntry]=useState("");
  const [loading,setLoading]=useState(true);
@@ -39,20 +42,26 @@ export default function CallPreviewChat({policy,selectedAgentId,onClose}:{
  useEffect(()=>{scroll.current?.scrollIntoView({block:"nearest",behavior:"smooth"});},[lines.length]);
  useEffect(()=>{
   let alive=true;conversation.current=null;setAgent(null);setRoute(null);
-  setLines([]);setError("");setLoading(true);setEntry("");
+  setLines([]);setError("");setRouteNote("");setLoading(true);setEntry("");
   const load=async()=>{
    const db=getSupabase();
    if(!db)throw Error("No se pudo abrir la prueba.");
    const {data:{user},error:userError}=await db.auth.getUser();
    const {data:{session}}=await db.auth.getSession();
    if(userError||!user||user.is_anonymous||!session?.access_token)throw Error("Inicia sesión para probar la llamada.");
-   const response=await fetch("/api/vmv/ai-agents/call-settings",{
-    method:"POST",cache:"no-store",headers:{"Content-Type":"application/json",
-    Authorization:"Bearer "+session.access_token},
-    body:JSON.stringify({policy:checkCallPolicy(policy)})
-   });
-   const payload=await response.json() as {decision?:CallDecision;error?:string};
-   if(!response.ok||!payload.decision)throw Error(payload.error||"No se pudo simular esta configuración.");
+   let decision:CallDecision|null=null;
+   let agentReadyForCalls=false;
+   if(scenario==="actual"){
+    const response=await fetch("/api/vmv/ai-agents/call-settings",{
+     method:"POST",cache:"no-store",headers:{"Content-Type":"application/json",
+     Authorization:"Bearer "+session.access_token},
+     body:JSON.stringify({policy:checkCallPolicy(policy)})
+    });
+    const payload=await response.json() as {decision?:CallDecision;selectedAgentReady?:boolean;error?:string};
+    if(!response.ok||!payload.decision)throw Error(payload.error||"No se pudo simular esta configuración.");
+    decision=payload.decision;
+    agentReadyForCalls=Boolean(payload.selectedAgentReady);
+   }
    let found:Agent|null=null;
    if(selectedAgentId){
     const {data}=await db.from("vmv_ai_agents")
@@ -63,30 +72,43 @@ export default function CallPreviewChat({policy,selectedAgentId,onClose}:{
    }
    if(!alive)return;
    setAgent(found);
-   const action=payload.decision.action;
-   setRoute(action);
-   if(action==="menu"){
-    setLines([line("system","Para hablar con nuestro agente de inteligencia artificial, marca 1. Para conversar con traducción, marca 2.")]);
-   }else if(action==="agent"){
-    setLines([line("agent",agentGreeting(found))]);
-   }else if(action==="translation"){
-    setLines([line("system","Se conectaría la llamada con Smart Call. Tú y el cliente hablarían con traducción en tiempo real.")]);
-   }else if(action==="ring_owner"){
-    setLines([line("system","Primero sonaría el teléfono autorizado durante "+policy.ring_seconds+" segundos.")]);
+   const action:Route=scenario==="actual"?decision!.action:scenario;
+   if(scenario!=="actual")setRouteNote("Escenario de prueba · no modifica la línea.");
+   else if(action==="message"){
+    setRouteNote(!agentReadyForCalls&&policy.agent_enabled?
+     "No hay un agente activo seleccionado para esta línea.":
+     decision?.reason==="outside_hours"?
+      "La configuración está fuera de horario.":
+      "Las funciones disponibles no están atendiendo ahora.");
+   }else setRouteNote("Así respondería la línea según tus ajustes.");
+   if(action==="agent"&&!found){
+    setRoute("message");
+    setLines([line("system","No tienes un agente seleccionado. Elige uno en AI Agents y vuelve a probar.")]);
    }else{
-    setLines([line("system",policy.closed_message)]);
+    setRoute(action);
+    if(action==="menu"){
+     setLines([line("system","Menú orientativo: marca 1 para el agente IA o 2 para traducción.")]);
+    }else if(action==="agent"){
+     setLines([line("agent",agentGreeting(found))]);
+    }else if(action==="translation"){
+     setLines([line("system","Smart Call conectaría a ambas personas con traducción en tiempo real. Esta vista es solo una simulación.")]);
+    }else if(action==="ring_owner"){
+     setLines([line("system","Primero sonaría el teléfono autorizado durante "+policy.ring_seconds+" segundos.")]);
+    }else{
+     setLines([line("system",policy.closed_message)]);
+    }
    }
   };
   void load().catch(e=>{if(alive)setError(e instanceof Error?e.message:"No se pudo cargar la prueba.");})
    .finally(()=>{if(alive)setLoading(false);});
   return()=>{alive=false;};
- },[policy,selectedAgentId,restart]);
+ },[policy,selectedAgentId,restart,scenario]);
  const select=(digit:1|2)=>{
   if(route!=="menu")return;
-  const next=digit===1?"agent":"translation";
+  const next:Route=digit===1?(agent?"agent":"message"):"translation";
   setLines(previous=>[...previous,line("caller",String(digit)),
    line(digit===1?"agent":"system",digit===1?agentGreeting(agent):
-    "Se conectaría la llamada con Smart Call. Tú y el cliente hablarían con traducción en tiempo real.")]);
+    "Smart Call conectaría a ambas personas con traducción en tiempo real. Esta vista es solo una simulación.")]);
   setRoute(next);
  };
  const noAnswer=()=>{
@@ -133,6 +155,13 @@ export default function CallPreviewChat({policy,selectedAgentId,onClose}:{
    <button type="button" className={styles.restart} onClick={()=>setRestart(v=>v+1)} disabled={loading||sending} aria-label="Reiniciar prueba"><RotateCcw size={17}/></button>
    <button type="button" className={styles.close} onClick={onClose} aria-label="Cerrar"><X size={18}/></button>
   </div>
+  <div className={styles.scenarios} role="group" aria-label="Elegir recorrido de prueba">
+   {([["actual","Ruta actual"],["menu","Menú 1 / 2"],["agent","Agente IA"],["translation","Traducción"]] as const).map(([value,label])=>
+    <button key={value} type="button" aria-pressed={scenario===value}
+     disabled={loading||sending} className={scenario===value?styles.scenarioActive:styles.scenario}
+     onClick={()=>setScenario(value)}>{label}</button>)}
+  </div>
+  {routeNote?<p className={styles.routeNote}>{routeNote}</p>:null}
   <div className={styles.chat} aria-live="polite" aria-relevant="additions text">
    {loading?<p className={styles.wait}>Preparando llamada de prueba…</p>:null}
    {lines.map(item=><div key={item.id} className={item.who==="caller"?styles.userBubble:styles.botBubble}>
