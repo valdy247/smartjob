@@ -14,6 +14,24 @@ export default function PublicAgentChat({slug,agentName}:{slug:string;agentName:
  const closeButton=useRef<HTMLButtonElement|null>(null);
  const launchButton=useRef<HTMLButtonElement|null>(null);
  const end=useRef<HTMLDivElement|null>(null);
+ useEffect(()=>{
+  const openFromHash=()=>{if(window.location.hash==="#vmv-chat")setOpen(true);};
+  const onChatLink=(event:MouseEvent)=>{
+   const target=event.target;
+   if(!(target instanceof Element))return;
+   const link=target.closest('a[href="#vmv-chat"]');
+   if(!link)return;
+   event.preventDefault();
+   setOpen(true);
+  };
+  openFromHash();
+  window.addEventListener("hashchange",openFromHash);
+  document.addEventListener("click",onChatLink,true);
+  return()=>{
+   window.removeEventListener("hashchange",openFromHash);
+   document.removeEventListener("click",onChatLink,true);
+  };
+ },[]);
  useEffect(()=>{if(open)closeButton.current?.focus();},[open]);
  useEffect(()=>{if(open)end.current?.scrollIntoView({behavior:"smooth",block:"end"});},[open,turns.length,error]);
  function close(){setOpen(false);launchButton.current?.focus();}
