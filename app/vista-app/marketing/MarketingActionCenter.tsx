@@ -37,6 +37,16 @@ type RequestRow={
  created_at:string;updated_at:string;business_snapshot?:ReturnType<typeof businessRequestSnapshot>|null;confirmed_at?:string|null;consent_version?:string|null;activity_history?:ActivityEvent[];reputation_data?:{mode:string;reviewText:string;replyText:string;reviewLink:string}|null;google_profile_data?:GoogleData&{media?:{kind:string;path:string}[]}|null;web_repair_data?:WebRepairData|null;directory_data?:DirectoryData|null
 };
 type SavedBusiness=CentralBusiness&{source?:"profile"|"agent"};
+// A source suggestion may refer to a business already in the owner's central
+// profile. Reuse only a single exact owner/name match after explicit selection.
+const normalizedBusinessName=(name:string)=>name.normalize("NFKC").trim().replace(/\\s+/g," ").toLocaleLowerCase("en-US");
+function existingForSuggestion(id:string,records:SavedBusiness[]):SavedBusiness|null{
+ const suggestion=records.find(item=>item.id===id&&Boolean(item.source));
+ if(!suggestion)return null;
+ const matches=records.filter(item=>!item.source&&item.owner_id===suggestion.owner_id&&
+  normalizedBusinessName(item.name)===normalizedBusinessName(suggestion.name));
+ return matches.length===1?matches[0]:null;
+}
 type Acceptance={id:string;request_id:string;owner_id:string;quote_revision:number;quoted_price_cents:number;accepted_at:string};
 type Service={id:ServiceCode;name:string;why:string;mode:string};
 const services:Service[]=[
@@ -413,20 +423,44 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   setBusinessError("");
  };
  const pickBusiness=(id:string)=>{
-  const record=savedBusinesses.find(x=>x.id===id);
-  if(!record)return;
+  const selected=savedBusinesses.find(x=>x.id===id);
+  if(!selected)return;
+  const existing=existingForSuggestion(id,savedBusinesses);
+  const record=existing||selected;
   businessEditedRef.current=true;
   const {source:ignored,...clean}=record;
-  setBusinessId(id);setBusinessDetails({...clean});setBusinessFiles(emptyBusinessFiles);
+  setBusinessId(record.id);setBusinessDetails({...clean});setBusinessFiles(emptyBusinessFiles);
   setName(record.name);setSite(record.website_url||"");setChosenCategory(record.category_id||"other");
   setSaveAlsoInBusiness(false);setConsent(false);
   setGoogleData(v=>businessGoogleSeed(record,v.action));
   setGoogleMedia(emptyMedia);
-  setBusinessMessage(en?"Business selected. Only missing details will be requested.":"Negocio seleccionado. Pediremos solo los datos que falten.");
+  setBusinessMessage(existing?
+   (en?"Business already saved. Using your existing profile.":"Este negocio ya está guardado. Usaremos su perfil existente."):
+   (en?"Business selected. Only missing details will be requested.":"Negocio seleccionado. Pediremos solo los datos que falten."));
   setBusinessError("");setWizardError("");
  };
  const saveBusiness=async():Promise<string|null>=>{
   if(!client||!user){setBusinessError(en?"Sign in to save your business.":"Inicia sesión para guardar tu negocio.");return null;}
+  const existing=existingForSuggestion(businessId,savedBusinesses);
+  if(existing&&existing.owner_id===user.id){
+   // Selecting an AI Agent business should never provision a second central business.
+   // Preserve typed optional request data, but do not overwrite the saved profile.
+   const defaults=centralBusinessDefaults();
+   const edits=Object.fromEntries(Object.entries(businessDetails).filter(([key,value])=>
+    key!=="id"&&key!=="owner_id"&&key!=="source_system"&&key!=="source_record_id"&&
+    Object.prototype.hasOwnProperty.call(defaults,key)&&
+    JSON.stringify(value)!==JSON.stringify(defaults[key as keyof typeof defaults])));
+   setBusinessId(existing.id);
+   setBusinessDetails({...existing,...edits,id:existing.id,owner_id:user.id,
+    source_system:existing.source_system||null,source_record_id:existing.source_record_id||null});
+   setBusinessError("");
+   setBusinessMessage(en?"Using saved business. No duplicate created.":"Usaremos el negocio guardado. No se creó un duplicado.");
+   return existing.id;
+  }
+  if(!savedBusinesses.some(x=>x.id===businessId&&!x.source)&&savedBusinesses.some(x=>!x.source)){
+   setBusinessError(en?"Select your existing saved business above to continue.":"Selecciona arriba tu negocio guardado para continuar.");
+   return null;
+  }
   const draft:CentralBusiness={...businessDetails,name:name.trim(),category_id:effectiveCategory,website_url:websiteAddress(site),owner_id:user.id};
   const invalid=validCentralBusiness(draft);
   if(invalid){setBusinessError(invalid);return null;}
@@ -474,7 +508,10 @@ export default function MarketingActionCenter({businessName,industryId,website,o
    setBusinessMessage(en?"Business profile saved.":"Perfil de negocio guardado.");
    return saved.id;
   }catch(e){
-   setBusinessError(errorMessage(e,en?"Could not save the business.":"No pudimos guardar el negocio."));
+   const code=(e&&typeof e==="object"&&"code" in e)?String((e as {code?:string}).code):"";
+   setBusinessError(code==="23514"?
+    (en?"You already have a saved business. Select it above.":"Ya tienes un negocio guardado. Selecciónalo arriba."):
+    errorMessage(e,en?"Could not save the business.":"No pudimos guardar el negocio."));
    return null;
   }finally{setBusinessBusy(false);}
  };
