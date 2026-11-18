@@ -1,4 +1,5 @@
 import {NextRequest,NextResponse} from "next/server";
+import {createClient} from "@supabase/supabase-js";
 
 export const runtime="nodejs";
 export const maxDuration=120;
@@ -27,6 +28,16 @@ type PsiResult={
 function roundScore(score?:number){return typeof score==="number"&&Number.isFinite(score)?Math.round(score*100):null;}
 
 export async function GET(req:NextRequest){
+ const token=req.headers.get("authorization")?.match(/^Bearer (\\S+)$/i)?.[1];
+ const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL;
+ const publishable=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+ if(!token||!supabaseUrl||!publishable)return NextResponse.json({error:"sign_in_required"},{status:401,headers:{"Cache-Control":"private, no-store"}});
+ try{
+  const client=createClient(supabaseUrl,publishable,{auth:{persistSession:false,autoRefreshToken:false}});
+  const {data:{user},error}=await client.auth.getUser(token);
+  if(error||!user||user.is_anonymous)return NextResponse.json({error:"sign_in_required"},{status:401,headers:{"Cache-Control":"private, no-store"}});
+ }catch{return NextResponse.json({error:"sign_in_required"},{status:401,headers:{"Cache-Control":"private, no-store"}});}
+
  const website=safePublicWebsite(req.nextUrl.searchParams.get("url")||"");
  const locale=req.nextUrl.searchParams.get("lang")==="en"?"en":"es";
  const errorCopy=(es:string,en:string)=>locale==="en"?en:es;
