@@ -9,9 +9,9 @@ export const dynamic="force-dynamic";
 type Draft={name:string;headline:string;message:string;destination:string;imageHash:string;
  pageId:string;instagramId:string|null;placements:"facebook"|"facebook_instagram";
  dailyBudgetCents:number;durationDays:number;totalBudgetCents:number;country:"US";
- objective:"OUTCOME_TRAFFIC";specialCategoriesAcknowledged:true;adAccountId:string};
+ objective:"OUTCOME_TRAFFIC";specialCategoriesAcknowledged:true;adAccountId:string;cityKey:string;cityName:string;citySearch:string;radiusMiles:10|15|25|50};
 const asInt=(x:unknown)=>typeof x==="number"&&Number.isInteger(x)?x:null;
-function parseDraft(input:any,adAccountId:string,pages:Awaited<ReturnType<typeof authorizedPages>>):Draft|null{
+function parseDraft(input:any,adAccountId:string,pages:Awaited<ReturnType<typeof authorizedPages>>,cities:Array<{key:string;name:string;region:string}>):Draft|null{
  const name=typeof input?.name==="string"?input.name.trim():"";
  const headline=typeof input?.headline==="string"?input.headline.trim():"";
  const message=typeof input?.message==="string"?input.message.trim():"";
@@ -19,6 +19,8 @@ function parseDraft(input:any,adAccountId:string,pages:Awaited<ReturnType<typeof
  const imageHash=typeof input?.imageHash==="string"?input.imageHash:"";
  const pageId=typeof input?.pageId==="string"?input.pageId:"";
  const placements=input?.placements;
+ const city=cities.find(x=>x.key===input?.cityKey&&x.name===input?.cityName);
+ const radius=input?.radiusMiles;
  const daily=asInt(input?.dailyBudgetCents),days=asInt(input?.durationDays);
  const page=pages.find(x=>x.id===pageId);
  if(!page||!name||name.length>80||headline.length<3||headline.length>80||
@@ -27,11 +29,13 @@ function parseDraft(input:any,adAccountId:string,pages:Awaited<ReturnType<typeof
   !days||days<1||days>30||
   !["facebook","facebook_instagram"].includes(placements)||
   (placements==="facebook_instagram"&&!page.instagramId)||
-  input?.specialCategoriesAcknowledged!==true)return null;
+  input?.specialCategoriesAcknowledged!==true||!city||!metaId(city.key)||
+  ![10,15,25,50].includes(radius))return null;
  return {name,headline,message,destination,imageHash,pageId,
   instagramId:page.instagramId,placements,dailyBudgetCents:daily,
   durationDays:days,totalBudgetCents:daily*days,country:"US",
-  objective:"OUTCOME_TRAFFIC",specialCategoriesAcknowledged:true,adAccountId};
+  objective:"OUTCOME_TRAFFIC",specialCategoriesAcknowledged:true,adAccountId,
+  cityKey:city.key,cityName:city.name,citySearch:String(input?.citySearch||"").trim().slice(0,80),radiusMiles:radius};
 }
 const fail=(error:string,status=400)=>NextResponse.json({error},{status,headers:noCache});
 export async function GET(req:NextRequest){
@@ -66,7 +70,17 @@ export async function POST(req:NextRequest){
   if(!uuid(input?.clientKey))return fail("invalid_idempotency_key");
   let pages;
   try{pages=await authorizedPages(active.token);}catch{return fail("meta_pages_unavailable",502);}
-  const draft=parseDraft(input?.draft,selectedAccount,pages);
+  const citySearch=typeof input?.draft?.citySearch==="string"?input.draft.citySearch.trim():"";
+  if(citySearch.length<3||citySearch.length>80)return fail("select_a_meta_city");
+  let cities:Array<{key:string;name:string;region:string}>=[];
+  try{
+   const found=await metaGet("search",active.token,{type:"adgeolocation",
+    location_types:JSON.stringify(["city"]),q:citySearch,limit:"25"});
+   cities=(Array.isArray(found.data)?found.data:[]).filter((x:any)=>
+    metaId(x.key)&&x.country_code==="US"&&x.type==="city")
+    .map((x:any)=>({key:String(x.key),name:String(x.name||""),region:String(x.region||"")}));
+  }catch{return fail("meta_city_lookup_unavailable",502);}
+  const draft=parseDraft(input?.draft,selectedAccount,pages,cities);
   if(!draft)return fail("invalid_campaign_details_or_missing_page");
   const {data,error}=await db.from("vmv_marketing_ads_campaigns").insert({
    owner_id:owner,connection_id:active.connection.id,provider:"meta",
@@ -120,7 +134,7 @@ export async function POST(req:NextRequest){
     lifetime_budget:String(draft.totalBudgetCents),
     start_time:String(start),end_time:String(end),
     destination_type:"WEBSITE",
-    targeting:JSON.stringify({geo_locations:{countries:["US"]},age_min:18,
+    targeting:JSON.stringify({geo_locations:{cities:[{key:draft.cityKey,radius:draft.radiusMiles,distance_unit:"mile"}]},age_min:18,
      publisher_platforms:draft.placements==="facebook"?
        ["facebook"]:["facebook","instagram"]})
    });
