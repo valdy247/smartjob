@@ -45,10 +45,12 @@ async function apiResponse(response:Response){
  return json;
 }
 
-export default function SocialCaptionPreview({onBack}:{onBack:()=>void}){
+export default function SocialCaptionPreview({onBack,businessName=""}:{onBack:()=>void;businessName?:string}){
  const {language}=useInterfaceLanguage();
  const en=language==="en";
  const [network,setNetwork]=useState("");
+ const [brand,setBrand]=useState(businessName);
+ useEffect(()=>{if(businessName&&!brand.trim())setBrand(businessName);},[businessName,brand]);
  const [mode,setMode]=useState<Mode>("speech");
  const [video,setVideo]=useState<File|null>(null);
  const [scene,setScene]=useState("");
@@ -108,7 +110,7 @@ export default function SocialCaptionPreview({onBack}:{onBack:()=>void}){
    setStage("generate");
    const response=await fetch("/api/marketing/social-captions/generate",{
     method:"POST",headers:{Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},
-    body:JSON.stringify({network,transcript:spoken,scene:scene.trim(),locale:language}),
+    body:JSON.stringify({network,transcript:spoken,scene:scene.trim(),locale:language,brand:brand.trim()}),
     signal:abortController.signal,cache:"no-store"
    });
    const result=await apiResponse(response);
@@ -143,6 +145,11 @@ export default function SocialCaptionPreview({onBack}:{onBack:()=>void}){
      <option value="">{en?"Choose a network":"Selecciona una red"}</option>
      {networks.map(item=><option key={item} value={item}>{item}</option>)}
     </select>
+   </label>
+   <label className={styles.field}>
+    <strong>{en?"Business or brand (optional)":"Negocio o marca (opcional)"}</strong>
+    <input type="text" className={styles.brandInput} maxLength={140} value={brand} disabled={busy} onChange={e=>{setBrand(e.target.value);setCaption("");}} placeholder={en?"Example: My bakery":"Ej.: Mi pastelería"}/>
+    <small className={styles.helper}>{en?"Only used to personalize your caption; no extra details are invented.":"Se usa solo para personalizar el texto, sin inventar información."}</small>
    </label>
    <div className={styles.field}>
     <strong><span>02</span>{en?"Does the video have speech?":"¿El video tiene voz?"}</strong>
@@ -179,7 +186,7 @@ export default function SocialCaptionPreview({onBack}:{onBack:()=>void}){
     </div>
     {notice?<p className={styles.notice} role="status">{notice}</p>:null}
    </div>:null}
-   <p className={styles.privacy}><LockKeyhole size={15}/>{en?"VMV doesn't save the video, extracted audio or transcript. For spoken videos, only temporary audio is sent to the transcription provider. Nothing publishes automatically.":"VMV no guarda el video, el audio ni la transcripción. Para videos con voz, enviamos únicamente audio temporal al proveedor de transcripción. Nada se publica automáticamente."}</p>
+   <p className={styles.privacy}><LockKeyhole size={15}/>{en?"VMV does not save your video or audio. Audio is sent for transcription; text and your description are sent to an AI provider to write the caption. Nothing is published automatically.":"VMV no guarda el video ni el audio. Enviamos el audio al servicio de transcripción y el texto a la IA para redactar la descripción. Nada se publica automáticamente."}</p>
   </div>
   {quizOpen?<ScienceWaitQuiz key={seed} en={en} seed={seed} processing={busy} mode="caption" phase={stage} onContinue={()=>setQuizOpen(false)}/>:null}
  </section>;
