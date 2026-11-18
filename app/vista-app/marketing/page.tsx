@@ -298,6 +298,10 @@ function MarketingWorkspace(){
         <button type="button" className={styles.secondary} onClick={()=>setCampaignEditing(value=>!value)}>{campaignEditing?<CheckCircle2 size={16}/>:<ClipboardCopy size={16}/>} {campaignEditing?translate("marketing.ui.done"):translate("marketing.ui.edit")}</button>
         <button type="button" className={styles.secondary} onClick={()=>void copy(activeCampaignDraft)}><ClipboardCopy size={16}/> {translate("marketing.copy.copy")}</button>
        </div>
+       <button type="button" className={styles.primary} onClick={()=>{setRequestedService("campaign_setup");setSection("actions");setNotice("");}}>
+        {language==="en"?"Request a campaign quote":"Solicitar una campaña y cotización"} <ArrowUpRight size={16}/>
+       </button>
+       <p className={styles.fineprint}>{language==="en"?"This is a campaign draft. No advertisement is published and no charges are made from this screen.":"Este es un borrador de campaña. Desde esta pantalla no se publican anuncios ni se realizan cobros."}</p>
        <button type="button" className={styles.detailsToggle} aria-expanded={campaignDetailsOpen}
         onClick={()=>setCampaignDetailsOpen(value=>!value)}>
         <span>{campaignDetailsOpen?translate("marketing.ui.hideStrategy"):translate("marketing.ui.showStrategy")}</span>
