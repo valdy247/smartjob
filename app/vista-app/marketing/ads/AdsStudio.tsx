@@ -360,9 +360,11 @@ export default function AdsStudio(){
      <span>{localized("Más información","Learn more")}</span></div>
    </div>
    <div className={styles.uploadRow}>
-    <label>{localized("Imagen del anuncio · JPG/PNG hasta 2 MB","Ad image · JPG/PNG up to 2 MB")}
-     <input type="file" accept="image/jpeg,image/png" onChange={e=>{setImage(e.target.files?.[0]||null);
-      setImageHash("");setDraftId("");setDraftKey(crypto.randomUUID());}}/></label>
+    <label className={styles.imagePicker}>{localized("Imagen del anuncio · JPG/PNG hasta 2 MB","Ad image · JPG/PNG up to 2 MB")}
+     <input className={styles.visuallyHiddenFile} type="file" accept="image/jpeg,image/png" onChange={e=>{setImage(e.target.files?.[0]||null);
+      setImageHash("");setDraftId("");setDraftKey(crypto.randomUUID());}}/>
+     <span className={styles.imagePickerButton}><ImagePlus size={16}/>{image?image.name.slice(0,30):localized("Elegir imagen","Choose image")}</span>
+    </label>
     <button type="button" className={styles.secondary} disabled={!!busy||!image} onClick={upload}>{busy==="image"?localized("Subiendo…","Uploading…"):localized("Preparar imagen en Meta","Prepare image in Meta")}</button>
     {imageHash?<span className={styles.connected}><CheckCircle2 size={15}/>{localized("Lista","Ready")}</span>:null}
    </div>
@@ -402,6 +404,8 @@ export default function AdsStudio(){
     onChange={e=>patch("specialCategoriesAcknowledged",e.target.checked)}/>
     <span>{localized("Confirmo que no anuncio vivienda, empleo, crédito ni otra categoría especial. Los datos de mi oferta son verdaderos y tengo derechos sobre las imágenes.",
      "I confirm this is not housing, employment, credit or another special category. My claims are accurate and I own the image rights.")}</span></label>
+   {!canSave?<p className={styles.completionNote}>{localized("Para guardar: selecciona ciudad y página, escribe título y mensaje, agrega enlace HTTPS e imagen, define presupuesto y confirma la categoría del anuncio.",
+    "To save: select a city and Page, enter headline and copy, add an HTTPS link and image, set a budget and confirm the ad category.")}</p>:null}
    <button type="button" className={styles.primary} disabled={!canSave||!!busy} onClick={saveDraft}>{localized("Guardar campaña para aprobación","Save campaign for approval")}</button>
    <p className={styles.muted}>{localized("Guardar no publica anuncios. Después podrás crear la campaña pausada para revisar en Meta.",
     "Saving does not publish ads. You can then create a paused campaign for review in Meta.")}</p>
