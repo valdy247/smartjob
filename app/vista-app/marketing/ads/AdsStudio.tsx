@@ -481,7 +481,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
     <label>{localized("Enlace de destino","Destination link")}
      <input type="text" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false}
       value={form.destination} onChange={e=>patch("destination",e.target.value)}
-      placeholder="mayulibakery.com"/></label>
+      placeholder={localized("Ej. mayulibakery.com","E.g. mayulibakery.com")}/></label>
     <div className={styles.linkCheck}>
      <button type="button" className={styles.secondary} disabled={!normalizedDestination}
       onClick={testDestination}><ExternalLink size={15}/>{localized("Probar enlace","Test link")}</button>
