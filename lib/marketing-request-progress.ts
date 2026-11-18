@@ -16,5 +16,5 @@ export function marketingRequestProgress(
   return Math.max(maximum,milestones[state]);
  },0);
  const current=status==="needs_customer"?0:milestones[status];
- return Math.max(16,Math.min(82,current,82)+(Math.max(prior,quoteAccepted?milestones.approved:0)>Math.max(16,current)?Math.max(prior,quoteAccepted?milestones.approved:0)-Math.max(16,current):0));
+ return Math.min(82,Math.max(16,current,prior,quoteAccepted?milestones.approved:0));
 }
