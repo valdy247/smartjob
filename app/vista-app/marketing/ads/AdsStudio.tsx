@@ -167,7 +167,7 @@ export default function AdsStudio(){
  const noBusinessCategories=form.specialCategoriesAcknowledged;
  return <div className={styles.workspace}>
   <section className={styles.hero}>
-   <span className={styles.eyebrow}>VMV BUSINESS · ADS CONTROL CENTER</span>
+   <span className={styles.eyebrow}>{localized("VMV BUSINESS · ANUNCIOS","VMV BUSINESS · ADS CONTROL CENTER")}</span>
    <h1>{localized("Conecta. Diseña. Aprueba.","Connect. Create. Approve.")}</h1>
    <p>{localized("Crea anuncios desde VMV, usando cuentas publicitarias autorizadas. Las primeras pruebas crean anuncios pausados; la publicación requiere una aprobación adicional.","Build ads in VMV with authorized ad accounts. The initial tests create paused ads; publishing requires additional approval.")}</p>
    <div className={styles.heroActions}><a href="/vista-app/marketing">{localized("Volver a Marketing","Back to Marketing")}</a>
@@ -184,7 +184,7 @@ export default function AdsStudio(){
    </div>)}</div>
   </section>
   <section className={styles.panel}>
-   <div className={styles.panelHead}><div><span className={styles.eyebrow}>02 · META</span><h2>{localized("Conectar cuenta de anuncios","Connect an ad account")}</h2></div>
+   <div className={styles.panelHead}><div><span className={styles.eyebrow}>{localized("02 · META","02 · META")}</span><h2>{localized("Conectar cuenta de anuncios","Connect an ad account")}</h2></div>
     {meta.connected?<span className={styles.connected}>{localized("Conectada","Connected")}</span>:null}</div>
    {loading?<p>{localized("Verificando conexiones…","Checking connections…")}</p>:
     !meta.configured?<div className={styles.setup}>
@@ -213,12 +213,12 @@ export default function AdsStudio(){
    <div className={styles.panelHead}><div><span className={styles.eyebrow}>03 · {localized("CREACIÓN","CREATION")}</span><h2>{localized("Crear anuncio de tráfico web","Create a website traffic ad")}</h2></div></div>
    <p className={styles.muted}>{localized("Para empezar, solo tráfico web hacia una URL HTTPS, audiencia general de Estados Unidos y máximo 30 días. Otros objetivos y audiencias requieren validación adicional.","Initial support: website traffic to an HTTPS URL, broad US audiences and up to 30 days. Other objectives and audiences require additional validation.")}</p>
    <div className={styles.fieldsGrid}>
-    <label>{localized("Nombre de la campaña","Campaign name")}<input maxLength={80} value={form.name} onChange={e=>patch("name",e.target.value)} placeholder="Promoción de noviembre"/></label>
+    <label>{localized("Nombre de la campaña","Campaign name")}<input maxLength={80} value={form.name} onChange={e=>patch("name",e.target.value)} placeholder={localized("Promoción de noviembre","November promotion")}/></label>
     <label>{localized("Página de Facebook autorizada","Authorized Facebook Page")}<select value={form.pageId} onChange={e=>patch("pageId",e.target.value)}>
      <option value="">{localized("Seleccionar página","Choose Page")}</option>{meta.pages.map(p=><option key={p.id} value={p.id}>{p.name}{p.instagramUsername?" · @"+p.instagramUsername:""}</option>)}
     </select></label>
     <label>{localized("Plataformas Meta","Meta placements")}<select value={form.placements} onChange={e=>patch("placements",e.target.value)}>
-     <option value="facebook">Facebook</option><option value="facebook_instagram" disabled={!selectedPage?.instagramId}>Facebook + Instagram</option>
+     <option value="facebook">{localized("Facebook","Facebook")}</option><option value="facebook_instagram" disabled={!selectedPage?.instagramId}>{localized("Facebook e Instagram","Facebook + Instagram")}</option>
     </select></label>
     <label>{localized("Página de destino HTTPS","HTTPS destination URL")}<input inputMode="url" value={form.destination} onChange={e=>patch("destination",e.target.value)} placeholder="https://tunegocio.com/oferta"/></label>
     <label>{localized("Título del anuncio","Ad headline")}<input maxLength={80} value={form.headline} onChange={e=>patch("headline",e.target.value)} placeholder={localized("Descubre nuestra oferta","Discover our offer")}/></label>
