@@ -4,7 +4,7 @@ import {adsMetaReady,adsOrigin,encryptMetaToken,metaGet,stateHash} from "@/lib/v
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const redirect=(origin:string,status:string)=>NextResponse.redirect(origin+
- "/vista-app/marketing/ads?meta="+encodeURIComponent(status),{status:303,headers:{"Cache-Control":"no-store"}});
+ "/vista-app/marketing/ads/create?meta="+encodeURIComponent(status),{status:303,headers:{"Cache-Control":"no-store"}});
 async function exchange(code:string,redirectUri:string){
  const u=new URL("https://graph.facebook.com/v27.0/oauth/access_token");
  u.searchParams.set("client_id",process.env.META_APP_ID||"");
