@@ -262,6 +262,15 @@ export default function AdsStudio(){
      </select></label>
     <button className={styles.primary} type="button" disabled={!selectedAccount||!!busy} onClick={chooseAccount}>{localized("Usar esta cuenta","Use this account")}</button>
    </div>:null}
+   {hasAccount?<div className={styles.accountSelect}>
+    <label>{localized("Página de Facebook para el anuncio","Facebook Page for your ad")}
+     <select value={form.pageId} onChange={e=>patch("pageId",e.target.value)}>
+      <option value="">{localized("Seleccionar página","Choose Page")}</option>
+      {meta.pages.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+     </select></label>
+    {!meta.pages.length?<small className={styles.muted}>{localized("No se encontraron páginas autorizadas. Comprueba los permisos en Meta y vuelve a conectar.",
+     "No authorized Pages found. Check permissions in Meta and reconnect.")}</small>:null}
+   </div>:null}
    {!loading&&meta.connected&&meta.connection?.selectedAccountId?<details className={styles.inlineDisclosure}>
     <summary>{localized("Cambiar cuenta o desconectar","Change account or disconnect")} <ChevronDown size={15}/></summary>
     <div className={styles.accountSelect}>
@@ -366,7 +375,7 @@ export default function AdsStudio(){
      localized("Necesita una página con Instagram profesional vinculado","Requires a Page with linked professional Instagram")}</small></div>
     <label className={styles.toggle}><input type="checkbox" checked={instagramEnabled&&Boolean(selectedPage?.instagramId)} disabled={!selectedPage?.instagramId}
      onChange={e=>setInstagramEnabled(e.target.checked)}/><span/></label></div>
-   <div className={styles.switchRow}><div><strong>{localized("Medir visitas con UTM","Track visits with UTM")}</strong>
+   <div className={styles.switchRow}><div><strong>{localized("Añadir etiquetas UTM","Add UTM tags")}</strong>
     <small>{localized("Añade etiquetas al enlace para atribuir visitas.","Adds tags to your URL to attribute visits.")}</small></div>
     <label className={styles.toggle}><input type="checkbox" checked={form.utmEnabled} onChange={e=>patch("utmEnabled",e.target.checked)}/><span/></label></div>
    <div className={styles.compactFields}>
@@ -389,12 +398,6 @@ export default function AdsStudio(){
      {form.utmEnabled&&form.destination?<small className={styles.trackedLink}>{localized("Enlace con UTM: ","Tracked link: ")}{trackedDestination}</small>:null}
     </div>
    </details>
-   {!form.pageId&&meta.pages.length>0?<div className={styles.accountSelect}>
-    <label>{localized("Selecciona una página de Facebook para continuar","Select a Facebook Page to continue")}
-     <select value={form.pageId} onChange={e=>patch("pageId",e.target.value)}>
-      <option value="">{localized("Elegir página","Choose Page")}</option>
-      {meta.pages.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-     </select></label></div>:null}
    <label className={styles.permission}><input type="checkbox" checked={form.specialCategoriesAcknowledged}
     onChange={e=>patch("specialCategoriesAcknowledged",e.target.checked)}/>
     <span>{localized("Confirmo que no anuncio vivienda, empleo, crédito ni otra categoría especial. Los datos de mi oferta son verdaderos y tengo derechos sobre las imágenes.",
