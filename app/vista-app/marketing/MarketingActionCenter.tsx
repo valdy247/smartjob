@@ -11,7 +11,7 @@ import {
  ArrowLeft,ArrowRight,ArrowUpRight,Apple,Check,CheckCircle2,ClipboardList,ExternalLink,
  FileCheck2,Gauge,Globe2,HandHeart,LayoutGrid,LockKeyhole,MapPinned,
  Megaphone,MessageSquareHeart,Navigation,RefreshCw,Search,Send,ShieldCheck,
- Sparkles,Star,Wallet,Workflow,Video,Users,BarChart3
+ Sparkles,Star,Wallet,Workflow,Video,Users,BarChart3,Ellipsis,ChevronDown,FilePenLine,NotebookPen,Trash2,Copy,X,Clock3
 } from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
@@ -26,6 +26,7 @@ import {readMarketingDraft,writeMarketingDraft,readDraftMedia,saveDraftMedia,cle
 import GoogleProfileWizard,{emptyGoogle,emptyMedia,googleStepNames,validateGoogleStep,validateGoogleLinks,validateGoogleAll,type GoogleData,type GoogleMedia} from "./GoogleProfileWizard";
 import ScienceWaitQuiz from "./ScienceWaitQuiz";
 import SocialCaptionPreview from "./SocialCaptionPreview";
+import {marketingRequestProgress} from "@/lib/marketing-request-progress";
 
 export type ServiceCode="directory_listings"|"google_profile"|"apple_maps"|"bing_places"|"yelp_profile"|"search_console"|"seo_improvement"|"campaign_setup"|"review_strategy"|"other";
 type Status="received"|"quoted"|"approved"|"in_progress"|"needs_customer"|"verified"|"cancelled";
@@ -120,6 +121,11 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [staff,setStaff]=useState(false);
  const [requests,setRequests]=useState<RequestRow[]>([]);
  const [approvals,setApprovals]=useState<Acceptance[]>([]);
+ const [expandedRequests,setExpandedRequests]=useState<Record<string,boolean>>({});
+ const [caseAction,setCaseAction]=useState<{id:string;kind:"note"|"edit"|"cancel"|"delete"}|null>(null);
+ const [caseActionText,setCaseActionText]=useState("");
+ const [caseActionError,setCaseActionError]=useState("");
+ const [caseActionBusy,setCaseActionBusy]=useState(false);
  const [selected,setSelected]=useState<ServiceCode>(preselectedService||"google_profile");
  const [wizardStep,setWizardStep]=useState<WizardStep>(preselectedService?1:0);
  const [socialPreviewOpen,setSocialPreviewOpen]=useState(false);
@@ -741,6 +747,40 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   }catch(e){setError(errorMessage(e,translate("marketing.action.couldn_t_save_directory_statuses")));}
   finally{setBusy(false);}
  };
+ const selectCaseAction=(id:string,kind:"note"|"edit"|"cancel"|"delete")=>{
+  setCaseAction({id,kind});setCaseActionText("");setCaseActionError("");
+ };
+ const sendCaseAction=async(req:RequestRow)=>{
+  if(!client||!user||req.owner_id!==user.id||!caseAction||caseAction.id!==req.id)return;
+  const details=caseActionText.trim();
+  if(["note","edit"].includes(caseAction.kind)&&details.length<8){
+   setCaseActionError(en?"Please describe your request in at least 8 characters.":"Describe tu solicitud con al menos 8 caracteres.");return;
+  }
+  if(caseAction.kind==="delete"&&!window.confirm(en?
+   "Request removal of this case? The VMV team will review it; this will not delete it immediately.":
+   "¿Solicitar la eliminación de este caso? VMV lo revisará; no se eliminará inmediatamente."))return;
+  const titles={note:"Nota del cliente",edit:"Solicitud de modificación",cancel:"Solicitud de cancelación",delete:"Solicitud de eliminación"} as const;
+  const text=details||(caseAction.kind==="cancel"?"Solicito cancelar este caso.":"Solicito eliminar este expediente de acuerdo con el procedimiento aplicable.");
+  setCaseActionBusy(true);setCaseActionError("");
+  try{
+   const {data:{session}}=await client.auth.getSession();
+   if(!session?.access_token)throw Error("session");
+   const response=await fetch("/api/support",{
+    method:"POST",cache:"no-store",
+    headers:{"Authorization":"Bearer "+session.access_token,"Content-Type":"application/json"},
+    body:JSON.stringify({action:"message",source:"marketing",id:req.id,
+     message:titles[caseAction.kind]+" (#"+req.id.slice(0,8)+"): "+text,
+     request_key:crypto.randomUUID()})
+   });
+   const payload=await response.json().catch(()=>({})) as {error?:string};
+   if(!response.ok)throw Error(payload.error||"request");
+   setCaseAction(null);setCaseActionText("");
+   setMessage(en?"Message sent to VMV. The case remains unchanged until it is reviewed.":"Mensaje enviado a VMV. El caso sigue igual hasta que se revise.");
+  }catch(e){
+   setCaseActionError(e instanceof Error&&e.message!=="request"&&e.message!=="session"?e.message:
+    en?"We couldn't send the message. Open Support to continue.":"No pudimos enviar el mensaje. Abre Soporte para continuar.");
+  }finally{setCaseActionBusy(false);}
+ };
  const openStaff=(req:RequestRow)=>{
   setDirectoryStatus({});setDirectoryProof({});
   setActiveStaffId(req.id);setStage(req.status);
@@ -921,15 +961,59 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     <div className={styles.requestList}>{shown.map(req=>{
      const approved=isAccepted(req);
      const service=serviceName(req.service_code);
+     const progress=marketingRequestProgress(req.status,approved,req.activity_history);
+     const expanded=expandedRequests[req.id]??Boolean(staff&&teamView);
+     const supportUrl="/vista-app/soporte?source=marketing&id="+encodeURIComponent(req.id);
      const historyEntries:Array<{key:string;date:string;kind:string;note?:string;quoteCents?:number|null}>=[
       ...(Array.isArray(req.activity_history)?req.activity_history:[]).map((ev,i)=>({key:"event-"+i,date:ev.date,kind:ev.kind,note:ev.note,quoteCents:ev.quoteCents})),
       ...approvals.filter(a=>a.request_id===req.id).map(a=>({key:"acceptance-"+a.id,date:a.accepted_at,kind:"acceptance",quoteCents:a.quoted_price_cents}))
      ].sort((a,b)=>new Date(a.date).getTime()-new Date(b.date).getTime());
      return <article className={styles.request} key={req.id}>
-      <div className={styles.requestTop}><div><strong>{service}</strong><small>{req.business_name} · {date(req.created_at)} · #{req.id.slice(0,8)}</small></div>
-       <span className={req.status==="verified"?styles.verified:styles.status}>{statusNames[req.status]}</span></div>
-      <p>{req.goal_text}</p>
-      {req.owner_id===user.id?<a className={styles.reportLink} href={"/vista-app/soporte?source=marketing&id="+encodeURIComponent(req.id)}><MessageSquareHeart size={16}/>{translate("marketing.google.openConversation")}</a>:null}
+      <div className={styles.requestTop}>
+       <div className={styles.requestIdentity}><strong>{service}</strong><small>{req.business_name} <span aria-hidden="true">·</span> {date(req.created_at)} <span aria-hidden="true">·</span> #{req.id.slice(0,8)}</small></div>
+       <div className={styles.requestTopActions}>
+        <span className={req.status==="verified"?styles.verified:styles.status} data-stage={req.status}>{statusNames[req.status]}</span>
+        {req.owner_id===user?.id?<details className={styles.requestMenu}
+         onKeyDown={e=>{if(e.key==="Escape")e.currentTarget.open=false;}}
+         onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget))e.currentTarget.open=false;}}>
+         <summary className={styles.requestMenuButton} aria-label={en?"Case options":"Opciones del caso"} title={en?"Case options":"Opciones del caso"}><Ellipsis size={20}/></summary>
+         <div className={styles.requestMenuPanel} onClick={e=>{if((e.target as HTMLElement).closest("button,a"))e.currentTarget.closest("details")?.removeAttribute("open");}}>
+          <a href={supportUrl}><MessageSquareHeart size={16}/>{en?"Contact support":"Hablar con soporte"}</a>
+          <button type="button" onClick={()=>setExpandedRequests(v=>({...v,[req.id]:true}))}><Clock3 size={16}/>{en?"View case details":"Ver detalles e historial"}</button>
+          <button type="button" onClick={()=>selectCaseAction(req.id,"note")}><NotebookPen size={16}/>{en?"Add a note":"Añadir nota"}</button>
+          {req.status!=="verified"&&req.status!=="cancelled"?<button type="button" onClick={()=>selectCaseAction(req.id,"edit")}><FilePenLine size={16}/>{en?"Request changes":"Solicitar modificación"}</button>:null}
+          {req.status!=="verified"&&req.status!=="cancelled"?<button type="button" onClick={()=>selectCaseAction(req.id,"cancel")}><X size={16}/>{en?"Request cancellation":"Solicitar cancelación"}</button>:null}
+          <button type="button" className={styles.requestMenuDanger} onClick={()=>selectCaseAction(req.id,"delete")}><Trash2 size={16}/>{en?"Request removal":"Solicitar eliminación"}</button>
+          <button type="button" onClick={()=>void navigator.clipboard.writeText(req.id).then(()=>setMessage(en?"Case reference copied.":"Referencia copiada.")).catch(()=>setError(en?"Couldn't copy the reference.":"No pudimos copiar la referencia."))}><Copy size={16}/>{en?"Copy case reference":"Copiar referencia"}</button>
+         </div>
+        </details>:null}
+       </div>
+      </div>
+      <div className={styles.caseProgress}>
+       <div className={styles.caseProgressLabels}><span>{en?"Case progress":"Progreso del caso"}</span><strong>{approved&&req.status==="quoted"?(en?"Quote approved":"Cotización aprobada"):statusNames[req.status]}</strong></div>
+       <div className={styles.caseProgressTrack} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}
+        aria-label={en?"Case milestones completed; not an estimate of work time":"Etapas registradas del caso; no es una estimación de tiempo"}>
+        <span className={req.status==="cancelled"?styles.caseProgressCancelled:styles.caseProgressFill} style={{width:progress+"%"}}/>
+       </div>
+      </div>
+      <p className={styles.requestDescription}>{req.goal_text}</p>
+      {caseAction?.id===req.id&&req.owner_id===user?.id?<form className={styles.caseComposer} onSubmit={e=>{e.preventDefault();void sendCaseAction(req);}}>
+       <div className={styles.caseComposerHeader}><strong>{caseAction.kind==="note"?(en?"Note to VMV":"Nota para VMV"):caseAction.kind==="edit"?(en?"Request a modification":"Solicitar modificación"):caseAction.kind==="cancel"?(en?"Request cancellation":"Solicitar cancelación"):(en?"Request record removal":"Solicitar eliminación")}</strong>
+        <button type="button" onClick={()=>setCaseAction(null)} aria-label={en?"Close":"Cerrar"}><X size={16}/></button></div>
+       <p>{caseAction.kind==="delete"?(en?"VMV will review the request before removing any record. Nothing is deleted now.":"VMV revisará la solicitud antes de eliminar cualquier expediente. Nada se borra ahora."):en?"Your message goes to VMV support. The original case is unchanged until reviewed.":"Tu mensaje llega a soporte de VMV. El caso original no cambia hasta que se revise."}</p>
+       <textarea aria-label={en?"Message to VMV":"Mensaje para VMV"} rows={3} maxLength={1200} value={caseActionText} disabled={caseActionBusy} onChange={e=>setCaseActionText(e.target.value)}
+        placeholder={caseAction.kind==="note"?(en?"Add details for the team…":"Escribe una nota para el equipo…"):caseAction.kind==="edit"?(en?"Describe the information to change…":"Explica qué información quieres modificar…"):en?"Optional reason…":"Motivo (opcional)…"}/>
+       {caseActionError?<p className={styles.caseComposerError} role="alert">{caseActionError}</p>:null}
+       <div className={styles.caseComposerActions}><button type="button" disabled={caseActionBusy} onClick={()=>setCaseAction(null)}>{en?"Cancel":"Volver"}</button>
+        <button type="submit" disabled={caseActionBusy}>{caseActionBusy?(en?"Sending…":"Enviando…"):(en?"Send to VMV":"Enviar a VMV")}</button></div>
+      </form>:null}
+      <div className={styles.requestFooter}>
+       <button type="button" className={styles.requestExpand} aria-expanded={expanded}
+        onClick={()=>setExpandedRequests(v=>({...v,[req.id]:!expanded}))}><ChevronDown size={17} className={expanded?styles.chevronUp:undefined}/>{expanded?(en?"Hide details":"Ocultar detalles"):(en?"Details and history":"Detalles e historial")}</button>
+       {req.owner_id===user?.id?<a className={styles.requestSupport} href={supportUrl}><MessageSquareHeart size={15}/>{en?"Support":"Soporte"}</a>:null}
+       {req.status==="quoted"&&!approved&&req.owner_id===user?.id?<button className={styles.requestReviewQuote} type="button" onClick={()=>setExpandedRequests(v=>({...v,[req.id]:true}))}>{en?"Review quote":"Revisar cotización"}</button>:null}
+      </div>
+      {expanded?<div className={styles.requestExpanded}>
       {req.service_code==="review_strategy"&&req.reputation_data?<details className={styles.googleSaved}><summary>{translate("marketing.copy.view_reputation_details")}</summary><div className={styles.googleSavedContent}>{req.reputation_data.reviewText?<p>{translate("marketing.copy.real_review")} {req.reputation_data.reviewText}</p>:null}{req.reputation_data.replyText?<p>{translate("marketing.action.preparedResponse")} {req.reputation_data.replyText}</p>:null}{req.reputation_data.reviewLink?<a href={req.reputation_data.reviewLink} target="_blank" rel="noopener noreferrer">{translate("marketing.copy.review_link_2")}</a>:null}<small>{translate("marketing.copy.no_automatic_publishing_or_sending")}</small></div></details>:null}
       {req.service_code==="directory_listings"&&req.directory_data?<div className={styles.dirHistory}><strong>{translate("marketing.copy.selected_directories")} {req.directory_data.city}, {req.directory_data.state}</strong>{req.directory_data.selected.map(t=><div className={styles.dirHistoryRow} key={t.id}><div><strong>{t.id==="research-local"?translate("marketing.directory.researchFor",{place:[req.directory_data?.city,req.directory_data?.state].filter(Boolean).join(", ")}):t.name}</strong><small>{localizedDirectoryStatus(language,t.status)}</small>{t.existingUrl&&safeDirectoryUrl(t.existingUrl)?<a href={t.existingUrl} target="_blank" rel="noopener noreferrer">{translate("marketing.copy.existing_link_supplied_by_the_customer_not_verified")}</a>:null}{t.evidenceUrl&&safeDirectoryUrl(t.evidenceUrl)?<a href={t.evidenceUrl} target="_blank" rel="noopener noreferrer">{translate("marketing.copy.view_publication_evidence")}</a>:null}{t.note?<small>{t.note}</small>:null}</div>{staff&&teamView&&activeStaffId===req.id?<div className={styles.dirStaffFields}><select aria-label={translate("marketing.action.status_of")+t.name} value={directoryStatus[t.id]||t.status} onChange={e=>setDirectoryStatus(v=>({...v,[t.id]:e.target.value as DirectoryProgress}))}>{Object.entries(directoryStatusNames).map(([v])=><option key={v} value={v}>{localizedDirectoryStatus(language,v as DirectoryProgress)}</option>)}</select><input aria-label={translate("marketing.action.verified_link_for")+t.name} value={directoryProof[t.id]??t.evidenceUrl} onChange={e=>setDirectoryProof(v=>({...v,[t.id]:e.target.value}))} placeholder={translate("marketing.action.public_url_only_if_published")}/></div>:null}</div>)}</div>:null}
       {req.service_code==="seo_improvement"&&req.web_repair_data?<><a className={styles.reportLink} href={"/vista-app/marketing/informe/"+req.id}>{translate("marketing.copy.open_saved_full_report")}</a><details className={styles.googleSaved}><summary>{translate("marketing.copy.view_diagnosis_and_platform")}</summary><div className={styles.googleSavedContent}><p>{translate("marketing.copy.platform")} {req.web_repair_data.platform==="other"?req.web_repair_data.otherPlatform:req.web_repair_data.platform}</p><p>{translate("marketing.copy.repository")} {req.web_repair_data.repositoryHost}</p>{req.web_repair_data.repositoryUrl?<p>{req.web_repair_data.repositoryUrl}</p>:null}{req.web_repair_data.audit?<><p>{translate("marketing.action.auditSpeed")} {req.web_repair_data.audit.scores.performance??"—"}/100 {translate("marketing.action.seoSeparator")}{req.web_repair_data.audit.scores.seo??"—"}/100</p>{req.web_repair_data.audit.explanation?<p>{req.web_repair_data.audit.explanation}</p>:null}<a href={req.web_repair_data.audit.reportUrl||"https://pagespeed.web.dev/"} target="_blank" rel="noopener noreferrer">{translate("marketing.copy.view_technical_evidence_on_google")}</a></>:<p>{translate("marketing.copy.no_automatic_report_request_awaiting_review")}</p>}</div></details></>:null}
@@ -988,6 +1072,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
         <button type="button" disabled={busy||(["approved","in_progress","verified"].includes(stage)&&!approved)} onClick={()=>void updateStage(req)}>{translate("marketing.copy.save_status_and_evidence")}</button>
         {req.directory_data?<button type="button" disabled={busy} onClick={()=>void updateDirectoryProgress(req)}>{translate("marketing.copy.save_directory_statuses")}</button>:null}
        </div>:null}
+      </div>:null}
       </div>:null}
      </article>;
     })}</div>
