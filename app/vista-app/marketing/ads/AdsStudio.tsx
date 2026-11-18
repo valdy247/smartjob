@@ -11,7 +11,9 @@ type Connected={id:string;providerName:string;expiresAt:string|null;selectedAcco
 type Campaign={id:string;ad_account_id:string;status:string;draft:{
  name:string;headline:string;message:string;destination:string;totalBudgetCents:number;
  durationDays:number;placements:string};provider_campaign_id:string|null;provider_ad_id:string|null;
+ metaAdsetEffectiveStatus?:string|null;metaAdsetEndAt?:string|null;
  error_code:string|null;created_at:string};
+type InsightRow={impressions?:string;reach?:string;clicks?:string;spend?:string;cpc?:string;ctr?:string;date_start?:string;date_stop?:string};
 type AdVariant={label:string;headline:string;message:string;why:string};
 type Plan={variants:AdVariant[];source:"ai"|"brief";recommendation:string;measurement:string;providerConfigured:boolean};
 type Place={key:string;name:string;region:string;countryCode:string};
@@ -58,7 +60,8 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
  const uploadSeq=useRef(0);
  const [draftKey,setDraftKey]=useState(()=>crypto.randomUUID());
  const [draftId,setDraftId]=useState("");
- const [insights,setInsights]=useState<Record<string,any[]>>({});
+ const [insights,setInsights]=useState<Record<string,{rows:InsightRow[];period:string}>>({});
+ const [historyFilter,setHistoryFilter]=useState<"pending"|"active"|"completed">("pending");
  const [publishReady,setPublishReady]=useState(false);
  const total=useMemo(()=>Math.round(Number(form.dailyBudget)*100)*Number(form.durationDays),[form.dailyBudget,form.durationDays]);
  const normalizedDestination=useMemo(()=>{
@@ -273,7 +276,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
  };
  const metrics=(c:Campaign)=>run("metrics:"+c.id,async()=>{
   const r=await api("/api/marketing/ads/meta/insights?campaignId="+encodeURIComponent(c.id));
-  setInsights(prev=>({...prev,[c.id]:r.rows||[]}));
+  setInsights(prev=>({...prev,[c.id]:{rows:Array.isArray(r.rows)?r.rows:[],period:r.period||"maximum"}}));
  });
  const selectedPage=meta.pages.find(x=>x.id===form.pageId);
  const hasAccount=Boolean(meta.connected&&meta.connection?.selectedAccountId);
@@ -316,30 +319,99 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
   return()=>{active=false;window.clearTimeout(timer);};
  },[step,hasAccount,form.stateCode,form.cityQuery,form.cityKey,language]);
 
+ const campaignGroup=(c:Campaign):"pending"|"active"|"completed"=>{
+  if(["completed","finished","ended","archived"].includes(c.status)||c.metaAdsetEffectiveStatus==="COMPLETED")return "completed";
+  if(c.status==="active")return "active";
+  return "pending";
+ };
+ const groupItems=campaigns.filter(c=>campaignGroup(c)===historyFilter);
+ const groupCount=(group:"pending"|"active"|"completed")=>campaigns.filter(c=>campaignGroup(c)===group).length;
+ const statusLabel=(c:Campaign)=>{
+  if(c.metaAdsetEffectiveStatus==="COMPLETED")return localized("Terminada","Completed");
+  const values:Record<string,[string,string]>={
+   draft:["Borrador","Draft"],paused:["Preparada · Pausada","Prepared · Paused"],
+   provisioning:["Preparando en Meta","Creating in Meta"],
+   failed:["Requiere revisión","Needs review"],
+   activation_pending:["Pendiente de confirmación","Awaiting confirmation"],
+   customer_paused:["Pausada","Paused"],active:["En curso","Active"],
+   completed:["Terminada","Completed"],finished:["Terminada","Completed"],
+   ended:["Terminada","Completed"],archived:["Archivada","Archived"]
+  };
+  const pair=values[c.status];
+  return pair?localized(pair[0],pair[1]):localized("Estado por revisar","Status to review");
+ };
+ const metricNumber=(value?:string)=>{
+  const n=Number(value);
+  return value!==undefined&&Number.isFinite(n)?n.toLocaleString(en?"en-US":"es-US",{maximumFractionDigits:1}):"—";
+ };
+ const metricMoney=(value?:string)=>{
+  const n=Number(value);
+  return value!==undefined&&Number.isFinite(n)?money(Math.round(n*100)):"—";
+ };
  if(mode==="campaigns")return <div className={styles.workspace}>
-  <div className={styles.compactIntro}><div><span className={styles.eyebrow}>{localized("MARKETING · HISTORIAL","MARKETING · HISTORY")}</span>
-   <h1>{localized("Mis campañas","My campaigns")}</h1>
-   <p>{localized("Gestiona borradores, anuncios pausados y métricas fuera del asistente.","Manage drafts, paused ads and metrics outside the wizard.")}</p></div></div>
+  <div className={styles.compactIntro}><div>
+   <span className={styles.eyebrow}><BarChart3 size={15}/>{localized("ADS STUDIO · HISTORIAL","ADS STUDIO · HISTORY")}</span>
+   <h1>{localized("Historial y resultados","History & results")}</h1>
+   <p>{localized("Revisa el estado de tus campañas y las métricas que Meta haya registrado.","Review your campaign status and any metrics recorded by Meta.")}</p>
+  </div></div>
   {error?<p className={styles.warning} role="alert">{error}</p>:null}
   {notice?<p className={styles.success} role="status">{notice}</p>:null}
-    <details open className={styles.simpleDetails}>
-   <summary><span><BarChart3 size={18}/>{localized("Mis campañas","My campaigns")}</span><span className={styles.count}>{campaigns.length}</span><ChevronDown size={17}/></summary>
-   {campaigns.length===0?<p className={styles.muted}>{localized("Todavía no hay campañas guardadas.","No saved campaigns yet.")}</p>:
-    <div className={styles.history}>{campaigns.map(c=><div key={c.id} className={styles.historyCard}>
-     <div className={styles.historyHead}><div><strong>{c.draft.name}</strong><small>{new Date(c.created_at).toLocaleDateString()}</small></div>
-      <span className={c.status==="active"?styles.live:styles.pilot}>{c.status}</span></div>
-     <p>{c.draft.headline} · {money(c.draft.totalBudgetCents)}</p>
-     <div className={styles.inlineActions}>
-      {c.status==="draft"?<button className={styles.primary} type="button" disabled={!!busy} onClick={()=>createPaused(c.id,c.draft.totalBudgetCents)}>{localized("Aprobar y crear PAUSADA","Approve and create PAUSED")}</button>:null}
-      {c.status==="paused"&&publishReady?<button className={styles.primary} type="button" disabled={!!busy} onClick={()=>publish(c)}>{localized("Autorizar publicación y gasto","Authorize publication and spend")}</button>:null}
-      {["active","activation_pending","paused"].includes(c.status)?<button className={styles.secondary} type="button" disabled={!!busy} onClick={()=>pause(c)}>{localized("Pausar","Pause")}</button>:null}
-      {c.provider_campaign_id?<button className={styles.secondary} type="button" disabled={!!busy} onClick={()=>void metrics(c)}>{localized("Ver métricas","View metrics")}</button>:null}
-     </div>
-     {c.error_code?<p className={styles.warning}>{c.error_code}</p>:null}
-     {insights[c.id]?.map((row,i)=><p key={i}>{localized("Gasto","Spend")}: {row.spend||"0"} · {localized("Clics","Clicks")}: {row.clicks||"0"}</p>)}
-    </div>)}</div>}
-  </details>
-
+  <div className={styles.historyTabs} role="group" aria-label={localized("Filtrar campañas","Filter campaigns")}>
+   {([
+    ["pending",localized("Pendientes","Pending")],
+    ["active",localized("En curso","Active")],
+    ["completed",localized("Terminadas","Completed")]
+   ] as const).map(([key,label])=><button type="button" key={key}
+     aria-pressed={historyFilter===key}
+     className={historyFilter===key?styles.historyTabSelected:styles.historyTab}
+     onClick={()=>setHistoryFilter(key)}>{label}<span>{groupCount(key)}</span></button>)}
+  </div>
+  {loading?<div className={styles.simpleCard}><p className={styles.muted}>{localized("Cargando campañas…","Loading campaigns…")}</p></div>:
+   groupItems.length?<div className={styles.history}>{groupItems.map(c=><article key={c.id} className={styles.historyCard}>
+    <div className={styles.historyHead}>
+     <div><strong>{c.draft?.name||localized("Campaña","Campaign")}</strong><small>{new Date(c.created_at).toLocaleDateString(en?"en-US":"es-US",{year:"numeric",month:"short",day:"numeric"})}</small></div>
+     <span className={campaignGroup(c)==="active"?styles.live:campaignGroup(c)==="completed"?styles.connected:styles.pilot}>{statusLabel(c)}</span>
+    </div>
+    <p>{c.draft?.headline||"—"}</p>
+    <div className={styles.historyInfo}>
+     <span><small>{localized("Presupuesto configurado","Configured budget")}</small><strong>{money(c.draft?.totalBudgetCents||0)}</strong></span>
+     <span><small>{localized("Red","Network")}</small><strong>{c.draft?.placements==="facebook_instagram"?"Facebook + Instagram":"Facebook"}</strong></span>
+    </div>
+    {c.metaAdsetEndAt?<small className={styles.historyContext}>{localized("Fin programado en Meta: ","Meta scheduled end: ")}{new Date(c.metaAdsetEndAt).toLocaleDateString(en?"en-US":"es-US")}</small>:null}
+    {c.error_code?<p className={styles.warning}>{localized("Se necesita revisar esta campaña: ","This campaign needs review: ")}{c.error_code}</p>:null}
+    <div className={styles.inlineActions}>
+     {c.status==="draft"?<button className={styles.primary} type="button" disabled={!!busy} onClick={()=>createPaused(c.id,c.draft.totalBudgetCents)}>
+      {localized("Aprobar y crear pausada","Approve and create paused")}</button>:null}
+     {c.status==="paused"&&publishReady?<button className={styles.primary} type="button" disabled={!!busy} onClick={()=>publish(c)}>
+      {localized("Autorizar publicación y gasto","Authorize publication and spend")}</button>:null}
+     {["active","activation_pending","paused"].includes(c.status)?<button className={styles.secondary} type="button" disabled={!!busy} onClick={()=>pause(c)}>{localized("Pausar","Pause")}</button>:null}
+     {c.provider_campaign_id?<button className={styles.secondary} type="button" disabled={!!busy} onClick={()=>void metrics(c)}>
+      {busy==="metrics:"+c.id?localized("Consultando…","Loading…"):localized("Ver resultados","View results")}</button>:null}
+    </div>
+    {insights[c.id]?<div className={styles.resultsPanel}>
+     <div className={styles.resultsHeading}><strong>{localized("Resultados de Meta","Meta results")}</strong>
+      <small>{localized("Datos acumulados disponibles","Available cumulative data")}</small></div>
+     {insights[c.id].rows.length?insights[c.id].rows.map((row,index)=>
+      <div className={styles.resultsGrid} key={index}>
+       <span><small>{localized("Gasto real","Actual spend")}</small><strong>{metricMoney(row.spend)}</strong></span>
+       <span><small>{localized("Clics","Clicks")}</small><strong>{metricNumber(row.clicks)}</strong></span>
+       <span><small>{localized("Impresiones","Impressions")}</small><strong>{metricNumber(row.impressions)}</strong></span>
+       <span><small>{localized("Alcance","Reach")}</small><strong>{metricNumber(row.reach)}</strong></span>
+       <span><small>{localized("CTR","CTR")}</small><strong>{row.ctr?metricNumber(row.ctr)+"%":"—"}</strong></span>
+       <span><small>{localized("Costo por clic","Cost per click")}</small><strong>{metricMoney(row.cpc)}</strong></span>
+      </div>):
+       <p className={styles.muted}>{localized("Meta aún no reporta resultados para esta campaña.","Meta has not reported results for this campaign yet.")}</p>}
+     <p className={styles.resultsNote}>{localized("Estos son datos publicitarios de Meta, no ventas verificadas. Las métricas pueden retrasarse.","These are Meta advertising metrics, not verified sales. Reporting may be delayed.")}</p>
+    </div>:null}
+   </article>)}</div>:
+   <div className={styles.emptyHistory}><BarChart3 size={24}/>
+    <strong>{historyFilter==="pending"?localized("No tienes campañas pendientes","No pending campaigns"):
+     historyFilter==="active"?localized("No hay campañas en curso","No active campaigns"):
+      localized("No hay campañas terminadas registradas","No completed campaigns recorded")}</strong>
+    <p>{historyFilter==="completed"?
+     localized("Las campañas pausadas no se consideran terminadas. Mostraremos aquí las que Meta confirme como completadas.","Paused campaigns are not considered completed. Campaigns confirmed as completed by Meta will appear here."):
+     localized("Las campañas que correspondan a este estado aparecerán aquí.","Campaigns in this state will appear here.")}</p>
+   </div>}
  </div>;
  if(mode==="platforms")return <div className={styles.workspace}>
   <div className={styles.compactIntro}><div><span className={styles.eyebrow}>{localized("MARKETING · CANALES","MARKETING · CHANNELS")}</span>
@@ -347,7 +419,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
    <p>{localized("Integraciones disponibles y próximas conexiones.","Available integrations and upcoming connections.")}</p></div></div>
   <div className={styles.simpleCard}><strong>{localized("Meta Ads · Piloto","Meta Ads · Pilot")}</strong>
    <p className={styles.muted}>{localized("Facebook e Instagram. Anuncios con revisión y aprobación humana.","Facebook and Instagram. Ads with human review and approval.")}</p>
-   <a className={styles.primary} href="/vista-app/marketing/ads">{localized("Crear campaña","Create campaign")}</a></div>
+   <a className={styles.primary} href="/vista-app/marketing/ads/create">{localized("Crear campaña","Create campaign")}</a></div>
     <details open className={styles.simpleDetails}>
    <summary><span><Globe2 size={18}/>{localized("Otras plataformas","Other platforms")}</span><ChevronDown size={17}/></summary>
    <div className={styles.platformGrid}>{platforms.filter(p=>!p.available).map(p=><div className={styles.platform} key={p.name}>
