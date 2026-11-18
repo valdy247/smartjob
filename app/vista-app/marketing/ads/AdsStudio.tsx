@@ -1,9 +1,9 @@
 "use client";
-import {useCallback,useEffect,useMemo,useState} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import styles from "./AdsStudio.module.css";
-import {Megaphone,ShieldCheck,ArrowUpRight,CheckCircle2,Globe2,ChevronDown,ChevronLeft,ChevronRight,ImagePlus,MapPin,WandSparkles,BarChart3} from "lucide-react";
+import {Megaphone,ShieldCheck,ArrowUpRight,CheckCircle2,Globe2,ExternalLink,ChevronDown,ChevronLeft,ChevronRight,ImagePlus,MapPin,WandSparkles,BarChart3} from "lucide-react";
 
 type Account={id:string;name:string;currency:string;status:number;timezone:string};
 type Page={id:string;name:string;instagramId:string|null;instagramUsername:string};
@@ -17,7 +17,7 @@ type Plan={variants:AdVariant[];source:"ai"|"brief";recommendation:string;measur
 type Place={key:string;name:string;region:string;countryCode:string};
 type AccountsResponse={configured:boolean;connected:boolean;connection?:Connected;accounts:Account[];
  pages:Page[];error?:string};
-const initial={name:"",business:"",offer:"",audience:"",benefit:"",stateCode:"",cityQuery:"",cityKey:"",cityName:"",citySearch:"",radiusMiles:"15",utmEnabled:true,headline:"",message:"",destination:"",pageId:"",
+const initial={name:"",business:"",offer:"",audience:"",benefit:"",stateCode:"",cityQuery:"",cityKey:"",cityName:"",cityMetaName:"",citySearch:"",radiusMiles:"15",utmEnabled:true,headline:"",message:"",destination:"",pageId:"",
  dailyBudget:"10",durationDays:"7",placements:"facebook_instagram" as "facebook"|"facebook_instagram",
  specialCategoriesAcknowledged:false};
 const usStates="AL:Alabama|AK:Alaska|AZ:Arizona|AR:Arkansas|CA:California|CO:Colorado|CT:Connecticut|DE:Delaware|DC:District of Columbia|FL:Florida|GA:Georgia|HI:Hawaii|ID:Idaho|IL:Illinois|IN:Indiana|IA:Iowa|KS:Kansas|KY:Kentucky|LA:Louisiana|ME:Maine|MD:Maryland|MA:Massachusetts|MI:Michigan|MN:Minnesota|MS:Mississippi|MO:Missouri|MT:Montana|NE:Nebraska|NV:Nevada|NH:New Hampshire|NJ:New Jersey|NM:New Mexico|NY:New York|NC:North Carolina|ND:North Dakota|OH:Ohio|OK:Oklahoma|OR:Oregon|PA:Pennsylvania|RI:Rhode Island|SC:South Carolina|SD:South Dakota|TN:Tennessee|TX:Texas|UT:Utah|VT:Vermont|VA:Virginia|WA:Washington|WV:West Virginia|WI:Wisconsin|WY:Wyoming".split("|").map(x=>x.split(":") as [string,string]);
@@ -30,7 +30,7 @@ const platforms=[
  {name:"LinkedIn Ads",description:"Anuncios profesionales",available:false},
  {name:"Snapchat Ads",description:"Anuncios Snapchat",available:false}
 ];
-export default function AdsStudio(){
+export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"platforms"}){
  const {language}=useInterfaceLanguage();
  const en=language==="en";
  const localized=(es:string,english:string)=>en?english:es;
@@ -55,23 +55,39 @@ export default function AdsStudio(){
  const [showAdvanced,setShowAdvanced]=useState(false);
  const [image,setImage]=useState<File|null>(null);
  const [imageHash,setImageHash]=useState("");
+ const uploadSeq=useRef(0);
  const [draftKey,setDraftKey]=useState(()=>crypto.randomUUID());
  const [draftId,setDraftId]=useState("");
  const [insights,setInsights]=useState<Record<string,any[]>>({});
  const [publishReady,setPublishReady]=useState(false);
  const total=useMemo(()=>Math.round(Number(form.dailyBudget)*100)*Number(form.durationDays),[form.dailyBudget,form.durationDays]);
- const trackedDestination=useMemo(()=>{
+ const normalizedDestination=useMemo(()=>{
+  const raw=form.destination.trim();
+  if(!raw||/\s/.test(raw)||raw.startsWith("//")||raw.startsWith("\\")||
+   /^(?!https:\/\/)[a-z][a-z0-9+.-]*:\/\//i.test(raw))return null;
   try{
-   const url=new URL(form.destination);
-   if(!form.utmEnabled||url.protocol!=="https:")return form.destination;
-   url.searchParams.set("utm_source","meta");
-   url.searchParams.set("utm_medium","paid_social");
-   const slug=(form.name||form.business||"vmv_campaign").toLowerCase().normalize("NFD")
-    .replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").slice(0,50);
-   url.searchParams.set("utm_campaign",slug||"vmv_campaign");
+   const url=new URL(/^https:\/\//i.test(raw)?raw:"https://"+raw);
+   if(url.protocol!=="https:"||url.username||url.password||url.port||
+    !url.hostname.includes(".")||url.hostname==="localhost"||
+    url.hostname.endsWith(".local")||/^\d+\.\d+\.\d+\.\d+$/.test(url.hostname))return null;
    return url.toString();
-  }catch{return form.destination;}
- },[form.destination,form.utmEnabled,form.name,form.business]);
+  }catch{return null;}
+ },[form.destination]);
+ const trackedDestination=useMemo(()=>{
+  if(!normalizedDestination)return "";
+  if(!form.utmEnabled)return normalizedDestination;
+  const url=new URL(normalizedDestination);
+  url.searchParams.set("utm_source","meta");
+  url.searchParams.set("utm_medium","paid_social");
+  const slug=(form.name||form.business||"vmv_campaign").toLowerCase().normalize("NFD")
+   .replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").slice(0,50);
+  url.searchParams.set("utm_campaign",slug||"vmv_campaign");
+  return url.toString();
+ },[normalizedDestination,form.utmEnabled,form.name,form.business]);
+ const testDestination=()=>{
+  if(normalizedDestination)window.open(normalizedDestination,"_blank","noopener,noreferrer");
+ };
+
  useEffect(()=>{
   if(!image){setPreviewImage("");return;}
   const url=URL.createObjectURL(image);setPreviewImage(url);
@@ -136,16 +152,29 @@ export default function AdsStudio(){
    await reload();setNotice(localized("Meta desconectado.","Meta disconnected."));
   });
  };
- const upload=()=>run("image",async()=>{
-  if(!image)throw Error("select_image");
-  const f=new FormData();f.set("image",image);
-  const result=await api("/api/marketing/ads/meta/image","POST",f,true);
-  setImageHash(result.imageHash);
-  setNotice(localized("Imagen enviada de forma segura a Meta.","Image uploaded securely to Meta."));
- });
+ const upload=(file:File|null)=>{
+  const seq=++uploadSeq.current;
+  setImage(file);setImageHash("");setDraftId("");setDraftKey(crypto.randomUUID());
+  setError("");
+  if(!file)return;
+  if(!["image/png","image/jpeg"].includes(file.type)||file.size<1024||file.size>2*1024*1024){
+   setError(localized("Selecciona una imagen JPG o PNG de hasta 2 MB.","Choose a JPG or PNG image up to 2 MB."));
+   return;
+  }
+  void run("image",async()=>{
+   const data=new FormData();data.set("image",file);
+   const result=await api("/api/marketing/ads/meta/image","POST",data,true);
+   if(seq===uploadSeq.current){
+    setImageHash(result.imageHash);
+    setNotice(localized("Imagen lista para el anuncio.","Image ready for the ad."));
+   }
+  });
+ };
  const choosePlace=(place:Place)=>{
-  setForm(v=>({...v,cityKey:place.key,cityName:place.name+
-   (place.region?", "+place.region:""),citySearch:place.name}));
+  const stateName=usStates.find(([code])=>code===form.stateCode)?.[1]||place.region;
+  const base=place.name.trim().replace(/\s*\([^)]*\)\s*$/,"").split(",")[0].trim();
+  setForm(v=>({...v,cityKey:place.key,cityName:base+(stateName?", "+stateName:""),
+   cityMetaName:place.name,cityQuery:base,citySearch:base}));
   setPlaces([]);setDraftId("");setDraftKey(crypto.randomUUID());setPlan(null);
  };
  const generate=()=>run("generate",async()=>{
@@ -179,7 +208,7 @@ export default function AdsStudio(){
   const result=await api("/api/marketing/ads/meta/campaigns","POST",{
    operation:"draft",clientKey:draftKey,draft:{
     name:form.name,headline:form.headline,message:form.message,destination:trackedDestination,
-    cityKey:form.cityKey,cityName:form.cityName.split(",")[0],citySearch:form.citySearch,radiusMiles:Number(form.radiusMiles),
+    cityKey:form.cityKey,cityName:form.cityMetaName,citySearch:form.citySearch,radiusMiles:Number(form.radiusMiles),
     imageHash,pageId:form.pageId,placements:instagramEnabled&&selectedPage?.instagramId?"facebook_instagram":"facebook",
     dailyBudgetCents:daily,durationDays:days,
     specialCategoriesAcknowledged:form.specialCategoriesAcknowledged
@@ -230,7 +259,7 @@ export default function AdsStudio(){
  const hasAccount=Boolean(meta.connected&&meta.connection?.selectedAccountId);
  const canSave=Boolean(hasAccount&&form.cityKey&&form.pageId&&imageHash&&
   form.name.trim().length>=2&&form.headline.trim().length>=5&&form.message.trim().length>=10&&
-  form.specialCategoriesAcknowledged&&/^https:\/\//.test(form.destination)&&
+  form.specialCategoriesAcknowledged&&Boolean(normalizedDestination)&&
   Number.isInteger(total)&&total>=500&&total<=750000);
  const steps=en?["Account","Promotion","Location","Ad","Review"]:["Cuenta","Promoción","Ubicación","Anuncio","Revisión"];
  const canContinue=[
@@ -238,7 +267,7 @@ export default function AdsStudio(){
   form.business.trim().length>=2&&form.offer.trim().length>=8,
   Boolean(form.cityKey),
   form.headline.trim().length>=5&&form.message.trim().length>=10&&form.name.trim().length>=2&&
-   /^https:\/\//.test(form.destination)&&Boolean(imageHash)
+   Boolean(normalizedDestination)&&Boolean(imageHash)
  ];
  const goStep=(n:number)=>{setStep(Math.max(0,Math.min(4,n)));window.scrollTo({top:0,behavior:"smooth"});};
  useEffect(()=>{
@@ -266,6 +295,47 @@ export default function AdsStudio(){
   },550);
   return()=>{active=false;window.clearTimeout(timer);};
  },[step,hasAccount,form.stateCode,form.cityQuery,form.cityKey,language]);
+
+ if(mode==="campaigns")return <div className={styles.workspace}>
+  <div className={styles.compactIntro}><div><span className={styles.eyebrow}>{localized("MARKETING · HISTORIAL","MARKETING · HISTORY")}</span>
+   <h1>{localized("Mis campañas","My campaigns")}</h1>
+   <p>{localized("Gestiona borradores, anuncios pausados y métricas fuera del asistente.","Manage drafts, paused ads and metrics outside the wizard.")}</p></div></div>
+  {error?<p className={styles.warning} role="alert">{error}</p>:null}
+  {notice?<p className={styles.success} role="status">{notice}</p>:null}
+    <details open className={styles.simpleDetails}>
+   <summary><span><BarChart3 size={18}/>{localized("Mis campañas","My campaigns")}</span><span className={styles.count}>{campaigns.length}</span><ChevronDown size={17}/></summary>
+   {campaigns.length===0?<p className={styles.muted}>{localized("Todavía no hay campañas guardadas.","No saved campaigns yet.")}</p>:
+    <div className={styles.history}>{campaigns.map(c=><div key={c.id} className={styles.historyCard}>
+     <div className={styles.historyHead}><div><strong>{c.draft.name}</strong><small>{new Date(c.created_at).toLocaleDateString()}</small></div>
+      <span className={c.status==="active"?styles.live:styles.pilot}>{c.status}</span></div>
+     <p>{c.draft.headline} · {money(c.draft.totalBudgetCents)}</p>
+     <div className={styles.inlineActions}>
+      {c.status==="draft"?<button className={styles.primary} type="button" disabled={!!busy} onClick={()=>createPaused(c.id,c.draft.totalBudgetCents)}>{localized("Aprobar y crear PAUSADA","Approve and create PAUSED")}</button>:null}
+      {c.status==="paused"&&publishReady?<button className={styles.primary} type="button" disabled={!!busy} onClick={()=>publish(c)}>{localized("Autorizar publicación y gasto","Authorize publication and spend")}</button>:null}
+      {["active","activation_pending","paused"].includes(c.status)?<button className={styles.secondary} type="button" disabled={!!busy} onClick={()=>pause(c)}>{localized("Pausar","Pause")}</button>:null}
+      {c.provider_campaign_id?<button className={styles.secondary} type="button" disabled={!!busy} onClick={()=>void metrics(c)}>{localized("Ver métricas","View metrics")}</button>:null}
+     </div>
+     {c.error_code?<p className={styles.warning}>{c.error_code}</p>:null}
+     {insights[c.id]?.map((row,i)=><p key={i}>{localized("Gasto","Spend")}: {row.spend||"0"} · {localized("Clics","Clicks")}: {row.clicks||"0"}</p>)}
+    </div>)}</div>}
+  </details>
+
+ </div>;
+ if(mode==="platforms")return <div className={styles.workspace}>
+  <div className={styles.compactIntro}><div><span className={styles.eyebrow}>{localized("MARKETING · CANALES","MARKETING · CHANNELS")}</span>
+   <h1>{localized("Plataformas publicitarias","Ad platforms")}</h1>
+   <p>{localized("Integraciones disponibles y próximas conexiones.","Available integrations and upcoming connections.")}</p></div></div>
+  <div className={styles.simpleCard}><strong>{localized("Meta Ads · Piloto","Meta Ads · Pilot")}</strong>
+   <p className={styles.muted}>{localized("Facebook e Instagram. Anuncios con revisión y aprobación humana.","Facebook and Instagram. Ads with human review and approval.")}</p>
+   <a className={styles.primary} href="/vista-app/marketing/ads">{localized("Crear campaña","Create campaign")}</a></div>
+    <details open className={styles.simpleDetails}>
+   <summary><span><Globe2 size={18}/>{localized("Otras plataformas","Other platforms")}</span><ChevronDown size={17}/></summary>
+   <div className={styles.platformGrid}>{platforms.filter(p=>!p.available).map(p=><div className={styles.platform} key={p.name}>
+    <strong>{p.name}</strong><small>{p.description}</small><span className={styles.planned}>{localized("Próximamente","Coming soon")}</span>
+   </div>)}</div>
+  </details>
+
+ </div>;
  return <div className={styles.workspace}>
   <div className={styles.compactIntro}>
    <div><span className={styles.eyebrow}><Megaphone size={15}/>{localized("MARKETING · ANUNCIOS","MARKETING · ADS")}</span>
@@ -358,14 +428,14 @@ export default function AdsStudio(){
    <div className={styles.formStack}>
     <label>{localized("País","Country")}<input disabled value={localized("Estados Unidos","United States")} /></label>
     <label>{localized("Estado","State")}<select value={form.stateCode} onChange={e=>{
-     patch("stateCode",e.target.value);setForm(v=>({...v,cityQuery:"",cityKey:"",cityName:"",citySearch:""}));setPlaces([]);
+     patch("stateCode",e.target.value);setForm(v=>({...v,cityQuery:"",cityKey:"",cityName:"",cityMetaName:"",citySearch:""}));setPlaces([]);
     }}>
      <option value="">{localized("Seleccionar estado","Choose a state")}</option>
      {usStates.map(([code,name])=><option key={code} value={code}>{name} ({code})</option>)}
     </select></label>
     <label>{localized("Ciudad","City")}<input autoComplete="off" maxLength={80} disabled={!form.stateCode}
      value={form.cityQuery} onChange={e=>{
-      patch("cityQuery",e.target.value);setForm(v=>({...v,cityKey:"",cityName:"",citySearch:""}));setPlaces([]);
+      patch("cityQuery",e.target.value);setForm(v=>({...v,cityKey:"",cityName:"",cityMetaName:"",citySearch:""}));setPlaces([]);
      }} placeholder={localized("Ej. Columbus","E.g. Columbus")}/></label>
     {placeSearching?<small className={styles.muted}>{localized("Buscando ciudades…","Searching cities…")}</small>:null}
     {places.length?<div className={styles.locationResults} role="group" aria-label={localized("Ciudades encontradas","Matching cities")}>
@@ -408,8 +478,16 @@ export default function AdsStudio(){
      <textarea rows={4} maxLength={500} value={form.message} onChange={e=>patch("message",e.target.value)} placeholder={localized("Qué ofreces y por qué vale la pena visitar tu web","What you offer and why people should visit your website")}/></label>
     <label>{localized("Nombre interno de la campaña","Campaign name")}
      <input maxLength={80} value={form.name} onChange={e=>patch("name",e.target.value)} placeholder={localized("Ej. Pasteles · Noviembre","E.g. Cakes · November")}/></label>
-    <label>{localized("Página web del anuncio (HTTPS)","Ad destination (HTTPS)")}
-     <input type="url" inputMode="url" value={form.destination} onChange={e=>patch("destination",e.target.value)} placeholder="https://tusitio.com"/></label>
+    <label>{localized("Enlace de destino","Destination link")}
+     <input type="text" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+      value={form.destination} onChange={e=>patch("destination",e.target.value)}
+      placeholder="mayulibakery.com"/></label>
+    <div className={styles.linkCheck}>
+     <button type="button" className={styles.secondary} disabled={!normalizedDestination}
+      onClick={testDestination}><ExternalLink size={15}/>{localized("Probar enlace","Test link")}</button>
+     {normalizedDestination?<small>{localized("Enlace seguro: ","Secure URL: ")}{normalizedDestination}</small>:
+      form.destination.trim()?<small className={styles.linkError}>{localized("Escribe un dominio válido. Solo HTTPS.","Enter a valid domain. HTTPS only.")}</small>:null}
+    </div>
    </div>
    <div className={styles.preview}>
     <div className={styles.previewHeader}><span className={styles.previewBrand}>{form.business.trim().slice(0,1).toUpperCase()||"V"}</span><div>
@@ -418,17 +496,18 @@ export default function AdsStudio(){
     {previewImage?<img src={previewImage} alt={localized("Vista previa de imagen seleccionada","Selected image preview")}/>:
      <div className={styles.previewEmpty}><ImagePlus size={24}/>{localized("Selecciona una imagen para ver el anuncio","Select an image to preview your ad")}</div>}
     <div className={styles.previewBottom}><div><strong>{form.headline||localized("Título del anuncio","Ad headline")}</strong>
-     <small>{(()=>{try{return new URL(form.destination).hostname;}catch{return localized("Tu sitio web","Your website");}})()}</small></div>
+     <small>{(()=>{try{return normalizedDestination?new URL(normalizedDestination).hostname:localized("Tu sitio web","Your website");}catch{return localized("Tu sitio web","Your website");}})()}</small></div>
      <span>{localized("Más información","Learn more")}</span></div>
    </div>
    <div className={styles.uploadRow}>
     <label className={styles.imagePicker}>{localized("Imagen del anuncio · JPG/PNG hasta 2 MB","Ad image · JPG/PNG up to 2 MB")}
-     <input className={styles.visuallyHiddenFile} type="file" accept="image/jpeg,image/png" onChange={e=>{setImage(e.target.files?.[0]||null);
-      setImageHash("");setDraftId("");setDraftKey(crypto.randomUUID());}}/>
+     <input className={styles.visuallyHiddenFile} type="file" accept="image/jpeg,image/png"
+      disabled={busy==="image"} onChange={e=>upload(e.target.files?.[0]||null)}/>
      <span className={styles.imagePickerButton}><ImagePlus size={16}/>{image?image.name.slice(0,30):localized("Elegir imagen","Choose image")}</span>
     </label>
-    <button type="button" className={styles.secondary} disabled={!!busy||!image} onClick={upload}>{busy==="image"?localized("Subiendo…","Uploading…"):localized("Preparar imagen en Meta","Prepare image in Meta")}</button>
-    {imageHash?<span className={styles.connected}><CheckCircle2 size={15}/>{localized("Lista","Ready")}</span>:null}
+    {busy==="image"?<span className={styles.uploadStatus}>{localized("Preparando imagen automáticamente…","Preparing image automatically…")}</span>:
+     imageHash?<span className={styles.connected}><CheckCircle2 size={15}/>{localized("Imagen lista","Image ready")}</span>:
+      image?<button type="button" className={styles.secondary} disabled={!!busy} onClick={()=>upload(image)}>{localized("Reintentar imagen","Retry image")}</button>:null}
    </div>
   </section>:null}
   {step===4?<section className={styles.simpleCard}>
@@ -474,29 +553,6 @@ export default function AdsStudio(){
    {step>0?<button type="button" className={styles.secondary} disabled={!!busy} onClick={()=>goStep(step-1)}><ChevronLeft size={17}/>{localized("Atrás","Back")}</button>:<span/>}
    {step<4?<button type="button" className={styles.primary} disabled={!!busy||!canContinue[step]} onClick={()=>goStep(step+1)}>{localized("Continuar","Continue")}<ChevronRight size={17}/></button>:null}
   </div>
-  <details className={styles.simpleDetails}>
-   <summary><span><BarChart3 size={18}/>{localized("Mis campañas","My campaigns")}</span><span className={styles.count}>{campaigns.length}</span><ChevronDown size={17}/></summary>
-   {campaigns.length===0?<p className={styles.muted}>{localized("Todavía no hay campañas guardadas.","No saved campaigns yet.")}</p>:
-    <div className={styles.history}>{campaigns.map(c=><div key={c.id} className={styles.historyCard}>
-     <div className={styles.historyHead}><div><strong>{c.draft.name}</strong><small>{new Date(c.created_at).toLocaleDateString()}</small></div>
-      <span className={c.status==="active"?styles.live:styles.pilot}>{c.status}</span></div>
-     <p>{c.draft.headline} · {money(c.draft.totalBudgetCents)}</p>
-     <div className={styles.inlineActions}>
-      {c.status==="draft"?<button className={styles.primary} type="button" disabled={!!busy} onClick={()=>createPaused(c.id,c.draft.totalBudgetCents)}>{localized("Aprobar y crear PAUSADA","Approve and create PAUSED")}</button>:null}
-      {c.status==="paused"&&publishReady?<button className={styles.primary} type="button" disabled={!!busy} onClick={()=>publish(c)}>{localized("Autorizar publicación y gasto","Authorize publication and spend")}</button>:null}
-      {["active","activation_pending","paused"].includes(c.status)?<button className={styles.secondary} type="button" disabled={!!busy} onClick={()=>pause(c)}>{localized("Pausar","Pause")}</button>:null}
-      {c.provider_campaign_id?<button className={styles.secondary} type="button" disabled={!!busy} onClick={()=>void metrics(c)}>{localized("Ver métricas","View metrics")}</button>:null}
-     </div>
-     {c.error_code?<p className={styles.warning}>{c.error_code}</p>:null}
-     {insights[c.id]?.map((row,i)=><p key={i}>{localized("Gasto","Spend")}: {row.spend||"0"} · {localized("Clics","Clicks")}: {row.clicks||"0"}</p>)}
-    </div>)}</div>}
-  </details>
-  <details className={styles.simpleDetails}>
-   <summary><span><Globe2 size={18}/>{localized("Otras plataformas","Other platforms")}</span><ChevronDown size={17}/></summary>
-   <div className={styles.platformGrid}>{platforms.filter(p=>!p.available).map(p=><div className={styles.platform} key={p.name}>
-    <strong>{p.name}</strong><small>{p.description}</small><span className={styles.planned}>{localized("Próximamente","Coming soon")}</span>
-   </div>)}</div>
-  </details>
   <p className={styles.foot}>{localized("El presupuesto se cobra en Meta, nunca en este formulario. VMV no crea anuncios activos sin una aprobación adicional.",
    "Ad budgets are billed by Meta, never in this form. VMV does not activate ads without separate approval.")}</p>
  </div>;
