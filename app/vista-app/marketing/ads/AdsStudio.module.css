@@ -253,3 +253,10 @@
 .pageOption strong,.pageOptionSelected strong{font-size:12px}
 .pageOption small,.pageOptionSelected small{font-size:10px;color:#96869a}
 @media(max-width:540px){.wizardSteps{gap:2px;padding:6px}.wizardStep small,.wizardStepDone small,.wizardStepCurrent small{font-size:9px}.wizardFooter .primary{min-width:140px}}
+
+/* Final wizard polish: automatic media and destination testing. */
+.linkCheck{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.linkCheck .secondary{min-height:39px;padding:9px 12px}
+.linkCheck small{font-size:10px;color:#776578;overflow-wrap:anywhere;line-height:1.5;flex:1 1 190px}
+.linkCheck .linkError{color:#9e4058}
+.uploadStatus{font-size:11px;font-weight:750;color:#8b6188;line-height:1.5}
