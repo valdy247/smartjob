@@ -10,7 +10,7 @@ export default function MarketingAdsCampaignsPage(){
  return <main className={styles.page}><div className={styles.shell}>
   <header className={styles.topbar}>
    <div className={styles.topbarIdentity}>
-    <Link href="/vista-app/marketing" className={styles.backLink}><ArrowLeft size={17}/> Marketing</Link>
+    <Link href="/vista-app/marketing" className={styles.backLink}><ArrowLeft size={17}/> {language==="en"?"Marketing":"Marketing"}</Link>
     <InterfaceLanguagePicker compact/>
    </div>
    <span className={styles.marker}><Sparkles size={14}/>{language==="en"?"My campaigns":"Mis campañas"}</span>
