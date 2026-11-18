@@ -3,7 +3,7 @@ import {useCallback,useEffect,useMemo,useState} from "react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import styles from "./AdsStudio.module.css";
-import {Megaphone,ShieldCheck,ArrowUpRight,CheckCircle2,Globe2,ChevronDown,ImagePlus,MapPin,WandSparkles,BarChart3} from "lucide-react";
+import {Megaphone,ShieldCheck,ArrowUpRight,CheckCircle2,Globe2,ChevronDown,ChevronLeft,ChevronRight,ImagePlus,MapPin,WandSparkles,BarChart3} from "lucide-react";
 
 type Account={id:string;name:string;currency:string;status:number;timezone:string};
 type Page={id:string;name:string;instagramId:string|null;instagramUsername:string};
@@ -47,6 +47,7 @@ export default function AdsStudio(){
  const [places,setPlaces]=useState<Place[]>([]);
  const [previewImage,setPreviewImage]=useState("");
  const [instagramEnabled,setInstagramEnabled]=useState(true);
+ const [step,setStep]=useState(0);
  const [showAdvanced,setShowAdvanced]=useState(false);
  const [image,setImage]=useState<File|null>(null);
  const [imageHash,setImageHash]=useState("");
@@ -234,6 +235,15 @@ export default function AdsStudio(){
   form.name.trim().length>=2&&form.headline.trim().length>=5&&form.message.trim().length>=10&&
   form.specialCategoriesAcknowledged&&/^https:\/\//.test(form.destination)&&
   Number.isInteger(total)&&total>=500&&total<=750000);
+ const steps=en?["Account","Promotion","Location","Ad","Review"]:["Cuenta","Promoción","Ubicación","Anuncio","Revisión"];
+ const canContinue=[
+  hasAccount&&Boolean(form.pageId),
+  form.business.trim().length>=2&&form.offer.trim().length>=8,
+  Boolean(form.cityKey),
+  form.headline.trim().length>=5&&form.message.trim().length>=10&&form.name.trim().length>=2&&
+   /^https:\/\//.test(form.destination)&&Boolean(imageHash)
+ ];
+ const goStep=(n:number)=>{setStep(Math.max(0,Math.min(4,n)));window.scrollTo({top:0,behavior:"smooth"});};
  return <div className={styles.workspace}>
   <div className={styles.compactIntro}>
    <div><span className={styles.eyebrow}><Megaphone size={15}/>{localized("MARKETING · ANUNCIOS","MARKETING · ADS")}</span>
@@ -244,7 +254,13 @@ export default function AdsStudio(){
   {metaReturn==="connected"&&meta.connected?<p className={styles.success}><CheckCircle2 size={16}/>{localized("Tu cuenta Meta se conectó correctamente.","Your Meta account connected successfully.")}</p>:null}
   {notice?<p className={styles.success} role="status"><CheckCircle2 size={16}/>{notice}</p>:null}
   {error?<p className={styles.warning} role="alert">{error}</p>:null}
-  <section className={styles.simpleCard}>
+  <nav className={styles.wizardSteps} aria-label={localized("Pasos de la campaña","Campaign steps")}>
+   {steps.map((label,i)=><button key={i} type="button" aria-current={i===step?"step":undefined}
+    className={i===step?styles.wizardStepCurrent:i<step?styles.wizardStepDone:styles.wizardStep}
+    disabled={!!busy||i>step} onClick={()=>goStep(i)}>
+    <span>{i<step?<CheckCircle2 size={15}/>:i+1}</span><small>{label}</small></button>)}
+  </nav>
+  {step===0?<section className={styles.simpleCard}>
    <div className={styles.cardTop}>
     <div className={styles.cardTitle}><span className={styles.cardIcon}><ShieldCheck size={19}/></span><div><h2>{localized("Cuenta publicitaria","Ad account")}</h2>
      <small>{loading?localized("Comprobando…","Checking…"):
@@ -282,8 +298,8 @@ export default function AdsStudio(){
       <button type="button" disabled={!!busy} className={styles.textButton} onClick={disconnect}>{localized("Desconectar Meta","Disconnect Meta")}</button></div>
     </div>
    </details>:null}
-  </section>
-  <section className={styles.simpleCard}>
+  </section>:null}
+  {step===1?<section className={styles.simpleCard}>
    <div className={styles.cardTop}>
     <div className={styles.cardTitle}><span className={styles.cardIcon}><MapPin size={19}/></span><div>
      <h2>{localized("Tu promoción","Your promotion")}</h2>
@@ -302,6 +318,13 @@ export default function AdsStudio(){
      <input maxLength={130} value={form.audience} onChange={e=>patch("audience",e.target.value)}
       placeholder={localized("Ej. Personas que quieren encargar un pastel","E.g. Customers ordering a birthday cake")}/>
      <small>{localized("Esto orienta el mensaje; no selecciona atributos personales en Meta.","For ad copy only; not personal-attribute targeting in Meta.")}</small></label>
+   </div>
+  </section>:null}
+  {step===2?<section className={styles.simpleCard}>
+   <div className={styles.cardTop}><div className={styles.cardTitle}><span className={styles.cardIcon}><MapPin size={19}/></span><div>
+    <h2>{localized("Ciudad y alcance","City and reach")}</h2><small>{localized("Elige dónde quieres anunciar.","Choose where your ad appears.")}</small>
+   </div></div></div>
+   <div className={styles.formStack}>
     <div className={styles.locationRow}>
      <label>{localized("Ciudad donde quieres anunciar","Target city")}
       <input maxLength={80} value={form.cityQuery} onChange={e=>{
@@ -316,13 +339,13 @@ export default function AdsStudio(){
       {[10,15,25,50].map(n=><option key={n} value={n}>{n} mi</option>)}
      </select></div>:null}
    </div>
-  </section>
-  <section className={styles.simpleCard}>
+  </section>:null}
+  {step===3?<section className={styles.simpleCard}>
    <div className={styles.cardTop}><div className={styles.cardTitle}><span className={styles.cardIcon}><WandSparkles size={19}/></span><div>
     <h2>{localized("Propuesta publicitaria","Ad proposal")}</h2>
-    <small>{localized("Tres enfoques para comparar, editar y aprobar.","Three concepts to compare, edit and approve.")}</small></div></div></div>
+    <small>{localized("Prepara y revisa tu anuncio antes de guardarlo.","Prepare and review your ad before saving.")}</small></div></div></div>
    <button className={styles.primary} type="button" disabled={!!busy||!hasAccount||!form.cityKey||form.business.trim().length<2||form.offer.trim().length<8||form.audience.trim().length<3} onClick={generate}>
-    <WandSparkles size={17}/>{busy==="generate"?localized("Preparando…","Preparing…"):localized("Preparar 3 propuestas","Prepare 3 concepts")}
+    <WandSparkles size={17}/>{busy==="generate"?localized("Preparando…","Preparing…"):localized("Preparar propuesta de anuncio","Prepare ad proposal")}
    </button>
    {!plan?<p className={styles.muted}>{localized("Los títulos y mensajes serán editables. Si la IA no está conectada, te lo indicaremos y usaremos borradores basados en tus datos.","Headlines and messages are editable. If AI is not connected, we'll say so and use rule-based drafts.")}</p>:
     <div className={styles.proposal}>
@@ -368,8 +391,8 @@ export default function AdsStudio(){
     <button type="button" className={styles.secondary} disabled={!!busy||!image} onClick={upload}>{busy==="image"?localized("Subiendo…","Uploading…"):localized("Preparar imagen en Meta","Prepare image in Meta")}</button>
     {imageHash?<span className={styles.connected}><CheckCircle2 size={15}/>{localized("Lista","Ready")}</span>:null}
    </div>
-  </section>
-  <section className={styles.simpleCard}>
+  </section>:null}
+  {step===4?<section className={styles.simpleCard}>
    <div className={styles.cardTop}><div className={styles.cardTitle}><span className={styles.cardIcon}><BarChart3 size={19}/></span><div>
     <h2>{localized("Presupuesto y entrega","Budget and delivery")}</h2><small>{localized("El gasto publicitario se paga directamente a Meta.","Ad spend is billed directly by Meta.")}</small></div></div></div>
    <div className={styles.switchRow}><div><strong>{localized("Publicar también en Instagram","Include Instagram")}</strong>
@@ -409,7 +432,11 @@ export default function AdsStudio(){
    <button type="button" className={styles.primary} disabled={!canSave||!!busy} onClick={saveDraft}>{localized("Guardar campaña para aprobación","Save campaign for approval")}</button>
    <p className={styles.muted}>{localized("Guardar no publica anuncios. Después podrás crear la campaña pausada para revisar en Meta.",
     "Saving does not publish ads. You can then create a paused campaign for review in Meta.")}</p>
-  </section>
+  </section>:null}
+  <div className={styles.wizardFooter}>
+   {step>0?<button type="button" className={styles.secondary} disabled={!!busy} onClick={()=>goStep(step-1)}><ChevronLeft size={17}/>{localized("Atrás","Back")}</button>:<span/>}
+   {step<4?<button type="button" className={styles.primary} disabled={!!busy||!canContinue[step]} onClick={()=>goStep(step+1)}>{localized("Continuar","Continue")}<ChevronRight size={17}/></button>:null}
+  </div>
   <details className={styles.simpleDetails}>
    <summary><span><BarChart3 size={18}/>{localized("Mis campañas","My campaigns")}</span><span className={styles.count}>{campaigns.length}</span><ChevronDown size={17}/></summary>
    {campaigns.length===0?<p className={styles.muted}>{localized("Todavía no hay campañas guardadas.","No saved campaigns yet.")}</p>:
