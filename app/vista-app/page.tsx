@@ -178,7 +178,8 @@ export default function VMVMobilePreview(){
   {id:"video-generator",name:"Video Generator",search:"video videos generador creator studio inteligencia artificial",group:"digital",Icon:Video,tone:styles.catalogViolet,state:translate("services.comingSoon"),action:()=>{}},
   {id:"instagram-connect",name:"Instagram Connect",search:"instagram conectar mensajes dm directos comentarios inteligentes meta respuestas automáticas ventas",group:"communication",Icon:MessageCircle,tone:styles.catalogPink,state:translate("services.comingSoon"),action:()=>{}},
   {id:"smart-quote",name:"Smart Quote",search:"cotizaciones presupuestos presupuestar facturas pagos depósito propuestas cobranza ventas inteligencia artificial",group:"growth",Icon:FileText,tone:styles.catalogMint,state:translate("services.comingSoon"),action:()=>{}},
-  {id:"marketing",name:"Marketing",search:"marketing publicidad reputación",group:"growth",Icon:BarChart3,tone:styles.catalogPink,state:translate("catalog.beta"),action:()=>window.location.assign("/vista-app/marketing")}
+  {id:"marketing",name:"Marketing",search:"marketing publicidad reputación",group:"growth",Icon:BarChart3,tone:styles.catalogPink,state:translate("catalog.beta"),action:()=>window.location.assign("/vista-app/marketing")},
+  {id:"ads-studio",name:"Ads Studio",search:"ads anuncios campañas publicidad meta facebook instagram marketing generador anuncios inteligencia artificial",group:"growth",Icon:Megaphone,tone:styles.catalogPink,state:translate("catalog.beta"),action:()=>window.location.assign("/vista-app/marketing/ads")}
  ] as const;
  const catalogSearch=catalogQuery.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase();
  const filteredCatalog=catalogItems.filter(item=>(catalogGroup==="all"||item.group===catalogGroup)&&
