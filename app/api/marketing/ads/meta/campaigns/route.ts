@@ -75,7 +75,7 @@ export async function POST(req:NextRequest){
   let cities:Array<{key:string;name:string;region:string}>=[];
   try{
    const found=await metaGet("search",active.token,{type:"adgeolocation",
-    location_types:JSON.stringify(["city"]),q:citySearch,limit:"25"});
+    location_types:JSON.stringify(["city"]),q:citySearch,limit:"100"});
    cities=(Array.isArray(found.data)?found.data:[]).filter((x:any)=>
     metaId(x.key)&&x.country_code==="US"&&x.type==="city")
     .map((x:any)=>({key:String(x.key),name:String(x.name||""),region:String(x.region||"")}));
