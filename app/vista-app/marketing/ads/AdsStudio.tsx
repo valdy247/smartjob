@@ -131,7 +131,19 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
  const run=async(label:string,fn:()=>Promise<void>)=>{
   setBusy(label);setError("");setNotice("");
   try{await fn();}
-  catch(e){setError(e instanceof Error?e.message:"operation_failed");}
+  catch(e){
+   const message=e instanceof Error?e.message:"operation_failed";
+   const display=message==="ai_generation_unavailable_retry"?
+    localized("La IA no pudo crear el anuncio. Intenta nuevamente en un momento; no se generó una plantilla como sustituto.",
+     "AI could not create your ad. Please retry shortly; no template was substituted."):
+    message==="ai_provider_not_available"?
+    localized("La conexión de IA no está disponible en este momento. Intenta más tarde.",
+     "The AI connection is unavailable. Please try later."):
+    message==="ai_daily_limit_retry_later"?
+    localized("Has alcanzado el límite temporal de generación. Intenta más tarde.",
+     "You've reached the temporary generation limit. Please try later."):message;
+   setError(display);
+  }
   finally{setBusy("");}
  };
  const connect=()=>run("connect",async()=>{
