@@ -187,11 +187,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
   setPlan(response);setPlanIndex(0);
   setForm(v=>({...v,headline:response.variants[0].headline,message:response.variants[0].message}));
   setDraftId("");setDraftKey(crypto.randomUUID());
-  setNotice(response.source==="ai"?
-   localized("Tres propuestas creadas con IA. Elige la que mejor represente tu negocio.",
-    "Three AI-generated concepts. Choose the best fit for your business."):
-   localized("Preparé tres borradores basados en tus datos. No son IA: falta configurar el proveedor para las propuestas avanzadas.",
-    "Three editable rule-based drafts are ready. These are not AI: the provider must be configured."));
+  setNotice(localized("Propuesta creada con IA. Revisa y edita antes de aprobar.","AI proposal created. Review and edit before approving."));
  });
  const chooseVariant=(index:number)=>{
   if(!plan?.variants[index])return;
@@ -456,7 +452,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
    <button className={styles.primary} type="button" disabled={!!busy||!hasAccount||!form.cityKey||form.business.trim().length<2||form.offer.trim().length<8||form.audience.trim().length<3} onClick={generate}>
     <WandSparkles size={17}/>{busy==="generate"?localized("Preparando…","Preparing…"):localized("Preparar propuesta de anuncio","Prepare ad proposal")}
    </button>
-   {!plan?<p className={styles.muted}>{localized("Los títulos y mensajes serán editables. Si la IA no está conectada, te lo indicaremos y usaremos borradores basados en tus datos.","Headlines and messages are editable. If AI is not connected, we'll say so and use rule-based drafts.")}</p>:
+   {!plan?<p className={styles.muted}>{localized("La IA preparará una propuesta con diferentes enfoques. Puedes elegir y editar el anuncio antes de aprobarlo.","AI will prepare a proposal with different approaches. You can choose and edit the ad before approval.")}</p>:
     <div className={styles.proposal}>
      <div className={styles.planSource}>
       <span className={plan.source==="ai"?styles.connected:styles.pilot}>{plan.source==="ai"?localized("Generado con IA","AI-generated"):localized("Borrador sin IA","Non-AI draft")}</span>
