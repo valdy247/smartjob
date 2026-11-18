@@ -507,6 +507,32 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   }catch(e){setError(errorMessage(e,translate("marketing.action.couldn_t_load_requests")));}
   finally{setLoading(false);}
  };
+ // Refresh visible request cards after returning to the tab, and every minute while open.
+ // A change of status is displayed only after the server returns the updated record.
+ useEffect(()=>{
+  if(!requestsOnly||!client||!user)return;
+  let active=true,pending=false;
+  const sync=async()=>{
+   if(pending||document.visibilityState==="hidden")return;
+   pending=true;
+   try{
+    const [requestsResult,approvalResult]=await Promise.all([
+     (teamView&&staff?client.from("vmv_marketing_requests").select("*"):client.from("vmv_marketing_requests").select("*").eq("owner_id",user.id)).order("created_at",{ascending:false}).limit(80),
+     (teamView&&staff?client.from("vmv_marketing_quote_acceptances").select("*"):client.from("vmv_marketing_quote_acceptances").select("*").eq("owner_id",user.id)).order("accepted_at",{ascending:false}).limit(120)
+    ]);
+    if(active&&!requestsResult.error&&!approvalResult.error){
+     setRequests((requestsResult.data||[]) as RequestRow[]);
+     setApprovals((approvalResult.data||[]) as Acceptance[]);
+    }
+   }catch{/* Manual Refresh remains available if background refresh fails. */}
+   finally{pending=false;}
+  };
+  const handleVisibility=()=>{if(document.visibilityState==="visible")void sync();};
+  const interval=window.setInterval(()=>void sync(),60000);
+  window.addEventListener("focus",handleVisibility);
+  document.addEventListener("visibilitychange",handleVisibility);
+  return()=>{active=false;window.clearInterval(interval);window.removeEventListener("focus",handleVisibility);document.removeEventListener("visibilitychange",handleVisibility);};
+ },[requestsOnly,client,user,teamView,staff]);
  const ownRequests=useMemo(()=>requests.filter(r=>r.owner_id===user?.id),[requests,user]);
  const shown=teamView&&staff?requests:ownRequests;
  const isAccepted=(req:RequestRow)=>approvals.some(a=>a.request_id===req.id&&a.quote_revision===req.quote_revision&&a.quoted_price_cents===req.quoted_price_cents);
