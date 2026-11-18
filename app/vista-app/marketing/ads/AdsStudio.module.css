@@ -281,3 +281,46 @@
 .instagramConnection .switchRow{border-top:1px solid #f0e3ed;padding:12px 0 0}
 @media(max-width:540px){.igActions>.secondary{flex:1 1 180px}}
 @media(prefers-reduced-motion:reduce){.spinIcon{animation:none}}
+
+
+/* Ads Studio home: two clear entry points, separate from the creation wizard. */
+.adsHubIntro{padding:14px 3px 4px;max-width:690px}
+.adsHubIntro h1{font-size:clamp(27px,5vw,36px);line-height:1.2;margin:11px 0 9px;font-weight:900;letter-spacing:-1.05px;color:#382742}
+.adsHubIntro p{margin:0;font-size:13px;line-height:1.75;color:#8b778e;max-width:560px}
+.adsHubCards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:900px;margin:21px 0 0}
+.adsHubCard{display:flex;align-items:flex-start;gap:15px;min-width:0;min-height:154px;padding:22px 19px;background:#fff;border:1px solid #ebdfe9;border-radius:19px;box-shadow:0 7px 25px #4214420a;text-decoration:none;color:#7e4675;transition:border-color .18s,transform .18s}
+.adsHubCard:focus-visible{outline:3px solid #b676a4;outline-offset:3px}
+.adsHubCard:hover{border-color:#dcb8d4;transform:translateY(-2px)}
+.adsHubCard>svg:last-child{margin:2px 0 0 auto;flex-shrink:0}
+.adsHubIcon{display:grid;place-items:center;width:44px;height:44px;border-radius:13px;flex-shrink:0;background:#f9edf5;color:#884979}
+.adsHubCardCopy{min-width:0;display:grid;gap:8px}
+.adsHubCardCopy strong{font-size:17px;line-height:1.3;color:#382940;font-weight:850}
+.adsHubCardCopy small{font-size:12px;line-height:1.65;color:#8e7c92}
+.adsHubFoot{display:flex;align-items:center;gap:9px;margin:19px 2px;color:#938397;font-size:11px;line-height:1.55}
+.adsHubFoot svg{flex-shrink:0;color:#558a69}
+.historyTabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:6px;background:#fff;border:1px solid #ede1eb;border-radius:15px}
+.historyTab,.historyTabSelected{border:0;display:flex;gap:7px;justify-content:center;align-items:center;min-width:0;min-height:43px;padding:9px 6px;border-radius:10px;background:transparent;color:#867589;cursor:pointer;font-size:12px;font-family:inherit;font-weight:800}
+.historyTabSelected{background:#894277;color:#fff}
+.historyTab span,.historyTabSelected span{display:grid;place-items:center;min-width:19px;height:19px;border-radius:999px;background:#f7eff5;color:#84557b;font-size:10px}
+.historyTabSelected span{background:#ffffff38;color:#fff}
+.historyTab:focus-visible,.historyTabSelected:focus-visible{outline:3px solid #c88cb7;outline-offset:2px}
+.historyInfo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:2px 0}
+.historyInfo span{display:grid;gap:4px;border-radius:11px;background:#faf5f9;padding:10px 12px}
+.historyInfo small{font-size:10px;color:#907c91}
+.historyInfo strong{font-size:12px;color:#533b58;overflow-wrap:anywhere}
+.historyContext{font-size:10px;color:#937e96}
+.resultsPanel{display:grid;gap:12px;padding:14px;border-radius:14px;background:#fdf9fc;border:1px solid #f0e6ee}
+.resultsHeading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.resultsHeading strong{color:#694366;font-size:12px}
+.resultsHeading small{font-size:10px;color:#958699}
+.resultsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.resultsGrid>span{display:grid;gap:5px;padding:10px;background:#fff;border:1px solid #f1e7f0;border-radius:11px}
+.resultsGrid small{font-size:10px;color:#927f94}
+.resultsGrid strong{font-size:16px;font-variant-numeric:tabular-nums;color:#4c3552}
+.resultsNote{margin:0;font-size:10px;color:#958699;line-height:1.6}
+.emptyHistory{display:grid;place-items:center;gap:12px;padding:34px 18px;background:#fff;border:1px solid #eee3ed;border-radius:16px;color:#9b7c97;text-align:center}
+.emptyHistory strong{color:#614668;font-size:13px}
+.emptyHistory p{max-width:390px;font-size:11px;line-height:1.65;color:#938296;margin:0}
+@media(max-width:680px){.adsHubCards{grid-template-columns:1fr}.adsHubCard{min-height:124px;padding:18px 16px}.adsHubIntro h1{font-size:27px}}
+@media(max-width:400px){.historyTabs{gap:3px}.historyTab,.historyTabSelected{font-size:10px;padding:7px 3px;gap:4px}}
+@media(prefers-reduced-motion:reduce){.adsHubCard{transition:none}}
