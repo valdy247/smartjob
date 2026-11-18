@@ -301,6 +301,16 @@ function MarketingWorkspace(){
        <Link href="/vista-app/marketing/ads" className={styles.primary} style={{display:"inline-flex",alignItems:"center",gap:8,textDecoration:"none",marginRight:10,marginBottom:10}}>
         {language==="en"?"Connect advertising accounts":"Conectar cuentas y crear anuncios"} <ArrowUpRight size={16}/>
        </Link>
+       <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
+        <Link href="/vista-app/marketing/ads/campaigns" className={styles.secondary}
+         style={{display:"inline-flex",alignItems:"center",gap:7,textDecoration:"none"}}>
+         <BarChart3 size={16}/>{language==="en"?"My ad campaigns":"Mis campañas"}
+        </Link>
+        <Link href="/vista-app/marketing/ads/platforms" className={styles.secondary}
+         style={{display:"inline-flex",alignItems:"center",gap:7,textDecoration:"none"}}>
+         <Globe2 size={16}/>{language==="en"?"Other ad platforms":"Otras plataformas"}
+        </Link>
+       </div>
        <button type="button" className={styles.primary} onClick={()=>{setRequestedService("campaign_setup");setSection("actions");setNotice("");}}>
         {language==="en"?"Request a campaign quote":"Solicitar una campaña y cotización"} <ArrowUpRight size={16}/>
        </button>
