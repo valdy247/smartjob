@@ -41,7 +41,9 @@ export async function GET(req:NextRequest){
   .select("id,ad_account_id,status,draft,provider_campaign_id,provider_adset_id,provider_ad_id,approved_at,error_code,created_at")
   .eq("owner_id",owner).order("created_at",{ascending:false}).limit(50);
  if(error)return fail("campaign_history_unavailable",503);
- return NextResponse.json({campaigns:data||[],configured:adsMetaReady()},{headers:noCache});
+ return NextResponse.json({campaigns:data||[],configured:adsMetaReady(),
+  publishReady:adsMetaReady()&&process.env.VMV_ADS_META_PUBLISH_ENABLED==="true"&&
+   process.env.VMV_ADS_META_ALLOWED_OWNER_ID===owner},{headers:noCache});
 }
 export async function POST(req:NextRequest){
  if(!adsMetaReady())return fail("meta_pilot_unavailable",503);
