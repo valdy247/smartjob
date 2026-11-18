@@ -139,9 +139,21 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
     message==="ai_provider_not_available"?
     localized("La conexión de IA no está disponible en este momento. Intenta más tarde.",
      "The AI connection is unavailable. Please try later."):
-    message==="ai_daily_limit_retry_later"?
-    localized("Has alcanzado el límite temporal de generación. Intenta más tarde.",
-     "You've reached the temporary generation limit. Please try later."):message;
+    message==="ai_daily_limit_retry_later"||message==="ai_provider_rate_limited"?
+    localized("La generación de IA alcanzó su límite de solicitudes. Intenta más tarde.",
+     "AI generation hit a request limit. Please try later."):
+    message==="ai_provider_access_denied"?
+    localized("La conexión de IA necesita autorización en Vercel. Estamos revisándola.",
+     "The AI connection needs Vercel authorization. We're investigating it."):
+    message==="ai_provider_billing_unavailable"?
+    localized("El proveedor de IA no tiene facturación disponible. Revisa la configuración de Vercel.",
+     "The AI provider's billing is unavailable. Check Vercel configuration."):
+    message==="ai_provider_timeout"?
+    localized("La IA tardó demasiado en responder. Intenta nuevamente.",
+     "The AI request timed out. Please try again."):
+    message==="ai_invalid_provider_response"?
+    localized("La IA respondió, pero el anuncio no cumplió los requisitos. Intenta generarlo nuevamente.",
+     "AI responded but the ad did not meet the requirements. Please regenerate."):message;
    setError(display);
   }
   finally{setBusy("");}
