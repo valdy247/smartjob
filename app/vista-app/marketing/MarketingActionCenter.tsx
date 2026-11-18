@@ -59,6 +59,7 @@ const comingSoonCards=[
  {id:"social_ads",Icon:Megaphone,es:"Redes y anuncios",en:"Social media & ads",esDesc:"Programar publicaciones y gestionar campañas de Meta y Google.",enDesc:"Schedule posts and manage Meta and Google campaigns."},
  {id:"seo_reputation",Icon:Globe2,es:"SEO y reputación automáticos",en:"Automated SEO & reputation",esDesc:"Conectar la web y las reseñas a acciones de mejora continuas.",enDesc:"Connect website SEO and reviews to ongoing improvements."},
  {id:"video-translate",Icon:Languages,es:"Video Translate",en:"Video Translate",esDesc:"Traducción y doblaje de videos a otros idiomas con una voz similar a la original.",enDesc:"Translate and dub videos into other languages with a voice similar to the original."},
+ {id:"business-cards",Icon:FilePenLine,es:"Tarjeta de presentación",en:"Business Cards",esDesc:"Próximamente podrás solicitar tarjetas de negocio. Planeamos imprimirlas con Office Depot y enviarlas a tu domicilio.",enDesc:"Soon you can order business cards. We plan to arrange printing through Office Depot and home delivery."},
  {id:"attribution",Icon:BarChart3,es:"Analítica y atribución",en:"Analytics & attribution",esDesc:"Saber qué anuncio generó cada llamada, cliente y venta.",enDesc:"See which ad drove each call, customer and sale."}
 ] as const;
 type WizardStep=0|1|2|3|4;
