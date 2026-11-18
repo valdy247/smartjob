@@ -17,6 +17,7 @@ type AccountsResponse={configured:boolean;connected:boolean;connection?:Connecte
 const initial={name:"",business:"",offer:"",audience:"",headline:"",message:"",destination:"",pageId:"",
  dailyBudget:"10",durationDays:"7",placements:"facebook_instagram" as "facebook"|"facebook_instagram",
  specialCategoriesAcknowledged:false};
+const adsWordmark="VMV ADS";
 const platforms=[
  {name:"Meta Ads",description:"Facebook e Instagram",available:true},
  {name:"Google Ads",description:"Búsqueda, YouTube y Display",available:false},
@@ -185,7 +186,7 @@ export default function AdsStudio(){
     <div className={styles.heroActions}><a href="/vista-app/marketing"><ArrowUpRight size={15}/>{localized("Volver a Marketing","Back to Marketing")}</a>
      <a href="/vista-app/marketing/requests"><ShieldCheck size={15}/>{localized("Solicitudes y pagos","Requests and payments")}</a></div>
    </div>
-   <div className={styles.heroShape} aria-hidden="true"><div className={styles.heroArt}><Megaphone size={40} strokeWidth={1.5}/><span>VMV ADS</span></div></div>
+   <div className={styles.heroShape} aria-hidden="true"><div className={styles.heroArt}><Megaphone size={40} strokeWidth={1.5}/><span>{adsWordmark}</span></div></div>
   </section>
   <nav className={styles.journey} aria-label={localized("Progreso de creación de anuncios","Advertising setup progress")}>
    <div className={meta.connected?styles.journeyDone:styles.journeyNow}><span>{meta.connected?<CheckCircle2 size={17}/>:1}</span><div><strong>{localized("Conectar","Connect")}</strong><small>{localized("Cuenta Meta","Meta account")}</small></div></div>
