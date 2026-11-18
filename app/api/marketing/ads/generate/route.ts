@@ -11,7 +11,11 @@ const maxLength=(s:string,n:number)=>s.slice(0,n).trim();
 const token=(s:string)=>s.replace(/[\r\n<>]/g," ").replace(/\s+/g," ").trim();
 /** Deterministic brief, not branded as AI. All statements come from user's own inputs. */
 function manualBrief(business:string,offer:string,benefit:string,city:string,en:boolean):Strategy{
- const businessShort=maxLength(token(business),50),offerShort=maxLength(token(offer),96);
+ const businessShort=maxLength(token(business),50);
+ // Remove first-person planning language so a customer's brief becomes customer-facing copy.
+ const cleanedOffer=token(offer)
+  .replace(/^(?:yo\s+)?(?:quiero|quisiera|deseo|necesito|i\s+want\s+to|we\s+want\s+to)\s+(?:(?:promocionar|anunciar|vender|ofrecer|dar\s+a\s+conocer|promote|advertise|sell|market)\s+)(?:mis|nuestros|our|my|los|las|el|la)?\s*/i,"").trim();
+ const offerShort=maxLength(cleanedOffer.length>=4?cleanedOffer:token(offer),96);
  const cityShort=maxLength(token(city),52),benefitShort=maxLength(token(benefit),115);
  const where=cityShort?(en?" in "+cityShort:" en "+cityShort):"";
  const b=benefitShort?(en?" "+benefitShort:" "+benefitShort):"";
