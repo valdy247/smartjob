@@ -28,7 +28,8 @@ type PsiResult={
 function roundScore(score?:number){return typeof score==="number"&&Number.isFinite(score)?Math.round(score*100):null;}
 
 export async function GET(req:NextRequest){
- const token=req.headers.get("authorization")?.match(/^Bearer (\\S+)$/i)?.[1];
+ const auth=req.headers.get("authorization")||"";
+ const token=auth.startsWith("Bearer ")?auth.slice(7).trim():"";
  const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL;
  const publishable=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
  if(!token||!supabaseUrl||!publishable)return NextResponse.json({error:"sign_in_required"},{status:401,headers:{"Cache-Control":"private, no-store"}});
