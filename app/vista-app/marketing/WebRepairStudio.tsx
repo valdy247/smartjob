@@ -92,9 +92,10 @@ export default function WebRepairStudio({site,data,onChange,accessToken,step=0}:
 
  const patch=<K extends keyof WebRepairData>(k:K,v:WebRepairData[K])=>onChange(prev=>({...prev,[k]:v}));
  const scan=async()=>{
+  if(!accessToken){setError(en?"Please sign in again to analyze your website.":"Vuelve a iniciar sesión para analizar tu web.");return;}
   setLoading(true);setError("");setQuizVisible(true);setShowAudit(false);
   try{
-   const res=await fetch("/api/marketing/site-audit?url="+encodeURIComponent(site)+"&lang="+language,{cache:"no-store"});
+   const res=await fetch("/api/marketing/site-audit?url="+encodeURIComponent(site)+"&lang="+language,{cache:"no-store",headers:{Authorization:"Bearer "+accessToken}});
    const json=await res.json();
    if(!res.ok)throw new Error(translate("marketing.web.auditFailed"));
    const audit:WebAudit={...json,reportUrl:json.reportUrl||googleReport(site),status:"complete"};
