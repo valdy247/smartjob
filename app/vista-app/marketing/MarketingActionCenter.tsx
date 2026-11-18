@@ -1022,7 +1022,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
         <span className={req.status==="cancelled"?styles.caseProgressCancelled:styles.caseProgressFill} style={{width:progress+"%"}}/>
        </div>
       </div>
-      <p className={styles.requestDescription}>{req.goal_text}</p>
+      <p>{req.goal_text}</p>
       {caseAction?.id===req.id&&req.owner_id===user?.id?<form className={styles.caseComposer} onSubmit={e=>{e.preventDefault();void sendCaseAction(req);}}>
        <div className={styles.caseComposerHeader}><strong>{caseAction.kind==="note"?(en?"Note to VMV":"Nota para VMV"):caseAction.kind==="edit"?(en?"Request a modification":"Solicitar modificación"):caseAction.kind==="cancel"?(en?"Request cancellation":"Solicitar cancelación"):(en?"Request record removal":"Solicitar eliminación")}</strong>
         <button type="button" onClick={()=>setCaseAction(null)} aria-label={en?"Close":"Cerrar"}><X size={16}/></button></div>
