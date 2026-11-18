@@ -15,11 +15,11 @@ export async function GET(req:NextRequest){
   if(!active||!active.connection.selected_ad_account_id)
    return NextResponse.json({error:"select_ad_account_first"},{status:409,headers:noCache});
   const result=await metaGet("search",active.token,{
-   type:"adgeolocation",location_types:JSON.stringify(["city"]),q,limit:"25"
+   type:"adgeolocation",location_types:JSON.stringify(["city"]),q,limit:"100"
   });
   const places=(Array.isArray(result.data)?result.data:[]).filter((x:any)=>
    metaId(x.key)&&x.country_code==="US"&&x.type==="city")
-   .slice(0,15).map((x:any)=>({key:String(x.key),name:String(x.name||""),
+   .slice(0,100).map((x:any)=>({key:String(x.key),name:String(x.name||""),
     region:String(x.region||""),countryCode:"US"}));
   return NextResponse.json({places},{headers:noCache});
  }catch{return NextResponse.json({error:"meta_location_search_unavailable"},{status:502,headers:noCache});}
