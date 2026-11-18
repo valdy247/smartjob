@@ -9,6 +9,10 @@ type Creative={label:string;headline:string;message:string;why:string};
 type Strategy={variants:Creative[];recommendation:string;measurement:string;source:"ai"|"brief"};
 const maxLength=(s:string,n:number)=>s.slice(0,n).trim();
 const token=(s:string)=>s.replace(/[\r\n<>]/g," ").replace(/\s+/g," ").trim();
+const cleanLocation=(s:string)=>s
+ .replace(/\(\s*([A-Za-zÀ-ÿ .'-]{2,30})\s*\)\s*,\s*\1\b/gi,", $1")
+ .replace(/,\s*([A-Za-zÀ-ÿ .'-]{2,30})\s*,\s*\1\b/gi,", $1");
+
 /** Deterministic brief, not branded as AI. All statements come from user's own inputs. */
 function manualBrief(business:string,offer:string,benefit:string,city:string,en:boolean):Strategy{
  const businessShort=maxLength(token(business),50);
@@ -40,8 +44,8 @@ function manualBrief(business:string,offer:string,benefit:string,city:string,en:
 function validateVariants(v:unknown):Creative[]|null{
  if(!Array.isArray(v)||v.length!==3)return null;
  const arr=v.map((x:any)=>({
-  label:str(x?.label,32),headline:str(x?.headline,70),
-  message:str(x?.message,350),why:str(x?.why,160)
+  label:str(x?.label,32),headline:cleanLocation(str(x?.headline,70)),
+  message:cleanLocation(str(x?.message,350)),why:str(x?.why,160)
  }));
  return arr.every(x=>x.label.length>=2&&x.headline.length>=5&&x.message.length>=25&&x.why.length>=10)?arr:null;
 }
