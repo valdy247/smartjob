@@ -117,15 +117,22 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
  const reload=useCallback(async()=>{
   setLoading(true);
   try{
-   const accounts=(await api("/api/marketing/ads/meta/accounts")) as AccountsResponse;
-   setMeta(accounts);setSelectedAccount(accounts.connection?.selectedAccountId||"");
-   const list=await api("/api/marketing/ads/meta/campaigns");
-   setCampaigns(list.campaigns||[]);
-   setPublishReady(list.publishReady===true);
-   if(accounts.error)setError(accounts.error);
+   // The history belongs to VMV and must remain visible if Meta temporarily disconnects.
+   if(mode==="campaigns"){
+    const list=await api("/api/marketing/ads/meta/campaigns");
+    setCampaigns(list.campaigns||[]);
+    setPublishReady(list.publishReady===true);
+   }else if(mode==="wizard"){
+    const accounts=(await api("/api/marketing/ads/meta/accounts")) as AccountsResponse;
+    setMeta(accounts);setSelectedAccount(accounts.connection?.selectedAccountId||"");
+    const list=await api("/api/marketing/ads/meta/campaigns");
+    setCampaigns(list.campaigns||[]);
+    setPublishReady(list.publishReady===true);
+    if(accounts.error)setError(accounts.error);
+   }
   }catch(e){setError(e instanceof Error?e.message:"unavailable");}
   finally{setLoading(false);}
- },[]);
+ },[mode]);
  useEffect(()=>{
   const status=new URLSearchParams(window.location.search).get("meta");
   if(status)setMetaReturn(status);
