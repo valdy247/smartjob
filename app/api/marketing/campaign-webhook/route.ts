@@ -63,7 +63,7 @@ export async function POST(req:NextRequest){
    const {data:existing,error:readError}=await db.from("vmv_marketing_campaign_test_payments")
     .select("stripe_checkout_session_id,owner_id,amount_cents")
     .eq("request_id",requestId).eq("quote_revision",revision).maybeSingle();
-   if(!readError&&existing?.stripe_checkout_session_id===session.id&&
+   if(!readError&&existing&&existing.stripe_checkout_session_id===session.id&&
       existing.owner_id===owner&&existing.amount_cents===cents)
     return NextResponse.json({received:true,duplicate:true},{headers:noStore});
    return NextResponse.json({error:"duplicate_or_conflicting_payment"},{status:409,headers:noStore});
