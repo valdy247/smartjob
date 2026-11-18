@@ -223,3 +223,10 @@
  .variantTabs button{font-size:10px;padding:10px 6px}
  .uploadRow>button{width:100%}
 }
+
+
+.imagePicker{cursor:pointer;position:relative;min-width:0;flex:1 1 190px}
+.visuallyHiddenFile{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip-path:inset(50%);pointer-events:none}
+.imagePickerButton{display:inline-flex;align-items:center;gap:9px;max-width:100%;min-height:39px;padding:10px 12px;border:1px dashed #cfaac7;border-radius:11px;background:#fffafd;color:#88527b;font-size:11px;font-weight:800;overflow-wrap:anywhere}
+.imagePicker:focus-within .imagePickerButton{outline:3px solid #e19cc7;outline-offset:3px}
+.completionNote{background:#fffbf4;color:#8f7753;border:1px solid #f3e8d3;border-radius:11px;padding:10px 12px;font-size:11px;line-height:1.55;margin:0}
