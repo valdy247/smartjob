@@ -124,6 +124,9 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [staff,setStaff]=useState(false);
  const [requests,setRequests]=useState<RequestRow[]>([]);
  const [approvals,setApprovals]=useState<Acceptance[]>([]);
+ const [campaignTestReceipts,setCampaignTestReceipts]=useState<Array<{request_id:string;quote_revision:number;amount_cents:number;paid_at:string}>>([]);
+ const [campaignCheckoutBusy,setCampaignCheckoutBusy]=useState<string|null>(null);
+ const campaignTestCheckoutVisible=process.env.NEXT_PUBLIC_VMV_MARKETING_CAMPAIGN_TEST_CHECKOUT==="true";
  const [expandedRequests,setExpandedRequests]=useState<Record<string,boolean>>({});
  const [caseAction,setCaseAction]=useState<{id:string;kind:"note"|"edit"|"cancel"|"delete"}|null>(null);
  const [caseActionText,setCaseActionText]=useState("");
@@ -536,9 +539,39 @@ export default function MarketingActionCenter({businessName,industryId,website,o
   document.addEventListener("visibilitychange",handleVisibility);
   return()=>{active=false;window.clearInterval(interval);window.removeEventListener("focus",handleVisibility);document.removeEventListener("visibilitychange",handleVisibility);};
  },[requestsOnly,client,user,teamView,staff]);
+ useEffect(()=>{
+  if(!requestsOnly||!client||!user||!campaignTestCheckoutVisible)return;
+  let active=true;
+  void client.from("vmv_marketing_campaign_test_payments")
+   .select("request_id,quote_revision,amount_cents,paid_at")
+   .eq("owner_id",user.id).order("paid_at",{ascending:false}).limit(100)
+   .then(({data,error})=>{if(active&&!error)setCampaignTestReceipts(data||[]);});
+  return()=>{active=false;};
+ },[requestsOnly,client,user?.id,requests,campaignTestCheckoutVisible]);
  const ownRequests=useMemo(()=>requests.filter(r=>r.owner_id===user?.id),[requests,user]);
  const shown=teamView&&staff?requests:ownRequests;
  const isAccepted=(req:RequestRow)=>approvals.some(a=>a.request_id===req.id&&a.quote_revision===req.quote_revision&&a.quoted_price_cents===req.quoted_price_cents);
+ const isCampaignTestPaid=(req:RequestRow)=>campaignTestReceipts.some(p=>
+  p.request_id===req.id&&p.quote_revision===req.quote_revision&&p.amount_cents===req.quoted_price_cents);
+ const startCampaignTestCheckout=async(req:RequestRow)=>{
+  if(!client||!user||req.owner_id!==user.id||req.service_code!=="campaign_setup"||
+     req.status!=="quoted"||!isAccepted(req)||isCampaignTestPaid(req)||!campaignTestCheckoutVisible)return;
+  setCampaignCheckoutBusy(req.id);setError("");setMessage("");
+  try{
+   const {data:{session},error:sessionError}=await client.auth.getSession();
+   if(sessionError||!session?.access_token)throw new Error("session_required");
+   const response=await fetch("/api/marketing/campaign-checkout",{
+    method:"POST",cache:"no-store",
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+    body:JSON.stringify({request_id:req.id})
+   });
+   const result=await response.json().catch(()=>null);
+   if(!response.ok||typeof result?.url!=="string"||
+      !result.url.startsWith("https://checkout.stripe.com/"))throw new Error("checkout_unavailable");
+   window.location.assign(result.url);
+  }catch{setError(en?"Test payment is unavailable. Try again later.":"El pago de prueba no está disponible. Intenta de nuevo más tarde.");}
+  finally{setCampaignCheckoutBusy(null);}
+ };
  const openPrivatePhoto=async(path:string)=>{
   if(!client)return;
   const {data,error:mediaError}=await client.storage.from("vmv-google-media").createSignedUrl(path,120);
@@ -1085,6 +1118,14 @@ export default function MarketingActionCenter({businessName,industryId,website,o
        {approved?<span className={styles.accepted}><CheckCircle2 size={15}/> {translate("marketing.copy.approved_by_customer")}</span>:
         req.owner_id===user.id&&req.status==="quoted"?
          <button type="button" disabled={busy} onClick={()=>void accept(req)}>{translate("marketing.copy.approve")} {money(req.quoted_price_cents)}</button>:null}
+       {campaignTestCheckoutVisible&&req.service_code==="campaign_setup"&&req.owner_id===user.id&&approved&&req.quoted_price_cents!==null&&req.quoted_price_cents>0?
+        isCampaignTestPaid(req)?<span className={styles.accepted}><CheckCircle2 size={15}/>{en?"VMV service fee paid (TEST)":"Servicio VMV pagado (PRUEBA)"}</span>:
+        req.status==="quoted"?<button type="button" disabled={campaignCheckoutBusy===req.id||busy} onClick={()=>void startCampaignTestCheckout(req)}>
+         {campaignCheckoutBusy===req.id?(en?"Opening test checkout…":"Abriendo cobro de prueba…"):(en?"Pay VMV service fee (TEST)":"Pagar servicio VMV (PRUEBA)")} {money(req.quoted_price_cents)}
+        </button>:null
+       :null}
+       {campaignTestCheckoutVisible&&req.service_code==="campaign_setup"&&req.owner_id===user.id&&approved?
+        <small>{en?"TEST charge covers VMV service only. Your ad budget is paid separately to Meta/Google. No ads are published.":"El cobro de PRUEBA es solo por el servicio VMV. El presupuesto publicitario se paga aparte a Meta/Google. No se publican anuncios."}</small>:null}
       </div>:<p className={styles.notQuoted}>{translate("marketing.copy.the_team_has_not_issued_a_quote_yet_no_paid_work_has")}</p>}
       {req.status==="verified"&&req.evidence_url?<><a className={styles.evidence} href={req.evidence_url} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> {translate("marketing.copy.view_evidence_provided_by_the_team")}</a><p className={styles.notQuoted}>{translate("marketing.copy.this_evidence_was_recorded_by_vmv_and_does_not_indep")}</p></>:null}
       {staff&&teamView?<div className={styles.staffControls}>
