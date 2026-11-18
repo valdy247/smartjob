@@ -52,6 +52,24 @@ Integración con CRM & Leads: formulario, llamada, cita, pedido, reserva y fuent
 ### 5. Experimentos con rentabilidad
 Dos variantes de landing/oferta o creatividad; definir hipótesis, inversión y conversiones antes del lanzamiento. Recomendaciones basadas en resultados y límites de presupuesto. No publicar ni gastar sin autorización explícita.
 
+## Reputation Booster — fase futura de «Mi reputación» (18 noviembre 2026)
+
+**Decisión de producto:** integrar Reputation Booster como una ampliación de `Marketing → Mi reputación`; **no crear otra tarjeta** en el catálogo de Servicios. Ya existen respuestas a reseñas reales y generación manual de solicitudes con enlace. La automatización se deja en estado **Próximamente**, sin activar envíos.
+
+**Flujo previsto:**
+1. El negocio activa voluntariamente solicitudes de reseñas y configura el canal y el enlace de reseñas.
+2. Tras una compra, servicio o cita **realmente confirmados**, VMV identifica clientes con autorización válida para recibir comunicaciones en ese canal.
+3. VMV prepara y, solo cuando el negocio autorice la automatización, envía una solicitud **neutral y honesta** de opinión; ofrece controles para pausar, limitar frecuencia y evitar duplicados.
+4. Seguimientos opcionales únicamente dentro del consentimiento y de las reglas del canal; siempre respetar bajas/revocaciones y no insistir a quien no quiere recibir mensajes.
+5. Panel con métricas verificables: solicitudes autorizadas y enviadas, entregas cuando el proveedor lo confirme, aperturas o clics solo si medibles, y reseñas recibidas únicamente cuando exista una fuente que permita confirmarlo. **No atribuir una reseña a una solicitud si no hay evidencia.**
+6. Los agentes de VMV pueden sugerir borradores de respuesta a reseñas reales; publicación solo con autorización y permisos adecuados.
+
+**Integraciones candidatas:** eventos de pedidos/citas de VMV Smart Quote, Smart Call, Web Services o conectores externos; sistemas de mensajería con consentimiento (email, SMS o WhatsApp según disponibilidad); Google Business Profile Reviews **solo sujeto a aprobación de API, OAuth y permisos de la cuenta**.
+
+**Condiciones:** nunca comprar reseñas, ofrecer incentivos por valoración, fabricar opiniones, filtrar clientes según satisfacción ni pedir exclusivamente reseñas positivas. Gestionar privacidad, retención de datos, permisos por negocio, registros de auditoría, límites de envío y requisitos de Meta/Google/operadores. Costos y disponibilidad pendientes de validación.
+
+**Alcance del cambio actual:** únicamente referencia bilingüe «Próximamente — Reputation Booster» dentro de `ReputationStudio` y esta documentación. No se han añadido conexiones, colas de mensajes, base de datos, cobros, APIs, automatizaciones ni cambios en producción.
+
 ## Reglas de seguridad
 - No enviar correos/SMS/reseñas sin consentimiento, ni generar reseñas falsas o filtrar solo las positivas.
 - No crear fichas duplicadas; no hacer scraping o automatización de portales contra sus términos.
