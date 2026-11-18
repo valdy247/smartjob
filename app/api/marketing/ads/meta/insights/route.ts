@@ -20,9 +20,9 @@ export async function GET(req:NextRequest){
    return NextResponse.json({error:"reconnect_meta"},{status:409,headers:noCache});
   const insights=await metaGet(data.provider_campaign_id+"/insights",active.token,{
    fields:"date_start,date_stop,impressions,reach,clicks,spend,cpc,ctr",
-   date_preset:"last_7d",limit:"7"
+   date_preset:"maximum",limit:"7"
   });
-  return NextResponse.json({source:"Meta Marketing API",period:"last_7d",
+  return NextResponse.json({source:"Meta Marketing API",period:"maximum",
    rows:Array.isArray(insights.data)?insights.data:[]},{headers:noCache});
  }catch{return NextResponse.json({error:"insights_unavailable"},{status:502,headers:noCache});}
 }
