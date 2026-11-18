@@ -230,3 +230,26 @@
 .imagePickerButton{display:inline-flex;align-items:center;gap:9px;max-width:100%;min-height:39px;padding:10px 12px;border:1px dashed #cfaac7;border-radius:11px;background:#fffafd;color:#88527b;font-size:11px;font-weight:800;overflow-wrap:anywhere}
 .imagePicker:focus-within .imagePickerButton{outline:3px solid #e19cc7;outline-offset:3px}
 .completionNote{background:#fffbf4;color:#8f7753;border:1px solid #f3e8d3;border-radius:11px;padding:10px 12px;font-size:11px;line-height:1.55;margin:0}
+
+/* VMV Ads mobile wizard: one focused task per screen. */
+.wizardSteps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:8px;background:#fff;border:1px solid #eee1ec;border-radius:16px}
+.wizardStep,.wizardStepDone,.wizardStepCurrent{appearance:none;border:0;border-radius:11px;background:transparent;color:#92809a;min-width:0;padding:7px 3px;display:flex;flex-direction:column;align-items:center;gap:5px;font-family:inherit;cursor:pointer}
+.wizardStep:disabled{cursor:default;opacity:.7}
+.wizardStep>span,.wizardStepDone>span,.wizardStepCurrent>span{display:grid;place-items:center;width:27px;height:27px;border:1px solid #eadfea;border-radius:50%;font-size:11px;font-weight:850;background:#faf7fa}
+.wizardStep small,.wizardStepDone small,.wizardStepCurrent small{font-size:10px;font-weight:750;line-height:1.2;text-align:center;overflow-wrap:anywhere}
+.wizardStepDone{color:#398057}
+.wizardStepDone>span{background:#e6f6ee;border-color:#c8e8d7}
+.wizardStepCurrent{color:#79375e;background:#faeef6}
+.wizardStepCurrent>span{color:#fff;background:#82396e;border-color:#82396e}
+.wizardFooter{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 2px}
+.wizardFooter .primary,.wizardFooter .secondary{min-height:46px;padding:12px 18px}
+.fieldHeading{color:#634e69;font-size:12px;font-weight:800}
+.pagePicker{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;min-height:48px;background:#fefbfe;border:1px solid #ebdfea;border-radius:12px;padding:11px 13px;color:#48344f;font:700 13px inherit;cursor:pointer;text-align:left}
+.pagePicker svg{flex-shrink:0;color:#915881}
+.pageOptions{display:grid;gap:6px;padding:6px;border:1px solid #f0e3ed;border-radius:13px;background:#fff}
+.pageOption,.pageOptionSelected{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border:0;border-radius:10px;background:#fff;color:#573e5a;text-align:left;font-family:inherit;cursor:pointer}
+.pageOptionSelected{background:#faeef6;color:#77345f}
+.pageOption>span,.pageOptionSelected>span{display:grid;gap:5px}
+.pageOption strong,.pageOptionSelected strong{font-size:12px}
+.pageOption small,.pageOptionSelected small{font-size:10px;color:#96869a}
+@media(max-width:540px){.wizardSteps{gap:2px;padding:6px}.wizardStep small,.wizardStepDone small,.wizardStepCurrent small{font-size:9px}.wizardFooter .primary{min-width:140px}}
