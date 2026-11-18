@@ -28,7 +28,7 @@ const audioReq=(mime="audio/webm",size=1024)=>{
  form.append("audio",new Blob([new Uint8Array(size)],{type:mime}),mime.startsWith("video/")?"video.mp4":"speech.webm");
  return new NextRequest(BASE+"transcribe",{method:"POST",body:form});
 };
-const valid={network:"TikTok",transcript:"El negocio muestra cómo prepara sus productos cada mañana.",scene:"",locale:"es"};
+const valid={network:"TikTok",transcript:"El negocio muestra cómo prepara sus productos cada mañana.",scene:"",brand:"Mayuli Bakery",locale:"es"};
 const prev={
  direct:process.env.OPENAI_API_KEY,eleven:process.env.ELEVENLABS_API_KEY,
  gateway:process.env.AI_GATEWAY_API_KEY,oidc:process.env.VERCEL_OIDC_TOKEN
@@ -48,7 +48,7 @@ test("caption generation denies guests before spending credits",async()=>{
 test("caption generation rejects invalid platform, missing context and overlong payload before spending",async()=>{
  withKeys({direct:true});
  const {api,stats}=route("generate");
- for(const body of [{...valid,network:"MySpace"},{...valid,transcript:"",scene:""},{...valid,transcript:"x".repeat(6100)}]){
+ for(const body of [{...valid,network:"MySpace"},{...valid,transcript:"",scene:""},{...valid,transcript:"x".repeat(6100)},{...valid,brand:"a".repeat(150)}]){
   assert.equal((await api.POST(jsonReq(body))).status,400);
  }
  assert.equal(stats.creditCalls,0);
@@ -71,6 +71,7 @@ test("caption generation returns real provider text, never posts content",async(
   const request=JSON.parse(options.body);
   assert.equal(request.messages[1].content.includes("TikTok"),true);
   assert.equal(request.messages[1].content.includes(valid.transcript),true);
+  assert.equal(request.messages[1].content.includes(valid.brand),true);
   assert.match(request.messages[0].content,/sin inventar|no inventar/i);
   return new Response(JSON.stringify({choices:[{message:{content:"Nuestro proceso artesanal, paso a paso. Conócenos. #Repostería #HechoAMano"}}]}),{status:200});
  };
