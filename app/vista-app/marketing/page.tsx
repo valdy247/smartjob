@@ -298,6 +298,9 @@ function MarketingWorkspace(){
         <button type="button" className={styles.secondary} onClick={()=>setCampaignEditing(value=>!value)}>{campaignEditing?<CheckCircle2 size={16}/>:<ClipboardCopy size={16}/>} {campaignEditing?translate("marketing.ui.done"):translate("marketing.ui.edit")}</button>
         <button type="button" className={styles.secondary} onClick={()=>void copy(activeCampaignDraft)}><ClipboardCopy size={16}/> {translate("marketing.copy.copy")}</button>
        </div>
+       <Link href="/vista-app/marketing/ads" className={styles.primary} style={{display:"inline-flex",alignItems:"center",gap:8,textDecoration:"none",marginRight:10,marginBottom:10}}>
+        {language==="en"?"Connect advertising accounts":"Conectar cuentas y crear anuncios"} <ArrowUpRight size={16}/>
+       </Link>
        <button type="button" className={styles.primary} onClick={()=>{setRequestedService("campaign_setup");setSection("actions");setNotice("");}}>
         {language==="en"?"Request a campaign quote":"Solicitar una campaña y cotización"} <ArrowUpRight size={16}/>
        </button>
