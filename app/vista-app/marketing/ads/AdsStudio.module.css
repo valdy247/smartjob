@@ -260,3 +260,24 @@
 .linkCheck small{font-size:10px;color:#776578;overflow-wrap:anywhere;line-height:1.5;flex:1 1 190px}
 .linkCheck .linkError{color:#9e4058}
 .uploadStatus{font-size:11px;font-weight:750;color:#8b6188;line-height:1.5}
+
+
+/* Upload progress: visible on mobile, respects reduced motion. */
+.uploadStatus{display:inline-flex;align-items:center;gap:8px;color:#845075}
+.imageWaitText{font-size:11px;line-height:1.5;color:#8a7490;margin:-6px 0 0}
+.spinIcon{animation:vmvAdsSpin .85s linear infinite;flex-shrink:0}
+@keyframes vmvAdsSpin{to{transform:rotate(360deg)}}
+.instagramConnection{display:grid;gap:13px;border:1px solid #f0e3ed;background:#fffcfe;border-radius:15px;padding:14px}
+.igHeading{display:flex;align-items:center;gap:10px;min-width:0;color:#86517d}
+.igHeading>div{display:grid;gap:3px;flex:1;min-width:0}
+.igHeading strong{color:#563f5d;font-size:13px}
+.igHeading small{color:#95879c;font-size:10px;line-height:1.5}
+.igHelp{display:grid;gap:10px;font-size:11px;line-height:1.6;color:#786780;margin:0}
+.igHelp p{margin:0}
+.igHelp small{font-size:10px;color:#95859a}
+.igActions{display:flex;flex-wrap:wrap;gap:8px}
+.igActions a{text-decoration:none}
+.igActions>.secondary{display:inline-flex;min-height:43px}
+.instagramConnection .switchRow{border-top:1px solid #f0e3ed;padding:12px 0 0}
+@media(max-width:540px){.igActions>.secondary{flex:1 1 180px}}
+@media(prefers-reduced-motion:reduce){.spinIcon{animation:none}}
