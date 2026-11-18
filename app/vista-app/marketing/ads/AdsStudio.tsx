@@ -13,7 +13,7 @@ type Campaign={id:string;ad_account_id:string;status:string;draft:{
  error_code:string|null;created_at:string};
 type AccountsResponse={configured:boolean;connected:boolean;connection?:Connected;accounts:Account[];
  pages:Page[];error?:string};
-const initial={name:"",headline:"",message:"",destination:"",pageId:"",
+const initial={name:"",business:"",offer:"",audience:"",headline:"",message:"",destination:"",pageId:"",
  dailyBudget:"10",durationDays:"7",placements:"facebook_instagram" as "facebook"|"facebook_instagram",
  specialCategoriesAcknowledged:false};
 const platforms=[
@@ -108,6 +108,16 @@ export default function AdsStudio(){
   const result=await api("/api/marketing/ads/meta/image","POST",f,true);
   setImageHash(result.imageHash);
   setNotice(localized("Imagen enviada de forma segura a Meta.","Image uploaded securely to Meta."));
+ });
+ const generate=()=>run("generate",async()=>{
+  const result=await api("/api/marketing/ads/generate","POST",{
+   business:form.business,offer:form.offer,audience:form.audience,locale:language
+  });
+  setForm(v=>({...v,headline:result.headline||v.headline,message:result.message||v.message}));
+  setDraftId("");setDraftKey(crypto.randomUUID());
+  setNotice(result.source==="AI"?
+    localized("La IA preparó un borrador. Revísalo antes de guardar.","AI drafted your copy. Review it before saving."):
+    localized("Se usó una plantilla porque la IA no está configurada o no respondió.","A template was used because the AI provider is not configured or unavailable."));
  });
  const saveDraft=()=>run("draft",async()=>{
   const daily=Math.round(Number(form.dailyBudget)*100),days=Number(form.durationDays);
@@ -213,6 +223,12 @@ export default function AdsStudio(){
    <div className={styles.panelHead}><div><span className={styles.eyebrow}>03 · {localized("CREACIÓN","CREATION")}</span><h2>{localized("Crear anuncio de tráfico web","Create a website traffic ad")}</h2></div></div>
    <p className={styles.muted}>{localized("Para empezar, solo tráfico web hacia una URL HTTPS, audiencia general de Estados Unidos y máximo 30 días. Otros objetivos y audiencias requieren validación adicional.","Initial support: website traffic to an HTTPS URL, broad US audiences and up to 30 days. Other objectives and audiences require additional validation.")}</p>
    <div className={styles.fieldsGrid}>
+    <label>{localized("Nombre del negocio","Business name")}<input maxLength={100} value={form.business} onChange={e=>patch("business",e.target.value)} placeholder={localized("Nombre comercial","Business name")}/></label>
+    <label>{localized("Qué quieres promocionar","What are you promoting?")}<input maxLength={280} value={form.offer} onChange={e=>patch("offer",e.target.value)} placeholder={localized("Producto, servicio u oferta real","Real product, service or offer")}/></label>
+    <label className={styles.wide}>{localized("Público general de la campaña","Broad target audience")}<input maxLength={150} value={form.audience} onChange={e=>patch("audience",e.target.value)} placeholder={localized("Clientes de nuestra área que necesitan el servicio","Local customers looking for our service")}/></label>
+    <div className={styles.wide}><button className={styles.secondary} disabled={!!busy||form.business.trim().length<2||form.offer.trim().length<8||form.audience.trim().length<3} onClick={generate}>
+     {busy==="generate"?localized("Preparando texto…","Preparing copy…"):localized("Proponer anuncio con IA","Suggest ad copy with AI")}
+    </button><p className={styles.muted}>{localized("Revisa los hechos y políticas publicitarias. La IA no publicará nada por su cuenta.","Review factual claims and ad policies. AI never publishes without your approval.")}</p></div>
     <label>{localized("Nombre de la campaña","Campaign name")}<input maxLength={80} value={form.name} onChange={e=>patch("name",e.target.value)} placeholder={localized("Promoción de noviembre","November promotion")}/></label>
     <label>{localized("Página de Facebook autorizada","Authorized Facebook Page")}<select value={form.pageId} onChange={e=>patch("pageId",e.target.value)}>
      <option value="">{localized("Seleccionar página","Choose Page")}</option>{meta.pages.map(p=><option key={p.id} value={p.id}>{p.name}{p.instagramUsername?" · @"+p.instagramUsername:""}</option>)}
