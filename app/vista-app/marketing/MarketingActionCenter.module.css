@@ -431,7 +431,7 @@
 .caseProgressTrack{height:7px;width:100%;border-radius:999px;background:#f0edf5;overflow:hidden}
 .caseProgressFill,.caseProgressCancelled{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#b69af1 0%,#8e72de 70%,#7a5ed1 100%);transition:width .35s ease}
 .caseProgressCancelled{background:#bcb3c3}
-.request>.requestDescription{color:#7c7087;font-size:11.5px;line-height:1.5;margin:0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+.request>p{color:#7c7087;font-size:11.5px;line-height:1.5;margin:0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
 .requestFooter{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid #f0ecf5;padding-top:10px}
 .requestFooter button,.requestFooter a{display:inline-flex;align-items:center;gap:7px;min-height:35px;font:inherit;font-size:11px;font-weight:800;text-decoration:none;cursor:pointer}
 .requestExpand{padding:7px 0;border:0;background:transparent;color:#76569a}
