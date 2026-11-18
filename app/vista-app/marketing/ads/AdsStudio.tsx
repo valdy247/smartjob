@@ -3,7 +3,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import styles from "./AdsStudio.module.css";
-import {Megaphone,ShieldCheck,ArrowUpRight,CheckCircle2,Globe2,ExternalLink,ChevronDown,ChevronLeft,ChevronRight,ImagePlus,MapPin,WandSparkles,BarChart3} from "lucide-react";
+import {Megaphone,ShieldCheck,ArrowUpRight,CheckCircle2,Globe2,ExternalLink,ChevronDown,ChevronLeft,ChevronRight,ImagePlus,MapPin,WandSparkles,BarChart3,LoaderCircle,Instagram} from "lucide-react";
 
 type Account={id:string;name:string;currency:string;status:number;timezone:string};
 type Page={id:string;name:string;instagramId:string|null;instagramUsername:string};
@@ -519,28 +519,51 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
      <small>{(()=>{try{return normalizedDestination?new URL(normalizedDestination).hostname:localized("Tu sitio web","Your website");}catch{return localized("Tu sitio web","Your website");}})()}</small></div>
      <span>{localized("Más información","Learn more")}</span></div>
    </div>
-   <div className={styles.uploadRow}>
+   <div className={styles.uploadRow} aria-live="polite">
     <label className={styles.imagePicker}>{localized("Imagen del anuncio · JPG/PNG hasta 2 MB","Ad image · JPG/PNG up to 2 MB")}
      <input className={styles.visuallyHiddenFile} type="file" accept="image/jpeg,image/png"
       disabled={busy==="image"} onChange={e=>upload(e.target.files?.[0]||null)}/>
      <span className={styles.imagePickerButton}><ImagePlus size={16}/>{image?image.name.slice(0,30):localized("Elegir imagen","Choose image")}</span>
     </label>
-    {busy==="image"?<span className={styles.uploadStatus}>{localized("Preparando imagen automáticamente…","Preparing image automatically…")}</span>:
+    {busy==="image"?<span className={styles.uploadStatus} role="status"><LoaderCircle size={17} className={styles.spinIcon} aria-hidden="true"/>{localized("Subiendo imagen a Meta…","Uploading image to Meta…")}</span>:
      imageHash?<span className={styles.connected}><CheckCircle2 size={15}/>{localized("Imagen lista","Image ready")}</span>:
       image?<button type="button" className={styles.secondary} disabled={!!busy} onClick={()=>upload(image)}>{localized("Reintentar imagen","Retry image")}</button>:null}
    </div>
+   {busy==="image"?<p className={styles.imageWaitText}>{localized("Puedes esperar unos segundos. Continuar se activará automáticamente cuando Meta termine.","Please wait a few seconds. Continue will activate automatically when Meta is ready.")}</p>:null}
   </section>:null}
   {step===4?<section className={styles.simpleCard}>
    <div className={styles.cardTop}><div className={styles.cardTitle}><span className={styles.cardIcon}><BarChart3 size={19}/></span><div>
     <h2>{localized("Presupuesto y entrega","Budget and delivery")}</h2><small>{localized("El gasto publicitario se paga directamente a Meta.","Ad spend is billed directly by Meta.")}</small></div></div></div>
-   <div className={styles.switchRow}><div><strong>{localized("Publicar también en Instagram","Include Instagram")}</strong>
-    <small>{selectedPage?.instagramId?localized("Con la cuenta de Instagram vinculada","With your linked Instagram account"):
-     localized("Vincula Instagram profesional a esta página desde Meta y vuelve a comprobar.","Link a professional Instagram account to this Page in Meta and check again.")}</small></div>
-    <label className={styles.toggle}><input type="checkbox" checked={instagramEnabled&&Boolean(selectedPage?.instagramId)} disabled={!selectedPage?.instagramId}
-     onChange={e=>setInstagramEnabled(e.target.checked)}/><span/></label></div>
-   {!selectedPage?.instagramId?<button type="button" className={styles.textButton} disabled={!!busy} onClick={()=>void reload()}>
-    {localized("Instagram vinculado · Comprobar otra vez","Instagram linked · Check again")}
-   </button>:<small className={styles.muted}>{selectedPage.instagramUsername?"@"+selectedPage.instagramUsername:localized("Instagram vinculado","Instagram linked")}</small>}
+   <div className={styles.instagramConnection}>
+    <div className={styles.igHeading}><Instagram size={19} aria-hidden="true"/>
+     <div><strong>{localized("Instagram","Instagram")}</strong>
+      <small>{selectedPage?.name||localized("Selecciona una página de Facebook en el primer paso","Choose a Facebook Page in the first step")}</small></div>
+     {selectedPage?.instagramId?<span className={styles.connected}><CheckCircle2 size={14}/>{localized("Vinculado","Linked")}</span>:
+      <span className={styles.pilot}>{localized("Sin vincular","Not linked")}</span>}
+    </div>
+    {selectedPage?.instagramId?<p className={styles.igHelp}>{selectedPage.instagramUsername?"@"+selectedPage.instagramUsername:
+     localized("Meta reconoce un Instagram profesional vinculado a esta página.","Meta recognizes a professional Instagram account linked to this Page.")}</p>:
+     <div className={styles.igHelp}>
+      <p>{localized("El switch no conecta cuentas. Vincula tu Instagram profesional a esta página de Facebook desde Meta Business Suite y vuelve para comprobarlo.",
+       "The switch doesn't link accounts. Link your professional Instagram to this Facebook Page in Meta Business Suite, then return to verify it.")}</p>
+      <div className={styles.igActions}>
+       <a href="https://business.facebook.com/" target="_blank" rel="noopener noreferrer" className={styles.secondary}>
+        <ExternalLink size={15}/>{localized("Vincular Instagram en Meta","Link Instagram in Meta")}</a>
+       <button type="button" className={styles.secondary} disabled={loading||!!busy} onClick={()=>void reload()}>
+        {loading?<LoaderCircle size={15} className={styles.spinIcon} aria-hidden="true"/>:<CheckCircle2 size={15}/>}
+        {loading?localized("Comprobando…","Checking…"):localized("Comprobar conexión","Check connection")}</button>
+      </div>
+      <small>{localized("En Meta: Configuración → Cuentas → Instagram. Asegúrate de vincularlo también a la página seleccionada.",
+       "In Meta: Settings → Accounts → Instagram. Make sure it is also linked to the selected Page.")}</small>
+     </div>}
+    <div className={styles.switchRow}><div><strong>{localized("Incluir Instagram en el anuncio","Include Instagram in the ad")}</strong>
+     <small>{selectedPage?.instagramId?localized("Activar ubicaciones de Instagram para esta campaña.","Enable Instagram placements for this campaign."):
+      localized("Disponible cuando Meta confirme la vinculación.","Available after Meta confirms the linked account.")}</small></div>
+     <label className={styles.toggle}><input type="checkbox" aria-label={localized("Incluir Instagram en el anuncio","Include Instagram in the ad")}
+      checked={instagramEnabled&&Boolean(selectedPage?.instagramId)} disabled={!selectedPage?.instagramId}
+      onChange={e=>setInstagramEnabled(e.target.checked)}/><span/></label>
+    </div>
+   </div>
    <div className={styles.switchRow}><div><strong>{localized("Añadir etiquetas UTM","Add UTM tags")}</strong>
     <small>{localized("Añade etiquetas al enlace para atribuir visitas.","Adds tags to your URL to attribute visits.")}</small></div>
     <label className={styles.toggle}><input type="checkbox" checked={form.utmEnabled} onChange={e=>patch("utmEnabled",e.target.checked)}/><span/></label></div>
@@ -571,7 +594,10 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
   </section>:null}
   <div className={styles.wizardFooter}>
    {step>0?<button type="button" className={styles.secondary} disabled={!!busy} onClick={()=>goStep(step-1)}><ChevronLeft size={17}/>{localized("Atrás","Back")}</button>:<span/>}
-   {step<4?<button type="button" className={styles.primary} disabled={!!busy||!canContinue[step]} onClick={()=>goStep(step+1)}>{localized("Continuar","Continue")}<ChevronRight size={17}/></button>:null}
+   {step<4?<button type="button" className={styles.primary} disabled={!!busy||!canContinue[step]} aria-busy={busy==="image"} onClick={()=>goStep(step+1)}>
+    {step===3&&busy==="image"?<><LoaderCircle size={17} className={styles.spinIcon} aria-hidden="true"/>{localized("Cargando imagen…","Uploading image…")}</>:
+     <>{localized("Continuar","Continue")}<ChevronRight size={17}/></>}
+   </button>:null}
   </div>
   <p className={styles.foot}>{localized("El presupuesto se cobra en Meta, nunca en este formulario. VMV no crea anuncios activos sin una aprobación adicional.",
    "Ad budgets are billed by Meta, never in this form. VMV does not activate ads without separate approval.")}</p>
