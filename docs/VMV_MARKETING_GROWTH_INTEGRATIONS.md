@@ -52,6 +52,35 @@ Integración con CRM & Leads: formulario, llamada, cita, pedido, reserva y fuent
 ### 5. Experimentos con rentabilidad
 Dos variantes de landing/oferta o creatividad; definir hipótesis, inversión y conversiones antes del lanzamiento. Recomendaciones basadas en resultados y límites de presupuesto. No publicar ni gastar sin autorización explícita.
 
+## Decisión aprobada — Crear una campaña automático con IA (18 noviembre 2026)
+
+**Decisión del Director:** la evolución definitiva de **Marketing → Crear una campaña** es un flujo **automático con IA**, no un servicio manual como destino final. **Meta Ads (Facebook/Instagram) primero; Google Ads en fase posterior.** El cliente debe revisar y autorizar expresamente el anuncio, destino, cuenta publicitaria y presupuesto antes de publicar o generar gasto. No se elimina el planificador de campañas actual: se reutiliza como la primera etapa del recorrido.
+
+**Estado actual:** solo existe el planificador de contenido/estrategia, edición, copia/compartir y calculadora de resultados con datos introducidos manualmente. **No hay conexión OAuth con Meta/Google Ads ni capacidad de crear/publicar campañas, gastar dinero o leer métricas de anuncios desde esos proveedores.** Esta sección es **documentación de producto**, no una activación.
+
+### Flujo futuro aprobado
+1. **Conectar cuenta publicitaria** por OAuth oficial, con consentimiento por negocio, permisos mínimos, comprobación de titularidad, caducidad, revocación y desconexión.
+2. **Preparar campaña con IA:** objetivo, producto/oferta, público, creatividad y mensaje, ubicaciones permitidas, destino (web/WhatsApp u otro), duración, límite total y presupuesto diario en moneda indicada. Validar políticas de publicidad y consentimiento del material; permitir revisión y edición.
+3. **Cotizar por separado** (a) gasto publicitario de la cuenta del negocio y (b) comisión/suscripción de VMV, si procede. Nunca mezclar ambos conceptos ni inventar resultados esperados.
+4. **Mostrar previsualización y aprobación explícita** del negocio sobre versión exacta de creatividades, audiencia, destino y presupuesto; registrar versión, usuario aprobador, alcance, fecha, cuenta y consentimiento.
+5. **Crear primero el borrador en estado pausado**, vía API oficial y solo bajo la cuenta publicitaria autorizada. Confirmar los IDs reales devueltos, la revisión de plataforma y el estado.
+6. **Publicar únicamente mediante acción autorizada**, comprobando aprobación vigente, límites de gasto, permisos y estados de revisión. No reactivar campañas automáticamente ni aumentar presupuestos sin una nueva autorización.
+7. **Leer resultados reales de la API**, con fecha/fuente/atribución y aclaración de retrasos; permitir pausar y supervisar presupuesto, errores, rechazo de anuncio y métricas, con avisos basados en hechos verificables.
+8. **Historial auditable** por negocio: aprobaciones, cambios, costes, operaciones, eventos del proveedor y reintentos idempotentes; aislamiento multi-tenant estricto.
+
+### Secuencia de implementación y puertas de salida
+- **Fase 0 — catálogo y planificador:** conservar el generador actual sin presentarlo como publicación automática. Probar edición/copia/compartir móvil.
+- **Fase 1 — Meta en modo prueba:** requisitos de Meta Developers, permisos empresariales, OAuth, cuentas autorizadas y desarrollo de anuncios/borradores **pausados**. Validar en cuenta controlada, sin presupuesto activo.
+- **Fase 2 — creación y publicación autorizadas:** confirmar aprobación humana, política de presupuestos, estados de revisión, webhook o reconciliación, operaciones de pausa y pruebas negativas antes de permitir anuncios activos.
+- **Fase 3 — Google Ads:** OAuth, acceso del desarrollador/API y flujo equivalente de aprobación, borrador, publicación y métricas.
+- **Fase 4 — cobro VMV:** precios, planes y facturación independientes del presupuesto publicitario, con controles de pago y requisitos fiscales revisados.
+
+**No hacer en la fase actual:** no crear conexiones reales ni campañas; no activar pagos, anuncios, credenciales, automatismos o cambios de producción. No crear una tarjeta duplicada en Servicios; el alcance pertenece a Marketing → Campañas. Las cuentas publicitarias y la disponibilidad de funciones dependen de permisos y aprobación de cada proveedor.
+
+Referencias técnicas iniciales que deben verificarse al implementar:
+- Meta Marketing API: https://developers.facebook.com/docs/marketing-apis/
+- Google Ads API: https://developers.google.com/google-ads/api/docs/start
+
 ## Reputation Booster — fase futura de «Mi reputación» (18 noviembre 2026)
 
 **Decisión de producto:** integrar Reputation Booster como una ampliación de `Marketing → Mi reputación`; **no crear otra tarjeta** en el catálogo de Servicios. Ya existen respuestas a reseñas reales y generación manual de solicitudes con enlace. La automatización se deja en estado **Próximamente**, sin activar envíos.
