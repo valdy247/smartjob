@@ -37,7 +37,9 @@ export async function POST(req:NextRequest){
  rate.set(owner,{count:r&&r.until>now?r.count+1:1,until:r&&r.until>now?r.until:now+3600000});
  const rules=[
   "You are a senior small-business paid social strategist writing useful Meta Ads copy.",
-  "Return ONLY JSON with three distinct variants, each with label, headline, message, why, plus recommendation and measurement.",
+  "Return ONLY one valid JSON object, without markdown, code fences, comments or introductory text.",
+  "Use precisely this structure: {\"variants\":[{\"label\":\"...\",\"headline\":\"...\",\"message\":\"...\",\"why\":\"...\"},{\"label\":\"...\",\"headline\":\"...\",\"message\":\"...\",\"why\":\"...\"},{\"label\":\"...\",\"headline\":\"...\",\"message\":\"...\",\"why\":\"...\"}],\"recommendation\":\"...\",\"measurement\":\"...\"}.",
+  "Include exactly three variants, with commercially distinct angles and independently editable copy.",
   "One variant should lead with a truthful product offer, one with the location, one with a useful differentiator supplied by the customer.",
   "Each variant must read like an original, concrete advertisement, not a template or restatement of the intake.",
   "Write a compelling opening hook, describe why the offering matters, and give an actionable invitation to visit the website.",
@@ -60,10 +62,12 @@ export async function POST(req:NextRequest){
   const text=await askAiAgent({
    system:rules,
    messages:[{role:"user",content:prompt}],
-   temperature:0.65,maxOutputTokens:1350,timeoutMs:25000
+   temperature:0.45,maxOutputTokens:1700,timeoutMs:25000
   });
-  const raw=text.trim().replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"");
+  const content=text.trim().replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim();
+  const raw=content.startsWith("{")?content:content.slice(content.indexOf("{"),content.lastIndexOf("}")+1);
   const parsed=JSON.parse(raw);
+
   const variants=validateVariants(parsed.variants);
   if(!variants||str(parsed.recommendation,350).length<20||str(parsed.measurement,250).length<10)
    throw Error("incomplete_ai_output");
@@ -71,8 +75,23 @@ export async function POST(req:NextRequest){
    recommendation:str(parsed.recommendation,350),
    measurement:str(parsed.measurement,250),providerConfigured:true},{headers:noCache});
  }catch(err){
-  console.warn("[marketing-ads] AI generation unavailable",err instanceof Error?err.name:"error");
-  return NextResponse.json({error:"ai_generation_unavailable_retry"},{status:503,headers:noCache});
+  const status=typeof err==="object"&&err!==null&&"statusCode" in err&&
+   typeof err.statusCode==="number"?err.statusCode:0;
+  const message=err instanceof Error?err.message:"";
+  const kind=err instanceof SyntaxError?"invalid_json":
+   message==="incomplete_ai_output"?"invalid_structure":
+   /abort|timed out|timeout/i.test(message)||err instanceof DOMException&&err.name==="TimeoutError"?"timeout":
+   status===402?"gateway_billing":status===401||status===403?"gateway_auth":
+   status===429?"gateway_rate_limited":status>=500?"gateway_upstream":
+   /AI provider|Gateway|OpenAI|model/i.test(message)?"gateway_request":"other";
+  console.warn("[marketing-ads] provider failure",{kind,status,name:err instanceof Error?err.name:"unknown"});
+  const error=kind==="gateway_auth"?"ai_provider_access_denied":
+   kind==="gateway_billing"?"ai_provider_billing_unavailable":
+   kind==="gateway_rate_limited"?"ai_provider_rate_limited":
+   kind==="timeout"?"ai_provider_timeout":
+   kind==="invalid_json"||kind==="invalid_structure"?"ai_invalid_provider_response":
+   "ai_generation_unavailable_retry";
+  return NextResponse.json({error},{status:503,headers:noCache});
  }
 
 }
