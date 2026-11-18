@@ -1,17 +1,22 @@
 "use client";
 import Link from "next/link";
-import {ArrowLeft} from "lucide-react";
+import {ArrowLeft,Sparkles} from "lucide-react";
 import AdsStudio from "./AdsStudio";
-const moduleName="Marketing";
+import styles from "./AdsStudio.module.css";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
+import {useInterfaceLanguage} from "@/lib/i18n-web";
 export default function MarketingAdsPage(){
- return <main style={{minHeight:"100dvh",background:"#faf8fc",color:"#1a1727"}}>
-  <header style={{maxWidth:1120,margin:"auto",padding:"22px 20px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-   <Link href="/vista-app/marketing" style={{display:"inline-flex",gap:8,alignItems:"center",fontSize:13,fontWeight:650,textDecoration:"none",color:"#5f526f"}}>
-    <ArrowLeft size={16}/> {moduleName}
-   </Link>
-   <InterfaceLanguagePicker compact/>
-  </header>
-  <AdsStudio/>
+ const {language}=useInterfaceLanguage();
+ return <main className={styles.page}>
+  <div className={styles.shell}>
+   <header className={styles.topbar}>
+    <div className={styles.topbarIdentity}>
+     <Link href="/vista-app/marketing" className={styles.backLink}><ArrowLeft size={17}/> {language==="en"?"Marketing":"Marketing"}</Link>
+     <InterfaceLanguagePicker compact/>
+    </div>
+    <span className={styles.marker}><Sparkles size={14}/>{language==="en"?"Ads Studio · Pilot":"Ads Studio · Piloto"}</span>
+   </header>
+   <AdsStudio/>
+  </div>
  </main>;
 }
