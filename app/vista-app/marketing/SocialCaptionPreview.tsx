@@ -50,7 +50,7 @@ export default function SocialCaptionPreview({onBack,businessName=""}:{onBack:()
  const en=language==="en";
  const [network,setNetwork]=useState("");
  const [brand,setBrand]=useState(businessName);
- useEffect(()=>{if(businessName&&!brand.trim())setBrand(businessName);},[businessName,brand]);
+ useEffect(()=>{setBrand(businessName);},[businessName]);
  const [mode,setMode]=useState<Mode>("speech");
  const [video,setVideo]=useState<File|null>(null);
  const [scene,setScene]=useState("");
