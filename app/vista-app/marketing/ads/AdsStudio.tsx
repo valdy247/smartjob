@@ -282,7 +282,7 @@ export default function AdsStudio(){
    </div>)}</div>}
   </section>
   <details className={styles.moreChannels}>
-   <summary><Globe2 size={18}/><span>${localized("Ver otras plataformas y próximas integraciones","Other platforms and upcoming integrations")}</span><ArrowUpRight size={16}/></summary>
+   <summary><Globe2 size={18}/><span>{localized("Ver otras plataformas y próximas integraciones","Other platforms and upcoming integrations")}</span><ArrowUpRight size={16}/></summary>
   <section className={styles.panel}>
    <div className={styles.panelHead}><div><span className={styles.eyebrow}>04 · {localized("PLATAFORMAS","CHANNELS")}</span><h2>{localized("Más plataformas publicitarias","More advertising platforms")}</h2></div>
     <span className={styles.help}>{localized("Cada plataforma requiere su propia autorización.","Each platform requires separate authorization.")}</span></div>
