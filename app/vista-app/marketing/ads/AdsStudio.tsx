@@ -17,9 +17,10 @@ type Plan={variants:AdVariant[];source:"ai"|"brief";recommendation:string;measur
 type Place={key:string;name:string;region:string;countryCode:string};
 type AccountsResponse={configured:boolean;connected:boolean;connection?:Connected;accounts:Account[];
  pages:Page[];error?:string};
-const initial={name:"",business:"",offer:"",audience:"",benefit:"",cityQuery:"",cityKey:"",cityName:"",citySearch:"",radiusMiles:"15",utmEnabled:true,headline:"",message:"",destination:"",pageId:"",
+const initial={name:"",business:"",offer:"",audience:"",benefit:"",stateCode:"",cityQuery:"",cityKey:"",cityName:"",citySearch:"",radiusMiles:"15",utmEnabled:true,headline:"",message:"",destination:"",pageId:"",
  dailyBudget:"10",durationDays:"7",placements:"facebook_instagram" as "facebook"|"facebook_instagram",
  specialCategoriesAcknowledged:false};
+const usStates="AL:Alabama|AK:Alaska|AZ:Arizona|AR:Arkansas|CA:California|CO:Colorado|CT:Connecticut|DE:Delaware|DC:District of Columbia|FL:Florida|GA:Georgia|HI:Hawaii|ID:Idaho|IL:Illinois|IN:Indiana|IA:Iowa|KS:Kansas|KY:Kentucky|LA:Louisiana|ME:Maine|MD:Maryland|MA:Massachusetts|MI:Michigan|MN:Minnesota|MS:Mississippi|MO:Missouri|MT:Montana|NE:Nebraska|NV:Nevada|NH:New Hampshire|NJ:New Jersey|NM:New Mexico|NY:New York|NC:North Carolina|ND:North Dakota|OH:Ohio|OK:Oklahoma|OR:Oregon|PA:Pennsylvania|RI:Rhode Island|SC:South Carolina|SD:South Dakota|TN:Tennessee|TX:Texas|UT:Utah|VT:Vermont|VA:Virginia|WA:Washington|WV:West Virginia|WI:Wisconsin|WY:Wyoming".split("|").map(x=>x.split(":") as [string,string]);
 const adsWordmark="VMV ADS";
 const platforms=[
  {name:"Meta Ads",description:"Facebook e Instagram",available:true},
@@ -48,6 +49,8 @@ export default function AdsStudio(){
  const [previewImage,setPreviewImage]=useState("");
  const [instagramEnabled,setInstagramEnabled]=useState(true);
  const [step,setStep]=useState(0);
+ const [placeSearching,setPlaceSearching]=useState(false);
+ const [locationError,setLocationError]=useState("");
  const [pagePickerOpen,setPagePickerOpen]=useState(false);
  const [showAdvanced,setShowAdvanced]=useState(false);
  const [image,setImage]=useState<File|null>(null);
@@ -77,7 +80,7 @@ export default function AdsStudio(){
  const money=(cents:number)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(cents/100);
  const patch=(name:keyof typeof initial,value:string|boolean)=>{
   setForm(v=>({...v,[name]:value}));setDraftId("");setDraftKey(crypto.randomUUID());setError("");
-  if(["business","offer","audience","benefit","cityQuery"].includes(name))setPlan(null);
+  if(["business","offer","audience","benefit","cityQuery","stateCode"].includes(name))setPlan(null);
  };
  const api=async(path:string,method="GET",payload?:unknown,formData=false)=>{
   const client=getSupabase();if(!client)throw Error("sign_in_required");
@@ -140,16 +143,9 @@ export default function AdsStudio(){
   setImageHash(result.imageHash);
   setNotice(localized("Imagen enviada de forma segura a Meta.","Image uploaded securely to Meta."));
  });
- const searchPlaces=()=>run("locations",async()=>{
-  const term=form.cityQuery.trim();
-  if(term.length<3)throw Error("Escribe al menos 3 letras de tu ciudad.");
-  const result=await api("/api/marketing/ads/meta/locations?q="+encodeURIComponent(term));
-  setPlaces(result.places||[]);
-  if(!result.places?.length)throw Error("Meta no encontró ciudades. Prueba otro nombre.");
- });
  const choosePlace=(place:Place)=>{
   setForm(v=>({...v,cityKey:place.key,cityName:place.name+
-   (place.region?", "+place.region:""),citySearch:v.cityQuery}));
+   (place.region?", "+place.region:""),citySearch:place.name}));
   setPlaces([]);setDraftId("");setDraftKey(crypto.randomUUID());setPlan(null);
  };
  const generate=()=>run("generate",async()=>{
@@ -245,6 +241,31 @@ export default function AdsStudio(){
    /^https:\/\//.test(form.destination)&&Boolean(imageHash)
  ];
  const goStep=(n:number)=>{setStep(Math.max(0,Math.min(4,n)));window.scrollTo({top:0,behavior:"smooth"});};
+ useEffect(()=>{
+  const term=form.cityQuery.trim();
+  if(step!==2||!hasAccount||!form.stateCode||term.length<3||form.cityKey){
+   setPlaces([]);setPlaceSearching(false);setLocationError("");return;
+  }
+  let active=true;
+  setPlaceSearching(true);setLocationError("");
+  const timer=window.setTimeout(()=>{
+   void (async()=>{
+    try{
+     const result=await api("/api/marketing/ads/meta/locations?q="+encodeURIComponent(term));
+     if(!active)return;
+     const stateName=usStates.find(s=>s[0]===form.stateCode)?.[1]?.toLowerCase()||"";
+     const matches=(Array.isArray(result.places)?result.places:[]).filter((p:Place)=>{
+      const region=p.region.toLowerCase();
+      return region===stateName||region===form.stateCode.toLowerCase()||region.includes(stateName);
+     });
+     setPlaces(matches);
+     if(!matches.length)setLocationError(localized("No encontramos la ciudad en ese estado. Prueba otro nombre.","No city found in this state. Try another name."));
+    }catch{if(active){setPlaces([]);setLocationError(localized("La búsqueda de Meta no respondió. Comprueba la conexión.","Meta location search failed. Check the connection."));}}
+    finally{if(active)setPlaceSearching(false);}
+   })();
+  },550);
+  return()=>{active=false;window.clearTimeout(timer);};
+ },[step,hasAccount,form.stateCode,form.cityQuery,form.cityKey,language]);
  return <div className={styles.workspace}>
   <div className={styles.compactIntro}>
    <div><span className={styles.eyebrow}><Megaphone size={15}/>{localized("MARKETING · ANUNCIOS","MARKETING · ADS")}</span>
@@ -335,19 +356,27 @@ export default function AdsStudio(){
     <h2>{localized("Ciudad y alcance","City and reach")}</h2><small>{localized("Elige dónde quieres anunciar.","Choose where your ad appears.")}</small>
    </div></div></div>
    <div className={styles.formStack}>
-    <div className={styles.locationRow}>
-     <label>{localized("Ciudad donde quieres anunciar","Target city")}
-      <input maxLength={80} value={form.cityQuery} onChange={e=>{
-       patch("cityQuery",e.target.value);setForm(v=>({...v,cityKey:"",cityName:"",citySearch:""}));setPlaces([]);
-      }} placeholder={localized("Ej. Columbus, Georgia","E.g. Columbus, Georgia")}/></label>
-     <button type="button" className={styles.secondary} disabled={!hasAccount||!!busy||form.cityQuery.trim().length<3} onClick={searchPlaces}>{busy==="locations"?localized("Buscando…","Searching…"):localized("Buscar en Meta","Find in Meta")}</button>
-    </div>
-    {places.length?<div className={styles.locationResults} role="group" aria-label={localized("Resultados de ciudades","City results")}>
-     {places.map(p=><button key={p.key} type="button" onClick={()=>choosePlace(p)}><MapPin size={15}/> {p.name}{p.region?", "+p.region:""}</button>)}</div>:null}
-    {form.cityKey?<div className={styles.placePicked}><CheckCircle2 size={15}/>{form.cityName} · {localized("Radio","Radius")}
-     <select aria-label={localized("Radio de alcance en millas","Target radius in miles")} value={form.radiusMiles} onChange={e=>patch("radiusMiles",e.target.value)}>
-      {[10,15,25,50].map(n=><option key={n} value={n}>{n} mi</option>)}
-     </select></div>:null}
+    <label>{localized("País","Country")}<input disabled value={localized("Estados Unidos","United States")} /></label>
+    <label>{localized("Estado","State")}<select value={form.stateCode} onChange={e=>{
+     patch("stateCode",e.target.value);setForm(v=>({...v,cityQuery:"",cityKey:"",cityName:"",citySearch:""}));setPlaces([]);
+    }}>
+     <option value="">{localized("Seleccionar estado","Choose a state")}</option>
+     {usStates.map(([code,name])=><option key={code} value={code}>{name} ({code})</option>)}
+    </select></label>
+    <label>{localized("Ciudad","City")}<input autoComplete="off" maxLength={80} disabled={!form.stateCode}
+     value={form.cityQuery} onChange={e=>{
+      patch("cityQuery",e.target.value);setForm(v=>({...v,cityKey:"",cityName:"",citySearch:""}));setPlaces([]);
+     }} placeholder={localized("Ej. Columbus","E.g. Columbus")}/></label>
+    {placeSearching?<small className={styles.muted}>{localized("Buscando ciudades…","Searching cities…")}</small>:null}
+    {places.length?<div className={styles.locationResults} role="group" aria-label={localized("Ciudades encontradas","Matching cities")}>
+     {places.map(p=><button key={p.key} type="button" onClick={()=>choosePlace(p)}><MapPin size={15}/> {p.name}{p.region?", "+p.region:""}</button>)}
+    </div>:null}
+    {locationError?<p className={styles.completionNote} role="status">{locationError}</p>:null}
+    {form.cityKey?<div className={styles.placePicked}><CheckCircle2 size={15}/>{form.cityName}</div>:null}
+    <label>{localized("Radio de alcance","Target radius")}<select value={form.radiusMiles} onChange={e=>patch("radiusMiles",e.target.value)}>
+     {[10,15,25,50].map(n=><option key={n} value={n}>{n} {localized("millas","miles")}</option>)}
+    </select></label>
+    <small className={styles.muted}>{localized("Solo elegimos ciudades verificadas por Meta. Nunca todo Estados Unidos por defecto.","Only Meta-verified cities are used, never the entire United States by default.")}</small>
    </div>
   </section>:null}
   {step===3?<section className={styles.simpleCard}>
