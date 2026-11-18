@@ -48,6 +48,7 @@ export default function AdsStudio(){
  const [previewImage,setPreviewImage]=useState("");
  const [instagramEnabled,setInstagramEnabled]=useState(true);
  const [step,setStep]=useState(0);
+ const [pagePickerOpen,setPagePickerOpen]=useState(false);
  const [showAdvanced,setShowAdvanced]=useState(false);
  const [image,setImage]=useState<File|null>(null);
  const [imageHash,setImageHash]=useState("");
@@ -279,11 +280,20 @@ export default function AdsStudio(){
     <button className={styles.primary} type="button" disabled={!selectedAccount||!!busy} onClick={chooseAccount}>{localized("Usar esta cuenta","Use this account")}</button>
    </div>:null}
    {hasAccount?<div className={styles.accountSelect}>
-    <label>{localized("Página de Facebook para el anuncio","Facebook Page for your ad")}
-     <select value={form.pageId} onChange={e=>patch("pageId",e.target.value)}>
-      <option value="">{localized("Seleccionar página","Choose Page")}</option>
-      {meta.pages.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-     </select></label>
+    <span className={styles.fieldHeading}>{localized("Página de Facebook para el anuncio","Facebook Page for your ad")}</span>
+    <button type="button" className={styles.pagePicker} aria-expanded={pagePickerOpen} onClick={()=>setPagePickerOpen(v=>!v)}>
+     <span>{selectedPage?.name||localized("Seleccionar página","Choose a Page")}</span><ChevronDown size={17}/>
+    </button>
+    {pagePickerOpen?<div className={styles.pageOptions} role="group" aria-label={localized("Páginas disponibles","Available Pages")}>
+     {meta.pages.map(p=><button key={p.id} type="button"
+      className={form.pageId===p.id?styles.pageOptionSelected:styles.pageOption}
+      onClick={()=>{patch("pageId",p.id);setPagePickerOpen(false);}}>
+      <span><strong>{p.name}</strong><small>{p.instagramId?
+       localized("Instagram vinculado","Instagram linked")+(p.instagramUsername?" · @"+p.instagramUsername:""):
+       localized("Instagram no vinculado","Instagram not linked")}</small></span>
+      {form.pageId===p.id?<CheckCircle2 size={17}/>:null}
+     </button>)}
+    </div>:null}
     {!meta.pages.length?<small className={styles.muted}>{localized("No se encontraron páginas autorizadas. Comprueba los permisos en Meta y vuelve a conectar.",
      "No authorized Pages found. Check permissions in Meta and reconnect.")}</small>:null}
    </div>:null}
@@ -397,9 +407,12 @@ export default function AdsStudio(){
     <h2>{localized("Presupuesto y entrega","Budget and delivery")}</h2><small>{localized("El gasto publicitario se paga directamente a Meta.","Ad spend is billed directly by Meta.")}</small></div></div></div>
    <div className={styles.switchRow}><div><strong>{localized("Publicar también en Instagram","Include Instagram")}</strong>
     <small>{selectedPage?.instagramId?localized("Con la cuenta de Instagram vinculada","With your linked Instagram account"):
-     localized("Necesita una página con Instagram profesional vinculado","Requires a Page with linked professional Instagram")}</small></div>
+     localized("Vincula Instagram profesional a esta página desde Meta y vuelve a comprobar.","Link a professional Instagram account to this Page in Meta and check again.")}</small></div>
     <label className={styles.toggle}><input type="checkbox" checked={instagramEnabled&&Boolean(selectedPage?.instagramId)} disabled={!selectedPage?.instagramId}
      onChange={e=>setInstagramEnabled(e.target.checked)}/><span/></label></div>
+   {!selectedPage?.instagramId?<button type="button" className={styles.textButton} disabled={!!busy} onClick={()=>void reload()}>
+    {localized("Instagram vinculado · Comprobar otra vez","Instagram linked · Check again")}
+   </button>:<small className={styles.muted}>{selectedPage.instagramUsername?"@"+selectedPage.instagramUsername:localized("Instagram vinculado","Instagram linked")}</small>}
    <div className={styles.switchRow}><div><strong>{localized("Añadir etiquetas UTM","Add UTM tags")}</strong>
     <small>{localized("Añade etiquetas al enlace para atribuir visitas.","Adds tags to your URL to attribute visits.")}</small></div>
     <label className={styles.toggle}><input type="checkbox" checked={form.utmEnabled} onChange={e=>patch("utmEnabled",e.target.checked)}/><span/></label></div>
@@ -413,13 +426,8 @@ export default function AdsStudio(){
      <strong>{Number.isFinite(total)&&total>0?money(total):"—"}</strong></div>
     <span>{localized("Sin gasto ahora","No spend now")}</span></div>
    <details className={styles.inlineDisclosure}>
-    <summary>{localized("Página y configuración avanzada","Page and advanced settings")} <ChevronDown size={15}/></summary>
+    <summary>{localized("Detalles de seguimiento","Tracking details")} <ChevronDown size={15}/></summary>
     <div className={styles.formStack}>
-     <label>{localized("Página de Facebook autorizada","Authorized Facebook Page")}
-      <select value={form.pageId} onChange={e=>patch("pageId",e.target.value)}>
-       <option value="">{localized("Seleccionar página","Choose a Page")}</option>
-       {meta.pages.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-      </select></label>
      {form.utmEnabled&&form.destination?<small className={styles.trackedLink}>{localized("Enlace con UTM: ","Tracked link: ")}{trackedDestination}</small>:null}
     </div>
    </details>
