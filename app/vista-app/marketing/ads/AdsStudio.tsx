@@ -212,7 +212,7 @@ export default function AdsStudio(){
      <div className={styles.fields}>
       <label>{localized("Cuenta publicitaria","Ad account")}<select value={selectedAccount} onChange={e=>setSelectedAccount(e.target.value)}>
        <option value="">{localized("Seleccionar cuenta autorizada","Select authorized account")}</option>
-       {meta.accounts.map(a=><option key={a.id} value={a.id}>{a.name} · {a.currency} · {a.id}{a.status!==1?" (inactiva)":""}</option>)}
+       {meta.accounts.map(a=><option key={a.id} value={a.id} disabled={a.status!==1||a.currency!=="USD"}>{a.name} · {a.currency} · {a.id}{a.status!==1?" (inactiva)":""}</option>)}
       </select></label>
       <button className={styles.primary} disabled={!!busy||!selectedAccount||selectedAccount===meta.connection?.selectedAccountId} onClick={chooseAccount}>{localized("Confirmar cuenta","Confirm account")}</button>
       <small>{localized("El piloto admite cuentas activas en USD. Meta cobra el presupuesto directamente al negocio.","The pilot supports active USD accounts. Meta bills ad spend directly to the business.")}</small>
@@ -242,7 +242,7 @@ export default function AdsStudio(){
     <label>{localized("Días de duración","Duration (days)")}<input type="number" min="1" max="30" value={form.durationDays} onChange={e=>patch("durationDays",e.target.value)}/></label>
     <label className={styles.wide}>{localized("Texto del anuncio","Ad message")}<textarea maxLength={500} rows={4} value={form.message} onChange={e=>patch("message",e.target.value)} placeholder={localized("Escribe qué ofreces y por qué visitar tu web","Describe your offer and why visitors should click")}/></label>
     <div className={styles.wide}>
-     <label>{localized("Imagen del anuncio (JPG/PNG, máximo 3 MB)","Ad image (JPG/PNG, up to 3 MB)")}<input type="file" accept="image/jpeg,image/png" onChange={e=>{
+     <label>{localized("Imagen del anuncio (JPG/PNG, máximo 2 MB)","Ad image (JPG/PNG, up to 2 MB)")}<input type="file" accept="image/jpeg,image/png" onChange={e=>{
       setImage(e.target.files?.[0]||null);setImageHash("");setDraftId("");setDraftKey(crypto.randomUUID());
      }}/></label>
      <div className={styles.inlineActions}><button disabled={!!busy||!image} onClick={upload} className={styles.secondary}>{busy==="image"?localized("Subiendo…","Uploading…"):localized("Subir a Meta","Upload to Meta")}</button>
