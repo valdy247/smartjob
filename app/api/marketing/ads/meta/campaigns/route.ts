@@ -45,7 +45,31 @@ export async function GET(req:NextRequest){
   .select("id,ad_account_id,status,draft,provider_campaign_id,provider_adset_id,provider_ad_id,approved_at,error_code,created_at")
   .eq("owner_id",owner).order("created_at",{ascending:false}).limit(50);
  if(error)return fail("campaign_history_unavailable",503);
- return NextResponse.json({campaigns:data||[],configured:adsMetaReady(),
+ let campaigns=data||[];
+ // Where a published ad set exists, read its current Meta delivery status.
+ // Do not infer completion from a VMV pause or from an elapsed planned duration.
+ const candidates=campaigns.filter(c=>c.status==="active"&&metaId(c.provider_adset_id)).slice(0,20);
+ if(candidates.length){
+  try{
+   const connected=await activeMeta(owner);
+   if(connected){
+    const provider=await metaGet("",connected.token,{
+     ids:candidates.map(c=>c.provider_adset_id).join(","),
+     fields:"id,effective_status,end_time"
+    });
+    campaigns=campaigns.map(c=>{
+     const item=metaId(c.provider_adset_id)?provider[c.provider_adset_id]:null;
+     return {...c,
+      metaAdsetEffectiveStatus:typeof item?.effective_status==="string"?item.effective_status:null,
+      metaAdsetEndAt:typeof item?.end_time==="string"?item.end_time:null
+     };
+    });
+   }
+  }catch{
+   // Show persisted statuses even when Meta delivery lookup is temporarily unavailable.
+  }
+ }
+ return NextResponse.json({campaigns,configured:adsMetaReady(),
   publishReady:adsMetaReady()&&process.env.VMV_ADS_META_PUBLISH_ENABLED==="true"&&
    process.env.VMV_ADS_META_ALLOWED_OWNER_ID===owner},{headers:noCache});
 }
