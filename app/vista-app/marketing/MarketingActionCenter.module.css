@@ -398,3 +398,78 @@
 .quickActions button small{color:#68577a}
 .panel,.wizardPanel,.reviewCard{border-color:#eee5f4;border-radius:21px;background:#fff}
 .serviceTile{border-radius:18px}
+
+
+/* Compact, stage-aware request tracker, aligned with VMV's soft pastel system. */
+.requestList{gap:12px}
+.request{position:relative;padding:19px 21px;gap:13px;border:1px solid #e9e2f2;border-radius:19px;background:linear-gradient(145deg,#fff 65%,#fdfaff);box-shadow:0 4px 20px #36224d09;min-width:0}
+.requestTop{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:14px;flex-wrap:nowrap}
+.requestTop .requestIdentity{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
+.requestTop .requestIdentity strong{font-size:16px;line-height:1.25;letter-spacing:-.4px;color:#29213c;font-weight:850;overflow-wrap:anywhere}
+.requestTop .requestIdentity small{font-size:10.5px;line-height:1.5;color:#91869e;overflow-wrap:anywhere}
+.requestTopActions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex:0 0 auto;min-width:0}
+.requestTopActions .status,.requestTopActions .verified{display:inline-flex;align-items:center;min-height:29px;box-sizing:border-box;padding:6px 10px;border-radius:9px;background:#f3edf9;color:#75519a;font-size:10px;font-weight:800;text-align:center}
+.requestTopActions .status[data-stage="needs_customer"]{background:#fff2da;color:#936619}
+.requestTopActions .status[data-stage="cancelled"]{background:#f2f0f3;color:#827987}
+.requestTopActions .status[data-stage="in_progress"]{background:#edf3ff;color:#4d71a4}
+.requestTopActions .status[data-stage="approved"]{background:#eaf6ff;color:#34708e}
+.requestTopActions .verified{background:#e5f5eb;color:#23724d}
+.requestMenu{position:relative;flex:0 0 auto;z-index:3}
+.requestMenu[open]{z-index:30}
+.requestMenuButton{display:grid;place-items:center;width:36px;height:36px;border:1px solid #e7e1ee;border-radius:11px;background:#fff;color:#665774;cursor:pointer;list-style:none}
+.requestMenuButton::-webkit-details-marker{display:none}
+.requestMenuButton::marker{content:""}
+.requestMenuButton:hover,.requestMenu[open] .requestMenuButton{background:#f5effb;border-color:#d7c5e5;color:#5e4380}
+.requestMenuPanel{position:absolute;right:0;top:calc(100% + 7px);width:min(260px,calc(100vw - 48px));box-sizing:border-box;display:flex;flex-direction:column;gap:2px;padding:7px;border-radius:15px;background:#fff;border:1px solid #e8dfef;box-shadow:0 18px 45px #30213c29;z-index:40}
+.requestMenuPanel button,.requestMenuPanel a{width:100%;min-height:39px;display:flex;align-items:center;gap:10px;padding:10px 11px;border:0;border-radius:9px;background:transparent;text-align:left;text-decoration:none;font:inherit;font-size:11.5px;font-weight:740;color:#554466;cursor:pointer}
+.requestMenuPanel button:hover,.requestMenuPanel a:hover{background:#f5effa;color:#63448a}
+.requestMenuPanel .requestMenuDanger{color:#aa5167}
+.requestMenuPanel .requestMenuDanger:hover{background:#fff0f3;color:#9a3652}
+.caseProgress{display:flex;flex-direction:column;gap:7px}
+.caseProgressLabels{display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:10.5px;color:#8d8296}
+.caseProgressLabels strong{font-size:10.5px;color:#6a5784;font-weight:800;text-align:right}
+.caseProgressTrack{height:7px;width:100%;border-radius:999px;background:#f0edf5;overflow:hidden}
+.caseProgressFill,.caseProgressCancelled{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#b69af1 0%,#8e72de 70%,#7a5ed1 100%);transition:width .35s ease}
+.caseProgressCancelled{background:#bcb3c3}
+.request>.requestDescription{color:#7c7087;font-size:11.5px;line-height:1.5;margin:0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+.requestFooter{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid #f0ecf5;padding-top:10px}
+.requestFooter button,.requestFooter a{display:inline-flex;align-items:center;gap:7px;min-height:35px;font:inherit;font-size:11px;font-weight:800;text-decoration:none;cursor:pointer}
+.requestExpand{padding:7px 0;border:0;background:transparent;color:#76569a}
+.requestExpand .chevronUp{transform:rotate(180deg)}
+.requestSupport{color:#775a92}
+.requestReviewQuote{padding:8px 11px;border:1px solid #d9c9ef;border-radius:10px;background:#f6efff;color:#7652a1}
+.requestExpanded{display:flex;flex-direction:column;gap:12px;border-top:1px solid #ebe5f2;padding-top:14px;animation:vmv-request-expand .18s ease-out}
+.requestExpanded>.notQuoted{margin:0}
+.requestExpanded .googleSaved,.requestExpanded .activityTimeline{margin:0}
+.caseComposer{display:flex;flex-direction:column;gap:10px;padding:15px;border:1px solid #ddd1ed;border-radius:14px;background:#faf7ff}
+.caseComposerHeader{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.caseComposerHeader strong{font-size:12px;font-weight:850;color:#4e3b67}
+.caseComposerHeader button{display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:9px;background:#f2ecf9;color:#69567b;cursor:pointer}
+.caseComposer>p{margin:0;font-size:11px;line-height:1.5;color:#877793}
+.caseComposer textarea{box-sizing:border-box;width:100%;resize:vertical;min-height:94px;padding:12px;border:1px solid #e4d9ee;border-radius:11px;background:#fff;color:#443552;font:inherit;font-size:13px;line-height:1.55}
+.caseComposer textarea:focus-visible{outline:2px solid #b494dc;outline-offset:1px}
+.caseComposer .caseComposerError{color:#a93c5b}
+.caseComposerActions{display:flex;align-items:center;justify-content:flex-end;gap:9px}
+.caseComposerActions button{min-height:38px;padding:8px 14px;border-radius:10px;border:1px solid #dcd0e8;background:#fff;color:#69587a;font:inherit;font-size:11px;font-weight:850;cursor:pointer}
+.caseComposerActions button:last-child{background:#7554a0;border-color:#7554a0;color:#fff}
+.caseComposerActions button:disabled{opacity:.55;cursor:not-allowed}
+@keyframes vmv-request-expand{from{opacity:.5;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:700px){
+ .request{padding:15px 14px;border-radius:16px;gap:11px;box-shadow:0 3px 12px #36224d07}
+ .requestTop{gap:8px}
+ .requestTop .requestIdentity strong{font-size:15px}
+ .requestTop .requestIdentity small{font-size:10px}
+ .requestTopActions{gap:6px}
+ .requestTopActions .status,.requestTopActions .verified{font-size:9px;padding:5px 7px;min-height:26px}
+ .requestMenuButton{width:34px;height:34px}
+ .requestFooter{gap:9px}
+ .requestFooter button,.requestFooter a{font-size:10.5px}
+ .caseComposer{padding:12px}
+ .caseComposer textarea{font-size:16px}
+}
+@media(max-width:380px){
+ .requestTopActions{flex-wrap:wrap;max-width:114px}
+ .requestTopActions .status,.requestTopActions .verified{max-width:110px}
+ .requestMenuPanel{width:min(246px,calc(100vw - 48px))}
+}
+@media(prefers-reduced-motion:reduce){.caseProgressFill,.caseProgressCancelled{transition:none}.requestExpanded{animation:none}}
