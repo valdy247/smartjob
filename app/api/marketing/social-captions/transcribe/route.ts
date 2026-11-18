@@ -8,7 +8,7 @@ export const dynamic="force-dynamic";
 export const maxDuration=120;
 const MAX_AUDIO_BYTES=3_300_000;
 const reply=(data:Record<string,unknown>,status=200)=>NextResponse.json(data,{status,headers:{"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
-const validTypes=new Set(["audio/webm","audio/mp4","audio/ogg","audio/mpeg","audio/wav","audio/x-m4a","audio/aac","video/mp4"]);
+const validTypes=new Set(["audio/webm","audio/mp4","audio/ogg","audio/mpeg","audio/wav","audio/x-m4a","audio/aac"]);
 
 export async function POST(req:NextRequest){
  const user=await authenticatedUser(req);
