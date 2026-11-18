@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useState,type FormEvent} from "react";
 import {House,LayoutGrid,PhoneCall,Languages,UserRound,ArrowUpRight,ChevronLeft,Clock3,ContactRound,UserRoundPlus,
- ShieldCheck,Mic,Package,CalendarDays,Users,BarChart3,Workflow,Globe,Bot,
+ ShieldCheck,Mic,Package,CalendarDays,Users,BarChart3,Workflow,Globe,Bot,Video,
  RefreshCw,Settings2,LoaderCircle,LogOut,LockKeyhole,PhoneForwarded,MessageCircle,Monitor,Cpu,TrendingUp,Search,Bell,Rocket,Megaphone} from "lucide-react";
 import {LivePanel} from "@/components/LivePanel";
 import InitialServiceCard from "@/components/InitialServiceCard";
@@ -175,6 +175,7 @@ export default function VMVMobilePreview(){
   {id:"translator",name:translate("common.translator"),search:"translator intérprete traducción",group:"communication",Icon:Languages,tone:styles.catalogMint,state:translate("catalog.open"),action:()=>go("translator")},
   {id:"web",name:"Web Services",search:"web sitios páginas",group:"digital",Icon:Globe,tone:styles.catalogYellow,state:translate("catalog.open"),action:()=>{setOpen(false);setServiceFocus("web");setTab("services");}},
   {id:"agents",name:"AI Agents",search:"ia inteligencia artificial agentes",group:"digital",Icon:Bot,tone:styles.catalogSky,state:translate("catalog.beta"),action:()=>window.location.assign("/vista-app/ai-agents")},
+  {id:"video-generator",name:"Video Generator",search:"video videos generador creator studio inteligencia artificial",group:"digital",Icon:Video,tone:styles.catalogViolet,state:translate("services.comingSoon"),action:()=>{}},
   {id:"marketing",name:"Marketing",search:"marketing publicidad reputación",group:"growth",Icon:BarChart3,tone:styles.catalogPink,state:translate("catalog.beta"),action:()=>window.location.assign("/vista-app/marketing")}
  ] as const;
  const catalogSearch=catalogQuery.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase();
@@ -394,7 +395,8 @@ export default function VMVMobilePreview(){
            onClick={()=>setCatalogGroup(group)}>{translate(group==="all"?"catalog.all":group==="communication"?"catalog.communication":group==="digital"?"catalog.digital":"catalog.growth")}</button>)}
         </div>
         <div className={styles.catalogGrid}>
-         {filteredCatalog.map(item=><button type="button" key={item.id}
+         {filteredCatalog.map(item=><button type="button" key={item.id} disabled={item.id==="video-generator"}
+          style={item.id==="video-generator"?{cursor:"default",opacity:1}:undefined}
           className={`${styles.catalogCard} ${item.tone}`} onClick={item.action}
           aria-label={item.name+" · "+item.state}>
           <span className={styles.catalogIcon}><item.Icon size={26}/></span>
