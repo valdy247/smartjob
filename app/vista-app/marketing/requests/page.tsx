@@ -11,7 +11,7 @@ import styles from "../page.module.css";
 export default function MarketingRequestsPage(){
  const {translate}=useInterfaceLanguage();
  return <main className={styles.page}>
-  <div className={styles.shell} style={{maxWidth:860}}>
+  <div className={styles.shell} style={{maxWidth:1020}}>
    <header className={styles.header}>
     <Link href="/vista-app/marketing" className={styles.back}>
      <ArrowLeft size={18}/> {translate("marketing.report.back")}
