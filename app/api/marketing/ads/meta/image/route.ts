@@ -17,8 +17,8 @@ export async function POST(req:NextRequest){
   const form=await req.formData();
   const file=form.get("image");
   if(!(file instanceof File)||!["image/png","image/jpeg"].includes(file.type)||
-     file.size<1024||file.size>3*1024*1024)
-   return NextResponse.json({error:"invalid_image_use_jpg_png_under_3mb"},{status:400,headers:noCache});
+     file.size<1024||file.size>2*1024*1024)
+   return NextResponse.json({error:"invalid_image_use_jpg_png_under_2mb"},{status:400,headers:noCache});
   const buffer=Buffer.from(await file.arrayBuffer());
   const png=buffer.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
   const jpg=buffer[0]===0xff&&buffer[1]===0xd8&&buffer[2]===0xff;
