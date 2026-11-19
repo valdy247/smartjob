@@ -1,0 +1,35 @@
+const {test}=require("node:test");
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const read=p=>fs.readFileSync(path.join(__dirname,"..",p),"utf8");
+const wizard=read("app/vista-app/ai-agents/AutomaticAdWizard.tsx");
+const parent=read("app/vista-app/ai-agents/page.tsx");
+const bridge=read("lib/vmv-ai-agents/ad-handoff.ts");
+test("Agent ad flow uses existing principal and selected central business",()=>{
+ assert.match(parent,/selectedWorkspace&&/);
+ assert.match(parent,/agent={principal}/);
+ assert.match(wizard,/agent\.business_id!==workspaceId/);
+ assert.match(wizard,/user\.id!==business\.owner_id/);
+});
+test("Only authorized, active, approved inventory is offered",()=>{
+ assert.match(wizard,/vmv_ai_catalog_items/);
+ assert.match(wizard,/\.eq\("owner_id",user\.id\)/);
+ assert.match(wizard,/\.eq\("business_id",workspaceId\)/);
+ assert.match(wizard,/\.eq\("approved",true\)\.eq\("active",true\)/);
+ assert.match(wizard,/businessImageAvailable/);
+});
+test("Marketing receives a scoped short-lived creative brief, never an ad launch",()=>{
+ assert.match(bridge,/sessionStorage\.setItem/);
+ assert.match(bridge,/ownerId!==ownerId\|\|x\.businessId!==businessId/);
+ assert.match(bridge,/30\*60\*1000/);
+ assert.match(bridge,/sessionStorage\.removeItem/);
+ assert.match(wizard,/saveAgentAdBrief\(brief\)/);
+ assert.match(wizard,/\/vista-app\/marketing\/ads\/create\?from=ai-agents/);
+ assert.doesNotMatch(wizard,/create_paused|confirmSpend|PUBLICAR|ads_management/);
+});
+test("The agent does not claim to generate or publish Meta ads itself",()=>{
+ assert.match(wizard,/La aprobación, imagen, presupuesto y publicación se gestionan en Marketing/);
+ assert.match(wizard,/Continuar/);
+ assert.match(wizard,/Generar anuncio/);
+});
