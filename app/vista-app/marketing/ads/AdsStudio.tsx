@@ -1,6 +1,7 @@
 "use client";
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {getSupabase} from "@/lib/supabase";
+import {consumeAgentAdBrief,type AgentAdBrief} from "@/lib/vmv-ai-agents/ad-handoff";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import styles from "./AdsStudio.module.css";
 import {Megaphone,ShieldCheck,ArrowUpRight,CheckCircle2,Globe2,ExternalLink,ChevronDown,ChevronLeft,ChevronRight,ImagePlus,MapPin,WandSparkles,BarChart3,LoaderCircle,Instagram,X,Tag,Sparkles} from "lucide-react";
@@ -68,6 +69,9 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
  const [draftId,setDraftId]=useState("");
  const [insights,setInsights]=useState<Record<string,{rows:InsightRow[];period:string}>>({});
  const [historyFilter,setHistoryFilter]=useState<"pending"|"active"|"completed">("pending");
+ const [agentBrief,setAgentBrief]=useState<AgentAdBrief|null>(null);
+ const [handoffLoading,setHandoffLoading]=useState(false);
+ const handoffChecked=useRef(false);
  const [publishReady,setPublishReady]=useState(false);
  const total=useMemo(()=>Math.round(Number(form.dailyBudget)*100)*Number(form.durationDays),[form.dailyBudget,form.durationDays]);
  const normalizedDestination=useMemo(()=>{
@@ -161,6 +165,48 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
    }
   }catch(e){setError(e instanceof Error?e.message:"unavailable");}
   finally{setLoading(false);}
+ },[mode]);
+ useEffect(()=>{
+  if(mode!=="wizard"||handoffChecked.current)return;
+  handoffChecked.current=true;
+  const query=new URLSearchParams(window.location.search);
+  if(query.get("from")!=="ai-agents")return;
+  const id=query.get("business")||"";
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id))return;
+  let mounted=true;
+  setHandoffLoading(true);
+  void (async()=>{
+   const db=getSupabase();if(!db)return;
+   const {data:{user}}=await db.auth.getUser();
+   if(!user||user.is_anonymous||!mounted)return;
+   const {data:central}=await db.from("vmv_marketing_businesses").select("id")
+    .eq("id",id).eq("owner_id",user.id).maybeSingle();
+   if(!central||!mounted)return;
+   // Check business ownership before consuming the one-time intake. Each stored
+   // agent and workspace must still belong to the signed-in owner.
+   const {data:workspaces}=await db.from("vmv_ai_businesses").select("id")
+    .eq("owner_id",user.id).eq("central_business_id",id).limit(20);
+   if(!workspaces?.length||!mounted)return;
+   const candidate=consumeAgentAdBrief(user.id,id);
+   if(!candidate||!workspaces.some(w=>w.id===candidate.workspaceId))return;
+   const {data:agent}=await db.from("vmv_ai_agents").select("id")
+    .eq("id",candidate.agentId).eq("owner_id",user.id)
+    .eq("business_id",candidate.workspaceId).maybeSingle();
+   if(!agent||!mounted)return;
+   const state=usStates.find(([code,name])=>code.toLowerCase()===candidate.region.toLowerCase()||
+    name.toLowerCase()===candidate.region.toLowerCase());
+   const city=candidate.city.trim().replace(/\s*,.*$/,"");
+   setForm(v=>({...v,business:candidate.businessName.slice(0,80),
+    offer:candidate.offer.slice(0,200),audience:candidate.audience.slice(0,130),
+    benefit:candidate.notes.slice(0,180),destination:candidate.website,
+    name:(candidate.businessName+" · "+candidate.offer).slice(0,80),
+    stateCode:state?.[0]||"",cityQuery:city.slice(0,80),citySearch:city.slice(0,80),
+    cityKey:"",cityName:"",cityMetaName:""}));
+   setAgentBrief(candidate);
+   setStep(4); // Review first, not the five-step creation wizard.
+  })().catch(()=>{if(mounted)setError(localized("No se pudo recuperar el anuncio del agente.","Could not load the agent's ad brief."));})
+   .finally(()=>{if(mounted)setHandoffLoading(false);});
+  return()=>{mounted=false;};
  },[mode]);
  useEffect(()=>{
   const status=new URLSearchParams(window.location.search).get("meta");
@@ -628,6 +674,43 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
    </div>
    {busy==="image"?<p className={styles.imageWaitText}>{localized("Puedes esperar unos segundos. Continuar se activará automáticamente cuando Meta termine.","Please wait a few seconds. Continue will activate automatically when Meta is ready.")}</p>:null}
   </section>:null}
+  {step===4&&agentBrief?<section className={styles.agentReview} aria-label={localized("Revisión del anuncio preparado por tu agente","Review the ad prepared by your agent")}>
+   <div className={styles.agentReviewHeader}><span className={styles.agentReviewIcon}><Sparkles size={24}/></span>
+    <div><small>AI AGENTS → MARKETING</small><h2>{localized("Revisa tu anuncio","Review your ad")}</h2>
+     <p>{localized("Tu agente ya recopiló los datos. Solo falta completar lo que Meta exige.","Your agent already collected the details. Complete only what Meta requires.")}</p>
+    </div>
+   </div>
+   <div className={styles.agentReviewGrid}>
+    <div><small>{localized("Negocio","Business")}</small><strong>{form.business||"—"}</strong></div>
+    <div><small>{localized("Producto u oferta","Offer")}</small><strong>{form.offer||"—"}</strong></div>
+    <div><small>{localized("Sitio web","Website")}</small><strong>{form.destination||localized("Pendiente","Pending")}</strong></div>
+    <div><small>{localized("Ubicación","Location")}</small><strong>{agentBrief.city}, {agentBrief.region}</strong></div>
+    <div><small>{localized("Público","Audience")}</small><strong>{form.audience||"—"}</strong></div>
+    <div><small>{localized("Objetivos","Goals")}</small><strong>{(agentBrief.goals||[agentBrief.goal]).map(g=>({
+     visits:localized("Visitas","Visits"),messages:localized("Mensajes","Messages"),sales:localized("Ventas","Sales")
+    }[g])).join(" · ")}</strong></div>
+   </div>
+   <div className={styles.agentReviewTasks}>
+    <strong>{localized("Antes de guardar la campaña","Before saving the campaign")}</strong>
+    {!hasAccount||!form.pageId?<button type="button" onClick={()=>goStep(0)}>
+     <span>{localized("Cuenta y página de Facebook","Facebook account and Page")}</span><ChevronRight size={18}/></button>:null}
+    {!form.cityKey?<button type="button" onClick={()=>goStep(2)}>
+     <span>{localized("Confirmar ciudad en Meta","Verify city in Meta")}</span><ChevronRight size={18}/></button>:null}
+    {!form.headline.trim()||!form.message.trim()||!imageHash||!normalizedDestination?
+     <button type="button" onClick={()=>goStep(3)}>
+      <span>{localized("Generar texto, revisar enlace y cargar imagen","Generate copy, review link and upload image")}</span><ChevronRight size={18}/></button>:null}
+    {!form.specialCategoriesAcknowledged?<p>{localized("Confirma más abajo la categoría especial y el presupuesto.","Confirm the ad category and budget below.")}</p>:null}
+    {hasAccount&&form.pageId&&form.cityKey&&form.headline&&form.message&&imageHash&&normalizedDestination?
+     <p>{localized("Cuenta, imagen y creatividad listas. Revisa el presupuesto y confirma abajo.","Account, image and creative ready. Review the budget and confirm below.")}</p>:null}
+    {(agentBrief.goals||[agentBrief.goal]).some(g=>g!=="visits")?
+     <p>{localized("Meta Ads Studio solo prepara clics a la web en este piloto. Los objetivos de mensajes o ventas quedan como intención; no se activarán automáticamente.","This Meta Ads pilot supports website clicks only. Message and sales goals are preferences and will not activate automatically.")}</p>:null}
+   </div>
+   <div className={styles.inlineActions}>
+    <button type="button" className={styles.secondary} onClick={()=>goStep(1)}>{localized("Editar los datos","Edit details")}</button>
+    <button type="button" className={styles.secondary} onClick={()=>goStep(3)}>{localized("Editar anuncio e imagen","Edit ad and image")}</button>
+   </div>
+  </section>:null}
+  {handoffLoading?<p className={styles.muted}>{localized("Preparando revisión…","Preparing review…")}</p>:null}
   {step===4?<section className={styles.simpleCard}>
    <div className={styles.cardTop}><div className={styles.cardTitle}><span className={styles.cardIcon}><BarChart3 size={19}/></span><div>
     <h2>{localized("Presupuesto y entrega","Budget and delivery")}</h2><small>{localized("El gasto publicitario se paga directamente a Meta.","Ad spend is billed directly by Meta.")}</small></div></div></div>
@@ -706,6 +789,10 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
     </div>
    </div>
   </div>:null}
+  {agentBrief&&step!==4?<div className={styles.agentReviewReturn}>
+    <button type="button" className={styles.secondary} onClick={()=>goStep(4)}>
+     <ChevronRight size={16}/>{localized("Volver a revisión","Back to review")}</button>
+   </div>:null}
   <div className={styles.wizardFooter}>
    {step>0?<button type="button" className={styles.secondary} disabled={!!busy} onClick={()=>goStep(step-1)}><ChevronLeft size={17}/>{localized("Atrás","Back")}</button>:<span/>}
    {step<4?<button type="button" className={styles.primary} disabled={!!busy||!canContinue[step]} aria-busy={busy==="image"} onClick={()=>goStep(step+1)}>
