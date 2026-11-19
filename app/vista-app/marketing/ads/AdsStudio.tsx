@@ -676,7 +676,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
   </section>:null}
   {step===4&&agentBrief?<section className={styles.agentReview} aria-label={localized("Revisión del anuncio preparado por tu agente","Review the ad prepared by your agent")}>
    <div className={styles.agentReviewHeader}><span className={styles.agentReviewIcon}><Sparkles size={24}/></span>
-    <div><small>AI AGENTS → MARKETING</small><h2>{localized("Revisa tu anuncio","Review your ad")}</h2>
+    <div><small>{localized("DEL AGENTE A MARKETING","FROM AGENT TO MARKETING")}</small><h2>{localized("Revisa tu anuncio","Review your ad")}</h2>
      <p>{localized("Tu agente ya recopiló los datos. Solo falta completar lo que Meta exige.","Your agent already collected the details. Complete only what Meta requires.")}</p>
     </div>
    </div>
