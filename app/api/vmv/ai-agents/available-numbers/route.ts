@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
+import {billingAdmin} from "@/lib/vmv-billing";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const headers={"Cache-Control":"private,no-store"};
@@ -12,7 +13,15 @@ export async function GET(req:NextRequest){
   return respond({error:"La búsqueda de números solo está abierta para el piloto autorizado."},403);
  const area=req.nextUrl.searchParams.get("area")||"";
  if(!/^[2-9][0-9]{2}$/.test(area))return respond({error:"Introduce un código de área de tres dígitos."},400);
- const sid=process.env.TWILIO_ACCOUNT_SID||"";
+ let sid=process.env.TWILIO_ACCOUNT_SID||"";
+ if(!sid){
+  const db=billingAdmin();
+  const {data:verified}=db?await db.from("vmv_ai_voice_routes")
+   .select("twilio_account_sid").eq("owner_id",uid).eq("verified_ownership",true)
+   .eq("enabled",true).limit(2):{data:null};
+  const accounts=[...new Set((verified||[]).map(row=>String(row.twilio_account_sid)))];
+  if(accounts.length===1)sid=accounts[0];
+ }
  const token=process.env.TWILIO_AUTH_TOKEN||"";
  if(!/^AC[0-9a-f]{32}$/i.test(sid)||!token)
   return respond({error:"El proveedor de números todavía no está disponible en este Preview."},503);
