@@ -1,0 +1,86 @@
+.page{min-height:100vh;background:radial-gradient(ellipse at 3% 0%,#e7dcff 0,transparent 39%),radial-gradient(ellipse at 97% 8%,#d9f7e7 0,transparent 35%),#f8f7fc;color:#29213d;padding:25px 16px 90px;font-family:Inter,"Helvetica Neue",Arial,sans-serif}
+.page *{box-sizing:border-box}
+.shell{max-width:1120px;margin:auto}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:28px}
+.back{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:#6b4a9c;font-weight:750;font-size:13px}
+.pilot{display:inline-flex;align-items:center;gap:7px;border:1px solid #d5c5ed;background:#fff9;border-radius:100px;padding:8px 12px;font-size:11px;color:#6e4ba5;font-weight:800}
+.hero{display:flex;align-items:center;gap:20px;margin-bottom:22px}
+.logo{width:76px;height:76px;display:grid;place-items:center;flex-shrink:0;background:linear-gradient(135deg,#d8c0ff,#bfeddf);border:1px solid #ffffffda;color:#643fa2;border-radius:25px;box-shadow:0 10px 22px #714db721}
+.eyebrow{color:#8c70b1;font-size:11px;font-weight:850;letter-spacing:.13em}
+.hero h1{font-size:clamp(34px,5vw,55px);letter-spacing:-.075em;line-height:1;margin:7px 0}
+.hero h1 span{color:#9568df}
+.hero p{margin:0;color:#746a82;line-height:1.5;max-width:640px;font-size:14px}
+.security{display:flex;align-items:center;gap:12px;color:#315849;border:1px solid #cde9da;background:#effaf4;border-radius:16px;padding:15px 18px;font-size:12px;font-weight:650;line-height:1.45;margin-bottom:20px}
+.security svg{flex-shrink:0;color:#3b9c72}
+.message{border:1px solid #dcd1ef;background:#faf5ff;border-radius:14px;padding:13px 16px;font-size:13px;color:#66438d;margin:0 0 18px;overflow-wrap:anywhere}
+.loading,.blank,.empty{padding:50px 20px;text-align:center;color:#746a82}
+.loading{display:flex;justify-content:center;align-items:center;gap:10px}
+.blank{background:#fff;border:1px solid #ece4f5;border-radius:22px}
+.blank h2{color:#362548}
+.blank a{display:inline-flex;color:#6d43ad;background:#eee4fb;padding:12px 18px;text-decoration:none;border-radius:14px;font-weight:800}
+.workspace{display:grid;gap:18px}
+.toolbar{display:flex;justify-content:space-between;align-items:end;gap:15px;flex-wrap:wrap}
+.toolbar label{display:flex;flex-direction:column;gap:7px;flex:1;max-width:440px;font-size:12px;font-weight:850;color:#6a5883}
+.toolbar select,.form input,.form select,.form textarea{border:1px solid #e4dbef;background:#fff;color:#29213d;border-radius:13px;padding:13px;min-height:46px;font-size:14px;font-family:inherit;min-width:0;width:100%;outline:none}
+.toolbar select{font-weight:750}
+.toolbar select:focus,.form input:focus,.form select:focus,.form textarea:focus{border-color:#a582df;box-shadow:0 0 0 3px #9568df19}
+button{font-family:inherit}
+.toolbar button,.panel button:not(.primary):not(.actionPrimary),.tabs button{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid #dfd5ed;background:#fff;color:#604d79;padding:11px 15px;border-radius:13px;font-size:12px;font-weight:800;cursor:pointer}
+button:disabled{opacity:.48;cursor:not-allowed!important}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.metrics>div{padding:18px 20px;background:#fff;border:1px solid #ece6f4;border-radius:18px;box-shadow:0 8px 18px #4932730a;display:flex;flex-direction:column;gap:5px}
+.metrics span{font-size:12px;color:#82768e;font-weight:750}
+.metrics strong{font-size:30px;letter-spacing:-.06em;color:#35284d}
+.tabs{display:flex;gap:8px;border-bottom:1px solid #e6def0;padding-bottom:10px}
+.tabs button{background:transparent;border-color:transparent;color:#8a7c99}
+.tabs .tabActive{color:#603d9a!important;border-color:#e6d7fc!important;background:#f1e9fc!important}
+.twoColumn{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);gap:16px;align-items:start}
+.panel{background:#fff;border:1px solid #eae2f3;border-radius:24px;padding:clamp(18px,3vw,27px);box-shadow:0 14px 45px #4932730b}
+.panel h2{font-size:22px;letter-spacing:-.05em;margin:0 0 8px}
+.panel h3{font-size:15px;margin:9px 0 0}
+.panel p{font-size:13px;color:#85778f;line-height:1.55;margin:0 0 20px}
+.form{display:grid;gap:15px;margin-top:20px}
+.form>label,.formGrid>label,.lineInput label{display:flex;flex-direction:column;gap:7px;font-size:12px;color:#615577;font-weight:780}
+.form textarea{resize:vertical}
+.formGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.form .check{flex-direction:row;align-items:center;font-size:12px;gap:10px}
+.check input{width:18px;min-height:18px;height:18px;accent-color:#8f64cf}
+.primary,.actionPrimary{display:inline-flex;justify-content:center;align-items:center;gap:9px;border:0!important;background:#734bb5!important;color:#fff!important;border-radius:13px;padding:13px 18px;font-size:13px;font-weight:850;cursor:pointer;min-height:46px;box-shadow:0 6px 15px #764dc51e}
+.secondary{justify-self:start}
+.list{display:grid;gap:9px}
+.listItem{display:flex;align-items:center;justify-content:space-between;gap:15px;border:1px solid #efebf5;border-radius:16px;padding:15px}
+.listItem strong,.listItem small{display:block}
+.listItem strong{font-size:14px;color:#392b4c;margin-bottom:6px}
+.listItem small{font-size:12px;color:#867891}
+.muted{color:#9c90ab}
+.sectionTop{display:flex;align-items:center;justify-content:space-between;gap:13px;flex-wrap:wrap}
+.sectionTop p{margin-bottom:0}
+.lineInput{display:grid;grid-template-columns:minmax(0,1fr) 110px 47px;gap:10px;align-items:end}
+.lineInput button{min-height:46px}
+.totals{display:flex;flex-direction:column;gap:11px;margin-top:7px;padding:20px;background:linear-gradient(135deg,#f5efff,#ecfaf5);border:1px solid #e6dbf3;border-radius:17px}
+.totals span{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#746684;font-size:13px}
+.totals b{color:#352749}
+.totals .grand{padding-top:13px;border-top:1px solid #dbcde9;font-size:16px;font-weight:850;color:#2e2041}
+.totals .grand b{font-size:24px;letter-spacing:-.04em;color:#5b348d}
+.form .hint{font-size:11px;color:#9b8ea4;margin:0}
+.quoteList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin-top:22px}
+.quoteCard{border:1px solid #eae3f1;border-radius:18px;padding:19px;background:#fff;display:flex;flex-direction:column;gap:15px;min-width:0}
+.quoteHeading{display:flex;align-items:start;justify-content:space-between;gap:10px}
+.quoteCode{font-size:10px;font-weight:800;color:#957dac;letter-spacing:.05em}
+.quoteHeading h3{font-size:18px;margin:5px 0;overflow-wrap:anywhere}
+.quoteHeading small{font-size:12px;color:#8a7b95;overflow-wrap:anywhere}
+.status{background:#f1e7fc;color:#6e4c9e;font-size:10px;font-weight:800;padding:7px 9px;border-radius:9px;white-space:normal;text-align:center}
+.quoteDetails{display:flex;justify-content:space-between;align-items:baseline;gap:9px;flex-wrap:wrap}
+.quoteDetails strong{font-size:27px;color:#5e3a93;letter-spacing:-.05em}
+.quoteDetails span{font-size:11px;color:#91849e}
+.quoteItems{display:flex;flex-wrap:wrap;gap:6px}
+.quoteItems span{background:#f7f4fa;padding:7px 8px;border-radius:8px;font-size:11px;color:#756783}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:auto}
+.actions button{font-size:11px!important;padding:9px 11px!important;min-height:35px}
+.actions .danger{color:#a83c56!important}
+.empty{border:1px dashed #ded3ea;border-radius:20px;margin-top:18px}
+.empty svg{color:#af98d2}
+.footer{display:flex;align-items:start;gap:10px;padding:13px 2px;color:#82758f;font-size:12px;line-height:1.6}
+.footer svg{flex-shrink:0;color:#8356b7}
+@media(max-width:740px){.twoColumn,.quoteList{grid-template-columns:1fr}.hero{gap:14px}.logo{width:58px;height:58px;border-radius:18px}.metrics>div{padding:15px 13px}.metrics strong{font-size:25px}.formGrid{grid-template-columns:1fr 1fr}.panel{border-radius:18px}.lineInput{grid-template-columns:minmax(0,1fr) 74px 42px}.lineInput input,.lineInput select{padding:9px;font-size:12px}.top{margin-bottom:20px}}
+@media(max-width:420px){.formGrid{grid-template-columns:1fr}.hero h1{font-size:32px}.pilot{font-size:9px;padding:7px}.toolbar label{min-width:100%}.sectionTop>.primary{width:100%}}
