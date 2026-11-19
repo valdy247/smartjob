@@ -41,7 +41,7 @@ test("Smart Call never alters Twilio line route, always verifies ownership and u
  assert.match(call,/loadPhoneSelection\(\)/);
  assert.match(call,/user\.id!==agent\.owner_id/);
  assert.match(call,/user\.id!==business\.owner_id/);
- assert.match(call,/selectPhoneAgent\\(line\\.routeId,workingAgent\\)/);
+ assert.match(call,/selectPhoneAgent\(line\.routeId,workingAgent\)/);
  assert.match(call,/checkCallPolicy\(policy\),version/);
  assert.match(call,/method:"POST"/);
  assert.match(call,/\/api\/vmv\/ai-agents\/call-settings/);
