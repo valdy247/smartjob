@@ -44,6 +44,8 @@ type Overview={role:"admin"|"agent";actorId:string;cases:CaseRow[];staff:Operato
  metrics:{total:number;new:number;unassigned:number;progress:number;waiting:number;soon:number;overdue:number;sources:Record<Source,number>}};
 type CasePage={cases:CaseRow[];page:number;size:number;total:number;pages:number};
 type Notice={id:number;source:Source;source_id:string;kind:string;title:string;created_at:string;read_at:string|null};
+type RecentChange={id:number;source:Source;source_id:string;action:string;summary:string;visibility:string;created_at:string;
+ title:string|null;status:string|null;updated_at:string|null};
 
 const uuid=(value:string)=>/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
 const sources:{id:Source;label:string;Icon:LucideIcon;description:string}[]=[
@@ -132,6 +134,10 @@ export default function AdminConsole(){
  const [clientPage,setClientPage]=useState(1);
  const [noticeList,setNoticeList]=useState<Notice[]>([]);
  const [noticeCount,setNoticeCount]=useState(0);
+ const [recentChanges,setRecentChanges]=useState<RecentChange[]>([]);
+ const [recentCheckedAt,setRecentCheckedAt]=useState<string|null>(null);
+ const [recentError,setRecentError]=useState(false);
+ const [recentLoading,setRecentLoading]=useState(false);
  const [noticesOpen,setNoticesOpen]=useState(false);
  const [drafts,setDrafts]=useState<Record<string,string>>({});
  const [sendingKey,setSendingKey]=useState<string|null>(null);
@@ -190,6 +196,16 @@ export default function AdminConsole(){
   if(!response.ok)throw Object.assign(Error(result.error||"No se completó la operación."),{status:response.status});
   return result as T;
  },[]);
+ const loadRecent=useCallback(async()=>{
+  setRecentLoading(true);
+  try{
+   const result=await api<{events:RecentChange[]}>("view=recent_changes");
+   setRecentChanges(Array.isArray(result.events)?result.events:[]);
+   setRecentCheckedAt(new Date().toISOString());
+   setRecentError(false);
+  }catch{setRecentError(true);}
+  finally{setRecentLoading(false);}
+ },[api]);
  const refresh=useCallback(async()=>{
   const seq=++sessionSeq.current;
   setLoading(true);
@@ -204,6 +220,7 @@ export default function AdminConsole(){
    setCasePage(1);setCasePages(first.pages);setCaseTotal(first.total);
    setNoticeList(notices.notifications);setNoticeCount(notices.unread);
    setPhase("ready");setError("");
+   void loadRecent();
   }catch(e){
    if(seq!==sessionSeq.current)return;
    const code=(e as {status?:number}).status;
@@ -211,7 +228,7 @@ export default function AdminConsole(){
    else if(code===403)setPhase("forbidden");
    else {setError(e instanceof Error?e.message:"No se pudo actualizar.");setPhase(p=>p==="checking"?"error":p);}
   }finally{if(seq===sessionSeq.current)setLoading(false);}
- },[api]);
+ },[api,loadRecent]);
  useEffect(()=>{
   const db=getSupabase();
   if(!db){setPhase("unconfigured");return;}
@@ -349,6 +366,7 @@ export default function AdminConsole(){
    const updated=await api<Omit<Overview,"cases"|"total"|"truncated"|"sources">>("view=overview");
    setOverview(prev=>prev?{...prev,...updated,total:updated.metrics.total,sources:updated.metrics.sources}:prev);
    await loadQueue(casePage);
+   void loadRecent();
    setNotice(success);
    return true;
   }catch(e){setError(e instanceof Error?e.message:"No se pudo guardar. Tus cambios siguen escritos.");return false;}
@@ -397,6 +415,7 @@ export default function AdminConsole(){
   setOverview(prev=>prev?{...prev,...data,total:data.metrics.total,sources:data.metrics.sources}:prev);
   setNoticeList(notices.notifications);setNoticeCount(notices.unread);
   await loadQueue(casePage);
+  await loadRecent();
   if(detail&&selectedRef.current===caseKey(detail.case))await loadDetail(detail.case);
   if(section==="clients"&&overview?.role==="admin")await loadClients(clientPage);
   if(section==="team")setTeam(await api<StaffPayload>("view=team"));
@@ -543,6 +562,40 @@ export default function AdminConsole(){
        <b>{overview?.sources[s.id]||0}</b><ChevronRight size={16}/></button>)}
      </section>
     </div>
+    <section className={styles.surface+" "+styles.savedChanges} aria-label={L("Cambios registrados","Recorded changes")}>
+     <div className={styles.surfaceHead}>
+      <div><span className={styles.eyebrow}>{L("VERIFICACIÓN","VERIFICATION")}</span>
+       <h3>{L("Cambios guardados en solicitudes","Saved request changes")}</h3>
+       <p className={styles.savedChangesDescription}>{L("Actividad confirmada en la base de datos, con el estado actual de cada solicitud.","Activity confirmed in the database, alongside each request's current status.")}</p>
+      </div>
+      <button type="button" className={styles.textButton} disabled={recentLoading} onClick={()=>void loadRecent()}>
+       <RefreshCw size={15} className={recentLoading?styles.spin:""}/>{L("Comprobar","Verify")}
+      </button>
+     </div>
+     {recentError?<p className={styles.savedChangesEmpty}>{L("No se pudo comprobar el historial. Reintenta sin modificar tus solicitudes.","Could not verify the change log. Retry without changing any requests.")}</p>:
+      !recentCheckedAt?<p className={styles.savedChangesEmpty}>{L("Comprobando cambios guardados…","Checking saved changes…")}</p>:
+      recentChanges.length?<div className={styles.savedChangesList}>
+       {recentChanges.slice(0,8).map(e=><button type="button" key={e.id} className={styles.savedChange} onClick={()=>{
+        const original=overview?.cases.find(c=>c.source===e.source&&c.id===e.source_id);
+        const direct=original||{source:e.source,id:e.source_id,owner_id:"",title:e.title||"Solicitud",
+         client_name:"Cliente",service:"general",status:e.status||"",description:"",
+         created_at:e.created_at,updated_at:e.updated_at||e.created_at,priority:"normal" as const,
+         assigned_to:null,due_at:null,amount:null};
+        choose(direct);
+       }}>
+        <span className={styles.savedChangeIcon}><CheckCircle2 size={17}/></span>
+        <span className={styles.savedChangeBody}>
+         <strong>{e.summary}</strong>
+         <small>{e.title||sourceName(e.source)} · {date(e.created_at)}
+          {e.visibility==="internal"?L(" · Interno"," · Internal"):""}</small>
+        </span>
+        {e.status?<span className={styles.chip} data-status={e.status}>{status(e.status)}</span>:null}
+        <ChevronRight size={16} className={styles.savedChangeArrow}/>
+       </button>)}
+      </div>:<p className={styles.savedChangesEmpty}>{L("Todavía no hay modificaciones auditadas. Las nuevas acciones guardadas aparecerán aquí.","No audited changes yet. Newly saved actions will appear here.")}</p>}
+     {recentCheckedAt&&!recentError?<small className={styles.savedChangesFoot}>{L("Comprobado: ","Checked: ")}{date(recentCheckedAt)}
+      {L(" · Una cotización guardada no implica que esté aceptada o pagada."," · A saved quote does not mean it has been accepted or paid.")}</small>:null}
+    </section>
    </>:null}
 
    {section==="inbox"?<>
@@ -577,6 +630,15 @@ export default function AdminConsole(){
        </div>
        <div className={styles.detailHeader}><p className={styles.eyebrow}>{sourceName(selectedRow.source).toUpperCase()} / {serviceName(selectedRow.service).toUpperCase()}</p>
         <h2>{detail.case.title}</h2><div className={styles.flex}><span className={styles.chip} data-status={detail.case.status}>{status(detail.case.status)}</span><span className={styles.smallMuted}>{date(detail.case.created_at)}</span></div>
+       </div>
+       <div className={styles.verifiedRecord}>
+        <CheckCircle2 size={16}/>
+        <div><strong>{L("Estado registrado en VMV","Status recorded in VMV")}</strong>
+         <small>{L("Última actualización: ","Last updated: ")}{date(detail.case.updated_at)}
+          {" · "}{status(detail.case.status)}</small>
+         {detail.history.length?<small>{L("Último movimiento auditado: ","Latest audited change: ")}
+          {detail.history[detail.history.length-1].summary}</small>:null}
+        </div>
        </div>
        <div className={styles.detailTabs}><button type="button" aria-pressed={detailTab==="conversation"} className={detailTab==="conversation"?styles.tabOn:styles.tab} onClick={()=>setDetailTab("conversation")}><MessageSquare size={15}/>{L("Conversación","Conversation")}</button>
         <button type="button" aria-pressed={detailTab==="request"} className={detailTab==="request"?styles.tabOn:styles.tab} onClick={()=>setDetailTab("request")}><FileText size={15}/>{L("Solicitud y acciones","Request & actions")}</button></div>
