@@ -100,7 +100,7 @@ export default function AutomaticCommerceWizard({mode,business,agent,onAgentUpda
     <button type="button" className={permission.cap_sales?styles.optionActive:styles.option}
      onClick={()=>setPermission(p=>({...p,cap_sales:true}))}>Sí, activar ventas</button>
     <button type="button" className={!permission.cap_sales?styles.optionActive:styles.option}
-     onClick={()=>setPermission(p=>({...p,cap_sales:false,perm_prepare_order:false,
+     onClick={()=>setPermission(p=>({...p,channel:"Chat",cap_sales:false,perm_prepare_order:false,
       perm_confirm_order:false,perm_payment_link:false}))}>No, mantener ventas desactivadas</button>
    </div>}
   </div>:null}
