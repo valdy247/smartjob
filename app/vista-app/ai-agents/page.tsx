@@ -22,6 +22,8 @@ import AutomaticWebWizard from "./AutomaticWebWizard";
 import AutomaticVideoWizard from "./AutomaticVideoWizard";
 import AutomaticCallWizard from "./AutomaticCallWizard";
 import AutomaticQuoteWizard from "./AutomaticQuoteWizard";
+import AutomaticCommerceWizard from "./AutomaticCommerceWizard";
+import AutomaticBookingWizard from "./AutomaticBookingWizard";
 import {inspectAgent} from "./agentQuality";
 import {getSupabase} from "@/lib/supabase";
 import {centralPrefill,businessMissing,choosePrincipalAgent,linkLegacyWorkspace,loadBusinessChoices,provisionAiWorkspace,type CentralBusiness,type AiWorkspace} from "./centralBusiness";
@@ -29,7 +31,7 @@ import {loadAgents,loadPhoneSelection,selectPhoneAgent,setStudyStatus,storeAgent
 
 type Kind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 type Status="draft"|"active"|"paused";
-type Screen="home"|"editor"|"test"|"quality"|"commerce"|"phone"|"bookings"|"ads"|"web"|"video"|"call"|"quote";
+type Screen="home"|"editor"|"test"|"quality"|"commerce"|"commerceWizard"|"phone"|"bookings"|"bookingsWizard"|"ads"|"web"|"video"|"call"|"quote";
 type AgentDraft=WizardDraft;
 type Agent=PersistedAgent;
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
@@ -133,12 +135,12 @@ export default function AIAgentsPreview(){
  const openFor=(kind:Kind,agent:Agent)=>{
   setSelected(agent.id);
   if(kind==="sales"||kind==="inventory"){
-   setCommerceTab(kind==="inventory"?"catalog":"setup");setScreen("commerce");
+   setCommerceTab(kind==="inventory"?"catalog":"setup");setScreen("commerceWizard");
   }else if(kind==="calls"){
    setScreen("call");
    setNotice(phone?.agentId===agent.id?"":translate("agents.notice.configureCalls"));
   }else if(kind==="bookings"){
-   setScreen("bookings");setNotice("");
+   setScreen("bookingsWizard");setNotice("");
   }else if(kind==="support"){
    test(agent);setNotice(translate("agents.notice.privateChat"));
   }else if(kind==="operations"){
@@ -337,15 +339,19 @@ export default function AIAgentsPreview(){
  };
  const back=()=>{setScreen("home");setMessageNotice("");};
  const patch=(key:keyof AgentDraft,value:string)=>setDraft(prev=>({...prev,[key]:value}));
- const immersive=screen==="ads"||screen==="web"||screen==="video"||screen==="call"||screen==="quote";
+ const immersive=screen==="ads"||screen==="web"||screen==="video"||screen==="call"||screen==="quote"||screen==="commerceWizard"||screen==="bookingsWizard";
  useEffect(()=>{
   if(loading||!authenticated||!principal||!selectedBusiness||!selectedWorkspace)return;
   const url=new URL(window.location.href);
   const service=url.searchParams.get("service");
-  if(service!=="web"&&service!=="video"&&service!=="call"&&service!=="quote")return;
+  if(!["web","video","call","quote","inventory","sales","bookings"].includes(String(service)))return;
   url.searchParams.delete("service");
   window.history.replaceState(null,"",url.pathname+url.search+url.hash);
-  setSelected(principal.id);setScreen(service==="web"?"web":service==="call"?"call":service==="quote"?"quote":"video");setNotice("");
+  setSelected(principal.id);
+  if(service==="inventory"||service==="sales"){
+   setCommerceTab(service==="inventory"?"catalog":"setup");setScreen("commerceWizard");
+  }else setScreen(service==="web"?"web":service==="call"?"call":service==="quote"?"quote":service==="bookings"?"bookingsWizard":"video");
+  setNotice("");
  },[loading,authenticated,principal?.id,selectedBusiness?.id,selectedWorkspace?.id]);
  return <main className={immersive?styles.adsCanvas:styles.canvas}>
   <div className={immersive?styles.adsLayout:styles.layout}>
@@ -499,6 +505,16 @@ export default function AIAgentsPreview(){
      {screen==="quote"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticQuoteWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
        workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
+     {screen==="commerceWizard"&&principal&&selectedBusiness&&selectedWorkspace?
+      <AutomaticCommerceWizard key={selectedBusiness.id+principal.id+commerceTab} business={selectedBusiness}
+       agent={principal} mode={commerceTab==="catalog"?"inventory":"sales"}
+       onAgentUpdated={updated=>{setAgents(list=>list.map(a=>a.id===updated.id?updated:a));}}
+       onOpenStudio={()=>setScreen("commerce")} onClose={back}/>:null}
+     {screen==="bookingsWizard"&&principal&&selectedBusiness&&selectedWorkspace?
+      <AutomaticBookingWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
+       agent={principal} onClose={back}
+       onAgentUpdated={updated=>{setAgents(list=>list.map(a=>a.id===updated.id?updated:a));}}
+       onOpenStudio={()=>setScreen("bookings")}/>:null}
      {screen==="phone"?<CallControl onBack={back}/>:null}
      {screen==="commerce"?<CommerceStudio centralBusinessId={selectedBusiness?.id||""} agents={principal?[principal]:visibleAgents.filter(a=>a.revision>0)}
       initialAgentId={principal?.id||selected||""} initialTab={commerceTab} onAgentUpdated={updated=>
