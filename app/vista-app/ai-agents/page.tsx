@@ -31,7 +31,7 @@ import {loadAgents,loadPhoneSelection,selectPhoneAgent,setStudyStatus,storeAgent
 
 type Kind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 type Status="draft"|"active"|"paused";
-type Screen="home"|"editor"|"test"|"quality"|"commerce"|"commerceWizard"|"phone"|"bookings"|"bookingsWizard"|"ads"|"web"|"video"|"call"|"quote";
+type Screen="videoEntry"|"home"|"editor"|"test"|"quality"|"commerce"|"commerceWizard"|"phone"|"bookings"|"bookingsWizard"|"ads"|"web"|"video"|"call"|"quote";
 type AgentDraft=WizardDraft;
 type Agent=PersistedAgent;
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
@@ -339,7 +339,7 @@ export default function AIAgentsPreview(){
  };
  const back=()=>{setScreen("home");setMessageNotice("");};
  const patch=(key:keyof AgentDraft,value:string)=>setDraft(prev=>({...prev,[key]:value}));
- const immersive=screen==="ads"||screen==="web"||screen==="video"||screen==="call"||screen==="quote"||screen==="commerceWizard"||screen==="bookingsWizard";
+ const immersive=screen==="ads"||screen==="web"||screen==="video"||screen==="videoEntry"||screen==="call"||screen==="quote"||screen==="commerceWizard"||screen==="bookingsWizard";
  useEffect(()=>{
   if(loading||!authenticated||!principal||!selectedBusiness||!selectedWorkspace)return;
   const url=new URL(window.location.href);
@@ -350,7 +350,7 @@ export default function AIAgentsPreview(){
   setSelected(principal.id);
   if(service==="inventory"||service==="sales"){
    setCommerceTab(service==="inventory"?"catalog":"setup");setScreen("commerceWizard");
-  }else setScreen(service==="web"?"web":service==="call"?"call":service==="quote"?"quote":service==="bookings"?"bookingsWizard":"video");
+  }else setScreen(service==="web"?"web":service==="call"?"call":service==="quote"?"quote":service==="bookings"?"bookingsWizard":"videoEntry");
   setNotice("");
  },[loading,authenticated,principal?.id,selectedBusiness?.id,selectedWorkspace?.id]);
  return <main className={immersive?styles.adsCanvas:styles.canvas}>
@@ -428,7 +428,7 @@ export default function AIAgentsPreview(){
        <button type="button" className={styles.tile} style={{background:"#f8ddec",color:"#893d73"}}
         onClick={()=>{
          if(principal&&selectedBusiness&&selectedWorkspace){
-          setSelected(principal.id);setScreen("video");setNotice("");
+          setSelected(principal.id);setScreen("videoEntry");setNotice("");
          }else setNotice("Selecciona tu negocio y su agente principal para preparar un video.");
         }} aria-label="Video Generator con tu agente">
         <span className={styles.tileIcon}><Video size={24}/></span>
@@ -496,9 +496,24 @@ export default function AIAgentsPreview(){
      {screen==="web"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticWebWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
        workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
+     {screen==="videoEntry"&&principal&&selectedBusiness&&selectedWorkspace?
+      <section style={{padding:"24px 18px",display:"grid",gap:18,alignContent:"start",minHeight:"100%",background:"#faf8fd",color:"#25213a"}}>
+       <button type="button" onClick={back} style={{border:0,background:"transparent",display:"flex",alignItems:"center",gap:8,justifySelf:"start",fontWeight:700,color:"#59457f"}}><ArrowLeft size={18}/> Volver</button>
+       <div style={{textAlign:"center",padding:"16px 8px"}}>
+        <Video size={32} style={{margin:"0 auto 12px",color:"#8945a2"}}/>
+        <h2 style={{fontSize:23,fontWeight:800,margin:"0 0 8px"}}>Video Generator</h2>
+        <p style={{fontSize:13,color:"#6d637c",margin:0}}>¿Qué quieres hacer?</p>
+       </div>
+       <button type="button" onClick={()=>setScreen("video")} style={{textAlign:"left",display:"flex",alignItems:"center",gap:16,padding:19,borderRadius:18,border:"1px solid #e9d9ed",background:"#fff",color:"#332346",cursor:"pointer"}}>
+        <WandSparkles size={25} color="#8144ad"/><span style={{display:"grid",gap:4}}><strong>Generar video</strong><small>Crear con tu agente IA</small></span><ChevronRight size={18} style={{marginLeft:"auto"}}/>
+       </button>
+       <a href="/vista-app/video-generator" style={{textDecoration:"none",textAlign:"left",display:"flex",alignItems:"center",gap:16,padding:19,borderRadius:18,border:"1px solid #e9d9ed",background:"#fff",color:"#332346"}}>
+        <PlayCircle size={25} color="#8144ad"/><span style={{display:"grid",gap:4}}><strong>Historial</strong><small>Mi biblioteca · reproducir y descargar</small></span><ChevronRight size={18} style={{marginLeft:"auto"}}/>
+       </a>
+      </section>:null}
      {screen==="video"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticVideoWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
-       workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
+       workspaceId={selectedWorkspace.id} agent={principal} onClose={()=>setScreen("videoEntry")}/>:null}
      {screen==="call"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticCallWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
        workspaceId={selectedWorkspace.id} agent={principal} onClose={back}
