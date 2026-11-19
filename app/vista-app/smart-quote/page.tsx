@@ -111,9 +111,7 @@ export default function SmartQuotePage(){
   setProductId("");setProduct({name:"",description:"",unit_name:"unidad",price:"",active:true});
   await load(businessId);setMessage(localize("Servicio guardado.","Catalog item saved."));
  });
- const beginQuote=()=>{if(!activeCatalog.length){setTab("catalog");setMessage(localize("Primero agrega un servicio con precio aprobado.","First add a service with an approved price."));return;}
-  const draft=blank();draft.items=[{catalog_item_id:activeCatalog[0].id,quantity:"1",key:Date.now()}];setQuoteForm(draft);setTab("quotes");setMessage("");
- };
+ const beginQuote=()=>window.location.assign("/vista-app/ai-agents?service=quote");
  const editQuote=(q:Quote)=>{if(q.status!=="draft")return;
   setQuoteForm({id:q.id,customer_name:q.customer_name,customer_email:q.customer_email,customer_phone:q.customer_phone,
    items:q.lines.map((l,i)=>({catalog_item_id:l.catalog_item_id,quantity:String(l.quantity),key:i+1})),
