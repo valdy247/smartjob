@@ -87,6 +87,44 @@ export async function metaPost(path:string,token:string,fields:Record<string,str
   Authorization:"Bearer "+token,"Content-Type":"application/x-www-form-urlencoded"
  },body:new URLSearchParams(fields)});
 }
+
+/** Single-image link ad spec shared by dry-run validation and real creative creation. */
+export type MetaLinkCreativeDraft={
+ name:string;pageId:string;placements:"facebook"|"facebook_instagram";
+ instagramId:string|null;destination:string;message:string;headline:string;imageHash:string
+};
+export function metaLinkCreativeFields(draft:MetaLinkCreativeDraft):Record<string,string>{
+ const story={
+  page_id:draft.pageId,
+  ...(draft.placements==="facebook_instagram"&&draft.instagramId?
+   {instagram_user_id:draft.instagramId}:{}),
+  link_data:{
+   link:draft.destination,message:draft.message,name:draft.headline,
+   image_hash:draft.imageHash,
+   call_to_action:{type:"LEARN_MORE",value:{link:draft.destination}}
+  }
+ };
+ return {name:draft.name+" — creativo",object_story_spec:JSON.stringify(story)};
+}
+export function metaCreativeReason(error:unknown){
+ if(!(error instanceof MetaApiError))return "meta_creative_provider_unavailable";
+ switch(error.subcode){
+  case 1885183:return "meta_app_in_development_mode";
+  case 2238281:return "meta_instagram_identity_deprecated";
+  case 1487124:return "meta_creative_image_not_found";
+ }
+ if(error.code==="meta_api_190")return "meta_reconnect_required";
+ if(error.code==="meta_api_200"||error.code==="meta_api_270")return "meta_creative_access_denied";
+ return "meta_creative_parameters_rejected";
+}
+/** Meta's validate_only request uses POST but never creates a creative or an ad. */
+export async function validateMetaLinkCreative(accountId:string,token:string,draft:MetaLinkCreativeDraft){
+ if(!/^act_\d{5,30}$/.test(accountId))throw new Error("invalid_meta_account_id");
+ return metaPost(accountId+"/adcreatives",token,{
+  ...metaLinkCreativeFields(draft),execution_options:JSON.stringify(["validate_only"])
+ });
+}
+
 /** A billing signal, not a guarantee of payment. Never disclose payment method details. */
 export type MetaPaymentCheck={state:"ready"|"missing"|"unverified"|"inactive";checkedAt:string;
  reason:"funding_detected"|"funding_absent"|"funding_unavailable"|"provider_unavailable"|"account_inactive"};

@@ -2,7 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {billingAdmin} from "@/lib/vmv-billing";
 import {adsMetaReady,activeMeta,authorizedAccounts,authorizedPages,metaGet,metaId,metaPost,
- noCache,uuid,validDestination,inspectMetaPayment,MetaApiError} from "@/lib/vmv-marketing-ads-meta";
+ noCache,uuid,validDestination,inspectMetaPayment,MetaApiError,metaLinkCreativeFields,metaCreativeReason,validateMetaLinkCreative} from "@/lib/vmv-marketing-ads-meta";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -156,14 +156,27 @@ export async function POST(req:NextRequest){
   if(input?.confirmPaused!==true||input?.approvedTotalCents!==draft.totalBudgetCents)
    return fail("explicit_budget_approval_required",403);
   if(record.status!=="draft")return fail("campaign_already_processed",409);
+  // Dry-run first: reject a bad creative BEFORE any campaign, ad set or ad is written to Meta.
+  try{await validateMetaLinkCreative(selectedAccount,active.token,draft);}
+  catch(error){
+   const reason=metaCreativeReason(error);
+   return NextResponse.json({error:reason,createdInMeta:false,adSpendActive:false,
+    ...(error instanceof MetaApiError&&error.subcode?{metaSubcode:error.subcode}:{})},
+    {status:409,headers:noCache});
+  }
   // The compare-and-set lock prevents duplicate external Meta campaign creation.
   const {data:claimed,error:claimError}=await db.from("vmv_marketing_ads_campaigns")
    .update({status:"provisioning",approved_at:new Date().toISOString(),
     approved_snapshot:draft,updated_at:new Date().toISOString()})
    .eq("id",record.id).eq("owner_id",owner).eq("status","draft").select("id").maybeSingle();
   if(claimError||!claimed)return fail("campaign_already_processing",409);
-  let step="campaign";
+  let step="creative";
   try{
+   // Create the creative first, so a rejection cannot leave a partial campaign/ad set.
+   const creative=await metaPost(selectedAccount+"/adcreatives",active.token,metaLinkCreativeFields(draft));
+   if(!metaId(creative.id))throw Error("invalid_creative_response");
+   await db.from("vmv_marketing_ads_campaigns").update({provider_creative_id:creative.id}).eq("id",record.id);
+   step="campaign";
    const campaign=await metaPost(selectedAccount+"/campaigns",active.token,{
     name:draft.name,objective:"OUTCOME_TRAFFIC",status:"PAUSED",special_ad_categories:"[]",
     is_adset_budget_sharing_enabled:"false",buying_type:"AUCTION"
@@ -186,20 +199,6 @@ export async function POST(req:NextRequest){
    });
    if(!metaId(adset.id))throw Error("invalid_adset_response");
    await db.from("vmv_marketing_ads_campaigns").update({provider_adset_id:adset.id}).eq("id",record.id);
-   step="creative";
-   const creative=await metaPost(selectedAccount+"/adcreatives",active.token,{
-    name:draft.name+" — creativo",
-    object_story_spec:JSON.stringify({
-     page_id:draft.pageId,
-     ...(draft.placements==="facebook_instagram"&&draft.instagramId?
-      {instagram_actor_id:draft.instagramId}:{}),
-     link_data:{link:draft.destination,message:draft.message,name:draft.headline,
-      image_hash:draft.imageHash,
-      call_to_action:{type:"LEARN_MORE",value:{link:draft.destination}}}
-    })
-   });
-   if(!metaId(creative.id))throw Error("invalid_creative_response");
-   await db.from("vmv_marketing_ads_campaigns").update({provider_creative_id:creative.id}).eq("id",record.id);
    step="ad";
    const ad=await metaPost(selectedAccount+"/ads",active.token,{
     name:draft.name+" — anuncio",adset_id:adset.id,
@@ -216,12 +215,14 @@ export async function POST(req:NextRequest){
    const metaCode=error instanceof MetaApiError?error.code:"provider_or_save_error";
    const subcode=error instanceof MetaApiError&&Number.isInteger(error.subcode)&&Number(error.subcode)>0?
     ":sub_"+String(error.subcode):"";
+   const reason=step==="creative"?metaCreativeReason(error):"provider_creation_incomplete_review_"+step;
    await db.from("vmv_marketing_ads_campaigns").update({
     status:"failed",error_code:step+":"+metaCode+subcode,updated_at:new Date().toISOString()
    }).eq("id",record.id).eq("owner_id",owner);
    // Keep the stage and reference for customer support. All objects created here are PAUSED.
-   return NextResponse.json({error:"provider_creation_incomplete_review_"+step,
-    campaignId:record.id,stage:step,createdInMeta:true,adSpendActive:false},
+   return NextResponse.json({error:reason,
+    campaignId:record.id,stage:step,createdInMeta:step!=="creative",
+    adSpendActive:false,...(error instanceof MetaApiError&&error.subcode?{metaSubcode:error.subcode}:{})},
     {status:502,headers:noCache});
   }
  }

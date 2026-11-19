@@ -80,6 +80,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
  const [finished,setFinished]=useState<{kind:"saved"|"sent"|"paused"|"failed";id:string}|null>(null);
  const resumedOnce=useRef(false);
  const [insights,setInsights]=useState<Record<string,{rows:InsightRow[];period:string}>>({});
+ const [creativeChecks,setCreativeChecks]=useState<Record<string,{ok:boolean;reason:string;subcode?:number|null}>>({});
  const [historyFilter,setHistoryFilter]=useState<"pending"|"active"|"completed">("pending");
  const [agentBrief,setAgentBrief]=useState<AgentAdBrief|null>(null);
  const [handoffLoading,setHandoffLoading]=useState(false);
@@ -253,6 +254,15 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
   if(code==="meta_account_selection_required"||code==="meta_ad_account_not_authorized")
    return localized("No podemos usar esta cuenta publicitaria. Selecciona una cuenta activa en el primer paso.",
     "This ad account cannot be used. Select an active account in step one.");
+  if(code==="meta_app_in_development_mode")
+   return localized("Meta bloquea la creación de anuncios porque la aplicación sigue en modo Desarrollo. Debe cambiarse a Activo (Live) en Meta Developers.",
+    "Meta blocks new creatives because the app remains in Development mode. Switch it to Live in Meta Developers.");
+  if(code==="meta_creative_image_not_found")
+   return localized("Meta no encontró la imagen del anuncio en esta cuenta. Es necesario subirla de nuevo.", "Meta cannot find the ad image in this account. Upload it again.");
+  if(code==="meta_instagram_identity_deprecated")
+   return localized("Meta rechazó un campo antiguo de Instagram. La integración ya utiliza el identificador actualizado.", "Meta rejected an old Instagram field. The integration now uses the updated identifier.");
+  if(code==="meta_creative_parameters_rejected")
+   return localized("Meta rechazó algún parámetro del anuncio. Revisa la campaña y solicita ayuda antes de repetirla.", "Meta rejected an ad parameter. Review the campaign and request help before resubmitting.");
   if(code==="meta_payment_not_detected")
    return localized("Meta no mostró un método de pago para esta cuenta. Comprueba la facturación en Meta. No se activó el anuncio.",
     "Meta did not show a payment method for this account. Check Meta billing. The ad was not activated.");
@@ -448,6 +458,35 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
    await reload();
   });
  };
+ const checkCreative=(c:Campaign)=>run("creative:"+c.id,async()=>{
+  const result=await api("/api/marketing/ads/meta/creative-check","POST",{campaignId:c.id});
+  setCreativeChecks(prev=>({...prev,[c.id]:result}));
+ });
+ const creativeMessage=(result:{ok:boolean;reason:string})=>{
+  if(result.ok)return localized(
+   "Meta aceptó los parámetros en una validación sin crear anuncios. Esto no garantiza la aprobación posterior; este intento anterior sigue fallido.",
+   "Meta accepted the parameters in a no-creation validation. This does not guarantee approval; the earlier attempt remains failed.");
+  switch(result.reason){
+   case "meta_app_in_development_mode":return localized(
+    "La aplicación de Meta todavía está en modo Desarrollo. Para crear anuncios nuevos debe pasar a modo Activo (Live), con los permisos de publicidad correspondientes.",
+    "The Meta app is still in Development mode. To create new ads it must switch to Live with the required ad permissions.");
+   case "meta_instagram_identity_deprecated":return localized(
+    "Meta rechazó un identificador de Instagram antiguo. Ya corregimos el parámetro; vuelve a verificar antes de crear otra campaña.",
+    "Meta rejected a deprecated Instagram identifier. The field is updated; validate again before creating another campaign.");
+   case "meta_creative_image_not_found":return localized(
+    "Meta no encuentra esa imagen en la cuenta publicitaria seleccionada. Será necesario subirla nuevamente a esa misma cuenta.",
+    "Meta cannot find this image in the selected ad account. Re-upload it to that account.");
+   case "meta_reconnect_required":return localized(
+    "Meta requiere volver a iniciar sesión para validar el anuncio.",
+    "Meta requires you to reconnect before validation.");
+   case "meta_creative_access_denied":return localized(
+    "La cuenta o la aplicación de Meta no tiene los permisos necesarios para preparar anuncios.",
+    "The account or Meta app lacks the necessary permissions to create ad creatives.");
+   default:return localized(
+    "Meta sigue rechazando algún parámetro, pero no identificó cuál. Conservamos la referencia para investigarlo sin duplicar anuncios.",
+    "Meta still rejects a parameter but did not identify which one. Keep the reference for support without creating duplicates.");
+  }
+ };
  const metrics=(c:Campaign)=>run("metrics:"+c.id,async()=>{
   const r=await api("/api/marketing/ads/meta/insights?campaignId="+encodeURIComponent(c.id));
   setInsights(prev=>({...prev,[c.id]:{rows:Array.isArray(r.rows)?r.rows:[],period:r.period||"maximum"}}));
@@ -603,11 +642,25 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
      <small>{localized("Referencia VMV: ","VMV reference: ")}{c.id.slice(0,8)}
       {" · "}{localized("Diagnóstico: ","Diagnostic: ")}{c.error_code}</small>
      <div className={styles.paymentActions}>
+      {c.status==="failed"?<button type="button" className={styles.secondary} disabled={!!busy}
+       onClick={()=>void checkCreative(c)}>
+       {busy==="creative:"+c.id?<LoaderCircle size={15} className={styles.spinIcon}/>:<ShieldCheck size={15}/>}
+       {localized("Comprobar con Meta · sin crear anuncio","Check with Meta · no ad created")}
+      </button>:null}
       <button type="button" className={styles.secondary} onClick={()=>void navigator.clipboard?.writeText("VMV "+c.id+" · "+c.error_code).catch(()=>{})}>
        {localized("Copiar referencia","Copy reference")}</button>
       <a href="/vista-app/soporte" className={styles.secondary}>
        {localized("Solicitar ayuda","Get support")}</a>
      </div>
+    </div>:null}
+    {creativeChecks[c.id]?<div className={styles.creativeValidation} role="status">
+     <strong>{creativeChecks[c.id].ok?localized("Validación completada","Validation completed"):
+      localized("Diagnóstico de Meta","Meta diagnosis")}</strong>
+     <p>{creativeMessage(creativeChecks[c.id])}</p>
+     {creativeChecks[c.id].subcode?<small>{localized("Código Meta: ","Meta code: ")}{creativeChecks[c.id].subcode}</small>:null}
+     {!creativeChecks[c.id].ok&&creativeChecks[c.id].reason==="meta_app_in_development_mode"?
+      <a className={styles.secondary} href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer">
+       <ExternalLink size={15}/>{localized("Abrir Meta Developers","Open Meta Developers")}</a>:null}
     </div>:null}
     {c.status==="activation_pending"?<div className={styles.adIssue}>
      <strong>{localized("Activación pendiente de confirmación","Activation pending confirmation")}</strong>

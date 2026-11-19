@@ -74,3 +74,50 @@ test("No active ad spend is available without manual publish enablement",()=>{
  assert.match(route,/status:"PAUSED"/);
  assert.match(route,/status:"draft"/);
 });
+
+
+test("Creative payload uses supported Instagram user identity and has one consistent image-link spec",()=>{
+ const api=moduleWithEnv({});
+ const base={name:"Pasteles",pageId:"1234567890",placements:"facebook",
+  instagramId:null,destination:"https://example.com",message:"Pasteles de cumpleaños",
+  headline:"Conoce nuestros pasteles",imageHash:"a".repeat(32)};
+ const story=JSON.parse(api.metaLinkCreativeFields(base).object_story_spec);
+ assert.equal(story.page_id,base.pageId);
+ assert.equal(story.link_data.image_hash,base.imageHash);
+ assert.equal(story.link_data.call_to_action.value.link,base.destination);
+ assert.equal("instagram_actor_id" in story,false);
+ const ig=JSON.parse(api.metaLinkCreativeFields({...base,placements:"facebook_instagram",instagramId:"1234567890"}).object_story_spec);
+ assert.equal(ig.instagram_user_id,"1234567890");
+ assert.equal("instagram_actor_id" in ig,false);
+});
+test("Creative preflight uses Meta validate_only, without creating a creative or an ad",async()=>{
+ const api=moduleWithEnv({});
+ const fake=api.metaLinkCreativeFields;
+ const base={name:"Test",pageId:"1234567890",placements:"facebook",
+  instagramId:null,destination:"https://example.com",message:"Original copy",
+  headline:"An informative headline",imageHash:"a".repeat(32)};
+ const originalFetch=global.fetch, calls=[];
+ try{
+  global.fetch=async(url,options)=>{
+   calls.push({url:String(url),options});
+   return new Response(JSON.stringify({success:true}),{status:200,headers:{"Content-Type":"application/json"}});
+  };
+  // The module captures fetch in its test sandbox, so the source contract below verifies the safe flag.
+  const code=fs.readFileSync(path.resolve("lib/vmv-marketing-ads-meta.ts"),"utf8");
+  assert.match(code,/execution_options:JSON\.stringify\(\["validate_only"\]\)/);
+  const check=fs.readFileSync(path.resolve("app/api/marketing/ads/meta/creative-check/route.ts"),"utf8");
+  assert.match(check,/validateMetaLinkCreative/);
+  assert.equal(check.includes("operation:\\"create_paused\\""),false);
+  assert.match(check,/createdInMeta:false/);
+  const route=fs.readFileSync(path.resolve("app/api/marketing/ads/meta/campaigns/route.ts"),"utf8");
+  assert.ok(route.indexOf("await validateMetaLinkCreative(selectedAccount")<route.indexOf('const {data:claimed,error:claimError}'));
+  assert.ok(route.indexOf('const creative=await metaPost(selectedAccount+"/adcreatives"')<route.indexOf('const campaign=await metaPost(selectedAccount+"/campaigns"'));
+ }finally{global.fetch=originalFetch;}
+});
+test("Creative error subcodes are distinguished, rather than treating all 100s as the same",()=>{
+ const api=moduleWithEnv({});
+ assert.equal(api.metaCreativeReason(new api.MetaApiError("meta_api_100",400,1885183)),"meta_app_in_development_mode");
+ assert.equal(api.metaCreativeReason(new api.MetaApiError("meta_api_100",400,2238281)),"meta_instagram_identity_deprecated");
+ assert.equal(api.metaCreativeReason(new api.MetaApiError("meta_api_100",400,1487124)),"meta_creative_image_not_found");
+ assert.equal(api.metaCreativeReason(new api.MetaApiError("meta_api_100",400,null)),"meta_creative_parameters_rejected");
+});
