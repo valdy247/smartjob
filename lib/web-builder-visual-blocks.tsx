@@ -76,8 +76,6 @@ export const visualBlocks:Config["components"]={
    imageWidth:numericEditorField("imageWidth"),
    imageRadius:numericEditorField("imageRadius"),
    imageOpacity:numericEditorField("imageOpacity"),
-   imageBorder:numericEditorField("imageBorder"),
-   borderColor:colorEditorField("Color del borde"),
    imageMoveX:numericEditorField("imageMoveX"),
    imageMoveY:numericEditorField("imageMoveY"),
    align:{type:"select",options:[{label:"Izquierda",value:"left"},{label:"Centro",value:"center"}]},
@@ -107,7 +105,7 @@ export const visualBlocks:Config["components"]={
      {fields.buttonShape}{fields.buttonTextColor}{fields.buttonColor}{fields.buttonFontSize}</fieldset>
    <fieldset className="vmv-puck-field-group"><legend>Imagen · Reemplazar y ajustar</legend>
     {fields.image}{fields.imageAlt}{fields.imageWidth}{fields.imageRadius}{fields.imageOpacity}
-    {fields.imageBorder}{fields.borderColor}{fields.imageMoveX}{fields.imageMoveY}
+    {fields.imageMoveX}{fields.imageMoveY}
     {fields.imagePosition}{fields.shadeStrength}</fieldset>
   </>,
   render:({id,layout,eyebrow,title,description,buttonText,buttonUrl,image,imageAlt,align,imagePosition,shade,shadeStrength,height,buttonStyle,buttonShape,buttonColor,buttonTextColor,buttonFontSize,imageWidth,imageRadius,imageOpacity,imageBorder,borderColor,imageMoveX,imageMoveY,titleFont,titleColor,titleFontSize,titleShadow,titleWeight,titleItalic,titleLink,puck,...responsive})=>{
