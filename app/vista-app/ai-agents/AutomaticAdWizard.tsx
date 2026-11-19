@@ -233,28 +233,38 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   const url=URL.createObjectURL(image);setImagePreview(url);
   return()=>URL.revokeObjectURL(url);
  },[image]);
- const finish=()=>{
-  if(!owner||!canContinue||!answer.businessName.trim()||!answer.offer.trim()||
-   !cityKey||!pageId||!imageHash||!headline.trim()||!message.trim()||
-   !answer.audience.trim()||!accountId)return;
+ const finish=async()=>{
+  if(!owner||!validBudget||!specialConfirmed||!cityKey||!pageId||!imageHash||
+    !headline.trim()||!message.trim()||!accountId||pending)return;
   if(!answer.website||!validSite(answer.website)){
-   setError("Para anuncios de clics necesitas un enlace HTTPS válido.");return;
+   setError("El enlace del anuncio debe utilizar HTTPS.");return;
   }
-  const brief:AgentAdBrief={
-   version:1,ownerId:owner,businessId:business.id,workspaceId,agentId:agent.id,
-   createdAt:Date.now(),businessName:answer.businessName.trim(),website:answer.website.trim(),
-   offer:answer.offer.trim(),city:answer.city.trim(),region:answer.region.trim(),
-   audience:answer.audience.trim(),goals:answer.goals,
-   goal:answer.goals[0],imageChoice:"upload",
-   productIds:selectedProducts.map(p=>p.id),
-   selectedItems:selectedProducts.map(p=>({id:p.id,name:p.name,type:p.type})),
-   productId:product?.id,priceCents:product?.price_cents,currency:product?.currency,
-   notes:answer.notes.trim(),pageId,accountId,cityKey,cityMetaName,
-   imageHash,headline:headline.trim(),message:message.trim()
-  };
-  if(!saveAgentAdBrief(brief)){setError("No se pudo preparar el anuncio. Revisa el almacenamiento de este navegador.");return;}
-  // Marketing is the consumer: no campaign, Meta action or ad spend here.
-  window.location.assign("/vista-app/marketing/ads/create?from=ai-agents&business="+encodeURIComponent(business.id));
+  if(!meta.connected||meta.connection?.selectedAccountId!==accountId||
+   !meta.pages.some(p=>p.id===pageId)){
+   setError("Verifica nuevamente la cuenta y la página de Facebook.");return;
+  }
+  if(!window.confirm("Enviar a revisión por "+usd(totalCents)+
+   " de presupuesto máximo. Se guardará como borrador: no se publicará ni se gastará dinero."))return;
+  setPending("send");setError("");
+  try{
+   const dest=new URL(answer.website);
+   if(utmEnabled){
+    dest.searchParams.set("utm_source","meta");
+    dest.searchParams.set("utm_medium","paid_social");
+    dest.searchParams.set("utm_campaign",(answer.businessName+"_"+answer.offer)
+     .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").slice(0,50));
+   }
+   await api("/api/marketing/ads/meta/campaigns","POST",{
+    operation:"draft",clientKey:sendKey,draft:{
+     name:(answer.businessName+" · "+answer.offer).slice(0,80),
+     headline:headline.trim(),message:message.trim(),destination:dest.toString(),
+     cityKey,cityName:cityMetaName,citySearch:answer.city.trim(),radiusMiles,
+     imageHash,pageId,placements:"facebook",
+     dailyBudgetCents:budgetCents,durationDays:duration,specialCategoriesAcknowledged:true
+    }
+   });
+   window.location.assign("/vista-app/marketing/ads/campaigns");
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo guardar. Intenta nuevamente.");setPending("");}
  };
  const question:Record<Step,string>={
   business:"¿Este anuncio es para tu negocio?",
@@ -357,23 +367,21 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
    </div>:null}
   {!loading&&step==="location"?<div className={styles.answers}>
     <div className={styles.fieldPair}>
-     <label className={styles.field}>Ciudad<input maxLength={100} value={answer.city}
+     <label className={styles.field}>Ciudad<input maxLength={100} placeholder="Escribe tu ciudad" value={answer.city}
       onChange={e=>{update("city",e.target.value);setCityKey("");setCityMetaName("");}}/></label>
-     <label className={styles.field}>Estado<input maxLength={90} value={answer.region}
-      onChange={e=>{update("region",e.target.value);setCityKey("");setCityMetaName("");}}/></label>
+     <label className={styles.field}>Estado
+      <span className={styles.selectShell}><select aria-label="Estado" value={stateCode(answer.region)}
+       onChange={e=>{update("region",e.target.value);setCityKey("");setCityMetaName("");}}>
+       <option value="">Selecciona estado</option>
+       {usStates.map(([code,name])=><option value={code} key={code}>{name}</option>)}
+      </select></span></label>
     </div>
     {locationVerified?<div className={styles.fact}><Check size={17}/>{cityMetaName} · Verificada por Meta</div>:null}
-    <button type="button" disabled={pending==="city"||answer.city.trim().length<3}
-     className={styles.chip} onClick={()=>void verifyCity()}>
+    <button type="button" disabled={pending==="city"||answer.city.trim().length<3||!stateCode(answer.region)}
+     className={styles.verifyCity} onClick={()=>void verifyCity()}>
      {pending==="city"?<LoaderCircle size={17} className={styles.spin}/>:<Globe2 size={17}/>}
-     Verificar ciudad en Meta</button>
-    {places.length>0?<div className={styles.products} role="group" aria-label="Selecciona una ciudad de Meta">
-     {places.map(p=><button key={p.key} type="button" className={styles.product}
-      onClick={()=>{setCityKey(p.key);setCityMetaName(p.name+(p.region?", "+p.region:""));
-       setPlaces([]);setHeadline("");setMessage("");setAdReady(false);}}>
-      <Globe2 size={15}/>{p.name}, {p.region}</button>)}</div>:null}
-    {pending!=="city"&&!cityKey&&places.length===0?<p className={styles.helper}>
-     Debes elegir una ciudad confirmada por Meta antes de continuar.</p>:null}
+     Verificar ciudad con Meta</button>
+    <p className={styles.helper}>Después de verificar, toca tu ciudad en la lista para continuar.</p>
    </div>:null}
   {!loading&&step==="image"?<div className={styles.answers}>
     <label className={styles.field}>Imagen del anuncio · JPG o PNG (máximo 2 MB)
@@ -388,15 +396,32 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
     <p className={styles.helper}>No avanzaremos hasta que Facebook confirme la recepción.</p>
    </div>:null}
   {!loading&&step==="copy"?<div className={styles.answers}>
-    <button type="button" className={styles.next} disabled={pending==="copy"}
-     onClick={()=>void generateCopy()}>
-     {pending==="copy"?<LoaderCircle size={17} className={styles.spin}/>:<Sparkles size={17}/>}
-     {pending==="copy"?"Generando con IA…":adReady?"Regenerar texto con IA":"Generar texto con IA"}</button>
+    {pending==="copy"?<div className={styles.uploadProgress} role="status">
+     <LoaderCircle size={23} className={styles.spin}/> Generando anuncio con IA…</div>:null}
+    {!headline&&!message&&pending!=="copy"?<button type="button" className={styles.chip}
+     onClick={()=>void generateCopy()}><Sparkles size={16}/> Intentar generar texto</button>:null}
     <label className={styles.field}>Título
      <input maxLength={70} value={headline} onChange={e=>setHeadline(e.target.value)}/></label>
     <label className={styles.field}>Texto del anuncio
      <textarea rows={5} maxLength={350} value={message} onChange={e=>setMessage(e.target.value)}/></label>
-    <p className={styles.helper}>La IA prepara el texto automáticamente. Puedes editarlo o volver a generarlo antes de la revisión.</p>
+    <p className={styles.helper}>Revisa y edita el anuncio. Continúa para configurar el presupuesto.</p>
+   </div>:null}
+  {!loading&&step==="budget"?<div className={styles.answers}>
+    <div className={styles.fieldPair}>
+     <label className={styles.field}>Presupuesto diario (USD)
+      <input type="number" inputMode="decimal" min="5" max="250" step="0.01"
+       value={dailyBudget} onChange={e=>setDailyBudget(e.target.value)}/></label>
+     <label className={styles.field}>Duración (días)
+      <input type="number" inputMode="numeric" min="1" max="30" step="1"
+       value={durationDays} onChange={e=>setDurationDays(e.target.value)}/></label>
+    </div>
+    <div className={styles.budgetTotal}><small>Presupuesto máximo</small>
+     <strong>{validBudget?usd(totalCents):"—"}</strong><span>Sin cobros ahora</span></div>
+    <label className={styles.switchField}>
+     <span><strong>Etiquetas UTM</strong><small>Medir visitas desde Meta en tu web</small></span>
+     <input type="checkbox" checked={utmEnabled} onChange={e=>setUtmEnabled(e.target.checked)}/>
+    </label>
+    <p className={styles.helper}>El gasto se cobra directamente en Meta si autorizas la publicación más adelante.</p>
    </div>:null}
   {!loading&&step==="review"?<div className={styles.review}>
     <div><small>Negocio</small><strong>{answer.businessName}</strong></div>
@@ -408,21 +433,49 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
     <div><small>Imagen</small><strong>{imageHash?"Recibida por Meta":"Pendiente"}</strong></div>
     <div><small>Título</small><strong>{headline}</strong></div>
     <div><small>Texto</small><strong>{message}</strong></div>
+    <div><small>Presupuesto máximo</small><strong>{validBudget?usd(totalCents):"Pendiente"}</strong></div>
+    <div><small>UTM</small><strong>{utmEnabled?"Activadas":"Desactivadas"}</strong></div>
     <div><small>Objetivos</small><strong>{answer.goals.map(goal=>
      ({visits:"Visitas",messages:"Mensajes",sales:"Ventas"} as const)[goal]).join(" · ")}</strong></div>
-    <label className={styles.field}>Algo más que debamos saber (opcional)
-     <textarea value={answer.notes} onChange={e=>update("notes",e.target.value)}
-      rows={2} maxLength={300} placeholder="Detalle real de la oferta"/></label>
+    <label className={styles.consent}><input type="checkbox" checked={specialConfirmed}
+     onChange={e=>setSpecialConfirmed(e.target.checked)}/>
+     <span>Confirmo que este anuncio no pertenece a vivienda, empleo, crédito ni otra categoría especial.
+      Los datos son reales y tengo derechos para usar la imagen.</span></label>
+    <p className={styles.helper}>Enviar crea un borrador para aprobación. No publica ni gasta dinero.</p>
    </div>:null}
   {error?<p role="alert" className={styles.error}>{error}
    <button type="button" className={styles.chip} onClick={()=>setError("")}>Cerrar aviso</button>
   </p>:null}
   {!loading&&owner?<div className={styles.footer}>
-    {step!=="review"?<button type="button" className={styles.next} disabled={!canContinue||Boolean(pending)} onClick={next}>
+    {step==="location"?null:step!=="review"?<button type="button" className={styles.next}
+     disabled={!canContinue||Boolean(pending)} onClick={next}>
      Continuar <ArrowRight size={18}/></button>:
-     <button type="button" className={styles.generate} onClick={finish}>
-      <Megaphone size={18}/> Generar anuncio <ArrowRight size={17}/></button>}
+     <button type="button" className={styles.generate}
+      disabled={!validBudget||!specialConfirmed||Boolean(pending)} onClick={()=>void finish()}>
+      {pending==="send"?<LoaderCircle size={17} className={styles.spin}/>:<Megaphone size={18}/>}
+      {pending==="send"?"Enviando…":"Enviar a revisión"} <ArrowRight size={17}/></button>}
    </div>:null}
-  <p className={styles.safety}><ShieldCheck size={14}/> Presupuesto y publicación requieren tu aprobación en Marketing.</p>
+  {step!=="location"?<p className={styles.safety}><ShieldCheck size={14}/>
+   No publicamos anuncios ni activamos gastos automáticamente.</p>:null}
+  {cityDialogOpen&&step==="location"?<div className={styles.cityOverlay}
+   role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget&&!pending)setCityDialogOpen(false);}}>
+   <div className={styles.cityDialog} role="dialog" aria-modal="true"
+    aria-label="Ciudades verificadas por Meta">
+    <div className={styles.cityDialogHead}><span><Globe2 size={20}/> Ciudades de Meta</span>
+     <button type="button" aria-label="Cerrar selección" onClick={()=>setCityDialogOpen(false)}>×</button></div>
+    <p className={styles.helper}>Elige la ciudad correcta para continuar automáticamente.</p>
+    {pending==="city"?<div className={styles.uploadProgress} role="status">
+     <LoaderCircle size={23} className={styles.spin}/> Verificando ciudad…</div>:null}
+    {!pending&&places.length===0?<p className={styles.helper}>
+     No hay coincidencias verificadas para {answer.city}, {stateName(answer.region)}.
+     Cierra la ventana y cambia la búsqueda.</p>:null}
+    {places.map(p=><button key={p.key} type="button" className={styles.cityChoice}
+     onClick={()=>{setCityKey(p.key);setCityMetaName(p.name);setPlaces([]);
+      setCityDialogOpen(false);setHeadline("");setMessage("");setAdReady(false);
+      setStep("image");}}>
+     <span><strong>{p.name}</strong><small>{p.region} · Estados Unidos</small></span>
+     <Check size={17}/></button>)}
+   </div>
+  </div>:null}
  </section>;
 }
