@@ -55,24 +55,24 @@
 .finish button{display:inline-flex;align-items:center;gap:10px;border:0;background:#673d97;color:#fff;border-radius:12px;padding:13px 18px;min-height:48px;font-size:13px;font-weight:850}
 .finish button:disabled{opacity:.5;cursor:wait}
 .finish span button{background:transparent;color:#6c418e;padding:4px 8px;min-height:30px}
-:global(.vmv-connected-services){display:flex;flex-direction:column;gap:10px}
-:global(.vmv-connected-services)>header{display:flex;justify-content:space-between;align-items:center}
-:global(.vmv-connected-services)>header>button{border:1px solid #ded2ea;background:#fff;border-radius:9px;min-height:40px;min-width:40px}
-:global(.vmv-connected-services)>p{font-size:11px;color:#7a7285;margin:0;line-height:1.6}
-:global(.vmv-connected-items){display:flex;flex-direction:column;gap:6px}
-:global(.vmv-connected-items)>div{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px;border-radius:11px;background:#fff}
-:global(.vmv-connected-items span){display:flex;flex-direction:column;gap:3px}
-:global(.vmv-connected-items button),:global(.vmv-connected-add){border:1px solid #d8c9e5;border-radius:10px;background:#fff;color:#6a458d;padding:10px 12px;font-size:12px;min-height:44px;font-weight:760}
-:global(.vmv-connected-add){display:inline-flex;align-items:center;gap:7px;align-self:flex-start}
-:global(.vmv-connected-overlay){position:fixed;inset:0;z-index:11000;display:flex;align-items:center;justify-content:center;background:#20152d91;padding:16px}
-:global(.vmv-connected-modal){width:min(100%,520px);max-height:92dvh;overflow-y:auto;display:flex;flex-direction:column;gap:13px;background:#fff;padding:24px;border-radius:19px;box-shadow:0 25px 60px #17102735}
-:global(.vmv-connected-modal)>header{display:flex;justify-content:space-between;align-items:center}
-:global(.vmv-connected-modal) header button{min-height:44px;min-width:44px;border:0;background:#f2edf7;border-radius:10px}
-:global(.vmv-connected-modal) label{font-size:12px}
-:global(.vmv-connected-modal) label input:not([type=checkbox]),:global(.vmv-connected-modal) textarea{font-size:16px}
-:global(.vmv-connected-modal) label.vmv-connected-check{flex-direction:row;align-items:center;gap:9px}
-:global(.vmv-connected-modal) .vmv-connected-check input{width:19px;height:19px}
-:global(.vmv-connected-modal)>button:last-child{min-height:48px;border:0;background:#6a4792;color:#fff;border-radius:11px;padding:12px;font-weight:850}
+.root :global(.vmv-connected-services){display:flex;flex-direction:column;gap:10px}
+.root :global(.vmv-connected-services)>header{display:flex;justify-content:space-between;align-items:center}
+.root :global(.vmv-connected-services)>header>button{border:1px solid #ded2ea;background:#fff;border-radius:9px;min-height:40px;min-width:40px}
+.root :global(.vmv-connected-services)>p{font-size:11px;color:#7a7285;margin:0;line-height:1.6}
+.root :global(.vmv-connected-items){display:flex;flex-direction:column;gap:6px}
+.root :global(.vmv-connected-items)>div{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px;border-radius:11px;background:#fff}
+.root :global(.vmv-connected-items span){display:flex;flex-direction:column;gap:3px}
+.root :global(.vmv-connected-items button),:global(.vmv-connected-add){border:1px solid #d8c9e5;border-radius:10px;background:#fff;color:#6a458d;padding:10px 12px;font-size:12px;min-height:44px;font-weight:760}
+.root :global(.vmv-connected-add){display:inline-flex;align-items:center;gap:7px;align-self:flex-start}
+.root :global(.vmv-connected-overlay){position:fixed;inset:0;z-index:11000;display:flex;align-items:center;justify-content:center;background:#20152d91;padding:16px}
+.root :global(.vmv-connected-modal){width:min(100%,520px);max-height:92dvh;overflow-y:auto;display:flex;flex-direction:column;gap:13px;background:#fff;padding:24px;border-radius:19px;box-shadow:0 25px 60px #17102735}
+.root :global(.vmv-connected-modal)>header{display:flex;justify-content:space-between;align-items:center}
+.root :global(.vmv-connected-modal) header button{min-height:44px;min-width:44px;border:0;background:#f2edf7;border-radius:10px}
+.root :global(.vmv-connected-modal) label{font-size:12px}
+.root :global(.vmv-connected-modal) label input:not([type=checkbox]),:global(.vmv-connected-modal) textarea{font-size:16px}
+.root :global(.vmv-connected-modal) label.vmv-connected-check{flex-direction:row;align-items:center;gap:9px}
+.root :global(.vmv-connected-modal) .vmv-connected-check input{width:19px;height:19px}
+.root :global(.vmv-connected-modal)>button:last-child{min-height:48px;border:0;background:#6a4792;color:#fff;border-radius:11px;padding:12px;font-weight:850}
 @media(max-width:720px){
  .root{padding:13px;gap:13px}.section{padding:16px;border-radius:16px}
  .goalGrid,.fontGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
