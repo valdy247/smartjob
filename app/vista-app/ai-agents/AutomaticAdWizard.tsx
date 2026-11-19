@@ -376,6 +376,11 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
  const chip=(label:string,selected:boolean,onClick:()=>void)=><button type="button"
   className={selected?styles.chipSelected:styles.chip} onClick={onClick}
   aria-pressed={selected}>{selected?<Check size={15}/>:null}{label}</button>;
+ const reviewCard=(label:string,value:string,target:Step)=><div className={styles.reviewCard} key={label}>
+  <div className={styles.reviewCardText}><small>{label}</small><strong>{value||"Pendiente"}</strong></div>
+  <button type="button" className={styles.reviewEdit} aria-label={"Editar "+label}
+   title={"Editar "+label} onClick={()=>editReview(target)}><Pencil size={17}/></button>
+ </div>;
  return <section className={styles.root} aria-label="Asistente para anuncios automáticos">
   <header className={styles.top}><button type="button" onClick={back} aria-label="Volver"><ArrowLeft size={20}/></button>
    <span>Anuncio automático</span><span>{index+1}/{steps.length}</span></header>
@@ -547,19 +552,19 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
     <p className={styles.helper}>El gasto se cobra directamente en Meta si autorizas la publicación más adelante.</p>
    </div>:null}
   {!loading&&step==="review"?<div className={styles.review}>
-    <div><small>Negocio</small><strong>{answer.businessName}</strong></div>
-    <div><small>Promoción</small><strong>{answer.offer}</strong></div>
-    <div><small>Destino</small><strong>{answer.website||"Por definir en Marketing"}</strong></div>
-    <div><small>Zona</small><strong>{answer.city}, {answer.region}</strong></div>
-    <div><small>Página Facebook</small><strong>{verifiedPage?.name||"Pendiente"}</strong></div>
-    <div><small>Productos / servicios</small><strong>{selectedProducts.map(p=>p.name).join(", ")||answer.offer}</strong></div>
-    <div><small>Imagen</small><strong>{imageHash?"Recibida por Meta":"Pendiente"}</strong></div>
-    <div><small>Título</small><strong>{headline}</strong></div>
-    <div><small>Texto</small><strong>{message}</strong></div>
-    <div><small>Presupuesto máximo</small><strong>{validBudget?usd(totalCents):"Pendiente"}</strong></div>
-    <div><small>UTM</small><strong>{utmEnabled?"Activadas":"Desactivadas"}</strong></div>
-    <div><small>Objetivos</small><strong>{answer.goals.map(goal=>
-     ({visits:"Visitas",messages:"Mensajes",sales:"Ventas"} as const)[goal]).join(" · ")}</strong></div>
+    {reviewCard("Negocio",answer.businessName,"business")}
+    {reviewCard("Promoción",answer.offer,"product")}
+    {reviewCard("Destino",answer.website,"website")}
+    {reviewCard("Zona",answer.city+", "+stateName(answer.region),"location")}
+    {reviewCard("Página Facebook",verifiedPage?.name||"","account")}
+    {reviewCard("Productos / servicios",selectedProducts.map(p=>p.name).join(", ")||answer.offer,"product")}
+    {reviewCard("Imagen",imageHash?"Recibida por Meta":"","image")}
+    {reviewCard("Título",headline,"copy")}
+    {reviewCard("Texto",message,"copy")}
+    {reviewCard("Presupuesto máximo",validBudget?usd(totalCents):"","budget")}
+    {reviewCard("UTM",utmEnabled?"Activadas":"Desactivadas","budget")}
+    {reviewCard("Objetivos",answer.goals.map(goal=>
+     ({visits:"Visitas",messages:"Mensajes",sales:"Ventas"} as const)[goal]).join(" · "),"goal")}
     <label className={styles.consent}><input type="checkbox" checked={specialConfirmed}
      onChange={e=>setSpecialConfirmed(e.target.checked)}/>
      <span>Confirmo que este anuncio no pertenece a vivienda, empleo, crédito ni otra categoría especial.
@@ -572,7 +577,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   {!loading&&owner?<div className={styles.footer}>
     {step==="location"?null:step!=="review"?<button type="button" className={styles.next}
      disabled={!canContinue||Boolean(pending)} onClick={next}>
-     Continuar <ArrowRight size={18}/></button>:
+     {returnToReview?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={18}/></button>:
      <button type="button" className={styles.generate}
       disabled={!validBudget||!specialConfirmed||Boolean(pending)} onClick={()=>void finish()}>
       {pending==="send"?<LoaderCircle size={17} className={styles.spin}/>:<Megaphone size={18}/>}
@@ -595,7 +600,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
     {places.map(p=><button key={p.key} type="button" className={styles.cityChoice}
      onClick={()=>{setCityKey(p.key);setCityMetaName(p.name);setPlaces([]);
       setCityDialogOpen(false);setHeadline("");setMessage("");setAdReady(false);
-      setStep("image");}}>
+      setStep(returnToReview?"review":"image");setReturnToReview(false);}}>
      <span><strong>{p.name}</strong><small>{p.region} · Estados Unidos</small></span>
      <Check size={17}/></button>)}
    </div>
