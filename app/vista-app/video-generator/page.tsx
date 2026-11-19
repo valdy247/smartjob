@@ -1,0 +1,370 @@
+"use client";
+import {useCallback,useEffect,useMemo,useState} from "react";
+import Link from "next/link";
+import {ArrowLeft,ArrowUpRight,CalendarDays,Check,CheckCircle2,ChevronRight,
+ Clapperboard,Download,Film,ImagePlus,Library,LoaderCircle,Play,RefreshCw,
+ ShieldCheck,Sparkles,Video,WandSparkles,Workflow,X} from "lucide-react";
+import {getSupabase} from "@/lib/supabase";
+import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
+import {useInterfaceLanguage} from "@/lib/i18n-web";
+import styles from "./page.module.css";
+
+type Job={id:string;pilot_id:string|null;prompt:string;mode:"text"|"image";model:"gen4.5"|"kling";
+ ratio:"1280:720"|"720:1280";duration:number;status:string;output_url:string|null;
+ failure_code:string|null;caption:string|null;created_at:string;updated_at:string};
+type Pilot={id:string;niche:string;audience:string;goal:string;style:string;frequency:number;
+ status:string;created_at:string};
+type Screen="home"|"create"|"pilot"|"library";
+type Form={prompt:string;caption:string;mode:"text"|"image";model:"gen4.5"|"kling";
+ ratio:"1280:720"|"720:1280";duration:5|10};
+const initial:Form={prompt:"",caption:"",mode:"text",model:"gen4.5",ratio:"720:1280",duration:5};
+const defaultPilot={id:"",niche:"",audience:"",goal:"",style:"realistic",frequency:3};
+function errMessage(code:string,en:boolean){
+ const map:Record<string,[string,string]>={
+  video_not_enabled_for_account:["Video Generator aún no está habilitado para esta cuenta.","Video Generator isn't enabled for this account yet."],
+  runway_key_missing:["Falta conectar Runway en Vercel.","Connect Runway in Vercel first."],
+  video_daily_limit:["Alcanzaste el límite de tres generaciones en 24 horas.","You've reached the three-videos-per-day limit."],
+  video_active_job_limit:["Espera a que termine el video anterior.","Wait for your previous video to finish."],
+  invalid_video_request:["Revisa el texto, formato, imagen y autorización.","Check your prompt, format, image and confirmation."],
+  runway_credits_required:["Runway necesita créditos para generar videos.","Runway requires credits to generate videos."],
+  runway_rate_limited:["Runway está procesando demasiadas solicitudes. Intenta más tarde.","Runway is processing too many requests. Retry later."],
+  runway_access_denied:["La clave de Runway no tiene acceso al modelo seleccionado.","Your Runway key can't access the selected model."],
+  runway_parameters_or_model_rejected:["Runway rechazó el formato o modelo. Prueba otra opción.","Runway rejected this model or format. Try another option."],
+  runway_start_unavailable:["No se pudo iniciar la generación. Intenta nuevamente.","Could not start video generation. Try again."],
+  video_ai_unavailable:["La IA de guiones no respondió. Puedes escribir la idea manualmente.","AI couldn't write a prompt. You can enter one manually."],
+  video_ai_limit:["Espera un momento antes de pedir otra idea.","Please wait before requesting another AI idea."],
+  video_database_unavailable:["El historial no está disponible. Intenta de nuevo.","History is temporarily unavailable. Retry."],
+  pilot_save_unavailable:["No se pudo guardar el piloto.","Could not save the pilot."],
+  video_history_unavailable:["No se pudo cargar tu biblioteca.","Could not load your library."]
+ };
+ return (map[code]||["No se pudo completar la operación.","The request could not be completed."])[en?1:0];
+}
+async function api(path:string,method="GET",body?:Record<string,unknown>){
+ const client=getSupabase();
+ if(!client)throw Error("login");
+ const {data}=await client.auth.getSession();
+ if(!data.session)throw Error("login");
+ const r=await fetch("/api/video-generator"+path,{
+  method,cache:"no-store",
+  headers:{Authorization:"Bearer "+data.session.access_token,...(body?{"Content-Type":"application/json"}:{})},
+  ...(body?{body:JSON.stringify(body)}:{})
+ });
+ const payload=await r.json().catch(()=>({error:"network"}));
+ if(!r.ok)throw Error(payload.error||"network");
+ return payload;
+}
+async function imageData(file:File){
+ if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>14*1024*1024)
+  throw Error("image_invalid");
+ const bitmap=await createImageBitmap(file);
+ try{
+  const scale=Math.min(1,1440/Math.max(bitmap.width,bitmap.height));
+  const canvas=document.createElement("canvas");
+  canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+  canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+  const ctx=canvas.getContext("2d");if(!ctx)throw Error("image_invalid");
+  ctx.fillStyle="#fff";ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+  for(const quality of [0.82,0.7,0.55,0.4]){
+   const data=canvas.toDataURL("image/jpeg",quality);
+   if(data.length<=4100000)return data;
+  }
+  throw Error("image_invalid");
+ }finally{bitmap.close();}
+}
+export default function VideoGeneratorPage(){
+ const {language}=useInterfaceLanguage(),en=language==="en";
+ const L=(es:string,english:string)=>en?english:es;
+ const [screen,setScreen]=useState<Screen>("home");
+ const [jobs,setJobs]=useState<Job[]>([]),[pilots,setPilots]=useState<Pilot[]>([]);
+ const [form,setForm]=useState<Form>(initial);
+ const [image,setImage]=useState(""),[imageLoading,setImageLoading]=useState(false);
+ const [pilot,setPilot]=useState(defaultPilot);
+ const [selected,setSelected]=useState<string|null>(null);
+ const [costApproved,setCostApproved]=useState(false),[configured,setConfigured]=useState(false);
+ const [ready,setReady]=useState(false),[busy,setBusy]=useState(""),[error,setError]=useState(""),[notice,setNotice]=useState("");
+ const patch=<K extends keyof Form>(field:K,value:Form[K])=>{setForm(f=>({...f,[field]:value}));setCostApproved(false);};
+ const active=(job:Job)=>["starting","PENDING","THROTTLED","RUNNING"].includes(job.status);
+ const load=useCallback(async()=>{
+  try{
+   const r=await api("");
+   setJobs(r.jobs||[]);setPilots(r.pilots||[]);setConfigured(Boolean(r.configured));
+   if(r.pilots?.[0])setPilot({
+    id:r.pilots[0].id,niche:r.pilots[0].niche,audience:r.pilots[0].audience,
+    goal:r.pilots[0].goal,style:r.pilots[0].style,frequency:r.pilots[0].frequency
+   });
+  }catch(e){setError(e instanceof Error?e.message:"unavailable");}
+  finally{setReady(true);}
+ },[]);
+ useEffect(()=>{void load();},[load]);
+ const refreshJob=useCallback(async(id:string)=>{
+  try{
+   const r=await api("?id="+encodeURIComponent(id));
+   const next=r.job as Job;
+   if(next)setJobs(prev=>[next,...prev.filter(j=>j.id!==id)]);
+  }catch(e){setError(e instanceof Error?e.message:"unavailable");}
+ },[]);
+ const current=useMemo(()=>jobs.find(j=>j.id===selected)||null,[jobs,selected]);
+ useEffect(()=>{
+  if(!current||!active(current))return;
+  const timer=window.setInterval(()=>void refreshJob(current.id),7000);
+  return()=>window.clearInterval(timer);
+ },[current?.id,current?.status,refreshJob]);
+ const failures=jobs.filter(j=>j.status==="FAILED").length;
+ const open=(next:Screen)=>{setScreen(next);setError("");setNotice("");};
+ const generate=async()=>{
+  if(busy||!costApproved)return;
+  setBusy("generate");setError("");setNotice("");
+  try{
+   const result=await api("","POST",{
+    ...form,imageUrl:form.mode==="image"?image:"",confirmCost:true,clientKey:crypto.randomUUID(),
+    caption:form.caption.trim().slice(0,500)
+   });
+   if(result.job){
+    setJobs(prev=>[result.job,...prev.filter(j=>j.id!==result.job.id)]);
+    setSelected(result.job.id);setCostApproved(false);open("library");
+   }
+  }catch(e){setError(e instanceof Error?e.message:"unavailable");}
+  finally{setBusy("");}
+ };
+ const idea=async(usePilot=false)=>{
+  if(busy)return;
+  const niche=usePilot?pilot.niche:form.prompt;
+  if(niche.trim().length<3)return;
+  setBusy("idea");setError("");setNotice("");
+  try{
+   const r=await api("/brief","POST",{
+    niche,goal:usePilot?pilot.goal:"",
+    audience:usePilot?pilot.audience:"",style:usePilot?pilot.style:"realistic",
+    prompt:usePilot?"":form.prompt,locale:en?"en":"es"
+   });
+   setForm(v=>({...v,prompt:r.prompt,caption:r.caption}));
+   if(usePilot){setImage("");setScreen("create");}
+   setNotice(L("Guion y descripción listos.","Prompt and caption ready."));
+  }catch(e){setError(e instanceof Error?e.message:"unavailable");}
+  finally{setBusy("");}
+ };
+ const savePilot=async()=>{
+  if(busy)return;
+  setBusy("pilot");setError("");setNotice("");
+  try{
+   const result=await api("/pilot","POST",{
+    ...(pilot.id?{id:pilot.id}:{}),niche:pilot.niche,audience:pilot.audience,
+    goal:pilot.goal,style:pilot.style,frequency:pilot.frequency
+   });
+   setPilots(prev=>[result.pilot,...prev.filter(p=>p.id!==result.pilot.id)]);
+   setPilot(prev=>({...prev,id:result.pilot.id}));
+   setNotice(L("Configuración guardada.","Settings saved."));
+  }catch(e){setError(e instanceof Error?e.message:"unavailable");}
+  finally{setBusy("");}
+ };
+ const onFile=async(file?:File)=>{
+  if(!file)return;
+  setImageLoading(true);setImage("");setError("");
+  try{setImage(await imageData(file));}
+  catch{setError("image_invalid");}
+  finally{setImageLoading(false);}
+ };
+ const selectJob=(job:Job)=>{setSelected(job.id);open("library");if(active(job))void refreshJob(job.id);};
+ const status=(job:Job)=>job.status==="SUCCEEDED"?L("Listo","Ready"):
+  job.status==="FAILED"?L("Falló","Failed"):
+  job.status==="RUNNING"?L("Generando","Generating"):
+  job.status==="CANCELED"?L("Cancelado","Canceled"):L("Procesando","Processing");
+ const date=(value:string)=>new Date(value).toLocaleDateString(en?"en-US":"es-US",{month:"short",day:"numeric",year:"numeric"});
+ const errorText=error==="login"?L("Inicia sesión en VMV Business.","Sign in to VMV Business."):
+  error==="image_invalid"?L("Selecciona una imagen JPG, PNG o WebP válida.","Choose a valid JPG, PNG or WebP image."):
+  error?errMessage(error,en):"";
+ return <main className={styles.page}><div className={styles.shell}>
+  <header className={styles.topbar}>
+   {screen==="home"?<Link href="/vista-app" className={styles.back}><ArrowLeft size={17}/> VMV Business</Link>:
+    <button type="button" className={styles.back} onClick={()=>open("home")}><ArrowLeft size={17}/>{L("Video Generator","Video Generator")}</button>}
+   <div className={styles.topRight}><InterfaceLanguagePicker compact/><span className={styles.pill}><Sparkles size={14}/> Beta</span></div>
+  </header>
+  {screen==="home"?<>
+   <div className={styles.intro}><span className={styles.eyebrow}><Video size={15}/> VMV VIDEO GENERATOR</span>
+    <h1>{L("Crea videos con IA","Create videos with AI")}</h1>
+    <p>{L("Un estudio sencillo para crear, organizar y preparar tus videos.","A simple studio to create, organize and prepare videos.")}</p>
+   </div>
+   <div className={styles.choiceGrid}>
+    <button type="button" className={styles.choice} onClick={()=>open("create")}>
+     <span className={styles.choiceIcon}><Clapperboard size={23}/></span>
+     <strong>{L("Crear un video","Create a video")}</strong>
+     <small>{L("De texto o imagen a video.","Turn text or images into video.")}</small>
+     <ArrowUpRight size={18} className={styles.choiceArrow}/>
+    </button>
+    <button type="button" className={styles.choice} onClick={()=>open("pilot")}>
+     <span className={styles.choiceIcon}><Workflow size={23}/></span>
+     <strong>{L("Piloto automático","Content autopilot")}</strong>
+     <small>{L("Elige tu nicho y prepara contenido recurrente.","Choose a niche and prepare recurring content.")}</small>
+     <ArrowUpRight size={18} className={styles.choiceArrow}/>
+    </button>
+   </div>
+   <button type="button" className={styles.libraryShortcut} onClick={()=>open("library")}>
+    <Library size={19}/><span>{L("Mi biblioteca","My library")}</span>
+    <span className={styles.count}>{jobs.length}</span><ChevronRight size={17}/>
+   </button>
+   {ready&&!configured?<div className={styles.setup}><ShieldCheck size={17}/>
+    {L("Para comenzar falta conectar Runway en Vercel.","Connect Runway in Vercel to begin.")}</div>:null}
+   {failures>0?<p className={styles.foot}>{L("Generaciones fallidas registradas: ","Failed attempts recorded: ")}{failures}</p>:null}
+  </>:null}
+  {screen==="create"?<>
+   <div className={styles.heading}><span className={styles.eyebrow}><Film size={15}/>{L("ESTUDIO DE VIDEO","VIDEO STUDIO")}</span>
+    <h1>{L("Crear video","Create video")}</h1>
+   </div>
+   <section className={styles.card}>
+    <div className={styles.field}><label>{L("Origen","Source")}</label>
+     <div className={styles.segment}>
+      <button type="button" aria-pressed={form.mode==="text"} className={form.mode==="text"?styles.chosen:""} onClick={()=>patch("mode","text")}>{L("Texto","Text")}</button>
+      <button type="button" aria-pressed={form.mode==="image"} className={form.mode==="image"?styles.chosen:""} onClick={()=>patch("mode","image")}>{L("Imagen","Image")}</button>
+     </div>
+    </div>
+    {form.mode==="image"?<div className={styles.field}>
+     <label>{L("Imagen de referencia","Reference image")}</label>
+     <label className={styles.filePicker}><ImagePlus size={18}/>
+      {image?L("Cambiar imagen","Change image"):L("Seleccionar imagen","Choose image")}
+      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>void onFile(e.target.files?.[0])}/>
+     </label>
+     {imageLoading?<span className={styles.progress}><LoaderCircle size={15} className={styles.spinner}/>{L("Preparando imagen…","Preparing image…")}</span>:null}
+     {image?<img alt={L("Imagen seleccionada","Selected image")} className={styles.reference} src={image}/>:null}
+    </div>:null}
+    <div className={styles.field}>
+     <label htmlFor="vmv-video-prompt">{L("Describe tu video","Describe your video")}</label>
+     <textarea id="vmv-video-prompt" rows={5} maxLength={1000}
+      value={form.prompt} placeholder={L("Un pastel recién terminado sobre una mesa, cámara cinematográfica…","A freshly decorated cake on a table, cinematic camera movement…")}
+      onChange={e=>patch("prompt",e.target.value)}/>
+     <div className={styles.fieldFooter}>
+      <span>{form.prompt.length}/1000</span>
+      <button type="button" className={styles.miniAction} disabled={busy!==""||form.prompt.trim().length<3}
+       onClick={()=>void idea()}><WandSparkles size={15}/>{L("Mejorar con IA","Enhance with AI")}</button>
+     </div>
+    </div>
+    <div className={styles.dual}>
+     <div className={styles.field}><label>{L("Motor","Engine")}</label>
+      <div className={styles.segment}>
+       <button type="button" className={form.model==="gen4.5"?styles.chosen:""} onClick={()=>patch("model","gen4.5")}>Runway</button>
+       <button type="button" className={form.model==="kling"?styles.chosen:""} onClick={()=>patch("model","kling")}>Kling</button>
+      </div>
+     </div>
+     <div className={styles.field}><label>{L("Duración","Duration")}</label>
+      <div className={styles.segment}>
+       <button type="button" className={form.duration===5?styles.chosen:""} onClick={()=>patch("duration",5)}>5 s</button>
+       <button type="button" className={form.duration===10?styles.chosen:""} onClick={()=>patch("duration",10)}>10 s</button>
+      </div>
+     </div>
+    </div>
+    <div className={styles.field}><label>{L("Formato","Format")}</label>
+     <div className={styles.segment}>
+      <button type="button" className={form.ratio==="720:1280"?styles.chosen:""} onClick={()=>patch("ratio","720:1280")}>{L("Vertical · Reels","Vertical · Reels")}</button>
+      <button type="button" className={form.ratio==="1280:720"?styles.chosen:""} onClick={()=>patch("ratio","1280:720")}>{L("Horizontal","Landscape")}</button>
+     </div>
+    </div>
+    <div className={styles.field}>
+     <label htmlFor="vmv-caption">{L("Descripción para redes","Social description")}</label>
+     <textarea id="vmv-caption" rows={2} maxLength={500} value={form.caption}
+      onChange={e=>patch("caption",e.target.value)}
+      placeholder={L("Descripción y hashtags opcionales","Optional caption and hashtags")}/>
+    </div>
+    <label className={styles.approval}>
+     <input type="checkbox" checked={costApproved} onChange={e=>setCostApproved(e.target.checked)}/>
+     <span>{L("Autorizo esta generación. Runway puede cobrar créditos por el resultado.","I authorize this generation. Runway may charge credits for the result.")}</span>
+    </label>
+    <button className={styles.primary} type="button" onClick={()=>void generate()}
+     disabled={!configured||!costApproved||busy!==""||imageLoading||form.prompt.trim().length<3||(form.mode==="image"&&!image)}>
+     {busy==="generate"?<LoaderCircle size={18} className={styles.spinner}/>:<Play size={18}/>}
+     {busy==="generate"?L("Enviando a Runway…","Sending to Runway…"):L("Generar video","Generate video")}
+    </button>
+   </section>
+  </>:null}
+  {screen==="pilot"?<>
+   <div className={styles.heading}><span className={styles.eyebrow}><Workflow size={15}/>{L("CONTENIDO RECURRENTE","RECURRING CONTENT")}</span>
+    <h1>{L("Piloto automático","Content autopilot")}</h1>
+   </div>
+   <section className={styles.card}>
+    <div className={styles.field}><label htmlFor="vmv-niche">{L("Tu nicho","Your niche")}</label>
+     <input id="vmv-niche" value={pilot.niche} maxLength={160}
+      onChange={e=>setPilot(p=>({...p,niche:e.target.value}))}
+      placeholder={L("Repostería, historias, tecnología…","Baking, storytelling, technology…")}/>
+    </div>
+    <div className={styles.field}><label htmlFor="vmv-audience">{L("Público","Audience")}</label>
+     <input id="vmv-audience" value={pilot.audience} maxLength={180}
+      onChange={e=>setPilot(p=>({...p,audience:e.target.value}))} placeholder={L("¿A quién quieres llegar?","Who do you want to reach?")}/>
+    </div>
+    <div className={styles.field}><label htmlFor="vmv-goal">{L("Objetivo","Goal")}</label>
+     <input id="vmv-goal" value={pilot.goal} maxLength={180}
+      onChange={e=>setPilot(p=>({...p,goal:e.target.value}))} placeholder={L("Dar a conocer mis productos","Introduce my products")}/>
+    </div>
+    <div className={styles.field}><label>{L("Frecuencia objetivo","Target frequency")}</label>
+     <div className={styles.segment}>
+      {([1,3,5,7] as const).map(n=><button type="button" key={n}
+       className={pilot.frequency===n?styles.chosen:""} onClick={()=>setPilot(p=>({...p,frequency:n}))}>{n}/{L("sem","wk")}</button>)}
+     </div>
+    </div>
+    <div className={styles.field}><label>{L("Estilo","Style")}</label>
+     <div className={styles.segment}>
+      {([["realistic",L("Realista","Realistic")],["cinematic",L("Cine","Cinema")],
+       ["animated",L("Animado","Animated")],["product",L("Producto","Product")]] as const)
+       .map(([code,name])=><button type="button" key={code}
+       className={pilot.style===code?styles.chosen:""} onClick={()=>setPilot(p=>({...p,style:code}))}>{name}</button>)}
+     </div>
+    </div>
+    <div className={styles.inlineActions}>
+     <button type="button" className={styles.secondary} disabled={busy!==""||pilot.niche.trim().length<3}
+      onClick={()=>void savePilot()}>{busy==="pilot"?<LoaderCircle size={16} className={styles.spinner}/>:<Check size={16}/>}
+      {L("Guardar piloto","Save pilot")}</button>
+     <button type="button" className={styles.primary} disabled={busy!==""||pilot.niche.trim().length<3}
+      onClick={()=>void idea(true)}>{busy==="idea"?<LoaderCircle size={16} className={styles.spinner}/>:<Sparkles size={16}/>}
+      {L("Preparar primer video","Prepare first video")}</button>
+    </div>
+    <div className={styles.setup}><CalendarDays size={17}/>
+     {L("El calendario automático y la publicación quedan pausados. Puedes preparar videos y aprobar cada generación.","Automatic scheduling and publishing are paused. You can prepare videos and approve each generation.")}</div>
+   </section>
+  </>:null}
+  {screen==="library"?<>
+   <div className={styles.heading}><span className={styles.eyebrow}><Library size={15}/>{L("TUS CREACIONES","YOUR CREATIONS")}</span>
+    <h1>{L("Mi biblioteca","My library")}</h1>
+   </div>
+   <div className={styles.libraryGrid}>
+    <section className={styles.libraryList}>
+     <div className={styles.libraryTitle}>
+      <strong>{L("Videos","Videos")} · {jobs.length}</strong>
+      <button type="button" disabled={busy!==""} className={styles.iconButton} onClick={()=>void load()} aria-label={L("Actualizar","Refresh")}>
+       <RefreshCw size={17}/></button>
+     </div>
+     {jobs.length?jobs.map(j=><button type="button" key={j.id}
+      className={selected===j.id?styles.jobSelected:styles.job} onClick={()=>selectJob(j)}>
+      <span className={styles.jobIcon}><Film size={17}/></span>
+      <span className={styles.jobInfo}><strong>{j.prompt.slice(0,65)}</strong><small>{date(j.created_at)} · {j.duration} s · {j.model==="kling"?"Kling":"Runway"}</small></span>
+      <span className={j.status==="SUCCEEDED"?styles.done:j.status==="FAILED"?styles.failed:styles.waiting}>{status(j)}</span>
+     </button>):<div className={styles.empty}>{L("Aún no has generado videos.","You haven't generated videos yet.")}</div>}
+    </section>
+    <section className={styles.previewCard}>
+     {current?<>
+      <div className={styles.previewHeading}><strong>{status(current)}</strong>
+       {active(current)?<LoaderCircle size={19} className={styles.spinner}/>:current.status==="SUCCEEDED"?<CheckCircle2 size={20}/>:<X size={18}/>}</div>
+      {current.output_url&&current.status==="SUCCEEDED"?<>
+       <video controls playsInline preload="metadata" className={styles.video} src={current.output_url}/>
+       <a href={current.output_url} target="_blank" rel="noopener noreferrer" className={styles.primary}>
+        <Download size={17}/>{L("Abrir y descargar","Open and download")}</a>
+       <p className={styles.foot}>{L("Descarga el archivo: el enlace del proveedor puede caducar.","Save your file; provider links may expire.")}</p>
+      </>:<div className={styles.videoEmpty}>
+       {active(current)?<LoaderCircle size={26} className={styles.spinner}/>:<Video size={26}/>}
+       <p>{current.status==="FAILED"?errMessage(current.failure_code||"",en):
+        active(current)?L("Generando tu video. Puedes salir y volver más tarde.","Generating your video. You can come back later."):
+        L("Sin video disponible.","No video available.")}</p>
+       {active(current)?<button type="button" className={styles.secondary} onClick={()=>void refreshJob(current.id)}>
+        <RefreshCw size={15}/>{L("Comprobar progreso","Check progress")}</button>:null}
+      </div>}
+      <p className={styles.videoPrompt}>{current.prompt}</p>
+      {current.caption?<div className={styles.caption}><strong>{L("Descripción","Caption")}</strong><p>{current.caption}</p>
+       <button type="button" className={styles.miniAction} onClick={()=>void navigator.clipboard.writeText(current.caption||"")}>
+        {L("Copiar descripción","Copy caption")}</button></div>:null}
+     </>:<div className={styles.empty}>{L("Selecciona un video para verlo.","Select a video to preview.")}</div>}
+    </section>
+   </div>
+  </>:null}
+  {!ready?<div className={styles.status}><LoaderCircle size={17} className={styles.spinner}/>{L("Cargando…","Loading…")}</div>:null}
+  {errorText?<div className={styles.alert} role="alert"><span>{errorText}</span>
+   <button type="button" onClick={()=>setError("")} aria-label={L("Cerrar aviso","Dismiss")}><X size={16}/></button></div>:null}
+  {notice?<div className={styles.notice} role="status"><CheckCircle2 size={16}/>{notice}</div>:null}
+ </div></main>;
+}
