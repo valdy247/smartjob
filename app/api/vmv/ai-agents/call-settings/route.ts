@@ -78,7 +78,7 @@ export async function GET(req:NextRequest){
    forwardReady:ctx.forwardReady,
    businessHoursReady:ctx.businessReady,
    version:ctx.version,policy:ctx.policy,source:ctx.version?"saved":"legacy_menu",
-   note:ctx.version?"La configuración se aplicará a la próxima llamada.":
+   note:ctx.version?"Reglas guardadas; la nueva ruta telefónica se habilita únicamente en el piloto de Twilio verificado.":
     "La línea conserva el menú original hasta que guardes una nueva configuración."
   });
  }catch(e){return failure(e);}
@@ -126,13 +126,13 @@ export async function PUT(req:NextRequest){
   }
   if(!saved.data)return reply({error:"La configuración cambió en otra sesión. Recarga antes de guardar."},409);
   return reply({ok:true,version:saved.data.version,
-   policy:checkCallPolicy(saved.data),notice:"Reglas guardadas en VMV. No se modificó la ruta de Twilio."});
+   policy:checkCallPolicy(saved.data),notice:"Reglas guardadas en VMV. La ruta de Twilio no se modificó; la nueva IVR requiere habilitación del piloto."});
  }catch(e){return failure(e);}
 }
 export async function POST(req:NextRequest){
  try{
   const ctx=await context(req);
-  const body=await req.json() as {policy?:unknown;day?:string;time?:string};
+  const body=await req.json() as {policy?:unknown;day?:string;time?:string;digit?:string};
   const policy=checkCallPolicy(body.policy);
   const week=policy.use_business_hours?ctx.businessHours:policy.schedule;
   if(!week)throw Error("El horario del negocio aún no está definido.");
@@ -140,9 +140,22 @@ export async function POST(req:NextRequest){
    localPreview(body.day as Parameters<typeof localPreview>[0],body.time):
    localParts(new Date(),policy.time_zone);
   const decision=decideCall(policy,sample,week);
-  const safeDecision=decision.agentAvailable&&(!ctx.selected||ctx.selected.status!=="active")?
-   {...decision,action:decision.translationAvailable?"translation":"message",reason:"disabled"}:
-   decision;
+  const chosen=typeof body.digit==="string"&&/^[0-9]?$/.test(body.digit)?body.digit:null;
+  let predicted=decision;
+  if(policy.menu_config.enabled){
+   const m=policy.menu_config;
+   const action=chosen===null?"menu":
+     chosen===m.spanish_digit||chosen===""?"ring_owner":
+     chosen===m.english_digit&&decision.translationAvailable?"translation":
+     chosen===m.agent_digit&&decision.agentAvailable?"agent":"message";
+   predicted={...decision,action,reason:action==="agent"?"agent":
+     action==="translation"?"translation":action==="ring_owner"?"owner_first":
+      action==="menu"?"menu":"disabled"};
+  }
+  const safeDecision=predicted.agentAvailable&&(!ctx.selected||ctx.selected.status!=="active)&&
+    predicted.action==="agent"?
+   {...predicted,action:predicted.translationAvailable?"translation":"message",reason:"disabled"}:
+   predicted;
   return reply({decision:safeDecision,day:sample.day,
    time:body.time||null,zone:policy.time_zone,
    selectedAgentReady:ctx.selected?.status==="active",
