@@ -3,7 +3,7 @@ import {useEffect,useState} from "react";
 import {
  ArrowLeft,ArrowUpRight,Bot,BookOpen,BookCheck,BriefcaseBusiness,CalendarDays,Check,
  ChevronRight,ClipboardList,Headphones,MessageCircle,Package,PauseCircle,
- PhoneCall,PlayCircle,ShieldCheck,ShoppingBag,Sparkles,WandSparkles
+ PhoneCall,PlayCircle,ShieldCheck,ShoppingBag,Sparkles,WandSparkles,Megaphone
 } from "lucide-react";
 import type {LucideIcon} from "lucide-react";
 import styles from "./page.module.css";
@@ -17,6 +17,7 @@ import CommerceStudio from "./CommerceStudio";
 import BookingStudio from "./BookingStudio";
 import CallControl from "./CallControl";
 import AgentLiveTest from "./AgentLiveTest";
+import AutomaticAdWizard from "./AutomaticAdWizard";
 import {inspectAgent} from "./agentQuality";
 import {getSupabase} from "@/lib/supabase";
 import {centralPrefill,businessMissing,choosePrincipalAgent,linkLegacyWorkspace,loadBusinessChoices,provisionAiWorkspace,type CentralBusiness,type AiWorkspace} from "./centralBusiness";
@@ -24,7 +25,7 @@ import {loadAgents,loadPhoneSelection,selectPhoneAgent,setStudyStatus,storeAgent
 
 type Kind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 type Status="draft"|"active"|"paused";
-type Screen="home"|"editor"|"test"|"quality"|"commerce"|"phone"|"bookings";
+type Screen="home"|"editor"|"test"|"quality"|"commerce"|"phone"|"bookings"|"ads";
 type AgentDraft=WizardDraft;
 type Agent=PersistedAgent;
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
@@ -386,6 +387,15 @@ export default function AIAgentsPreview(){
           <span className={styles.tileIcon}><type.Icon size={24}/></span>
           <strong>{title}</strong><small>{status}</small>
        </button>})}
+       <button type="button" className={styles.tile} style={{background:"#e4dcff",color:"#6245a7"}}
+        onClick={()=>{
+         if(principal&&selectedBusiness&&selectedWorkspace){
+          setSelected(principal.id);setScreen("ads");setNotice("");
+         }else setNotice("Selecciona tu negocio y su agente principal para preparar un anuncio.");
+        }} aria-label="Anuncio automático con tu agente">
+        <span className={styles.tileIcon}><Megaphone size={24}/></span>
+        <strong>Anuncio automático</strong><small>Tu agente prepara el anuncio</small>
+       </button>
       </div>
       <div className={styles.sectionHeading}><h2>{translate("agents.existing")}{principal?" "+translate("agents.andPrincipal"):""}</h2><span className={styles.agentCounter}>{visibleAgents.length}</span></div>
       {visibleAgents.length===0?<div className={styles.empty}>
@@ -433,6 +443,9 @@ export default function AIAgentsPreview(){
      {screen==="quality"&&active?<AgentQualityLab agent={active} onClose={back} onEdit={step=>edit(active,step)}/>:null}
      {screen==="bookings"&&active?<BookingStudio agent={active} onClose={back}
       onAgentUpdated={updated=>setAgents(old=>old.map(a=>a.id===updated.id?updated:a))}/>:null}
+     {screen==="ads"&&principal&&selectedBusiness&&selectedWorkspace?
+      <AutomaticAdWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
+       workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
      {screen==="phone"?<CallControl onBack={back}/>:null}
      {screen==="commerce"?<CommerceStudio centralBusinessId={selectedBusiness?.id||""} agents={principal?[principal]:visibleAgents.filter(a=>a.revision>0)}
       initialAgentId={principal?.id||selected||""} initialTab={commerceTab} onAgentUpdated={updated=>
