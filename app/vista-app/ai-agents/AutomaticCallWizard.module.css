@@ -15,3 +15,11 @@
  border-radius:17px;padding:20px;color:#25755f;text-align:center}
 .success strong{font-size:17px}.success p{font-size:11px;line-height:1.6;margin:0}
 .success a{color:#7646c2;text-decoration:underline;font-weight:800;font-size:12px}
+
+.agentCard{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #e6d5fa;border-radius:15px;background:#f7f0ff;padding:16px}
+.agentCard>div{display:grid;gap:5px;min-width:0}.agentCard strong{color:#4b3065;font-size:16px;overflow-wrap:anywhere}
+.agentCard small{font-size:11px;color:#816e93}
+.agentSwitch{display:flex;gap:8px;align-items:center;text-align:right;font-weight:750;font-size:11px;color:#61448c;cursor:pointer;max-width:152px}
+.agentSwitch input{width:20px;height:20px;flex-shrink:0;accent-color:#7b4bc0}
+.advanced{border:1px solid #e8dbf1;border-radius:12px;padding:12px;font-size:12px;color:#694c86}
+.advanced summary{cursor:pointer;font-weight:750}
