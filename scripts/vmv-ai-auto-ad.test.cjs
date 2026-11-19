@@ -31,7 +31,7 @@ test("Marketing receives a scoped short-lived creative brief, never an ad launch
  assert.doesNotMatch(wizard,/create_paused|confirmSpend|PUBLICAR|ads_management/);
 });
 test("The agent does not claim to generate or publish Meta ads itself",()=>{
- assert.match(wizard,/La aprobación, imagen, presupuesto y publicación se gestionan en Marketing/);
+ assert.match(wizard,/Presupuesto y publicación requieren tu aprobación en Marketing/);
  assert.match(wizard,/meta\/image/);
  assert.match(wizard,/meta\/locations/);
  assert.match(wizard,/meta\/accounts/);
