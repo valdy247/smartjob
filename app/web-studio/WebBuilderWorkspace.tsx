@@ -794,10 +794,8 @@ export default function WebBuilderWorkspace(){
      </div>
     </header>
     <div className={styles.libraryCreate}>
-     <a href="/web-studio?mode=templates"><Plus size={18}/>
-      {language==="en"?"Create with templates":"Crear con plantillas"}</a>
-     <a href="/web-studio?mode=ai"><Plus size={18}/>
-      {language==="en"?"Create with AI":"Crear con IA"}</a>
+     <a href="/vista-app/ai-agents?service=web"><Bot size={18}/>
+      {language==="en"?"Create with my AI Agent":"Crear con mi agente IA"}</a>
     </div>
     {classicDraft?<button type="button" className={styles.importClassic} disabled={busy}
      onClick={()=>void importClassic()}><Layers size={18}/> Importar mi web actual al editor visual</button>:null}
@@ -815,8 +813,8 @@ export default function WebBuilderWorkspace(){
       </button>
      </article>)}
      {!sites.length?<p className={styles.libraryEmpty}>{language==="en"?
-      "No websites yet. Create one with templates or AI.":
-      "Todavía no tienes sitios. Empieza con plantillas o IA."}</p>:null}
+      "No websites yet. Create one with your AI Agent.":
+      "Todavía no tienes sitios. Empieza con tu agente IA."}</p>:null}
     </div>
    </>:null}  </main>:<main className={styles.main}>
    <div className={styles.desktopSiteControls}>
