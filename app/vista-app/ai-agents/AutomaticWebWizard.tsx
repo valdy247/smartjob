@@ -269,6 +269,16 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
     throw Error(/límite de cinco sitios/i.test(String(result.error?.message||""))?
      "Has alcanzado el límite de sitios de tu cuenta. Puedes editar los existentes.":
      "No se pudo guardar la web. Revisa tu cuenta o inténtalo nuevamente.");
+   // The inquiry switch is real: Web Studio's public forms require this site flag.
+   // The new site is already saved; do not recreate it on an optional update failure.
+   setCreated(slug);
+   const enabled=await db.from("smartjob_builder_sites")
+    .update({inquiries_enabled:inquiries,updated_at:new Date().toISOString()})
+    .eq("id",result.data.siteId).eq("owner_id",owner).select("id").single();
+   if(enabled.error||!enabled.data){
+    setError("La web se creó, pero no se pudo configurar el formulario de solicitudes. Ábrela en Web Studio para revisarlo.");
+    return;
+   }
    if(proposal.seoTitle){
     const page=await db.from("smartjob_builder_pages").select("revision")
      .eq("id",result.data.pageId).eq("owner_id",owner).maybeSingle();
@@ -280,7 +290,6 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
      }).eq("id",result.data.pageId).eq("owner_id",owner).eq("revision",page.data.revision);
     }
    }
-   setCreated(slug);
    window.location.assign("/web-studio?mode=templates&open="+encodeURIComponent(slug));
   }catch(e){setError(e instanceof Error?e.message:"No se pudo guardar la web.");}
   finally{setBusy("");}
@@ -322,7 +331,7 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
     <button type="button" className={mode==="new"?styles.optionActive:styles.option}
      onClick={()=>setMode("new")}>Crear una web nueva</button>
     {existing.length?<button type="button" className={mode==="alternative"?styles.optionActive:styles.option}
-     onClick={()=>setMode("alternative")}>Crear una versión mejorada sin reemplazar la actual</button>:null}
+     onClick={()=>setMode("alternative")}>Crear una propuesta alternativa sin reemplazar la actual</button>:null}
    </div>
    {existing.length?<div className={styles.info}>
     <span>Encontré {existing.length} web(s) en tu cuenta.</span>
@@ -449,7 +458,7 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
   {!loading&&owner&&stage==="review"?<div className={styles.panel}>
    <div className={styles.review}>
     {reviewCard("Negocio",name,"business")}
-    {reviewCard("Tipo de proyecto",mode==="new"?"Web nueva":"Versión alternativa","project")}
+    {reviewCard("Tipo de proyecto",mode==="new"?"Web nueva":"Propuesta alternativa","project")}
     {reviewCard("Productos y servicios",uniqueOffers.join(", "),"offerings")}
     {reviewCard("Objetivo",({calls:"Llamadas",quotes:"Cotizaciones",bookings:"Citas",orders:"Pedidos"} as const)[objective],"features")}
     {reviewCard("Contacto",[phone,email,city].filter(Boolean).join(" · "),"contact")}
@@ -464,7 +473,10 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
      Actualizar propuesta</button></div>:null}
    <p className={styles.note}>El borrador se guardará en Web Studio. No reemplaza ni publica sitios actuales.</p>
   </div>:null}
-  {error?<div role="alert" className={styles.error}>{error}</div>:null}
+  {error?<div role="alert" className={styles.error}>{error}
+   {created?<a href={"/web-studio?mode=templates&open="+encodeURIComponent(created)}>
+    Abrir el borrador creado en Web Studio</a>:null}
+  </div>:null}
   {!loading&&owner?<div className={styles.footer}>
    {stage!=="review"?stage!=="preview"?<button type="button" className={styles.primary+" "+theme.agentButton}
      disabled={!validStage||Boolean(busy)} onClick={next}>
