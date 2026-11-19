@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
-import {ArrowLeft,ArrowRight,Bot,Check,Globe2,LoaderCircle,Pencil,PhoneCall,ShieldCheck,Sparkles} from "lucide-react";
+import {ArrowLeft,ArrowRight,Bot,Check,LoaderCircle,Pencil,PhoneCall,ShieldCheck,Sparkles} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {loadPhoneSelection,selectPhoneAgent,type PersistedAgent,type PhoneSelection} from "./agentStore";
 import {checkCallPolicy,days,initialCallPolicy,zoneOptions,type CallPolicy,type DayName} from "@/lib/vmv-ai-agents/call-policy";
@@ -45,10 +45,10 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose}
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(""),[error,setError]=useState("");
  const [owner,setOwner]=useState(""),[line,setLine]=useState<PhoneSelection|null>(null);
  const [version,setVersion]=useState(0),[policy,setPolicy]=useState<CallPolicy>(initialCallPolicy);
- const [original,setOriginal]=useState<CallPolicy|null>(null);
+
  const [agentReady,setAgentReady]=useState(false),[businessHours,setBusinessHours]=useState(false);
  const [forwardReady,setForwardReady]=useState(false);
- const [useAgent,setUseAgent]=useState(false),[bindAgent,setBindAgent]=useState(false);
+ const [bindAgent,setBindAgent]=useState(false);
  const [prefs,setPrefs]=useState<Preferences>(defaults),[originalPrefs,setOriginalPrefs]=useState<Preferences>(defaults);
  const [prefEditable,setPrefEditable]=useState(false),[preferencesAvailable,setPreferencesAvailable]=useState(false);
  const [saved,setSaved]=useState(false);
@@ -96,11 +96,11 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose}
     if(!live)return;
     if(status.error)throw Error(status.error);
     const settings=checkCallPolicy(status.policy);
-    setPolicy(settings);setOriginal(settings);setVersion(status.version);
+    setPolicy(settings);setVersion(status.version);
     setAgentReady(status.agentActive===true);
     setBusinessHours(status.businessHoursReady===true);
     setForwardReady(status.forwardReady===true);
-    setUseAgent(settings.agent_enabled);
+
     const pref=smartCall?.preferences;
     if(pref?.ok&&pref?.data?.settings){
      const values=pref.data.settings;
@@ -151,7 +151,7 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose}
     throw Error("Para habilitar llamadas con IA, autoriza asignar Mi agente al número y verifica que esté activo.");
    }
    const result=await callApi("PUT",{policy:checkCallPolicy(policy),version});
-   setPolicy(checkCallPolicy(result.policy));setOriginal(checkCallPolicy(result.policy));
+   setPolicy(checkCallPolicy(result.policy));
    setVersion(result.version);policySaved=true;
    if(prefEditable&&JSON.stringify(prefs)!==JSON.stringify(originalPrefs)){
     const {data:{session}}=await db.auth.getSession();
@@ -193,7 +193,7 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose}
   </div>:null}
   {!loading&&step==="line"&&owner?<div className={styles.panel}>
    {line?<div className={extra.line}><PhoneCall size={25}/>
-    <strong>{line.maskedNumber}</strong><span>Línea verificada en tu cuenta VMV</span>
+    <strong>{line.maskedNumber}</strong><span>Línea activa detectada en tu cuenta VMV</span>
     <small>{line.agentId===agent.id?"Mi agente ya está seleccionado":"Puedes seleccionar Mi agente al guardar"}</small>
    </div>:<div className={styles.warning}>No hay una línea activa asociada a esta cuenta.
     Verifica tu número o configura Smart Call para continuar.</div>}
@@ -217,6 +217,12 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose}
        {chosen?<Check size={16}/>:null}{label}</button>;
     })}
    </div>
+   {policy.translation_enabled?<label className={styles.field}>Horario de traducción
+    <select value={policy.translation_mode}
+     onChange={event=>patch("translation_mode",event.target.value as CallPolicy["translation_mode"])}>
+     <option value="always">Siempre disponible</option>
+     <option value="schedule">Solo por horario</option>
+    </select></label>:null}
   </div>:null}
   {!loading&&step==="agent"&&policy.agent_enabled&&owner?<div className={styles.panel}>
    <div className={extra.line}><strong>{agent.name}</strong><small>
@@ -268,10 +274,7 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose}
      </div>)}</div>:null}
   </div>:null}
   {!loading&&step==="priority"&&owner?<div className={styles.panel}>
-   {policy.translation_enabled?<label className={styles.field}>Disponibilidad de traducción
-    <select value={policy.translation_mode} onChange={e=>patch("translation_mode",e.target.value as CallPolicy["translation_mode"])}>
-     <option value="always">Siempre disponible</option><option value="schedule">Solo por horario</option>
-    </select></label>:null}
+
    {policy.agent_enabled&&policy.translation_enabled?<div className={styles.optionsVertical}>
     {([["menu","El cliente elige en el menú"],["agent_first","Mi agente responde primero"],
       ["translation_first","Smart Call traduce primero"]] as const).map(([value,label])=>
