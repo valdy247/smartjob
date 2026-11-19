@@ -38,7 +38,7 @@ test("The agent does not claim to generate or publish Meta ads itself",()=>{
  assert.match(wizard,/meta\/accounts/);
  assert.match(wizard,/api\/marketing\/ads\/generate/);
  assert.match(wizard,/Continuar/);
- assert.match(wizard,/Enviar a revisión/);
+ assert.match(wizard,/Enviar anuncio/);
 });
 
 test("Multiple ad goals can be toggled without automatic navigation",()=>{
@@ -60,4 +60,16 @@ test("Website decision can return to saved site after opting for another option"
  assert.match(wizard,/siteChoice==="saved"\?savedWebsite/);
  assert.match(wizard,/value={customWebsite}/);
  assert.doesNotMatch(wizard,/update\("website",""\)/);
+});
+
+test("Agent-only review creates Meta objects paused after explicit confirmation, never publishes",()=>{
+ assert.match(wizard,/window\.confirm\("Confirmo un presupuesto máximo/);
+ assert.match(wizard,/operation:"draft",clientKey:sendKey/);
+ assert.match(wizard,/operation:"create_paused",campaignId,confirmPaused:true,approvedTotalCents:totalCents/);
+ assert.match(wizard,/specialCategoriesAcknowledged:true/);
+ assert.match(wizard,/utm_source/);
+ assert.match(wizard,/budgetCents>=500&&budgetCents<=25000/);
+ assert.match(wizard,/setStep\("image"\)/);
+ assert.match(wizard,/setCityDialogOpen\(false\)/);
+ assert.doesNotMatch(wizard,/operation:"activate"/);
 });
