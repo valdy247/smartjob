@@ -39,3 +39,18 @@ test("Owner approval and sending are separate from actual payments",()=>{
  assert.ok(!sql.includes("'paid'"));
  assert.ok(!page.includes("stripe.com/v1"));
 });
+
+test("Catalog creation respects restricted column permissions",()=>{
+ assert.ok(page.includes('await db.from("vmv_smart_quote_catalog").insert({owner_id:owner,business_id:businessId,...payload})'));
+ const start=page.indexOf("const payload={name:product.name.trim()");
+ const end=page.indexOf("const result=productId?",start);
+ assert.ok(start>=0&&end>start);
+ assert.ok(!page.slice(start,end).includes("updated_at:"));
+ assert.ok(sql.includes("grant insert (owner_id,business_id,name,description,unit_name,unit_price_cents,active)"));
+});
+test("Approved quotes offer a printable document without inventing payment events",()=>{
+ assert.ok(page.includes("setPrintableQuote(q)"));
+ assert.ok(page.includes("window.print()"));
+ assert.ok(page.includes("printableQuote.status")||page.includes("printableQuote.customer_name"));
+ assert.ok(page.includes('styles.printSheet'));
+});
