@@ -8,7 +8,7 @@ import {safeWebImageUrl} from "@/lib/web-services-site";
 import type {CatalogItem} from "./commerceStore";
 import AgentWebCatalogEditor from "./AgentWebCatalogEditor";
 import AgentWebMediaPicker from "./AgentWebMediaPicker";
-import {createSiteProposals,type SiteDesignPreferences,type SiteIntake,type SiteProduct,type SiteProposal} from "@/lib/web-builder-templates";
+import {applyChosenSiteDesign,createSiteProposals,type SiteDesignPreferences,type SiteIntake,type SiteProduct,type SiteProposal} from "@/lib/web-builder-templates";
 import type {CentralBusiness} from "./centralBusiness";
 import type {PersistedAgent} from "./agentStore";
 
@@ -216,13 +216,13 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
    if(!aiAvailable){
     const result=createSiteProposals(input);
     if(!result[0])throw Error("No se pudo preparar un diseño sin IA.");
-    setProposal(result[0]);setProposalSignature(signature);go("preview");return;
+    setProposal({...result[0],data:applyChosenSiteDesign(result[0].data,input.design)});setProposalSignature(signature);go("preview");return;
    }
    const res=await askAi("/api/web-services/generate-site",{
     intake:input,direction:direction.trim().slice(0,360)
    });
    if(!res.proposal?.data)throw Error("La IA no devolvió una web editable.");
-   setProposal(res.proposal as SiteProposal);setProposalSignature(signature);go("preview");
+   setProposal({...res.proposal as SiteProposal,data:applyChosenSiteDesign((res.proposal as SiteProposal).data,input.design)});setProposalSignature(signature);go("preview");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo generar tu web.");}
   finally{setBusy("");}
  };
@@ -443,7 +443,7 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
    {proposal&&proposalSignature===signature?<TemplateProposals input={input}
     generated={proposal} busy={Boolean(busy)}
     onBack={()=>{go("review");setProposal(null);}}
-    onChoose={p=>{setProposal(p);setProposalSignature(signature);}}/>:
+    onChoose={p=>{setProposal({...p,data:applyChosenSiteDesign(p.data,input.design)});setProposalSignature(signature);}}/>:
     <div className={styles.warning}>
      La propuesta debe generarse desde la Revisión. Si cambiaste datos, regresa, confirma la configuración y genera otra vez.
      <button type="button" className={styles.option} onClick={()=>go("review")}>Volver a Revisión</button>
