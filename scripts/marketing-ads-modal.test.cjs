@@ -99,5 +99,22 @@ test("Ads Studio offers three short modal options before generation",()=>{
  assert.equal(ui.includes("plan.variants.map"),false);
  assert.equal(ui.includes("plan.recommendation"),false);
  assert.equal(ui.includes("plan.measurement"),false);
- assert.ok(ui.includes('setDraftId("");setDraftKey(crypto.randomUUID());'));
+ // An edited saved draft retains its ID and is updated rather than duplicated.
+ assert.ok(ui.includes('setFinished(null);setPaymentCheck(null);setDraftKey(crypto.randomUUID());'));
+ assert.match(ui,/operation:draftId\?"update_draft":"draft"/);
+});
+
+test("Ads Studio keeps safe send and save separate, with no Meta spend while preview publish is off",()=>{
+ const ui=fs.readFileSync(path.resolve("app/vista-app/marketing/ads/AdsStudio.tsx"),"utf8");
+ const route=fs.readFileSync(path.resolve("app/api/marketing/ads/meta/campaigns/route.ts"),"utf8");
+ const check=fs.readFileSync(path.resolve("app/api/marketing/ads/meta/payment-check/route.ts"),"utf8");
+ assert.match(ui,/Guardar para más tarde/);
+ assert.match(ui,/Enviar anuncio/);
+ assert.match(ui,/operation:"update_draft"/);
+ assert.match(ui,/paymentCheck\.state!=="ready"/);
+ assert.match(ui,/if\(!publishReady\)/);
+ assert.match(route,/process\.env\.VMV_ADS_META_PUBLISH_ENABLED!=="true"/);
+ assert.match(route,/payment\.state!=="ready"/);
+ assert.match(check,/export async function GET/);
+ assert.equal(check.includes("export async function POST"),false);
 });
