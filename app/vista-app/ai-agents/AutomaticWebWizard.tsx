@@ -407,9 +407,20 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
   </div>:null}
   {!loading&&owner&&stage==="media"?<div className={styles.panel}>
    <div className={styles.mediaRow}><strong>Foto principal</strong>
-    <BuilderImageField value={cover} onChange={url=>{setCover(url);if(url)setSkipImages(false);}}/></div>
+    <BuilderImageField allowAi={false} value={cover} onChange={url=>{setCover(url);if(url)setSkipImages(false);}}/></div>
    <div className={styles.mediaRow}><strong>Logo (opcional)</strong>
-    <BuilderImageField kind="logo" value={logo} onChange={setLogo}/></div>
+    <BuilderImageField allowAi={false} kind="logo" value={logo} onChange={setLogo}/></div>
+   <div className={styles.mediaRow}><strong>Galería (opcional)</strong>
+    {gallery.map((url,i)=><div className={styles.gallerySlot} key={i}>
+     <BuilderImageField allowAi={false} value={url} onChange={value=>{
+      setGallery(list=>list.map((item,j)=>j===i?value:item));
+     }}/>
+     <button type="button" className={styles.option} onClick={()=>setGallery(list=>list.filter((_,j)=>j!==i))}>
+      Quitar espacio {i+1}</button>
+    </div>)}
+    {gallery.length<4?<button type="button" className={styles.option}
+     onClick={()=>setGallery(list=>[...list,""])}><ImagePlus size={16}/> Añadir foto a la galería</button>:null}
+   </div>
    {imageAiReady?<div className={styles.aiImageBox}>
     <p className={styles.note}>También puedes pedir una propuesta de portada con IA y aprobarla antes de usarla.</p>
     <label className={styles.field}>Describe la imagen (opcional)
