@@ -3,7 +3,7 @@ import {useEffect,useState} from "react";
 import {
  ArrowLeft,ArrowUpRight,Bot,BookOpen,BookCheck,BriefcaseBusiness,CalendarDays,Check,
  ChevronRight,ClipboardList,Headphones,MessageCircle,Package,PauseCircle,
- PhoneCall,PlayCircle,ShieldCheck,ShoppingBag,Sparkles,WandSparkles,Megaphone,Globe2,Video
+ PhoneCall,PlayCircle,ShieldCheck,ShoppingBag,Sparkles,WandSparkles,Megaphone,Globe2,Video,FileText
 } from "lucide-react";
 import type {LucideIcon} from "lucide-react";
 import styles from "./page.module.css";
@@ -21,6 +21,7 @@ import AutomaticAdWizard from "./AutomaticAdWizard";
 import AutomaticWebWizard from "./AutomaticWebWizard";
 import AutomaticVideoWizard from "./AutomaticVideoWizard";
 import AutomaticCallWizard from "./AutomaticCallWizard";
+import AutomaticQuoteWizard from "./AutomaticQuoteWizard";
 import {inspectAgent} from "./agentQuality";
 import {getSupabase} from "@/lib/supabase";
 import {centralPrefill,businessMissing,choosePrincipalAgent,linkLegacyWorkspace,loadBusinessChoices,provisionAiWorkspace,type CentralBusiness,type AiWorkspace} from "./centralBusiness";
@@ -28,7 +29,7 @@ import {loadAgents,loadPhoneSelection,selectPhoneAgent,setStudyStatus,storeAgent
 
 type Kind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 type Status="draft"|"active"|"paused";
-type Screen="home"|"editor"|"test"|"quality"|"commerce"|"phone"|"bookings"|"ads"|"web"|"video"|"call";
+type Screen="home"|"editor"|"test"|"quality"|"commerce"|"phone"|"bookings"|"ads"|"web"|"video"|"call"|"quote";
 type AgentDraft=WizardDraft;
 type Agent=PersistedAgent;
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
@@ -336,15 +337,15 @@ export default function AIAgentsPreview(){
  };
  const back=()=>{setScreen("home");setMessageNotice("");};
  const patch=(key:keyof AgentDraft,value:string)=>setDraft(prev=>({...prev,[key]:value}));
- const immersive=screen==="ads"||screen==="web"||screen==="video"||screen==="call";
+ const immersive=screen==="ads"||screen==="web"||screen==="video"||screen==="call"||screen==="quote";
  useEffect(()=>{
   if(loading||!authenticated||!principal||!selectedBusiness||!selectedWorkspace)return;
   const url=new URL(window.location.href);
   const service=url.searchParams.get("service");
-  if(service!=="web"&&service!=="video"&&service!=="call")return;
+  if(service!=="web"&&service!=="video"&&service!=="call"&&service!=="quote")return;
   url.searchParams.delete("service");
   window.history.replaceState(null,"",url.pathname+url.search+url.hash);
-  setSelected(principal.id);setScreen(service==="web"?"web":service==="call"?"call":"video");setNotice("");
+  setSelected(principal.id);setScreen(service==="web"?"web":service==="call"?"call":service==="quote"?"quote":"video");setNotice("");
  },[loading,authenticated,principal?.id,selectedBusiness?.id,selectedWorkspace?.id]);
  return <main className={immersive?styles.adsCanvas:styles.canvas}>
   <div className={immersive?styles.adsLayout:styles.layout}>
@@ -408,6 +409,15 @@ export default function AIAgentsPreview(){
         }} aria-label="Crear sitio web con tu agente">
         <span className={styles.tileIcon}><Globe2 size={24}/></span>
         <strong>Web Services</strong><small>Crear web con tu agente</small>
+       </button>
+       <button type="button" className={styles.tile} style={{background:"#d9ece9",color:"#29695a"}}
+        onClick={()=>{
+         if(principal&&selectedBusiness&&selectedWorkspace){
+          setSelected(principal.id);setScreen("quote");setNotice("");
+         }else setNotice("Selecciona tu negocio y el agente principal para preparar una cotización.");
+        }} aria-label="Smart Quote guiado por Mi agente">
+        <span className={styles.tileIcon}><FileText size={24}/></span>
+        <strong>Smart Quote</strong><small>Cotizar con tu agente</small>
        </button>
        <button type="button" className={styles.tile} style={{background:"#f8ddec",color:"#893d73"}}
         onClick={()=>{
@@ -485,6 +495,9 @@ export default function AIAgentsPreview(){
        workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
      {screen==="call"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticCallWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
+       workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
+     {screen==="quote"&&principal&&selectedBusiness&&selectedWorkspace?
+      <AutomaticQuoteWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
        workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
      {screen==="phone"?<CallControl onBack={back}/>:null}
      {screen==="commerce"?<CommerceStudio centralBusinessId={selectedBusiness?.id||""} agents={principal?[principal]:visibleAgents.filter(a=>a.revision>0)}
