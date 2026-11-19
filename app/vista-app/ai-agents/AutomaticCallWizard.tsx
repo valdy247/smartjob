@@ -38,8 +38,8 @@ async function callApi(method:"GET"|"PUT",payload?:object){
  if(!r.ok)throw Error(String(data.error||"No se pudo consultar tu línea."));
  return data;
 }
-export default function AutomaticCallWizard({business,agent,workspaceId,onClose}:{
- business:CentralBusiness;agent:PersistedAgent;workspaceId:string;onClose:()=>void;
+export default function AutomaticCallWizard({business,agent,workspaceId,onClose,onAdvanced}:{
+ business:CentralBusiness;agent:PersistedAgent;workspaceId:string;onClose:()=>void;onAdvanced:()=>void;
 }){
  const [step,setStep]=useState<Step>("business"),[returnReview,setReturnReview]=useState(false);
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(""),[error,setError]=useState("");
@@ -199,6 +199,7 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose}
     Verifica tu número o configura Smart Call para continuar.</div>}
    <a className={styles.option} href="/vista-app?tab=services&service=smart-call">
     Administrar o verificar mi número <ArrowRight size={17}/></a>
+   <button type="button" className={styles.option} onClick={onAdvanced}>Configurar reglas avanzadas y probar llamadas</button>
    <p className={styles.note}>No compramos líneas ni modificamos el desvío telefónico sin una configuración aparte.</p>
   </div>:null}
   {!loading&&step==="services"&&owner?<div className={styles.panel}>
@@ -326,6 +327,7 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose}
      {card("Voz",prefEditable?prefs.voice_customer+" · "+prefs.voice_owner:"Sin cambios","voice")}
     </div>}
    {!saved?<p className={styles.note}>Debes aprobar cualquier cambio de selección y reglas. No compraremos números ni activaremos gastos adicionales automáticamente.</p>:null}
+   <button type="button" className={styles.option} onClick={onAdvanced}>Configuración avanzada y laboratorio de llamada</button>
   </div>:null}
   {error?<p className={styles.error} role="alert">{error}</p>:null}
   {!loading&&owner&&line?<div className={styles.footer}>
