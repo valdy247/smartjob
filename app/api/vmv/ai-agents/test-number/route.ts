@@ -310,6 +310,8 @@ export async function POST(req:NextRequest){
  if(selection!==null)return closed(policy);
  // Accounts without settings keep their tested 1 -> Smart Call, 2 -> AI behavior.
  if(!saved)return menuPrompt(base,await callBrand(route));
+ // The preview pilot must never drop existing direct-only calls while guided IVR is unarmed.
+ if(policy&&!policy.agent_enabled&&!policy.translation_enabled)return smartCall();
  const outcome=decision!;
  if(outcome.action==="message")return closed(policy);
  if(outcome.action==="translation")return smartCall();
