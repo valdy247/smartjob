@@ -108,6 +108,9 @@ test("Visual image understanding, explicit conflict confirmation and social capt
  assert.match(caption,/videoAllowed\(owner\)/);
  assert.match(caption,/job\.status!=="SUCCEEDED"/);
  assert.match(caption,/platforms\[platform\]/);
+ assert.match(caption,/actualVideoFrame:visualFacts/);
+ assert.match(studio,/captureVideoFrame\(current\.output_url\)/);
+ assert.match(studio,/needsVideoSubject/);
  assert.match(studio,/Ver prompt de este video/);
  assert.match(studio,/Generar descripción/);
  assert.match(studio,/captionModal/);
