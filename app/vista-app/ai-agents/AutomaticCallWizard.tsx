@@ -77,7 +77,7 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
   ...(policy.agent_enabled?["agent" as Step]:[]),
   "translation",...(schedule?["hours" as Step]:[]),"priority","voice","menu","test","review"];
  const index=Math.max(0,steps.indexOf(step));
- const valid=step==="services"?(policy.agent_enabled||policy.translation_enabled):
+ const valid=step==="services"?true:
   step==="line"?(lineChoice==="current"?Boolean(line?.routeId):true):
   step==="agent"?(!policy.agent_enabled||bindAgent&&workingAgent.status==="active"):
   step==="menu"?(()=>{try{checkCallPolicy(policy);return true;}catch{return false;}})():
@@ -266,10 +266,15 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
      aria-pressed={policy.agent_enabled&&policy.agent_mode==="after_no_answer"}
      onClick={()=>setPolicy(p=>({...p,agent_enabled:true,agent_mode:"after_no_answer"}))}>
      Primero yo o mi equipo; después Mi agente IA</button>:null}
-    <button type="button" className={!policy.agent_enabled?styles.optionActive:styles.option}
-     aria-pressed={!policy.agent_enabled}
+    <button type="button" className={!policy.agent_enabled&&policy.translation_enabled?styles.optionActive:styles.option}
+     aria-pressed={!policy.agent_enabled&&policy.translation_enabled}
      onClick={()=>setPolicy(p=>({...p,agent_enabled:false,translation_enabled:true,outside_action:"translation"}))}>
      Atención mediante traducción, sin agente IA</button>
+    <button type="button"
+     className={!policy.agent_enabled&&!policy.translation_enabled?styles.optionActive:styles.option}
+     onClick={()=>setPolicy(p=>({...p,agent_enabled:false,translation_enabled:false,
+      coexistence:"menu",menu_config:{...p.menu_config,enabled:true}}))}>
+     Solo hablar conmigo o mi equipo, sin IA ni traducción</button>
    </div>
    <p className={styles.note}>La opción de atención humana primero requiere un teléfono de destino verificado. Estos ajustes no modifican el desvío de Twilio.</p>
   </div>:null}
@@ -303,8 +308,9 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
      aria-pressed={policy.translation_enabled} onClick={()=>patch("translation_enabled",true)}>
      {policy.translation_enabled?<Check size={16}/>:null} Activar traducción</button>
     <button type="button" className={!policy.translation_enabled?styles.optionActive:styles.option}
-     aria-pressed={!policy.translation_enabled} disabled={!policy.agent_enabled}
-     onClick={()=>setPolicy(p=>({...p,translation_enabled:false,outside_action:"message"}))}>
+     aria-pressed={!policy.translation_enabled}
+     onClick={()=>setPolicy(p=>({...p,translation_enabled:false,outside_action:"message",
+      menu_config:{...p.menu_config,enabled:p.agent_enabled?p.menu_config.enabled:true}}))}>
      No usar traducción</button>
    </div>
    {policy.translation_enabled?<label className={styles.field}>Cuándo traducir
@@ -379,7 +385,8 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
   </div>:null}
   {!loading&&step==="voice"&&owner?<div className={styles.panel}>
    <SmartCallMenuEditor mode="voices" menu={policy.menu_config}
-    onChange={menu=>patch("menu_config",menu)} agentEnabled={policy.agent_enabled}
+    onChange={menu=>setPolicy(p=>({...p,menu_config:menu,
+      coexistence:menu.enabled?"menu":p.coexistence==="menu"?(p.agent_enabled?"agent_first":"translation_first"):p.coexistence}))} agentEnabled={policy.agent_enabled}
     translationEnabled={policy.translation_enabled}/>
    {preferencesAvailable&&prefEditable?<details className={extra.advanced}>
     <summary>Configuración anterior de voz y saludos de traducción</summary>
@@ -399,7 +406,8 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
   </div>:null}
   {!loading&&step==="menu"&&owner?<div className={styles.panel}>
    <SmartCallMenuEditor mode="menu" menu={policy.menu_config}
-    onChange={menu=>patch("menu_config",menu)} agentEnabled={policy.agent_enabled}
+    onChange={menu=>setPolicy(p=>({...p,menu_config:menu,
+      coexistence:menu.enabled?"menu":p.coexistence==="menu"?(p.agent_enabled?"agent_first":"translation_first"):p.coexistence}))} agentEnabled={policy.agent_enabled}
     translationEnabled={policy.translation_enabled}/>
    <p className={styles.note}>Las llamadas directas no consumen créditos de IA ni de traducción;
     sí pueden consumir minutos telefónicos normales. Los servicios que no estén disponibles no se anunciarán.</p>
