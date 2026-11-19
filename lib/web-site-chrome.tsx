@@ -25,7 +25,16 @@ export function WebsiteChrome({siteName,baseUrl,menu,logo,family,language="es",s
  const safeLogo=logo?safeWebImageUrl(logo):null;
  const social=normalizeSocialLinks(socialLinks);
  const activeSocial=SOCIAL_PLATFORMS.filter(p=>Boolean(social[p.id]));
- const families:Record<string,string>={modern:'ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif',editorial:'Georgia,"Times New Roman",serif',rounded:'"Trebuchet MS",ui-sans-serif,system-ui,sans-serif',geometric:'"Avenir Next",Montserrat,ui-sans-serif,system-ui,sans-serif'};
+ const families:Record<string,string>={
+  modern:'ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif',
+  editorial:'Georgia,"Times New Roman",serif',
+  rounded:'"Trebuchet MS",ui-sans-serif,system-ui,sans-serif',
+  geometric:'"Avenir Next",Montserrat,ui-sans-serif,system-ui,sans-serif',
+  mono:'ui-monospace,"SFMono-Regular",Consolas,monospace',
+  classic:'"Palatino Linotype",Palatino,Georgia,serif',
+  humanist:'"Gill Sans",Calibri,system-ui,sans-serif',
+  luxury:'Baskerville,"Times New Roman",serif'
+ };
  return <div lang={language} className="vmv-site" data-site-family={family}
   data-site-style={siteStyle} data-site-width={siteWidth} style={{...visualStyle,fontFamily:families[font]||families.modern}}>
   <header className="vmv-site-nav" data-header-family={family}>
