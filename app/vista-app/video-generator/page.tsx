@@ -264,7 +264,7 @@ export default function VideoGeneratorPage(){
   catch{setError("image_invalid");}
   finally{setImageLoading(false);}
  };
- const selectJob=(job:Job)=>{setSelected(job.id);open("library");if(active(job))void refreshJob(job.id);};
+ const selectJob=(job:Job)=>{setSelected(job.id);setCaptionModal(false);setCaptionError("");setNeedsVideoSubject(false);setManualVideoSubject("");setPromptOpen(null);open("library");if(active(job))void refreshJob(job.id);};
  const downloadJob=async(job:Job)=>{
   if(downloading)return;
   setDownloading(true);setError("");
@@ -505,7 +505,7 @@ export default function VideoGeneratorPage(){
         <div className={styles.captionPlatforms}>
          {([["instagram","Instagram"],["facebook","Facebook"],["tiktok","TikTok"],
           ["youtube","YouTube Shorts"],["linkedin","LinkedIn"]] as const).map(([id,label])=>
-          <button key={id} type="button" disabled={captionBusy} onClick={()=>void createCaption(id)}>
+          <button key={id} type="button" disabled={captionBusy||(needsVideoSubject&&manualVideoSubject.trim().length<8)} onClick={()=>void createCaption(id)}>
            {captionBusy?<LoaderCircle size={17} className={styles.spinner}/>:<Sparkles size={16}/>} {label}
           </button>)}
         </div>
