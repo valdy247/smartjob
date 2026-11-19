@@ -196,37 +196,34 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
    const state=usStates.find(([code,name])=>code.toLowerCase()===candidate.region.toLowerCase()||
     name.toLowerCase()===candidate.region.toLowerCase());
    const city=candidate.city.trim().replace(/\s*,.*$/,"");
-   setForm(v=>({...v,business:candidate.businessName.slice(0,80),
-    offer:candidate.offer.slice(0,200),audience:candidate.audience.slice(0,130),
-    benefit:candidate.notes.slice(0,180),destination:candidate.website,
-    name:(candidate.businessName+" · "+candidate.offer).slice(0,80),
-    stateCode:state?.[0]||"",cityQuery:city.slice(0,80),citySearch:city.slice(0,80),
-    cityKey:"",cityName:"",cityMetaName:""}));
+   // These Meta identifiers come from the authenticated wizard, then must still
+   // match currently authorized account/Page; server campaign checks remain final.
+   const selectedMeta=(await api("/api/marketing/ads/meta/accounts")) as AccountsResponse;
+   const matchAccount=selectedMeta.connected&&candidate.accountId&&
+    selectedMeta.connection?.selectedAccountId===candidate.accountId;
+   const matchPage=matchAccount&&selectedMeta.pages.some(p=>p.id===candidate.pageId);
+   if(!matchPage||!candidate.cityKey||!candidate.imageHash||!candidate.headline||!candidate.message){
+    setError(localized("El anuncio necesita volver al agente para completar cuenta, ubicación, imagen o texto.",
+     "Return to the agent to finish account, location, image or copy."));
+    return;
+   }
+   if(mounted){
+    setMeta(selectedMeta);setSelectedAccount(candidate.accountId||"");
+    setImageHash(candidate.imageHash||"");
+    setSelectedAngle("offer");
+    setForm(v=>({...v,business:candidate.businessName.slice(0,80),
+     offer:candidate.offer.slice(0,200),audience:candidate.audience.slice(0,130),
+     benefit:candidate.notes.slice(0,180),destination:candidate.website,
+     name:(candidate.businessName+" · "+candidate.offer).slice(0,80),
+     stateCode:state?.[0]||"",cityQuery:city.slice(0,80),citySearch:city.slice(0,80),
+     cityKey:candidate.cityKey||"",cityName:candidate.cityMetaName||"",
+     cityMetaName:candidate.cityMetaName||"",pageId:candidate.pageId||"",
+     headline:candidate.headline||"",message:candidate.message||""}));
+   }
    setAgentBrief(candidate);
    setStep(4); // Review first, not the five-step creation wizard.
-   // The agent's "Generate ad" action prepares the copy right here; Meta
-   // account, Page, budget and publish authorization remain independent.
-   if(candidate.offer.trim().length>=8&&candidate.audience.trim().length>=3&&city.length>=2){
-    setBusy("agent-generate");
-    try{
-     const response=await api("/api/marketing/ads/generate","POST",{
-      business:candidate.businessName,offer:candidate.offer,
-      audience:candidate.audience,benefit:candidate.notes,city:city+
-       (candidate.region?", "+candidate.region:""),
-      locale:language,goal:"website",angle:"offer"
-     }) as GeneratedAd;
-     if(mounted&&response.source==="ai"&&response.angle==="offer"&&
-      response.variant?.headline&&response.variant?.message){
-      setForm(v=>({...v,headline:response.variant.headline,message:response.variant.message}));
-      setSelectedAngle("offer");
-     }
-    }catch{
-     if(mounted)setNotice(localized(
-      "El resumen está listo. Puedes generar o editar el texto del anuncio antes de guardarlo.",
-      "Your brief is ready. You can generate or edit ad copy before saving."
-     ));
-    }finally{if(mounted)setBusy("");}
-   }
+   // Creative copy and Meta image have already been prepared by AI Agents.
+   // This screen only reviews budget, policy declarations and approval.
   })().catch(()=>{if(mounted)setError(localized("No se pudo recuperar el anuncio del agente.","Could not load the agent's ad brief."));})
    .finally(()=>{if(mounted)setHandoffLoading(false);});
   return()=>{mounted=false;};
