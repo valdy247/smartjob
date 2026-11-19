@@ -21,23 +21,24 @@ test("Only authorized, active, approved inventory is offered",()=>{
  assert.match(wizard,/productIds:string\[\]/);
  assert.match(wizard,/answer\.productIds\.includes\(p\.id\)/);
 });
-test("Marketing receives a scoped short-lived creative brief, never an ad launch",()=>{
+test("Agent creates only a validated draft; no spend or publication",()=>{
  assert.match(bridge,/sessionStorage\.setItem/);
  assert.match(bridge,/ownerId!==ownerId\|\|x\.businessId!==businessId/);
  assert.match(bridge,/30\*60\*1000/);
  assert.match(bridge,/sessionStorage\.removeItem/);
- assert.match(wizard,/saveAgentAdBrief\(brief\)/);
- assert.match(wizard,/\/vista-app\/marketing\/ads\/create\?from=ai-agents/);
+ assert.match(wizard,/operation:"draft",clientKey:sendKey/);
+ assert.match(wizard,/\/api\/marketing\/ads\/meta\/campaigns/);
+ assert.match(wizard,/\/vista-app\/marketing\/ads\/campaigns/);
  assert.doesNotMatch(wizard,/create_paused|confirmSpend|PUBLICAR|ads_management/);
 });
 test("The agent does not claim to generate or publish Meta ads itself",()=>{
- assert.match(wizard,/Presupuesto y publicación requieren tu aprobación en Marketing/);
+ assert.match(wizard,/No publicamos anuncios ni activamos gastos automáticamente/);
  assert.match(wizard,/meta\/image/);
  assert.match(wizard,/meta\/locations/);
  assert.match(wizard,/meta\/accounts/);
  assert.match(wizard,/api\/marketing\/ads\/generate/);
  assert.match(wizard,/Continuar/);
- assert.match(wizard,/Generar anuncio/);
+ assert.match(wizard,/Enviar a revisión/);
 });
 
 test("Multiple ad goals can be toggled without automatic navigation",()=>{
