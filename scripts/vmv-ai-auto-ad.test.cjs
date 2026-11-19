@@ -49,7 +49,7 @@ test("Multiple ad goals can be toggled without automatic navigation",()=>{
  assert.match(wizard,/aria-pressed={answer\.goals\.includes\(id\)}/);
  assert.match(wizard,/step==="goal"\?answer\.goals\.length>0/);
  assert.doesNotMatch(wizard,/update\("goal",id\);next\(\)/);
- assert.match(wizard,/goals:answer\.goals/);
+ assert.match(wizard,/answer\.goals\.includes\(id\)/);
  assert.match(bridge,/goals\?:Array<"visits"\|"messages"\|"sales">/);
 });
 test("Website decision can return to saved site after opting for another option",()=>{
