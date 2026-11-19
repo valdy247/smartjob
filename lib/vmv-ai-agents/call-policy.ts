@@ -3,7 +3,20 @@ export const days=["sun","mon","tue","wed","thu","fri","sat"] as const;
 export type DayName=typeof days[number];
 export type DayHours={enabled:boolean;start:string;end:string};
 export type Week=Record<DayName,DayHours>;
+export type CallMenu={
+ enabled:boolean; spanish_digit:string; english_digit:string; agent_digit:string;
+ greeting_es:string; greeting_en:string; human_es:string; human_en:string; agent_message:string;
+};
+export const defaultCallMenu:CallMenu={
+ enabled:true,spanish_digit:"1",english_digit:"2",agent_digit:"3",
+ greeting_es:"Gracias por llamar. Para atención en español, marque uno.",
+ greeting_en:"For service in English, press two. To speak with our AI assistant, press three.",
+ human_es:"Le comunicaremos con nuestro equipo. Un momento, por favor.",
+ human_en:"We will connect you with our team using translation. Please hold.",
+ agent_message:"Le comunicaremos con nuestro asistente inteligente."
+};
 export type CallPolicy={
+ menu_config:CallMenu;
  agent_enabled:boolean;
  translation_enabled:boolean;
  agent_mode:"always"|"schedule"|"after_no_answer";
@@ -27,6 +40,7 @@ const keyList=["sun","mon","tue","wed","thu","fri","sat"] as DayName[];
 const defaultHours:Week=Object.fromEntries(keyList.map((d,i)=>[d,
  {enabled:i>=1&&i<=5,start:"09:00",end:"17:00"}])) as Week;
 export const initialCallPolicy:CallPolicy={
+ menu_config:structuredClone(defaultCallMenu),
  agent_enabled:true,translation_enabled:true,agent_mode:"always",
  translation_mode:"always",coexistence:"menu",outside_action:"translation",
  ring_seconds:18,time_zone:"America/New_York",use_business_hours:false,
@@ -64,7 +78,24 @@ export function checkCallPolicy(input:unknown):CallPolicy{
  if(!Number.isInteger(count)||count<10||count>30)throw Error("La espera permitida es de 10 a 30 segundos.");
  if(typeof p.closed_message!=="string"||p.closed_message.trim().length<5||
   p.closed_message.length>220)throw Error("El mensaje de cierre debe tener entre 5 y 220 caracteres.");
+ const rawMenu=(p.menu_config&&typeof p.menu_config==="object"&&!Array.isArray(p.menu_config))
+  ?p.menu_config as Record<string,unknown>:defaultCallMenu as unknown as Record<string,unknown>;
+ const menu:CallMenu={...defaultCallMenu};
+ if(typeof rawMenu.enabled==="boolean")menu.enabled=rawMenu.enabled;
+ for(const key of ["spanish_digit","english_digit","agent_digit"] as const){
+  const value=rawMenu[key];if(typeof value==="string"&&/^[0-9]$/.test(value))menu[key]=value;
+ }
+ if(new Set([menu.spanish_digit,menu.english_digit,menu.agent_digit]).size!==3)
+  throw Error("Cada opción del menú debe tener un número diferente.");
+ for(const key of ["greeting_es","greeting_en","human_es","human_en","agent_message"] as const){
+  const value=rawMenu[key];
+  if(typeof value==="string"){
+   const v=value.trim();if(v.length<5||v.length>180||/[<>\r\n]/.test(v))throw Error("Los mensajes del menú deben tener de 5 a 180 caracteres.");
+   menu[key]=v;
+  }
+ }
  return {
+  menu_config:menu,
   agent_enabled:p.agent_enabled,translation_enabled:p.translation_enabled,
   agent_mode:one("agent_mode",["always","schedule","after_no_answer"]) as CallPolicy["agent_mode"],
   translation_mode:one("translation_mode",["always","schedule"]) as CallPolicy["translation_mode"],
