@@ -81,3 +81,8 @@
  .finish>div{width:100%;justify-content:stretch}.finish>div>button{flex:1;justify-content:center}
  .contrastPreview>strong{flex:1;text-align:center}
 }
+
+.root :global(.vmv-connected-products){display:flex;flex-direction:column;gap:10px}
+.root :global(.vmv-connected-products)>header{display:flex;align-items:center;justify-content:space-between}
+.root :global(.vmv-connected-products)>header>button{border:1px solid #ded2ea;background:#fff;border-radius:9px;min-height:40px;min-width:40px}
+.root :global(.vmv-connected-products)>p{font-size:11px;color:#7a7285;margin:0;line-height:1.6}
