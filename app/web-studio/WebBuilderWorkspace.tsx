@@ -3,7 +3,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import dynamic from "next/dynamic";
 import type {Data} from "@puckeditor/core";
 import {Puck,Render} from "@puckeditor/core";
-import {ArrowLeft,ChevronDown,ExternalLink,Eye,FilePlus2,Globe,History,Layers,Plus,RefreshCw,Save,Settings2,ShieldCheck,SlidersHorizontal,Trash2} from "lucide-react";
+import {ArrowLeft,ChevronDown,ExternalLink,Eye,FilePlus2,Globe,Bot,History,Layers,Plus,RefreshCw,Save,Settings2,ShieldCheck,SlidersHorizontal,Trash2} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {t as interfaceText,type InterfaceLanguage} from "@/lib/i18n";
