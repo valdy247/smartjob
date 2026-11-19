@@ -351,3 +351,21 @@
 .conceptArrow{flex:0 0 18px;color:#9c8cad}
 @media(max-width:560px){.conceptOverlay{align-items:center;padding:15px 11px}.conceptModal{padding:19px 15px;border-radius:19px;max-height:calc(100dvh - 30px)}.conceptHeading{margin-bottom:16px}.conceptOption{padding:13px;gap:11px;border-radius:14px}.conceptIcon{width:44px;height:44px;flex-basis:44px}.conceptText strong{font-size:13px}.conceptText small{font-size:10.5px}.aiGenerateRow .primary{width:100%;justify-content:center}}
 @media(prefers-reduced-motion:reduce){.conceptOption{transition:none}.conceptOption:hover{transform:none}}
+
+/* The agent hands a completed intake into Review, never a second intake wizard. */
+.agentReview{display:grid;gap:17px;background:linear-gradient(145deg,#fff,#fcf8ff);border:1px solid #ead9f0;border-radius:20px;padding:clamp(16px,3vw,22px)}
+.agentReviewHeader{display:flex;align-items:center;gap:12px}
+.agentReviewIcon{display:grid;place-items:center;width:48px;height:48px;border-radius:16px;background:#f1e6ff;color:#8147c5;flex-shrink:0}
+.agentReviewHeader small{font-size:10px;letter-spacing:.8px;color:#9865ae;font-weight:900}
+.agentReviewHeader h2{margin:4px 0;font-size:22px;line-height:1.1;color:#422951}
+.agentReviewHeader p{margin:0;font-size:12px;color:#86708f;line-height:1.5}
+.agentReviewGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.agentReviewGrid>div{display:grid;gap:5px;background:#fff;border:1px solid #f1e7f2;border-radius:13px;padding:12px;min-width:0}
+.agentReviewGrid small{font-size:10px;color:#8d7b93}
+.agentReviewGrid strong{font-size:12px;color:#452d53;overflow-wrap:anywhere}
+.agentReviewTasks{display:grid;gap:9px;border-top:1px solid #ede2ef;padding-top:14px}
+.agentReviewTasks>strong{font-size:13px;color:#4a3057}
+.agentReviewTasks>button{display:flex;justify-content:space-between;gap:12px;align-items:center;background:#f8f0fc;border:1px solid #ecd9f4;border-radius:12px;color:#704581;font-size:12px;font-weight:800;padding:13px;text-align:left;cursor:pointer}
+.agentReviewTasks>p{margin:0;font-size:11px;line-height:1.6;color:#846d91}
+.agentReviewReturn{margin:0}
+@media(max-width:430px){.agentReviewGrid{grid-template-columns:1fr}}
