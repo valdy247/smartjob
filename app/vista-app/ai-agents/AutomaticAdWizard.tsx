@@ -8,8 +8,9 @@ import {saveAgentAdBrief,type AgentAdBrief} from "@/lib/vmv-ai-agents/ad-handoff
 import styles from "./AutomaticAdWizard.module.css";
 
 type Product={id:string;name:string;description:string;price_cents:number;currency:string;stock_mode:string;image_path:string|null};
+type Goal="visits"|"messages"|"sales";
 type Answer={businessName:string;website:string;offer:string;productId:string;
- audience:string;city:string;region:string;goal:"visits"|"messages"|"sales";
+ audience:string;city:string;region:string;goals:Goal[];
  imageChoice:"business"|"product"|"upload";imageProductId:string;notes:string};
 type Step="business"|"website"|"product"|"goal"|"audience"|"location"|"image"|"review";
 const steps:Step[]=["business","website","product","goal","audience","location","image","review"];
@@ -32,7 +33,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
  const [answer,setAnswer]=useState<Answer>({
   businessName:business.name,website:validSite(business.website_url||"")?business.website_url||"":"",
   offer:"",productId:"",audience:"Personas interesadas en los productos o servicios del negocio",
-  city:business.city||"",region:business.region||"",goal:"visits",
+  city:business.city||"",region:business.region||"",goals:["visits"],
   imageChoice:"upload",imageProductId:"",notes:""
  });
  const update=<K extends keyof Answer>(k:K,v:Answer[K])=>setAnswer(x=>({...x,[k]:v}));
@@ -71,6 +72,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
  const canContinue=step==="business"?answer.businessName.trim().length>=2:
   step==="website"?siteChoice==="none"||siteChoice==="saved"&&hasSite||siteChoice==="custom"&&validSite(customWebsite):
   step==="product"?answer.offer.trim().length>=3:
+  step==="goal"?answer.goals.length>0:
   step==="audience"?answer.audience.trim().length>=3:
   step==="location"?answer.city.trim().length>=2&&answer.region.trim().length>=2:
   step==="image"?answer.imageChoice!=="product"||hasProductImage:true;
@@ -80,6 +82,10 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   setError("");setStep(steps[Math.min(index+1,steps.length-1)]);
  };
  const back=()=>{if(index===0){onClose();return;}setError("");setStep(steps[index-1]);};
+ const toggleGoal=(goal:Goal)=>setAnswer(current=>({
+  ...current,goals:current.goals.includes(goal)?
+   current.goals.filter(item=>item!==goal):[...current.goals,goal]
+ }));
  const selectProduct=(id:string)=>{
   const p=products.find(x=>x.id===id);
   update("productId",id);
@@ -93,7 +99,8 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
    version:1,ownerId:owner,businessId:business.id,workspaceId,agentId:agent.id,
    createdAt:Date.now(),businessName:answer.businessName.trim(),website:answer.website.trim(),
    offer:answer.offer.trim(),city:answer.city.trim(),region:answer.region.trim(),
-   audience:answer.audience.trim(),goal:answer.goal,imageChoice:answer.imageChoice,
+   audience:answer.audience.trim(),goals:answer.goals,
+   goal:answer.goals[0],imageChoice:answer.imageChoice,
    imageProductId:answer.imageChoice==="product"?answer.imageProductId:undefined,
    productId:product?.id,priceCents:product?.price_cents,currency:product?.currency,
    notes:answer.notes.trim()
@@ -160,10 +167,17 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
       placeholder="¿Qué quieres anunciar?"/></label>
     <p className={styles.helper}>No inventaremos descuentos ni precios.</p>
    </div>:null}
-  {!loading&&step==="goal"?<div className={styles.answers}><div className={styles.optionsVertical}>
-    {([["visits","Visitas a mi web"],["messages","Mensajes y consultas"],["sales","Ventas"]] as const)
-     .map(([id,title])=>chip(title,answer.goal===id,()=>{update("goal",id);next();}))}
-   </div></div>:null}
+  {!loading&&step==="goal"?<div className={styles.answers}>
+    <p className={styles.helper}>Puedes elegir varios objetivos.</p>
+    <div className={styles.optionsVertical} role="group" aria-label="Objetivos del anuncio">
+     {([["visits","Visitas a mi web"],["messages","Mensajes y consultas"],["sales","Ventas"]] as const)
+      .map(([id,title])=><button key={id} type="button"
+       className={answer.goals.includes(id)?styles.chipSelected:styles.chip}
+       aria-pressed={answer.goals.includes(id)} onClick={()=>toggleGoal(id)}>
+       {answer.goals.includes(id)?<Check size={17}/>:null}{title}
+      </button>)}
+    </div>
+   </div>:null}
   {!loading&&step==="audience"?<div className={styles.answers}>
     <label className={styles.field}>Público
      <textarea maxLength={130} rows={3} value={answer.audience} onChange={e=>update("audience",e.target.value)}/></label>
@@ -196,7 +210,8 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
     <div><small>Promoción</small><strong>{answer.offer}</strong></div>
     <div><small>Destino</small><strong>{answer.website||"Por definir en Marketing"}</strong></div>
     <div><small>Zona</small><strong>{answer.city}, {answer.region}</strong></div>
-    <div><small>Objetivo</small><strong>{({visits:"Visitas",messages:"Mensajes",sales:"Ventas"} as const)[answer.goal]}</strong></div>
+    <div><small>Objetivos</small><strong>{answer.goals.map(goal=>
+     ({visits:"Visitas",messages:"Mensajes",sales:"Ventas"} as const)[goal]).join(" · ")}</strong></div>
     <label className={styles.field}>Algo más que debamos saber (opcional)
      <textarea value={answer.notes} onChange={e=>update("notes",e.target.value)}
       rows={2} maxLength={300} placeholder="Detalle real de la oferta"/></label>
