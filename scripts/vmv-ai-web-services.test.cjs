@@ -117,7 +117,9 @@ test("Public website never touches inventory without opt-in; linked prices are l
  assert.match(live,/catalog===null\)return base/);
  assert.match(live,/showPrices:catalog\.length\?"yes":"no"/);
  assert.match(publicPage,/publishedBuilderCatalog\(slug\)/);
- assert.match(publicPage,/applyPublishedCatalog\(/);
+ assert.match(publicPage,/publishedBuilderServices\(slug\)/);
+ assert.match(publicPage,/applyPublishedConnections\(/);
+ assert.match(live,/services_connection_enabled!==true/);
 });
 test("Builder actually persists visual choices into each AI or template proposal",()=>{
  assert.match(templates,/function applyChosenSiteDesign/);
