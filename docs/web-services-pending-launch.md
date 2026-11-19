@@ -100,3 +100,26 @@ Los anteriores pendientes de experiencia móvil, imágenes, contenido dinámico 
 **Preview del código corregido:** SHA `03d3cb349a5ddf984417d799e6626528525f38b9`, Vercel READY; `/web-studio` dio HTTP 200 y mostró el enlace de iniciar sesión sin errores JS en Chromium sin sesión. QA autenticada pendiente.
 
 Todos los pendientes anteriores de galería múltiple, portada, logo, seguridad de archivos, catálogo y rediseño móvil permanecen abiertos donde corresponda.
+
+
+## Unified Web Builder — consolidación del wizard y sincronización (19 noviembre 2026)
+
+**Solicitud del propietario:** reemplazar los wizards separados «Plantillas» e «IA» por un único formulario de creación, utilizando los datos del perfil central de VMV, selector de negocio, productos y servicios de la sección AI Agents, tres colores con contraste accesible, ocho tipografías, fotografías opcionales, chat, redes sociales y una sola propuesta adaptable a móvil/escritorio. El mensaje original acababa truncado después de «quiero que en vez de llenar eso manual»; ese requisito adicional no puede darse por implementado sin el texto completo.
+
+**Implementación en la rama compartida:**
+- `UnifiedWebWizard.tsx`: una sola pantalla, elección de negocio central `vmv_marketing_businesses`, categorías, objetivos comerciales, catálogo conectado y preferencias, sin publicar automáticamente. El antiguo modo `mode=ai` se redirige al mismo componente para compatibilidad, y la biblioteca muestra un botón «Crear mi página web».
+- `ConnectedProductsEditor.tsx`: lista y formulario modal con SKU, nombre, precio, descripción, foto, stock y aprobación; guarda en la tabla CANÓNICA `vmv_ai_catalog_items` por `business_id` y `owner_id`, con comprobación de versión para evitar sobrescrituras concurrentes.
+- `ConnectedServicesEditor.tsx`: formulario modal nombre, descripción, duración, precio, activo/aprobado, guarda en los servicios de reserva de AI Agents `vmv_ai_booking_services`. Al editar no sobrescribe `time_zone` ni `auto_confirm`. Ambos editores refrescan al volver a enfocar y descartan resultados obsoletos cuando se cambia de negocio.
+- `smartjob_builder_sites` conserva claves canónicas `inventory_business_id`, `services_business_id` y flags. Al crear la web se verifica que el workspace pertenezca al negocio central/propietario seleccionado; la página pública utiliza `publishedBuilderCatalog` y `publishedBuilderServices`, lee cada solicitud pública en la base de datos, y reemplaza únicamente `connected-catalog`/`connected-services` mediante IDs estables. Solo muestra registros activos y aprobados. No se duplican tablas de inventario.
+- `web-builder-contrast.ts`: ajusta luminosidad manteniendo el tono; relación de contraste >=4.5 para texto sobre fondos claros y CTA. `Puck` aplica variables de paleta y las 8 fuentes disponibles; conservado el modo de chat cuando se utiliza plantilla sin IA.
+- Foto de producto guardada como `image_path` del dueño en `smartjob-web-images`, se muestra por ID, nunca por posición. Se retiraron los controles de borde de imágenes y se anularon bordes en diseño, sin eliminar documentos guardados.
+- `TemplateProposals` muestra **una propuesta** y dos vistas reales en iframe; el tamaño de móvil usa el ancho interno, no una versión reducida del escritorio. Se conservan SEO, validaciones de contenido y la obligación de revisión humana.
+
+**Evidencia técnica, no equivalente a aceptación total:**
+- `npm run typecheck` pasó en el SHA `ff9c5a011c9e`; `node --test scripts/web-builder-unified.test.cjs scripts/web-builder-ai-site.test.cjs scripts/web-builder-images.test.cjs` **22/22 PASS** en ese mismo SHA.
+- Playwright/Chromium con datos simulados (únicamente en sandbox, nunca conectados a un usuario real) verificó `TemplateProposals` en 360/390/430/1280 px: HTTP 200, sin errores JS ni scroll horizontal, vistas separadas por iframe y elección de propuesta. La pantalla unificada también cargó en esos cuatro tamaños sin overflow y con productos/servicios simulados; en 390 px se crearon elementos en los dos modales y se abrió la vista previa móvil sin errores.
+- La QA en navegador descubrió y permitió corregir dos selectores CSS Modules inválidos que los tests TypeScript no capturaron.
+- **Pendiente**: probar con sesión auténtica y negocios reales el RLS, alta/edición, fotos, cambio de negocio, aprobación y desactivación, propagación a web pública, guardado y publicación. El «live sync» actual significa lectura canónica en cada visita/recarga, **no** push inmediato a los navegadores públicos ya abiertos. No declarar validación end-to-end sin esos pasos.
+- La generación de imagen IA sigue limitada por la habilitación del proveedor de imágenes; no es universal. El mensaje cortado puede indicar requisitos adicionales por definir.
+
+**Pendientes anteriores conservados**: rediseño/editor móvil, biblioteca y eliminación persistente, logo completo, encuadre de portada, galería múltiple, QA accesibilidad, verificación de publicación/dominio, interacción contextual y pruebas de 360/390/430 px con cuentas reales. No tocar archivos de otros módulos salvo modificaciones explícitamente necesarias al renderer público compartido.
