@@ -189,7 +189,7 @@ function guidedEnabled(route:OwnerRoute,policy:CallPolicy|null):boolean{
   policy?.menu_config?.enabled===true;
 }
 function guidedSay(message:string,lang:"es"|"en",voice:string){
- const sound=sayElevenVoice(voice,lang);
+ const sound=process.env.VMV_SMART_CALL_ELEVENLABS_SAY_ENABLED==="true"?sayElevenVoice(voice,lang):"";
  if(!sound)return say(message,lang==="es"?"es-ES":"en-US");
  return '<Say voice="'+xmlEscape(sound)+'" language="'+(lang==="es"?"es-ES":"en-US")+'">'+
   xmlEscape(message)+'</Say>';
