@@ -7,17 +7,21 @@ export const dynamic="force-dynamic";
 export const maxDuration=45;
 const rate=new Map<string,{count:number;until:number}>();
 const str=(x:unknown,max:number)=>typeof x==="string"?x.trim().slice(0,max):"";
-type Creative={label:string;headline:string;message:string;why:string};
+type Creative={headline:string;message:string};
+const angles={
+ offer:"Lead with the customer's verified product or service offer and a specific reason to click. Avoid invented prices or promotions.",
+ local:"Emphasize the verified service city and local relevance; do not invent claims of local popularity, delivery range or reviews.",
+ value:"Highlight the customer's explicitly supplied benefit, if provided. Otherwise show the offer from a useful factual perspective without inventing differentiators."
+} as const;
 const cleanLocation=(s:string)=>s
  .replace(/\(\s*([A-Za-zÀ-ÿ .'-]{2,30})\s*\)\s*,\s*\1\b/gi,", $1")
  .replace(/,\s*([A-Za-zÀ-ÿ .'-]{2,30})\s*,\s*\1\b/gi,", $1");
-function validateVariants(v:unknown):Creative[]|null{
- if(!Array.isArray(v)||v.length!==3)return null;
- const arr=v.map((x:any)=>({
-  label:str(x?.label,32),headline:cleanLocation(str(x?.headline,70)),
-  message:cleanLocation(str(x?.message,350)),why:str(x?.why,160)
- }));
- return arr.every(x=>x.label.length>=2&&x.headline.length>=5&&x.message.length>=25&&x.why.length>=10)?arr:null;
+function validateVariant(v:unknown):Creative|null{
+ if(!v||typeof v!=="object"||Array.isArray(v))return null;
+ const item=v as Record<string,unknown>;
+ const headline=cleanLocation(str(item.headline,70));
+ const message=cleanLocation(str(item.message,350));
+ return headline.length>=5&&message.length>=25?{headline,message}:null;
 }
 export async function POST(req:NextRequest){
  const owner=await authenticatedUser(req);
@@ -27,6 +31,9 @@ export async function POST(req:NextRequest){
  const business=str(body?.business,80),offer=str(body?.offer,200),
   audience=str(body?.audience,130),city=cleanLocation(str(body?.city,110)),
   benefit=str(body?.benefit,180);
+ const angle=typeof body?.angle==="string"&&Object.prototype.hasOwnProperty.call(angles,body.angle)?
+  body.angle as keyof typeof angles:null;
+ if(!angle)return NextResponse.json({error:"select_ad_angle"},{status:400,headers:noCache});
  if(business.length<2||offer.length<8||audience.length<3||city.length<2)
   return NextResponse.json({error:"complete_campaign_brief"},{status:400,headers:noCache});
  if(!aiAgentModelPathAvailable())
@@ -38,16 +45,15 @@ export async function POST(req:NextRequest){
  const rules=[
   "You are a senior small-business paid social strategist writing useful Meta Ads copy.",
   "Return ONLY one valid JSON object, without markdown, code fences, comments or introductory text.",
-  "Use precisely this structure: {\"variants\":[{\"label\":\"...\",\"headline\":\"...\",\"message\":\"...\",\"why\":\"...\"},{\"label\":\"...\",\"headline\":\"...\",\"message\":\"...\",\"why\":\"...\"},{\"label\":\"...\",\"headline\":\"...\",\"message\":\"...\",\"why\":\"...\"}],\"recommendation\":\"...\",\"measurement\":\"...\"}.",
-  "Include exactly three variants, with commercially distinct angles and independently editable copy.",
-  "One variant should lead with a truthful product offer, one with the location, one with a useful differentiator supplied by the customer.",
+  'Use precisely this JSON structure: {"headline":"...","message":"..."}.',
+  "Generate only ONE ad according to the selected creative direction. Do not produce options, recommendations or analysis.",
   "Each variant must read like an original, concrete advertisement, not a template or restatement of the intake.",
   "Write a compelling opening hook, describe why the offering matters, and give an actionable invitation to visit the website.",
   "Do not add empty filler such as 'conoce lo que ofrecemos', 'descubre más en nuestra web', 'explore our website', or 'learn more' as the whole CTA.",
   "Do not repeat the business name or city mechanically; mention the city at most once per variant if it adds value.",
   "Never repeat the state name, e.g. 'Columbus (Georgia), Georgia'.",
   "Do not invent reviews, prices, discounts, promotions, guaranteed results, contact methods or product facts.",
-  "Headlines 5–70 chars; messages 25–350 chars; why 10–160 chars; labels <=32 chars.",
+  "Headlines 5–70 chars; messages 25–350 chars.",
   "Do not infer protected or sensitive attributes from an audience description. No Meta sensitive targeting.",
   "Keep calls to action suitable for WEBSITE LINK CLICKS only (no chat-automation claims).",
   "If the supplied benefit is empty, do not invent one; use distinct presentation styles instead.",
@@ -57,23 +63,21 @@ export async function POST(req:NextRequest){
   en?"Language: natural US English.":"Idioma: español latinoamericano natural."
  ].join(" ");
  const prompt=JSON.stringify({business,offer,audience,city,benefit,goal:"website_clicks",
-  instruction:"Generate three commercially useful, clearly differentiated ad copies that use ONLY verified inputs."});
+  creativeDirection:angles[angle],
+  instruction:"Generate one original, accurate Meta ad for the chosen creative direction using only the customer's verified inputs."});
  try{
   const text=await askAiAgent({
    system:rules,
    messages:[{role:"user",content:prompt}],
-   temperature:0.45,maxOutputTokens:1700,timeoutMs:25000
+   temperature:0.45,maxOutputTokens:700,timeoutMs:25000
   });
   const content=text.trim().replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim();
   const raw=content.startsWith("{")?content:content.slice(content.indexOf("{"),content.lastIndexOf("}")+1);
   const parsed=JSON.parse(raw);
 
-  const variants=validateVariants(parsed.variants);
-  if(!variants||str(parsed.recommendation,350).length<20||str(parsed.measurement,250).length<10)
-   throw Error("incomplete_ai_output");
-  return NextResponse.json({source:"ai",variants,
-   recommendation:str(parsed.recommendation,350),
-   measurement:str(parsed.measurement,250),providerConfigured:true},{headers:noCache});
+  const variant=validateVariant(parsed);
+  if(!variant)throw Error("incomplete_ai_output");
+  return NextResponse.json({source:"ai",angle,variant,providerConfigured:true},{headers:noCache});
  }catch(err){
   const status=typeof err==="object"&&err!==null&&"statusCode" in err&&
    typeof err.statusCode==="number"?err.statusCode:0;
