@@ -5,7 +5,7 @@ import {ImagePlus,MoreVertical,RefreshCw,Trash2,WandSparkles,X} from "lucide-rea
 import {getSupabase} from "@/lib/supabase";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import styles from "./BuilderImageField.module.css";
-type Props={value:string;onChange:(url:string)=>void;kind?:"photo"|"logo";openRequest?:number};
+type Props={value:string;onChange:(url:string)=>void;kind?:"photo"|"logo";openRequest?:number;allowAi?:boolean};
 const bucket="smartjob-web-images";
 async function shrink(file:File):Promise<Blob>{
  if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw new Error("Solo imágenes JPG, PNG o WebP");
@@ -29,7 +29,7 @@ async function shrink(file:File):Promise<Blob>{
   return converted;
  }finally{bitmap.close();}
 }
-export default function BuilderImageField({value,onChange,kind="photo",openRequest}:Props){
+export default function BuilderImageField({value,onChange,kind="photo",openRequest,allowAi=true}:Props){
  const [items,setItems]=useState<string[]>([]);
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
@@ -100,6 +100,7 @@ export default function BuilderImageField({value,onChange,kind="photo",openReque
   return()=>window.removeEventListener("vmv:web-image-archived",handleDelete);
  },[]);
  useEffect(()=>{
+  if(!allowAi)return;
   let active=true;
   void(async()=>{
    const client=getSupabase();if(!client)return;
@@ -112,7 +113,7 @@ export default function BuilderImageField({value,onChange,kind="photo",openReque
    if(active)setAi(result.ok&&json.enabled===true);
   })();
   return()=>{active=false;};
- },[]);
+ },[allowAi]);
  async function upload(file:File){
   if(busy)return;
   setBusy(true);setError("");setNotice("");
@@ -172,7 +173,7 @@ export default function BuilderImageField({value,onChange,kind="photo",openReque
   finally{setDeleting(null);setMenuFor(null);setConfirmDelete(null);}
  }
  async function generate(){
-  if(generating||!ai||prompt.trim().length<8)return;
+  if(generating||!allowAi||!ai||prompt.trim().length<8)return;
   if(!window.confirm("Generar una imagen consume 1 generación del límite diario y tiene un costo externo de IA para VMV. No hay cobro al cliente en esta pantalla. ¿Continuar?"))return;
   setGenerating(true);setError("");
   try{
@@ -266,7 +267,7 @@ export default function BuilderImageField({value,onChange,kind="photo",openReque
          }}/>
        </label>
        <p className={styles.hint}>JPG, PNG o WebP, hasta 18 MB. La foto se optimiza y queda seleccionada automáticamente.</p>
-       {ai?<div className={styles.ai}>
+       {ai&&allowAi?<div className={styles.ai}>
         <small>Generar con IA consume 1 generación del cupo diario y utiliza una API con costo para VMV.</small>
         <textarea value={prompt} maxLength={450} spellCheck={false} rows={2}
          placeholder="Describe la imagen que quieres crear" onChange={e=>setPrompt(e.target.value)}/>
