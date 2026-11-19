@@ -55,7 +55,6 @@ export default function SmartCallMenuEditor({menu,onChange,agentEnabled,translat
      disabled={menu[lang==="es"?"voice_es":"voice_en"]==="default"}>Escuchar muestra</button>
    </div>)}
    {current?.preview?<audio key={current.id} className={css.audio} src={current.preview} controls autoPlay preload="none"/>:null}
-  </div>
   </div>:null}
   {mode==="menu"?<div className={css.section}><strong>Así escuchará las opciones el cliente</strong>
    <p className={css.readback}>{menu.greeting_es}</p>
