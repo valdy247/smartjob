@@ -33,3 +33,11 @@
 .error{width:100%;border-radius:12px;background:#fff0f3;color:#9c3553;padding:12px;font-size:11px}
 .safety{font-size:10px;color:#9789a4;line-height:1.6;display:flex;align-items:start;gap:6px;margin:16px 0 0;text-align:left}
 .safety svg{flex-shrink:0}
+
+.answers select{box-sizing:border-box;width:100%;min-height:45px;border:1px solid #e0d6ef;border-radius:12px;padding:11px;background:white;color:#312840;font-size:13px}
+.answers input[type=file]{background:#f7f1ff;padding:11px;font-size:12px}
+.imagePreview{display:block;max-width:100%;width:100%;max-height:235px;object-fit:contain;border:1px solid #e7dcf5;background:#fff;border-radius:14px}
+.uploadProgress{display:flex;justify-content:center;align-items:center;gap:10px;border-radius:14px;background:#f4edff;color:#7650bd;font-size:13px;font-weight:800;padding:15px}
+.spin{animation:agent-spin 1s linear infinite;flex-shrink:0}
+@keyframes agent-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation:none}}
