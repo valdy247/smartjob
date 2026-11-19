@@ -74,6 +74,41 @@ async function imageData(file:File){
   throw Error("image_invalid");
  }finally{bitmap.close();}
 }
+/** Best-effort client capture: never proxies arbitrary provider URLs through our server.
+ * Some providers do not allow cross-origin canvas; caller asks for a description. */
+async function captureVideoFrame(url:string):Promise<string>{
+ const parsed=new URL(url);
+ if(parsed.protocol!=="https:"||parsed.username||parsed.password)throw Error("video_invalid");
+ const video=document.createElement("video");
+ video.crossOrigin="anonymous";video.preload="auto";video.muted=true;
+ try{
+  return await new Promise<string>((resolve,reject)=>{
+   let closed=false;
+   const finish=(result?:string,error?:Error)=>{
+    if(closed)return;closed=true;window.clearTimeout(timer);
+    video.onloadeddata=null;video.onerror=null;
+    if(error)reject(error);else resolve(result||"");
+   };
+   const timer=window.setTimeout(()=>finish(undefined,Error("video_frame_timeout")),7000);
+   video.onerror=()=>finish(undefined,Error("video_frame_unavailable"));
+   video.onloadeddata=()=>{
+    try{
+     const max=980,scale=Math.min(1,max/Math.max(video.videoWidth,video.videoHeight));
+     if(!Number.isFinite(scale)||!video.videoWidth||!video.videoHeight)throw Error("video_frame_invalid");
+     const canvas=document.createElement("canvas");
+     canvas.width=Math.max(1,Math.round(video.videoWidth*scale));
+     canvas.height=Math.max(1,Math.round(video.videoHeight*scale));
+     const ctx=canvas.getContext("2d");if(!ctx)throw Error("video_frame_invalid");
+     ctx.drawImage(video,0,0,canvas.width,canvas.height);
+     const data=canvas.toDataURL("image/jpeg",0.67);
+     if(data.length<1000||data.length>3500000)throw Error("video_frame_invalid");
+     finish(data);
+    }catch{finish(undefined,Error("video_frame_cors"));}
+   };
+   video.src=url;video.load();
+  });
+ }finally{video.removeAttribute("src");video.load();}
+}
 export default function VideoGeneratorPage(){
  const {language}=useInterfaceLanguage(),en=language==="en";
  const L=(es:string,english:string)=>en?english:es;
