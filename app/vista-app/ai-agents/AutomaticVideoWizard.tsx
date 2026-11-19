@@ -407,9 +407,13 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
    <p className={base.note}>Si eliges una imagen, podrás subirla o generar una referencia y aprobarla antes de gastar créditos de video.</p>
   </div>:null}
   {!loading&&owner&&stage==="reference"?<div className={base.panel}>
-   <label className={base.field}>Sube una imagen · JPG, PNG o WebP (máximo 14 MB)
+   <label className={styles.referenceUpload}>
+    <ImagePlus size={22}/><strong>Subir imagen de referencia</strong>
+    <small>JPG, PNG o WebP · máximo 14 MB</small>
     <input type="file" accept="image/jpeg,image/png,image/webp" disabled={Boolean(busy)}
-     onChange={e=>{const file=e.target.files?.[0];if(file)void uploadReference(file);}}/></label>
+     onChange={e=>{const file=e.target.files?.[0];e.target.value="";
+      if(file)void uploadReference(file);}}/>
+   </label>
    {filePreview?<div className={styles.reference}><img src={filePreview} alt="Imagen aprobada para generar el video"/>
     <div className={styles.success}><CheckCircle2 size={16}/> Imagen preparada para el video</div></div>:null}
    {busy==="analyze"?<p className={styles.generating} role="status">
