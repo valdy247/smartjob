@@ -171,7 +171,7 @@ export default function VMVMobilePreview(){
  };
  // Services are discoverable products; Home uses authenticated operational data instead.
  const catalogItems=[
-  {id:"smart-call",name:"Smart Call",search:"calls llamadas teléfono",group:"communication",Icon:PhoneCall,tone:styles.catalogViolet,state:translate("home.pilot"),action:()=>showCall("overview")},
+  {id:"smart-call",name:"Smart Call",search:"calls llamadas teléfono",group:"communication",Icon:PhoneCall,tone:styles.catalogViolet,state:translate("home.pilot"),action:()=>window.location.assign("/vista-app/ai-agents?service=call")},
   {id:"translator",name:translate("common.translator"),search:"translator intérprete traducción",group:"communication",Icon:Languages,tone:styles.catalogMint,state:translate("catalog.open"),action:()=>go("translator")},
   {id:"web",name:"Web Services",search:"web sitios páginas",group:"digital",Icon:Globe,tone:styles.catalogYellow,state:translate("catalog.open"),action:()=>{setOpen(false);setServiceFocus("web");setTab("services");}},
   {id:"agents",name:"AI Agents",search:"ia inteligencia artificial agentes",group:"digital",Icon:Bot,tone:styles.catalogSky,state:translate("catalog.beta"),action:()=>window.location.assign("/vista-app/ai-agents")},
