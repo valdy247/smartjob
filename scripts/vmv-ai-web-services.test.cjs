@@ -14,6 +14,10 @@ const catalog=read("app/vista-app/ai-agents/AgentWebCatalogEditor.tsx");
 const media=read("app/vista-app/ai-agents/AgentWebMediaPicker.tsx");
 const imageApi=read("app/api/web-services/generate-image/route.ts");
 const builder=read("lib/web-builder-puck.tsx");
+const live=read("lib/web-builder-live-catalog.ts");
+const publicPage=read("app/web/[slug]/[[...page]]/page.tsx");
+const templates=read("lib/web-builder-templates.ts");
+
 test("Web Services reuses the existing agent, owner and central business",()=>{
  assert.match(agents,/screen==="web"&&principal&&selectedBusiness&&selectedWorkspace/);
  assert.match(agents,/agent={principal}/);
@@ -101,4 +105,23 @@ test("Buttons, progress and robot have a slow accessible pink-purple-blue-green 
  assert.match(wizard,/theme\.agentButton/);
  assert.match(ads,/theme\.agentProgress/);
  assert.match(ads,/theme\.agentButton/);
+});
+
+test("Public website never touches inventory without opt-in; linked prices are live and owner verified",()=>{
+ assert.match(live,/site\.inventory_connection_enabled!==true/);
+ assert.match(live,/\.eq\("id",site\.inventory_business_id\)/);
+ assert.match(live,/\.eq\("owner_id",site\.owner_id\)/);
+ assert.match(live,/\.eq\("active",true\)\.eq\("approved",true\)/);
+ assert.match(live,/catalog===null\)return base/);
+ assert.match(live,/showPrices:catalog\.length\?"yes":"no"/);
+ assert.match(publicPage,/publishedBuilderCatalog\(slug\)/);
+ assert.match(publicPage,/applyPublishedCatalog\(/);
+});
+test("Builder actually persists visual choices into each AI or template proposal",()=>{
+ assert.match(templates,/function applyChosenSiteDesign/);
+ assert.match(templates,/font:design\.font/);
+ assert.match(templates,/accentColor:design\.colors\[0\]/);
+ assert.match(templates,/imageRadius:radius/);
+ assert.match(wizard,/applyChosenSiteDesign\(result\[0\]\.data,input\.design\)/);
+ assert.match(wizard,/applyChosenSiteDesign\(\(res\.proposal as SiteProposal\)\.data,input\.design\)/);
 });
