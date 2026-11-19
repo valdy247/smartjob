@@ -24,6 +24,33 @@ const stateCode=(value:string)=>usStates.find(([code,name])=>code.toLowerCase()=
 const validSite=(v:string)=>{try{const u=new URL(v);return u.protocol==="https:"&&
  !u.username&&!u.password&&!u.port&&u.hostname.includes(".")&&!u.hostname.endsWith(".local")&&
  !["localhost","127.0.0.1"].includes(u.hostname);}catch{return false;}};
+type MenuChoice={value:string;label:string;detail?:string};
+function ChoiceDropdown({label,value,placeholder,choices,disabled,onSelect}:{
+ label:string;value:string;placeholder:string;choices:MenuChoice[];
+ disabled?:boolean;onSelect:(value:string)=>void;
+}){
+ const [open,setOpen]=useState(false);
+ const current=choices.find(item=>item.value===value);
+ return <div className={styles.field}>
+  <span>{label}</span>
+  <div className={styles.dropdown} onBlurCapture={e=>{
+   if(!e.currentTarget.contains(e.relatedTarget as Node))setOpen(false);
+  }}>
+   <button type="button" className={styles.dropdownTrigger} aria-expanded={open}
+    disabled={disabled||!choices.length} onClick={()=>setOpen(v=>!v)}>
+    <span>{current?.label||placeholder}</span><span aria-hidden="true">⌄</span>
+   </button>
+   {open?<div className={styles.dropdownPanel} role="group" aria-label={label}>
+    {choices.map(item=><button type="button" key={item.value}
+     className={value===item.value?styles.dropdownSelected:styles.dropdownOption}
+     aria-pressed={value===item.value} onClick={()=>{
+      onSelect(item.value);setOpen(false);
+     }}><span><strong>{item.label}</strong>{item.detail?<small>{item.detail}</small>:null}</span>
+      {value===item.value?<Check size={16}/>:null}</button>)}
+   </div>:null}
+  </div>
+ </div>;
+}
 export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
  business:CentralBusiness;workspaceId:string;agent:PersistedAgent;onClose:()=>void;
 }){
@@ -352,29 +379,24 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
     {!meta.configured?<p className={styles.helper}>Meta aún no está configurado. Conéctalo en el piloto para continuar.</p>:null}
     {meta.configured&&!meta.connected?<button type="button" className={styles.next} onClick={()=>void connectMeta()}>
      Conectar Facebook</button>:null}
-    {meta.connected?<label className={styles.field}>Cuenta publicitaria
-     <select value={accountId} disabled={Boolean(pending)} onChange={e=>void saveAccount(e.target.value)}>
-      <option value="">Seleccionar cuenta</option>
-      {meta.accounts.filter(a=>a.status===1&&a.currency==="USD").map(a=>
-       <option key={a.id} value={a.id}>{a.name}</option>)}
-     </select></label>:null}
-    {meta.connected&&accountId?<label className={styles.field}>Página de Facebook
-     <select value={pageId} onChange={e=>setPageId(e.target.value)}>
-      <option value="">Seleccionar página</option>
-      {meta.pages.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-     </select></label>:null}
+    {meta.connected?<ChoiceDropdown label="Cuenta publicitaria" value={accountId}
+     placeholder="Seleccionar cuenta" disabled={Boolean(pending)}
+     choices={meta.accounts.filter(a=>a.status===1&&a.currency==="USD")
+      .map(a=>({value:a.id,label:a.name,detail:"Cuenta autorizada · USD"}))}
+     onSelect={id=>void saveAccount(id)}/>:null}
+    {meta.connected&&accountId?<ChoiceDropdown label="Página de Facebook" value={pageId}
+     placeholder="Seleccionar página" disabled={Boolean(pending)}
+     choices={meta.pages.map(p=>({value:p.id,label:p.name}))}
+     onSelect={setPageId}/>:null}
     {pending==="account"?<p className={styles.helper}>Verificando cuenta…</p>:null}
    </div>:null}
   {!loading&&step==="location"?<div className={styles.answers}>
     <div className={styles.fieldPair}>
      <label className={styles.field}>Ciudad<input maxLength={100} placeholder="Escribe tu ciudad" value={answer.city}
       onChange={e=>{update("city",e.target.value);setCityKey("");setCityMetaName("");}}/></label>
-     <label className={styles.field}>Estado
-      <span className={styles.selectShell}><select aria-label="Estado" value={stateCode(answer.region)}
-       onChange={e=>{update("region",e.target.value);setCityKey("");setCityMetaName("");}}>
-       <option value="">Selecciona estado</option>
-       {usStates.map(([code,name])=><option value={code} key={code}>{name}</option>)}
-      </select></span></label>
+     <ChoiceDropdown label="Estado" value={stateCode(answer.region)} placeholder="Seleccionar estado"
+      choices={usStates.map(([code,name])=>({value:code,label:name}))}
+      onSelect={code=>{update("region",code);setCityKey("");setCityMetaName("");}}/>
     </div>
     {locationVerified?<div className={styles.fact}><Check size={17}/>{cityMetaName} · Verificada por Meta</div>:null}
     <button type="button" disabled={pending==="city"||answer.city.trim().length<3||!stateCode(answer.region)}
