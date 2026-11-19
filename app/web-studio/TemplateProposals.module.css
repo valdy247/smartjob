@@ -51,3 +51,16 @@
  .carousel[data-single=true] .websiteFrame{height:305px}}
 @media(max-width:570px){.carousel[data-single=true]{padding-inline:15px;max-width:100%}
  .carousel[data-single=true] .card{flex:1 1 auto;width:100%;max-width:100%}}
+
+.viewportControls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:18px 0 6px}
+.viewportControls button{display:inline-flex;align-items:center;gap:8px;min-height:44px;border-radius:12px;padding:10px 14px;background:#fff;border:1px solid #e3d8ee;color:#624b78;font-size:12px;font-weight:850}
+.viewportControls button[aria-pressed=true]{background:#eadbfa;border-color:#9360c3;color:#4e267c}
+.websiteFrame[data-responsive=true]{height:580px;display:flex;align-items:flex-start;justify-content:center;background:#eeedf1;overflow:hidden;padding:13px}
+.responsivePreview{width:100%;height:100%;display:flex;align-items:stretch;justify-content:center;max-width:100%;min-width:0}
+.responsivePreview[data-viewport=mobile]{width:min(390px,100%);height:100%}
+.previewIframe{width:100%;height:100%;max-width:100%;border:0;border-radius:11px;background:#fff;box-shadow:0 12px 30px #22152818}
+.carousel[data-single=true]{max-width:1020px}
+.carousel[data-single=true] .websiteFrame[data-responsive=true]{height:580px}
+@media(max-width:900px){.carousel[data-single=true] .websiteFrame[data-responsive=true]{height:520px}}
+@media(max-width:570px){.carousel[data-single=true] .websiteFrame[data-responsive=true]{height:510px;padding:9px}
+ .responsivePreview[data-viewport=mobile]{width:min(390px,100%)}}
