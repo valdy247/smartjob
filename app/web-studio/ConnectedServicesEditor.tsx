@@ -1,5 +1,5 @@
 "use client";
-import {useCallback,useEffect,useState} from "react";
+import {useCallback,useEffect,useRef,useState} from "react";
 import {Check,Plus,RefreshCw,X} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 
@@ -18,6 +18,8 @@ export default function ConnectedServicesEditor({workspaceId,onChange}:{
  const [editing,setEditing]=useState<ConnectedService|null>(null);
  const [show,setShow]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState("");
  const [loading,setLoading]=useState(true);
+ const liveRef=useRef(true);
+ useEffect(()=>{liveRef.current=true;return()=>{liveRef.current=false};},[]);
  const refresh=useCallback(async()=>{
   const db=getSupabase();if(!db)throw Error("No se pudo acceder a VMV.");
   const {data:{user},error:authError}=await db.auth.getUser();
@@ -28,6 +30,7 @@ export default function ConnectedServicesEditor({workspaceId,onChange}:{
    .order("name",{ascending:true}).limit(100);
   if(error)throw Error("No se pudieron cargar los servicios de AI Agents.");
   const services=(data||[]) as ConnectedService[];
+  if(!liveRef.current)return;
   setItems(services);onChange(services);setError("");
  },[workspaceId,onChange]);
  useEffect(()=>{
