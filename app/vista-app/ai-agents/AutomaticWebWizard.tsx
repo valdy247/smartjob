@@ -326,55 +326,41 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
     <a href="/web-studio?mode=templates">Editar una web existente</a>
    </div>:<p className={styles.note}>Crearemos un borrador nuevo. No será público hasta que lo apruebes.</p>}
   </div>:null}
-  {!loading&&owner&&stage==="offerings"?<div className={styles.panel}>
-   {items.length?<><p className={styles.note}>Seleccioné opciones conocidas del negocio. Puedes quitar o agregar las que quieras.</p>
-    <div className={styles.items} role="group" aria-label="Productos y servicios">
-     {items.map(x=><button type="button" key={x.id}
-      className={selectedIds.includes(x.id)?styles.itemSelected:styles.item}
-      aria-pressed={selectedIds.includes(x.id)} onClick={()=>toggle(x.id)}>
-      <Package size={17}/><span><strong>{x.name}</strong><small>{x.type==="product"?"Producto":"Servicio"}
-       {typeof x.price_cents==="number"?" · $"+(x.price_cents/100).toFixed(2):""}</small></span>
-      {selectedIds.includes(x.id)?<Check size={18}/>:null}</button>)}
-    </div></>:null}
-   <label className={styles.field}>¿Algo más que deba aparecer? (opcional)
-    <textarea rows={2} maxLength={350} placeholder="Servicios adicionales separados por coma"
-     value={extraOffer} onChange={e=>setExtraOffer(e.target.value)}/></label>
-   <p className={styles.note}>Solo se usarán datos aprobados o escritos por ti. No se inventarán precios ni descuentos.</p>
+  {!loading&&owner&&stage==="catalog"?<div className={styles.panel}>
+   <p className={styles.note}>Tu web puede mostrar el inventario de tu negocio, con precios y productos aprobados. Tú decides si autorizas esa conexión.</p>
+   <div className={styles.optionsVertical}>
+    <button type="button" className={catalogChoice==="yes"?styles.optionActive:styles.option}
+     aria-pressed={catalogChoice==="yes"} onClick={()=>setCatalogChoice("yes")}>
+     <Check size={17}/> Sí, conectar mi catálogo</button>
+    <button type="button" className={catalogChoice==="no"?styles.optionActive:styles.option}
+     aria-pressed={catalogChoice==="no"} onClick={()=>{setCatalogChoice("no");setInventoryItems([]);}}>
+     No, crear la web sin acceso al inventario</button>
+   </div>
+   <p className={styles.note}>Si respondes No, la web no se conectará a Inventario ni mostrará sus precios y existencias.</p>
   </div>:null}
-  {!loading&&owner&&stage==="features"?<div className={styles.panel}>
-   <p className={styles.note}>Elige lo importante. Las conexiones que requieran autorización se configurarán por separado.</p>
-   <div className={styles.optionsVertical} role="group" aria-label="Objetivo del sitio">
-    {([["calls","Recibir llamadas"],["quotes","Solicitar cotizaciones"],["bookings","Solicitar citas"],["orders","Consultar pedidos"]] as const)
-     .map(([id,label])=><button key={id} type="button"
-      className={objective===id?styles.optionActive:styles.option}
-      aria-pressed={objective===id} onClick={()=>{setObjective(id);setBooking(id==="bookings");}}>{label}</button>)}
-   </div>
-   <div className={styles.checks}>
-    {products.length?<label><input type="checkbox" checked={inventory}
-     onChange={e=>setInventory(e.target.checked)}/> Mostrar catálogo de productos</label>:null}
-    <label><input type="checkbox" checked={booking} onChange={e=>setBooking(e.target.checked)}/>
-     Mostrar solicitud de citas (no reserva automática)</label>
-    <label><input type="checkbox" checked={chat} onChange={e=>setChat(e.target.checked)}/>
-     Añadir botón de chat (bandeja VMV)</label>
-    <label><input type="checkbox" checked={inquiries} onChange={e=>setInquiries(e.target.checked)}/>
-     Permitir consultas desde la web</label>
-   </div>
+  {!loading&&owner&&stage==="products"&&catalogChoice==="yes"?<div className={styles.panel}>
+   <p className={styles.note}>Todos tus productos están aquí. Edítalos o añade nuevos: se guardarán en el mismo Inventario de AI Agents, no en una lista paralela.</p>
+   <AgentWebCatalogEditor workspaceId={workspaceId} onChange={setInventoryItems}/>
+   <p className={styles.note}>Tu web mostrará los productos activos y aprobados. Los no aprobados seguirán en Inventario, pero no serán públicos.</p>
   </div>:null}
   {!loading&&owner&&stage==="contact"?<div className={styles.panel}>
-   <p className={styles.note}>Completé lo que ya existe en VMV; puedes corregirlo.</p>
-   <label className={styles.field}>Teléfono comercial<input type="tel" maxLength={36}
-    value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Opcional"/></label>
-   <label className={styles.field}>Correo comercial<input type="email" maxLength={180}
-    value={email} onChange={e=>setEmail(e.target.value)} placeholder="contacto@tunegocio.com"/></label>
-   <label className={styles.field}>Ciudad y estado<input maxLength={180}
-    value={city} onChange={e=>setCity(e.target.value)}/></label>
-   <label className={styles.field}>Descripción de tu negocio<textarea rows={3} maxLength={500}
-    value={about} onChange={e=>setAbout(e.target.value)}
-    placeholder="Cuéntanos qué hace especial a tu negocio"/></label>
-   <p className={styles.note}>Nunca publicaremos tu dirección privada automáticamente.</p>
+   <p className={styles.note}>Tu agente ya conoce el teléfono y otros datos del negocio. Solo te preguntará lo que falta.</p>
+   {(!email.trim()||returnToReview)?<label className={styles.field}>Correo comercial
+    <input type="email" maxLength={180} value={email} placeholder="ventas@tunegocio.com"
+     onChange={e=>{setEmail(e.target.value);setSkipEmail(false);}}/></label>:null}
+   {!email.trim()?<label className={styles.checkLine}>
+    <input type="checkbox" checked={skipEmail} onChange={e=>setSkipEmail(e.target.checked)}/>
+    Mi web no tendrá correo por ahora</label>:null}
+   {!phone.trim()||returnToReview?<label className={styles.field}>Teléfono (opcional)
+    <input type="tel" maxLength={36} value={phone} onChange={e=>setPhone(e.target.value)}/></label>:null}
+   {!city.trim()||returnToReview?<label className={styles.field}>Ciudad y estado (opcional)
+    <input maxLength={180} value={city} onChange={e=>setCity(e.target.value)}/></label>:null}
+   {returnToReview?<label className={styles.field}>Descripción del negocio
+    <textarea rows={3} maxLength={500} value={about} onChange={e=>setAbout(e.target.value)}/></label>:null}
+   <p className={styles.note}>Nunca se publicará tu domicilio privado automáticamente.</p>
   </div>:null}
-  {!loading&&owner&&stage==="design"?<div className={styles.panel}>
-   <p className={styles.note}>Elige tres colores para tu web. El agente recomendará una composición a partir de ellos.</p>
+  {!loading&&owner&&stage==="colors"?<div className={styles.panel}>
+   <p className={styles.note}>Elige tres colores para la identidad de tu nueva web. El efecto suave de colores de AI Agents no altera esta selección.</p>
    <div className={styles.swatches} role="group" aria-label="Colores de la web">
     {colors.map(([label,hex])=><button key={hex} type="button"
      className={palette.includes(hex)?styles.swatchActive:styles.swatch}
@@ -382,62 +368,55 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
      <span style={{backgroundColor:hex}}/><small>{label}</small>{palette.includes(hex)?<Check size={14}/>:null}
     </button>)}
    </div>
-   <label className={styles.field}>Tipografía
-    <select value={font} onChange={e=>setFont(e.target.value as Typeface)}>
-     <option value="modern">Moderna</option><option value="editorial">Editorial</option>
-     <option value="rounded">Redondeada</option><option value="geometric">Geométrica</option>
-    </select></label>
-   <label className={styles.field}>Fotografías
-    <select value={shape} onChange={e=>setShape(e.target.value as ImageShape)}>
-     <option value="rounded">Esquinas suaves</option><option value="square">Rectas</option>
-     <option value="pill">Orgánicas</option><option value="bordered">Con marco</option>
-    </select></label>
+   <p className={styles.note}>{palette.length}/3 colores elegidos.</p>
+  </div>:null}
+  {!loading&&owner&&stage==="typography"?<div className={styles.panel}>
+   <p className={styles.note}>Selecciona la letra que mejor represente a tu negocio. Todos los ejemplos se ven antes de continuar.</p>
+   <div className={styles.fontGrid} role="group" aria-label="Tipografías">
+    {([
+     ["modern","Moderna",'system-ui,-apple-system,"Segoe UI",sans-serif'],
+     ["editorial","Editorial",'Georgia,"Times New Roman",serif'],
+     ["rounded","Amigable",'"Trebuchet MS",system-ui,sans-serif'],
+     ["geometric","Geométrica",'"Avenir Next",Montserrat,system-ui,sans-serif'],
+     ["mono","Tecnológica",'ui-monospace,"SFMono-Regular",monospace'],
+     ["classic","Clásica",'"Palatino Linotype",Palatino,serif'],
+     ["humanist","Natural",'"Gill Sans",Calibri,system-ui,sans-serif'],
+     ["luxury","Elegante",'"Baskerville","Times New Roman",serif']
+    ] as const).map(([id,label,family])=><button key={id} type="button"
+     className={font===id?styles.fontActive:styles.fontCard} aria-pressed={font===id}
+     onClick={()=>setFont(id)}>
+     <span className={styles.fontSample} style={{fontFamily:family}}>Aa</span>
+     <strong style={{fontFamily:family}}>{label}</strong>
+     {font===id?<Check size={16}/>:null}
+    </button>)}
+   </div>
+  </div>:null}
+  {!loading&&owner&&stage==="photography"?<div className={styles.panel}>
+   <p className={styles.note}>Elige cómo se presentarán las fotografías. La vista previa muestra la diferencia de forma y composición.</p>
+   <div className={styles.photoGrid} role="group" aria-label="Estilos de fotografías">
+    {([
+     ["rounded","Suaves"],["square","Modernas"],["pill","Orgánicas"],["bordered","Editoriales"]
+    ] as const).map(([id,label])=><button type="button" key={id}
+     className={shape===id?styles.photoActive:styles.photoCard}
+     aria-pressed={shape===id} onClick={()=>setShape(id)}>
+     <span className={styles.photoDemo+" "+styles["photo_"+id]}>
+      <svg viewBox="0 0 140 95" role="img" aria-label={"Ejemplo "+label}>
+       <rect width="140" height="95" fill="#e2ebe9"/>
+       <circle cx="103" cy="23" r="11" fill="#ffd3a5"/>
+       <path d="M0 89L41 33L68 61L96 38L140 90Z" fill="#72a4a2"/>
+       <path d="M0 95L56 57L80 78L116 52L140 75V95Z" fill="#3c797b"/>
+      </svg>
+     </span>
+     <span>{label}</span>{shape===id?<Check size={16}/>:null}
+    </button>)}
+   </div>
   </div>:null}
   {!loading&&owner&&stage==="media"?<div className={styles.panel}>
-   <div className={styles.mediaRow}><strong>Foto principal</strong>
-    <BuilderImageField allowAi={false} value={cover} onChange={url=>{setCover(url);if(url)setSkipImages(false);}}/></div>
-   <div className={styles.mediaRow}><strong>Logo (opcional)</strong>
-    <BuilderImageField allowAi={false} kind="logo" value={logo} onChange={setLogo}/></div>
-   <div className={styles.mediaRow}><strong>Galería (opcional)</strong>
-    {gallery.map((url,i)=><div className={styles.gallerySlot} key={i}>
-     <BuilderImageField allowAi={false} value={url} onChange={value=>{
-      setGallery(list=>list.map((item,j)=>j===i?value:item));
-     }}/>
-     <button type="button" className={styles.option} onClick={()=>setGallery(list=>list.filter((_,j)=>j!==i))}>
-      Quitar espacio {i+1}</button>
-    </div>)}
-    {gallery.length<4?<button type="button" className={styles.option}
-     onClick={()=>setGallery(list=>[...list,""])}><ImagePlus size={16}/> Añadir foto a la galería</button>:null}
-   </div>
-   {imageAiReady?<div className={styles.aiImageBox}>
-    <p className={styles.note}>También puedes pedir una propuesta de portada con IA y aprobarla antes de usarla.</p>
-    <label className={styles.field}>Describe la imagen (opcional)
-     <textarea rows={2} maxLength={450} value={imagePrompt}
-      onChange={e=>setImagePrompt(e.target.value)} placeholder="Fotografía moderna de nuestros productos"/></label>
-    <button type="button" className={styles.option} disabled={Boolean(busy)}
-     onClick={()=>void generateImage()}>
-     {busy==="image"?<LoaderCircle size={17} className={styles.spin}/>:<WandSparkles size={17}/>}
-     {busy==="image"?"Generando…":"Generar portada con IA"}</button>
-    {imageCandidate?<div className={styles.candidate}>
-     <img src={imageCandidate} alt="Propuesta de imagen de portada"/>
-     <div className={styles.options}>
-      <button type="button" className={styles.optionActive} onClick={()=>{
-       setCover(imageCandidate);setSkipImages(false);setImageCandidate("");
-      }}><Check size={15}/> Aprobar</button>
-      <button type="button" className={styles.option} disabled={Boolean(busy)}
-       onClick={()=>void generateImage()}><RefreshCw size={15}/> Reintentar</button>
-     </div>
-    </div>:null}
-   </div>:<p className={styles.note}>Las imágenes con IA se habilitan cuando el proveedor esté disponible. Puedes subir fotos ahora.</p>}
-   <label className={styles.checkLine}><input type="checkbox" checked={skipImages}
-    onChange={e=>setSkipImages(e.target.checked)}/> Continuar sin fotos por ahora</label>
-  </div>:null}
-  {!loading&&owner&&stage==="direction"?<div className={styles.panel}>
-   <p className={styles.note}>El agente ya conoce tu negocio, tus productos y tus preferencias. Solo agrega un detalle creativo si quieres.</p>
-   <label className={styles.field}>Indicaciones para el diseño
-    <textarea rows={4} maxLength={360} value={direction}
-     onChange={e=>setDirection(e.target.value)}/></label>
-   <div className={styles.info}>Los textos, secciones y SEO serán generados con tus datos verificables, sin inventar promociones ni testimonios.</div>
+   <p className={styles.note}>Usa **Subir imagen** o **Generar con IA**. Después selecciona si es para el logo, la portada o la galería. Solo necesitas un logo y una portada; la galería admite hasta ocho fotos.</p>
+   <AgentWebMediaPicker business={name} category={category}
+    offer={uniqueOffers.slice(0,6).join(", ")||about}
+    aiEnabled={imageAiReady} logo={logo} cover={cover} gallery={gallery}
+    onLogo={setLogo} onCover={setCover} onGallery={setGallery}/>
   </div>:null}
   {!loading&&owner&&stage==="preview"?<div className={styles.panel}>
    {proposal&&proposalSignature===signature?<TemplateProposals input={input} generated={proposal} busy={Boolean(busy)}
