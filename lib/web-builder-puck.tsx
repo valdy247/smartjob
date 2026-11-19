@@ -12,6 +12,7 @@ import ThemeSwatches,{AccentPicker} from "@/app/web-studio/ThemeSwatches";
 import {visualBlocks,VISUAL_BLOCK_NAMES,normalizeVisualProps,visualTextStyle,type VisualBlockName} from "./web-builder-visual-blocks";
 import {compositionBlocks,COMPOSE_BLOCK_NAMES,COMPOSE_SLOTS,normalizeComposeProps,type ComposeBlockName} from "./web-builder-composition";
 import {buttonAppearance} from "./web-builder-button-appearance";
+import {accessibleAccent,onAccent} from "./web-builder-contrast";
 
 type ButtonProps={label?:string;url?:string};
 function safeLink(value:unknown):string{
@@ -246,7 +247,8 @@ export const builderConfig:Config={
     humanist:'"Gill Sans",Calibri,system-ui,sans-serif',
     luxury:'Baskerville,"Times New Roman",serif'
    };
-   const css={"--vmv-accent":/^#[0-9a-f]{6}$/i.test(accentColor||"")?accentColor:color.accent,
+   const readableAccent=accessibleAccent(accentColor||color.accent,color.accent);
+   const css={"--vmv-accent":readableAccent,"--vmv-accent-on":onAccent(readableAccent),
     "--vmv-pale":color.pale,
     "--vmv-secondary":/^#[0-9a-f]{6}$/i.test(secondaryColor||"")?secondaryColor:color.pale,
     "--vmv-tertiary":/^#[0-9a-f]{6}$/i.test(tertiaryColor||"")?tertiaryColor:color.accent,
