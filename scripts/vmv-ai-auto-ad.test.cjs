@@ -29,7 +29,7 @@ test("Agent creates only a validated draft; no spend or publication",()=>{
  assert.match(wizard,/operation:"draft",clientKey:sendKey/);
  assert.match(wizard,/\/api\/marketing\/ads\/meta\/campaigns/);
  assert.match(wizard,/\/vista-app\/marketing\/ads\/campaigns/);
- assert.doesNotMatch(wizard,/create_paused|confirmSpend|PUBLICAR|ads_management/);
+ assert.doesNotMatch(wizard,/confirmSpend|PUBLICAR|ads_management|operation:"activate"/);
 });
 test("The agent does not claim to generate or publish Meta ads itself",()=>{
  assert.match(wizard,/No publicamos anuncios ni activamos gastos automáticamente/);
