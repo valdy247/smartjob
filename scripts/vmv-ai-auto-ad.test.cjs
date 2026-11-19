@@ -33,3 +33,24 @@ test("The agent does not claim to generate or publish Meta ads itself",()=>{
  assert.match(wizard,/Continuar/);
  assert.match(wizard,/Generar anuncio/);
 });
+
+test("Multiple ad goals can be toggled without automatic navigation",()=>{
+ assert.match(wizard,/goals:Goal\[\]/);
+ assert.match(wizard,/toggleGoal=\(goal:Goal\)/);
+ assert.match(wizard,/current\.goals\.filter\(item=>item!==goal\)/);
+ assert.match(wizard,/answer\.goals\.includes\(id\)/);
+ assert.match(wizard,/aria-pressed={answer\.goals\.includes\(id\)}/);
+ assert.match(wizard,/step==="goal"\?answer\.goals\.length>0/);
+ assert.doesNotMatch(wizard,/update\("goal",id\);next\(\)/);
+ assert.match(wizard,/goals:answer\.goals/);
+ assert.match(bridge,/goals\?:Array<"visits"\|"messages"\|"sales">/);
+});
+test("Website decision can return to saved site after opting for another option",()=>{
+ assert.match(wizard,/siteChoice==="saved"/);
+ assert.match(wizard,/setSiteChoice\(hasSite\?"saved":"custom"\)/);
+ assert.match(wizard,/setSiteChoice\("custom"\)/);
+ assert.match(wizard,/setSiteChoice\("none"\)/);
+ assert.match(wizard,/siteChoice==="saved"\?savedWebsite/);
+ assert.match(wizard,/value={customWebsite}/);
+ assert.doesNotMatch(wizard,/update\("website",""\)/);
+});
