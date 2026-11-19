@@ -1,0 +1,10 @@
+.root{display:grid;gap:12px;border-radius:14px;padding:15px;background:#faf7ff;border:1px solid #e8d7f6;color:#4a305d}
+.root>strong{font-size:14px}.root p{font-size:12px;margin:0;line-height:1.5}
+.fields{display:grid;gap:10px}.fields label{display:grid;gap:6px;font-size:12px;font-weight:650}
+.fields input{border:1px solid #e0d3ef;padding:10px;border-radius:10px;background:#fff;color:#382a48}
+.check{display:flex;gap:9px;align-items:flex-start;font-size:12px;line-height:1.5;font-weight:650}
+.check input{width:18px;height:18px;flex:none;accent-color:#7448ba}
+.activate{display:flex;justify-content:center;gap:8px;align-items:center;border:0;border-radius:12px;padding:12px;background:#7845b6;color:#fff;font-weight:800;cursor:pointer}
+.activate:disabled{opacity:.6}.root small{font-size:11px;line-height:1.6;color:#806f8b}
+.missing{color:#8e5e20}.error{color:#a42a40;font-weight:700}
+.ready{display:flex;gap:10px;color:#227452;border-radius:12px;background:#eefaf2;border:1px solid #cfead6;padding:12px;font-size:12px}
