@@ -139,6 +139,9 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
  const next=()=>{
   if(!valid||busy||(step==="line"&&!line&&lineChoice==="current"))return;
   setError("");
+  if(returnReview&&step==="line"&&lineChoice!=="current"){
+   setReturnReview(false);setStep("lineRequest");return;
+  }
   if(returnReview){setReturnReview(false);setStep("review");return;}
   setStep(steps[Math.min(index+1,steps.length-1)]);
  };
@@ -165,7 +168,7 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
   source:"schedule"|"translation_schedule")=>
   setPolicy(p=>({...p,[source]:{...p[source],[d]:{...p[source][d],[k]:value}}}));
  const save=async()=>{
-  if(busy||!owner||!line||!valid||saved)return;
+  if(busy||!owner||!line||lineChoice!=="current"||!valid||saved)return;
   if(!window.confirm("¿Guardar las reglas para tu número "+line.maskedNumber+
    "? Los cambios podrían afectar a las próximas llamadas; no se compra un número ni se modifica la ruta Twilio."))return;
   setBusy("save");setError("");
@@ -250,7 +253,7 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
   </div>:null}
   {!loading&&step==="lineRequest"&&owner&&lineChoice!=="current"?<div className={styles.panel}>
    <SmartCallLineRequest businessId={business.id} choice={lineChoice}
-    onReturn={()=>{setLineChoice("current");setStep("line");}}
+    onReturn={()=>{setLineChoice("current");setReturnReview(false);setStep("line");}}
     onClose={onClose}/>
   </div>:null}
   {!loading&&step==="services"&&owner?<div className={styles.panel}>
