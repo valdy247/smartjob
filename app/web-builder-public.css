@@ -13,7 +13,7 @@
 .vmv-site-kicker{color:var(--vmv-accent);font-weight:900;letter-spacing:.16em;font-size:11px}
 .vmv-site-hero h1{font-size:clamp(42px,7.8vw,110px);line-height:.96;margin:4px 0;max-width:1000px;font-weight:900}
 .vmv-site-hero p{font-size:clamp(15px,2vw,21px);max-width:690px;line-height:1.6;margin:0}
-.vmv-site-button{display:inline-flex;align-items:center;justify-content:center;gap:22px;padding:16px 23px;background:var(--vmv-accent);color:white!important;border-radius:99px;font-size:13px;font-weight:850;margin-top:16px}
+.vmv-site-button{display:inline-flex;align-items:center;justify-content:center;gap:22px;padding:16px 23px;background:var(--vmv-accent);color:var(--vmv-accent-on,#fff)!important;border-radius:99px;font-size:13px;font-weight:850;margin-top:16px}
 .vmv-site-button:focus-visible,.vmv-site a:focus-visible{outline:3px solid var(--vmv-accent);outline-offset:3px}
 .vmv-site-section{padding:clamp(53px,7vw,104px) clamp(23px,8vw,120px);max-width:1440px;margin:0 auto}
 .vmv-site-section h2{font-size:clamp(29px,5vw,66px);line-height:1.05;margin:0 0 27px;font-weight:870}
@@ -866,3 +866,7 @@
  position:relative;
  z-index:2;
 }
+
+/* Accessible contrast for user-defined palettes; never white text on a light CTA. */
+.vmv-site-inquiry .ws-inquiry-submit{color:var(--vmv-accent-on,#fff)!important}
+.vmv-site .vmv-site-button[data-button-style=solid]{color:var(--vmv-accent-on,#fff)!important}
