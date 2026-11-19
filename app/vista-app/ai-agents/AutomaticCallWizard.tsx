@@ -3,13 +3,15 @@ import {useEffect,useState} from "react";
 import {ArrowLeft,ArrowRight,Bot,Check,LoaderCircle,Pencil,PhoneCall,ShieldCheck,Sparkles} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {loadPhoneSelection,selectPhoneAgent,type PersistedAgent,type PhoneSelection} from "./agentStore";
+import SmartCallMenuEditor from "./SmartCallMenuEditor";
+import SmartCallAgentSetup from "./SmartCallAgentSetup";
 import {checkCallPolicy,days,initialCallPolicy,zoneOptions,type CallPolicy,type DayName} from "@/lib/vmv-ai-agents/call-policy";
 import type {CentralBusiness} from "./centralBusiness";
 import theme from "./AgentServiceFlow.module.css";
 import styles from "./AutomaticWebWizard.module.css";
 import extra from "./AutomaticCallWizard.module.css";
 
-type Step="business"|"line"|"services"|"agent"|"translation"|"hours"|"priority"|"voice"|"test"|"review";
+type Step="business"|"line"|"services"|"agent"|"translation"|"hours"|"priority"|"voice"|"menu"|"test"|"review";
 type Voice="default"|"bright"|"calm";
 type Preferences={voice_customer:Voice;voice_owner:Voice;greeting_customer:string;greeting_owner:string};
 const defaults:Preferences={voice_customer:"default",voice_owner:"default",greeting_customer:"",greeting_owner:""};
@@ -21,7 +23,8 @@ const labels:Record<Step,string>={
  translation:"¿Quieres activar la traducción?",
  hours:"¿En qué horarios atenderemos?",
  priority:"¿Qué hacemos cuando entran llamadas?",
- voice:"¿Qué voz y saludo usaremos?",
+ voice:"¿Qué voz escucharán tus clientes?",
+ menu:"Personalicemos el saludo y el menú telefónico",
  test:"Probemos la configuración antes de guardarla",
  review:"Revisa las reglas antes de guardarlas"
 };
@@ -40,9 +43,10 @@ async function callApi(method:"GET"|"POST"|"PUT",payload?:object){
  if(!r.ok)throw Error(String(data.error||"No se pudo consultar tu línea."));
  return data;
 }
-export default function AutomaticCallWizard({business,agent,workspaceId,onClose,onAdvanced,businesses,onChooseBusiness}:{
+export default function AutomaticCallWizard({business,agent,workspaceId,onClose,onAdvanced,businesses,onChooseBusiness,onAgentUpdated}:{
  business:CentralBusiness;agent:PersistedAgent;workspaceId:string;onClose:()=>void;onAdvanced:()=>void;
  businesses:CentralBusiness[];onChooseBusiness:(id:string)=>void;
+ onAgentUpdated?:(agent:PersistedAgent)=>void;
 }){
  const [step,setStep]=useState<Step>("business"),[returnReview,setReturnReview]=useState(false);
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(""),[error,setError]=useState("");
@@ -52,6 +56,7 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
  const [agentReady,setAgentReady]=useState(false),[businessHours,setBusinessHours]=useState(false);
  const [forwardReady,setForwardReady]=useState(false);
  const [bindAgent,setBindAgent]=useState(false);
+ const [workingAgent,setWorkingAgent]=useState<PersistedAgent>(agent);
  const [prefs,setPrefs]=useState<Preferences>(defaults),[originalPrefs,setOriginalPrefs]=useState<Preferences>(defaults);
  const [prefEditable,setPrefEditable]=useState(false),[preferencesAvailable,setPreferencesAvailable]=useState(false);
  const [saved,setSaved]=useState(false);
@@ -67,10 +72,12 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
   policy.translation_enabled&&policy.translation_mode==="schedule";
  const steps:Step[]=["business","line","services",
   ...(policy.agent_enabled?["agent" as Step]:[]),
-  "translation",...(schedule?["hours" as Step]:[]),"priority","voice","test","review"];
+  "translation",...(schedule?["hours" as Step]:[]),"priority","voice","menu","test","review"];
  const index=Math.max(0,steps.indexOf(step));
  const valid=step==="services"?(policy.agent_enabled||policy.translation_enabled):
   step==="line"?Boolean(line?.routeId):
+  step==="agent"?(!policy.agent_enabled||bindAgent&&workingAgent.status==="active"):
+  step==="menu"?(()=>{try{checkCallPolicy(policy);return true;}catch{return false;}})():
   step==="voice"?validGreeting(prefs.greeting_customer)&&validGreeting(prefs.greeting_owner):
   true;
  useEffect(()=>{
@@ -163,13 +170,13 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
    const db=getSupabase();if(!db)throw Error("No hay conexión.");
    const {data:{user}}=await db.auth.getUser();
    if(!user||user.id!==owner)throw Error("La sesión cambió. Inicia sesión nuevamente.");
-   if(policy.agent_enabled&&bindAgent&&line.agentId!==agent.id){
-    if(agent.status!=="active")throw Error("Primero activa Mi agente antes de asignarlo al número.");
-    await selectPhoneAgent(line.routeId,agent);
-    setLine(p=>p?{...p,agentId:agent.id}:p);
+   if(policy.agent_enabled&&bindAgent&&line.agentId!==workingAgent.id){
+    if(workingAgent.status!=="active")throw Error("Activa Mi agente dentro de este asistente antes de asignarlo al número.");
+    await selectPhoneAgent(line.routeId,workingAgent);
+    setLine(p=>p?{...p,agentId:workingAgent.id}:p);
     selectionChanged=true;
    }
-   if(policy.agent_enabled&&(!bindAgent||(!agentReady&&!selectionChanged&&line.agentId!==agent.id))){
+   if(policy.agent_enabled&&(!bindAgent||(!agentReady&&!selectionChanged&&line.agentId!==workingAgent.id))){
     throw Error("Para habilitar llamadas con IA, autoriza asignar Mi agente al número y verifica que esté activo.");
    }
    const result=await callApi("PUT",{policy:checkCallPolicy(policy),version});
@@ -376,17 +383,18 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
   {!loading&&step==="review"&&owner?<div className={styles.panel}>
    {saved?<div className={extra.success}><Check size={24}/>
     <strong>Configuración guardada</strong>
-    <p>Las nuevas reglas se aplicarán a las próximas llamadas. La ruta telefónica de Twilio no se modificó.</p>
+    <p>Reglas guardadas. La activación de enrutamiento real requiere el piloto verificado de Twilio. Tu ruta de proveedor no se modificó.</p>
     <button type="button" className={styles.option} onClick={onClose}>Volver a AI Agents</button></div>:
     <div className={styles.review}>
      {card("Negocio",business.name,"business")}
      {card("Número",line?.maskedNumber||"Pendiente","line")}
      {card("Atención",policy.agent_enabled?(policy.agent_mode==="after_no_answer"?"Humano primero, luego IA":"Mi agente IA"):"Traducción sin IA","services")}
      {card("Traducción",policy.translation_enabled?policy.translation_mode==="always"?"Activada":"Por horario":"Desactivada","translation")}
-     {policy.agent_enabled?card("Mi agente",bindAgent?agent.name:"Sin asignar","agent"):null}
+     {policy.agent_enabled?card("Mi agente",bindAgent?workingAgent.name:"Sin asignar","agent"):null}
      {card("Horarios",schedule?(policy.use_business_hours?"Horario del negocio":"Horario personalizado"):"Siempre","hours")}
      {card("Prioridad",policy.coexistence+" · "+policy.outside_action,"priority")}
-     {card("Voz",prefEditable?prefs.voice_customer+" · "+prefs.voice_owner:"Sin cambios","voice")}
+     {card("Voces ElevenLabs",policy.menu_config.voice_es+" · "+policy.menu_config.voice_en,"voice")}
+      {card("Menú telefónico",policy.menu_config.enabled?"Activado · teclas personalizadas":"Sin menú","menu")}
      {card("Prueba",testResult||"No realizada","test")}
     </div>}
    {!saved?<p className={styles.note}>Debes aprobar cualquier cambio de selección y reglas. No compraremos números ni activaremos gastos adicionales automáticamente.</p>:null}
