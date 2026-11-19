@@ -63,3 +63,26 @@
 @media(max-width:400px){.swatches{grid-template-columns:repeat(4,minmax(0,1fr))}.option,.optionActive{padding:10px 8px}}
 
 .gallerySlot{display:grid;gap:8px;border:1px solid #eee5f5;background:#fff;border-radius:15px;padding:12px}
+
+/* Large tactile choice cards: each font is actually supported by the builder. */
+.fontGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.fontCard,.fontActive{display:grid;place-items:center;align-content:center;gap:7px;
+ min-height:112px;border:1px solid #e4d7f1;border-radius:17px;background:#fff;color:#3e294e;
+ position:relative;cursor:pointer;padding:14px;text-align:center}
+.fontActive{background:#f5edff;border-color:#9e6fe8;box-shadow:0 0 0 2px #9c6be61e}
+.fontSample{font-size:34px;letter-spacing:-1px;line-height:1.1;color:#53367a}
+.fontCard strong,.fontActive strong{font-size:12px}
+.fontActive svg{position:absolute;right:9px;top:9px;color:#7850c1}
+.photoGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.photoCard,.photoActive{display:grid;gap:11px;place-items:center;position:relative;
+ min-height:148px;border:1px solid #e5d8ee;border-radius:16px;background:#fff;color:#62467c;
+ font-size:12px;font-weight:850;cursor:pointer;padding:12px}
+.photoActive{background:#f4eeff;border-color:#a176e7;box-shadow:0 0 0 2px #ac80e51c}
+.photoDemo{width:100%;max-width:150px;height:95px;display:block;overflow:hidden;background:#e2ebe9}
+.photoDemo svg{width:100%;height:100%;display:block}
+.photo_rounded{border-radius:17px}
+.photo_square{border-radius:0}
+.photo_pill{border-radius:60px}
+.photo_bordered{padding:6px;border:4px solid #c9acdf;border-radius:3px;background:#fff}
+.photoActive>svg{position:absolute;right:9px;top:9px;color:#8053bf}
+@media(max-width:430px){.fontGrid,.photoGrid{gap:9px}.fontCard,.fontActive{min-height:105px}}
