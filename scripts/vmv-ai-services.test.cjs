@@ -104,6 +104,9 @@ test("Smart Call bilingual menu validation, safe voice allowlist, and isolated p
  assert.equal(baseline.menu_config.english_digit,"2");
  assert.equal(baseline.menu_config.agent_digit,"3");
  assert.equal(policy.decideCall(baseline,{day:"mon",minutes:600}).action,"menu");
+ const direct=policy.checkCallPolicy({...baseline,agent_enabled:false,translation_enabled:false});
+ assert.equal(policy.decideCall(direct,{day:"mon",minutes:600}).action,"ring_owner");
+ assert.throws(()=>policy.checkCallPolicy({...direct,menu_config:{...direct.menu_config,enabled:false}}),/menú/);
  assert.ok(voices.PHONE_VOICE_CATALOG.filter(v=>v.lang==="es").length>=2);
  assert.ok(voices.PHONE_VOICE_CATALOG.filter(v=>v.lang==="en").length>=2);
  assert.equal(voices.sayElevenVoice("es_maria","en"),"");
