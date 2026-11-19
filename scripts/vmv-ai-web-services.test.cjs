@@ -10,6 +10,10 @@ const editor=read("app/web-studio/WebBuilderWorkspace.tsx");
 const entry=read("app/web-studio/page.tsx");
 const animation=read("app/vista-app/ai-agents/AgentServiceFlow.module.css");
 const ads=read("app/vista-app/ai-agents/AutomaticAdWizard.tsx");
+const catalog=read("app/vista-app/ai-agents/AgentWebCatalogEditor.tsx");
+const media=read("app/vista-app/ai-agents/AgentWebMediaPicker.tsx");
+const imageApi=read("app/api/web-services/generate-image/route.ts");
+const builder=read("lib/web-builder-puck.tsx");
 test("Web Services reuses the existing agent, owner and central business",()=>{
  assert.match(agents,/screen==="web"&&principal&&selectedBusiness&&selectedWorkspace/);
  assert.match(agents,/agent={principal}/);
@@ -19,13 +23,18 @@ test("Web Services reuses the existing agent, owner and central business",()=>{
  assert.match(wizard,/vmv_marketing_businesses/);
  assert.match(wizard,/\.eq\("owner_id",user\.id\)/);
 });
-test("Approved inventory and owner-written services feed conditional intake",()=>{
- assert.match(wizard,/vmv_ai_catalog_items/);
+test("Catalog connection is explicit and inventory edits write to canonical owner catalog",()=>{
+ assert.match(wizard,/catalogChoice==="yes"/);
+ assert.match(wizard,/catalogChoice==="no"/);
+ assert.match(wizard,/setCatalogChoice\("yes"\)/);
+ assert.match(wizard,/setCatalogChoice\("no"\)/);
+ assert.match(wizard,/inventory_connection_enabled:catalogChoice==="yes"/);
+ assert.match(wizard,/inventory_business_id:catalogChoice==="yes"\?workspaceId:null/);
  assert.match(wizard,/vmv_ai_booking_services/);
- assert.match(wizard,/\.eq\("active",true\)\.eq\("approved",true\)/);
- assert.match(wizard,/selectedIds\.includes\(x\.id\)/);
- assert.match(wizard,/products\.length/);
- assert.match(wizard,/inventory&&products\.length>0/);
+ assert.match(catalog,/listCatalog\(workspaceId\)/);
+ assert.match(catalog,/saveCatalogItem\(form,editing,workspaceId\)/);
+ assert.match(catalog,/onChange\(catalog\)/);
+ assert.match(catalog,/item\.approved&&item\.active/);
  assert.match(wizard,/inquiries_enabled:inquiries/);
 });
 test("Agent generates real Puck proposals and only creates unpublished owner-scoped drafts",()=>{
@@ -38,16 +47,41 @@ test("Agent generates real Puck proposals and only creates unpublished owner-sco
  assert.match(wizard,/Guardar borrador y abrir Web Studio/);
  assert.doesNotMatch(wizard,/smartjob_builder_publications|operation:"activate"|publish\(/);
 });
-test("Edits on review return directly and old websites are not overwritten",()=>{
+test("Review is before generation, edits return directly and current websites stay intact",()=>{
  assert.match(wizard,/className={styles\.edit}/);
  assert.match(wizard,/const edit=\(target:Stage\)/);
  assert.match(wizard,/setReturnToReview\(true\)/);
  assert.match(wizard,/if\(returnToReview\)\{setReturnToReview\(false\);go\("review"\);return;\}/);
  assert.match(wizard,/no se modificarán ni se publicará nada/);
+ assert.match(wizard,/\["business","project","catalog"/);
+ assert.match(wizard,/"media","review","preview"/);
+ assert.match(wizard,/onClick=\{\(\)=>void generate\(\)\}/);
  assert.match(wizard,/proposalSignature!==signature/);
- assert.match(wizard,/imageCandidate/);
- assert.match(wizard,/Aprobar/);
- assert.match(wizard,/Reintentar/);
+ assert.match(wizard,/Guardar borrador y abrir Web Studio/);
+});
+test("Media modal supports upload or owner-approved AI logo/cover and up to eight gallery images",()=>{
+ assert.match(wizard,/AgentWebMediaPicker/);
+ assert.match(media,/onGallery\(\[\.\.\.gallery,safe\]\)/);
+ assert.match(media,/gallery\.length>=8/);
+ assert.match(media,/kind:target/);
+ assert.match(media,/Aprobar imagen/);
+ assert.match(media,/Reintentar/);
+ assert.match(media,/Cámara/);
+ assert.match(media,/Fotos \/ Galería/);
+ assert.match(media,/Archivos/);
+ assert.match(media,/storage\.from\(bucket\)\.upload/);
+ assert.match(imageApi,/kind==="logo"/);
+ assert.match(imageApi,/kind==="cover"/);
+});
+test("Visual stages offer eight real fonts, image-style examples, and skip present contact information",()=>{
+ assert.match(wizard,/stage==="colors"/);
+ assert.match(wizard,/stage==="typography"/);
+ assert.match(wizard,/stage==="photography"/);
+ assert.match(wizard,/needsContact=!email\.trim\(\)&&!skipEmail/);
+ assert.match(wizard,/returnToReview\?<label className=\{styles\.field\}>Teléfono/);
+ assert.match(wizard,/fontGrid/);
+ assert.match(wizard,/photoGrid/);
+ for(const key of ["mono","classic","humanist","luxury"])assert.ok(builder.includes(key));
 });
 test("New web creation routes through AI Agents; existing editor remains available",()=>{
  assert.match(services,/href="\/vista-app\/ai-agents\?service=web"/);
