@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useState} from "react";
 import {ArrowLeft,ArrowRight,Bot,Check,Globe2,Image as ImageIcon,LoaderCircle,Megaphone,Package,ShieldCheck,Sparkles} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import type {CentralBusiness} from "./centralBusiness";
@@ -22,6 +22,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
  const [owner,setOwner]=useState("");
  const [step,setStep]=useState<Step>("business");
  const [products,setProducts]=useState<Product[]>([]);
+ const [businessImageAvailable,setBusinessImageAvailable]=useState(false);
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
  const [editBusiness,setEditBusiness]=useState(false);
@@ -31,7 +32,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   businessName:business.name,website:validSite(business.website_url||"")?business.website_url||"":"",
   offer:"",productId:"",audience:"Personas interesadas en los productos o servicios del negocio",
   city:business.city||"",region:business.region||"",goal:"visits",
-  imageChoice:"business",imageProductId:"",notes:""
+  imageChoice:"upload",imageProductId:"",notes:""
  });
  const update=<K extends keyof Answer>(k:K,v:Answer[K])=>setAnswer(x=>({...x,[k]:v}));
  useEffect(()=>{let live=true;
@@ -43,12 +44,19 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
     throw Error("Selecciona un agente y un negocio de tu propia cuenta.");
    if(!live)return;
    setOwner(user.id);
-   const {data,error:itemsError}=await db.from("vmv_ai_catalog_items")
-    .select("id,name,description,price_cents,currency,stock_mode,image_path")
-    .eq("owner_id",user.id).eq("business_id",workspaceId)
-    .eq("approved",true).eq("active",true).order("updated_at",{ascending:false}).limit(50);
-   if(itemsError)throw Error("No se pudo consultar tu inventario.");
-   if(live)setProducts((data||[]) as Product[]);
+   const [catalog,profile]=await Promise.all([
+    db.from("vmv_ai_catalog_items")
+     .select("id,name,description,price_cents,currency,stock_mode,image_path")
+     .eq("owner_id",user.id).eq("business_id",workspaceId)
+     .eq("approved",true).eq("active",true).order("updated_at",{ascending:false}).limit(50),
+    db.from("vmv_marketing_businesses").select("id,logo_path,cover_path")
+     .eq("id",business.id).eq("owner_id",user.id).maybeSingle()
+   ]);
+   if(catalog.error||profile.error||!profile.data)throw Error("No se pudo consultar el contenido del negocio.");
+   if(live){
+    setProducts((catalog.data||[]) as Product[]);
+    setBusinessImageAvailable(Boolean(profile.data.logo_path||profile.data.cover_path));
+   }
   };
   void run().catch(e=>{if(live)setError(e instanceof Error?e.message:"No se pudo cargar tu negocio.");})
    .finally(()=>{if(live)setLoading(false);});
@@ -161,7 +169,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
    </div>:null}
   {!loading&&step==="image"?<div className={styles.answers}>
     <div className={styles.optionsVertical}>
-     {chip("Usar imagen del negocio",answer.imageChoice==="business",()=>update("imageChoice","business"))}
+     {businessImageAvailable?chip("Usar imagen del negocio",answer.imageChoice==="business",()=>update("imageChoice","business")):null}
      {products.some(p=>p.image_path)?chip("Imagen de un producto",answer.imageChoice==="product",()=>update("imageChoice","product")):null}
      {chip("Subir otra en Marketing",answer.imageChoice==="upload",()=>update("imageChoice","upload"))}
     </div>
