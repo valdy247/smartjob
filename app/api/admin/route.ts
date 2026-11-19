@@ -73,6 +73,27 @@ export async function GET(req:NextRequest){
   if(metrics.error||staff.error)throw Error("overview_read_failed");
   return reply({role,actorId:uid,metrics:metrics.data,staff:staff.data||[],failedCalls30d:errors.error?null:errors.count||0});
  }
+ if(view==="recent_changes"){
+  // Read-only, role-protected view of changes actually committed to the case history.
+  // It intentionally does not infer a save from local form state or unverified UI data.
+  const result=await db.from("vmv_admin_case_history")
+   .select("id,source,source_id,action,summary,visibility,created_at")
+   .order("created_at",{ascending:false}).order("id",{ascending:false}).limit(12);
+  if(result.error)throw Error("recent_changes_unavailable");
+  const events=result.data||[];
+  const caseIds=[...new Set(events.map(e=>e.source_id).filter(Boolean))];
+  const indexed=caseIds.length?await db.from("vmv_admin_case_index")
+   .select("id,source,title,status,updated_at").in("id",caseIds)
+   :{data:[],error:null};
+  if(indexed.error)throw Error("recent_changes_index_unavailable");
+  const records=new Map((indexed.data||[]).map(c=>[c.source+":"+c.id,c]));
+  return reply({events:events.map(e=>{
+   const item=records.get(e.source+":"+e.source_id);
+   return {id:e.id,source:e.source,source_id:e.source_id,action:e.action,
+    summary:e.summary,visibility:e.visibility,created_at:e.created_at,
+    title:item?.title||null,status:item?.status||null,updated_at:item?.updated_at||null};
+  })});
+ }
  if(view==="cases"){
   const page=pageNumber(q.get("page")),size=limit(q.get("size"),60,25);
   let stmt=db.from("vmv_admin_case_index")
