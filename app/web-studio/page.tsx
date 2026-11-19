@@ -12,7 +12,7 @@ const AiStandalone=dynamic(()=>import("./WebAiStandalone"),{ssr:false,loading:()
 )});
 export default function WebStudioHome(){
  const [mode,setMode]=useState<"checking"|"ai"|"templates">("checking");
- useEffect(()=>{setMode(new URLSearchParams(window.location.search).get("mode")==="ai"?"ai":"templates");},[]);
+ useEffect(()=>{if(new URLSearchParams(window.location.search).get("mode")==="ai"){window.location.replace("/vista-app/ai-agents?service=web");return;}setMode("templates");},[]);
  if(mode==="checking")return <div role="status" style={{padding:36,fontFamily:"system-ui",color:"#7555a8"}}>Abriendo Web Studio…</div>;
  return mode==="ai"?<AiStandalone/>:<Workspace/>;
 }
