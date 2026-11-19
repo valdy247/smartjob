@@ -246,12 +246,31 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
    setError(videoError[code]||"No se pudo crear el guion automáticamente. Puedes escribirlo aquí.");}
   finally{setBusy("");}
  };
+ const inspectReference=async(reference:string)=>{
+  setImageAnalysis(null);setManualSubject("");setCreativeOverride(false);
+  setScriptAutoTried(false);setPrompt("");setCaption("");setConfirmCredits(false);
+  try{
+   const visual=await api("/api/video-generator/analyze-image",{
+    imageUrl:reference,desiredScene:imageDirection.slice(0,260),offer:offer.slice(0,170)
+   });
+   if(typeof visual.subject!=="string"||!visual.subject.trim()||
+      typeof visual.groundedMotion!=="string")throw Error("visual_analysis_unavailable");
+   setImageAnalysis({
+    subject:visual.subject.slice(0,130),observations:String(visual.observations||"").slice(0,240),
+    groundedMotion:visual.groundedMotion.slice(0,450),
+    conflict:visual.conflict===true,reason:String(visual.reason||"").slice(0,220)
+   });
+  }catch{
+   setError("No pude reconocer esta imagen automáticamente. Describe qué aparece en ella para continuar. No inventaré el sujeto.");
+  }
+ };
  const uploadReference=async(file?:File)=>{
   if(!file||busy)return;
-  setBusy("upload");setError("");
+  setBusy("analyze");setError("");
   try{
-   const result=await jpgDataUrl(file);
-   setFilePreview(result);setImageCandidate("");
+   const reference=await jpgDataUrl(file);
+   setFilePreview(reference);setImageCandidate("");
+   await inspectReference(reference);
   }catch(e){setError(e instanceof Error?e.message:"No se pudo preparar la imagen.");}
   finally{setBusy("");}
  };
@@ -392,6 +411,26 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
      onChange={e=>{const file=e.target.files?.[0];if(file)void uploadReference(file);}}/></label>
    {filePreview?<div className={styles.reference}><img src={filePreview} alt="Imagen aprobada para generar el video"/>
     <div className={styles.success}><CheckCircle2 size={16}/> Imagen preparada para el video</div></div>:null}
+   {busy==="analyze"?<p className={styles.generating} role="status">
+    <LoaderCircle size={17} className={base.spin}/> Analizando el contenido real de tu imagen…</p>:null}
+   {imageAnalysis?<div className={styles.vision}>
+    <strong>El agente reconoce: {imageAnalysis.subject}</strong>
+    <p>{imageAnalysis.observations}</p>
+    {imageAnalysis.conflict?<div className={styles.conflict}>
+     <strong>La idea no coincide completamente con la imagen</strong>
+     <p>{imageAnalysis.reason||"La imagen contiene un sujeto distinto de la escena indicada."}</p>
+     <label><input type="checkbox" checked={creativeOverride}
+      onChange={e=>setCreativeOverride(e.target.checked)}/>
+      Quiero mantener esta imagen y autorizar una transformación creativa intencional</label>
+     <p>También puedes sustituir la imagen. Si no autorizas el cambio, no generaré un guion contradictorio.</p>
+    </div>:<p className={styles.success}>El guion conservará este sujeto como protagonista.</p>}
+   </div>:null}
+   {filePreview&&!imageAnalysis&&busy!=="analyze"?<label className={base.field}>
+    Qué aparece realmente en la imagen (si el análisis no estuvo disponible)
+    <textarea value={manualSubject} maxLength={260} rows={3}
+     onChange={e=>setManualSubject(e.target.value)}
+     placeholder="Ejemplo: pantera negra caminando hacia la cámara; no hay personas."/>
+   </label>:null}
    <div className={styles.imageAiBox}>
     <strong className={styles.label}>O genera tu imagen de referencia con IA</strong>
     <label className={base.field}>Indicación visual (opcional)
@@ -406,7 +445,9 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
      <img src={imageCandidate} alt="Propuesta generada por IA, pendiente de aprobación"/>
      <div className={styles.imageActions}>
       <button type="button" className={base.optionActive} onClick={()=>{
-       setFilePreview(imageCandidate);setImageCandidate("");setError("");
+       const reference=imageCandidate;setFilePreview(reference);setImageCandidate("");
+       setError("");setBusy("analyze");
+       void inspectReference(reference).finally(()=>setBusy(""));
       }} disabled={Boolean(busy)}><Check size={16}/> Aprobar imagen</button>
       <button type="button" className={base.option} disabled={Boolean(busy)}
        onClick={()=>void generateReference()}><RefreshCw size={16}/> Reintentar</button>
@@ -415,7 +456,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
      </div>
     </div>:null}
    </div>
-   {busy==="upload"?<p className={base.note} role="status"><LoaderCircle size={17} className={base.spin}/> Preparando tu imagen…</p>:null}
+
    <p className={base.note}>Una imagen de IA no se envía a Runway hasta que la apruebes y confirmes los créditos.</p>
   </div>:null}
   {!loading&&owner&&stage==="script"?<div className={base.panel}>
