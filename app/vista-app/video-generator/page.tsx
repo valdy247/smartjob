@@ -35,6 +35,8 @@ function errMessage(code:string,en:boolean){
   video_ai_limit:["Espera un momento antes de pedir otra idea.","Please wait before requesting another AI idea."],
   video_database_unavailable:["El historial no está disponible. Intenta de nuevo.","History is temporarily unavailable. Retry."],
   pilot_save_unavailable:["No se pudo guardar el piloto.","Could not save the pilot."],
+  download_expired_or_unavailable:["El enlace del video expiró o no está disponible. Prueba abrir el original.","The video link expired or is unavailable. Try opening the original."],
+  download_provider_link_unavailable:["Descarga directa no disponible para este proveedor.","Direct download is unavailable for this provider."],
   video_history_unavailable:["No se pudo cargar tu biblioteca.","Could not load your library."]
  };
  return (map[code]||["No se pudo completar la operación.","The request could not be completed."])[en?1:0];
@@ -82,6 +84,7 @@ export default function VideoGeneratorPage(){
  const [pilot,setPilot]=useState(defaultPilot);
  const [selected,setSelected]=useState<string|null>(null);
  const [costApproved,setCostApproved]=useState(false),[configured,setConfigured]=useState(false);
+ const [sourcePilot,setSourcePilot]=useState<string|null>(null),[downloading,setDownloading]=useState(false);
  const [ready,setReady]=useState(false),[busy,setBusy]=useState(""),[error,setError]=useState(""),[notice,setNotice]=useState("");
  const patch=<K extends keyof Form>(field:K,value:Form[K])=>{setForm(f=>({...f,[field]:value}));setCostApproved(false);};
  const active=(job:Job)=>["starting","PENDING","THROTTLED","RUNNING"].includes(job.status);
@@ -117,7 +120,7 @@ export default function VideoGeneratorPage(){
   setBusy("generate");setError("");setNotice("");
   try{
    const result=await api("","POST",{
-    ...form,imageUrl:form.mode==="image"?image:"",confirmCost:true,clientKey:crypto.randomUUID(),
+    ...form,pilotId:sourcePilot,imageUrl:form.mode==="image"?image:"",confirmCost:true,clientKey:crypto.randomUUID(),
     caption:form.caption.trim().slice(0,500)
    });
    if(result.job){
@@ -139,7 +142,7 @@ export default function VideoGeneratorPage(){
     prompt:usePilot?"":form.prompt,locale:en?"en":"es"
    });
    setForm(v=>({...v,prompt:r.prompt,caption:r.caption}));
-   if(usePilot){setImage("");setScreen("create");}
+   if(usePilot){setImage("");setSourcePilot(pilot.id||null);setScreen("create");}else{setSourcePilot(null);}
    setNotice(L("Guion y descripción listos.","Prompt and caption ready."));
   }catch(e){setError(e instanceof Error?e.message:"unavailable");}
   finally{setBusy("");}
@@ -166,6 +169,28 @@ export default function VideoGeneratorPage(){
   finally{setImageLoading(false);}
  };
  const selectJob=(job:Job)=>{setSelected(job.id);open("library");if(active(job))void refreshJob(job.id);};
+ const downloadJob=async(job:Job)=>{
+  if(downloading)return;
+  setDownloading(true);setError("");
+  try{
+   const db=getSupabase(),session=await db?.auth.getSession();
+   const token=session?.data.session?.access_token;
+   if(!token)throw Error("login");
+   const result=await fetch("/api/video-generator/download?id="+encodeURIComponent(job.id),{
+    cache:"no-store",headers:{Authorization:"Bearer "+token}
+   });
+   if(!result.ok){
+    const detail=await result.json().catch(()=>({error:"download_expired_or_unavailable"}));
+    throw Error(detail.error||"download_expired_or_unavailable");
+   }
+   const blob=await result.blob(),url=URL.createObjectURL(blob);
+   const anchor=document.createElement("a");anchor.href=url;
+   anchor.download="vmv-video-"+job.id.slice(0,8)+".mp4";
+   document.body.appendChild(anchor);anchor.click();anchor.remove();
+   window.setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }catch(e){setError(e instanceof Error?e.message:"download_expired_or_unavailable");}
+  finally{setDownloading(false);}
+ };
  const status=(job:Job)=>job.status==="SUCCEEDED"?L("Listo","Ready"):
   job.status==="FAILED"?L("Falló","Failed"):
   job.status==="RUNNING"?L("Generando","Generating"):
@@ -343,8 +368,11 @@ export default function VideoGeneratorPage(){
        {active(current)?<LoaderCircle size={19} className={styles.spinner}/>:current.status==="SUCCEEDED"?<CheckCircle2 size={20}/>:<X size={18}/>}</div>
       {current.output_url&&current.status==="SUCCEEDED"?<>
        <video controls playsInline preload="metadata" className={styles.video} src={current.output_url}/>
-       <a href={current.output_url} target="_blank" rel="noopener noreferrer" className={styles.primary}>
-        <Download size={17}/>{L("Abrir y descargar","Open and download")}</a>
+       <button type="button" className={styles.primary} disabled={downloading} onClick={()=>void downloadJob(current)}>
+        {downloading?<LoaderCircle size={17} className={styles.spinner}/>:<Download size={17}/>}
+        {downloading?L("Descargando…","Downloading…"):L("Descargar MP4","Download MP4")}</button>
+       <a href={current.output_url} target="_blank" rel="noopener noreferrer" className={styles.miniAction}>
+        <ArrowUpRight size={15}/>{L("Abrir original","Open original")}</a>
        <p className={styles.foot}>{L("Descarga el archivo: el enlace del proveedor puede caducar.","Save your file; provider links may expire.")}</p>
       </>:<div className={styles.videoEmpty}>
        {active(current)?<LoaderCircle size={26} className={styles.spinner}/>:<Video size={26}/>}
