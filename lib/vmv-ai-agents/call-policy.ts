@@ -68,8 +68,8 @@ export function checkCallPolicy(input:unknown):CallPolicy{
   if(typeof value!=="string"||!choices.includes(value))throw Error("Opción inválida: "+name);
   return value;
  };
- if(typeof p.agent_enabled!=="boolean"||typeof p.translation_enabled!=="boolean"||
-   (!p.agent_enabled&&!p.translation_enabled))throw Error("Deja al menos una función de llamadas habilitada.");
+ if(typeof p.agent_enabled!=="boolean"||typeof p.translation_enabled!=="boolean")
+  throw Error("Selecciona qué funciones atenderán llamadas.");
  if(typeof p.use_business_hours!=="boolean")throw Error("Elige cómo usar los horarios.");
  if(!validWeek(p.schedule))throw Error("Completa los días y las horas del agente.");
  // Older saved policies and mobile clients originally had one shared schedule.
@@ -102,6 +102,8 @@ export function checkCallPolicy(input:unknown):CallPolicy{
    menu[key]=v;
   }
  }
+ if(!p.agent_enabled&&!p.translation_enabled&&!menu.enabled)
+  throw Error("Para atención humana sin IA ni traducción, activa el menú directo.");
  return {
   menu_config:menu,
   agent_enabled:p.agent_enabled,translation_enabled:p.translation_enabled,
@@ -174,6 +176,7 @@ export function decideCall(policy:CallPolicy,at:{day:DayName;minutes:number},
   reason=action==="ring_owner"?"owner_first":"agent";
  }else if(translationAvailable){
   action="translation";reason="translation";
- }else{action="message";reason=agentInside||translationInside?"disabled":"outside_hours";}
+ }else if(!policy.agent_enabled&&!policy.translation_enabled){action="ring_owner";reason="owner_first";}
+ else{action="message";reason=agentInside||translationInside?"disabled":"outside_hours";}
  return {action,reason,agentAvailable,translationAvailable};
 }
