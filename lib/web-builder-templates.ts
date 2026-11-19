@@ -7,7 +7,7 @@ export type SiteObjective="calls"|"quotes"|"bookings"|"orders";
 export type SiteOffering="products"|"services"|"both";
 export type SiteProduct={id:string;title:string;description:string;image:string;price:string};
 export type SiteDesignPreferences={
- colors:string[];font:"modern"|"editorial"|"rounded"|"geometric";
+ colors:string[];font:"modern"|"editorial"|"rounded"|"geometric"|"mono"|"classic"|"humanist"|"luxury";
  imageStyle:"rounded"|"square"|"pill"|"bordered";
  galleryColumns?:"1"|"2"|"3"|"4";
  features:{inventory:boolean;booking:boolean;chat:boolean};
