@@ -90,6 +90,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
  const [duration,setDuration]=useState<5|10>(5);
  const [mode,setMode]=useState<Mode>("text");
  const [filePreview,setFilePreview]=useState("");
+ const [pilotId,setPilotId]=useState<string|null>(null);
  const [imageCandidate,setImageCandidate]=useState("");
  const [imageDirection,setImageDirection]=useState("");
  const [prompt,setPrompt]=useState("");
@@ -107,7 +108,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
  const goal=targets.find(x=>x[0]===purpose)?.[1]||"Presentar el negocio";
  const valid=stage==="business"?name.trim().length>=2:
   stage==="audience"?audience.trim().length>=3:
-  stage==="reference"?Boolean(filePreview):
+  stage==="reference"?Boolean(filePreview)&&!imageCandidate:
   stage==="script"?prompt.trim().length>=3&&prompt.length<=1000:
   true;
  useEffect(()=>{
@@ -159,6 +160,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
     const pilotId=new URLSearchParams(window.location.search).get("pilot");
     const activePilot=status.pilots?.find(p=>p.id===pilotId);
     if(activePilot){
+     setPilotId(activePilot.id);
      setAudience(activePilot.audience.slice(0,180)||"Clientes interesados en "+business.name);
      setExtra(activePilot.niche.slice(0,160));
      if(["realistic","cinematic","animated","product"].includes(activePilot.style))
@@ -196,7 +198,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
   if(index===0){onClose();return;}
   move(steps[index-1]);
  };
- const edit=(target:Stage)=>{setEditing(true);move(target);};
+ const edit=(target:Stage)=>{setConfirmCredits(false);setEditing(true);move(target);};
  const generateScript=async()=>{
   if(busy)return;
   setBusy("script");setError("");
@@ -256,7 +258,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
  };
  const submit=async()=>{
   if(!configured||!confirmCredits||busy||prompt.trim().length<3||
-     (mode==="image"&&!filePreview)||!owner)return;
+     (mode==="image"&&(!filePreview||Boolean(imageCandidate)))||!owner)return;
   if(!window.confirm("¿Autorizas generar este video de "+duration+
    " segundos con "+(model==="kling"?"Kling":"Runway")+
    "? El proveedor puede consumir créditos. No se publicará en redes."))return;
@@ -264,7 +266,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
   try{
    const result=await api("/api/video-generator",{
     prompt:prompt.trim(),caption:caption.trim(),mode,model,ratio,duration,
-    imageUrl:mode==="image"?filePreview:"",pilotId:null,confirmCost:true,clientKey
+    imageUrl:mode==="image"?filePreview:"",pilotId,confirmCost:true,clientKey
    });
    if(!result.job?.id||!String(result.job.id).match(/^[0-9a-f-]{36}$/i))
     throw Error("No se pudo confirmar el trabajo.");
@@ -387,6 +389,8 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
       }} disabled={Boolean(busy)}><Check size={16}/> Aprobar imagen</button>
       <button type="button" className={base.option} disabled={Boolean(busy)}
        onClick={()=>void generateReference()}><RefreshCw size={16}/> Reintentar</button>
+      <button type="button" className={base.option} disabled={Boolean(busy)}
+       onClick={()=>setImageCandidate("")}>Descartar propuesta</button>
      </div>
     </div>:null}
    </div>
@@ -433,7 +437,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
   {error?<div role="alert" className={base.error}>{error}</div>:null}
   {!loading&&owner?<div className={base.footer}>
    {stage==="review"?<button type="button" className={base.primary+" "+theme.agentButton}
-    disabled={!configured||!confirmCredits||!prompt.trim()||Boolean(busy)||(mode==="image"&&!filePreview)}
+    disabled={!configured||!confirmCredits||!prompt.trim()||Boolean(busy)||(mode==="image"&&(!filePreview||Boolean(imageCandidate)))}
     onClick={()=>void submit()}>
     {busy==="submit"?<LoaderCircle size={18} className={base.spin}/>:<Play size={18}/>}
     {busy==="submit"?"Iniciando generación…":"Confirmar y generar video"} <ArrowRight size={17}/></button>:
