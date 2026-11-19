@@ -2,7 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {billingAdmin} from "@/lib/vmv-billing";
 import {adsMetaReady,activeMeta,authorizedAccounts,authorizedPages,metaGet,metaId,metaPost,
- noCache,uuid,validDestination,inspectMetaPayment} from "@/lib/vmv-marketing-ads-meta";
+ noCache,uuid,validDestination,inspectMetaPayment,MetaApiError} from "@/lib/vmv-marketing-ads-meta";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -213,12 +213,16 @@ export async function POST(req:NextRequest){
    return NextResponse.json({status:"paused",campaignId:record.id,
     metaCampaignId:campaign.id,metaAdId:ad.id,adSpendActive:false},{headers:noCache});
   }catch(error){
-   const metaCode=error instanceof Error&&/^meta_api_\d+$/.test(error.message)?
-    error.message:"provider_or_save_error";
+   const metaCode=error instanceof MetaApiError?error.code:"provider_or_save_error";
+   const subcode=error instanceof MetaApiError&&Number.isInteger(error.subcode)&&Number(error.subcode)>0?
+    ":sub_"+String(error.subcode):"";
    await db.from("vmv_marketing_ads_campaigns").update({
-    status:"failed",error_code:step+":"+metaCode,updated_at:new Date().toISOString()
+    status:"failed",error_code:step+":"+metaCode+subcode,updated_at:new Date().toISOString()
    }).eq("id",record.id).eq("owner_id",owner);
-   return fail("provider_creation_incomplete_review_"+step,502);
+   // Keep the stage and reference for customer support. All objects created here are PAUSED.
+   return NextResponse.json({error:"provider_creation_incomplete_review_"+step,
+    campaignId:record.id,stage:step,createdInMeta:true,adSpendActive:false},
+    {status:502,headers:noCache});
   }
  }
  if(!metaId(record.provider_campaign_id)||!metaId(record.provider_adset_id)||!metaId(record.provider_ad_id))

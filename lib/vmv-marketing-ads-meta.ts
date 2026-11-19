@@ -60,7 +60,7 @@ export async function activeMeta(owner:string):Promise<{connection:MetaConnectio
  return {connection:connection as MetaConnection,token:decryptMetaToken(secret.encrypted_access_token)};
 }
 export class MetaApiError extends Error{
- constructor(public code:string,public httpStatus:number){super(code);}
+ constructor(public code:string,public httpStatus:number,public subcode:number|null=null){super(code);}
 }
 type Graph=Record<string,any>;
 const graphBase="https://graph.facebook.com/"+META_GRAPH_VERSION+"/";
@@ -70,7 +70,8 @@ async function graphResponse(url:URL,opts:RequestInit):Promise<Graph>{
  if(!response.ok||body?.error){
   const raw=body?.error?.code;
   const safeCode=Number.isInteger(raw)?String(raw):"unknown";
-  throw new MetaApiError("meta_api_"+safeCode,response.status);
+  const subcode=Number.isInteger(body?.error?.error_subcode)?Number(body.error.error_subcode):null;
+  throw new MetaApiError("meta_api_"+safeCode,response.status,subcode);
  }
  return body||{};
 }
@@ -87,25 +88,26 @@ export async function metaPost(path:string,token:string,fields:Record<string,str
  },body:new URLSearchParams(fields)});
 }
 /** A billing signal, not a guarantee of payment. Never disclose payment method details. */
-export type MetaPaymentCheck={state:"ready"|"missing"|"unverified"|"inactive";checkedAt:string};
+export type MetaPaymentCheck={state:"ready"|"missing"|"unverified"|"inactive";checkedAt:string;
+ reason:"funding_detected"|"funding_absent"|"funding_unavailable"|"provider_unavailable"|"account_inactive"};
 export async function inspectMetaPayment(token:string,accountId:string):Promise<MetaPaymentCheck>{
  const checkedAt=new Date().toISOString();
- if(!/^act_\d{5,30}$/.test(accountId))return {state:"unverified",checkedAt};
+ if(!/^act_\d{5,30}$/.test(accountId))return {state:"unverified",checkedAt,reason:"funding_unavailable"};
  try{
   const account=await metaGet(accountId,token,{fields:"id,account_status,currency,funding_source"});
   if(account.id!==accountId||Number(account.account_status)!==1||account.currency!=="USD")
-   return {state:"inactive",checkedAt};
+   return {state:"inactive",checkedAt,reason:"account_inactive"};
   if(!Object.prototype.hasOwnProperty.call(account,"funding_source"))
-   return {state:"unverified",checkedAt};
+   return {state:"unverified",checkedAt,reason:"funding_unavailable"};
   const funding=account.funding_source;
   if((typeof funding==="string"&&/^[1-9]\d*$/.test(funding))||
     (typeof funding==="number"&&Number.isSafeInteger(funding)&&funding>0))
-   return {state:"ready",checkedAt};
+   return {state:"ready",checkedAt,reason:"funding_detected"};
   if(funding===null||funding===""||funding===0||funding==="0")
-   return {state:"missing",checkedAt};
-  return {state:"unverified",checkedAt};
+   return {state:"missing",checkedAt,reason:"funding_absent"};
+  return {state:"unverified",checkedAt,reason:"funding_unavailable"};
  }catch{
-  return {state:"unverified",checkedAt};
+  return {state:"unverified",checkedAt,reason:"provider_unavailable"};
  }
 }
 export async function authorizedAccounts(token:string){

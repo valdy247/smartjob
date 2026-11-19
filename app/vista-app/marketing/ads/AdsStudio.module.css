@@ -384,3 +384,14 @@
 .pilotNotice{display:flex;align-items:flex-start;gap:9px;font-size:11px;line-height:1.65;color:#866e79;background:#f8f1f7;border:1px solid #ece0e9;border-radius:12px;padding:12px;margin:0}
 .pilotNotice svg{flex-shrink:0}
 @media(max-width:430px){.finalActions{grid-template-columns:1fr}}
+
+
+/* Human-readable ad diagnostics. Technical detail remains available for support. */
+.adIssue{display:grid;gap:9px;border:1px solid #ead9d9;background:#fffcfb;border-radius:15px;padding:14px 15px;color:#6c4850}
+.adIssueTitle{display:flex;align-items:flex-start;gap:9px;color:#9b5264}
+.adIssueTitle strong,.adIssue>strong{font-size:12px;line-height:1.5}
+.adIssueTitle svg{flex-shrink:0}
+.adIssue p{font-size:11px;line-height:1.65;margin:0;color:#826775}
+.adIssue small{font-size:10px;color:#927a86;overflow-wrap:anywhere}
+.adIssue .paymentActions{margin-top:3px;align-items:center}
+.adIssue .secondary{font-size:11px;min-height:39px;text-decoration:none}

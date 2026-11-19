@@ -118,3 +118,18 @@ test("Ads Studio keeps safe send and save separate, with no Meta spend while pre
  assert.match(check,/export async function GET/);
  assert.equal(check.includes("export async function POST"),false);
 });
+
+
+test("Meta creative failures explain non-activation and keep a customer support reference",()=>{
+ const ui=fs.readFileSync(path.resolve("app/vista-app/marketing/ads/AdsStudio.tsx"),"utf8");
+ const api=fs.readFileSync(path.resolve("app/api/marketing/ads/meta/campaigns/route.ts"),"utf8");
+ const lib=fs.readFileSync(path.resolve("lib/vmv-marketing-ads-meta.ts"),"utf8");
+ assert.match(ui,/c\.error_code\.startsWith\("creative:"\)/);
+ assert.match(ui,/Referencia VMV:/);
+ assert.match(ui,/No se envió ni se generó gasto/);
+ assert.match(ui,/No vuelvas a enviar/);
+ assert.match(ui,/c\.status!=="failed"/);
+ assert.match(api,/createdInMeta:true,adSpendActive:false/);
+ assert.match(api,/subcode/);
+ assert.match(lib,/funding_unavailable/);
+});

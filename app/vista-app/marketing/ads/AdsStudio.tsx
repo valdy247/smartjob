@@ -19,7 +19,8 @@ type Campaign={id:string;ad_account_id:string;status:string;draft:{
  provider_campaign_id:string|null;provider_ad_id:string|null;
  metaAdsetEffectiveStatus?:string|null;metaAdsetEndAt?:string|null;
  error_code:string|null;created_at:string};
-type PaymentCheck={state:"ready"|"missing"|"unverified"|"inactive";checkedAt:string};
+type PaymentCheck={state:"ready"|"missing"|"unverified"|"inactive";checkedAt:string;
+ reason?:"funding_detected"|"funding_absent"|"funding_unavailable"|"provider_unavailable"|"account_inactive"|"connection_unavailable"};
 type InsightRow={impressions?:string;reach?:string;clicks?:string;spend?:string;cpc?:string;ctr?:string;date_start?:string;date_stop?:string};
 type AdAngle="offer"|"local"|"value";
 type GeneratedAd={source:"ai";angle:AdAngle;variant:{headline:string;message:string}};
@@ -76,7 +77,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
  const [paymentCheck,setPaymentCheck]=useState<PaymentCheck|null>(null);
  const [confirmSendOpen,setConfirmSendOpen]=useState(false);
  const [spendConsent,setSpendConsent]=useState(false);
- const [finished,setFinished]=useState<{kind:"saved"|"sent"|"paused";id:string}|null>(null);
+ const [finished,setFinished]=useState<{kind:"saved"|"sent"|"paused"|"failed";id:string}|null>(null);
  const resumedOnce=useRef(false);
  const [insights,setInsights]=useState<Record<string,{rows:InsightRow[];period:string}>>({});
  const [historyFilter,setHistoryFilter]=useState<"pending"|"active"|"completed">("pending");
@@ -245,6 +246,30 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
   if(status)setMetaReturn(status);
   void reload();
  },[reload]);
+ const describeFailure=(code:string)=>{
+  if(code==="meta_reconnect_required"||code==="meta_connect_required")
+   return localized("La conexión con Meta venció. Vuelve a conectar la cuenta desde el primer paso.",
+    "Your Meta connection expired. Reconnect it from step one.");
+  if(code==="meta_account_selection_required"||code==="meta_ad_account_not_authorized")
+   return localized("No podemos usar esta cuenta publicitaria. Selecciona una cuenta activa en el primer paso.",
+    "This ad account cannot be used. Select an active account in step one.");
+  if(code==="meta_payment_not_detected")
+   return localized("Meta no mostró un método de pago para esta cuenta. Comprueba la facturación en Meta. No se activó el anuncio.",
+    "Meta did not show a payment method for this account. Check Meta billing. The ad was not activated.");
+  if(code==="meta_payment_not_verified")
+   return localized("Meta no compartió datos suficientes sobre el pago. Esto NO significa que haya rechazado tu anuncio; no se activó.",
+    "Meta did not share enough billing information. This does NOT mean your ad was rejected; it was not activated.");
+  if(code.startsWith("provider_creation_incomplete_review_"))
+   return localized("Meta no pudo completar la creación del anuncio. Puede haber elementos pausados en Meta. No lo envíes otra vez: revisa Historial y solicita ayuda usando la referencia de la campaña.",
+    "Meta could not finish creating the ad. Paused items may exist in Meta. Do not send it again: check History and contact support using the campaign reference.");
+  if(code==="campaign_already_processed"||code==="campaign_already_processing")
+   return localized("Esta campaña ya se está procesando o fue enviada antes. Consulta Historial antes de repetir.",
+    "This campaign is already processing or was submitted before. Check History before retrying.");
+  if(code==="activation_state_requires_reconciliation")
+   return localized("Meta no confirmó si la activación se completó. Consulta Historial; la campaña podría estar activa y generando gasto. No repitas el envío.",
+    "Meta has not confirmed whether activation completed. Check History; the campaign may be live and spending. Do not resend.");
+  return null;
+ };
  const run=async(label:string,fn:()=>Promise<void>)=>{
   setBusy(label);setError("");setNotice("");
   try{await fn();}
@@ -271,7 +296,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
     message==="ai_invalid_provider_response"?
     localized("La IA respondió, pero el anuncio no cumplió los requisitos. Intenta generarlo nuevamente.",
      "AI responded but the ad did not meet the requirements. Please regenerate."):message;
-   setError(display);
+   setError(describeFailure(message)||display);
   }
   finally{setBusy("");}
  };
@@ -383,10 +408,15 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
   setConfirmSendOpen(false);
   void run("send",async()=>{
    const saved=await saveDraftRecord();
-   await api("/api/marketing/ads/meta/campaigns","POST",{
-    operation:"create_paused",campaignId:saved.id,confirmPaused:true,approvedTotalCents:total
-   });
-   setFinished({kind:"paused",id:saved.id});
+   try{
+    await api("/api/marketing/ads/meta/campaigns","POST",{
+     operation:"create_paused",campaignId:saved.id,confirmPaused:true,approvedTotalCents:total
+    });
+    setFinished({kind:"paused",id:saved.id});
+   }catch(e){
+    setFinished({kind:"failed",id:saved.id});
+    throw e;
+   }
    await api("/api/marketing/ads/meta/campaigns","POST",{
     operation:"activate",campaignId:saved.id,confirmSpend:true,
     approvedTotalCents:total,confirmationText:"PUBLICAR"
@@ -549,14 +579,49 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
      <span><small>{localized("Red","Network")}</small><strong>{c.draft?.placements==="facebook_instagram"?"Facebook + Instagram":"Facebook"}</strong></span>
     </div>
     {c.metaAdsetEndAt?<small className={styles.historyContext}>{localized("Fin programado en Meta: ","Meta scheduled end: ")}{new Date(c.metaAdsetEndAt).toLocaleDateString(en?"en-US":"es-US")}</small>:null}
-    {c.error_code?<p className={styles.warning}>{localized("Se necesita revisar esta campaña: ","This campaign needs review: ")}{c.error_code}</p>:null}
+    {c.error_code?<div className={styles.adIssue}>
+     <div className={styles.adIssueTitle}><ShieldCheck size={18}/>
+      <strong>{c.status==="failed"?
+       localized("No se completó la creación del anuncio","Ad creation was not completed"):
+       localized("Esta campaña requiere atención","This campaign needs attention")}</strong></div>
+     <p>{c.error_code.startsWith("creative:")?
+      localized("Meta rechazó la solicitud para preparar la imagen y el texto del anuncio. El motivo exacto no está disponible. No fue un rechazo posterior a la revisión ni un problema de pago confirmado.",
+       "Meta rejected the request to prepare the ad creative. The exact reason is unavailable. This was not a post-review ad rejection or a confirmed billing issue."):
+      c.error_code.startsWith("adset:")?
+      localized("Meta no pudo configurar el presupuesto o la audiencia. No se activó el anuncio.",
+       "Meta could not configure the budget or audience. The ad was not activated."):
+      c.error_code.startsWith("campaign:")?
+      localized("Meta no pudo crear la estructura de la campaña. No se activó el anuncio.",
+       "Meta could not create the campaign. The ad was not activated."):
+      c.error_code.startsWith("ad:")?
+      localized("Meta no pudo finalizar la creación del anuncio. La campaña quedó sin activar.",
+       "Meta could not finish creating the ad. The campaign was not activated."):
+      localized("Ocurrió un problema durante la preparación. Comprueba el estado antes de intentar otra vez.",
+       "There was a problem preparing the campaign. Check its status before trying again.")}</p>
+     <p>{localized("Esta campaña no se activó desde VMV. Pueden existir elementos pausados en Meta. No vuelvas a enviarla; solicita ayuda con esta referencia.",
+      "This campaign was not activated from VMV. Paused items may exist in Meta. Do not resubmit it; request help using this reference.")}</p>
+     <small>{localized("Referencia VMV: ","VMV reference: ")}{c.id.slice(0,8)}
+      {" · "}{localized("Diagnóstico: ","Diagnostic: ")}{c.error_code}</small>
+     <div className={styles.paymentActions}>
+      <button type="button" className={styles.secondary} onClick={()=>void navigator.clipboard?.writeText("VMV "+c.id+" · "+c.error_code).catch(()=>{})}>
+       {localized("Copiar referencia","Copy reference")}</button>
+      <a href="/vista-app/soporte" className={styles.secondary}>
+       {localized("Solicitar ayuda","Get support")}</a>
+     </div>
+    </div>:null}
+    {c.status==="activation_pending"?<div className={styles.adIssue}>
+     <strong>{localized("Activación pendiente de confirmación","Activation pending confirmation")}</strong>
+     <p>{localized("Meta no confirmó el resultado. El anuncio podría estar activo y generar gastos. No repitas el envío; pide ayuda para verificar el estado.",
+      "Meta did not confirm the outcome. The ad could be active and spending. Do not resubmit; request help to verify its status.")}</p>
+     <a href="/vista-app/soporte" className={styles.secondary}>{localized("Solicitar ayuda","Get support")}</a>
+    </div>:null}
     <div className={styles.inlineActions}>
      {c.status==="draft"?<a className={styles.primary} href={"/vista-app/marketing/ads/create?draft="+encodeURIComponent(c.id)}>
       {localized("Continuar campaña","Resume campaign")}</a>:null}
      {c.status==="paused"&&publishReady?<button className={styles.primary} type="button" disabled={!!busy} onClick={()=>publish(c)}>
       {localized("Autorizar publicación y gasto","Authorize publication and spend")}</button>:null}
      {["active","activation_pending","paused"].includes(c.status)?<button className={styles.secondary} type="button" disabled={!!busy} onClick={()=>pause(c)}>{localized("Pausar","Pause")}</button>:null}
-     {c.provider_campaign_id?<button className={styles.secondary} type="button" disabled={!!busy} onClick={()=>void metrics(c)}>
+     {c.provider_campaign_id&&c.provider_ad_id&&c.status!=="failed"?<button className={styles.secondary} type="button" disabled={!!busy} onClick={()=>void metrics(c)}>
       {busy==="metrics:"+c.id?localized("Consultando…","Loading…"):localized("Ver resultados","View results")}</button>:null}
     </div>
     {insights[c.id]?<div className={styles.resultsPanel}>
@@ -618,7 +683,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
   </div>
   {metaReturn==="connected"&&meta.connected?<p className={styles.success}><CheckCircle2 size={16}/>{localized("Tu cuenta Meta se conectó correctamente.","Your Meta account connected successfully.")}</p>:null}
   {notice?<p className={styles.success} role="status"><CheckCircle2 size={16}/>{notice}</p>:null}
-  {error?<p className={styles.warning} role="alert">{error}</p>:null}
+  {error&&step!==4?<p className={styles.warning} role="alert">{error}</p>:null}
   <nav className={styles.wizardSteps} aria-label={localized("Pasos de la campaña","Campaign steps")}>
    {steps.map((label,i)=><button key={i} type="button" aria-current={i===step?"step":undefined}
     className={i===step?styles.wizardStepCurrent:i<step?styles.wizardStepDone:styles.wizardStep}
@@ -887,24 +952,24 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
    {paymentCheck?<div className={styles.paymentResult} role="status">
     <div className={styles.paymentHeading}><CreditCard size={18}/>
      <strong>{paymentCheck.state==="ready"?
-      localized("Meta reconoce una fuente de pago","Meta recognizes a funding source"):
+      localized("Meta informó una fuente de pago","Meta reported a funding source"):
       paymentCheck.state==="missing"?
-      localized("No se detectó un método de pago","No payment method detected"):
+      localized("Meta no mostró un método de pago","Meta did not show a payment method"):
       paymentCheck.state==="inactive"?
       localized("La cuenta publicitaria no está activa","Ad account is not active"):
-      localized("No se pudo verificar la facturación","Billing could not be verified")}</strong>
+      localized("No pudimos comprobar el pago en Meta","We could not check payment in Meta")}</strong>
     </div>
     <p>{paymentCheck.state==="ready"?
       localized("La disponibilidad de pago se verificará nuevamente antes de activar. Meta decide si acepta el cobro.",
        "Payment availability will be rechecked before activation. Meta ultimately determines whether it accepts charges."):
       paymentCheck.state==="missing"?
-      localized("Agrega un método de pago a esa cuenta en Meta y vuelve a comprobarlo. Tu borrador sigue disponible.",
-       "Add a payment method to this ad account in Meta and check again. Your draft remains available."):
+      localized("Meta no devolvió una fuente de pago para esta cuenta. Verifica el método de pago en la sección Facturación de Meta. Esto no significa que tu anuncio haya sido rechazado. Aún no se envió ni generó gasto.",
+       "Meta did not return a funding source for this account. Check its payment method in Meta Billing. This does not mean your ad was rejected. Nothing was sent or spent."):
       paymentCheck.state==="inactive"?
       localized("Revisa el estado de la cuenta en Meta antes de enviar anuncios.",
        "Review your account status in Meta before sending ads."):
-      localized("Algunas cuentas o permisos no muestran información de facturación a terceros. No intentaremos publicar sin confirmación.",
-       "Some accounts or permissions do not disclose billing data. We will not publish without verification.")}</p>
+      localized("Meta no permitió verificar la información de pago desde VMV. Puede haber una tarjeta válida: no sabemos si falta o si los permisos impiden verla. Esto NO es una revisión ni un rechazo del anuncio. No se envió ni se generó gasto.",
+       "Meta did not let VMV verify payment information. A valid card may exist; we cannot tell whether it is missing or hidden by permissions. This is NOT an ad review or rejection. No ad was sent and no spend occurred.")}</p>
     {paymentCheck.state!=="ready"?<div className={styles.paymentActions}>
      <a href="https://www.facebook.com/adsmanager/billing" className={styles.secondary}
       target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/>{localized("Revisar pago en Meta","Check billing in Meta")}</a>
@@ -915,21 +980,35 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
    {!publishReady?<p className={styles.pilotNotice}>
     <ShieldCheck size={16}/>{localized("Modo de pruebas: Enviar solo comprueba la cuenta. La publicación y el gasto siguen desactivados.",
      "Preview mode: Send only checks your account. Publishing and ad spend remain disabled.")}</p>:null}
-   {finished?<div className={finished.kind==="paused"?styles.warning:styles.success} role="status">
+   {finished?<div className={["paused","failed"].includes(finished.kind)?styles.warning:styles.success} role="status">
     <CheckCircle2 size={17}/>
     <div><strong>{finished.kind==="sent"?localized("Campaña enviada a Meta","Campaign sent to Meta"):
-      finished.kind==="paused"?localized("Campaña creada, activación sin confirmar","Campaign created, activation unconfirmed"):
+      finished.kind==="paused"?localized("Campaña creada en Meta, aún pausada","Campaign created in Meta, still paused"):
+      finished.kind==="failed"?localized("Meta no pudo completar el anuncio","Meta could not finish the ad"):
       localized("Campaña guardada","Campaign saved")}</strong>
      <p>{finished.kind==="sent"?
       localized("Meta confirmó la solicitud de activación. Comprueba la aprobación y entrega en Historial.",
        "Meta confirmed the activation request. Check review and delivery in History."):
       finished.kind==="paused"?
-      localized("Consulta Historial antes de reintentar. Puede existir una campaña pausada en Meta.",
-       "Check History before retrying. A paused campaign may exist in Meta."):
+      localized("La campaña está pausada en Meta y no se activó. Consulta Historial para revisar el estado.",
+       "The campaign is paused in Meta and was not activated. Check History to review its status."):
+      finished.kind==="failed"?
+      localized("Algunos elementos pueden haberse creado pausados. No vuelvas a enviar: consulta Historial y usa la referencia para pedir soporte.",
+       "Some items may have been created paused. Do not resend: check History and use the reference for support."):
       localized("Está en Pendientes. Puedes continuar después sin crear anuncios en Meta.",
        "It is in Pending. You can resume later without creating ads in Meta.")}</p>
      <a className={styles.secondary} href="/vista-app/marketing/ads/campaigns">
       {localized("Ver historial y resultados","View history & results")}</a></div>
+   </div>:null}
+   {error&&step===4?<div className={styles.adIssue} role="alert">
+    <div className={styles.adIssueTitle}><ShieldCheck size={18}/>
+     <strong>{localized("No pudimos completar esta acción","We could not complete this action")}</strong></div>
+    <p>{error}</p>
+    <div className={styles.paymentActions}>
+     <a className={styles.secondary} href="/vista-app/marketing/ads/campaigns">
+      {localized("Ver estado en Historial","Check status in History")}</a>
+     <a className={styles.secondary} href="/vista-app/soporte">{localized("Solicitar ayuda","Get support")}</a>
+    </div>
    </div>:null}
    <p className={styles.muted}>{localized("Meta cobra directamente a la cuenta publicitaria del cliente. Guardar no publica ni genera gasto.",
     "Meta charges the customer's ad account directly. Saving does not publish or incur spend.")}</p>
