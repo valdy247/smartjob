@@ -333,23 +333,23 @@ export default function AIAgentsPreview(){
  };
  const back=()=>{setScreen("home");setMessageNotice("");};
  const patch=(key:keyof AgentDraft,value:string)=>setDraft(prev=>({...prev,[key]:value}));
- return <main className={styles.canvas}>
-  <div className={styles.layout}>
-   <div className={styles.externalHeader}>
+ return <main className={screen==="ads"?styles.adsCanvas:styles.canvas}>
+  <div className={screen==="ads"?styles.adsLayout:styles.layout}>
+   {screen!=="ads"?<div className={styles.externalHeader}>
     <a href="/vista-app" className={styles.returnLink}><ArrowLeft size={17}/> VMV Business</a><InterfaceLanguagePicker compact/>
     <span className={styles.previewBadge}>PREVIEW · AI AGENTS</span>
-   </div>
-   <section className={styles.phone} aria-label={translate("agents.phonePreview")}>
-    <div className={styles.phoneTop}>
+   </div>:null}
+   <section className={screen==="ads"?styles.adsPhone:styles.phone} aria-label={translate("agents.phonePreview")}>
+    {screen!=="ads"?<div className={styles.phoneTop}>
      <b>VMV</b><span className={styles.dynamicIsland}/><span className={styles.phoneSignal}>◢ ▰</span>
-    </div>
-    <div className={styles.appHeader}>
+    </div>:null}
+    {screen!=="ads"?<div className={styles.appHeader}>
      <button type="button" className={styles.backIcon} onClick={screen==="home"?()=>{window.location.href="/vista-app";}:back}
       aria-label={screen==="home"?translate("agents.backVMV"):translate("agents.backAgents")}><ArrowLeft size={20}/></button>
      <div className={styles.appTitle}><small>VMV BUSINESS</small><strong>AI Agents<span>.</span></strong></div>
      <InterfaceLanguagePicker compact/>
-    </div>
-    <div className={styles.scroller}>
+    </div>:null}
+    <div className={screen==="ads"?styles.adsScroller:styles.scroller}>
      {loading?<div className={styles.info} role="status">{translate("agents.loadingWorkspace")}</div>:null}
      {!loading&&!authenticated?<div className={styles.info} role="alert">
       <ShieldCheck size={17}/> {translate("agents.accountError")}
@@ -456,13 +456,13 @@ export default function AIAgentsPreview(){
       onAgentUpdated={updated=>setAgents(old=>old.map(a=>a.id===updated.id?updated:a))}/>:null}
      </>:null}
     </div>
-    <div className={styles.phoneFooter}><div className={styles.footerBrand}><Bot size={17}/> AI Agents</div>
-     <span>VMV Business <Sparkles size={12}/></span></div>
+    {screen!=="ads"?<div className={styles.phoneFooter}><div className={styles.footerBrand}><Bot size={17}/> AI Agents</div>
+     <span>VMV Business <Sparkles size={12}/></span></div>:null}
    </section>
-   <div className={styles.externalFooter}>
+   {screen!=="ads"?<div className={styles.externalFooter}>
     <span><ShieldCheck size={16}/> {translate("agents.isolationNotice")}</span>
     <a href="/vista-app">{translate("agents.backVMV")} <ArrowUpRight size={15}/></a>
-   </div>
+   </div>:null}
   </div>
  </main>;
 }
