@@ -113,6 +113,10 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
    current.goals.filter(item=>item!==goal):[...current.goals,goal]
  }));
  const selectProduct=(id:string)=>{
+  if(!answer.productIds.includes(id)&&answer.productIds.length>=20){
+   setError("Puedes seleccionar hasta 20 productos o servicios por anuncio.");return;
+  }
+  setError("");
   setAnswer(x=>{
    const ids=x.productIds.includes(id)?x.productIds.filter(v=>v!==id):[...x.productIds,id];
    const names=products.filter(p=>ids.includes(p.id)).map(p=>p.name);
@@ -197,9 +201,10 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   setPending("copy");setError("");setAdReady(false);
   try{
    const offer=answer.offer.trim();
-   if(offer.length<8)throw Error("Describe la oferta con al menos 8 caracteres.");
+   const description=offer.length>=8?offer:offer+" de "+answer.businessName.trim();
+   if(description.length<8)throw Error("Describe qué vas a anunciar.");
    const response=await api("/api/marketing/ads/generate","POST",{
-    business:answer.businessName,offer,audience:answer.audience,
+    business:answer.businessName,offer:description,audience:answer.audience,
     city:cityMetaName,benefit:answer.notes,locale:"es",goal:"website",angle:"offer"
    });
    if(response.source!=="ai"||!response.variant?.headline||!response.variant?.message)
@@ -402,6 +407,6 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
      <button type="button" className={styles.generate} onClick={finish}>
       <Megaphone size={18}/> Generar anuncio <ArrowRight size={17}/></button>}
    </div>:null}
-  <p className={styles.safety}><ShieldCheck size={14}/> La aprobación, imagen, presupuesto y publicación se gestionan en Marketing.</p>
+  <p className={styles.safety}><ShieldCheck size={14}/> Presupuesto y publicación requieren tu aprobación en Marketing.</p>
  </section>;
 }
