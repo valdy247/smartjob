@@ -5,20 +5,22 @@ import {ArrowLeft,ArrowRight,Bot,Check,CheckCircle2,Globe2,ImagePlus,LoaderCircl
 import {getSupabase} from "@/lib/supabase";
 import {BUSINESS_CATEGORIES,categoryLabel} from "@/lib/vmv-business-categories";
 import {safeWebImageUrl} from "@/lib/web-services-site";
+import type {CatalogItem} from "./commerceStore";
+import AgentWebCatalogEditor from "./AgentWebCatalogEditor";
+import AgentWebMediaPicker from "./AgentWebMediaPicker";
 import {createSiteProposals,type SiteDesignPreferences,type SiteIntake,type SiteProduct,type SiteProposal} from "@/lib/web-builder-templates";
 import type {CentralBusiness} from "./centralBusiness";
 import type {PersistedAgent} from "./agentStore";
-import BuilderImageField from "@/app/web-studio/BuilderImageField";
+
 import theme from "./AgentServiceFlow.module.css";
 import styles from "./AutomaticWebWizard.module.css";
 
 const TemplateProposals=dynamic(()=>import("@/app/web-studio/TemplateProposals"),{ssr:false,
  loading:()=> <p role="status">Preparando vista previa de tu sitio…</p>});
-type Stage="business"|"project"|"offerings"|"features"|"contact"|"design"|"media"|"direction"|"preview"|"review";
-const stages:Stage[]=["business","project","offerings","features","contact","design","media","direction","preview","review"];
+type Stage="business"|"project"|"catalog"|"products"|"contact"|"colors"|"typography"|"photography"|"media"|"review"|"preview";
 type Item={id:string;name:string;description:string;price_cents:number|null;type:"product"|"service";approved:boolean};
 type Existing={id:string;name:string;slug:string};
-type Typeface="modern"|"editorial"|"rounded"|"geometric";
+type Typeface="modern"|"editorial"|"rounded"|"geometric"|"mono"|"classic"|"humanist"|"luxury";
 type ImageShape="rounded"|"square"|"pill"|"bordered";
 type Objective="calls"|"quotes"|"bookings"|"orders";
 const colors=[["Rosa","#b7357b"],["Violeta","#7947c3"],["Azul","#2c62ab"],["Verde","#217c68"],
@@ -30,14 +32,15 @@ const cleanOffer=(s:string)=>s.trim().replace(/\s+/g," ").slice(0,100);
 const stageQuestion:Record<Stage,string>={
  business:"¿Esta página es para tu negocio?",
  project:"¿Qué haremos con tu web?",
- offerings:"¿Qué productos o servicios mostraremos?",
- features:"¿Qué quieres lograr con tu página?",
- contact:"¿Cómo te contactarán tus clientes?",
- design:"¿Qué estilo prefieres?",
+ catalog:"¿Quieres conectar tu catálogo?",
+ products:"Revisa los productos de tu inventario",
+ contact:"¿Qué información de contacto nos falta?",
+ colors:"¿Qué colores te gustan?",
+ typography:"¿Qué tipografía prefieres?",
+ photography:"¿Qué estilo de fotografías usaremos?",
  media:"¿Qué imágenes usaremos?",
- direction:"¿Cómo quieres que se sienta tu web?",
- preview:"Así está creando tu web el agente",
- review:"Revisa tu página antes de guardarla"
+ review:"Revisa todo antes de generar tu web",
+ preview:"Tu página web está lista para visualizar"
 };
 export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:{
  business:CentralBusiness;workspaceId:string;agent:PersistedAgent;onClose:()=>void;
@@ -55,8 +58,9 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
  const [mode,setMode]=useState<"new"|"alternative">("new");
  const [existing,setExisting]=useState<Existing[]>([]);
  const [items,setItems]=useState<Item[]>([]);
- const [selectedIds,setSelectedIds]=useState<string[]>([]);
- const [extraOffer,setExtraOffer]=useState("");
+ const [catalogChoice,setCatalogChoice]=useState<"yes"|"no"|null>(null);
+ const [inventoryItems,setInventoryItems]=useState<CatalogItem[]>([]);
+ const [skipEmail,setSkipEmail]=useState(false);
  const [objective,setObjective]=useState<Objective>("quotes");
  const [inventory,setInventory]=useState(false);
  const [booking,setBooking]=useState(false);
@@ -71,9 +75,6 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
  const [logo,setLogo]=useState("");
  const [cover,setCover]=useState("");
  const [gallery,setGallery]=useState<string[]>([]);
- const [skipImages,setSkipImages]=useState(false);
- const [imagePrompt,setImagePrompt]=useState("");
- const [imageCandidate,setImageCandidate]=useState("");
  const [imageAiReady,setImageAiReady]=useState(false);
  const [direction,setDirection]=useState("Diseño ultramoderno, elegante y fácil de usar desde el teléfono.");
  const [aiAvailable,setAiAvailable]=useState(false);
@@ -81,38 +82,43 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
  const [proposal,setProposal]=useState<SiteProposal|null>(null);
  const [proposalSignature,setProposalSignature]=useState("");
  const [created,setCreated]=useState("");
- const progress=stages.indexOf(stage);
- const selectedItems=items.filter(x=>selectedIds.includes(x.id));
- const products=selectedItems.filter(x=>x.type==="product");
- const services=selectedItems.filter(x=>x.type==="service");
- const offeredNames=[...selectedItems.map(x=>x.name),...extraOffer.split(/[\n,]+/).map(cleanOffer).filter(Boolean)];
- const uniqueOffers=Array.from(new Set(offeredNames)).slice(0,18);
- const features={inventory:inventory&&products.length>0,booking,chat};
+ const approvedProducts=inventoryItems.filter(x=>x.approved&&x.active);
+ const products=approvedProducts.slice(0,30);
+ const services=items.filter(x=>x.type==="service");
+ const uniqueOffers=Array.from(new Set([
+  ...(catalogChoice==="yes"?approvedProducts.map(x=>x.name):[]),
+  ...services.map(x=>x.name)
+ ])).slice(0,30);
+ const features={inventory:catalogChoice==="yes",booking,chat};
+ const needsContact=!email.trim()&&!skipEmail;
+ const stages:Stage[]=["business","project","catalog",
+  ...(catalogChoice==="yes"?["products" as Stage]:[]),
+  ...(needsContact?["contact" as Stage]:[]),
+  "colors","typography","photography","media","review","preview"];
+ const progress=Math.max(0,stages.indexOf(stage));
  const input=useMemo<SiteIntake>(()=>{
-  const selectedProducts:SiteProduct[]=inventory?products.slice(0,18).map(x=>({
+  const selectedProducts:SiteProduct[]=catalogChoice==="yes"?products.slice(0,30).map(x=>({
    id:x.id,title:x.name,description:x.description.slice(0,400),
    price:typeof x.price_cents==="number"?"$"+(x.price_cents/100).toFixed(2):"",image:""
   })):[];
-  const selectedServices=Array.from(new Set([
-   ...services.map(x=>x.name),...extraOffer.split(/[\n,]+/).map(cleanOffer).filter(Boolean)
-  ])).slice(0,20);
-  const offering=products.length&&selectedServices.length?"both":products.length?"products":"services";
+  const selectedServices=services.map(x=>x.name).slice(0,20);
+  const offering=catalogChoice==="yes"&&selectedProducts.length?
+   (selectedServices.length?"both":"products"):"services";
   const design:SiteDesignPreferences={colors:palette,font,imageStyle:shape,
    galleryColumns:"3",features,chatMode:chat?"inbox":"off"};
   return {business:name.trim().slice(0,100),categoryId:category,offering,
    objective:booking?"bookings":objective,phone:phone.trim().slice(0,36),
    email:email.trim().slice(0,180),city:city.trim().slice(0,180),
    about:about.trim().slice(0,500),logo,
-   photos:Array.from(new Set([cover,...gallery].filter(Boolean))).slice(0,12),
+   photos:Array.from(new Set([cover,...gallery].filter(Boolean))).slice(0,9),
    offerings:selectedServices,products:selectedProducts,design};
  },[name,category,objective,booking,phone,email,city,about,logo,cover,gallery,
-  selectedIds,items,inventory,chat,palette,font,shape,extraOffer]);
+  inventoryItems,items,catalogChoice,chat,palette,font,shape]);
  const signature=JSON.stringify({input,direction});
  const validStage=stage==="business"?name.trim().length>=2&&Boolean(category):
-  stage==="offerings"?uniqueOffers.length>0:
-  stage==="contact"?validEmail(email)&&Boolean(phone.trim()||email.trim()||inquiries):
-  stage==="design"?palette.length===3:
-  stage==="media"?Boolean(cover||skipImages):
+  stage==="catalog"?catalogChoice!==null:
+  stage==="contact"?Boolean(skipEmail||email.trim())&&validEmail(email):
+  stage==="colors"?palette.length===3:
   stage==="preview"?Boolean(proposal&&proposalSignature===signature):
   true;
  useEffect(()=>{
