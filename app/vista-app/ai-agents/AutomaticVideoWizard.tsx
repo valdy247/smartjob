@@ -152,7 +152,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
        description:"",type});
      }
     }
-    if(active){setItems(records);setSelected(records.slice(0,4).map(x=>x.id));}
+    if(active){setItems(records);setSelected([]);}
     const {data:{session}}=await db.auth.getSession();
     if(!session?.access_token)throw Error("Inicia sesión nuevamente.");
     const r=await fetch("/api/video-generator",{
@@ -350,7 +350,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
    <p className={base.note}>El agente adaptará la escena y la descripción a tu objetivo.</p>
   </div>:null}
   {!loading&&owner&&stage==="offer"?<div className={base.panel}>
-   <p className={base.note}>Productos y servicios aprobados de tu negocio. Puedes seleccionar varios o escribir otro tema.</p>
+   <p className={base.note}>Selecciona únicamente los productos que deben aparecer en el video. Ninguno se añade automáticamente; los demás son contexto del negocio.</p>
    {items.length?<div className={base.items} role="group" aria-label="Seleccionar productos y servicios">
     {items.map(x=><button type="button" key={x.id}
      className={selected.includes(x.id)?base.itemSelected:base.item}
