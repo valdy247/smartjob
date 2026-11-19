@@ -81,7 +81,9 @@ test("Visual stages offer eight real fonts, image-style examples, and skip prese
  assert.match(wizard,/stage==="colors"/);
  assert.match(wizard,/stage==="typography"/);
  assert.match(wizard,/stage==="photography"/);
- assert.match(wizard,/needsContact=!email\.trim\(\)&&!skipEmail/);
+ assert.match(wizard,/needsContact=contactRequired/);
+ assert.match(wizard,/setContactRequired\(!String\(central\.data\.email\|\|""\)\.trim\(\)\)/);
+ assert.match(wizard,/stage==="products"\?catalogLoaded/);
  assert.match(wizard,/returnToReview\?<label className=\{styles\.field\}>Teléfono/);
  assert.match(wizard,/fontGrid/);
  assert.match(wizard,/photoGrid/);
