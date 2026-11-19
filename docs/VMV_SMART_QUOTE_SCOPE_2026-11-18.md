@@ -1,6 +1,8 @@
 # VMV Business — Smart Quote
 
 Fecha: 2026-11-18
+
+> **Actualización de implementación:** existe un piloto en la rama `feat/vmv-smart-quote-mvp`, con catálogo, presupuestos y aprobación manual. La migración no se ha aplicado ni se han habilitado pagos o integraciones externas. Consulta `docs/VMV_SMART_QUOTE_PILOT_IMPLEMENTATION_2026-11-18.md`. Las secciones de estado y exclusiones siguientes describen el alcance histórico original.
 Estado: **Próximamente — concepto documentado, NO implementado**
 Rama: `feat/vmv-smart-call-control-center`
 Tarjeta visible en: **Servicios → Crecimiento** (`smart-quote`), **deshabilitada** sin formularios, cobros ni integración activa.
