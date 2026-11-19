@@ -870,3 +870,6 @@
 /* Accessible contrast for user-defined palettes; never white text on a light CTA. */
 .vmv-site-inquiry .ws-inquiry-submit{color:var(--vmv-accent-on,#fff)!important}
 .vmv-site .vmv-site-button[data-button-style=solid]{color:var(--vmv-accent-on,#fff)!important}
+
+/* VMV Web Studio: image borders are deprecated. Preserve saved dimensions and crop, not ornamental frames. */
+.vmv-site .vmv-managed-image,.vmv-site .vmv-visual-media{border-width:0!important;border-style:none!important}
