@@ -23,7 +23,7 @@ function errMessage(code:string,en:boolean){
  const map:Record<string,[string,string]>={
   video_not_enabled_for_account:["Video Generator aún no está habilitado para esta cuenta.","Video Generator isn't enabled for this account yet."],
   runway_key_missing:["Falta conectar Runway en Vercel.","Connect Runway in Vercel first."],
-  video_daily_limit:["Alcanzaste el límite de tres generaciones en 24 horas.","You've reached the three-videos-per-day limit."],
+  video_daily_limit:["Se alcanzó el presupuesto de seguridad para las pruebas de video.","The pilot testing budget was reached."],
   video_active_job_limit:["Espera a que termine el video anterior.","Wait for your previous video to finish."],
   invalid_video_request:["Revisa el texto, formato, imagen y autorización.","Check your prompt, format, image and confirmation."],
   runway_credits_required:["Runway necesita créditos para generar videos.","Runway requires credits to generate videos."],
