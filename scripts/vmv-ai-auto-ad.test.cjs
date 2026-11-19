@@ -17,7 +17,9 @@ test("Only authorized, active, approved inventory is offered",()=>{
  assert.match(wizard,/\.eq\("owner_id",user\.id\)/);
  assert.match(wizard,/\.eq\("business_id",workspaceId\)/);
  assert.match(wizard,/\.eq\("approved",true\)\.eq\("active",true\)/);
- assert.match(wizard,/businessImageAvailable/);
+ assert.match(wizard,/vmv_ai_booking_services/);
+ assert.match(wizard,/productIds:string\[\]/);
+ assert.match(wizard,/answer\.productIds\.includes\(p\.id\)/);
 });
 test("Marketing receives a scoped short-lived creative brief, never an ad launch",()=>{
  assert.match(bridge,/sessionStorage\.setItem/);
@@ -30,6 +32,10 @@ test("Marketing receives a scoped short-lived creative brief, never an ad launch
 });
 test("The agent does not claim to generate or publish Meta ads itself",()=>{
  assert.match(wizard,/La aprobación, imagen, presupuesto y publicación se gestionan en Marketing/);
+ assert.match(wizard,/meta\/image/);
+ assert.match(wizard,/meta\/locations/);
+ assert.match(wizard,/meta\/accounts/);
+ assert.match(wizard,/api\/marketing\/ads\/generate/);
  assert.match(wizard,/Continuar/);
  assert.match(wizard,/Generar anuncio/);
 });
