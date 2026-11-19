@@ -198,7 +198,7 @@ export default function UnifiedWebWizard({ownerId,busy,onChoose}:{
     const res=await fetch("/api/web-services/generate-site",{
      method:"POST",cache:"no-store",
      headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
-     body:JSON.stringify({intake,direction:direction.trim()})
+     body:JSON.stringify({intake:input,direction:direction.trim()})
     });
     const result=await res.json().catch(()=>({})) as {proposal?:SiteProposal;error?:string};
     if(!res.ok||!result.proposal?.data)throw Error(result.error||"La IA no pudo preparar una propuesta.");
