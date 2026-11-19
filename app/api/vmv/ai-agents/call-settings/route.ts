@@ -152,7 +152,7 @@ export async function POST(req:NextRequest){
      action==="translation"?"translation":action==="ring_owner"?"owner_first":
       action==="menu"?"menu":"disabled"};
   }
-  const safeDecision=predicted.agentAvailable&&(!ctx.selected||ctx.selected.status!=="active)&&
+  const safeDecision=predicted.agentAvailable&&(!ctx.selected||ctx.selected.status!=="active")&&
     predicted.action==="agent"?
    {...predicted,action:predicted.translationAvailable?"translation":"message",reason:"disabled"}:
    predicted;
