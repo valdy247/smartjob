@@ -16,8 +16,11 @@ type Goal="visits"|"messages"|"sales";
 type Answer={businessName:string;website:string;offer:string;productIds:string[];
  audience:string;city:string;region:string;goals:Goal[];
  imageChoice:"business"|"product"|"upload";imageProductId:string;notes:string};
-type Step="business"|"website"|"product"|"goal"|"audience"|"account"|"location"|"image"|"copy"|"review";
-const steps:Step[]=["business","website","product","goal","audience","account","location","image","copy","review"];
+type Step="business"|"website"|"product"|"goal"|"audience"|"account"|"location"|"image"|"copy"|"budget"|"review";
+const steps:Step[]=["business","website","product","goal","audience","account","location","image","copy","budget","review"];
+const usStates="AL:Alabama|AK:Alaska|AZ:Arizona|AR:Arkansas|CA:California|CO:Colorado|CT:Connecticut|DE:Delaware|DC:District of Columbia|FL:Florida|GA:Georgia|HI:Hawaii|ID:Idaho|IL:Illinois|IN:Indiana|IA:Iowa|KS:Kansas|KY:Kentucky|LA:Louisiana|ME:Maine|MD:Maryland|MA:Massachusetts|MI:Michigan|MN:Minnesota|MS:Mississippi|MO:Missouri|MT:Montana|NE:Nebraska|NV:Nevada|NH:New Hampshire|NJ:New Jersey|NM:New Mexico|NY:New York|NC:North Carolina|ND:North Dakota|OH:Ohio|OK:Oklahoma|OR:Oregon|PA:Pennsylvania|RI:Rhode Island|SC:South Carolina|SD:South Dakota|TN:Tennessee|TX:Texas|UT:Utah|VT:Vermont|VA:Virginia|WA:Washington|WV:West Virginia|WI:Wisconsin|WY:Wyoming".split("|").map(x=>x.split(":") as [string,string]);
+const stateName=(value:string)=>usStates.find(([code,name])=>code.toLowerCase()===value.trim().toLowerCase()||name.toLowerCase()===value.trim().toLowerCase())?.[1]||"";
+const stateCode=(value:string)=>usStates.find(([code,name])=>code.toLowerCase()===value.trim().toLowerCase()||name.toLowerCase()===value.trim().toLowerCase())?.[0]||"";
 const validSite=(v:string)=>{try{const u=new URL(v);return u.protocol==="https:"&&
  !u.username&&!u.password&&!u.port&&u.hostname.includes(".")&&!u.hostname.endsWith(".local")&&
  !["localhost","127.0.0.1"].includes(u.hostname);}catch{return false;}};
@@ -31,6 +34,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
  const [accountId,setAccountId]=useState("");
  const [pageId,setPageId]=useState("");
  const [places,setPlaces]=useState<Place[]>([]);
+ const [cityDialogOpen,setCityDialogOpen]=useState(false);
  const [cityKey,setCityKey]=useState("");
  const [cityMetaName,setCityMetaName]=useState("");
  const [image,setImage]=useState<File|null>(null);
@@ -40,6 +44,19 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
  const [message,setMessage]=useState("");
  const [pending,setPending]=useState("");
  const [adReady,setAdReady]=useState(false);
+ const [dailyBudget,setDailyBudget]=useState("10");
+ const [durationDays,setDurationDays]=useState("7");
+ const [radiusMiles,setRadiusMiles]=useState<10|15|25|50>(15);
+ const [utmEnabled,setUtmEnabled]=useState(true);
+ const [specialConfirmed,setSpecialConfirmed]=useState(false);
+ const [sendKey]=useState(()=>crypto.randomUUID());
+ const budgetCents=Math.round(Number(dailyBudget)*100);
+ const duration=Number(durationDays);
+ const totalCents=budgetCents*duration;
+ const validBudget=Number.isInteger(budgetCents)&&budgetCents>=500&&budgetCents<=25000&&
+  Number.isInteger(duration)&&duration>=1&&duration<=30&&
+  Number.isInteger(totalCents)&&totalCents<=750000;
+ const usd=(cents:number)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(cents/100);
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
  const [editBusiness,setEditBusiness]=useState(false);
@@ -100,14 +117,15 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   step==="account"?Boolean(meta.connected&&selectedAccount?.status===1&&selectedAccount.currency==="USD"&&verifiedPage):
   step==="location"?locationVerified:
   step==="image"?Boolean(imageHash):
-  step==="copy"?headline.trim().length>=5&&message.trim().length>=25:true;
+  step==="copy"?headline.trim().length>=5&&message.trim().length>=10:
+  step==="budget"?validBudget:true;
  const next=()=>{
   if(!canContinue||Boolean(pending))return;
   if(step==="website")setAnswer(x=>({...x,website:siteChoice==="saved"?savedWebsite:siteChoice==="custom"?customWebsite.trim():""}));
   if(step==="image"&&!headline.trim()&&!message.trim())void generateCopy();
   setError("");setStep(steps[Math.min(index+1,steps.length-1)]);
  };
- const back=()=>{if(index===0){onClose();return;}setError("");setStep(steps[index-1]);};
+ const back=()=>{if(cityDialogOpen){setCityDialogOpen(false);return;}if(index===0){onClose();return;}setError("");setStep(steps[index-1]);};
  const toggleGoal=(goal:Goal)=>setAnswer(current=>({
   ...current,goals:current.goals.includes(goal)?
    current.goals.filter(item=>item!==goal):[...current.goals,goal]
@@ -165,16 +183,13 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   finally{setPending("");}
  };
  const verifyCity=async()=>{
-  if(!answer.city.trim()||!meta.connected)return;
-  setPending("city");setError("");setPlaces([]);setCityKey("");setCityMetaName("");
+  if(answer.city.trim().length<3||!stateName(answer.region)||!meta.connected)return;
+  setCityDialogOpen(true);setPending("city");setError("");setPlaces([]);setCityKey("");setCityMetaName("");
   try{
    const data=await api("/api/marketing/ads/meta/locations?q="+encodeURIComponent(answer.city.trim()));
-   const states:Record<string,string>={GA:"georgia",FL:"florida",AL:"alabama",TX:"texas",CA:"california",NY:"new york",NC:"north carolina",SC:"south carolina",TN:"tennessee"};
-   const wanted=answer.region.trim().toLowerCase();
-   const normalized=states[wanted.toUpperCase()]||wanted;
+   const wanted=stateName(answer.region).toLowerCase();
    const results=(Array.isArray(data.places)?data.places:[]) as Place[];
-   setPlaces(results.filter(p=>p.countryCode==="US"&&
-    (p.region.toLowerCase()===normalized||p.region.toLowerCase()===wanted)));
+   setPlaces(results.filter(p=>p.countryCode==="US"&&p.region.trim().toLowerCase()===wanted).slice(0,30));
   }catch(e){setError(e instanceof Error?e.message:"No se pudo verificar la ciudad.");}
   finally{setPending("");}
  };
@@ -251,7 +266,8 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   location:"¿Dónde quieres anunciarte?",
   image:"¿Qué imagen usaremos?",
   copy:"Tu agente preparó el anuncio",
-  review:"Revisa tu anuncio"
+  budget:"¿Cuánto quieres invertir?",
+  review:"Revisa todo antes de enviar"
  };
  const chip=(label:string,selected:boolean,onClick:()=>void)=><button type="button"
   className={selected?styles.chipSelected:styles.chip} onClick={onClick}
