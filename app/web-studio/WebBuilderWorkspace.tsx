@@ -10,8 +10,8 @@ import {t as interfaceText,type InterfaceLanguage} from "@/lib/i18n";
 import {builderConfig,normalizeBuilderDocument,validateBuilderDocument,starterBuilderDocument,importLegacyBuilderDocument} from "@/lib/web-builder-puck";
 import {normalizeWebContent,type WebSiteContent} from "@/lib/web-services-site";
 import {BUSINESS_CATEGORIES,CATEGORY_GROUPS} from "@/lib/vmv-business-categories";
-import WebSiteIntake from "./WebSiteIntake";
-const WebAiWizard=dynamic(()=>import("./WebAiWizard"),{ssr:false,loading:()=>
+
+const UnifiedWebWizard=dynamic(()=>import("./UnifiedWebWizard"),{ssr:false,loading:()=>
  <div role="status" style={{padding:"30px 12px",fontSize:13,color:"#7555a8"}}>Preparando el creador de webs con IA…</div>
 });
 import WebChatLauncher from "./WebChatLauncher";
@@ -782,9 +782,7 @@ export default function WebBuilderWorkspace(){
   {error?<div className={styles.error} role="alert">{error}</div>:null}
   {notice?<div className={styles.notice} role="status">{notice}</div>:null}
   {!site?<main className={styles.landing}>
-   {creationMode==="templates"?<WebSiteIntake ownerId={userId} busy={busy}
-    onChoose={(input,proposal)=>void createSite(input,proposal)}/>:
-    creationMode==="ai"?<WebAiWizard ownerId={userId} busy={busy}
+   {creationMode!=="sites"?<UnifiedWebWizard ownerId={userId} busy={busy}
     onChoose={(input,proposal)=>void createSite(input,proposal)}/>:null}
    {creationMode==="sites"?<>
     <header className={styles.libraryHeading}>
@@ -794,8 +792,8 @@ export default function WebBuilderWorkspace(){
      </div>
     </header>
     <div className={styles.libraryCreate}>
-     <a href="/vista-app/ai-agents?service=web"><Bot size={18}/>
-      {language==="en"?"Create with my AI Agent":"Crear con mi agente IA"}</a>
+     <a href="/web-studio?mode=templates"><Plus size={18}/>
+      {language==="en"?"Create my website":"Crear mi página web"}</a>
     </div>
     {classicDraft?<button type="button" className={styles.importClassic} disabled={busy}
      onClick={()=>void importClassic()}><Layers size={18}/> Importar mi web actual al editor visual</button>:null}
