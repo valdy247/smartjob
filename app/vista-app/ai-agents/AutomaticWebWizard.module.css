@@ -61,3 +61,5 @@
 @keyframes twirl{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
 @media(max-width:400px){.swatches{grid-template-columns:repeat(4,minmax(0,1fr))}.option,.optionActive{padding:10px 8px}}
+
+.gallerySlot{display:grid;gap:8px;border:1px solid #eee5f5;background:#fff;border-radius:15px;padding:12px}
