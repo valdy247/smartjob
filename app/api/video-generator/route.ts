@@ -34,7 +34,7 @@ export async function GET(req:NextRequest){
   ]);
   if(jobs.error||pilots.error)return reply({error:"video_history_unavailable"},503);
   return reply({jobs:jobs.data||[],pilots:pilots.data||[],configured:videoReady(),pilot:true,
-   dailyLimit:3,automaticPublishing:false});
+   dailyLimit:50,automaticPublishing:false});
  }catch{return reply({error:"video_database_unavailable"},503);}
 }
 export async function POST(req:NextRequest){
@@ -50,7 +50,7 @@ export async function POST(req:NextRequest){
  const pilotId=body.pilotId==null?null:body.pilotId;
  if(pilotId!==null&&!validUuid(pilotId))return reply({error:"invalid_pilot"},400);
  const db=videoDb();
- const saved=await db.rpc("vmv_video_reserve_job",{
+ const saved=await db.rpc("vmv_video_reserve_pilot_job",{
   p_owner:owner,p_key:body.clientKey,p_prompt:input.prompt,p_mode:input.mode,
   p_model:input.model,p_ratio:input.ratio,p_duration:input.duration,p_pilot:pilotId
  });
