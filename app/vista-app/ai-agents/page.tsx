@@ -502,7 +502,18 @@ export default function AIAgentsPreview(){
      {screen==="call"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticCallWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
        workspaceId={selectedWorkspace.id} agent={principal} onClose={back}
-       onAdvanced={()=>setScreen("phone")}/>:null}
+       onAdvanced={()=>setScreen("phone")} businesses={businesses}
+       onChooseBusiness={id=>{
+        const nextWorkspace=workspaces.find(w=>w.central_business_id===id);
+        const nextAgent=agents.find(a=>a.id===nextWorkspace?.primary_agent_id);
+        setChosenBusiness(id);
+        if(nextWorkspace&&nextAgent){
+         setSelected(nextAgent.id);setNotice("");
+        }else{
+         setScreen("home");
+         setNotice("Para configurar las llamadas de ese negocio, primero prepara su agente principal.");
+        }
+       }}/>:null}
      {screen==="quote"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticQuoteWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
        workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
