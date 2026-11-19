@@ -109,6 +109,14 @@ export default function VideoGeneratorPage(){
  },[]);
  const current=useMemo(()=>jobs.find(j=>j.id===selected)||null,[jobs,selected]);
  useEffect(()=>{
+  if(!ready)return;
+  const url=new URL(window.location.href),id=url.searchParams.get("job");
+  if(!id||!/^[0-9a-f-]{36}$/i.test(id))return;
+  url.searchParams.delete("job");
+  window.history.replaceState(null,"",url.pathname+url.search+url.hash);
+  setSelected(id);setScreen("library");void refreshJob(id);
+ },[ready,refreshJob]);
+ useEffect(()=>{
   if(!current||!active(current))return;
   const timer=window.setInterval(()=>void refreshJob(current.id),7000);
   return()=>window.clearInterval(timer);
@@ -158,8 +166,13 @@ export default function VideoGeneratorPage(){
    setPilots(prev=>[result.pilot,...prev.filter(p=>p.id!==result.pilot.id)]);
    setPilot(prev=>({...prev,id:result.pilot.id}));
    setNotice(L("Configuración guardada.","Settings saved."));
+   return result.pilot as Pilot;
   }catch(e){setError(e instanceof Error?e.message:"unavailable");}
   finally{setBusy("");}
+ };
+ const preparePilot=async()=>{
+  const saved=await savePilot();
+  if(saved?.id)window.location.assign("/vista-app/ai-agents?service=video&pilot="+encodeURIComponent(saved.id));
  };
  const onFile=async(file?:File)=>{
   if(!file)return;
@@ -211,7 +224,7 @@ export default function VideoGeneratorPage(){
     <p>{L("Un estudio sencillo para crear, organizar y preparar tus videos.","A simple studio to create, organize and prepare videos.")}</p>
    </div>
    <div className={styles.choiceGrid}>
-    <button type="button" className={styles.choice} onClick={()=>open("create")}>
+    <button type="button" className={styles.choice} onClick={()=>window.location.assign("/vista-app/ai-agents?service=video")}>
      <span className={styles.choiceIcon}><Clapperboard size={23}/></span>
      <strong>{L("Crear un video","Create a video")}</strong>
      <small>{L("De texto o imagen a video.","Turn text or images into video.")}</small>
@@ -337,7 +350,7 @@ export default function VideoGeneratorPage(){
       onClick={()=>void savePilot()}>{busy==="pilot"?<LoaderCircle size={16} className={styles.spinner}/>:<Check size={16}/>}
       {L("Guardar piloto","Save pilot")}</button>
      <button type="button" className={styles.primary} disabled={busy!==""||pilot.niche.trim().length<3}
-      onClick={()=>void idea(true)}>{busy==="idea"?<LoaderCircle size={16} className={styles.spinner}/>:<Sparkles size={16}/>}
+      onClick={()=>void preparePilot()}>{busy==="pilot"?<LoaderCircle size={16} className={styles.spinner}/>:<Sparkles size={16}/>}
       {L("Preparar primer video","Prepare first video")}</button>
     </div>
     <div className={styles.setup}><CalendarDays size={17}/>
