@@ -82,6 +82,9 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   return()=>{live=false;};
  },[business.id,workspaceId,agent.id,agent.owner_id,agent.business_id]);
  const savedWebsite=validSite(business.website_url||"")?business.website_url||"":"";
+ useEffect(()=>{if(step==="account"&&!meta.connected&&!pending)void fetchMeta();},
+  // The account step is entered deliberately; avoid repeated requests while pending.
+  [step]);
  const hasSite=Boolean(savedWebsite);
  const index=steps.indexOf(step);
  const selectedProducts=products.filter(x=>answer.productIds.includes(x.id));
@@ -99,7 +102,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   step==="image"?Boolean(imageHash):
   step==="copy"?headline.trim().length>=5&&message.trim().length>=25:true;
  const next=()=>{
-  if(!canContinue)return;
+  if(!canContinue||Boolean(pending))return;
   if(step==="website")setAnswer(x=>({...x,website:siteChoice==="saved"?savedWebsite:siteChoice==="custom"?customWebsite.trim():""}));
   setError("");setStep(steps[Math.min(index+1,steps.length-1)]);
  };
@@ -211,17 +214,22 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
  },[image]);
  const finish=()=>{
   if(!owner||!canContinue||!answer.businessName.trim()||!answer.offer.trim()||
-   !answer.city.trim()||!answer.region.trim()||!answer.audience.trim())return;
-  if(answer.website&&!validSite(answer.website)){setError("Utiliza una dirección HTTPS válida.");return;}
+   !cityKey||!pageId||!imageHash||!headline.trim()||!message.trim()||
+   !answer.audience.trim()||!accountId)return;
+  if(!answer.website||!validSite(answer.website)){
+   setError("Para anuncios de clics necesitas un enlace HTTPS válido.");return;
+  }
   const brief:AgentAdBrief={
    version:1,ownerId:owner,businessId:business.id,workspaceId,agentId:agent.id,
    createdAt:Date.now(),businessName:answer.businessName.trim(),website:answer.website.trim(),
    offer:answer.offer.trim(),city:answer.city.trim(),region:answer.region.trim(),
    audience:answer.audience.trim(),goals:answer.goals,
-   goal:answer.goals[0],imageChoice:answer.imageChoice,
-   imageProductId:answer.imageChoice==="product"?answer.imageProductId:undefined,
+   goal:answer.goals[0],imageChoice:"upload",
+   productIds:selectedProducts.map(p=>p.id),
+   selectedItems:selectedProducts.map(p=>({id:p.id,name:p.name,type:p.type})),
    productId:product?.id,priceCents:product?.price_cents,currency:product?.currency,
-   notes:answer.notes.trim()
+   notes:answer.notes.trim(),pageId,accountId,cityKey,cityMetaName,
+   imageHash,headline:headline.trim(),message:message.trim()
   };
   if(!saveAgentAdBrief(brief)){setError("No se pudo preparar el anuncio. Revisa el almacenamiento de este navegador.");return;}
   // Marketing is the consumer: no campaign, Meta action or ad spend here.
@@ -233,9 +241,11 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   product:"¿Qué vamos a promocionar?",
   goal:"¿Qué quieres conseguir?",
   audience:"¿A quién quieres llegar?",
+  account:"¿Qué página de Facebook usaremos?",
   location:"¿Dónde quieres anunciarte?",
   image:"¿Qué imagen usaremos?",
-  review:"Tu anuncio está listo para preparar"
+  copy:"Tu agente preparó el anuncio",
+  review:"Revisa tu anuncio"
  };
  const chip=(label:string,selected:boolean,onClick:()=>void)=><button type="button"
   className={selected?styles.chipSelected:styles.chip} onClick={onClick}
@@ -273,17 +283,18 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
     {siteChoice==="none"?<p className={styles.helper}>Marketing te pedirá un destino válido antes de publicar.</p>:null}
    </div>:null}
   {!loading&&step==="product"?<div className={styles.answers}>
-    {products.length>0?<><p className={styles.helper}>Productos aprobados de {business.name}</p>
-     <div className={styles.products}>{products.map(p=><button key={p.id} type="button"
-      className={answer.productId===p.id?styles.productActive:styles.product}
-      onClick={()=>selectProduct(p.id)}>
-      <Package size={16}/><span>{p.name}<small>{p.currency==="usd"?"$"+(p.price_cents/100).toFixed(2):"Precio aprobado"}</small></span>
-      {answer.productId===p.id?<Check size={18}/>:null}</button>)}</div></>:null}
-    <label className={styles.field}>Producto, servicio u oferta
-     <textarea maxLength={220} rows={2} value={answer.offer}
-      onChange={e=>setAnswer(x=>({...x,offer:e.target.value,productId:""}))}
-      placeholder="¿Qué quieres anunciar?"/></label>
-    <p className={styles.helper}>No inventaremos descuentos ni precios.</p>
+    {products.length>0?<><p className={styles.helper}>Marca varios productos o servicios aprobados</p>
+     <div className={styles.products} role="group" aria-label="Productos y servicios del anuncio">{products.map(p=><button key={p.id} type="button"
+      className={answer.productIds.includes(p.id)?styles.productActive:styles.product}
+      aria-pressed={answer.productIds.includes(p.id)} onClick={()=>selectProduct(p.id)}>
+      <Package size={16}/><span>{p.name}<small>{p.type==="service"?"Servicio · ":"Producto · "}
+       {p.currency==="usd"?"$"+(p.price_cents/100).toFixed(2):"Precio aprobado"}</small></span>
+      {answer.productIds.includes(p.id)?<Check size={18}/>:null}</button>)}</div></>:null}
+    <label className={styles.field}>Oferta (puedes editar o agregar algo más)
+     <textarea maxLength={220} rows={3} value={answer.offer}
+      onChange={e=>{update("offer",e.target.value);setAdReady(false);}}
+      placeholder="Describe qué vas a promocionar"/></label>
+    <p className={styles.helper}>{answer.productIds.length} seleccionado(s). Sin descuentos ni precios inventados.</p>
    </div>:null}
   {!loading&&step==="goal"?<div className={styles.answers}>
     <p className={styles.helper}>Puedes elegir varios objetivos.</p>
@@ -301,42 +312,91 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
      <textarea maxLength={130} rows={3} value={answer.audience} onChange={e=>update("audience",e.target.value)}/></label>
     <p className={styles.helper}>Describe intereses generales; evita datos sensibles o personales.</p>
    </div>:null}
+  {!loading&&step==="account"?<div className={styles.answers}>
+    <p className={styles.helper}>Cuenta y página autorizadas de Meta</p>
+    {meta.connected?<div className={styles.fact}><Check size={17}/> Meta conectado</div>:null}
+    <button type="button" className={styles.chip} disabled={Boolean(pending)} onClick={()=>void fetchMeta()}>
+     {pending==="meta"?<LoaderCircle className={styles.spin} size={18}/>:<RefreshCw size={17}/>} Comprobar conexión</button>
+    {!meta.configured?<p className={styles.helper}>Meta aún no está configurado. Conéctalo en el piloto para continuar.</p>:null}
+    {meta.configured&&!meta.connected?<button type="button" className={styles.next} onClick={()=>void connectMeta()}>
+     Conectar Facebook</button>:null}
+    {meta.connected?<label className={styles.field}>Cuenta publicitaria
+     <select value={accountId} disabled={Boolean(pending)} onChange={e=>void saveAccount(e.target.value)}>
+      <option value="">Seleccionar cuenta</option>
+      {meta.accounts.filter(a=>a.status===1&&a.currency==="USD").map(a=>
+       <option key={a.id} value={a.id}>{a.name}</option>)}
+     </select></label>:null}
+    {meta.connected&&accountId?<label className={styles.field}>Página de Facebook
+     <select value={pageId} onChange={e=>setPageId(e.target.value)}>
+      <option value="">Seleccionar página</option>
+      {meta.pages.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+     </select></label>:null}
+    {pending==="account"?<p className={styles.helper}>Verificando cuenta…</p>:null}
+   </div>:null}
   {!loading&&step==="location"?<div className={styles.answers}>
-    {!editCity&&answer.city&&answer.region?<div className={styles.fact}>{answer.city}, {answer.region}</div>:null}
-    <div className={styles.options}>{chip("Sí, aquí",!editCity&&Boolean(answer.city),()=>{if(answer.city&&answer.region)next();else setEditCity(true);})}
-     {chip("Cambiar ubicación",editCity,()=>setEditCity(true))}</div>
-    {editCity||!answer.city?<div className={styles.fieldPair}>
+    <div className={styles.fieldPair}>
      <label className={styles.field}>Ciudad<input maxLength={100} value={answer.city}
-      onChange={e=>update("city",e.target.value)}/></label>
+      onChange={e=>{update("city",e.target.value);setCityKey("");setCityMetaName("");}}/></label>
      <label className={styles.field}>Estado<input maxLength={90} value={answer.region}
-      onChange={e=>update("region",e.target.value)}/></label></div>:null}
-    <p className={styles.helper}>Marketing verificará la ubicación con Meta antes de publicar.</p>
+      onChange={e=>{update("region",e.target.value);setCityKey("");setCityMetaName("");}}/></label>
+    </div>
+    {locationVerified?<div className={styles.fact}><Check size={17}/>{cityMetaName} · Verificada por Meta</div>:null}
+    <button type="button" disabled={pending==="city"||answer.city.trim().length<3}
+     className={styles.chip} onClick={()=>void verifyCity()}>
+     {pending==="city"?<LoaderCircle size={17} className={styles.spin}/>:<Globe2 size={17}/>}
+     Verificar ciudad en Meta</button>
+    {places.length>0?<div className={styles.products} role="group" aria-label="Selecciona una ciudad de Meta">
+     {places.map(p=><button key={p.key} type="button" className={styles.product}
+      onClick={()=>{setCityKey(p.key);setCityMetaName(p.name+(p.region?", "+p.region:""));
+       setPlaces([]);setHeadline("");setMessage("");setAdReady(false);}}>
+      <Globe2 size={15}/>{p.name}, {p.region}</button>)}</div>:null}
+    {pending!=="city"&&!cityKey&&places.length===0?<p className={styles.helper}>
+     Debes elegir una ciudad confirmada por Meta antes de continuar.</p>:null}
    </div>:null}
   {!loading&&step==="image"?<div className={styles.answers}>
-    <div className={styles.optionsVertical}>
-     {businessImageAvailable?chip("Usar imagen del negocio",answer.imageChoice==="business",()=>update("imageChoice","business")):null}
-     {products.some(p=>p.image_path)?chip("Imagen de un producto",answer.imageChoice==="product",()=>update("imageChoice","product")):null}
-     {chip("Subir otra en Marketing",answer.imageChoice==="upload",()=>update("imageChoice","upload"))}
-    </div>
-    {answer.imageChoice==="product"?<div className={styles.products}>{products.filter(p=>p.image_path).map(p=><button type="button"
-     key={p.id} className={answer.imageProductId===p.id?styles.productActive:styles.product}
-     onClick={()=>update("imageProductId",p.id)}><ImageIcon size={16}/>{p.name}</button>)}</div>:null}
-    <p className={styles.helper}>La imagen se revisa y carga desde Ads Studio; todavía no se publica.</p>
+    <label className={styles.field}>Imagen del anuncio · JPG o PNG (máximo 2 MB)
+     <input type="file" accept="image/jpeg,image/png" disabled={pending==="image"}
+      onChange={e=>{const file=e.target.files?.[0];if(file)void uploadImage(file);}}/></label>
+    {imagePreview?<img className={styles.imagePreview} src={imagePreview} alt="Vista previa de la imagen del anuncio"/>:null}
+    {pending==="image"?<div className={styles.uploadProgress} role="status">
+     <LoaderCircle size={26} className={styles.spin}/> Enviando imagen a Meta…</div>:null}
+    {imageHash&&pending!=="image"?<div className={styles.fact} role="status"><Check size={17}/> Imagen recibida por Meta</div>:null}
+    {image&&!imageHash&&pending!=="image"?<button type="button" className={styles.chip}
+     onClick={()=>void uploadImage(image)}>Reintentar subida</button>:null}
+    <p className={styles.helper}>No avanzaremos hasta que Facebook confirme la recepción.</p>
+   </div>:null}
+  {!loading&&step==="copy"?<div className={styles.answers}>
+    <button type="button" className={styles.next} disabled={pending==="copy"}
+     onClick={()=>void generateCopy()}>
+     {pending==="copy"?<LoaderCircle size={17} className={styles.spin}/>:<Sparkles size={17}/>}
+     {pending==="copy"?"Generando con IA…":adReady?"Regenerar texto con IA":"Generar texto con IA"}</button>
+    <label className={styles.field}>Título
+     <input maxLength={70} value={headline} onChange={e=>setHeadline(e.target.value)}/></label>
+    <label className={styles.field}>Texto del anuncio
+     <textarea rows={5} maxLength={350} value={message} onChange={e=>setMessage(e.target.value)}/></label>
+    <p className={styles.helper}>Revisa las afirmaciones antes de aprobar. El agente no publicará nada.</p>
    </div>:null}
   {!loading&&step==="review"?<div className={styles.review}>
     <div><small>Negocio</small><strong>{answer.businessName}</strong></div>
     <div><small>Promoción</small><strong>{answer.offer}</strong></div>
     <div><small>Destino</small><strong>{answer.website||"Por definir en Marketing"}</strong></div>
     <div><small>Zona</small><strong>{answer.city}, {answer.region}</strong></div>
+    <div><small>Página Facebook</small><strong>{verifiedPage?.name||"Pendiente"}</strong></div>
+    <div><small>Productos / servicios</small><strong>{selectedProducts.map(p=>p.name).join(", ")||answer.offer}</strong></div>
+    <div><small>Imagen</small><strong>{imageHash?"Recibida por Meta":"Pendiente"}</strong></div>
+    <div><small>Título</small><strong>{headline}</strong></div>
+    <div><small>Texto</small><strong>{message}</strong></div>
     <div><small>Objetivos</small><strong>{answer.goals.map(goal=>
      ({visits:"Visitas",messages:"Mensajes",sales:"Ventas"} as const)[goal]).join(" · ")}</strong></div>
     <label className={styles.field}>Algo más que debamos saber (opcional)
      <textarea value={answer.notes} onChange={e=>update("notes",e.target.value)}
       rows={2} maxLength={300} placeholder="Detalle real de la oferta"/></label>
    </div>:null}
-  {error?<p role="alert" className={styles.error}>{error}</p>:null}
+  {error?<p role="alert" className={styles.error}>{error}
+   <button type="button" className={styles.chip} onClick={()=>setError("")}>Cerrar aviso</button>
+  </p>:null}
   {!loading&&owner?<div className={styles.footer}>
-    {step!=="review"?<button type="button" className={styles.next} disabled={!canContinue} onClick={next}>
+    {step!=="review"?<button type="button" className={styles.next} disabled={!canContinue||Boolean(pending)} onClick={next}>
      Continuar <ArrowRight size={18}/></button>:
      <button type="button" className={styles.generate} onClick={finish}>
       <Megaphone size={18}/> Generar anuncio <ArrowRight size={17}/></button>}
