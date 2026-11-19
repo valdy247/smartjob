@@ -93,7 +93,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
  const selectedAccount=meta.accounts.find(a=>a.id===accountId);
  const locationVerified=Boolean(cityKey&&cityMetaName);
  const canContinue=step==="business"?answer.businessName.trim().length>=2:
-  step==="website"?siteChoice==="none"||siteChoice==="saved"&&hasSite||siteChoice==="custom"&&validSite(customWebsite):
+  step==="website"?siteChoice==="saved"&&hasSite||siteChoice==="custom"&&validSite(customWebsite):
   step==="product"?answer.offer.trim().length>=3:
   step==="goal"?answer.goals.length>0:
   step==="audience"?answer.audience.trim().length>=3:
@@ -104,6 +104,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
  const next=()=>{
   if(!canContinue||Boolean(pending))return;
   if(step==="website")setAnswer(x=>({...x,website:siteChoice==="saved"?savedWebsite:siteChoice==="custom"?customWebsite.trim():""}));
+  if(step==="image"&&!headline.trim()&&!message.trim())void generateCopy();
   setError("");setStep(steps[Math.min(index+1,steps.length-1)]);
  };
  const back=()=>{if(index===0){onClose();return;}setError("");setStep(steps[index-1]);};
@@ -280,7 +281,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
     {siteChoice==="custom"?<input type="url" inputMode="url" aria-label="Sitio web HTTPS"
      placeholder="https://tunegocio.com" value={customWebsite}
      onChange={e=>setCustomWebsite(e.target.value)} maxLength={240}/>:null}
-    {siteChoice==="none"?<p className={styles.helper}>Marketing te pedirá un destino válido antes de publicar.</p>:null}
+    {siteChoice==="none"?<p className={styles.helper}>Este piloto de Meta necesita una web HTTPS para los anuncios de clics.</p>:null}
    </div>:null}
   {!loading&&step==="product"?<div className={styles.answers}>
     {products.length>0?<><p className={styles.helper}>Marca varios productos o servicios aprobados</p>
@@ -374,7 +375,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
      <input maxLength={70} value={headline} onChange={e=>setHeadline(e.target.value)}/></label>
     <label className={styles.field}>Texto del anuncio
      <textarea rows={5} maxLength={350} value={message} onChange={e=>setMessage(e.target.value)}/></label>
-    <p className={styles.helper}>Revisa las afirmaciones antes de aprobar. El agente no publicará nada.</p>
+    <p className={styles.helper}>La IA prepara el texto automáticamente. Puedes editarlo o volver a generarlo antes de la revisión.</p>
    </div>:null}
   {!loading&&step==="review"?<div className={styles.review}>
     <div><small>Negocio</small><strong>{answer.businessName}</strong></div>
