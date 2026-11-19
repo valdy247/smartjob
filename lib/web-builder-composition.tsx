@@ -244,8 +244,6 @@ export const compositionBlocks:Config["components"]={
    imageWidth:numericEditorField("imageWidth"),
    imageRadius:numericEditorField("imageRadius"),
    imageOpacity:numericEditorField("imageOpacity"),
-   imageBorder:numericEditorField("imageBorder"),
-   borderColor:colorEditorField("Color del borde"),
    imageMoveX:numericEditorField("imageMoveX"),
    imageMoveY:numericEditorField("imageMoveY"),
    ratio:{type:"radio",options:[{label:"Cuadrada",value:"square"},{label:"Vertical",value:"portrait"},
@@ -259,7 +257,7 @@ export const compositionBlocks:Config["components"]={
    imageMoveX:0,imageMoveY:0,visibility:"all"},
   renderFields:({fields:f})=><>
    <SettingsGroup title="Reemplazar o quitar">{f.image}{f.alt}</SettingsGroup>
-   <SettingsGroup title="Tamaño y marco">{f.imageWidth}{f.imageRadius}{f.imageBorder}{f.borderColor}{f.ratio}</SettingsGroup>
+   <SettingsGroup title="Tamaño y encuadre">{f.imageWidth}{f.imageRadius}{f.ratio}</SettingsGroup>
    <SettingsGroup title="Transparencia y encuadre">{f.imageOpacity}{f.position}</SettingsGroup>
    <SettingsGroup title="Mover imagen">{f.imageMoveX}{f.imageMoveY}</SettingsGroup>
    <SettingsGroup title="Visibilidad">{f.visibility}</SettingsGroup>
