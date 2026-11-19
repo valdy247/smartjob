@@ -43,7 +43,7 @@ test("Edits on review return directly and old websites are not overwritten",()=>
  assert.match(wizard,/const edit=\(target:Stage\)/);
  assert.match(wizard,/setReturnToReview\(true\)/);
  assert.match(wizard,/if\(returnToReview\)\{setReturnToReview\(false\);go\("review"\);return;\}/);
- assert.match(wizard,/No se modificarán ni se publicará nada/);
+ assert.match(wizard,/no se modificarán ni se publicará nada/);
  assert.match(wizard,/proposalSignature!==signature/);
  assert.match(wizard,/imageCandidate/);
  assert.match(wizard,/Aprobar/);
