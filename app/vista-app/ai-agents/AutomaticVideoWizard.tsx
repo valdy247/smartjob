@@ -93,6 +93,11 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
  const [pilotId,setPilotId]=useState<string|null>(null);
  const [imageCandidate,setImageCandidate]=useState("");
  const [imageDirection,setImageDirection]=useState("");
+ const [imageAnalysis,setImageAnalysis]=useState<{
+  subject:string;observations:string;groundedMotion:string;conflict:boolean;reason:string;
+ }|null>(null);
+ const [manualSubject,setManualSubject]=useState("");
+ const [creativeOverride,setCreativeOverride]=useState(false);
  const [prompt,setPrompt]=useState("");
  const [caption,setCaption]=useState("");
  const [confirmCredits,setConfirmCredits]=useState(false);
@@ -108,7 +113,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
  const goal=targets.find(x=>x[0]===purpose)?.[1]||"Presentar el negocio";
  const valid=stage==="business"?name.trim().length>=2:
   stage==="audience"?audience.trim().length>=3:
-  stage==="reference"?Boolean(filePreview)&&!imageCandidate:
+  stage==="reference"?Boolean(filePreview)&&!imageCandidate&&Boolean(imageAnalysis||manualSubject.trim().length>=8)&&(!imageAnalysis?.conflict||creativeOverride):
   stage==="script"?prompt.trim().length>=3&&prompt.length<=1000:
   true;
  useEffect(()=>{
@@ -188,7 +193,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
   if(busy||!valid)return;
   if(editing){setEditing(false);move("review");return;}
   const nextStage=steps[Math.min(index+1,steps.length-1)];
-  if(nextStage==="script"&&!scriptAutoTried&&!prompt.trim()){
+  if(nextStage==="script"&&!scriptAutoTried&&!prompt.trim()&&(mode==="text"||Boolean(imageAnalysis||manualSubject.trim()))){
    setScriptAutoTried(true);void generateScript();
   }
   move(nextStage);
@@ -204,18 +209,34 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
   setBusy("script");setError("");
   try{
    const details=chosen.slice(0,6).map(x=>x.name+": "+x.description.slice(0,85)).join("; ");
+   const visual=mode==="image"?
+    (imageAnalysis?("VERIFIED IMAGE SUBJECT: "+imageAnalysis.subject+
+     ". OBSERVED FRAME: "+imageAnalysis.observations+
+     ". PRESERVE THIS SUBJECT: "+imageAnalysis.groundedMotion):
+     "USER-CONFIRMED IMAGE SUBJECT: "+manualSubject.trim()):"";
    const existing=[
-    "Business: "+name.slice(0,100),
+    mode==="image"?"IMAGE TO VIDEO. The image is primary visual evidence.":"TEXT TO VIDEO.",
+    visual,
+    mode==="image"?"HARD CONSTRAINT: keep the pictured main subject and species.":
+     "Describe one clear scene.",
+    mode==="image"&&creativeOverride?
+     "Explicit owner-approved creative change: "+imageDirection.slice(0,180):"",
+    "Business context only (must NEVER replace pictured subject): "+name.slice(0,70),
     "Goal: "+goal,
-    "Products/services: "+(offer||"No confirmed offering"),
-    details?"Known details: "+details:"",
-    "Video style: "+style,
-    imageDirection?"Creative direction: "+imageDirection.slice(0,180):"",
-    "Do not invent prices, discounts, testimonials, promises or logos."
+    mode==="text"?"Products/services: "+(offer||"No confirmed offering"):
+     "Commercial context (optional, never insert people or cake unless visually supported): "+offer.slice(0,110),
+    mode==="text"&&details?"Known details: "+details:"",
+    "Style: "+style,"No invented prices, discounts or testimonials."
    ].filter(Boolean).join("\n").slice(0,1000);
    const result=await api("/api/video-generator/brief",{
     niche:topic,audience:audience.trim().slice(0,150),goal:goal.slice(0,160),
-    style,prompt:existing,locale:"es"
+    style,prompt:existing,locale:"es",
+    visualGrounding:mode==="image"?{
+     subject:imageAnalysis?.subject||manualSubject.trim(),
+     observations:imageAnalysis?.observations||manualSubject.trim(),
+     groundedMotion:imageAnalysis?.groundedMotion||manualSubject.trim(),
+     permitTransformation:creativeOverride,creativeDirection:imageDirection.slice(0,180)
+    }:null
    });
    if(typeof result.prompt!=="string"||result.prompt.trim().length<20)
     throw Error("video_ai_unavailable");
