@@ -55,3 +55,16 @@ test("Approved quotes offer a printable document without inventing payment event
  assert.ok(page.includes("printableQuote.status")||page.includes("printableQuote.customer_name"));
  assert.ok(page.includes('styles.printSheet'));
 });
+
+test("Smart Quote AI wizard always shows Continue in the business step and waits for confirmation",()=>{
+ const wizard=readFileSync("app/vista-app/ai-agents/AutomaticQuoteWizard.tsx","utf8");
+ const parsed=ts.createSourceFile("AutomaticQuoteWizard.tsx",wizard,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+ assert.deepEqual(parsed.parseDiagnostics.map(x=>ts.flattenDiagnosticMessageText(x.messageText," ")),[]);
+ assert.match(wizard,/step==="business"\?businessConfirmed/);
+ assert.match(wizard,/aria-pressed=\{businessConfirmed\}/);
+ assert.match(wizard,/onClick=\{\(\)=>setBusinessConfirmed\(true\)\}/);
+ assert.match(wizard,/disabled=\{!valid\|\|Boolean\(busy\)\} onClick=\{next\}/);
+ assert.match(wizard,/\{editing\?"Guardar y volver a Revisión":"Continuar"\}/);
+ assert.equal(wizard.includes('className={styles.optionActive} onClick={next}'),false);
+ assert.equal(wizard.includes('step!=="business"?<button'),false);
+});

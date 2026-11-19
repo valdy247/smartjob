@@ -29,6 +29,7 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
  business:CentralBusiness;agent:PersistedAgent;workspaceId:string;onClose:()=>void;
 }){
  const [step,setStep]=useState<Step>("business"),[editing,setEditing]=useState(false);
+ const [businessConfirmed,setBusinessConfirmed]=useState(false);
  const [owner,setOwner]=useState(""),[catalog,setCatalog]=useState<QuoteService[]>([]);
  const [qty,setQty]=useState<Record<string,string>>({});
  const [customer,setCustomer]=useState({name:"",email:"",phone:""});
@@ -43,7 +44,8 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
  const discount=parseUsd(charges.discount),delivery=parseUsd(charges.delivery);
  const tax=validPercent(charges.tax)?Math.round(Math.max(0,subTotal-(discount||0))*Number(charges.tax)/100):0;
  const total=discount!==null&&delivery!==null?subTotal-discount+delivery+tax:0;
- const valid=step==="services"?chosen.length>0&&chosen.length<=25&&chosen.every(x=>
+ const valid=step==="business"?businessConfirmed:
+  step==="services"?chosen.length>0&&chosen.length<=25&&chosen.every(x=>
    Number.isSafeInteger(Number(qty[x.id]))&&Number(qty[x.id])>=1&&Number(qty[x.id])<=9999):
   step==="customer"?customer.name.trim().length>=2&&customer.name.length<=120&&
    (!customer.email.trim()||/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email.trim())):
@@ -147,7 +149,9 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
   {loading?<p role="status" className={styles.note}><LoaderCircle size={17}/> Consultando tu negocio…</p>:null}
   {!loading&&owner&&step==="business"?<div className={styles.panel}>
    <strong className={styles.emphasis+" "+theme.agentText}>{business.name}</strong>
-   <button type="button" className={styles.optionActive} onClick={next}><Check size={16}/> Sí, este negocio</button>
+   <button type="button" aria-pressed={businessConfirmed}
+    className={businessConfirmed?styles.optionActive:styles.option}
+    onClick={()=>setBusinessConfirmed(true)}><Check size={16}/> Sí, este negocio</button>
    <p className={styles.note}>La cotización usará precios de tu catálogo real de Smart Quote, no precios imaginados por IA.</p>
   </div>:null}
   {!loading&&owner&&step==="services"?<div className={styles.panel}>
@@ -228,9 +232,9 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
     disabled={Boolean(busy)||Boolean(savedId)||!chosen.length}
     onClick={()=>void save()}>{busy==="save"?<LoaderCircle size={17}/>:<FileText size={17}/>}
     {busy==="save"?"Guardando…":savedId?"Borrador guardado":"Crear borrador de cotización"} <ArrowRight size={17}/></button>:
-   step!=="business"?<button type="button" className={styles.primary+" "+theme.agentButton}
+   <button type="button" className={styles.primary+" "+theme.agentButton}
     disabled={!valid||Boolean(busy)} onClick={next}>
-    {editing?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={17}/></button>:null}
+    {editing?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={17}/></button>}
   </div>:null}
   <p className={styles.footnote}><ShieldCheck size={14}/> Nunca se envía ni se cobra sin aprobación.</p>
  </section>;
