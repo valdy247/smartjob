@@ -1,6 +1,6 @@
 "use client";
 import {useState} from "react";
-import {ColorField,RangeField} from "./BuilderContextFields";
+import {RangeField} from "./BuilderContextFields";
 import {normalizeImageSettings} from "@/lib/web-builder-images";
 
 export default function BuilderImageControls({value,onChange,radius=16}:{
@@ -22,8 +22,6 @@ export default function BuilderImageControls({value,onChange,radius=16}:{
   </div>
   <RangeField label="Esquinas redondas" min={0} max={80} unit="px" value={p.imageRadius} onChange={v=>onChange({imageRadius:v})}/>
   <RangeField label="Transparencia" min={0} max={100} value={p.imageOpacity} onChange={v=>onChange({imageOpacity:v})}/>
-  <RangeField label="Grosor del borde" min={0} max={12} unit="px" value={p.imageBorder} onChange={v=>onChange({imageBorder:v})}/>
-  <ColorField label="Color del borde" value={p.borderColor} onChange={v=>onChange({borderColor:v})}/>
   <button className="vmv-image-reset" type="button" onClick={()=>onChange({[key("imageMoveX")]:0,[key("imageMoveY")]:0,[key("imageAlign")]:"left"})}>Restablecer posición {mobile?"móvil":""}</button>
  </div>;
 }
