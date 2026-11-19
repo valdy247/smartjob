@@ -132,12 +132,10 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
      throw Error("Debes abrir Web Services desde el agente principal del mismo negocio.");
     if(!live)return;
     setOwner(user.id);
-    const [central,existingSites,catalog,bookingServices]=await Promise.all([
-     db.from("vmv_marketing_businesses").select("id,email,services,products,category_id")
+    const [central,existingSites,bookingServices]=await Promise.all([
+     db.from("vmv_marketing_businesses").select("id,email,services,category_id")
       .eq("id",business.id).eq("owner_id",user.id).maybeSingle(),
      db.from("smartjob_builder_sites").select("id,name,slug").eq("owner_id",user.id).limit(20),
-     db.from("vmv_ai_catalog_items").select("id,name,description,price_cents")
-      .eq("business_id",workspaceId).eq("owner_id",user.id).eq("active",true).eq("approved",true).limit(40),
      db.from("vmv_ai_booking_services").select("id,name,description,price_cents")
       .eq("business_id",workspaceId).eq("owner_id",user.id).eq("active",true).eq("approved",true).limit(30)
     ]);
@@ -146,22 +144,16 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
     if(!live)return;
     setEmail(String(central.data.email||"").slice(0,180));
     if(!category&&central.data.category_id)setCategory(central.data.category_id);
-    const existingItems=[
-     ...(catalog.data||[]).map(x=>({...x,type:"product" as const,approved:true})),
-     ...(bookingServices.data||[]).map(x=>({...x,type:"service" as const,approved:true}))
-    ];
+    const knownServices:Item[]=(bookingServices.data||[]).map(x=>({
+     ...x,type:"service" as const,approved:true
+    }));
     const savedServices=String(central.data.services||"").split(/[\n,]+/).map(cleanOffer).filter(Boolean);
-    const savedProducts=String(central.data.products||"").split(/[\n,]+/).map(cleanOffer).filter(Boolean);
-    for(const [kind,names] of [["service",savedServices],["product",savedProducts]] as const){
-     for(const value of names.slice(0,12)){
-      if(existingItems.some(x=>x.name.toLocaleLowerCase("es")===value.toLocaleLowerCase("es")))continue;
-      existingItems.push({id:"central-"+kind+"-"+existingItems.length,name:value,description:"",
-       price_cents:null,type:kind,approved:true});
-     }
+    for(const label of savedServices.slice(0,12)){
+     if(knownServices.some(x=>x.name.toLocaleLowerCase("es")===label.toLocaleLowerCase("es")))continue;
+     knownServices.push({id:"central-service-"+knownServices.length,name:label,
+      description:"",price_cents:null,type:"service",approved:true});
     }
-    setItems(existingItems);
-    setSelectedIds(existingItems.slice(0,6).map(x=>x.id));
-    setInventory(existingItems.some(x=>x.type==="product"));
+    setItems(knownServices);
     setExisting((existingSites.data||[]) as Existing[]);
    }catch(e){if(live)setError(e instanceof Error?e.message:"No se pudo cargar el negocio.");}
    finally{if(live)setLoading(false);}
@@ -192,6 +184,8 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
  const next=()=>{
   if(!validStage||busy)return;
   if(returnToReview){setReturnToReview(false);go("review");return;}
+  // The final preview follows the owner's complete review; generation is a
+  // separate action that cannot spend credits without explicit request.
   go(stages[Math.min(progress+1,stages.length-1)]);
  };
  const previous=()=>{
@@ -200,9 +194,6 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
   go(stages[progress-1]);
  };
  const edit=(target:Stage)=>{setReturnToReview(true);go(target);};
- const toggle=(id:string)=>{
-  setSelectedIds(ids=>ids.includes(id)?ids.filter(v=>v!==id):ids.length>=16?ids:[...ids,id]);
- };
  const toggleColor=(hex:string)=>{
   setPalette(current=>current.includes(hex)?current.length===1?current:current.filter(x=>x!==hex):
    current.length>=3?[...current.slice(1),hex]:[...current,hex]);
@@ -218,36 +209,20 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
   if(!response.ok)throw Error(String(result.error||"La IA no pudo completar esta solicitud."));
   return result;
  };
- const generateImage=async()=>{
-  if(busy||!imageAiReady)return;
-  if(!window.confirm("Generar la imagen utiliza una generación del cupo diario de IA. ¿Continuar?"))return;
-  setBusy("image");setImageCandidate("");setError("");
-  try{
-   const prompt=(imagePrompt.trim()||"Fotografía comercial auténtica de "+uniqueOffers.slice(0,4).join(", ")+
-    " para el negocio, composición limpia, sin texto ni logotipos.").slice(0,450);
-   const res=await askAi("/api/web-services/generate-image",{
-    prompt,business:name,categoryId:category
-   });
-   const url=safeWebImageUrl(String(res.url||""));
-   if(!url)throw Error("La imagen generada no se pudo verificar.");
-   setImageCandidate(url);
-  }catch(e){setError(e instanceof Error?e.message:"Error al generar la imagen.");}
-  finally{setBusy("");}
- };
  const generate=async()=>{
-  if(busy||!name.trim()||!category||!uniqueOffers.length||palette.length!==3)return;
+  if(busy||!name.trim()||!category||palette.length!==3)return;
   setBusy("generate");setError("");setProposal(null);
   try{
    if(!aiAvailable){
     const result=createSiteProposals(input);
     if(!result[0])throw Error("No se pudo preparar un diseño sin IA.");
-    setProposal(result[0]);setProposalSignature(signature);return;
+    setProposal(result[0]);setProposalSignature(signature);go("preview");return;
    }
    const res=await askAi("/api/web-services/generate-site",{
     intake:input,direction:direction.trim().slice(0,360)
    });
    if(!res.proposal?.data)throw Error("La IA no devolvió una web editable.");
-   setProposal(res.proposal as SiteProposal);setProposalSignature(signature);
+   setProposal(res.proposal as SiteProposal);setProposalSignature(signature);go("preview");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo generar tu web.");}
   finally{setBusy("");}
  };
@@ -275,11 +250,18 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
     throw Error(/límite de cinco sitios/i.test(String(result.error?.message||""))?
      "Has alcanzado el límite de sitios de tu cuenta. Puedes editar los existentes.":
      "No se pudo guardar la web. Revisa tu cuenta o inténtalo nuevamente.");
-   // The inquiry switch is real: Web Studio's public forms require this site flag.
-   // The new site is already saved; do not recreate it on an optional update failure.
+   // Never publish or overwrite. The catalog link points to the canonical
+   // owner-scoped inventory only when the owner expressly chose Sí.
    setCreated(slug);
    const enabled=await db.from("smartjob_builder_sites")
-    .update({inquiries_enabled:inquiries,updated_at:new Date().toISOString()})
+    .update({
+     inquiries_enabled:inquiries,
+     inventory_connection_enabled:catalogChoice==="yes",
+     inventory_business_id:catalogChoice==="yes"?workspaceId:null,
+     services_connection_enabled:false,
+     services_business_id:null,
+     updated_at:new Date().toISOString()
+    })
     .eq("id",result.data.siteId).eq("owner_id",owner).select("id").single();
    if(enabled.error||!enabled.data){
     setError("La web se creó, pero no se pudo configurar el formulario de solicitudes. Ábrela en Web Studio para revisarlo.");
