@@ -33,3 +33,21 @@ test("AI copy and Meta image are prepared in Agent before Marketing review, with
  assert.match(studio,/operation:"create_paused"/);
  assert.match(studio,/confirmPaused:true/);
 });
+
+test("Only AI Agent can initiate new campaign, all requirements completed before review",()=>{
+ const hub=read("app/vista-app/marketing/ads/page.tsx");
+ const create=read("app/vista-app/marketing/ads/create/page.tsx");
+ assert.match(hub,/href="\/vista-app\/ai-agents"/);
+ assert.match(create,/window\.location\.replace\("\/vista-app\/ai-agents"\)/);
+ assert.match(studio,/mode==="wizard"&&!agentBrief/);
+ assert.match(intake,/meta\/accounts/);
+ assert.match(intake,/meta\/locations/);
+ assert.match(intake,/meta\/image/);
+ assert.match(intake,/api\/marketing\/ads\/generate/);
+ assert.match(intake,/if\(step==="image"&&!headline\.trim\(\)&&!message\.trim\(\)\)void generateCopy\(\)/);
+ assert.match(intake,/step==="image"\?Boolean\(imageHash\)/);
+ assert.match(intake,/step==="location"\?locationVerified/);
+ assert.match(intake,/selectedProducts\.map\(p=>p\.id\)/);
+ assert.match(intake,/pageId,accountId,cityKey,cityMetaName/);
+ assert.match(studio,/setImageHash\(candidate\.imageHash\|\|""\)/);
+});
