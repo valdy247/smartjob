@@ -335,6 +335,27 @@ export default function WebBuilderWorkspace(){
    const loaded=await loadCreatedSite(db,ids);
    const created=loaded.created;
    let home=loaded.home;
+   // All connected cards belong to a verified central business and remain
+   // canonical in AI Agents. The published page reads the live approved rows.
+   if(intake.agentWorkspaceId&&(intake.connectInventory||intake.connectServices)){
+    const {data:workspace,error:workspaceError}=await db.from("vmv_ai_businesses")
+     .select("id,central_business_id").eq("id",intake.agentWorkspaceId)
+     .eq("owner_id",userId).maybeSingle();
+    if(workspaceError||!workspace||workspace.central_business_id!==intake.sourceBusinessId)
+     throw new Error("El borrador se creó, pero falta confirmar el negocio del catálogo. Ábrelo en Mis sitios y revisa las conexiones.");
+   }
+   const {data:connections,error:connectionsError}=await db.from("smartjob_builder_sites")
+    .update({
+     inventory_connection_enabled:Boolean(intake.connectInventory&&intake.agentWorkspaceId),
+     inventory_business_id:intake.connectInventory?intake.agentWorkspaceId||null:null,
+     services_connection_enabled:Boolean(intake.connectServices&&intake.agentWorkspaceId),
+     services_business_id:intake.connectServices?intake.agentWorkspaceId||null:null,
+     updated_at:new Date().toISOString()
+    })
+    .eq("id",created.id).eq("owner_id",userId).select("id").maybeSingle();
+   if(connectionsError||!connections)
+    throw new Error("El borrador se creó, pero no se confirmó la sincronización con Inventario y Servicios. Revisa Mis sitios.");
+
    let seoPending=false;
    if(proposal.seoTitle){
     // A generated site is only a draft. Persist its SEO title on the same
