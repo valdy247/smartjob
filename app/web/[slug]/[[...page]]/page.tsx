@@ -6,6 +6,7 @@ import {Render} from "@puckeditor/core";
 import {builderConfig,normalizeBuilderDocument} from "@/lib/web-builder-puck";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import {familyForCategory} from "@/lib/web-builder-templates";
+import {publishedBuilderCatalog,applyPublishedCatalog} from "@/lib/web-builder-live-catalog";
 import {WebsiteChrome,websiteVisualStyle} from "@/lib/web-site-chrome";
 import type {CSSProperties} from "react";
 import RequestForm from "@/app/sites/[slug]/RequestForm";
@@ -73,7 +74,8 @@ export default async function VMVPublishedPage({params}:Props){
  const custom=requestHeaders.get("x-vmv-custom-domain")==="1";
  const base=custom?"":"/web/"+slug;
  const siteName=result.page.site_name||slug.replace(/-/g," ");
- const data=normalizeBuilderDocument(result.page.document);
+ const approvedCatalog=part==="home"?await publishedBuilderCatalog(slug):null;
+ const data=applyPublishedCatalog(normalizeBuilderDocument(result.page.document),approvedCatalog);
  const classicServices=data.content.filter(b=>b.type==="Services").flatMap(b=>
   ["first","second","third"].map(k=>b.props?.[k]).filter((s):s is string=>typeof s==="string"&&Boolean(s.trim())));
  const visualServices=data.content.filter(b=>b.type==="OfferingGrid").flatMap(b=>
