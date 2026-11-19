@@ -102,8 +102,9 @@ export default function SmartQuotePage(){
   if(!product.unit_name.trim()||product.unit_name.length>35)throw Error("Indica la unidad de venta.");
   const price=cents(product.price);if(price>100000000)throw Error("Precio demasiado alto.");
   const payload={name:product.name.trim(),description:product.description.trim(),unit_name:product.unit_name.trim(),
-   unit_price_cents:price,active:product.active,updated_at:new Date().toISOString()};
-  const result=productId?await db.from("vmv_smart_quote_catalog").update(payload).eq("id",productId).eq("business_id",businessId).eq("owner_id",owner).select("id").single():
+   unit_price_cents:price,active:product.active};
+  // The server owns creation/update timestamps; INSERT has intentionally restricted column grants.
+  const result=productId?await db.from("vmv_smart_quote_catalog").update({...payload,updated_at:new Date().toISOString()}).eq("id",productId).eq("business_id",businessId).eq("owner_id",owner).select("id").single():
    await db.from("vmv_smart_quote_catalog").insert({owner_id:owner,business_id:businessId,...payload}).select("id").single();
   if(result.error||!result.data)throw Error(result.error?.message||"No se pudo guardar el catálogo.");
   setProductId("");setProduct({name:"",description:"",unit_name:"unidad",price:"",active:true});
