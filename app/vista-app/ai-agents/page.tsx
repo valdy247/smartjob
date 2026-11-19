@@ -3,7 +3,7 @@ import {useEffect,useState} from "react";
 import {
  ArrowLeft,ArrowUpRight,Bot,BookOpen,BookCheck,BriefcaseBusiness,CalendarDays,Check,
  ChevronRight,ClipboardList,Headphones,MessageCircle,Package,PauseCircle,
- PhoneCall,PlayCircle,ShieldCheck,ShoppingBag,Sparkles,WandSparkles,Megaphone,Globe2
+ PhoneCall,PlayCircle,ShieldCheck,ShoppingBag,Sparkles,WandSparkles,Megaphone,Globe2,Video
 } from "lucide-react";
 import type {LucideIcon} from "lucide-react";
 import styles from "./page.module.css";
@@ -19,6 +19,7 @@ import CallControl from "./CallControl";
 import AgentLiveTest from "./AgentLiveTest";
 import AutomaticAdWizard from "./AutomaticAdWizard";
 import AutomaticWebWizard from "./AutomaticWebWizard";
+import AutomaticVideoWizard from "./AutomaticVideoWizard";
 import {inspectAgent} from "./agentQuality";
 import {getSupabase} from "@/lib/supabase";
 import {centralPrefill,businessMissing,choosePrincipalAgent,linkLegacyWorkspace,loadBusinessChoices,provisionAiWorkspace,type CentralBusiness,type AiWorkspace} from "./centralBusiness";
@@ -26,7 +27,7 @@ import {loadAgents,loadPhoneSelection,selectPhoneAgent,setStudyStatus,storeAgent
 
 type Kind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 type Status="draft"|"active"|"paused";
-type Screen="home"|"editor"|"test"|"quality"|"commerce"|"phone"|"bookings"|"ads"|"web";
+type Screen="home"|"editor"|"test"|"quality"|"commerce"|"phone"|"bookings"|"ads"|"web"|"video";
 type AgentDraft=WizardDraft;
 type Agent=PersistedAgent;
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
@@ -334,14 +335,15 @@ export default function AIAgentsPreview(){
  };
  const back=()=>{setScreen("home");setMessageNotice("");};
  const patch=(key:keyof AgentDraft,value:string)=>setDraft(prev=>({...prev,[key]:value}));
- const immersive=screen==="ads"||screen==="web";
+ const immersive=screen==="ads"||screen==="web"||screen==="video";
  useEffect(()=>{
   if(loading||!authenticated||!principal||!selectedBusiness||!selectedWorkspace)return;
   const url=new URL(window.location.href);
-  if(url.searchParams.get("service")!=="web")return;
+  const service=url.searchParams.get("service");
+  if(service!=="web"&&service!=="video")return;
   url.searchParams.delete("service");
   window.history.replaceState(null,"",url.pathname+url.search+url.hash);
-  setSelected(principal.id);setScreen("web");setNotice("");
+  setSelected(principal.id);setScreen(service==="web"?"web":"video");setNotice("");
  },[loading,authenticated,principal?.id,selectedBusiness?.id,selectedWorkspace?.id]);
  return <main className={immersive?styles.adsCanvas:styles.canvas}>
   <div className={immersive?styles.adsLayout:styles.layout}>
@@ -406,6 +408,15 @@ export default function AIAgentsPreview(){
         <span className={styles.tileIcon}><Globe2 size={24}/></span>
         <strong>Web Services</strong><small>Crear web con tu agente</small>
        </button>
+       <button type="button" className={styles.tile} style={{background:"#f8ddec",color:"#893d73"}}
+        onClick={()=>{
+         if(principal&&selectedBusiness&&selectedWorkspace){
+          setSelected(principal.id);setScreen("video");setNotice("");
+         }else setNotice("Selecciona tu negocio y su agente principal para preparar un video.");
+        }} aria-label="Video Generator con tu agente">
+        <span className={styles.tileIcon}><Video size={24}/></span>
+        <strong>Video Generator</strong><small>Crear video con tu agente</small>
+       </button>
        <button type="button" className={styles.tile} style={{background:"#e4dcff",color:"#6245a7"}}
         onClick={()=>{
          if(principal&&selectedBusiness&&selectedWorkspace){
@@ -467,6 +478,9 @@ export default function AIAgentsPreview(){
        workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
      {screen==="web"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticWebWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
+       workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
+     {screen==="video"&&principal&&selectedBusiness&&selectedWorkspace?
+      <AutomaticVideoWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
        workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
      {screen==="phone"?<CallControl onBack={back}/>:null}
      {screen==="commerce"?<CommerceStudio centralBusinessId={selectedBusiness?.id||""} agents={principal?[principal]:visibleAgents.filter(a=>a.revision>0)}
