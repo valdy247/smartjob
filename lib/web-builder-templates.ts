@@ -160,7 +160,7 @@ export function applyChosenSiteDesign(document:Data,design?:SiteDesignPreference
  return normalizeBuilderDocument({
   ...base,
   root:{...base.root,props:{...base.root?.props,
-   font:design.font,accentColor:design.colors[0]||"",
+   font:design.font,chatMode:design.chatMode,accentColor:design.colors[0]||"",
    secondaryColor:design.colors[1]||"",tertiaryColor:design.colors[2]||""}},
   content:base.content.map(block=>{
    if(block.type==="HeroVisual")return {...block,props:{...block.props,...media}};
