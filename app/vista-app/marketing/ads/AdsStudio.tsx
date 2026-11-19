@@ -599,7 +599,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
   </details>
 
  </div>;
- if(mode==="wizard"&&!agentBrief)return <div className={styles.workspace}>
+ if(mode==="wizard"&&!agentBrief&&!draftId)return <div className={styles.workspace}>
   <div className={styles.simpleCard}>
    <h2>{localized("Prepara tu anuncio con AI Agents","Prepare your ad with AI Agents")}</h2>
    <p className={styles.muted}>{handoffLoading?

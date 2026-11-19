@@ -8,8 +8,14 @@ import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 export default function CreateAdsCampaignPage(){
  const [fromAgent,setFromAgent]=useState<boolean|null>(null);
- useEffect(()=>{const agent=new URLSearchParams(window.location.search).get("from")==="ai-agents";
-  setFromAgent(agent);if(!agent)window.location.replace("/vista-app/ai-agents");},[]);
+ useEffect(()=>{
+  const params=new URLSearchParams(window.location.search);
+  const agent=params.get("from")==="ai-agents";
+  const draft=params.get("draft")||"";
+  const resume=/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(draft);
+  setFromAgent(agent);
+  if(!agent&&!resume)window.location.replace("/vista-app/ai-agents");
+ },[]);
  const {language}=useInterfaceLanguage();
  return <main className={styles.page}><div className={styles.shell}>
   <header className={styles.topbar}>

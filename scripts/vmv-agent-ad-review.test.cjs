@@ -20,7 +20,8 @@ test("Review handoff re-verifies ownership and cannot skip Meta account and loca
  assert.match(studio,/candidate\.agentId/);
  assert.match(studio,/!hasAccount\|\|!form\.pageId/);
  assert.match(studio,/!form\.cityKey/);
- assert.match(studio,/Guardar campaña para aprobación/);
+ assert.match(studio,/Guardar para más tarde/);
+ assert.match(studio,/operation:draftId\?"update_draft":"draft"/);
 });
 test("AI copy and Meta image are prepared in Agent before Marketing review, without ad spending",()=>{
  assert.match(intake,/generateCopy=async/);
@@ -39,6 +40,8 @@ test("Only AI Agent can initiate new campaign, all requirements completed before
  const create=read("app/vista-app/marketing/ads/create/page.tsx");
  assert.match(hub,/href="\/vista-app\/ai-agents"/);
  assert.match(create,/window\.location\.replace\("\/vista-app\/ai-agents"\)/);
+ assert.match(create,/params\.get\("draft"\)/);
+ assert.match(studio,/mode==="wizard"&&!agentBrief&&!draftId/);
  assert.match(studio,/mode==="wizard"&&!agentBrief/);
  assert.match(intake,/meta\/accounts/);
  assert.match(intake,/meta\/locations/);
