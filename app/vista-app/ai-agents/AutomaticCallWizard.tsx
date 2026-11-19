@@ -64,6 +64,7 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
  const [lineChoice,setLineChoice]=useState<"current"|"different"|"new">("current");
  const [testDay,setTestDay]=useState<DayName>("mon");
  const [testTime,setTestTime]=useState("10:00");
+ const [testDigit,setTestDigit]=useState("none");
  const [testResult,setTestResult]=useState("");
  const [testError,setTestError]=useState("");
  const patch=<K extends keyof CallPolicy>(key:K,value:CallPolicy[K])=>
@@ -148,7 +149,8 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
   if(busy||!line)return;
   setBusy("simulate");setTestResult("");setTestError("");setError("");
   try{
-   const result=await callApi("POST",{policy:checkCallPolicy(policy),day:testDay,time:testTime});
+   const result=await callApi("POST",{policy:checkCallPolicy(policy),day:testDay,time:testTime,
+    digit:testDigit==="none"?null:testDigit==="silent"?"":testDigit});
    const action=String(result.decision?.action||"");
    const labels:Record<string,string>={menu:"El cliente podrá elegir en el menú",
     agent:"Mi agente IA respondería",translation:"Se ofrecería traducción",
@@ -386,6 +388,14 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
     </select></label>
    <label className={styles.field}>Hora de prueba
     <input type="time" value={testTime} onChange={e=>setTestTime(e.target.value)}/></label>
+   {policy.menu_config.enabled?<label className={styles.field}>¿Qué opción marcará el cliente?
+    <select value={testDigit} onChange={e=>setTestDigit(e.target.value)}>
+     <option value="none">Escuchar el menú inicial</option>
+     <option value="silent">Esperar sin marcar</option>
+     <option value={policy.menu_config.spanish_digit}>Marcar {policy.menu_config.spanish_digit} · Atención directa en español</option>
+     {policy.translation_enabled?<option value={policy.menu_config.english_digit}>Marcar {policy.menu_config.english_digit} · Traducción</option>:null}
+     {policy.agent_enabled?<option value={policy.menu_config.agent_digit}>Marcar {policy.menu_config.agent_digit} · Mi agente IA</option>:null}
+    </select></label>:null}
    <button type="button" className={styles.optionActive}
     disabled={!line||Boolean(busy)} onClick={()=>void simulate()}>
     <PhoneCall size={17}/> {busy==="simulate"?"Simulando…":"Simular llamada"}</button>
