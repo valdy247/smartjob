@@ -22,10 +22,12 @@ test("Review handoff re-verifies ownership and cannot skip Meta account and loca
  assert.match(studio,/!form\.cityKey/);
  assert.match(studio,/Guardar campaña para aprobación/);
 });
-test("AI copy is generated once in Marketing, not ad spending",()=>{
- assert.match(studio,/setBusy\("agent-generate"\)/);
- assert.match(studio,/api\("\/api\/marketing\/ads\/generate","POST"/);
- assert.match(studio,/angle:"offer"/);
+test("AI copy and Meta image are prepared in Agent before Marketing review, without ad spending",()=>{
+ assert.match(intake,/generateCopy=async/);
+ assert.match(intake,/uploadImage=async/);
+ assert.match(studio,/candidate\.imageHash/);
+ assert.match(studio,/candidate\.headline/);
+ assert.match(studio,/candidate\.message/);
  assert.match(studio,/setSelectedAngle\("offer"\)/);
  assert.match(studio,/onClick=\{\(\)=>goStep\(4\)\}/);
  assert.match(studio,/operation:"create_paused"/);
