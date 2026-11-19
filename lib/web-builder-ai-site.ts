@@ -119,8 +119,7 @@ export function buildAiSiteProposal(input:SiteIntake,result:unknown):SiteProposa
   for(const item of content){
    if(item.type==="HeroVisual"||item.type==="Image"){
     item.props.imageRadius=imageFrame.radius;
-    item.props.imageBorder=imageFrame.border;
-    item.props.borderColor=prefs.colors[2];
+    item.props.imageBorder=0;
    }
   }
  }
