@@ -44,7 +44,7 @@ test("Only AI Agent can initiate new campaign, all requirements completed before
  assert.match(intake,/meta\/locations/);
  assert.match(intake,/meta\/image/);
  assert.match(intake,/api\/marketing\/ads\/generate/);
- assert.match(intake,/if\(step==="image"&&!headline\.trim\(\)&&!message\.trim\(\)\)void generateCopy\(\)/);
+ assert.match(intake,/if\(!returnToReview&&step==="image"&&!headline\.trim\(\)&&!message\.trim\(\)\)void generateCopy\(\)/);
  assert.match(intake,/step==="image"\?Boolean\(imageHash\)/);
  assert.match(intake,/step==="location"\?locationVerified/);
  assert.match(intake,/answer\.productIds\.includes\(p\.id\)/);
