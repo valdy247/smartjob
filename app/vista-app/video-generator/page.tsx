@@ -126,6 +126,9 @@ export default function VideoGeneratorPage(){
  const [generatedCaptions,setGeneratedCaptions]=useState<Record<string,{platform:string;caption:string}>>({});
  const [captionBusy,setCaptionBusy]=useState(false);
  const [captionError,setCaptionError]=useState("");
+ const [manualVideoSubject,setManualVideoSubject]=useState("");
+ const [needsVideoSubject,setNeedsVideoSubject]=useState(false);
+ const [verifiedFrames,setVerifiedFrames]=useState<Record<string,string>>({});
  const createCaption=async(platform:"instagram"|"facebook"|"tiktok"|"youtube"|"linkedin")=>{
   if(!current||captionBusy)return;
   setCaptionBusy(true);setCaptionError("");
@@ -133,16 +136,36 @@ export default function VideoGeneratorPage(){
    const client=getSupabase();if(!client)throw Error("Inicia sesión nuevamente.");
    const {data:{session}}=await client.auth.getSession();
    if(!session?.access_token)throw Error("Inicia sesión nuevamente.");
+   let visualFacts=manualVideoSubject.trim().slice(0,450)||verifiedFrames[current.id]||"";
+   if(!visualFacts){
+    try{
+     if(!current.output_url||current.status!=="SUCCEEDED")throw Error("video_not_ready");
+     const frame=await captureVideoFrame(current.output_url);
+     const visionResponse=await fetch("/api/video-generator/analyze-image",{
+      method:"POST",cache:"no-store",headers:{
+       Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"
+      },body:JSON.stringify({imageUrl:frame,desiredScene:current.prompt.slice(0,280),offer:""})
+     });
+     const visual=await visionResponse.json().catch(()=>({}));
+     if(!visionResponse.ok||typeof visual.subject!=="string"||!visual.subject.trim()||
+      typeof visual.observations!=="string")throw Error("visual_unavailable");
+     visualFacts=(visual.subject+". "+visual.observations).slice(0,450);
+     setVerifiedFrames(old=>({...old,[current.id]:visualFacts}));
+    }catch{
+     setNeedsVideoSubject(true);
+     throw Error("No pude verificar un fotograma del video. Escribe brevemente qué aparece realmente y vuelve a elegir la red social.");
+    }
+   }
    const response=await fetch("/api/video-generator/caption",{
     method:"POST",cache:"no-store",headers:{
      Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"
-    },body:JSON.stringify({jobId:current.id,platform})
+    },body:JSON.stringify({jobId:current.id,platform,visualFacts})
    });
    const data=await response.json().catch(()=>({}));
    if(!response.ok||typeof data.caption!=="string")throw Error(
     data.error==="video_not_ready"?"Espera a que termine la generación.":"No se pudo crear la descripción.");
    setGeneratedCaptions(old=>({...old,[current.id]:{platform,caption:data.caption}}));
-   setCaptionModal(false);
+   setCaptionModal(false);setNeedsVideoSubject(false);setManualVideoSubject("");
   }catch(e){setCaptionError(e instanceof Error?e.message:"No se pudo generar.");}
   finally{setCaptionBusy(false);}
  };
@@ -486,6 +509,12 @@ export default function VideoGeneratorPage(){
            {captionBusy?<LoaderCircle size={17} className={styles.spinner}/>:<Sparkles size={16}/>} {label}
           </button>)}
         </div>
+        {needsVideoSubject?<label className={styles.captionManual}>
+         {L("¿Qué aparece realmente en el video?","What actually appears in the video?")}
+         <textarea rows={3} maxLength={450} value={manualVideoSubject}
+          placeholder={L("Ejemplo: una pantera negra camina hacia la cámara en un jardín.","Example: a black panther walks toward the camera in a garden.")}
+          onChange={e=>setManualVideoSubject(e.target.value)}/>
+        </label>:null}
         {captionError?<p role="alert" className={styles.captionError}>{captionError}</p>:null}
        </div>
       </div>:null}
