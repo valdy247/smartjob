@@ -396,7 +396,7 @@ export default function VideoGeneratorPage(){
      {jobs.length?jobs.map(j=><button type="button" key={j.id}
       className={selected===j.id?styles.jobSelected:styles.job} onClick={()=>selectJob(j)}>
       <span className={styles.jobIcon}><Film size={17}/></span>
-      <span className={styles.jobInfo}><strong>{j.prompt.slice(0,65)}</strong><small>{date(j.created_at)} · {j.duration} s · {j.model==="kling"?"Kling":"Runway"}</small></span>
+      <span className={styles.jobInfo}><strong>{L("Video generado","Generated video")} · {date(j.created_at)}</strong><small>{j.duration} s · {j.model==="kling"?"Kling":"Runway"}</small></span>
       <span className={j.status==="SUCCEEDED"?styles.done:j.status==="FAILED"?styles.failed:styles.waiting}>{status(j)}</span>
      </button>):<div className={styles.empty}>{L("Aún no has generado videos.","You haven't generated videos yet.")}</div>}
     </section>
