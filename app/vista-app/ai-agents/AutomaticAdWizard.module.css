@@ -122,3 +122,34 @@
 .dropdownPanel button span{display:grid;gap:4px}
 .dropdownPanel button strong{font-size:12px}
 .dropdownPanel button small{font-size:10px;color:#9884a3}
+
+/* Creative direction, AI candidate review and per-card editing. */
+.imageModeChoices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.imageMode,.imageModeActive{display:flex;align-items:center;justify-content:center;gap:9px;
+ border:1px solid #e3d5f4;background:white;color:#644c7d;min-height:64px;
+ padding:10px 12px;border-radius:16px;font-size:12px;font-weight:850;cursor:pointer}
+.imageModeActive{color:#784bce;border-color:#9e75ed;background:#f3ebff;
+ box-shadow:0 0 0 2px #9e75ed1b}
+.imageMode:disabled,.imageModeActive:disabled{opacity:.55;cursor:wait}
+.generateImageButton{display:flex;align-items:center;justify-content:center;gap:8px;
+ background:linear-gradient(110deg,#8959e1,#9d72ea);color:white;border:0;
+ min-height:50px;border-radius:15px;font-size:13px;font-weight:850;cursor:pointer}
+.generateImageButton:disabled{opacity:.55}
+.aiCandidate{display:grid;gap:11px}
+.imageCandidateActions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.approveImage,.retryImage{display:flex;align-items:center;justify-content:center;gap:7px;
+ padding:13px 9px;border-radius:14px;min-height:48px;font-size:12px;font-weight:850;cursor:pointer}
+.approveImage{background:#8654d8;border:1px solid #8654d8;color:#fff}
+.retryImage{background:#fff;border:1px solid #dbc6f0;color:#7445bc}
+.approveImage:disabled,.retryImage:disabled{opacity:.5;cursor:wait}
+.reviewCard{display:flex;align-items:center;justify-content:space-between;gap:12px;
+ background:#fff;border:1px solid #ede4f4;border-radius:15px;padding:12px 13px;min-width:0}
+.reviewCardText{min-width:0;flex:1;display:grid;gap:5px;text-align:left}
+.reviewCardText small{font-size:10px;color:#847491}
+.reviewCardText strong{font-size:12px;font-weight:850;color:#30263e;line-height:1.5;overflow-wrap:anywhere}
+.reviewEdit{display:grid;place-items:center;flex-shrink:0;width:39px;height:39px;
+ background:#f4ecff;border:1px solid #e7d7fa;border-radius:12px;color:#7f50ce;
+ cursor:pointer}
+.reviewEdit:focus-visible,.reviewEdit:hover{outline:2px solid #ac83ef;outline-offset:2px;background:#ebddff}
+@media(max-width:380px){.imageModeChoices,.imageCandidateActions{gap:7px}
+ .imageMode,.imageModeActive{font-size:11px;padding:9px 6px}}
