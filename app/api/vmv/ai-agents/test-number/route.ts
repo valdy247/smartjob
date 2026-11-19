@@ -1,7 +1,11 @@
 import {NextRequest} from "next/server";
 import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 import {verifyAiTestWebhook} from "@/lib/vmv-ai-agents/twilio-test";
-import {findPhoneRoute} from "@/lib/phone-routes";
+import {findPhoneRoute,reservePhoneSession,updatePhoneSession} from "@/lib/phone-routes";
+import {claimNational} from "@/lib/vmv-national-minutes";
+import {paidServiceAllowed} from "@/lib/vmv-entitlements";
+import {languageMenuEnabled,ivrEligible,selectionSignature,directClientTwiml} from "@/lib/vmv-ivr";
+import {sayElevenVoice} from "@/lib/vmv-ai-agents/phone-voices";
 import {billingAdmin} from "@/lib/vmv-billing";
 import {aiAgentModelPathAvailable} from "@/lib/vmv-ai-agents/model";
 import {businessWeek,checkCallPolicy,decideCall,localParts,type CallPolicy} from "@/lib/vmv-ai-agents/call-policy";
@@ -175,6 +179,53 @@ function ringOwner(base:string,route:OwnerRoute,policy:CallPolicy,caller:string)
   '<Hangup/>'
  );
 }
+
+/** Guided IVR is PREVIEW ONLY and separately operator-armed.
+ * Saving a wizard policy never changes an existing number's VoiceUrl. */
+function guidedEnabled(route:OwnerRoute,policy:CallPolicy|null):boolean{
+ return process.env.VERCEL_ENV==="preview"&&
+  process.env.VMV_SMART_CALL_GUIDED_IVR_ENABLED==="true"&&
+  process.env.VMV_AI_TEST_OWNER_ID===route.user_id&&
+  policy?.menu_config?.enabled===true;
+}
+function guidedSay(message:string,lang:"es"|"en",voice:string){
+ const sound=sayElevenVoice(voice,lang);
+ if(!sound)return say(message,lang==="es"?"es-ES":"en-US");
+ return '<Say voice="'+xmlEscape(sound)+'" language="'+(lang==="es"?"es-ES":"en-US")+'">'+
+  xmlEscape(message)+'</Say>';
+}
+function guidedMenu(base:string,policy:CallPolicy,translationReady:boolean,aiReady:boolean){
+ const m=policy.menu_config;
+ const choice=xmlEscape(base+path+"?selection=guided");
+ const intro=guidedSay(m.greeting_es,"es",m.voice_es)+guidedSay(m.greeting_en,"en",m.voice_en);
+ const options=guidedSay("Para hablar con nuestro equipo en español, marque "+m.spanish_digit+".","es",m.voice_es)+
+  (translationReady?guidedSay("For English with live translation, press "+m.english_digit+".","en",m.voice_en):"")+
+  (aiReady?guidedSay("Para hablar con nuestro asistente inteligente, marque "+m.agent_digit+".","es",m.voice_es):"")+
+  guidedSay("O permanezca en la línea para atención directa en español.","es",m.voice_es);
+ return twiml('<Gather input="dtmf" numDigits="1" timeout="7" actionOnEmptyResult="true" method="POST" action="'+choice+'">'+
+  intro+options+'</Gather><Hangup/>');
+}
+async function guidedDirect(route:OwnerRoute,bridge:string,caller:string,policy:CallPolicy){
+ if(!ivrEligible(route)||!await paidServiceAllowed(route.user_id,"direct_call"))
+  return closed(policy);
+ if(!await reservePhoneSession(bridge,route,"direct",caller))
+  return twiml(guidedSay("No podemos conectar esta llamada ahora mismo.","es",policy.menu_config.voice_es)+"<Hangup/>");
+ const granted=await claimNational(route.user_id,"in:"+bridge);
+ if(granted===0){await updatePhoneSession(bridge,"failed");return closed(policy);}
+ const limit=granted===null?600:granted*60;
+ // Reuse the established direct-client TwiML with its signed usage callback.
+ return directClientTwiml(bridge,route,caller,limit);
+}
+function guidedTranslate(bridge:string,route:OwnerRoute,caller:string,policy:CallPolicy){
+ const original=originalSmartCallUrl();
+ if(!original||!languageMenuEnabled())return smartCall();
+ const target=new URL(original);
+ target.searchParams.set("language","en");
+ target.searchParams.set("proof",selectionSignature(bridge,route.id,caller,"en"));
+ return twiml(guidedSay(policy.menu_config.human_en,"en",policy.menu_config.voice_en)+
+  '<Redirect method="POST">'+xmlEscape(target.toString())+'</Redirect>');
+}
+
 export async function POST(req:NextRequest){
  const signed=await verifyAiTestWebhook(req);
  if(!signed){
@@ -213,7 +264,32 @@ export async function POST(req:NextRequest){
   return ready?redirect(base,agentVoice):fallback(policy,decision.translationAvailable);
  }
  if(flow!==null)return closed(policy);
+
  const selection=req.nextUrl.searchParams.get("selection");
+ // Existing menu is unchanged unless this owner-specific Preview feature is armed.
+ const guided=guidedEnabled(route,policy);
+ if(guided&&policy){
+  const mode=policy.menu_config;
+  if(!ivrEligible(route))return closed(policy);
+  if(selection==="guided"){
+   const digit=signed.get("Digits")||"";
+   if(digit===mode.spanish_digit||digit==="")return guidedDirect(route,sid,caller,policy);
+   if(digit===mode.english_digit&&decision?.translationAvailable&&
+      await paidServiceAllowed(route.user_id,"translated_call"))
+     return guidedTranslate(sid,route,caller,policy);
+   if(digit===mode.agent_digit&&decision?.agentAvailable&&
+      await agentReady(to,account,route.user_id))
+     return redirect(base,agentVoice);
+   return closed(policy);
+  }
+  if(selection===null&&flow===null){
+   const aiReady=decision?.agentAvailable===true&&await agentReady(to,account,route.user_id);
+   const translated=decision?.translationAvailable===true&&
+    await paidServiceAllowed(route.user_id,"translated_call");
+   return guidedMenu(base,policy,translated,aiReady);
+  }
+ }
+
  if(selection==="menu"){
   const digits=signed.get("Digits")||"";
   if(digits==="1")return decision&&!decision.translationAvailable?
