@@ -4,16 +4,22 @@ import {getSupabase} from "@/lib/supabase";
 import {consumeAgentAdBrief,type AgentAdBrief} from "@/lib/vmv-ai-agents/ad-handoff";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import styles from "./AdsStudio.module.css";
-import {Megaphone,ShieldCheck,ArrowUpRight,CheckCircle2,Globe2,ExternalLink,ChevronDown,ChevronLeft,ChevronRight,ImagePlus,MapPin,WandSparkles,BarChart3,LoaderCircle,Instagram,X,Tag,Sparkles} from "lucide-react";
+import {Megaphone,ShieldCheck,ArrowUpRight,CheckCircle2,Globe2,ExternalLink,ChevronDown,ChevronLeft,ChevronRight,ImagePlus,MapPin,WandSparkles,BarChart3,LoaderCircle,Instagram,X,Tag,Sparkles,Send,BookmarkCheck,CreditCard} from "lucide-react";
 
 type Account={id:string;name:string;currency:string;status:number;timezone:string};
 type Page={id:string;name:string;instagramId:string|null;instagramUsername:string};
 type Connected={id:string;providerName:string;expiresAt:string|null;selectedAccountId:string|null;selectedAccountName:string|null};
 type Campaign={id:string;ad_account_id:string;status:string;draft:{
  name:string;headline:string;message:string;destination:string;totalBudgetCents:number;
- durationDays:number;placements:string};provider_campaign_id:string|null;provider_ad_id:string|null;
+ durationDays:number;placements:string;imageHash?:string;pageId?:string;
+ cityKey?:string;cityName?:string;citySearch?:string;radiusMiles?:number;
+ dailyBudgetCents?:number;specialCategoriesAcknowledged?:boolean;
+ intake?:{business?:string;offer?:string;audience?:string;benefit?:string;stateCode?:string;
+ cityDisplay?:string;destinationInput?:string;utmEnabled?:boolean}};
+ provider_campaign_id:string|null;provider_ad_id:string|null;
  metaAdsetEffectiveStatus?:string|null;metaAdsetEndAt?:string|null;
  error_code:string|null;created_at:string};
+type PaymentCheck={state:"ready"|"missing"|"unverified"|"inactive";checkedAt:string};
 type InsightRow={impressions?:string;reach?:string;clicks?:string;spend?:string;cpc?:string;ctr?:string;date_start?:string;date_stop?:string};
 type AdAngle="offer"|"local"|"value";
 type GeneratedAd={source:"ai";angle:AdAngle;variant:{headline:string;message:string}};
@@ -67,6 +73,11 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
  const uploadSeq=useRef(0);
  const [draftKey,setDraftKey]=useState(()=>crypto.randomUUID());
  const [draftId,setDraftId]=useState("");
+ const [paymentCheck,setPaymentCheck]=useState<PaymentCheck|null>(null);
+ const [confirmSendOpen,setConfirmSendOpen]=useState(false);
+ const [spendConsent,setSpendConsent]=useState(false);
+ const [finished,setFinished]=useState<{kind:"saved"|"sent"|"paused";id:string}|null>(null);
+ const resumedOnce=useRef(false);
  const [insights,setInsights]=useState<Record<string,{rows:InsightRow[];period:string}>>({});
  const [historyFilter,setHistoryFilter]=useState<"pending"|"active"|"completed">("pending");
  const [agentBrief,setAgentBrief]=useState<AgentAdBrief|null>(null);
@@ -131,7 +142,8 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
  },[image]);
  const money=(cents:number)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(cents/100);
  const patch=(name:keyof typeof initial,value:string|boolean)=>{
-  setForm(v=>({...v,[name]:value}));setDraftId("");setDraftKey(crypto.randomUUID());setError("");
+  setForm(v=>({...v,[name]:value}));setFinished(null);setPaymentCheck(null);
+  setConfirmSendOpen(false);setDraftKey(crypto.randomUUID());setError("");
   if(["business","offer","audience","benefit","cityQuery","stateCode"].includes(name))setSelectedAngle(null);
  };
  const api=async(path:string,method="GET",payload?:unknown,formData=false)=>{
@@ -277,13 +289,13 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
   if(!window.confirm(localized("¿Desconectar Meta y revocar el acceso desde VMV? Puedes revocar también la app en Meta.","Disconnect Meta and remove VMV's access token? You can revoke the app in Meta as well.")))return;
   void run("disconnect",async()=>{
    await api("/api/marketing/ads/meta/disconnect","POST",{});
-   setImageHash("");setDraftId("");
+   setImageHash("");setDraftId("");setPaymentCheck(null);setFinished(null);
    await reload();setNotice(localized("Meta desconectado.","Meta disconnected."));
   });
  };
  const upload=(file:File|null)=>{
   const seq=++uploadSeq.current;
-  setImage(file);setImageHash("");setDraftId("");setDraftKey(crypto.randomUUID());
+  setImage(file);setImageHash("");setFinished(null);setPaymentCheck(null);setDraftKey(crypto.randomUUID());
   setError("");
   if(!file)return;
   if(!["image/png","image/jpeg"].includes(file.type)||file.size<1024||file.size>2*1024*1024){
@@ -304,7 +316,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
   const base=place.name.trim().replace(/\s*\([^)]*\)\s*$/,"").split(",")[0].trim();
   setForm(v=>({...v,cityKey:place.key,cityName:base+(stateName?", "+stateName:""),
    cityMetaName:place.name,cityQuery:base,citySearch:base}));
-  setPlaces([]);setDraftId("");setDraftKey(crypto.randomUUID());setSelectedAngle(null);
+  setPlaces([]);setFinished(null);setPaymentCheck(null);setDraftKey(crypto.randomUUID());setSelectedAngle(null);
  };
  const generate=(angle:AdAngle)=>{
   setConceptDialogOpen(false);
@@ -319,38 +331,69 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
     throw Error("ai_invalid_provider_response");
    setSelectedAngle(angle);
    setForm(v=>({...v,headline:response.variant.headline,message:response.variant.message}));
-   setDraftId("");setDraftKey(crypto.randomUUID());
+   setFinished(null);setPaymentCheck(null);setDraftKey(crypto.randomUUID());
    setNotice(localized("Anuncio generado. Puedes editarlo antes de aprobar.","Ad generated. You can edit it before approval."));
   });
  };
- const saveDraft=()=>run("draft",async()=>{
+ const saveDraftRecord=async()=>{
   const daily=Math.round(Number(form.dailyBudget)*100),days=Number(form.durationDays);
   if(!Number.isInteger(daily)||daily<500||daily>25000||!Number.isInteger(days)||days<1||days>30)
    throw Error("budget_must_be_5_to_250_usd_per_day_and_1_to_30_days");
   if(!form.cityKey)throw Error("select_verified_city_first");
   if(!imageHash)throw Error("upload_image_first");
   const result=await api("/api/marketing/ads/meta/campaigns","POST",{
-   operation:"draft",clientKey:draftKey,draft:{
+   operation:draftId?"update_draft":"draft",clientKey:draftKey,
+   ...(draftId?{campaignId:draftId}:{}),
+   draft:{
     name:form.name,headline:form.headline,message:form.message,destination:trackedDestination,
-    cityKey:form.cityKey,cityName:form.cityMetaName,citySearch:form.citySearch,radiusMiles:Number(form.radiusMiles),
-    imageHash,pageId:form.pageId,placements:instagramEnabled&&selectedPage?.instagramId?"facebook_instagram":"facebook",
+    cityKey:form.cityKey,cityName:form.cityMetaName,citySearch:form.citySearch,
+    radiusMiles:Number(form.radiusMiles),imageHash,pageId:form.pageId,
+    placements:instagramEnabled&&selectedPage?.instagramId?"facebook_instagram":"facebook",
     dailyBudgetCents:daily,durationDays:days,
-    specialCategoriesAcknowledged:form.specialCategoriesAcknowledged
+    specialCategoriesAcknowledged:form.specialCategoriesAcknowledged,
+    intake:{business:form.business,offer:form.offer,audience:form.audience,
+     benefit:form.benefit,stateCode:form.stateCode,cityDisplay:form.cityName,
+     destinationInput:form.destination,utmEnabled:form.utmEnabled}
    }
   });
+  if(typeof result.campaign?.id!=="string")throw Error("draft_save_failed");
   setDraftId(result.campaign.id);
-  setNotice(localized("Borrador guardado. Revisa el presupuesto antes de crear objetos pausados.","Draft saved. Review the budget before creating paused objects."));
-  await reload();
+  return result.campaign as Campaign;
+ };
+ const saveDraft=()=>void run("draft",async()=>{
+  const saved=await saveDraftRecord();
+  setFinished({kind:"saved",id:saved.id});
+  setNotice(localized("Guardado en Pendientes. Puedes retomarlo desde Historial y resultados.",
+   "Saved under Pending. You can resume it from History & results."));
  });
- const createPaused=(campaignId:string,budget:number)=>{
-  if(!window.confirm(localized(
-   "Confirmo el diseño y un presupuesto máximo de "+money(budget)+". Crear campaña, conjunto y anuncio PAUSADOS en Meta (sin publicar ni gastar).",
-   "I approve the creative and maximum budget of "+money(budget)+". Create PAUSED campaign, ad set and ad in Meta (no publishing or spend).")))return;
-  void run("paused:"+campaignId,async()=>{
-   const response=await api("/api/marketing/ads/meta/campaigns","POST",{
-    operation:"create_paused",campaignId,confirmPaused:true,approvedTotalCents:budget
+ const prepareSend=()=>void run("payment",async()=>{
+  if(!canSave)return;
+  const result=await api("/api/marketing/ads/meta/payment-check") as PaymentCheck;
+  setPaymentCheck(result);
+  if(result.state!=="ready")return;
+  if(!publishReady){
+   setNotice(localized("El envío real sigue desactivado en esta versión de pruebas. Puedes guardar el anuncio sin crear nada en Meta.",
+    "Live sending remains disabled in this preview. You can save the ad without creating anything in Meta."));
+   return;
+  }
+  setSpendConsent(false);setConfirmSendOpen(true);
+ });
+ const sendAd=()=>{
+  if(!publishReady||!spendConsent||!confirmSendOpen||paymentCheck?.state!=="ready"||!canSave)return;
+  setConfirmSendOpen(false);
+  void run("send",async()=>{
+   const saved=await saveDraftRecord();
+   await api("/api/marketing/ads/meta/campaigns","POST",{
+    operation:"create_paused",campaignId:saved.id,confirmPaused:true,approvedTotalCents:total
    });
-   setNotice(localized("Anuncio creado y pausado en Meta. No se ha gastado presupuesto.","Ad created in Meta in paused state. No ad spend was triggered."));
+   setFinished({kind:"paused",id:saved.id});
+   await api("/api/marketing/ads/meta/campaigns","POST",{
+    operation:"activate",campaignId:saved.id,confirmSpend:true,
+    approvedTotalCents:total,confirmationText:"PUBLICAR"
+   });
+   setFinished({kind:"sent",id:saved.id});
+   setNotice(localized("Meta confirmó la activación. El anuncio puede requerir revisión antes de publicarse.",
+    "Meta confirmed activation. The ad may require review before delivery."));
    await reload();
   });
  };
@@ -381,6 +424,33 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
  });
  const selectedPage=meta.pages.find(x=>x.id===form.pageId);
  const hasAccount=Boolean(meta.connected&&meta.connection?.selectedAccountId);
+ useEffect(()=>{
+  if(mode!=="wizard"||loading||resumedOnce.current)return;
+  resumedOnce.current=true;
+  const requested=new URLSearchParams(window.location.search).get("draft");
+  if(!requested||!/^[0-9a-f-]{36}$/i.test(requested))return;
+  const saved=campaigns.find(c=>c.id===requested&&c.status==="draft");
+  if(!saved){setError(localized("No encontramos un borrador editable de esa cuenta.",
+    "No editable draft was found for this account."));return;}
+  const d=saved.draft,extra=d.intake||{};
+  setForm(v=>({...v,
+   name:d.name||"",headline:d.headline||"",message:d.message||"",
+   destination:extra.destinationInput||d.destination||"",business:extra.business||d.name||"",
+   offer:extra.offer||"",audience:extra.audience||"",benefit:extra.benefit||"",
+   stateCode:extra.stateCode||"",cityQuery:d.citySearch||"",citySearch:d.citySearch||"",
+   cityKey:d.cityKey||"",cityMetaName:d.cityName||"",
+   cityName:extra.cityDisplay||d.cityName||"",pageId:d.pageId||"",
+   radiusMiles:String(d.radiusMiles||15),utmEnabled:extra.utmEnabled??true,
+   dailyBudget:String((d.dailyBudgetCents||1000)/100),
+   durationDays:String(d.durationDays||7),
+   specialCategoriesAcknowledged:d.specialCategoriesAcknowledged===true
+  }));
+  setInstagramEnabled(d.placements==="facebook_instagram");
+  setImageHash(d.imageHash||"");
+  setDraftId(saved.id);setStep(4);
+  setNotice(localized("Borrador recuperado. Puedes editarlo o enviarlo cuando esté habilitado.",
+   "Draft restored. You can edit it or send it when publishing is enabled."));
+ },[mode,loading,campaigns]);
  const canSave=Boolean(hasAccount&&form.cityKey&&form.pageId&&imageHash&&
   form.name.trim().length>=2&&form.headline.trim().length>=5&&form.message.trim().length>=10&&
   form.specialCategoriesAcknowledged&&Boolean(normalizedDestination)&&
@@ -430,7 +500,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
  const statusLabel=(c:Campaign)=>{
   if(c.metaAdsetEffectiveStatus==="COMPLETED")return localized("Terminada","Completed");
   const values:Record<string,[string,string]>={
-   draft:["Borrador","Draft"],paused:["Preparada · Pausada","Prepared · Paused"],
+   draft:["Guardada · Pendiente","Saved · Pending"],paused:["Preparada · Pausada","Prepared · Paused"],
    provisioning:["Preparando en Meta","Creating in Meta"],
    failed:["Requiere revisión","Needs review"],
    activation_pending:["Pendiente de confirmación","Awaiting confirmation"],
@@ -481,8 +551,8 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
     {c.metaAdsetEndAt?<small className={styles.historyContext}>{localized("Fin programado en Meta: ","Meta scheduled end: ")}{new Date(c.metaAdsetEndAt).toLocaleDateString(en?"en-US":"es-US")}</small>:null}
     {c.error_code?<p className={styles.warning}>{localized("Se necesita revisar esta campaña: ","This campaign needs review: ")}{c.error_code}</p>:null}
     <div className={styles.inlineActions}>
-     {c.status==="draft"?<button className={styles.primary} type="button" disabled={!!busy} onClick={()=>createPaused(c.id,c.draft.totalBudgetCents)}>
-      {localized("Aprobar y crear pausada","Approve and create paused")}</button>:null}
+     {c.status==="draft"?<a className={styles.primary} href={"/vista-app/marketing/ads/create?draft="+encodeURIComponent(c.id)}>
+      {localized("Continuar campaña","Resume campaign")}</a>:null}
      {c.status==="paused"&&publishReady?<button className={styles.primary} type="button" disabled={!!busy} onClick={()=>publish(c)}>
       {localized("Autorizar publicación y gasto","Authorize publication and spend")}</button>:null}
      {["active","activation_pending","paused"].includes(c.status)?<button className={styles.secondary} type="button" disabled={!!busy} onClick={()=>pause(c)}>{localized("Pausar","Pause")}</button>:null}
@@ -802,10 +872,96 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
      "I confirm this is not housing, employment, credit or another special category. My claims are accurate and I own the image rights.")}</span></label>
    {!canSave?<p className={styles.completionNote}>{localized("Para guardar: selecciona ciudad y página, escribe título y mensaje, agrega enlace HTTPS e imagen, define presupuesto y confirma la categoría del anuncio.",
     "To save: select a city and Page, enter headline and copy, add an HTTPS link and image, set a budget and confirm the ad category.")}</p>:null}
-   <button type="button" className={styles.primary} disabled={!canSave||!!busy} onClick={saveDraft}>{localized("Guardar campaña para aprobación","Save campaign for approval")}</button>
-   <p className={styles.muted}>{localized("Guardar no publica anuncios. Después podrás crear la campaña pausada para revisar en Meta.",
-    "Saving does not publish ads. You can then create a paused campaign for review in Meta.")}</p>
+   <div className={styles.finalActions}>
+    <button type="button" className={styles.primary} disabled={!canSave||!!busy||finished?.kind==="sent"}
+     onClick={prepareSend}>
+     {busy==="payment"?<LoaderCircle size={17} className={styles.spinIcon}/>:<Send size={17}/>}
+     {localized("Enviar anuncio","Send ad")}
+    </button>
+    <button type="button" className={styles.secondary} disabled={!canSave||!!busy||finished?.kind==="sent"}
+     onClick={saveDraft}>
+     {busy==="draft"?<LoaderCircle size={17} className={styles.spinIcon}/>:<BookmarkCheck size={17}/>}
+     {localized("Guardar para más tarde","Save for later")}
+    </button>
+   </div>
+   {paymentCheck?<div className={styles.paymentResult} role="status">
+    <div className={styles.paymentHeading}><CreditCard size={18}/>
+     <strong>{paymentCheck.state==="ready"?
+      localized("Meta reconoce una fuente de pago","Meta recognizes a funding source"):
+      paymentCheck.state==="missing"?
+      localized("No se detectó un método de pago","No payment method detected"):
+      paymentCheck.state==="inactive"?
+      localized("La cuenta publicitaria no está activa","Ad account is not active"):
+      localized("No se pudo verificar la facturación","Billing could not be verified")}</strong>
+    </div>
+    <p>{paymentCheck.state==="ready"?
+      localized("La disponibilidad de pago se verificará nuevamente antes de activar. Meta decide si acepta el cobro.",
+       "Payment availability will be rechecked before activation. Meta ultimately determines whether it accepts charges."):
+      paymentCheck.state==="missing"?
+      localized("Agrega un método de pago a esa cuenta en Meta y vuelve a comprobarlo. Tu borrador sigue disponible.",
+       "Add a payment method to this ad account in Meta and check again. Your draft remains available."):
+      paymentCheck.state==="inactive"?
+      localized("Revisa el estado de la cuenta en Meta antes de enviar anuncios.",
+       "Review your account status in Meta before sending ads."):
+      localized("Algunas cuentas o permisos no muestran información de facturación a terceros. No intentaremos publicar sin confirmación.",
+       "Some accounts or permissions do not disclose billing data. We will not publish without verification.")}</p>
+    {paymentCheck.state!=="ready"?<div className={styles.paymentActions}>
+     <a href="https://www.facebook.com/adsmanager/billing" className={styles.secondary}
+      target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/>{localized("Revisar pago en Meta","Check billing in Meta")}</a>
+     <button type="button" className={styles.secondary} disabled={!!busy} onClick={prepareSend}>
+      <CheckCircle2 size={15}/>{localized("Comprobar otra vez","Check again")}</button>
+    </div>:null}
+   </div>:null}
+   {!publishReady?<p className={styles.pilotNotice}>
+    <ShieldCheck size={16}/>{localized("Modo de pruebas: Enviar solo comprueba la cuenta. La publicación y el gasto siguen desactivados.",
+     "Preview mode: Send only checks your account. Publishing and ad spend remain disabled.")}</p>:null}
+   {finished?<div className={finished.kind==="paused"?styles.warning:styles.success} role="status">
+    <CheckCircle2 size={17}/>
+    <div><strong>{finished.kind==="sent"?localized("Campaña enviada a Meta","Campaign sent to Meta"):
+      finished.kind==="paused"?localized("Campaña creada, activación sin confirmar","Campaign created, activation unconfirmed"):
+      localized("Campaña guardada","Campaign saved")}</strong>
+     <p>{finished.kind==="sent"?
+      localized("Meta confirmó la solicitud de activación. Comprueba la aprobación y entrega en Historial.",
+       "Meta confirmed the activation request. Check review and delivery in History."):
+      finished.kind==="paused"?
+      localized("Consulta Historial antes de reintentar. Puede existir una campaña pausada en Meta.",
+       "Check History before retrying. A paused campaign may exist in Meta."):
+      localized("Está en Pendientes. Puedes continuar después sin crear anuncios en Meta.",
+       "It is in Pending. You can resume later without creating ads in Meta.")}</p>
+     <a className={styles.secondary} href="/vista-app/marketing/ads/campaigns">
+      {localized("Ver historial y resultados","View history & results")}</a></div>
+   </div>:null}
+   <p className={styles.muted}>{localized("Meta cobra directamente a la cuenta publicitaria del cliente. Guardar no publica ni genera gasto.",
+    "Meta charges the customer's ad account directly. Saving does not publish or incur spend.")}</p>
   </section>:null}
+  {confirmSendOpen?<div className={styles.conceptOverlay}>
+   <div className={styles.conceptModal} role="dialog" aria-modal="true" aria-labelledby="vmv-send-title">
+    <div className={styles.conceptHeading}>
+     <div><span><ShieldCheck size={16}/>{localized("CONFIRMAR GASTO","CONFIRM SPEND")}</span>
+      <h2 id="vmv-send-title">{localized("Enviar anuncio a Meta","Send ad to Meta")}</h2>
+      <p>{localized("Meta cobrará directamente en tu cuenta publicitaria si comienza la entrega.",
+       "Meta bills your ad account directly if delivery begins.")}</p></div>
+     <button className={styles.conceptClose} type="button" onClick={()=>setConfirmSendOpen(false)}
+      aria-label={localized("Cerrar","Close")}><X size={19}/></button>
+    </div>
+    <div className={styles.budgetSimple}>
+     <div><small>{localized("Presupuesto máximo de Meta","Maximum Meta ad budget")}</small>
+      <strong>{money(total)}</strong></div>
+     <span>{form.durationDays} {localized("días","days")}</span>
+    </div>
+    <label className={styles.permission}>
+     <input type="checkbox" checked={spendConsent} onChange={e=>setSpendConsent(e.target.checked)}/>
+     <span>{localized("Autorizo el envío y el gasto publicitario hasta este presupuesto. Meta revisa el anuncio y gestiona el cobro.",
+      "I authorize submission and ad spend up to this budget. Meta reviews the ad and handles billing.")}</span>
+    </label>
+    <div className={styles.finalActions}>
+     <button type="button" className={styles.primary} disabled={!spendConsent||!!busy}
+      onClick={sendAd}><Send size={17}/>{localized("Confirmar envío","Confirm send")}</button>
+     <button type="button" className={styles.secondary} onClick={()=>setConfirmSendOpen(false)}>
+      {localized("Volver","Go back")}</button>
+    </div>
+   </div>
+  </div>:null}
   {conceptDialogOpen?<div className={styles.conceptOverlay} onMouseDown={e=>{if(e.target===e.currentTarget)setConceptDialogOpen(false);}}>
    <div ref={conceptDialogRef} className={styles.conceptModal} role="dialog" aria-modal="true" aria-labelledby="vmv-ad-angle-title" aria-describedby="vmv-ad-angle-subtitle">
     <div className={styles.conceptHeading}>

@@ -2,14 +2,16 @@ import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {billingAdmin} from "@/lib/vmv-billing";
 import {adsMetaReady,activeMeta,authorizedAccounts,authorizedPages,metaGet,metaId,metaPost,
- noCache,uuid,validDestination} from "@/lib/vmv-marketing-ads-meta";
+ noCache,uuid,validDestination,inspectMetaPayment} from "@/lib/vmv-marketing-ads-meta";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 type Draft={name:string;headline:string;message:string;destination:string;imageHash:string;
  pageId:string;instagramId:string|null;placements:"facebook"|"facebook_instagram";
  dailyBudgetCents:number;durationDays:number;totalBudgetCents:number;country:"US";
- objective:"OUTCOME_TRAFFIC";specialCategoriesAcknowledged:true;adAccountId:string;cityKey:string;cityName:string;citySearch:string;radiusMiles:10|15|25|50};
+ objective:"OUTCOME_TRAFFIC";specialCategoriesAcknowledged:true;adAccountId:string;cityKey:string;cityName:string;citySearch:string;radiusMiles:10|15|25|50;
+ intake?:{business:string;offer:string;audience:string;benefit:string;stateCode:string;
+  cityDisplay:string;destinationInput:string;utmEnabled:boolean}};
 const asInt=(x:unknown)=>typeof x==="number"&&Number.isInteger(x)?x:null;
 function parseDraft(input:any,adAccountId:string,pages:Awaited<ReturnType<typeof authorizedPages>>,cities:Array<{key:string;name:string;region:string}>):Draft|null{
  const name=typeof input?.name==="string"?input.name.trim():"";
@@ -35,7 +37,17 @@ function parseDraft(input:any,adAccountId:string,pages:Awaited<ReturnType<typeof
   instagramId:page.instagramId,placements,dailyBudgetCents:daily,
   durationDays:days,totalBudgetCents:daily*days,country:"US",
   objective:"OUTCOME_TRAFFIC",specialCategoriesAcknowledged:true,adAccountId,
-  cityKey:city.key,cityName:city.name,citySearch:String(input?.citySearch||"").trim().slice(0,80),radiusMiles:radius};
+  cityKey:city.key,cityName:city.name,citySearch:String(input?.citySearch||"").trim().slice(0,80),radiusMiles:radius,
+  intake:{
+   business:String(input?.intake?.business||"").trim().slice(0,80),
+   offer:String(input?.intake?.offer||"").trim().slice(0,200),
+   audience:String(input?.intake?.audience||"").trim().slice(0,130),
+   benefit:String(input?.intake?.benefit||"").trim().slice(0,180),
+   stateCode:/^[A-Z]{2}$/.test(String(input?.intake?.stateCode||""))?String(input.intake.stateCode):"",
+   cityDisplay:String(input?.intake?.cityDisplay||"").trim().slice(0,110),
+   destinationInput:String(input?.intake?.destinationInput||"").trim().slice(0,500),
+   utmEnabled:input?.intake?.utmEnabled===true
+  }};
 }
 const fail=(error:string,status=400)=>NextResponse.json({error},{status,headers:noCache});
 export async function GET(req:NextRequest){
@@ -78,7 +90,7 @@ export async function POST(req:NextRequest){
  const owner=await authenticatedUser(req);if(!owner)return fail("unauthorized",401);
  const input=await req.json().catch(()=>null);
  const operation=input?.operation;
- if(!["draft","create_paused","activate","pause"].includes(operation))return fail("invalid_action");
+ if(!["draft","update_draft","create_paused","activate","pause"].includes(operation))return fail("invalid_action");
  const db=billingAdmin();if(!db)return fail("database_unavailable",503);
  let active;
  try{active=await activeMeta(owner);}catch{return fail("meta_reconnect_required",409);}
@@ -90,8 +102,9 @@ export async function POST(req:NextRequest){
  if(!accounts.some(a=>a.id===selectedAccount&&a.status===1&&a.currency==="USD"))
   return fail("meta_ad_account_not_authorized",403);
 
- if(operation==="draft"){
-  if(!uuid(input?.clientKey))return fail("invalid_idempotency_key");
+ if(operation==="draft"||operation==="update_draft"){
+  if(operation==="draft"&&!uuid(input?.clientKey))return fail("invalid_idempotency_key");
+  if(operation==="update_draft"&&!uuid(input?.campaignId))return fail("invalid_campaign_id");
   let pages;
   try{pages=await authorizedPages(active.token);}catch{return fail("meta_pages_unavailable",502);}
   const citySearch=typeof input?.draft?.citySearch==="string"?input.draft.citySearch.trim():"";
@@ -106,6 +119,15 @@ export async function POST(req:NextRequest){
   }catch{return fail("meta_city_lookup_unavailable",502);}
   const draft=parseDraft(input?.draft,selectedAccount,pages,cities);
   if(!draft)return fail("invalid_campaign_details_or_missing_page");
+  if(operation==="update_draft"){
+   const {data:updated,error:updateError}=await db.from("vmv_marketing_ads_campaigns")
+    .update({draft,updated_at:new Date().toISOString()}).eq("id",input.campaignId)
+    .eq("owner_id",owner).eq("connection_id",active.connection.id)
+    .eq("ad_account_id",selectedAccount).eq("status","draft")
+    .select("id,status,draft").maybeSingle();
+   if(updateError||!updated)return fail("saved_draft_not_editable",409);
+   return NextResponse.json({campaign:updated},{headers:noCache});
+  }
   const {data,error}=await db.from("vmv_marketing_ads_campaigns").insert({
    owner_id:owner,connection_id:active.connection.id,provider:"meta",
    ad_account_id:selectedAccount,client_key:input.clientKey,draft,status:"draft"
@@ -209,6 +231,9 @@ export async function POST(req:NextRequest){
      input?.confirmationText!=="PUBLICAR"||record.status!=="paused"||
      JSON.stringify(record.approved_snapshot)!==JSON.stringify(draft))
     return fail("fresh_publication_approval_required",403);
+  const payment=await inspectMetaPayment(active.token,selectedAccount);
+  if(payment.state==="missing")return fail("meta_payment_not_detected",409);
+  if(payment.state!=="ready")return fail("meta_payment_not_verified",409);
   const {data:claimed}=await db.from("vmv_marketing_ads_campaigns")
    .update({status:"activation_pending",updated_at:new Date().toISOString()})
    .eq("owner_id",owner).eq("id",record.id).eq("status","paused").select("id").maybeSingle();

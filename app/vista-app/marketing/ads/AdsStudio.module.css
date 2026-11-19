@@ -369,3 +369,18 @@
 .agentReviewTasks>p{margin:0;font-size:11px;line-height:1.6;color:#846d91}
 .agentReviewReturn{margin:0}
 @media(max-width:430px){.agentReviewGrid{grid-template-columns:1fr}}
+
+
+/* Final review: two clear actions, billing preflight, and mobile confirmation. */
+.finalActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.finalActions>button{min-width:0;min-height:48px;line-height:1.35}
+.paymentResult{display:grid;gap:10px;border:1px solid #eadde7;border-radius:14px;padding:15px;background:#fffcfe}
+.paymentHeading{display:flex;align-items:center;gap:9px;color:#724b6c}
+.paymentHeading strong{font-size:12px}
+.paymentResult p{margin:0;font-size:11px;line-height:1.6;color:#846f83}
+.paymentActions{display:flex;flex-wrap:wrap;gap:9px}
+.paymentActions>a{font-size:11px;text-decoration:none}
+.paymentActions>button{font-size:11px}
+.pilotNotice{display:flex;align-items:flex-start;gap:9px;font-size:11px;line-height:1.65;color:#866e79;background:#f8f1f7;border:1px solid #ece0e9;border-radius:12px;padding:12px;margin:0}
+.pilotNotice svg{flex-shrink:0}
+@media(max-width:430px){.finalActions{grid-template-columns:1fr}}

@@ -86,6 +86,28 @@ export async function metaPost(path:string,token:string,fields:Record<string,str
   Authorization:"Bearer "+token,"Content-Type":"application/x-www-form-urlencoded"
  },body:new URLSearchParams(fields)});
 }
+/** A billing signal, not a guarantee of payment. Never disclose payment method details. */
+export type MetaPaymentCheck={state:"ready"|"missing"|"unverified"|"inactive";checkedAt:string};
+export async function inspectMetaPayment(token:string,accountId:string):Promise<MetaPaymentCheck>{
+ const checkedAt=new Date().toISOString();
+ if(!/^act_\d{5,30}$/.test(accountId))return {state:"unverified",checkedAt};
+ try{
+  const account=await metaGet(accountId,token,{fields:"id,account_status,currency,funding_source"});
+  if(account.id!==accountId||Number(account.account_status)!==1||account.currency!=="USD")
+   return {state:"inactive",checkedAt};
+  if(!Object.prototype.hasOwnProperty.call(account,"funding_source"))
+   return {state:"unverified",checkedAt};
+  const funding=account.funding_source;
+  if((typeof funding==="string"&&/^[1-9]\d*$/.test(funding))||
+    (typeof funding==="number"&&Number.isSafeInteger(funding)&&funding>0))
+   return {state:"ready",checkedAt};
+  if(funding===null||funding===""||funding===0||funding==="0")
+   return {state:"missing",checkedAt};
+  return {state:"unverified",checkedAt};
+ }catch{
+  return {state:"unverified",checkedAt};
+ }
+}
 export async function authorizedAccounts(token:string){
  const data=await metaGet("me/adaccounts",token,{fields:"id,name,account_status,currency,timezone_name",limit:"100"});
  return (Array.isArray(data.data)?data.data:[]).filter((item:any)=>typeof item.id==="string"&&
