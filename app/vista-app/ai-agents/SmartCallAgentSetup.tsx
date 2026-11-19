@@ -31,7 +31,8 @@ const fields=[
  ["custom_limits","Acciones prohibidas"]
 ] as const;
 export default function SmartCallAgentSetup({agent,businessName,onUpdated}:Props){
- const [draft,setDraft]=useState<PersistedAgent>(agent);
+ const [draft,setDraft]=useState<PersistedAgent>(()=>({...agent,setup:{...agent.setup,
+  business_name:agent.setup.business_name||businessName}}));
  const [saving,setSaving]=useState(false),[error,setError]=useState("");
  const report=useMemo(()=>inspectAgent(draft),[draft]);
  const setup={...draft.setup};
@@ -56,7 +57,7 @@ export default function SmartCallAgentSetup({agent,businessName,onUpdated}:Props
   }catch(e){setError(e instanceof Error?e.message:"No se pudo activar este agente.");}
   finally{setSaving(false);}
  };
- if(agent.status==="active"&&phoneReady&&channelReady)return <div className={styles.ready}><Check size={18}/>
+ if(agent.status==="active"&&phoneReady&&channelReady&&report.requiredPassed)return <div className={styles.ready}><Check size={18}/>
   <span>Mi agente está activo y autorizado para llamadas. La conexión al número se aprobará en el último paso.</span></div>;
  return <div className={styles.root}>
   <strong>Preparemos Mi agente aquí mismo</strong>
