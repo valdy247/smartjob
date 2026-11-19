@@ -262,22 +262,28 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
    <p className={styles.note}>La opción de atención humana primero requiere un teléfono de destino verificado. Estos ajustes no modifican el desvío de Twilio.</p>
   </div>:null}
   {!loading&&step==="agent"&&policy.agent_enabled&&owner?<div className={styles.panel}>
-   <div className={extra.line}><strong>{agent.name}</strong><small>
-    {agent.status==="active"?"Agente activo":"Agente aún no activo"}</small></div>
-   <label className={styles.checkLine}><input type="checkbox" checked={bindAgent}
-    onChange={e=>setBindAgent(e.target.checked)}/>
-    Asignar Mi agente a esta línea telefónica</label>
-   <label className={styles.field}>Cómo responderá Mi agente
+   <div className={extra.agentCard}>
+    <div><strong>{workingAgent.name}</strong>
+     <small>Mi agente IA · {workingAgent.status==="active"?"Activo":"Pendiente de activación"}</small></div>
+    <label className={extra.agentSwitch}><input type="checkbox" checked={bindAgent}
+     onChange={e=>setBindAgent(e.target.checked)}/>
+     <span>Asignar a este número</span></label>
+   </div>
+   {bindAgent?<SmartCallAgentSetup agent={workingAgent} businessName={business.name}
+    onUpdated={updated=>{setWorkingAgent(updated);setAgentReady(updated.status==="active");
+     onAgentUpdated?.(updated);}}/>:null}
+   <label className={styles.field}>Cuándo responderá Mi agente
     <select value={policy.agent_mode} onChange={e=>patch("agent_mode",e.target.value as CallPolicy["agent_mode"])}>
      <option value="always">Siempre que esté disponible</option>
-     <option value="schedule">Solo en horario configurado</option>
-     {forwardReady?<option value="after_no_answer">Cuando no conteste una persona</option>:null}
+     <option value="schedule">Solo durante el horario configurado</option>
+     {forwardReady?<option value="after_no_answer">Cuando una persona no conteste</option>:null}
     </select></label>
-   {policy.agent_mode==="after_no_answer"&&<label className={styles.field}>Segundos antes de transferir
+   {policy.agent_mode==="after_no_answer"?<label className={styles.field}>Segundos para esperar respuesta humana
     <select value={policy.ring_seconds} onChange={e=>patch("ring_seconds",Number(e.target.value))}>
      {[10,15,18,20,25,30].map(v=><option value={v} key={v}>{v} segundos</option>)}
-    </select></label>}
-   {agent.status!=="active"?<p className={styles.warning}>Debes activar y preparar el canal telefónico en Identidad del agente antes de guardar.</p>:null}
+    </select></label>:null}
+   <p className={styles.note}>Al aprobar la configuración, VMV intentará vincular el agente a esta línea.
+    Las llamadas reales requieren que el canal telefónico esté verificado.</p>
   </div>:null}
   {!loading&&step==="translation"&&owner?<div className={styles.panel}>
    <div className={styles.optionsVertical}>
@@ -346,24 +352,31 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
      onChange={e=>patch("closed_message",e.target.value)}/></label>:null}
   </div>:null}
   {!loading&&step==="voice"&&owner?<div className={styles.panel}>
-   {preferencesAvailable&&prefEditable?<div className={styles.optionsVertical}>
-    <label className={styles.field}>Voz para el cliente<select value={prefs.voice_customer}
-     onChange={e=>setPrefs(p=>({...p,voice_customer:e.target.value as Voice}))}>
-     <option value="default">Original</option><option value="bright">Clara</option><option value="calm">Tranquila</option>
-    </select></label>
-    <label className={styles.field}>Voz para ti<select value={prefs.voice_owner}
-     onChange={e=>setPrefs(p=>({...p,voice_owner:e.target.value as Voice}))}>
-     <option value="default">Original</option><option value="bright">Clara</option><option value="calm">Tranquila</option>
-    </select></label>
-    <label className={styles.field}>Saludo al cliente (opcional)
-     <textarea rows={3} maxLength={180} value={prefs.greeting_customer}
-      onChange={e=>setPrefs(p=>({...p,greeting_customer:e.target.value}))}/></label>
-    <label className={styles.field}>Saludo al propietario (opcional)
-     <textarea rows={3} maxLength={180} value={prefs.greeting_owner}
-      onChange={e=>setPrefs(p=>({...p,greeting_owner:e.target.value}))}/></label>
-   </div>:<div className={styles.info}>Las voces y saludos de Smart Call no están disponibles para editar en tu cuenta actual.
-    No se modificará esa configuración.</div>}
-   <p className={styles.note}>Configuración guiada aquí. Los accesos manuales se conservarán en Cuenta → Configuración.</p>
+   <SmartCallMenuEditor mode="voices" menu={policy.menu_config}
+    onChange={menu=>patch("menu_config",menu)} agentEnabled={policy.agent_enabled}
+    translationEnabled={policy.translation_enabled}/>
+   {preferencesAvailable&&prefEditable?<details className={extra.advanced}>
+    <summary>Configuración anterior de voz y saludos de traducción</summary>
+    <label className={styles.field}>Voz para el cliente
+     <select value={prefs.voice_customer}
+      onChange={e=>setPrefs(p=>({...p,voice_customer:e.target.value as Voice}))}>
+      <option value="default">Original</option><option value="bright">Clara</option><option value="calm">Tranquila</option>
+     </select></label>
+    <label className={styles.field}>Voz para el propietario
+     <select value={prefs.voice_owner}
+      onChange={e=>setPrefs(p=>({...p,voice_owner:e.target.value as Voice}))}>
+      <option value="default">Original</option><option value="bright">Clara</option><option value="calm">Tranquila</option>
+     </select></label>
+   </details>:null}
+   <p className={styles.note}>Las voces ElevenLabs pueden seleccionarse durante el piloto sin exigir Pro o Premium.
+    Son ajustes adicionales que Twilio debe admitir en cada llamada.</p>
+  </div>:null}
+  {!loading&&step==="menu"&&owner?<div className={styles.panel}>
+   <SmartCallMenuEditor mode="menu" menu={policy.menu_config}
+    onChange={menu=>patch("menu_config",menu)} agentEnabled={policy.agent_enabled}
+    translationEnabled={policy.translation_enabled}/>
+   <p className={styles.note}>Las llamadas directas no consumen créditos de IA ni de traducción;
+    sí pueden consumir minutos telefónicos normales. Los servicios que no estén disponibles no se anunciarán.</p>
   </div>:null}
   {!loading&&step==="test"&&owner?<div className={styles.panel}>
    <p className={styles.note}>Prueba cómo se enrutaría una llamada, sin llamar a nadie ni modificar el número.</p>
