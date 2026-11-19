@@ -35,7 +35,7 @@ const concepts=[["realistic","Realista"],["cinematic","Cinematográfico"],["anim
 const videoError:Record<string,string>={
  video_not_enabled_for_account:"La generación está limitada a cuentas autorizadas del piloto. Puedes preparar el guion.",
  runway_key_missing:"El proveedor de video todavía no está conectado.",
- video_daily_limit:"Se alcanzó el límite de tres videos cada 24 horas.",
+ video_daily_limit:"Se alcanzó el límite de pruebas para esta cuenta.",
  video_active_job_limit:"Espera a que termine la generación anterior.",
  runway_credits_required:"Runway necesita créditos disponibles.",
  runway_rate_limited:"El proveedor está ocupado; intenta más tarde.",
@@ -43,7 +43,7 @@ const videoError:Record<string,string>={
  runway_parameters_or_model_rejected:"Runway rechazó esta combinación de formato y modelo.",
  video_ai_limit:"El asistente alcanzó el límite temporal de guiones.",
  video_ai_unavailable:"La IA no pudo generar el guion. Puedes escribirlo manualmente.",
- image_daily_limit:"Se alcanzó el límite compartido de imágenes con IA. Puedes subir una foto.",
+ image_daily_limit:"Se alcanzó el presupuesto de seguridad del piloto. Puedes subir una foto.",
  video_image_unavailable:"No se pudo generar esta imagen. Puedes reintentar o subir una foto.",
  invalid_video_request:"Revisa el guion, imagen, formato y autorización de créditos."
 };
