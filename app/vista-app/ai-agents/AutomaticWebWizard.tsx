@@ -61,6 +61,8 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
  const [catalogChoice,setCatalogChoice]=useState<"yes"|"no"|null>(null);
  const [inventoryItems,setInventoryItems]=useState<CatalogItem[]>([]);
  const [skipEmail,setSkipEmail]=useState(false);
+ const [contactRequired,setContactRequired]=useState(false);
+ const [catalogLoaded,setCatalogLoaded]=useState(false);
  const [objective,setObjective]=useState<Objective>("quotes");
  const [inventory,setInventory]=useState(false);
  const [booking,setBooking]=useState(false);
@@ -90,7 +92,7 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
   ...services.map(x=>x.name)
  ])).slice(0,30);
  const features={inventory:catalogChoice==="yes",booking,chat};
- const needsContact=!email.trim()&&!skipEmail;
+ const needsContact=contactRequired;
  const stages:Stage[]=["business","project","catalog",
   ...(catalogChoice==="yes"?["products" as Stage]:[]),
   ...(needsContact?["contact" as Stage]:[]),
@@ -117,6 +119,7 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
  const signature=JSON.stringify({input,direction});
  const validStage=stage==="business"?name.trim().length>=2&&Boolean(category):
   stage==="catalog"?catalogChoice!==null:
+  stage==="products"?catalogLoaded:
   stage==="contact"?Boolean(skipEmail||email.trim())&&validEmail(email):
   stage==="colors"?palette.length===3:
   stage==="preview"?Boolean(proposal&&proposalSignature===signature):
@@ -143,6 +146,7 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
     if(existingSites.error)throw Error("No se pudieron comprobar las páginas existentes.");
     if(!live)return;
     setEmail(String(central.data.email||"").slice(0,180));
+    setContactRequired(!String(central.data.email||"").trim());
     if(!category&&central.data.category_id)setCategory(central.data.category_id);
     const knownServices:Item[]=(bookingServices.data||[]).map(x=>({
      ...x,type:"service" as const,approved:true
@@ -333,14 +337,14 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
      aria-pressed={catalogChoice==="yes"} onClick={()=>setCatalogChoice("yes")}>
      <Check size={17}/> Sí, conectar mi catálogo</button>
     <button type="button" className={catalogChoice==="no"?styles.optionActive:styles.option}
-     aria-pressed={catalogChoice==="no"} onClick={()=>{setCatalogChoice("no");setInventoryItems([]);}}>
+     aria-pressed={catalogChoice==="no"} onClick={()=>{setCatalogChoice("no");setInventoryItems([]);setCatalogLoaded(false);}}>
      No, crear la web sin acceso al inventario</button>
    </div>
    <p className={styles.note}>Si respondes No, la web no se conectará a Inventario ni mostrará sus precios y existencias.</p>
   </div>:null}
   {!loading&&owner&&stage==="products"&&catalogChoice==="yes"?<div className={styles.panel}>
    <p className={styles.note}>Todos tus productos están aquí. Edítalos o añade nuevos: se guardarán en el mismo Inventario de AI Agents, no en una lista paralela.</p>
-   <AgentWebCatalogEditor workspaceId={workspaceId} onChange={setInventoryItems}/>
+   <AgentWebCatalogEditor workspaceId={workspaceId} onChange={catalog=>{setInventoryItems(catalog);setCatalogLoaded(true);}}/>
    <p className={styles.note}>Tu web mostrará los productos activos y aprobados. Los no aprobados seguirán en Inventario, pero no serán públicos.</p>
   </div>:null}
   {!loading&&owner&&stage==="contact"?<div className={styles.panel}>
