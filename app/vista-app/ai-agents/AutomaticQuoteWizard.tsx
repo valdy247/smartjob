@@ -20,10 +20,11 @@ const steps:Step[]=["business","services","customer","charges","review"];
 const money=(c:number)=>new Intl.NumberFormat("es-US",{style:"currency",currency:"USD"}).format(c/100);
 const parseUsd=(v:string)=>/^\d{1,7}(?:\.\d{1,2})?$/.test(v.trim())?Math.round(Number(v)*100):null;
 const validPercent=(v:string)=>/^\d{1,3}(?:\.\d{1,2})?$/.test(v)&&Number(v)>=0&&Number(v)<=100;
-function expiry(){
- const d=new Date();d.setDate(d.getDate()+7);
+function localDate(offset=0){
+ const d=new Date();d.setDate(d.getDate()+offset);
  return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");
 }
+function expiry(){return localDate(7);}
 export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose}:{
  business:CentralBusiness;agent:PersistedAgent;workspaceId:string;onClose:()=>void;
 }){
@@ -48,8 +49,7 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
    (!customer.email.trim()||/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email.trim())):
   step==="charges"?discount!==null&&delivery!==null&&discount<=subTotal&&
    validPercent(charges.tax)&&validPercent(charges.deposit)&&
-   charges.until>=expiry().replace(/.$/,"0")&&charges.until<=
-    (()=>{const d=new Date();d.setDate(d.getDate()+365);return d.toISOString().slice(0,10);})():
+   charges.until>=localDate(0)&&charges.until<=localDate(365):
   true;
  useEffect(()=>{
   let live=true;
