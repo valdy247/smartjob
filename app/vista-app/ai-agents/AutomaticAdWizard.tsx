@@ -270,8 +270,8 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
    !meta.pages.some(p=>p.id===pageId)){
    setError("Verifica nuevamente la cuenta y la página de Facebook.");return;
   }
-  if(!window.confirm("Enviar a revisión por "+usd(totalCents)+
-   " de presupuesto máximo. Se guardará como borrador: no se publicará ni se gastará dinero."))return;
+  if(!window.confirm("Confirmo un presupuesto máximo de "+usd(totalCents)+
+   ". Se enviará a Meta como anuncio PAUSADO, sin publicación ni gasto. ¿Continuar?"))return;
   setPending("send");setError("");
   try{
    const dest=new URL(answer.website);
@@ -281,7 +281,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
     dest.searchParams.set("utm_campaign",(answer.businessName+"_"+answer.offer)
      .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").slice(0,50));
    }
-   await api("/api/marketing/ads/meta/campaigns","POST",{
+   const saved=await api("/api/marketing/ads/meta/campaigns","POST",{
     operation:"draft",clientKey:sendKey,draft:{
      name:(answer.businessName+" · "+answer.offer).slice(0,80),
      headline:headline.trim(),message:message.trim(),destination:dest.toString(),
@@ -290,6 +290,18 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
      dailyBudgetCents:budgetCents,durationDays:duration,specialCategoriesAcknowledged:true
     }
    });
+   const campaignId=String(saved.campaign?.id||"");
+   if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(campaignId))throw Error("No se pudo confirmar el borrador.");
+   try{
+    // The user explicitly approved the capped budget in this last step.
+    // Meta objects are created PAUSED. Publishing and spending remain
+    // separately gated by the existing Meta campaign approval endpoint.
+    await api("/api/marketing/ads/meta/campaigns","POST",{
+     operation:"create_paused",campaignId,confirmPaused:true,approvedTotalCents:totalCents
+    });
+   }catch{
+    throw Error("El borrador se guardó, pero Meta no confirmó la campaña pausada. Revísala en Historial de campañas.");
+   }
    window.location.assign("/vista-app/marketing/ads/campaigns");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo guardar. Intenta nuevamente.");setPending("");}
  };
@@ -463,7 +475,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
      onChange={e=>setSpecialConfirmed(e.target.checked)}/>
      <span>Confirmo que este anuncio no pertenece a vivienda, empleo, crédito ni otra categoría especial.
       Los datos son reales y tengo derechos para usar la imagen.</span></label>
-    <p className={styles.helper}>Enviar crea un borrador para aprobación. No publica ni gasta dinero.</p>
+    <p className={styles.helper}>Enviar crea el anuncio PAUSADO en Meta. Publicarlo y gastar requieren autorización posterior.</p>
    </div>:null}
   {error?<p role="alert" className={styles.error}>{error}
    <button type="button" className={styles.chip} onClick={()=>setError("")}>Cerrar aviso</button>
@@ -475,7 +487,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
      <button type="button" className={styles.generate}
       disabled={!validBudget||!specialConfirmed||Boolean(pending)} onClick={()=>void finish()}>
       {pending==="send"?<LoaderCircle size={17} className={styles.spin}/>:<Megaphone size={18}/>}
-      {pending==="send"?"Enviando…":"Enviar a revisión"} <ArrowRight size={17}/></button>}
+      {pending==="send"?"Enviando…":"Enviar anuncio"} <ArrowRight size={17}/></button>}
    </div>:null}
   {step!=="location"?<p className={styles.safety}><ShieldCheck size={14}/>
    No publicamos anuncios ni activamos gastos automáticamente.</p>:null}
