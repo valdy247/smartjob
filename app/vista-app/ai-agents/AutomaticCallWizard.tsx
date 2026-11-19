@@ -9,23 +9,25 @@ import theme from "./AgentServiceFlow.module.css";
 import styles from "./AutomaticWebWizard.module.css";
 import extra from "./AutomaticCallWizard.module.css";
 
-type Step="business"|"line"|"services"|"agent"|"hours"|"priority"|"voice"|"review";
+type Step="business"|"line"|"services"|"agent"|"translation"|"hours"|"priority"|"voice"|"test"|"review";
 type Voice="default"|"bright"|"calm";
 type Preferences={voice_customer:Voice;voice_owner:Voice;greeting_customer:string;greeting_owner:string};
 const defaults:Preferences={voice_customer:"default",voice_owner:"default",greeting_customer:"",greeting_owner:""};
 const labels:Record<Step,string>={
  business:"¿Qué negocio vamos a configurar?",
  line:"¿Qué número configuraremos?",
- services:"¿Qué funciones tendrá tu línea?",
+ services:"¿Quién responderá tus llamadas?",
  agent:"¿Cómo atenderá Mi agente las llamadas?",
+ translation:"¿Quieres activar la traducción?",
  hours:"¿En qué horarios atenderemos?",
  priority:"¿Qué hacemos cuando entran llamadas?",
  voice:"¿Qué voz y saludo usaremos?",
+ test:"Probemos la configuración antes de guardarla",
  review:"Revisa las reglas antes de guardarlas"
 };
 const weekdays:Record<DayName,string>={sun:"Domingo",mon:"Lunes",tue:"Martes",wed:"Miércoles",thu:"Jueves",fri:"Viernes",sat:"Sábado"};
 function validGreeting(v:string){return v.length<=180&&!/[<>\r\n]/.test(v)&&(!v.trim()||v.trim().length>=10);}
-async function callApi(method:"GET"|"PUT",payload?:object){
+async function callApi(method:"GET"|"POST"|"PUT",payload?:object){
  const db=getSupabase();if(!db)throw Error("No hay conexión.");
  const {data:{session}}=await db.auth.getSession();
  if(!session?.access_token)throw Error("Inicia sesión nuevamente.");
@@ -55,13 +57,17 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
  const [saved,setSaved]=useState(false);
  const [showBusinesses,setShowBusinesses]=useState(false);
  const [lineChoice,setLineChoice]=useState<"current"|"different"|"new">("current");
+ const [testDay,setTestDay]=useState<DayName>("mon");
+ const [testTime,setTestTime]=useState("10:00");
+ const [testResult,setTestResult]=useState("");
+ const [testError,setTestError]=useState("");
  const patch=<K extends keyof CallPolicy>(key:K,value:CallPolicy[K])=>
   setPolicy(v=>({...v,[key]:value}));
  const schedule=policy.agent_enabled&&policy.agent_mode==="schedule"||
   policy.translation_enabled&&policy.translation_mode==="schedule";
  const steps:Step[]=["business","line","services",
   ...(policy.agent_enabled?["agent" as Step]:[]),
-  ...(schedule?["hours" as Step]:[]),"priority","voice","review"];
+  "translation",...(schedule?["hours" as Step]:[]),"priority","voice","test","review"];
  const index=Math.max(0,steps.indexOf(step));
  const valid=step==="services"?(policy.agent_enabled||policy.translation_enabled):
   step==="line"?Boolean(line?.routeId):
@@ -131,6 +137,19 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
   if(index===0){onClose();return;}setStep(steps[index-1]);
  };
  const edit=(target:Step)=>{setReturnReview(true);setStep(target);setSaved(false);};
+ const simulate=async()=>{
+  if(busy||!line)return;
+  setBusy("simulate");setTestResult("");setTestError("");setError("");
+  try{
+   const result=await callApi("POST",{policy:checkCallPolicy(policy),day:testDay,time:testTime});
+   const action=String(result.decision?.action||"");
+   const labels:Record<string,string>={menu:"El cliente podrá elegir en el menú",
+    agent:"Mi agente IA respondería",translation:"Se ofrecería traducción",
+    ring_owner:"Primero sonaría el teléfono humano",message:"Se reproduciría el mensaje de cierre"};
+   setTestResult(labels[action]||"Simulación completada");
+  }catch(e){setTestError(e instanceof Error?e.message:"No fue posible simular las reglas.");}
+  finally{setBusy("");}
+ };
  const setDay=(d:DayName,k:"enabled"|"start"|"end",value:boolean|string,
   source:"schedule"|"translation_schedule")=>
   setPolicy(p=>({...p,[source]:{...p[source],[d]:{...p[source][d],[k]:value}}}));
@@ -220,26 +239,20 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
   </div>:null}
   {!loading&&step==="services"&&owner?<div className={styles.panel}>
    <div className={styles.optionsVertical}>
-    {([["both","Atender con IA y traducir llamadas"],
-      ["agent","Solo atender con Mi agente IA"],
-      ["translation","Solo traducción Smart Call"]] as const).map(([value,label])=>{
-     const chosen=value==="both"?policy.agent_enabled&&policy.translation_enabled:
-      value==="agent"?policy.agent_enabled&&!policy.translation_enabled:
-       !policy.agent_enabled&&policy.translation_enabled;
-     return <button type="button" key={value} className={chosen?styles.optionActive:styles.option}
-      aria-pressed={chosen} onClick={()=>
-       setPolicy(p=>({...p,agent_enabled:value!=="translation",
-        translation_enabled:value!=="agent",
-        outside_action:value==="agent"?"message":p.outside_action}))}>
-       {chosen?<Check size={16}/>:null}{label}</button>;
-    })}
+    <button type="button" className={policy.agent_enabled&&policy.agent_mode!=="after_no_answer"?styles.optionActive:styles.option}
+     aria-pressed={policy.agent_enabled&&policy.agent_mode!=="after_no_answer"}
+     onClick={()=>setPolicy(p=>({...p,agent_enabled:true,agent_mode:"always"}))}>
+     Mi agente IA responderá primero</button>
+    {forwardReady?<button type="button" className={policy.agent_enabled&&policy.agent_mode==="after_no_answer"?styles.optionActive:styles.option}
+     aria-pressed={policy.agent_enabled&&policy.agent_mode==="after_no_answer"}
+     onClick={()=>setPolicy(p=>({...p,agent_enabled:true,agent_mode:"after_no_answer"}))}>
+     Primero yo o mi equipo; después Mi agente IA</button>:null}
+    <button type="button" className={!policy.agent_enabled?styles.optionActive:styles.option}
+     aria-pressed={!policy.agent_enabled}
+     onClick={()=>setPolicy(p=>({...p,agent_enabled:false,translation_enabled:true,outside_action:"translation"}))}>
+     Atención mediante traducción, sin agente IA</button>
    </div>
-   {policy.translation_enabled?<label className={styles.field}>Horario de traducción
-    <select value={policy.translation_mode}
-     onChange={event=>patch("translation_mode",event.target.value as CallPolicy["translation_mode"])}>
-     <option value="always">Siempre disponible</option>
-     <option value="schedule">Solo por horario</option>
-    </select></label>:null}
+   <p className={styles.note}>La opción de atención humana primero requiere un teléfono de destino verificado. Estos ajustes no modifican el desvío de Twilio.</p>
   </div>:null}
   {!loading&&step==="agent"&&policy.agent_enabled&&owner?<div className={styles.panel}>
    <div className={extra.line}><strong>{agent.name}</strong><small>
@@ -258,6 +271,24 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
      {[10,15,18,20,25,30].map(v=><option value={v} key={v}>{v} segundos</option>)}
     </select></label>}
    {agent.status!=="active"?<p className={styles.warning}>Debes activar y preparar el canal telefónico en Identidad del agente antes de guardar.</p>:null}
+  </div>:null}
+  {!loading&&step==="translation"&&owner?<div className={styles.panel}>
+   <div className={styles.optionsVertical}>
+    <button type="button" className={policy.translation_enabled?styles.optionActive:styles.option}
+     aria-pressed={policy.translation_enabled} onClick={()=>patch("translation_enabled",true)}>
+     {policy.translation_enabled?<Check size={16}/>:null} Activar traducción</button>
+    <button type="button" className={!policy.translation_enabled?styles.optionActive:styles.option}
+     aria-pressed={!policy.translation_enabled} disabled={!policy.agent_enabled}
+     onClick={()=>setPolicy(p=>({...p,translation_enabled:false,outside_action:"message"}))}>
+     No usar traducción</button>
+   </div>
+   {policy.translation_enabled?<label className={styles.field}>Cuándo traducir
+    <select value={policy.translation_mode}
+     onChange={e=>patch("translation_mode",e.target.value as CallPolicy["translation_mode"])}>
+     <option value="always">Siempre que se necesite</option>
+     <option value="schedule">Solo durante el horario establecido</option>
+    </select></label>:null}
+   <p className={styles.note}>Los minutos de traducción se descuentan cuando se utilizan. No se efectuarán recargas automáticas.</p>
   </div>:null}
   {!loading&&step==="hours"&&owner?<div className={styles.panel}>
    <label className={styles.field}>Zona horaria<select value={policy.time_zone}
@@ -327,20 +358,36 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
     No se modificará esa configuración.</div>}
    <p className={styles.note}>Configuración guiada aquí. Los accesos manuales se conservarán en Cuenta → Configuración.</p>
   </div>:null}
+  {!loading&&step==="test"&&owner?<div className={styles.panel}>
+   <p className={styles.note}>Prueba cómo se enrutaría una llamada, sin llamar a nadie ni modificar el número.</p>
+   <label className={styles.field}>Día de prueba
+    <select value={testDay} onChange={e=>setTestDay(e.target.value as DayName)}>
+     {days.map(d=><option value={d} key={d}>{weekdays[d]}</option>)}
+    </select></label>
+   <label className={styles.field}>Hora de prueba
+    <input type="time" value={testTime} onChange={e=>setTestTime(e.target.value)}/></label>
+   <button type="button" className={styles.optionActive}
+    disabled={!line||Boolean(busy)} onClick={()=>void simulate()}>
+    <PhoneCall size={17}/> {busy==="simulate"?"Simulando…":"Simular llamada"}</button>
+   {testResult?<div className={styles.info} role="status"><Check size={17}/>{testResult}</div>:null}
+   {testError?<p className={styles.warning} role="alert">{testError}</p>:null}
+   <p className={styles.note}>Esta simulación solo evalúa reglas. Una llamada real requiere el canal telefónico activo y autorización.</p>
+  </div>:null}
   {!loading&&step==="review"&&owner?<div className={styles.panel}>
    {saved?<div className={extra.success}><Check size={24}/>
     <strong>Configuración guardada</strong>
     <p>Las nuevas reglas se aplicarán a las próximas llamadas. La ruta telefónica de Twilio no se modificó.</p>
-    <a href="/vista-app?tab=services&service=smart-call">Ver Smart Call</a></div>:
+    <button type="button" className={styles.option} onClick={onClose}>Volver a AI Agents</button></div>:
     <div className={styles.review}>
      {card("Negocio",business.name,"business")}
      {card("Número",line?.maskedNumber||"Pendiente","line")}
-     {card("Servicios",policy.agent_enabled&&policy.translation_enabled?"IA + Traducción":
-      policy.agent_enabled?"Mi agente IA":"Traducción","services")}
+     {card("Atención",policy.agent_enabled?(policy.agent_mode==="after_no_answer"?"Humano primero, luego IA":"Mi agente IA"):"Traducción sin IA","services")}
+     {card("Traducción",policy.translation_enabled?policy.translation_mode==="always"?"Activada":"Por horario":"Desactivada","translation")}
      {policy.agent_enabled?card("Mi agente",bindAgent?agent.name:"Sin asignar","agent"):null}
      {card("Horarios",schedule?(policy.use_business_hours?"Horario del negocio":"Horario personalizado"):"Siempre","hours")}
      {card("Prioridad",policy.coexistence+" · "+policy.outside_action,"priority")}
      {card("Voz",prefEditable?prefs.voice_customer+" · "+prefs.voice_owner:"Sin cambios","voice")}
+     {card("Prueba",testResult||"No realizada","test")}
     </div>}
    {!saved?<p className={styles.note}>Debes aprobar cualquier cambio de selección y reglas. No compraremos números ni activaremos gastos adicionales automáticamente.</p>:null}
 
