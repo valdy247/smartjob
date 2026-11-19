@@ -6,6 +6,7 @@ export type AgentAdBrief={
  version:1;ownerId:string;businessId:string;workspaceId:string;agentId:string;
  createdAt:number;businessName:string;website:string;offer:string;
  city:string;region:string;audience:string;goal:"visits"|"messages"|"sales";
+ goals?:Array<"visits"|"messages"|"sales">;
  imageChoice:"business"|"product"|"upload";imageProductId?:string;
  productId?:string;priceCents?:number;currency?:string;
  notes:string;
@@ -19,6 +20,7 @@ export function saveAgentAdBrief(value:AgentAdBrief):boolean{
   !value.businessName.trim()||Date.now()-value.createdAt>30000)return false;
  const stored={...value,businessName:value.businessName.slice(0,100),
   offer:value.offer.slice(0,220),audience:value.audience.slice(0,130),
+  goals:(value.goals||[value.goal]).filter(goal=>["visits","messages","sales"].includes(goal)).slice(0,3),
   city:value.city.slice(0,100),region:value.region.slice(0,90),
   website:safeSite(value.website),notes:value.notes.slice(0,300)};
  try{sessionStorage.setItem(AD_HANDOFF_KEY+":"+value.ownerId,JSON.stringify(stored));return true;}
