@@ -34,12 +34,18 @@ export async function POST(req:NextRequest){
  if(!s.enabled)return json({error:"La generación de imágenes aún no está activada"},503);
  const user=await authenticate(req,s);
  if(!user||user.id!==s.owner)return json({error:"Sin autorización para generar imágenes"},403);
- let body:{prompt?:unknown;business?:unknown;categoryId?:unknown};
+ let body:{prompt?:unknown;business?:unknown;categoryId?:unknown;kind?:unknown};
  try{body=await req.json();}catch{return json({error:"Solicitud inválida"},400);}
  const prompt=typeof body.prompt==="string"?body.prompt.trim():"";
  if(prompt.length<8||prompt.length>450)return json({error:"Describe la imagen entre 8 y 450 caracteres"},400);
  const name=typeof body.business==="string"?body.business.slice(0,100):"";
  const category=categoryLabel(typeof body.categoryId==="string"?body.categoryId:"");
+ const kind=["logo","cover","gallery"].includes(String(body.kind))?String(body.kind):"cover";
+ const kindInstruction=kind==="logo"?
+  "Diseña UN SÍMBOLO GRÁFICO ORIGINAL para la identidad de este negocio, estilo logo vectorial minimalista con geometría sólida, fondo de color liso o transparente si el modelo lo permite. NO hagas fotografía, NO escribas palabras ni letras, NO copies marcas, NO inventes el nombre del negocio en la imagen. Debe distinguirse a tamaño pequeño.":
+  kind==="cover"?
+  "Crea UNA fotografía de portada profesional, original y cinematográfica de alta calidad, composición limpia y espacio libre para el encabezado, acorde a productos y servicios confirmados. SIN palabras, textos, precios ni marcas de agua.":
+  "Crea UNA fotografía original para galería de sitio web, realista y de alta calidad, productos o servicios auténticos, detalles y luz profesional. SIN palabras, textos, precios ni marcas de agua.";
  const admin=createClient(s.url,s.secret,{auth:{persistSession:false,autoRefreshToken:false}});
  // Atomic quota is enforced inside Postgres, not in browser memory.
  const {data:reserved,error:quotaError}=await admin.rpc("smartjob_web_ai_claim_slot",{p_owner:user.id});
@@ -51,7 +57,7 @@ export async function POST(req:NextRequest){
    headers:{"Authorization":"Bearer "+s.openAi,"Content-Type":"application/json"},
    body:JSON.stringify({
     model:"gpt-image-2",
-    prompt:"Crea una fotografía de portada original y profesional para un sitio web de negocio. Estilo editorial premium, composición limpia, calidad comercial. Sin marcas conocidas, sin texto, sin logotipos, sin marcas de agua. Negocio: "+name+". Sector: "+category+". Solicitud visual: "+prompt,
+    prompt:kindInstruction+" Negocio: "+name+". Sector: "+category+". Solicitud visual: "+prompt,
     n:1,size:"1024x1024",quality:"low",output_format:"webp"
    }),
    signal:AbortSignal.timeout(53000)
