@@ -7,7 +7,7 @@ const wizard=read("app/vista-app/ai-agents/AutomaticAdWizard.tsx");
 const parent=read("app/vista-app/ai-agents/page.tsx");
 const bridge=read("lib/vmv-ai-agents/ad-handoff.ts");
 test("Agent ad flow uses existing principal and selected central business",()=>{
- assert.match(parent,/selectedWorkspace&&/);
+ assert.match(parent,/if\(principal&&selectedBusiness&&selectedWorkspace\)/);
  assert.match(parent,/agent={principal}/);
  assert.match(wizard,/agent\.business_id!==workspaceId/);
  assert.match(wizard,/user\.id!==business\.owner_id/);
