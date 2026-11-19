@@ -98,6 +98,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
  }|null>(null);
  const [manualSubject,setManualSubject]=useState("");
  const [creativeOverride,setCreativeOverride]=useState(false);
+ const [allowTransformation,setAllowTransformation]=useState(false);
  const [prompt,setPrompt]=useState("");
  const [caption,setCaption]=useState("");
  const [confirmCredits,setConfirmCredits]=useState(false);
@@ -113,7 +114,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
  const goal=targets.find(x=>x[0]===purpose)?.[1]||"Presentar el negocio";
  const valid=stage==="business"?name.trim().length>=2:
   stage==="audience"?audience.trim().length>=3:
-  stage==="reference"?Boolean(filePreview)&&!imageCandidate&&Boolean(imageAnalysis||manualSubject.trim().length>=8)&&(!imageAnalysis?.conflict||creativeOverride):
+  stage==="reference"?Boolean(filePreview)&&!imageCandidate&&Boolean(imageAnalysis||manualSubject.trim().length>=8)&&(!imageAnalysis?.conflict||creativeOverride)&&(!allowTransformation||imageDirection.trim().length>=8):
   stage==="script"?prompt.trim().length>=3&&prompt.length<=1000:
   true;
  useEffect(()=>{
@@ -219,8 +220,8 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
     visual,
     mode==="image"?"HARD CONSTRAINT: keep the pictured main subject and species.":
      "Describe one clear scene.",
-    mode==="image"&&creativeOverride?
-     "Explicit owner-approved creative change: "+imageDirection.slice(0,180):"",
+    mode==="image"&&allowTransformation?
+     "Explicit owner-approved creative transformation: "+imageDirection.slice(0,180):"",
     "Business context only (must NEVER replace pictured subject): "+name.slice(0,70),
     "Goal: "+goal,
     mode==="text"?"Products/services: "+(offer||"No confirmed offering"):
@@ -235,7 +236,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
      subject:imageAnalysis?.subject||manualSubject.trim(),
      observations:imageAnalysis?.observations||manualSubject.trim(),
      groundedMotion:imageAnalysis?.groundedMotion||manualSubject.trim(),
-     permitTransformation:creativeOverride,creativeDirection:imageDirection.slice(0,180)
+     permitTransformation:allowTransformation,creativeDirection:imageDirection.slice(0,180)
     }:null
    });
    if(typeof result.prompt!=="string"||result.prompt.trim().length<20)
@@ -247,7 +248,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
   finally{setBusy("");}
  };
  const inspectReference=async(reference:string)=>{
-  setImageAnalysis(null);setManualSubject("");setCreativeOverride(false);
+  setImageAnalysis(null);setManualSubject("");setCreativeOverride(false);setAllowTransformation(false);
   setScriptAutoTried(false);setPrompt("");setCaption("");setConfirmCredits(false);
   try{
    const visual=await api("/api/video-generator/analyze-image",{
@@ -419,9 +420,15 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
     {imageAnalysis.conflict?<div className={styles.conflict}>
      <strong>La idea no coincide completamente con la imagen</strong>
      <p>{imageAnalysis.reason||"La imagen contiene un sujeto distinto de la escena indicada."}</p>
-     <label><input type="checkbox" checked={creativeOverride}
-      onChange={e=>setCreativeOverride(e.target.checked)}/>
-      Quiero mantener esta imagen y autorizar una transformación creativa intencional</label>
+     <div className={styles.visionChoices}>
+      <button type="button" className={creativeOverride&&!allowTransformation?base.optionActive:base.option}
+       onClick={()=>{setCreativeOverride(true);setAllowTransformation(false);}}>
+       Mantener el sujeto visible y corregir el guion</button>
+      <button type="button" className={allowTransformation?base.optionActive:base.option}
+       onClick={()=>{setCreativeOverride(true);setAllowTransformation(true);}}>
+       Autorizar una transformación creativa</button>
+     </div>
+     {allowTransformation?<p>Describe arriba qué transformación quieres. Primero se respetará el fotograma original.</p>:null}
      <p>También puedes sustituir la imagen. Si no autorizas el cambio, no generaré un guion contradictorio.</p>
     </div>:<p className={styles.success}>El guion conservará este sujeto como protagonista.</p>}
    </div>:null}
