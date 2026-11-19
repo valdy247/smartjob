@@ -69,8 +69,9 @@ export async function POST(req:NextRequest){
  }
  try{
   const taskId=await startRunway(input);
+  const caption=typeof body.caption==="string"?body.caption.trim().slice(0,500):"";
   const result=await db.from("vmv_video_jobs").update({
-   provider_task_id:taskId,status:"PENDING",updated_at:new Date().toISOString()
+   provider_task_id:taskId,status:"PENDING",caption,updated_at:new Date().toISOString()
   }).eq("id",jobId).eq("owner_id",owner).select("*").single();
   if(result.error)throw Error("video_task_persistence_failed");
   return reply({job:result.data},202);
