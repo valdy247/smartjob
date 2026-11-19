@@ -136,7 +136,7 @@ export function normalizeBuilderDocument(input:unknown):Data{
  const sourceRoot=raw.root&&typeof raw.root==="object"?raw.root as Record<string,unknown>:{};
  const rawProps=sourceRoot.props&&typeof sourceRoot.props==="object"?sourceRoot.props as Record<string,unknown>:{};
  const palette=["violet","mint","amber","ink","rose","forest","ocean","terracotta","charcoal"].includes(String(rawProps.palette))?String(rawProps.palette):"violet";
- const font=["modern","editorial","rounded","geometric"].includes(String(rawProps.font))?String(rawProps.font):"modern";
+ const font=["modern","editorial","rounded","geometric","mono","classic","humanist","luxury"].includes(String(rawProps.font))?String(rawProps.font):"modern";
  const style=["light","dark","warm","editorial","bold"].includes(String(rawProps.style))?String(rawProps.style):"light";
  const width=["regular","wide"].includes(String(rawProps.width))?String(rawProps.width):"regular";
  const motion=rawProps.motion==="subtle"?"subtle":"off";
@@ -209,7 +209,9 @@ export const builderConfig:Config={
    palette:{type:"custom",render:({value,onChange})=><ThemeSwatches value={value} onChange={onChange}/>},
    font:{type:"select",options:[
     {label:"Moderna",value:"modern"},{label:"Editorial",value:"editorial"},
-    {label:"Redondeada",value:"rounded"},{label:"Geométrica",value:"geometric"}
+    {label:"Redondeada",value:"rounded"},{label:"Geométrica",value:"geometric"},
+    {label:"Tecnológica",value:"mono"},{label:"Clásica",value:"classic"},
+    {label:"Natural",value:"humanist"},{label:"Elegante",value:"luxury"}
    ]},
    style:{type:"select",options:[
     {label:"Claro",value:"light"},{label:"Oscuro",value:"dark"},
@@ -238,7 +240,11 @@ export const builderConfig:Config={
     modern:'ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif',
     editorial:'Georgia,"Times New Roman",serif',
     rounded:'"Trebuchet MS",ui-sans-serif,system-ui,sans-serif',
-    geometric:'"Avenir Next",Montserrat,ui-sans-serif,system-ui,sans-serif'
+    geometric:'"Avenir Next",Montserrat,ui-sans-serif,system-ui,sans-serif',
+    mono:'ui-monospace,"SFMono-Regular",Consolas,monospace',
+    classic:'"Palatino Linotype",Palatino,Georgia,serif',
+    humanist:'"Gill Sans",Calibri,system-ui,sans-serif',
+    luxury:'Baskerville,"Times New Roman",serif'
    };
    const css={"--vmv-accent":/^#[0-9a-f]{6}$/i.test(accentColor||"")?accentColor:color.accent,
     "--vmv-pale":color.pale,
