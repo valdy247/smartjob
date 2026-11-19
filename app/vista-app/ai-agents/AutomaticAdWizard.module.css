@@ -41,3 +41,63 @@
 .spin{animation:agent-spin 1s linear infinite;flex-shrink:0}
 @keyframes agent-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
+
+/* Polished selectors: native choices, accessible labels and consistent mobile geometry. */
+.root{width:100%;max-width:540px;min-height:calc(100dvh - 58px);margin:0 auto;box-sizing:border-box;padding:5px 0 26px}
+.top{padding:0 0 1px}
+.track{margin:13px 0 clamp(24px,5dvh,46px)}
+.robot{width:94px;height:94px;border-radius:29px}
+.question{max-width:410px;line-height:1.16;margin:24px 0}
+.answers{gap:16px}
+.answers input:not([type=file]),.answers textarea,.answers select,.review textarea,.field input{
+ border:1px solid #e6d8f6;border-radius:15px;background:#fff;color:#2c223c;
+ font-family:inherit;font-weight:650;font-size:14px;min-height:48px;
+ transition:border-color .15s ease,box-shadow .15s ease
+}
+.answers input:focus,.answers select:focus,.answers textarea:focus{
+ outline:none;border-color:#9760ea;box-shadow:0 0 0 4px #9960e81a
+}
+.selectShell{position:relative;display:block;min-width:0}
+.selectShell:after{content:"";position:absolute;right:17px;top:50%;
+ width:9px;height:9px;border-right:2px solid #8153cc;border-bottom:2px solid #8153cc;
+ transform:translateY(-65%) rotate(45deg);pointer-events:none}
+.selectShell select{appearance:none!important;-webkit-appearance:none!important;
+ width:100%;min-height:49px;padding:12px 40px 12px 13px;background:#fff!important;
+ border:1px solid #e4d6f3;border-radius:15px;color:#342640;font-weight:700;font:inherit}
+.verifyCity{display:flex;align-items:center;justify-content:center;gap:9px;border:0;
+ border-radius:15px;min-height:50px;width:100%;background:linear-gradient(100deg,#8352d8,#a46cef);
+ color:white;font-weight:900;font-size:13px;cursor:pointer}
+.verifyCity:disabled{opacity:.45;cursor:not-allowed}
+.cityOverlay{position:fixed;inset:0;z-index:150;display:flex;justify-content:center;
+ align-items:center;padding:18px;background:#170e2860;backdrop-filter:blur(12px);
+ -webkit-backdrop-filter:blur(12px)}
+.cityDialog{box-sizing:border-box;width:min(420px,100%);max-height:min(74dvh,620px);
+ overflow-y:auto;background:#fff;border-radius:25px;border:1px solid #efe2fa;
+ box-shadow:0 25px 70px #22113e40;padding:20px;display:grid;gap:13px;text-align:left}
+.cityDialogHead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cityDialogHead span{display:flex;align-items:center;gap:9px;color:#33214e;font-size:16px;font-weight:900}
+.cityDialogHead button{border:0;background:#f3edfc;color:#7751c6;font-size:23px;
+ border-radius:12px;width:38px;height:38px}
+.cityChoice{display:flex;align-items:center;justify-content:space-between;gap:12px;
+ width:100%;background:#fcf9ff;border:1px solid #e7ddf4;border-radius:14px;
+ padding:14px;color:#4c3566;text-align:left;cursor:pointer}
+.cityChoice:hover,.cityChoice:focus-visible{border-color:#a773ef;background:#f3eaff}
+.cityChoice span{display:grid;gap:5px}
+.cityChoice strong{font-size:13px}
+.cityChoice small{font-size:11px;color:#8b79a0}
+.budgetTotal{display:grid;gap:7px;padding:18px;border-radius:18px;background:#f3eafd;
+ border:1px solid #e7d7f6;color:#63478b}
+.budgetTotal small{font-size:11px}
+.budgetTotal strong{font-size:30px;color:#322048;letter-spacing:-1px}
+.budgetTotal span{font-size:11px;color:#8b77a4}
+.switchField{display:flex;align-items:center;justify-content:space-between;gap:13px;
+ background:#fff;border:1px solid #ebdef5;padding:14px;border-radius:15px;text-align:left}
+.switchField span{display:grid;gap:5px}
+.switchField strong{font-size:13px;color:#352542}
+.switchField small{font-size:10px;color:#887897}
+.switchField input{width:20px;height:20px;accent-color:#8b58d8;flex-shrink:0}
+.consent{display:flex;align-items:flex-start;gap:10px;text-align:left;
+ font-size:11px;line-height:1.6;color:#604c75;padding:11px 0}
+.consent input{width:18px;height:18px;accent-color:#8b58d8;flex-shrink:0;margin-top:2px}
+.generate:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:480px){.root{min-height:calc(100dvh - 32px)}.question{font-size:clamp(22px,6.4vw,30px)}}
