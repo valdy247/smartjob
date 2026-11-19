@@ -14,7 +14,7 @@ type Voice="default"|"bright"|"calm";
 type Preferences={voice_customer:Voice;voice_owner:Voice;greeting_customer:string;greeting_owner:string};
 const defaults:Preferences={voice_customer:"default",voice_owner:"default",greeting_customer:"",greeting_owner:""};
 const labels:Record<Step,string>={
- business:"¿Configuraremos las llamadas de tu negocio?",
+ business:"¿Qué negocio vamos a configurar?",
  line:"¿Qué número configuraremos?",
  services:"¿Qué funciones tendrá tu línea?",
  agent:"¿Cómo atenderá Mi agente las llamadas?",
@@ -38,8 +38,9 @@ async function callApi(method:"GET"|"PUT",payload?:object){
  if(!r.ok)throw Error(String(data.error||"No se pudo consultar tu línea."));
  return data;
 }
-export default function AutomaticCallWizard({business,agent,workspaceId,onClose,onAdvanced}:{
+export default function AutomaticCallWizard({business,agent,workspaceId,onClose,onAdvanced,businesses,onChooseBusiness}:{
  business:CentralBusiness;agent:PersistedAgent;workspaceId:string;onClose:()=>void;onAdvanced:()=>void;
+ businesses:CentralBusiness[];onChooseBusiness:(id:string)=>void;
 }){
  const [step,setStep]=useState<Step>("business"),[returnReview,setReturnReview]=useState(false);
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(""),[error,setError]=useState("");
@@ -52,6 +53,8 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
  const [prefs,setPrefs]=useState<Preferences>(defaults),[originalPrefs,setOriginalPrefs]=useState<Preferences>(defaults);
  const [prefEditable,setPrefEditable]=useState(false),[preferencesAvailable,setPreferencesAvailable]=useState(false);
  const [saved,setSaved]=useState(false);
+ const [showBusinesses,setShowBusinesses]=useState(false);
+ const [lineChoice,setLineChoice]=useState<"current"|"different"|"new">("current");
  const patch=<K extends keyof CallPolicy>(key:K,value:CallPolicy[K])=>
   setPolicy(v=>({...v,[key]:value}));
  const schedule=policy.agent_enabled&&policy.agent_mode==="schedule"||
@@ -187,8 +190,13 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
   <h1 className={styles.question+" "+theme.agentHeading}>{labels[step]}</h1>
   {loading?<p className={styles.note} role="status"><LoaderCircle size={17}/> Consultando tu línea…</p>:null}
   {!loading&&step==="business"&&owner?<div className={styles.panel}>
-   <strong className={styles.emphasis+" "+theme.agentText}>{business.name}</strong>
-   <button type="button" className={styles.optionActive} onClick={next}><Check size={16}/> Sí, este negocio</button>
+   <div className={extra.line}><Check size={19}/><strong>{business.name}</strong><small>Negocio seleccionado</small></div>
+   <button type="button" className={styles.option} onClick={()=>setShowBusinesses(v=>!v)}>
+    {showBusinesses?"Ocultar negocios":"Cambiar negocio"}</button>
+   {showBusinesses?<div className={styles.optionsVertical}>
+    {businesses.map(b=><button type="button" key={b.id} className={business.id===b.id?styles.optionActive:styles.option}
+     onClick={()=>{if(b.id!==business.id)onChooseBusiness(b.id);else setShowBusinesses(false);}}>{b.name}</button>)}
+   </div>:null}
    <p className={styles.note}>El asistente usará tu agente principal y la línea existente. No creará otro agente.</p>
   </div>:null}
   {!loading&&step==="line"&&owner?<div className={styles.panel}>
@@ -197,9 +205,17 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
     <small>{line.agentId===agent.id?(line.serverEnrolled?"Mi agente está vinculado a esta ruta":"Mi agente seleccionado · vinculación de voz pendiente"):"Puedes seleccionar Mi agente al guardar"}</small>
    </div>:<div className={styles.warning}>No hay una línea activa asociada a esta cuenta.
     Verifica tu número o configura Smart Call para continuar.</div>}
-   <a className={styles.option} href="/vista-app?tab=services&service=smart-call">
-    Administrar o verificar mi número <ArrowRight size={17}/></a>
-   <button type="button" className={styles.option} onClick={onAdvanced}>Configurar reglas avanzadas y probar llamadas</button>
+   <button type="button" className={lineChoice==="current"?styles.optionActive:styles.option}
+    onClick={()=>setLineChoice("current")}>Usar línea actual</button>
+   <button type="button" className={lineChoice==="different"?styles.optionActive:styles.option}
+    onClick={()=>setLineChoice("different")}>Tengo otro número</button>
+   <button type="button" className={lineChoice==="new"?styles.optionActive:styles.option}
+    onClick={()=>setLineChoice("new")}>Necesito un número nuevo</button>
+   {lineChoice!=="current"?<div className={styles.info}>
+    {lineChoice==="new"?"Obtener un número nuevo puede tener costos y requiere aprobación del proveedor.":
+     "El número nuevo debe verificarse y vincularse antes de utilizarlo."}
+    Ningún cambio se aplicará automáticamente. Vuelve a seleccionar tu línea actual para continuar.
+   </div>:null}
    <p className={styles.note}>No compramos líneas ni modificamos el desvío telefónico sin una configuración aparte.</p>
   </div>:null}
   {!loading&&step==="services"&&owner?<div className={styles.panel}>
@@ -309,7 +325,7 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
       onChange={e=>setPrefs(p=>({...p,greeting_owner:e.target.value}))}/></label>
    </div>:<div className={styles.info}>Las voces y saludos de Smart Call no están disponibles para editar en tu cuenta actual.
     No se modificará esa configuración.</div>}
-   <a className={styles.option} href="/vista-app?tab=services&service=smart-call">Más ajustes de Smart Call</a>
+   <p className={styles.note}>Configuración guiada aquí. Los accesos manuales se conservarán en Cuenta → Configuración.</p>
   </div>:null}
   {!loading&&step==="review"&&owner?<div className={styles.panel}>
    {saved?<div className={extra.success}><Check size={24}/>
@@ -327,17 +343,17 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
      {card("Voz",prefEditable?prefs.voice_customer+" · "+prefs.voice_owner:"Sin cambios","voice")}
     </div>}
    {!saved?<p className={styles.note}>Debes aprobar cualquier cambio de selección y reglas. No compraremos números ni activaremos gastos adicionales automáticamente.</p>:null}
-   <button type="button" className={styles.option} onClick={onAdvanced}>Configuración avanzada y laboratorio de llamada</button>
+
   </div>:null}
   {error?<p className={styles.error} role="alert">{error}</p>:null}
-  {!loading&&owner&&line?<div className={styles.footer}>
+  {!loading&&owner?<div className={styles.footer}>
    {step==="review"?<button type="button" className={styles.primary+" "+theme.agentButton}
     onClick={()=>void save()} disabled={Boolean(busy)||saved}>
     {busy==="save"?<LoaderCircle size={17}/>:<ShieldCheck size={18}/>}
     {busy==="save"?"Guardando…":saved?"Guardado":"Aprobar y guardar reglas"} <ArrowRight size={17}/></button>:
-   step!=="business"?<button type="button" className={styles.primary+" "+theme.agentButton}
-    onClick={next} disabled={Boolean(busy)||!valid}>
-    {returnReview?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={17}/></button>:null}
+   <button type="button" className={styles.primary+" "+theme.agentButton}
+    onClick={next} disabled={Boolean(busy)||!valid||(step==="line"&&(!line||lineChoice!=="current"))}>
+    {returnReview?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={17}/></button>}
   </div>:null}
   <p className={styles.footnote}><ShieldCheck size={14}/> Smart Call mantiene el control del número y la facturación.</p>
  </section>;
