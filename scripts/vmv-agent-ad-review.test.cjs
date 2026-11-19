@@ -5,9 +5,9 @@ const path=require("node:path");
 const read=p=>fs.readFileSync(path.join(__dirname,"..",p),"utf8");
 const studio=read("app/vista-app/marketing/ads/AdsStudio.tsx");
 const intake=read("app/vista-app/ai-agents/AutomaticAdWizard.tsx");
-test("Agent finish navigates to Marketing; Marketing receives direct review",()=>{
- assert.match(intake,/saveAgentAdBrief\(brief\)/);
- assert.match(intake,/marketing\/ads\/create\?from=ai-agents/);
+test("Agent submits a reviewable draft directly, while legacy handoffs are still owner verified",()=>{
+ assert.match(intake,/operation:"draft",clientKey:sendKey/);
+ assert.match(intake,/\/vista-app\/marketing\/ads\/campaigns/);
  assert.match(studio,/query\.get\("from"\)!=="ai-agents"/);
  assert.match(studio,/consumeAgentAdBrief\(user\.id,id\)/);
  assert.match(studio,/setStep\(4\); \/\/ Review first/);
@@ -47,7 +47,10 @@ test("Only AI Agent can initiate new campaign, all requirements completed before
  assert.match(intake,/if\(step==="image"&&!headline\.trim\(\)&&!message\.trim\(\)\)void generateCopy\(\)/);
  assert.match(intake,/step==="image"\?Boolean\(imageHash\)/);
  assert.match(intake,/step==="location"\?locationVerified/);
- assert.match(intake,/selectedProducts\.map\(p=>p\.id\)/);
- assert.match(intake,/pageId,accountId,cityKey,cityMetaName/);
+ assert.match(intake,/answer\.productIds\.includes\(p\.id\)/);
+ assert.match(intake,/cityKey,cityName:cityMetaName/);
  assert.match(studio,/setImageHash\(candidate\.imageHash\|\|""\)/);
+ assert.match(intake,/setStep\("image"\)/);
+ assert.match(intake,/stateName\(answer\.region\)/);
+ assert.match(intake,/specialCategoriesAcknowledged:true/);
 });
