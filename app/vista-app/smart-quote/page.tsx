@@ -1,6 +1,6 @@
 "use client";
 import {useCallback,useEffect,useMemo,useState} from "react";
-import {ArrowLeft,Check,ClipboardCopy,FileText,Plus,RefreshCw,ShieldCheck,Trash2,Wallet,Send,PackageCheck} from "lucide-react";
+import {ArrowLeft,Check,ClipboardCopy,FileText,Plus,RefreshCw,ShieldCheck,Trash2,Wallet,Send,PackageCheck,Printer} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import styles from "./smart-quote.module.css";
@@ -41,6 +41,7 @@ export default function SmartQuotePage(){
  const [productId,setProductId]=useState("");
  const [product,setProduct]=useState({name:"",description:"",unit_name:"unidad",price:"",active:true});
  const [quoteForm,setQuoteForm]=useState<QuoteDraft|null>(null);
+ const [printableQuote,setPrintableQuote]=useState<Quote|null>(null);
  const [counter,setCounter]=useState(0);
  const selected=businesses.find(b=>b.id===businessId);
  const activeCatalog=catalog.filter(c=>c.active);
@@ -144,6 +145,12 @@ export default function SmartQuotePage(){
   if(error||data!==true)throw Error(error?.message||"No se pudo cambiar el estado.");
   await load(businessId);setMessage(localize("Estado actualizado.","Status updated."));
  });
+ useEffect(()=>{if(!printableQuote)return;
+  const done=()=>setPrintableQuote(null);
+  window.addEventListener("afterprint",done);
+  const timer=window.setTimeout(()=>window.print(),110);
+  return ()=>{window.clearTimeout(timer);window.removeEventListener("afterprint",done);};
+ },[printableQuote]);
  const copyQuote=(q:Quote)=>void run(async()=>{
   if(q.status!=="approved"&&q.status!=="sent")throw Error("Solo puedes compartir cotizaciones aprobadas.");
   if(q.valid_until<plusDays(0))throw Error("Esta cotización venció. Crea una nueva propuesta.");
@@ -166,6 +173,39 @@ export default function SmartQuotePage(){
   setMessage(localize("Cotización copiada. Envíala por el canal que prefieras y después marca que fue enviada.","Quote copied. Send it through your preferred channel, then mark it as sent."));
  });
  return <main className={styles.page}>
+  {printableQuote?<section className={styles.printSheet} aria-label={localize("Cotización para imprimir","Printable quote")}>
+   <div className={styles.printBrand}>VMV BUSINESS <span>SMART QUOTE</span></div>
+   <div className={styles.printHead}>
+    <div><h1>{localize("Cotización","Quotation")}</h1><p>{localize("Presentada por","Prepared by")} {selected?.name||"VMV Business"}</p></div>
+    <div><strong>#{printableQuote.id.slice(0,8).toUpperCase()}</strong><span>{localize("Revisión","Revision")} {printableQuote.revision}</span>
+     <span>{localize("Válida hasta","Valid until")} {printableQuote.valid_until}</span></div>
+   </div>
+   <div className={styles.printClient}><strong>{localize("Cliente","Customer")}</strong>
+    <span>{printableQuote.customer_name}</span>
+    {printableQuote.customer_email?<span>{printableQuote.customer_email}</span>:null}
+    {printableQuote.customer_phone?<span>{printableQuote.customer_phone}</span>:null}
+   </div>
+   <table className={styles.printTable}><thead><tr>
+    <th>{localize("Descripción","Description")}</th>
+    <th>{localize("Cantidad","Quantity")}</th><th>{localize("Precio unitario","Unit price")}</th><th>{localize("Importe","Amount")}</th>
+   </tr></thead><tbody>{printableQuote.lines.map((line,i)=><tr key={i}>
+    <td><strong>{line.name}</strong>{line.description?<small>{line.description}</small>:null}</td>
+    <td>{line.quantity} {line.unit_name}</td>
+    <td>{money(line.unit_price_cents,language)}</td>
+    <td>{money(line.line_total_cents,language)}</td>
+   </tr>)}</tbody></table>
+   <div className={styles.printTotals}>
+    <div><span>{localize("Subtotal","Subtotal")}</span><strong>{money(printableQuote.subtotal_cents,language)}</strong></div>
+    {printableQuote.discount_cents>0?<div><span>{localize("Descuento","Discount")}</span><strong>-{money(printableQuote.discount_cents,language)}</strong></div>:null}
+    {printableQuote.delivery_cents>0?<div><span>{localize("Entrega y cargos","Delivery and charges")}</span><strong>{money(printableQuote.delivery_cents,language)}</strong></div>:null}
+    <div><span>{localize("Impuestos configurados","Configured tax")} ({printableQuote.tax_bps/100}%)</span><strong>{money(printableQuote.tax_cents,language)}</strong></div>
+    <div className={styles.printGrand}><span>{localize("Total","Total")} (USD)</span><strong>{money(printableQuote.total_cents,language)}</strong></div>
+    {printableQuote.deposit_bps>0?<div><span>{localize("Depósito propuesto","Proposed deposit")} ({printableQuote.deposit_bps/100}%)</span><strong>{money(printableQuote.deposit_cents,language)}</strong></div>:null}
+   </div>
+   {printableQuote.notes?<div className={styles.printTerms}><strong>{localize("Condiciones","Terms")}</strong><p>{printableQuote.notes}</p></div>:null}
+   <footer className={styles.printFooter}>{localize("Documento de cotización aprobado, no es una factura ni constancia de pago. Los impuestos y condiciones corresponden a los datos proporcionados por el negocio.",
+    "Approved quote document; not an invoice or proof of payment. Taxes and terms reflect the seller's configured information.")}</footer>
+  </section>:null}
   <div className={styles.shell}>
    <header className={styles.top}><a href="/vista-app" className={styles.back}><ArrowLeft size={17}/>{localize("Regresar a VMV","Back to VMV")}</a>
     <span className={styles.pilot}><ShieldCheck size={15}/>{localize("Piloto privado","Private pilot")}</span></header>
@@ -273,6 +313,7 @@ export default function SmartQuotePage(){
         {q.status==="draft"?<><button type="button" onClick={()=>editQuote(q)}>{localize("Editar","Edit")}</button>
          <button type="button" className={styles.actionPrimary} disabled={busy||q.valid_until<plusDays(0)} onClick={()=>statusChange(q,"approve")}><ShieldCheck size={15}/>{localize("Aprobar","Approve")}</button></>:null}
         {q.status==="approved"||q.status==="sent"?<button type="button" disabled={busy||q.valid_until<plusDays(0)} onClick={()=>copyQuote(q)}><ClipboardCopy size={15}/>{localize("Copiar propuesta","Copy quote")}</button>:null}
+        {q.status==="approved"||q.status==="sent"?<button type="button" disabled={busy||q.valid_until<plusDays(0)} onClick={()=>setPrintableQuote(q)}><Printer size={15}/>{localize("Imprimir / PDF","Print / PDF")}</button>:null}
         {q.status==="approved"?<button type="button" disabled={busy} onClick={()=>statusChange(q,"mark_sent")}><Send size={15}/>{localize("Ya la envié","I've sent it")}</button>:null}
         {q.status!=="cancelled"?<button type="button" className={styles.danger} disabled={busy} onClick={()=>statusChange(q,"cancel")}>{localize("Cancelar","Cancel")}</button>:null}
        </div>
