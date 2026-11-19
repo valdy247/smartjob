@@ -18,6 +18,8 @@ export type SiteIntake={
  phone:string;email:string;city:string;about:string;logo:string;photos:string[];
  offerings:string[];products?:SiteProduct[];socials?:BusinessSocialLinks;
  design?:SiteDesignPreferences;
+ sourceBusinessId?:string;agentWorkspaceId?:string;
+ connectInventory?:boolean;connectServices?:boolean;
 };
 export type SiteProposal={id:string;family:SiteFamily;name:string;subtitle:string;data:Data;layout:string;palette:string;
  seoTitle?:string;seoDescription?:string;aiGenerated?:boolean};
