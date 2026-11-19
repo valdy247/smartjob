@@ -26,7 +26,8 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
  const [editBusiness,setEditBusiness]=useState(false);
- const [editSite,setEditSite]=useState(false);
+ const [siteChoice,setSiteChoice]=useState<"saved"|"custom"|"none">(validSite(business.website_url||"")?"saved":"custom");
+ const [customWebsite,setCustomWebsite]=useState("");
  const [editCity,setEditCity]=useState(false);
  const [answer,setAnswer]=useState<Answer>({
   businessName:business.name,website:validSite(business.website_url||"")?business.website_url||"":"",
@@ -62,17 +63,22 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
    .finally(()=>{if(live)setLoading(false);});
   return()=>{live=false;};
  },[business.id,workspaceId,agent.id,agent.owner_id,agent.business_id]);
- const hasSite=Boolean(answer.website);
+ const savedWebsite=validSite(business.website_url||"")?business.website_url||"":"";
+ const hasSite=Boolean(savedWebsite);
  const index=steps.indexOf(step);
  const product=products.find(x=>x.id===answer.productId)||null;
  const hasProductImage=products.some(x=>x.id===answer.imageProductId&&x.image_path);
  const canContinue=step==="business"?answer.businessName.trim().length>=2:
-  step==="website"?!answer.website.trim()||validSite(answer.website):
+  step==="website"?siteChoice==="none"||siteChoice==="saved"&&hasSite||siteChoice==="custom"&&validSite(customWebsite):
   step==="product"?answer.offer.trim().length>=3:
   step==="audience"?answer.audience.trim().length>=3:
   step==="location"?answer.city.trim().length>=2&&answer.region.trim().length>=2:
   step==="image"?answer.imageChoice!=="product"||hasProductImage:true;
- const next=()=>{if(!canContinue)return;setError("");setStep(steps[Math.min(index+1,steps.length-1)]);};
+ const next=()=>{
+  if(!canContinue)return;
+  if(step==="website")setAnswer(x=>({...x,website:siteChoice==="saved"?savedWebsite:siteChoice==="custom"?customWebsite.trim():""}));
+  setError("");setStep(steps[Math.min(index+1,steps.length-1)]);
+ };
  const back=()=>{if(index===0){onClose();return;}setError("");setStep(steps[index-1]);};
  const selectProduct=(id:string)=>{
   const p=products.find(x=>x.id===id);
@@ -118,21 +124,28 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   {loading?<div className={styles.helper}><LoaderCircle size={17}/> Cargando datos del negocio…</div>:null}
   {!loading&&!error&&step==="business"?<div className={styles.answers}>
     <strong className={styles.example}>{business.name}</strong>
-    <div className={styles.options}>{chip("Sí",!editBusiness,()=>{setEditBusiness(false);update("businessName",business.name);next();})}
+    <div className={styles.options}>{chip("Sí",!editBusiness,()=>{
+      setEditBusiness(false);update("businessName",business.name);
+    })}
      {chip("No, es otro",editBusiness,()=>setEditBusiness(true))}</div>
     {editBusiness?<><input aria-label="Nombre del negocio para este anuncio" maxLength={100}
      value={answer.businessName} onChange={e=>update("businessName",e.target.value)}/>
      <p className={styles.helper}>Cambiarlo aquí no modifica tu negocio guardado.</p></>:null}
    </div>:null}
   {!loading&&step==="website"?<div className={styles.answers}>
-    {hasSite&&!editSite?<div className={styles.fact}><Globe2 size={20}/><span>{answer.website}</span></div>:null}
+    {hasSite?<div className={styles.fact}><Globe2 size={20}/><span>{savedWebsite}</span></div>:null}
     <div className={styles.options}>
-     {chip("Sí",!editSite&&hasSite,()=>{if(!hasSite)setEditSite(true);else next();})}
-     {chip("No / usar otra",editSite||!hasSite,()=>{setEditSite(true);update("website","");})}
+     {chip("Sí, usar mi web",siteChoice==="saved",()=>{setSiteChoice(hasSite?"saved":"custom");setError("");})}
+     {chip("No, otra opción",siteChoice!=="saved",()=>{setSiteChoice("custom");setError("");})}
     </div>
-    {editSite?<><input type="url" inputMode="url" aria-label="Sitio web HTTPS" placeholder="https://tunegocio.com"
-     value={answer.website} onChange={e=>update("website",e.target.value)} maxLength={240}/>
-     <p className={styles.helper}>Si no tienes web, puedes continuar sin ella y definir el destino con Marketing.</p></>:null}
+    {siteChoice!=="saved"?<div className={styles.optionsVertical}>
+     {chip("Escribir otra web",siteChoice==="custom",()=>setSiteChoice("custom"))}
+     {chip("No tengo web",siteChoice==="none",()=>setSiteChoice("none"))}
+    </div>:null}
+    {siteChoice==="custom"?<input type="url" inputMode="url" aria-label="Sitio web HTTPS"
+     placeholder="https://tunegocio.com" value={customWebsite}
+     onChange={e=>setCustomWebsite(e.target.value)} maxLength={240}/>:null}
+    {siteChoice==="none"?<p className={styles.helper}>Marketing te pedirá un destino válido antes de publicar.</p>:null}
    </div>:null}
   {!loading&&step==="product"?<div className={styles.answers}>
     {products.length>0?<><p className={styles.helper}>Productos aprobados de {business.name}</p>
