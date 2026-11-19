@@ -1,4 +1,5 @@
 import {phoneVoice} from "./voice-options";
+import {sayElevenVoice} from "./phone-voices";
 import {NextRequest} from "next/server";
 import {say,twiml,xmlEscape} from "@/lib/twilio-pilot";
 import {verifyAiTestWebhook} from "@/lib/vmv-ai-agents/twilio-test";
@@ -26,6 +27,8 @@ const locale=(l:Lang)=>l==="en"?"en-US":"es-ES";
 const safe=(s:unknown)=>typeof s==="string"?s.trim():"";
 function speak(message:string,l:Lang,snapshot?:Record<string,unknown>){
  const config=(snapshot?.configuration||{}) as Record<string,unknown>;
+ const chosen=sayElevenVoice(l==="es"?config.smart_call_voice_es:config.smart_call_voice_en,l);
+ if(chosen)return '<Say language="'+locale(l)+'" voice="'+xmlEscape(chosen)+'">'+xmlEscape(message)+'</Say>';
  if(config.voice_preset!=="female"&&config.voice_preset!=="male")return say(message,locale(l));
  const voice=phoneVoice(String(config.voice_preset),l)!.voice;
  return '<Say language="'+(l==="es"?"es-US":"en-US")+'" voice="'+voice+'">'+xmlEscape(message)+'</Say>';
@@ -176,6 +179,22 @@ export async function handleAiVoice(req:NextRequest){
   }catch{
    console.warn("[vmv-ai-voice] verified business context unavailable");
    return end("No puedo consultar la información autorizada del negocio ahora mismo. Vuelve a llamar más tarde.","es");
+  }
+  // The owner-selected menu voice follows the caller into the telephone AI agent.
+  // Only the separately armed Preview pilot may apply this profile.
+  if(process.env.VMV_SMART_CALL_GUIDED_IVR_ENABLED==="true"){
+   const {data:guided}=await db.from("vmv_ai_call_settings").select("menu_config")
+    .eq("owner_id",session.owner_id).eq("route_id",ownerRoute.id).maybeSingle();
+   const menu=guided?.menu_config as Record<string,unknown>|undefined;
+   if(menu?.enabled===true){
+    const cfg=(session.agent_snapshot.configuration||{}) as Record<string,unknown>;
+    const latest={...session.agent_snapshot,configuration:{...cfg,
+     smart_call_voice_es:menu.voice_es,smart_call_voice_en:menu.voice_en}};
+    const {data:updated}=await db.from("vmv_ai_voice_calls").update({agent_snapshot:latest})
+     .eq("call_sid",sid).eq("owner_id",session.owner_id).eq("turn_count",0)
+     .select("call_sid").maybeSingle();
+    if(updated)session={...session,agent_snapshot:latest};
+   }
   }
   if(!trained(session.agent_snapshot))return refused();
   const lang=session.preferred_language==="en"?"en":"es";
