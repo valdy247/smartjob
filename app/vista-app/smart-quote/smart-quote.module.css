@@ -84,3 +84,34 @@ button:disabled{opacity:.48;cursor:not-allowed!important}
 .footer svg{flex-shrink:0;color:#8356b7}
 @media(max-width:740px){.twoColumn,.quoteList{grid-template-columns:1fr}.hero{gap:14px}.logo{width:58px;height:58px;border-radius:18px}.metrics>div{padding:15px 13px}.metrics strong{font-size:25px}.formGrid{grid-template-columns:1fr 1fr}.panel{border-radius:18px}.lineInput{grid-template-columns:minmax(0,1fr) 74px 42px}.lineInput input,.lineInput select{padding:9px;font-size:12px}.top{margin-bottom:20px}}
 @media(max-width:420px){.formGrid{grid-template-columns:1fr}.hero h1{font-size:32px}.pilot{font-size:9px;padding:7px}.toolbar label{min-width:100%}.sectionTop>.primary{width:100%}}
+
+/* Print-ready approved quote; no customer contact or quote data is loaded publicly. */
+.printSheet{display:none}
+@media print{
+ @page{size:auto;margin:15mm}
+ .page{background:#fff!important;color:#1d2333!important;min-height:0;padding:0}
+ .shell{display:none!important}
+ .printSheet{display:block!important;max-width:190mm;margin:0 auto;padding:0;font-family:Arial,sans-serif;font-size:11pt;color:#202635}
+ .printBrand{font-size:9pt;font-weight:900;letter-spacing:.12em;color:#6c4d9a;padding-bottom:18px;border-bottom:2px solid #7655ad}
+ .printBrand span{float:right;color:#357f68}
+ .printHead{display:flex;align-items:start;justify-content:space-between;gap:20px;padding:25px 0}
+ .printHead h1{font-size:27pt;letter-spacing:-.06em;margin:0 0 8px;color:#241937}
+ .printHead p{font-size:12pt;color:#484057;margin:0}
+ .printHead>div:last-child{text-align:right;display:flex;flex-direction:column;gap:7px;font-size:10pt}
+ .printHead>div:last-child strong{font-size:14pt}
+ .printClient{display:flex;flex-direction:column;gap:5px;border-radius:10px;background:#f5f2fa;padding:13px 16px;margin-bottom:24px}
+ .printClient strong{color:#59407d;font-size:9pt}
+ .printTable{width:100%;border-collapse:collapse;margin:0 0 23px}
+ .printTable th{text-align:left;text-transform:uppercase;font-size:8pt;letter-spacing:.05em;background:#eee9f6;color:#4f3e69;padding:11px 9px}
+ .printTable th:not(:first-child),.printTable td:not(:first-child){text-align:right;white-space:nowrap}
+ .printTable td{border-bottom:1px solid #e9e4ee;padding:12px 9px;vertical-align:top;font-size:10pt}
+ .printTable td small{display:block;color:#747181;font-size:8pt;margin-top:5px}
+ .printTotals{width:min(90mm,100%);margin:0 0 0 auto;display:flex;flex-direction:column;gap:9px;font-size:10pt}
+ .printTotals div{display:flex;justify-content:space-between;align-items:baseline;gap:14px}
+ .printTotals strong{white-space:nowrap}
+ .printTotals .printGrand{border-top:2px solid #5f428b;padding-top:14px;margin-top:6px;font-size:14pt;color:#4b3475}
+ .printTerms{margin-top:35px;padding-top:14px;border-top:1px solid #e0d9ea;break-inside:avoid}
+ .printTerms strong{font-size:10pt;color:#5e4681}
+ .printTerms p{white-space:pre-wrap;line-height:1.45}
+ .printFooter{border-top:1px solid #e9e4ed;margin-top:32px;padding-top:12px;color:#787384;font-size:8pt;line-height:1.5}
+}
