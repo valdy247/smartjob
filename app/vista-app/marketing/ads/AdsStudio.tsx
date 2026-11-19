@@ -3,7 +3,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import styles from "./AdsStudio.module.css";
-import {Megaphone,ShieldCheck,ArrowUpRight,CheckCircle2,Globe2,ExternalLink,ChevronDown,ChevronLeft,ChevronRight,ImagePlus,MapPin,WandSparkles,BarChart3,LoaderCircle,Instagram} from "lucide-react";
+import {Megaphone,ShieldCheck,ArrowUpRight,CheckCircle2,Globe2,ExternalLink,ChevronDown,ChevronLeft,ChevronRight,ImagePlus,MapPin,WandSparkles,BarChart3,LoaderCircle,Instagram,X,Tag,Sparkles} from "lucide-react";
 
 type Account={id:string;name:string;currency:string;status:number;timezone:string};
 type Page={id:string;name:string;instagramId:string|null;instagramUsername:string};
@@ -14,8 +14,13 @@ type Campaign={id:string;ad_account_id:string;status:string;draft:{
  metaAdsetEffectiveStatus?:string|null;metaAdsetEndAt?:string|null;
  error_code:string|null;created_at:string};
 type InsightRow={impressions?:string;reach?:string;clicks?:string;spend?:string;cpc?:string;ctr?:string;date_start?:string;date_stop?:string};
-type AdVariant={label:string;headline:string;message:string;why:string};
-type Plan={variants:AdVariant[];source:"ai"|"brief";recommendation:string;measurement:string;providerConfigured:boolean};
+type AdAngle="offer"|"local"|"value";
+type GeneratedAd={source:"ai";angle:AdAngle;variant:{headline:string;message:string}};
+const adAngles=[
+ {id:"offer",titleEs:"Destacar mi oferta",titleEn:"Highlight my offer",helpEs:"Qué vendes y por qué elegirlo.",helpEn:"What you sell and why choose it.",Icon:Tag},
+ {id:"local",titleEs:"Llegar a mi ciudad",titleEn:"Reach local customers",helpEs:"Conecta con personas cerca.",helpEn:"Connect with nearby customers.",Icon:MapPin},
+ {id:"value",titleEs:"Mostrar mi diferencia",titleEn:"Show what makes me different",helpEs:"Resalta el valor real del negocio.",helpEn:"Highlight genuine business value.",Icon:Sparkles}
+] as const;
 type Place={key:string;name:string;region:string;countryCode:string};
 type AccountsResponse={configured:boolean;connected:boolean;connection?:Connected;accounts:Account[];
  pages:Page[];error?:string};
@@ -45,8 +50,9 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
  const [campaigns,setCampaigns]=useState<Campaign[]>([]);
  const [selectedAccount,setSelectedAccount]=useState("");
  const [form,setForm]=useState(initial);
- const [plan,setPlan]=useState<Plan|null>(null);
- const [planIndex,setPlanIndex]=useState(0);
+ const [selectedAngle,setSelectedAngle]=useState<AdAngle|null>(null);
+ const [conceptDialogOpen,setConceptDialogOpen]=useState(false);
+ const conceptDialogRef=useRef<HTMLDivElement|null>(null);
  const [places,setPlaces]=useState<Place[]>([]);
  const [previewImage,setPreviewImage]=useState("");
  const [instagramEnabled,setInstagramEnabled]=useState(true);
@@ -90,6 +96,29 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
  const testDestination=()=>{
   if(normalizedDestination)window.open(normalizedDestination,"_blank","noopener,noreferrer");
  };
+ useEffect(()=>{
+  if(!conceptDialogOpen)return;
+  const previous=document.activeElement as HTMLElement|null;
+  const dialog=conceptDialogRef.current;
+  dialog?.querySelector<HTMLButtonElement>("button[data-concept]")?.focus();
+  const oldOverflow=document.body.style.overflow;
+  document.body.style.overflow="hidden";
+  const onKeyDown=(event:KeyboardEvent)=>{
+   if(event.key==="Escape"){event.preventDefault();setConceptDialogOpen(false);return;}
+   if(event.key!=="Tab"||!dialog)return;
+   const buttons=Array.from(dialog.querySelectorAll<HTMLButtonElement>("button:not([disabled])"));
+   if(!buttons.length)return;
+   const first=buttons[0],last=buttons[buttons.length-1];
+   if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+   else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+  };
+  document.addEventListener("keydown",onKeyDown);
+  return()=>{
+   document.body.style.overflow=oldOverflow;
+   document.removeEventListener("keydown",onKeyDown);
+   previous?.focus();
+  };
+ },[conceptDialogOpen]);
 
  useEffect(()=>{
   if(!image){setPreviewImage("");return;}
@@ -99,7 +128,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
  const money=(cents:number)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(cents/100);
  const patch=(name:keyof typeof initial,value:string|boolean)=>{
   setForm(v=>({...v,[name]:value}));setDraftId("");setDraftKey(crypto.randomUUID());setError("");
-  if(["business","offer","audience","benefit","cityQuery","stateCode"].includes(name))setPlan(null);
+  if(["business","offer","audience","benefit","cityQuery","stateCode"].includes(name))setSelectedAngle(null);
  };
  const api=async(path:string,method="GET",payload?:unknown,formData=false)=>{
   const client=getSupabase();if(!client)throw Error("sign_in_required");
@@ -209,25 +238,24 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
   const base=place.name.trim().replace(/\s*\([^)]*\)\s*$/,"").split(",")[0].trim();
   setForm(v=>({...v,cityKey:place.key,cityName:base+(stateName?", "+stateName:""),
    cityMetaName:place.name,cityQuery:base,citySearch:base}));
-  setPlaces([]);setDraftId("");setDraftKey(crypto.randomUUID());setPlan(null);
+  setPlaces([]);setDraftId("");setDraftKey(crypto.randomUUID());setSelectedAngle(null);
  };
- const generate=()=>run("generate",async()=>{
-  if(!form.cityKey)throw Error("Selecciona primero una ciudad de Meta.");
-  const response=await api("/api/marketing/ads/generate","POST",{
-   business:form.business,offer:form.offer,audience:form.audience,
-   benefit:form.benefit,city:form.cityName,locale:language,goal:"website"
-  }) as Plan;
-  if(!Array.isArray(response.variants)||response.variants.length!==3)throw Error("invalid_campaign_brief");
-  setPlan(response);setPlanIndex(0);
-  setForm(v=>({...v,headline:response.variants[0].headline,message:response.variants[0].message}));
-  setDraftId("");setDraftKey(crypto.randomUUID());
-  setNotice(localized("Propuesta creada con IA. Revisa y edita antes de aprobar.","AI proposal created. Review and edit before approving."));
- });
- const chooseVariant=(index:number)=>{
-  if(!plan?.variants[index])return;
-  const variant=plan.variants[index];
-  setPlanIndex(index);setForm(v=>({...v,headline:variant.headline,message:variant.message}));
-  setDraftId("");setDraftKey(crypto.randomUUID());
+ const generate=(angle:AdAngle)=>{
+  setConceptDialogOpen(false);
+  void run("generate",async()=>{
+   if(!form.cityKey)throw Error("Selecciona primero una ciudad de Meta.");
+   const response=await api("/api/marketing/ads/generate","POST",{
+    business:form.business,offer:form.offer,audience:form.audience,
+    benefit:form.benefit,city:form.cityName,locale:language,goal:"website",angle
+   }) as GeneratedAd;
+   if(response.source!=="ai"||response.angle!==angle||
+      typeof response.variant?.headline!=="string"||typeof response.variant?.message!=="string")
+    throw Error("ai_invalid_provider_response");
+   setSelectedAngle(angle);
+   setForm(v=>({...v,headline:response.variant.headline,message:response.variant.message}));
+   setDraftId("");setDraftKey(crypto.randomUUID());
+   setNotice(localized("Anuncio generado. Puedes editarlo antes de aprobar.","Ad generated. You can edit it before approval."));
+  });
  };
  const saveDraft=()=>run("draft",async()=>{
   const daily=Math.round(Number(form.dailyBudget)*100),days=Number(form.durationDays);
@@ -552,24 +580,14 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
    <div className={styles.cardTop}><div className={styles.cardTitle}><span className={styles.cardIcon}><WandSparkles size={19}/></span><div>
     <h2>{localized("Propuesta publicitaria","Ad proposal")}</h2>
     <small>{localized("Prepara y revisa tu anuncio antes de guardarlo.","Prepare and review your ad before saving.")}</small></div></div></div>
-   <button className={styles.primary} type="button" disabled={!!busy||!hasAccount||!form.cityKey||form.business.trim().length<2||form.offer.trim().length<8||form.audience.trim().length<3} onClick={generate}>
-    <WandSparkles size={17}/>{busy==="generate"?localized("Preparando…","Preparing…"):localized("Preparar propuesta de anuncio","Prepare ad proposal")}
-   </button>
-   {!plan?<p className={styles.muted}>{localized("La IA preparará una propuesta con diferentes enfoques. Puedes elegir y editar el anuncio antes de aprobarlo.","AI will prepare a proposal with different approaches. You can choose and edit the ad before approval.")}</p>:
-    <div className={styles.proposal}>
-     <div className={styles.planSource}>
-      <span className={plan.source==="ai"?styles.connected:styles.pilot}>{plan.source==="ai"?localized("Generado con IA","AI-generated"):localized("Borrador sin IA","Non-AI draft")}</span>
-      <small>{plan.source==="ai"?localized("Revisa todos los datos antes de publicar.","Verify all statements before publishing."):
-       localized("La IA necesita configurar un proveedor. Estas opciones usan solo tus datos.","AI needs a configured provider. These concepts only use your inputs.")}</small>
-     </div>
-     <div className={styles.variantTabs} role="group" aria-label={localized("Elegir enfoque del anuncio","Choose an ad concept")}>
-      {plan.variants.map((v,i)=><button type="button" key={i} aria-pressed={planIndex===i} className={planIndex===i?styles.variantActive:styles.variant} onClick={()=>chooseVariant(i)}>
-       {v.label}</button>)}
-     </div>
-     <p className={styles.planReason}>{plan.variants[planIndex]?.why}</p>
-     <div className={styles.planAnalysis}><strong>{localized("Estrategia","Strategy")}</strong><p>{plan.recommendation}</p>
-      <strong>{localized("Qué medir","What to measure")}</strong><p>{plan.measurement}</p></div>
-    </div>}
+   <div className={styles.aiGenerateRow}>
+    <button className={styles.primary} type="button" disabled={!!busy||!hasAccount||!form.cityKey||form.business.trim().length<2||form.offer.trim().length<8||form.audience.trim().length<3}
+     onClick={()=>setConceptDialogOpen(true)}>
+     {busy==="generate"?<LoaderCircle size={17} className={styles.spinIcon}/>:<WandSparkles size={17}/>}
+     {busy==="generate"?localized("Generando anuncio…","Generating ad…"):localized("Generar anuncio","Generate ad")}
+    </button>
+    {selectedAngle?<span className={styles.aiReady}><CheckCircle2 size={15}/>{localized("Listo para editar","Ready to edit")}</span>:null}
+   </div>
    <div className={styles.formStack}>
     <label>{localized("Título del anuncio","Ad headline")}
      <input maxLength={80} value={form.headline} onChange={e=>patch("headline",e.target.value)} placeholder={localized("Título específico y comprobable","Specific, factual headline")}/></label>
@@ -671,6 +689,23 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
    <p className={styles.muted}>{localized("Guardar no publica anuncios. Después podrás crear la campaña pausada para revisar en Meta.",
     "Saving does not publish ads. You can then create a paused campaign for review in Meta.")}</p>
   </section>:null}
+  {conceptDialogOpen?<div className={styles.conceptOverlay} onMouseDown={e=>{if(e.target===e.currentTarget)setConceptDialogOpen(false);}}>
+   <div ref={conceptDialogRef} className={styles.conceptModal} role="dialog" aria-modal="true" aria-labelledby="vmv-ad-angle-title" aria-describedby="vmv-ad-angle-subtitle">
+    <div className={styles.conceptHeading}>
+     <div><span><WandSparkles size={16}/>{localized("CREACIÓN CON IA","CREATE WITH AI")}</span>
+      <h2 id="vmv-ad-angle-title">{localized("¿Qué quieres destacar?","What do you want to highlight?")}</h2>
+      <p id="vmv-ad-angle-subtitle">{localized("Elige una opción y generaremos tu anuncio.","Choose one option to generate your ad.")}</p></div>
+     <button type="button" className={styles.conceptClose} onClick={()=>setConceptDialogOpen(false)} aria-label={localized("Cerrar","Close")}><X size={20}/></button>
+    </div>
+    <div className={styles.conceptOptions}>
+     {adAngles.map(item=><button key={item.id} type="button" data-concept className={styles.conceptOption} onClick={()=>generate(item.id)}>
+      <span className={styles.conceptIcon}><item.Icon size={21}/></span>
+      <span className={styles.conceptText}><strong>{en?item.titleEn:item.titleEs}</strong><small>{en?item.helpEn:item.helpEs}</small></span>
+      <ChevronRight size={18} className={styles.conceptArrow}/>
+     </button>)}
+    </div>
+   </div>
+  </div>:null}
   <div className={styles.wizardFooter}>
    {step>0?<button type="button" className={styles.secondary} disabled={!!busy} onClick={()=>goStep(step-1)}><ChevronLeft size={17}/>{localized("Atrás","Back")}</button>:<span/>}
    {step<4?<button type="button" className={styles.primary} disabled={!!busy||!canContinue[step]} aria-busy={busy==="image"} onClick={()=>goStep(step+1)}>
