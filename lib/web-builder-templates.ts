@@ -145,6 +145,33 @@ function assemble(input:SiteIntake,family:SiteFamily,variant:number):Data{
   socialLinks:input.socials
  }},content:blocks});
 }
+/** Apply the owner's visual selections to BOTH AI and template-generated Puck documents.
+ * This never changes the underlying business data or the site's publication state. */
+export function applyChosenSiteDesign(document:Data,design?:SiteDesignPreferences):Data{
+ if(!design)return normalizeBuilderDocument(document);
+ const base=normalizeBuilderDocument(document);
+ const radius=design.imageStyle==="square"?0:design.imageStyle==="pill"?55:
+  design.imageStyle==="bordered"?4:19;
+ const border=design.imageStyle==="bordered"?5:0;
+ const media={imageRadius:radius,imageBorder:border,
+  borderColor:design.colors[1]||"#d2c2e1"};
+ return normalizeBuilderDocument({
+  ...base,
+  root:{...base.root,props:{...base.root?.props,
+   font:design.font,accentColor:design.colors[0]||"",
+   secondaryColor:design.colors[1]||"",tertiaryColor:design.colors[2]||""}},
+  content:base.content.map(block=>{
+   if(block.type==="HeroVisual")return {...block,props:{...block.props,...media}};
+   if(block.type==="OfferingGrid"||block.type==="PhotoGallery"||block.type==="ProjectShowcase"){
+    const props=block.props||{};
+    const items=Array.isArray(props.items)?props.items.map((item:unknown)=>
+     item&&typeof item==="object"&&!Array.isArray(item)?{...item,...media}:item):props.items;
+    return {...block,props:{...props,items}};
+   }
+   return block;
+  })
+ });
+}
 export function createSiteProposals(input:SiteIntake,family=familyForCategory(input.categoryId)):SiteProposal[]{
  return variantSpecs.map((v,i)=>({
   id:family+"-"+i,family,name:v.name,subtitle:v.subtitle,layout:v.layout,
