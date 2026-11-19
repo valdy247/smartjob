@@ -9,6 +9,9 @@ export type AgentAdBrief={
  goals?:Array<"visits"|"messages"|"sales">;
  imageChoice:"business"|"product"|"upload";imageProductId?:string;
  productId?:string;priceCents?:number;currency?:string;
+ productIds?:string[];selectedItems?:Array<{id:string;name:string;type:"product"|"service"}>;
+ accountId?:string;pageId?:string;cityKey?:string;cityMetaName?:string;
+ imageHash?:string;headline?:string;message?:string;
  notes:string;
 };
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
@@ -22,7 +25,14 @@ export function saveAgentAdBrief(value:AgentAdBrief):boolean{
   offer:value.offer.slice(0,220),audience:value.audience.slice(0,130),
   goals:(value.goals||[value.goal]).filter(goal=>["visits","messages","sales"].includes(goal)).slice(0,3),
   city:value.city.slice(0,100),region:value.region.slice(0,90),
-  website:safeSite(value.website),notes:value.notes.slice(0,300)};
+  website:safeSite(value.website),notes:value.notes.slice(0,300),
+  productIds:(value.productIds||[]).filter(id=>uuid.test(id)).slice(0,20),
+  selectedItems:(value.selectedItems||[]).filter(x=>uuid.test(x.id)&&["product","service"].includes(x.type))
+   .slice(0,20).map(x=>({id:x.id,name:x.name.slice(0,100),type:x.type})),
+  accountId:value.accountId?.slice(0,35),pageId:value.pageId?.slice(0,35),
+  cityKey:value.cityKey?.slice(0,35),cityMetaName:value.cityMetaName?.slice(0,140),
+  imageHash:/^[a-f0-9]{32}$/i.test(value.imageHash||"")?value.imageHash:undefined,
+  headline:value.headline?.slice(0,70),message:value.message?.slice(0,350)};
  try{sessionStorage.setItem(AD_HANDOFF_KEY+":"+value.ownerId,JSON.stringify(stored));return true;}
  catch{return false;}
 }
