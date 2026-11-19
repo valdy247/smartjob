@@ -5,19 +5,21 @@ import {getSupabase} from "@/lib/supabase";
 import {loadPhoneSelection,selectPhoneAgent,type PersistedAgent,type PhoneSelection} from "./agentStore";
 import SmartCallMenuEditor from "./SmartCallMenuEditor";
 import SmartCallAgentSetup from "./SmartCallAgentSetup";
+import SmartCallLineRequest from "./SmartCallLineRequest";
 import {checkCallPolicy,days,initialCallPolicy,zoneOptions,type CallPolicy,type DayName} from "@/lib/vmv-ai-agents/call-policy";
 import type {CentralBusiness} from "./centralBusiness";
 import theme from "./AgentServiceFlow.module.css";
 import styles from "./AutomaticWebWizard.module.css";
 import extra from "./AutomaticCallWizard.module.css";
 
-type Step="business"|"line"|"services"|"agent"|"translation"|"hours"|"priority"|"voice"|"menu"|"test"|"review";
+type Step="business"|"line"|"lineRequest"|"services"|"agent"|"translation"|"hours"|"priority"|"voice"|"menu"|"test"|"review";
 type Voice="default"|"bright"|"calm";
 type Preferences={voice_customer:Voice;voice_owner:Voice;greeting_customer:string;greeting_owner:string};
 const defaults:Preferences={voice_customer:"default",voice_owner:"default",greeting_customer:"",greeting_owner:""};
 const labels:Record<Step,string>={
  business:"¿Qué negocio vamos a configurar?",
  line:"¿Qué número configuraremos?",
+ lineRequest:"Preparemos tu solicitud de número",
  services:"¿Quién responderá tus llamadas?",
  agent:"¿Cómo atenderá Mi agente las llamadas?",
  translation:"¿Quieres activar la traducción?",
@@ -71,12 +73,12 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
   setPolicy(v=>({...v,[key]:value}));
  const schedule=policy.agent_enabled&&policy.agent_mode==="schedule"||
   policy.translation_enabled&&policy.translation_mode==="schedule";
- const steps:Step[]=["business","line","services",
+ const steps:Step[]=["business","line",...(lineChoice==="current"?[]:["lineRequest" as Step]),"services",
   ...(policy.agent_enabled?["agent" as Step]:[]),
   "translation",...(schedule?["hours" as Step]:[]),"priority","voice","menu","test","review"];
  const index=Math.max(0,steps.indexOf(step));
  const valid=step==="services"?(policy.agent_enabled||policy.translation_enabled):
-  step==="line"?Boolean(line?.routeId):
+  step==="line"?(lineChoice==="current"?Boolean(line?.routeId):true):
   step==="agent"?(!policy.agent_enabled||bindAgent&&workingAgent.status==="active"):
   step==="menu"?(()=>{try{checkCallPolicy(policy);return true;}catch{return false;}})():
   step==="voice"?validGreeting(prefs.greeting_customer)&&validGreeting(prefs.greeting_owner):
@@ -135,7 +137,7 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
   return()=>{live=false;};
  },[business.id,agent.id,workspaceId]);
  const next=()=>{
-  if(!valid||busy||(step==="line"&&!line))return;
+  if(!valid||busy||(step==="line"&&!line&&lineChoice==="current"))return;
   setError("");
   if(returnReview){setReturnReview(false);setStep("review");return;}
   setStep(steps[Math.min(index+1,steps.length-1)]);
@@ -242,9 +244,14 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
    {lineChoice!=="current"?<div className={styles.info}>
     {lineChoice==="new"?"Obtener un número nuevo puede tener costos y requiere aprobación del proveedor.":
      "El número nuevo debe verificarse y vincularse antes de utilizarlo."}
-    Ningún cambio se aplicará automáticamente. Vuelve a seleccionar tu línea actual para continuar.
+    Continúa para preparar la solicitud con Mi agente, sin compras ni cambios automáticos.
    </div>:null}
    <p className={styles.note}>No compramos líneas ni modificamos el desvío telefónico sin una configuración aparte.</p>
+  </div>:null}
+  {!loading&&step==="lineRequest"&&owner&&lineChoice!=="current"?<div className={styles.panel}>
+   <SmartCallLineRequest businessId={business.id} choice={lineChoice}
+    onReturn={()=>{setLineChoice("current");setStep("line");}}
+    onClose={onClose}/>
   </div>:null}
   {!loading&&step==="services"&&owner?<div className={styles.panel}>
    <div className={styles.optionsVertical}>
@@ -424,13 +431,13 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
 
   </div>:null}
   {error?<p className={styles.error} role="alert">{error}</p>:null}
-  {!loading&&owner?<div className={styles.footer}>
+  {!loading&&owner&&step!=="lineRequest"?<div className={styles.footer}>
    {step==="review"?<button type="button" className={styles.primary+" "+theme.agentButton}
     onClick={()=>void save()} disabled={Boolean(busy)||saved}>
     {busy==="save"?<LoaderCircle size={17}/>:<ShieldCheck size={18}/>}
     {busy==="save"?"Guardando…":saved?"Guardado":"Aprobar y guardar reglas"} <ArrowRight size={17}/></button>:
    <button type="button" className={styles.primary+" "+theme.agentButton}
-    onClick={next} disabled={Boolean(busy)||!valid||(step==="line"&&(!line||lineChoice!=="current"))}>
+    onClick={next} disabled={Boolean(busy)||!valid||(step==="line"&&lineChoice==="current"&&!line)}>
     {returnReview?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={17}/></button>}
   </div>:null}
   <p className={styles.footnote}><ShieldCheck size={14}/> Smart Call mantiene el control del número y la facturación.</p>
