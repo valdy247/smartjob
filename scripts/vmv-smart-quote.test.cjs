@@ -9,11 +9,12 @@ test("Smart Quote workspace parses as TypeScript/JSX",()=>{
  const file=ts.createSourceFile("smart-quote/page.tsx",page,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
  assert.deepEqual(file.parseDiagnostics.map(x=>ts.flattenDiagnosticMessageText(x.messageText," ")),[]);
 });
-test("Services card launches Smart Quote; future services remain disabled",()=>{
+test("Services card launches Smart Quote; Instagram stays disabled and video uses AI Agents",()=>{
  const card=service.split('id:"smart-quote"')[1];
  assert.ok(card&&card.slice(0,450).includes('state:translate("catalog.beta")'));
  assert.ok(card&&card.slice(0,450).includes('window.location.assign("/vista-app/smart-quote")'));
- assert.ok(service.includes('disabled={item.id==="video-generator"||item.id==="instagram-connect"}'));
+ assert.ok(service.includes('disabled={item.id==="instagram-connect"}'));
+ assert.ok(service.includes('action:()=>window.location.assign("/vista-app/ai-agents?service=video")'));
 });
 test("Catalog, quotes and audit are owner-only with RLS",()=>{
  for(const name of ["vmv_smart_quote_catalog","vmv_smart_quotes","vmv_smart_quote_events"])
