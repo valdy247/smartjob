@@ -1,4 +1,5 @@
 /** Owner-configurable AI Agents call policy. Never changes Smart Call's own IVR. */
+import {validPhoneVoice} from "./phone-voices";
 export const days=["sun","mon","tue","wed","thu","fri","sat"] as const;
 export type DayName=typeof days[number];
 export type DayHours={enabled:boolean;start:string;end:string};
@@ -6,9 +7,11 @@ export type Week=Record<DayName,DayHours>;
 export type CallMenu={
  enabled:boolean; spanish_digit:string; english_digit:string; agent_digit:string;
  greeting_es:string; greeting_en:string; human_es:string; human_en:string; agent_message:string;
+ voice_es:string;voice_en:string;
 };
 export const defaultCallMenu:CallMenu={
  enabled:true,spanish_digit:"1",english_digit:"2",agent_digit:"3",
+ voice_es:"default",voice_en:"default",
  greeting_es:"Gracias por llamar. Para atención en español, marque uno.",
  greeting_en:"For service in English, press two. To speak with our AI assistant, press three.",
  human_es:"Le comunicaremos con nuestro equipo. Un momento, por favor.",
@@ -81,6 +84,11 @@ export function checkCallPolicy(input:unknown):CallPolicy{
  const rawMenu=(p.menu_config&&typeof p.menu_config==="object"&&!Array.isArray(p.menu_config))
   ?p.menu_config as Record<string,unknown>:defaultCallMenu as unknown as Record<string,unknown>;
  const menu:CallMenu={...defaultCallMenu};
+ for(const [language,key] of [["es","voice_es"],["en","voice_en"]] as const){
+  const value=rawMenu[key];
+  if(value!==undefined&&!validPhoneVoice(value,language))throw Error("Voz de ElevenLabs no autorizada.");
+  if(typeof value==="string")menu[key]=value;
+ }
  if(typeof rawMenu.enabled==="boolean")menu.enabled=rawMenu.enabled;
  for(const key of ["spanish_digit","english_digit","agent_digit"] as const){
   const value=rawMenu[key];if(typeof value==="string"&&/^[0-9]$/.test(value))menu[key]=value;
