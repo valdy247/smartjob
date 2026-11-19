@@ -1,0 +1,38 @@
+/* VMV shared agent language: deliberately slow color movement, high contrast on white.
+   Each complete cycle takes five minutes and never uses pale yellow or flashing. */
+.flow{--agent-ink:#2a213b;--agent-muted:#8d819a}
+.agentButton{color:#fff!important;background-color:#8045b6;animation:agentButtonFlow 300s ease-in-out infinite}
+.agentText{color:#8135a0;animation:agentTextFlow 300s ease-in-out infinite}
+.agentHeading{color:#36213f;animation:agentHeadingFlow 300s ease-in-out infinite}
+.agentProgress{background-color:#8c47bd;animation:agentButtonFlow 300s ease-in-out infinite}
+.agentRobot{color:#8248c7;animation:agentTextFlow 300s ease-in-out infinite}
+.agentOutline{color:#7e3db2;border-color:#ab86ce;animation:agentOutlineFlow 300s ease-in-out infinite}
+@keyframes agentButtonFlow{
+ 0%,100%{background-color:#a32972}
+ 25%{background-color:#7942b6}
+ 50%{background-color:#315da5}
+ 75%{background-color:#207a67}
+}
+@keyframes agentTextFlow{
+ 0%,100%{color:#a02c72}
+ 25%{color:#7641ae}
+ 50%{color:#2f5a9e}
+ 75%{color:#1d7965}
+}
+@keyframes agentHeadingFlow{
+ 0%,100%{color:#402138}
+ 25%{color:#372747}
+ 50%{color:#253b5a}
+ 75%{color:#234640}
+}
+@keyframes agentOutlineFlow{
+ 0%,100%{color:#a02c72;border-color:#ce92b6}
+ 25%{color:#7641ae;border-color:#ae8bcf}
+ 50%{color:#2f5a9e;border-color:#97b2d5}
+ 75%{color:#1d7965;border-color:#92c8b8}
+}
+@media(prefers-reduced-motion:reduce){
+ .agentButton,.agentText,.agentHeading,.agentProgress,.agentRobot,.agentOutline{
+  animation:none!important
+ }
+}
