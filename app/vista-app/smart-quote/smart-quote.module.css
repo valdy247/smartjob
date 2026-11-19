@@ -24,7 +24,7 @@
 .toolbar select,.form input,.form select,.form textarea{border:1px solid #e4dbef;background:#fff;color:#29213d;border-radius:13px;padding:13px;min-height:46px;font-size:14px;font-family:inherit;min-width:0;width:100%;outline:none}
 .toolbar select{font-weight:750}
 .toolbar select:focus,.form input:focus,.form select:focus,.form textarea:focus{border-color:#a582df;box-shadow:0 0 0 3px #9568df19}
-button{font-family:inherit}
+.page button{font-family:inherit}
 .toolbar button,.panel button:not(.primary):not(.actionPrimary),.tabs button{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid #dfd5ed;background:#fff;color:#604d79;padding:11px 15px;border-radius:13px;font-size:12px;font-weight:800;cursor:pointer}
 button:disabled{opacity:.48;cursor:not-allowed!important}
 .metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
