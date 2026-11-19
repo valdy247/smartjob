@@ -23,7 +23,7 @@
 .product span{flex:1}
 .product small{display:block;margin-top:4px;color:#85788f;font-size:10px}
 .review{display:grid;gap:10px;width:100%;text-align:left}
-.review>div{background:white;border:1px solid #ede4f4;border-radius:12px;padding:12px;display:grid;gap:4px}
+.review>div{background:white;border:1px solid #ede4f4;border-radius:12px;padding:12px;gap:4px}
 .review small{color:#847491;font-size:10px}
 .review strong{font-size:12px;color:#30263e;overflow-wrap:anywhere}
 .footer{margin-top:auto;width:100%;padding-top:20px}
@@ -153,3 +153,8 @@
 .reviewEdit:focus-visible,.reviewEdit:hover{outline:2px solid #ac83ef;outline-offset:2px;background:#ebddff}
 @media(max-width:380px){.imageModeChoices,.imageCandidateActions{gap:7px}
  .imageMode,.imageModeActive{font-size:11px;padding:9px 6px}}
+
+/* Ensure the pencil stays horizontally aligned on the right even for long text. */
+.review>.reviewCard{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:12px}
+.review>.reviewCard>.reviewCardText{flex:1 1 0;min-width:0;display:grid;gap:5px}
+.review>.reviewCard>.reviewEdit{flex:0 0 39px;align-self:center;margin-left:auto}
