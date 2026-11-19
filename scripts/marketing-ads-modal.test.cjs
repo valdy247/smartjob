@@ -129,7 +129,7 @@ test("Meta creative failures explain non-activation and keep a customer support 
  assert.match(ui,/No se envió ni se generó gasto/);
  assert.match(ui,/No vuelvas a enviar/);
  assert.match(ui,/c\.status!=="failed"/);
- assert.match(api,/createdInMeta:true,adSpendActive:false/);
+ assert.match(api,/createdInMeta:step!=="creative"/);
  assert.match(api,/subcode/);
  assert.match(lib,/funding_unavailable/);
 });
