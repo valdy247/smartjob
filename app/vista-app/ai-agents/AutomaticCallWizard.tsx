@@ -118,7 +118,7 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose}
   return()=>{live=false;};
  },[business.id,agent.id,workspaceId]);
  const next=()=>{
-  if(!valid||busy||!line)return;
+  if(!valid||busy||(step==="line"&&!line))return;
   setError("");
   if(returnReview){setReturnReview(false);setStep("review");return;}
   setStep(steps[Math.min(index+1,steps.length-1)]);
@@ -194,7 +194,7 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose}
   {!loading&&step==="line"&&owner?<div className={styles.panel}>
    {line?<div className={extra.line}><PhoneCall size={25}/>
     <strong>{line.maskedNumber}</strong><span>Línea activa detectada en tu cuenta VMV</span>
-    <small>{line.agentId===agent.id?"Mi agente ya está seleccionado":"Puedes seleccionar Mi agente al guardar"}</small>
+    <small>{line.agentId===agent.id?(line.serverEnrolled?"Mi agente está vinculado a esta ruta":"Mi agente seleccionado · vinculación de voz pendiente"):"Puedes seleccionar Mi agente al guardar"}</small>
    </div>:<div className={styles.warning}>No hay una línea activa asociada a esta cuenta.
     Verifica tu número o configura Smart Call para continuar.</div>}
    <a className={styles.option} href="/vista-app?tab=services&service=smart-call">
