@@ -50,7 +50,7 @@ test("Only AI Agent can initiate new campaign, all requirements completed before
  assert.match(intake,/answer\.productIds\.includes\(p\.id\)/);
  assert.match(intake,/cityKey,cityName:cityMetaName/);
  assert.match(studio,/setImageHash\(candidate\.imageHash\|\|""\)/);
- assert.match(intake,/setStep\("image"\)/);
+ assert.match(intake,/setStep\(returnToReview\?"review":"image"\)/);
  assert.match(intake,/stateName\(answer\.region\)/);
  assert.match(intake,/specialCategoriesAcknowledged:true/);
 });
