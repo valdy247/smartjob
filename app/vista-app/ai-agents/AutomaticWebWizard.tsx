@@ -412,58 +412,61 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
    </div>
   </div>:null}
   {!loading&&owner&&stage==="media"?<div className={styles.panel}>
-   <p className={styles.note}>Usa **Subir imagen** o **Generar con IA**. Después selecciona si es para el logo, la portada o la galería. Solo necesitas un logo y una portada; la galería admite hasta ocho fotos.</p>
+   <p className={styles.note}>Usa Subir imagen o Generar con IA. Después selecciona si es para el logo, la portada o la galería. Solo necesitas un logo y una portada; la galería admite hasta ocho fotos.</p>
    <AgentWebMediaPicker business={name} category={category}
     offer={uniqueOffers.slice(0,6).join(", ")||about}
     aiEnabled={imageAiReady} logo={logo} cover={cover} gallery={gallery}
     onLogo={setLogo} onCover={setCover} onGallery={setGallery}/>
   </div>:null}
-  {!loading&&owner&&stage==="preview"?<div className={styles.panel}>
-   {proposal&&proposalSignature===signature?<TemplateProposals input={input} generated={proposal} busy={Boolean(busy)}
-    onBack={()=>{setProposal(null);go("direction");}}
-    onChoose={p=>{setProposal(p);setProposalSignature(signature);next();}}/>:
-    <><p className={styles.note}>Prepararé una propuesta editable. Podrás revisar el diseño antes de guardar el borrador.</p>
-     {proposal&&proposalSignature!==signature?<p className={styles.warning}>
-      Cambiaste datos desde Revisión. Actualiza el diseño para incluirlos.</p>:null}
-     {!aiAvailable?<p className={styles.note}>
-      {aiReason||"La IA no está disponible ahora."} Se usará un diseño profesional de plantilla, editable y sin datos inventados.
-     </p>:null}
-     <button type="button" className={styles.primary+" "+theme.agentButton}
-      disabled={Boolean(busy)} onClick={()=>void generate()}>
-      {busy==="generate"?<LoaderCircle size={18} className={styles.spin}/>:<Sparkles size={18}/>}
-      {busy==="generate"?"Generando tu web…":"Generar y ver propuesta"} <ArrowRight size={17}/></button></>}
-  </div>:null}
   {!loading&&owner&&stage==="review"?<div className={styles.panel}>
+   <p className={styles.note}>Esta es toda la configuración antes de generar. Usa el lápiz a la derecha para corregir cualquier dato sin empezar de nuevo.</p>
    <div className={styles.review}>
     {reviewCard("Negocio",name,"business")}
-    {reviewCard("Tipo de proyecto",mode==="new"?"Web nueva":"Propuesta alternativa","project")}
-    {reviewCard("Productos y servicios",uniqueOffers.join(", "),"offerings")}
-    {reviewCard("Objetivo",({calls:"Llamadas",quotes:"Cotizaciones",bookings:"Citas",orders:"Pedidos"} as const)[objective],"features")}
-    {reviewCard("Contacto",[phone,email,city].filter(Boolean).join(" · "),"contact")}
-    {reviewCard("Estilo",palette.length+" colores · "+font+" · "+shape,"design")}
-    {reviewCard("Imágenes",cover?"Portada aprobada":"Sin fotos por ahora","media")}
-    {reviewCard("Indicaciones",direction,"direction")}
-    {reviewCard("Diseño generado",proposal?.name||"Pendiente","preview")}
+    {reviewCard("Proyecto",mode==="new"?"Página web nueva":"Propuesta alternativa","project")}
+    {reviewCard("Conexión a Inventario",catalogChoice==="yes"?"Sí · catálogo conectado":"No · sin acceso al catálogo","catalog")}
+    {catalogChoice==="yes"?reviewCard("Productos aprobados",
+     products.length+" producto(s) · "+products.map(x=>x.name).join(", "),"products"):null}
+    {reviewCard("Teléfono",phone||"Sin teléfono","contact")}
+    {reviewCard("Correo",email||"Sin correo","contact")}
+    {reviewCard("Ciudad",city||"No especificada","contact")}
+    {reviewCard("Descripción",about||"Pendiente","contact")}
+    {reviewCard("Colores",palette.join(" · "),"colors")}
+    {reviewCard("Tipografía",font,"typography")}
+    {reviewCard("Fotografías",shape,"photography")}
+    {reviewCard("Logo",logo?"Imagen seleccionada":"Sin logo","media")}
+    {reviewCard("Portada",cover?"Imagen seleccionada":"Sin portada","media")}
+    {reviewCard("Galería",gallery.length+" de 8 imágenes","media")}
    </div>
-   {proposalSignature!==signature?<div className={styles.warning}>
-    Cambiaste un dato de tu web. Actualiza el diseño antes de guardar.
-    <button type="button" className={styles.option} onClick={()=>{setReturnToReview(false);go("preview");}}>
-     Actualizar propuesta</button></div>:null}
-   <p className={styles.note}>El borrador se guardará en Web Studio. No reemplaza ni publica sitios actuales.</p>
+   <p className={styles.note}>Al aprobar, el agente preparará una propuesta. Después podrás visualizarla y guardar un borrador editable en Web Studio. Ninguna página se publica automáticamente.</p>
+  </div>:null}
+  {!loading&&owner&&stage==="preview"?<div className={styles.panel}>
+   {proposal&&proposalSignature===signature?<TemplateProposals input={input}
+    generated={proposal} busy={Boolean(busy)}
+    onBack={()=>{go("review");setProposal(null);}}
+    onChoose={p=>{setProposal(p);setProposalSignature(signature);}}/>:
+    <div className={styles.warning}>
+     La propuesta debe generarse desde la Revisión. Si cambiaste datos, regresa, confirma la configuración y genera otra vez.
+     <button type="button" className={styles.option} onClick={()=>go("review")}>Volver a Revisión</button>
+    </div>}
   </div>:null}
   {error?<div role="alert" className={styles.error}>{error}
    {created?<a href={"/web-studio?mode=templates&open="+encodeURIComponent(created)}>
     Abrir el borrador creado en Web Studio</a>:null}
   </div>:null}
   {!loading&&owner?<div className={styles.footer}>
-   {stage!=="review"?stage!=="preview"?<button type="button" className={styles.primary+" "+theme.agentButton}
-     disabled={!validStage||Boolean(busy)} onClick={next}>
-     {returnToReview?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={18}/></button>:null:
-    <button type="button" className={styles.primary+" "+theme.agentButton}
-     disabled={Boolean(busy)||!proposal||proposalSignature!==signature||Boolean(created)}
-     onClick={()=>void save()}>
-     {busy==="save"?<LoaderCircle size={18} className={styles.spin}/>:<Globe2 size={18}/>}
-     {busy==="save"?"Guardando…":"Guardar borrador y abrir Web Studio"} <ArrowRight size={18}/></button>}
+   {stage==="review"?<button type="button" className={styles.primary+" "+theme.agentButton}
+    disabled={Boolean(busy)||!name.trim()||!category||palette.length!==3||!validEmail(email)}
+    onClick={()=>void generate()}>
+    {busy==="generate"?<LoaderCircle size={18} className={styles.spin}/>:<Sparkles size={18}/>}
+    {busy==="generate"?"Generando tu web…":"Aprobar y generar mi web"} <ArrowRight size={18}/></button>:
+   stage==="preview"?<button type="button" className={styles.primary+" "+theme.agentButton}
+    disabled={Boolean(busy)||!proposal||proposalSignature!==signature||Boolean(created)}
+    onClick={()=>void save()}>
+    {busy==="save"?<LoaderCircle size={18} className={styles.spin}/>:<Globe2 size={18}/>}
+    {busy==="save"?"Guardando…":"Guardar borrador y abrir Web Studio"} <ArrowRight size={18}/></button>:
+   <button type="button" className={styles.primary+" "+theme.agentButton}
+    disabled={!validStage||Boolean(busy)} onClick={next}>
+    {returnToReview?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={18}/></button>}
   </div>:null}
   <p className={styles.footnote}><ShieldCheck size={14}/> No se publica ninguna web sin tu aprobación.</p>
  </section>;
