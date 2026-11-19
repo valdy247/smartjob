@@ -89,9 +89,9 @@ test("Visual stages offer eight real fonts, image-style examples, and skip prese
  assert.match(wizard,/photoGrid/);
  for(const key of ["mono","classic","humanist","luxury"])assert.ok(builder.includes(key));
 });
-test("New web creation routes through AI Agents; existing editor remains available",()=>{
+test("Web Services offers agent-led intake while Web Studio also retains its unified creator",()=>{
  assert.match(services,/href="\/vista-app\/ai-agents\?service=web"/);
- assert.match(editor,/href="\/vista-app\/ai-agents\?service=web"/);
+ assert.match(editor,/<UnifiedWebWizard ownerId=\{userId\}/);
  assert.match(entry,/window\.location\.replace\("\/vista-app\/ai-agents\?service=web"\)/);
  assert.match(wizard,/\/web-studio\?mode=templates&open=/);
 });
