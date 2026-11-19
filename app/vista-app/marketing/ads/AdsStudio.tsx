@@ -204,6 +204,29 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
     cityKey:"",cityName:"",cityMetaName:""}));
    setAgentBrief(candidate);
    setStep(4); // Review first, not the five-step creation wizard.
+   // The agent's "Generate ad" action prepares the copy right here; Meta
+   // account, Page, budget and publish authorization remain independent.
+   if(candidate.offer.trim().length>=8&&candidate.audience.trim().length>=3&&city.length>=2){
+    setBusy("agent-generate");
+    try{
+     const response=await api("/api/marketing/ads/generate","POST",{
+      business:candidate.businessName,offer:candidate.offer,
+      audience:candidate.audience,benefit:candidate.notes,city:city+
+       (candidate.region?", "+candidate.region:""),
+      locale:language,goal:"website",angle:"offer"
+     }) as GeneratedAd;
+     if(mounted&&response.source==="ai"&&response.angle==="offer"&&
+      response.variant?.headline&&response.variant?.message){
+      setForm(v=>({...v,headline:response.variant.headline,message:response.variant.message}));
+      setSelectedAngle("offer");
+     }
+    }catch{
+     if(mounted)setNotice(localized(
+      "El resumen está listo. Puedes generar o editar el texto del anuncio antes de guardarlo.",
+      "Your brief is ready. You can generate or edit ad copy before saving."
+     ));
+    }finally{if(mounted)setBusy("");}
+   }
   })().catch(()=>{if(mounted)setError(localized("No se pudo recuperar el anuncio del agente.","Could not load the agent's ad brief."));})
    .finally(()=>{if(mounted)setHandoffLoading(false);});
   return()=>{mounted=false;};
