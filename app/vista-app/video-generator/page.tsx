@@ -86,6 +86,31 @@ export default function VideoGeneratorPage(){
  const [costApproved,setCostApproved]=useState(false),[configured,setConfigured]=useState(false);
  const [sourcePilot,setSourcePilot]=useState<string|null>(null),[downloading,setDownloading]=useState(false);
  const [ready,setReady]=useState(false),[busy,setBusy]=useState(""),[error,setError]=useState(""),[notice,setNotice]=useState("");
+ const [promptOpen,setPromptOpen]=useState<string|null>(null);
+ const [captionModal,setCaptionModal]=useState(false);
+ const [generatedCaptions,setGeneratedCaptions]=useState<Record<string,{platform:string;caption:string}>>({});
+ const [captionBusy,setCaptionBusy]=useState(false);
+ const [captionError,setCaptionError]=useState("");
+ const createCaption=async(platform:"instagram"|"facebook"|"tiktok"|"youtube"|"linkedin")=>{
+  if(!current||captionBusy)return;
+  setCaptionBusy(true);setCaptionError("");
+  try{
+   const client=getSupabase();if(!client)throw Error("Inicia sesión nuevamente.");
+   const {data:{session}}=await client.auth.getSession();
+   if(!session?.access_token)throw Error("Inicia sesión nuevamente.");
+   const response=await fetch("/api/video-generator/caption",{
+    method:"POST",cache:"no-store",headers:{
+     Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"
+    },body:JSON.stringify({jobId:current.id,platform})
+   });
+   const data=await response.json().catch(()=>({}));
+   if(!response.ok||typeof data.caption!=="string")throw Error(
+    data.error==="video_not_ready"?"Espera a que termine la generación.":"No se pudo crear la descripción.");
+   setGeneratedCaptions(old=>({...old,[current.id]:{platform,caption:data.caption}}));
+   setCaptionModal(false);
+  }catch(e){setCaptionError(e instanceof Error?e.message:"No se pudo generar.");}
+  finally{setCaptionBusy(false);}
+ };
  const patch=<K extends keyof Form>(field:K,value:Form[K])=>{setForm(f=>({...f,[field]:value}));setCostApproved(false);};
  const active=(job:Job)=>["starting","PENDING","THROTTLED","RUNNING"].includes(job.status);
  const load=useCallback(async()=>{
@@ -395,10 +420,40 @@ export default function VideoGeneratorPage(){
        {active(current)?<button type="button" className={styles.secondary} onClick={()=>void refreshJob(current.id)}>
         <RefreshCw size={15}/>{L("Comprobar progreso","Check progress")}</button>:null}
       </div>}
-      <p className={styles.videoPrompt}>{current.prompt}</p>
-      {current.caption?<div className={styles.caption}><strong>{L("Descripción","Caption")}</strong><p>{current.caption}</p>
-       <button type="button" className={styles.miniAction} onClick={()=>void navigator.clipboard.writeText(current.caption||"")}>
-        {L("Copiar descripción","Copy caption")}</button></div>:null}
+      <div className={styles.resultActions}>
+       <button type="button" className={styles.secondary} onClick={()=>
+        setPromptOpen(id=>id===current.id?null:current.id)}>
+        {promptOpen===current.id?L("Ocultar prompt","Hide prompt"):L("Ver prompt de este video","View video prompt")}
+       </button>
+       <button type="button" className={styles.primary} disabled={current.status!=="SUCCEEDED"}
+        onClick={()=>{setCaptionModal(true);setCaptionError("");}}>
+        <Sparkles size={17}/>{L("Generar descripción","Generate caption")}
+       </button>
+      </div>
+      {promptOpen===current.id?<p className={styles.videoPrompt}>{current.prompt}</p>:null}
+      {generatedCaptions[current.id]?<div className={styles.caption}>
+       <strong>{L("Descripción para","Caption for")} {generatedCaptions[current.id].platform}</strong>
+       <p>{generatedCaptions[current.id].caption}</p>
+       <button type="button" className={styles.miniAction} onClick={()=>void navigator.clipboard.writeText(generatedCaptions[current.id].caption)}>
+        {L("Copiar descripción","Copy caption")}</button>
+      </div>:null}
+      {captionModal?<div className={styles.captionOverlay} role="presentation"
+       onMouseDown={e=>{if(e.target===e.currentTarget&&!captionBusy)setCaptionModal(false);}}>
+       <div className={styles.captionDialog} role="dialog" aria-modal="true" aria-label={L("Elegir red social","Choose social platform")}>
+        <div className={styles.captionHeader}><strong>{L("¿Para qué red social?","Which social platform?")}</strong>
+         <button type="button" aria-label={L("Cerrar","Close")} disabled={captionBusy}
+          onClick={()=>setCaptionModal(false)}><X size={18}/></button></div>
+        <p>{L("Crearé un texto específico con estructura y hashtags relevantes.","I'll write a structured, platform-specific caption with relevant hashtags.")}</p>
+        <div className={styles.captionPlatforms}>
+         {([["instagram","Instagram"],["facebook","Facebook"],["tiktok","TikTok"],
+          ["youtube","YouTube Shorts"],["linkedin","LinkedIn"]] as const).map(([id,label])=>
+          <button key={id} type="button" disabled={captionBusy} onClick={()=>void createCaption(id)}>
+           {captionBusy?<LoaderCircle size={17} className={styles.spinner}/>:<Sparkles size={16}/>} {label}
+          </button>)}
+        </div>
+        {captionError?<p role="alert" className={styles.captionError}>{captionError}</p>:null}
+       </div>
+      </div>:null}
      </>:<div className={styles.empty}>{L("Selecciona un video para verlo.","Select a video to preview.")}</div>}
     </section>
    </div>
