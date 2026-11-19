@@ -67,7 +67,7 @@ export default function ConnectedServicesEditor({workspaceId,onChange}:{
    const value={name,description:description.slice(0,700),
     price_cents,duration_minutes:duration,approved:form.approved,
     active:form.active,currency:"usd",owner_id:user.id,
-    business_id:workspaceId,auto_confirm:false,time_zone:"America/New_York",
+    business_id:workspaceId,
     updated_at:new Date().toISOString()};
    if(editing){
     const {data,error}=await db.from("vmv_ai_booking_services").update(value)
