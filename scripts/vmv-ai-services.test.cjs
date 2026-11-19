@@ -87,3 +87,42 @@ test("Guided Smart Call menu and activation screens are TypeScript/TSX parseable
  assert.match(read("app/api/vmv/ai-agents/test-number/route.ts"),/reservePhoneSession/);
  assert.match(read("lib/vmv-ai-agents/phone-voices.ts"),/voiceById/);
 });
+
+test("Smart Call bilingual menu validation, safe voice allowlist, and isolated provider routing",()=>{
+ function loadTs(filename,local={}){
+  const out=ts.transpileModule(read(filename),{compilerOptions:{
+   module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022
+  }}).outputText;
+  const mod={exports:{}};
+  new Function("require","module","exports",out)((id)=>local[id]||require(id),mod,mod.exports);
+  return mod.exports;
+ }
+ const voices=loadTs("lib/vmv-ai-agents/phone-voices.ts");
+ const policy=loadTs("lib/vmv-ai-agents/call-policy.ts",{"./phone-voices":voices});
+ const baseline=policy.checkCallPolicy(policy.initialCallPolicy);
+ assert.equal(baseline.menu_config.spanish_digit,"1");
+ assert.equal(baseline.menu_config.english_digit,"2");
+ assert.equal(baseline.menu_config.agent_digit,"3");
+ assert.equal(policy.decideCall(baseline,{day:"mon",minutes:600}).action,"menu");
+ assert.ok(voices.PHONE_VOICE_CATALOG.filter(v=>v.lang==="es").length>=2);
+ assert.ok(voices.PHONE_VOICE_CATALOG.filter(v=>v.lang==="en").length>=2);
+ assert.equal(voices.sayElevenVoice("es_maria","en"),"");
+ assert.match(voices.sayElevenVoice("en_jessica","en"),/^ElevenLabs\./);
+ assert.throws(()=>policy.checkCallPolicy({...baseline,menu_config:{
+  ...baseline.menu_config,english_digit:"1"}}),/diferente/);
+ assert.throws(()=>policy.checkCallPolicy({...baseline,menu_config:{
+  ...baseline.menu_config,voice_es:"attacker_voice"}}),/autorizada/);
+ assert.throws(()=>policy.checkCallPolicy({...baseline,menu_config:{
+  ...baseline.menu_config,greeting_es:"<Hangup/>"}}),/mensajes/);
+ const router=read("app/api/vmv/ai-agents/test-number/route.ts");
+ assert.match(router,/VMV_SMART_CALL_GUIDED_IVR_ENABLED/);
+ assert.match(router,/process.env.VERCEL_ENV==="preview"/);
+ assert.match(router,/reservePhoneSession/);
+ assert.match(router,/claimNational/);
+ assert.match(router,/validSelectionSignature|selectionSignature/);
+ assert.doesNotMatch(router,/AvailablePhoneNumbers\/US\/Local.json|IncomingPhoneNumbers\.json/);
+ const requestDb=read("supabase/sql/vmv_smart_call_line_requests_20261119.sql");
+ assert.match(requestDb,/enable row level security/);
+ assert.match(requestDb,/owner_id=\(select auth.uid\(\)\)/);
+ assert.doesNotMatch(read("app/api/vmv/ai-agents/available-numbers/route.ts"),/method:"POST"/);
+});
