@@ -1,5 +1,5 @@
 "use client";
-import {useCallback,useEffect,useState} from "react";
+import {useCallback,useEffect,useRef,useState} from "react";
 import {Check,Plus,RefreshCw,X} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {safeWebImageUrl} from "@/lib/web-services-site";
@@ -24,8 +24,11 @@ export default function ConnectedProductsEditor({workspaceId,onChange}:{
  const [busy,setBusy]=useState(false);
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
+ const liveRef=useRef(true);
+ useEffect(()=>{liveRef.current=true;return()=>{liveRef.current=false};},[]);
  const refresh=useCallback(async()=>{
   const data=await listCatalog(workspaceId) as Product[];
+  if(!liveRef.current)return;
   setItems(data);onChange(data);setError("");
  },[workspaceId,onChange]);
  useEffect(()=>{
