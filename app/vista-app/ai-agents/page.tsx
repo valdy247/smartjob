@@ -3,7 +3,7 @@ import {useEffect,useState} from "react";
 import {
  ArrowLeft,ArrowUpRight,Bot,BookOpen,BookCheck,BriefcaseBusiness,CalendarDays,Check,
  ChevronRight,ClipboardList,Headphones,MessageCircle,Package,PauseCircle,
- PhoneCall,PlayCircle,ShieldCheck,ShoppingBag,Sparkles,WandSparkles,Megaphone
+ PhoneCall,PlayCircle,ShieldCheck,ShoppingBag,Sparkles,WandSparkles,Megaphone,Globe2
 } from "lucide-react";
 import type {LucideIcon} from "lucide-react";
 import styles from "./page.module.css";
@@ -18,6 +18,7 @@ import BookingStudio from "./BookingStudio";
 import CallControl from "./CallControl";
 import AgentLiveTest from "./AgentLiveTest";
 import AutomaticAdWizard from "./AutomaticAdWizard";
+import AutomaticWebWizard from "./AutomaticWebWizard";
 import {inspectAgent} from "./agentQuality";
 import {getSupabase} from "@/lib/supabase";
 import {centralPrefill,businessMissing,choosePrincipalAgent,linkLegacyWorkspace,loadBusinessChoices,provisionAiWorkspace,type CentralBusiness,type AiWorkspace} from "./centralBusiness";
@@ -25,7 +26,7 @@ import {loadAgents,loadPhoneSelection,selectPhoneAgent,setStudyStatus,storeAgent
 
 type Kind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 type Status="draft"|"active"|"paused";
-type Screen="home"|"editor"|"test"|"quality"|"commerce"|"phone"|"bookings"|"ads";
+type Screen="home"|"editor"|"test"|"quality"|"commerce"|"phone"|"bookings"|"ads"|"web";
 type AgentDraft=WizardDraft;
 type Agent=PersistedAgent;
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
@@ -333,23 +334,32 @@ export default function AIAgentsPreview(){
  };
  const back=()=>{setScreen("home");setMessageNotice("");};
  const patch=(key:keyof AgentDraft,value:string)=>setDraft(prev=>({...prev,[key]:value}));
- return <main className={screen==="ads"?styles.adsCanvas:styles.canvas}>
-  <div className={screen==="ads"?styles.adsLayout:styles.layout}>
-   {screen!=="ads"?<div className={styles.externalHeader}>
+ const immersive=screen==="ads"||screen==="web";
+ useEffect(()=>{
+  if(loading||!authenticated||!principal||!selectedBusiness||!selectedWorkspace)return;
+  const url=new URL(window.location.href);
+  if(url.searchParams.get("service")!=="web")return;
+  url.searchParams.delete("service");
+  window.history.replaceState(null,"",url.pathname+url.search+url.hash);
+  setSelected(principal.id);setScreen("web");setNotice("");
+ },[loading,authenticated,principal?.id,selectedBusiness?.id,selectedWorkspace?.id]);
+ return <main className={immersive?styles.adsCanvas:styles.canvas}>
+  <div className={immersive?styles.adsLayout:styles.layout}>
+   {!immersive?<div className={styles.externalHeader}>
     <a href="/vista-app" className={styles.returnLink}><ArrowLeft size={17}/> VMV Business</a><InterfaceLanguagePicker compact/>
     <span className={styles.previewBadge}>PREVIEW · AI AGENTS</span>
    </div>:null}
-   <section className={screen==="ads"?styles.adsPhone:styles.phone} aria-label={translate("agents.phonePreview")}>
-    {screen!=="ads"?<div className={styles.phoneTop}>
+   <section className={immersive?styles.adsPhone:styles.phone} aria-label={translate("agents.phonePreview")}>
+    {!immersive?<div className={styles.phoneTop}>
      <b>VMV</b><span className={styles.dynamicIsland}/><span className={styles.phoneSignal}>◢ ▰</span>
     </div>:null}
-    {screen!=="ads"?<div className={styles.appHeader}>
+    {!immersive?<div className={styles.appHeader}>
      <button type="button" className={styles.backIcon} onClick={screen==="home"?()=>{window.location.href="/vista-app";}:back}
       aria-label={screen==="home"?translate("agents.backVMV"):translate("agents.backAgents")}><ArrowLeft size={20}/></button>
      <div className={styles.appTitle}><small>VMV BUSINESS</small><strong>AI Agents<span>.</span></strong></div>
      <InterfaceLanguagePicker compact/>
     </div>:null}
-    <div className={screen==="ads"?styles.adsScroller:styles.scroller}>
+    <div className={immersive?styles.adsScroller:styles.scroller}>
      {loading?<div className={styles.info} role="status">{translate("agents.loadingWorkspace")}</div>:null}
      {!loading&&!authenticated?<div className={styles.info} role="alert">
       <ShieldCheck size={17}/> {translate("agents.accountError")}
@@ -387,6 +397,15 @@ export default function AIAgentsPreview(){
           <span className={styles.tileIcon}><type.Icon size={24}/></span>
           <strong>{title}</strong><small>{status}</small>
        </button>})}
+       <button type="button" className={styles.tile} style={{background:"#dff4ec",color:"#226956"}}
+        onClick={()=>{
+         if(principal&&selectedBusiness&&selectedWorkspace){
+          setSelected(principal.id);setScreen("web");setNotice("");
+         }else setNotice("Selecciona el negocio y su agente principal para preparar tu página web.");
+        }} aria-label="Crear sitio web con tu agente">
+        <span className={styles.tileIcon}><Globe2 size={24}/></span>
+        <strong>Web Services</strong><small>Crear web con tu agente</small>
+       </button>
        <button type="button" className={styles.tile} style={{background:"#e4dcff",color:"#6245a7"}}
         onClick={()=>{
          if(principal&&selectedBusiness&&selectedWorkspace){
@@ -446,6 +465,9 @@ export default function AIAgentsPreview(){
      {screen==="ads"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticAdWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
        workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
+     {screen==="web"&&principal&&selectedBusiness&&selectedWorkspace?
+      <AutomaticWebWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
+       workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
      {screen==="phone"?<CallControl onBack={back}/>:null}
      {screen==="commerce"?<CommerceStudio centralBusinessId={selectedBusiness?.id||""} agents={principal?[principal]:visibleAgents.filter(a=>a.revision>0)}
       initialAgentId={principal?.id||selected||""} initialTab={commerceTab} onAgentUpdated={updated=>
@@ -456,10 +478,10 @@ export default function AIAgentsPreview(){
       onAgentUpdated={updated=>setAgents(old=>old.map(a=>a.id===updated.id?updated:a))}/>:null}
      </>:null}
     </div>
-    {screen!=="ads"?<div className={styles.phoneFooter}><div className={styles.footerBrand}><Bot size={17}/> AI Agents</div>
+    {!immersive?<div className={styles.phoneFooter}><div className={styles.footerBrand}><Bot size={17}/> AI Agents</div>
      <span>VMV Business <Sparkles size={12}/></span></div>:null}
    </section>
-   {screen!=="ads"?<div className={styles.externalFooter}>
+   {!immersive?<div className={styles.externalFooter}>
     <span><ShieldCheck size={16}/> {translate("agents.isolationNotice")}</span>
     <a href="/vista-app">{translate("agents.backVMV")} <ArrowUpRight size={15}/></a>
    </div>:null}
