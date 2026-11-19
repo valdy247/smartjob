@@ -110,8 +110,8 @@ test("Ads Studio keeps safe send and save separate, with no Meta spend while pre
  const check=fs.readFileSync(path.resolve("app/api/marketing/ads/meta/payment-check/route.ts"),"utf8");
  assert.match(ui,/Guardar para más tarde/);
  assert.match(ui,/Enviar anuncio/);
- assert.match(ui,/operation:"update_draft"/);
- assert.match(ui,/paymentCheck\.state!=="ready"/);
+ assert.match(ui,/operation:draftId\?"update_draft":"draft"/);
+ assert.match(ui,/paymentCheck\?\.state!=="ready"/);
  assert.match(ui,/if\(!publishReady\)/);
  assert.match(route,/process\.env\.VMV_ADS_META_PUBLISH_ENABLED!=="true"/);
  assert.match(route,/payment\.state!=="ready"/);
