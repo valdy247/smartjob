@@ -277,3 +277,34 @@
 
 /* Allow Testers as seventh navigation item without crushing mobile controls. */
 @media(max-width:750px){.sidebar nav{min-width:0;overflow-x:auto;scrollbar-width:thin;justify-content:flex-start}.sidebar .nav,.sidebar .navOn{flex:0 0 36px}}
+
+
+/* Persisted administrative activity — blends into the existing mint/dark-green panel. */
+.savedChanges{margin-top:17px}
+.savedChanges .surfaceHead{align-items:flex-start}
+.savedChangesDescription{font-size:11px;color:#849386;line-height:1.6;margin:8px 0 0!important;max-width:630px}
+.savedChangesList{display:grid;gap:0}
+.savedChange{display:flex;gap:12px;align-items:center;min-width:0;width:100%;text-align:left;padding:13px 0;border:0;border-top:1px solid #edf1ec;background:#fff;color:#304335}
+.savedChange:hover{background:#fbfcf9}
+.savedChangeIcon{display:grid;place-items:center;width:36px;height:36px;flex-shrink:0;background:#e8f5df;border-radius:11px;color:#5c9164}
+.savedChangeBody{display:grid;gap:5px;flex:1;min-width:0}
+.savedChangeBody strong{font-size:12px;font-weight:850;color:#344a39;overflow-wrap:anywhere}
+.savedChangeBody small{font-size:10px;color:#849385;line-height:1.5;overflow-wrap:anywhere}
+.savedChange .chip{max-width:150px;text-align:center;white-space:normal}
+.savedChangeArrow{flex-shrink:0;color:#8da08f}
+.savedChangesEmpty{font-size:12px;color:#7f917f;line-height:1.6;padding:18px 0}
+.savedChangesFoot{display:block;margin-top:12px;font-size:10px;line-height:1.6;color:#839383}
+.verifiedRecord{display:flex;align-items:flex-start;gap:10px;padding:12px 23px;background:#f4faf0;border-top:1px solid #e4eee0;border-bottom:1px solid #e4eee0;color:#50834c}
+.verifiedRecord>svg{flex-shrink:0;margin-top:2px}
+.verifiedRecord>div{display:grid;gap:5px;min-width:0}
+.verifiedRecord strong{font-size:11px;color:#426d40}
+.verifiedRecord small{font-size:10px;color:#688466;line-height:1.5;overflow-wrap:anywhere}
+@media(max-width:750px){
+ .savedChanges{margin-top:12px}
+ .savedChanges .surfaceHead{flex-wrap:wrap;align-items:flex-start}
+ .savedChange{gap:9px}
+ .savedChangeIcon{height:32px;width:32px}
+ .savedChangeBody strong{font-size:11px}
+ .savedChange .chip{max-width:96px;font-size:9px}
+ .verifiedRecord{padding:12px 17px}
+}
