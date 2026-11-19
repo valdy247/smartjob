@@ -518,6 +518,7 @@ export default function AIAgentsPreview(){
       <AutomaticCallWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
        workspaceId={selectedWorkspace.id} agent={principal} onClose={back}
        onAdvanced={()=>setScreen("phone")} businesses={businesses}
+       onAgentUpdated={updated=>setAgents(current=>current.map(a=>a.id===updated.id?updated:a))}
        onChooseBusiness={id=>{
         const nextWorkspace=workspaces.find(w=>w.central_business_id===id);
         const nextAgent=agents.find(a=>a.id===nextWorkspace?.primary_agent_id);
