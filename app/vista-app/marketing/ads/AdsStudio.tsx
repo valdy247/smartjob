@@ -656,6 +656,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
    <div className={styles.cardTop}><div className={styles.cardTitle}><span className={styles.cardIcon}><WandSparkles size={19}/></span><div>
     <h2>{localized("Propuesta publicitaria","Ad proposal")}</h2>
     <small>{localized("Prepara y revisa tu anuncio antes de guardarlo.","Prepare and review your ad before saving.")}</small></div></div></div>
+   {!agentBrief?<>
    <div className={styles.aiGenerateRow}>
     <button className={styles.primary} type="button" disabled={!!busy||!hasAccount||!form.cityKey||form.business.trim().length<2||form.offer.trim().length<8||form.audience.trim().length<3}
      onClick={()=>setConceptDialogOpen(true)}>
@@ -664,6 +665,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
     </button>
     {selectedAngle?<span className={styles.aiReady}><CheckCircle2 size={15}/>{localized("Listo para editar","Ready to edit")}</span>:null}
    </div>
+   </>:<p className={styles.success}><CheckCircle2 size={16}/>{localized("El agente generó el texto. Puedes editarlo aquí.","Your agent generated this copy. You can edit it here.")}</p>}
    <div className={styles.formStack}>
     <label>{localized("Título del anuncio","Ad headline")}
      <input maxLength={80} value={form.headline} onChange={e=>patch("headline",e.target.value)} placeholder={localized("Título específico y comprobable","Specific, factual headline")}/></label>
@@ -692,6 +694,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
      <small>{(()=>{try{return normalizedDestination?new URL(normalizedDestination).hostname:localized("Tu sitio web","Your website");}catch{return localized("Tu sitio web","Your website");}})()}</small></div>
      <span>{localized("Más información","Learn more")}</span></div>
    </div>
+   {!agentBrief?<>
    <div className={styles.uploadRow} aria-live="polite">
     <label className={styles.imagePicker}>{localized("Imagen del anuncio · JPG/PNG hasta 2 MB","Ad image · JPG/PNG up to 2 MB")}
      <input className={styles.visuallyHiddenFile} type="file" accept="image/jpeg,image/png"
@@ -703,6 +706,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
       image?<button type="button" className={styles.secondary} disabled={!!busy} onClick={()=>upload(image)}>{localized("Reintentar imagen","Retry image")}</button>:null}
    </div>
    {busy==="image"?<p className={styles.imageWaitText}>{localized("Puedes esperar unos segundos. Continuar se activará automáticamente cuando Meta termine.","Please wait a few seconds. Continue will activate automatically when Meta is ready.")}</p>:null}
+   </>:<p className={styles.success}><CheckCircle2 size={16}/>{localized("Imagen confirmada por Meta desde el agente.","Meta confirmed the image from your agent.")}</p>}
   </section>:null}
   {step===4&&agentBrief?<section className={styles.agentReview} aria-label={localized("Revisión del anuncio preparado por tu agente","Review the ad prepared by your agent")}>
    <div className={styles.agentReviewHeader}><span className={styles.agentReviewIcon}><Sparkles size={24}/></span>
