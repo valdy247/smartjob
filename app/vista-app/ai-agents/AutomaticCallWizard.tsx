@@ -345,11 +345,25 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
   </div>:null}
   {!loading&&step==="priority"&&owner?<div className={styles.panel}>
 
-   {policy.agent_enabled&&policy.translation_enabled?<div className={styles.optionsVertical}>
-    {([["menu","El cliente elige en el menú"],["agent_first","Mi agente responde primero"],
-      ["translation_first","Smart Call traduce primero"]] as const).map(([value,label])=>
-     <button type="button" key={value} className={policy.coexistence===value?styles.optionActive:styles.option}
-      onClick={()=>patch("coexistence",value)}>{label}</button>)}</div>:null}
+   <div className={styles.optionsVertical}>
+    <button type="button" className={policy.menu_config.enabled?styles.optionActive:styles.option}
+     onClick={()=>setPolicy(p=>({...p,coexistence:"menu",menu_config:{...p.menu_config,enabled:true}}))}>
+     El cliente elige en un menú personalizado</button>
+    {policy.agent_enabled?<button type="button"
+     className={!policy.menu_config.enabled&&policy.coexistence==="agent_first"&&policy.agent_mode!=="after_no_answer"?styles.optionActive:styles.option}
+     onClick={()=>setPolicy(p=>({...p,coexistence:"agent_first",agent_mode:"always",menu_config:{...p.menu_config,enabled:false}}))}>
+     Mi agente IA responde directamente</button>:null}
+    {policy.agent_enabled&&forwardReady?<button type="button"
+     className={!policy.menu_config.enabled&&policy.agent_mode==="after_no_answer"?styles.optionActive:styles.option}
+     onClick={()=>setPolicy(p=>({...p,coexistence:"agent_first",agent_mode:"after_no_answer",menu_config:{...p.menu_config,enabled:false}}))}>
+     Primero suena mi teléfono; si no contesto, Mi agente responde</button>:null}
+    {policy.translation_enabled?<button type="button"
+     className={!policy.menu_config.enabled&&policy.coexistence==="translation_first"?styles.optionActive:styles.option}
+     onClick={()=>setPolicy(p=>({...p,coexistence:"translation_first",menu_config:{...p.menu_config,enabled:false}}))}>
+     Traducir directamente sin menú</button>:null}
+   </div>
+   <p className={styles.note}>Para que las llamadas en español sean directas y las de inglés usen traducción solo cuando se elija,
+    recomendamos el menú personalizado. Puedes cambiar teclas y mensajes en el siguiente paso.</p>
    <label className={styles.field}>Fuera del horario o sin atención
     <select value={policy.outside_action}
      onChange={e=>patch("outside_action",e.target.value as CallPolicy["outside_action"])}>
