@@ -69,7 +69,34 @@ test("Agent-only review creates Meta objects paused after explicit confirmation,
  assert.match(wizard,/specialCategoriesAcknowledged:true/);
  assert.match(wizard,/utm_source/);
  assert.match(wizard,/budgetCents>=500&&budgetCents<=25000/);
- assert.match(wizard,/setStep\("image"\)/);
+ assert.match(wizard,/setStep\(returnToReview\?"review":"image"\)/);
  assert.match(wizard,/setCityDialogOpen\(false\)/);
  assert.doesNotMatch(wizard,/operation:"activate"/);
+});
+
+test("AI image remains a preview until the user approves upload to Meta",()=>{
+ const route=read("app/api/marketing/ads/generate-image/route.ts");
+ assert.match(route,/authenticatedUser\(req\)/);
+ assert.match(route,/vmv_marketing_businesses/);
+ assert.match(route,/vmv_ai_businesses/);
+ assert.match(route,/smartjob_web_ai_claim_slot/);
+ assert.match(route,/VMV_ADS_AI_IMAGES_ENABLED/);
+ assert.doesNotMatch(route,/meta\/image|create_paused|operation:"activate"/);
+ assert.match(wizard,/setAiCandidate\(new File/);
+ assert.match(wizard,/Aprobar imagen/);
+ assert.match(wizard,/Reintentar/);
+ assert.match(wizard,/uploadImage\(aiCandidate\)/);
+ assert.match(wizard,/step==="image"\?Boolean\(imageHash\)/);
+});
+test("Every review card has a pencil and returns directly to review after edit",()=>{
+ assert.match(wizard,/const reviewCard=/);
+ assert.match(wizard,/className={styles.reviewEdit}/);
+ assert.match(wizard,/aria-label={"Editar "\+label}/);
+ assert.match(wizard,/const editReview=\(target:Step\)/);
+ assert.match(wizard,/setReturnToReview\(true\)/);
+ assert.match(wizard,/if\(returnToReview\)\{setReturnToReview\(false\);setStep\("review"\);return;\}/);
+ assert.match(wizard,/Guardar y volver a Revisión/);
+ assert.match(wizard,/reviewCard\("Imagen"/);
+ assert.match(wizard,/reviewCard\("Texto"/);
+ assert.match(wizard,/reviewCard\("UTM"/);
 });
