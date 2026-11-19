@@ -154,9 +154,7 @@ export function applyChosenSiteDesign(document:Data,design?:SiteDesignPreference
  const base=normalizeBuilderDocument(document);
  const radius=design.imageStyle==="square"?0:design.imageStyle==="pill"?55:
   design.imageStyle==="bordered"?4:19;
- const border=design.imageStyle==="bordered"?5:0;
- const media={imageRadius:radius,imageBorder:border,
-  borderColor:design.colors[1]||"#d2c2e1"};
+ const media={imageRadius:radius,imageBorder:0};
  return normalizeBuilderDocument({
   ...base,
   root:{...base.root,props:{...base.root?.props,
