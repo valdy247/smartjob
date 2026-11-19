@@ -6,6 +6,7 @@ import type {CentralBusiness} from "./centralBusiness";
 import type {PersistedAgent} from "./agentStore";
 import {saveAgentAdBrief,type AgentAdBrief} from "@/lib/vmv-ai-agents/ad-handoff";
 import styles from "./AutomaticAdWizard.module.css";
+import theme from "./AgentServiceFlow.module.css";
 
 type Product={id:string;name:string;description:string;price_cents:number;currency:string;stock_mode:string;image_path:string|null;type:"product"|"service"};
 type MetaAccount={id:string;name:string;currency:string;status:number};
@@ -381,15 +382,15 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   <button type="button" className={styles.reviewEdit} aria-label={"Editar "+label}
    title={"Editar "+label} onClick={()=>editReview(target)}><Pencil size={17}/></button>
  </div>;
- return <section className={styles.root} aria-label="Asistente para anuncios automáticos">
+ return <section className={styles.root+" "+theme.flow} aria-label="Asistente para anuncios automáticos">
   <header className={styles.top}><button type="button" onClick={back} aria-label="Volver"><ArrowLeft size={20}/></button>
    <span>Anuncio automático</span><span>{index+1}/{steps.length}</span></header>
-  <div className={styles.track}><span style={{width:((index+1)/steps.length*100)+"%"}}/></div>
-  <div className={styles.robot}><Bot size={37}/><Sparkles size={16} className={styles.spark}/></div>
-  <h1 className={styles.question}>{question[step]}</h1>
+  <div className={styles.track}><span className={theme.agentProgress} style={{width:((index+1)/steps.length*100)+"%"}}/></div>
+  <div className={styles.robot+" "+theme.agentRobot}><Bot size={37}/><Sparkles size={16} className={styles.spark}/></div>
+  <h1 className={styles.question+" "+theme.agentHeading}>{question[step]}</h1>
   {loading?<div className={styles.helper}><LoaderCircle size={17}/> Cargando datos del negocio…</div>:null}
   {!loading&&!error&&step==="business"?<div className={styles.answers}>
-    <strong className={styles.example}>{business.name}</strong>
+    <strong className={styles.example+" "+theme.agentText}>{business.name}</strong>
     <div className={styles.options}>{chip("Sí",!editBusiness,()=>{
       setEditBusiness(false);update("businessName",business.name);
     })}
@@ -575,10 +576,10 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
    <button type="button" className={styles.chip} onClick={()=>setError("")}>Cerrar aviso</button>
   </p>:null}
   {!loading&&owner?<div className={styles.footer}>
-    {step==="location"?null:step!=="review"?<button type="button" className={styles.next}
+    {step==="location"?null:step!=="review"?<button type="button" className={styles.next+" "+theme.agentButton}
      disabled={!canContinue||Boolean(pending)} onClick={next}>
      {returnToReview?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={18}/></button>:
-     <button type="button" className={styles.generate}
+     <button type="button" className={styles.generate+" "+theme.agentButton}
       disabled={!validBudget||!specialConfirmed||Boolean(pending)} onClick={()=>void finish()}>
       {pending==="send"?<LoaderCircle size={17} className={styles.spin}/>:<Megaphone size={18}/>}
       {pending==="send"?"Enviando…":"Enviar anuncio"} <ArrowRight size={17}/></button>}
