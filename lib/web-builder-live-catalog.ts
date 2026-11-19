@@ -1,6 +1,7 @@
 import type {Data} from "@puckeditor/core";
 import {billingAdmin} from "@/lib/vmv-billing";
 import {normalizeBuilderDocument} from "@/lib/web-builder-puck";
+import {safeWebImageUrl} from "@/lib/web-services-site";
 
 type DisplayProduct={id:string;title:string;description:string;price:string;image:string;alt:string};
 /** Called ONLY after the public publication view has returned a published page.
@@ -20,7 +21,7 @@ export async function publishedBuilderCatalog(slug:string):Promise<DisplayProduc
    .eq("owner_id",site.owner_id).maybeSingle();
   if(workspaceError||!workspace)return [];
   const {data,error}=await db.from("vmv_ai_catalog_items")
-   .select("id,name,description,price_cents,currency")
+   .select("id,name,description,price_cents,currency,image_path")
    .eq("business_id",workspace.id).eq("owner_id",site.owner_id)
    .eq("active",true).eq("approved",true).eq("currency","usd")
    .order("name",{ascending:true}).limit(60);
@@ -29,7 +30,11 @@ export async function publishedBuilderCatalog(slug:string):Promise<DisplayProduc
    Number.isSafeInteger(x.price_cents)&&x.price_cents>=1&&x.price_cents<=10000000)
    .map(x=>({
     id:x.id,title:x.name.trim().slice(0,120),description:String(x.description||"").slice(0,400),
-    price:"$"+(x.price_cents/100).toFixed(2),image:"",alt:x.name.trim().slice(0,120)
+    price:"$"+(x.price_cents/100).toFixed(2),
+    image:(()=>{
+     const safe=safeWebImageUrl(typeof x.image_path==="string"?x.image_path:"");
+     return safe&&safe.includes("/smartjob-web-images/"+site.owner_id+"/")?safe:"";
+    })(),alt:x.name.trim().slice(0,120)
    }));
  }catch{return [];}
 }
