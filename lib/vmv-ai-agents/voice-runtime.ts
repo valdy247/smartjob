@@ -27,7 +27,8 @@ const locale=(l:Lang)=>l==="en"?"en-US":"es-ES";
 const safe=(s:unknown)=>typeof s==="string"?s.trim():"";
 function speak(message:string,l:Lang,snapshot?:Record<string,unknown>){
  const config=(snapshot?.configuration||{}) as Record<string,unknown>;
- const chosen=sayElevenVoice(l==="es"?config.smart_call_voice_es:config.smart_call_voice_en,l);
+ const chosen=process.env.VMV_SMART_CALL_ELEVENLABS_SAY_ENABLED==="true"?
+  sayElevenVoice(l==="es"?config.smart_call_voice_es:config.smart_call_voice_en,l):"";
  if(chosen)return '<Say language="'+locale(l)+'" voice="'+xmlEscape(chosen)+'">'+xmlEscape(message)+'</Say>';
  if(config.voice_preset!=="female"&&config.voice_preset!=="male")return say(message,locale(l));
  const voice=phoneVoice(String(config.voice_preset),l)!.voice;
