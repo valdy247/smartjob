@@ -17,30 +17,30 @@ const sharedImage='https://test.supabase.co/storage/v1/object/public/smartjob-we
 const node=(id,title,items)=>({type:'OfferingGrid',props:{id,title,items,showPrices:'no'}});
 const product=(id,title,image='')=>({id,title,description:'',image,alt:title,price:'$12.00'});
 const doc=()=>normalizeBuilderDocument({content:[
- node('connected-catalog','Productos',[product('p1','Chocolate'),product('p2','Bocaditos')]),
- node('connected-services','Servicios',[product('s1','Catering')])
+ node('connected-catalog','Productos',[product('product-one','Chocolate'),product('product-two','Bocaditos')]),
+ node('connected-services','Servicios',[product('service-one','Catering')])
 ]});
 test('live catalog updates only its own cards by stable IDs',()=>{
  const source=doc();
- const result=applyPublishedConnections(source,[product('p2','Bocaditos'),product('p1','Chocolate',sharedImage)],
-  [product('s1','Catering'),product('s2','Entregas')]);
+ const result=applyPublishedConnections(source,[product('product-two','Bocaditos'),product('product-one','Chocolate',sharedImage)],
+  [product('service-one','Catering'),product('service-two','Entregas')]);
  const [products,services]=result.content.map(x=>x.props);
- assert.deepEqual(products.items.map(x=>x.id),['p2','p1']);
+ assert.deepEqual(products.items.map(x=>x.id),['product-two','product-one']);
  assert.equal(products.items[1].image,sharedImage);
- assert.deepEqual(services.items.map(x=>x.id),['s1','s2']);
- assert.deepEqual(source.content[0].props.items.map(x=>x.id),['p1','p2'],
+ assert.deepEqual(services.items.map(x=>x.id),['service-one','service-two']);
+ assert.deepEqual(source.content[0].props.items.map(x=>x.id),['product-one','product-two'],
   'a new publication view must not modify the editor draft');
 });
 test('deletion of one product never removes another occurrence or a service',()=>{
  const original=doc();
- const result=applyPublishedConnections(original,[product('p2','Bocaditos')],[product('s1','Catering')]);
- assert.deepEqual(result.content[0].props.items.map(x=>x.id),['p2']);
- assert.equal(result.content[1].props.items[0].id,'s1');
+ const result=applyPublishedConnections(original,[product('product-two','Bocaditos')],[product('service-one','Catering')]);
+ assert.deepEqual(result.content[0].props.items.map(x=>x.id),['product-two']);
+ assert.equal(result.content[1].props.items[0].id,'service-one');
  assert.equal(original.content[0].props.items.length,2);
 });
 test('services can be connected without products and preserve original sections',()=>{
  const source=normalizeBuilderDocument({content:[node('connected-services','Servicios',[])]});
- const result=applyPublishedConnections(source,null,[product('s1','Servicio nuevo')]);
+ const result=applyPublishedConnections(source,null,[product('service-one','Servicio nuevo')]);
  assert.equal(result.content.length,1);
  assert.equal(result.content[0].props.items[0].title,'Servicio nuevo');
 });
@@ -56,7 +56,7 @@ test('duplicate colors are rejected and every chosen accent has readable foregro
 test('customer visual choices are applied to one editable proposal without changing owner catalog',()=>{
  const intake={business:'Repostería de prueba',categoryId:'bakery',offering:'both',objective:'orders',
   phone:'',email:'',city:'',about:'',logo:'',photos:[],socials:{},
-  offerings:['Servicio A'],products:[product('p1','Producto A')],
+  offerings:['Servicio A'],products:[product('product-one','Producto A')],
   design:{colors:['#fbe0d5','#f3c2ab','#523a60'],font:'luxury',imageStyle:'square',
    features:{inventory:true,booking:false,chat:true},chatMode:'inbox'}};
  const proposal=createSiteProposals(intake)[0];
@@ -64,7 +64,7 @@ test('customer visual choices are applied to one editable proposal without chang
  assert.equal(result.root.props.font,'luxury');
  assert.equal(result.root.props.chatMode,'inbox');
  assert.equal(result.root.props.accentColor,'#fbe0d5');
- assert.equal(intake.products[0].id,'p1');
+ assert.equal(intake.products[0].id,'product-one');
 });
 test('web creation persists both connection flags for the selected workspace',()=>{
  const source=fs.readFileSync(path.join(root,'app/web-studio/WebBuilderWorkspace.tsx'),'utf8');
