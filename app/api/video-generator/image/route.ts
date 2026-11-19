@@ -27,8 +27,8 @@ export async function POST(req:NextRequest){
  const offer=safe(body?.offer,220),audience=safe(body?.audience,130),
   direction=safe(body?.direction,260),context=safe(body?.context,220);
  if(offer.length<3||audience.length<3)return reply({error:"complete_video_brief"},400);
- // Shared, atomic AI image quota prevents unchecked provider spending on retries.
- const {data:claimed,error:quotaError}=await db.rpc("smartjob_web_ai_claim_slot",{p_owner:owner});
+ // Pilot-only 50/day image budget; ordinary Web Studio quotas are untouched.
+ const {data:claimed,error:quotaError}=await db.rpc("smartjob_web_ai_claim_video_test_slot",{p_owner:owner});
  if(quotaError)return reply({error:"image_quota_unavailable"},503);
  if(claimed!==true)return reply({error:"image_daily_limit"},429);
  try{
