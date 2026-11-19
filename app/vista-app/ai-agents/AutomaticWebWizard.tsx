@@ -238,7 +238,7 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
     setProposal(result[0]);setProposalSignature(signature);return;
    }
    const res=await askAi("/api/web-services/generate-site",{
-    intake,direction:direction.trim().slice(0,360)
+    intake:input,direction:direction.trim().slice(0,360)
    });
    if(!res.proposal?.data)throw Error("La IA no devolvió una web editable.");
    setProposal(res.proposal as SiteProposal);setProposalSignature(signature);
