@@ -4,7 +4,7 @@ import {ArrowRight,CheckCircle2,Globe,ImagePlus,LoaderCircle,Package,Plus,Refres
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {getSupabase} from "@/lib/supabase";
 import {provisionAiWorkspace} from "@/app/vista-app/ai-agents/centralBusiness";
-import AgentWebCatalogEditor from "@/app/vista-app/ai-agents/AgentWebCatalogEditor";
+import ConnectedProductsEditor from "./ConnectedProductsEditor";
 import type {CatalogItem} from "@/app/vista-app/ai-agents/commerceStore";
 import {accessibleAccent,onAccent,colorsAreDistinct} from "@/lib/web-builder-contrast";
 import {applyChosenSiteDesign,createSiteProposals,familyForCategory,type SiteDesignPreferences,
@@ -162,7 +162,8 @@ export default function UnifiedWebWizard({ownerId,busy,onChoose}:{
   const showServices=connectServices&&Boolean(workspace);
   const productItems:SiteProduct[]=showProducts?approvedProducts.slice(0,30).map(p=>({
    id:p.id,title:p.name,description:p.description||"",
-   image:"",price:money(p.price_cents)
+   image:safeWebImageUrl((p as CatalogItem & {image_path?:string|null}).image_path||"")||"",
+   price:money(p.price_cents)
   })):[];
   const serviceItems=showServices?approvedServices.slice(0,30).map(p=>p.name):[];
   return {business:name.trim(),categoryId:category||"other",offering:showProducts&&showServices?"both":
@@ -286,7 +287,7 @@ export default function UnifiedWebWizard({ownerId,busy,onChoose}:{
    {workspace&&(connectProducts||connectServices)?<>
     {connectProducts?<div className={styles.catalogBlock}>
      <h3>Productos sincronizados · {approvedProducts.length} aprobados</h3>
-     <AgentWebCatalogEditor key={workspace+"-p-"+refreshKey} workspaceId={workspace}
+     <ConnectedProductsEditor key={workspace+"-p-"+refreshKey} workspaceId={workspace}
       onChange={handleProducts}/>
     </div>:null}
     {connectServices?<div className={styles.catalogBlock}>
