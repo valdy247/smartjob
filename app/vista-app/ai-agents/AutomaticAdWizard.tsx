@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
-import {ArrowLeft,ArrowRight,Bot,Check,Globe2,Image as ImageIcon,LoaderCircle,Megaphone,Package,ShieldCheck,Sparkles,RefreshCw} from "lucide-react";
+import {ArrowLeft,ArrowRight,Bot,Check,Globe2,Image as ImageIcon,LoaderCircle,Megaphone,Package,ShieldCheck,Sparkles,RefreshCw,Pencil,WandSparkles} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import type {CentralBusiness} from "./centralBusiness";
 import type {PersistedAgent} from "./agentStore";
@@ -65,6 +65,11 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
  const [cityKey,setCityKey]=useState("");
  const [cityMetaName,setCityMetaName]=useState("");
  const [image,setImage]=useState<File|null>(null);
+ const [imageMode,setImageMode]=useState<"upload"|"ai">("upload");
+ const [aiCandidate,setAiCandidate]=useState<File|null>(null);
+ const [aiPreview,setAiPreview]=useState("");
+ const [imagePrompt,setImagePrompt]=useState("");
+ const [returnToReview,setReturnToReview]=useState(false);
  const [imageHash,setImageHash]=useState("");
  const [imagePreview,setImagePreview]=useState("");
  const [headline,setHeadline]=useState("");
@@ -149,10 +154,20 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
  const next=()=>{
   if(!canContinue||Boolean(pending))return;
   if(step==="website")setAnswer(x=>({...x,website:siteChoice==="saved"?savedWebsite:siteChoice==="custom"?customWebsite.trim():""}));
-  if(step==="image"&&!headline.trim()&&!message.trim())void generateCopy();
-  setError("");setStep(steps[Math.min(index+1,steps.length-1)]);
+  if(!returnToReview&&step==="image"&&!headline.trim()&&!message.trim())void generateCopy();
+  setError("");
+  if(returnToReview){setReturnToReview(false);setStep("review");return;}
+  setStep(steps[Math.min(index+1,steps.length-1)]);
  };
- const back=()=>{if(cityDialogOpen){setCityDialogOpen(false);return;}if(index===0){onClose();return;}setError("");setStep(steps[index-1]);};
+ const back=()=>{
+  if(cityDialogOpen){setCityDialogOpen(false);return;}
+  if(returnToReview){setReturnToReview(false);setError("");setStep("review");return;}
+  if(index===0){onClose();return;}
+  setError("");setStep(steps[index-1]);
+ };
+ const editReview=(target:Step)=>{
+  setReturnToReview(true);setError("");setStep(target);
+ };
  const toggleGoal=(goal:Goal)=>setAnswer(current=>({
   ...current,goals:current.goals.includes(goal)?
    current.goals.filter(item=>item!==goal):[...current.goals,goal]
@@ -220,6 +235,41 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   }catch(e){setError(e instanceof Error?e.message:"No se pudo verificar la ciudad.");}
   finally{setPending("");}
  };
+ /** One generated candidate remains private to the owner until approval. */
+ const generateAdImage=async()=>{
+  if(pending)return;
+  setPending("image-ai");setError("");setAiCandidate(null);setImageHash("");
+  try{
+   const result=await api("/api/marketing/ads/generate-image","POST",{
+    businessId:business.id,workspaceId,offer:answer.offer,
+    audience:answer.audience,notes:answer.notes,prompt:imagePrompt
+   });
+   const base64=String(result?.imageBase64||"");
+   const mime=String(result?.mediaType||"");
+   if(!["image/png","image/jpeg","image/webp"].includes(mime)||base64.length>9000000||!base64)
+    throw Error("La IA no devolvió una imagen válida.");
+   const binary=atob(base64),bytes=new Uint8Array(binary.length);
+   for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+   const bitmap=await createImageBitmap(new Blob([bytes],{type:mime}));
+   let output:Blob|null=null;
+   try{
+    const canvas=document.createElement("canvas");
+    canvas.width=bitmap.width;canvas.height=bitmap.height;
+    const context=canvas.getContext("2d");
+    if(!context)throw Error("No se pudo preparar la imagen.");
+    context.drawImage(bitmap,0,0);
+    for(const quality of [0.85,0.72,0.58]){
+     output=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,"image/jpeg",quality));
+     if(output&&output.size>=1024&&output.size<=2*1024*1024)break;
+    }
+   }finally{bitmap.close();}
+   if(!output||output.size<1024||output.size>2*1024*1024)
+    throw Error("La imagen superó el tamaño admitido por Meta.");
+   setAiCandidate(new File([output],"vmv-anuncio-ia.jpg",{type:"image/jpeg"}));
+  }catch(e){const error=e instanceof Error?e.message:"Error generando imagen.";
+   setError(error==="image_daily_limit"?"Has alcanzado el límite diario de imágenes con IA. Puedes subir una imagen propia.":error);}
+  finally{setPending("");}
+ };
  const uploadImage=async(file:File)=>{
   setImage(file);setImageHash("");setAdReady(false);setPending("image");setError("");
   if(!["image/jpeg","image/png"].includes(file.type)||file.size<1024||file.size>2*1024*1024){
@@ -260,6 +310,11 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   const url=URL.createObjectURL(image);setImagePreview(url);
   return()=>URL.revokeObjectURL(url);
  },[image]);
+ useEffect(()=>{
+  if(!aiCandidate){setAiPreview("");return;}
+  const url=URL.createObjectURL(aiCandidate);setAiPreview(url);
+  return()=>URL.revokeObjectURL(url);
+ },[aiCandidate]);
  const finish=async()=>{
   if(!owner||!validBudget||!specialConfirmed||!cityKey||!pageId||!imageHash||
     !headline.trim()||!message.trim()||!accountId||pending)return;
