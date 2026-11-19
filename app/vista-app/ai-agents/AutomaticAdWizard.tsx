@@ -473,16 +473,50 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
     <p className={styles.helper}>Después de verificar, toca tu ciudad en la lista para continuar.</p>
    </div>:null}
   {!loading&&step==="image"?<div className={styles.answers}>
-    <label className={styles.field}>Imagen del anuncio · JPG o PNG (máximo 2 MB)
-     <input type="file" accept="image/jpeg,image/png" disabled={pending==="image"}
-      onChange={e=>{const file=e.target.files?.[0];if(file)void uploadImage(file);}}/></label>
-    {imagePreview?<img className={styles.imagePreview} src={imagePreview} alt="Vista previa de la imagen del anuncio"/>:null}
+    <div className={styles.imageModeChoices} role="group" aria-label="Origen de la imagen">
+     <button type="button" className={imageMode==="upload"?styles.imageModeActive:styles.imageMode}
+      disabled={Boolean(pending)} aria-pressed={imageMode==="upload"}
+      onClick={()=>{setImageMode("upload");setImageHash("");setError("");}}>
+      <ImageIcon size={19}/> Subir imagen</button>
+     <button type="button" className={imageMode==="ai"?styles.imageModeActive:styles.imageMode}
+      disabled={Boolean(pending)} aria-pressed={imageMode==="ai"}
+      onClick={()=>{setImageMode("ai");setImageHash("");setError("");}}>
+      <WandSparkles size={19}/> Generar con IA</button>
+    </div>
+    {imageMode==="upload"?<>
+     <label className={styles.field}>Imagen del anuncio · JPG o PNG (máximo 2 MB)
+      <input type="file" accept="image/jpeg,image/png" disabled={Boolean(pending)}
+       onChange={e=>{const file=e.target.files?.[0];if(file)void uploadImage(file);}}/></label>
+     {imagePreview?<img className={styles.imagePreview} src={imagePreview} alt="Imagen elegida para el anuncio"/>:null}
+     {image&&!imageHash&&pending!=="image"?<button type="button" className={styles.chip}
+      onClick={()=>void uploadImage(image)}>Reintentar subida</button>:null}
+    </>:<>
+     <p className={styles.helper}>Tu agente propone una imagen basada en tu negocio y los productos seleccionados.</p>
+     <label className={styles.field}>Instrucción adicional (opcional)
+      <textarea rows={2} maxLength={300} placeholder="Ejemplo: fotografía de repostería con fondo elegante"
+       disabled={Boolean(pending)} value={imagePrompt} onChange={e=>setImagePrompt(e.target.value)}/></label>
+     {!aiCandidate?<button type="button" className={styles.generateImageButton}
+      disabled={Boolean(pending)} onClick={()=>void generateAdImage()}>
+      <WandSparkles size={18}/> Generar imagen</button>:null}
+     {aiPreview?<div className={styles.aiCandidate}>
+      <img className={styles.imagePreview} src={aiPreview} alt="Propuesta de imagen generada por IA"/>
+      {!imageHash?<div className={styles.imageCandidateActions}>
+       <button type="button" className={styles.approveImage}
+        disabled={Boolean(pending)} onClick={()=>aiCandidate&&void uploadImage(aiCandidate)}>
+        <Check size={16}/> Aprobar imagen</button>
+       <button type="button" className={styles.retryImage}
+        disabled={Boolean(pending)} onClick={()=>void generateAdImage()}>
+        <RefreshCw size={16}/> Reintentar</button>
+      </div>:null}
+     </div>:null}
+    </>}
+    {pending==="image-ai"?<div className={styles.uploadProgress} role="status">
+     <LoaderCircle size={26} className={styles.spin}/> Creando propuesta con IA…</div>:null}
     {pending==="image"?<div className={styles.uploadProgress} role="status">
-     <LoaderCircle size={26} className={styles.spin}/> Enviando imagen a Meta…</div>:null}
-    {imageHash&&pending!=="image"?<div className={styles.fact} role="status"><Check size={17}/> Imagen recibida por Meta</div>:null}
-    {image&&!imageHash&&pending!=="image"?<button type="button" className={styles.chip}
-     onClick={()=>void uploadImage(image)}>Reintentar subida</button>:null}
-    <p className={styles.helper}>No avanzaremos hasta que Facebook confirme la recepción.</p>
+     <LoaderCircle size={26} className={styles.spin}/> Enviando imagen aprobada a Meta…</div>:null}
+    {imageHash&&pending!=="image"?<div className={styles.fact} role="status">
+     <Check size={17}/> Imagen recibida por Meta</div>:null}
+    <p className={styles.helper}>Solo se envía a Meta cuando eliges la imagen o apruebas la propuesta de IA.</p>
    </div>:null}
   {!loading&&step==="copy"?<div className={styles.answers}>
     {pending==="copy"?<div className={styles.uploadProgress} role="status">
