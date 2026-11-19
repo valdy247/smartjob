@@ -1,0 +1,70 @@
+const {test}=require("node:test");
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const read=p=>fs.readFileSync(path.join(__dirname,"..",p),"utf8");
+const wizard=read("app/vista-app/ai-agents/AutomaticWebWizard.tsx");
+const agents=read("app/vista-app/ai-agents/page.tsx");
+const services=read("app/vista-app/BusinessServicesPreview.tsx");
+const editor=read("app/web-studio/WebBuilderWorkspace.tsx");
+const entry=read("app/web-studio/page.tsx");
+const animation=read("app/vista-app/ai-agents/AgentServiceFlow.module.css");
+const ads=read("app/vista-app/ai-agents/AutomaticAdWizard.tsx");
+test("Web Services reuses the existing agent, owner and central business",()=>{
+ assert.match(agents,/screen==="web"&&principal&&selectedBusiness&&selectedWorkspace/);
+ assert.match(agents,/agent={principal}/);
+ assert.match(wizard,/user\.id!==business\.owner_id/);
+ assert.match(wizard,/user\.id!==agent\.owner_id/);
+ assert.match(wizard,/agent\.business_id!==workspaceId/);
+ assert.match(wizard,/vmv_marketing_businesses/);
+ assert.match(wizard,/\.eq\("owner_id",user\.id\)/);
+});
+test("Approved inventory and owner-written services feed conditional intake",()=>{
+ assert.match(wizard,/vmv_ai_catalog_items/);
+ assert.match(wizard,/vmv_ai_booking_services/);
+ assert.match(wizard,/\.eq\("active",true\)\.eq\("approved",true\)/);
+ assert.match(wizard,/selectedIds\.includes\(x\.id\)/);
+ assert.match(wizard,/products\.length/);
+ assert.match(wizard,/inventory&&products\.length>0/);
+ assert.match(wizard,/inquiries_enabled:inquiries/);
+});
+test("Agent generates real Puck proposals and only creates unpublished owner-scoped drafts",()=>{
+ assert.match(wizard,/api\/web-services\/generate-site/);
+ assert.match(wizard,/createSiteProposals\(input\)/);
+ assert.match(wizard,/TemplateProposals input={input}/);
+ assert.match(wizard,/smartjob_builder_create_site/);
+ assert.match(wizard,/normalizeBuilderDocument\(proposal\.data\)/);
+ assert.match(wizard,/\.eq\("id",result\.data\.siteId\)\.eq\("owner_id",owner\)/);
+ assert.match(wizard,/Guardar borrador y abrir Web Studio/);
+ assert.doesNotMatch(wizard,/smartjob_builder_publications|operation:"activate"|publish\(/);
+});
+test("Edits on review return directly and old websites are not overwritten",()=>{
+ assert.match(wizard,/className={styles\.edit}/);
+ assert.match(wizard,/const edit=\(target:Stage\)/);
+ assert.match(wizard,/setReturnToReview\(true\)/);
+ assert.match(wizard,/if\(returnToReview\)\{setReturnToReview\(false\);go\("review"\);return;\}/);
+ assert.match(wizard,/No se modificarán ni se publicará nada/);
+ assert.match(wizard,/proposalSignature!==signature/);
+ assert.match(wizard,/imageCandidate/);
+ assert.match(wizard,/Aprobar/);
+ assert.match(wizard,/Reintentar/);
+});
+test("New web creation routes through AI Agents; existing editor remains available",()=>{
+ assert.match(services,/href="\/vista-app\/ai-agents\?service=web"/);
+ assert.match(editor,/href="\/vista-app\/ai-agents\?service=web"/);
+ assert.match(entry,/window\.location\.replace\("\/vista-app\/ai-agents\?service=web"\)/);
+ assert.match(wizard,/\/web-studio\?mode=templates&open=/);
+});
+test("Buttons, progress and robot have a slow accessible pink-purple-blue-green color drift",()=>{
+ assert.match(animation,/300s ease-in-out infinite/g);
+ assert.match(animation,/#a32972/);
+ assert.match(animation,/#7942b6/);
+ assert.match(animation,/#315da5/);
+ assert.match(animation,/#207a67/);
+ assert.match(animation,/prefers-reduced-motion:reduce/);
+ assert.match(wizard,/theme\.agentProgress/);
+ assert.match(wizard,/theme\.agentRobot/);
+ assert.match(wizard,/theme\.agentButton/);
+ assert.match(ads,/theme\.agentProgress/);
+ assert.match(ads,/theme\.agentButton/);
+});
