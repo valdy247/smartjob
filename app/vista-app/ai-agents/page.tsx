@@ -501,7 +501,8 @@ export default function AIAgentsPreview(){
        workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
      {screen==="call"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticCallWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
-       workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
+       workspaceId={selectedWorkspace.id} agent={principal} onClose={back}
+       onAdvanced={()=>setScreen("phone")}/>:null}
      {screen==="quote"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticQuoteWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
        workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
@@ -515,7 +516,7 @@ export default function AIAgentsPreview(){
        agent={principal} onClose={back}
        onAgentUpdated={updated=>{setAgents(list=>list.map(a=>a.id===updated.id?updated:a));}}
        onOpenStudio={()=>setScreen("bookings")}/>:null}
-     {screen==="phone"?<CallControl onBack={back}/>:null}
+     {screen==="phone"?<CallControl onBack={()=>setScreen("call")}/>:null}
      {screen==="commerce"?<CommerceStudio centralBusinessId={selectedBusiness?.id||""} agents={principal?[principal]:visibleAgents.filter(a=>a.revision>0)}
       initialAgentId={principal?.id||selected||""} initialTab={commerceTab} onAgentUpdated={updated=>
        setAgents(prev=>prev.map(a=>a.id===updated.id?updated:a))}
