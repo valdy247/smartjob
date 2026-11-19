@@ -324,3 +324,30 @@
 @media(max-width:680px){.adsHubCards{grid-template-columns:1fr}.adsHubCard{min-height:124px;padding:18px 16px}.adsHubIntro h1{font-size:27px}}
 @media(max-width:400px){.historyTabs{gap:3px}.historyTab,.historyTabSelected{font-size:10px;padding:7px 3px;gap:4px}}
 @media(prefers-reduced-motion:reduce){.adsHubCard{transition:none}}
+
+
+/* One-ad creative direction picker: the options live only in the modal. */
+.aiGenerateRow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.aiGenerateRow .primary{min-height:46px}
+.aiReady{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:#317e60}
+.conceptOverlay{position:fixed;inset:0;z-index:1500;display:grid;place-items:center;overflow-y:auto;padding:20px 14px;background:rgba(29,22,42,.51);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.conceptModal{width:min(100%,500px);max-height:calc(100dvh - 40px);overflow-y:auto;box-sizing:border-box;border:1px solid #e7d9ec;background:#fff;border-radius:24px;padding:24px;box-shadow:0 28px 75px #1b142a38}
+.conceptHeading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:21px}
+.conceptHeading>div{display:flex;flex-direction:column;align-items:flex-start;gap:9px;min-width:0}
+.conceptHeading>div>span{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:900;letter-spacing:.095em;color:#9061a0}
+.conceptHeading h2{font-size:clamp(22px,5vw,27px);line-height:1.2;letter-spacing:-.65px;color:#2f233d;margin:0}
+.conceptHeading p{font-size:12px;line-height:1.45;color:#8b7b91;margin:0}
+.conceptClose{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border:1px solid #eee7f1;border-radius:11px;background:#faf7fc;color:#7c7085;cursor:pointer}
+.conceptOptions{display:grid;gap:10px}
+.conceptOption{display:flex;align-items:center;gap:14px;width:100%;padding:16px;border:1px solid #e9e1ee;border-radius:16px;background:#fff;text-align:left;color:#3a2c46;font:inherit;cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
+.conceptOption:hover{background:#faf5ff;border-color:#bca3d8;transform:translateY(-1px)}
+.conceptOption:focus-visible,.conceptClose:focus-visible{outline:3px solid #bd8eda;outline-offset:2px}
+.conceptIcon{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border-radius:14px;background:#f1e9fc;color:#7652a1}
+.conceptOption:nth-child(2) .conceptIcon{background:#e8f4f8;color:#4c7e9e}
+.conceptOption:nth-child(3) .conceptIcon{background:#faeaf2;color:#a05d83}
+.conceptText{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0}
+.conceptText strong{font-size:14px;line-height:1.28;font-weight:850;color:#35273f}
+.conceptText small{font-size:11px;line-height:1.45;color:#85768d}
+.conceptArrow{flex:0 0 18px;color:#9c8cad}
+@media(max-width:560px){.conceptOverlay{align-items:center;padding:15px 11px}.conceptModal{padding:19px 15px;border-radius:19px;max-height:calc(100dvh - 30px)}.conceptHeading{margin-bottom:16px}.conceptOption{padding:13px;gap:11px;border-radius:14px}.conceptIcon{width:44px;height:44px;flex-basis:44px}.conceptText strong{font-size:13px}.conceptText small{font-size:10.5px}.aiGenerateRow .primary{width:100%;justify-content:center}}
+@media(prefers-reduced-motion:reduce){.conceptOption{transition:none}.conceptOption:hover{transform:none}}
