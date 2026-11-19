@@ -41,7 +41,7 @@ test("Smart Call never alters Twilio line route, always verifies ownership and u
  assert.match(call,/loadPhoneSelection\(\)/);
  assert.match(call,/user\.id!==agent\.owner_id/);
  assert.match(call,/user\.id!==business\.owner_id/);
- assert.match(call,/selectPhoneAgent\(line\.routeId,agent\)/);
+ assert.match(call,/selectPhoneAgent\\(line\\.routeId,workingAgent\\)/);
  assert.match(call,/checkCallPolicy\(policy\),version/);
  assert.match(call,/method:"POST"/);
  assert.match(call,/\/api\/vmv\/ai-agents\/call-settings/);
@@ -70,4 +70,20 @@ test("Inventory sales and bookings share canonical stores, require owner permiss
  assert.match(bookings,/cap_bookings:enabled/);
  assert.match(bookings,/perm_book_service:enabled&&confirm/);
  assert.match(bookings,/onOpenStudio/);
+});
+
+test("Guided Smart Call menu and activation screens are TypeScript/TSX parseable",()=>{
+ for(const filename of ["app/vista-app/ai-agents/SmartCallMenuEditor.tsx",
+  "app/vista-app/ai-agents/SmartCallAgentSetup.tsx",
+  "lib/vmv-ai-agents/call-policy.ts","lib/vmv-ai-agents/phone-voices.ts",
+  "app/api/vmv/ai-agents/test-number/route.ts"]){
+  const ast=ts.createSourceFile(filename,read(filename),ts.ScriptTarget.Latest,true,
+   filename.endsWith(".tsx")?ts.ScriptKind.TSX:ts.ScriptKind.TS);
+  assert.deepEqual(ast.parseDiagnostics.map(d=>ts.flattenDiagnosticMessageText(d.messageText," ")),[],filename);
+ }
+ assert.match(call,/SmartCallMenuEditor/);
+ assert.match(call,/SmartCallAgentSetup/);
+ assert.match(read("app/api/vmv/ai-agents/test-number/route.ts"),/VMV_SMART_CALL_GUIDED_IVR_ENABLED/);
+ assert.match(read("app/api/vmv/ai-agents/test-number/route.ts"),/reservePhoneSession/);
+ assert.match(read("lib/vmv-ai-agents/phone-voices.ts"),/voiceById/);
 });
