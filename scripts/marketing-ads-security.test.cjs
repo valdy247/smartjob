@@ -107,7 +107,7 @@ test("Creative preflight uses Meta validate_only, without creating a creative or
   assert.match(code,/execution_options:JSON\.stringify\(\["validate_only"\]\)/);
   const check=fs.readFileSync(path.resolve("app/api/marketing/ads/meta/creative-check/route.ts"),"utf8");
   assert.match(check,/validateMetaLinkCreative/);
-  assert.equal(check.includes("operation:\\"create_paused\\""),false);
+  assert.equal(check.includes('operation:"create_paused"'),false);
   assert.match(check,/createdInMeta:false/);
   const route=fs.readFileSync(path.resolve("app/api/marketing/ads/meta/campaigns/route.ts"),"utf8");
   assert.ok(route.indexOf("await validateMetaLinkCreative(selectedAccount")<route.indexOf('const {data:claimed,error:claimError}'));
