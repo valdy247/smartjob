@@ -99,5 +99,5 @@ test("Ads Studio offers three short modal options before generation",()=>{
  assert.equal(ui.includes("plan.variants.map"),false);
  assert.equal(ui.includes("plan.recommendation"),false);
  assert.equal(ui.includes("plan.measurement"),false);
- assert.match(ui,/setDraftId\(" "\)|setDraftId\(" "\)/); // should be invalid? corrected below
+ assert.ok(ui.includes('setDraftId("");setDraftKey(crypto.randomUUID());'));
 });
