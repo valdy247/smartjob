@@ -53,9 +53,31 @@ export async function POST(req:NextRequest){
   const cleaned=text.trim().replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"");
   const raw=cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1);
   const data=JSON.parse(raw);
-  const title=s(data.title,80),prompt=s(data.prompt,1000),caption=s(data.caption,500);
-  if(title.length<3||prompt.length<20||caption.length<5)throw Error("invalid_copy");
-  return reply({title,prompt,caption});
+  const title=s(data.title,80),generatedPrompt=s(data.prompt,1000),caption=s(data.caption,500);
+  if(title.length<3||generatedPrompt.length<20||caption.length<5)throw Error("invalid_copy");
+  let prompt=generatedPrompt;
+  if(vision&&!vision.permitTransformation){
+   // A second independent check prevents the AI author from replacing an
+   // uploaded animal/object with the business's typical product or employee.
+   // Fail closed to the image-grounded prompt when the judge is unavailable.
+   let consistent=false;
+   try{
+    const verdict=await askAiAgent({
+     system:"You check SUBJECT CONTINUITY for image-to-video. Reply MATCH only if the supplied video prompt preserves the original image's main subject, species and setting. If it replaces the subject, adds an unrelated main person, or changes species, reply MISMATCH. No other text.",
+     messages:[{role:"user",content:JSON.stringify({
+      observedSubject:vision.subject,observedScene:vision.observations,
+      proposedVideoPrompt:generatedPrompt
+     })}],maxOutputTokens:8,temperature:0,timeoutMs:7000
+    });
+    consistent=verdict.trim().toUpperCase()==="MATCH";
+   }catch{consistent=false;}
+   if(!consistent){
+    prompt=("Starting from the exact supplied image: "+vision.subject+
+     ". "+vision.groundedMotion+
+     ". Preserve the same subject and scene continuously; no new characters, no changed species, no text overlays.").slice(0,1000);
+   }
+  }
+  return reply({title,prompt,caption,visualVerified:vision?true:null});
  }catch{
   return reply({error:"video_ai_unavailable"},503);
  }
