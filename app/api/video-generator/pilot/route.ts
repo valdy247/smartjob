@@ -11,13 +11,19 @@ export async function POST(req:NextRequest){
  const body=await req.json().catch(()=>null);
  const niche=str(body?.niche,160),audience=str(body?.audience,180),goal=str(body?.goal,180);
  const style=str(body?.style,25),freq=Number(body?.frequency);
+ const model=body?.model??"gen4.5",delivery=body?.delivery??"download";
+ const monthlyBudget=Number(body?.monthly_budget_cents??0);
  if(niche.length<3||!["realistic","cinematic","animated","product"].includes(style)||
-  ![1,3,5,7].includes(freq))return reply({error:"complete_pilot_settings"},400);
+  ![1,3,5,7].includes(freq)||!["gen4.5","kling"].includes(model)||
+  !["download","social_draft"].includes(delivery)||
+  ![0,1500,3000,6000].includes(monthlyBudget))return reply({error:"complete_pilot_settings"},400);
  const id=body?.id;
  if(id!==null&&id!==undefined&&!validUuid(id))return reply({error:"invalid_pilot"},400);
  const db=videoDb();
  let result;
- const payload={niche,audience,goal,style,frequency:freq,status:"paused",
+ // Saving a plan is NEVER permission to schedule generation, spend credits, or publish.
+ const payload={niche,audience,goal,style,frequency:freq,model,
+  monthly_budget_cents:monthlyBudget,delivery,status:"paused",
   next_run_at:null,updated_at:new Date().toISOString()};
  if(id){
   result=await db.from("vmv_video_pilots").update(payload).eq("id",id).eq("owner_id",owner).select("*").maybeSingle();
