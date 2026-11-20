@@ -175,15 +175,37 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
     created?"El catálogo se guardó; actualiza antes de intentar otra vez.":"No se pudo agregar.");
   }finally{setBusy("");}
  };
- const save=async()=>{
+ const downloadPdf=async(id:string)=>{
+  const db=getSupabase();if(!db)return;
+  setBusy("pdf");setError("");
+  try{
+   const {data:{session}}=await db.auth.getSession();
+   if(!session?.access_token)throw Error("Tu sesión expiró.");
+   const r=await fetch("/api/vmv/smart-quote/dispatch",{
+    method:"POST",headers:{Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},
+    body:JSON.stringify({quoteId:id,action:"pdf"})});
+   if(!r.ok){const d=await r.json().catch(()=>({}));throw Error(d.error||"No se pudo preparar el PDF.");}
+   const url=URL.createObjectURL(await r.blob());
+   const a=document.createElement("a");a.href=url;a.download="cotizacion-"+id.slice(0,8)+".pdf";
+   document.body.appendChild(a);a.click();a.remove();
+   window.setTimeout(()=>URL.revokeObjectURL(url),1500);
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo descargar el PDF.");}
+  finally{setBusy("");}
+ };
+ const save=async(intent:"draft"|"send")=>{
   if(busy||!owner||!valid||!chosen.length||savedId)return;
-  if(!window.confirm("¿Guardar esta cotización como BORRADOR? El precio final se calculará en la base de datos; no se enviará ni se cobrará nada."))return;
+  if(intent==="send"&&(!emailReady||!customer.email.trim()||
+   !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email.trim()))){
+   setError("Para enviar necesitas un correo válido y el proveedor de correo conectado.");return;
+  }
+  if(!window.confirm(intent==="send"?
+   "¿Aprobar esta cotización y enviarla al correo "+customer.email+" con el PDF? No se cobrará nada.":
+   "¿Guardar esta cotización como borrador para continuar después? No se enviará ni se cobrará nada."))return;
   setBusy("save");setError("");
   try{
    const db=getSupabase();if(!db)throw Error("No hay conexión.");
    const {data:{user}}=await db.auth.getUser();
    if(!user||user.id!==owner)throw Error("Tu sesión cambió.");
-   // Do not submit a quote with prices that changed in AI Agents during the wizard.
    const latest=await reloadCatalog(owner);
    if(chosen.some(previous=>{
     const current=latest.find(item=>item.id===previous.id);
@@ -191,10 +213,11 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
      current.name!==previous.name;
    })){
     setStep("services");
-    throw Error("El catálogo o algún precio cambió en AI Agents. Revisa los importes actualizados antes de guardar.");
+    throw Error("El catálogo o algún precio cambió en AI Agents. Revisa los importes actualizados.");
    }
    if(discount===null||delivery===null||discount>subTotal||
-    !validPercent(charges.tax)||!validPercent(charges.deposit))throw Error("Corrige impuestos y cargos.");
+    !validPercent(charges.tax)||!validPercent(charges.deposit))
+    throw Error("Corrige impuestos y cargos antes de guardar.");
    const {data,error}=await db.rpc("vmv_smart_quote_save",{
     p_business_id:business.id,p_quote_id:null,p_customer_name:customer.name.trim(),
     p_customer_email:customer.email.trim(),p_customer_phone:customer.phone.trim(),
@@ -204,10 +227,30 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
     p_deposit_bps:Math.round(Number(charges.deposit)*100),
     p_valid_until:charges.until,p_notes:charges.notes.trim().slice(0,1500)
    });
-   if(error||!data)throw Error(error?.message||"No se pudo crear el borrador.");
-   setSavedId(String(data));
+   if(error||!data)throw Error(error?.message||"No se pudo crear la cotización.");
+   const id=String(data);setSavedId(id);setSavedOutcome("draft");
+   const designResult=await db.rpc("vmv_smart_quote_set_design",{
+    p_quote_id:id,p_template:design});
+   if(designResult.error||designResult.data!==true)
+    throw Error("Se guardó el borrador, pero no se pudo guardar el diseño. Revísalo desde Mis cotizaciones.");
+   if(intent==="draft")return;
+   const approval=await db.rpc("vmv_smart_quote_set_status",{p_quote_id:id,p_action:"approve"});
+   if(approval.error||approval.data!==true)
+    throw Error("El borrador quedó guardado, pero falta aprobarlo. Revísalo desde Mis cotizaciones.");
+   setSavedOutcome("approved");
+   const {data:{session}}=await db.auth.getSession();
+   if(!session?.access_token)throw Error("La cotización se aprobó, pero tu sesión expiró. Revísala antes de reenviar.");
+   const result=await fetch("/api/vmv/smart-quote/dispatch",{
+    method:"POST",headers:{Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},
+    body:JSON.stringify({quoteId:id,action:"send",message})});
+   const body=await result.json().catch(()=>({}));
+   if(!result.ok)throw Error(body.error||"La cotización quedó aprobada, pero no pudo enviarse.");
+   if(body.accepted===true&&body.recorded===true)setSavedOutcome("sent");
+   else if(body.accepted===true)throw Error(body.message||
+    "El correo fue aceptado, pero el historial todavía no lo refleja. No lo reenvíes sin verificar.");
+   else throw Error("No se confirmó el envío. Revísalo en Mis cotizaciones.");
   }catch(e){setError(e instanceof Error?e.message:
-   "No se pudo guardar. Revisa tus borradores de Smart Quote antes de reintentar.");}
+   "No se pudo completar. Revisa Mis cotizaciones antes de intentarlo de nuevo.");}
   finally{setBusy("");}
  };
  const card=(label:string,value:string,to:Step)=><div key={label} className={styles.reviewCard}>
@@ -355,8 +398,14 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
   </div>:null}
   {!loading&&owner&&step==="review"?<div className={styles.panel}>
    {savedId?<div className={extra.success}><Check size={25}/>
-    <strong>Borrador creado</strong><p>La cotización no se envió ni se cobró.</p>
-    <a href="/vista-app/smart-quote">Abrir Smart Quote para revisarla y aprobarla</a>
+    <strong>{savedOutcome==="sent"?"Envío aceptado":savedOutcome==="approved"?"Cotización aprobada":"Borrador guardado"}</strong>
+    <p>{savedOutcome==="sent"?
+     "El proveedor aceptó el correo. La recepción final puede estar pendiente.":
+     savedOutcome==="approved"?"Aprobada, pero el correo no quedó confirmado. Revisa el historial.":
+     "Se guardó para más tarde. No se envió ni se cobró."}</p>
+    <button type="button" className={styles.option} disabled={Boolean(busy)}
+     onClick={()=>void downloadPdf(savedId)}><Download size={16}/> Descargar PDF</button>
+    <a href="/vista-app/smart-quote">Ver en Mis cotizaciones</a>
    </div>:<div className={styles.review}>
     {card("Negocio",business.name,"business")}
     {card("Productos y servicios",chosen.map(x=>x.name+" × "+qty[x.id]).join(", "),"services")}
@@ -369,14 +418,20 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
     {card("Total estimado",money(Math.max(0,total)),"charges")}
     {card("Plantilla",designs.find(x=>x.id===design)?.label||"Moderna","design")}
    </div>}
-   <p className={styles.note}>Los cálculos definitivos se hacen en Supabase utilizando precios aprobados. Crear un borrador no envía una cotización al cliente ni confirma un cobro.</p>
+   <p className={styles.note}>Los precios se validan en Supabase. «Enviar» requiere tu confirmación y un correo configurado; «Guardar» crea un borrador. Ninguna acción cobra dinero.</p>
   </div>:null}
   {error?<div className={styles.error} role="alert">{error}</div>:null}
   {!loading&&owner?<div className={styles.footer}>
-   {step==="review"?<button type="button" className={styles.primary+" "+theme.agentButton}
-    disabled={Boolean(busy)||Boolean(savedId)||!chosen.length}
-    onClick={()=>void save()}>{busy==="save"?<LoaderCircle size={17}/>:<FileText size={17}/>}
-    {busy==="save"?"Guardando…":savedId?"Borrador guardado":"Crear borrador de cotización"} <ArrowRight size={17}/></button>:
+   {step==="review"?(!savedId?<div className={extra.deliveryActions}>
+    <button type="button" className={styles.primary+" "+theme.agentButton}
+     disabled={Boolean(busy)||!chosen.length||!emailReady||!customer.email.trim()}
+     onClick={()=>void save("send")}><Send size={17}/>
+     {busy==="save"?"Procesando…":"Enviar cotización"}</button>
+    <button type="button" className={extra.secondaryAction}
+     disabled={Boolean(busy)||!chosen.length} onClick={()=>void save("draft")}>
+     <Bookmark size={17}/> Guardar para más tarde</button>
+    {!emailReady?<p className={styles.note}>Para habilitar el envío, configura el proveedor de correo del servidor. Guardar y descargar PDF ya está disponible.</p>:null}
+   </div>:null):
    <button type="button" className={styles.primary+" "+theme.agentButton}
     disabled={!valid||Boolean(busy)} onClick={next}>
     {editing?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={17}/></button>}
