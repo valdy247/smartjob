@@ -12,7 +12,7 @@ type Stage="source"|"imageSource"|"imageSize"|"imageQuality"|"reference"|"script
 type Mode="text"|"image";
 type Model="gen4.5"|"kling";
 type Ratio="720:1280"|"1280:720";
-type VideoStatus={configured:boolean};
+type VideoStatus={configured:boolean;pilots?:{id:string;niche:string;audience:string;goal:string;style:string;model?:string}[]};
 const stages=(mode:Mode,generated:boolean):Stage[]=>mode==="image"?
  ["source","imageSource",...(generated?["imageSize","imageQuality"] as const:[]),"reference","script","format","review","result"]:
  ["source","script","format","review","result"];
@@ -95,6 +95,7 @@ function VideoWizardSession({onClose,onRestart}:{onClose:()=>void;onRestart:()=>
  const [size,setSize]=useState("1024x1536");
  const [quality,setQuality]=useState("standard");
  const [jobId,setJobId]=useState("");
+ const [sourcePilotId,setSourcePilotId]=useState("");
  const [outputImage,setOutputImage]=useState<Blob|null>(null);
  const [clientKey]=useState(()=>crypto.randomUUID());
  const steps=stages(mode,generated),index=steps.indexOf(stage);
@@ -121,6 +122,24 @@ function VideoWizardSession({onClose,onRestart}:{onClose:()=>void;onRestart:()=>
     if(!r.ok){setVideoStatus(videoError[status.error||""]||"Video Generator aún no está disponible para esta cuenta.");return;}
     setConfigured(status.configured===true);
     if(!status.configured)setVideoStatus("Falta conectar Runway en el entorno de pruebas.");
+    const pilotId=new URLSearchParams(window.location.search).get("pilot");
+    const fromPlan=pilotId&&/^[0-9a-f-]{36}$/i.test(pilotId)?
+     status.pilots?.find(p=>p.id===pilotId):null;
+    if(fromPlan){
+     setSourcePilotId(fromPlan.id);
+     setMode("text");setStandalone(false);setStage("script");
+     if(["realistic","cinematic","animated","product"].includes(fromPlan.style))
+      setStyle(fromPlan.style as (typeof concepts)[number][0]);
+     if(fromPlan.model==="gen4.5"||fromPlan.model==="kling")setModel(fromPlan.model);
+     setPrompt([
+      "Crea un video original de 5 segundos.",
+      "Tema: "+fromPlan.niche,
+      "Público: "+fromPlan.audience,
+      "Objetivo: "+fromPlan.goal,
+      "Estilo visual: "+fromPlan.style,
+      "Una escena clara con movimiento de cámara suave y composición coherente."
+     ].join("\n").slice(0,1000));
+    }
    }catch(e){if(active)setError(e instanceof Error?e.message:"No se pudo cargar el contexto del video.");}
    finally{if(active)setLoading(false);}
   })();
@@ -246,7 +265,8 @@ function VideoWizardSession({onClose,onRestart}:{onClose:()=>void;onRestart:()=>
   try{
    const result=await api("/api/video-generator",{
     prompt:(prompt.trim().slice(0,960)+"\nVisual style: "+style).slice(0,1000),caption:caption.trim(),mode,model,ratio,duration,
-    imageUrl:mode==="image"?filePreview:"",confirmCost:true,clientKey
+    imageUrl:mode==="image"?filePreview:"",confirmCost:true,clientKey,
+    pilotId:sourcePilotId||null
    });
    if(!result.job?.id||!String(result.job.id).match(/^[0-9a-f-]{36}$/i))
     throw Error("No se pudo confirmar el trabajo.");
