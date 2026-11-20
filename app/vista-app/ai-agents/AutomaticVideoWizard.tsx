@@ -435,7 +435,7 @@ function VideoWizardSession({onClose,onRestart}:{onClose:()=>void;onRestart:()=>
    <div className={base.footer}>
     <div className={base.options}>
      <button type="button" className={base.option} onClick={onRestart}>Crear de nuevo</button>
-     <button type="button" className={base.option} onClick={onClose}>Finalizar</button>
+     <button type="button" className={base.primary} onClick={()=>window.location.assign("/vista-app?tab=services")}>Finalizar y volver a Servicios <ArrowRight size={17}/></button>
     </div>
    </div>
   </>}
