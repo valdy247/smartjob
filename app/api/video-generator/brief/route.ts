@@ -1,3 +1,4 @@
+import {IMAGE_PROMPT_LIMIT} from "@/lib/vmv-video-generator/image-prompt";
 import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {askAiAgent} from "@/lib/vmv-ai-agents/model";
@@ -12,8 +13,11 @@ export async function POST(req:NextRequest){
  const owner=await authenticatedUser(req);
  if(!owner||!videoAllowed(owner))return reply({error:"video_not_enabled_for_account"},403);
  const b=await req.json().catch(()=>null);
+ const image=b?.output==="image";
+ const limit=image?IMAGE_PROMPT_LIMIT:1000;
+ if(image&&typeof b.prompt==="string"&&b.prompt.trim().length>limit)return reply({error:"image_prompt_too_long"},400);
  const niche=s(b?.niche,160),audience=s(b?.audience,150),goal=s(b?.goal,160),
-  style=s(b?.style,30),existing=s(b?.prompt,1000);
+  style=s(b?.style,30),existing=s(b?.prompt,limit);
  const en=b?.locale==="en";
  const visual=b?.visualGrounding&&typeof b.visualGrounding==="object"?
   b.visualGrounding as Record<string,unknown>:null;
@@ -48,12 +52,12 @@ export async function POST(req:NextRequest){
  ].join(" ");
  try{
   const text=await askAiAgent({system,messages:[{role:"user",content:JSON.stringify({
-   niche,audience,goal,style,prompt:existing,visualGrounding:vision,output:"One short original video idea. Preserve the exact subject in visualGrounding; do not invent a new character."
+   niche,audience,goal,style,prompt:existing,visualGrounding:vision,output:image?"A still-image prompt preserving the user’s details.":"One short original video idea. Preserve the exact subject in visualGrounding; do not invent a new character."
   })}],maxOutputTokens:700,temperature:0.55,timeoutMs:22000});
   const cleaned=text.trim().replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"");
   const raw=cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1);
   const data=JSON.parse(raw);
-  const title=s(data.title,80),generatedPrompt=s(data.prompt,1000),caption=s(data.caption,500);
+  const title=s(data.title,80),generatedPrompt=s(data.prompt,limit),caption=s(data.caption,500);
   if(title.length<3||generatedPrompt.length<20||caption.length<5)throw Error("invalid_copy");
   let prompt=generatedPrompt;
   if(vision&&!vision.permitTransformation){
