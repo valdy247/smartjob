@@ -35,7 +35,7 @@ export async function POST(req:NextRequest){
    "Use the subject, setting and style requested by the user."
   ].join(" ");
   const signal=AbortSignal.timeout(110000);
-  const modelId=quality==="high"?"openai/gpt-image-1.5":"openai/gpt-image-1-mini";
+  const modelId="openai/gpt-image-1-mini";
   const request={
    maxRetries:0,
    prompt:instructions+"\n"+description,
