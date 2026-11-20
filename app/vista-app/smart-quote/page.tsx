@@ -3,6 +3,7 @@ import {useCallback,useEffect,useMemo,useState} from "react";
 import {ArrowLeft,Check,ClipboardCopy,FileText,Plus,RefreshCw,ShieldCheck,Trash2,Wallet,Send,PackageCheck,Printer,Download} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
+import ShareQuotePdf from "./ShareQuotePdf";
 import styles from "./smart-quote.module.css";
 
 type Business={id:string;name:string;owner_id:string};
@@ -345,6 +346,8 @@ export default function SmartQuotePage(){
         {q.status==="approved"||q.status==="sent"?<button type="button" disabled={busy||q.valid_until<plusDays(0)} onClick={()=>copyQuote(q)}><ClipboardCopy size={15}/>{localize("Copiar propuesta","Copy quote")}</button>:null}
         {q.status==="approved"||q.status==="sent"?<button type="button" disabled={busy}
          onClick={()=>documentAction(q,"pdf")}><Download size={15}/>{localize("Descargar PDF","Download PDF")}</button>:null}
+        {q.status==="approved"||q.status==="sent"?<ShareQuotePdf key={q.id+":"+q.revision}
+         quoteId={q.id} english={language==="en"} disabled={busy}/>:null}
         {q.status==="approved"||q.status==="sent"?<button type="button" disabled={busy||q.valid_until<plusDays(0)}
          onClick={()=>setPrintableQuote(q)}><Printer size={15}/>{localize("Imprimir","Print")}</button>:null}
         {q.status==="approved"?<button type="button" disabled={busy||!emailReady||!q.customer_email||q.valid_until<plusDays(0)}
