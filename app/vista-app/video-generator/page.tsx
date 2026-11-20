@@ -8,17 +8,18 @@ import {getSupabase} from "@/lib/supabase";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import styles from "./page.module.css";
+import AutopilotWizard,{type AutopilotPlan} from "./AutopilotWizard";
 
 type Job={id:string;pilot_id:string|null;prompt:string;mode:"text"|"image";model:"gen4.5"|"kling";
  ratio:"1280:720"|"720:1280";duration:number;status:string;output_url:string|null;
  failure_code:string|null;caption:string|null;created_at:string;updated_at:string};
-type Pilot={id:string;niche:string;audience:string;goal:string;style:string;frequency:number;
- status:string;created_at:string};
+type Pilot=AutopilotPlan & {status:string;created_at:string};
 type Screen="home"|"create"|"pilot"|"library";
 type Form={prompt:string;caption:string;mode:"text"|"image";model:"gen4.5"|"kling";
  ratio:"1280:720"|"720:1280";duration:5|10};
 const initial:Form={prompt:"",caption:"",mode:"text",model:"gen4.5",ratio:"720:1280",duration:5};
-const defaultPilot={id:"",niche:"",audience:"",goal:"",style:"realistic",frequency:3};
+const defaultPilot:AutopilotPlan={id:"",niche:"",audience:"Público general",goal:"Atraer clientes",style:"realistic",frequency:3,
+ model:"gen4.5",monthly_budget_cents:1500,delivery:"download"};
 function errMessage(code:string,en:boolean){
  const map:Record<string,[string,string]>={
   video_not_enabled_for_account:["Video Generator aún no está habilitado para esta cuenta.","Video Generator isn't enabled for this account yet."],
@@ -177,12 +178,23 @@ export default function VideoGeneratorPage(){
    setJobs(r.jobs||[]);setPilots(r.pilots||[]);setConfigured(Boolean(r.configured));
    if(r.pilots?.[0])setPilot({
     id:r.pilots[0].id,niche:r.pilots[0].niche,audience:r.pilots[0].audience,
-    goal:r.pilots[0].goal,style:r.pilots[0].style,frequency:r.pilots[0].frequency
+    goal:r.pilots[0].goal,style:r.pilots[0].style,frequency:r.pilots[0].frequency,
+    model:r.pilots[0].model==="kling"?"kling":"gen4.5",
+    monthly_budget_cents:[0,1500,3000,6000].includes(r.pilots[0].monthly_budget_cents)?r.pilots[0].monthly_budget_cents:1500,
+    delivery:r.pilots[0].delivery==="social_draft"?"social_draft":"download
    });
   }catch(e){setError(e instanceof Error?e.message:"unavailable");}
   finally{setReady(true);}
  },[]);
  useEffect(()=>{void load();},[load]);
+ useEffect(()=>{
+  if(!ready)return;
+  const url=new URL(window.location.href);
+  if(url.searchParams.get("setup")!=="autopilot")return;
+  url.searchParams.delete("setup");
+  window.history.replaceState(null,"",url.pathname+url.search+url.hash);
+  setScreen("pilot");
+ },[ready]);
  const refreshJob=useCallback(async(id:string)=>{
   try{
    const r=await api("?id="+encodeURIComponent(id));
@@ -238,24 +250,21 @@ export default function VideoGeneratorPage(){
   }catch(e){setError(e instanceof Error?e.message:"unavailable");}
   finally{setBusy("");}
  };
- const savePilot=async()=>{
-  if(busy)return;
+ const savePilot=async(next:AutopilotPlan,prepare:boolean):Promise<boolean>=>{
+  if(busy)return false;
   setBusy("pilot");setError("");setNotice("");
   try{
    const result=await api("/pilot","POST",{
-    ...(pilot.id?{id:pilot.id}:{}),niche:pilot.niche,audience:pilot.audience,
-    goal:pilot.goal,style:pilot.style,frequency:pilot.frequency
+    ...(next.id?{id:next.id}:{}),
+    niche:next.niche,audience:next.audience,goal:next.goal,style:next.style,frequency:next.frequency,
+    model:next.model,monthly_budget_cents:next.monthly_budget_cents,delivery:next.delivery
    });
    setPilots(prev=>[result.pilot,...prev.filter(p=>p.id!==result.pilot.id)]);
-   setPilot(prev=>({...prev,id:result.pilot.id}));
-   setNotice(L("Configuración guardada.","Settings saved."));
-   return result.pilot as Pilot;
-  }catch(e){setError(e instanceof Error?e.message:"unavailable");}
+   setPilot({...next,id:result.pilot.id});
+   if(prepare)window.location.assign("/vista-app/ai-agents?service=video&pilot="+encodeURIComponent(result.pilot.id));
+   return true;
+  }catch(e){setError(e instanceof Error?e.message:"pilot_save_unavailable");return false;}
   finally{setBusy("");}
- };
- const preparePilot=async()=>{
-  const saved=await savePilot();
-  if(saved?.id)window.location.assign("/vista-app/ai-agents?service=video&pilot="+encodeURIComponent(saved.id));
  };
  const onFile=async(file?:File)=>{
   if(!file)return;
@@ -396,50 +405,8 @@ export default function VideoGeneratorPage(){
     </button>
    </section>
   </>:null}
-  {screen==="pilot"?<>
-   <div className={styles.heading}><span className={styles.eyebrow}><Workflow size={15}/>{L("CONTENIDO RECURRENTE","RECURRING CONTENT")}</span>
-    <h1>{L("Piloto automático","Content autopilot")}</h1>
-   </div>
-   <section className={styles.card}>
-    <div className={styles.field}><label htmlFor="vmv-niche">{L("Tu nicho","Your niche")}</label>
-     <input id="vmv-niche" value={pilot.niche} maxLength={160}
-      onChange={e=>setPilot(p=>({...p,niche:e.target.value}))}
-      placeholder={L("Repostería, historias, tecnología…","Baking, storytelling, technology…")}/>
-    </div>
-    <div className={styles.field}><label htmlFor="vmv-audience">{L("Público","Audience")}</label>
-     <input id="vmv-audience" value={pilot.audience} maxLength={180}
-      onChange={e=>setPilot(p=>({...p,audience:e.target.value}))} placeholder={L("¿A quién quieres llegar?","Who do you want to reach?")}/>
-    </div>
-    <div className={styles.field}><label htmlFor="vmv-goal">{L("Objetivo","Goal")}</label>
-     <input id="vmv-goal" value={pilot.goal} maxLength={180}
-      onChange={e=>setPilot(p=>({...p,goal:e.target.value}))} placeholder={L("Dar a conocer mis productos","Introduce my products")}/>
-    </div>
-    <div className={styles.field}><label>{L("Frecuencia objetivo","Target frequency")}</label>
-     <div className={styles.segment}>
-      {([1,3,5,7] as const).map(n=><button type="button" key={n}
-       className={pilot.frequency===n?styles.chosen:""} onClick={()=>setPilot(p=>({...p,frequency:n}))}>{n}/{L("sem","wk")}</button>)}
-     </div>
-    </div>
-    <div className={styles.field}><label>{L("Estilo","Style")}</label>
-     <div className={styles.segment}>
-      {([["realistic",L("Realista","Realistic")],["cinematic",L("Cine","Cinema")],
-       ["animated",L("Animado","Animated")],["product",L("Producto","Product")]] as const)
-       .map(([code,name])=><button type="button" key={code}
-       className={pilot.style===code?styles.chosen:""} onClick={()=>setPilot(p=>({...p,style:code}))}>{name}</button>)}
-     </div>
-    </div>
-    <div className={styles.inlineActions}>
-     <button type="button" className={styles.secondary} disabled={busy!==""||pilot.niche.trim().length<3}
-      onClick={()=>void savePilot()}>{busy==="pilot"?<LoaderCircle size={16} className={styles.spinner}/>:<Check size={16}/>}
-      {L("Guardar piloto","Save pilot")}</button>
-     <button type="button" className={styles.primary} disabled={busy!==""||pilot.niche.trim().length<3}
-      onClick={()=>void preparePilot()}>{busy==="pilot"?<LoaderCircle size={16} className={styles.spinner}/>:<Sparkles size={16}/>}
-      {L("Preparar primer video","Prepare first video")}</button>
-    </div>
-    <div className={styles.setup}><CalendarDays size={17}/>
-     {L("El calendario automático y la publicación quedan pausados. Puedes preparar videos y aprobar cada generación.","Automatic scheduling and publishing are paused. You can prepare videos and approve each generation.")}</div>
-   </section>
-  </>:null}
+  {screen==="pilot"&&ready?<AutopilotWizard initial={pilot} en={en} busy={busy==="pilot"}
+   onSave={savePilot} onExit={()=>open("home")} onLibrary={()=>open("library")}/>:null}
   {screen==="library"?<>
    <div className={styles.heading}><span className={styles.eyebrow}><Library size={15}/>{L("TUS CREACIONES","YOUR CREATIONS")}</span>
     <h1>{L("Mi biblioteca","My library")}</h1>
