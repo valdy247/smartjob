@@ -30,7 +30,7 @@ export async function POST(req:NextRequest){
  if(previous&&previous.until>now&&previous.count>=8)return reply({error:"video_ai_limit"},429);
  quota.set(owner,{until:previous&&previous.until>now?previous.until:now+3600000,
   count:previous&&previous.until>now?previous.count+1:1});
- const system=[
+ const system=b?.output==="image"?"Improve the supplied still-image prompt while preserving the user\u0027s idea. Specify composition, lighting and style. Return JSON with title, prompt and caption. Write in the language of the user prompt.":[
   "You create original, visually specific 5-to-10-second AI video prompts and optional social captions for small businesses and content creators.",
   "Return one strict JSON object with the keys title, prompt, caption and nothing else.",
   "Prompt must describe ONE coherent scene, camera motion, subjects, lighting, pace, physical actions and composition. Maximum 900 characters.",
