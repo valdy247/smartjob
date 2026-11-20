@@ -68,3 +68,25 @@ test("Smart Quote AI wizard always shows Continue in the business step and waits
  assert.equal(wizard.includes('className={styles.optionActive} onClick={next}'),false);
  assert.equal(wizard.includes('step!=="business"?<button'),false);
 });
+
+
+test("Smart Quote syncs original AI Agents product/service catalogs without duplicate price authority",()=>{
+ const wizard=readFileSync("app/vista-app/ai-agents/AutomaticQuoteWizard.tsx","utf8");
+ const sync=readFileSync("supabase/sql/vmv_smart_quote_agent_catalog_sync_20261119.sql","utf8");
+ const parsed=ts.createSourceFile("AutomaticQuoteWizard.tsx",wizard,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+ assert.deepEqual(parsed.parseDiagnostics.map(x=>ts.flattenDiagnosticMessageText(x.messageText," ")),[]);
+ assert.match(wizard,/Conectar inventario/);
+ assert.match(wizard,/Conectar servicios/);
+ assert.match(wizard,/vmv_ai_catalog_items/);
+ assert.match(wizard,/vmv_ai_booking_services/);
+ assert.match(wizard,/source_kind,source_id/);
+ assert.match(wizard,/central_business_id/);
+ assert.match(wizard,/await reloadCatalog\(owner\)/);
+ assert.match(wizard,/p_items:chosen\.map/);
+ assert.match(sync,/ON CONFLICT \(owner_id,business_id,source_kind,source_id\)/);
+ assert.match(sync,/AFTER INSERT OR UPDATE OR DELETE ON public\.vmv_ai_catalog_items/);
+ assert.match(sync,/AFTER INSERT OR UPDATE OR DELETE ON public\.vmv_ai_booking_services/);
+ assert.match(sync,/approved AND NEW\.active/);
+ assert.match(sync,/Edit linked products and services in AI Agents/);
+ assert.match(sync,/JOIN public\.vmv_marketing_businesses b ON b\.id=w\.central_business_id AND b\.owner_id=/);
+});

@@ -1,13 +1,14 @@
 "use client";
-import {useEffect,useMemo,useState} from "react";
-import {ArrowLeft,ArrowRight,Bot,Check,FileText,LoaderCircle,Pencil,Plus,ShieldCheck,Sparkles} from "lucide-react";
+import {useCallback,useEffect,useState} from "react";
+import {ArrowLeft,ArrowRight,Bot,Check,FileText,LoaderCircle,Pencil,Plus,ShieldCheck,Sparkles,Package,CalendarCheck,RefreshCw} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import type {CentralBusiness} from "./centralBusiness";
 import type {PersistedAgent} from "./agentStore";
 import theme from "./AgentServiceFlow.module.css";
 import styles from "./AutomaticWebWizard.module.css";
 import extra from "./AutomaticQuoteWizard.module.css";
-type QuoteService={id:string;name:string;description:string;unit_name:string;unit_price_cents:number;active:boolean};
+type QuoteService={id:string;name:string;description:string;unit_name:string;unit_price_cents:number;active:boolean;source_kind:"product"|"service"|null;source_id:string|null};
+type QuoteKind="product"|"service";
 type Step="business"|"services"|"customer"|"charges"|"review";
 const questions:Record<Step,string>={
  business:"¿Esta cotización es para tu negocio?",
@@ -31,15 +32,23 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
  const [step,setStep]=useState<Step>("business"),[editing,setEditing]=useState(false);
  const [businessConfirmed,setBusinessConfirmed]=useState(false);
  const [owner,setOwner]=useState(""),[catalog,setCatalog]=useState<QuoteService[]>([]);
+ const [connected,setConnected]=useState({product:false,service:false});
+ const [refreshing,setRefreshing]=useState(false);
  const [qty,setQty]=useState<Record<string,string>>({});
  const [customer,setCustomer]=useState({name:"",email:"",phone:""});
  const [charges,setCharges]=useState({tax:"0",discount:"0",delivery:"0",deposit:"0",until:expiry(),notes:""});
- const [newItem,setNewItem]=useState({name:"",price:"",unit:"unidad",description:""});
+ const [newItem,setNewItem]=useState({kind:"product" as QuoteKind,name:"",price:"",description:"",duration:"60"});
  const [adding,setAdding]=useState(false),[approved,setApproved]=useState(false);
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(""),[error,setError]=useState("");
  const [savedId,setSavedId]=useState("");
  const index=steps.indexOf(step);
- const chosen=catalog.filter(x=>x.active&&Number(qty[x.id])>0);
+ const visibleCatalog=catalog.filter(x=>x.active&&
+  (x.source_kind===null||connected[x.source_kind]));
+ const chosen=visibleCatalog.filter(x=>Number(qty[x.id])>0);
+ const sourceCounts={
+  product:catalog.filter(x=>x.active&&x.source_kind==="product").length,
+  service:catalog.filter(x=>x.active&&x.source_kind==="service").length
+ };
  const subTotal=chosen.reduce((sum,x)=>sum+x.unit_price_cents*Number(qty[x.id]||0),0);
  const discount=parseUsd(charges.discount),delivery=parseUsd(charges.delivery);
  const tax=validPercent(charges.tax)?Math.round(Math.max(0,subTotal-(discount||0))*Number(charges.tax)/100):0;
@@ -53,6 +62,16 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
    validPercent(charges.tax)&&validPercent(charges.deposit)&&
    charges.until>=localDate(0)&&charges.until<=localDate(365):
   true;
+ const reloadCatalog=useCallback(async(userId:string)=>{
+  const db=getSupabase();if(!db)throw Error("No se pudo consultar Smart Quote.");
+  const {data,error}=await db.from("vmv_smart_quote_catalog")
+   .select("id,name,description,unit_name,unit_price_cents,active,source_kind,source_id")
+   .eq("business_id",business.id).eq("owner_id",userId)
+   .order("updated_at",{ascending:false}).limit(200);
+  if(error)throw Error("No se pudo sincronizar el catálogo de este negocio.");
+  const latest=(data||[]) as QuoteService[];
+  setCatalog(latest);return latest;
+ },[business.id]);
  useEffect(()=>{
   let live=true;
   void(async()=>{
@@ -62,20 +81,36 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
     if(error||!user||user.is_anonymous||user.id!==business.owner_id||
      user.id!==agent.owner_id||agent.business_id!==workspaceId)
      throw Error("Debes utilizar el agente principal de tu negocio.");
-    if(!live)return;setOwner(user.id);
-    const {data:allowed}=await db.from("vmv_marketing_businesses").select("id")
-     .eq("id",business.id).eq("owner_id",user.id).maybeSingle();
-    if(!allowed)throw Error("El negocio no está disponible.");
-    const {data,error:catalogError}=await db.from("vmv_smart_quote_catalog")
-     .select("id,name,description,unit_name,unit_price_cents,active")
-     .eq("business_id",business.id).eq("owner_id",user.id)
-     .order("created_at",{ascending:false}).limit(100);
-    if(catalogError)throw Error("No se pudo consultar el catálogo de cotizaciones.");
-    if(live)setCatalog((data||[]) as QuoteService[]);
+    const [central,linked]=await Promise.all([
+     db.from("vmv_marketing_businesses").select("id")
+      .eq("id",business.id).eq("owner_id",user.id).maybeSingle(),
+     db.from("vmv_ai_businesses").select("id")
+      .eq("id",workspaceId).eq("owner_id",user.id)
+      .eq("central_business_id",business.id).maybeSingle()
+    ]);
+    if(central.error||!central.data||linked.error||!linked.data)
+     throw Error("Vincula este negocio con Mi agente para usar sus productos y servicios.");
+    if(!live)return;
+    await reloadCatalog(user.id);
+    if(live)setOwner(user.id);
    }catch(e){if(live)setError(e instanceof Error?e.message:"No se pudo cargar Smart Quote.");}
    finally{if(live)setLoading(false);}
   })();return()=>{live=false;};
- },[business.id,agent.id,workspaceId]);
+ },[business.id,business.owner_id,agent.id,agent.owner_id,agent.business_id,workspaceId,reloadCatalog]);
+ useEffect(()=>{
+  if(!owner)return;
+  const refresh=()=>{if(document.visibilityState==="visible")
+   void reloadCatalog(owner).catch(()=>setError("No se pudo actualizar el catálogo. Prueba de nuevo."));};
+  window.addEventListener("focus",refresh);
+  return()=>window.removeEventListener("focus",refresh);
+ },[owner,reloadCatalog]);
+ const refreshManually=async()=>{
+  if(refreshing||!owner)return;
+  setRefreshing(true);setError("");
+  try{await reloadCatalog(owner);}
+  catch(e){setError(e instanceof Error?e.message:"No se pudo actualizar.");}
+  finally{setRefreshing(false);}
+ };
  const next=()=>{
   if(!valid||busy)return;setError("");
   if(editing){setEditing(false);setStep("review");return;}
@@ -89,24 +124,40 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
  const createService=async()=>{
   if(busy||!owner)return;
   const price=parseUsd(newItem.price);
-  if(!newItem.name.trim()||newItem.name.trim().length<2||price===null||
-   price<1||price>100000000||!newItem.unit.trim())return;
-  if(!window.confirm("¿Confirmas que el nombre, precio y unidad de este servicio son reales y autorizados?"))return;
+  const kind=newItem.kind;
+  const minutes=Number(newItem.duration);
+  if(newItem.name.trim().length<2||price===null||price<1||price>10000000||
+   (kind==="service"&&(!Number.isInteger(minutes)||minutes<15||minutes>240)))return;
+  if(!window.confirm("¿Confirmas que el producto o servicio y su precio son reales, y autorizas añadirlo al catálogo compartido de AI Agents?"))return;
   setBusy("service");setError("");
+  let created=false;
   try{
    const db=getSupabase();if(!db)throw Error("No se pudo conectar.");
    const {data:{user}}=await db.auth.getUser();
    if(!user||user.id!==owner)throw Error("Tu sesión cambió.");
-   const {data,error}=await db.from("vmv_smart_quote_catalog")
-    .insert({owner_id:owner,business_id:business.id,name:newItem.name.trim().slice(0,120),
-     description:newItem.description.trim().slice(0,700),unit_name:newItem.unit.trim().slice(0,35),
-     unit_price_cents:price,active:true}).select("id,name,description,unit_name,unit_price_cents,active").single();
-   if(error||!data)throw Error("No se pudo crear este servicio.");
-   setCatalog(v=>[data as QuoteService,...v]);
-   setQty(v=>({...v,[data.id]:"1"}));setAdding(false);
-   setNewItem({name:"",price:"",unit:"unidad",description:""});
-  }catch(e){setError(e instanceof Error?e.message:"No se pudo agregar el servicio.");}
-  finally{setBusy("");}
+   const shared={owner_id:owner,business_id:workspaceId,
+    name:newItem.name.trim().slice(0,120),
+    description:newItem.description.trim().slice(0,500),
+    price_cents:price,currency:"usd",approved:true,active:true};
+   const table=kind==="product"?"vmv_ai_catalog_items":"vmv_ai_booking_services";
+   const fields=kind==="product"?
+    {...shared,sku:"SQ-"+crypto.randomUUID().replace(/-/g,"").slice(0,18).toUpperCase(),
+     stock_mode:"manual",available_qty:null}:
+    {...shared,duration_minutes:minutes,auto_confirm:false};
+   const {data,error}=await db.from(table).insert(fields).select("id").single();
+   if(error||!data?.id)throw Error("No se pudo guardar en el catálogo de AI Agents.");
+   created=true;
+   const latest=await reloadCatalog(owner);
+   const mirror=latest.find(x=>x.active&&x.source_kind===kind&&x.source_id===data.id);
+   if(!mirror)throw Error("Guardado en AI Agents, pero falta actualizar Smart Quote. Actualiza la lista antes de volver a guardar.");
+   setConnected(v=>({...v,[kind]:true}));
+   setQty(v=>({...v,[mirror.id]:"1"}));
+   setAdding(false);
+   setNewItem({kind,name:"",price:"",description:"",duration:"60"});
+  }catch(e){
+   setError(e instanceof Error?e.message:
+    created?"El catálogo se guardó; actualiza antes de intentar otra vez.":"No se pudo agregar.");
+  }finally{setBusy("");}
  };
  const save=async()=>{
   if(busy||!owner||!valid||!chosen.length||savedId)return;
@@ -116,6 +167,16 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
    const db=getSupabase();if(!db)throw Error("No hay conexión.");
    const {data:{user}}=await db.auth.getUser();
    if(!user||user.id!==owner)throw Error("Tu sesión cambió.");
+   // Do not submit a quote with prices that changed in AI Agents during the wizard.
+   const latest=await reloadCatalog(owner);
+   if(chosen.some(previous=>{
+    const current=latest.find(item=>item.id===previous.id);
+    return !current||!current.active||current.unit_price_cents!==previous.unit_price_cents||
+     current.name!==previous.name;
+   })){
+    setStep("services");
+    throw Error("El catálogo o algún precio cambió en AI Agents. Revisa los importes actualizados antes de guardar.");
+   }
    if(discount===null||delivery===null||discount>subTotal||
     !validPercent(charges.tax)||!validPercent(charges.deposit))throw Error("Corrige impuestos y cargos.");
    const {data,error}=await db.rpc("vmv_smart_quote_save",{
@@ -155,30 +216,63 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
    <p className={styles.note}>La cotización usará precios de tu catálogo real de Smart Quote, no precios imaginados por IA.</p>
   </div>:null}
   {!loading&&owner&&step==="services"?<div className={styles.panel}>
-   <p className={styles.note}>Selecciona los servicios y cantidades. Puedes elegir varios o añadir uno con precio confirmado.</p>
-   <div className={extra.serviceList}>{catalog.filter(x=>x.active).map(item=><div key={item.id} className={extra.service}>
+   <p className={styles.note}>Conecta el inventario o los servicios de Mi agente. También puedes añadir uno aquí; quedará disponible en AI Agents y Smart Quote.</p>
+   <div className={extra.sourceGrid} role="group" aria-label="Conectar catálogos de Mi agente">
+    <button type="button" aria-pressed={connected.product} className={connected.product?extra.sourceConnected:extra.sourceCard}
+     onClick={()=>setConnected(v=>({...v,product:!v.product}))}>
+     <Package size={20}/><span><strong>Conectar inventario</strong>
+      <small>{sourceCounts.product} producto(s) activo(s) y aprobado(s)</small></span>
+     {connected.product?<Check size={17}/>:<Plus size={17}/>}
+    </button>
+    <button type="button" aria-pressed={connected.service} className={connected.service?extra.sourceConnected:extra.sourceCard}
+     onClick={()=>setConnected(v=>({...v,service:!v.service}))}>
+     <CalendarCheck size={20}/><span><strong>Conectar servicios</strong>
+      <small>{sourceCounts.service} servicio(s) con precio confirmado</small></span>
+     {connected.service?<Check size={17}/>:<Plus size={17}/>}
+    </button>
+   </div>
+   <button type="button" className={extra.refresh} disabled={refreshing||Boolean(busy)}
+    onClick={()=>void refreshManually()}><RefreshCw size={15}/>
+    {refreshing?"Actualizando…":"Actualizar desde AI Agents"}</button>
+   <div className={extra.serviceList}>{visibleCatalog.map(item=><div key={item.id} className={extra.service}>
     <label><input type="checkbox" checked={Number(qty[item.id])>0}
      onChange={e=>setQty(v=>({...v,[item.id]:e.target.checked?"1":"0"}))}/>
-     <span><strong>{item.name}</strong><small>{money(item.unit_price_cents)} / {item.unit_name}</small></span></label>
+     <span><strong>{item.name}</strong>
+      <small>{money(item.unit_price_cents)} / {item.unit_name} · {item.source_kind==="product"?"Inventario de Mi agente":
+       item.source_kind==="service"?"Servicios de Mi agente":"Smart Quote"}</small></span></label>
     {Number(qty[item.id])>0?<input type="number" min={1} max={9999} inputMode="numeric"
      aria-label={"Cantidad de "+item.name} value={qty[item.id]}
      onChange={e=>setQty(v=>({...v,[item.id]:e.target.value}))}/>:null}
    </div>)}</div>
-   {!catalog.some(x=>x.active)?<p className={styles.warning}>
-    Todavía no hay servicios para cotizar. Añade uno con su precio real para continuar.</p>:null}
+   {!visibleCatalog.length?<p className={styles.note}>
+    {sourceCounts.product+sourceCounts.service>0?
+     "Selecciona «Conectar inventario» o «Conectar servicios» para usar los artículos existentes.":
+     "Aún no hay artículos aprobados con precio. Añade un producto o servicio aquí para compartirlo con Mi agente."}
+   </p>:null}
    <button type="button" className={styles.option} onClick={()=>setAdding(x=>!x)}>
-    <Plus size={17}/> Añadir nuevo servicio</button>
+    <Plus size={17}/> {adding?"Cerrar formulario":"Añadir producto o servicio"}</button>
    {adding?<div className={extra.serviceForm}>
+    <div className={extra.kindSwitch} role="group" aria-label="Tipo de artículo">
+     <button type="button" aria-pressed={newItem.kind==="product"} className={newItem.kind==="product"?extra.kindOn:extra.kindOff}
+      onClick={()=>setNewItem(v=>({...v,kind:"product"}))}>Producto</button>
+     <button type="button" aria-pressed={newItem.kind==="service"} className={newItem.kind==="service"?extra.kindOn:extra.kindOff}
+      onClick={()=>setNewItem(v=>({...v,kind:"service"}))}>Servicio</button>
+    </div>
     <label className={styles.field}>Nombre<input maxLength={120} value={newItem.name}
      onChange={e=>setNewItem(v=>({...v,name:e.target.value}))}/></label>
     <label className={styles.field}>Precio unitario USD<input inputMode="decimal" value={newItem.price}
      onChange={e=>setNewItem(v=>({...v,price:e.target.value}))} placeholder="50.00"/></label>
-    <label className={styles.field}>Unidad<input maxLength={35} value={newItem.unit}
-     onChange={e=>setNewItem(v=>({...v,unit:e.target.value}))}/></label>
-    <label className={styles.field}>Descripción<textarea rows={2} maxLength={700} value={newItem.description}
+    {newItem.kind==="service"?<label className={styles.field}>Duración del servicio (minutos)
+     <select value={newItem.duration} onChange={e=>setNewItem(v=>({...v,duration:e.target.value}))}>
+      {[15,30,45,60,90,120,180,240].map(minutes=><option key={minutes} value={minutes}>{minutes} minutos</option>)}
+     </select></label>:null}
+    <label className={styles.field}>Descripción<textarea rows={2} maxLength={500} value={newItem.description}
      onChange={e=>setNewItem(v=>({...v,description:e.target.value}))}/></label>
-    <button type="button" className={styles.optionActive} disabled={Boolean(busy)||!newItem.name.trim()||parseUsd(newItem.price)===null}
-     onClick={()=>void createService()}>Guardar servicio aprobado</button>
+    <p className={styles.note}>Se guardará en el catálogo real de AI Agents como activo y aprobado. El precio se podrá actualizar desde Mi agente.</p>
+    <button type="button" className={styles.optionActive}
+     disabled={Boolean(busy)||newItem.name.trim().length<2||parseUsd(newItem.price)===null||
+      Number(newItem.price)>100000}
+     onClick={()=>void createService()}>{busy==="service"?"Guardando…":"Guardar y sincronizar con Mi agente"}</button>
    </div>:null}
    <strong className={extra.total}>Subtotal: {money(subTotal)}</strong>
   </div>:null}
@@ -215,7 +309,7 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
     <a href="/vista-app/smart-quote">Abrir Smart Quote para revisarla y aprobarla</a>
    </div>:<div className={styles.review}>
     {card("Negocio",business.name,"business")}
-    {card("Servicios",chosen.map(x=>x.name+" × "+qty[x.id]).join(", "),"services")}
+    {card("Productos y servicios",chosen.map(x=>x.name+" × "+qty[x.id]).join(", "),"services")}
     {card("Cliente",customer.name+" · "+customer.email,"customer")}
     {card("Impuestos",charges.tax+" %","charges")}
     {card("Descuento",money(discount||0),"charges")}
