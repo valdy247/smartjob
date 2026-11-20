@@ -190,10 +190,16 @@ export default function VideoGeneratorPage(){
  useEffect(()=>{
   if(!ready)return;
   const url=new URL(window.location.href);
-  if(url.searchParams.get("setup")!=="autopilot")return;
-  url.searchParams.delete("setup");
-  window.history.replaceState(null,"",url.pathname+url.search+url.hash);
-  setScreen("pilot");
+  if(url.searchParams.get("setup")==="autopilot"){
+   url.searchParams.delete("setup");
+   window.history.replaceState(null,"",url.pathname+url.search+url.hash);
+   setScreen("pilot");return;
+  }
+  if(url.searchParams.get("view")==="library"){
+   url.searchParams.delete("view");
+   window.history.replaceState(null,"",url.pathname+url.search+url.hash);
+   setScreen("library");
+  }
  },[ready]);
  const refreshJob=useCallback(async(id:string)=>{
   try{
