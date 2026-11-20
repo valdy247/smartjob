@@ -1,10 +1,8 @@
 "use client";
-import {useEffect,useMemo,useState} from "react";
-import {ArrowLeft,ArrowRight,Bot,Check,CheckCircle2,Film,ImagePlus,LoaderCircle,Package,Pencil,RefreshCw,Sparkles,WandSparkles} from "lucide-react";
+import {useEffect,useState} from "react";
+import {ArrowLeft,ArrowRight,Bot,Check,CheckCircle2,Film,ImagePlus,LoaderCircle,Pencil,RefreshCw,Sparkles,WandSparkles} from "lucide-react";
 import VideoCreationResult,{mediaHeaders} from "./VideoCreationResult";
 import {getSupabase} from "@/lib/supabase";
-import type {CentralBusiness} from "./centralBusiness";
-import type {PersistedAgent} from "./agentStore";
 import theme from "./AgentServiceFlow.module.css";
 import base from "./AutomaticWebWizard.module.css";
 import styles from "./AutomaticVideoWizard.module.css";
@@ -13,9 +11,7 @@ type Stage="source"|"reference"|"script"|"format"|"review"|"result";
 type Mode="text"|"image";
 type Model="gen4.5"|"kling";
 type Ratio="720:1280"|"1280:720";
-type Item={id:string;name:string;description:string;type:"product"|"service"};
-type Pilot={id:string;niche:string;audience:string;goal:string;style:string;frequency:number};
-type VideoStatus={configured:boolean;dailyLimit?:number;pilots?:Pilot[]};
+type VideoStatus={configured:boolean};
 const stages=(mode:Mode):Stage[]=>mode==="image"?
  ["source","reference","script","format","review","result"]:
  ["source","script","format","review","result"];
@@ -23,8 +19,6 @@ const questions:Record<Stage,string>={
  source:"¿Qué quieres crear?",reference:"Elige tu imagen de partida",script:"Describe lo que quieres crear",
  format:"Ajustes de generación",review:"Revisa tu creación",result:"Tu resultado"
 };
-const targets=[["promotion","Presentar mi negocio"],["product","Mostrar productos o servicios"],
- ["education","Compartir un consejo"],["social","Contenido para redes"]] as const;
 const concepts=[["realistic","Realista"],["cinematic","Cinematográfico"],["animated","Animado"],["product","Producto"]] as const;
 const videoError:Record<string,string>={
  video_not_enabled_for_account:"La generación está limitada a cuentas autorizadas del piloto. Puedes preparar el guion.",
@@ -62,28 +56,19 @@ async function jpgDataUrl(blob:Blob){
   throw Error("La imagen es demasiado grande para el generador.");
  }finally{bitmap.close();}
 }
-export default function AutomaticVideoWizard({business,workspaceId,agent,onClose}:{
- business:CentralBusiness;workspaceId:string;agent:PersistedAgent;onClose:()=>void;
-}){
+export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
  const [stage,setStage]=useState<Stage>("source");
  const [editing,setEditing]=useState(false);
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState("");
  const [error,setError]=useState("");
  const [owner,setOwner]=useState("");
- const name=business.name;
- const [purpose,setPurpose]=useState<(typeof targets)[number][0]>("promotion");
- const [items,setItems]=useState<Item[]>([]);
- const [selected,setSelected]=useState<string[]>([]);
- const [extra,setExtra]=useState("");
- const [audience,setAudience]=useState("Clientes interesados en "+business.name.slice(0,80));
  const [style,setStyle]=useState<(typeof concepts)[number][0]>("cinematic");
  const [model,setModel]=useState<Model>("gen4.5");
  const [ratio,setRatio]=useState<Ratio>("720:1280");
  const [duration,setDuration]=useState<5|10>(5);
  const [mode,setMode]=useState<Mode>("text");
  const [filePreview,setFilePreview]=useState("");
- const [pilotId,setPilotId]=useState<string|null>(null);
  const [imageCandidate,setImageCandidate]=useState("");
  const [imageDirection,setImageDirection]=useState("");
  const [imageAnalysis,setImageAnalysis]=useState<{
@@ -104,11 +89,6 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
  const [outputImage,setOutputImage]=useState<Blob|null>(null);
  const [clientKey]=useState(()=>crypto.randomUUID());
  const steps=stages(mode),index=steps.indexOf(stage);
- const chosen=useMemo(()=>items.filter(x=>selected.includes(x.id)),[items,selected]);
- const offer=[...chosen.map(x=>x.name),...extra.split(/[\n,]+/).map(x=>x.trim()).filter(Boolean)]
-  .filter((x,i,a)=>a.indexOf(x)===i).slice(0,12).join(", ");
- const topic=(offer||business.description||name).slice(0,160);
- const goal=targets.find(x=>x[0]===purpose)?.[1]||"Presentar el negocio";
  const valid=
   stage==="reference"?Boolean(filePreview)&&!imageCandidate&&Boolean(imageAnalysis||manualSubject.trim().length>=8)&&(!imageAnalysis?.conflict||creativeOverride)&&(!allowTransformation||imageDirection.trim().length>=8):
   stage==="script"?prompt.trim().length>=3&&prompt.length<=1000:
@@ -119,36 +99,9 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
    try{
     const db=getSupabase();if(!db)throw Error("No hay conexión con VMV.");
     const {data:{user},error:authError}=await db.auth.getUser();
-    if(authError||!user||user.is_anonymous||user.id!==business.owner_id||
-       user.id!==agent.owner_id||agent.business_id!==workspaceId)
-     throw Error("El agente y el negocio deben pertenecer a la misma cuenta.");
+    if(authError||!user||user.is_anonymous)throw Error("Inicia sesión para crear.");
     if(!active)return;
-
-    const [central,catalog,services]=await Promise.all([
-     db.from("vmv_marketing_businesses").select("id,services,products,description")
-      .eq("owner_id",user.id).eq("id",business.id).maybeSingle(),
-     db.from("vmv_ai_catalog_items").select("id,name,description")
-      .eq("owner_id",user.id).eq("business_id",workspaceId)
-      .eq("approved",true).eq("active",true).limit(40),
-     db.from("vmv_ai_booking_services").select("id,name,description")
-      .eq("owner_id",user.id).eq("business_id",workspaceId)
-      .eq("approved",true).eq("active",true).limit(30)
-    ]);
-    if(central.error||!central.data)throw Error("No se pudo validar tu negocio.");
-    const records:Item[]=[
-     ...(catalog.data||[]).map(v=>({id:v.id,name:v.name,description:v.description||"",type:"product" as const})),
-     ...(services.data||[]).map(v=>({id:v.id,name:v.name,description:v.description||"",type:"service" as const}))
-    ];
-    for(const [type,names] of [
-     ["service",String(central.data.services||"")],["product",String(central.data.products||"")]
-    ] as const){
-     for(const item of names.split(/[\n,]+/).map(v=>v.trim()).filter(Boolean).slice(0,12)){
-      if(records.some(r=>r.name.toLowerCase()===item.toLowerCase()))continue;
-      records.push({id:"central-"+type+"-"+records.length,name:item.slice(0,100),
-       description:"",type});
-     }
-    }
-    if(active){setOwner(user.id);setItems(records);setSelected([]);}
+    setOwner(user.id);
     const {data:{session}}=await db.auth.getSession();
     if(!session?.access_token)throw Error("Inicia sesión nuevamente.");
     const r=await fetch("/api/video-generator",{
@@ -159,21 +112,11 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
     if(!r.ok){setVideoStatus(videoError[status.error||""]||"Video Generator aún no está disponible para esta cuenta.");return;}
     setConfigured(status.configured===true);
     if(!status.configured)setVideoStatus("Falta conectar Runway en el entorno de pruebas.");
-    const pilotId=new URLSearchParams(window.location.search).get("pilot");
-    const activePilot=status.pilots?.find(p=>p.id===pilotId);
-    if(activePilot){
-     setPilotId(activePilot.id);
-     setAudience(activePilot.audience.slice(0,180)||"Clientes interesados en "+business.name);
-     setExtra(activePilot.niche.slice(0,160));
-     if(["realistic","cinematic","animated","product"].includes(activePilot.style))
-      setStyle(activePilot.style as (typeof concepts)[number][0]);
-     if(activePilot.goal.trim())setPurpose("social");
-    }
    }catch(e){if(active)setError(e instanceof Error?e.message:"No se pudo cargar el contexto del video.");}
    finally{if(active)setLoading(false);}
   })();
   return()=>{active=false;};
- },[business.id,workspaceId,agent.id]);
+ },[]);
  const api=async(path:string,body:Record<string,unknown>)=>{
   const db=getSupabase();if(!db)throw Error("No hay conexión.");
   const {data:{session}}=await db.auth.getSession();
@@ -203,7 +146,6 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
   if(busy)return;
   setBusy("script");setError("");
   try{
-   const details=chosen.slice(0,6).map(x=>x.name+": "+x.description.slice(0,85)).join("; ");
    const visual=mode==="image"?
     (imageAnalysis?("VERIFIED IMAGE SUBJECT: "+imageAnalysis.subject+
      ". OBSERVED FRAME: "+imageAnalysis.observations+
@@ -217,15 +159,9 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
      "Describe one clear scene.",
     mode==="image"&&allowTransformation?
      "Explicit owner-approved creative transformation: "+imageDirection.slice(0,180):"",
-    "Business context only (must NEVER replace pictured subject): "+name.slice(0,70),
-    "Goal: "+goal,
-    mode==="text"?"Products/services: "+(offer||"No confirmed offering"):
-     "Commercial context (optional, never insert people or cake unless visually supported): "+offer.slice(0,110),
-    mode==="text"&&details?"Known details: "+details:"",
-    "Style: "+style,"No invented prices, discounts or testimonials."
+    "Style: "+style
    ].filter(Boolean).join("\n").slice(0,1000);
    const result=await api("/api/video-generator/brief",{
-    niche:topic,audience:audience.trim().slice(0,150),goal:goal.slice(0,160),
     style,prompt:standalone?prompt:existing,output:standalone?"image":"video",locale:"es",
     visualGrounding:mode==="image"?{
      subject:imageAnalysis?.subject||manualSubject.trim(),
@@ -247,7 +183,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
   setPrompt("");setCaption("");setConfirmCredits(false);
   try{
    const visual=await api("/api/video-generator/analyze-image",{
-    imageUrl:reference,desiredScene:imageDirection.slice(0,260),offer:offer.slice(0,170)
+    imageUrl:reference,desiredScene:imageDirection.slice(0,260)
    });
    if(typeof visual.subject!=="string"||!visual.subject.trim()||
       typeof visual.groundedMotion!=="string")throw Error("visual_analysis_unavailable");
@@ -276,8 +212,6 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
   setBusy("image");setError("");setImageCandidate("");
   try{
    const result=await api("/api/video-generator/image",{
-    businessId:business.id,workspaceId,offer:offer||name,
-    audience:audience.trim(),context:chosen.slice(0,4).map(x=>x.description).join("; ").slice(0,220),
     direction:imageDirection,size,quality
    });
    const mime=String(result.mediaType||"");
@@ -300,7 +234,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
   try{
    const result=await api("/api/video-generator",{
     prompt:(prompt.trim().slice(0,960)+"\nVisual style: "+style).slice(0,1000),caption:caption.trim(),mode,model,ratio,duration,
-    imageUrl:mode==="image"?filePreview:"",pilotId,confirmCost:true,clientKey
+    imageUrl:mode==="image"?filePreview:"",confirmCost:true,clientKey
    });
    if(!result.job?.id||!String(result.job.id).match(/^[0-9a-f-]{36}$/i))
     throw Error("No se pudo confirmar el trabajo.");
@@ -320,8 +254,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
   try{
    const response=await fetch("/api/video-generator/image",{method:"POST",
     headers:{...await mediaHeaders(owner),"Content-Type":"application/json"},
-    body:JSON.stringify({output:"image",businessId:business.id,workspaceId,offer:offer||name,
-     audience,prompt,size,quality})});
+    body:JSON.stringify({output:"image",prompt,size,quality})});
    if(!response.ok){const data=await response.json().catch(()=>({}));throw Error(videoError[data.error]||"No se pudo generar la imagen.");}
    const blob=await response.blob();
    if(!blob.type.startsWith("image/"))throw Error("El proveedor devolvió un archivo inválido.");
@@ -347,7 +280,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
    style={{width:((index+1)/steps.length*100)+"%"}}/></div>
   <div className={base.robot+" "+theme.agentRobot}><Bot size={35}/><Sparkles size={16}/></div>
   <h1 className={base.question+" "+theme.agentHeading}>{questions[stage]}</h1>
-  {loading?<p role="status" className={base.note}><LoaderCircle size={17} className={base.spin}/> Cargando tu negocio…</p>:null}
+  {loading?<p role="status" className={base.note}><LoaderCircle size={17} className={base.spin}/> Cargando el creador…</p>:null}
   {!loading&&owner&&stage==="source"&&<div className={base.optionsVertical}>
    <button className={base.option} onClick={()=>selectMode("text")}><Film/>Texto a video</button>
    <button className={base.option} onClick={()=>selectMode("image")}><ImagePlus/>Imagen a video</button>
@@ -391,13 +324,13 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
    </label>:null}
    <div className={styles.imageAiBox}>
     <strong className={styles.label}>O genera tu imagen de referencia con IA</strong>
-    <label className={base.field}>Indicación visual (opcional)
+    <label className={base.field}>Describe la imagen
      <textarea rows={2} value={imageDirection} maxLength={260} disabled={Boolean(busy)}
       onChange={e=>setImageDirection(e.target.value)}
       placeholder="Ejemplo: toma cinematográfica de un pastel elegante sobre una mesa"/></label>
     {imageSettings}
     <button type="button" className={base.option+" "+theme.agentOutline}
-     onClick={()=>void generateReference()} disabled={Boolean(busy)}>
+     onClick={()=>void generateReference()} disabled={Boolean(busy)||imageDirection.trim().length<3}>
      {busy==="image"?<LoaderCircle size={17} className={base.spin}/>:<WandSparkles size={17}/>}
      {busy==="image"?"Creando imagen…":"Generar imagen con IA"}</button>
     {imageCandidate?<div className={styles.reference}>
@@ -425,22 +358,6 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
      placeholder={standalone?"Describe el sujeto, el fondo y el estilo…":mode==="image"?"Describe el movimiento del sujeto o de la cámara…":"Describe la escena, la acción y el ambiente…"}/></label>
    <button className={base.option} disabled={Boolean(busy)||(mode!=="image"&&prompt.trim().length<3)} onClick={()=>void generateScript()}>
     <Sparkles size={17}/>{busy==="script"?"Preparando prompt…":prompt.trim()?"Mejorar con IA":"Sugerir movimiento con IA"}</button>
-   <details><summary>Contexto del negocio</summary>
-      {items.length?<div className={base.items} role="group" aria-label="Seleccionar productos y servicios">
-    {items.map(x=><button type="button" key={x.id}
-     className={selected.includes(x.id)?base.itemSelected:base.item}
-     aria-pressed={selected.includes(x.id)}
-     onClick={()=>setSelected(a=>a.includes(x.id)?a.filter(v=>v!==x.id):a.length>=12?a:[...a,x.id])}>
-     <Package size={17}/><span><strong>{x.name}</strong>
-      <small>{x.type==="product"?"Producto":"Servicio"}</small></span>
-     {selected.includes(x.id)?<Check size={17}/>:null}</button>)}
-   </div>:null}
-
-   <label className={base.field}>Tema<input value={extra} maxLength={220} onChange={e=>setExtra(e.target.value)}/></label>
-   <label className={base.field}>Objetivo<select value={purpose} onChange={e=>setPurpose(e.target.value as typeof purpose)}>
-    {targets.map(([key,title])=><option key={key} value={key}>{title}</option>)}</select></label>
-   <label className={base.field}>Público<input value={audience} maxLength={150} onChange={e=>setAudience(e.target.value)}/></label>
-   </details>
   </div>}
   {!loading&&owner&&stage==="format"&&<div className={base.panel}>{standalone?imageSettings:<>
    <span className={styles.label}>Estilo del video</span>
