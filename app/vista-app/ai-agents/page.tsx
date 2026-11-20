@@ -3,7 +3,7 @@ import {useEffect,useState} from "react";
 import {
  ArrowLeft,ArrowUpRight,Bot,BookOpen,BookCheck,BriefcaseBusiness,CalendarDays,Check,
  ChevronRight,ClipboardList,Headphones,MessageCircle,Package,PauseCircle,
- PhoneCall,PlayCircle,ShieldCheck,ShoppingBag,Sparkles,WandSparkles,Megaphone,Globe2,Video,FileText
+ PhoneCall,PlayCircle,ShieldCheck,ShoppingBag,Sparkles,WandSparkles,Megaphone,Globe2,Video,FileText,Plus
 } from "lucide-react";
 import type {LucideIcon} from "lucide-react";
 import styles from "./page.module.css";
