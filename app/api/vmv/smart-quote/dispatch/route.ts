@@ -32,7 +32,7 @@ export async function POST(req:NextRequest){
  if(authError||!identity.user||identity.user.is_anonymous)return fail("Sesión inválida.",401);
  const owner=identity.user.id;
  const {data:quote,error:quoteError}=await db.from("vmv_smart_quotes")
-  .select("id,owner_id,business_id,status,revision,customer_name,customer_email,customer_phone,valid_until,lines,subtotal_cents,discount_cents,delivery_cents,tax_bps,tax_cents,deposit_bps,deposit_cents,total_cents,notes,design_template")
+  .select("id,owner_id,business_id,status,revision,customer_name,customer_email,customer_phone,valid_until,lines,subtotal_cents,discount_cents,delivery_cents,tax_bps,tax_cents,deposit_bps,deposit_cents,total_cents,notes,design_template,pdf_business_contact")
   .eq("id",quoteId).eq("owner_id",owner).maybeSingle();
  if(quoteError||!quote)return fail("No se pudo encontrar tu cotización.",404);
  const {data:business,error:businessError}=await db.from("vmv_marketing_businesses")
