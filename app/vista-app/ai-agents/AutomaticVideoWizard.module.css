@@ -26,3 +26,19 @@
 .referenceUpload strong{font-size:13px}.referenceUpload small{font-size:10px;color:#947aab}
 .referenceUpload input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .referenceUpload:focus-within{outline:2px solid #8855c6;outline-offset:3px}
+
+.entryOptions{display:grid;gap:12px;width:100%}
+.entryOptions>button,.entryOptions>.fileChoice{
+ display:flex;align-items:center;justify-content:flex-start;gap:16px;width:100%;
+ box-sizing:border-box;min-height:76px;padding:16px 20px;font:inherit;font-weight:700;font-size:17px;text-align:left;cursor:pointer;
+}
+.entryOptions svg{width:30px;height:30px;flex:none}
+.fileChoice{position:relative}
+.fileChoice input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.fileChoice:focus-within{outline:2px solid #8855c6;outline-offset:3px}
+.sizeOptions,.qualityOptions{display:grid;gap:8px;width:100%}
+.sizeOptions{grid-template-columns:repeat(3,minmax(0,1fr))}
+.qualityOptions{grid-template-columns:repeat(2,minmax(0,1fr))}
+.sizeOptions>button{min-width:0;min-height:90px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;padding:8px 3px}
+.qualityOptions>button{min-height:54px}
+.frame{box-sizing:border-box;border:2px solid currentColor;border-radius:4px}
