@@ -154,7 +154,7 @@ export default function AutomaticBookingWizard({business,agent,onClose,onAgentUp
     {done?"Guardado":"Confirmar permisos"} <ArrowRight size={17}/></button>:
    <button type="button" className={styles.primary+" "+theme.agentButton}
     onClick={next} disabled={busy||(step==="business"&&!businessConfirmed)}>
-    {editing?"Volver a Revisión":step==="goal"?"Continuar: permisos del agente":"Continuar"} <ArrowRight size={17}/></button>
+    {editing?"Volver a Revisión":step==="goal"?"Continuar: permisos del agente":"Continuar"} <ArrowRight size={17}/></button>}
   </div>:null}
   <p className={styles.footnote}><ShieldCheck size={14}/> Reservas bajo control del propietario.</p>
  </section>;
