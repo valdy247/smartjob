@@ -376,8 +376,8 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
    <label className={base.field}>{mode==="image"?"¿Cómo debe moverse la imagen?":"Tu prompt"}
     <textarea rows={5} maxLength={1000} value={prompt} disabled={Boolean(busy)} onChange={e=>setPrompt(e.target.value)}
      placeholder={standalone?"Describe el sujeto, el fondo y el estilo…":mode==="image"?"Describe el movimiento del sujeto o de la cámara…":"Describe la escena, la acción y el ambiente…"}/></label>
-   <button className={base.option} disabled={Boolean(busy)||(mode!=="image"&&prompt.trim().length<3)} onClick={()=>void generateScript()}>
-    <Sparkles size={17}/>{busy==="script"?"Preparando prompt…":prompt.trim()?"Mejorar con IA":"Sugerir movimiento con IA"}</button>
+   {prompt.trim().length>0&&<button className={base.option} disabled={Boolean(busy)||prompt.trim().length<3} onClick={()=>void generateScript()}>
+    <Sparkles size={17}/>{busy==="script"?"Mejorando…":"Mejorar con IA"}</button>}
   </div>}
   {!loading&&owner&&stage==="format"&&<div className={base.panel}>{standalone?<><span className={styles.label}>Tamaño</span>{sizeOptions}<span className={styles.label}>Calidad</span>{qualityOptions}</>:<>
    <span className={styles.label}>Estilo del video</span>
