@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
-import {ArrowLeft,ArrowRight,Bot,Check,CheckCircle2,Film,ImagePlus,LoaderCircle,Package,Pencil,Play,RefreshCw,ShieldCheck,Sparkles,WandSparkles} from "lucide-react";
+import {ArrowLeft,ArrowRight,Bot,Check,CheckCircle2,Film,ImagePlus,LoaderCircle,Package,Pencil,RefreshCw,Sparkles,WandSparkles} from "lucide-react";
+import VideoCreationResult,{mediaHeaders} from "./VideoCreationResult";
 import {getSupabase} from "@/lib/supabase";
 import type {CentralBusiness} from "./centralBusiness";
 import type {PersistedAgent} from "./agentStore";
@@ -8,26 +9,19 @@ import theme from "./AgentServiceFlow.module.css";
 import base from "./AutomaticWebWizard.module.css";
 import styles from "./AutomaticVideoWizard.module.css";
 
-type Stage="business"|"purpose"|"offer"|"audience"|"format"|"source"|"reference"|"script"|"review";
+type Stage="source"|"reference"|"script"|"format"|"review"|"result";
 type Mode="text"|"image";
 type Model="gen4.5"|"kling";
 type Ratio="720:1280"|"1280:720";
 type Item={id:string;name:string;description:string;type:"product"|"service"};
 type Pilot={id:string;niche:string;audience:string;goal:string;style:string;frequency:number};
 type VideoStatus={configured:boolean;dailyLimit?:number;pilots?:Pilot[]};
-const stages:(mode:Mode)=>Stage[]=mode=>mode==="image"?
- ["business","purpose","offer","audience","format","source","reference","script","review"]:
- ["business","purpose","offer","audience","format","source","script","review"];
+const stages=(mode:Mode):Stage[]=>mode==="image"?
+ ["source","reference","script","format","review","result"]:
+ ["source","script","format","review","result"];
 const questions:Record<Stage,string>={
- business:"¿Este video es para tu negocio?",
- purpose:"¿Qué quieres lograr con el video?",
- offer:"¿Qué productos o servicios aparecerán?",
- audience:"¿A quién quieres llegar?",
- format:"¿Cómo quieres que se vea?",
- source:"¿De dónde partimos?",
- reference:"¿Qué imagen usaremos?",
- script:"Tu agente preparó el guion",
- review:"Revisa tu video antes de generarlo"
+ source:"¿Qué quieres crear?",reference:"Elige tu imagen de partida",script:"Describe lo que quieres crear",
+ format:"Ajustes de generación",review:"Revisa tu creación",result:"Tu resultado"
 };
 const targets=[["promotion","Presentar mi negocio"],["product","Mostrar productos o servicios"],
  ["education","Compartir un consejo"],["social","Contenido para redes"]] as const;
@@ -71,14 +65,13 @@ async function jpgDataUrl(blob:Blob){
 export default function AutomaticVideoWizard({business,workspaceId,agent,onClose}:{
  business:CentralBusiness;workspaceId:string;agent:PersistedAgent;onClose:()=>void;
 }){
- const [stage,setStage]=useState<Stage>("business");
+ const [stage,setStage]=useState<Stage>("source");
  const [editing,setEditing]=useState(false);
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState("");
  const [error,setError]=useState("");
  const [owner,setOwner]=useState("");
- const [name,setName]=useState(business.name);
- const [editName,setEditName]=useState(false);
+ const name=business.name;
  const [purpose,setPurpose]=useState<(typeof targets)[number][0]>("promotion");
  const [items,setItems]=useState<Item[]>([]);
  const [selected,setSelected]=useState<string[]>([]);
@@ -104,7 +97,11 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
  const [confirmCredits,setConfirmCredits]=useState(false);
  const [configured,setConfigured]=useState(false);
  const [videoStatus,setVideoStatus]=useState("");
- const [scriptAutoTried,setScriptAutoTried]=useState(false);
+ const [standalone,setStandalone]=useState(false);
+ const [size,setSize]=useState("1024x1024");
+ const [quality,setQuality]=useState("standard");
+ const [jobId,setJobId]=useState("");
+ const [outputImage,setOutputImage]=useState<Blob|null>(null);
  const [clientKey]=useState(()=>crypto.randomUUID());
  const steps=stages(mode),index=steps.indexOf(stage);
  const chosen=useMemo(()=>items.filter(x=>selected.includes(x.id)),[items,selected]);
@@ -112,8 +109,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
   .filter((x,i,a)=>a.indexOf(x)===i).slice(0,12).join(", ");
  const topic=(offer||business.description||name).slice(0,160);
  const goal=targets.find(x=>x[0]===purpose)?.[1]||"Presentar el negocio";
- const valid=stage==="business"?name.trim().length>=2:
-  stage==="audience"?audience.trim().length>=3:
+ const valid=
   stage==="reference"?Boolean(filePreview)&&!imageCandidate&&Boolean(imageAnalysis||manualSubject.trim().length>=8)&&(!imageAnalysis?.conflict||creativeOverride)&&(!allowTransformation||imageDirection.trim().length>=8):
   stage==="script"?prompt.trim().length>=3&&prompt.length<=1000:
   true;
@@ -127,7 +123,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
        user.id!==agent.owner_id||agent.business_id!==workspaceId)
      throw Error("El agente y el negocio deben pertenecer a la misma cuenta.");
     if(!active)return;
-    setOwner(user.id);
+
     const [central,catalog,services]=await Promise.all([
      db.from("vmv_marketing_businesses").select("id,services,products,description")
       .eq("owner_id",user.id).eq("id",business.id).maybeSingle(),
@@ -152,7 +148,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
        description:"",type});
      }
     }
-    if(active){setItems(records);setSelected([]);}
+    if(active){setOwner(user.id);setItems(records);setSelected([]);}
     const {data:{session}}=await db.auth.getSession();
     if(!session?.access_token)throw Error("Inicia sesión nuevamente.");
     const r=await fetch("/api/video-generator",{
@@ -194,14 +190,12 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
   if(busy||!valid)return;
   if(editing){setEditing(false);move("review");return;}
   const nextStage=steps[Math.min(index+1,steps.length-1)];
-  if(nextStage==="script"&&!scriptAutoTried&&!prompt.trim()&&(mode==="text"||Boolean(imageAnalysis||manualSubject.trim()))){
-   setScriptAutoTried(true);void generateScript();
-  }
   move(nextStage);
  };
  const back=()=>{
   if(editing){setEditing(false);move("review");return;}
-  if(index===0){onClose();return;}
+  if(busy)return;
+  if(index===0||stage==="result"){onClose();return;}
   move(steps[index-1]);
  };
  const edit=(target:Stage)=>{setConfirmCredits(false);setEditing(true);move(target);};
@@ -216,6 +210,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
      ". PRESERVE THIS SUBJECT: "+imageAnalysis.groundedMotion):
      "USER-CONFIRMED IMAGE SUBJECT: "+manualSubject.trim()):"";
    const existing=[
+    prompt.trim(),
     mode==="image"?"IMAGE TO VIDEO. The image is primary visual evidence.":"TEXT TO VIDEO.",
     visual,
     mode==="image"?"HARD CONSTRAINT: keep the pictured main subject and species.":
@@ -231,7 +226,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
    ].filter(Boolean).join("\n").slice(0,1000);
    const result=await api("/api/video-generator/brief",{
     niche:topic,audience:audience.trim().slice(0,150),goal:goal.slice(0,160),
-    style,prompt:existing,locale:"es",
+    style,prompt:standalone?prompt:existing,output:standalone?"image":"video",locale:"es",
     visualGrounding:mode==="image"?{
      subject:imageAnalysis?.subject||manualSubject.trim(),
      observations:imageAnalysis?.observations||manualSubject.trim(),
@@ -249,7 +244,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
  };
  const inspectReference=async(reference:string)=>{
   setImageAnalysis(null);setManualSubject("");setCreativeOverride(false);setAllowTransformation(false);
-  setScriptAutoTried(false);setPrompt("");setCaption("");setConfirmCredits(false);
+  setPrompt("");setCaption("");setConfirmCredits(false);
   try{
    const visual=await api("/api/video-generator/analyze-image",{
     imageUrl:reference,desiredScene:imageDirection.slice(0,260),offer:offer.slice(0,170)
@@ -283,7 +278,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
    const result=await api("/api/video-generator/image",{
     businessId:business.id,workspaceId,offer:offer||name,
     audience:audience.trim(),context:chosen.slice(0,4).map(x=>x.description).join("; ").slice(0,220),
-    direction:imageDirection
+    direction:imageDirection,size,quality
    });
    const mime=String(result.mediaType||"");
    const base64=String(result.imageBase64||"");
@@ -300,18 +295,16 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
  const submit=async()=>{
   if(!configured||!confirmCredits||busy||prompt.trim().length<3||
      (mode==="image"&&(!filePreview||Boolean(imageCandidate)))||!owner)return;
-  if(!window.confirm("¿Autorizas generar este video de "+duration+
-   " segundos con "+(model==="kling"?"Kling":"Runway")+
-   "? El proveedor puede consumir créditos. No se publicará en redes."))return;
+  
   setBusy("submit");setError("");
   try{
    const result=await api("/api/video-generator",{
-    prompt:prompt.trim(),caption:caption.trim(),mode,model,ratio,duration,
+    prompt:(prompt.trim().slice(0,960)+"\nVisual style: "+style).slice(0,1000),caption:caption.trim(),mode,model,ratio,duration,
     imageUrl:mode==="image"?filePreview:"",pilotId,confirmCost:true,clientKey
    });
    if(!result.job?.id||!String(result.job.id).match(/^[0-9a-f-]{36}$/i))
     throw Error("No se pudo confirmar el trabajo.");
-   window.location.assign("/vista-app/video-generator?job="+encodeURIComponent(result.job.id));
+   setJobId(result.job.id);move("result");
   }catch(e){const code=e instanceof Error?e.message:"network";
    setError(videoError[code]||"No se pudo iniciar el video. Si hubo un error de red, revisa Mi biblioteca antes de reintentar.");}
   finally{setBusy("");}
@@ -321,91 +314,45 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
   <button className={base.edit} type="button" aria-label={"Editar "+label} title={"Editar "+label}
    onClick={()=>edit(target)}><Pencil size={17}/></button>
  </div>;
+ const startImage=async()=>{
+  if(busy||!confirmCredits||!owner||prompt.trim().length<3)return;
+  setBusy("submit");setError("");
+  try{
+   const response=await fetch("/api/video-generator/image",{method:"POST",
+    headers:{...await mediaHeaders(owner),"Content-Type":"application/json"},
+    body:JSON.stringify({output:"image",businessId:business.id,workspaceId,offer:offer||name,
+     audience,prompt,size,quality})});
+   if(!response.ok){const data=await response.json().catch(()=>({}));throw Error(videoError[data.error]||"No se pudo generar la imagen.");}
+   const blob=await response.blob();
+   if(!blob.type.startsWith("image/"))throw Error("El proveedor devolvió un archivo inválido.");
+   setOutputImage(blob);move("result");
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo generar la imagen.");}
+  finally{setBusy("");}
+ };
+ const selectMode=(choice:"text"|"image"|"still")=>{
+  setEditing(false);setStandalone(choice==="still");setMode(choice==="image"?"image":"text");
+  setConfirmCredits(false);move(choice==="image"?"reference":"script");
+ };
+ const imageSettings=<>
+  <label className={base.field}>Tamaño de imagen<select value={size} onChange={e=>setSize(e.target.value)}>
+   <option value="1024x1024">Cuadrada · 1024 × 1024</option><option value="1024x1536">Vertical · 1024 × 1536</option>
+   <option value="1536x1024">Horizontal · 1536 × 1024</option></select></label>
+  <label className={base.field}>Calidad<select value={quality} onChange={e=>setQuality(e.target.value)}>
+   <option value="standard">Estándar · GPT Image 1 Mini</option><option value="high">Alta · GPT Image 1.5</option></select></label>
+ </>;
  return <section className={base.root+" "+theme.flow} aria-label="Video Generator con AI Agents">
-  <div className={base.top}><button type="button" aria-label="Volver" onClick={back}><ArrowLeft size={19}/></button>
+  <div className={base.top}><button type="button" aria-label="Volver" disabled={Boolean(busy)} onClick={back}><ArrowLeft size={19}/></button>
    <span>Video Generator · Mi agente</span><span>{index+1}/{steps.length}</span></div>
   <div className={base.track}><span className={theme.agentProgress}
    style={{width:((index+1)/steps.length*100)+"%"}}/></div>
   <div className={base.robot+" "+theme.agentRobot}><Bot size={35}/><Sparkles size={16}/></div>
   <h1 className={base.question+" "+theme.agentHeading}>{questions[stage]}</h1>
   {loading?<p role="status" className={base.note}><LoaderCircle size={17} className={base.spin}/> Cargando tu negocio…</p>:null}
-  {!loading&&owner&&stage==="business"?<div className={base.panel}>
-   <strong className={base.emphasis+" "+theme.agentText}>{business.name}</strong>
-   <div className={base.options}>
-    <button type="button" className={!editName?base.optionActive:base.option}
-     onClick={()=>{setEditName(false);setName(business.name);}}>Sí, usar este negocio</button>
-    <button type="button" className={editName?base.optionActive:base.option}
-     onClick={()=>setEditName(true)}>Corregir el nombre</button>
-   </div>
-   {editName?<label className={base.field}>Nombre que aparecerá en el guion
-    <input maxLength={100} value={name} onChange={e=>setName(e.target.value)}/></label>:null}
-   <p className={base.note}>Los datos de este video no alteran tu negocio ni la configuración del agente principal.</p>
-  </div>:null}
-  {!loading&&owner&&stage==="purpose"?<div className={base.panel}>
-   <div className={base.optionsVertical}>
-    {targets.map(([id,label])=><button key={id} type="button" aria-pressed={purpose===id}
-     className={purpose===id?base.optionActive:base.option} onClick={()=>setPurpose(id)}>
-     {purpose===id?<Check size={16}/>:null}{label}</button>)}
-   </div>
-   <p className={base.note}>El agente adaptará la escena y la descripción a tu objetivo.</p>
-  </div>:null}
-  {!loading&&owner&&stage==="offer"?<div className={base.panel}>
-   <p className={base.note}>Selecciona únicamente los productos que deben aparecer en el video. Ninguno se añade automáticamente; los demás son contexto del negocio.</p>
-   {items.length?<div className={base.items} role="group" aria-label="Seleccionar productos y servicios">
-    {items.map(x=><button type="button" key={x.id}
-     className={selected.includes(x.id)?base.itemSelected:base.item}
-     aria-pressed={selected.includes(x.id)}
-     onClick={()=>setSelected(a=>a.includes(x.id)?a.filter(v=>v!==x.id):a.length>=12?a:[...a,x.id])}>
-     <Package size={17}/><span><strong>{x.name}</strong>
-      <small>{x.type==="product"?"Producto":"Servicio"}</small></span>
-     {selected.includes(x.id)?<Check size={17}/>:null}</button>)}
-   </div>:null}
-   <label className={base.field}>Otro tema o producto (opcional)
-    <textarea rows={3} maxLength={300} value={extra} onChange={e=>setExtra(e.target.value)}
-     placeholder="Ejemplo: nuevo diseño de pastel, consejos para clientes…"/></label>
-  </div>:null}
-  {!loading&&owner&&stage==="audience"?<div className={base.panel}>
-   <p className={base.note}>Usé el contexto de tu negocio; confirma a quién va dirigido el video.</p>
-   <label className={base.field}>Público objetivo
-    <textarea rows={3} maxLength={150} value={audience}
-     onChange={e=>setAudience(e.target.value)}/></label>
-  </div>:null}
-  {!loading&&owner&&stage==="format"?<div className={base.panel}>
-   <span className={styles.label}>Estilo del video</span>
-   <div className={base.optionsVertical}>{concepts.map(([id,label])=><button key={id} type="button"
-    className={style===id?base.optionActive:base.option} onClick={()=>setStyle(id)}
-    aria-pressed={style===id}>{label}</button>)}</div>
-   <span className={styles.label}>Formato</span>
-   <div className={base.options}>
-    <button type="button" className={ratio==="720:1280"?base.optionActive:base.option}
-     onClick={()=>setRatio("720:1280")}>Vertical · Reels</button>
-    <button type="button" className={ratio==="1280:720"?base.optionActive:base.option}
-     onClick={()=>setRatio("1280:720")}>Horizontal · YouTube</button>
-   </div>
-   <span className={styles.label}>Duración</span>
-   <div className={base.options}>
-    {([5,10] as const).map(v=><button type="button" key={v}
-     className={duration===v?base.optionActive:base.option}
-     onClick={()=>setDuration(v)}>{v} segundos</button>)}
-   </div>
-   <span className={styles.label}>Motor de generación</span>
-   <div className={base.options}>
-    <button type="button" className={model==="gen4.5"?base.optionActive:base.option}
-     onClick={()=>setModel("gen4.5")}>Runway</button>
-    <button type="button" className={model==="kling"?base.optionActive:base.option}
-     onClick={()=>setModel("kling")}>Kling</button>
-   </div>
-   <p className={base.note}>La disponibilidad de modelos depende de tu cuenta y los créditos del proveedor.</p>
-  </div>:null}
-  {!loading&&owner&&stage==="source"?<div className={base.panel}>
-   <div className={base.optionsVertical}>
-    <button type="button" className={mode==="text"?base.optionActive:base.option}
-     onClick={()=>setMode("text")}><Film size={19}/> Crear video desde texto</button>
-    <button type="button" className={mode==="image"?base.optionActive:base.option}
-     onClick={()=>setMode("image")}><ImagePlus size={19}/> Animar una imagen</button>
-   </div>
-   <p className={base.note}>Si eliges una imagen, podrás subirla o generar una referencia y aprobarla antes de gastar créditos de video.</p>
-  </div>:null}
+  {!loading&&owner&&stage==="source"&&<div className={base.optionsVertical}>
+   <button className={base.option} onClick={()=>selectMode("text")}><Film/>Texto a video</button>
+   <button className={base.option} onClick={()=>selectMode("image")}><ImagePlus/>Imagen a video</button>
+   <button className={base.option} onClick={()=>selectMode("still")}><WandSparkles/>Texto a imagen</button>
+  </div>}
   {!loading&&owner&&stage==="reference"?<div className={base.panel}>
    <label className={styles.referenceUpload}>
     <ImagePlus size={22}/><strong>Subir imagen de referencia</strong>
@@ -448,6 +395,7 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
      <textarea rows={2} value={imageDirection} maxLength={260} disabled={Boolean(busy)}
       onChange={e=>setImageDirection(e.target.value)}
       placeholder="Ejemplo: toma cinematográfica de un pastel elegante sobre una mesa"/></label>
+    {imageSettings}
     <button type="button" className={base.option+" "+theme.agentOutline}
      onClick={()=>void generateReference()} disabled={Boolean(busy)}>
      {busy==="image"?<LoaderCircle size={17} className={base.spin}/>:<WandSparkles size={17}/>}
@@ -470,54 +418,73 @@ export default function AutomaticVideoWizard({business,workspaceId,agent,onClose
 
    <p className={base.note}>Una imagen de IA no se envía a Runway hasta que la apruebes y confirmes los créditos.</p>
   </div>:null}
-  {!loading&&owner&&stage==="script"?<div className={base.panel}>
-   {busy==="script"?<div className={styles.generating} role="status">
-    <LoaderCircle size={19} className={base.spin}/> Tu agente está creando la escena…</div>:null}
-   {scriptAutoTried&&!prompt&&busy!=="script"?<button type="button" className={base.option}
-    onClick={()=>void generateScript()}><Sparkles size={16}/> Intentar generar guion con IA</button>:null}
-   <label className={base.field}>Guion visual · máximo 1000 caracteres
-    <textarea rows={7} maxLength={1000} value={prompt}
-     placeholder="Describe una escena, su iluminación, movimiento de cámara y acción…"
-     onChange={e=>setPrompt(e.target.value)}/></label>
-   <label className={base.field}>Descripción para redes · opcional
-    <textarea rows={3} maxLength={500} value={caption}
-     placeholder="Texto que puedes copiar después; no se publicará automáticamente."
-     onChange={e=>setCaption(e.target.value)}/></label>
-   <p className={base.note}>Revisa lo que dice el guion. No se deben inventar precios, premios ni beneficios.</p>
-  </div>:null}
-  {!loading&&owner&&stage==="review"?<div className={base.panel}>
-   <div className={base.review}>
-    {reviewCard("Negocio",name,"business")}
-    {reviewCard("Objetivo",goal,"purpose")}
-    {reviewCard("Productos y servicios",offer||"Video general del negocio","offer")}
-    {reviewCard("Público",audience,"audience")}
-    {reviewCard("Estilo y motor",style+" · "+(model==="kling"?"Kling":"Runway"),"format")}
-    {reviewCard("Formato y duración",(ratio==="720:1280"?"Vertical":"Horizontal")+" · "+duration+" segundos","format")}
-    {reviewCard("Origen",mode==="image"?"Imagen a video":"Texto a video","source")}
-    {mode==="image"?reviewCard("Imagen",filePreview?"Preparada y aprobada":"Pendiente","reference"):null}
-    {reviewCard("Guion",prompt,"script")}
-    {reviewCard("Descripción para redes",caption||"Sin descripción","script")}
+
+  {!loading&&owner&&stage==="script"&&<div className={base.panel}>
+   <label className={base.field}>{mode==="image"?"¿Cómo debe moverse la imagen?":"Tu prompt"}
+    <textarea rows={5} maxLength={1000} value={prompt} disabled={Boolean(busy)} onChange={e=>setPrompt(e.target.value)}
+     placeholder={standalone?"Describe el sujeto, el fondo y el estilo…":mode==="image"?"Describe el movimiento del sujeto o de la cámara…":"Describe la escena, la acción y el ambiente…"}/></label>
+   <button className={base.option} disabled={Boolean(busy)||(mode!=="image"&&prompt.trim().length<3)} onClick={()=>void generateScript()}>
+    <Sparkles size={17}/>{busy==="script"?"Preparando prompt…":prompt.trim()?"Mejorar con IA":"Sugerir movimiento con IA"}</button>
+   <details><summary>Contexto del negocio</summary>
+      {items.length?<div className={base.items} role="group" aria-label="Seleccionar productos y servicios">
+    {items.map(x=><button type="button" key={x.id}
+     className={selected.includes(x.id)?base.itemSelected:base.item}
+     aria-pressed={selected.includes(x.id)}
+     onClick={()=>setSelected(a=>a.includes(x.id)?a.filter(v=>v!==x.id):a.length>=12?a:[...a,x.id])}>
+     <Package size={17}/><span><strong>{x.name}</strong>
+      <small>{x.type==="product"?"Producto":"Servicio"}</small></span>
+     {selected.includes(x.id)?<Check size={17}/>:null}</button>)}
+   </div>:null}
+
+   <label className={base.field}>Tema<input value={extra} maxLength={220} onChange={e=>setExtra(e.target.value)}/></label>
+   <label className={base.field}>Objetivo<select value={purpose} onChange={e=>setPurpose(e.target.value as typeof purpose)}>
+    {targets.map(([key,title])=><option key={key} value={key}>{title}</option>)}</select></label>
+   <label className={base.field}>Público<input value={audience} maxLength={150} onChange={e=>setAudience(e.target.value)}/></label>
+   </details>
+  </div>}
+  {!loading&&owner&&stage==="format"&&<div className={base.panel}>{standalone?imageSettings:<>
+   <span className={styles.label}>Estilo del video</span>
+   <div className={base.optionsVertical}>{concepts.map(([id,label])=><button key={id} type="button"
+    className={style===id?base.optionActive:base.option} onClick={()=>setStyle(id)}
+    aria-pressed={style===id}>{label}</button>)}</div>
+   <span className={styles.label}>Formato</span>
+   <div className={base.options}>
+    <button type="button" className={ratio==="720:1280"?base.optionActive:base.option}
+     onClick={()=>setRatio("720:1280")}>Vertical · Reels</button>
+    <button type="button" className={ratio==="1280:720"?base.optionActive:base.option}
+     onClick={()=>setRatio("1280:720")}>Horizontal · YouTube</button>
    </div>
-   <label className={base.checkLine}>
-    <input type="checkbox" checked={confirmCredits} onChange={e=>setConfirmCredits(e.target.checked)}/>
-    Autorizo generar este video. El proveedor puede consumir créditos incluso si el resultado no me satisface.
-   </label>
-   <div className={base.info}><ShieldCheck size={17}/> No se publicará el video en redes.
-    La generación es manual y el historial estará disponible en Mi biblioteca.</div>
-   {!configured?<div className={base.warning} role="status">
-    {videoStatus||"Video Generator aún no está conectado para tu cuenta."}</div>:null}
-  </div>:null}
-  {error?<div role="alert" className={base.error}>{error}</div>:null}
-  {!loading&&owner?<div className={base.footer}>
-   {stage==="review"?<button type="button" className={base.primary+" "+theme.agentButton}
-    disabled={!configured||!confirmCredits||!prompt.trim()||Boolean(busy)||(mode==="image"&&(!filePreview||Boolean(imageCandidate)))}
-    onClick={()=>void submit()}>
-    {busy==="submit"?<LoaderCircle size={18} className={base.spin}/>:<Play size={18}/>}
-    {busy==="submit"?"Iniciando generación…":"Confirmar y generar video"} <ArrowRight size={17}/></button>:
-    <button type="button" className={base.primary+" "+theme.agentButton}
-     disabled={!valid||Boolean(busy)} onClick={next}>
+   <span className={styles.label}>Duración</span>
+   <div className={base.options}>
+    {([5,10] as const).map(v=><button type="button" key={v}
+     className={duration===v?base.optionActive:base.option}
+     onClick={()=>setDuration(v)}>{v} segundos</button>)}
+   </div>
+   <span className={styles.label}>Motor de generación</span>
+   <div className={base.options}>
+    <button type="button" className={model==="gen4.5"?base.optionActive:base.option}
+     onClick={()=>setModel("gen4.5")}>Runway</button>
+    <button type="button" className={model==="kling"?base.optionActive:base.option}
+     onClick={()=>setModel("kling")}>Kling</button>
+   </div>
+
+  </>}</div>}
+  {!loading&&owner&&stage==="review"&&<div className={base.panel}>
+   {reviewCard("Guion",prompt,"script")}
+   {mode==="image"&&reviewCard("Imagen","Referencia aprobada","reference")}
+   {reviewCard("Ajustes",standalone?size+" · "+(quality==="high"?"Alta":"Estándar"):
+    duration+" segundos · "+(ratio==="720:1280"?"Vertical":"Horizontal")+" · "+(model==="kling"?"Kling":"Runway"),"format")}
+   <label className={base.checkLine}><input type="checkbox" checked={confirmCredits} onChange={e=>setConfirmCredits(e.target.checked)}/>
+    Autorizo usar créditos para esta generación.</label>
+   {!standalone&&!configured&&<p className={base.warning}>{videoStatus||"El generador de video no está disponible."}</p>}
+  </div>}
+  {stage==="result"&&<VideoCreationResult owner={owner} jobId={jobId} image={outputImage}/>}
+  {error&&<p className={base.error} role="alert">{error}</p>}
+  {!loading&&owner&&stage!=="source"&&stage!=="result"&&<div className={base.footer}>
+   {stage==="review"?<button className={base.primary+" "+theme.agentButton} disabled={Boolean(busy)||!confirmCredits||(!standalone&&!configured)}
+    onClick={()=>void (standalone?startImage():submit())}>{busy?"Generando…":standalone?"Generar imagen":"Generar video"}</button>:
+    <button className={base.primary+" "+theme.agentButton} disabled={!valid||Boolean(busy)} onClick={next}>
      {editing?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={17}/></button>}
-  </div>:null}
-  <p className={base.footnote}><ShieldCheck size={14}/> Preparación privada. Sin publicación automática.</p>
+  </div>}
  </section>;
 }
