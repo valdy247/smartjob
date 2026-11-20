@@ -1,6 +1,7 @@
 import {IMAGE_PROMPT_LIMIT} from "@/lib/vmv-video-generator/image-prompt";
 import {NextRequest,NextResponse} from "next/server";
 import {generateImage} from "ai";
+import {gateway} from "@ai-sdk/gateway";
 import {authenticatedUser} from "@/lib/auth-server";
 import {videoAllowed,videoDb,videoHeaders} from "@/lib/vmv-video-generator";
 export const runtime="nodejs";
@@ -33,11 +34,22 @@ export async function POST(req:NextRequest){
    "Create one original starting frame for an image-to-video sequence.",
    "Use the subject, setting and style requested by the user."
   ].join(" ");
-  const result=await generateImage({
-   model:quality==="high"?"openai/gpt-image-1.5":"openai/gpt-image-1-mini",
+  const signal=AbortSignal.timeout(110000);
+  const modelId=quality==="high"?"openai/gpt-image-1.5":"openai/gpt-image-1-mini";
+  const generate=()=>generateImage({
+   model:gateway.imageModel(modelId),maxRetries:0,
    prompt:instructions+"\n"+description,
-   size:dimensions,providerOptions:{openai:{quality:quality==="high"?"high":"medium",output_format:"jpeg"}},abortSignal:AbortSignal.timeout(110000)
+   size:dimensions,providerOptions:{openai:{quality:quality==="high"?"high":"medium",output_format:"jpeg"}},abortSignal:signal
   });
+  let result;
+  try{
+   result=await generate();
+  }catch(error){
+   if(!(error instanceof Error)||error.name!=="GatewayInternalServerError"||signal.aborted)throw error;
+   await new Promise(resolve=>setTimeout(resolve,900));
+   signal.throwIfAborted();
+   result=await generate();
+  }
   const bytes=Buffer.from(result.image.uint8Array);
   if(bytes.length<1024||bytes.length>6*1024*1024)return reply({error:"image_size_unavailable"},502);
   const mediaType=result.image.mediaType;
@@ -46,7 +58,9 @@ export async function POST(req:NextRequest){
   if(standalone)return new NextResponse(new Uint8Array(bytes),{headers:{...videoHeaders,"Content-Type":mediaType}});
   return reply({imageBase64:bytes.toString("base64"),mediaType});
  }catch(error){
-  console.warn("[vmv-video-reference] image generation failed",error instanceof Error?error.name:"unknown");
+  const name=error instanceof Error?error.name:"unknown";
+  console.warn("[vmv-video-reference] image generation failed",{name,quality,dimensions});
+  if(name==="GatewayInternalServerError")return reply({error:"image_provider_busy"},503);
   return reply({error:"video_image_unavailable"},503);
  }
 }
