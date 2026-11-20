@@ -1,6 +1,6 @@
 "use client";
 import {useCallback,useEffect,useMemo,useState} from "react";
-import {ArrowLeft,Check,ClipboardCopy,FileText,Plus,RefreshCw,ShieldCheck,Trash2,Wallet,Send,PackageCheck,Printer} from "lucide-react";
+import {ArrowLeft,Check,ClipboardCopy,FileText,Plus,RefreshCw,ShieldCheck,Trash2,Wallet,Send,PackageCheck,Printer,Download} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import styles from "./smart-quote.module.css";
@@ -11,7 +11,7 @@ type Line={catalog_item_id:string;name:string;description:string;unit_name:strin
 type Quote={id:string;business_id:string;customer_name:string;customer_email:string;customer_phone:string;lines:Line[];
  subtotal_cents:number;discount_cents:number;delivery_cents:number;tax_bps:number;tax_cents:number;
  deposit_bps:number;deposit_cents:number;total_cents:number;valid_until:string;notes:string;
- status:"draft"|"approved"|"sent"|"cancelled";revision:number;created_at:string};
+ status:"draft"|"approved"|"sent"|"cancelled";design_template:"modern"|"elegant"|"classic";revision:number;created_at:string};
 type ItemInput={catalog_item_id:string;quantity:string;key:number};
 type QuoteDraft={id:string|null;customer_name:string;customer_email:string;customer_phone:string;
  items:ItemInput[];tax:string;delivery:string;discount:string;deposit:string;valid_until:string;notes:string};
@@ -35,6 +35,10 @@ export default function SmartQuotePage(){
  const [quotes,setQuotes]=useState<Quote[]>([]);
  const [tab,setTab]=useState<"quotes"|"catalog">("quotes");
  const [loading,setLoading]=useState(true);
+ const [emailReady,setEmailReady]=useState(false);
+ useEffect(()=>{let live=true;void fetch("/api/vmv/smart-quote/dispatch",{cache:"no-store"})
+  .then(r=>r.json()).then(d=>{if(live)setEmailReady(d.enabled===true);})
+  .catch(()=>{});return()=>{live=false;};},[]);
  const [busy,setBusy]=useState(false);
  const [message,setMessage]=useState("");
  const [missingSchema,setMissingSchema]=useState(false);
@@ -49,7 +53,7 @@ export default function SmartQuotePage(){
   const db=getSupabase();if(!db||!id||!uuid.test(id))return;
   const [products,proposals]=await Promise.all([
    db.from("vmv_smart_quote_catalog").select("id,owner_id,business_id,name,description,unit_name,unit_price_cents,active").eq("business_id",id).order("created_at",{ascending:false}).limit(100),
-   db.from("vmv_smart_quotes").select("id,business_id,customer_name,customer_email,customer_phone,lines,subtotal_cents,discount_cents,delivery_cents,tax_bps,tax_cents,deposit_bps,deposit_cents,total_cents,valid_until,notes,status,revision,created_at").eq("business_id",id).order("created_at",{ascending:false}).limit(100)
+   db.from("vmv_smart_quotes").select("id,business_id,customer_name,customer_email,customer_phone,lines,subtotal_cents,discount_cents,delivery_cents,tax_bps,tax_cents,deposit_bps,deposit_cents,total_cents,valid_until,notes,status,design_template,revision,created_at").eq("business_id",id).order("created_at",{ascending:false}).limit(100)
   ]);
   if(products.error||proposals.error){
    const error=products.error||proposals.error;
@@ -149,6 +153,34 @@ export default function SmartQuotePage(){
   const timer=window.setTimeout(()=>window.print(),110);
   return ()=>{window.clearTimeout(timer);window.removeEventListener("afterprint",done);};
  },[printableQuote]);
+ const documentAction=(q:Quote,action:"pdf"|"send")=>void run(async()=>{
+  if(action==="send"){
+   if(!emailReady||!q.customer_email.trim())throw Error("Configura el remitente y el correo del cliente para enviar.");
+   if(!window.confirm("¿Enviar la cotización aprobada al correo "+q.customer_email+"? No se cobrará nada."))return;
+  }
+  const db=getSupabase();if(!db)throw Error("No hay conexión.");
+  const {data:{session}}=await db.auth.getSession();
+  if(!session?.access_token)throw Error("Inicia sesión nuevamente.");
+  const response=await fetch("/api/vmv/smart-quote/dispatch",{
+   method:"POST",headers:{Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},
+   body:JSON.stringify({quoteId:q.id,action})
+  });
+  if(action==="pdf"){
+   if(!response.ok){const error=await response.json().catch(()=>({}));throw Error(error.error||"No se pudo generar el PDF.");}
+   const url=URL.createObjectURL(await response.blob());
+   const link=document.createElement("a");link.href=url;link.download="cotizacion-"+q.id.slice(0,8)+".pdf";
+   document.body.appendChild(link);link.click();link.remove();
+   window.setTimeout(()=>URL.revokeObjectURL(url),1500);
+   setMessage("PDF descargado con la plantilla seleccionada.");
+   return;
+  }
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error(result.error||"El correo no fue aceptado. La cotización sigue aprobada.");
+  if(result.accepted&&result.recorded){
+   await load(businessId);
+   setMessage("El proveedor aceptó el correo. La entrega final todavía puede estar pendiente.");
+  }else throw Error(result.message||"El proveedor aceptó el correo, pero no se pudo actualizar el historial. Verifica antes de repetir.");
+ });
  const copyQuote=(q:Quote)=>void run(async()=>{
   if(q.status!=="approved"&&q.status!=="sent")throw Error("Solo puedes compartir cotizaciones aprobadas.");
   if(q.valid_until<plusDays(0))throw Error("Esta cotización venció. Crea una nueva propuesta.");
@@ -311,7 +343,12 @@ export default function SmartQuotePage(){
         {q.status==="draft"?<><button type="button" onClick={()=>editQuote(q)}>{localize("Editar","Edit")}</button>
          <button type="button" className={styles.actionPrimary} disabled={busy||q.valid_until<plusDays(0)} onClick={()=>statusChange(q,"approve")}><ShieldCheck size={15}/>{localize("Aprobar","Approve")}</button></>:null}
         {q.status==="approved"||q.status==="sent"?<button type="button" disabled={busy||q.valid_until<plusDays(0)} onClick={()=>copyQuote(q)}><ClipboardCopy size={15}/>{localize("Copiar propuesta","Copy quote")}</button>:null}
-        {q.status==="approved"||q.status==="sent"?<button type="button" disabled={busy||q.valid_until<plusDays(0)} onClick={()=>setPrintableQuote(q)}><Printer size={15}/>{localize("Imprimir / PDF","Print / PDF")}</button>:null}
+        {q.status==="approved"||q.status==="sent"?<button type="button" disabled={busy}
+         onClick={()=>documentAction(q,"pdf")}><Download size={15}/>{localize("Descargar PDF","Download PDF")}</button>:null}
+        {q.status==="approved"||q.status==="sent"?<button type="button" disabled={busy||q.valid_until<plusDays(0)}
+         onClick={()=>setPrintableQuote(q)}><Printer size={15}/>{localize("Imprimir","Print")}</button>:null}
+        {q.status==="approved"?<button type="button" disabled={busy||!emailReady||!q.customer_email||q.valid_until<plusDays(0)}
+         onClick={()=>documentAction(q,"send")}><Send size={15}/>{localize("Enviar por correo","Send email")}</button>:null}
         {q.status==="approved"?<button type="button" disabled={busy} onClick={()=>statusChange(q,"mark_sent")}><Send size={15}/>{localize("Ya la envié","I've sent it")}</button>:null}
         {q.status!=="cancelled"?<button type="button" className={styles.danger} disabled={busy} onClick={()=>statusChange(q,"cancel")}>{localize("Cancelar","Cancel")}</button>:null}
        </div>
