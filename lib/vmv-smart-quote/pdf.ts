@@ -8,6 +8,7 @@ export type QuotePdfData={
  valid_until:string;lines:Line[];subtotal_cents:number;discount_cents:number;
  delivery_cents:number;tax_bps:number;tax_cents:number;deposit_bps:number;
  deposit_cents:number;total_cents:number;notes:string;status:string;
+ pdf_business_contact?:Partial<Record<"email"|"website"|"phone"|"address",string>>;
 };
 const price=(n:number)=>"$"+(n/100).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const pdfText=(v:unknown)=>String(v??"").normalize("NFC")
@@ -27,6 +28,11 @@ function sheet(data:QuotePdfData,business:string,template:QuoteTemplate,part:num
  if(template==="modern"){rect(0,735,612,57,accent);label(business,37,759,17,true,"1 1 1",55);}
  else if(template==="elegant"){rect(35,732,542,2,accent);label(business,40,759,21,true,accent,55);}
  else {rect(0,748,612,44,accent);label(business,36,764,17,true,"1 1 1",55);}
+ const contact=data.pdf_business_contact;
+ const details=[contact?.email,contact?.website,contact?.phone,contact?.address]
+  .filter((value):value is string=>typeof value==="string"&&Boolean(value.trim()));
+ const contactLines=details.flatMap(value=>value.match(/.{1,100}/g)||[]);
+ contactLines.forEach((value,i)=>label(value,38,126-i*9,7,false,muted,100));
  label("COTIZACION",38,704,22,true,accent);
  label("#"+data.id.slice(0,8).toUpperCase()+"  |  Revision "+data.revision,38,683,10,false,muted);
  label("Valida hasta: "+data.valid_until,394,683,10,false,muted,34);
@@ -58,8 +64,8 @@ function sheet(data:QuotePdfData,business:string,template:QuoteTemplate,part:num
   label(price(data.tax_cents),483,y+24,10,false,text,15);
   rect(307,y-28,269,28,accent);
   label("TOTAL",320,y-18,13,true,"1 1 1");label(price(data.total_cents),464,y-18,13,true,"1 1 1",15);
-  if(data.deposit_bps)label("Deposito propuesto: "+price(data.deposit_cents),320,y-46,9,false,muted,45);
-  if(data.notes)label("Condiciones: "+data.notes,38,96,9,false,muted,100);
+  if(data.deposit_bps)label("Deposito propuesto: "+price(data.deposit_cents),320,y-44,9,false,muted,45);
+  if(data.notes)label("Condiciones: "+data.notes,38,139,9,false,muted,100);
  }
  rect(36,50,540,1,"0.87 0.84 0.90");
  label("Cotizacion comercial. No es factura fiscal ni comprobante de pago.",38,34,8,false,muted,97);
