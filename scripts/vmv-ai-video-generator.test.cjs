@@ -30,7 +30,8 @@ test("The AI Agent is the only reachable new video creation entry",()=>{
  assert.match(catalog,/id:"video-generator".*service=video/);
  assert.match(catalog,/disabled={item\.id==="instagram-connect"}/);
  assert.match(studio,/onClick=\{\(\)=>window\.location\.assign\("\/vista-app\/ai-agents\?service=video"\)\}/);
- assert.match(studio,/onClick=\{\(\)=>void preparePilot\(\)\}/);
+ assert.match(studio,/<AutopilotWizard initial=\{pilot\}/);
+ assert.match(agents,/\/vista-app\/video-generator\?setup=autopilot/);
  assert.match(studio,/\/vista-app\/ai-agents\?service=video&pilot=/);
  assert.match(studio,/setScreen\("library"\);void refreshJob\(id\)/);
 });
@@ -127,4 +128,32 @@ test("Video wizard result can finish and reopen the Services tab",()=>{
  assert.match(wizard,/onClick=\{onRestart\}>Crear de nuevo/);
  assert.match(catalog,/requestedTab==="account"\|\|requestedTab==="services"/);
  assert.match(catalog,/setTab\(requestedTab\)/);
+});
+
+test("Visual autopilot is a short, mobile-first guided flow and never auto-publishes",()=>{
+ const flow=read("app/vista-app/video-generator/AutopilotWizard.tsx");
+ const css=read("app/vista-app/video-generator/AutopilotWizard.module.css");
+ const api=read("app/api/video-generator/pilot/route.ts");
+ const migration=read("supabase/sql/vmv_video_autopilot_visual_preferences_20261119.sql");
+ for(const [filename,source] of [["AutopilotWizard.tsx",flow],["AutomaticVideoWizard.tsx",wizard]]){
+  const syntax=ts.createSourceFile(filename,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+  assert.deepEqual(syntax.parseDiagnostics.map(e=>ts.flattenDiagnosticMessageText(e.messageText," ")),[]);
+ }
+ assert.match(flow,/titles=\[/);
+ assert.match(flow,/const niches:Choice\[\]/);
+ assert.match(flow,/const goals:Choice\[\]/);
+ assert.match(flow,/const styles:Choice\[\]/);
+ assert.match(flow,/onSave/);
+ assert.match(flow,/if\(savedId\)\{setPlan\(p=>\(\{\.\.\.p,id:savedId\}\)\)/);
+ assert.match(flow,/aria-pressed=/);
+ assert.match(css,/@media\(max-width:450px\)/);
+ assert.match(css,/prefers-reduced-motion:reduce/);
+ assert.match(api,/status:"paused"/);
+ assert.match(api,/next_run_at:null/);
+ assert.match(api,/monthly_budget_cents:monthlyBudget/);
+ assert.match(migration,/ADD COLUMN IF NOT EXISTS monthly_budget_cents/);
+ assert.doesNotMatch(api,/startRunway\(|publishToSocial|scheduleJob\(/);
+ assert.match(wizard,/pilotId:sourcePilotId\|\|null/);
+ assert.match(studio,/setup"\)==="autopilot"/);
+ assert.match(studio,/view"\)==="library"/);
 });
