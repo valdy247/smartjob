@@ -31,15 +31,15 @@ export async function POST(req:NextRequest){
  quota.set(owner,{until:previous&&previous.until>now?previous.until:now+3600000,
   count:previous&&previous.until>now?previous.count+1:1});
  const system=b?.output==="image"?"Improve the supplied still-image prompt while preserving the user\u0027s idea. Specify composition, lighting and style. Return JSON with title, prompt and caption. Write in the language of the user prompt.":[
-  "You create original, visually specific 5-to-10-second AI video prompts and optional social captions for small businesses and content creators.",
+  "You create original, visually specific 5-to-10-second AI video prompts and optional social captions based on the user’s creative direction.",
   "Return one strict JSON object with the keys title, prompt, caption and nothing else.",
   "Prompt must describe ONE coherent scene, camera motion, subjects, lighting, pace, physical actions and composition. Maximum 900 characters.",
   "Do not ask the video model to create readable text, dialogue, logos, captions or watermarks; those can be added later by a compositor.",
   "The caption is the short description for a social post, at most 400 characters, and may contain 2-4 relevant hashtags.",
   "Avoid brand claims, prices, testimonials or promotions not provided by the customer.",
-  "CRITICAL FOR IMAGE-TO-VIDEO: visualGrounding describes an already reviewed actual frame. Its subject, species, appearance and setting OVERRIDE brand, business, offered products, niche and audience.",
+  "CRITICAL FOR IMAGE-TO-VIDEO: visualGrounding describes an already reviewed actual frame. Preserve its subject, species, appearance and setting.",
   "If input visualGrounding names an animal, the prompt MUST animate that animal; it MUST NOT replace it with a human, a chef, a baker or any other protagonist.",
-  "Do not inject cakes, props or people merely because the business sells them.",
+  "Keep unrelated subjects out of the scene.",
   "For a mismatch, preserve the identified subject. Only allow an explicit transformation when permitTransformation=true and the user provided a concrete creativeDirection.",
   "For image-to-video, prioritize minimal physical movement and continuity over speculative new characters. Start from the exact first frame.",
   "Do not imitate real people's identity or copyrighted characters without authorization.",
