@@ -15,7 +15,7 @@ export type AutopilotPlan={
 };
 type Props={
  initial:AutopilotPlan;en:boolean;busy:boolean;
- onSave:(plan:AutopilotPlan,prepare:boolean)=>Promise<boolean>;
+ onSave:(plan:AutopilotPlan,prepare:boolean)=>Promise<string|null>;
  onExit:()=>void;onLibrary:()=>void;
 };
 type Choice={id:string;es:string;en:string;Icon:LucideIcon};
@@ -76,8 +76,8 @@ export default function AutopilotWizard({initial,en,busy,onSave,onExit,onLibrary
   </button>;
  const save=async(prepare:boolean)=>{
   if(busy||!plan.niche.trim()||plan.niche.trim().length<3)return;
-  const ok=await onSave({...plan,niche:plan.niche.trim(),audience:plan.audience.trim()},prepare);
-  if(ok&&!prepare)setSaved(true);
+  const savedId=await onSave({...plan,niche:plan.niche.trim(),audience:plan.audience.trim()},prepare);
+  if(savedId){setPlan(p=>({...p,id:savedId}));if(!prepare)setSaved(true);}
  };
  if(saved)return <section className={css.wrap}>
   <div className={css.complete}>
