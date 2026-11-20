@@ -4,7 +4,7 @@ import {authenticatedUser} from "@/lib/auth-server";
 import {videoAllowed,videoDb,videoHeaders,validUuid} from "@/lib/vmv-video-generator";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
-export const maxDuration=60;
+export const maxDuration=120;
 const reply=(body:Record<string,unknown>,status=200)=>NextResponse.json(body,{status,headers:videoHeaders});
 const safe=(v:unknown,max:number)=>typeof v==="string"?v.trim().slice(0,max):"";
 /** Generate a private preview only: no image-to-video credits or publishing here. */
@@ -24,6 +24,13 @@ export async function POST(req:NextRequest){
  ]);
  if(business.error||workspace.error||!business.data||!workspace.data)
   return reply({error:"business_not_authorized"},403);
+ const standalone=body?.output==="image";
+ const dimensions=body?.size??"1024x1024";
+ const quality=body?.quality??"standard";
+ if(!["1024x1024","1024x1536","1536x1024"].includes(dimensions)||
+    !["standard","high"].includes(quality))return reply({error:"invalid_video_request"},400);
+ const userPrompt=safe(body?.prompt,1000);
+ if(standalone&&userPrompt.length<3)return reply({error:"complete_video_brief"},400);
  const offer=safe(body?.offer,220),audience=safe(body?.audience,130),
   direction=safe(body?.direction,260),context=safe(body?.context,220);
  if(offer.length<3||audience.length<3)return reply({error:"complete_video_brief"},400);
@@ -32,8 +39,8 @@ export async function POST(req:NextRequest){
  if(quotaError)return reply({error:"image_quota_unavailable"},503);
  if(claimed!==true)return reply({error:"image_daily_limit"},429);
  try{
-  const instructions=[
-   "Create an original high-quality square photographic reference frame for a short commercial video.",
+  const instructions=standalone?"Create the still image described by the user. Respect the requested subject, composition and style.":[
+   "Create an original high-quality photographic reference frame for a short commercial video.",
    "One cinematic scene with a clear foreground subject, natural lighting and convincing physical detail.",
    "No text, captions, typography, logos, watermarks, overlays or UI in the frame.",
    "No unverified packaging, invented prices, celebrity likenesses, trademarks or unsupported product features.",
@@ -45,14 +52,16 @@ export async function POST(req:NextRequest){
    visualDirection:direction||"Authentic premium cinematic product photography"
   });
   const result=await generateImage({
-   model:"openai/gpt-image-1-mini",prompt:instructions+"\nContext: "+data,
-   size:"1024x1024",abortSignal:AbortSignal.timeout(54000)
+   model:quality==="high"?"openai/gpt-image-1.5":"openai/gpt-image-1-mini",
+   prompt:standalone?instructions+"\n"+userPrompt:instructions+"\nContext: "+data,
+   size:dimensions,providerOptions:{openai:{quality:quality==="high"?"high":"medium",output_format:"jpeg"}},abortSignal:AbortSignal.timeout(110000)
   });
   const bytes=Buffer.from(result.image.uint8Array);
   if(bytes.length<1024||bytes.length>6*1024*1024)return reply({error:"image_size_unavailable"},502);
   const mediaType=result.image.mediaType;
   if(!["image/jpeg","image/png","image/webp"].includes(mediaType))
    return reply({error:"image_format_unavailable"},502);
+  if(standalone)return new NextResponse(new Uint8Array(bytes),{headers:{...videoHeaders,"Content-Type":mediaType}});
   return reply({imageBase64:bytes.toString("base64"),mediaType});
  }catch(error){
   console.warn("[vmv-video-reference] image generation failed",error instanceof Error?error.name:"unknown");
