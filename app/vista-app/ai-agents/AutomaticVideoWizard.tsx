@@ -60,6 +60,11 @@ async function jpgDataUrl(blob:Blob){
  }finally{bitmap.close();}
 }
 export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
+ const [creation,setCreation]=useState(0);
+ return <VideoWizardSession key={creation} onClose={onClose} onRestart={()=>setCreation(value=>value+1)}/>;
+}
+
+function VideoWizardSession({onClose,onRestart}:{onClose:()=>void;onRestart:()=>void}){
  const [stage,setStage]=useState<Stage>("source");
  const [editing,setEditing]=useState(false);
  const [loading,setLoading]=useState(true);
@@ -425,7 +430,15 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
     Autorizo usar créditos para esta generación.</label>
    {!standalone&&!configured&&<p className={base.warning}>{videoStatus||"El generador de video no está disponible."}</p>}
   </div>}
-  {stage==="result"&&<VideoCreationResult owner={owner} jobId={jobId} image={outputImage}/>}
+  {stage==="result"&&<>
+   <VideoCreationResult owner={owner} jobId={jobId} image={outputImage}/>
+   <div className={base.footer}>
+    <div className={base.options}>
+     <button type="button" className={base.option} onClick={onRestart}>Crear de nuevo</button>
+     <button type="button" className={base.option} onClick={onClose}>Finalizar</button>
+    </div>
+   </div>
+  </>}
   {error&&<p className={base.error} role="alert">{error}</p>}
   {!loading&&owner&&stage!=="source"&&stage!=="imageSource"&&stage!=="imageSize"&&stage!=="imageQuality"&&stage!=="result"&&!(stage==="reference"&&!filePreview)&&<div className={base.footer}>
    {stage==="review"?<button className={base.primary+" "+theme.agentButton} disabled={Boolean(busy)||!confirmCredits||(!standalone&&!configured)}
