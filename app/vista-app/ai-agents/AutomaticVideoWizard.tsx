@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
 import {ArrowLeft,ArrowRight,Bot,Check,Film,ImagePlus,LoaderCircle,Pencil,RefreshCw,Sparkles,WandSparkles} from "lucide-react";
+import {IMAGE_PROMPT_LIMIT} from "@/lib/vmv-video-generator/image-prompt";
 import VideoCreationResult,{mediaHeaders} from "./VideoCreationResult";
 import {getSupabase} from "@/lib/supabase";
 import theme from "./AgentServiceFlow.module.css";
@@ -33,6 +34,7 @@ const videoError:Record<string,string>={
  video_ai_unavailable:"La IA no pudo generar el guion. Puedes escribirlo manualmente.",
  image_daily_limit:"Se alcanzó el presupuesto de seguridad del piloto. Puedes subir una foto.",
  video_image_unavailable:"No se pudo generar esta imagen. Puedes reintentar o subir una foto.",
+ image_prompt_too_long:"La descripción supera los 12,000 caracteres.",
  invalid_video_request:"Revisa el guion, imagen, formato y autorización de créditos."
 };
 async function jpgDataUrl(blob:Blob){
@@ -92,7 +94,7 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
  const steps=stages(mode,generated),index=steps.indexOf(stage);
  const valid=
   stage==="reference"?Boolean(filePreview)&&!imageCandidate&&Boolean(imageAnalysis||manualSubject.trim().length>=8)&&(!imageAnalysis?.conflict||creativeOverride)&&(!allowTransformation||imageDirection.trim().length>=8):
-  stage==="script"?prompt.trim().length>=3&&prompt.length<=1000:
+  stage==="script"?prompt.trim().length>=3&&prompt.length<=(standalone?IMAGE_PROMPT_LIMIT:1000):
   true;
  useEffect(()=>{
   let active=true;
@@ -173,7 +175,7 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
    });
    if(typeof result.prompt!=="string"||result.prompt.trim().length<20)
     throw Error("video_ai_unavailable");
-   setPrompt(result.prompt.slice(0,1000));
+   setPrompt(result.prompt.slice(0,standalone?IMAGE_PROMPT_LIMIT:1000));
    setCaption(String(result.caption||"").slice(0,500));
   }catch(e){const code=e instanceof Error?e.message:"video_ai_unavailable";
    setError(videoError[code]||"No se pudo crear el guion automáticamente. Puedes escribirlo aquí.");}
@@ -348,9 +350,10 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
    </label>:null}
    {generated&&!filePreview&&<div className={styles.imageAiBox}>
     <label className={base.field}>Describe la imagen
-     <textarea rows={2} value={imageDirection} maxLength={260} disabled={Boolean(busy)}
+     <textarea rows={7} value={imageDirection} maxLength={IMAGE_PROMPT_LIMIT} disabled={Boolean(busy)}
       onChange={e=>setImageDirection(e.target.value)}
-      placeholder="Ejemplo: toma cinematográfica de un pastel elegante sobre una mesa"/></label>
+      placeholder="Describe el sujeto, el fondo, la luz y los detalles que quieres conservar…"/>
+     <small>{imageDirection.length.toLocaleString("es-US")} / 12,000</small></label>
     <button type="button" className={base.option+" "+theme.agentOutline}
      onClick={()=>void generateReference()} disabled={Boolean(busy)||imageDirection.trim().length<3}>
      {busy==="image"?<LoaderCircle size={17} className={base.spin}/>:<WandSparkles size={17}/>}
@@ -374,7 +377,7 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
 
   {!loading&&owner&&stage==="script"&&<div className={base.panel}>
    <label className={base.field}>{mode==="image"?"¿Cómo debe moverse la imagen?":"Tu prompt"}
-    <textarea rows={5} maxLength={1000} value={prompt} disabled={Boolean(busy)} onChange={e=>setPrompt(e.target.value)}
+    <textarea rows={standalone?7:5} maxLength={standalone?IMAGE_PROMPT_LIMIT:1000} value={prompt} disabled={Boolean(busy)} onChange={e=>setPrompt(e.target.value)}
      placeholder={standalone?"Describe el sujeto, el fondo y el estilo…":mode==="image"?"Describe el movimiento del sujeto o de la cámara…":"Describe la escena, la acción y el ambiente…"}/></label>
    {prompt.trim().length>0&&<button className={base.option} disabled={Boolean(busy)||prompt.trim().length<3} onClick={()=>void generateScript()}>
     <Sparkles size={17}/>{busy==="script"?"Mejorando…":"Mejorar con IA"}</button>}
