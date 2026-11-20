@@ -145,7 +145,7 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
   move(steps[index-1]);
  };
  const edit=(target:Stage)=>{setConfirmCredits(false);setEditing(true);move(target);};
- const generateScript=async()=>{
+ const generateScript=async(referencePrompt=false)=>{
   if(busy)return;
   setBusy("script");setError("");
   try{
@@ -165,8 +165,8 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
     "Style: "+style
    ].filter(Boolean).join("\n").slice(0,1000);
    const result=await api("/api/video-generator/brief",{
-    style,prompt:standalone?prompt:existing,output:standalone?"image":"video",locale:"es",
-    visualGrounding:mode==="image"?{
+    style,prompt:referencePrompt?imageDirection:standalone?prompt:existing,output:referencePrompt||standalone?"image":"video",locale:"es",
+    visualGrounding:mode==="image"&&!referencePrompt?{
      subject:imageAnalysis?.subject||manualSubject.trim(),
      observations:imageAnalysis?.observations||manualSubject.trim(),
      groundedMotion:imageAnalysis?.groundedMotion||manualSubject.trim(),
@@ -175,6 +175,9 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
    });
    if(typeof result.prompt!=="string"||result.prompt.trim().length<20)
     throw Error("video_ai_unavailable");
+   if(referencePrompt){
+    setImageDirection(result.prompt.slice(0,IMAGE_PROMPT_LIMIT));setImageCandidate("");return;
+   }
    setPrompt(result.prompt.slice(0,standalone?IMAGE_PROMPT_LIMIT:1000));
    setCaption(String(result.caption||"").slice(0,500));
   }catch(e){const code=e instanceof Error?e.message:"video_ai_unavailable";
@@ -354,10 +357,13 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
       onChange={e=>setImageDirection(e.target.value)}
       placeholder="Describe el sujeto, el fondo, la luz y los detalles que quieres conservar…"/>
      <small>{imageDirection.length.toLocaleString("es-US")} / 12,000</small></label>
-    <button type="button" className={base.option+" "+theme.agentOutline}
+    {imageDirection.trim().length>0&&<button type="button" className={base.option+" "+theme.agentOutline}
+     disabled={Boolean(busy)||imageDirection.trim().length<3} onClick={()=>void generateScript(true)}>
+     <Sparkles size={17}/>{busy==="script"?"Mejorando…":"Mejorar con IA"}</button>}
+    <button type="button" className={base.primary+" "+theme.agentButton}
      onClick={()=>void generateReference()} disabled={Boolean(busy)||imageDirection.trim().length<3}>
      {busy==="image"?<LoaderCircle size={17} className={base.spin}/>:<WandSparkles size={17}/>}
-     {busy==="image"?"Creando imagen…":"Generar imagen con IA"}</button>
+     {busy==="image"?"Creando imagen…":"Generar imagen"}</button>
     {imageCandidate?<div className={styles.reference}>
      <img src={imageCandidate} alt="Propuesta generada por IA, pendiente de aprobación"/>
      <div className={styles.imageActions}>
