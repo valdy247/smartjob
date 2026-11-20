@@ -3,7 +3,7 @@ import {useEffect,useState} from "react";
 import {
  ArrowLeft,ArrowUpRight,Bot,BookOpen,BookCheck,BriefcaseBusiness,CalendarDays,Check,
  ChevronRight,ClipboardList,Headphones,MessageCircle,Package,PauseCircle,
- PhoneCall,PlayCircle,ShieldCheck,ShoppingBag,Sparkles,WandSparkles,Megaphone,Globe2,Video,FileText,Plus
+ PhoneCall,PlayCircle,ShieldCheck,ShoppingBag,Sparkles,WandSparkles,Megaphone,Globe2,Video,FileText,Plus,Workflow
 } from "lucide-react";
 import type {LucideIcon} from "lucide-react";
 import styles from "./page.module.css";
@@ -513,8 +513,11 @@ export default function AIAgentsPreview(){
        <button type="button" onClick={()=>setScreen("video")} style={{textAlign:"left",display:"flex",alignItems:"center",gap:16,padding:19,borderRadius:18,border:"1px solid #e9d9ed",background:"#fff",color:"#332346",cursor:"pointer"}}>
         <WandSparkles size={25} color="#8144ad"/><span style={{display:"grid",gap:4}}><strong>Generar video</strong><small>Crear con tu agente IA</small></span><ChevronRight size={18} style={{marginLeft:"auto"}}/>
        </button>
-       <a href="/vista-app/video-generator" style={{textDecoration:"none",textAlign:"left",display:"flex",alignItems:"center",gap:16,padding:19,borderRadius:18,border:"1px solid #e9d9ed",background:"#fff",color:"#332346"}}>
-        <PlayCircle size={25} color="#8144ad"/><span style={{display:"grid",gap:4}}><strong>Historial</strong><small>Mi biblioteca · reproducir y descargar</small></span><ChevronRight size={18} style={{marginLeft:"auto"}}/>
+       <a href="/vista-app/video-generator?setup=autopilot" style={{textDecoration:"none",textAlign:"left",display:"flex",alignItems:"center",gap:16,padding:19,borderRadius:18,border:"1.5px solid #cfb9ee",background:"linear-gradient(120deg,#f1e9ff,#e7f8f0)",color:"#332346"}}>
+         <Workflow size={27} color="#7444b3"/><span style={{display:"grid",gap:4}}><strong>Piloto automático</strong><small>Tu contenido, paso a paso</small></span><ChevronRight size={18} style={{marginLeft:"auto",color:"#7444b3"}}/>
+        </a>
+        <a href="/vista-app/video-generator?view=library" style={{textDecoration:"none",textAlign:"left",display:"flex",alignItems:"center",gap:16,padding:19,borderRadius:18,border:"1px solid #e9d9ed",background:"#fff",color:"#332346"}}>
+        <PlayCircle size={25} color="#8144ad"/><span style={{display:"grid",gap:4}}><strong>Historial</strong><small>Reproducir y descargar</small></span><ChevronRight size={18} style={{marginLeft:"auto"}}/>
        </a>
       </section>:null}
      {screen==="video"&&authenticated?
