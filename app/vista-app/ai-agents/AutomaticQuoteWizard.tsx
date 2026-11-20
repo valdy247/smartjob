@@ -26,11 +26,13 @@ function localDate(offset=0){
  return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");
 }
 function expiry(){return localDate(7);}
-export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose}:{
+export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose,businesses,onChooseBusiness}:{
  business:CentralBusiness;agent:PersistedAgent;workspaceId:string;onClose:()=>void;
+ businesses:CentralBusiness[];onChooseBusiness:(id:string)=>void;
 }){
  const [step,setStep]=useState<Step>("business"),[editing,setEditing]=useState(false);
  const [businessConfirmed,setBusinessConfirmed]=useState(false);
+ const [showBusinesses,setShowBusinesses]=useState(false);
  const [owner,setOwner]=useState(""),[catalog,setCatalog]=useState<QuoteService[]>([]);
  const [connected,setConnected]=useState({product:false,service:false});
  const [refreshing,setRefreshing]=useState(false);
@@ -213,6 +215,20 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
    <button type="button" aria-pressed={businessConfirmed}
     className={businessConfirmed?styles.optionActive:styles.option}
     onClick={()=>setBusinessConfirmed(true)}><Check size={16}/> Sí, este negocio</button>
+   <button type="button" className={styles.option} aria-expanded={showBusinesses}
+    onClick={()=>setShowBusinesses(value=>!value)}>
+    {showBusinesses?"Ocultar negocios":"Cambiar negocio"}</button>
+   {showBusinesses?<div className={styles.optionsVertical} aria-label="Otros negocios disponibles">
+    {businesses.filter(b=>b.id!==business.id).length===0?
+     <p className={styles.note}>No tienes otros negocios registrados para seleccionar.</p>:
+     businesses.filter(b=>b.id!==business.id).map(b=>
+      <button type="button" key={b.id} className={styles.option}
+       onClick={()=>{
+        if((chosen.length>0||customer.name.trim())&&
+         !window.confirm("Cambiar de negocio descartará la cotización sin guardar. ¿Continuar?"))return;
+        onChooseBusiness(b.id);
+       }}>{b.name}</button>)}
+   </div>:null}
    <p className={styles.note}>La cotización usará precios de tu catálogo real de Smart Quote, no precios imaginados por IA.</p>
   </div>:null}
   {!loading&&owner&&step==="services"?<div className={styles.panel}>
