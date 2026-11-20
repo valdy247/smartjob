@@ -83,7 +83,10 @@ export default function VMVMobilePreview(){
  const [tab,setTab]=useState<Tab>("home");
  const [diagnosticOpen,setDiagnosticOpen]=useState(false);
  const [diagnosticSaved,setDiagnosticSaved]=useState<DiagnosticRecord|null>(null);
- useEffect(()=>{if(new URLSearchParams(window.location.search).get("tab")==="account")setTab("account");},[]);
+ useEffect(()=>{const requestedTab=new URLSearchParams(window.location.search).get("tab");
+   // The creation wizard can return directly to the Services screen.
+   if(requestedTab==="account"||requestedTab==="services")setTab(requestedTab);
+  },[]);
  const [open,setOpen]=useState(false);
  const [serviceFocus,setServiceFocus]=useState<"all"|"web">("all");
  const [catalogQuery,setCatalogQuery]=useState("");
