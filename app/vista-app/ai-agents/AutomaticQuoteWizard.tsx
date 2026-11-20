@@ -1,6 +1,6 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
-import {ArrowLeft,ArrowRight,Bot,Check,FileText,LoaderCircle,Pencil,Plus,ShieldCheck,Sparkles,Package,CalendarCheck,RefreshCw,Send,Download,Bookmark,Palette} from "lucide-react";
+import {ArrowLeft,ArrowRight,Bot,Check,FileText,LoaderCircle,Pencil,Plus,Sparkles,Package,CalendarCheck,RefreshCw,Download,Bookmark,Palette} from "lucide-react";
 import ShareQuotePdf from "../smart-quote/ShareQuotePdf";
 import {getSupabase} from "@/lib/supabase";
 import type {CentralBusiness} from "./centralBusiness";
@@ -42,9 +42,7 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
  const [businessConfirmed,setBusinessConfirmed]=useState(false);
  const [showBusinesses,setShowBusinesses]=useState(false);
  const [design,setDesign]=useState<Design>("modern");
- const [message,setMessage]=useState("");
- const [emailReady,setEmailReady]=useState(false);
- const [savedOutcome,setSavedOutcome]=useState<"draft"|"approved"|"sent">("draft");
+ const [savedOutcome,setSavedOutcome]=useState<"draft"|"approved">("draft");
  const [owner,setOwner]=useState(""),[catalog,setCatalog]=useState<QuoteService[]>([]);
  const [connected,setConnected]=useState({product:false,service:false});
  const [refreshing,setRefreshing]=useState(false);
@@ -55,9 +53,6 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
  const [adding,setAdding]=useState(false),[approved,setApproved]=useState(false);
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(""),[error,setError]=useState("");
  const [savedId,setSavedId]=useState("");
- useEffect(()=>{let live=true;void fetch("/api/vmv/smart-quote/dispatch",{cache:"no-store"})
-  .then(r=>r.json()).then(d=>{if(live)setEmailReady(d.enabled===true);})
-  .catch(()=>{});return()=>{live=false;};},[]);
  const index=steps.indexOf(step);
  const visibleCatalog=catalog.filter(x=>x.active&&
   (x.source_kind===null||connected[x.source_kind]));
@@ -193,15 +188,9 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
   }catch(e){setError(e instanceof Error?e.message:"No se pudo descargar el PDF.");}
   finally{setBusy("");}
  };
- const save=async(intent:"draft"|"send")=>{
+ const save=async(intent:"draft"|"share")=>{
   if(busy||!owner||!valid||!chosen.length||savedId)return;
-  if(intent==="send"&&(!emailReady||!customer.email.trim()||
-   !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email.trim()))){
-   setError("Para enviar necesitas un correo válido y el proveedor de correo conectado.");return;
-  }
-  if(!window.confirm(intent==="send"?
-   "¿Aprobar esta cotización y enviarla al correo "+customer.email+" con el PDF? No se cobrará nada.":
-   "¿Guardar esta cotización como borrador para continuar después? No se enviará ni se cobrará nada."))return;
+  if(intent==="draft"&&!window.confirm("¿Guardar esta cotización como borrador?"))return;
   setBusy("save");setError("");
   try{
    const db=getSupabase();if(!db)throw Error("No hay conexión.");
@@ -239,17 +228,7 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
    if(approval.error||approval.data!==true)
     throw Error("El borrador quedó guardado, pero falta aprobarlo. Revísalo desde Mis cotizaciones.");
    setSavedOutcome("approved");
-   const {data:{session}}=await db.auth.getSession();
-   if(!session?.access_token)throw Error("La cotización se aprobó, pero tu sesión expiró. Revísala antes de reenviar.");
-   const result=await fetch("/api/vmv/smart-quote/dispatch",{
-    method:"POST",headers:{Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},
-    body:JSON.stringify({quoteId:id,action:"send",message})});
-   const body=await result.json().catch(()=>({}));
-   if(!result.ok)throw Error(body.error||"La cotización quedó aprobada, pero no pudo enviarse.");
-   if(body.accepted===true&&body.recorded===true)setSavedOutcome("sent");
-   else if(body.accepted===true)throw Error(body.message||
-    "El correo fue aceptado, pero el historial todavía no lo refleja. No lo reenvíes sin verificar.");
-   else throw Error("No se confirmó el envío. Revísalo en Mis cotizaciones.");
+   return id;
   }catch(e){setError(e instanceof Error?e.message:
    "No se pudo completar. Revisa Mis cotizaciones antes de intentarlo de nuevo.");}
   finally{setBusy("");}
@@ -384,29 +363,12 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
      <strong>{d.label}</strong><small>{d.hint}</small>
     </button>)}
    </div>
-   <label className={styles.field}>Mensaje para el cliente (editable)
-    <textarea rows={4} maxLength={1000} value={message}
-     onChange={e=>setMessage(e.target.value)}
-     placeholder="Gracias por tu interés. Adjunto encontrarás la cotización solicitada."/>
-   </label>
-   <button type="button" className={styles.option} onClick={()=>
-    setMessage("Hola "+customer.name.trim()+",\n\nGracias por tu interés en "+business.name+
-     ". Te compartimos nuestra cotización por "+money(Math.max(0,total))+
-     ", válida hasta "+charges.until+".\n\nQuedamos atentos a tus preguntas.\n"+business.name)}>
-    <Sparkles size={16}/> Sugerir mensaje profesional
-   </button>
-   <p className={styles.note}>El texto sugerido no utiliza IA generativa; puedes revisarlo antes de enviarlo.</p>
   </div>:null}
   {!loading&&owner&&step==="review"?<div className={styles.panel}>
    {savedId?<div className={extra.success}><Check size={25}/>
-    <strong>{savedOutcome==="sent"?"Envío aceptado":savedOutcome==="approved"?"Cotización aprobada":"Borrador guardado"}</strong>
-    <p>{savedOutcome==="sent"?
-     "El proveedor aceptó el correo. La recepción final puede estar pendiente.":
-     savedOutcome==="approved"?"Aprobada, pero el correo no quedó confirmado. Revisa el historial.":
-     "Se guardó para más tarde. No se envió ni se cobró."}</p>
+    <strong>{savedOutcome==="approved"?"Cotización aprobada":"Borrador guardado"}</strong>
     <button type="button" className={styles.option} disabled={Boolean(busy)}
      onClick={()=>void downloadPdf(savedId)}><Download size={16}/> Descargar PDF</button>
-    <ShareQuotePdf key={savedId} quoteId={savedId} className={styles.option} disabled={Boolean(busy)}/>
     <a href="/vista-app/smart-quote">Ver en Mis cotizaciones</a>
    </div>:<div className={styles.review}>
     {card("Negocio",business.name,"business")}
@@ -420,24 +382,20 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
     {card("Total estimado",money(Math.max(0,total)),"charges")}
     {card("Plantilla",designs.find(x=>x.id===design)?.label||"Moderna","design")}
    </div>}
-   <p className={styles.note}>Los precios se validan en Supabase. «Enviar» requiere tu confirmación y un correo configurado; «Guardar» crea un borrador. Ninguna acción cobra dinero.</p>
   </div>:null}
   {error?<div className={styles.error} role="alert">{error}</div>:null}
   {!loading&&owner?<div className={styles.footer}>
-   {step==="review"?(!savedId?<div className={extra.deliveryActions}>
-    <button type="button" className={styles.primary+" "+theme.agentButton}
-     disabled={Boolean(busy)||!chosen.length||!emailReady||!customer.email.trim()}
-     onClick={()=>void save("send")}><Send size={17}/>
-     {busy==="save"?"Procesando…":"Enviar cotización"}</button>
-    <button type="button" className={extra.secondaryAction}
-     disabled={Boolean(busy)||!chosen.length} onClick={()=>void save("draft")}>
-     <Bookmark size={17}/> Guardar para más tarde</button>
-    {!emailReady?<p className={styles.note}>Para habilitar el envío, configura el proveedor de correo del servidor. Guardar y descargar PDF ya está disponible.</p>:null}
-   </div>:null):
+   {step==="review"?<div className={extra.deliveryActions}>
+    {(!savedId||savedOutcome==="approved")&&<ShareQuotePdf
+     quoteId={savedId} prepareQuote={()=>save("share")} buttonLabel="Compartir factura"
+     className={styles.primary+" "+theme.agentButton} disabled={Boolean(busy)||!valid}/>}
+    {!savedId&&<button type="button" className={extra.secondaryAction}
+     disabled={Boolean(busy)||!valid} onClick={()=>void save("draft")}>
+     <Bookmark size={17}/> Guardar para después</button>}
+   </div>:
    <button type="button" className={styles.primary+" "+theme.agentButton}
     disabled={!valid||Boolean(busy)} onClick={next}>
     {editing?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={17}/></button>}
   </div>:null}
-  <p className={styles.footnote}><ShieldCheck size={14}/> Nunca se envía ni se cobra sin aprobación.</p>
  </section>;
 }
