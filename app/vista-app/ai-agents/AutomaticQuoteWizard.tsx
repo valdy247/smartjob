@@ -128,7 +128,7 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
   const minutes=Number(newItem.duration);
   if(newItem.name.trim().length<2||price===null||price<1||price>10000000||
    (kind==="service"&&(!Number.isInteger(minutes)||minutes<15||minutes>240)))return;
-  if(!window.confirm("¿Confirmas que el producto o servicio y su precio son reales, y autorizas añadirlo al catálogo compartido de AI Agents?"))return;
+  if(!window.confirm("¿Confirmas este precio real? El artículo quedará activo y aprobado en AI Agents y también podrá aparecer en las webs conectadas a su catálogo."))return;
   setBusy("service");setError("");
   let created=false;
   try{
@@ -268,7 +268,7 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
      </select></label>:null}
     <label className={styles.field}>Descripción<textarea rows={2} maxLength={500} value={newItem.description}
      onChange={e=>setNewItem(v=>({...v,description:e.target.value}))}/></label>
-    <p className={styles.note}>Se guardará en el catálogo real de AI Agents como activo y aprobado. El precio se podrá actualizar desde Mi agente.</p>
+    <p className={styles.note}>Quedará activo y aprobado en AI Agents. Si tu web usa este catálogo, también podrá mostrarse allí. Puedes editarlo después en Mi agente.</p>
     <button type="button" className={styles.optionActive}
      disabled={Boolean(busy)||newItem.name.trim().length<2||parseUsd(newItem.price)===null||
       Number(newItem.price)>100000}
