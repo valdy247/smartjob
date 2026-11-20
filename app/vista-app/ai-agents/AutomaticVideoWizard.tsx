@@ -1,22 +1,22 @@
 "use client";
 import {useEffect,useState} from "react";
-import {ArrowLeft,ArrowRight,Bot,Check,CheckCircle2,Film,ImagePlus,LoaderCircle,Pencil,RefreshCw,Sparkles,WandSparkles} from "lucide-react";
+import {ArrowLeft,ArrowRight,Bot,Check,Film,ImagePlus,LoaderCircle,Pencil,RefreshCw,Sparkles,WandSparkles} from "lucide-react";
 import VideoCreationResult,{mediaHeaders} from "./VideoCreationResult";
 import {getSupabase} from "@/lib/supabase";
 import theme from "./AgentServiceFlow.module.css";
 import base from "./AutomaticWebWizard.module.css";
 import styles from "./AutomaticVideoWizard.module.css";
 
-type Stage="source"|"reference"|"script"|"format"|"review"|"result";
+type Stage="source"|"imageSource"|"imageSize"|"imageQuality"|"reference"|"script"|"format"|"review"|"result";
 type Mode="text"|"image";
 type Model="gen4.5"|"kling";
 type Ratio="720:1280"|"1280:720";
 type VideoStatus={configured:boolean};
-const stages=(mode:Mode):Stage[]=>mode==="image"?
- ["source","reference","script","format","review","result"]:
+const stages=(mode:Mode,generated:boolean):Stage[]=>mode==="image"?
+ ["source","imageSource",...(generated?["imageSize","imageQuality"] as const:[]),"reference","script","format","review","result"]:
  ["source","script","format","review","result"];
 const questions:Record<Stage,string>={
- source:"¿Qué quieres crear?",reference:"Elige tu imagen de partida",script:"Describe lo que quieres crear",
+ source:"¿Qué quieres crear?",imageSource:"¿De dónde viene la imagen?",imageSize:"Elige el tamaño",imageQuality:"Elige la calidad",reference:"Imagen de partida",script:"Describe lo que quieres crear",
  format:"Ajustes de generación",review:"Revisa tu creación",result:"Tu resultado"
 };
 const concepts=[["realistic","Realista"],["cinematic","Cinematográfico"],["animated","Animado"],["product","Producto"]] as const;
@@ -83,12 +83,13 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
  const [configured,setConfigured]=useState(false);
  const [videoStatus,setVideoStatus]=useState("");
  const [standalone,setStandalone]=useState(false);
- const [size,setSize]=useState("1024x1024");
+ const [generated,setGenerated]=useState(false);
+ const [size,setSize]=useState("1024x1536");
  const [quality,setQuality]=useState("standard");
  const [jobId,setJobId]=useState("");
  const [outputImage,setOutputImage]=useState<Blob|null>(null);
  const [clientKey]=useState(()=>crypto.randomUUID());
- const steps=stages(mode),index=steps.indexOf(stage);
+ const steps=stages(mode,generated),index=steps.indexOf(stage);
  const valid=
   stage==="reference"?Boolean(filePreview)&&!imageCandidate&&Boolean(imageAnalysis||manualSubject.trim().length>=8)&&(!imageAnalysis?.conflict||creativeOverride)&&(!allowTransformation||imageDirection.trim().length>=8):
   stage==="script"?prompt.trim().length>=3&&prompt.length<=1000:
@@ -264,15 +265,25 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
  };
  const selectMode=(choice:"text"|"image"|"still")=>{
   setEditing(false);setStandalone(choice==="still");setMode(choice==="image"?"image":"text");
-  setConfirmCredits(false);move(choice==="image"?"reference":"script");
+  setConfirmCredits(false);if(choice==="image")setGenerated(false);
+  move(choice==="image"?"imageSource":"script");
  };
- const imageSettings=<>
-  <label className={base.field}>Tamaño de imagen<select value={size} onChange={e=>setSize(e.target.value)}>
-   <option value="1024x1024">Cuadrada · 1024 × 1024</option><option value="1024x1536">Vertical · 1024 × 1536</option>
-   <option value="1536x1024">Horizontal · 1536 × 1024</option></select></label>
-  <label className={base.field}>Calidad<select value={quality} onChange={e=>setQuality(e.target.value)}>
-   <option value="standard">Estándar · GPT Image 1 Mini</option><option value="high">Alta · GPT Image 1.5</option></select></label>
- </>;
+ const clearReference=()=>{
+  setFilePreview("");setImageCandidate("");setImageAnalysis(null);setManualSubject("");
+  setCreativeOverride(false);setAllowTransformation(false);setConfirmCredits(false);
+ };
+ const sizes=[["1024x1536","Vertical",18,27],["1024x1024","Cuadrado",23,23],["1536x1024","Horizontal",27,18]] as const;
+ const sizeOptions=<div className={styles.sizeOptions} role="group" aria-label="Tamaño">
+  {sizes.map(([value,label,width,height])=><button key={value} type="button"
+   className={size===value?base.optionActive:base.option} aria-pressed={size===value}
+   onClick={()=>{if(stage==="imageSize"&&size!==value)clearReference();setSize(value);if(stage==="imageSize")move("imageQuality");}}>
+   <span className={styles.frame} style={{width,height}} aria-hidden="true"/>{label}</button>)}
+ </div>;
+ const qualityOptions=<div className={styles.qualityOptions} role="group" aria-label="Calidad">
+  {([["standard","Media"],["high","Alta"]] as const).map(([value,label])=><button key={value}
+   type="button" className={quality===value?base.optionActive:base.option} aria-pressed={quality===value}
+   onClick={()=>{if(stage==="imageQuality"&&quality!==value)clearReference();setQuality(value);if(stage==="imageQuality")move("reference");}}>{label}</button>)}
+ </div>;
  return <section className={base.root+" "+theme.flow} aria-label="Video Generator con AI Agents">
   <div className={base.top}><button type="button" aria-label="Volver" disabled={Boolean(busy)} onClick={back}><ArrowLeft size={19}/></button>
    <span>Video Generator · Mi agente</span><span>{index+1}/{steps.length}</span></div>
@@ -281,26 +292,38 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
   <div className={base.robot+" "+theme.agentRobot}><Bot size={35}/><Sparkles size={16}/></div>
   <h1 className={base.question+" "+theme.agentHeading}>{questions[stage]}</h1>
   {loading?<p role="status" className={base.note}><LoaderCircle size={17} className={base.spin}/> Cargando el creador…</p>:null}
-  {!loading&&owner&&stage==="source"&&<div className={base.optionsVertical}>
+  {!loading&&owner&&stage==="source"&&<div className={styles.entryOptions}>
    <button className={base.option} onClick={()=>selectMode("text")}><Film/>Texto a video</button>
    <button className={base.option} onClick={()=>selectMode("image")}><ImagePlus/>Imagen a video</button>
    <button className={base.option} onClick={()=>selectMode("still")}><WandSparkles/>Texto a imagen</button>
   </div>}
+  {!loading&&owner&&stage==="imageSource"&&<div className={styles.entryOptions}>
+   <label className={base.option+" "+styles.fileChoice}><ImagePlus/>Subir imagen
+    <input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>{
+     const file=e.target.files?.[0];if(!file)return;
+     clearReference();setImageDirection("");setGenerated(false);move("reference");void uploadReference(file);
+    }}/></label>
+   <button type="button" className={base.option} onClick={()=>{
+    clearReference();setGenerated(true);move("imageSize");
+   }}><WandSparkles/>Generar con IA</button>
+  </div>}
+  {!loading&&owner&&stage==="imageSize"&&sizeOptions}
+  {!loading&&owner&&stage==="imageQuality"&&qualityOptions}
   {!loading&&owner&&stage==="reference"?<div className={base.panel}>
-   <label className={styles.referenceUpload}>
+   {!generated&&!filePreview&&busy!=="analyze"&&<label className={styles.referenceUpload}>
     <ImagePlus size={22}/><strong>Subir imagen de referencia</strong>
     <small>JPG, PNG o WebP · máximo 14 MB</small>
     <input type="file" accept="image/jpeg,image/png,image/webp" disabled={Boolean(busy)}
      onChange={e=>{const file=e.target.files?.[0];e.target.value="";
       if(file)void uploadReference(file);}}/>
-   </label>
+   </label>}
    {filePreview?<div className={styles.reference}><img src={filePreview} alt="Imagen aprobada para generar el video"/>
-    <div className={styles.success}><CheckCircle2 size={16}/> Imagen preparada para el video</div></div>:null}
+    <button type="button" className={base.option} disabled={Boolean(busy)} onClick={()=>{setEditing(false);move("imageSource");}}>Cambiar imagen</button></div>:null}
    {busy==="analyze"?<p className={styles.generating} role="status">
     <LoaderCircle size={17} className={base.spin}/> Analizando el contenido real de tu imagen…</p>:null}
    {imageAnalysis?<div className={styles.vision}>
     <strong>El agente reconoce: {imageAnalysis.subject}</strong>
-    <p>{imageAnalysis.observations}</p>
+    
     {imageAnalysis.conflict?<div className={styles.conflict}>
      <strong>La idea no coincide completamente con la imagen</strong>
      <p>{imageAnalysis.reason||"La imagen contiene un sujeto distinto de la escena indicada."}</p>
@@ -312,9 +335,10 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
        onClick={()=>{setCreativeOverride(true);setAllowTransformation(true);}}>
        Autorizar una transformación creativa</button>
      </div>
-     {allowTransformation?<p>Describe arriba qué transformación quieres. Primero se respetará el fotograma original.</p>:null}
-     <p>También puedes sustituir la imagen. Si no autorizas el cambio, no generaré un guion contradictorio.</p>
-    </div>:<p className={styles.success}>El guion conservará este sujeto como protagonista.</p>}
+     {allowTransformation&&<label className={base.field}>Transformación
+      <input maxLength={260} value={imageDirection} onChange={e=>setImageDirection(e.target.value)}/></label>}
+
+    </div>:null}
    </div>:null}
    {filePreview&&!imageAnalysis&&busy!=="analyze"?<label className={base.field}>
     Qué aparece realmente en la imagen (si el análisis no estuvo disponible)
@@ -322,13 +346,11 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
      onChange={e=>setManualSubject(e.target.value)}
      placeholder="Ejemplo: pantera negra caminando hacia la cámara; no hay personas."/>
    </label>:null}
-   <div className={styles.imageAiBox}>
-    <strong className={styles.label}>O genera tu imagen de referencia con IA</strong>
+   {generated&&!filePreview&&<div className={styles.imageAiBox}>
     <label className={base.field}>Describe la imagen
      <textarea rows={2} value={imageDirection} maxLength={260} disabled={Boolean(busy)}
       onChange={e=>setImageDirection(e.target.value)}
       placeholder="Ejemplo: toma cinematográfica de un pastel elegante sobre una mesa"/></label>
-    {imageSettings}
     <button type="button" className={base.option+" "+theme.agentOutline}
      onClick={()=>void generateReference()} disabled={Boolean(busy)||imageDirection.trim().length<3}>
      {busy==="image"?<LoaderCircle size={17} className={base.spin}/>:<WandSparkles size={17}/>}
@@ -347,9 +369,7 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
        onClick={()=>setImageCandidate("")}>Descartar propuesta</button>
      </div>
     </div>:null}
-   </div>
-
-   <p className={base.note}>Una imagen de IA no se envía a Runway hasta que la apruebes y confirmes los créditos.</p>
+   </div>}
   </div>:null}
 
   {!loading&&owner&&stage==="script"&&<div className={base.panel}>
@@ -359,7 +379,7 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
    <button className={base.option} disabled={Boolean(busy)||(mode!=="image"&&prompt.trim().length<3)} onClick={()=>void generateScript()}>
     <Sparkles size={17}/>{busy==="script"?"Preparando prompt…":prompt.trim()?"Mejorar con IA":"Sugerir movimiento con IA"}</button>
   </div>}
-  {!loading&&owner&&stage==="format"&&<div className={base.panel}>{standalone?imageSettings:<>
+  {!loading&&owner&&stage==="format"&&<div className={base.panel}>{standalone?<><span className={styles.label}>Tamaño</span>{sizeOptions}<span className={styles.label}>Calidad</span>{qualityOptions}</>:<>
    <span className={styles.label}>Estilo del video</span>
    <div className={base.optionsVertical}>{concepts.map(([id,label])=><button key={id} type="button"
     className={style===id?base.optionActive:base.option} onClick={()=>setStyle(id)}
@@ -389,7 +409,7 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
   {!loading&&owner&&stage==="review"&&<div className={base.panel}>
    {reviewCard("Guion",prompt,"script")}
    {mode==="image"&&reviewCard("Imagen","Referencia aprobada","reference")}
-   {reviewCard("Ajustes",standalone?size+" · "+(quality==="high"?"Alta":"Estándar"):
+   {reviewCard("Ajustes",standalone?size+" · "+(quality==="high"?"Alta":"Media"):
     duration+" segundos · "+(ratio==="720:1280"?"Vertical":"Horizontal")+" · "+(model==="kling"?"Kling":"Runway"),"format")}
    <label className={base.checkLine}><input type="checkbox" checked={confirmCredits} onChange={e=>setConfirmCredits(e.target.checked)}/>
     Autorizo usar créditos para esta generación.</label>
@@ -397,7 +417,7 @@ export default function AutomaticVideoWizard({onClose}:{onClose:()=>void}){
   </div>}
   {stage==="result"&&<VideoCreationResult owner={owner} jobId={jobId} image={outputImage}/>}
   {error&&<p className={base.error} role="alert">{error}</p>}
-  {!loading&&owner&&stage!=="source"&&stage!=="result"&&<div className={base.footer}>
+  {!loading&&owner&&stage!=="source"&&stage!=="imageSource"&&stage!=="imageSize"&&stage!=="imageQuality"&&stage!=="result"&&!(stage==="reference"&&!filePreview)&&<div className={base.footer}>
    {stage==="review"?<button className={base.primary+" "+theme.agentButton} disabled={Boolean(busy)||!confirmCredits||(!standalone&&!configured)}
     onClick={()=>void (standalone?startImage():submit())}>{busy?"Generando…":standalone?"Generar imagen":"Generar video"}</button>:
     <button className={base.primary+" "+theme.agentButton} disabled={!valid||Boolean(busy)} onClick={next}>
