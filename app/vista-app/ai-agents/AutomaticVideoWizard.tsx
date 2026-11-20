@@ -32,6 +32,7 @@ const videoError:Record<string,string>={
  runway_parameters_or_model_rejected:"Runway rechazó esta combinación de formato y modelo.",
  video_ai_limit:"El asistente alcanzó el límite temporal de guiones.",
  video_ai_unavailable:"La IA no pudo generar el guion. Puedes escribirlo manualmente.",
+ image_provider_busy:"El proveedor de imágenes sigue sin responder. Tu descripción está guardada en esta pantalla. Inténtalo en unos minutos.",
  image_daily_limit:"Se alcanzó el presupuesto de seguridad del piloto. Puedes subir una foto.",
  video_image_unavailable:"No se pudo generar esta imagen. Puedes reintentar o subir una foto.",
  image_prompt_too_long:"La descripción supera los 12,000 caracteres.",
