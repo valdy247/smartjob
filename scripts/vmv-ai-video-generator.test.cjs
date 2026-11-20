@@ -119,3 +119,12 @@ test("Pilot-specific quota keeps normal owners unchanged and never opens unappro
  assert.match(image,/videoAllowed\(owner\)/);
  assert.match(start,/confirmCost/);
 });
+
+test("Video wizard result can finish and reopen the Services tab",()=>{
+ assert.match(wizard,/stage==="result"&&<>/);
+ assert.match(wizard,/Finalizar y volver a Servicios/);
+ assert.match(wizard,/window\.location\.assign\("\/vista-app\?tab=services"\)/);
+ assert.match(wizard,/onClick=\{onRestart\}>Crear de nuevo/);
+ assert.match(catalog,/requestedTab==="account"\|\|requestedTab==="services"/);
+ assert.match(catalog,/setTab\(requestedTab\)/);
+});
