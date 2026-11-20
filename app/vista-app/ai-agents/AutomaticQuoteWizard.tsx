@@ -1,6 +1,7 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
 import {ArrowLeft,ArrowRight,Bot,Check,FileText,LoaderCircle,Pencil,Plus,ShieldCheck,Sparkles,Package,CalendarCheck,RefreshCw,Send,Download,Bookmark,Palette} from "lucide-react";
+import ShareQuotePdf from "../smart-quote/ShareQuotePdf";
 import {getSupabase} from "@/lib/supabase";
 import type {CentralBusiness} from "./centralBusiness";
 import type {PersistedAgent} from "./agentStore";
@@ -405,6 +406,7 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
      "Se guardó para más tarde. No se envió ni se cobró."}</p>
     <button type="button" className={styles.option} disabled={Boolean(busy)}
      onClick={()=>void downloadPdf(savedId)}><Download size={16}/> Descargar PDF</button>
+    <ShareQuotePdf key={savedId} quoteId={savedId} className={styles.option} disabled={Boolean(busy)}/>
     <a href="/vista-app/smart-quote">Ver en Mis cotizaciones</a>
    </div>:<div className={styles.review}>
     {card("Negocio",business.name,"business")}
