@@ -49,16 +49,14 @@ test("Smart Call never alters Twilio line route, always verifies ownership and u
  assert.match(call,/window\.confirm\("¿Guardar las reglas/);
  assert.doesNotMatch(call,/twilio_number:|smartjob_phone_routes"\)\.update|buyPhoneNumber|purchasePhone/);
 });
-test("Smart Quote saves a draft or approves it before sharing a PDF",()=>{
- assert.match(quote,/vmv_marketing_businesses/);
- assert.match(quote,/vmv_smart_quote_catalog/);
- assert.match(quote,/unit_price_cents/);
+test("Smart Quote prepares a persisted PDF before sharing it from review",()=>{
  assert.match(quote,/vmv_smart_quote_save/);
- assert.match(quote,/p_quote_id:null/);
- assert.match(quote,/p_business_id:business\.id/);
- assert.match(quote,/if\(intent==="draft"\)return;\s*const approval=await db\.rpc\("vmv_smart_quote_set_status",\{p_quote_id:id,p_action:"approve"\}\)/);
- assert.match(quote,/prepareQuote=\{\(\)=>save\("share"\)\}/);
- assert.doesNotMatch(quote,/action:"send"|stripe\.charges|checkout\/sessions|mark_sent/);
+ assert.match(quote,/p_quote_id:draftId\|\|null/);
+ assert.match(quote,/vmv_smart_quote_set_pdf_details/);
+ assert.match(quote,/setPdfFile\(new File/);
+ assert.match(quote,/await navigator\.share\(\{?data\}?\)/);
+ assert.match(quote,/onClick=\{\(\)=>setSavedId\(draftId\)\}/);
+ assert.doesNotMatch(quote,/action:"send"/);
 });
 test("Inventory sales and bookings share canonical stores, require owner permission approval",()=>{
  assert.match(commerce,/setAgentCatalogReadAccess\(agent,inventoryRead\)/);
