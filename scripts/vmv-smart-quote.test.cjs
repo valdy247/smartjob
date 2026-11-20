@@ -67,6 +67,12 @@ test("Smart Quote AI wizard always shows Continue in the business step and waits
  assert.match(wizard,/\{editing\?"Guardar y volver a Revisión":"Continuar"\}/);
  assert.equal(wizard.includes('className={styles.optionActive} onClick={next}'),false);
  assert.equal(wizard.includes('step!=="business"?<button'),false);
+ assert.match(wizard,/Cambiar negocio/);
+ assert.match(wizard,/aria-expanded=\{showBusinesses\}/);
+ assert.match(wizard,/onChooseBusiness\(b\.id\)/);
+ const agentPage=readFileSync("app/vista-app/ai-agents/page.tsx","utf8");
+ assert.ok(agentPage.includes('businesses={businesses} onChooseBusiness={id=>'));
+ assert.ok(agentPage.includes('setChosenBusiness(id)'));
 });
 
 
