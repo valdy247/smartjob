@@ -181,7 +181,7 @@ export default function VideoGeneratorPage(){
     goal:r.pilots[0].goal,style:r.pilots[0].style,frequency:r.pilots[0].frequency,
     model:r.pilots[0].model==="kling"?"kling":"gen4.5",
     monthly_budget_cents:[0,1500,3000,6000].includes(r.pilots[0].monthly_budget_cents)?r.pilots[0].monthly_budget_cents:1500,
-    delivery:r.pilots[0].delivery==="social_draft"?"social_draft":"download
+    delivery:r.pilots[0].delivery==="social_draft"?"social_draft":"download"
    });
   }catch(e){setError(e instanceof Error?e.message:"unavailable");}
   finally{setReady(true);}
