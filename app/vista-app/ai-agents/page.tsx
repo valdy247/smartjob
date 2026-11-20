@@ -344,12 +344,15 @@ export default function AIAgentsPreview(){
  const patch=(key:keyof AgentDraft,value:string)=>setDraft(prev=>({...prev,[key]:value}));
  const immersive=screen==="ads"||screen==="web"||screen==="video"||screen==="videoEntry"||screen==="call"||screen==="quote"||screen==="quoteEntry"||screen==="commerceWizard"||screen==="bookingsWizard";
  useEffect(()=>{
-  if(loading||!authenticated||!principal||!selectedBusiness||!selectedWorkspace)return;
+  if(loading||!authenticated)return;
   const url=new URL(window.location.href);
   const service=url.searchParams.get("service");
   if(!["web","video","call","quote","inventory","sales","bookings"].includes(String(service)))return;
+  if(service!=="video"&&(!principal||!selectedBusiness||!selectedWorkspace))return;
   url.searchParams.delete("service");
   window.history.replaceState(null,"",url.pathname+url.search+url.hash);
+  if(service==="video"){setScreen("videoEntry");setNotice("");return;}
+  if(!principal)return;
   setSelected(principal.id);
   if(service==="inventory"||service==="sales"){
    setCommerceTab(service==="inventory"?"catalog":"setup");setScreen("commerceWizard");
@@ -432,11 +435,7 @@ export default function AIAgentsPreview(){
         <strong>Smart Quote</strong><small>Cotizar con tu agente</small>
        </button>
        <button type="button" className={styles.tile} style={{background:"#f8ddec",color:"#893d73"}}
-        onClick={()=>{
-         if(principal&&selectedBusiness&&selectedWorkspace){
-          setSelected(principal.id);setScreen("videoEntry");setNotice("");
-         }else setNotice("Selecciona tu negocio y su agente principal para preparar un video.");
-        }} aria-label="Video Generator con tu agente">
+        onClick={()=>{setScreen("videoEntry");setNotice("");}} aria-label="Video Generator con tu agente">
         <span className={styles.tileIcon}><Video size={24}/></span>
         <strong>Video Generator</strong><small>Crear video con tu agente</small>
        </button>
@@ -503,7 +502,7 @@ export default function AIAgentsPreview(){
      {screen==="web"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticWebWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
        workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
-     {screen==="videoEntry"&&principal&&selectedBusiness&&selectedWorkspace?
+     {screen==="videoEntry"&&authenticated?
       <section style={{padding:"24px 18px",display:"grid",gap:18,alignContent:"start",minHeight:"100%",background:"#faf8fd",color:"#25213a"}}>
        <button type="button" onClick={back} style={{border:0,background:"transparent",display:"flex",alignItems:"center",gap:8,justifySelf:"start",fontWeight:700,color:"#59457f"}}><ArrowLeft size={18}/> Volver</button>
        <div style={{textAlign:"center",padding:"16px 8px"}}>
@@ -518,9 +517,8 @@ export default function AIAgentsPreview(){
         <PlayCircle size={25} color="#8144ad"/><span style={{display:"grid",gap:4}}><strong>Historial</strong><small>Mi biblioteca · reproducir y descargar</small></span><ChevronRight size={18} style={{marginLeft:"auto"}}/>
        </a>
       </section>:null}
-     {screen==="video"&&principal&&selectedBusiness&&selectedWorkspace?
-      <AutomaticVideoWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
-       workspaceId={selectedWorkspace.id} agent={principal} onClose={()=>setScreen("videoEntry")}/>:null}
+     {screen==="video"&&authenticated?
+      <AutomaticVideoWizard onClose={()=>setScreen("videoEntry")}/>:null}
      {screen==="call"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticCallWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
        workspaceId={selectedWorkspace.id} agent={principal} onClose={back}
