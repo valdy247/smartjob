@@ -14,12 +14,13 @@ const labels:Record<Step,string>={
  permissions:"¿Qué podrá hacer Mi agente?",
  review:"Revisa los permisos de reservas"
 };
-export default function AutomaticBookingWizard({business,agent,onClose,onAgentUpdated,onOpenStudio}:{
+export default function AutomaticBookingWizard({business,agent,onClose,onAgentUpdated,onOpenStudio,initialStep="business"}:{
  business:CentralBusiness;agent:PersistedAgent;onClose:()=>void;
  onAgentUpdated:(agent:PersistedAgent)=>void;onOpenStudio:(section:Goal|"permissions")=>void;
+ initialStep?:Step;
 }){
- const [step,setStep]=useState<Step>("business"),[editing,setEditing]=useState(false);
- const [businessConfirmed,setBusinessConfirmed]=useState(false);
+ const [step,setStep]=useState<Step>(initialStep),[editing,setEditing]=useState(false);
+ const [businessConfirmed,setBusinessConfirmed]=useState(initialStep!=="business");
  const [owner,setOwner]=useState(""),[loading,setLoading]=useState(true);
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[done,setDone]=useState(false);
  const [serviceCount,setServiceCount]=useState<number|null>(null);
