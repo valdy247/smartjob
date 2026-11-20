@@ -20,17 +20,10 @@ test("New video agent code parses as TypeScript and JSX",()=>{
    "TypeScript parse error in "+file);
  }
 });
-test("Video requests belong to the principal agent and verified business",()=>{
- assert.match(agents,/screen==="video"&&principal&&selectedBusiness&&selectedWorkspace/);
- assert.match(agents,/agent={principal}/);
- assert.match(wizard,/user\.id!==business\.owner_id/);
- assert.match(wizard,/user\.id!==agent\.owner_id/);
- assert.match(wizard,/agent\.business_id!==workspaceId/);
- assert.match(wizard,/vmv_marketing_businesses/);
- assert.match(wizard,/vmv_ai_catalog_items/);
- assert.match(wizard,/vmv_ai_booking_services/);
- assert.match(wizard,/\.eq\("approved",true\)\.eq\("active",true\)/);
- assert.match(wizard,/selected\.includes\(x\.id\)/);
+test("The creator uses the signed-in account and user prompt without business data",()=>{
+ assert.match(agents,/screen==="video"&&authenticated/);
+ assert.match(wizard,/session.user.id!==owner/);
+ assert.doesNotMatch(wizard,/Contexto del negocio|businessId|vmv_ai_catalog_items|vmv_marketing_businesses|workspaceId/);
 });
 test("The AI Agent is the only reachable new video creation entry",()=>{
  assert.match(agents,/setScreen\("video"\)/);
@@ -43,8 +36,8 @@ test("The AI Agent is the only reachable new video creation entry",()=>{
 });
 test("Image generation is private and quota limited, approval is required before consuming video credits",()=>{
  assert.match(image,/videoAllowed\(owner\)/);
- assert.match(image,/vmv_marketing_businesses/);
- assert.match(image,/vmv_ai_businesses/);
+ assert.match(image,/authenticatedUser\(req\)/);
+ assert.doesNotMatch(image,/vmv_marketing_businesses|vmv_ai_businesses/);
  assert.match(image,/smartjob_web_ai_claim_video_test_slot/);
  assert.match(image,/generateImage\(/);
  assert.doesNotMatch(image,/startRunway\(|operation:"activate"|published_at/);
