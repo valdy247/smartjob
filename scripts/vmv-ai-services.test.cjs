@@ -49,15 +49,18 @@ test("Smart Call never alters Twilio line route, always verifies ownership and u
  assert.match(call,/window\.confirm\("¿Guardar las reglas/);
  assert.doesNotMatch(call,/twilio_number:|smartjob_phone_routes"\)\.update|buyPhoneNumber|purchasePhone/);
 });
-test("Smart Quote computes preview and saves only a reviewable server-calculated owner draft",()=>{
+test("Smart Quote saves a server-calculated draft and sends only after explicit approval",()=>{
  assert.match(quote,/vmv_marketing_businesses/);
  assert.match(quote,/vmv_smart_quote_catalog/);
  assert.match(quote,/unit_price_cents/);
- assert.match(quote,/confirm\("¿Guardar esta cotización como BORRADOR/);
+ assert.match(quote,/window\.confirm\(intent==="send"\?/);
+ assert.match(quote,/¿Guardar esta cotización como borrador/);
  assert.match(quote,/vmv_smart_quote_save/);
  assert.match(quote,/p_quote_id:null/);
  assert.match(quote,/p_business_id:business\.id/);
- assert.doesNotMatch(quote,/vmv_smart_quote_set_status|stripe\.charges|checkout\/sessions|mark_sent/);
+ assert.match(quote,/if\(intent==="draft"\)return;\s*const approval=await db\.rpc\("vmv_smart_quote_set_status",\{p_quote_id:id,p_action:"approve"\}\);[\s\S]*?if\(approval\.error\|\|approval\.data!==true\)\s*throw Error[\s\S]*?fetch\("\/api\/vmv\/smart-quote\/dispatch"/);
+ assert.match(quote,/JSON\.stringify\(\{quoteId:id,action:"send",message\}\)/);
+ assert.doesNotMatch(quote,/stripe\.charges|checkout\/sessions|mark_sent/);
 });
 test("Inventory sales and bookings share canonical stores, require owner permission approval",()=>{
  assert.match(commerce,/setAgentCatalogReadAccess\(agent,inventoryRead\)/);
