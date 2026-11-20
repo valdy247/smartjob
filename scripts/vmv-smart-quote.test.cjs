@@ -64,7 +64,7 @@ test("Smart Quote AI wizard always shows Continue in the business step and waits
  assert.match(wizard,/aria-pressed=\{businessConfirmed\}/);
  assert.match(wizard,/onClick=\{\(\)=>setBusinessConfirmed\(true\)\}/);
  assert.match(wizard,/disabled=\{!valid\|\|Boolean\(busy\)\} onClick=\{next\}/);
- assert.match(wizard,/\{editing\?"Guardar y volver a Revisión":"Continuar"\}/);
+ assert.match(wizard,/\{busy==="prepare"\?"Preparando PDF…":editing\?"Guardar y volver a Revisión":step==="design"\?"Preparar cotización":"Continuar"\}/);
  assert.equal(wizard.includes('className={styles.optionActive} onClick={next}'),false);
  assert.equal(wizard.includes('step!=="business"?<button'),false);
  assert.match(wizard,/Cambiar negocio/);
