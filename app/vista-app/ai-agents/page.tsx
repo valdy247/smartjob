@@ -22,6 +22,7 @@ import AutomaticWebWizard from "./AutomaticWebWizard";
 import AutomaticVideoWizard from "./AutomaticVideoWizard";
 import AutomaticCallWizard from "./AutomaticCallWizard";
 import AutomaticQuoteWizard from "./AutomaticQuoteWizard";
+import quoteStyles from "./AutomaticQuoteWizard.module.css";
 import AutomaticCommerceWizard from "./AutomaticCommerceWizard";
 import AutomaticBookingWizard from "./AutomaticBookingWizard";
 import {inspectAgent} from "./agentQuality";
@@ -31,7 +32,7 @@ import {loadAgents,loadPhoneSelection,selectPhoneAgent,setStudyStatus,storeAgent
 
 type Kind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 type Status="draft"|"active"|"paused";
-type Screen="videoEntry"|"home"|"editor"|"test"|"quality"|"commerce"|"commerceWizard"|"phone"|"bookings"|"bookingsWizard"|"ads"|"web"|"video"|"call"|"quote";
+type Screen="videoEntry"|"home"|"editor"|"test"|"quality"|"commerce"|"commerceWizard"|"phone"|"bookings"|"bookingsWizard"|"ads"|"web"|"video"|"call"|"quote"|"quoteEntry";
 type AgentDraft=WizardDraft;
 type Agent=PersistedAgent;
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
@@ -341,7 +342,7 @@ export default function AIAgentsPreview(){
  };
  const back=()=>{setScreen("home");setMessageNotice("");};
  const patch=(key:keyof AgentDraft,value:string)=>setDraft(prev=>({...prev,[key]:value}));
- const immersive=screen==="ads"||screen==="web"||screen==="video"||screen==="videoEntry"||screen==="call"||screen==="quote"||screen==="commerceWizard"||screen==="bookingsWizard";
+ const immersive=screen==="ads"||screen==="web"||screen==="video"||screen==="videoEntry"||screen==="call"||screen==="quote"||screen==="quoteEntry"||screen==="commerceWizard"||screen==="bookingsWizard";
  useEffect(()=>{
   if(loading||!authenticated||!principal||!selectedBusiness||!selectedWorkspace)return;
   const url=new URL(window.location.href);
@@ -354,7 +355,7 @@ export default function AIAgentsPreview(){
    setCommerceTab(service==="inventory"?"catalog":"setup");setScreen("commerceWizard");
   }else {
    if(service==="bookings")setResumeBooking(false);
-   setScreen(service==="web"?"web":service==="call"?"call":service==="quote"?"quote":service==="bookings"?"bookingsWizard":"videoEntry");
+   setScreen(service==="web"?"web":service==="call"?"call":service==="quote"?"quoteEntry":service==="bookings"?"bookingsWizard":"videoEntry");
   }
   setNotice("");
  },[loading,authenticated,principal?.id,selectedBusiness?.id,selectedWorkspace?.id]);
@@ -424,7 +425,7 @@ export default function AIAgentsPreview(){
        <button type="button" className={styles.tile} style={{background:"#d9ece9",color:"#29695a"}}
         onClick={()=>{
          if(principal&&selectedBusiness&&selectedWorkspace){
-          setSelected(principal.id);setScreen("quote");setNotice("");
+          setSelected(principal.id);setScreen("quoteEntry");setNotice("");
          }else setNotice("Selecciona tu negocio y el agente principal para preparar una cotización.");
         }} aria-label="Smart Quote guiado por Mi agente">
         <span className={styles.tileIcon}><FileText size={24}/></span>
@@ -536,9 +537,30 @@ export default function AIAgentsPreview(){
          setNotice("Para configurar las llamadas de ese negocio, primero prepara su agente principal.");
         }
        }}/>:null}
+     {screen==="quoteEntry"?<section className={quoteStyles.entry} aria-label="Smart Quote">
+      <header className={quoteStyles.entryTop}>
+       <button type="button" onClick={back} aria-label="Volver"><ArrowLeft size={19}/></button>
+       <span>Smart Quote · VMV Business</span>
+      </header>
+      <div className={quoteStyles.entryHero}><FileText size={34}/><h1>¿Qué quieres hacer?</h1>
+       <p>Prepara una cotización con Mi agente o consulta las que ya guardaste.</p></div>
+      <div className={quoteStyles.entryActions}>
+       <button type="button" onClick={()=>{
+        if(!principal||!selectedBusiness||!selectedWorkspace){
+         setNotice("Prepara el agente principal del negocio antes de crear una cotización.");setScreen("home");return;
+        }
+        setScreen("quote");setNotice("");
+       }}><span className={quoteStyles.entryIcon}><Plus size={24}/></span>
+        <span><strong>Crear nueva cotización</strong><small>El asistente te guía paso a paso</small></span>
+        <ChevronRight size={19}/></button>
+       <a href="/vista-app/smart-quote"><span className={quoteStyles.entryIcon}><BookOpen size={24}/></span>
+        <span><strong>Mis cotizaciones</strong><small>Historial, borradores, PDF y envíos</small></span>
+        <ChevronRight size={19}/></a>
+      </div>
+     </section>:null}
      {screen==="quote"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticQuoteWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
-       workspaceId={selectedWorkspace.id} agent={principal} onClose={back}
+       workspaceId={selectedWorkspace.id} agent={principal} onClose={()=>setScreen("quoteEntry")}
        businesses={businesses} onChooseBusiness={id=>{
         if(!businesses.some(b=>b.id===id))return;
         const nextWorkspace=workspaces.find(w=>w.central_business_id===id);
