@@ -70,11 +70,13 @@ test("Preview Runway only starts after independent human credit authorization",(
  assert.match(start,/body\?\.confirmCost!==true/);
  assert.match(start,/vmv_video_reserve_pilot_job/);
  assert.match(wizard,/confirmCredits/);
- assert.match(wizard,/window\.confirm\("¿Autorizas generar este video/);
+ assert.match(wizard,/checked=\{confirmCredits\}/);
  assert.match(wizard,/confirmCost:true,clientKey/);
  assert.match(wizard,/\/api\/video-generator\/brief/);
  assert.match(wizard,/\/api\/video-generator",\{/);
- assert.match(wizard,/\/vista-app\/video-generator\?job=/);
+ assert.match(wizard,/setJobId\(result.job.id\);move\("result"\)/);
+ assert.match(wizard,/Texto a imagen/);
+ assert.match(wizard,/Mejorar con IA/);
  assert.doesNotMatch(wizard,/automaticPublish|publish\(|postToInstagram|activate\(/);
 });
 test("Video wizard uses consistent white-background soft color shifts and reduced-motion support",()=>{
