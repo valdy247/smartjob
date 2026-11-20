@@ -16,12 +16,15 @@ const labels:Record<Step,string>={
 };
 export default function AutomaticBookingWizard({business,agent,onClose,onAgentUpdated,onOpenStudio}:{
  business:CentralBusiness;agent:PersistedAgent;onClose:()=>void;
- onAgentUpdated:(agent:PersistedAgent)=>void;onOpenStudio:()=>void;
+ onAgentUpdated:(agent:PersistedAgent)=>void;onOpenStudio:(section:Goal|"permissions")=>void;
 }){
  const [step,setStep]=useState<Step>("business"),[editing,setEditing]=useState(false);
+ const [businessConfirmed,setBusinessConfirmed]=useState(false);
  const [owner,setOwner]=useState(""),[loading,setLoading]=useState(true);
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[done,setDone]=useState(false);
  const [serviceCount,setServiceCount]=useState<number|null>(null);
+ const [approvedCount,setApprovedCount]=useState<number|null>(null);
+ const [bookingCount,setBookingCount]=useState<number|null>(null);
  const [slotCount,setSlotCount]=useState<number|null>(null);
  const [goal,setGoal]=useState<Goal>("services");
  const [enabled,setEnabled]=useState(agent.setup.cap_bookings==="Sí");
@@ -39,22 +42,34 @@ export default function AutomaticBookingWizard({business,agent,onClose,onAgentUp
     .eq("central_business_id",business.id).maybeSingle();
    if(!workspace)throw Error("No hay una agenda vinculada a este negocio.");
    if(!live)return;setOwner(user.id);
-   const [services,slots]=await Promise.all([
+   const [services,approved,slots,bookings]=await Promise.all([
     db.from("vmv_ai_booking_services").select("id",{count:"exact",head:true})
      .eq("owner_id",user.id).eq("business_id",agent.business_id),
+    db.from("vmv_ai_booking_services").select("id",{count:"exact",head:true})
+     .eq("owner_id",user.id).eq("business_id",agent.business_id)
+     .eq("active",true).eq("approved",true),
     db.from("vmv_ai_booking_slots").select("id",{count:"exact",head:true})
      .eq("owner_id",user.id).eq("business_id",agent.business_id)
-     .gt("start_at",new Date().toISOString()).eq("active",true)
+     .gt("start_at",new Date().toISOString()).eq("active",true),
+    db.from("vmv_ai_bookings").select("id",{count:"exact",head:true})
+     .eq("owner_id",user.id).eq("business_id",agent.business_id)
    ]);
-   if(services.error||slots.error)throw Error("No se pudo consultar la agenda actual.");
+   if(services.error||approved.error||slots.error||bookings.error)
+    throw Error("No se pudo consultar la agenda actual.");
    if(live){
-    setServiceCount(services.count||0);setSlotCount(slots.count||0);
-    setGoal((services.count||0)>0?"slots":"services");
+    setServiceCount(services.count||0);setApprovedCount(approved.count||0);
+    setSlotCount(slots.count||0);setBookingCount(bookings.count||0);
+    setGoal((approved.count||0)>0?"slots":"services");
    }
   }catch(e){if(live)setError(e instanceof Error?e.message:"No se pudo abrir la agenda.");}
   finally{if(live)setLoading(false);}
  })();return()=>{live=false;};},[business.id,agent.id]);
- const next=()=>{setError("");if(editing){setEditing(false);setStep("review");return;}
+ const openGoal=(nextGoal:Goal)=>{
+  setError("");setGoal(nextGoal);
+  onOpenStudio(nextGoal);
+ };
+ const next=()=>{if(step==="business"&&!businessConfirmed)return;
+  setError("");if(editing){setEditing(false);setStep("review");return;}
   setStep(steps[Math.min(index+1,steps.length-1)]);
  };
  const back=()=>{if(editing){setEditing(false);setStep("review");return;}
@@ -89,19 +104,25 @@ export default function AutomaticBookingWizard({business,agent,onClose,onAgentUp
   {loading?<p className={styles.note} role="status"><LoaderCircle size={17}/> Consultando tu agenda…</p>:null}
   {!loading&&owner&&step==="business"?<div className={styles.panel}>
    <strong className={styles.emphasis+" "+theme.agentText}>{business.name}</strong>
-   <button type="button" className={styles.optionActive} onClick={next}><Check size={17}/> Sí, este negocio</button>
+   <button type="button" aria-pressed={businessConfirmed}
+    className={businessConfirmed?styles.optionActive:styles.option}
+    onClick={()=>setBusinessConfirmed(true)}><Check size={17}/> Sí, este negocio</button>
   </div>:null}
   {!loading&&owner&&step==="goal"?<div className={styles.panel}>
-   <p className={styles.note}>Encontré {serviceCount??"…"} servicio(s) y {slotCount??"…"} horario(s) disponibles en la agenda de VMV.</p>
+   <p className={styles.note}>Esta agenda tiene {serviceCount??"…"} servicio(s) registrado(s),
+    {approvedCount??"…"} activo(s) y aprobado(s), {slotCount??"…"} horario(s) futuro(s)
+    y {bookingCount??"…"} cita(s). Elige una opción para abrirla directamente.</p>
    <div className={styles.optionsVertical}>
-    <button type="button" className={goal==="services"?styles.optionActive:styles.option}
-     onClick={()=>setGoal("services")}>Crear o editar servicios</button>
-    <button type="button" disabled={!serviceCount} className={goal==="slots"?styles.optionActive:styles.option}
-     onClick={()=>setGoal("slots")}>Agregar fechas y horarios</button>
-    <button type="button" disabled={!serviceCount} className={goal==="bookings"?styles.optionActive:styles.option}
-     onClick={()=>setGoal("bookings")}>Consultar solicitudes y citas</button>
+    <button type="button" className={styles.option} onClick={()=>openGoal("services")}>
+     <CalendarDays size={17}/> Crear o editar servicios <ArrowRight size={16}/></button>
+    <button type="button" className={styles.option} onClick={()=>openGoal("slots")}>
+     <CalendarDays size={17}/> Agregar fechas y horarios <ArrowRight size={16}/></button>
+    <button type="button" className={styles.option} onClick={()=>openGoal("bookings")}>
+     <CalendarDays size={17}/> Consultar solicitudes y citas <ArrowRight size={16}/></button>
    </div>
-   {!serviceCount?<p className={styles.note}>Primero necesitas registrar un servicio antes de añadir disponibilidad.</p>:null}
+   {!approvedCount?<p className={styles.note}>Todavía no hay servicios activos y aprobados.
+    Puedes crear uno o activar un servicio existente. Las opciones se pueden abrir aunque la agenda esté vacía.</p>:null}
+   <p className={styles.note}>Si solo necesitas configurar al agente para atender reservas, pulsa «Continuar».</p>
   </div>:null}
   {!loading&&owner&&step==="permissions"?<div className={styles.panel}>
    <label className={styles.checkLine}><input type="checkbox" checked={enabled}
@@ -114,11 +135,11 @@ export default function AutomaticBookingWizard({business,agent,onClose,onAgentUp
   </div>:null}
   {!loading&&owner&&step==="review"?<div className={styles.panel}>
    {done?<div className={styles.info}>Permisos guardados.
-    <button type="button" className={styles.option} onClick={onOpenStudio}>
+    <button type="button" className={styles.option} onClick={()=>onOpenStudio(goal)}>
      <CalendarDays size={16}/> Abrir agenda para {goal==="services"?"servicios":goal==="slots"?"horarios":"citas"}
     </button></div>:<div className={styles.review}>
     {card("Negocio",business.name,"business")}
-    {card("Acción",goal==="services"?"Gestionar servicios":goal==="slots"?"Configurar disponibilidad":"Consultar citas","goal")}
+    {card("Acción","Gestionar reservas desde la agenda","goal")}
     {card("Atención de citas",enabled?"Permitida":"Desactivada","permissions")}
     {card("Confirmar reservas",enabled&&confirm?"Con disponibilidad verificada":"No","permissions")}
    </div>}
@@ -130,8 +151,9 @@ export default function AutomaticBookingWizard({business,agent,onClose,onAgentUp
     disabled={busy||done} onClick={()=>void save()}>
     {busy?<LoaderCircle size={17}/>:<ShieldCheck size={17}/>}
     {done?"Guardado":"Confirmar permisos"} <ArrowRight size={17}/></button>:
-   step!=="business"?<button type="button" className={styles.primary+" "+theme.agentButton}
-    onClick={next} disabled={busy}> {editing?"Volver a Revisión":"Continuar"} <ArrowRight size={17}/></button>:null}
+   <button type="button" className={styles.primary+" "+theme.agentButton}
+    onClick={next} disabled={busy||(step==="business"&&!businessConfirmed)}>
+    {editing?"Volver a Revisión":step==="goal"?"Continuar: permisos del agente":"Continuar"} <ArrowRight size={17}/></button>
   </div>:null}
   <p className={styles.footnote}><ShieldCheck size={14}/> Reservas bajo control del propietario.</p>
  </section>;

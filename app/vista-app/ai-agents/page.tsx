@@ -14,7 +14,7 @@ import BusinessProfileDialog from "./BusinessProfileDialog";
 import AgentSetupWizard,{type WizardDraft} from "./AgentSetupWizard";
 import AgentQualityLab from "./AgentQualityLab";
 import CommerceStudio from "./CommerceStudio";
-import BookingStudio from "./BookingStudio";
+import BookingStudio,{type BookingTab} from "./BookingStudio";
 import CallControl from "./CallControl";
 import AgentLiveTest from "./AgentLiveTest";
 import AutomaticAdWizard from "./AutomaticAdWizard";
@@ -62,6 +62,8 @@ export default function AIAgentsPreview(){
  const [businessDialog,setBusinessDialog]=useState(false);
  const [pendingKind,setPendingKind]=useState<Kind|null>(null);
  const [commerceTab,setCommerceTab]=useState<"setup"|"catalog">("catalog");
+ const [bookingTab,setBookingTab]=useState<BookingTab>("services");
+ const [resumeBooking,setResumeBooking]=useState(false);
  const [phone,setPhone]=useState<PhoneSelection|null>(null);
  const [pilotChecks,setPilotChecks]=useState<{key:string;label:string;ok:boolean}[]|null>(null);
  const [pilotChecking,setPilotChecking]=useState(false);
@@ -140,7 +142,7 @@ export default function AIAgentsPreview(){
    setScreen("call");
    setNotice(phone?.agentId===agent.id?"":translate("agents.notice.configureCalls"));
   }else if(kind==="bookings"){
-   setScreen("bookingsWizard");setNotice("");
+   setResumeBooking(false);setScreen("bookingsWizard");setNotice("");
   }else if(kind==="support"){
    test(agent);setNotice(translate("agents.notice.privateChat"));
   }else if(kind==="operations"){
@@ -350,7 +352,10 @@ export default function AIAgentsPreview(){
   setSelected(principal.id);
   if(service==="inventory"||service==="sales"){
    setCommerceTab(service==="inventory"?"catalog":"setup");setScreen("commerceWizard");
-  }else setScreen(service==="web"?"web":service==="call"?"call":service==="quote"?"quote":service==="bookings"?"bookingsWizard":"videoEntry");
+  }else {
+   if(service==="bookings")setResumeBooking(false);
+   setScreen(service==="web"?"web":service==="call"?"call":service==="quote"?"quote":service==="bookings"?"bookingsWizard":"videoEntry");
+  }
   setNotice("");
  },[loading,authenticated,principal?.id,selectedBusiness?.id,selectedWorkspace?.id]);
  return <main className={immersive?styles.adsCanvas:styles.canvas}>
@@ -488,7 +493,8 @@ export default function AIAgentsPreview(){
       initial={draft} workspaceId={active?.business_id||selectedWorkspace?.id} onReviewBusiness={current=>{setDraft(current);setBusinessDialog(true);}} initialStep={editStep} saving={busy} isPreview={false} authRequired={!authenticated} recoverDraft={!selected} onCancel={back}
       onSave={async updated=>{setDraft(updated);await save(updated);}}/>:null}
      {screen==="quality"&&active?<AgentQualityLab agent={active} onClose={back} onEdit={step=>edit(active,step)}/>:null}
-     {screen==="bookings"&&active?<BookingStudio agent={active} onClose={back}
+     {screen==="bookings"&&active?<BookingStudio agent={active} initialTab={bookingTab}
+      onClose={()=>setScreen("bookingsWizard")}
       onAgentUpdated={updated=>setAgents(old=>old.map(a=>a.id===updated.id?updated:a))}/>:null}
      {screen==="ads"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticAdWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
@@ -539,10 +545,11 @@ export default function AIAgentsPreview(){
        onAgentUpdated={updated=>{setAgents(list=>list.map(a=>a.id===updated.id?updated:a));}}
        onOpenStudio={()=>setScreen("commerce")} onClose={back}/>:null}
      {screen==="bookingsWizard"&&principal&&selectedBusiness&&selectedWorkspace?
-      <AutomaticBookingWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
-       agent={principal} onClose={back}
+      <AutomaticBookingWizard key={selectedBusiness.id+principal.id+(resumeBooking?"-resume":"-new")}
+       business={selectedBusiness} agent={principal} initialStep={resumeBooking?"goal":"business"}
+       onClose={back}
        onAgentUpdated={updated=>{setAgents(list=>list.map(a=>a.id===updated.id?updated:a));}}
-       onOpenStudio={()=>setScreen("bookings")}/>:null}
+       onOpenStudio={section=>{setBookingTab(section);setResumeBooking(true);setScreen("bookings");}}/>:null}
      {screen==="phone"?<CallControl onBack={()=>setScreen("call")}/>:null}
      {screen==="commerce"?<CommerceStudio centralBusinessId={selectedBusiness?.id||""} agents={principal?[principal]:visibleAgents.filter(a=>a.revision>0)}
       initialAgentId={principal?.id||selected||""} initialTab={commerceTab} onAgentUpdated={updated=>

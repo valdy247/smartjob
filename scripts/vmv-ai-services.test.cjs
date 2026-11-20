@@ -129,3 +129,35 @@ test("Smart Call bilingual menu validation, safe voice allowlist, and isolated p
  assert.match(requestDb,/owner_id=\(select auth.uid\(\)\)/);
  assert.doesNotMatch(read("app/api/vmv/ai-agents/available-numbers/route.ts"),/method:"POST"/);
 });
+
+
+test("Booking wizard opens live services, slots and requests directly and does not disable empty agenda cards",()=>{
+ const wizard=read(base+"AutomaticBookingWizard.tsx");
+ const studio=read(base+"BookingStudio.tsx");
+ const page=read(base+"page.tsx");
+ const parsed=[
+  ["AutomaticBookingWizard.tsx",wizard],
+  ["BookingStudio.tsx",studio],
+  ["page.tsx",page]
+ ];
+ for(const [path,code] of parsed){
+  const ast=ts.createSourceFile(path,code,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+  assert.deepEqual(ast.parseDiagnostics.map(d=>ts.flattenDiagnosticMessageText(d.messageText," ")),[],path);
+ }
+ assert.match(wizard,/onOpenStudio\(nextGoal\)/);
+ assert.match(wizard,/openGoal\("services"\)/);
+ assert.match(wizard,/openGoal\("slots"\)/);
+ assert.match(wizard,/openGoal\("bookings"\)/);
+ assert.doesNotMatch(wizard,/disabled=\{!serviceCount\}/);
+ assert.match(wizard,/eq\("approved",true\)/);
+ assert.match(wizard,/vmv_ai_bookings/);
+ assert.match(wizard,/aria-pressed=\{businessConfirmed\}/);
+ assert.match(page,/initialTab=\{bookingTab\}/);
+ assert.match(page,/initialStep=\{resumeBooking\?"goal":"business"\}/);
+ assert.match(studio,/initialTab\?:BookingTab/);
+ assert.match(studio,/setTab\("services"\)/);
+ assert.match(studio,/eligibleServices=services\.filter\(s=>s\.active&&s\.approved\)/);
+ assert.match(studio,/Crear o aprobar servicio/);
+ assert.match(studio,/Aún no hay reservas registradas/);
+ assert.match(studio,/vmv_ai_owner_add_booking_slot/);
+});
