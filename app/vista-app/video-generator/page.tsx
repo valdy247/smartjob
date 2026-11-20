@@ -256,8 +256,8 @@ export default function VideoGeneratorPage(){
   }catch(e){setError(e instanceof Error?e.message:"unavailable");}
   finally{setBusy("");}
  };
- const savePilot=async(next:AutopilotPlan,prepare:boolean):Promise<boolean>=>{
-  if(busy)return false;
+ const savePilot=async(next:AutopilotPlan,prepare:boolean):Promise<string|null>=>{
+  if(busy)return null;
   setBusy("pilot");setError("");setNotice("");
   try{
    const result=await api("/pilot","POST",{
@@ -268,8 +268,8 @@ export default function VideoGeneratorPage(){
    setPilots(prev=>[result.pilot,...prev.filter(p=>p.id!==result.pilot.id)]);
    setPilot({...next,id:result.pilot.id});
    if(prepare)window.location.assign("/vista-app/ai-agents?service=video&pilot="+encodeURIComponent(result.pilot.id));
-   return true;
-  }catch(e){setError(e instanceof Error?e.message:"pilot_save_unavailable");return false;}
+   return result.pilot.id as string;
+  }catch(e){setError(e instanceof Error?e.message:"pilot_save_unavailable");return null;}
   finally{setBusy("");}
  };
  const onFile=async(file?:File)=>{
