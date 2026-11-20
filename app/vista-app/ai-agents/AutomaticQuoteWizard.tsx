@@ -1,7 +1,6 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
-import {ArrowLeft,ArrowRight,Bot,Check,FileText,LoaderCircle,Pencil,Plus,Sparkles,Package,CalendarCheck,RefreshCw,Download,Bookmark,Palette} from "lucide-react";
-import ShareQuotePdf from "../smart-quote/ShareQuotePdf";
+import {ArrowLeft,ArrowRight,Bot,Check,FileText,LoaderCircle,Pencil,Plus,Sparkles,Package,CalendarCheck,RefreshCw,Share2,Download,Bookmark,Palette} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import type {CentralBusiness} from "./centralBusiness";
 import type {PersistedAgent} from "./agentStore";
@@ -53,6 +52,10 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
  const [adding,setAdding]=useState(false),[approved,setApproved]=useState(false);
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(""),[error,setError]=useState("");
  const [savedId,setSavedId]=useState("");
+ const [draftId,setDraftId]=useState("");
+ const [pdfFile,setPdfFile]=useState<File|null>(null);
+ const [contact,setContact]=useState({email:"",website:"",address:"",phone:""});
+ const [include,setInclude]=useState({email:false,website:false,address:false,phone:false});
  const index=steps.indexOf(step);
  const visibleCatalog=catalog.filter(x=>x.active&&
   (x.source_kind===null||connected[x.source_kind]));
@@ -94,7 +97,7 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
      user.id!==agent.owner_id||agent.business_id!==workspaceId)
      throw Error("Debes utilizar el agente principal de tu negocio.");
     const [central,linked]=await Promise.all([
-     db.from("vmv_marketing_businesses").select("id")
+     db.from("vmv_marketing_businesses").select("id,email,website_url,street,city,region,postal,address_visibility,phone")
       .eq("id",business.id).eq("owner_id",user.id).maybeSingle(),
      db.from("vmv_ai_businesses").select("id")
       .eq("id",workspaceId).eq("owner_id",user.id)
@@ -104,7 +107,13 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
      throw Error("Vincula este negocio con Mi agente para usar sus productos y servicios.");
     if(!live)return;
     await reloadCatalog(user.id);
-    if(live)setOwner(user.id);
+    if(live){
+     const profile=central.data;
+     setContact({email:profile.email||"",website:profile.website_url||"",phone:profile.phone||"",
+      address:profile.address_visibility==="public"?
+       [profile.street,profile.city,profile.region,profile.postal].filter(Boolean).join(", ").slice(0,180):""});
+     setOwner(user.id);
+    }
    }catch(e){if(live)setError(e instanceof Error?e.message:"No se pudo cargar Smart Quote.");}
    finally{if(live)setLoading(false);}
   })();return()=>{live=false;};
@@ -125,14 +134,17 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
  };
  const next=()=>{
   if(!valid||busy)return;setError("");
-  if(editing){setEditing(false);setStep("review");return;}
+  if(editing||step==="design"){void prepareReview();return;}
   setStep(steps[Math.min(index+1,steps.length-1)]);
  };
  const back=()=>{
-  if(editing){setEditing(false);setStep("review");return;}
+  if(busy)return;
+  if(savedId){onClose();return;}
+  if(editing){void prepareReview();return;}
+  if(step==="review")setPdfFile(null);
   if(!index){onClose();return;}setStep(steps[index-1]);
  };
- const edit=(s:Step)=>{setEditing(true);setStep(s);};
+ const edit=(s:Step)=>{setPdfFile(null);setEditing(true);setStep(s);};
  const createService=async()=>{
   if(busy||!owner)return;
   const price=parseUsd(newItem.price);
@@ -188,10 +200,9 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
   }catch(e){setError(e instanceof Error?e.message:"No se pudo descargar el PDF.");}
   finally{setBusy("");}
  };
- const save=async(intent:"draft"|"share")=>{
+ const prepareReview=async()=>{
   if(busy||!owner||!valid||!chosen.length||savedId)return;
-  if(intent==="draft"&&!window.confirm("¿Guardar esta cotización como borrador?"))return;
-  setBusy("save");setError("");
+  setBusy("prepare");setError("");setPdfFile(null);
   try{
    const db=getSupabase();if(!db)throw Error("No hay conexión.");
    const {data:{user}}=await db.auth.getUser();
@@ -209,7 +220,7 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
     !validPercent(charges.tax)||!validPercent(charges.deposit))
     throw Error("Corrige impuestos y cargos antes de guardar.");
    const {data,error}=await db.rpc("vmv_smart_quote_save",{
-    p_business_id:business.id,p_quote_id:null,p_customer_name:customer.name.trim(),
+    p_business_id:business.id,p_quote_id:draftId||null,p_customer_name:customer.name.trim(),
     p_customer_email:customer.email.trim(),p_customer_phone:customer.phone.trim(),
     p_items:chosen.map(x=>({catalog_item_id:x.id,quantity:Number(qty[x.id])})),
     p_tax_bps:Math.round(Number(charges.tax)*100),
@@ -218,20 +229,45 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
     p_valid_until:charges.until,p_notes:charges.notes.trim().slice(0,1500)
    });
    if(error||!data)throw Error(error?.message||"No se pudo crear la cotización.");
-   const id=String(data);setSavedId(id);setSavedOutcome("draft");
-   const designResult=await db.rpc("vmv_smart_quote_set_design",{
-    p_quote_id:id,p_template:design});
+   const id=String(data);setDraftId(id);
+   const selectedContact=Object.fromEntries((Object.keys(contact) as (keyof typeof contact)[])
+    .filter(key=>include[key]&&contact[key].trim()).map(key=>[key,contact[key].trim().slice(0,180)]));
+   const designResult=await db.rpc("vmv_smart_quote_set_pdf_details",{
+    p_quote_id:id,p_template:design,p_contact:selectedContact});
    if(designResult.error||designResult.data!==true)
     throw Error("Se guardó el borrador, pero no se pudo guardar el diseño. Revísalo desde Mis cotizaciones.");
-   if(intent==="draft")return;
-   const approval=await db.rpc("vmv_smart_quote_set_status",{p_quote_id:id,p_action:"approve"});
-   if(approval.error||approval.data!==true)
-    throw Error("El borrador quedó guardado, pero falta aprobarlo. Revísalo desde Mis cotizaciones.");
-   setSavedOutcome("approved");
-   return id;
+   const {data:{session}}=await db.auth.getSession();
+   if(!session?.access_token)throw Error("Tu sesión expiró.");
+   const response=await fetch("/api/vmv/smart-quote/dispatch",{
+    method:"POST",headers:{Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},
+    body:JSON.stringify({quoteId:id,action:"pdf"})});
+   if(!response.ok)throw Error("No se pudo preparar el PDF. Inténtalo otra vez.");
+   setPdfFile(new File([await response.blob()],"cotizacion-"+id.slice(0,8)+".pdf",{type:"application/pdf"}));
+   setEditing(false);setStep("review");
   }catch(e){setError(e instanceof Error?e.message:
    "No se pudo completar. Revisa Mis cotizaciones antes de intentarlo de nuevo.");}
   finally{setBusy("");}
+ };
+ const sharePrepared=async()=>{
+  if(!pdfFile||busy)return;
+  setBusy("share");setError("");
+  try{
+   const data={files:[pdfFile]};
+   if(!navigator.share||!navigator.canShare?.(data)){
+    await downloadPdf(draftId);
+    return;
+   }
+   await navigator.share(data);
+   if(savedOutcome==="approved")return;
+   const db=getSupabase();
+   if(!db)throw Error("El PDF se compartió, pero la cotización sigue como borrador.");
+   const result=await db.rpc("vmv_smart_quote_set_status",{p_quote_id:draftId,p_action:"approve"});
+   if(result.error||result.data!==true)throw Error("El PDF se compartió, pero la cotización sigue como borrador.");
+   setSavedOutcome("approved");setSavedId(draftId);
+  }catch(e){
+   if(!(e instanceof DOMException&&e.name==="AbortError"))
+    setError(e instanceof Error&&!(e instanceof DOMException)?e.message:"No se pudo compartir el PDF.");
+  }finally{setBusy("");}
  };
  const card=(label:string,value:string,to:Step)=><div key={label} className={styles.reviewCard}>
   <span><small>{label}</small><strong>{value||"Pendiente"}</strong></span>
@@ -363,6 +399,15 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
      <strong>{d.label}</strong><small>{d.hint}</small>
     </button>)}
    </div>
+   <strong>¿Qué datos del negocio quieres incluir?</strong>
+   {([["email","Correo"],["website","Sitio web"],["address","Dirección"],["phone","Teléfono"]] as const).map(([key,label])=>
+    <div key={key}>
+     <label><input type="checkbox" checked={include[key]}
+      onChange={e=>setInclude({...include,[key]:e.target.checked})}/> {label}</label>
+     {include[key]&&<label className={styles.field}>{label}
+      <input value={contact[key]} maxLength={180} onChange={e=>setContact({...contact,[key]:e.target.value})}/>
+     </label>}
+    </div>)}
   </div>:null}
   {!loading&&owner&&step==="review"?<div className={styles.panel}>
    {savedId?<div className={extra.success}><Check size={25}/>
@@ -381,21 +426,22 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
     {card("Vigencia",charges.until,"charges")}
     {card("Total estimado",money(Math.max(0,total)),"charges")}
     {card("Plantilla",designs.find(x=>x.id===design)?.label||"Moderna","design")}
+    {Object.values(include).some(Boolean)&&card("Datos del negocio",Object.entries(contact).filter(([key,value])=>include[key as keyof typeof include]&&value.trim()).map(([,value])=>value).join(" · "),"design")}
    </div>}
   </div>:null}
   {error?<div className={styles.error} role="alert">{error}</div>:null}
   {!loading&&owner?<div className={styles.footer}>
    {step==="review"?<div className={extra.deliveryActions}>
-    {(!savedId||savedOutcome==="approved")&&<ShareQuotePdf
-     quoteId={savedId} prepareQuote={()=>save("share")} buttonLabel="Compartir factura"
-     className={styles.primary+" "+theme.agentButton} disabled={Boolean(busy)||!valid}/>}
+    {(!savedId||savedOutcome==="approved")&&<button type="button"
+     className={styles.primary+" "+theme.agentButton} disabled={Boolean(busy)||!pdfFile}
+     onClick={()=>void sharePrepared()}><Share2 size={17}/> Compartir factura</button>}
     {!savedId&&<button type="button" className={extra.secondaryAction}
-     disabled={Boolean(busy)||!valid} onClick={()=>void save("draft")}>
+     disabled={Boolean(busy)||!draftId} onClick={()=>setSavedId(draftId)}>
      <Bookmark size={17}/> Guardar para después</button>}
    </div>:
    <button type="button" className={styles.primary+" "+theme.agentButton}
     disabled={!valid||Boolean(busy)} onClick={next}>
-    {editing?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={17}/></button>}
+    {busy==="prepare"?"Preparando PDF…":editing?"Guardar y volver a Revisión":step==="design"?"Preparar cotización":"Continuar"} <ArrowRight size={17}/></button>}
   </div>:null}
  </section>;
 }
