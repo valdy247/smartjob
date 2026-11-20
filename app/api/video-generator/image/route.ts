@@ -36,19 +36,21 @@ export async function POST(req:NextRequest){
   ].join(" ");
   const signal=AbortSignal.timeout(110000);
   const modelId=quality==="high"?"openai/gpt-image-1.5":"openai/gpt-image-1-mini";
-  const generate=()=>generateImage({
-   model:gateway.imageModel(modelId),maxRetries:0,
+  const request={
+   maxRetries:0,
    prompt:instructions+"\n"+description,
-   size:dimensions,providerOptions:{openai:{quality:quality==="high"?"high":"medium",output_format:"jpeg"}},abortSignal:signal
-  });
+   size:dimensions,abortSignal:signal
+  };
   let result;
   try{
-   result=await generate();
+   result=await generateImage({...request,model:gateway.imageModel(modelId),
+    providerOptions:{openai:{quality:quality==="high"?"high":"medium",output_format:"jpeg"}}});
   }catch(error){
    if(!(error instanceof Error)||error.name!=="GatewayInternalServerError"||signal.aborted)throw error;
-   await new Promise(resolve=>setTimeout(resolve,900));
-   signal.throwIfAborted();
-   result=await generate();
+   const fallback=quality==="high"?"minimax/minimax-h3-image":"minimax/minimax-h3-image-highspeed";
+   console.warn("[vmv-video-reference] using alternate image model",{modelId,fallback,dimensions});
+   result=await generateImage({...request,model:gateway.imageModel(fallback),
+    providerOptions:{minimax:{outputFormat:"jpeg"}}});
   }
   const bytes=Buffer.from(result.image.uint8Array);
   if(bytes.length<1024||bytes.length>6*1024*1024)return reply({error:"image_size_unavailable"},502);
