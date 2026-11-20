@@ -1,6 +1,6 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
-import {ArrowLeft,ArrowRight,Bot,Check,FileText,LoaderCircle,Pencil,Plus,ShieldCheck,Sparkles,Package,CalendarCheck,RefreshCw} from "lucide-react";
+import {ArrowLeft,ArrowRight,Bot,Check,FileText,LoaderCircle,Pencil,Plus,ShieldCheck,Sparkles,Package,CalendarCheck,RefreshCw,Send,Download,Bookmark,Palette} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import type {CentralBusiness} from "./centralBusiness";
 import type {PersistedAgent} from "./agentStore";
@@ -9,15 +9,22 @@ import styles from "./AutomaticWebWizard.module.css";
 import extra from "./AutomaticQuoteWizard.module.css";
 type QuoteService={id:string;name:string;description:string;unit_name:string;unit_price_cents:number;active:boolean;source_kind:"product"|"service"|null;source_id:string|null};
 type QuoteKind="product"|"service";
-type Step="business"|"services"|"customer"|"charges"|"review";
+type Step="business"|"services"|"customer"|"charges"|"design"|"review";
+type Design="modern"|"elegant"|"classic";
+const designs:{id:Design;label:string;hint:string;color:string}[]=[
+ {id:"modern",label:"Moderna",hint:"Minimalista",color:"#7853ba"},
+ {id:"elegant",label:"Elegante",hint:"Sofisticada",color:"#b07857"},
+ {id:"classic",label:"Clásica",hint:"Profesional",color:"#285c73"}
+];
 const questions:Record<Step,string>={
  business:"¿Esta cotización es para tu negocio?",
  services:"¿Qué productos o servicios cotizaremos?",
  customer:"¿A quién prepararemos la cotización?",
  charges:"¿Qué condiciones tendrá?",
- review:"Revisa la cotización antes de crearla"
+ design:"¿Cómo diseñaremos la cotización?",
+ review:"Revisa y elige qué quieres hacer"
 };
-const steps:Step[]=["business","services","customer","charges","review"];
+const steps:Step[]=["business","services","customer","charges","design","review"];
 const money=(c:number)=>new Intl.NumberFormat("es-US",{style:"currency",currency:"USD"}).format(c/100);
 const parseUsd=(v:string)=>/^\d{1,7}(?:\.\d{1,2})?$/.test(v.trim())?Math.round(Number(v)*100):null;
 const validPercent=(v:string)=>/^\d{1,3}(?:\.\d{1,2})?$/.test(v)&&Number(v)>=0&&Number(v)<=100;
@@ -33,6 +40,10 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
  const [step,setStep]=useState<Step>("business"),[editing,setEditing]=useState(false);
  const [businessConfirmed,setBusinessConfirmed]=useState(false);
  const [showBusinesses,setShowBusinesses]=useState(false);
+ const [design,setDesign]=useState<Design>("modern");
+ const [message,setMessage]=useState("");
+ const [emailReady,setEmailReady]=useState(false);
+ const [savedOutcome,setSavedOutcome]=useState<"draft"|"approved"|"sent">("draft");
  const [owner,setOwner]=useState(""),[catalog,setCatalog]=useState<QuoteService[]>([]);
  const [connected,setConnected]=useState({product:false,service:false});
  const [refreshing,setRefreshing]=useState(false);
@@ -43,6 +54,9 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
  const [adding,setAdding]=useState(false),[approved,setApproved]=useState(false);
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(""),[error,setError]=useState("");
  const [savedId,setSavedId]=useState("");
+ useEffect(()=>{let live=true;void fetch("/api/vmv/smart-quote/dispatch",{cache:"no-store"})
+  .then(r=>r.json()).then(d=>{if(live)setEmailReady(d.enabled===true);})
+  .catch(()=>{});return()=>{live=false;};},[]);
  const index=steps.indexOf(step);
  const visibleCatalog=catalog.filter(x=>x.active&&
   (x.source_kind===null||connected[x.source_kind]));
@@ -233,19 +247,17 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
   </div>:null}
   {!loading&&owner&&step==="services"?<div className={styles.panel}>
    <p className={styles.note}>Conecta el inventario o los servicios de Mi agente. También puedes añadir uno aquí; quedará disponible en AI Agents y Smart Quote.</p>
-   <div className={extra.sourceGrid} role="group" aria-label="Conectar catálogos de Mi agente">
-    <button type="button" aria-pressed={connected.product} className={connected.product?extra.sourceConnected:extra.sourceCard}
-     onClick={()=>setConnected(v=>({...v,product:!v.product}))}>
-     <Package size={20}/><span><strong>Conectar inventario</strong>
-      <small>{sourceCounts.product} producto(s) activo(s) y aprobado(s)</small></span>
-     {connected.product?<Check size={17}/>:<Plus size={17}/>}
-    </button>
-    <button type="button" aria-pressed={connected.service} className={connected.service?extra.sourceConnected:extra.sourceCard}
-     onClick={()=>setConnected(v=>({...v,service:!v.service}))}>
-     <CalendarCheck size={20}/><span><strong>Conectar servicios</strong>
-      <small>{sourceCounts.service} servicio(s) con precio confirmado</small></span>
-     {connected.service?<Check size={17}/>:<Plus size={17}/>}
-    </button>
+   <div className={extra.switches} role="group" aria-label="Conectar catálogos de Mi agente">
+    <label className={extra.switchRow}><span><strong>Conectar inventario</strong>
+     <small>{sourceCounts.product} producto(s) activo(s) y aprobado(s)</small></span>
+     <input type="checkbox" role="switch" checked={connected.product}
+      onChange={e=>setConnected(v=>({...v,product:e.target.checked}))}/>
+     <span className={extra.switchTrack} aria-hidden="true"/></label>
+    <label className={extra.switchRow}><span><strong>Conectar servicios</strong>
+     <small>{sourceCounts.service} servicio(s) con precio confirmado</small></span>
+     <input type="checkbox" role="switch" checked={connected.service}
+      onChange={e=>setConnected(v=>({...v,service:e.target.checked}))}/>
+     <span className={extra.switchTrack} aria-hidden="true"/></label>
    </div>
    <button type="button" className={extra.refresh} disabled={refreshing||Boolean(busy)}
     onClick={()=>void refreshManually()}><RefreshCw size={15}/>
@@ -319,6 +331,28 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
      onChange={e=>setCharges(v=>({...v,notes:e.target.value}))}/></label>
    <strong className={extra.total}>Total estimado: {money(Math.max(0,total))}</strong>
   </div>:null}
+  {!loading&&owner&&step==="design"?<div className={styles.panel}>
+   <p className={styles.note}>Elige una de tres plantillas para el PDF. Es una cotización, no una factura ni un comprobante de pago.</p>
+   <div className={extra.templates} role="group" aria-label="Plantillas de cotización">
+    {designs.map(d=><button type="button" key={d.id} aria-pressed={design===d.id}
+     className={design===d.id?extra.templateSelected:extra.template} onClick={()=>setDesign(d.id)}>
+     <span className={extra.miniSheet} style={{"--document-accent":d.color} as React.CSSProperties}><i/><i/><i/></span>
+     <strong>{d.label}</strong><small>{d.hint}</small>
+    </button>)}
+   </div>
+   <label className={styles.field}>Mensaje para el cliente (editable)
+    <textarea rows={4} maxLength={1000} value={message}
+     onChange={e=>setMessage(e.target.value)}
+     placeholder="Gracias por tu interés. Adjunto encontrarás la cotización solicitada."/>
+   </label>
+   <button type="button" className={styles.option} onClick={()=>
+    setMessage("Hola "+customer.name.trim()+",\n\nGracias por tu interés en "+business.name+
+     ". Te compartimos nuestra cotización por "+money(Math.max(0,total))+
+     ", válida hasta "+charges.until+".\n\nQuedamos atentos a tus preguntas.\n"+business.name)}>
+    <Sparkles size={16}/> Sugerir mensaje profesional
+   </button>
+   <p className={styles.note}>El texto sugerido no utiliza IA generativa; puedes revisarlo antes de enviarlo.</p>
+  </div>:null}
   {!loading&&owner&&step==="review"?<div className={styles.panel}>
    {savedId?<div className={extra.success}><Check size={25}/>
     <strong>Borrador creado</strong><p>La cotización no se envió ni se cobró.</p>
@@ -333,6 +367,7 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
     {card("Depósito",charges.deposit+" %","charges")}
     {card("Vigencia",charges.until,"charges")}
     {card("Total estimado",money(Math.max(0,total)),"charges")}
+    {card("Plantilla",designs.find(x=>x.id===design)?.label||"Moderna","design")}
    </div>}
    <p className={styles.note}>Los cálculos definitivos se hacen en Supabase utilizando precios aprobados. Crear un borrador no envía una cotización al cliente ni confirma un cobro.</p>
   </div>:null}
