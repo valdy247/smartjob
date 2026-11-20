@@ -538,7 +538,19 @@ export default function AIAgentsPreview(){
        }}/>:null}
      {screen==="quote"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticQuoteWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
-       workspaceId={selectedWorkspace.id} agent={principal} onClose={back}/>:null}
+       workspaceId={selectedWorkspace.id} agent={principal} onClose={back}
+       businesses={businesses} onChooseBusiness={id=>{
+        if(!businesses.some(b=>b.id===id))return;
+        const nextWorkspace=workspaces.find(w=>w.central_business_id===id);
+        const nextAgent=agents.find(a=>a.id===nextWorkspace?.primary_agent_id);
+        setChosenBusiness(id);
+        if(nextWorkspace&&nextAgent&&nextAgent.revision>0){
+         setSelected(nextAgent.id);setNotice("");
+        }else{
+         setScreen("home");
+         setNotice("Para cotizar con ese negocio, primero configura su agente principal.");
+        }
+       }}/>:null}
      {screen==="commerceWizard"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticCommerceWizard key={selectedBusiness.id+principal.id+commerceTab} business={selectedBusiness}
        agent={principal} mode={commerceTab==="catalog"?"inventory":"sales"}
