@@ -1,3 +1,4 @@
+import {IMAGE_PROMPT_LIMIT} from "@/lib/vmv-video-generator/image-prompt";
 import {NextRequest,NextResponse} from "next/server";
 import {generateImage} from "ai";
 import {authenticatedUser} from "@/lib/auth-server";
@@ -6,13 +7,12 @@ export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=120;
 const reply=(body:Record<string,unknown>,status=200)=>NextResponse.json(body,{status,headers:videoHeaders});
-const safe=(v:unknown,max:number)=>typeof v==="string"?v.trim().slice(0,max):"";
 /** Generate a private preview only: no image-to-video credits or publishing here. */
 export async function POST(req:NextRequest){
  const owner=await authenticatedUser(req);
  if(!owner||!videoAllowed(owner))return reply({error:"video_not_enabled_for_account"},403);
  const size=Number(req.headers.get("content-length")||0);
- if(size>9000)return reply({error:"invalid_video_request"},413);
+ if(size>96*1024)return reply({error:"invalid_video_request"},413);
  const body=await req.json().catch(()=>null);
  const db=videoDb();
  const standalone=body?.output==="image";
@@ -20,9 +20,10 @@ export async function POST(req:NextRequest){
  const quality=body?.quality??"standard";
  if(!["1024x1024","1024x1536","1536x1024"].includes(dimensions)||
     !["standard","high"].includes(quality))return reply({error:"invalid_video_request"},400);
- const userPrompt=safe(body?.prompt,1000);
- const direction=safe(body?.direction,260);
- if((standalone?userPrompt:direction).length<3)return reply({error:"complete_video_brief"},400);
+ const input=standalone?body?.prompt:body?.direction;
+ const description=typeof input==="string"?input.trim():"";
+ if(description.length<3)return reply({error:"complete_video_brief"},400);
+ if(description.length>IMAGE_PROMPT_LIMIT)return reply({error:"image_prompt_too_long"},400);
  // Pilot-only 50/day image budget; ordinary Web Studio quotas are untouched.
  const {data:claimed,error:quotaError}=await db.rpc("smartjob_web_ai_claim_video_test_slot",{p_owner:owner});
  if(quotaError)return reply({error:"image_quota_unavailable"},503);
@@ -34,7 +35,7 @@ export async function POST(req:NextRequest){
   ].join(" ");
   const result=await generateImage({
    model:quality==="high"?"openai/gpt-image-1.5":"openai/gpt-image-1-mini",
-   prompt:instructions+"\n"+(standalone?userPrompt:direction),
+   prompt:instructions+"\n"+description,
    size:dimensions,providerOptions:{openai:{quality:quality==="high"?"high":"medium",output_format:"jpeg"}},abortSignal:AbortSignal.timeout(110000)
   });
   const bytes=Buffer.from(result.image.uint8Array);
