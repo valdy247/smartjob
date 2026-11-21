@@ -45,7 +45,7 @@ async function apiResponse(response:Response){
  return json;
 }
 
-export default function SocialCaptionPreview({onBack,businessName=""}:{onBack:()=>void;businessName?:string}){
+export default function SocialCaptionPreview({onBack,businessName="",hideBack=false}:{onBack:()=>void;businessName?:string;hideBack?:boolean}){
  const {language}=useInterfaceLanguage();
  const en=language==="en";
  const [network,setNetwork]=useState("");
@@ -131,7 +131,7 @@ export default function SocialCaptionPreview({onBack,businessName=""}:{onBack:()
   }catch{setNotice(en?"Select and copy the text manually.":"Selecciona y copia el texto manualmente.");}
  };
  return <section className={styles.preview} aria-label={en?"Social media captions":"Descripciones para redes"}>
-  <button type="button" className={styles.back} onClick={back}><ArrowLeft size={16}/>{en?"Back to Marketing":"Volver a Marketing"}</button>
+  {!hideBack?<button type="button" className={styles.back} onClick={back}><ArrowLeft size={16}/>{en?"Back to Marketing":"Volver a Marketing"}</button>:null}
   <div className={styles.heading}>
    <span className={styles.icon}><Sparkles size={22}/></span>
    <span className={styles.badge}>{en?"AI caption studio":"Estudio de descripciones con IA"}</span>
