@@ -21,18 +21,19 @@ export function signupQuestions(data:SignupAnswer):SignupQuestion[]{
  if(data.business_now==="yes"){
   out.push(
    q("business_name","¿Cómo se llama tu negocio?","What's your business called?","Tu negocio","text",false,120),
+   q("country","¿En qué país trabajas?","What country do you work in?","Ubicación","choice",false,5,[
+    o("US","Estados Unidos","United States"),o("CA","Canadá","Canada"),
+    o("MX","México","Mexico"),o("CU","Cuba","Cuba"),o("other","Otro","Other")
+   ])
+   ...(data.country==="other"?[q("country_code","Código de país","Country code","Ubicación","text",false,2)]:[]),
    q("category","¿A qué se dedica tu negocio?","What does your business do?","Tu negocio","google_category",false,100),
    q("description","Describe brevemente tu negocio","Describe your business briefly","Tu negocio","textarea",false,550),
    q("business_type","¿Dónde atiendes?","Where do you serve customers?","Tu negocio","choice",false,30,[
     o("storefront","En mi local","At my location"),o("service_area","Voy al cliente","At the customer's location"),
     o("hybrid","Ambos","Both")
    ]),
-   q("country","¿En qué país trabajas?","What country do you work in?","Ubicación","choice",false,5,[
-    o("US","Estados Unidos","United States"),o("CA","Canadá","Canada"),
-    o("MX","México","Mexico"),o("CU","Cuba","Cuba"),o("other","Otro","Other")
-   ])
+
   );
-  if(data.country==="other")out.push(q("country_code","Selecciona el código de tu país","Choose your country code","Ubicación","text",false,2));
   out.push(
    q("region","Selecciona tu estado o provincia","Select your state or province","Ubicación","location_region",false,120),
    q("city","Selecciona tu ciudad","Select your city","Ubicación","location_city",false,120),
@@ -179,6 +180,7 @@ export function signupValidation(step:SignupQuestion,value:string,data:SignupAns
  if(step.id==="repeat_password"&&s!==data.password)return "Las contraseñas deben coincidir.";
  if(step.kind==="tel"&&!/^\+?[0-9 ()-]{7,35}$/.test(s))return "Comprueba el teléfono.";
  if(step.kind==="number"&&(!/^\d+(?:\.\d{1,2})?$/.test(s)||Number(s)>1000000))return "Escribe un precio válido.";
+ if(/^product_\d+_price$/.test(step.id)&&Number(s)<=0)return "Indica un precio mayor que cero.";
  if(step.kind==="url"&&!websiteAddress(s))return "Escribe un sitio web válido, por ejemplo minegocio.com.";
  if(step.id==="country_code"&&!/^[A-Za-z]{2}$/.test(s))return "Usa dos letras, por ejemplo FR.";
  if(step.kind==="date"&&(!/^20\d{2}-\d{2}-\d{2}$/.test(s)||!Number.isFinite(Date.parse(s))||
