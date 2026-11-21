@@ -597,7 +597,7 @@ export default function VMVMobilePreview(){
         <span className={styles.accountHeroInfo}><strong>{business}</strong><small>{user?.email||"—"}</small></span>
         <span className={styles.accountHeroSpark} aria-hidden="true">✦</span>
        </div>
-       {user?<AccountBusinessAgent key={user.id} ownerId={user.id} initialName={profile?.business_name||""}/>:null}
+       {user?<AccountBusinessAgent key={user.id} ownerId={user.id} initialName={profile?.business_name||""} initialAgentName={profile?.assistant_name||""}/>:null}
        <div className={styles.accountStatGrid}>
         <button type="button" className={styles.accountStatTile} onClick={()=>showCall("minutes")}>
          <span><Clock3 size={19}/></span><strong>{num(available)} min</strong><small>{translate("home.minutesToTranslate")}</small>
