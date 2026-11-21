@@ -17,10 +17,11 @@ test("Identity and Activity do not render standalone AI Agent tiles",()=>{
  assert.ok(!ai.includes("import AgentSetupWizard"));
  assert.ok(!ai.includes("import AgentQualityLab"));
 });
-test("existing AI Agents expose one Profile configuration entry",()=>{
- assert.ok(ai.includes('href={agentProfileUrl(principal||proposal||undefined)}'));
- assert.ok(ai.includes('import AgentSettingsEntry from "../AgentSettingsEntry"'));
- assert.ok(ai.includes('<AgentSettingsEntry'));
+test("AI Agents home keeps only capability tiles; Profile remains the configuration destination",()=>{
+ assert.ok(!ai.includes('import AgentSettingsEntry from "../AgentSettingsEntry"'));
+ assert.ok(!ai.includes('<AgentSettingsEntry'));
+ assert.ok(ai.includes('className={styles.tiles}'));
+ assert.ok(!ai.includes('className={styles.hero}'));
  assert.ok(!ai.includes('translate("agents.existing")'));
  assert.ok(!ai.includes('visibleAgents.map(a=>'));
  assert.ok(ai.includes('const edit=(agent:Agent,step:0|1|2|3=0)=>openAgentProfile(agent,"agent",step);'));
