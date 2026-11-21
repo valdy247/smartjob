@@ -39,9 +39,8 @@ type Agent=PersistedAgent;
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
  {id:"calls",title:"Llamadas",sub:"Atención telefónica",Icon:PhoneCall,bg:"#ede2ff",fg:"#7143c7",purpose:"Orientar a quien llama y derivar a una persona cuando sea necesario."},
  {id:"support",title:"Clientes",sub:"Atención y consultas",Icon:Headphones,bg:"#c8f3e4",fg:"#17624f",purpose:"Responder preguntas habituales sobre productos, servicios y horarios."},
- {id:"sales",title:"Ventas",sub:"Productos y servicios",Icon:ShoppingBag,bg:"#ffdf84",fg:"#775018",purpose:"Informar sobre productos confirmados e identificar oportunidades de venta."},
  {id:"bookings",title:"Reservas",sub:"Citas y disponibilidad",Icon:CalendarDays,bg:"#bfe4ff",fg:"#2c6086",purpose:"Informar sobre horarios y ayudar a los clientes a solicitar citas."},
- {id:"inventory",title:"Inventario",sub:"Productos y existencias",Icon:Package,bg:"#ffd4e6",fg:"#9b4776",purpose:"Explicar productos y existencias autorizadas de la empresa."},
+ {id:"inventory",title:"Productos/Pedidos",sub:"Catálogo y pedidos",Icon:Package,bg:"#ffd4e6",fg:"#9b4776",purpose:"Gestionar productos aprobados, imágenes y pedidos del negocio."},
  {id:"operations",title:"Administración",sub:"Solicitudes y procesos",Icon:BriefcaseBusiness,bg:"#d7ecff",fg:"#416995",purpose:"Orientar y organizar solicitudes administrativas de forma segura."},
  {id:"custom",title:"A mi medida",sub:"Tu propio objetivo",Icon:WandSparkles,bg:"#e7dfff",fg:"#6b45bb",purpose:"Ayudar con el propósito personalizado del negocio."}
 ];
@@ -140,7 +139,8 @@ export default function AIAgentsPreview(){
  const openFor=(kind:Kind,agent:Agent)=>{
   setSelected(agent.id);
   if(kind==="sales"||kind==="inventory"){
-   setCommerceTab(kind==="inventory"?"catalog":"setup");setScreen("commerceWizard");
+   setCommerceTab("catalog");setNotice("");
+   setScreen(commerceNeedsSetup(agent)?"commerceWizard":"commerce");
   }else if(kind==="calls"){
    setScreen("call");
    setNotice(phone?.agentId===agent.id?"":translate("agents.notice.configureCalls"));
@@ -343,6 +343,8 @@ export default function AIAgentsPreview(){
   finally{setBusy(false);}
  };
  const back=()=>{setScreen("home");setMessageNotice("");};
+ const commerceNeedsSetup=(agent:Agent)=>agent.setup.commerce_onboarded!=="Sí"&&
+  agent.setup.cap_catalog!=="Sí"&&agent.setup.cap_catalog!=="No";
  const patch=(key:keyof AgentDraft,value:string)=>setDraft(prev=>({...prev,[key]:value}));
  const immersive=screen==="ads"||screen==="web"||screen==="video"||screen==="videoEntry"||screen==="call"||screen==="quote"||screen==="quoteEntry"||screen==="commerceWizard"||screen==="bookingsWizard";
  useEffect(()=>{
@@ -357,7 +359,7 @@ export default function AIAgentsPreview(){
   if(!principal)return;
   setSelected(principal.id);
   if(service==="inventory"||service==="sales"){
-   setCommerceTab(service==="inventory"?"catalog":"setup");setScreen("commerceWizard");
+   setCommerceTab("catalog");setScreen(commerceNeedsSetup(principal)?"commerceWizard":"commerce");
   }else {
    if(service==="bookings")setResumeBooking(false);
    setScreen(service==="web"?"web":service==="call"?"call":service==="quote"?"quoteEntry":service==="bookings"?"bookingsWizard":"videoEntry");
@@ -477,10 +479,6 @@ export default function AIAgentsPreview(){
           onClick={()=>void designate(a).catch(e=>setNotice(translate("agents.notice.designateError")))}>
           <Bot size={15}/> {translate("agents.makePrincipal")}</button>:null}
          <button type="button" className={styles.buttonSecondary} onClick={()=>edit(a)}><ClipboardList size={15}/> {translate("agents.editIdentity")}</button>
-         {a.revision>0&&(a.kind==="sales"||a.setup.cap_sales==="Sí"||phone?.agentId===a.id)?
-          <button type="button" className={styles.buttonSecondary}
-           onClick={()=>{setSelected(a.id);setScreen("commerce");}}>
-           <ShoppingBag size={15}/> {translate("agents.prepareSales")}</button>:null}
          <button type="button" className={styles.buttonSecondary} onClick={()=>void toggleStatus(a)}>
           {a.status==="active"?<PauseCircle size={15}/>:<PlayCircle size={15}/>} {a.status==="active"?translate("agents.pause"):translate("agents.activateStudio")}
          </button>
@@ -578,7 +576,7 @@ export default function AIAgentsPreview(){
        }}/>:null}
      {screen==="commerceWizard"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticCommerceWizard key={selectedBusiness.id+principal.id+commerceTab} business={selectedBusiness}
-       agent={principal} mode={commerceTab==="catalog"?"inventory":"sales"}
+       agent={principal}
        onAgentUpdated={updated=>{setAgents(list=>list.map(a=>a.id===updated.id?updated:a));}}
        onOpenStudio={()=>setScreen("commerce")} onClose={back}/>:null}
      {screen==="bookingsWizard"&&principal&&selectedBusiness&&selectedWorkspace?
@@ -589,7 +587,8 @@ export default function AIAgentsPreview(){
        onOpenStudio={section=>{setBookingTab(section);setResumeBooking(true);setScreen("bookings");}}/>:null}
      {screen==="phone"?<CallControl onBack={()=>setScreen("call")}/>:null}
      {screen==="commerce"?<CommerceStudio centralBusinessId={selectedBusiness?.id||""} agents={principal?[principal]:visibleAgents.filter(a=>a.revision>0)}
-      initialAgentId={principal?.id||selected||""} initialTab={commerceTab} onAgentUpdated={updated=>
+      initialAgentId={principal?.id||selected||""} initialTab={commerceTab}
+      onConfigure={()=>setScreen("commerceWizard")} onAgentUpdated={updated=>
        setAgents(prev=>prev.map(a=>a.id===updated.id?updated:a))}
       onClose={()=>{void reload().catch(()=>{});back();}}/>:null}
      {screen==="chatWeb"&&active?<ChatWebHub key={active.id} agent={active}
