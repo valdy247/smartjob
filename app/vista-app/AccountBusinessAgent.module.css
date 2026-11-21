@@ -20,3 +20,11 @@
 .card:focus-visible,.dialog button:focus-visible{outline:3px solid #8a58df;outline-offset:3px}
 
 .financeIcon{flex-shrink:0;display:grid;place-items:center;width:48px;height:48px;border-radius:16px;background:#e9e7ff;color:#6650bb}
+
+/* Profile is the sole editing and quality workspace for the saved agent. */
+.agentTabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;padding:5px;border:1px solid #e9e0f4;border-radius:14px;background:#f1ebf9;margin:0 0 15px}
+.agentTab,.agentTabActive{min-height:42px;padding:10px 8px;border:0;border-radius:11px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;transition:background .15s,color .15s}
+.agentTab{background:transparent;color:#796b8c}
+.agentTabActive{background:white;color:#7045aa;box-shadow:0 3px 10px #37234814}
+@media(max-width:380px){.agentTab,.agentTabActive{font-size:11px;padding:9px 5px}}
+@media(prefers-reduced-motion:reduce){.agentTab,.agentTabActive{transition:none}}
