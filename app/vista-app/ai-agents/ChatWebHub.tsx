@@ -3,7 +3,7 @@ import {useCallback,useEffect,useState} from "react";
 import {
  ArrowLeft,ArrowUpRight,Bot,Check,CheckCircle2,ChevronRight,
  Globe2,Headphones,Inbox,LoaderCircle,MessageCircle,Package,
- RefreshCw,Settings2,ShieldCheck,ShoppingBag,SlidersHorizontal,
+ RefreshCw,Settings2,ShieldCheck,ShoppingBag,SlidersHorizontal,BellRing,
  Sparkles,Unplug,Users,X,Send
 } from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
@@ -106,6 +106,26 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
   finally{setLoading(false);}
  },[owner,agent.id,agent.business_id,businessName]);
  useEffect(()=>{void load();},[load]);
+ useEffect(()=>{
+  if(loading)return;
+  const url=new URL(window.location.href);
+  if(url.searchParams.get("chatWeb")!=="conversations")return;
+  const sessionId=url.searchParams.get("session")||"";
+  if(sessionId&&!visitorChats.some(c=>c.id===sessionId))return;
+  setSection("conversations");setConversationTab("ai");
+  if(sessionId){
+   setChosen(sessionId);setMessages([]);
+   const db=getSupabase();
+   if(db)void db.from("vmv_web_public_chat_messages")
+    .select("id,role,content,created_at").eq("owner_id",owner)
+    .eq("session_id",sessionId).order("created_at",{ascending:true}).limit(100)
+    .then(({data})=>{if(data)setMessages(data as Message[]);});
+   if(db)void db.from("vmv_web_chat_alerts").update({read_at:new Date().toISOString()})
+    .eq("owner_id",owner).eq("session_id",sessionId).then(()=>{});
+  }
+  for(const key of ["chatWeb","agent","session"])url.searchParams.delete(key);
+  window.history.replaceState(null,"",url.pathname+url.search+url.hash);
+ },[loading,visitorChats,owner]);
  const refreshChatInbox=useCallback(async()=>{
   const db=getSupabase();if(!db)return;
   const [current,unread]=await Promise.all([
@@ -433,13 +453,19 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
     <div className={css.panelTitle}><Settings2 size={19}/><strong>Atención al cliente</strong></div>
     <label className={css.toggle}><span><strong>Guardar contactos</strong><small>Nombre y teléfono o correo, con permiso</small></span>
      <input type="checkbox" checked={settings.lead_capture} onChange={e=>change("lead_capture",e.target.checked)}/></label>
-    <label className={css.toggle}><span><strong>Transferir a humano</strong><small>Si el cliente lo pide o hay dudas</small></span>
+    <label className={css.toggle}><span><strong>Transferir a humano</strong><small>Responder desde Conversaciones</small></span>
      <input type="checkbox" checked={settings.human_handoff} onChange={e=>change("human_handoff",e.target.checked)}/></label>
+    <button className={css.catalogConnect} type="button" onClick={()=>{
+     if(typeof Notification!=="undefined")void Notification.requestPermission().then(result=>
+      setNotice(result==="granted"?"Avisos del navegador activados mientras VMV esté abierto.":"Permiso de notificaciones no concedido."));
+     else setNotice("Este navegador no admite estos avisos.");
+    }}><BellRing size={16}/> Activar avisos</button>
+    <p className={css.smallNote}>Los avisos se muestran en VMV; cerrar el navegador puede detenerlos.</p>
    </div>
    <button className={css.save} type="button" disabled={saving||loading}
     onClick={()=>void saveSettings()}>{saving?<LoaderCircle size={17} className={css.spin}/>:<Check size={18}/>}
     Guardar ajustes</button>
-   <p className={css.smallNote}>Los ajustes funcionan en las pruebas del agente. El chat público aún no está habilitado.</p>
+   <p className={css.smallNote}>Los ajustes también se aplican al chat público cuando activas una web.</p>
   </>:null}
   {loading?<div className={css.loading}><LoaderCircle size={18} className={css.spin}/> Cargando…</div>:null}
   {error?<div role="alert" className={css.error}>{error}<button onClick={()=>setError("")} aria-label="Cerrar"><X size={15}/></button></div>:null}
