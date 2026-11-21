@@ -115,6 +115,16 @@ test("Customer stock counts are hidden; orders are owner-reviewed and cannot aut
  assert.match(publicChat,/hideStockCounts\(rawReply\)/);
  assert.match(helper,/export function customerCatalog/);
  assert.doesNotMatch(helper,/availableQuantity:item\.availableQuantity/);
+ const js=ts.transpileModule(helper,{compilerOptions:{
+  module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022
+ }}).outputText;
+ const mod={exports:{}};
+ new Function("module","exports",js)(mod,mod.exports);
+ const redact=mod.exports.hideStockCounts;
+ assert.doesNotMatch(redact("Tenemos 10 unidades disponibles. Precio 55 USD."),/10 unidades/);
+ assert.doesNotMatch(redact("Stock: 10, pregunta por disponibilidad."),/Stock: 10/);
+ assert.match(redact("Precio 55 USD."),/Precio 55 USD/);
+
  assert.match(form,/Pedido #/);
  assert.match(form,/acceptOrder:true/);
  assert.match(action,/visitorSession\(req,body.kind,body.slug\)/);
