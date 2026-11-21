@@ -29,7 +29,7 @@ export default function CreateAdsCampaignPage(){
     {canGoBack?
      <button type="button" className={styles.backLink} onClick={()=>wizardBack.current?.()}>
       <ArrowLeft size={17}/>{language==="en"?"Back":"Atrás"}</button>:
-     <Link href="/vista-app/marketing/ads" className={styles.backLink}><ArrowLeft size={17}/>Ads Studio</Link>}
+     <Link href="/vista-app/marketing/ads" className={styles.backLink}><ArrowLeft size={17}/>{language==="en"?"Ads Studio":"Ads Studio"}</Link>}
     <InterfaceLanguagePicker compact/>
    </div>
    <span className={styles.marker}><Sparkles size={14}/>{language==="en"?"Create campaign":"Crear campaña"}</span>
