@@ -29,9 +29,8 @@ const categories=[
 export function signupQuestions(data:SignupAnswer):SignupQuestion[]{
  const sections:SignupQuestion[]=[
   q("first","¡Hola! ¿Cómo te llamas?","Hi! What's your name?","Conozcámonos","text",false,60),
-  q("last",`Qué gusto tenerte aquí, ${data.first?.trim()||"amigo"}. ¿Cuál es tu apellido?`,
-    `Great to have you here, ${data.first?.trim()||"friend"}. What's your last name?`,"Conozcámonos","text",false,80),
-  q("agent_name","¿Cómo quieres llamarme?","What would you like to call me?","Tu agente","text",false,40),
+  q("agent_name",`¡Qué bueno tenerte por aquí, ${data.first?.trim()||"amigo"}! ¿Cómo quieres llamarme?`,
+    `Great to have you here, ${data.first?.trim()||"friend"}! What would you like to call me?`,"Tu agente","text",false,40),
   q("business_now","¿Quieres registrar tu negocio ahora?","Would you like to register your business now?","Tu negocio","choice",false,10,yesNo)
  ];
  if(data.business_now==="yes"){
@@ -183,6 +182,7 @@ export function signupQuestions(data:SignupAnswer):SignupQuestion[]{
   q("agent_mission","¿Cuál es la misión principal de tu agente?","What's your agent's main mission?","Tu agente","textarea",false,240),
   q("agent_faq","¿Qué preguntas frecuentes debe saber responder?","What common questions should the agent answer?","Tu agente","textarea",true,1100),
   q("agent_limits","¿Qué cosas nunca debe prometer o hacer?","What should your agent never promise or do?","Seguridad","textarea",true,700),
+  q("last","¿Cuál es tu apellido?","What's your last name?","Tu cuenta","text",false,80),
   q("user_phone","¿Cuál es tu número de contacto?","What's your contact phone number?","Tu cuenta","tel",false,35),
   q("email","¿A qué correo enviamos tu confirmación?","What email should we send your confirmation to?","Tu cuenta","email",false,254),
   q("password","Crea tu contraseña segura","Create a secure password","Tu cuenta","password",false,128),
