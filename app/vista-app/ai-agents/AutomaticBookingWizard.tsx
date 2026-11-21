@@ -16,7 +16,7 @@ const labels:Record<Step,string>={
 };
 export default function AutomaticBookingWizard({business,agent,onClose,onAgentUpdated,onOpenStudio,initialStep="business"}:{
  business:CentralBusiness;agent:PersistedAgent;onClose:()=>void;
- onAgentUpdated:(agent:PersistedAgent)=>void;onOpenStudio:(section:Goal|"permissions")=>void;
+ onAgentUpdated:(agent:PersistedAgent)=>void;onOpenStudio:(section:Goal|"permissions"|"availability")=>void;
  initialStep?:Step;
 }){
  const [step,setStep]=useState<Step>(initialStep),[editing,setEditing]=useState(false);
