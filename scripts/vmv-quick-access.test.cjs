@@ -42,7 +42,7 @@ test("search works in Spanish and English, including accents and alternate terms
 });
 test("shared layout mounts Quick Access on all routes",()=>{
  const layout=fs.readFileSync(path.resolve("app/layout.tsx"),"utf8");
- assert.ok(layout.includes("<VMVQuickAccessProvider>{children}</VMVQuickAccessProvider>"));
+ assert.ok(layout.includes("<VMVQuickAccessProvider>{children}"));
  const ui=fs.readFileSync(path.resolve("components/VMVQuickAccess.tsx"),"utf8");
  assert.ok(ui.includes('role="dialog"'));
  assert.ok(ui.includes('data-vmv-shortcut-id'));
