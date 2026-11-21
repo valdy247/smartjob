@@ -12,7 +12,7 @@ type Stage="source"|"imageSource"|"imageSize"|"imageQuality"|"reference"|"script
 type Mode="text"|"image";
 type Model="gen4.5"|"kling";
 type Ratio="720:1280"|"1280:720";
-type VideoStatus={configured:boolean;pilots?:{id:string;niche:string;audience:string;goal:string;style:string;model?:string}[]};
+type VideoStatus={configured:boolean;pilots?:{id:string;niche:string;audience:string;goal:string;style:string;model?:string;creative_seed?:string}[]};
 const stages=(mode:Mode,generated:boolean):Stage[]=>mode==="image"?
  ["source","imageSource",...(generated?["imageSize","imageQuality"] as const:[]),"reference","script","format","review","result"]:
  ["source","script","format","review","result"];
@@ -136,6 +136,7 @@ function VideoWizardSession({onClose,onRestart}:{onClose:()=>void;onRestart:()=>
       "Tema: "+fromPlan.niche,
       "Público: "+fromPlan.audience,
       "Objetivo: "+fromPlan.goal,
+      fromPlan.creative_seed?"Inspiración ORIGINAL basada en metadatos públicos (no copiar): "+fromPlan.creative_seed:"",
       "Estilo visual: "+fromPlan.style,
       "Una escena clara con movimiento de cámara suave y composición coherente."
      ].join("\n").slice(0,1000));
