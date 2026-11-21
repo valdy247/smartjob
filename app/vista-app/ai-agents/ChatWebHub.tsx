@@ -261,24 +261,37 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
   </>:null}
   {section==="conversations"?<>
    <div className={css.tabs} role="group" aria-label="Tipo de conversación">
+    <button type="button" aria-pressed={conversationTab==="ai"} className={conversationTab==="ai"?css.activeTab:""}
+     onClick={()=>{setConversationTab("ai");setChosen(null);}}>Chat IA · {visitorChats.length}</button>
     <button type="button" aria-pressed={conversationTab==="website"} className={conversationTab==="website"?css.activeTab:""}
-     onClick={()=>{setConversationTab("website");setChosen(null);}}>Web · {inquiries.length}</button>
+     onClick={()=>{setConversationTab("website");setChosen(null);}}>Solicitudes · {inquiries.length}</button>
     <button type="button" aria-pressed={conversationTab==="tests"} className={conversationTab==="tests"?css.activeTab:""}
      onClick={()=>{setConversationTab("tests");setChosen(null);}}>Pruebas · {conversations.length}</button>
    </div>
-   {conversationTab==="website"?inquiries.length?
-    <div className={css.list}>{inquiries.slice(0,20).map(item=><div key={item.id} className={css.conversation}>
-     <div><strong>{item.visitor_name||"Visitante"}</strong><small>{when(item.created_at)} · /{item.site_slug}</small>
-      <p>{item.message}</p></div><span className={css.muted}>{item.status==="new"?"Nueva":"Recibida"}</span>
-    </div>)}</div>:
-    <div className={css.empty}><Inbox size={28}/><strong>Sin consultas web</strong><span>Los formularios aparecerán aquí.</span></div>:
+   {conversationTab==="ai"?(chosen?<div className={css.thread}>
+     <button type="button" onClick={()=>{setChosen(null);setMessages([]);}}><ArrowLeft size={15}/> Chats recientes</button>
+     {messages.map(m=><div key={m.id} className={m.role==="user"?css.userBubble:css.agentBubble}>
+      <small>{m.role==="user"?"Visitante":"Agente IA"}</small><p>{m.content}</p></div>)}
+     {!messages.length?<span className={css.muted}>Sin mensajes disponibles.</span>:null}
+    </div>:visitorChats.length?<div className={css.list}>{visitorChats.map(c=><button
+     key={c.id} type="button" className={css.testRow} onClick={()=>void showConversation(c.id)}>
+     <span className={css.siteIcon}><Bot size={18}/></span>
+     <span><strong>Visitante · {c.site_slug}</strong><small>{when(c.updated_at)} · {c.site_kind==="builder"?"Web Studio":"Sitio clásico"}</small></span><ChevronRight size={17}/>
+    </button>)}</div>:<div className={css.empty}><Bot size={28}/><strong>Sin chats IA todavía</strong><span>Las conversaciones reales aparecerán aquí.</span></div>):
+    conversationTab==="website"?(inquiries.length?
+     <div className={css.list}>{inquiries.slice(0,20).map(item=><div key={item.id} className={css.conversation}>
+      <div><strong>{item.visitor_name||"Visitante"}</strong><small>{when(item.created_at)} · /{item.site_slug}</small>
+       <p>{item.message}</p></div><span className={css.muted}>{item.status==="new"?"Nueva":"Recibida"}</span>
+     </div>)}</div>:
+     <div className={css.empty}><Inbox size={28}/><strong>Sin solicitudes web</strong><span>Los formularios aparecerán aquí.</span></div>):
     chosen?<div className={css.thread}>
      <button type="button" onClick={()=>{setChosen(null);setMessages([]);}}><ArrowLeft size={15}/> Conversaciones</button>
      {messages.map(m=><div key={m.id} className={m.role==="user"?css.userBubble:css.agentBubble}>
       <small>{m.role==="user"?"Tú":"Agente"}</small><p>{m.content}</p></div>)}
-     {!messages.length?<span className={css.muted}>Cargando mensajes…</span>:null}
-    </div>:conversations.length?<div className={css.list}>{conversations.map(c=><button type="button" key={c.id} className={css.testRow} onClick={()=>void showConversation(c.id)}>
-     <span className={css.siteIcon}><MessageCircle size={17}/></span><span><strong>{c.title}</strong><small>{when(c.created_at)} · Prueba privada</small></span><ChevronRight size={17}/>
+    </div>:conversations.length?<div className={css.list}>{conversations.map(c=><button type="button" key={c.id}
+     className={css.testRow} onClick={()=>void showConversation(c.id)}>
+     <span className={css.siteIcon}><MessageCircle size={17}/></span>
+     <span><strong>{c.title}</strong><small>{when(c.created_at)} · Prueba privada</small></span><ChevronRight size={17}/>
     </button>)}</div>:<div className={css.empty}><MessageCircle size={28}/><strong>Sin pruebas</strong><span>Usa «Probar agente» para comenzar.</span></div>}
   </>:null}
   {section==="settings"?<>
