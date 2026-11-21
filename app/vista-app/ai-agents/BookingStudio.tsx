@@ -4,6 +4,7 @@ import {ArrowLeft,CalendarDays,CheckCircle2,Clock3,Plus,Save,ShieldCheck} from "
 import {getSupabase} from "@/lib/supabase";
 import {storeAgent,type PersistedAgent} from "./agentStore";
 import styles from "./CommerceStudio.module.css";
+import {useAgentHeaderBack} from "./AgentHeaderBack";
 
 type Service={
  id:string;owner_id:string;business_id:string;name:string;description:string;
@@ -26,6 +27,7 @@ export default function BookingStudio({agent,onClose,onAgentUpdated,initialTab="
  agent:PersistedAgent;onClose:()=>void;onAgentUpdated?:(agent:PersistedAgent)=>void;
  initialTab?:BookingTab;
 }){
+ const useSharedHeader=useAgentHeaderBack(onClose);
  const [current,setCurrent]=useState(agent);
  const [tab,setTab]=useState<Tab>(initialTab);
  const [services,setServices]=useState<Service[]>([]);
@@ -145,7 +147,7 @@ export default function BookingStudio({agent,onClose,onAgentUpdated,initialTab="
  };
  const label=(s:string,children:React.ReactNode)=><label>{s}{children}</label>;
  return <section className={styles.root}>
-  <button type="button" onClick={onClose} className={styles.back}><ArrowLeft size={17}/> Volver al asistente de reservas</button>
+  {!useSharedHeader?<button type="button" onClick={onClose} className={styles.back}><ArrowLeft size={17}/> Volver al asistente de reservas</button>:null}
   <div className={styles.hero}><div><small>AGENTE PRINCIPAL · AGENDA VMV</small>
    <h1>Reservas</h1><p>{current.name}</p></div><CalendarDays size={30}/></div>
   <div className={styles.warning}><ShieldCheck size={18}/><p>Agenda VMV compartida con Mi agente y Smart Quote para los servicios aprobados con precio. No se conecta a calendarios externos ni cobra automáticamente.</p></div>
