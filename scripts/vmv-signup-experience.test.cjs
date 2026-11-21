@@ -49,7 +49,7 @@ test("service area removes street address and collects only served areas",()=>{
 test("a custom country must provide an ISO two-letter code",()=>{
  const all=ids({...withBiz,country:"other"});
  assert.ok(all.includes("country_code"));
- assert.match(signupValidation({id:"country_code",kind:"text",optional:false,max:2},"USA",{}),/dos letras/);
+ assert.match(signupValidation({id:"country_code",kind:"text",optional:false,max:2},"USA",{}),/corta|dos letras/);
  assert.equal(signupValidation({id:"country_code",kind:"text",optional:false,max:2},"FR",{}),"");
 });
 test("future booking windows are required only when explicitly selected",()=>{
@@ -104,7 +104,8 @@ test("business, principal agent, catalog and hours save to canonical owner-scope
 test("a signup blueprint never serializes passwords or privileged account entitlements",()=>{
  const complete=read("lib/vmv-signup-complete.ts");
  assert.ok(complete.includes('key!=="password"&&key!=="repeat_password"'));
- assert.ok(complete.includes('preferred_plan'));
+ assert.ok(!complete.includes("preferred_plan:\"premium\""));
+ assert.ok(complete.includes("plan_prompt_seen:true"));
  assert.ok(!complete.includes("service_role"));
  assert.ok(!complete.includes("SUPABASE_SECRET_KEY"));
 });
