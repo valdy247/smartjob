@@ -146,7 +146,7 @@ export default function AgentLiveTest({agent,onClose,onEdit,webMode=false,onAgen
     .eq("id",id).eq("owner_id",agent.owner_id).eq("mode","test").single();
    if(error||!data)throw Error("No se pudo verificar el pedido de prueba.");
    const url=await createTestCheckout(data as TestOrder);
-   window.open(url,"_blank","noopener,noreferrer");
+   window.location.assign(url);
    setNotice("Se abrió un checkout de Stripe en modo prueba. No se realizaron cobros reales.");
   }catch(e){setNotice(e instanceof Error?e.message:"No fue posible iniciar el pedido de prueba.");}
   finally{setPurchasing(false);}
