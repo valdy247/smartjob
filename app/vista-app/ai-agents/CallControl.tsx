@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
 import {ArrowLeft,Check,Languages,MessageCircle,PhoneCall,ShieldCheck} from "lucide-react";
+import {useAgentHeaderBack} from "./AgentHeaderBack";
 import {getSupabase} from "@/lib/supabase";
 import {checkCallPolicy,days,initialCallPolicy,zoneOptions,type CallPolicy,type DayName} from "@/lib/vmv-ai-agents/call-policy";
 import styles from "./CallControl.module.css";
@@ -18,6 +19,7 @@ async function request(method:"GET"|"POST"|"PUT",payload?:object){
  return result;
 }
 export default function CallControl({onBack}:{onBack:()=>void}){
+ const useSharedHeader=useAgentHeaderBack(onBack);
  const [policy,setPolicy]=useState<CallPolicy>(initialCallPolicy);
  const [savedPolicy,setSavedPolicy]=useState<CallPolicy|null>(null);
  const [legacyMenu,setLegacyMenu]=useState(false);
@@ -55,7 +57,7 @@ export default function CallControl({onBack}:{onBack:()=>void}){
   }catch(e){setNotice(e instanceof Error?e.message:"No se pudo guardar.");}finally{setBusy(false);}
  };
  return <div className={styles.root}>
-  <button type="button" className={styles.back} onClick={onBack}><ArrowLeft size={16}/> AI Agents</button>
+  {!useSharedHeader?<button type="button" className={styles.back} onClick={onBack}><ArrowLeft size={16}/> AI Agents</button>:null}
   <header className={styles.hero}>
    <span className={styles.heroEyebrow}>CONFIGURACIÓN DE LÍNEA</span>
    <h1>Atención de llamadas<span>.</span></h1>
