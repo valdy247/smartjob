@@ -117,3 +117,41 @@
 .captionManual{display:grid;gap:8px;font-size:11px;font-weight:850;color:#72558b}
 .captionManual textarea{width:100%;min-height:75px;border-radius:12px;border:1px solid #dfd0ee;
  background:#fff;color:#30223f;padding:11px;font:inherit;resize:vertical}
+
+
+/* Video Studio is the single navigation hub; keep the white/pastel VMV Services language. */
+.page{background:#fff;color:#2d2140}
+.back{color:#6f4ca4}
+.intro p,.choice small{color:#84758f}
+.choiceGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.choice{min-height:174px;text-decoration:none;border-color:#e9def2;color:#39284f;padding:19px;border-radius:20px}
+.choice:hover{border-color:#ad89d5}
+.choiceIcon{background:#f0e7ff;color:#7949b5}
+.choice:nth-child(2) .choiceIcon{background:#e8f5f0;color:#3a9a7b}
+.choice:nth-child(3) .choiceIcon{background:#e7efff;color:#597bb5}
+.featured{background:linear-gradient(140deg,#faf6ff,#fff)}
+.libraryShortcut{border-color:#e9def2;color:#5c4772;min-height:61px}
+.libraryShortcut>svg:first-child{color:#8556ba}
+.count{background:#f2e8fb;color:#7646ab}
+.quickLibrary{background:#fff;border:1px solid #e8dcf1;border-radius:20px;padding:18px;margin-bottom:21px;display:grid;gap:13px}
+.quickHeader,.quickPreviewTop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.quickHeader>div{display:grid;gap:5px}
+.quickHeader strong{font-size:15px;color:#352747}
+.quickHeader small{font-size:11px;color:#97849f}
+.quickCards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:9px}
+.quickCard,.quickCardActive{display:flex;flex-direction:column;gap:8px;padding:13px;align-items:flex-start;text-align:left;min-width:0;min-height:122px;border-radius:15px;border:1px solid #e7dcef;background:#fff;color:#3e3150;cursor:pointer}
+.quickCard:hover,.quickCardActive{background:#f8f3ff;border-color:#ad87d5}
+.quickIcon{width:34px;height:34px;display:grid;place-items:center;background:#f1e8ff;color:#7751af;border-radius:10px}
+.quickCard strong,.quickCardActive strong{font-size:12px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.quickCard small,.quickCardActive small{color:#9785a7;font-size:10px}
+.quickPreview{border:1px solid #e9e0ef;border-radius:17px;background:#fcfaff;padding:13px;display:grid;gap:11px}
+.quickPreviewTop strong{font-size:14px;color:#4b366b;overflow-wrap:anywhere}
+.quickPreviewTop button{background:transparent;border:0;color:#aa5171;font-size:12px;font-weight:750;cursor:pointer}
+.quickPreview video{display:block;width:100%;max-height:460px;object-fit:contain;background:#111;border-radius:11px}
+.quickPreview a{justify-self:start}
+.quickEmpty{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:#9785a5;font-size:12px}
+.quickEmpty a{color:#7952b0;font-weight:800}
+.quickError{color:#a44967;font-size:12px}
+.librarySubheading{font-size:15px;color:#77628f;margin:4px 0 14px}
+@media(max-width:920px){.choiceGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:740px){.choiceGrid{grid-template-columns:1fr}.choice{min-height:135px}.quickLibrary{padding:13px}}
