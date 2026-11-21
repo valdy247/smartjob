@@ -72,3 +72,25 @@ button:focus-visible{outline:3px solid #ad86ec;outline-offset:2px}
 .importPanel .items{margin-top:12px}
 @media(prefers-reduced-motion:reduce){.catalogSwitch span,.catalogSwitch span:before{transition:none}}
 @media(max-width:350px){.actionGrid{grid-template-columns:1fr}.actionCard{min-height:125px}}
+
+/* Reviewed orders from public web chat and the private agent simulator. */
+.orderCard{display:flex;flex-direction:column;gap:9px;border:1px solid #e6d9f2;
+ border-radius:16px;padding:14px;background:#fff;color:#332544;min-width:0}
+.orderCard>strong{font-size:18px;color:#5f3897}
+.orderCard>small{color:#80708e;font-size:11px;overflow-wrap:anywhere}
+.orderTop{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.orderTop strong{font-size:14px;color:#312440}
+.orderTop span{padding:4px 7px;border-radius:8px;background:#f1eaff;color:#7955af;
+ font-size:10px;font-weight:850}
+.orderLine{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;
+ font-size:12px;padding:8px 0;border-top:1px solid #f3ecfa}
+.orderLine span:first-child{overflow-wrap:anywhere}
+.orderLine span:last-child{flex-shrink:0;font-weight:800}
+.orderCustomer{display:grid;gap:3px;padding:10px;background:#faf7fd;border-radius:10px}
+.orderCustomer strong{font-size:12px}.orderCustomer small{font-size:11px;color:#6c5d78;overflow-wrap:anywhere}
+.orderActions{display:flex;gap:8px;flex-wrap:wrap}
+.orderActions button,.orderCard>button{border:1px solid #dfcbf0;color:#7047a9;
+ background:#f7f0ff;border-radius:10px;padding:10px 12px;font-size:11px;
+ font-weight:850;cursor:pointer}
+.orderActions button:first-child{background:#8052d4;color:#fff;border-color:#8052d4}
+.orderActions button:disabled,.orderCard>button:disabled{opacity:.5;cursor:wait}
