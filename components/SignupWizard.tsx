@@ -6,7 +6,8 @@ import {ArrowLeft,ArrowRight,Bot,Check,CheckCircle2,Eye,EyeOff,
 import {InterfaceLanguagePicker} from "./InterfaceLanguagePicker";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {blueprintForSignup,completeSignup} from "@/lib/vmv-signup-complete";
-import {signupQuestions,signupValidation,type SignupAnswer} from "@/lib/vmv-signup-flow";
+import {signupQuestions,signupValidation,weekdays,type SignupAnswer} from "@/lib/vmv-signup-flow";
+import {SignupCategoryLookup,SignupLocationLookup,SignupHoursReview} from "./SignupSmartFields";
 import styles from "./SignupExperience.module.css";
 import service from "@/app/vista-app/ai-agents/AutomaticWebWizard.module.css";
 import theme from "@/app/vista-app/ai-agents/AgentServiceFlow.module.css";
@@ -32,6 +33,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
  const [busy,setBusy]=useState(false),[error,setError]=useState("");
  const [notice,setNotice]=useState(""),[showPassword,setShowPassword]=useState(false);
  const [confirmationPassword,setConfirmationPassword]=useState("");
+ const [reviewHours,setReviewHours]=useState(false);
  const submitting=useRef(false);
  const inputRef=useRef<HTMLInputElement|null>(null),scrollRef=useRef<HTMLDivElement|null>(null);
  const steps=useMemo(()=>signupQuestions(answers),[answers]);
@@ -39,7 +41,10 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
  const current=steps[index]||steps[0];
  const progress=Math.round(((index+1)/steps.length)*100);
  const answer=answers[current.id]||"";
- const setAnswer=(value:string)=>{setAnswers(prev=>({...prev,[current.id]:value}));setError("");};
+ const onPatch=(patch:SignupAnswer)=>{setAnswers(prev=>({...prev,...patch}));setError("");};
+ const setAnswer=(value:string)=>{setAnswers(prev=>({...prev,[current.id]:value,
+  ...(current.id==="hours_natural"?{hours_approved:"",hours_policy:""}:{}),
+  ...(current.id==="country"?{region:"",region_place_id:"",city:"",city_place_id:""}:{})}));setError("");};
  useEffect(()=>{
   // Browser-tab recovery only. Passwords are never written to web storage.
   try{
@@ -93,6 +98,10 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
  const next=(event?:FormEvent)=>{
   event?.preventDefault();
   if(busy)return;
+  if(current.kind==="natural_hours"&&answers.hours_approved!=="yes"){
+   if(answer.trim().length<10){setError(es?"Describe tus días y horarios.":"Describe your hours.");return;}
+   setReviewHours(true);return;
+  }
   const result=signupValidation(current,answer,answers);
   if(result){setError(result);return;}
   setError("");
@@ -202,16 +211,29 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
     {phase==="questions"?<>
      <h1 key={current.id} className={service.question+" "+theme.agentHeading}>{es?current.es:current.en}</h1>
      <form className={service.panel} id="vmv-signup-question" onSubmit={next}>
-      {current.kind==="choice"||current.kind==="multi"?
+      {current.kind==="google_category"?
+       <SignupCategoryLookup answers={answers} onPatch={onPatch} en={!es}/>:
+       current.kind==="location_region"||current.kind==="location_city"?
+       <SignupLocationLookup kind={current.kind==="location_region"?"region":"city"} answers={answers} onPatch={onPatch} en={!es}/>:
+       current.kind==="choice"||current.kind==="multi"?
        <div role={current.kind==="multi"?"group":"radiogroup"} aria-label={es?current.es:current.en}
-        className={service.optionsVertical+" "+styles.choiceList}>
+        className={service.optionsVertical+" "+styles.choiceList+(current.kind==="multi"?" "+styles.toggles:"")}>
         {options.map(o=><button type="button" key={o.value}
          role={current.kind==="multi"?"checkbox":"radio"} aria-checked={isSelected(o.value)}
          className={isSelected(o.value)?service.optionActive:service.option}
          onClick={()=>choice(o.value)}>
-         {isSelected(o.value)?<Check size={17}/>:null}
+         {current.kind==="multi"?<span className={styles.switchOuter}><span className={isSelected(o.value)?styles.switchOn:styles.switchOff}/></span>:isSelected(o.value)?<Check size={17}/>:null}
          {es?o.es:o.en}
         </button>)}
+       </div>:
+       current.kind==="natural_hours"?<div className={styles.naturalSchedule}>
+        <textarea value={answer} maxLength={current.max} rows={3} autoComplete="off"
+         aria-label={es?current.es:current.en} placeholder={es?"Ej. Lunes a viernes de 11 a 4; sábados de 9 a 2":"E.g. Mon–Fri 11–4, Saturdays 9–2"}
+         onChange={e=>setAnswer(e.target.value)}/>
+        <button type="button" className={service.option} onClick={()=>{
+         onPatch({hours_natural:"Solo con cita",hours_policy:"appointments",hours_approved:"yes"});
+         setStepId(steps[index+1].id);
+        }}>{es?"Solo con cita":"Appointment only"}</button>
        </div>:
        current.kind==="textarea"?
         <div className={service.field}>
@@ -289,6 +311,14 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
      </div>
     </>}
    </div>
+   {reviewHours?<SignupHoursReview source={answers.hours_natural||""} en={!es}
+    onClose={()=>setReviewHours(false)}
+    onApprove={hours=>{
+     const patch:SignupAnswer={hours_approved:"yes",hours_policy:"weekly"};
+     weekdays.forEach((day,i)=>{patch["hours_"+day]=hours[i].closed?"closed":hours[i].start+"-"+hours[i].end;});
+     onPatch(patch);setReviewHours(false);
+     if(index<steps.length-1)setStepId(steps[index+1].id);
+    }}/>:null}
   </section>
  </main>;
 }
