@@ -5,6 +5,7 @@ import {billingAdmin} from "@/lib/vmv-billing";
 import {conversationalOrder} from "@/lib/vmv-ai-agents/conversational-order";
 import {ownerCatalogSnapshot} from "@/lib/vmv-ai-agents/catalog-snapshot";
 import {customerCatalog,hideStockCounts} from "@/lib/vmv-ai-agents/customer-catalog";
+import {bookingChatTurn} from "@/lib/vmv-ai-agents/booking-chat";
 import {centralPublicBusiness,approvedCentralSnapshot} from "@/lib/vmv-ai-agents/central-public-context";
 import {askAiAgent,aiAgentModelPathAvailable} from "@/lib/vmv-ai-agents/model";
 
@@ -153,13 +154,19 @@ export async function POST(req:NextRequest){
     "Configuración aprobada del wizard (datos de la empresa, reglas, agenda e inventario solicitado; nunca prueba de conexión):\n"+JSON.stringify(configuration).slice(0,6500)
   ].join("\n");
   try{
-    const order=canPrepare?conversationalOrder(
+    // Owner previews can discuss the live schedule but never create real appointments.
+    const bookingReply=await bookingChatTurn({
+     db,owner:userId,business:agent.business_id,agent:agentId,
+     configuration,history:history.map(turn=>({role:turn.role,content:turn.content})),
+     message,session:conversationId,source:"owner_preview"
+    });
+    const order=!bookingReply&&canPrepare?conversationalOrder(
      [...history,{id:written.id,role:"user",content:message}],
      selectedProducts.map(p=>({id:p.id,name:p.name,priceCents:p.priceCents}))):null;
     const orderRelated=/(quiero|comprar|compro|ordenar|pedido|encargar|me llamo|mi nombre|tel[eé]fono|n[uú]mero|whatsapp|correo|email|contacto|my name|phone|order|purchase|buy)/i.test(message);
     let transactionalReply:string|null=null;
     let createdOrder=false;
-    if(order&&orderRelated){
+    if(!bookingReply&&order&&orderRelated){
      const requested=order.items.map(i=>i.qty+" × "+i.name).join(", ");
      if(order.name.length<2||!(order.phone||order.email)){
       transactionalReply="Puedo preparar tu pedido de "+requested+
@@ -201,7 +208,7 @@ export async function POST(req:NextRequest){
       }
      }
     }
-    const rawReply=transactionalReply??(await askAiAgent({
+    const rawReply=bookingReply??transactionalReply??(await askAiAgent({
       system,
       messages:[...history.map(({role,content})=>({role,content})),{role:"user" as const,content:message}],
       maxOutputTokens:phonePreview?190:450,temperature:0.25,timeoutMs:12000
