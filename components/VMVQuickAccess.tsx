@@ -192,7 +192,7 @@ export function VMVQuickAccessProvider({children}:{children:ReactNode}){
   const overflow=document.body.style.overflow;
   document.body.style.overflow="hidden";
   const focusables=()=>Array.from(dialog.querySelectorAll<HTMLElement>("button:not([disabled]),a[href],input:not([disabled])"));
-  (dialog.querySelector<HTMLElement>("input[autofocus]")||focusables()[0])?.focus();
+  (dialog.querySelector<HTMLElement>('input[type="search"]')||focusables()[0])?.focus();
   const key=(event:KeyboardEvent)=>{
    if(event.key==="Escape"){event.preventDefault();setView("closed");setActionItem(null);return;}
    if(event.key!=="Tab")return;
