@@ -56,30 +56,31 @@ test('VMV service details and support tickets have one contextual header back',(
  assert.doesNotMatch(support,/className=\{styles\.backMobile\}/);
 });
 
-test('Web Studio removes second mobile return arrow and preserves the editor destination',()=>{
+
+test('Web Studio uses a single contextual mobile header arrow',()=>{
  const studio=read('app/web-studio/WebBuilderWorkspace.tsx');
- assert.equal((studio.match(/className=\\{styles\\.mobileBack\\}/g)||[]).length,1);
- assert.doesNotMatch(studio,/className=\\{styles\\.mobileEditorReturn\\}/);
- assert.match(studio,/view==="editor"\\?"Volver a mis sitios":"Volver al editor"/);
+ assert.equal(studio.split('className={styles.mobileBack}').length-1,1);
+ assert.ok(!studio.includes('className={styles.mobileEditorReturn}'));
+ assert.ok(studio.includes('view==="editor"?"Volver a mis sitios":"Volver al editor"'));
 });
-test('Web Services nested pages give their back action to the main header',()=>{
+test('Web Services nested pages delegate back navigation to main app header',()=>{
  const preview=read('app/vista-app/BusinessServicesPreview.tsx');
- assert.match(preview,/registerHeaderBack/);
- assert.match(preview,/hideBack=\\{Boolean\\(registerHeaderBack\\)\\}/);
+ assert.ok(preview.includes('registerHeaderBack'));
+ assert.ok(preview.includes('hideBack={Boolean(registerHeaderBack)}'));
  const app=read('app/vista-app/page.tsx');
- assert.match(app,/registerHeaderBack=\\{registerWebBack\\}/);
- assert.match(app,/webBack\\.current\\(\\)/);
- for(const screen of ['WebServicesStudio','WebServicesInbox']){
-  const code=read('app/vista-app/'+screen+'.tsx');
-  assert.match(code,/hideBack=false/);
-  assert.match(code,/!hideBack\\?<button/);
+ assert.ok(app.includes('registerHeaderBack={registerWebBack}'));
+ assert.ok(app.includes('webBack.current()'));
+ for(const name of ['WebServicesStudio','WebServicesInbox']){
+  const source=read('app/vista-app/'+name+'.tsx');
+  assert.ok(source.includes('hideBack=false'),name);
+  assert.ok(source.includes('!hideBack?<button'),name);
  }
 });
-test('campaign creator uses its one header back arrow for each Ads Studio step',()=>{
+test('Ads Studio uses page header for step navigation',()=>{
  const page=read('app/vista-app/marketing/ads/create/page.tsx');
  const ads=read('app/vista-app/marketing/ads/AdsStudio.tsx');
- assert.match(page,/registerHeaderBack=\\{registerWizardBack\\}/);
- assert.match(page,/wizardBack\\.current\\?\\.\\(\\)/);
- assert.match(ads,/registerHeaderBack/);
- assert.match(ads,/step>0&&!registerHeaderBack/);
+ assert.ok(page.includes('registerHeaderBack={registerWizardBack}'));
+ assert.ok(page.includes('wizardBack.current?.()'));
+ assert.ok(ads.includes('registerHeaderBack'));
+ assert.ok(ads.includes('step>0&&!registerHeaderBack'));
 });
