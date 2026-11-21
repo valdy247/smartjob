@@ -100,6 +100,7 @@ test("Productos/Pedidos opens directly after one-time setup and keeps real produ
  assert.match(hub,/BuilderImageField/);
  assert.match(editor,/BuilderImageField/);
  assert.match(store,/image_path:photo/);
+ assert.match(read("lib/vmv-ai-agents/voice-commerce.ts"),/cfg.cap_catalog==="Sí"&&cfg.cap_sales==="Sí"/);
  assert.match(store,/smartjob-web-images\/"\+owner/);
  assert.match(renderer,/select\("id,name,description,price_cents,currency,image_path"\)/);
  assert.match(renderer,/safeWebImageUrl/);
