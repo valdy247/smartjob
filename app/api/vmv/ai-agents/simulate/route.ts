@@ -127,7 +127,7 @@ export async function POST(req:NextRequest){
     webTone,
     "Idioma: "+(webPreview?(prefs?.languages==="en"?"inglés":prefs?.languages==="es"?"español":"usa el idioma del visitante"):(agent.language==="both"?"usa el idioma del cliente":agent.language==="en"?"inglés":"español"))+".",
     roleGuide[String(agent.kind)]||roleGuide.custom,
-    "Solo puedes conversar y orientar. No cambies existencias, prepares pedidos, realices cobros ni confirmes citas sin un checkout transaccional verificado. En esta conversación no hay checkout habilitado.",
+    "Solo puedes conversar y orientar. No cambies existencias, prepares pedidos, realices cobros ni confirmes citas sin un checkout transaccional verificado. Si existe un checkout de prueba conectado, la interfaz puede mostrar un botón; nunca afirmes que el pago se realizó sin verificación de Stripe.",
     configuration.cap_catalog==="Sí"?
      (catalog.length?
       (phonePreview?
