@@ -91,6 +91,6 @@ test("Tone uses server-validated 1-100 percent sliders, not five discrete levels
  assert.match(hub,/settings\.formality\}%/);
  assert.match(sql,/warmth BETWEEN 1 AND 100/);
  assert.match(sql,/formality BETWEEN 1 AND 100/);
- assert.match(pub,/c\.settings\.warmth\+"%"/);
- assert.match(pub,/c\.settings\.formality\+"%"/);
+ assert.ok(pub.includes('c.settings.warmth+"% and formal'));
+ assert.ok(pub.includes('c.settings.formality+"%.'));
 });
