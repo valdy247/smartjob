@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useState} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {
  ArrowLeft,ArrowUpRight,Bot,BookOpen,BookCheck,BriefcaseBusiness,CalendarDays,Check,
  ChevronRight,ClipboardList,Headphones,MessageCircle,Package,PauseCircle,
@@ -18,6 +18,7 @@ import BookingStudio,{type BookingTab} from "./BookingStudio";
 import CallControl from "./CallControl";
 import AgentLiveTest from "./AgentLiveTest";
 import ChatWebHub from "./ChatWebHub";
+import {AgentHeaderBackContext} from "./AgentHeaderBack";
 import AutomaticAdWizard from "./AutomaticAdWizard";
 import AutomaticWebWizard from "./AutomaticWebWizard";
 import AutomaticVideoWizard from "./AutomaticVideoWizard";
@@ -53,6 +54,7 @@ function blank(kind:Kind):AgentDraft{
 export default function AIAgentsPreview(){
  const {language,translate}=useInterfaceLanguage();
  const [screen,setScreen]=useState<Screen>("home");
+ const registeredBack=useRef<(()=>void)|null>(null);
  const [editStep,setEditStep]=useState<0|1|2|3>(0);
  const [draft,setDraft]=useState<AgentDraft>(()=>blank("support"));
  const [agents,setAgents]=useState<Agent[]>([]);
@@ -348,6 +350,16 @@ export default function AIAgentsPreview(){
   agent.setup.cap_catalog!=="Sí"&&agent.setup.cap_catalog!=="No";
  const patch=(key:keyof AgentDraft,value:string)=>setDraft(prev=>({...prev,[key]:value}));
  const immersive=screen==="ads"||screen==="web"||screen==="video"||screen==="videoEntry"||screen==="call"||screen==="quote"||screen==="quoteEntry"||screen==="commerceWizard"||screen==="bookingsWizard";
+ const registerHeaderBack=useCallback((callback:(()=>void)|null)=>{
+  registeredBack.current=callback;
+ },[]);
+ const headerBackContext=useMemo(()=>({enabled:!immersive,register:registerHeaderBack}),
+  [immersive,registerHeaderBack]);
+ const headerBack=()=>{
+  if(screen==="home"){window.location.assign("/vista-app");return;}
+  if(registeredBack.current){registeredBack.current();return;}
+  back();
+ };
  useEffect(()=>{
   if(loading||!authenticated)return;
   const url=new URL(window.location.href);
@@ -367,10 +379,10 @@ export default function AIAgentsPreview(){
   }
   setNotice("");
  },[loading,authenticated,principal?.id,selectedBusiness?.id,selectedWorkspace?.id]);
- return <main className={immersive?styles.adsCanvas:styles.canvas}>
+ return <AgentHeaderBackContext.Provider value={headerBackContext}>
+ <main className={immersive?styles.adsCanvas:styles.canvas}>
   <div className={immersive?styles.adsLayout:styles.layout}>
    {!immersive?<div className={styles.externalHeader}>
-    <a href="/vista-app" className={styles.returnLink}><ArrowLeft size={17}/> VMV Business</a><InterfaceLanguagePicker compact/>
     <span className={styles.previewBadge}>PREVIEW · AI AGENTS</span>
    </div>:null}
    <section className={immersive?styles.adsPhone:styles.phone} aria-label={translate("agents.phonePreview")}>
@@ -378,7 +390,7 @@ export default function AIAgentsPreview(){
      <b>VMV</b><span className={styles.dynamicIsland}/><span className={styles.phoneSignal}>◢ ▰</span>
     </div>:null}
     {!immersive?<div className={styles.appHeader}>
-     <button type="button" className={styles.backIcon} onClick={screen==="home"?()=>{window.location.href="/vista-app";}:back}
+     <button type="button" className={styles.backIcon} onClick={headerBack}
       aria-label={screen==="home"?translate("agents.backVMV"):translate("agents.backAgents")}><ArrowLeft size={20}/></button>
      <div className={styles.appTitle}><small>VMV BUSINESS</small><strong>AI Agents<span>.</span></strong></div>
      <InterfaceLanguagePicker compact/>
@@ -606,8 +618,8 @@ export default function AIAgentsPreview(){
    </section>
    {!immersive?<div className={styles.externalFooter}>
     <span><ShieldCheck size={16}/> {translate("agents.isolationNotice")}</span>
-    <a href="/vista-app">{translate("agents.backVMV")} <ArrowUpRight size={15}/></a>
    </div>:null}
   </div>
- </main>;
+ </main>
+ </AgentHeaderBackContext.Provider>;
 }
