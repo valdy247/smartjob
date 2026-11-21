@@ -45,7 +45,7 @@ const platforms=[
  {name:"LinkedIn Ads",description:"Anuncios profesionales",available:false},
  {name:"Snapchat Ads",description:"Anuncios Snapchat",available:false}
 ];
-export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"platforms"}){
+export default function AdsStudio({mode="wizard",registerHeaderBack}:{mode?:"wizard"|"campaigns"|"platforms";registerHeaderBack?:(callback:(()=>void)|null)=>void}){
  const {language}=useInterfaceLanguage();
  const en=language==="en";
  const localized=(es:string,english:string)=>en?english:es;
@@ -533,6 +533,15 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
    Boolean(normalizedDestination)&&Boolean(imageHash)
  ];
  const goStep=(n:number)=>{setStep(Math.max(0,Math.min(4,n)));window.scrollTo({top:0,behavior:"smooth"});};
+ const headerBackAction=useRef<()=>void>(()=>{});
+ headerBackAction.current=()=>goStep(step-1);
+ const canGoBack=mode==="wizard"&&step>0;
+ useEffect(()=>{
+  if(!registerHeaderBack||!canGoBack)return;
+  const handler=()=>headerBackAction.current();
+  registerHeaderBack(handler);
+  return()=>registerHeaderBack(null);
+ },[registerHeaderBack,canGoBack]);
  useEffect(()=>{
   const term=form.cityQuery.trim();
   if(step!==2||!hasAccount||!form.stateCode||term.length<3||form.cityKey){
@@ -1116,7 +1125,7 @@ export default function AdsStudio({mode="wizard"}:{mode?:"wizard"|"campaigns"|"p
      <ChevronRight size={16}/>{localized("Volver a revisión","Back to review")}</button>
    </div>:null}
   <div className={styles.wizardFooter}>
-   {step>0?<button type="button" className={styles.secondary} disabled={!!busy} onClick={()=>goStep(step-1)}><ChevronLeft size={17}/>{localized("Atrás","Back")}</button>:<span/>}
+   {step>0&&!registerHeaderBack?<button type="button" className={styles.secondary} disabled={!!busy} onClick={()=>goStep(step-1)}><ChevronLeft size={17}/>{localized("Atrás","Back")}</button>:<span/>}
    {step<4?<button type="button" className={styles.primary} disabled={!!busy||!canContinue[step]} aria-busy={busy==="image"} onClick={()=>goStep(step+1)}>
     {step===3&&busy==="image"?<><LoaderCircle size={17} className={styles.spinIcon} aria-hidden="true"/>{localized("Cargando imagen…","Uploading image…")}</>:
      <>{localized("Continuar","Continue")}<ChevronRight size={17}/></>}
