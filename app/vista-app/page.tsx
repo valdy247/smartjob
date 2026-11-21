@@ -15,6 +15,7 @@ import {DIAGNOSTIC_METADATA_KEY,getDiagnosticRecommendations,makeDiagnosticRecor
 import {useSmartCallAccount,type Tab,type Panel,type CallSettings,type CallRecord,type Voice} from "./useSmartCallAccount";
 import styles from "./vista-app.module.css";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
+import {VMVQuickAccessSettings,VMVHomePinnedShortcuts} from "@/components/VMVQuickAccess";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import type {MessageKey} from "@/lib/i18n";
 
@@ -83,10 +84,16 @@ export default function VMVMobilePreview(){
  const [tab,setTab]=useState<Tab>("home");
  const [diagnosticOpen,setDiagnosticOpen]=useState(false);
  const [diagnosticSaved,setDiagnosticSaved]=useState<DiagnosticRecord|null>(null);
- useEffect(()=>{const requestedTab=new URLSearchParams(window.location.search).get("tab");
-   // The creation wizard can return directly to the Services screen.
-   if(requestedTab==="account"||requestedTab==="services")setTab(requestedTab);
-  },[]);
+ useEffect(()=>{
+  const params=new URLSearchParams(window.location.search);
+  const requestedTab=params.get("tab");
+  if(requestedTab==="account"||requestedTab==="services"||requestedTab==="home"||requestedTab==="calls"||requestedTab==="translator")setTab(requestedTab);
+  if(requestedTab==="calls"&&(params.get("view")==="contacts"||params.get("view")==="history"||params.get("view")==="dial"))setCallsView(params.get("view") as "contacts"|"history"|"dial");
+  if(requestedTab==="services"){
+   if(params.get("focus")==="web")setServiceFocus("web");
+   if(params.get("open")==="call"){setOpen(true);setPanel(params.get("panel")==="minutes"?"minutes":"overview");}
+  }
+ },[]);
  const [open,setOpen]=useState(false);
  const [serviceFocus,setServiceFocus]=useState<"all"|"web">("all");
  const [catalogQuery,setCatalogQuery]=useState("");
@@ -345,16 +352,17 @@ export default function VMVMobilePreview(){
         <div className={styles.homeRocketArt} aria-hidden="true"><span className={styles.homeRocketHalo}/><Rocket size={104} strokeWidth={1.35}/><span className={styles.homeRocketCloud}/></div>
        </section>
        <div className={styles.homeServiceTiles}>
-        {showHomeOffer("smart-call")?<button type="button" className={styles.homeTileMint} onClick={()=>showCall(summary?.billing.ok&&billing?.subscriptionActive===false?"minutes":"overview")}><PhoneCall size={31}/><strong>Smart Call</strong></button>:null}
-        {showHomeOffer("web-services")?<button type="button" className={styles.homeTilePink} onClick={()=>{setOpen(false);setServiceFocus("web");setTab("services");}}><Monitor size={31}/><strong>Web Services</strong></button>:null}
-        <button type="button" className={styles.homeTileLavender} onClick={()=>window.location.assign("/vista-app/ai-agents")}><Bot size={31}/><strong>AI Agents</strong></button>
-        {showHomeOffer("marketing")?<button type="button" className={styles.homeTileGreen} onClick={()=>window.location.assign("/vista-app/marketing")}><Megaphone size={31}/><strong>Marketing</strong></button>:null}
-        {homeRecommendations?.some(item=>item.id==="google-business")?<button type="button" className={styles.homeTileLavender} onClick={()=>window.location.assign("/vista-app/marketing")}><Globe size={31}/><strong>Google Business</strong></button>:null}
+        {showHomeOffer("smart-call")?<button type="button" className={styles.homeTileMint} data-vmv-shortcut-id="smart-call" onClick={()=>showCall(summary?.billing.ok&&billing?.subscriptionActive===false?"minutes":"overview")}><PhoneCall size={31}/><strong>Smart Call</strong></button>:null}
+        {showHomeOffer("web-services")?<button type="button" className={styles.homeTilePink} data-vmv-shortcut-id="web" onClick={()=>{setOpen(false);setServiceFocus("web");setTab("services");}}><Monitor size={31}/><strong>Web Services</strong></button>:null}
+        <button type="button" className={styles.homeTileLavender} data-vmv-shortcut-id="ai-agents" onClick={()=>window.location.assign("/vista-app/ai-agents")}><Bot size={31}/><strong>AI Agents</strong></button>
+        {showHomeOffer("marketing")?<button type="button" className={styles.homeTileGreen} data-vmv-shortcut-id="marketing" onClick={()=>window.location.assign("/vista-app/marketing")}><Megaphone size={31}/><strong>Marketing</strong></button>:null}
+        {homeRecommendations?.some(item=>item.id==="google-business")?<button type="button" className={styles.homeTileLavender} data-vmv-shortcut-id="google-profile" onClick={()=>window.location.assign("/vista-app/marketing")}><Globe size={31}/><strong>Google Business</strong></button>:null}
         {homeRecommendations?.length===0?<button type="button" className={styles.homeTileLavender} onClick={()=>go("services")}><LayoutGrid size={31}/><strong>{language==="en"?"All services":"Todos los servicios"}</strong></button>:null}
        </div>
+       <VMVHomePinnedShortcuts/>
        <section className={styles.homeBusinessArea}>
         <h3>{language==="en"?"My Business":"Mi Negocio"}</h3>
-        <button type="button" className={styles.homeSummaryCard} onClick={()=>go("account")}>
+        <button type="button" className={styles.homeSummaryCard} data-vmv-shortcut-id="account" onClick={()=>go("account")}>
          <span className={styles.homeSummaryIcon}><TrendingUp size={24}/></span>
          <span><strong>{language==="en"?"Overview":"Resumen"}</strong><small>{language==="en"?"Activity and results":"Actividad y resultados"}</small></span>
          <ChevronLeft size={21} className={styles.homeSummaryChevron} aria-hidden="true"/>
@@ -403,7 +411,7 @@ export default function VMVMobilePreview(){
         <div className={styles.catalogGrid}>
          {filteredCatalog.map(item=><button type="button" key={item.id} disabled={item.id==="instagram-connect"}
           style={item.id==="instagram-connect"?{cursor:"default",opacity:1}:undefined}
-          className={`${styles.catalogCard} ${item.tone}`} onClick={item.action}
+          className={`${styles.catalogCard} ${item.tone}`} data-vmv-shortcut-id={item.id==="agents"?"ai-agents":item.id==="ads-studio"?"ads":item.id==="video-generator"?"video-generator":item.id==="smart-quote"?"smart-quote":item.id} onClick={item.action}
           aria-label={item.name+" · "+item.state}>
           <span className={styles.catalogIcon}><item.Icon size={26}/></span>
           <span className={styles.catalogCardCopy}><strong>{item.name}</strong><small>{item.state}</small></span>
@@ -588,6 +596,10 @@ export default function VMVMobilePreview(){
          <span><ShieldCheck size={19}/></span><strong>{billing?.plan?.toUpperCase()||"—"}</strong><small>{translate("common.plan")}</small>
         </button>
        </div>
+       <section id="vmv-shortcuts-settings" style={{display:"grid",gap:10}}>
+        <h3 style={{fontSize:17,fontWeight:850,color:"#342547",margin:"7px 0 0"}}>{language==="en"?"Settings":"Configuración"}</h3>
+        <VMVQuickAccessSettings/>
+       </section>
        <div className={styles.smartCard}>
         <Row label={translate("common.status")} value={billing?.status||"—"}/><Row label={translate("common.phone")} value={profile?.phone||"—"}/>
         <button className={styles.mainAction} onClick={()=>showCall("minutes")}>{translate("common.viewPlan")} <ArrowUpRight size={16}/></button>
@@ -603,7 +615,7 @@ export default function VMVMobilePreview(){
       </div>:null}
      </div>
      {ready?<nav className={styles.bottomNav} aria-label={translate("home.primaryNavigation")}>
-      {nav.map(([id,labelKey,Icon])=><button key={id} type="button" className={[tab===id?styles.activeNav:"",id==="calls"?styles.navCallAction:""].filter(Boolean).join(" ")} onClick={()=>go(id)} aria-label={translate(labelKey)} title={translate(labelKey)} aria-pressed={tab===id}><span aria-hidden="true"><Icon size={id==="calls"?25:22}/></span><small>{translate(labelKey)}</small></button>)}
+      {nav.map(([id,labelKey,Icon])=><button key={id} type="button" className={[tab===id?styles.activeNav:"",id==="calls"?styles.navCallAction:""].filter(Boolean).join(" ")} data-vmv-shortcut-id={id} onClick={()=>go(id)} aria-label={translate(labelKey)} title={translate(labelKey)} aria-pressed={tab===id}><span aria-hidden="true"><Icon size={id==="calls"?25:22}/></span><small>{translate(labelKey)}</small></button>)}
      </nav>:null}
     </div>
    </div>
