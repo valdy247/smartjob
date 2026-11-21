@@ -70,7 +70,7 @@ test("First-time product setup preserves agent identity, permissions and catalog
  assert.match(store,/cap_catalog:config\.catalog/);
  assert.match(store,/perm_prepare_order:config\.orders/);
  assert.match(hub,/toggleCatalogRead/);
- assert.match(hub,/BuilderImageField/);
+ assert.match(hub,/ProductImageField/);
  assert.match(bookings,/vmv_ai_booking_services/);
  assert.match(bookings,/vmv_ai_booking_slots/);
  assert.match(bookings,/storeAgent\(\{\.\.\.agent,setup/);
@@ -97,14 +97,46 @@ test("Productos/Pedidos opens directly after one-time setup and keeps real produ
  assert.match(hub,/Mis productos/);
  assert.match(hub,/role="switch"/);
  assert.match(hub,/Conectado":"Desconectado"/);
- assert.match(hub,/BuilderImageField/);
- assert.match(editor,/BuilderImageField/);
+ assert.match(hub,/ProductImageField/);
+ assert.match(editor,/ProductImageField/);
  assert.match(store,/image_path:photo/);
  assert.match(read("lib/vmv-ai-agents/voice-commerce.ts"),/cfg.cap_catalog==="Sí"&&cfg.cap_sales==="Sí"/);
  assert.match(store,/smartjob-web-images\/"\+owner/);
  assert.match(renderer,/select\("id,name,description,price_cents,currency,image_path"\)/);
  assert.match(renderer,/safeWebImageUrl/);
  assert.match(renderer,/inventory_connection_enabled!==true/);
+});
+
+
+test("Product AI photo is a reviewed image before canonical product save",()=>{
+ const modal=read(base+"ProductImageField.tsx");
+ const route=read("app/api/web-services/generate-image/route.ts");
+ const hub=read(base+"CommerceStudio.tsx");
+ const editor=read(base+"AgentWebCatalogEditor.tsx");
+ for(const [filename,src,kind] of [
+  ["ProductImageField.tsx",modal,ts.ScriptKind.TSX],
+  ["generate-image/route.ts",route,ts.ScriptKind.TS]
+ ]){
+  const ast=ts.createSourceFile(filename,src,ts.ScriptTarget.Latest,true,kind);
+  assert.deepEqual(ast.parseDiagnostics.map(d=>ts.flattenDiagnosticMessageText(d.messageText," ")),[],filename);
+ }
+ assert.match(modal,/Mejorar prompt/);
+ assert.match(modal,/Generando imagen/);
+ assert.match(modal,/Regenerar/);
+ assert.match(modal,/Aprobar imagen/);
+ assert.match(modal,/action,kind:"product",businessId/);
+ assert.match(modal,/onClick=\{approve\}/);
+ assert.match(modal,/onChange\(safe\)/);
+ assert.match(modal,/BuilderImageField/);
+ assert.match(hub,/productName=\{form\.name\} description=\{form\.description\} businessId=\{businessId\}/);
+ assert.match(editor,/productName=\{form\.name\} description=\{form\.description\} businessId=\{workspaceId\}/);
+ assert.match(route,/kind==="product"/);
+ assert.match(route,/\.eq\("id",businessId\)\s*\.eq\("owner_id",user\.id\)/);
+ assert.match(route,/if\(!isProduct\)\{/);
+ assert.match(route,/smartjob_web_ai_claim_slot/);
+ assert.match(route,/body\.action==="improve"/);
+ assert.match(route,/model:"gpt-image-2"/);
+ assert.match(route,/admin\.storage\.from\(bucket\)\.upload/);
 });
 
 test("Guided Smart Call menu and activation screens are TypeScript/TSX parseable",()=>{
