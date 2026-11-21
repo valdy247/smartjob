@@ -121,3 +121,34 @@ test("Creative error subcodes are distinguished, rather than treating all 100s a
  assert.equal(api.metaCreativeReason(new api.MetaApiError("meta_api_100",400,1487124)),"meta_creative_image_not_found");
  assert.equal(api.metaCreativeReason(new api.MetaApiError("meta_api_100",400,null)),"meta_creative_parameters_rejected");
 });
+
+
+test("Agent ad wizard preserves Meta preflight rejection details and keeps user spending disabled",()=>{
+ const route=fs.readFileSync(path.resolve("app/api/marketing/ads/meta/campaigns/route.ts"),"utf8");
+ const wizard=fs.readFileSync(path.resolve("app/vista-app/ai-agents/AutomaticAdWizard.tsx"),"utf8");
+ const history=fs.readFileSync(path.resolve("app/vista-app/marketing/ads/AdsStudio.tsx"),"utf8");
+ const creativeCheck=fs.readFileSync(path.resolve("app/api/marketing/ads/meta/creative-check/route.ts"),"utf8");
+ for(const [name,src,kind] of [
+  ["campaigns/route.ts",route,ts.ScriptKind.TS],
+  ["AutomaticAdWizard.tsx",wizard,ts.ScriptKind.TSX],
+  ["AdsStudio.tsx",history,ts.ScriptKind.TSX]
+ ]){
+  const parsed=ts.createSourceFile(name,src,ts.ScriptTarget.Latest,true,kind);
+  assert.deepEqual(parsed.parseDiagnostics.map(d=>ts.flattenDiagnosticMessageText(d.messageText," ")),[],name);
+ }
+ assert.match(route,/diagnostic\("preflight",metaCode,subcode\)/);
+ assert.match(route,/console\.warn\("\[vmv-meta-ads\] paused creation blocked"/);
+ assert.match(route,/\.update\(\{error_code:value,updated_at:new Date\(\)\.toISOString\(\)\}\)/);
+ assert.match(route,/\.eq\("owner_id",owner\)\.eq\("status","draft"\)/);
+ assert.match(route,/createdInMeta:false,adSpendActive:false/);
+ assert.match(wizard,/Borrador guardado\. /);
+ assert.match(wizard,/Meta rechazó los parámetros del anuncio/);
+ assert.match(wizard,/Referencia VMV: /);
+ assert.doesNotMatch(wizard,/El borrador se guardó, pero Meta no confirmó la campaña pausada/);
+ assert.match(history,/Comprobar con Meta · sin publicar/);
+ assert.match(history,/c\.status==="draft"\?<button type="button"/);
+ assert.match(creativeCheck,/validateMetaLinkCreative/);
+ assert.match(creativeCheck,/createdInMeta:false,adSpendActive:false/);
+ assert.doesNotMatch(creativeCheck,/operation:"create_paused"/);
+ assert.match(route,/process\.env\.VMV_ADS_META_PUBLISH_ENABLED!=="true"/);
+});
