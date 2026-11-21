@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useRef,useState,type FormEvent} from "react";
 import {Bot,CheckCircle2,Headphones,LoaderCircle,MessageCircle,Send,ShieldCheck,X} from "lucide-react";
 import RequestForm from "@/app/sites/[slug]/RequestForm";
+import VMVChatOrderCard,{type OrderProduct,type OrderRequest} from "@/components/VMVChatOrderCard";
 import css from "./WebChatLauncher.module.css";
 type VisitorMessage={role:"user"|"assistant"|"human";content:string;created_at?:string};
 type Status={enabled:boolean;agent?:string;business?:string;handoff?:boolean;leadCapture?:boolean;
@@ -15,6 +16,7 @@ export default function WebChatLauncher({slug,business,categoryId,services,previ
  const [text,setText]=useState(""),[consent,setConsent]=useState(false);
  const [sending,setSending]=useState(false),[error,setError]=useState("");
  const [contact,setContact]=useState(false),[offerLead,setOfferLead]=useState(false);
+ const [orderProducts,setOrderProducts]=useState<OrderProduct[]>([]),[orderKey,setOrderKey]=useState(0);
  const [leadName,setLeadName]=useState(""),[leadPhone,setLeadPhone]=useState(""),[leadEmail,setLeadEmail]=useState("");
  const [leadConsent,setLeadConsent]=useState(false),[leadBusy,setLeadBusy]=useState(false),[leadSaved,setLeadSaved]=useState(false);
  const closeRef=useRef<HTMLButtonElement>(null),openRef=useRef<HTMLButtonElement>(null);
@@ -53,12 +55,15 @@ export default function WebChatLauncher({slug,business,categoryId,services,previ
     body:JSON.stringify({slug,kind:siteKind,message:question,consent:true,website:""})
    });
    const data=await r.json() as {reply?:string;error?:string;offerContact?:boolean;
+    offerOrder?:boolean;orderProducts?:OrderProduct[];
     mode?:"bot"|"waiting"|"human";handoffStatus?:"waiting"};
    if(!r.ok)throw Error(data.error||"Chat no disponible.");
    if(data.reply)setMessages(prev=>[...prev,{role:"assistant",content:data.reply!}]);
    if(data.mode==="waiting"||data.mode==="human")
     setStatus(prev=>prev?{...prev,handoffStatus:data.mode==="human"?"human":"waiting"}:prev);
-   if(data.offerContact&&!leadSaved)setOfferLead(true);
+   if(data.offerOrder&&Array.isArray(data.orderProducts)&&data.orderProducts.length){
+    setOrderProducts(data.orderProducts);setOrderKey(n=>n+1);setOfferLead(false);
+   }else if(data.offerContact&&!leadSaved)setOfferLead(true);
    await refresh(true);
   }catch(e){setError(e instanceof Error?e.message:"No se pudo enviar. Inténtalo nuevamente.");}
   finally{sendingRef.current=false;setSending(false);void refresh(true);}
@@ -93,6 +98,22 @@ export default function WebChatLauncher({slug,business,categoryId,services,previ
    setLeadSaved(true);setOfferLead(false);setLeadName("");setLeadPhone("");setLeadEmail("");
   }catch(e){setError(e instanceof Error?e.message:"Comprueba tus datos.");}
   finally{setLeadBusy(false);}
+ };
+ const requestOrder=async(request:OrderRequest)=>{
+  if(!consent||!status?.enabled)throw Error("Acepta primero la privacidad del chat.");
+  const response=await fetch("/api/vmv/public-chat/action",{
+   method:"POST",cache:"no-store",credentials:"same-origin",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({kind:siteKind,slug,action:"order",consent:true,...request})
+  });
+  const data=await response.json().catch(()=>({})) as {
+   saved?:boolean;error?:string;orderNo?:number;totalCents?:number
+  };
+  if(!response.ok||data.saved!==true||typeof data.orderNo!=="number"||
+   typeof data.totalCents!=="number")
+   throw Error(data.error||"No se pudo crear el pedido.");
+  setOfferLead(false);
+  return {orderNo:data.orderNo,totalCents:data.totalCents};
  };
  const available=!checking&&(status?.enabled===true||fallbackMode==="inbox");
  if(!available)return null;
@@ -138,6 +159,8 @@ export default function WebChatLauncher({slug,business,categoryId,services,previ
         {leadBusy?"Guardando…":"Compartir datos"}</button>
         <button type="button" onClick={()=>setOfferLead(false)}>Ahora no</button></div>
       </form>:null}
+      {orderProducts.length>0&&!human?<VMVChatOrderCard key={orderKey}
+       products={orderProducts} onSubmit={requestOrder}/>:null}
       {leadSaved?<div className={css.leadSaved}><CheckCircle2 size={15}/> Contacto compartido</div>:null}
      </div>
      {!consent?<label className={css.consent}>
@@ -159,7 +182,7 @@ export default function WebChatLauncher({slug,business,categoryId,services,previ
       {!human&&status.handoff?<button type="button" onClick={()=>void transfer()} disabled={sending}>
        <Headphones size={15}/> Hablar con una persona</button>:null}
       {human?<button type="button" onClick={()=>setContact(true)}>Formulario de contacto</button>:null}
-      <span><ShieldCheck size={13}/> Sin pagos ni reservas automáticas</span>
+      <span><ShieldCheck size={13}/> Pedidos sujetos a revisión · sin cobros automáticos</span>
      </div>
     </>}
     <footer><ShieldCheck size={14}/> No compartas tarjetas ni datos sensibles.</footer>
