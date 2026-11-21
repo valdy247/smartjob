@@ -79,6 +79,33 @@ test("First-time product setup preserves agent identity, permissions and catalog
  assert.match(bookings,/onOpenStudio/);
 });
 
+
+test("Productos/Pedidos opens directly after one-time setup and keeps real product photos",()=>{
+ const hub=read(base+"CommerceStudio.tsx");
+ const editor=read(base+"AgentWebCatalogEditor.tsx");
+ const store=read(base+"commerceStore.ts");
+ const renderer=read("lib/web-builder-live-catalog.ts");
+ for(const [file,src] of [["CommerceStudio.tsx",hub],["AgentWebCatalogEditor.tsx",editor]]){
+  const ast=ts.createSourceFile(file,src,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+  assert.deepEqual(ast.parseDiagnostics.map(d=>ts.flattenDiagnosticMessageText(d.messageText," ")),[],file);
+ }
+ assert.doesNotMatch(root,/\{id:"sales",title:"Ventas"/);
+ assert.match(root,/title:"Productos\/Pedidos"/);
+ assert.match(root,/commerceNeedsSetup\(agent\)\?"commerceWizard":"commerce"/);
+ assert.match(root,/setCommerceTab\("catalog"\)/);
+ assert.match(hub,/Agregar producto/);
+ assert.match(hub,/Mis productos/);
+ assert.match(hub,/role="switch"/);
+ assert.match(hub,/Conectado":"Desconectado"/);
+ assert.match(hub,/BuilderImageField/);
+ assert.match(editor,/BuilderImageField/);
+ assert.match(store,/image_path:photo/);
+ assert.match(store,/smartjob-web-images\/"\+owner/);
+ assert.match(renderer,/select\("id,name,description,price_cents,currency,image_path"\)/);
+ assert.match(renderer,/safeWebImageUrl/);
+ assert.match(renderer,/inventory_connection_enabled===true/);
+});
+
 test("Guided Smart Call menu and activation screens are TypeScript/TSX parseable",()=>{
  for(const filename of ["app/vista-app/ai-agents/SmartCallMenuEditor.tsx",
   "app/vista-app/ai-agents/SmartCallAgentSetup.tsx",
