@@ -1,6 +1,6 @@
 "use client";
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
-import {useEffect,useState,type ChangeEvent} from "react";
+import {useEffect,useRef,useState,type ChangeEvent} from "react";
 import {Bot,Globe,Search,Star,CalendarDays,PanelsTopLeft,MapPin,ChartNoAxesCombined,Link2,PhoneCall,ArrowUpRight,ChevronLeft,Save,Copy,Check,Mail,Sparkles,BriefcaseBusiness,ScanSearch,LayoutTemplate} from "lucide-react";
 import styles from "./BusinessServicesPreview.module.css";
 import WebServicesStudio from "./WebServicesStudio";
@@ -41,7 +41,7 @@ const fields:{key:Exclude<keyof Draft,"authorized"|"category"|"categoryId">;labe
 ];
 const SERVICE_NAME_KEYS:Record<string,MessageKey>={"smart-call":"services.offer.smart-call","site-care":"services.offer.site-care","ai-agents":"services.offer.ai-agents","local-seo":"services.offer.local-seo","reviews":"services.offer.reviews","smart-booking":"services.offer.smart-booking","website-design":"services.offer.website-design","google-business-profile":"services.offer.google-business-profile","seo-setup":"services.offer.seo-setup","domain-setup":"services.offer.domain-setup"};
 const WEB_SERVICE_IDS=new Set(["site-care","local-seo","reviews","website-design","google-business-profile","seo-setup","domain-setup"]);
-export default function BusinessServicesPreview({userId,focus="all",excludeFeatured=false,searchTerm="",primaryHasMatches=false}:{userId:string;focus?:"all"|"web";excludeFeatured?:boolean;searchTerm?:string;primaryHasMatches?:boolean}){
+export default function BusinessServicesPreview({userId,focus="all",excludeFeatured=false,searchTerm="",primaryHasMatches=false,registerHeaderBack}:{userId:string;focus?:"all"|"web";excludeFeatured?:boolean;searchTerm?:string;primaryHasMatches?:boolean;registerHeaderBack?:(callback:(()=>void)|null)=>void}){
  const {language,translate}=useInterfaceLanguage();
  const [charge,setCharge]=useState<Charge>("subscription");
  const normalizedSearch=searchTerm.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase();
@@ -49,6 +49,18 @@ export default function BusinessServicesPreview({userId,focus="all",excludeFeatu
  const [editor,setEditor]=useState(false);
  const [siteEditor,setSiteEditor]=useState(false);
  const [inboxOpen,setInboxOpen]=useState(false);
+ const currentBack=useRef<()=>void>(()=>{});
+ currentBack.current=()=>{
+  if(inboxOpen){setInboxOpen(false);return;}
+  if(siteEditor){setSiteEditor(false);return;}
+  if(editor){setEditor(false);return;}
+ };
+ useEffect(()=>{
+  if(!registerHeaderBack||focus!=="web"||!(inboxOpen||siteEditor||editor))return;
+  const run=()=>currentBack.current();
+  registerHeaderBack(run);
+  return()=>registerHeaderBack(null);
+ },[registerHeaderBack,focus,inboxOpen,siteEditor,editor]);
  const [draft,setDraft]=useState<Draft>({...empty});
  const [status,setStatus]=useState<MessageKey|"">("");
  const key="vmv.gbp.web.draft.v1."+userId;
@@ -112,8 +124,8 @@ export default function BusinessServicesPreview({userId,focus="all",excludeFeatu
   try{await navigator.clipboard.writeText(message);setStatus("services.status.copied");}
   catch{setStatus("services.status.copyFailed");}
  };
- if(siteEditor)return <WebServicesStudio ownerId={userId} onBack={()=>setSiteEditor(false)}/>;
- if(inboxOpen)return <WebServicesInbox ownerId={userId} onBack={()=>setInboxOpen(false)}/>;
+ if(siteEditor)return <WebServicesStudio ownerId={userId} hideBack={Boolean(registerHeaderBack)} onBack={()=>setSiteEditor(false)}/>;
+ if(inboxOpen)return <WebServicesInbox ownerId={userId} hideBack={Boolean(registerHeaderBack)} onBack={()=>setInboxOpen(false)}/>;
  if(focus==="web"&&!editor)return <section className={styles.webHub} aria-label="Web Services">
   <div className={styles.webHubHeading}><span>{translate("web.hub.kicker")}</span><h2>{translate("web.hub.title")}<span>.</span></h2><p>{translate("web.hub.intro")}</p></div>
   <div className={styles.webHubGrid}>
@@ -131,7 +143,7 @@ export default function BusinessServicesPreview({userId,focus="all",excludeFeatu
   <div className={styles.webHubTools}><button type="button" onClick={()=>setInboxOpen(true)}><Mail size={16}/> {translate("web.hub.requests")}</button></div>
  </section>;
  if(editor)return <section className={styles.root}>
-   <button type="button" className={styles.back} onClick={()=>setEditor(false)}><ChevronLeft size={18}/> {translate("common.services")}</button>
+   {!registerHeaderBack?<button type="button" className={styles.back} onClick={()=>setEditor(false)}><ChevronLeft size={18}/> {translate("common.services")}</button>:null}
    <div className={styles.editorHero}>
     <div className={styles.editorIcon}><MapPin size={26}/></div>
     <div><h3>Google Business Profile</h3><span>{translate("services.editor.paymentMode")}</span></div>
