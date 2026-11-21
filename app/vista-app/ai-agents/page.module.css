@@ -207,3 +207,6 @@
 .adsScroller{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;overscroll-behavior:contain;
  background:transparent;padding:clamp(16px,3vw,24px) clamp(18px,4vw,30px) max(20px,env(safe-area-inset-bottom))}
 @media(min-width:900px){.adsScroller{padding-top:40px}}
+
+/* Chat web customer preview: full white viewport with fixed composer, not a padded wizard. */
+.chatWebScroller{flex:1;min-height:0;overflow:hidden;padding:0;background:#fff}
