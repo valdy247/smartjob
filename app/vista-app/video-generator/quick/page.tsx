@@ -109,30 +109,51 @@ export default function QuickVideoPage(){
  const [saveError,setSaveError]=useState("");
  const [sessionStatus,setSessionStatus]=useState<"loading"|"signed-in"|"signed-out"|"unavailable">("loading");
  const [loginReturnTo,setLoginReturnTo]=useState("/vista-app/video-generator/quick");
+ const [accountId,setAccountId]=useState(""),[draftRestored,setDraftRestored]=useState(false);
  const supabase=getSupabase();
  useEffect(()=>{
   const client=getSupabase();
   if(!client){setSessionStatus("unavailable");return;}
   let live=true;
   const {data:{subscription}}=client.auth.onAuthStateChange((_event,session)=>{
-   if(live)setSessionStatus(session?"signed-in":"signed-out");
+   if(live){setSessionStatus(session?"signed-in":"signed-out");setAccountId(session?.user.id||"");if(!session)setDraftRestored(false);}
   });
   void client.auth.getSession().then(({data,error})=>{
-   if(live)setSessionStatus(error?"signed-out":data.session?"signed-in":"signed-out");
+   if(live){setSessionStatus(error?"signed-out":data.session?"signed-in":"signed-out");setAccountId(data.session?.user.id||"");}
   }).catch(()=>{if(live)setSessionStatus("signed-out");});
   return()=>{live=false;subscription.unsubscribe();};
  },[]);
  const mediaRef=useRef<string[]>([]);
  const resultRef=useRef("");
  const stepNumber=stage==="setup"?step+1:stage==="story"?5:6;
+ useEffect(()=>{setLoginReturnTo(window.location.pathname+window.location.search);},[]);
  useEffect(()=>{
-  setLoginReturnTo(window.location.pathname+window.location.search);
+  if(!accountId)return;
+  let draft:{kind?:Kind;visual?:Visual;seconds?:15|30;ratio?:"portrait"|"landscape";
+   narration?:boolean;topic?:string;step?:number}|null=null;
+  try{const raw=sessionStorage.getItem("vmv-video-draft-v1:"+accountId);
+   if(raw&&raw.length<1500)draft=JSON.parse(raw);
+  }catch{/* Local draft is optional. */}
   const q=new URLSearchParams(window.location.search);
   const kindParam=q.get("kind"),visualParam=q.get("visual"),topicParam=q.get("topic");
-  if(kindParam==="promo"||kindParam==="facts")setKind(kindParam);
-  if(visualParam==="sticks"||visualParam==="stills")setVisual(visualParam);
+  const nextKind=kindParam==="promo"||kindParam==="facts"?kindParam:draft?.kind;
+  const nextVisual=visualParam==="sticks"||visualParam==="stills"?visualParam:draft?.visual;
+  if(nextKind==="promo"||nextKind==="facts")setKind(nextKind);
+  if(nextVisual==="sticks"||nextVisual==="stills")setVisual(nextVisual);
+  if(draft?.seconds===15||draft?.seconds===30)setSeconds(draft.seconds);
+  if(draft?.ratio==="portrait"||draft?.ratio==="landscape")setRatio(draft.ratio);
+  if(typeof draft?.narration==="boolean")setNarration(draft.narration);
   if(topicParam&&topicParam.trim().length>=3)setTopic(topicParam.slice(0,220));
- },[]);
+  else if(typeof draft?.topic==="string")setTopic(draft.topic.slice(0,220));
+  if(Number.isInteger(draft?.step)&&draft!.step!>=0&&draft!.step!<=3)setStep(draft!.step!);
+  setDraftRestored(true);
+ },[accountId]);
+ useEffect(()=>{
+  if(!accountId||!draftRestored)return;
+  try{sessionStorage.setItem("vmv-video-draft-v1:"+accountId,
+   JSON.stringify({kind,visual,seconds,ratio,narration,topic,step}));
+  }catch{/* Draft stays in memory if the browser disallows storage. */}
+ },[accountId,draftRestored,kind,visual,seconds,ratio,narration,topic,step]);
  useEffect(()=>()=>{mediaRef.current.forEach(URL.revokeObjectURL);if(resultRef.current)URL.revokeObjectURL(resultRef.current);},[]);
  const resetMedia=()=>{
   mediaRef.current.forEach(URL.revokeObjectURL);mediaRef.current=[];
