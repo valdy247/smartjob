@@ -58,7 +58,7 @@ export async function POST(req:NextRequest){
    messages:[{role:"user",content:JSON.stringify({topic,kind,visual,durationSeconds:seconds})}],
    maxOutputTokens:2100,temperature:0.5,timeoutMs:25000
   });
-  const text=result.trim().replace(/^``(?:json)?\s*/i,"").replace(/\s*``$/,"");
+  const text=result.trim();
   const output=JSON.parse(text.slice(text.indexOf("{"),text.lastIndexOf("}")+1)) as Record<string,unknown>;
   const raw=Array.isArray(output.scenes)?output.scenes:[];
   const scenes=raw.slice(0,count).map((scene:unknown)=>{
