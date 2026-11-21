@@ -163,5 +163,5 @@ test("Meta Graph errors retain sanitized owner-facing explanation and support tr
  assert.match(code,/fbtrace_id/);
  assert.match(code,/access_token=\[redacted\]/);
  assert.match(code,/Bearer \[redacted\]/);
- assert.match(code,/\\.slice\(0,360\)/);
+ assert.match(code,/\.slice\(0,360\)/);
 });
