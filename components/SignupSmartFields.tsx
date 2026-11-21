@@ -6,7 +6,7 @@ import type {SignupAnswer} from "@/lib/vmv-signup-flow";
 import styles from "./SignupExperience.module.css";
 type Patch=(values:SignupAnswer)=>void;
 type Result={id:string;label:string;secondary?:string};
-const countryOf=(a:SignupAnswer)=>(a.country==="other"?a.country_code:a.country||"US").toUpperCase();
+const countryOf=(a:SignupAnswer)=>String(a.country==="other"?(a.country_code||""):(a.country||"US")).toUpperCase();
 async function jsonPost(url:string,payload:object,signal?:AbortSignal){
  const r=await fetch(url,{method:"POST",cache:"no-store",signal,
   headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
@@ -64,7 +64,7 @@ export function SignupCategoryLookup({answers,onPatch,en}:{answers:SignupAnswer;
    {results.map(p=><button type="button" key={p.id} role="option" aria-selected={answers.google_category_id===p.id}
     onClick={()=>pickGoogle(p)}><Check size={15}/><span>{p.label}</span></button>)}
   </div>:null}
-  {!results.length&&query.trim().length>=2?<div className={styles.searchResults} role="listbox">
+  {!results.length&&query.trim().length>=2&&query!==answers.category_label&&query!==answers.google_category_name?<div className={styles.searchResults} role="listbox">
    {local.map(item=><button type="button" key={item.id} role="option" aria-selected={answers.category===item.id}
     onClick={()=>pickVmv(item)}><span>{item.label}</span></button>)}
   </div>:null}
@@ -146,7 +146,7 @@ type Hour={closed:boolean;start:string;end:string};
 const namesEs=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 const namesEn=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 const startDefault:Hour={closed:true,start:"09:00",end:"17:00"};
-const times=Array.from({length:48},(_,i)=>String(Math.floor(i/2)).padStart(2,"0")+":"+(i%2?"30":"00"));
+const times=Array.from({length:96},(_,i)=>String(Math.floor(i/4)).padStart(2,"0")+":"+String((i%4)*15).padStart(2,"0"));
 export function SignupHoursReview({source,en,onApprove,onClose}:{source:string;en:boolean;
  onApprove:(hours:Hour[])=>void;onClose:()=>void}){
  const [hours,setHours]=useState<Hour[]>(Array.from({length:7},()=>({...startDefault})));
