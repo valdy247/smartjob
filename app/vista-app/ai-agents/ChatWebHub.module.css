@@ -92,3 +92,5 @@
  .site{flex-wrap:wrap}.siteActions{width:100%;justify-content:flex-end}.panel{padding:15px}
 }
 @media(prefers-reduced-motion:reduce){.spin{animation:none}.tile{transition:none}.tile:hover{transform:none}}
+
+.catalogCount{margin-left:auto;color:#9473ae;font-size:10px;font-weight:800}
