@@ -6,7 +6,7 @@ create or replace function public.vmv_ai_capture_conversation_order(
 ) returns uuid language plpgsql security invoker set search_path=public,pg_temp as $$
 declare
  agent_row record; line jsonb; catalog_row record; order_id uuid;
- existing uuid; item_id uuid; amount integer; subtotal bigint:=0;
+ existing uuid; requested_item uuid; amount integer; subtotal bigint:=0;
  total_quantity integer:=0; seen uuid[]:=array[]::uuid[];
  priced_lines jsonb:='[]'::jsonb; stock_held integer;
 begin
@@ -59,10 +59,10 @@ begin
    coalesce(line->>'id','') !~* '^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$' or
    coalesce(line->>'qty','') !~ '^[1-9][0-9]?$'
   then return null; end if;
-  item_id:=(line->>'id')::uuid;
+  requested_item:=(line->>'id')::uuid;
   amount:=(line->>'qty')::integer;
-  if amount>50 or item_id=any(seen) then return null; end if;
-  seen:=array_append(seen,item_id);
+  if amount>50 or requested_item=any(seen) then return null; end if;
+  seen:=array_append(seen,requested_item);
   total_quantity:=total_quantity+amount;
   if total_quantity>50 then return null; end if;
 
@@ -71,27 +71,27 @@ begin
    join public.vmv_web_chat_settings cfg
     on cfg.owner_id=s.owner_id and cfg.agent_id=s.agent_id
    where s.id=p_session and s.owner_id=p_owner and s.agent_id=p_agent
-    and item_id=any(cfg.sales_item_ids)
+    and requested_item=any(cfg.sales_item_ids)
   ) then return null; end if;
 
   select id,sku,name,price_cents,currency,stock_mode,available_qty,
    jsonb_array_length(variants) as variant_count,
    jsonb_array_length(extras) as extra_count
   into catalog_row from public.vmv_ai_catalog_items
-  where id=item_id and owner_id=p_owner and business_id=p_business
+  where id=requested_item and owner_id=p_owner and business_id=p_business
    and active=true and approved=true for update;
   if not found or catalog_row.currency<>'usd' or catalog_row.price_cents<1 or
     catalog_row.variant_count<>0 or catalog_row.extra_count<>0
   then return null; end if;
   if catalog_row.stock_mode='tracked' then
    select coalesce(sum(h.qty),0) into stock_held from public.vmv_ai_inventory_holds h
-   where h.item_id=item_id and h.state='held' and h.expires_at>now();
+   where h.item_id=requested_item and h.state='held' and h.expires_at>now();
    if catalog_row.available_qty-stock_held<amount then return null; end if;
   end if;
   subtotal:=subtotal+(catalog_row.price_cents::bigint*amount);
   if subtotal>2000000000 then return null; end if;
   priced_lines:=priced_lines||jsonb_build_array(jsonb_build_object(
-   'id',item_id,'sku',catalog_row.sku,'name',catalog_row.name,
+   'id',requested_item,'sku',catalog_row.sku,'name',catalog_row.name,
    'qty',amount,'unit',catalog_row.price_cents));
  end loop;
 
