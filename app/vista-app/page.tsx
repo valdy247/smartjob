@@ -416,7 +416,7 @@ export default function VMVMobilePreview(){
         <div className={styles.catalogGrid}>
          {filteredCatalog.map(item=><button type="button" key={item.id} disabled={item.id==="instagram-connect"}
           style={item.id==="instagram-connect"?{cursor:"default",opacity:1}:undefined}
-          className={`${styles.catalogCard} ${item.tone}`} data-vmv-shortcut-id={item.id==="agents"?"ai-agents":item.id==="ads-studio"?"ads":item.id==="video-generator"?"video-generator":item.id==="smart-quote"?"smart-quote":item.id} onClick={item.action}
+          className={`${styles.catalogCard} ${item.tone}`} data-vmv-shortcut-id={item.id==="agents"?"ai-agents":item.id==="smart-call"?"agent-calls":item.id==="ads-studio"?"ads":item.id==="video-generator"?"agent-video":item.id==="smart-quote"?"agent-quote":item.id} onClick={item.action}
           aria-label={item.name+" · "+item.state}>
           <span className={styles.catalogIcon}><item.Icon size={26}/></span>
           <span className={styles.catalogCardCopy}><strong>{item.name}</strong><small>{item.state}</small></span>
