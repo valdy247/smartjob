@@ -188,7 +188,7 @@ export default function ViralRadar({niche,en,selectedSource,onChoose,onClear}:Pr
      setScan(h);setTerm(h.query);setPeriod(h.days);
     }}>{h.query} <ArrowUpRight size={13}/></button>)}</div>
    </div>:null}
-   {(scan||history.length)>0?<button type="button" className={css.deleteAction}
+   {(Boolean(scan)||history.length>0)?<button type="button" className={css.deleteAction}
     disabled={Boolean(loading)} onClick={()=>void clearHistory()}>
     {L("Borrar mis investigaciones","Delete my research")}
    </button>:null}
