@@ -84,3 +84,17 @@ test('Ads Studio uses page header for step navigation',()=>{
  assert.ok(ads.includes('registerHeaderBack'));
  assert.ok(ads.includes('step>0&&!registerHeaderBack'));
 });
+
+test('AI Agents home displays capability cards without promotional or agent-summary blocks',()=>{
+ const code=read('app/vista-app/ai-agents/page.tsx');
+ const start=code.indexOf('{screen==="home"?<>');
+ const end=code.indexOf('{businessDialog?',start);
+ assert.ok(start>=0&&end>start,'home panel must be present');
+ const home=code.slice(start,end);
+ assert.ok(home.includes('className={styles.tiles}'),'capability cards remain');
+ assert.ok(home.includes('types.filter('),'agent services remain');
+ assert.ok(home.includes('onClick={()=>void start(type.id)}'),'service navigation remains');
+ for(const legacy of ['className={styles.hero}','className={styles.sectionHeading}','<AgentSettingsEntry','agents.onePerBusiness','agents.oneAgent','agents.allFunctions','agents.capabilities']){
+  assert.ok(!home.includes(legacy),'no redundant home presentation: '+legacy);
+ }
+});
