@@ -28,8 +28,9 @@ function explicitAcceptance(s:string){
 }
 function salesPermitted(s:VoiceCommerceSession){
  const cfg=(s.agent_snapshot.configuration||{}) as Record<string,string>;
- return cfg.cap_sales==="Sí"&&cfg.perm_prepare_order==="Sí"&&
-   cfg.channel!=="Chat";
+ // Disconnecting the catalog must also block NEW automated phone orders.
+ return cfg.cap_catalog==="Sí"&&cfg.cap_sales==="Sí"&&
+   cfg.perm_prepare_order==="Sí"&&cfg.channel!=="Chat";
 }
 async function catalogForCall(db:SupabaseClient,s:VoiceCommerceSession):Promise<Catalog[]>{
  const {data:agent,error}=await db.from("vmv_ai_agents").select("business_id")
