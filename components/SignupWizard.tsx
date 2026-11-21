@@ -173,7 +173,11 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
    const selected=new Set(answer.split(",").filter(Boolean));
    if(selected.has(value))selected.delete(value);else selected.add(value);
    setAnswer([...selected].join(","));
-  }else setAnswer( return <main className={styles.outer}>
+  }else setAnswer(value);
+ };
+ const isSelected=(v:string)=>current.kind==="multi"?answer.split(",").includes(v):answer===v;
+ const friendlyName=answers.first?.trim()||"";
+ return <main className={styles.outer}>
   <section className={service.root+" "+theme.flow+" "+styles.wizard} aria-label={es?"Crear cuenta VMV":"Create VMV account"}>
    <header className={service.top}>
     <button type="button" disabled={busy||phase==="ready"} onClick={back} aria-label={es?"Volver":"Back"}>
