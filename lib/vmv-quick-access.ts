@@ -21,6 +21,7 @@ export const items:Shortcut[]=[
  ["agent-calls","Agente telefónico","Phone agent","/vista-app/ai-agents?service=call","IA",""],
  ["agent-video","Agente de video","Video agent","/vista-app/ai-agents?service=video","IA",""],
  ["agent-quote","Agente de cotizaciones","Quote agent","/vista-app/ai-agents?service=quote","IA",""],
+ ["booking-availability","Mi disponibilidad","My availability","/vista-app/ai-agents?service=bookings&view=availability","IA","agenda citas reservas horarios"],
  ["smart-quote","Smart Quote","Smart Quote","/vista-app/smart-quote","Negocio","cotizaciones"],
  ["video-generator","Video Generator","Video Generator","/vista-app/video-generator","IA","video"],
  ["marketing","Marketing","Marketing","/vista-app/marketing","Marketing",""],
