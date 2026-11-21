@@ -195,8 +195,12 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   const data=await response.json().catch(()=>null);
   if(!response.ok){
    const detail=Number(data?.metaSubcode);
+   const safeMetaMessage=typeof data?.metaMessage==="string"?data.metaMessage.slice(0,360):"";
+   const safeMetaTrace=typeof data?.metaTrace==="string"?data.metaTrace.slice(0,80):"";
    throw Error(String(data?.error||"El servicio no respondió.")+
-    (Number.isInteger(detail)&&detail>0?" · Código Meta: "+detail:""));
+    (Number.isInteger(detail)&&detail>0?" · Código Meta: "+detail:"")+
+    (safeMetaMessage?" · Detalle Meta: "+safeMetaMessage:"")+
+    (safeMetaTrace?" · Referencia Meta: "+safeMetaTrace:""));
   }
   return data;
  };
@@ -377,7 +381,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
      "La creación quedó incompleta y pueden existir objetos pausados en Meta. No vuelvas a enviarla.":
      "Meta no confirmó la campaña pausada. Diagnóstico: "+code);
     throw Error("Borrador guardado. "+cause+" Referencia VMV: "+campaignId.slice(0,8)+
-     (reason.includes("Código Meta:")?" · "+reason.split("Código Meta:")[1].trim():"")+
+     (reason.includes(" · ")?". "+reason.split(" · ").slice(1).join(" · "):"")+
      ". Consulta Historial → Comprobar con Meta (sin publicar).");
    }
    window.location.assign("/vista-app/marketing/ads/campaigns");
