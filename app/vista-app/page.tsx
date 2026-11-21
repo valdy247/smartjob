@@ -15,7 +15,7 @@ import {DIAGNOSTIC_METADATA_KEY,getDiagnosticRecommendations,makeDiagnosticRecor
 import {useSmartCallAccount,type Tab,type Panel,type CallSettings,type CallRecord,type Voice} from "./useSmartCallAccount";
 import styles from "./vista-app.module.css";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
-import {VMVQuickAccessSettings,VMVHomePinnedShortcuts} from "@/components/VMVQuickAccess";
+import {VMVQuickAccessSettings,VMVHomePinnedShortcuts,VMVExtraServicesSettings} from "@/components/VMVQuickAccess";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import type {MessageKey} from "@/lib/i18n";
 
@@ -118,8 +118,10 @@ export default function VMVMobilePreview(){
  useEffect(()=>{setDraft(settings?{...settings,caller_language:settings.desired_language===settings.caller_language?(settings.desired_language==="en"?"es":"en"):settings.caller_language}:null);},[settings]);
  const ready=phase==="signed_in"&&!!profile;
  useEffect(()=>{
-  if(!ready||tab!=="account"||new URLSearchParams(window.location.search).get("settings")!=="shortcuts")return;
-  const timer=window.setTimeout(()=>document.getElementById("vmv-shortcuts-settings")?.scrollIntoView({block:"start",behavior:"smooth"}),120);
+  if(!ready||tab!=="account")return;
+  const target=new URLSearchParams(window.location.search).get("settings");
+  if(target!=="shortcuts"&&target!=="extras")return;
+  const timer=window.setTimeout(()=>document.getElementById(target==="extras"?"vmv-extra-services":"vmv-shortcuts-settings")?.scrollIntoView({block:"start",behavior:"smooth"}),120);
   return()=>window.clearTimeout(timer);
  },[ready,tab]);
  useEffect(()=>{
@@ -339,7 +341,7 @@ export default function VMVMobilePreview(){
       {ready&&tab==="home"&&diagnosticOpen?<BusinessDiagnostic key={user?.id||"account"} language={language==="en"?"en":"es"}
        businessName={business} record={diagnostic} onSave={saveNeedsAssessment}
        onClose={()=>setDiagnosticOpen(false)} onExplore={exploreDiagnosticService}/>:null}
-      {ready&&tab==="home"&&!diagnosticOpen?<div className={`${styles.screen} ${styles.homeV2} ${styles.homeConcept}`}>
+      {ready&&tab==="home"&&!diagnosticOpen?<div className={`${styles.screen} ${styles.homeV2} ${styles.homeConcept}`} data-vmv-shortcut-scope="home">
        <header className={styles.homeIdentity}>
         <span className={styles.homeIdentityBrand}><span className={styles.homeIdentityV} aria-hidden="true">V</span><strong>VMV Business</strong></span>
         <span className={styles.homeIdentityActions}><InterfaceLanguagePicker compact/><span className={styles.homeBell} aria-hidden="true"><Bell size={21}/></span></span>
@@ -362,7 +364,7 @@ export default function VMVMobilePreview(){
         <button type="button" className={styles.homeTileLavender} data-vmv-shortcut-id="ai-agents" onClick={()=>window.location.assign("/vista-app/ai-agents")}><Bot size={31}/><strong>AI Agents</strong></button>
         {showHomeOffer("marketing")?<button type="button" className={styles.homeTileGreen} data-vmv-shortcut-id="marketing" onClick={()=>window.location.assign("/vista-app/marketing")}><Megaphone size={31}/><strong>Marketing</strong></button>:null}
         {homeRecommendations?.some(item=>item.id==="google-business")?<button type="button" className={styles.homeTileLavender} data-vmv-shortcut-id="google-profile" onClick={()=>window.location.assign("/vista-app/marketing")}><Globe size={31}/><strong>Google Business</strong></button>:null}
-        {homeRecommendations?.length===0?<button type="button" className={styles.homeTileLavender} onClick={()=>go("services")}><LayoutGrid size={31}/><strong>{language==="en"?"All services":"Todos los servicios"}</strong></button>:null}
+        {homeRecommendations?.length===0?<button type="button" className={styles.homeTileLavender} data-vmv-shortcut-id="services" onClick={()=>go("services")}><LayoutGrid size={31}/><strong>{language==="en"?"All services":"Todos los servicios"}</strong></button>:null}
        </div>
        <VMVHomePinnedShortcuts/>
        <section className={styles.homeBusinessArea}>
@@ -395,7 +397,7 @@ export default function VMVMobilePreview(){
         </details>
        </section>
       </div>:null}
-      {ready&&tab==="services"&&!open?<div className={`${styles.screen} ${styles.servicesV3}`}>
+      {ready&&tab==="services"&&!open?<div className={`${styles.screen} ${styles.servicesV3}`} data-vmv-shortcut-scope="services">
        {serviceFocus==="web"?<>
         <button type="button" className={styles.back} onClick={()=>setServiceFocus("all")}><ChevronLeft size={17}/> {translate("native.totalServices")}</button>
         {user?<BusinessServicesPreview userId={user.id} focus="web"/>:null}
@@ -585,7 +587,7 @@ export default function VMVMobilePreview(){
       {ready&&tab==="translator"?<div className={`${styles.screen} ${styles.translatorV3}`}>
        {client&&profile?<div className={styles.interpreterWrap}><LivePanel supabase={client} profile={profile} apiStatus={apiStatus}/></div>:null}
       </div>:null}
-      {ready&&tab==="account"?<div className={`${styles.screen} ${styles.accountV3}`}>
+      {ready&&tab==="account"?<div className={`${styles.screen} ${styles.accountV3}`} data-vmv-shortcut-scope="account">
        <h2>{translate("home.viewAccount")}<span className={styles.mint}>.</span></h2>
        {/* Interface language is already available from the shared app header; do not duplicate it here. */}
        <div className={styles.accountHero}><span className={styles.accountHeroAvatar}><UserRound size={29}/></span>
@@ -601,10 +603,11 @@ export default function VMVMobilePreview(){
          <span><ShieldCheck size={19}/></span><strong>{billing?.plan?.toUpperCase()||"—"}</strong><small>{translate("common.plan")}</small>
         </button>
        </div>
-       <section id="vmv-shortcuts-settings" style={{display:"grid",gap:10}}>
+       <section id="vmv-shortcuts-settings" style={{display:"grid",gap:10,scrollMarginTop:20}}>
         <h3 style={{fontSize:17,fontWeight:850,color:"#342547",margin:"7px 0 0"}}>{language==="en"?"Settings":"Configuración"}</h3>
         <VMVQuickAccessSettings/>
        </section>
+       <VMVExtraServicesSettings/>
        <div className={styles.smartCard}>
         <Row label={translate("common.status")} value={billing?.status||"—"}/><Row label={translate("common.phone")} value={profile?.phone||"—"}/>
         <button className={styles.mainAction} onClick={()=>showCall("minutes")}>{translate("common.viewPlan")} <ArrowUpRight size={16}/></button>
