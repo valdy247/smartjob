@@ -4,6 +4,7 @@ import {websiteAddress} from "./website-address";
 
 export type CentralBusiness={
  id:string;owner_id:string;name:string;legal_name:string;category_id:string;
+ google_category_id?:string;google_category_name?:string;
  website_url:string|null;description:string;country:string;street:string;unit:string;
  city:string;region:string;postal:string;address_visibility:"private"|"public";
  kind:"storefront"|"service_area"|"hybrid";service_areas:string;
@@ -13,7 +14,7 @@ export type CentralBusiness={
  services:string;products:string;source_system?:string|null;source_record_id?:string|null;
 };
 export const centralBusinessDefaults=(name="",category_id="other",website_url:string|null=null):Omit<CentralBusiness,"id"|"owner_id">=>({
- name,legal_name:"",category_id,website_url,description:"",country:"US",
+ name,legal_name:"",category_id,google_category_id:"",google_category_name:"",website_url,description:"",country:"US",
  street:"",unit:"",city:"",region:"",postal:"",address_visibility:"private",
  kind:"storefront",service_areas:"",phone:"",secondary_phone:"",email:"",
  social_links:{},booking_url:"",hours_enabled:false,hours:[],
@@ -22,7 +23,7 @@ export const centralBusinessDefaults=(name="",category_id="other",website_url:st
 });
 export function businessGoogleSeed(b:CentralBusiness,action:GoogleData["action"]="create"):GoogleData{
  return {
-  action,kind:b.kind,googleCategory:b.category_id!=="other"?(BUSINESS_CATEGORIES.find(c=>c.id===b.category_id)?.label||""):"",googleCategorySource:"business_activity",categoryPendingReview:b.category_id!=="other"&&BUSINESS_CATEGORIES.some(c=>c.id===b.category_id),locationPendingReview:true,otherCategories:"",
+  action,kind:b.kind,googleCategory:b.google_category_id?b.google_category_name||"":b.category_id!=="other"?(BUSINESS_CATEGORIES.find(c=>c.id===b.category_id)?.label||""):"",googleCategoryId:b.google_category_id||"",googleCategorySource:b.google_category_id?"customer":"business_activity",categoryPendingReview:!b.google_category_id&&b.category_id!=="other"&&BUSINESS_CATEGORIES.some(c=>c.id===b.category_id),locationPendingReview:true,otherCategories:"",
   street:b.kind==="service_area"?"":b.street,unit:b.kind==="service_area"?"":b.unit,
   city:b.kind==="service_area"?"":b.city,region:b.kind==="service_area"?"":b.region,
   postal:b.kind==="service_area"?"":b.postal,country:b.country||"US",
@@ -91,6 +92,7 @@ export function validCentralBusiness(b:Pick<CentralBusiness,"name"|"country"|"we
 export function centralBusinessWritePayload(b:CentralBusiness){
  return {
   name:b.name.trim(),legal_name:b.legal_name||"",category_id:b.category_id||"other",
+  google_category_id:b.google_category_id||"",google_category_name:b.google_category_name||"",
   website_url:websiteAddress(b.website_url||""),description:b.description||"",
   country:(b.country||"US").trim().toUpperCase(),street:b.street||"",unit:b.unit||"",
   city:b.city||"",region:b.region||"",postal:b.postal||"",
