@@ -112,21 +112,18 @@ test('slow local storage writes cannot leave an older visitor choice as the fina
  assert.equal(stored,'en');assert.equal(p.getSnapshot().language,'en');
 });
 
-test('Smart Call signed-out screen uses the account locale for all entry copy',()=>{
+test('Smart Call uses the same localized branded login as the VMV account',()=>{
  const page=fs.readFileSync(require('node:path').join(__dirname,'../app/vista-app/page.tsx'),'utf8');
- const login=page.split('{phase==="signed_out"?')[1]?.split('{phase==="signed_in"&&!profile?')[0];
- assert.ok(login,'signed-out screen must exist');
- for(const key of ['native.secureAccess','native.signInExplanation','native.emailPlaceholder',
-  'native.passwordPlaceholder','native.signInPrivacy','native.registerPrompt','common.loginError']){
-  assert.ok(login.includes('translate("'+key+'")'),key+' must render via the shared language controller');
- }
- for(const raw of ['ACCESO SEGURO','Inicia sesión con la misma cuenta','Tu contraseña',
-  'Sesión protegida por Supabase','¿No tienes cuenta? Abrir registro']){
-  assert.ok(!login.includes(raw),'untranslated signed-out copy: '+raw);
- }
+ const login=fs.readFileSync(require('node:path').join(__dirname,'../components/VMVAuthGateway.tsx'),'utf8');
+ assert.ok(page.includes('<VMVAuthGateway compact supabase={client}/>'),
+  'the mobile app should reuse the exact branded account login');
+ assert.ok(login.includes('useInterfaceLanguage'),'login must use the saved account locale');
+ assert.ok(login.includes('provider:"google"')||login.includes('social("google")'),'Google OAuth entry');
+ assert.ok(login.includes('social("apple")'),'Apple OAuth entry');
+ assert.ok(login.includes('signInWithPassword'),'password auth uses Supabase session');
  assert.ok(login.includes('value={email}')&&login.includes('value={password}'),
-  'language toggles must not replace controlled credentials');
- assert.ok(!login.includes('<InterfaceLanguagePicker'), 'language control must not occupy a form card');
+  'changing locale preserves controlled credentials');
+ assert.ok(login.includes('<InterfaceLanguagePicker compact/>'),'localized login language control');
 });
 test('Smart Call header owns the compact accessible flag switch',()=>{
  const page=fs.readFileSync(require('node:path').join(__dirname,'../app/vista-app/page.tsx'),'utf8');
@@ -170,12 +167,11 @@ test('refresh while saving cannot revert a deliberate language switch',async()=>
  assert.equal(f.preference.getSnapshot().language,'en');
  assert.equal(f.user().user_metadata.ui_language,'en');
 });
-test('occupations switch display language without clearing selected O*NET code',()=>{
+test('business types keep stable values across bilingual signup prompts',()=>{
+ const flow=fs.readFileSync(require('node:path').join(__dirname,'../lib/vmv-signup-flow.ts'),'utf8');
  const wizard=fs.readFileSync(require('node:path').join(__dirname,'../components/SignupWizard.tsx'),'utf8');
- const sync=fs.readFileSync(require('node:path').join(__dirname,'../scripts/sync-registration-data.mjs'),'utf8');
- assert.ok(wizard.includes('job.title_es||job.title'),'Spanish suggestions must use translated titles');
- assert.ok(wizard.includes('language,occupationCode,jobs,jobsLoaded'),'selected occupation follows interface language');
- assert.ok(wizard.includes('setOccupationCode(item.value)'),'stable O*NET code remains selected');
- assert.ok(sync.includes('spanish_taxonomy.zip'),'catalog comes from official O*NET translations');
- assert.ok(sync.includes('jobs.filter(job=>!!job.title_es).length<950'),'do not silently ship English-only catalogs');
+ assert.ok(flow.includes('option("spa","Spa y masajes"'),'business category IDs are stable');
+ assert.ok(flow.includes('option("bookings","Gestionar reservas"'),'booking capabilities are language independent');
+ assert.ok(wizard.includes('es?current.es:current.en'),'one-question signup follows interface language');
+ assert.ok(wizard.includes('setAnswer(o.value)')||wizard.includes('choice(o.value)'),'choice saves language-independent value');
 });
