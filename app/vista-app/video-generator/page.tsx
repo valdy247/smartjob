@@ -343,6 +343,9 @@ export default function VideoGeneratorPage(){
      <ArrowUpRight size={18} className={styles.choiceArrow}/>
     </button>
    </div>
+   <Link href="/vista-app/video-generator/quick" className={styles.libraryShortcut} style={{marginBottom:12}}>
+    <Clapperboard size={19}/><span>{L("Probar Stick / Imágenes IA","Try Stick / AI images")}</span><ChevronRight size={17}/>
+   </Link>
    <button type="button" className={styles.libraryShortcut} onClick={()=>open("library")}>
     <Library size={19}/><span>{L("Mi biblioteca","My library")}</span>
     <span className={styles.count}>{jobs.length}</span><ChevronRight size={17}/>
