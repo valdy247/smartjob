@@ -55,7 +55,7 @@ async function searchYouTube(query:string,days:number):Promise<RadarVideo[]>{
   part:"snippet,statistics",id:ids.join(",")
  }));
  return items.map(item=>videoToRadar(item)).filter((v):v is RadarVideo=>Boolean(v))
-  .sort((a,b)=>b.averageViewsPerDay-a.averageViewsPerDay).slice(0,12);
+  .sort((a,b)=>b.views-a.views).slice(0,12);
 }
 /** Private, read-only source research; no posting, downloading or provider charges. */
 export async function GET(req:NextRequest){
@@ -71,10 +71,13 @@ export async function GET(req:NextRequest){
  if(!query){
   const {data,error}=await videoDb().from("vmv_video_radar_scans")
    .select("id,owner_id,query,days,status,results,ideas,created_at,failure_code")
-   .eq("owner_id",owner).eq("status","ready").order("created_at",{ascending:false}).limit(4);
+   .eq("owner_id",owner).eq("status","ready")
+   .gte("created_at",new Date(Date.now()-29*86400000).toISOString())
+   .order("created_at",{ascending:false}).limit(4);
   return error?reply({error:"radar_database_unavailable"},503):
    reply({history:(data||[]).map(row=>show(row as Scan).scan),configured:Boolean(youtubeKey()),source:"youtube"});
  }
+ if(req.headers.get("x-vmv-youtube-consent")!=="accepted")return reply({error:"radar_consent_required"},403);
  const days=Number(req.nextUrl.searchParams.get("days")||"30");
  if(![7,30,90].includes(days))return reply({error:"radar_invalid_window"},400);
  if(!youtubeKey())return reply({error:"radar_youtube_key_missing"},503);
@@ -114,6 +117,7 @@ export async function GET(req:NextRequest){
 export async function POST(req:NextRequest){
  const owner=await account(req);
  if(!owner)return reply({error:"video_not_enabled_for_account"},403);
+ if(req.headers.get("x-vmv-youtube-consent")!=="accepted")return reply({error:"radar_consent_required"},403);
  const body=await req.json().catch(()=>null);
  if(!validUuid(body?.scanId))return reply({error:"radar_invalid_scan"},400);
  const scan=await readScan(body.scanId,owner);
@@ -137,7 +141,7 @@ export async function POST(req:NextRequest){
    messages:[{role:"user",content:JSON.stringify({
     niche:scan.query,videos:items.map(v=>({
      id:v.id,title:v.title,channel:v.channel,description:v.description,
-     views:v.views,averageViewsPerDay:v.averageViewsPerDay,publishedAt:v.publishedAt
+     views:v.views,publishedAt:v.publishedAt
     }))
    })}],maxOutputTokens:900,temperature:0.45,timeoutMs:18000
   });
@@ -159,4 +163,13 @@ export async function POST(req:NextRequest){
    .eq("owner_id",owner).eq("status","ready").select("*").single();
   return error||!data?reply({error:"radar_database_unavailable"},503):reply(show(data as Scan));
  }catch{return reply({error:"radar_ai_unavailable"},503);}
+}
+
+/** The user can delete their private research without affecting YouTube videos. */
+export async function DELETE(req:NextRequest){
+ const owner=await account(req);
+ if(!owner)return reply({error:"video_not_enabled_for_account"},403);
+ const db=videoDb();
+ const cleared=await db.rpc("vmv_video_radar_clear_owner",{p_owner:owner});
+ return cleared.error?reply({error:"radar_database_unavailable"},503):reply({deleted:true});
 }
