@@ -1,6 +1,6 @@
 "use client";
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
-import {useEffect,useMemo,useState} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {getSupabase} from "@/lib/supabase";
 import {LockKeyhole,LoaderCircle} from "lucide-react";
 import Link from "next/link";
@@ -113,6 +113,10 @@ function MarketingWorkspace(){
   }
  },[]);
  const [actionWizardActive,setActionWizardActive]=useState(false);
+ const actionBackRef=useRef<(()=>void)|null>(null);
+ const registerActionBack=useCallback((callback:(()=>void)|null)=>{
+  actionBackRef.current=callback;
+ },[]);
  const [form,setForm]=useState<FormState>(initial);
  const [notice,setNotice]=useState("");
  const [reviewUrl,setReviewUrl]=useState("");
@@ -206,7 +210,11 @@ function MarketingWorkspace(){
   <div className={styles.shell}>
    <header className={styles.header}>
     <div className={styles.headerIdentity}>
-     <Link href="/vista-app" className={styles.back}><ArrowLeft size={17}/> VMV Business</Link>
+     {section==="actions"&&actionWizardActive?
+      <button type="button" className={styles.back}
+       onClick={()=>{if(actionBackRef.current){actionBackRef.current();return;}window.location.assign("/vista-app");}}>
+       <ArrowLeft size={17}/>{translate("marketing.copy.previous")}</button>:
+      <Link href="/vista-app" className={styles.back}><ArrowLeft size={17}/> VMV Business</Link>}
      <InterfaceLanguagePicker compact/>
     </div>
     <span className={styles.marker}><Sparkles size={14}/> {translate("marketing.copy.marketing_studio_beta")}</span>
@@ -268,7 +276,7 @@ function MarketingWorkspace(){
        translate("marketing.generated.insightEmpty")}</p></div></div>
       <button type="button" className={styles.primary} onClick={()=>setSection("campaign")}>{translate("marketing.copy.design_campaign")} <ArrowUpRight size={16}/></button>
      </>:null}
-     {section==="actions"?<MarketingActionCenter onWizardActiveChange={setActionWizardActive} businessName={form.business}
+     {section==="actions"?<MarketingActionCenter onWizardActiveChange={setActionWizardActive} registerHeaderBack={registerActionBack} businessName={form.business}
       industryId={form.industry} website={form.website} preselectedService={requestedService||undefined} openSocialCaptions={openCaptionsFromShortcut}
       onGoToVisibility={()=>{setSection("presence");setNotice("");}}/>:null}
      {section==="presence"?<SavedLocalVisibility
