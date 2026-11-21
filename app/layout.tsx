@@ -3,6 +3,7 @@ import "./vmv-mint.css";
 import type {Metadata,Viewport} from "next";
 import {cookies,headers} from "next/headers";
 import {InterfaceLanguageProvider} from "@/lib/i18n-web";
+import {VMVQuickAccessProvider} from "@/components/VMVQuickAccess";
 import {t,visitorLanguage,type InterfaceLanguage} from "@/lib/i18n";
 
 async function requestLanguage():Promise<InterfaceLanguage>{
@@ -17,5 +18,5 @@ export async function generateMetadata():Promise<Metadata>{
 export const viewport:Viewport={width:"device-width",initialScale:1,viewportFit:"cover",themeColor:"#f8fbfa"};
 export default async function RootLayout({children}:{children:React.ReactNode}){
  const language=await requestLanguage();
- return <html lang={language} suppressHydrationWarning><body><InterfaceLanguageProvider>{children}</InterfaceLanguageProvider></body></html>;
+ return <html lang={language} suppressHydrationWarning><body><InterfaceLanguageProvider><VMVQuickAccessProvider>{children}</VMVQuickAccessProvider></InterfaceLanguageProvider></body></html>;
 }
