@@ -267,7 +267,7 @@ export default function BookingStudio({agent,onClose,onAgentUpdated,initialTab="
      <span className={styles.actionIcon}><ClipboardList size={24}/></span>
      <strong>Mis servicios</strong><small>{services.length} guardado(s)</small>
     </button>
-    <button type="button" className={styles.actionCard} onClick={()=>{setView("availability");setNotice("");}}>
+    <button type="button" className={styles.actionCard+" "+styles.availabilityCard} onClick={()=>{setView("availability");setNotice("");}}>
      <span className={styles.actionIcon}><CalendarClock size={24}/></span>
      <strong>Mi disponibilidad</strong><small>Días y horarios</small>
     </button>
