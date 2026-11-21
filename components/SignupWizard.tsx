@@ -17,6 +17,8 @@ const emailFormat=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const mobile=()=>typeof window!=="undefined"&&window.matchMedia("(max-width:600px)").matches;
 const ph=(id:string,es:boolean)=>
  id==="first"?"Ej. Valdy":id==="agent_name"?"Ej. Papi, Luna, Aurora":
+ id==="availability_day"?"Elige un día futuro":
+ id==="availability_start"||id==="availability_end"?"13:00":
  id==="hours_mon"||id.startsWith("hours_")?"09:00-17:00 o Cerrado":
  id==="user_phone"||id==="business_phone"||id==="call_number"||id==="whatsapp"?"Ej. +1 706 555 0148":
  id==="website"?"https://tusitio.com":id==="instagram"?"@tunegocio":
@@ -211,7 +213,9 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
        <div className={styles.inputWrap}>
         <input ref={inputRef} className={styles.input}
          type={current.kind==="password"&&!showPassword?"password":current.kind==="email"?"email":
-          current.kind==="tel"?"tel":current.kind==="number"?"text":"text"}
+          current.kind==="tel"?"tel":current.kind==="date"?"date":current.kind==="time"?"time":
+          current.kind==="number"?"text":"text"}
+         min={current.kind==="date"?new Date().toISOString().slice(0,10):undefined}
          inputMode={current.kind==="number"?"decimal":current.kind==="tel"?"tel":undefined}
          autoComplete={current.kind==="password"?"new-password":
           current.kind==="email"?"email":current.id==="first"?"given-name":
