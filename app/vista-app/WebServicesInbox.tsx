@@ -22,7 +22,7 @@ function formatTime(date:string){
   month:"short",day:"numeric",hour:"numeric",minute:"2-digit"
  }).format(parsed);
 }
-export default function WebServicesInbox({ownerId,onBack}:{ownerId:string;onBack:()=>void}){
+export default function WebServicesInbox({ownerId,onBack,hideBack=false}:{ownerId:string;onBack:()=>void;hideBack?:boolean}){
  const [items,setItems]=useState<Inquiry[]>([]);
  const [counts,setCounts]=useState({new:0,total:0});
  const [loading,setLoading]=useState(true);
@@ -75,7 +75,7 @@ export default function WebServicesInbox({ownerId,onBack}:{ownerId:string;onBack
  const visible=filter==="new"?items.filter(item=>item.status==="new"):items;
  const newCount=counts.new;
  return <section className={styles.root} aria-label="Bandeja de solicitudes web">
-  <button type="button" className={styles.back} onClick={onBack}><ArrowLeft size={16}/> Web Services</button>
+  {!hideBack?<button type="button" className={styles.back} onClick={onBack}><ArrowLeft size={16}/> Web Services</button>:null}
   <div className={styles.heading}>
    <div><span>CLIENTES / WEB SERVICES</span><h2>Solicitudes<b>.</b></h2></div>
    <button type="button" className={styles.refresh} aria-label="Actualizar solicitudes" onClick={()=>void load()} disabled={loading}><RefreshCw size={17}/></button>
