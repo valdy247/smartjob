@@ -341,7 +341,7 @@ export default function AIAgentsPreview(){
   if(service==="inventory"||service==="sales"){
    setCommerceTab("catalog");setScreen(commerceNeedsSetup(principal)?"commerceWizard":"commerce");
   }else {
-   if(service==="bookings"){setResumeBooking(false);setBookingTab("services");}
+   if(service==="bookings"){setResumeBooking(false);setBookingTab(url.searchParams.get("view")==="availability"?"availability":"services");}
    setScreen(service==="web"?"web":service==="call"?"call":service==="quote"?"quoteEntry":
     service==="bookings"?(bookingsNeedsSetup(principal)?"bookingsWizard":"bookings"):"videoEntry");
   }
