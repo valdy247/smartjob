@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import type {LucideIcon} from "lucide-react";
 import styles from "./page.module.css";
-import AgentSettingsEntry from "../AgentSettingsEntry";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
 import type {MessageKey} from "@/lib/i18n";
@@ -119,8 +118,6 @@ export default function AIAgentsPreview(){
  const description=(kind:Kind)=>translate(("agents.capabilityDetail."+kind) as MessageKey);
  const agentKind=(kind:Kind)=>translate(("agents.type."+kind) as MessageKey);
  const principal=visibleAgents.find(a=>a.id===selectedWorkspace?.primary_agent_id)||null;
- const proposal=principal?null:
-  (visibleAgents.find(a=>a.id===phone?.agentId)|| (visibleAgents.length===1?visibleAgents[0]:null));
  const designate=async(agent:Agent)=>{
   if(!selectedWorkspace||!agent.revision||agent.business_id!==selectedWorkspace.id)
    throw Error(translate("agents.notice.linkBusinessFirst"));
@@ -377,14 +374,7 @@ export default function AIAgentsPreview(){
      {authenticated?<>
      {screen!=="home"&&notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
      {screen==="home"?<>
-      <div className={styles.hero}>
-       <div className={styles.heroEyebrow}><span>{translate("agents.onePerBusiness")}</span><Sparkles size={22}/></div>
-       <h1>{translate("agents.oneAgent")}<br/>{translate("agents.allFunctions")}</h1>
-       <div className={styles.heroPills}><span>{principal?translate("agents.principalPrefix")+": "+principal.name:proposal?translate("agents.chooseAgent"):translate("agents.notConfigured")}</span></div>
-      </div>
       {notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
-      <div className={styles.sectionHeading}><div><h2>{translate("agents.capabilities")}</h2>
-       </div></div>
       <div className={styles.tiles}>
        {types.filter(type=>type.id!=="custom"&&type.id!=="operations").map(type=>{const title=label(type.id);
        const configured=principal?.setup||{};
@@ -435,13 +425,6 @@ export default function AIAgentsPreview(){
         <strong>Anuncio automático</strong><small>Tu agente prepara el anuncio</small>
        </button>
       </div>
-      <AgentSettingsEntry
-       label={language==="en"?"My agent":"Mi agente"}
-       name={principal?.name||proposal?.name||(visibleAgents.length?(language==="en"?"Choose your primary agent":"Elige tu agente principal"):(language==="en"?"Set up your agent":"Configura tu agente"))}
-       description={!selectedBusiness?(language==="en"?"Complete your business first":"Primero completa tu negocio"):principal?(inspectAgent(principal).requiredPassed?(language==="en"?"Edit identity and settings":"Editar identidad y configuración"):(language==="en"?"Complete setup":"Completar configuración")):(language==="en"?"Name, personality and capabilities":"Nombre, personalidad y funciones")}
-       href={agentProfileUrl(principal||proposal||undefined)}
-      />
-
      </>:null}
      {businessDialog?<BusinessProfileDialog businessId={selectedBusiness?.id} initialName={workspaces.find(w=>w.id===legacyId)?.name}
       legacy={selectedWorkspace?[]:unlinked} initialLegacyId={legacyId} onClose={()=>{setBusinessDialog(false);setPendingKind(null);}} onSaved={businessSaved}/>:null}
