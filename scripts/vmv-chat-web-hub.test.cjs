@@ -56,7 +56,7 @@ test("Settings can only select approved and available products, not live checkou
  assert.match(sim,/webPreview=body\.webPreview===true/);
  assert.match(sim,/selectedProducts/);
  assert.match(sim,/displayCatalog/);
- assert.match(sim,/Nunca puedes modificar existencias/);
+ assert.match(sim,/No cambies existencias/);
  assert.match(live,/webPreview:webMode/);
  assert.doesNotMatch(sim,/checkoutSession|createPaymentIntent/);
 });
