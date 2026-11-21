@@ -58,7 +58,7 @@ export function signupQuestions(data:SignupAnswer):SignupQuestion[]{
        o("15","15 min"),o("30","30 min"),o("45","45 min"),o("60","1 hora","1 hour"),
        o("90","90 min"),o("120","2 horas","2 hours"),o("180","3 horas","3 hours"),o("240","4 horas","4 hours")
       ]),
-     q("service_"+i+"_price","¿Qué precio tiene?","What's its price?","Servicios","number",true,12)
+     q("service_"+i+"_price","¿Precio en USD?","Price in USD?","Servicios","number",true,12)
     );
     if(i<10)out.push(q("service_"+i+"_more","¿Agregamos otro servicio?","Add another service?","Servicios","choice",false,3,[
      o("yes","Sí, otro","Yes, another"),o("no","Terminar servicios","Finish services")
@@ -73,7 +73,7 @@ export function signupQuestions(data:SignupAnswer):SignupQuestion[]{
     if(i>1&&data["product_"+(i-1)+"_more"]!=="yes")break;
     out.push(
      q("product_"+i+"_name","Nombre del producto "+i,"Product "+i+" name","Productos","text",false,120),
-     q("product_"+i+"_price","¿Qué precio tiene?","What's its price?","Productos","number",false,12)
+     q("product_"+i+"_price","¿Precio en USD?","Price in USD?","Productos","number",false,12)
     );
     if(i<10)out.push(q("product_"+i+"_more","¿Agregamos otro producto?","Add another product?","Productos","choice",false,3,[
      o("yes","Sí, otro","Yes, another"),o("no","Terminar productos","Finish products")
@@ -182,7 +182,11 @@ export function signupValidation(step:SignupQuestion,value:string,data:SignupAns
  if(step.kind==="number"&&(!/^\d+(?:\.\d{1,2})?$/.test(s)||Number(s)>1000000))return "Escribe un precio válido.";
  if(/^product_\d+_price$/.test(step.id)&&Number(s)<=0)return "Indica un precio mayor que cero.";
  if(step.kind==="url"&&!websiteAddress(s))return "Escribe un sitio web válido, por ejemplo minegocio.com.";
- if(step.id==="country_code"&&!/^[A-Za-z]{2}$/.test(s))return "Usa dos letras, por ejemplo FR.";
+ if(step.id==="country_code"){
+  if(!/^[A-Za-z]{2}$/.test(s))return "Usa dos letras, por ejemplo FR.";
+  const code=s.toUpperCase(),name=new Intl.DisplayNames(["en"],{type:"region"}).of(code);
+  if(!name||name===code||["EU","UN","ZZ","XK","XA","XB"].includes(code))return "Selecciona un país válido.";
+ }
  if(step.kind==="date"&&(!/^20\d{2}-\d{2}-\d{2}$/.test(s)||!Number.isFinite(Date.parse(s))||
   s<new Date().toISOString().slice(0,10)||s>new Date(Date.now()+89*86400000).toISOString().slice(0,10)))
   return "Selecciona una fecha de los próximos 90 días.";
