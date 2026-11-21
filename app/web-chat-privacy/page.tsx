@@ -36,6 +36,13 @@ export default function WebChatPrivacy(){
     Las cuotas de uso se eliminan por separado. Puedes cerrar el chat en cualquier momento y comunicarte
     directamente con el negocio para solicitar ayuda relacionada con una conversación.
    </section>
+   <section style={{background:"#fff",border:"1px solid #e9e0ef",padding:21,borderRadius:18,lineHeight:1.7,fontSize:13}}>
+    <h2 style={{fontSize:17,margin:"0 0 7px"}}>Datos de contacto (opcional)</h2>
+    Solo cuando completas el formulario y aceptas compartirlos, guardamos tu nombre y teléfono o correo
+    en los contactos del negocio. Los números de teléfono también pueden incorporarse a su agenda VMV,
+    que el negocio administra independientemente de los mensajes del chat y que no se borra
+    automáticamente al caducar la conversación. Puedes pedir al negocio que elimine tus datos de contacto.
+   </section>
    <section style={{background:"#edf8f3",border:"1px solid #d7eade",padding:18,borderRadius:16,
      display:"flex",gap:10,alignItems:"flex-start",color:"#4b7862",fontSize:12,lineHeight:1.65}}>
     <ShieldCheck size={23} style={{flexShrink:0}}/>
