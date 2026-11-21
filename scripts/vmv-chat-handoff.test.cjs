@@ -36,8 +36,8 @@ test("Fullscreen owner preview hides inventory/history and speaks to owner like 
  assert.match(css,/height:100dvh/);
  assert.match(css,/\.webComposer/);
  assert.match(parent,/screen==="test"&&testFromChatWeb/);
- assert.match(sim,/warm\+"%"/);
- assert.match(sim,/formal\+"%"/);
+ assert.match(sim,/warm\+"%: "/);
+ assert.match(sim,/formal\+"%: "/);
  assert.match(sim,/sin suponer que es el dueño ni evaluador/);
 });
 test("Contact capture is voluntary, owner-scoped, validated and visible in VMV Contacts",()=>{
