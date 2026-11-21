@@ -204,35 +204,65 @@ export async function completeSignup(db:SupabaseClient):Promise<{business:boolea
   .select("primary_agent_id").eq("id",workspaceId).eq("owner_id",owner).maybeSingle();
  if(workspaceError||!workspace)throw Error("No se pudo verificar el agente principal.");
  if(!workspace.primary_agent_id)await choosePrincipalAgent(workspaceId,blueprint.agentId,null);
- if(caps(data.capabilities||"").has("bookings")){
-  const count=Math.min(10,Math.max(0,Number(data.booking_count)||0));
-  const zone=["America/New_York","America/Chicago","America/Denver","America/Los_Angeles",
+ const enabledBookings=caps(data.capabilities||"").has("bookings");
+ const zone=["America/New_York","America/Chicago","America/Denver","America/Los_Angeles",
    "America/Phoenix","America/Anchorage","Pacific/Honolulu","America/Puerto_Rico"].includes(data.booking_zone)?
    data.booking_zone:"America/New_York";
-  for(let i=1;i<=count;i++){
-   const name=clean(data["service_"+i+"_name"],120);
-   const minutes=Number(data["service_"+i+"_duration"]);
-   if(!name||![15,30,45,60,90,120,180,240].includes(minutes))throw Error("Comprueba los servicios y sus duraciones.");
-   const rawPrice=clean(data["service_"+i+"_price"],12);
-   const price=rawPrice?Math.round(Number(rawPrice)*100):null;
-   if(price!==null&&(!Number.isInteger(price)||price<0||price>10000000))throw Error("Precio no válido.");
-   const {data:existing,error:checkError}=await db.from("vmv_ai_booking_services")
-    .select("id").eq("id",blueprint.serviceIds[i-1]).eq("owner_id",owner).maybeSingle();
-   if(checkError)throw Error("No se pudieron revisar tus servicios.");
+ const serviceCount=data.services_mode==="now"?10:
+  !data.services_mode?Math.min(10,Math.max(0,Number(data.booking_count)||0)):0;
+ for(let i=1;i<=serviceCount;i++){
+  const name=clean(data["service_"+i+"_name"],120);
+  if(!name)break;
+  const minutes=Number(data["service_"+i+"_duration"]);
+  if(![15,30,45,60,90,120,180,240].includes(minutes))throw Error("Comprueba la duración de "+name+".");
+  const rawPrice=clean(data["service_"+i+"_price"],12);
+  const price=rawPrice?Math.round(Number(rawPrice)*100):null;
+  if(price!==null&&(!Number.isInteger(price)||price<0||price>10000000))throw Error("Precio no válido.");
+  const {data:existing,error:checkError}=await db.from("vmv_ai_booking_services")
+   .select("id").eq("id",blueprint.serviceIds[i-1]).eq("owner_id",owner).maybeSingle();
+  if(checkError)throw Error("No se pudieron revisar tus servicios.");
+  if(!existing){
+   const {error:serviceError}=await db.from("vmv_ai_booking_services").insert({
+    id:blueprint.serviceIds[i-1],owner_id:owner,business_id:workspaceId,name,
+    description:clean(data["service_"+i+"_description"],500)||name,duration_minutes:minutes,
+    price_cents:price,approved:true,active:true,auto_confirm:enabledBookings&&data.booking_confirm==="yes",
+    time_zone:zone
+   });
+   if(serviceError){
+    const {data:retry}=await db.from("vmv_ai_booking_services").select("id")
+     .eq("id",blueprint.serviceIds[i-1]).eq("owner_id",owner).maybeSingle();
+    if(!retry)throw Error("No pudimos guardar "+name+": "+serviceError.message);
+   }
+  }
+ }
+ if(data.products_mode==="now"){
+  if(!blueprint.productIds||blueprint.productIds.length!==10)throw Error("No pudimos preparar los identificadores de productos.");
+  for(let i=1;i<=10;i++){
+   const name=clean(data["product_"+i+"_name"],120);
+   if(!name)break;
+   const price=Math.round(Number(data["product_"+i+"_price"])*100);
+   if(!Number.isInteger(price)||price<1||price>10000000)throw Error("Comprueba el precio de "+name+".");
+   const productId=blueprint.productIds[i-1];
+   const {data:existing,error:checkError}=await db.from("vmv_ai_catalog_items")
+    .select("id").eq("id",productId).eq("owner_id",owner).maybeSingle();
+   if(checkError)throw Error("No pudimos revisar tus productos.");
    if(!existing){
-    const {error:serviceError}=await db.from("vmv_ai_booking_services").insert({
-     id:blueprint.serviceIds[i-1],owner_id:owner,business_id:workspaceId,name,
-     description:clean(data["service_"+i+"_description"],500),duration_minutes:minutes,
-     price_cents:price,approved:true,active:true,auto_confirm:data.booking_confirm==="yes",
-     time_zone:zone
+    const {error:saveError}=await db.from("vmv_ai_catalog_items").insert({
+     id:productId,owner_id:owner,business_id:workspaceId,
+     name,sku:"REG-"+productId.slice(0,8).toUpperCase()+"-"+i,
+     description:clean(data["product_"+i+"_description"],500),
+     price_cents:price,currency:"usd",stock_mode:"manual",
+     approved:true,active:true,variants:[],extras:[]
     });
-    if(serviceError){
-     const {data:retry}=await db.from("vmv_ai_booking_services")
-      .select("id").eq("id",blueprint.serviceIds[i-1]).eq("owner_id",owner).maybeSingle();
-     if(!retry)throw Error("No pudimos guardar "+name+": "+serviceError.message);
+    if(saveError){
+     const {data:retry}=await db.from("vmv_ai_catalog_items").select("id")
+      .eq("id",productId).eq("owner_id",owner).maybeSingle();
+     if(!retry)throw Error("No pudimos guardar "+name+": "+saveError.message);
     }
    }
   }
+ }
+ if(enabledBookings){
   // The initial availability also comes from the owner, never from an AI guess.
   if(data.availability_mode==="weekly"&&data.hours_policy==="weekly"){
    const result=await db.rpc("vmv_ai_owner_seed_signup_availability",{
