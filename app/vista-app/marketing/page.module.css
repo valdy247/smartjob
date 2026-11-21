@@ -239,3 +239,6 @@
 .secondary{background:#eee2ff;color:#6742b0}
 .tabActive{background:#ede0ff;color:#6137a7}
 .page :is(button,input,textarea,select,a):focus-visible{outline-color:#9d78dd}
+
+/* Nested Marketing wizards use the same single back control in the page header. */
+button.back{appearance:none;border:0;background:transparent;cursor:pointer;padding:0;font:inherit;font-weight:800;min-height:40px}
