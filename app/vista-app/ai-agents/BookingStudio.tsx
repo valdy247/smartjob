@@ -6,6 +6,7 @@ import {getSupabase} from "@/lib/supabase";
 import {storeAgent,type PersistedAgent} from "./agentStore";
 import styles from "./CommerceStudio.module.css";
 import {useAgentHeaderBack} from "./AgentHeaderBack";
+import AvailabilityAgenda from "./AvailabilityAgenda";
 
 type Service={
  id:string;owner_id:string;business_id:string;name:string;description:string;
@@ -15,9 +16,9 @@ type Service={
 type Slot={id:string;service_id:string;business_id:string;start_at:string;end_at:string;capacity:number;active:boolean};
 type Booking={id:string;service_id:string;slot_id:string;agent_id:string;customer_name:string;status:string;source:string;created_at:string};
 type HumanRequest={id:string;owner_id:string;agent_id:string;status:"new"|"reviewed"|"closed";summary:string;created_at:string};
-export type BookingTab="services"|"slots"|"bookings"|"requests"|"permissions";
+export type BookingTab="services"|"slots"|"availability"|"bookings"|"requests"|"permissions";
 type NavTab="services"|"bookings"|"requests";
-type View="home"|"add"|"list"|"slots"|"permissions";
+type View="home"|"add"|"list"|"slots"|"availability"|"permissions";
 type Draft={name:string;description:string;duration_minutes:number;price:string;
  approved:boolean;active:boolean;auto_confirm:boolean;time_zone:string};
 const empty:Draft={name:"",description:"",duration_minutes:30,price:"",approved:false,active:true,
@@ -37,7 +38,7 @@ export default function BookingStudio({agent,onClose,onAgentUpdated,initialTab="
 }){
  const [current,setCurrent]=useState(agent);
  const [tab,setTab]=useState<NavTab>(initialTab==="bookings"?"bookings":initialTab==="requests"?"requests":"services");
- const [view,setView]=useState<View>(initialTab==="slots"?"slots":initialTab==="permissions"?"permissions":"home");
+ const [view,setView]=useState<View>(initialTab==="slots"?"slots":initialTab==="availability"?"availability":initialTab==="permissions"?"permissions":"home");
  const [services,setServices]=useState<Service[]>([]);
  const [slots,setSlots]=useState<Slot[]>([]);
  const [bookings,setBookings]=useState<Booking[]>([]);
@@ -266,6 +267,10 @@ export default function BookingStudio({agent,onClose,onAgentUpdated,initialTab="
      <span className={styles.actionIcon}><ClipboardList size={24}/></span>
      <strong>Mis servicios</strong><small>{services.length} guardado(s)</small>
     </button>
+    <button type="button" className={styles.actionCard} onClick={()=>{setView("availability");setNotice("");}}>
+     <span className={styles.actionIcon}><CalendarClock size={24}/></span>
+     <strong>Mi disponibilidad</strong><small>Días y horarios</small>
+    </button>
    </div>:view==="add"?<>
     {!useSharedHeader?<button type="button" className={styles.subBack}
      onClick={()=>{setView(editing?"list":"home");setEditing(null);}}><ArrowLeft size={16}/> Servicios</button>:null}
@@ -310,7 +315,9 @@ export default function BookingStudio({agent,onClose,onAgentUpdated,initialTab="
       <button type="button" onClick={()=>beginEdit(item)}><Pencil size={14}/> Editar</button>
      </div>
     </article>)}</div>}
-   </>:view==="slots"?<>
+   </>:view==="availability"?<AvailabilityAgenda business={workspace} owner={current.owner_id}
+    services={services} onBack={()=>setView("home")} onAddService={beginAdd}/>:
+   view==="slots"?<>
     {!useSharedHeader?<button type="button" className={styles.subBack} onClick={()=>setView("list")}>
      <ArrowLeft size={16}/> Mis servicios</button>:null}
     <div className={styles.heading}><h2>Horarios disponibles</h2></div>
