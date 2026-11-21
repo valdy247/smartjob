@@ -8,7 +8,7 @@ import css from "./ViralRadar.module.css";
 
 type Scan={id:string;query:string;days:number;status:string;items:RadarVideo[];
  ideas:RadarIdea[];createdAt:string;failure:string|null};
-type Props={niche:string;en:boolean;selectedSource:string;onChoose:(idea:RadarIdea)=>void};
+type Props={niche:string;en:boolean;selectedSource:string;onChoose:(idea:RadarIdea,scanId:string)=>void};
 const compact=(n:number)=>new Intl.NumberFormat("es-US",{notation:"compact",maximumFractionDigits:1}).format(n);
 const errors:Record<string,[string,string]>={
  radar_youtube_key_missing:["Falta conectar YouTube Data API en Vercel.","Connect YouTube Data API in Vercel."],
@@ -157,7 +157,7 @@ export default function ViralRadar({niche,en,selectedSource,onChoose}:Props){
       <strong>{idea.hook}</strong>
       <p>{idea.concept}</p>
       <small>{idea.reason}</small>
-      <button type="button" onClick={()=>onChoose(idea)}><CheckCircle2 size={16}/>{L("Usar esta idea","Use this idea")}</button>
+      <button type="button" onClick={()=>onChoose(idea,scan.id)}><CheckCircle2 size={16}/>{L("Usar esta idea","Use this idea")}</button>
      </div>)}
     </div>:null}
    </>:null}
