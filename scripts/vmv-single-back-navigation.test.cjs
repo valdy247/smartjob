@@ -38,7 +38,7 @@ test('video generator and marketing use page-header back for nested wizard steps
  const wizard=read('app/vista-app/video-generator/AutopilotWizard.tsx');
  assert.match(video,/registerHeaderBack=\{registerPilotBack\}/);
  assert.match(video,/pilotBack\.current\(\)/);
- assert.match(wizard,/registerHeaderBack\?\<\(callback/);
+ assert.ok(wizard.includes("registerHeaderBack?:(callback:"));
  assert.match(wizard,/!registerHeaderBack\?<button/);
  const marketing=read('app/vista-app/marketing/page.tsx');
  const actions=read('app/vista-app/marketing/MarketingActionCenter.tsx');
