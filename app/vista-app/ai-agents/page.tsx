@@ -45,7 +45,7 @@ const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string
  {id:"custom",title:"A mi medida",sub:"Tu propio objetivo",Icon:WandSparkles,bg:"#e7dfff",fg:"#6b45bb",purpose:"Ayudar con el propósito personalizado del negocio."}
 ];
 function blank(kind:Kind):AgentDraft{
- const item=types.find(t=>t.id===kind)||types[6];
+ const item=types.find(t=>t.id===kind)||types.find(t=>t.id==="custom")!;
  return {kind,name:kind==="custom"?"Mi agente":"Agente de "+item.title,
   purpose:item.purpose,personality:"Amable y profesional",language:"Español",
   instructions:"",knowledge:"",setup:{}};
