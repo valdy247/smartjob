@@ -2,6 +2,7 @@
 import {useEffect,useState} from "react";
 import {ArrowLeft,ArrowRight,Bot,Check,Film,ImagePlus,LoaderCircle,Pencil,RefreshCw,Sparkles,WandSparkles} from "lucide-react";
 import {IMAGE_PROMPT_LIMIT} from "@/lib/vmv-video-generator/image-prompt";
+import VideoPromptAssistant from "@/components/VideoPromptAssistant";
 import VideoCreationResult,{mediaHeaders} from "./VideoCreationResult";
 import {getSupabase} from "@/lib/supabase";
 import theme from "./AgentServiceFlow.module.css";
@@ -386,9 +387,9 @@ function VideoWizardSession({onClose,onRestart}:{onClose:()=>void;onRestart:()=>
       onChange={e=>setImageDirection(e.target.value)}
       placeholder="Describe el sujeto, el fondo, la luz y los detalles que quieres conservar…"/>
      <small>{imageDirection.length.toLocaleString("es-US")} / 12,000</small></label>
-    {imageDirection.trim().length>0&&<button type="button" className={base.option+" "+theme.agentOutline}
-     disabled={Boolean(busy)||imageDirection.trim().length<3} onClick={()=>void generateScript(true)}>
-     <Sparkles size={17}/>{busy==="script"?"Mejorando…":"Mejorar con IA"}</button>}
+    <VideoPromptAssistant value={imageDirection} onApply={value=>{setImageDirection(value);setImageCandidate("");}}
+     kind="image" maxLength={IMAGE_PROMPT_LIMIT} disabled={Boolean(busy)}
+     context={{visual:style,purpose:"Create an image preserving the original subject"}}/>
     <button type="button" className={base.primary+" "+theme.agentButton}
      onClick={()=>void generateReference()} disabled={Boolean(busy)||imageDirection.trim().length<3}>
      {busy==="image"?<LoaderCircle size={17} className={base.spin}/>:<WandSparkles size={17}/>}
@@ -414,8 +415,10 @@ function VideoWizardSession({onClose,onRestart}:{onClose:()=>void;onRestart:()=>
    <label className={base.field}>{mode==="image"?"¿Cómo debe moverse la imagen?":"Tu prompt"}
     <textarea rows={standalone?7:5} maxLength={standalone?IMAGE_PROMPT_LIMIT:1000} value={prompt} disabled={Boolean(busy)} onChange={e=>setPrompt(e.target.value)}
      placeholder={standalone?"Describe el sujeto, el fondo y el estilo…":mode==="image"?"Describe el movimiento del sujeto o de la cámara…":"Describe la escena, la acción y el ambiente…"}/></label>
-   {prompt.trim().length>0&&<button className={base.option} disabled={Boolean(busy)||prompt.trim().length<3} onClick={()=>void generateScript()}>
-    <Sparkles size={17}/>{busy==="script"?"Mejorando…":"Mejorar con IA"}</button>}
+   <VideoPromptAssistant value={prompt} onApply={setPrompt}
+    kind={standalone?"image":"video"} maxLength={standalone?IMAGE_PROMPT_LIMIT:1000}
+    disabled={Boolean(busy)}
+    context={{visual:style,purpose:mode==="image"?"Preserve the exact uploaded picture's main subject and species. Only improve safe camera movement.":"Original video scene",duration}}/>
   </div>}
   {!loading&&owner&&stage==="format"&&<div className={base.panel}>{standalone?<><span className={styles.label}>Tamaño</span>{sizeOptions}<span className={styles.label}>Calidad</span>{qualityOptions}</>:<>
    <span className={styles.label}>Estilo del video</span>
