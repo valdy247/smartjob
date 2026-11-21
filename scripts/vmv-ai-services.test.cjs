@@ -220,7 +220,8 @@ test("Booking wizard opens live services, slots and requests directly and does n
  assert.match(wizard,/vmv_ai_bookings/);
  assert.match(wizard,/aria-pressed=\{businessConfirmed\}/);
  assert.match(page,/initialTab=\{bookingTab\}/);
- assert.match(page,/initialStep=\{resumeBooking\?"goal":"business"\}/);
+ assert.match(page,/initialStep="business"/);
+ assert.match(page,/bookingsNeedsSetup/);
  assert.match(studio,/initialTab\?:BookingTab/);
  assert.match(studio,/setTab\("services"\)/);
  assert.match(studio,/eligibleServices=services\.filter\(s=>s\.active&&s\.approved\)/);
