@@ -3,6 +3,8 @@ import {useEffect,useRef,useState,type FormEvent} from "react";
 import {ArrowLeft,Bot,LoaderCircle,MessageCircle,Send,ShieldCheck} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {setAgentCatalogReadAccess,type PersistedAgent} from "./agentStore";
+import {listCatalog,prepareTestOrder,confirmTestOrder,createTestCheckout,
+ type CatalogItem,type TestOrder,formatUsd} from "./commerceStore";
 import styles from "./AgentLiveTest.module.css";
 import {useAgentHeaderBack} from "./AgentHeaderBack";
 
@@ -15,6 +17,9 @@ export default function AgentLiveTest({agent,onClose,onEdit,webMode=false,onAgen
  const useSharedHeader=useAgentHeaderBack(onClose);
  const [message,setMessage]=useState("");
  const [ownerFirstName,setOwnerFirstName]=useState("");
+ const [purchaseCatalog,setPurchaseCatalog]=useState<CatalogItem[]>([]);
+ const [purchaseItem,setPurchaseItem]=useState<CatalogItem|null>(null);
+ const [purchasing,setPurchasing]=useState(false);
  const [conversations,setConversations]=useState<Conversation[]>([]);
  const [current,setCurrent]=useState<string|null>(null);
  const [messages,setMessages]=useState<Item[]>([]);
@@ -24,6 +29,22 @@ export default function AgentLiveTest({agent,onClose,onEdit,webMode=false,onAgen
  const [notice,setNotice]=useState("");
  const listBottom=useRef<HTMLDivElement|null>(null);
  useEffect(()=>{listBottom.current?.scrollIntoView({behavior:"smooth",block:"nearest"});},[messages.length]);
+ useEffect(()=>{
+  if(!webMode||agent.setup.cap_catalog!=="Sí"||agent.setup.cap_sales!=="Sí")return;
+  let alive=true;
+  void (async()=>{
+   const db=getSupabase();if(!db)return;
+   const {data:settings}=await db.from("vmv_web_chat_settings")
+    .select("sales_enabled,sales_item_ids").eq("agent_id",agent.id).eq("owner_id",agent.owner_id).maybeSingle();
+   if(!settings?.sales_enabled||!Array.isArray(settings.sales_item_ids))return;
+   const rows=await listCatalog(agent.business_id);
+   if(alive)setPurchaseCatalog(rows.filter(row=>settings.sales_item_ids.includes(row.id)&&
+    row.active&&row.approved&&row.price_cents>0&&row.variants?.length===0&&
+    row.extras?.length===0&&(row.stock_mode==="unlimited"||
+     row.stock_mode==="tracked"&&Number(row.available_qty)>0)));
+  })().catch(()=>{if(alive)setPurchaseCatalog([]);});
+  return()=>{alive=false;};
+ },[webMode,agent.id,agent.business_id,agent.owner_id,agent.setup.cap_catalog,agent.setup.cap_sales]);
  useEffect(()=>{
   let live=true;
   const init=async()=>{
@@ -105,9 +126,30 @@ export default function AgentLiveTest({agent,onClose,onEdit,webMode=false,onAgen
    try{payload=await response.json();}catch{}
    if(!response.ok||!payload.reply)throw Error(payload.error||"El agente no respondió; intenta nuevamente.");
    await readMessages(id);
+   if(webMode&&/(comprar|compra|checkout|pay|buy|purchase)/i.test(prompt)){
+    const matching=purchaseCatalog.filter(item=>prompt.toLocaleLowerCase().includes(item.name.toLocaleLowerCase()));
+    const chosen=matching.length===1?matching[0]:matching.length===0&&purchaseCatalog.length===1?purchaseCatalog[0]:null;
+    if(chosen)setPurchaseItem(chosen);
+   }
   }catch(e){
    setNotice(e instanceof Error?e.message:"No se pudo completar la prueba.");
   }finally{setSending(false);}
+ }
+ async function testPurchase(){
+  if(!purchaseItem||purchasing)return;
+  setPurchasing(true);setNotice("");
+  try{
+   const id=await prepareTestOrder(agent,purchaseItem,1);
+   await confirmTestOrder(id);
+   const db=getSupabase();if(!db)throw Error("Sin conexión.");
+   const {data,error}=await db.from("vmv_ai_orders").select("*")
+    .eq("id",id).eq("owner_id",agent.owner_id).eq("mode","test").single();
+   if(error||!data)throw Error("No se pudo verificar el pedido de prueba.");
+   const url=await createTestCheckout(data as TestOrder);
+   window.open(url,"_blank","noopener,noreferrer");
+   setNotice("Se abrió un checkout de Stripe en modo prueba. No se realizaron cobros reales.");
+  }catch(e){setNotice(e instanceof Error?e.message:"No fue posible iniciar el pedido de prueba.");}
+  finally{setPurchasing(false);}
  }
  if(webMode)return <section className={styles.webFullscreen} aria-label="Probar agente como cliente">
   {!useSharedHeader?<button type="button" className={styles.webBack} onClick={onClose}
@@ -121,6 +163,12 @@ export default function AgentLiveTest({agent,onClose,onEdit,webMode=false,onAgen
    </div>
    {messages.map(item=><div key={item.id}
     className={item.role==="user"?styles.webCustomer:styles.webAgent}>{item.content}</div>)}
+   {purchaseItem?<div className={styles.webPurchase}>
+    <strong>{purchaseItem.name} · {formatUsd(purchaseItem.price_cents)}</strong>
+    <button type="button" disabled={purchasing} onClick={()=>void testPurchase()}>
+     {purchasing?"Preparando…":"Comprar en modo prueba"}</button>
+    <small>Solo Stripe TEST. Nunca se cobra dinero real desde esta prueba.</small>
+   </div>:null}
    {sending?<div className={styles.webTyping}><LoaderCircle size={15} className={styles.webSpin}/> Escribiendo…</div>:null}
    {loading?<div className={styles.webTyping}>Preparando chat…</div>:null}
    {notice?<div className={styles.webError} role="alert">{notice}</div>:null}
