@@ -119,7 +119,15 @@ export default function VMVMobilePreview(){
  const [lookupBusy,setLookupBusy]=useState<string|null>(null);
  const [callbackMessage,setCallbackMessage]=useState("");
  useEffect(()=>{setDraft(settings?{...settings,caller_language:settings.desired_language===settings.caller_language?(settings.desired_language==="en"?"es":"en"):settings.caller_language}:null);},[settings]);
- const ready=phase==="signed_in"&&!!profile;
+ // Email verification may open Home directly; finish the canonical onboarding first.
+ useEffect(()=>{
+  if(phase!=="signed_in"||!user)return;
+  if(user.user_metadata?.vmv_signup_v2&&!user.user_metadata?.vmv_signup_v2_completed){
+   window.location.replace("/registro?resume=1");
+  }
+ },[phase,user?.id,user?.user_metadata?.vmv_signup_v2_completed]);
+ const ready=phase==="signed_in"&&!!profile&&
+  !(user?.user_metadata?.vmv_signup_v2&&!user.user_metadata?.vmv_signup_v2_completed);
  useEffect(()=>{
   if(!ready||tab!=="account")return;
   const target=new URLSearchParams(window.location.search).get("settings");
