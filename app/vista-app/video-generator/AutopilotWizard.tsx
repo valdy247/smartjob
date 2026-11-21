@@ -9,6 +9,7 @@ import {
 import type {LucideIcon} from "lucide-react";
 import css from "./AutopilotWizard.module.css";
 import ViralRadar from "./ViralRadar";
+import VideoPromptAssistant from "@/components/VideoPromptAssistant";
 
 export type AutopilotPlan={
  id:string;niche:string;audience:string;goal:string;style:string;frequency:number;
@@ -137,9 +138,15 @@ export default function AutopilotWizard({initial,en,busy,onSave,onExit,onLibrary
      aria-pressed={customNiche} onClick={()=>{setCustomNiche(true);patch({niche:customNiche?plan.niche:"",creative_seed:"",research_video_id:"",research_scan_id:null});}}>
      <span className={css.iconBubble}><WandSparkles size={25}/></span><strong>{L("Otro tema","Other topic")}</strong>
     </button>
-    {customNiche?<label className={css.inlineField}>{L("Tu tema","Your topic")}
-     <input autoFocus value={plan.niche} maxLength={160} placeholder={L("Ej. Jardinería","e.g. Gardening")}
-      onChange={e=>patch({niche:e.target.value,creative_seed:"",research_video_id:"",research_scan_id:null})}/></label>:null}
+    {customNiche?<div className={css.inlineField}>
+     <label htmlFor="vmv-pilot-topic">{L("Tu tema","Your topic")}</label>
+     <input id="vmv-pilot-topic" autoFocus value={plan.niche} maxLength={160} placeholder={L("Ej. Jardinería","e.g. Gardening")}
+      onChange={e=>patch({niche:e.target.value,creative_seed:"",research_video_id:"",research_scan_id:null})}/>
+     <VideoPromptAssistant value={plan.niche} onApply={value=>patch({
+      niche:value,creative_seed:"",research_video_id:"",research_scan_id:null
+     })} kind="niche" maxLength={160} en={en} disabled={busy}
+      context={{purpose:"Content planning niche and video topic"}}/>
+    </div>:null}
    </div>
     {plan.niche.trim().length>=3?<ViralRadar niche={plan.niche} en={en}
      selectedSource={plan.research_video_id}
