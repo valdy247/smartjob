@@ -14,6 +14,7 @@ const isoDay=(zone:string)=>new Intl.DateTimeFormat("en-CA",{timeZone:zone,year:
 const advance=(day:string,n:number)=>new Date(Date.parse(day+"T12:00:00Z")+n*86400000).toISOString().slice(0,10);
 const minutes=(s:string)=>{const [h,m]=s.slice(0,5).split(":").map(Number);return h*60+m;};
 const displayTime=(n:number)=>String(Math.floor(n/60)).padStart(2,"0")+":"+String(n%60).padStart(2,"0");
+const shortTime=(s:string)=>s.slice(0,5);
 const localClock=(iso:string,zone:string)=>{
  const parts=new Intl.DateTimeFormat("en-CA",{timeZone:zone,hour12:false,
   year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}).formatToParts(new Date(iso));
