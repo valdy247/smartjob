@@ -109,7 +109,8 @@ export default async function VMVPublishedPage({params}:Props){
    __html:JSON.stringify(organization).replace(/</g,"\\u003c")
   }}/>:null}
   <Render config={builderConfig} data={data}/>
-  {showForm&&rootData.chatMode==="inbox"?<WebChatLauncher slug={slug} business={siteName} categoryId={result.page.category_id||""} services={services}/>:null}
+  {part==="home"?<WebChatLauncher slug={slug} siteKind="builder" fallbackMode={showForm&&rootData.chatMode==="inbox"?"inbox":"none"}
+   business={siteName} categoryId={result.page.category_id||""} services={services}/>:null}
   {showForm?<section className="vmv-site-inquiry" id="solicitud" aria-label="Enviar solicitud al negocio">
    <small>CONTACTA CON NOSOTROS</small>
    <h2>¿Qué necesitas?</h2>
