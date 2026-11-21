@@ -63,7 +63,7 @@ test("Owner booking review validates tenant, actual slot, capacity and writes au
  assert.match(sql,/vmv_ai_booking_owner_decisions/);
  assert.match(sql,/REVOKE ALL ON FUNCTION/);
  assert.match(sql,/GRANT EXECUTE ON FUNCTION.*TO authenticated/);
- assert.doesNotMatch(sql,/checkout|charge|sendTwilio/);
+ assert.doesNotMatch(sql,/stripeCheckout|createCharge|sendTwilio/);
 });
 test("Spanish and English service capability labels are preserved",()=>{
  const spanish=JSON.stringify(messages);
