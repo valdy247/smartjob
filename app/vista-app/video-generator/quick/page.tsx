@@ -6,6 +6,7 @@ import {ArrowLeft,ArrowRight,BookOpen,CheckCircle2,Clapperboard,Download,Film,
  Clock3,Smartphone,Monitor,VolumeX} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import VMVAuthGateway from "@/components/VMVAuthGateway";
+import VideoPromptAssistant from "@/components/VideoPromptAssistant";
 import {saveQuickVideo} from "@/lib/vmv-video-quick-library";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import css from "./page.module.css";
@@ -306,9 +307,18 @@ export default function QuickVideoPage(){
    setWorking("");setProgress("");
   }
  };
- const updateScene=(index:number,key:"speech"|"caption",value:string)=>{
+ const updateScene=(index:number,key:"speech"|"caption"|"imagePrompt",value:string)=>{
+  if(scenes[index]?.[key]===value)return;
   setScenes(prev=>prev.map((s,i)=>i===index?{...s,[key]:value}:s));
-  setAudio(null);if(stage==="ready")setStage("story");
+  if(key==="speech")setAudio(null);
+  if(key==="imagePrompt"){
+   const oldImage=images[index];
+   setImages(prev=>{const next={...prev};delete next[index];return next;});
+   if(oldImage){mediaRef.current=mediaRef.current.filter(url=>url!==oldImage);
+    URL.revokeObjectURL(oldImage);}
+   setApproved(false);
+  }
+  if(stage==="ready")setStage("story");
   if(resultRef.current)URL.revokeObjectURL(resultRef.current);
   resultRef.current="";setVideoUrl("");setSavedProject("");setSaveError("");
  };
@@ -374,7 +384,12 @@ export default function QuickVideoPage(){
        className={css.topic} rows={4} maxLength={220} value={topic}
        placeholder={L("Ej. Un stickman explica 3 errores al emprender","E.g. A stick figure explains 3 business mistakes")}
        onChange={e=>setTopic(e.target.value)}/>
-      <span className={css.counter}>{topic.length}/220</span>
+      <div className={css.promptActions}>
+       <VideoPromptAssistant value={topic} onApply={setTopic} kind="topic"
+        maxLength={220} en={en} disabled={Boolean(working)}
+        context={{visual,purpose:kind==="promo"?"promotion":"educational facts",duration:seconds}}/>
+       <span className={css.counter}>{topic.length}/220</span>
+      </div>
      </div>:null}
      {step===2?<div className={css.settingsStack}>
       <div className={css.settingsGroup}><strong>{L("Duración","Duration")}</strong>
@@ -435,8 +450,24 @@ export default function QuickVideoPage(){
      {scenes.map((s,i)=><article key={i} className={css.frame}>
       {images[i]?<img src={images[i]} alt={L("Escena ","Scene ")+(i+1)}/>:<div className={css.frameEmpty}><ImageIcon size={24}/><span>{i+1}</span></div>}
       <div className={css.frameText}><strong>{s.caption}</strong>
-       <details><summary>{L("Editar voz","Edit narration")}</summary>
+       <details><summary>{L("Editar narración","Edit narration")}</summary>
         <textarea rows={3} value={s.speech} maxLength={240} onChange={e=>updateScene(i,"speech",e.target.value)}/>
+        <VideoPromptAssistant value={s.speech} onApply={value=>updateScene(i,"speech",value)}
+         kind="narration" maxLength={240} en={en} disabled={Boolean(working)}
+         context={{visual,purpose:topic,duration:seconds}}/>
+       </details>
+       <details><summary>{L("Editar texto en pantalla","Edit on-screen text")}</summary>
+        <textarea rows={2} value={s.caption} maxLength={60} onChange={e=>updateScene(i,"caption",e.target.value)}/>
+        <VideoPromptAssistant value={s.caption} onApply={value=>updateScene(i,"caption",value)}
+         kind="overlay" maxLength={60} en={en} disabled={Boolean(working)}
+         context={{visual,purpose:topic}}/>
+       </details>
+       <details><summary>{L("Editar imagen / prompt","Edit image prompt")}</summary>
+        <textarea rows={4} value={s.imagePrompt} maxLength={900}
+         onChange={e=>updateScene(i,"imagePrompt",e.target.value)}/>
+        <VideoPromptAssistant value={s.imagePrompt} onApply={value=>updateScene(i,"imagePrompt",value)}
+         kind="scene_image" maxLength={900} en={en} disabled={Boolean(working)}
+         context={{visual,purpose:topic}}/>
        </details>
       </div>
      </article>)}
