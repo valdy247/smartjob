@@ -406,7 +406,7 @@ export default function AIAgentsPreview(){
      <div className={styles.appTitle}><small>VMV BUSINESS</small><strong>AI Agents<span>.</span></strong></div>
      <InterfaceLanguagePicker compact/>
     </div>:null}
-    <div className={immersive?styles.adsScroller:styles.scroller}>
+    <div className={immersive?screen==="test"&&testFromChatWeb?styles.chatWebScroller:styles.adsScroller:styles.scroller}>
      {loading?<div className={styles.info} role="status">{translate("agents.loadingWorkspace")}</div>:null}
      {!loading&&!authenticated?<div className={styles.info} role="alert">
       <ShieldCheck size={17}/> {translate("agents.accountError")}
