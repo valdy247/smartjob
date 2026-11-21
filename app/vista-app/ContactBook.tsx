@@ -6,6 +6,7 @@ import {CountryDialPicker} from "@/components/CountryDialPicker";
 import {contactPhoneE164,splitContactPhone} from "@/lib/contact-phone";
 import styles from "./vista-app.module.css";
 
+type WebLead={id:string;name:string;phone_e164:string|null;email:string|null;created_at:string};
 export type VMVContact={
  id:string;owner_id:string;name:string;phone_e164:string;notes:string;created_at:string;updated_at:string;
 };
@@ -22,6 +23,7 @@ export default function ContactBook({client,ownerId,initialPhone="",startInForm=
  client:SupabaseClient;ownerId:string;initialPhone?:string;startInForm?:boolean;embedded?:boolean;onClose:()=>void;onCall?:(phone:string,name:string)=>void
 }){
  const [entries,setEntries]=useState<VMVContact[]>([]);
+ const [webLeads,setWebLeads]=useState<WebLead[]>([]);
  const [loading,setLoading]=useState(true);
  const [saving,setSaving]=useState(false);
  const [notice,setNotice]=useState("");
@@ -40,15 +42,24 @@ export default function ContactBook({client,ownerId,initialPhone="",startInForm=
   try{
    const {data:identity,error:authError}=await client.auth.getUser();
    if(authError||identity.user?.id!==ownerId)throw new Error("Tu sesión no está disponible. Vuelve a entrar.");
-   const {data,error:readError}=await client.from("smartjob_contacts")
-    .select("id,owner_id,name,phone_e164,notes,created_at,updated_at")
-    .eq("owner_id",ownerId).order("name",{ascending:true}).limit(MAX_CONTACTS);
-   if(readError)throw readError;
-   setEntries((data||[]) as VMVContact[]);
+   const [saved,leads]=await Promise.all([
+    client.from("smartjob_contacts").select("id,owner_id,name,phone_e164,notes,created_at,updated_at")
+     .eq("owner_id",ownerId).order("name",{ascending:true}).limit(MAX_CONTACTS),
+    client.from("vmv_web_chat_leads").select("id,name,phone_e164,email,created_at")
+     .eq("owner_id",ownerId).order("created_at",{ascending:false}).limit(80)
+   ]);
+   if(saved.error||leads.error)throw saved.error||leads.error;
+   setEntries((saved.data||[]) as VMVContact[]);
+   setWebLeads((leads.data||[]) as WebLead[]);
   }catch(e){setError((e as Error)?.message||"No se pudieron cargar los contactos.");}
   finally{setLoading(false);}
  },[client,ownerId]);
  useEffect(()=>{void load();},[load]);
+ const webFiltered=useMemo(()=>webLeads.filter(item=>{
+  const q=search.trim().toLocaleLowerCase("es-US");
+  return !q||item.name.toLocaleLowerCase("es-US").includes(q)||
+   (item.email||"").toLocaleLowerCase("es-US").includes(q)||(item.phone_e164||"").includes(q);
+ }),[webLeads,search]);
  const filtered=useMemo(()=>{
   const q=search.trim().toLocaleLowerCase("es-US");
   if(!q)return entries;
@@ -162,6 +173,17 @@ export default function ContactBook({client,ownerId,initialPhone="",startInForm=
      <p>{entries.length?"Prueba otro nombre o teléfono.":"Añade tu primer contacto para identificar a tus clientes."}</p>
      {!entries.length?<button type="button" className={styles.mainAction} onClick={startNew}><Plus size={17}/> Añadir contacto</button>:null}
     </div>}
+   {webFiltered.length>0?<div className={styles.smartCard} style={{display:"grid",gap:9}}>
+    <strong style={{fontSize:13,color:"#7753a2"}}>Contactos Chat web · {webFiltered.length}</strong>
+    {webFiltered.map(item=><div key={item.id} style={{display:"flex",gap:10,alignItems:"center",padding:"8px 0"}}>
+     <span className={styles.contactAvatar}><UserRound size={17}/></span>
+     <div style={{display:"grid",gap:4,flex:1,minWidth:0}}>
+      <strong style={{fontSize:12}}>{item.name}</strong>
+      {item.email?<a href={"mailto:"+item.email} style={{color:"#8555b6",fontSize:11,overflowWrap:"anywhere"}}>{item.email}</a>:null}
+      {item.phone_e164?<a href={"tel:"+item.phone_e164} style={{color:"#8555b6",fontSize:11}}>{item.phone_e164}</a>:null}
+     </div>
+    </div>)}
+   </div>:null}
    {entries.length>=MAX_CONTACTS?<p className={styles.contactHelper}>Mostrando los primeros {MAX_CONTACTS} contactos. Usa la búsqueda o el panel web para gestionar más.</p>:null}
   </>}
   {editing&&formOpen?<div className={styles.contactDanger}>
