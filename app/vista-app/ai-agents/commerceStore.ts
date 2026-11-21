@@ -12,6 +12,8 @@ export type TestOrder={
  id:string;order_no:number;owner_id:string;business_id:string;agent_id:string;status:string;
  payment_status:string;subtotal_cents:number;total_cents:number;currency:string;mode:string;
  created_at:string;idempotency_key:string;
+ customer_name?:string|null;customer_phone?:string|null;customer_email?:string|null;
+ lines?:{name:string;qty:number;unit_cents:number}[];
 };
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 async function current(){
@@ -87,9 +89,26 @@ export async function listTestOrders(businessId:string):Promise<TestOrder[]>{
  if(!uuid.test(businessId))throw Error("Selecciona el negocio correcto.");
  const {db,owner}=await current();
  const {data,error}=await db.from("vmv_ai_orders").select("*")
-  .eq("owner_id",owner).eq("business_id",businessId).eq("mode","test").order("created_at",{ascending:false}).limit(30);
+  .eq("owner_id",owner).eq("business_id",businessId).order("created_at",{ascending:false}).limit(40);
  if(error)throw Error("No se pudo consultar el historial de pedidos.");
- return (data||[]) as TestOrder[];
+ const orders=(data||[]) as TestOrder[];
+ if(!orders.length)return [];
+ const {data:lines,error:lineError}=await db.from("vmv_ai_order_lines")
+  .select("order_id,name,qty,unit_cents").eq("owner_id",owner)
+  .in("order_id",orders.map(o=>o.id)).limit(160);
+ if(lineError)throw Error("No se pudieron cargar los productos de los pedidos.");
+ return orders.map(order=>({...order,lines:(lines||[])
+  .filter(line=>line.order_id===order.id).map(line=>({
+   name:line.name,qty:line.qty,unit_cents:line.unit_cents
+  }))}));
+}
+export async function reviewChatOrder(id:string,decision:"awaiting_payment"|"cancelled"){
+ if(!uuid.test(id))throw Error("Pedido inválido.");
+ const {db}=await current();
+ const {data,error}=await db.rpc("vmv_ai_owner_review_chat_order",{
+  p_order:id,p_decision:decision
+ });
+ if(error||data!==true)throw Error("No se pudo actualizar el pedido. Revisa existencias y permisos.");
 }
 export async function prepareTestOrder(agent:PersistedAgent,item:CatalogItem,quantity:number){
  const {db,owner}=await current();
