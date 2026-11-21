@@ -3,12 +3,13 @@ import {useEffect,useState} from "react";
 import {Check,LoaderCircle,Package,Pencil,Plus,RefreshCw,X} from "lucide-react";
 import {listCatalog,saveCatalogItem,formatUsd,type CatalogItem} from "./commerceStore";
 import styles from "./AgentWebCatalogEditor.module.css";
+import BuilderImageField from "@/app/web-studio/BuilderImageField";
 
 type Form={
- name:string;sku:string;description:string;price:string;
+ name:string;sku:string;description:string;price:string;image:string;
  stock_mode:CatalogItem["stock_mode"];available_qty:string;approved:boolean;active:boolean;
 };
-const blank:Form={name:"",sku:"",description:"",price:"",stock_mode:"manual",
+const blank:Form={name:"",sku:"",description:"",price:"",image:"",stock_mode:"manual",
  available_qty:"",approved:false,active:true};
 export default function AgentWebCatalogEditor({workspaceId,onChange}:{
  workspaceId:string;onChange:(items:CatalogItem[])=>void;
@@ -32,7 +33,7 @@ export default function AgentWebCatalogEditor({workspaceId,onChange}:{
  },[workspaceId]);
  const open=(item:CatalogItem|null)=>{
   setEditing(item);setForm(item?{name:item.name,sku:item.sku,
-   description:item.description||"",price:(item.price_cents/100).toFixed(2),
+   description:item.description||"",price:(item.price_cents/100).toFixed(2),image:item.image_path||"",
    stock_mode:item.stock_mode,available_qty:item.available_qty===null?"":String(item.available_qty),
    approved:item.approved,active:item.active}:blank);
   setConfirmed(false);setVisible(true);setError("");
@@ -51,10 +52,10 @@ export default function AgentWebCatalogEditor({workspaceId,onChange}:{
    <small>{items.filter(x=>x.approved&&x.active).length} aprobado(s) · {items.length} producto(s)</small></div>
    <button type="button" disabled={Boolean(busy)} onClick={()=>void refresh().catch(()=>setError("No se pudo actualizar."))}
     aria-label="Actualizar inventario"><RefreshCw size={17}/></button></header>
-  <p className={styles.note}>Los cambios se guardan en el inventario real de AI Agents. Tu web mostrará únicamente productos activos y aprobados.</p>
+
   {!loaded?<p className={styles.note} role="status"><LoaderCircle size={17}/> Cargando productos…</p>:
    <div className={styles.list}>{items.map(item=><div className={styles.item} key={item.id}>
-    <Package size={18}/><div><strong>{item.name}</strong>
+    {item.image_path?<img className={styles.thumb} src={item.image_path} alt={item.name}/>:<Package size={18}/>}<div><strong>{item.name}</strong>
      <small>{formatUsd(item.price_cents)} · {item.approved&&item.active?"Aprobado":"No visible"}
       {item.stock_mode==="tracked"?" · Existencias: "+(item.available_qty||0):""}</small></div>
     <button type="button" aria-label={"Editar "+item.name} title="Editar producto"
@@ -77,6 +78,8 @@ export default function AgentWebCatalogEditor({workspaceId,onChange}:{
       placeholder="25.00" onChange={e=>setForm(p=>({...p,price:e.target.value}))}/></label>
      <label>Descripción<textarea rows={3} maxLength={700} value={form.description}
       onChange={e=>setForm(p=>({...p,description:e.target.value}))}/></label>
+     <div className={styles.photoField}><strong>Foto del producto</strong>
+      <BuilderImageField value={form.image} onChange={url=>setForm(p=>({...p,image:url}))} allowAi={false}/></div>
      <label>Existencias<select value={form.stock_mode}
       onChange={e=>setForm(p=>({...p,stock_mode:e.target.value as CatalogItem["stock_mode"]}))}>
        <option value="manual">Confirmación manual</option>
