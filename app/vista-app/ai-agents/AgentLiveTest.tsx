@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useRef,useState} from "react";
+import {useEffect,useRef,useState,type FormEvent} from "react";
 import {ArrowLeft,Bot,LoaderCircle,MessageCircle,Send,ShieldCheck} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {setAgentCatalogReadAccess,type PersistedAgent} from "./agentStore";
@@ -14,6 +14,7 @@ const idValid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a
 export default function AgentLiveTest({agent,onClose,onEdit,webMode=false,onAgentUpdated}:Props){
  const useSharedHeader=useAgentHeaderBack(onClose);
  const [message,setMessage]=useState("");
+ const [ownerFirstName,setOwnerFirstName]=useState("");
  const [conversations,setConversations]=useState<Conversation[]>([]);
  const [current,setCurrent]=useState<string|null>(null);
  const [messages,setMessages]=useState<Item[]>([]);
@@ -34,7 +35,11 @@ export default function AgentLiveTest({agent,onClose,onEdit,webMode=false,onAgen
     .select("id,title,created_at").eq("agent_id",agent.id).eq("owner_id",user.id)
     .order("created_at",{ascending:false}).limit(15);
    if(loadError)throw Error("No se pudieron cargar las simulaciones.");
-   if(live)setConversations((history||[]) as Conversation[]);
+   if(live){
+    setConversations((history||[]) as Conversation[]);
+    const label=String(user.user_metadata?.first_name||user.user_metadata?.full_name||"").trim().split(/\s+/)[0];
+    if(label&&label.length<=40)setOwnerFirstName(label);
+   }
   };
   void init().catch(e=>{if(live)setNotice(e instanceof Error?e.message:"No se pudo abrir el simulador.");})
    .finally(()=>{if(live)setLoading(false);});
@@ -104,6 +109,31 @@ export default function AgentLiveTest({agent,onClose,onEdit,webMode=false,onAgen
    setNotice(e instanceof Error?e.message:"No se pudo completar la prueba.");
   }finally{setSending(false);}
  }
+ if(webMode)return <section className={styles.webFullscreen} aria-label="Probar agente como cliente">
+  {!useSharedHeader?<button type="button" className={styles.webBack} onClick={onClose}
+   aria-label="Volver a Chat web"><ArrowLeft size={23}/></button>:null}
+  <div className={styles.webIdentity}><div className={styles.webRobot}><Bot size={32}/></div>
+   <strong>{agent.name}</strong><small>Chat web</small></div>
+  <div className={styles.webConversation} aria-live="polite">
+   <div className={styles.webGreeting}>
+    Hola{ownerFirstName?", "+ownerFirstName:""}. En este chat puedes probar mis respuestas
+    como si fueras un cliente real. ¿En qué puedo ayudarte?
+   </div>
+   {messages.map(item=><div key={item.id}
+    className={item.role==="user"?styles.webCustomer:styles.webAgent}>{item.content}</div>)}
+   {sending?<div className={styles.webTyping}><LoaderCircle size={15} className={styles.webSpin}/> Escribiendo…</div>:null}
+   {loading?<div className={styles.webTyping}>Preparando chat…</div>:null}
+   {notice?<div className={styles.webError} role="alert">{notice}</div>:null}
+   <div ref={listBottom}/>
+  </div>
+  <form className={styles.webComposer} onSubmit={e=>{e.preventDefault();void send();}}>
+   <label htmlFor="web-chat-preview-message" className={styles.webSrOnly}>Escribe tu mensaje</label>
+   <input id="web-chat-preview-message" autoComplete="off" value={message}
+    onChange={e=>setMessage(e.target.value)} maxLength={1000} disabled={sending||loading}
+    placeholder="Mensaje…"/>
+   <button type="submit" disabled={sending||loading||!message.trim()} aria-label="Enviar mensaje"><Send size={20}/></button>
+  </form>
+ </section>;
  return <section className={styles.root}>
   {!useSharedHeader?<button type="button" className={styles.back} onClick={onClose}><ArrowLeft size={17}/>{webMode?"Chat web":"Mis agentes"}</button>:null}
   <div className={styles.hero}>
