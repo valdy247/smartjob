@@ -97,3 +97,14 @@
 
 .siteActions .activate{background:#e8f8ef;border-color:#c6e9d3;color:#28865e;font-size:10px;font-weight:900}
 @media(max-width:420px){.tabs button{font-size:10px;min-width:0}.siteActions{flex-wrap:wrap}}
+
+.waitBadge{font-size:10px!important;font-weight:900;color:#925b31;background:#fff3e1;border-radius:999px;padding:6px 8px;white-space:nowrap}
+.humanComposer{display:grid;gap:10px;margin-top:16px;border:1px solid #e5dcec;padding:12px;background:#fff;border-radius:17px}
+.humanComposer>span{font-size:11px;color:#725888;font-weight:800}
+.humanComposer form{display:flex;gap:8px;align-items:center}
+.humanComposer input{flex:1;min-width:0;height:45px;border:1px solid #ded3e8;border-radius:999px;
+ padding:11px 14px;font:inherit;color:#33243c;background:#faf8fc}
+.humanComposer form button{flex-shrink:0;width:43px;height:43px;display:grid;place-items:center;background:#8356b5;color:#fff;border:0;border-radius:50%;cursor:pointer}
+.humanComposer button:disabled{opacity:.5}
+.humanComposer .resolveChat{display:flex;align-items:center;gap:6px;justify-content:center;justify-self:start;
+ border:1px solid #d4e5db;background:#f1fbf5;color:#387b58;border-radius:10px;padding:9px 12px;font-size:10px;font-weight:850;cursor:pointer}
