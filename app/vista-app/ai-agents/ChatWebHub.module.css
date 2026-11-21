@@ -37,7 +37,7 @@
 .siteActions a,.siteActions button{border:1px solid #e7dced;border-radius:10px;background:#f8f5fb;color:#73509e;display:inline-flex;gap:5px;align-items:center;justify-content:center;min-height:34px;padding:8px;font-size:10px;font-weight:850;text-decoration:none;cursor:pointer}
 .siteActions .disconnect{color:#b55a77;background:#fff5f8;border-color:#f2d7df}
 .siteActions button:disabled{opacity:.45;cursor:wait}
-.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:15px;background:#f2edf8;padding:5px;border-radius:14px}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:15px;background:#f2edf8;padding:5px;border-radius:14px}
 .tabs button{border:0;background:none;padding:12px 5px;border-radius:11px;font-size:12px;font-weight:830;color:#88779b;cursor:pointer}
 .tabs button.activeTab{background:#fff;color:#6c439d;box-shadow:0 3px 13px #4e325117}
 .conversation{align-items:start;justify-content:space-between}
@@ -94,3 +94,6 @@
 @media(prefers-reduced-motion:reduce){.spin{animation:none}.tile{transition:none}.tile:hover{transform:none}}
 
 .catalogCount{margin-left:auto;color:#9473ae;font-size:10px;font-weight:800}
+
+.siteActions .activate{background:#e8f8ef;border-color:#c6e9d3;color:#28865e;font-size:10px;font-weight:900}
+@media(max-width:420px){.tabs button{font-size:10px;min-width:0}.siteActions{flex-wrap:wrap}}
