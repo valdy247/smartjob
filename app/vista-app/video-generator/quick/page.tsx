@@ -1,8 +1,9 @@
 "use client";
 import {useEffect,useRef,useState} from "react";
 import Link from "next/link";
-import {ArrowLeft,BookOpen,CheckCircle2,Clapperboard,Download,Film,
- ImageIcon,LoaderCircle,Mic2,Play,RefreshCw,ShieldCheck,Sparkles,WandSparkles} from "lucide-react";
+import {ArrowLeft,ArrowRight,BookOpen,CheckCircle2,Clapperboard,Download,Film,
+ ImageIcon,LoaderCircle,Mic2,Play,RefreshCw,ShieldCheck,Sparkles,WandSparkles,
+ Clock3,Smartphone,Monitor,VolumeX} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import css from "./page.module.css";
@@ -65,6 +66,28 @@ function download(blob:Blob,filename:string){
 export default function QuickVideoPage(){
  const {language}=useInterfaceLanguage(),en=language==="en";
  const L=(es:string,english:string)=>en?english:es;
+ const questionTitles:[string,string][]=[
+  ["¿Qué quieres crear?","What do you want to create?"],
+  ["¿De qué trata el video?","What's your video about?"],
+  ["¿Qué estilo prefieres?","Choose your visual style"],
+  ["¿Cuánto debe durar?","How long should it be?"],
+  ["¿En qué formato?","Choose the format"],
+  ["¿Quieres narración?","Add a voice-over?"],
+  ["¿Listo para comenzar?","Ready to create?"]
+ ];
+ const stepNumber=stage==="setup"?step+1:stage==="story"?8:9;
+ const goPrevious=()=>{
+  if(working)return;
+  if(stage!=="setup"){resetMedia();setStage("setup");setStep(6);return;}
+  if(step>0){setStep(current=>current-1);setError("");return;}
+  window.location.assign("/vista-app/video-generator?setup=autopilot");
+ };
+ const goNext=()=>{
+  if(working)return;
+  if(step<6&&!(step===1&&topic.trim().length<3)){
+   setStep(current=>current+1);setError("");
+  }
+ };
  const [kind,setKind]=useState<Kind>("promo");
  const [visual,setVisual]=useState<Visual>("sticks");
  const [seconds,setSeconds]=useState<15|30>(30);
@@ -72,6 +95,7 @@ export default function QuickVideoPage(){
  const [narration,setNarration]=useState(true);
  const [topic,setTopic]=useState("VMV Business: ayuda a los emprendedores a organizar y hacer crecer su negocio");
  const [stage,setStage]=useState<Stage>("setup");
+ const [step,setStep]=useState(0);
  const [title,setTitle]=useState("");
  const [scenes,setScenes]=useState<Scene[]>([]);
  const [images,setImages]=useState<Record<number,string>>({});
@@ -253,62 +277,101 @@ export default function QuickVideoPage(){
     <Link href="/vista-app/video-generator?setup=autopilot" className={css.back}><ArrowLeft size={18}/> VMV Business</Link>
     <span className={css.preview}><Sparkles size={14}/> Beta</span>
    </header>
-   <section className={css.hero}>
-    <span className={css.eyebrow}><Clapperboard size={16}/> VIDEO STUDIO</span>
-    <h1>{L("Crea tu video","Create your video")}</h1>
-    <p>{L("Historia, promoción o curiosidades.","Stories, promos or fun facts.")}</p>
-   </section>
-   <nav className={css.steps} aria-label={L("Pasos","Steps")}>
-    <span className={css.active}>1 · {L("Idea","Idea")}</span>
-    <span className={stage!=="setup"?css.active:""}>2 · {L("Escenas","Scenes")}</span>
-    <span className={stage==="ready"?css.active:""}>3 · Video</span>
-   </nav>
-   {stage==="setup"?<section className={css.panel}>
-    <label className={css.label}>{L("¿Qué vamos a crear?","What are we making?")}</label>
-    <div className={css.cards}>
-     <button type="button" className={kind==="promo"?css.selected:css.choice} onClick={()=>changeKind("promo")}>
-      <Clapperboard size={27}/><strong>{L("Promoción","Promotion")}</strong>
+   <div className={css.wizardTop}>
+    <span className={css.eyebrow}><Clapperboard size={15}/> VIDEO WIZARD</span>
+    <span className={css.stepCounter}>{L("Paso","Step")} {stepNumber}/9</span>
+   </div>
+   <div className={css.track} role="progressbar" aria-label={L("Progreso del Wizard","Wizard progress")}
+     aria-valuemin={1} aria-valuemax={9} aria-valuenow={stepNumber}>
+    <span style={{width:(stepNumber/9*100)+"%"}}/>
+   </div>
+   {stage==="setup"?<>
+    <section className={css.wizardHead} aria-live="polite">
+     <span className={css.headIcon}>
+      {step===0?<Clapperboard size={28}/>:step===1?<WandSparkles size={28}/>:
+       step===2?<Film size={28}/>:step===3?<Clock3 size={28}/>:
+       step===4?<Smartphone size={28}/>:step===5?<Mic2 size={28}/>:<CheckCircle2 size={28}/>}
+     </span>
+     <h1>{questionTitles[step][en?1:0]}</h1>
+    </section>
+    <section className={css.wizardContent} key={step}>
+     {step===0?<div className={css.optionGrid}>
+      <button type="button" aria-pressed={kind==="promo"} className={kind==="promo"?css.optionSelected:css.option}
+       onClick={()=>changeKind("promo")}><span className={css.optionIcon}><Clapperboard size={29}/></span>
+       <strong>{L("Promoción","Promotion")}</strong>{kind==="promo"?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
+      <button type="button" aria-pressed={kind==="facts"} className={kind==="facts"?css.optionSelected:css.option}
+       onClick={()=>changeKind("facts")}><span className={css.optionIcon}><BookOpen size={29}/></span>
+       <strong>{L("Datos curiosos","Fun facts")}</strong>{kind==="facts"?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
+     </div>:null}
+     {step===1?<div className={css.topicWrap}>
+      <textarea autoFocus id="vmv-quick-topic" aria-label={L("Describe la idea del video","Describe your video idea")}
+       className={css.topic} rows={4} maxLength={220} value={topic}
+       placeholder={L("Escribe tu idea…","Write your idea…")} onChange={e=>setTopic(e.target.value)}/>
+      <span className={css.counter}>{topic.length}/220</span>
+     </div>:null}
+     {step===2?<div className={css.optionGrid}>
+      <button type="button" aria-pressed={visual==="sticks"} className={visual==="sticks"?css.optionSelected:css.option}
+       onClick={()=>setVisual("sticks")}><span className={css.optionIcon}><Film size={29}/></span>
+       <strong>Stick figure</strong><small>Cartoon 2D</small>
+       {visual==="sticks"?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
+      <button type="button" aria-pressed={visual==="stills"} className={visual==="stills"?css.optionSelected:css.option}
+       onClick={()=>setVisual("stills")}><span className={css.optionIcon}><ImageIcon size={29}/></span>
+       <strong>{L("Imágenes IA","AI images")}</strong><small>{L("Estáticas","Still frames")}</small>
+       {visual==="stills"?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
+     </div>:null}
+     {step===3?<div className={css.optionGrid}>
+      {([15,30] as const).map(n=><button type="button" key={n}
+       aria-pressed={seconds===n} className={seconds===n?css.optionSelected:css.option}
+       onClick={()=>setSeconds(n)}><span className={css.optionIcon}><Clock3 size={29}/></span>
+       <strong className={css.largeValue}>{n} s</strong>
+       {seconds===n?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>)}
+     </div>:null}
+     {step===4?<div className={css.optionGrid}>
+      <button type="button" aria-pressed={ratio==="portrait"} className={ratio==="portrait"?css.optionSelected:css.option}
+       onClick={()=>setRatio("portrait")}><span className={css.optionIcon}><Smartphone size={29}/></span>
+       <strong>9:16</strong><small>{L("Vertical","Portrait")}</small>
+       {ratio==="portrait"?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
+      <button type="button" aria-pressed={ratio==="landscape"} className={ratio==="landscape"?css.optionSelected:css.option}
+       onClick={()=>setRatio("landscape")}><span className={css.optionIcon}><Monitor size={29}/></span>
+       <strong>16:9</strong><small>{L("Horizontal","Landscape")}</small>
+       {ratio==="landscape"?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
+     </div>:null}
+     {step===5?<div className={css.optionGrid}>
+      <button type="button" aria-pressed={narration} className={narration?css.optionSelected:css.option}
+       onClick={()=>setNarration(true)}><span className={css.optionIcon}><Mic2 size={29}/></span>
+       <strong>{L("Con narración IA","AI narration")}</strong>
+       {narration?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
+      <button type="button" aria-pressed={!narration} className={!narration?css.optionSelected:css.option}
+       onClick={()=>setNarration(false)}><span className={css.optionIcon}><VolumeX size={29}/></span>
+       <strong>{L("Sin narración","No narration")}</strong>
+       {!narration?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
+     </div>:null}
+     {step===6?<div className={css.reviewGrid}>
+      <span><Clapperboard size={17}/>{kind==="promo"?L("Promoción","Promotion"):L("Datos curiosos","Fun facts")}</span>
+      <span><Film size={17}/>{visual==="sticks"?"Stick figure":L("Imágenes IA","AI images")}</span>
+      <span><Clock3 size={17}/>{seconds} s</span>
+      <span>{ratio==="portrait"?<Smartphone size={17}/>:<Monitor size={17}/>}
+       {ratio==="portrait"?"9:16":"16:9"}</span>
+      <span><Mic2 size={17}/>{narration?L("Con voz","Voice on"):L("Sin voz","No voice")}</span>
+     </div>:null}
+    </section>
+    <div className={css.wizardActions}>
+     <button type="button" className={css.backAction} onClick={goPrevious} disabled={Boolean(working)}>
+      <ArrowLeft size={18}/>{L("Atrás","Back")}
      </button>
-     <button type="button" className={kind==="facts"?css.selected:css.choice} onClick={()=>changeKind("facts")}>
-      <BookOpen size={27}/><strong>{L("Datos curiosos","Fun facts")}</strong>
-     </button>
+     {step<6?<button type="button" className={css.nextAction} disabled={Boolean(working)||(step===1&&topic.trim().length<3)}
+      onClick={goNext}>{L("Continuar","Continue")}<ArrowRight size={19}/></button>:
+      <button type="button" className={css.nextAction} disabled={Boolean(working)} onClick={()=>void plan()}>
+       {working==="story"?<LoaderCircle size={19} className={css.spin}/>:<WandSparkles size={19}/>}
+       {working==="story"?L("Preparando…","Preparing…"):L("Crear escenas","Create scenes")}
+      </button>}
     </div>
-    <label className={css.label} htmlFor="vmv-quick-topic">{L("Tu idea","Your idea")}</label>
-    <textarea id="vmv-quick-topic" className={css.topic} rows={3} value={topic} maxLength={220} onChange={e=>setTopic(e.target.value)}/>
-    <label className={css.label}>{L("Estilo visual","Visual style")}</label>
-    <div className={css.cards}>
-     <button type="button" className={visual==="sticks"?css.selected:css.choice} onClick={()=>setVisual("sticks")}>
-      <Film size={27}/><strong>Stick figure</strong><small>Cartoon 2D</small>
-     </button>
-     <button type="button" className={visual==="stills"?css.selected:css.choice} onClick={()=>setVisual("stills")}>
-      <ImageIcon size={27}/><strong>{L("Imágenes IA","AI images")}</strong><small>{L("Estáticas","Still frames")}</small>
-     </button>
-    </div>
-    <div className={css.twocol}>
-     <div><label className={css.label}>{L("Duración","Duration")}</label>
-      <div className={css.segments}>{([15,30] as const).map(n=><button type="button" key={n} className={seconds===n?css.activeSegment:""} onClick={()=>setSeconds(n)}>{n} s</button>)}</div>
-     </div>
-     <div><label className={css.label}>{L("Formato","Aspect ratio")}</label>
-      <div className={css.segments}>
-       <button type="button" className={ratio==="portrait"?css.activeSegment:""} onClick={()=>setRatio("portrait")}>9:16</button>
-       <button type="button" className={ratio==="landscape"?css.activeSegment:""} onClick={()=>setRatio("landscape")}>16:9</button>
-      </div>
-     </div>
-    </div>
-    <button type="button" aria-pressed={narration} className={css.toggle} onClick={()=>setNarration(v=>!v)}>
-     <Mic2 size={21}/><strong>{L("Narración IA","AI narration")}</strong>
-     <span className={narration?css.on:css.off}>{narration?L("Sí","On"):L("No","Off")}</span>
-    </button>
-    <button type="button" className={css.primary} disabled={Boolean(working)||topic.trim().length<3} onClick={()=>void plan()}>
-     {working==="story"?<LoaderCircle className={css.spin} size={19}/>:<WandSparkles size={19}/>}
-     {L("Crear escenas","Create scenes")}
-    </button>
-   </section>:null}
+   </>:null}
    {stage!=="setup"?<section className={css.panel}>
     <div className={css.sectionTitle}>
      <div><span className={css.eyebrow}>{visual==="sticks"?"STICK FIGURE":"AI STILLS"}</span>
       <h2>{title}</h2></div>
-     <button type="button" className={css.iconButton} onClick={()=>{if(!working){resetMedia();setStage("setup");}}} disabled={Boolean(working)} aria-label={L("Editar idea","Edit idea")}><RefreshCw size={18}/></button>
+     <button type="button" className={css.iconButton} onClick={goPrevious} disabled={Boolean(working)} aria-label={L("Editar idea","Edit idea")}><RefreshCw size={18}/></button>
     </div>
     <div className={css.frameGrid}>
      {scenes.map((s,i)=><article key={i} className={css.frame}>
