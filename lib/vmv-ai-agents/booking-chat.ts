@@ -71,7 +71,15 @@ export async function bookingChatTurn({
  const svc=services.find(s=>s.id===intent.service_id);
  const date=typeof intent.date==="string"?intent.date:"";
  const time=typeof intent.time==="string"?normalizedTime(intent.time):null;
- const name=typeof intent.customer_name==="string"?intent.customer_name.trim().slice(0,80):"";
+ const name=typeof intent.customer_name==="string"?intent.customer_name.trim().replace(/\s+/g," ").slice(0,80):"";
+ const userWords=[...history.filter(turn=>turn.role==="user"),{role:"user",content:message}]
+  .map(turn=>turn.content).join(" ");
+ const comparable=(s:string)=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase();
+ const nameProvided=name.length>=2&&comparable(userWords).includes(comparable(name));
+ const lastAssistant=history.slice().reverse().find(turn=>turn.role==="assistant")?.content||"";
+ const wantsBooking=/\b(quiero|necesito|reservar|reserva|resérvame|agendar|agéndame|apartar|book|booking|schedule|appointment)\b/i.test(userWords)||
+  (/^(s[ií]|yes|confirmo|confirma|please)[.! ]*$/i.test(message.trim())&&
+   /\b(reserv|cita|book|appointment)/i.test(lastAssistant));
  if(!svc||!/^(20\d\d)-(0[1-9]|1[0-2])-([0-2]\d|3[01])$/.test(date)||!time)
   return english?"Which service, date and time would you like to book?":
    "¿Qué servicio, fecha y hora deseas reservar?";
@@ -80,7 +88,10 @@ export async function bookingChatTurn({
   clock(time)>=clock(w.start_local)&&clock(time)+length<=clock(w.end_local));
  if(!fits)return english?"That time is outside the published hours. Choose another time in the availability calendar.":
   "Ese horario está fuera de la disponibilidad publicada. Elige otra hora en la agenda.";
- if(name.length<2)return english?
+ if(!wantsBooking)return english?
+  "I can check "+svc.name+" on "+date+" at "+time+". Would you like me to book it?":
+  "Puedo consultar "+svc.name+" el "+date+" a las "+time+". ¿Quieres que lo reserve?";
+ if(!nameProvided)return english?
   "I can request "+svc.name+" on "+date+" at "+time+" ("+length+" min). What name should I use?":
   "Puedo reservar "+svc.name+" el "+date+" a las "+time+" ("+length+" min). ¿A nombre de quién?";
  if(source==="owner_preview")return english?
