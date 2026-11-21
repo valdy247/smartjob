@@ -458,7 +458,7 @@ function VideoWizardSession({onClose,onRestart}:{onClose:()=>void;onRestart:()=>
    <div className={base.footer}>
     <div className={base.options}>
      <button type="button" className={base.option} onClick={onRestart}>Crear de nuevo</button>
-     <button type="button" className={base.primary} onClick={()=>window.location.assign("/vista-app?tab=services")}>Finalizar y volver a Servicios <ArrowRight size={17}/></button>
+     <button type="button" className={base.primary} onClick={()=>window.location.assign(jobId?"/vista-app/video-generator?view=library&job="+encodeURIComponent(jobId):"/vista-app/video-generator")}>{jobId?"Ver en Video Generator":"Volver al estudio"} <ArrowRight size={17}/></button>
     </div>
    </div>
   </>}
