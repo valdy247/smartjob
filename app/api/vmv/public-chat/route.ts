@@ -209,8 +209,8 @@ export async function POST(req:NextRequest){
   setVisitorCookie(response,kind,slug,token,req);
   return response;
  }catch{
-  await db.rpc("vmv_web_public_chat_finish",{p_owner:c.link.owner_id,
-   p_session_id:sessionId,p_response:null}).catch(()=>null);
+  try{await db.rpc("vmv_web_public_chat_finish",{p_owner:c.link.owner_id,
+   p_session_id:sessionId,p_response:null});}catch{/* best effort release of pending chat */}
   const response=reply({error:"No pudimos responder. Inténtalo más tarde o contacta al negocio."},503);
   setVisitorCookie(response,kind,slug,token,req);
   return response;
