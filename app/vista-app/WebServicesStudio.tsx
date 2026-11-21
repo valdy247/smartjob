@@ -30,7 +30,7 @@ function siteSlug(brand:string):string{
   .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,35).replace(/-+$/g,"");
  return (name||"mi-negocio")+"-"+crypto.randomUUID().slice(0,10).replace(/-/g,"");
 }
-export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBack:()=>void}){
+export default function WebServicesStudio({ownerId,onBack,hideBack=false}:{ownerId:string;onBack:()=>void;hideBack?:boolean}){
  const [content,setContent]=useState<WebSiteContent>({...defaultWebContent});
  const [slug,setSlug]=useState<string|null>(null);
  const [published,setPublished]=useState(false);
@@ -390,7 +390,7 @@ export default function WebServicesStudio({ownerId,onBack}:{ownerId:string;onBac
      </div>
     </div>:null}
     {published?<button type="button" className={styles.withdraw} disabled={busy} onClick={()=>void unpublish()}><Trash2 size={16}/> Retirar publicación</button>:null}
-    <button type="button" className={styles.closeStudio} onClick={onBack}><ArrowLeft size={15}/> Volver a Web Services</button>
+    {!hideBack?<button type="button" className={styles.closeStudio} onClick={onBack}><ArrowLeft size={15}/> Volver a Web Services</button>:null}
    </section>}
   </>}
  </section>;
