@@ -103,7 +103,7 @@ test("Productos/Pedidos opens directly after one-time setup and keeps real produ
  assert.match(store,/smartjob-web-images\/"\+owner/);
  assert.match(renderer,/select\("id,name,description,price_cents,currency,image_path"\)/);
  assert.match(renderer,/safeWebImageUrl/);
- assert.match(renderer,/inventory_connection_enabled===true/);
+ assert.match(renderer,/inventory_connection_enabled!==true/);
 });
 
 test("Guided Smart Call menu and activation screens are TypeScript/TSX parseable",()=>{
