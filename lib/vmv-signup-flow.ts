@@ -92,10 +92,12 @@ export function signupQuestions(data:SignupAnswer):SignupQuestion[]{
   if(caps.includes("bookings")){
    sections.push(
     q("booking_count","¿Cuántos servicios se podrán reservar?","How many services can customers book?","Reservas","choice",false,1,[
-     option("1","Uno","One"),option("2","Dos","Two"),option("3","Tres","Three"),option("4","Cuatro","Four")
+     option("1","Uno","One"),option("2","Dos","Two"),option("3","Tres","Three"),option("4","Cuatro","Four"),
+     option("5","Cinco","Five"),option("6","Seis","Six"),option("8","Ocho","Eight"),
+     option("10","Diez","Ten")
     ])
    );
-   const count=Math.min(4,Math.max(0,Number(data.booking_count)||0));
+   const count=Math.min(10,Math.max(0,Number(data.booking_count)||0));
    for(let i=1;i<=count;i++){
     sections.push(
      q("service_"+i+"_name",`¿Cómo se llama el servicio ${i}?`,`What is service ${i} called?`,"Reservas","text",false,120),
