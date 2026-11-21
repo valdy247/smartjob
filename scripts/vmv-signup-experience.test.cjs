@@ -8,11 +8,11 @@ const read=p=>fs.readFileSync(path.join(root,p),"utf8");
 const pure=read("lib/vmv-signup-flow.ts");
 const js=ts.transpileModule(pure,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 const ctx={exports:{}};
-new Function("module","exports","require",js)(ctx,ctx.exports,require);
+new Function("module","exports","require",js)(ctx,ctx.exports,(name)=>name==="./website-address"?require("../lib/website-address.ts"):require(name));
 const {signupQuestions,signupValidation,signupHours}=ctx.exports;
 const ids=d=>signupQuestions(d).map(q=>q.id);
 const withBiz={first:"Valdy",last:"Mena",agent_name:"Papi",business_now:"yes",business_type:"storefront",country:"US",
- hours_policy:"weekly",capabilities:"support,bookings,calls,sales,marketing,ads,website,inventory",booking_count:"2",availability_mode:"weekly"};
+ hours_policy:"weekly",capabilities:"support,bookings,calls,sales,marketing,ads,website,inventory",services_mode:"now",products_mode:"now",service_1_more:"yes",service_2_more:"no",product_1_more:"no",availability_mode:"weekly"};
 
 test("registration begins with first name, then a personalized greeting and agent name",()=>{
  const first=signupQuestions({})[0];
@@ -27,19 +27,24 @@ test("declining business preserves personal setup without inventing a company",(
  assert.ok(!questions.includes("business_name"));
  assert.ok(!questions.includes("business_phone"));
  assert.ok(!questions.includes("service_1_name"));
- for(const id of ["agent_language","agent_personality","agent_mission","user_phone","email","password","repeat_password"])
+ for(const id of ["agent_language","agent_personality","agent_response","agent_handoff","user_phone","email","password","repeat_password"])
   assert.ok(questions.includes(id),id);
 });
-test("business onboarding asks contact, location, seven-day hours and every selected module's requirements",()=>{
+test("business setup asks one question for each essential datum and nothing twice",()=>{
  const all=ids(withBiz);
- for(const id of ["business_name","legal_name","category","description","business_type","city","region",
-  "postal","street","unit","business_phone","business_email","website","instagram","facebook","whatsapp",
-  "hours_mon","hours_tue","hours_wed","hours_thu","hours_fri","hours_sat","hours_sun",
-  "business_services","business_products","policies","capabilities","service_1_name",
-  "service_1_duration","service_2_name","service_2_duration","booking_confirm","availability_mode",
-  "call_number","call_greeting","sales_prices","marketing_goal","ads_budget","website_goal","inventory_categories"])
+ for(const id of ["business_name","category","description","business_type","country",
+  "region","city","postal","street","website","hours_natural","services_mode","products_mode",
+  "capabilities","service_1_name","service_1_duration","service_2_name","service_2_duration",
+  "product_1_name","product_1_price","booking_confirm","availability_mode",
+  "call_after_hours","marketing_goal","website_goal","inventory_connections","agent_response","agent_handoff"])
   assert.ok(all.includes(id),id);
- assert.ok(!all.includes("service_3_name"),"exactly the chosen number of service questions");
+ for(const duplicate of ["booking_count","call_number","business_phone","business_email","legal_name",
+  "business_services","business_products","inventory_categories","sales_prices",
+  "hours_mon","hours_tue","hours_wed","hours_thu","hours_fri","hours_sat","hours_sun"])
+  assert.ok(!all.includes(duplicate),"unnecessary repeated or free-text question: "+duplicate);
+ assert.equal(all.filter(id=>id==="user_phone").length,1);
+ assert.ok(!all.includes("service_3_name"));
+ assert.ok(!all.includes("product_2_name"));
 });
 test("service area removes street address and collects only served areas",()=>{
  const all=ids({...withBiz,business_type:"service_area",capabilities:"support"});
@@ -70,8 +75,12 @@ test("passwords require ten characters and matching confirmation; invalid time i
  assert.equal(signupValidation(p,"longsecurepassword",{}),"");
  const r={id:"repeat_password",kind:"password",optional:false,max:128};
  assert.match(signupValidation(r,"doesnotmatch",{password:"verystrongpassword"}),/coincidir/);
- assert.match(signupValidation({id:"hours_mon",kind:"timewindow",optional:false,max:20},"18:00-09:00",{}),/posterior/);
- assert.equal(signupValidation({id:"hours_mon",kind:"timewindow",optional:false,max:20},"cerrado",{}),"");
+ assert.match(signupValidation({id:"hours_natural",kind:"natural_hours",optional:false,max:400},
+  "Lunes a viernes de 9 a 5",{}),/confirma/);
+ assert.equal(signupValidation({id:"hours_natural",kind:"natural_hours",optional:false,max:400},
+  "Lunes a viernes de 9 a 5",{hours_approved:"yes",hours_policy:"weekly"}),"");
+ assert.equal(signupValidation({id:"website",kind:"url",optional:true,max:250},
+  "mayulibakery.com",{}),"");
 });
 test("verification and provisioning happen before the last Go Home button",()=>{
  const wizard=read("components/SignupWizard.tsx"),finish=read("lib/vmv-signup-complete.ts");
@@ -157,4 +166,47 @@ test("registration matches the shared white AI Services wizard, without landing-
   assert.ok(!wizard.includes(excluded),"remove decorative "+excluded);
  assert.ok(!css.includes("radial-gradient"));
  assert.ok(!css.includes("linear-gradient"));
+});
+
+test("Google categories and locations come from provider-backed endpoints, not invented approved labels",()=>{
+ const picker=read("components/SignupSmartFields.tsx");
+ const geo=read("app/api/vmv/signup-geo/route.ts");
+ const categories=read("app/api/marketing/google-categories/route.ts");
+ assert.ok(picker.includes('"/api/marketing/google-categories?q="'));
+ assert.ok(picker.includes('category_source:"pending"'));
+ assert.ok(picker.includes('category_source:"verified"'));
+ assert.ok(categories.includes("GOOGLE_BUSINESS_PROFILE_ACCESS_TOKEN"));
+ assert.ok(geo.includes("GOOGLE_PLACES_API_KEY"));
+ assert.ok(geo.includes("includedPrimaryTypes"));
+ assert.ok(geo.includes("validateCity"));
+ assert.ok(geo.includes("administrative_area_level_1"));
+ const flow=read("lib/vmv-signup-flow.ts");
+ assert.ok(flow.includes('kind==="location_region"')||flow.includes('"location_region"'));
+ assert.ok(flow.includes('kind==="google_category"')||flow.includes('"google_category"'));
+ const complete=read("lib/vmv-signup-complete.ts");
+ assert.ok(complete.includes('action:"validateCity"'));
+ assert.ok(complete.includes("google_category_id"));
+});
+test("AI proposes hours; owner explicitly edits and approves the weekly calendar",()=>{
+ const wizard=read("components/SignupWizard.tsx");
+ const editor=read("components/SignupSmartFields.tsx");
+ const backend=read("app/api/vmv/signup-hours/route.ts");
+ assert.ok(wizard.includes("<SignupHoursReview"));
+ assert.ok(wizard.includes('hours_approved:"yes"'));
+ assert.ok(editor.includes('role="dialog"'));
+ assert.ok(editor.includes("onApprove(hours)"));
+ assert.ok(backend.includes("askAiAgent"));
+ assert.ok(backend.includes("requiresApproval:true"));
+ assert.ok(backend.includes("too_many_requests"));
+});
+test("service/product onboarding persists each item to existing canonical catalogs",()=>{
+ const complete=read("lib/vmv-signup-complete.ts");
+ assert.ok(complete.includes("vmv_ai_catalog_items"));
+ assert.ok(complete.includes("vmv_ai_booking_services"));
+ assert.ok(complete.includes("productIds"));
+ assert.ok(complete.includes('data.services_mode==="now"'));
+ assert.ok(complete.includes('data.products_mode==="now"'));
+ assert.ok(complete.includes('data.inventory_connections'));
+ assert.ok(complete.includes('contactNumber(data.user_phone'));
+ assert.ok(!complete.includes('contactNumber(data.call_number'));
 });
