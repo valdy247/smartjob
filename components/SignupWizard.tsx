@@ -82,10 +82,9 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
    finally{if(active)setBusy(false);}
   };
   void resume();
-  const {data:listener}=supabase.auth.onAuthStateChange((event)=>{
-   if(event==="SIGNED_IN"||event==="TOKEN_REFRESHED")queueMicrotask(()=>{if(active)void resume();});
-  });
-  return()=>{active=false;listener.subscription.unsubscribe();};
+  // A confirmation link reloads /registro; other tabs can use "Ya confirmé".
+  // Do not also provision on SIGNED_IN: it would race the explicit verification path.
+  return()=>{active=false;};
  },[supabase]);
  const back=()=>{
   if(busy)return;setError("");
