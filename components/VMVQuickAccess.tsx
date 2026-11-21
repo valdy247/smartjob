@@ -185,11 +185,25 @@ export function VMVQuickAccessProvider({children}:{children:ReactNode}){
   return()=>{clear();document.removeEventListener("pointerdown",down,true);document.removeEventListener("pointermove",move,true);document.removeEventListener("pointerup",clear,true);document.removeEventListener("pointercancel",clear,true);document.removeEventListener("click",click,true);document.removeEventListener("contextmenu",contextMenu,true);};
  },[active,uid,pathname]);
  useEffect(()=>{
-  if(!active||!uid)return;
-  const key=(e:KeyboardEvent)=>{if(e.key==="Escape"){setView("closed");setActionItem(null);}};
+  if(!active||!uid||(view==="closed"&&!actionItem))return;
+  const dialog=document.querySelector<HTMLElement>("[data-vmv-shortcuts-ui] [role=dialog]");
+  if(!dialog)return;
+  const previous=document.activeElement instanceof HTMLElement?document.activeElement:null;
+  const overflow=document.body.style.overflow;
+  document.body.style.overflow="hidden";
+  const focusables=()=>Array.from(dialog.querySelectorAll<HTMLElement>("button:not([disabled]),a[href],input:not([disabled])"));
+  (dialog.querySelector<HTMLElement>("input[autofocus]")||focusables()[0])?.focus();
+  const key=(event:KeyboardEvent)=>{
+   if(event.key==="Escape"){event.preventDefault();setView("closed");setActionItem(null);return;}
+   if(event.key!=="Tab")return;
+   const elements=focusables();if(!elements.length)return;
+   const first=elements[0],last=elements[elements.length-1];
+   if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+   else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+  };
   document.addEventListener("keydown",key);
-  return()=>document.removeEventListener("keydown",key);
- },[active,uid]);
+  return()=>{document.body.style.overflow=overflow;document.removeEventListener("keydown",key);previous?.focus();};
+ },[active,uid,view,actionItem]);
  const all=[...items,...state.custom];
  const filtered=all.filter(item=>findMatching(item,query)).slice(0,80);
  const quick=state.quick.map(id=>findShortcut(state,id)).filter((v):v is Shortcut=>!!v);
