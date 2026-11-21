@@ -3,7 +3,7 @@ import {useEffect,useState} from "react";
 import {Check,LoaderCircle,Package,Pencil,Plus,RefreshCw,X} from "lucide-react";
 import {listCatalog,saveCatalogItem,formatUsd,type CatalogItem} from "./commerceStore";
 import styles from "./AgentWebCatalogEditor.module.css";
-import BuilderImageField from "@/app/web-studio/BuilderImageField";
+import ProductImageField from "./ProductImageField";
 
 type Form={
  name:string;sku:string;description:string;price:string;image:string;
@@ -79,7 +79,8 @@ export default function AgentWebCatalogEditor({workspaceId,onChange}:{
      <label>Descripción<textarea rows={3} maxLength={700} value={form.description}
       onChange={e=>setForm(p=>({...p,description:e.target.value}))}/></label>
      <div className={styles.photoField}><strong>Foto del producto</strong>
-      <BuilderImageField value={form.image} onChange={url=>setForm(p=>({...p,image:url}))} allowAi={false}/></div>
+      <ProductImageField value={form.image} onChange={url=>setForm(p=>({...p,image:url}))}
+       productName={form.name} description={form.description} businessId={workspaceId}/></div>
      <label>Existencias<select value={form.stock_mode}
       onChange={e=>setForm(p=>({...p,stock_mode:e.target.value as CatalogItem["stock_mode"]}))}>
        <option value="manual">Confirmación manual</option>
