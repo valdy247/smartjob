@@ -186,6 +186,27 @@ export default function BookingStudio({agent,onClose,onAgentUpdated,initialTab="
   }catch(e){setNotice(e instanceof Error?e.message:"No se pudo guardar el horario.");}
   finally{setBusy(false);}
  }
+ async function decideBooking(item:Booking,decision:"confirmed"|"canceled"){
+  if(busy)return;
+  const question=decision==="confirmed"?
+   "¿Confirmar esta reserva después de verificar el horario? Debes avisar personalmente al cliente.":
+   "¿Cancelar esta reserva? Debes avisar personalmente al cliente.";
+  if(!window.confirm(question))return;
+  setBusy(true);setNotice("");
+  try{
+   const {db}=await access();
+   const {data,error:writeError}=await db.rpc("vmv_ai_owner_review_booking",{
+    p_booking_id:item.id,p_decision:decision
+   });
+   if(writeError||data!==true)
+    throw Error("No se pudo actualizar. Verifica que el horario todavía esté disponible.");
+   await refresh();
+   setNotice(decision==="confirmed"?
+    "Reserva confirmada en VMV. Informa al cliente por tus canales habituales.":
+    "Reserva cancelada en VMV. Informa al cliente por tus canales habituales.");
+  }catch(e){setNotice(e instanceof Error?e.message:"No se pudo revisar la reserva.");}
+  finally{setBusy(false);}
+ }
  async function reviewRequest(item:HumanRequest,status:"reviewed"|"closed"){
   if(busy)return;setBusy(true);setNotice("");
   try{
@@ -204,7 +225,7 @@ export default function BookingStudio({agent,onClose,onAgentUpdated,initialTab="
   const slot=slots.find(s=>s.id===item.slot_id);
   return {service:service?.name||"Servicio",stamp:slot?
    bookingTime(slot.start_at,service?.time_zone||"America/New_York"):
-   new Date(item.created_at).toLocaleString("es-US")};
+   "Fecha de cita no disponible · Solicitud "+new Date(item.created_at).toLocaleDateString("es-US")};
  };
  return <section className={styles.root}>
   {!useSharedHeader?<button type="button" className={styles.subBack} onClick={back}>
@@ -341,8 +362,12 @@ export default function BookingStudio({agent,onClose,onAgentUpdated,initialTab="
     const summary=bookingSummary(item);
     return <article key={item.id} className={styles.item}><div>
      <strong>{item.customer_name}</strong><small>{summary.service} · {summary.stamp}</small>
-     <small>{item.status==="confirmed"?"Confirmada":item.status==="canceled"?"Cancelada":item.status}</small>
-    </div><CheckCircle2 size={18}/></article>;
+     <small>{item.status==="confirmed"?"Confirmada":item.status==="canceled"?"Cancelada":item.status}
+      {item.source==="ai_phone_test"?" · Prueba de llamada":""}</small>
+    </div>
+    {item.status==="confirmed"?<button type="button" disabled={busy}
+     onClick={()=>void decideBooking(item,"canceled")}>Cancelar</button>:<CheckCircle2 size={18}/>}
+    </article>;
    })}</div>}
   </>:<>
    <div className={styles.heading}><h2>Solicitudes ({pending.length+pendingHuman.length})</h2>
@@ -353,8 +378,12 @@ export default function BookingStudio({agent,onClose,onAgentUpdated,initialTab="
     const summary=bookingSummary(item);
     return <article key={item.id} className={styles.item}>
      <div><strong>{item.customer_name}</strong><small>{summary.service} · {summary.stamp}</small>
-      <small>Solicitud de reserva · Pendiente de revisión</small></div>
-     <UserRoundCheck size={18}/>
+      <small>Solicitud de reserva · Pendiente de revisión
+       {item.source==="ai_phone_test"?" · Prueba de llamada":""}</small></div>
+     <div className={styles.serviceRowActions}>
+      <button type="button" disabled={busy} onClick={()=>void decideBooking(item,"confirmed")}>Confirmar</button>
+      <button type="button" disabled={busy} onClick={()=>void decideBooking(item,"canceled")}>Cancelar</button>
+     </div>
     </article>;
    })}{pendingHuman.map(req=><article key={req.id} className={styles.item}>
     <div><strong>Atención humana</strong><small>{req.summary||"Solicita intervención del negocio"}</small>
@@ -362,7 +391,7 @@ export default function BookingStudio({agent,onClose,onAgentUpdated,initialTab="
     <button type="button" disabled={busy} onClick={()=>void reviewRequest(req,req.status==="new"?"reviewed":"closed")}>
      {req.status==="new"?"Revisar":"Cerrar"}</button>
    </article>)}</div>
-   <p className={styles.hint}>Revisar una solicitud no envía una confirmación al cliente.</p>
+   <p className={styles.hint}>Las decisiones se registran en VMV. Debes comunicar al cliente cualquier confirmación o cancelación; no se envían mensajes automáticamente.</p>
   </>}
  </section>;
 }
