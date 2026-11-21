@@ -312,6 +312,11 @@ export default function VMVMobilePreview(){
      <div className={styles.statusBar}><span>VMV</span><div className={styles.dynamicIsland}/><span>◢ ▰</span></div>
      <div className={ready&&tab==="home"?styles.homeTopHidden:styles.appTop}>
       <div className={styles.appHeaderIdentity}>
+       {ready&&tab==="services"&&(open||serviceFocus==="web")?
+        <button type="button" className={styles.headerBack}
+         aria-label={translate("native.totalServices")}
+         onClick={()=>{if(open)setOpen(false);else setServiceFocus("all");}}>
+         <ChevronLeft size={19} aria-hidden="true"/></button>:null}
        <div className={styles.appLogo}><span className={styles.mark}>▥</span><b>VMV<span> BUSINESS</span></b></div>
        <div className={styles.appHeaderLanguage}><InterfaceLanguagePicker compact/></div>
       </div>
@@ -399,7 +404,6 @@ export default function VMVMobilePreview(){
       </div>:null}
       {ready&&tab==="services"&&!open?<div className={`${styles.screen} ${styles.servicesV3}`} data-vmv-shortcut-scope="services">
        {serviceFocus==="web"?<>
-        <button type="button" className={styles.back} onClick={()=>setServiceFocus("all")}><ChevronLeft size={17}/> {translate("native.totalServices")}</button>
         {user?<BusinessServicesPreview userId={user.id} focus="web"/>:null}
        </>:<>
         <h2 className={styles.servicesTitle}>{translate("common.services")}<span className={styles.mint}>.</span></h2>
@@ -436,7 +440,6 @@ export default function VMVMobilePreview(){
        </>}
       </div>:null}
       {ready&&tab==="services"&&open?<div className={styles.smartScreen}>
-       <button className={styles.back} onClick={()=>setOpen(false)}><ChevronLeft size={17}/> {translate("native.totalServices")}</button>
        <header className={styles.smartHeading}>
         <h2>Smart Call<span>.</span></h2>
         <p className={styles.smartLineStatus}><span aria-hidden="true"/>{lineState}</p>
