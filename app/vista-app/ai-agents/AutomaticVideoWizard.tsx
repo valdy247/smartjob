@@ -326,6 +326,8 @@ function VideoWizardSession({onClose,onRestart}:{onClose:()=>void;onRestart:()=>
   {loading?<p role="status" className={base.note}><LoaderCircle size={17} className={base.spin}/> Cargando el creador…</p>:null}
   {!loading&&owner&&stage==="source"&&<div className={styles.entryOptions}>
    <button className={base.option} onClick={()=>selectMode("text")}><Film/>Texto a video</button>
+   <button className={base.option} onClick={()=>window.location.assign("/vista-app/video-generator/quick?visual=sticks")}>
+    <Film/>Stickman 2D · Personajes de palitos</button>
    <button className={base.option} onClick={()=>selectMode("image")}><ImagePlus/>Imagen a video</button>
    <button className={base.option} onClick={()=>selectMode("still")}><WandSparkles/>Texto a imagen</button>
   </div>}
