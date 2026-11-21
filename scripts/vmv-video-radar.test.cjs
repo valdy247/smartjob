@@ -23,21 +23,27 @@ test("Viral Radar and autopilot source parse as TS/TSX",()=>{
    p);
  }
 });
-test("Metric calculations distinguish average views/day from real-time growth",()=>{
+test("YouTube public statistics are displayed raw; no derived engagement score",()=>{
  const compiled=ts.transpileModule(source["lib/vmv-video-radar.ts"],{
   compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}
  }).outputText;
- const exports={};new Function("exports",compiled)(exports);
+ const stats={};new Function("exports",compiled)(stats);
  const now=Date.parse("2026-11-20T12:00:00.000Z");
- const published=new Date(now-2*86400000).toISOString();
- const metric=exports.radarMetrics(10000,100,50,published,now);
- assert.equal(metric.averageViewsPerDay,5000);
- assert.equal(metric.engagementPercent,1.5);
- assert.ok(metric.signalScore>=0&&metric.signalScore<=100);
- assert.equal(exports.cleanRadarQuery("  custom  cakes   "), "custom cakes");
- assert.equal(exports.cleanRadarQuery("<iframe>"),null);
- assert.equal(exports.validRadarId("5qap5aO4i9A"),true);
- assert.equal(exports.validRadarId("javascript:alert(1)"),false);
+ const video=stats.videoToRadar({
+  id:"5qap5aO4i9A",snippet:{title:"Original video",channelTitle:"Channel",
+   channelId:"CH123",publishedAt:"2026-11-18T12:00:00.000Z",
+   thumbnails:{medium:{url:"https://i.ytimg.com/vi/5qap5aO4i9A/mqdefault.jpg"}}},
+  statistics:{viewCount:"10000",likeCount:"100",commentCount:"50"}
+ },now);
+ assert.equal(video.views,10000);
+ assert.equal(video.likes,100);
+ assert.equal(video.comments,50);
+ assert.equal(Object.hasOwn(video,"averageViewsPerDay"),false);
+ assert.equal(Object.hasOwn(video,"signalScore"),false);
+ assert.equal(stats.cleanRadarQuery("  custom  cakes   "), "custom cakes");
+ assert.equal(stats.cleanRadarQuery("<iframe>"),null);
+ assert.equal(stats.validRadarId("5qap5aO4i9A"),true);
+ assert.equal(stats.validRadarId("javascript:alert(1)"),false);
 });
 test("Research runs only behind owner auth and official YouTube, never client provider secrets",()=>{
  const api=source["app/api/video-generator/radar/route.ts"];
@@ -77,4 +83,21 @@ test("Database owner RLS and server-only quota isolate research",()=>{
  assert.match(sql,/IF used>=6 THEN RAISE EXCEPTION 'radar_daily_limit'/);
  assert.match(sql,/created_at>now\(\)-interval '6 hours'/);
  assert.match(sql,/creative_seed/);
+});
+
+test("Owner deletion and scheduled purge protect YouTube data retention",()=>{
+ const api=source["app/api/video-generator/radar/route.ts"];
+ const ui=source["app/vista-app/video-generator/ViralRadar.tsx"];
+ const sql=read("supabase/sql/vmv_video_radar_retention_20261120.sql");
+ assert.match(sql,/cron\.schedule/);
+ assert.match(sql,/interval '29 days'/);
+ assert.match(sql,/vmv_video_radar_clear_owner/);
+ assert.match(api,/export async function DELETE/);
+ assert.match(api,/db\.rpc\("vmv_video_radar_clear_owner"/);
+ assert.match(ui,/Borrar mis investigaciones/);
+ assert.match(ui,/x-vmv-youtube-consent/);
+ assert.match(api,/x-vmv-youtube-consent/);
+ assert.doesNotMatch(ui,/averageViewsPerDay|engagementPercent|signalScore/);
+ assert.doesNotMatch(api,/averageViewsPerDay|engagementPercent|signalScore/);
+ assert.match(ui,/youtube\.com\/t\/terms/);
 });
