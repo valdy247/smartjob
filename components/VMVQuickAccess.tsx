@@ -236,9 +236,8 @@ export function VMVQuickAccessProvider({children}:{children:ReactNode}){
     const item=findPressItem(card,pathname);
     if(!item)return;
     const shouldHide=hidden.has(hiddenKey(cardScope(card,pathname),item.id));
-    if(shouldHide!==card.hasAttribute("data-vmv-hidden-card")){
-     if(shouldHide)card.setAttribute("data-vmv-hidden-card","true");
-     else card.removeAttribute("data-vmv-hidden-card");
+    if(shouldHide!==card.classList.contains(styles.cardHidden)){
+     card.classList.toggle(styles.cardHidden,shouldHide);
     }
    });
   };
@@ -390,7 +389,7 @@ export function VMVExtraServicesSettings(){
  const {state,restoreCard}=useVMVQuickAccess();
  const [filter,setFilter]=useState("");
  const hidden=state.hidden.map(entry=>({...entry,item:findShortcut(state,entry.id)}))
-  .filter((entry):entry is typeof entry & {item:Shortcut}=>Boolean(entry.item))
+  .filter((entry):entry is {id:string;scope:string;item:Shortcut}=>Boolean(entry.item))
   .filter(entry=>findMatching(entry.item,filter)||hiddenScreenLabel(entry.scope,en).toLowerCase().includes(filter.toLowerCase()));
  return <section className={styles.extraServices} id="vmv-extra-services" data-vmv-shortcuts-ui>
   <div className={styles.settingHeader}>
