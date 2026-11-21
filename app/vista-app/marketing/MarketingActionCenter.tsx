@@ -888,7 +888,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
       <span className={styles.stepBubble}>{index<wizardStep?<Check size={14}/>:index+1}</span><span>{label}</span>
      </li>)}
     </ol>:null}
-    {wizardStep===0?(socialPreviewOpen?<SocialCaptionPreview businessName={name} onBack={()=>setSocialPreviewOpen(false)}/>:<div className={styles.wizardBody}>
+    {wizardStep===0?(socialPreviewOpen?<SocialCaptionPreview businessName={name} hideBack={Boolean(registerHeaderBack)} onBack={()=>setSocialPreviewOpen(false)}/>:<div className={styles.wizardBody}>
      <div className={styles.servicePicker} data-vmv-shortcut-scope="marketing-actions">
       {services.filter(service=>["google_profile","seo_improvement","review_strategy"].includes(service.id)).map(service=>{
        const ServiceIcon=serviceIcons[service.id];
