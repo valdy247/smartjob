@@ -189,7 +189,10 @@ export function VMVQuickAccessProvider({children}:{children:ReactNode}){
    if(!target)return;
    start={x:event.clientX,y:event.clientY};
    pressTimer=setTimeout(()=>{
-    fired=target;firedAt=Date.now();setActionItem(entry);setView("closed");setSuccess("");clear();
+    fired=target;firedAt=Date.now();
+    const card=target?hideableCard(target):null;
+    setActionScope(card?cardScope(card,pathname):null);
+    setActionItem(entry);setView("closed");setSuccess("");clear();
    },570);
   };
   const move=(event:PointerEvent)=>{if(Math.hypot(event.clientX-start.x,event.clientY-start.y)>13)clear();};
@@ -207,6 +210,8 @@ export function VMVQuickAccessProvider({children}:{children:ReactNode}){
    clear();
    fired=element.closest<HTMLElement>("[data-vmv-shortcut-id],a[href],button");
    firedAt=Date.now();
+   const card=hideableCard(element);
+   setActionScope(card?cardScope(card,pathname):null);
    setActionItem(entry);setView("closed");setSuccess("");
   };
   document.addEventListener("pointerdown",down,true);
@@ -217,8 +222,37 @@ export function VMVQuickAccessProvider({children}:{children:ReactNode}){
   document.addEventListener("contextmenu",contextMenu,true);
   return()=>{clear();document.removeEventListener("pointerdown",down,true);document.removeEventListener("pointermove",move,true);document.removeEventListener("pointerup",clear,true);document.removeEventListener("pointercancel",clear,true);document.removeEventListener("click",click,true);document.removeEventListener("contextmenu",contextMenu,true);};
  },[active,uid,pathname]);
+ // Hidden cards stay out of this screen as lists load and React re-renders.
  useEffect(()=>{
-  if(!active||!uid||(view==="closed"&&!actionItem))return;
+  if(!active||!uid)return;
+  const hidden=new Set(state.hidden.map(x=>hiddenKey(x.scope,x.id)));
+  let scheduled=false;
+  let frame=0;
+  const apply=()=>{
+   scheduled=false;
+   document.querySelectorAll<HTMLElement>("[data-vmv-shortcut-id],button,a[href]").forEach(node=>{
+    const card=hideableCard(node);
+    if(!card||card!==node)return;
+    const item=findPressItem(card,pathname);
+    if(!item)return;
+    const shouldHide=hidden.has(hiddenKey(cardScope(card,pathname),item.id));
+    if(shouldHide!==card.hasAttribute("data-vmv-hidden-card")){
+     if(shouldHide)card.setAttribute("data-vmv-hidden-card","true");
+     else card.removeAttribute("data-vmv-hidden-card");
+    }
+   });
+  };
+  const schedule=()=>{
+   if(scheduled)return;
+   scheduled=true;frame=window.requestAnimationFrame(apply);
+  };
+  apply();
+  const observer=new MutationObserver(schedule);
+  observer.observe(document.body,{childList:true,subtree:true});
+  return()=>{observer.disconnect();window.cancelAnimationFrame(frame);};
+ },[active,uid,pathname,state.hidden]);
+ useEffect(()=>{
+  if(!active||!uid||(view==="closed"&&!actionItem&&!pendingHide))return;
   const dialog=document.querySelector<HTMLElement>("[data-vmv-shortcuts-ui] [role=dialog]");
   if(!dialog)return;
   const previous=document.activeElement instanceof HTMLElement?document.activeElement:null;
@@ -227,7 +261,7 @@ export function VMVQuickAccessProvider({children}:{children:ReactNode}){
   const focusables=()=>Array.from(dialog.querySelectorAll<HTMLElement>("button:not([disabled]),a[href],input:not([disabled])"));
   (dialog.querySelector<HTMLElement>('input[type="search"]')||focusables()[0])?.focus();
   const key=(event:KeyboardEvent)=>{
-   if(event.key==="Escape"){event.preventDefault();setView("closed");setActionItem(null);return;}
+   if(event.key==="Escape"){event.preventDefault();setView("closed");setActionItem(null);setPendingHide(null);return;}
    if(event.key!=="Tab")return;
    const elements=focusables();if(!elements.length)return;
    const first=elements[0],last=elements[elements.length-1];
@@ -236,11 +270,11 @@ export function VMVQuickAccessProvider({children}:{children:ReactNode}){
   };
   document.addEventListener("keydown",key);
   return()=>{document.body.style.overflow=overflow;document.removeEventListener("keydown",key);previous?.focus();};
- },[active,uid,view,actionItem]);
+ },[active,uid,view,actionItem,pendingHide]);
  const all=[...items,...state.custom];
  const filtered=all.filter(item=>findMatching(item,query)).slice(0,80);
  const quick=state.quick.map(id=>findShortcut(state,id)).filter((v):v is Shortcut=>!!v);
- return <Context.Provider value={{ready:!!uid,state,saveEnabled:(flag)=>mutate(v=>({...v,enabled:flag})),pin,unpin,openPicker,openMenu}}>
+ return <Context.Provider value={{ready:!!uid,state,saveEnabled:(flag)=>mutate(v=>({...v,enabled:flag})),pin,unpin,hideCard,restoreCard,openPicker,openMenu}}>
   {children}
   {active&&!!uid&&state.enabled?<button type="button" className={styles.fab} aria-label={en?"Open shortcuts":"Abrir accesos directos"}
    title={en?"Shortcuts":"Accesos directos"} data-vmv-shortcuts-ui onClick={openMenu}><Link2 size={23}/><span className={styles.fabPlus}>+</span></button>:null}
