@@ -2,7 +2,7 @@
 import {useEffect,useMemo,useRef,useState,type FormEvent} from "react";
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {ArrowLeft,ArrowRight,Bot,Check,CheckCircle2,ChevronRight,Eye,EyeOff,
- LockKeyRound,Mail,RefreshCw,ShieldCheck,Sparkles} from "lucide-react";
+ LockKeyhole,Mail,RefreshCw,ShieldCheck,Sparkles} from "lucide-react";
 import {Brand} from "./Brand";
 import {InterfaceLanguagePicker} from "./InterfaceLanguagePicker";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
@@ -255,7 +255,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
       <p className={styles.help}>{es?"Guardando tu negocio, tu agente y las preferencias que elegiste.":"Saving your business, agent and chosen preferences."}</p>
       <div className={styles.loadingBar}/>
      </>:phase==="failed"?<>
-      <div className={styles.bigIcon}><LockKeyRound size={30}/></div>
+      <div className={styles.bigIcon}><LockKeyhole size={30}/></div>
       <h1 className={styles.question}>{es?"Necesitamos completar un detalle":"One more thing to finish"}</h1>
       <p className={styles.help}>{es?"Tu correo está confirmado, pero no pudimos terminar toda la configuración. Tus respuestas siguen guardadas.":"Your email is verified, but setup wasn't fully completed. Your answers remain saved."}</p>
       {error?<p role="alert" className={styles.error}>{error}</p>:null}
