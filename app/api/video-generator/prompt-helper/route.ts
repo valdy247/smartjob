@@ -66,7 +66,7 @@ export async function POST(req:NextRequest){
    timeoutMs:20000
   });
   const suggestion=result.trim().replace(/^\x60{3}(?:text)?\s*/i,"").replace(/\s*\x60{3}$/,"")
-   .replace(/^["“](.*)["”]$/s,"$1").trim();
+   .replace(/^["“]([\s\S]*)["”]$/,"$1").trim();
   if(suggestion.length<3||suggestion.length>limits[type])return reply({error:"video_ai_invalid_suggestion"},422);
   return reply({suggestion,maxLength:limits[type]});
  }catch{
