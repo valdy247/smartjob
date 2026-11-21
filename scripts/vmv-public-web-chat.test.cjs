@@ -144,3 +144,44 @@ test("Customer stock counts are hidden; orders are owner-reviewed and cannot aut
  assert.match(store,/reviewChatOrder/);
  assert.doesNotMatch(action,/checkoutSession|createPaymentIntent/);
 });
+
+
+test("Conversational multi-item checkout creates one reviewed order only after contact",()=>{
+ const source=read("lib/vmv-ai-agents/conversational-order.ts");
+ const compiled=ts.transpileModule(source,{compilerOptions:{
+  module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022
+ }}).outputText;
+ const mod={exports:{}};
+ new Function("module","exports",compiled)(mod,mod.exports);
+ const parse=mod.exports.conversationalOrder;
+ const catalog=[
+  {id:"product-1",name:"Cake",priceCents:5500},
+  {id:"product-2",name:"chocoflan",priceCents:3000}
+ ];
+ const before=[{id:"q1",role:"user",content:"ok quiero un chocoflan y 2 cakes"}];
+ const pending=parse(before,catalog);
+ assert.equal(pending.intentId,"q1");
+ assert.deepEqual(pending.items.map(x=>[x.name,x.qty]),[["Cake",2],["chocoflan",1]]);
+ assert.equal(pending.name,"");
+ const ready=parse([...before,
+  {id:"q2",role:"assistant",content:"Dime tu nombre y teléfono"},
+  {id:"q3",role:"user",content:"mi nombre es miguel y mi numero de telefono es 2394061146"}],catalog);
+ assert.equal(ready.intentId,"q1");
+ assert.equal(ready.name.toLowerCase(),"miguel");
+ assert.equal(ready.phone,"2394061146");
+ assert.equal(ready.items.reduce((n,item)=>n+item.qty*item.priceCents,0),14000);
+ assert.equal(parse([{id:"q1",role:"user",content:"que tienes disponible?"}],catalog),null);
+ assert.equal(parse([{id:"q1",role:"user",content:"quiero otro producto"}],catalog),null);
+ const sim=read("app/api/vmv/ai-agents/simulate/route.ts");
+ const sql=read("supabase/sql/vmv_ai_multi_conversation_orders_20261121.sql");
+ assert.match(sim,/vmv_ai_capture_conversation_order/);
+ assert.match(sim,/actionsExecuted:createdOrder\?1:0/);
+ assert.match(sim,/const canPrepare=webPreview/);
+ assert.doesNotMatch(sim,/selectedProducts=webPreview&&prefs\?\.sales_enabled/);
+ assert.match(sql,/vmv_ai_orders/);
+ assert.match(sql,/vmv_ai_order_lines/);
+ assert.match(sql,/requires_review','not_started/);
+ assert.match(sql,/grant execute on function public\.vmv_ai_capture_conversation_order/);
+ assert.match(sql,/to service_role/);
+ assert.doesNotMatch(sql,/payment_intents|checkout\.sessions|hold_inventory/);
+});
