@@ -1,7 +1,10 @@
 export type Shortcut={id:string;es:string;en:string;href:string;group:string;terms?:string};
-export type ShortcutState={enabled:boolean;quick:string[];home:string[];custom:Shortcut[];updatedAt:number};
+export type HiddenService={id:string;scope:string};
+export type ShortcutState={enabled:boolean;quick:string[];home:string[];custom:Shortcut[];hidden:HiddenService[];updatedAt:number};
 export const SHORTCUTS_META_KEY="vmv_shortcuts_v1";
 export const SHORTCUT_LIMIT=24;
+export const HIDDEN_LIMIT=60;
+export const validHiddenScope=(scope:string)=>/^\/vista-app(?:\/[a-z0-9/_-]*)?(?:#[a-z0-9_-]+)?$/.test(scope)&&scope.length<=125;
 export const items:Shortcut[]=[
  ["home","Home","Home","/vista-app?tab=home","General","inicio"],
  ["services","Todos los servicios","All services","/vista-app?tab=services","General","catálogo"],
@@ -39,7 +42,7 @@ export const items:Shortcut[]=[
  ["finance","Finanzas","Finances","/vista-app/finanzas","Negocio","pagos"],
  ["support","Soporte VMV","VMV Support","/vista-app/soporte","General","ayuda"]
 ].map(([id,es,en,href,group,terms])=>({id,es,en,href,group,terms}));
-export const fresh=():ShortcutState=>({enabled:false,quick:[],home:[],custom:[],updatedAt:0});
+export const fresh=():ShortcutState=>({enabled:false,quick:[],home:[],custom:[],hidden:[],updatedAt:0});
 export function safePath(raw:string){
  try{
   if(!raw||raw.length>700||!raw.startsWith("/")||raw.startsWith("//")||raw.includes("\\"))return false;
@@ -59,14 +62,25 @@ export function parseState(raw:unknown):ShortcutState{
    typeof v.en==="string"&&v.en.length>0&&v.en.length<=72&&
    typeof v.href==="string"&&safePath(v.href)&&
    typeof v.group==="string"&&v.group.length<=32;
- }).slice(0,SHORTCUT_LIMIT):[];
+ }).slice(0,HIDDEN_LIMIT):[];
  const accepted=new Set([...items.map(x=>x.id),...custom.map(x=>x.id)]);
  const list=(v:unknown)=>Array.isArray(v)?[...new Set(v.filter((id):id is string=>typeof id==="string"&&accepted.has(id)))].slice(0,SHORTCUT_LIMIT):[];
- return {enabled:obj.enabled===true,quick:list(obj.quick),home:list(obj.home),custom,
+ const seen=new Set<string>();
+ const hidden:HiddenService[]=Array.isArray(obj.hidden)?obj.hidden.filter((raw):raw is HiddenService=>{
+  if(!raw||typeof raw!=="object")return false;
+  const entry=raw as Record<string,unknown>;
+  if(typeof entry.id!=="string"||!accepted.has(entry.id)||
+     typeof entry.scope!=="string"||!validHiddenScope(entry.scope))return false;
+  const key=entry.scope+"::"+entry.id;
+  if(seen.has(key))return false;
+  seen.add(key);return true;
+ }).slice(0,HIDDEN_LIMIT):[];
+ return {enabled:obj.enabled===true,quick:list(obj.quick),home:list(obj.home),custom,hidden,
   updatedAt:typeof obj.updatedAt==="number"&&Number.isFinite(obj.updatedAt)&&obj.updatedAt>0?obj.updatedAt:0};
 }
 export const findShortcut=(state:ShortcutState,id:string)=>items.find(x=>x.id===id)||state.custom.find(x=>x.id===id);
 export const labelFor=(item:Shortcut,en:boolean)=>en?item.en:item.es;
+export const hiddenKey=(scope:string,id:string)=>scope+"::"+id;
 export const findMatching=(item:Shortcut,q:string)=>{
  const normalized=(s:string)=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
  return normalized([item.es,item.en,item.group,item.terms||""].join(" ")).includes(normalized(q.trim()));
