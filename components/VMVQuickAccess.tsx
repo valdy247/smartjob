@@ -12,7 +12,7 @@ type AccessContext={ready:boolean;state:ShortcutState;saveEnabled:(flag:boolean)
 const Context=createContext<AccessContext|null>(null);
 const cacheKey=(uid:string)=>"vmv-quick-access:"+uid;
 const isAppPath=(path:string)=>path==="/vista-app"||path.startsWith("/vista-app/");
-function findPressItem(element:HTMLElement,pathname:string):Shortcut|null{
+function findPressItem(element:Element,pathname:string):Shortcut|null{
  if(element.closest("[data-vmv-shortcuts-ui],input,textarea,select,[contenteditable=true],[role=dialog]"))return null;
  const card=element.closest<HTMLElement>("[data-vmv-shortcut-id],a[href],button");
  if(!card||card.matches(":disabled")||card.getAttribute("aria-disabled")==="true")return null;
@@ -148,7 +148,7 @@ export function VMVQuickAccessProvider({children}:{children:ReactNode}){
   const down=(event:PointerEvent)=>{
    clear();target=null;
    if(event.button!==0)return;
-   const element=event.target instanceof HTMLElement?event.target:null;
+   const element=event.target instanceof Element?event.target:null;
    if(!element)return;
    const entry=findPressItem(element,pathname);
    if(!entry)return;
@@ -166,7 +166,7 @@ export function VMVQuickAccessProvider({children}:{children:ReactNode}){
    if(node instanceof Node&&fired.contains(node)){event.preventDefault();event.stopImmediatePropagation();fired=null;}
   };
   const contextMenu=(event:MouseEvent)=>{
-   const element=event.target instanceof HTMLElement?event.target:null;
+   const element=event.target instanceof Element?event.target:null;
    if(!element)return;
    const entry=findPressItem(element,pathname);
    if(!entry)return;
