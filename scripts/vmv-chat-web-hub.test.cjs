@@ -69,8 +69,8 @@ test("Owner and business isolation, no fake public chat activation",()=>{
  assert.match(ddl,/public_chat_enabled=false/);
  assert.match(ddl,/web_chat_site_business_mismatch/);
  assert.match(ddl,/NEW\.owner_id/);
- assert.match(hub,/Chat público sin activar/);
- assert.match(hub,/Las consultas web existentes siguen llegando a la bandeja/);
+ assert.match(hub,/Chat IA sin activar/);
+ assert.match(hub,/El formulario de contacto permanece/);
  assert.match(css,/@media\(max-width:420px\)/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
