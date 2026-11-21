@@ -4,6 +4,7 @@ import {ArrowLeft,ArrowRight,CalendarDays,Check,CheckCircle2,ChevronDown,Clock3,
 import VoiceSample from "./VoiceSample";
 import AgentConnections from "./AgentConnections";
 import styles from "./AgentSetupWizard.module.css";
+import {useAgentHeaderBack} from "./AgentHeaderBack";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import type {MessageKey} from "@/lib/i18n";
 
@@ -222,6 +223,7 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
   }setStep(x=>x+1);
  };
  const back=()=>{setError("");if(step===0)onCancel();else setStep(x=>x-1);};
+ const useSharedHeader=useAgentHeaderBack(back);
  const yesCalendar=availableTools.calendar&&wants(draft.setup,"calendar_needed"),yesInventory=availableTools.inventory&&wants(draft.setup,"inventory_needed");
  const setHours=(mode:string)=>{
   const pairs:Record<string,string>={};
@@ -333,7 +335,7 @@ export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusine
     {isPreview?<p className={styles.previewNote}>{translate("agents.wizard.previewNotice")}</p>:<p className={styles.previewNote}>{translate("agents.wizard.saveAccountNotice")}</p>}
   </div>:null}
   {error?<p className={styles.error} role="alert">{error}</p>:null}
-  <div className={styles.actions}><button type="button" className={styles.prev} onClick={back}><ArrowLeft size={17}/>{step===0?translate("agents.wizard.cancel"):translate("agents.wizard.back")}</button>
+  <div className={styles.actions}>{!useSharedHeader?<button type="button" className={styles.prev} onClick={back}><ArrowLeft size={17}/>{step===0?translate("agents.wizard.cancel"):translate("agents.wizard.back")}</button>:null}
    {recoverDraft&&step===0?<button type="button" className={styles.prev} disabled={saving||!draft.name.trim()}
     onClick={()=>{void Promise.resolve(onSave(draft)).catch((e:unknown)=>setError(translate("agents.wizard.draftSaveError")));}}>
     {translate("agents.wizard.saveDraft")}</button>:null}
