@@ -210,3 +210,10 @@
 
 /* Chat web customer preview: full white viewport with fixed composer, not a padded wizard. */
 .chatWebScroller{flex:1;min-height:0;overflow:hidden;padding:0;background:#fff}
+
+/* Agent editing is centralized in Profile; keep its entry understated. */
+.profileSettingsLink{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:0 0 auto;min-height:36px;padding:8px 11px;border-radius:11px;border:1px solid #decdf1;background:#fff;color:#7550ad;text-decoration:none;font-size:11px;font-weight:850;white-space:nowrap}
+.profileSettingsLink:hover{background:#f6efff;border-color:#c7aeea}
+.profileSettingsLink:focus-visible{outline:3px solid #bb99e6;outline-offset:2px}
+.agentButtons a.buttonSecondary{text-decoration:none}
+@media(max-width:370px){.profileSettingsLink{padding:8px;font-size:10px}}
