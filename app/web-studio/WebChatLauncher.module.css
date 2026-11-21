@@ -32,3 +32,41 @@
  border:1px solid transparent;
 }
 .launcher svg,.launcher span{color:inherit!important;opacity:1;visibility:visible}
+
+/* Human-readable AI chat on published VMV websites. */
+.chatStream{display:flex;flex-direction:column;gap:11px;min-height:220px;max-height:min(420px,42dvh);overflow-y:auto;
+ padding:13px 10px;border-radius:15px;background:linear-gradient(145deg,#faf7fd,#f4fcf8);overscroll-behavior:contain}
+.chatWelcome{display:flex;flex-direction:column;gap:7px;align-items:center;justify-content:center;min-height:185px;
+ text-align:center;padding:18px;color:#59436b}
+.chatWelcome>span{width:47px;height:47px;border-radius:17px;display:grid;place-items:center;background:#e8dcfa;color:#7951ac}
+.chatWelcome strong{font-size:13px}.chatWelcome p{margin:0;font-size:12px;color:#8a7d94}
+.visitorBubble,.aiBubble{display:grid;gap:5px;max-width:88%;border-radius:16px;padding:11px 13px;box-shadow:0 3px 8px #39234709}
+.visitorBubble{align-self:flex-end;background:#e5d8f7;color:#4a3162;border-bottom-right-radius:5px}
+.aiBubble{align-self:flex-start;background:#fff;color:#392e49;border:1px solid #eae4f0;border-bottom-left-radius:5px}
+.visitorBubble small,.aiBubble small{font-size:9px;font-weight:850;opacity:.63}
+.visitorBubble p,.aiBubble p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.55;margin:0}
+.waiting{display:flex;align-items:center;gap:8px;color:#81649f;font-size:11px;margin:4px}
+.consent{display:flex;gap:9px;align-items:flex-start;color:#796a8a;font-size:10px;line-height:1.6;padding:10px 12px;
+ border-radius:12px;border:1px solid #e4daed;background:#faf7fc;cursor:pointer}
+.consent input{width:18px;height:18px;flex-shrink:0;accent-color:#8955be}
+.consent a{color:#7650a9;font-weight:850;text-decoration:underline}
+.chatInput{display:flex;align-items:end;gap:9px}
+.chatInput textarea{flex:1;min-width:0;resize:vertical;max-height:116px;min-height:48px;border:1.5px solid #e4d9ee;
+ border-radius:15px;padding:12px 13px;color:#32243f;font-size:13px;outline:none;background:#fff;font:inherit}
+.chatInput textarea:focus{border-color:#a580d0;box-shadow:0 0 0 3px #b990d724}
+.chatInput textarea:disabled{opacity:.65;background:#faf8fc}
+.chatInput button{height:47px;width:47px;display:grid;place-items:center;flex-shrink:0;border:0;border-radius:14px;
+ background:var(--vmv-accent,#8554bf);color:#fff;cursor:pointer}
+.chatInput button:disabled{opacity:.4;cursor:not-allowed}
+.chatActions{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.chatActions button,.backToChat{display:inline-flex;align-items:center;gap:6px;min-height:33px;border:1px solid #d9c6e9;background:#f8f2fd;
+ color:#75509b;padding:7px 10px;border-radius:10px;font-size:10px;font-weight:850;cursor:pointer}
+.chatActions>span{display:flex;align-items:center;gap:5px;color:#9890a0;font-size:9px}
+.chatError{padding:9px 11px;margin:0;border:1px solid #efc6d3;background:#fff0f5;color:#ab486c;border-radius:10px;
+ font-size:11px;line-height:1.45}
+.formPanel{display:grid;gap:9px}
+.srOnly{position:absolute;height:1px;width:1px;clip:rect(0,0,0,0);overflow:hidden;white-space:nowrap}
+.spin{animation:chatSpin .9s linear infinite}
+@keyframes chatSpin{to{transform:rotate(360deg)}}
+@media(max-width:600px){.chatStream{max-height:42dvh;min-height:190px}}
+@media(prefers-reduced-motion:reduce){.spin{animation:none}}
