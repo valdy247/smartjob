@@ -15,7 +15,7 @@ export async function proxy(req:NextRequest){
   host.endsWith(".localhost")||host.length>253)return NextResponse.next();
  const pathname=req.nextUrl.pathname;
  if(pathname.startsWith("/api/")||pathname.startsWith("/_next/")||
-  pathname.startsWith("/.well-known/")||pathname==="/favicon.ico")return NextResponse.next();
+  pathname.startsWith("/.well-known/")||pathname==="/favicon.ico"||pathname==="/web-chat-privacy")return NextResponse.next();
  const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
  const key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
  if(!url||!key)return NextResponse.next();
