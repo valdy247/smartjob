@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS public.vmv_web_chat_settings(
  reply_style text NOT NULL DEFAULT 'balanced' CHECK(reply_style IN ('brief','balanced','detailed')),
  languages text NOT NULL DEFAULT 'auto' CHECK(languages IN ('auto','es','en')),
  sales_enabled boolean NOT NULL DEFAULT false,
+ sales_item_ids uuid[] NOT NULL DEFAULT '{}'::uuid[]
+   CHECK(cardinality(sales_item_ids)<=50),
  lead_capture boolean NOT NULL DEFAULT true,
  human_handoff boolean NOT NULL DEFAULT true,
  updated_at timestamptz NOT NULL DEFAULT now(),
@@ -39,11 +41,17 @@ BEGIN
  THEN RAISE EXCEPTION 'web_chat_agent_owner_mismatch'; END IF;
  IF NEW.sales_enabled AND (
   COALESCE(agent_record.configuration->>'cap_catalog','')<>'Sí' OR
-  NOT EXISTS(SELECT 1 FROM public.vmv_ai_catalog_items c
-   WHERE c.owner_id=NEW.owner_id AND c.business_id=NEW.business_id
-   AND c.approved=true AND c.active=true AND c.price_cents>0
-   AND (c.stock_mode='unlimited' OR
-        (c.stock_mode='tracked' AND c.available_qty>0)))
+  cardinality(NEW.sales_item_ids)=0 OR
+  EXISTS(
+   SELECT 1 FROM unnest(NEW.sales_item_ids) requested
+   WHERE NOT EXISTS(
+    SELECT 1 FROM public.vmv_ai_catalog_items c
+    WHERE c.id=requested AND c.owner_id=NEW.owner_id AND c.business_id=NEW.business_id
+    AND c.approved=true AND c.active=true AND c.price_cents>0
+    AND (c.stock_mode='unlimited' OR
+         (c.stock_mode='tracked' AND c.available_qty>0))
+   )
+  )
  ) THEN RAISE EXCEPTION 'web_chat_sales_require_approved_available_catalog'; END IF;
  NEW.updated_at:=now();
  RETURN NEW;
