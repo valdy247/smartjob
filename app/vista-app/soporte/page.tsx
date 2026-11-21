@@ -197,7 +197,11 @@ export default function SupportPage(){
  const resolved=active?["resolved","closed","verified","cancelled","activated","connected"].includes(active.status):false;
  const label=(code:string)=>statusText[code]?.[en?1:0]||code.replaceAll("_"," ");
  return <main className={styles.page}><div className={styles.shell}>
-  <header className={styles.header}><a href="/vista-app" className={styles.back}><ArrowLeft size={17}/>{L("Volver a VMV","Back to VMV")}</a>
+  <header className={styles.header}>{mobile==="detail"?
+   <button type="button" className={styles.back}
+    onClick={()=>{setMobile("list");setFormOpen(false);}}>
+    <ArrowLeft size={17}/>{L("Mis solicitudes","My requests")}</button>:
+   <a href="/vista-app" className={styles.back}><ArrowLeft size={17}/>{L("Volver a VMV","Back to VMV")}</a>}
    <span className={styles.brand}>V<span>VMV BUSINESS</span></span>
    <div className={styles.headerActions}><InterfaceLanguagePicker compact/>
     <button type="button" className={styles.bell} onClick={()=>setShowNotices(x=>!x)} aria-label={L("Notificaciones","Notifications")}>
@@ -231,7 +235,6 @@ export default function SupportPage(){
     </div>
    </section>
    <section className={styles.detail}><div className={styles.paneHead}>
-    <button type="button" className={styles.backMobile} onClick={()=>{setMobile("list");setFormOpen(false);}}><ArrowLeft size={16}/>{L("Mis solicitudes","My requests")}</button>
     <strong>{formOpen?L("Abrir ticket","Open ticket"):active?"#"+active.id.slice(0,8).toUpperCase():L("Conversación","Conversation")}</strong></div>
     {formOpen?<div className={styles.form}><span className={styles.eyebrow}>{L("NUEVA SOLICITUD","NEW REQUEST")}</span>
      <h2>{related?L("Continuar un caso cerrado","Follow up on a resolved case"):L("¿En qué podemos ayudarte?","How can we help?")}</h2>
