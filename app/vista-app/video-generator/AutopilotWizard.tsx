@@ -82,6 +82,14 @@ export default function AutopilotWizard({initial,en,busy,onSave,onExit,onLibrary
  const L=(es:string,english:string)=>en?english:es;
  const patch=(next:Partial<AutopilotPlan>)=>{setPlan(p=>({...p,...next}));setSaved(false);};
  const valid=step!==0||plan.niche.trim().length>=3;
+ const preview=()=>{
+  const params=new URLSearchParams({
+   kind:plan.goal==="Educar y compartir"?"facts":"promo",
+   visual:plan.style==="animated"?"sticks":"stills",
+   topic:plan.niche.trim()||"VMV Business"
+  });
+  window.location.assign("/vista-app/video-generator/quick?"+params.toString());
+ };
  const card=(option:Choice,selected:boolean,onClick:()=>void)=><button type="button"
   key={option.id} aria-pressed={selected} onClick={onClick}
   className={css.choice+(selected?" "+css.selected:"")}>
@@ -105,6 +113,7 @@ export default function AutopilotWizard({initial,en,busy,onSave,onExit,onLibrary
     {busy?<LoaderCircle size={18} className={css.spin}/>:<WandSparkles size={20}/>}
     {L("Preparar primer video","Prepare first video")} <ArrowRight size={18}/>
    </button>
+   <button type="button" className={css.altAction} onClick={preview}><Clapperboard size={18}/>{L("Probar Stick / Imágenes IA","Try Stick / AI images")}</button>
    <button type="button" className={css.altAction} onClick={onLibrary}><Clapperboard size={18}/>{L("Ver mis videos","My videos")}</button>
    {!registerHeaderBack?<button type="button" className={css.textAction} onClick={onExit}>{L("Volver al estudio","Back to studio")}</button>:null}
   </div>
@@ -153,7 +162,12 @@ export default function AutopilotWizard({initial,en,busy,onSave,onExit,onLibrary
     {customAudience?<label className={css.inlineField}>{L("Tu público","Your audience")}
      <input autoFocus value={plan.audience} maxLength={180} onChange={e=>patch({audience:e.target.value})}/></label>:null}
    </div>:null}
-   {step===2?<div className={css.grid}>{styles.map(option=>card(option,plan.style===option.id,()=>patch({style:option.id})))}</div>:null}
+   {step===2?<div className={css.stack}>
+    <div className={css.grid}>{styles.map(option=>card(option,plan.style===option.id,()=>patch({style:option.id})))}</div>
+    <button type="button" className={css.altAction} onClick={preview}>
+     <Clapperboard size={18}/>{L("Probar Stick / Imágenes IA","Try Stick / AI images")}
+    </button>
+   </div>:null}
    {step===3?<div className={css.grid}>
     {([1,3,5,7] as const).map(n=><button type="button" key={n} aria-pressed={plan.frequency===n}
      className={css.choice+" "+css.frequency+(plan.frequency===n?" "+css.selected:"")}
