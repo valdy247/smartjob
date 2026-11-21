@@ -1,15 +1,15 @@
 "use client";
 import {useEffect,useMemo,useRef,useState,type FormEvent} from "react";
 import type {SupabaseClient} from "@supabase/supabase-js";
-import {ArrowLeft,ArrowRight,Bot,Check,CheckCircle2,ChevronRight,Eye,EyeOff,
- LockKeyhole,Mail,RefreshCw,ShieldCheck,Sparkles} from "lucide-react";
-import {Brand} from "./Brand";
+import {ArrowLeft,ArrowRight,Bot,Check,CheckCircle2,Eye,EyeOff,
+ Mail,RefreshCw,ShieldCheck,Sparkles} from "lucide-react";
 import {InterfaceLanguagePicker} from "./InterfaceLanguagePicker";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
-import {authErrorKey} from "@/lib/i18n";
 import {blueprintForSignup,completeSignup} from "@/lib/vmv-signup-complete";
 import {signupQuestions,signupValidation,type SignupAnswer} from "@/lib/vmv-signup-flow";
 import styles from "./SignupExperience.module.css";
+import service from "@/app/vista-app/ai-agents/AutomaticWebWizard.module.css";
+import theme from "@/app/vista-app/ai-agents/AgentServiceFlow.module.css";
 
 type Phase="questions"|"email"|"saving"|"ready"|"failed";
 const draftStorage="vmv-signup-questions-v2";
@@ -31,7 +31,6 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
  const [stepId,setStepId]=useState("first"),[phase,setPhase]=useState<Phase>("questions");
  const [busy,setBusy]=useState(false),[error,setError]=useState("");
  const [notice,setNotice]=useState(""),[showPassword,setShowPassword]=useState(false);
- const [completeAgent,setCompleteAgent]=useState("");
  const [confirmationPassword,setConfirmationPassword]=useState("");
  const submitting=useRef(false);
  const inputRef=useRef<HTMLInputElement|null>(null),scrollRef=useRef<HTMLDivElement|null>(null);
@@ -76,7 +75,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
     const marked=await supabase.auth.updateUser({data:{vmv_signup_v2_completed:true}});
     if(marked.error)throw marked.error;
     if(!active)return;
-    setCompleteAgent(finished.agent);setPhase("ready");
+    setPhase("ready");
     try{sessionStorage.removeItem(draftStorage);}catch{}
    }catch(e){if(active){setPhase("failed");setError(e instanceof Error?e.message:"No pudimos terminar de preparar tu cuenta.");}}
    finally{if(active)setBusy(false);}
@@ -169,115 +168,123 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
   finally{setBusy(false);}
  }
  const options=current.options||[];
- const focus=()=>inputRef;
  const choice=(value:string)=>{
   if(current.kind==="multi"){
    const selected=new Set(answer.split(",").filter(Boolean));
    if(selected.has(value))selected.delete(value);else selected.add(value);
    setAnswer([...selected].join(","));
-  }else setAnswer(value);
- };
- const isSelected=(v:string)=>current.kind==="multi"?answer.split(",").includes(v):answer===v;
- const friendlyName=answers.first?.trim()||"";
- return <main className={styles.outer}>
-  <div className={styles.glowOne}/><div className={styles.glowTwo}/>
-  <div className={styles.shell}>
-   <header className={styles.top}>
-    <div className={styles.brand}><span className={styles.brandMark}><Bot size={21}/></span><span>VMV <b>BUSINESS</b></span></div>
-    <div className={styles.topActions}><InterfaceLanguagePicker compact/>{phase==="questions"&&<button type="button" onClick={onBack} className={styles.login}>{es?"Ya tengo cuenta":"I have an account"} <ChevronRight size={15}/></button>}</div>
+  }else setAnswer( return <main className={styles.outer}>
+  <section className={service.root+" "+theme.flow+" "+styles.wizard} aria-label={es?"Crear cuenta VMV":"Create VMV account"}>
+   <header className={service.top}>
+    <button type="button" disabled={busy||phase==="ready"} onClick={back} aria-label={es?"Volver":"Back"}>
+     <ArrowLeft size={19}/>
+    </button>
+    <span>{phase==="questions"?current.section:es?"Tu cuenta":"Your account"}</span>
+    <div className={styles.topRight}>
+     <InterfaceLanguagePicker compact/>
+     <span>{phase==="questions"?(index+1)+"/"+steps.length:"VMV"}</span>
+    </div>
    </header>
-   <div className={styles.main} ref={scrollRef}>
-    <section className={styles.panel} aria-live="polite">
-     {phase==="questions"?<>
-      <div className={styles.progressTop}><span>{current.section.toUpperCase()}</span><span>{index+1} / {steps.length}</span></div>
-      <div className={styles.track} role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Progreso"><div style={{width:progress+"%"}}/></div>
-      <div className={styles.badge}><Sparkles size={15}/>{es?"Una pregunta a la vez":"One question at a time"}</div>
-      <h1 key={current.id} className={styles.question}>{es?current.es:current.en}</h1>
-      <p className={styles.help}>{current.optional?(es?"Puedes dejarlo vacío.":"You can leave this blank."):
-       index===0?(es?"Vamos a crear algo extraordinario juntos.":"Let's build something remarkable together."):
-       current.kind==="multi"?(es?"Puedes elegir varias opciones.":"You can choose multiple options."):
-       es?"Puedes cambiar tu respuesta antes de terminar.":"You can change your answer before finishing."}</p>
-      <form onSubmit={next} className={styles.form}>
-       {current.kind==="choice"||current.kind==="multi"?
-       <div role={current.kind==="multi"?"group":"radiogroup"} aria-label={es?current.es:current.en} className={styles.choices}>
-        {options.map(o=><button type="button" role={current.kind==="multi"?"checkbox":"radio"}
-         aria-checked={isSelected(o.value)} className={isSelected(o.value)?styles.choiceActive:styles.choice}
-         onClick={()=>choice(o.value)} key={o.value}>
-         <span>{es?o.es:o.en}</span><span className={styles.choiceCircle}>{isSelected(o.value)?<Check size={15}/>:null}</span>
+   <div className={service.track} aria-label={es?"Progreso del registro":"Signup progress"} role="progressbar"
+    aria-valuemin={0} aria-valuemax={100} aria-valuenow={phase==="questions"?progress:100}>
+    <span className={theme.agentProgress} style={{width:(phase==="questions"?progress:100)+"%"}}/>
+   </div>
+   <div className={styles.screenContent} ref={scrollRef}>
+    <div className={service.robot+" "+theme.agentRobot}>
+     {phase==="email"?<Mail size={35}/>:phase==="ready"?<CheckCircle2 size={35}/>:
+      phase==="failed"?<ShieldCheck size={35}/>:<Bot size={35}/>}
+     <Sparkles size={16}/>
+    </div>
+    {phase==="questions"?<>
+     <h1 key={current.id} className={service.question+" "+theme.agentHeading}>{es?current.es:current.en}</h1>
+     <form className={service.panel} id="vmv-signup-question" onSubmit={next}>
+      {current.kind==="choice"||current.kind==="multi"?
+       <div role={current.kind==="multi"?"group":"radiogroup"} aria-label={es?current.es:current.en}
+        className={service.optionsVertical+" "+styles.choiceList}>
+        {options.map(o=><button type="button" key={o.value}
+         role={current.kind==="multi"?"checkbox":"radio"} aria-checked={isSelected(o.value)}
+         className={isSelected(o.value)?service.optionActive:service.option}
+         onClick={()=>choice(o.value)}>
+         {isSelected(o.value)?<Check size={17}/>:null}
+         {es?o.es:o.en}
         </button>)}
        </div>:
-       current.kind==="textarea"?<textarea className={styles.textarea} value={answer} maxLength={current.max}
-         placeholder={ph(current.id,es)} rows={4} onChange={e=>setAnswer(e.target.value)}
-         aria-label={es?current.es:current.en}/>:
-       <div className={styles.inputWrap}>
-        <input ref={inputRef} className={styles.input}
-         type={current.kind==="password"&&!showPassword?"password":current.kind==="email"?"email":
-          current.kind==="tel"?"tel":current.kind==="date"?"date":current.kind==="time"?"time":
-          current.kind==="number"?"text":"text"}
-         min={current.kind==="date"?new Date().toISOString().slice(0,10):undefined}
-         inputMode={current.kind==="number"?"decimal":current.kind==="tel"?"tel":undefined}
-         autoComplete={current.kind==="password"?"new-password":
-          current.kind==="email"?"email":current.id==="first"?"given-name":
-          current.id==="last"?"family-name":current.id==="user_phone"?"tel":"off"}
-         value={answer} maxLength={current.max} aria-label={es?current.es:current.en}
-         placeholder={ph(current.id,es)} onChange={e=>setAnswer(e.target.value)}/>
-        {current.kind==="password"?<button className={styles.eye} type="button" onClick={()=>setShowPassword(v=>!v)}
-         aria-label={showPassword?"Ocultar contraseña":"Mostrar contraseña"}>{showPassword?<EyeOff size={18}/>:<Eye size={18}/>}</button>:null}
-       </div>}
-       {error?<p className={styles.error} role="alert">{error}</p>:null}
-       <div className={styles.actions}>
-        <button type="button" className={styles.back} onClick={back}><ArrowLeft size={17}/>{es?"Atrás":"Back"}</button>
-        <button type="submit" className={styles.next} disabled={busy}>
-         {busy?(es?"Creando cuenta…":"Creating account…"):
-          index===steps.length-1?(es?"Crear cuenta":"Create account"):(es?"Continuar":"Continue")}
-         <ArrowRight size={18}/></button>
-       </div>
-      </form>
-      <div className={styles.footerHint}><ShieldCheck size={15}/>{es?"Tus respuestas se guardan de forma segura al confirmar el correo.":"Your answers are saved securely when your email is verified."}</div>
-     </>:phase==="email"?<>
-      <div className={styles.bigIcon}><Mail size={31}/></div>
-      <div className={styles.badge}><Check size={16}/>{es?"Último paso":"Final step"}</div>
-      <h1 className={styles.question}>{es?"Confirma tu cuenta por email":"Confirm your account by email"}</h1>
-      <p className={styles.help}>{es?"Enviamos un enlace a":"We sent a link to"} <strong>{answers.email||"tu correo"}</strong>. {es?"Ábrelo para verificar tu dirección y regresa aquí.":"Open it to verify your address, then return here."}</p>
-      <label className={styles.verifyLabel}>{es?"Contraseña (si abriste el enlace en otro dispositivo)":"Password (if you opened the email on another device)"}
-       <input type="password" autoComplete="current-password" value={confirmationPassword} onChange={e=>setConfirmationPassword(e.target.value)}
-        className={styles.input} placeholder="••••••••••"/></label>
-      {notice?<p className={styles.success} role="status">{notice}</p>:null}
-      {error?<p className={styles.error} role="alert">{error}</p>:null}
-      <button className={styles.next} type="button" disabled={busy} onClick={()=>void verify()}>
-       <CheckCircle2 size={18}/>{busy?(es?"Verificando…":"Verifying…"):(es?"Ya confirmé mi correo":"I've confirmed my email")}
+       current.kind==="textarea"?
+        <div className={service.field}>
+         <textarea value={answer} rows={4} maxLength={current.max}
+          placeholder={ph(current.id,es)} onChange={e=>setAnswer(e.target.value)}
+          aria-label={es?current.es:current.en}/>
+        </div>:
+        <div className={service.field}>
+         <div className={styles.inputRow}>
+          <input ref={inputRef} aria-label={es?current.es:current.en}
+           type={current.kind==="password"&&!showPassword?"password":current.kind==="email"?"email":
+            current.kind==="tel"?"tel":current.kind==="date"?"date":current.kind==="time"?"time":"text"}
+           min={current.kind==="date"?new Date().toISOString().slice(0,10):undefined}
+           inputMode={current.kind==="number"?"decimal":current.kind==="tel"?"tel":undefined}
+           autoComplete={current.kind==="password"?"new-password":
+            current.kind==="email"?"email":current.id==="first"?"given-name":
+            current.id==="last"?"family-name":current.id==="user_phone"?"tel":"off"}
+           value={answer} maxLength={current.max}
+           placeholder={ph(current.id,es)} onChange={e=>setAnswer(e.target.value)}/>
+          {current.kind==="password"?<button type="button" className={styles.eye}
+           aria-label={showPassword?(es?"Ocultar contraseña":"Hide password"):(es?"Mostrar contraseña":"Show password")}
+           onClick={()=>setShowPassword(v=>!v)}>{showPassword?<EyeOff size={18}/>:<Eye size={18}/>}</button>:null}
+         </div>
+        </div>}
+      {current.optional?<small className={styles.optional}>{es?"Opcional":"Optional"}</small>:null}
+      {error?<p className={service.error} role="alert">{error}</p>:null}
+     </form>
+     <footer className={service.footer}>
+      <button type="submit" form="vmv-signup-question"
+       className={service.primary+" "+theme.agentButton} disabled={busy}>
+       {busy?(es?"Creando cuenta…":"Creating account…"):
+        index===steps.length-1?(es?"Crear cuenta":"Create account"):
+         (es?"Continuar":"Continue")}
+       <ArrowRight size={17}/>
       </button>
-      <button className={styles.resend} type="button" disabled={busy} onClick={()=>void resend()}><RefreshCw size={15}/>{es?"Reenviar correo":"Resend email"}</button>
-     </>:phase==="saving"?<>
-      <div className={styles.bigIcon}><Sparkles size={30}/></div>
-      <h1 className={styles.question}>{es?"Preparando tu espacio":"Setting up your workspace"}</h1>
-      <p className={styles.help}>{es?"Guardando tu negocio, tu agente y las preferencias que elegiste.":"Saving your business, agent and chosen preferences."}</p>
-      <div className={styles.loadingBar}/>
-     </>:phase==="failed"?<>
-      <div className={styles.bigIcon}><LockKeyhole size={30}/></div>
-      <h1 className={styles.question}>{es?"Necesitamos completar un detalle":"One more thing to finish"}</h1>
-      <p className={styles.help}>{es?"Tu correo está confirmado, pero no pudimos terminar toda la configuración. Tus respuestas siguen guardadas.":"Your email is verified, but setup wasn't fully completed. Your answers remain saved."}</p>
-      {error?<p role="alert" className={styles.error}>{error}</p>:null}
-      <button type="button" disabled={busy} className={styles.next} onClick={()=>void verify()}>{es?"Reintentar configuración":"Retry setup"}<ArrowRight size={18}/></button>
-     </>:<>
-      <div className={styles.bigIcon}><CheckCircle2 size={31}/></div>
-      <div className={styles.badge}><Sparkles size={15}/>{es?"Todo preparado":"You're all set"}</div>
-      <h1 className={styles.question}>{es?`¡Bienvenido a VMV, ${friendlyName||"bienvenido"}!`:`Welcome to VMV, ${friendlyName||"friend"}!`}</h1>
-      <p className={styles.help}>{es?`Tu cuenta está verificada y ${completeAgent||"tu agente"} ya tiene su identidad guardada.`:
-       `Your account is verified, and ${completeAgent||"your agent"} has its identity saved.`}</p>
-      <div className={styles.readyPill}><ShieldCheck size={17}/>{es?"Sesión segura iniciada":"Secure session active"}</div>
-      <button className={styles.next} type="button" onClick={()=>window.location.replace("/vista-app")}>
-       {es?"Ir a Home":"Go to Home"}<ArrowRight size={19}/></button>
-     </>}
-    </section>
-    <aside className={styles.story}><div className={styles.orb}><div className={styles.orbEye}/><div className={styles.orbEye}/><div className={styles.orbSmile}/></div>
-     <span>{es?"TU NEGOCIO, TU IA":"YOUR BUSINESS, YOUR AI"}</span>
-     <h2>{es?"Conoce al agente que crecerá contigo.":"Meet the agent that will grow with you."}</h2>
-     <p>{es?"Configuramos su identidad desde el principio, para que tus herramientas trabajen conectadas desde un solo lugar.":"We'll set up its identity from day one, keeping your tools connected in one place."}</p>
-     <div className={styles.storyCard}><Bot size={22}/><div><small>{es?"NOMBRE DE TU AGENTE":"YOUR AGENT'S NAME"}</small><strong>{answers.agent_name||"Tu agente"}</strong></div><CheckCircle2 size={18}/></div>
-    </aside>
+     </footer>
+    </>:phase==="email"?<>
+     <h1 className={service.question+" "+theme.agentHeading}>{es?"Confirma tu cuenta por email":"Confirm your account by email"}</h1>
+     <div className={service.panel}>
+      <p className={service.note}>{es?"Te enviamos un enlace a":"We sent a link to"} <strong>{answers.email||"tu correo"}</strong>. {es?"Confírmalo para continuar.":"Confirm it to continue."}</p>
+      <label className={service.field}>{es?"Contraseña":"Password"}
+       <input type="password" autoComplete="current-password" value={confirmationPassword}
+        placeholder="••••••••" onChange={e=>setConfirmationPassword(e.target.value)}/>
+      </label>
+      {notice?<p className={styles.success} role="status">{notice}</p>:null}
+      {error?<p className={service.error} role="alert">{error}</p>:null}
+      <button className={service.primary+" "+theme.agentButton} type="button" disabled={busy}
+       onClick={()=>void verify()}>
+       <CheckCircle2 size={17}/>{busy?(es?"Verificando…":"Verifying…"):
+        (es?"Ya confirmé mi correo":"I've confirmed my email")}
+      </button>
+      <button className={service.option} type="button" disabled={busy} onClick={()=>void resend()}>
+       <RefreshCw size={15}/>{es?"Reenviar correo":"Resend email"}
+      </button>
+     </div>
+    </>:phase==="saving"?<>
+     <h1 className={service.question+" "+theme.agentHeading}>{es?"Preparando tu cuenta":"Setting up your account"}</h1>
+     <p className={service.note} role="status">{es?"Guardando la configuración…":"Saving your settings…"}</p>
+    </>:phase==="failed"?<>
+     <h1 className={service.question+" "+theme.agentHeading}>{es?"Terminemos tu configuración":"Finish your setup"}</h1>
+     <div className={service.panel}>
+      {error?<p role="alert" className={service.error}>{error}</p>:null}
+      <button type="button" disabled={busy} className={service.primary+" "+theme.agentButton}
+       onClick={()=>void verify()}>{es?"Reintentar":"Try again"}<ArrowRight size={17}/></button>
+     </div>
+    </>:<>
+     <h1 className={service.question+" "+theme.agentHeading}>{es?"¡Todo listo, "+(friendlyName||"bienvenido")+"!":
+      "You're all set, "+(friendlyName||"friend")+"!"}</h1>
+     <div className={service.panel}>
+      <p className={service.note}>{es?"Cuenta verificada.":"Account verified."}</p>
+      <button className={service.primary+" "+theme.agentButton} type="button"
+       onClick={()=>window.location.replace("/vista-app")}>
+       {es?"Ir a Home":"Go to Home"}<ArrowRight size={17}/>
+      </button>
+     </div>
+    </>}
    </div>
-   <footer className={styles.bottom}><span>VMV BUSINESS</span><span>{es?"Una experiencia para ti.":"Built around you."}</span></footer>
-  </div>
+  </section>
  </main>;
 }
