@@ -9,6 +9,7 @@ import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import styles from "./page.module.css";
 import AutopilotWizard,{type AutopilotPlan} from "./AutopilotWizard";
+import {listQuickVideos,deleteQuickVideo,type QuickVideoProject} from "@/lib/vmv-video-quick-library";
 
 type Job={id:string;pilot_id:string|null;prompt:string;mode:"text"|"image";model:"gen4.5"|"kling";
  ratio:"1280:720"|"720:1280";duration:number;status:string;output_url:string|null;
@@ -118,6 +119,9 @@ export default function VideoGeneratorPage(){
  const pilotBack=useRef<(()=>void)|null>(null);
  const registerPilotBack=useCallback((callback:(()=>void)|null)=>{pilotBack.current=callback;},[]);
  const [jobs,setJobs]=useState<Job[]>([]),[pilots,setPilots]=useState<Pilot[]>([]);
+ const [quickProjects,setQuickProjects]=useState<QuickVideoProject[]>([]);
+ const [quickSelected,setQuickSelected]=useState<string|null>(null);
+ const [quickLoading,setQuickLoading]=useState(false),[quickError,setQuickError]=useState("");
  const [form,setForm]=useState<Form>(initial);
  const [image,setImage]=useState(""),[imageLoading,setImageLoading]=useState(false);
  const [pilot,setPilot]=useState(defaultPilot);
@@ -174,6 +178,34 @@ export default function VideoGeneratorPage(){
   finally{setCaptionBusy(false);}
  };
  const patch=<K extends keyof Form>(field:K,value:Form[K])=>{setForm(f=>({...f,[field]:value}));setCostApproved(false);};
+ const loadQuick=useCallback(async()=>{
+  const db=getSupabase();if(!db)return;
+  setQuickLoading(true);setQuickError("");
+  try{
+   const list=await listQuickVideos(db);
+   setQuickProjects(list);
+  }catch(e){
+   const message=e instanceof Error?e.message:"quick_library_unavailable";
+   if(message!=="login")setQuickError(message);
+  }finally{setQuickLoading(false);}
+ },[]);
+ useEffect(()=>{void loadQuick();},[loadQuick]);
+ useEffect(()=>{
+  const id=new URLSearchParams(window.location.search).get("quick");
+  if(id&&/^[a-f0-9-]{36}$/i.test(id))setQuickSelected(id);
+ },[]);
+ const selectedQuick=quickProjects.find(p=>p.id===quickSelected)||null;
+ const removeQuick=async(project:QuickVideoProject)=>{
+  if(!window.confirm(L("¿Eliminar este video guardado?","Delete this saved video?")))return;
+  const db=getSupabase();if(!db)return;
+  setQuickError("");setQuickLoading(true);
+  try{
+   await deleteQuickVideo(db,project);
+   setQuickProjects(prev=>prev.filter(p=>p.id!==project.id));
+   if(quickSelected===project.id)setQuickSelected(null);
+  }catch(e){setQuickError(e instanceof Error?e.message:"quick_library_unavailable");}
+  finally{setQuickLoading(false);}
+ };
  const active=(job:Job)=>["starting","PENDING","THROTTLED","RUNNING"].includes(job.status);
  const load=useCallback(async()=>{
   try{
@@ -189,7 +221,10 @@ export default function VideoGeneratorPage(){
     research_video_id:String(r.pilots[0].research_video_id||""),
     research_scan_id:typeof r.pilots[0].research_scan_id==="string"?r.pilots[0].research_scan_id:null
    });
-  }catch(e){setError(e instanceof Error?e.message:"unavailable");}
+  }catch(e){
+   const message=e instanceof Error?e.message:"unavailable";
+   if(message!=="video_not_enabled_for_account")setError(message);
+  }
   finally{setReady(true);}
  },[]);
  useEffect(()=>{void load();},[load]);
@@ -229,7 +264,7 @@ export default function VideoGeneratorPage(){
   return()=>window.clearInterval(timer);
  },[current?.id,current?.status,refreshJob]);
  const failures=jobs.filter(j=>j.status==="FAILED").length;
- const open=(next:Screen)=>{setScreen(next);setError("");setNotice("");};
+ const open=(next:Screen)=>{setScreen(next);setError("");setNotice("");if(next==="library")void loadQuick();};
  const generate=async()=>{
   if(busy||!costApproved)return;
   setBusy("generate");setError("");setNotice("");
@@ -330,28 +365,34 @@ export default function VideoGeneratorPage(){
     <p>{L("Un estudio sencillo para crear, organizar y preparar tus videos.","A simple studio to create, organize and prepare videos.")}</p>
    </div>
    <div className={styles.choiceGrid}>
-    <button type="button" className={styles.choice} onClick={()=>window.location.assign("/vista-app/ai-agents?service=video")}>
+    <Link href="/vista-app/video-generator/quick?visual=sticks" className={styles.choice+" "+styles.featured}>
      <span className={styles.choiceIcon}><Clapperboard size={23}/></span>
-     <strong>{L("Crear un video","Create a video")}</strong>
-     <small>{L("De texto o imagen a video.","Turn text or images into video.")}</small>
+     <strong>Stickman 2D</strong>
+     <small>{L("Crea historias con personajes de palitos, voz y subtítulos.","Make stick-figure stories with voice and captions.")}</small>
+     <ArrowUpRight size={18} className={styles.choiceArrow}/>
+    </Link>
+    <button type="button" className={styles.choice} onClick={()=>window.location.assign("/vista-app/ai-agents?service=video")}>
+     <span className={styles.choiceIcon}><Film size={23}/></span>
+     <strong>{L("Video con IA","AI video")}</strong>
+     <small>{L("Texto o imagen a video con Runway / Kling.","Text or image to video with Runway / Kling.")}</small>
      <ArrowUpRight size={18} className={styles.choiceArrow}/>
     </button>
-    <button type="button" className={styles.choice} onClick={()=>open("pilot")}>
-     <span className={styles.choiceIcon}><Workflow size={23}/></span>
-     <strong>{L("Piloto automático","Content autopilot")}</strong>
-     <small>{L("Elige tu nicho y prepara contenido recurrente.","Choose a niche and prepare recurring content.")}</small>
+    <Link href="/vista-app/video-generator/quick?visual=stills" className={styles.choice}>
+     <span className={styles.choiceIcon}><ImagePlus size={23}/></span>
+     <strong>{L("Videos con imágenes IA","AI image stories")}</strong>
+     <small>{L("Crea escenas ilustradas, añade voz y exporta.","Generate illustrated scenes, voice and export.")}</small>
      <ArrowUpRight size={18} className={styles.choiceArrow}/>
-    </button>
+    </Link>
    </div>
-   <Link href="/vista-app/video-generator/quick" className={styles.libraryShortcut} style={{marginBottom:12}}>
-    <Clapperboard size={19}/><span>{L("Probar Stick / Imágenes IA","Try Stick / AI images")}</span><ChevronRight size={17}/>
-   </Link>
+   <button type="button" className={styles.libraryShortcut} onClick={()=>open("pilot")} style={{marginBottom:12}}>
+    <Workflow size={19}/><span>{L("Planificar contenido · Autopilot","Plan content · Autopilot")}</span><ChevronRight size={17}/>
+   </button>
    <button type="button" className={styles.libraryShortcut} onClick={()=>open("library")}>
     <Library size={19}/><span>{L("Mi biblioteca","My library")}</span>
-    <span className={styles.count}>{jobs.length}</span><ChevronRight size={17}/>
+    <span className={styles.count}>{jobs.length+quickProjects.length}</span><ChevronRight size={17}/>
    </button>
    {ready&&!configured?<div className={styles.setup}><ShieldCheck size={17}/>
-    {L("Para comenzar falta conectar Runway en Vercel.","Connect Runway in Vercel to begin.")}</div>:null}
+    {L("La generación con Runway/Kling requiere conexión y acceso al piloto; Stickman e imágenes IA se gestionan por separado.","Runway/Kling generation needs a connected pilot account; Stickman and AI image stories are separate.")}</div>:null}
    {failures>0?<p className={styles.foot}>{L("Generaciones fallidas registradas: ","Failed attempts recorded: ")}{failures}</p>:null}
   </>:null}
   {screen==="create"?<>
@@ -429,6 +470,36 @@ export default function VideoGeneratorPage(){
    <div className={styles.heading}><span className={styles.eyebrow}><Library size={15}/>{L("TUS CREACIONES","YOUR CREATIONS")}</span>
     <h1>{L("Mi biblioteca","My library")}</h1>
    </div>
+   <section className={styles.quickLibrary} aria-label={L("Videos Stickman e Imágenes IA guardados","Saved Stickman and AI image videos")}>
+    <div className={styles.quickHeader}>
+     <div><strong>{L("Stickman e Imágenes IA","Stickman & AI images")} · {quickProjects.length}</strong>
+      <small>{L("Guardados en tu cuenta · disponibles en otros dispositivos","Saved to your account · available across devices")}</small></div>
+     <button type="button" className={styles.iconButton} disabled={quickLoading} onClick={()=>void loadQuick()}
+      aria-label={L("Actualizar guardados","Refresh saved videos")}><RefreshCw size={17}/></button>
+    </div>
+    {quickLoading?<p className={styles.foot}><LoaderCircle size={14} className={styles.spinner}/>{L("Sincronizando…","Syncing…")}</p>:null}
+    {quickError?<p className={styles.quickError} role="alert">{L("No se pudo cargar o modificar la biblioteca. Intenta actualizar.","Could not load or update your library. Try refreshing.")}</p>:null}
+    {quickProjects.length?<div className={styles.quickCards}>
+     {quickProjects.map(p=><button type="button" key={p.id}
+      className={quickSelected===p.id?styles.quickCardActive:styles.quickCard}
+      onClick={()=>{setQuickSelected(p.id);setSelected(null);}}>
+      <span className={styles.quickIcon}><Clapperboard size={19}/></span>
+      <strong>{p.title||p.topic}</strong>
+      <small>{p.visual==="sticks"?"Stickman 2D":L("Imágenes IA","AI images")} · {p.seconds} s · {date(p.created_at)}</small>
+     </button>)}
+    </div>:<p className={styles.quickEmpty}>{L("Todavía no tienes videos Stickman guardados.","No Stickman videos saved yet.")}
+     <Link href="/vista-app/video-generator/quick?visual=sticks">{L("Crear Stickman","Create Stickman")}</Link></p>}
+    {selectedQuick?<div className={styles.quickPreview}>
+     <div className={styles.quickPreviewTop}><strong>{selectedQuick.title||selectedQuick.topic}</strong>
+      <button type="button" disabled={quickLoading} onClick={()=>void removeQuick(selectedQuick)}>
+       {L("Eliminar","Delete")}</button></div>
+     {selectedQuick.url?<><video key={selectedQuick.id} src={selectedQuick.url} controls playsInline preload="metadata"/>
+      <a href={selectedQuick.url} download target="_blank" rel="noreferrer" className={styles.secondary}>
+       <Download size={16}/>{L("Descargar video","Download video")}</a></>:
+      <p className={styles.foot}>{L("El enlace caducó. Actualiza la biblioteca.","Link expired. Refresh the library.")}</p>}
+    </div>:null}
+   </section>
+   <h2 className={styles.librarySubheading}>{L("Videos con Runway y Kling","Runway and Kling videos")}</h2>
    <div className={styles.libraryGrid}>
     <section className={styles.libraryList}>
      <div className={styles.libraryTitle}>
