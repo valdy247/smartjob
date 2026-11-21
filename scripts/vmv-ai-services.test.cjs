@@ -58,11 +58,19 @@ test("Smart Quote prepares a persisted PDF before sharing it from review",()=>{
  assert.match(quote,/onClick=\{\(\)=>setSavedId\(draftId\)\}/);
  assert.doesNotMatch(quote,/action:"send"/);
 });
-test("Inventory sales and bookings share canonical stores, require owner permission approval",()=>{
- assert.match(commerce,/setAgentCatalogReadAccess\(agent,inventoryRead\)/);
- assert.match(commerce,/saveCommerceAgentPermissions\(agent,permission\)/);
+test("First-time product setup preserves agent identity, permissions and catalog ownership",()=>{
+ const store=read(base+"commerceStore.ts");
+ const hub=read(base+"CommerceStudio.tsx");
+ assert.match(commerce,/saveCommerceSetup\(agent/);
  assert.match(commerce,/AgentWebCatalogEditor/);
- assert.match(commerce,/confirm\("¿Guardar los permisos/);
+ assert.match(commerce,/onOpenStudio\(\)/);
+ assert.match(store,/commerce_onboarded:"Sí"/);
+ assert.match(store,/\.eq\("owner_id",owner\)\.eq\("business_id",agent\.business_id\)/);
+ assert.match(store,/\.eq\("revision",agent\.revision\)/);
+ assert.match(store,/cap_catalog:config\.catalog/);
+ assert.match(store,/perm_prepare_order:config\.orders/);
+ assert.match(hub,/toggleCatalogRead/);
+ assert.match(hub,/BuilderImageField/);
  assert.match(bookings,/vmv_ai_booking_services/);
  assert.match(bookings,/vmv_ai_booking_slots/);
  assert.match(bookings,/storeAgent\(\{\.\.\.agent,setup/);
