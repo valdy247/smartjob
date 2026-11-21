@@ -733,13 +733,12 @@ export default function WebBuilderWorkspace(){
  return <div className={styles.workspace} ref={workspaceRef}>
   <header className={styles.topbar} data-site={Boolean(site)}>
    <a href="/vista-app" className={styles.brand}>VMV <span>Web Studio</span></a>
-   {site?<button type="button" className={styles.mobileBack} aria-label="Volver a mis sitios"
-    title="Mis sitios" onClick={back}><ArrowLeft size={19}/></button>:null}
+   {site?<button type="button" className={styles.mobileBack}
+    aria-label={view==="editor"?"Volver a mis sitios":"Volver al editor"}
+    title={view==="editor"?"Mis sitios":"Editor"}
+    onClick={()=>{if(view!=="editor"){setView("editor");setMobileSettings(false);setError("");return;}back();}}>
+    <ArrowLeft size={19}/></button>:null}
    {site?<div className={styles.mobileStudioTools} role="group" aria-label="Navegación del editor">
-    {view!=="editor"?<button type="button" className={styles.mobileEditorReturn}
-     onClick={()=>{setView("editor");setMobileSettings(false);setError("");}}>
-     <ArrowLeft size={16}/> Editor
-    </button>:null}
     <div className={styles.mobilePageSwitcher}>
      <button type="button" className={styles.mobilePageTrigger} disabled={busy||!page}
       aria-label="Seleccionar página" aria-haspopup="menu" aria-controls="vmv-page-choices"
