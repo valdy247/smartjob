@@ -8,10 +8,12 @@ import {
 } from "lucide-react";
 import type {LucideIcon} from "lucide-react";
 import css from "./AutopilotWizard.module.css";
+import ViralRadar from "./ViralRadar";
 
 export type AutopilotPlan={
  id:string;niche:string;audience:string;goal:string;style:string;frequency:number;
  model:"gen4.5"|"kling";monthly_budget_cents:number;delivery:"download"|"social_draft";
+ creative_seed:string;research_video_id:string;research_scan_id:string|null;
 };
 type Props={
  initial:AutopilotPlan;en:boolean;busy:boolean;
@@ -107,15 +109,22 @@ export default function AutopilotWizard({initial,en,busy,onSave,onExit,onLibrary
    <p>{subtitles[step][en?1:0]}</p>
   </div>
   <div className={css.content} key={step}>
-   {step===0?<div className={css.grid}>
-    {niches.map(option=>card(option,!customNiche&&plan.niche===option.id,()=>{setCustomNiche(false);patch({niche:option.id});}))}
+   {step===0?<div className={css.stack}><div className={css.grid}>
+    {niches.map(option=>card(option,!customNiche&&plan.niche===option.id,()=>{setCustomNiche(false);patch({niche:option.id,creative_seed:"",research_video_id:"",research_scan_id:null});}))}
     <button type="button" className={css.choice+(customNiche?" "+css.selected:"")}
-     aria-pressed={customNiche} onClick={()=>{setCustomNiche(true);patch({niche:customNiche?plan.niche:""});}}>
+     aria-pressed={customNiche} onClick={()=>{setCustomNiche(true);patch({niche:customNiche?plan.niche:"",creative_seed:"",research_video_id:"",research_scan_id:null});}}>
      <span className={css.iconBubble}><WandSparkles size={25}/></span><strong>{L("Otro tema","Other topic")}</strong>
     </button>
     {customNiche?<label className={css.inlineField}>{L("Tu tema","Your topic")}
      <input autoFocus value={plan.niche} maxLength={160} placeholder={L("Ej. Jardinería","e.g. Gardening")}
-      onChange={e=>patch({niche:e.target.value})}/></label>:null}
+      onChange={e=>patch({niche:e.target.value,creative_seed:"",research_video_id:"",research_scan_id:null})}/></label>:null}
+   </div>
+    {plan.niche.trim().length>=3?<ViralRadar niche={plan.niche} en={en}
+     selectedSource={plan.research_video_id}
+     onChoose={(idea,scanId)=>patch({
+      creative_seed:(idea.hook+" — "+idea.concept).slice(0,450),
+      research_video_id:idea.sourceId,research_scan_id:scanId
+     })}/>:null}
    </div>:null}
    {step===1?<div className={css.stack}>
     <div className={css.grid}>{goals.map(option=>card(option,plan.goal===option.id,()=>patch({goal:option.id})))}</div>
@@ -176,6 +185,8 @@ export default function AutopilotWizard({initial,en,busy,onSave,onExit,onLibrary
      <div><CalendarDays size={19}/><span>{L("Ritmo","Target")}</span><strong>{plan.frequency}/{L("semana","week")}</strong></div>
      <div><Coins size={19}/><span>{L("Límite previsto","Budget limit")}</span><strong>${(plan.monthly_budget_cents/100).toFixed(0)} USD</strong></div>
      <div><Download size={19}/><span>{L("Entrega","Delivery")}</span><strong>{plan.delivery==="download"?L("Descargar","Download"):L("Revisión para redes","Social draft")}</strong></div>
+     {plan.creative_seed?<div><Lightbulb size={19}/><span>{L("Idea del Radar","Radar idea")}</span>
+      <strong>{plan.creative_seed.slice(0,72)}{plan.creative_seed.length>72?"…":""}</strong></div>:null}
     </div>
     <div className={css.safety}><PauseCircle size={22}/><div><strong>{L("Piloto en pausa","Autopilot paused")}</strong>
      <span>{L("Se guarda tu plan. No inicia videos, cobros ni publicaciones automáticas.","Your plan is saved. No automatic videos, charges or publishing are started.")}</span></div></div>
