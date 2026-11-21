@@ -60,7 +60,8 @@ export async function activeMeta(owner:string):Promise<{connection:MetaConnectio
  return {connection:connection as MetaConnection,token:decryptMetaToken(secret.encrypted_access_token)};
 }
 export class MetaApiError extends Error{
- constructor(public code:string,public httpStatus:number,public subcode:number|null=null){super(code);}
+ constructor(public code:string,public httpStatus:number,public subcode:number|null=null,
+  public providerMessage:string|null=null,public traceId:string|null=null){super(code);}
 }
 type Graph=Record<string,any>;
 const graphBase="https://graph.facebook.com/"+META_GRAPH_VERSION+"/";
@@ -71,7 +72,16 @@ async function graphResponse(url:URL,opts:RequestInit):Promise<Graph>{
   const raw=body?.error?.code;
   const safeCode=Number.isInteger(raw)?String(raw):"unknown";
   const subcode=Number.isInteger(body?.error?.error_subcode)?Number(body.error.error_subcode):null;
-  throw new MetaApiError("meta_api_"+safeCode,response.status,subcode);
+  // Preserve Meta's human-readable diagnostic for the authenticated owner, never its token.
+  const rawMessage=body?.error?.error_user_msg||body?.error?.message;
+  const providerMessage=typeof rawMessage==="string"?rawMessage
+   .replace(/access_token\s*[=:]\s*[^\s&]+/gi,"access_token=[redacted]")
+   .replace(/Bearer\s+[^\s]+/gi,"Bearer [redacted]")
+   .replace(/EAA[A-Za-z0-9_-]{20,}/g,"[redacted]")
+   .replace(/[\r\n\t]+/g," ").trim().slice(0,360):null;
+  const rawTrace=body?.error?.fbtrace_id;
+  const traceId=typeof rawTrace==="string"&&/^[A-Za-z0-9_-]{6,80}$/.test(rawTrace)?rawTrace:null;
+  throw new MetaApiError("meta_api_"+safeCode,response.status,subcode,providerMessage,traceId);
  }
  return body||{};
 }
