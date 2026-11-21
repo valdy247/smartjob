@@ -1,5 +1,5 @@
 "use client";
-import {useState} from "react";
+import {useEffect,useRef,useState} from "react";
 import {
  ArrowLeft,ArrowRight,Check,CheckCircle2,Clapperboard,CalendarDays,
  Camera,CakeSlice,Coins,Download,Dumbbell,Film,Globe2,Heart,House,Instagram,
@@ -19,6 +19,7 @@ type Props={
  initial:AutopilotPlan;en:boolean;busy:boolean;
  onSave:(plan:AutopilotPlan,prepare:boolean)=>Promise<string|null>;
  onExit:()=>void;onLibrary:()=>void;
+ registerHeaderBack?:(callback:(()=>void)|null)=>void;
 };
 type Choice={id:string;es:string;en:string;Icon:LucideIcon};
 const niches:Choice[]=[
@@ -60,10 +61,22 @@ const subtitles=[
  ["Tú aprobarás cada creación.","You approve every creation."],
  ["Revisa y guarda tu configuración.","Review and save your plan."]
 ];
-export default function AutopilotWizard({initial,en,busy,onSave,onExit,onLibrary}:Props){
+export default function AutopilotWizard({initial,en,busy,onSave,onExit,onLibrary,registerHeaderBack}:Props){
  const [plan,setPlan]=useState<AutopilotPlan>(initial);
  const [step,setStep]=useState(0);
  const [saved,setSaved]=useState(false);
+ const goBack=()=>{
+  if(saved||step===0)onExit();
+  else setStep(current=>Math.max(0,current-1));
+ };
+ const currentBack=useRef(goBack);
+ currentBack.current=goBack;
+ useEffect(()=>{
+  if(!registerHeaderBack)return;
+  const invoke=()=>currentBack.current();
+  registerHeaderBack(invoke);
+  return()=>registerHeaderBack(null);
+ },[registerHeaderBack]);
  const [customNiche,setCustomNiche]=useState(!niches.some(n=>n.id===initial.niche)&&Boolean(initial.niche));
  const [customAudience,setCustomAudience]=useState(Boolean(initial.audience)&&!audiences.includes(initial.audience as typeof audiences[number]));
  const L=(es:string,english:string)=>en?english:es;
@@ -93,7 +106,7 @@ export default function AutopilotWizard({initial,en,busy,onSave,onExit,onLibrary
     {L("Preparar primer video","Prepare first video")} <ArrowRight size={18}/>
    </button>
    <button type="button" className={css.altAction} onClick={onLibrary}><Clapperboard size={18}/>{L("Ver mis videos","My videos")}</button>
-   <button type="button" className={css.textAction} onClick={onExit}>{L("Volver al estudio","Back to studio")}</button>
+   {!registerHeaderBack?<button type="button" className={css.textAction} onClick={onExit}>{L("Volver al estudio","Back to studio")}</button>:null}
   </div>
  </section>;
  return <section className={css.wrap}>
@@ -194,8 +207,8 @@ export default function AutopilotWizard({initial,en,busy,onSave,onExit,onLibrary
    </div>:null}
   </div>
   <div className={css.actions}>
-   <button type="button" className={css.back} disabled={busy} onClick={()=>step?setStep(i=>i-1):onExit()}>
-    <ArrowLeft size={18}/>{step?L("Atrás","Back"):L("Salir","Exit")}</button>
+   {!registerHeaderBack?<button type="button" className={css.back} disabled={busy} onClick={goBack}>
+    <ArrowLeft size={18}/>{step?L("Atrás","Back"):L("Salir","Exit")}</button>:null}
    {step<6?<button type="button" className={css.action} disabled={!valid||busy}
     onClick={()=>setStep(i=>Math.min(6,i+1))}>{L("Continuar","Continue")}<ArrowRight size={19}/></button>:
     <button type="button" className={css.action} disabled={busy||!valid}
