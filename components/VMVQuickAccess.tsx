@@ -88,8 +88,10 @@ export function VMVQuickAccessProvider({children}:{children:ReactNode}){
   void client.auth.getSession().then(({data})=>apply(data.session)).catch(()=>{});
   const onStorage=(event:StorageEvent)=>{
    if(!uidRef.current||event.key!==cacheKey(uidRef.current))return;
-   const latest=parseState(event.newValue?JSON.parse(event.newValue):null);
-   stateRef.current=latest;setState(latest);
+   try{
+    const latest=parseState(event.newValue?JSON.parse(event.newValue):null);
+    stateRef.current=latest;setState(latest);
+   }catch{/* Ignore invalid storage updates from unrelated scripts. */}
   };
   window.addEventListener("storage",onStorage);
   return()=>{alive=false;sub.subscription.unsubscribe();window.removeEventListener("storage",onStorage);};
@@ -164,8 +166,15 @@ export function VMVQuickAccessProvider({children}:{children:ReactNode}){
    if(node instanceof Node&&fired.contains(node)){event.preventDefault();event.stopImmediatePropagation();fired=null;}
   };
   const contextMenu=(event:MouseEvent)=>{
-   if(!fired||Date.now()-firedAt>900)return;
-   if(event.target instanceof Node&&fired.contains(event.target))event.preventDefault();
+   const element=event.target instanceof HTMLElement?event.target:null;
+   if(!element)return;
+   const entry=findPressItem(element,pathname);
+   if(!entry)return;
+   event.preventDefault();
+   clear();
+   fired=element.closest<HTMLElement>("[data-vmv-shortcut-id],a[href],button");
+   firedAt=Date.now();
+   setActionItem(entry);setView("closed");setSuccess("");
   };
   document.addEventListener("pointerdown",down,true);
   document.addEventListener("pointermove",move,true);
@@ -253,7 +262,7 @@ export function VMVHomePinnedShortcuts(){
  const {state,unpin,openPicker}=useVMVQuickAccess();
  const selected=state.home.map(id=>findShortcut(state,id)).filter((x):x is Shortcut=>!!x);
  if(!selected.length)return null;
- return <section className={styles.homeSection} data-vmv-shortcuts-ui>
+ return <section className={styles.homeSection}>
   <div className={styles.homeHeading}><h3>{en?"My shortcuts":"Mis accesos"}</h3><button type="button" onClick={openPicker} aria-label={en?"Edit Home shortcuts":"Editar accesos de Home"}><Plus size={17}/>{en?"Edit":"Editar"}</button></div>
   <div className={styles.homeGrid}>{selected.map(item=><div className={styles.homePinnedCard} key={item.id} data-vmv-shortcut-id={item.id}>
    <a href={item.href}><span className={styles.homePinnedIcon}><ArrowUpRight size={19}/></span><strong>{labelFor(item,en)}</strong></a>
