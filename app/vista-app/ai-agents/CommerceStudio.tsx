@@ -7,6 +7,7 @@ import {setAgentCatalogReadAccess,type PersistedAgent} from "./agentStore";
 import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,saveCatalogItem,listWebStudioCards,importWebStudioCard,getVerifiedCatalog,
  type CatalogItem,type TestOrder,type HumanRequest,type WebStudioCard,type VerifiedCatalogItem} from "./commerceStore";
 import styles from "./CommerceStudio.module.css";
+import {useAgentHeaderBack} from "./AgentHeaderBack";
 
 type Form={
  name:string;sku:string;description:string;price:string;image:string;stock_mode:CatalogItem["stock_mode"];
@@ -51,6 +52,15 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
  };
  const [tab,setTab]=useState<"catalog"|"orders"|"human">("catalog");
  const [catalogView,setCatalogView]=useState<"home"|"add"|"list">("home");
+ const useSharedHeader=useAgentHeaderBack(()=>{
+  if(tab==="catalog"&&catalogView==="add"){
+   setCatalogView(editing?"list":"home");setEditing(null);setForm(empty);setNotice("");return;
+  }
+  if(tab==="catalog"&&catalogView==="list"){
+   setCatalogView("home");setNotice("");return;
+  }
+  onClose();
+ });
  const refresh=async()=>{
   if(!businessId){setItems([]);setOrders([]);setHuman([]);return;}
   const [catalog,history,requests,cards]=await Promise.all([
@@ -124,7 +134,7 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
   finally{setBusy(false);}
  };
  return <div className={styles.root}>
-  {catalogOnly?<button type="button" className={styles.subBack} onClick={onClose}>
+  {catalogOnly&&!useSharedHeader?<button type="button" className={styles.subBack} onClick={onClose}>
    <ArrowLeft size={16}/> Cerrar catálogo</button>:null}
   {notice?<div className={styles.notice} role="status">{notice}</div>:null}
   {loading?<p className={styles.hint} role="status">Cargando productos…</p>:null}
@@ -164,9 +174,9 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
      <strong>Mis productos</strong><small>{items.length} guardado(s)</small>
     </button>
    </div>:catalogView==="add"?<>
-    <button type="button" className={styles.subBack}
+    {!useSharedHeader?<button type="button" className={styles.subBack}
      onClick={()=>{setCatalogView(editing?"list":"home");setEditing(null);setForm(empty);setNotice("");}}>
-     <ArrowLeft size={16}/> {editing?"Mis productos":"Catálogo"}</button>
+     <ArrowLeft size={16}/> {editing?"Mis productos":"Catálogo"}</button>:null}
     <div className={styles.heading}><h2>{editing?"Editar producto":"Agregar producto"}</h2></div>
     <div className={styles.form}>
      <label>Nombre<input maxLength={120} value={form.name}
@@ -212,8 +222,8 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
      })}</div>
     </details>:null}
    </>:<>
-    <button type="button" className={styles.subBack}
-     onClick={()=>{setCatalogView("home");setNotice("");}}><ArrowLeft size={16}/> Catálogo</button>
+    {!useSharedHeader?<button type="button" className={styles.subBack}
+     onClick={()=>{setCatalogView("home");setNotice("");}}><ArrowLeft size={16}/> Catálogo</button>:null}
     <div className={styles.heading}><h2>Mis productos ({items.length})</h2></div>
     {items.length===0?<div className={styles.empty}><Package size={26}/>
      <p>Aún no hay productos.</p></div>:
