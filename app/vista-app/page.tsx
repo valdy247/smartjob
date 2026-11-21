@@ -118,6 +118,11 @@ export default function VMVMobilePreview(){
  useEffect(()=>{setDraft(settings?{...settings,caller_language:settings.desired_language===settings.caller_language?(settings.desired_language==="en"?"es":"en"):settings.caller_language}:null);},[settings]);
  const ready=phase==="signed_in"&&!!profile;
  useEffect(()=>{
+  if(!ready||tab!=="account"||new URLSearchParams(window.location.search).get("settings")!=="shortcuts")return;
+  const timer=window.setTimeout(()=>document.getElementById("vmv-shortcuts-settings")?.scrollIntoView({block:"start",behavior:"smooth"}),120);
+  return()=>window.clearTimeout(timer);
+ },[ready,tab]);
+ useEffect(()=>{
   // Redirect only to allow-listed, same-origin modules after authenticated access.
   // Web Studio does not require a Smart Call profile; a signed-in account is enough.
   const destination=new URLSearchParams(window.location.search).get("returnTo");
