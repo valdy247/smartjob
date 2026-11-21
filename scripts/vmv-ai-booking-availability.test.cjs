@@ -35,7 +35,7 @@ function fake({enabled=true,services=[approved],windows=[window],ai=outcome({cus
  new Function("module","exports","require",js)(mod,mod.exports,localRequire);
  const run=(overrides={})=>mod.exports.bookingChatTurn({
   db,owner,business,agent,configuration:{cap_bookings:enabled?"Sí":"No",perm_book_service:"Sí"},
-  history:[],message:"Necesito un masaje mañana a la 1 pm",session:"web-session-test",source:"web_chat",...overrides
+  history:[],message:"Necesito reservar un masaje mañana a la 1 pm para Ana López",session:"web-session-test",source:"web_chat",...overrides
  });
  return {run,recorded};
 }
@@ -67,7 +67,7 @@ test("owner preview never books real appointments even with customer name",async
 });
 test("missing customer name prompts one question; never invents or books",async()=>{
  const {run,recorded}=fake({ai:outcome({customer_name:""})});
- const result=await run();
+ const result=await run({message:"Necesito un masaje mañana a la 1pm"});
  assert.match(result,/a nombre de quién/);
  assert.equal(recorded.calls.length,0);
 });
@@ -136,4 +136,17 @@ test("calendar TSX and booking backend are parseable TypeScript",()=>{
   const syntax=ts.createSourceFile(filename,file(filename),ts.ScriptTarget.ES2022,true,filename.endsWith(".tsx")?ts.ScriptKind.TSX:ts.ScriptKind.TS);
   assert.deepEqual(syntax.parseDiagnostics.map(x=>String(x.messageText)),[],filename);
  }
+});
+
+test("model-generated customer names cannot book unless the visitor actually provided that name",async()=>{
+ const {run,recorded}=fake({ai:outcome({customer_name:"Nombre Inventado"})});
+ const response=await run({message:"Necesito un masaje mañana a la 1pm"});
+ assert.match(response,/a nombre de quién/);
+ assert.equal(recorded.calls.length,0);
+});
+test("availability questions do not create bookings without explicit user intent",async()=>{
+ const {run,recorded}=fake({ai:outcome({customer_name:"Ana López"})});
+ const result=await run({message:"¿Hay disponibilidad para un masaje mañana a la 1pm? Soy Ana López"});
+ assert.match(result,/¿Quieres que lo reserve/);
+ assert.equal(recorded.calls.length,0);
 });
