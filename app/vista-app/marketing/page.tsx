@@ -97,10 +97,14 @@ function MarketingWorkspace(){
  const [contentLanguage]=useState(language); // Freeze generated customer-facing copy when switching the VMV UI language.
  const [section,setSection]=useState<Section>("actions");
  const [requestedService,setRequestedService]=useState<ServiceCode|null>(null);
+ const [openCaptionsFromShortcut,setOpenCaptionsFromShortcut]=useState(false);
  useEffect(()=>{
   const params=new URLSearchParams(window.location.search);
   const service=params.get("service");
-  if(service==="seo_improvement"||service==="other"){
+  const target=params.get("section");
+  if(["actions","strategy","presence","campaign","numbers","retention"].includes(target||""))setSection(target as Section);
+  if(params.get("tool")==="captions"){setOpenCaptionsFromShortcut(true);setSection("actions");}
+  if(service==="google_profile"||service==="seo_improvement"||service==="review_strategy"||service==="other"){
    setRequestedService(service);
    setSection("actions");
    const goal=params.get("goal");
@@ -265,7 +269,7 @@ function MarketingWorkspace(){
       <button type="button" className={styles.primary} onClick={()=>setSection("campaign")}>{translate("marketing.copy.design_campaign")} <ArrowUpRight size={16}/></button>
      </>:null}
      {section==="actions"?<MarketingActionCenter onWizardActiveChange={setActionWizardActive} businessName={form.business}
-      industryId={form.industry} website={form.website} preselectedService={requestedService||undefined}
+      industryId={form.industry} website={form.website} preselectedService={requestedService||undefined} openSocialCaptions={openCaptionsFromShortcut}
       onGoToVisibility={()=>{setSection("presence");setNotice("");}}/>:null}
      {section==="presence"?<SavedLocalVisibility
       profile={{business:form.business,industry:industryName(form.industry),website:form.website,phone:form.phone,address:form.address,city:form.city,region:form.region,postal:form.postal,hours:form.hours,description:form.description}}
