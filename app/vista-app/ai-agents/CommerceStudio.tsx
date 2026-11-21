@@ -4,7 +4,7 @@ import {ArrowLeft,CheckCircle2,Package,Plus,ReceiptText,ShieldCheck,UserRoundChe
 import ProductImageField from "./ProductImageField";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import {setAgentCatalogReadAccess,type PersistedAgent} from "./agentStore";
-import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,saveCatalogItem,listWebStudioCards,importWebStudioCard,getVerifiedCatalog,
+import {confirmTestOrder,createTestCheckout,reviewChatOrder,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,saveCatalogItem,listWebStudioCards,importWebStudioCard,getVerifiedCatalog,
  type CatalogItem,type TestOrder,type HumanRequest,type WebStudioCard,type VerifiedCatalogItem} from "./commerceStore";
 import styles from "./CommerceStudio.module.css";
 import {useAgentHeaderBack} from "./AgentHeaderBack";
@@ -106,6 +106,18 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
   setBusy(true);try{await confirmTestOrder(order.id);await refresh();
    setNotice("Aceptación de prueba registrada. Pedido aún NO PAGADO.");}
   catch(e){setNotice(e instanceof Error?e.message:"No se pudo registrar la aceptación.");}
+  finally{setBusy(false);}
+ };
+ const review=async(order:TestOrder,decision:"awaiting_payment"|"cancelled")=>{
+  if(busy)return;
+  setBusy(true);
+  try{
+   await reviewChatOrder(order.id,decision);
+   await refresh();
+   setNotice(decision==="awaiting_payment"?
+    "Pedido revisado. Pendiente de pago; todavía no se ha enviado ningún cobro.":
+    "Pedido cancelado.");
+  }catch(e){setNotice(e instanceof Error?e.message:"No se pudo revisar el pedido.");}
   finally{setBusy(false);}
  };
  const checkout=async(order:TestOrder)=>{
@@ -251,21 +263,43 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
      })}</div>}
    </>}
   </>:tab==="orders"?<>
-   <h2 className={styles.ordersTitle}>Pedidos de prueba</h2>
-   {orders.length===0?<div className={styles.empty}><ReceiptText size={26}/><p>Sin pedidos de prueba.</p></div>:
-    <div className={styles.items}>{orders.map(order=><div className={styles.item} key={order.id}>
-     <div><strong>Pedido #{order.order_no}</strong>
-      <small>{formatUsd(order.total_cents)} · {order.status==="awaiting_confirmation"?"Esperando aceptación":order.status==="awaiting_payment"?"Aceptado · pago pendiente":order.status}</small>
-      <small>TEST · {order.payment_status==="paid"?"Pago verificado":"NO PAGADO"}</small></div>
-     {order.status==="awaiting_confirmation"?<button type="button" disabled={busy} onClick={()=>void confirm(order)}>
-      <CheckCircle2 size={14}/> Simular aceptación</button>:null}
-     {order.status==="awaiting_payment"&&order.payment_status!=="paid"?<button type="button"
-      disabled={busy} onClick={()=>void checkout(order)}>Enlace test</button>:null}
+   <div className={styles.heading}><h2>Pedidos ({orders.length})</h2>
+    <button type="button" disabled={busy} onClick={()=>void refresh()}>Actualizar</button>
+   </div>
+   {orders.length===0?<div className={styles.empty}><ReceiptText size={26}/>
+    <p>Todavía no hay pedidos.</p></div>:
+    <div className={styles.items}>{orders.map(order=><article className={styles.orderCard} key={order.id}>
+     <div className={styles.orderTop}><strong>Pedido #{order.order_no}</strong>
+      <span>{order.mode==="live"?"Chat web":"Prueba"}</span></div>
+     <strong>{formatUsd(order.total_cents)}</strong>
+     <small>{order.status==="requires_review"?"Pendiente de revisión":
+      order.status==="awaiting_confirmation"?"Pendiente de aceptación":
+      order.status==="awaiting_payment"?"Pendiente de pago":
+      order.status==="cancelled"?"Cancelado":order.status}</small>
+     {order.lines?.map((line,index)=><div className={styles.orderLine} key={index}>
+      <span>{line.qty} × {line.name}</span><span>{formatUsd(line.qty*line.unit_cents)}</span>
+     </div>)}
+     {order.customer_name?<div className={styles.orderCustomer}>
+      <strong>{order.customer_name}</strong>
+      {order.customer_phone?<small>{order.customer_phone}</small>:null}
+      {order.customer_email?<small>{order.customer_email}</small>:null}
+     </div>:null}
+     <small>{order.payment_status==="paid"?"Pago verificado":"NO PAGADO"}</small>
+     {order.status==="requires_review"?<div className={styles.orderActions}>
+      <button type="button" disabled={busy}
+       onClick={()=>void review(order,"awaiting_payment")}>Requerir pago</button>
+      <button type="button" disabled={busy}
+       onClick={()=>void review(order,"cancelled")}>Cancelar</button>
+     </div>:null}
+     {order.mode==="test"&&order.status==="awaiting_confirmation"?<button type="button"
+      disabled={busy} onClick={()=>void confirm(order)}>Simular aceptación</button>:null}
+     {order.mode==="test"&&order.status==="awaiting_payment"&&order.payment_status!=="paid"?
+      <button type="button" disabled={busy} onClick={()=>void checkout(order)}>Checkout TEST</button>:null}
      {checkoutLinks[order.id]?<button type="button"
-      onClick={()=>void copyCheckout(checkoutLinks[order.id])}>Copiar enlace</button>:null}
-    </div>)}</div>}
+      onClick={()=>void copyCheckout(checkoutLinks[order.id])}>Copiar enlace TEST</button>:null}
+    </article>)}</div>}
    <div className={styles.warning}><ShieldCheck size={17}/>
-    <p>Solo cobros de prueba con Stripe verificado.</p></div>
+    <p>Los pedidos necesitan revisión. «Requerir pago» no envía enlaces ni cobra automáticamente.</p></div>
   </>:<>
    <h2 className={styles.ordersTitle}>Solicitudes humanas</h2>
    {human.length===0?<div className={styles.empty}><UserRoundCheck size={26}/><p>Sin solicitudes.</p></div>:
