@@ -2,10 +2,11 @@ import type {SupabaseClient} from "@supabase/supabase-js";
 import {initialAccountProfile} from "@/lib/account-profile";
 import {centralBusinessDefaults,centralBusinessWritePayload,validCentralBusiness} from "@/lib/vmv-central-business";
 import {signupHours,type SignupAnswer} from "@/lib/vmv-signup-flow";
+import {categoryById} from "@/lib/vmv-business-categories";
 import {provisionAiWorkspace,choosePrincipalAgent} from "@/app/vista-app/ai-agents/centralBusiness";
 
 export type SignupBlueprint={
- version:2;businessId:string;agentId:string;serviceIds:string[];answers:SignupAnswer;
+ version:2;businessId:string;agentId:string;serviceIds:string[];productIds?:string[];answers:SignupAnswer;
 };
 const isId=(s:string)=>/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(s);
 const clean=(v:unknown,max:number)=>typeof v==="string"?v.trim().slice(0,max):"";
@@ -28,18 +29,19 @@ const safeMeta=(value:unknown):SignupBlueprint=>{
  if(v.version!==2||typeof v.businessId!=="string"||typeof v.agentId!=="string"||
   !isId(v.businessId)||!isId(v.agentId)||!Array.isArray(v.serviceIds)||
   v.serviceIds.length!==10||!v.serviceIds.every(x=>typeof x==="string"&&isId(x))||
-  !v.answers||typeof v.answers!=="object"||Array.isArray(v.answers))
+  !v.answers||typeof v.answers!=="object"||Array.isArray(v.answers)||
+  (v.productIds!==undefined&&(!Array.isArray(v.productIds)||v.productIds.length!==10||!v.productIds.every(x=>typeof x==="string"&&isId(x)))))
   throw Error("Los datos iniciales no son válidos. Contacta a soporte.");
  const answers:SignupAnswer={};
  for(const [key,x] of Object.entries(v.answers as Record<string,unknown>)){
   if(/^[a-z0-9_]{1,55}$/i.test(key)&&typeof x==="string")answers[key]=x.slice(0,1100);
  }
- return {version:2,businessId:v.businessId,agentId:v.agentId,serviceIds:v.serviceIds as string[],answers};
+ return {version:2,businessId:v.businessId,agentId:v.agentId,serviceIds:v.serviceIds as string[],productIds:v.productIds as string[]|undefined,answers};
 };
 export function blueprintForSignup(data:SignupAnswer):SignupBlueprint{
  const answers=Object.fromEntries(Object.entries(data).filter(([key])=>key!=="password"&&key!=="repeat_password"));
  return {version:2,businessId:crypto.randomUUID(),agentId:crypto.randomUUID(),
-  serviceIds:Array.from({length:10},()=>crypto.randomUUID()),answers};
+  serviceIds:Array.from({length:10},()=>crypto.randomUUID()),productIds:Array.from({length:10},()=>crypto.randomUUID()),answers};
 }
 /** Retriable, owner-scoped provisioning ONLY after Supabase confirms verified email. */
 export async function completeSignup(db:SupabaseClient):Promise<{business:boolean;agent:string}>{
@@ -76,8 +78,30 @@ export async function completeSignup(db:SupabaseClient):Promise<{business:boolea
  if(profileReadError||!profile)throw Error("Tu perfil no se pudo verificar.");
  if(data.business_now!=="yes")return {business:false,agent:clean(data.agent_name,40)};
  if(clean(data.business_name,120).length<2||!clean(data.description,550)||
-  !clean(data.city,120)||!clean(data.region,120)||!clean(data.business_phone,35))
+  !clean(data.city,120)||!clean(data.region,120)||!contactNumber(data.user_phone||""))
   throw Error("Faltan datos imprescindibles de tu negocio.");
+ // Verify the selected state and city against Google before persisting the central record.
+ // Neither free typing nor a forged signup metadata value is considered a valid location.
+ if(!data.city_place_id||!data.region_place_id)throw Error("Selecciona estado y ciudad desde Google Places.");
+ const geoResponse=await fetch("/api/vmv/signup-geo",{
+  method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({action:"validateCity",country:countryCode(data),region:data.region,
+   city:data.city,regionPlaceId:data.region_place_id,cityPlaceId:data.city_place_id})
+ });
+ const geoResult=await geoResponse.json() as {verified?:boolean};
+ if(!geoResponse.ok||!geoResult.verified)throw Error("No pudimos validar ciudad y estado con Google. Revisa la ubicación.");
+ const catalogId=categoryById(data.category||"")?.id||"other";
+ let googleCategoryId="",googleCategoryName="";
+ if(data.category_source==="verified"&&data.google_category_id&&data.google_category_name){
+  const endpoint="/api/marketing/google-categories?q="+encodeURIComponent(data.google_category_name)+
+   "&country="+encodeURIComponent(countryCode(data))+"&lang=es";
+  const response=await fetch(endpoint,{cache:"no-store"});
+  if(response.ok){
+   const record=await response.json() as {categories?:{id:string;label:string}[]};
+   const match=record.categories?.find(item=>item.id===data.google_category_id&&item.label===data.google_category_name);
+   if(match){googleCategoryId=match.id;googleCategoryName=match.label;}
+  }
+ }
  const defaults=centralBusinessDefaults(clean(data.business_name,120));
  const socials:Record<string,string>={};
  if(url(data.instagram||""))socials.instagram=url(data.instagram||"")!;
@@ -87,17 +111,18 @@ export async function completeSignup(db:SupabaseClient):Promise<{business:boolea
  const central={...defaults,
   id:blueprint.businessId,owner_id:owner,name:clean(data.business_name,120),
   legal_name:clean(data.legal_name,150),description:clean(data.description,550),
-  category_id:clean(data.category,80)||"other",
+  category_id:catalogId,google_category_id:googleCategoryId,google_category_name:googleCategoryName,
   country:/^[A-Z]{2}$/.test(countryCode(data))?countryCode(data):"US",
   kind:kind(data.business_type) as "storefront"|"service_area"|"hybrid",
   street:kind(data.business_type)==="service_area"?"":clean(data.street,180),
   unit:kind(data.business_type)==="service_area"?"":clean(data.unit,80),
   city:clean(data.city,120),region:clean(data.region,120),postal:clean(data.postal,20),
   service_areas:kind(data.business_type)==="storefront"?"":clean(data.service_areas,500),
-  address_visibility:"private" as const,phone:contactNumber(data.business_phone),
-  email:clean(data.business_email,254),website_url:url(data.website||""),
+  address_visibility:"private" as const,phone:contactNumber(data.user_phone),
+  email:clean(user.email||"",254),website_url:url(data.website||""),
   booking_url:url(data.booking_url||"")||"",
-  social_links:socials,services:clean(data.business_services,800),products:clean(data.business_products,700),
+  social_links:socials,services:Array.from({length:10},(_,i)=>clean(data["service_"+(i+1)+"_name"],120)).filter(Boolean).join(", ").slice(0,800),
+  products:Array.from({length:10},(_,i)=>clean(data["product_"+(i+1)+"_name"],120)).filter(Boolean).join(", ").slice(0,700),
   hours_enabled:data.hours_policy==="weekly",hours:data.hours_policy==="weekly"?signupHours(data):[],
   source_system:"vmv_signup",source_record_id:owner
  };
@@ -129,40 +154,44 @@ export async function completeSignup(db:SupabaseClient):Promise<{business:boolea
    channel:enabled.has("calls")?"Teléfono y chat":"Chat",
    language_rule:data.agent_language==="both"?"Bilingüe":data.agent_language==="en"?"English":"Español",
    personality_rule:clean(data.agent_personality,60)||"Amable y profesional",
-   agent_limit:clean(data.agent_limits,500),
+   agent_limit:(data.agent_guardrails||"no_invent,privacy").split(",").join(", ").slice(0,280),
+   agent_response:clean(data.agent_response,35),agent_handoff:clean(data.agent_handoff,35),
    human_review:"Reconocerlo y derivar a un humano",
    data_scope:"Solo nombre y medio de contacto con permiso",
    cap_bookings:enabled.has("bookings")?"Sí":"No",
    perm_book_service:enabled.has("bookings")&&data.booking_confirm==="yes"?"Sí":"No",
-   cap_catalog:"No",perm_prepare_order:"No",
+   cap_catalog:(data.inventory_connections||"").includes("products")?"Sí":"No",perm_prepare_order:"No",
+   catalog_services:(data.inventory_connections||"").includes("services")?"Sí":"No",
    booking_confirmation:data.booking_confirm==="yes"?"Solo con disponibilidad verificada":"Después de aprobación humana",
-   booking_cancel:clean(data.booking_cancellation,400),
-   booking_services:clean(data.business_services,500),
-   support_topics:clean(data.agent_faq,500),
-   call_hello:clean(data.call_greeting,280),
+   booking_cancel:"Cambios sujetos a confirmación del negocio",
+   booking_services:central.services.slice(0,500),
+   support_topics:central.description.slice(0,500),
+   call_hello:("Gracias por contactar a "+central.name+". Soy "+clean(data.agent_name,40)+", ¿en qué puedo ayudarte?").slice(0,280),
    call_after_hours:clean(data.call_after_hours,30),
-   call_number:contactNumber(data.call_number||""),
-   sales_catalog:clean(data.sales_prices,500),
+   call_number:contactNumber(data.user_phone||""),
+   sales_catalog:(central.services+"; "+central.products).slice(0,500),
    sales_handoff:clean(data.sales_handoff,30),
    website_goal:clean(data.website_goal,30),
    marketing_goal:clean(data.marketing_goal,30),
    brand_voice:clean(data.brand_voice,30),
    ads_goal:clean(data.ads_goal,30),ads_budget:clean(data.ads_budget,20),
-   inventory_goal:clean(data.inventory_categories,500),
+   inventory_goal:clean(data.inventory_connections,100),
    signup_complete:"Sí"
   };
   const configuration=Object.fromEntries(Object.entries(setup).filter(([k,v])=>k.length<=50&&v));
   const {error:agentError}=await db.from("vmv_ai_agents").insert({
    id:blueprint.agentId,owner_id:owner,business_id:workspaceId,
    name:clean(data.agent_name,40),kind:kindAgent,
-   purpose:clean(data.agent_mission,240),
+   purpose:("Atender clientes de "+central.name+"; "+[...enabled].join(", ")).slice(0,240),
    personality:clean(data.agent_personality,60)||"Amable y profesional",
    language:["es","en","both"].includes(data.agent_language)?data.agent_language:"es",
    instructions:[
-    clean(data.policies,450),clean(data.agent_limits,650),clean(data.booking_cancellation,450),
-    clean(data.call_greeting,200)
+    "Estilo de respuesta: "+clean(data.agent_response,35),
+    "Escalar cuando sea necesario: "+clean(data.agent_handoff,35),
+    "Reglas elegidas: "+clean(data.agent_guardrails,150),
+    "Nunca inventar datos, precios, disponibilidad ni prometer funciones no conectadas."
    ].filter(Boolean).join("\n").slice(0,2400),
-   knowledge:clean(data.agent_faq,1100),configuration,
+   knowledge:(central.description+"\n"+central.services+"\n"+central.products).slice(0,1100),configuration,
    status:"draft"
   });
   if(agentError){
