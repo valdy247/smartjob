@@ -8,7 +8,7 @@ import css from "./ViralRadar.module.css";
 
 type Scan={id:string;query:string;days:number;status:string;items:RadarVideo[];
  ideas:RadarIdea[];createdAt:string;failure:string|null};
-type Props={niche:string;en:boolean;selectedSource:string;onChoose:(idea:RadarIdea,scanId:string)=>void};
+type Props={niche:string;en:boolean;selectedSource:string;onChoose:(idea:RadarIdea,scanId:string)=>void;onClear:()=>void};
 const compact=(n:number)=>new Intl.NumberFormat("es-US",{notation:"compact",maximumFractionDigits:1}).format(n);
 const errors:Record<string,[string,string]>={
  radar_youtube_key_missing:["Falta conectar YouTube Data API en Vercel.","Connect YouTube Data API in Vercel."],
@@ -17,13 +17,15 @@ const errors:Record<string,[string,string]>={
  radar_database_unavailable:["No se pudo guardar esta búsqueda.","Research could not be saved."],
  radar_daily_limit:["Límite de 6 investigaciones por día.","Maximum 6 fresh searches per day."],
  radar_ai_unavailable:["La IA no pudo preparar ideas. Puedes seguir viendo las fuentes.","AI couldn't prepare ideas. Sources remain available."],
- radar_empty:["No hay videos adecuados para generar ideas.","No suitable videos to build ideas."]
+ radar_empty:["No hay videos adecuados para generar ideas.","No suitable videos to build ideas."],
+ radar_consent_required:["Acepta primero las condiciones del Radar.","Accept the Radar terms before searching."]
 };
-export default function ViralRadar({niche,en,selectedSource,onChoose}:Props){
+export default function ViralRadar({niche,en,selectedSource,onChoose,onClear}:Props){
  const [open,setOpen]=useState(false),[period,setPeriod]=useState(30);
  const [term,setTerm]=useState(niche),[loading,setLoading]=useState(""),[error,setError]=useState("");
  const [scan,setScan]=useState<Scan|null>(null),[history,setHistory]=useState<Scan[]>([]);
  const [configured,setConfigured]=useState<boolean|null>(null);
+ const [consent,setConsent]=useState(false);
  const L=(es:string,english:string)=>en?english:es;
  const auth=async()=>{
   const db=getSupabase();if(!db)throw Error("login");
@@ -35,7 +37,7 @@ export default function ViralRadar({niche,en,selectedSource,onChoose}:Props){
   const token=await auth();
   const res=await fetch("/api/video-generator/radar"+path,{
    method,cache:"no-store",
-   headers:{Authorization:"Bearer "+token,...(body?{"Content-Type":"application/json"}:{})},
+   headers:{Authorization:"Bearer "+token,"X-VMV-YouTube-Consent":consent?"accepted":"",...(body?{"Content-Type":"application/json"}:{})},
    ...(body?{body:JSON.stringify(body)}:{})
   });
   const data=await res.json().catch(()=>({error:"network"}));
@@ -43,12 +45,14 @@ export default function ViralRadar({niche,en,selectedSource,onChoose}:Props){
   return data;
  };
  useEffect(()=>{
+  if(!consent)return;
   let active=true;
   void request("").then(data=>{
    if(active){setConfigured(data.configured===true);setHistory((data.history||[]) as Scan[]);}
   }).catch(()=>{if(active)setConfigured(null);});
   return()=>{active=false;};
- },[]);
+ },[consent]);
+ useEffect(()=>{setTerm(niche);setScan(null);},[niche]);
  useEffect(()=>{if(!scan||scan.status!=="pending")return;
   let active=true;
   const timer=window.setInterval(()=>{
@@ -59,7 +63,7 @@ export default function ViralRadar({niche,en,selectedSource,onChoose}:Props){
   return()=>{active=false;window.clearInterval(timer);};
  },[scan?.id,scan?.status]);
  const search=async()=>{
-  if(loading)return;
+  if(loading||!consent)return;
   setLoading("search");setError("");setScan(null);
   try{
    const q=term.trim().replace(/\s+/g," ");
@@ -78,6 +82,17 @@ export default function ViralRadar({niche,en,selectedSource,onChoose}:Props){
   catch(e){const code=e instanceof Error?e.message:"network";setError(
    errors[code]?.[en?1:0]||L("No se pudieron generar ideas.","Couldn't generate ideas.")
   );}
+  finally{setLoading("");}
+ };
+ const clearHistory=async()=>{
+  if(loading||!window.confirm(L(
+   "¿Eliminar tus investigaciones de Radar Viral? Esto también quitará la idea vinculada al plan. No afecta videos de YouTube.",
+   "Delete your Viral Radar research? This also removes the linked idea from your plan. YouTube videos are unaffected.")))return;
+  setLoading("delete");setError("");
+  try{
+   await request("","DELETE");
+   setScan(null);setHistory([]);onClear();
+  }catch{setError(L("No se pudieron borrar las investigaciones.","Couldn't delete your research."));}
   finally{setLoading("");}
  };
  const active=scan?.status==="ready"&&scan.items.length>0;
@@ -100,10 +115,17 @@ export default function ViralRadar({niche,en,selectedSource,onChoose}:Props){
     <strong>YouTube · {L("fuentes públicas","public sources")}</strong>
     <small>{L("Reels / Shorts de hasta 4 minutos · no analizamos el video completo","Short videos up to 4 minutes · metadata only")}</small>
    </span></div>
+   <label className={css.consent}>
+    <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/>
+    <span>{L("Acepto el uso de datos públicos de YouTube según","I accept public YouTube data usage under")}{" "}
+     <a href="/vista-app/video-generator/radar-privacy" target="_blank" rel="noopener noreferrer">{L("Privacidad de Radar","Radar Privacy")}</a>{" "}
+     {L("y","and")}{" "}<a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer">{L("Términos de YouTube","YouTube Terms")}</a>.
+    </span>
+   </label>
    <div className={css.queryLine}>
     <input value={term} maxLength={90} onChange={e=>setTerm(e.target.value)}
      aria-label={L("Buscar tema","Search topic")} placeholder={L("Tema o producto","Topic or product")}/>
-    <button type="button" disabled={Boolean(loading)||term.trim().length<3} onClick={()=>void search()}>
+    <button type="button" disabled={!consent||Boolean(loading)||term.trim().length<3} onClick={()=>void search()}>
      {loading==="search"?<LoaderCircle size={17} className={css.spin}/>:<Search size={17}/>}
      {L("Buscar","Search")}
     </button>
@@ -137,16 +159,16 @@ export default function ViralRadar({niche,en,selectedSource,onChoose}:Props){
       <small>{v.channel} · {new Date(v.publishedAt).toLocaleDateString(en?"en-US":"es-US")}</small>
       <div className={css.stats}>
        <span><BarChart3 size={13}/>{compact(v.views)} {L("vistas","views")}</span>
-       <span>{compact(v.averageViewsPerDay)} {L("vistas/día¹","views/day¹")}</span>
-       {v.engagementPercent!==null?<span>{v.engagementPercent}% {L("interacción²","engagement²")}</span>:null}
+       {v.likes!==null?<span>{compact(v.likes)} {L("me gusta","likes")}</span>:null}
+       {v.comments!==null?<span>{compact(v.comments)} {L("comentarios","comments")}</span>:null}
       </div>
       <a className={css.sourceLink} href={v.url} target="_blank" rel="noopener noreferrer">
        {L("Ver fuente","View source")} <ExternalLink size={13}/></a>
      </div>
     </article>)}</div>
     <p className={css.disclaimer}>
-     {L("¹ Promedio desde publicación, no crecimiento en tiempo real. ² Me gusta + comentarios / vistas, cuando YouTube informa estas cifras. No implica ventas ni viralidad garantizada.",
-      "¹ Average since publishing, not real-time growth. ² Likes + comments / views when available. No guaranteed virality or sales.")}
+     {L("Estadísticas públicas comunicadas por YouTube. No representan crecimiento en tiempo real ni garantizan ventas. Las ideas de IA son hipótesis basadas en metadatos; no hemos visto los videos.",
+      "Raw public statistics from YouTube. No real-time growth or sales guarantees. AI ideas are metadata-based hypotheses; videos were not viewed.")}
     </p>
     {active?<div className={css.ideasBox}>
      <div><Lightbulb size={20}/><strong>{L("Ideas originales","Original concepts")}</strong></div>
@@ -166,6 +188,10 @@ export default function ViralRadar({niche,en,selectedSource,onChoose}:Props){
      setScan(h);setTerm(h.query);setPeriod(h.days);
     }}>{h.query} <ArrowUpRight size={13}/></button>)}</div>
    </div>:null}
+   {(scan||history.length)>0?<button type="button" className={css.deleteAction}
+    disabled={Boolean(loading)} onClick={()=>void clearHistory()}>
+    {L("Borrar mis investigaciones","Delete my research")}
+   </button>:null}
    <p className={css.providerHint}>{L("Solo fuentes públicas de YouTube. Instagram y TikTok se integrarán con acceso autorizado.",
     "Public YouTube data only. Instagram and TikTok require separate authorized integrations.")}</p>
   </div>:null}
