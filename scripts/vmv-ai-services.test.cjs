@@ -225,7 +225,7 @@ test("Booking wizard opens live services, slots and requests directly and does n
  assert.match(page,/bookingsNeedsSetup/);
  assert.match(studio,/initialTab\?:BookingTab/);
  assert.match(studio,/setTab\("services"\)/);
- assert.match(studio,/eligibleServices=services\.filter\(s=>s\.active&&s\.approved\)/);
+ assert.match(studio,/eligible=services\.filter\(s=>s\.active&&s\.approved\)/);
  assert.match(studio,/Crear o aprobar servicio/);
  assert.match(studio,/Aún no hay reservas registradas/);
  assert.match(studio,/vmv_ai_owner_add_booking_slot/);
