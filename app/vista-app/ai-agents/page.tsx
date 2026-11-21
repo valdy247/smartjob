@@ -378,7 +378,10 @@ export default function AIAgentsPreview(){
       </div>
       {notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
       <div className={styles.sectionHeading}><div><h2>{translate("agents.yourAgent")}: {principal?.name||proposal?.name||translate("agents.notConfigured")}</h2>
-       <p>{selectedBusiness?.name||translate("agents.selectBusiness")}</p></div></div>
+       <p>{selectedBusiness?.name||translate("agents.selectBusiness")}</p></div>
+       <a className={styles.profileSettingsLink} href={agentProfileUrl(principal||proposal||undefined)}>
+        <Settings2 size={15}/>{language==="en"?"Configure":"Configurar"}
+       </a></div>
       <div className={styles.sectionHeading}><div><h2>{translate("agents.capabilities")}</h2>
        </div></div>
       <div className={styles.tiles}>
