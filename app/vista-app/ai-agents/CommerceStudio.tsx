@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
 import {ArrowLeft,CheckCircle2,Package,Plus,ReceiptText,ShieldCheck,UserRoundCheck,Settings2,ImagePlus,Pencil} from "lucide-react";
-import BuilderImageField from "@/app/web-studio/BuilderImageField";
+import ProductImageField from "./ProductImageField";
 import {safeWebImageUrl} from "@/lib/web-services-site";
 import {setAgentCatalogReadAccess,type PersistedAgent} from "./agentStore";
 import {confirmTestOrder,createTestCheckout,formatUsd,listCatalog,listTestOrders,listHumanRequests,updateHumanRequest,saveCatalogItem,listWebStudioCards,importWebStudioCard,getVerifiedCatalog,
@@ -189,7 +189,8 @@ export default function CommerceStudio({agents,onClose,initialAgentId="",onAgent
       onChange={e=>patch("description",e.target.value)}/></label>
      <div className={styles.photoField}>
       <strong>Foto del producto</strong>
-      <BuilderImageField value={form.image} onChange={url=>patch("image",url)} allowAi={false}/>
+      <ProductImageField value={form.image} onChange={url=>patch("image",url)}
+       productName={form.name} description={form.description} businessId={businessId}/>
       <small>Visible en la web conectada cuando apruebes el producto.</small>
      </div>
      <label>Existencias<select value={form.stock_mode}
