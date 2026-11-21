@@ -17,6 +17,7 @@ import CommerceStudio from "./CommerceStudio";
 import BookingStudio,{type BookingTab} from "./BookingStudio";
 import CallControl from "./CallControl";
 import AgentLiveTest from "./AgentLiveTest";
+import ChatWebHub from "./ChatWebHub";
 import AutomaticAdWizard from "./AutomaticAdWizard";
 import AutomaticWebWizard from "./AutomaticWebWizard";
 import AutomaticVideoWizard from "./AutomaticVideoWizard";
@@ -32,7 +33,7 @@ import {loadAgents,loadPhoneSelection,selectPhoneAgent,setStudyStatus,storeAgent
 
 type Kind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 type Status="draft"|"active"|"paused";
-type Screen="videoEntry"|"home"|"editor"|"test"|"quality"|"commerce"|"commerceWizard"|"phone"|"bookings"|"bookingsWizard"|"ads"|"web"|"video"|"call"|"quote"|"quoteEntry";
+type Screen="videoEntry"|"home"|"editor"|"test"|"quality"|"commerce"|"commerceWizard"|"phone"|"bookings"|"bookingsWizard"|"ads"|"web"|"video"|"call"|"quote"|"quoteEntry"|"chatWeb";
 type AgentDraft=WizardDraft;
 type Agent=PersistedAgent;
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
@@ -71,6 +72,7 @@ export default function AIAgentsPreview(){
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState(false);
  const [authenticated,setAuthenticated]=useState(false);
+ const [testFromChatWeb,setTestFromChatWeb]=useState(false);
  const [retryAccount,setRetryAccount]=useState(0);
  useEffect(()=>{let live=true;
   // Business profile is canonical; a phone lookup must never break the agent list.
@@ -145,7 +147,7 @@ export default function AIAgentsPreview(){
   }else if(kind==="bookings"){
    setResumeBooking(false);setScreen("bookingsWizard");setNotice("");
   }else if(kind==="support"){
-   test(agent);setNotice(translate("agents.notice.privateChat"));
+   setSelected(agent.id);setScreen("chatWeb");setNotice("");
   }else if(kind==="operations"){
    quality(agent);setNotice(translate("agents.notice.activityInfo"));
   }else{
@@ -271,7 +273,7 @@ export default function AIAgentsPreview(){
   setAgents(current=>current.some(a=>a.id===sample.id)?current:[sample,...current]);
   setNotice(translate("agents.notice.demoLoaded"));
  };
- const test=(agent:Agent)=>{setSelected(agent.id);setScreen("test");setMessage("");setMessageNotice("");};
+ const test=(agent:Agent)=>{setTestFromChatWeb(false);setSelected(agent.id);setScreen("test");setMessage("");setMessageNotice("");};
  const quality=(agent:Agent)=>{setSelected(agent.id);setScreen("quality");};
  const toggleStatus=async(agent:Agent)=>{
   if(busy)return;
@@ -405,7 +407,7 @@ export default function AIAgentsPreview(){
        const status=!principal?translate("agents.status.notConfigured"):
         type.id==="calls"?(phone?.agentId===principal.id&&phone.serverEnrolled?
          translate("agents.status.readyToTest"):phone?.agentId===principal.id?translate("agents.status.needsAttention"):translate("agents.status.notConfigured")):
-        type.id==="support"?translate("agents.status.needsAttention"):
+        type.id==="support"?(language==="en"?"Manage chat":"Gestionar chat"):
         type.id==="inventory"?(configured.cap_catalog==="Sí"?translate("agents.status.needsAttention"):translate("agents.status.notConfigured")):
         type.id==="sales"?(configured.cap_sales==="Sí"?translate("agents.status.needsAttention"):translate("agents.status.notConfigured")):
         type.id==="bookings"?(configured.cap_bookings==="Sí"?translate("agents.status.needsAttention"):translate("agents.status.notConfigured")):
@@ -590,8 +592,12 @@ export default function AIAgentsPreview(){
       initialAgentId={principal?.id||selected||""} initialTab={commerceTab} onAgentUpdated={updated=>
        setAgents(prev=>prev.map(a=>a.id===updated.id?updated:a))}
       onClose={()=>{void reload().catch(()=>{});back();}}/>:null}
-     {screen==="test"&&active?<AgentLiveTest agent={active}
-      onClose={back} onEdit={()=>edit(active)}
+     {screen==="chatWeb"&&active?<ChatWebHub key={active.id} agent={active}
+      businessName={selectedBusiness?.name||""} onBack={back}
+      onTest={()=>{test(active);setTestFromChatWeb(true);}}
+      onAgentUpdated={updated=>setAgents(old=>old.map(a=>a.id===updated.id?updated:a))}/>:null}
+     {screen==="test"&&active?<AgentLiveTest agent={active} webMode={testFromChatWeb}
+      onClose={()=>{if(testFromChatWeb){setScreen("chatWeb");setTestFromChatWeb(false);}else back();}} onEdit={()=>edit(active)}
       onAgentUpdated={updated=>setAgents(old=>old.map(a=>a.id===updated.id?updated:a))}/>:null}
      </>:null}
     </div>
