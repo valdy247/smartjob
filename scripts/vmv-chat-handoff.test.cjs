@@ -33,7 +33,8 @@ test("Fullscreen owner preview hides inventory/history and speaks to owner like 
  assert.match(preview,/Hola\{ownerFirstName/);
  assert.match(preview,/webComposer/);
  assert.match(preview,/webGreeting/);
- assert.match(css,/height:100dvh/);
+ assert.match(css,/height:100%/);
+ assert.match(read("app/vista-app/ai-agents/page.module.css"),/chatWebScroller/);
  assert.match(css,/\.webComposer/);
  assert.match(parent,/screen==="test"&&testFromChatWeb/);
  assert.match(sim,/warm\+"%: "/);
