@@ -51,7 +51,7 @@ export default function AutomaticBookingWizard({business,agent,onClose,onAgentUp
      .eq("active",true).eq("approved",true),
     db.from("vmv_ai_booking_availability").select("id",{count:"exact",head:true})
      .eq("owner_id",user.id).eq("business_id",agent.business_id)
-     .gt("start_at",new Date().toISOString()).eq("active",true),
+     .gte("day",new Date().toISOString().slice(0,10)),
     db.from("vmv_ai_bookings").select("id",{count:"exact",head:true})
      .eq("owner_id",user.id).eq("business_id",agent.business_id)
    ]);
