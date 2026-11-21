@@ -20,7 +20,7 @@ function AgentDialog({children,onClose,busy,title}:{children:React.ReactNode;onC
  return <dialog ref={ref} className={styles.dialog} aria-label={title} onCancel={e=>{e.preventDefault();if(!busy)onClose();}}>
   <header><strong>{title}</strong><button type="button" disabled={busy} aria-label={language==="en"?"Close agent settings":"Cerrar configuración del agente"} onClick={onClose}>×</button></header>{children}</dialog>;
 }
-export default function AccountBusinessAgent({ownerId,initialName=""}:{ownerId:string;initialName?:string}){
+export default function AccountBusinessAgent({ownerId,initialName="",initialAgentName=""}:{ownerId:string;initialName?:string;initialAgentName?:string}){
  const {language}=useInterfaceLanguage();const en=language==="en";const L=(es:string,english:string)=>en?english:es;
  const [businesses,setBusinesses]=useState<CentralBusiness[]>([]),[workspaces,setWorkspaces]=useState<AiWorkspace[]>([]),[agents,setAgents]=useState<PersistedAgent[]>([]);
  const [businessId,setBusinessId]=useState("");const [loading,setLoading]=useState(true),[error,setError]=useState(""),[agentError,setAgentError]=useState("");
@@ -64,7 +64,7 @@ export default function AccountBusinessAgent({ownerId,initialName=""}:{ownerId:s
   if(!business){setResumeAgent(true);setBusinessOpen(true);return;}
   setCandidate("");setEditing(principal);
   setDraft(centralPrefill(business,principal?{...principal,setup:{...principal.setup}}:{
-   name:L("Mi agente","My agent"),kind:"support",purpose:L("Atender a los clientes de mi negocio con información autorizada.","Help my business customers using approved information."),
+   name:initialAgentName.trim().slice(0,40)||L("Mi agente","My agent"),kind:"support",purpose:L("Atender a los clientes de mi negocio con información autorizada.","Help my business customers using approved information."),
    personality:L("Amable y profesional","Friendly and professional"),language:en?"English":"Español",instructions:"",knowledge:"",setup:{}
   }));setAgentOpen(true);
  };
