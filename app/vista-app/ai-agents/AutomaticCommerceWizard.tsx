@@ -1,168 +1,125 @@
 "use client";
 import {useEffect,useState} from "react";
-import {ArrowLeft,ArrowRight,Bot,Check,LoaderCircle,Pencil,ShieldCheck,ShoppingBag,Sparkles} from "lucide-react";
+import {ArrowLeft,ArrowRight,Bot,Check,LoaderCircle,ShieldCheck,Sparkles} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
-import {setAgentCatalogReadAccess,type PersistedAgent} from "./agentStore";
-import {saveCommerceAgentPermissions,type CatalogItem,type CommerceAgentPermissions} from "./commerceStore";
+import {listCatalog,saveCommerceSetup,type CatalogItem} from "./commerceStore";
 import AgentWebCatalogEditor from "./AgentWebCatalogEditor";
+import type {PersistedAgent} from "./agentStore";
 import type {CentralBusiness} from "./centralBusiness";
 import theme from "./AgentServiceFlow.module.css";
 import styles from "./AutomaticWebWizard.module.css";
-type Mode="inventory"|"sales";
-type Step="business"|"access"|"catalog"|"permissions"|"review";
-const title:Record<Step,string>={
- business:"¿Este servicio es para tu negocio?",
- access:"¿Qué quieres conectar con Mi agente?",
- catalog:"Este es tu inventario real",
- permissions:"¿Qué podrá hacer Mi agente?",
- review:"Revisa los permisos del servicio"
+
+type Step="access"|"orders"|"product"|"review";
+const steps:Step[]=["access","orders","product","review"];
+const labels:Record<Step,string>={
+ access:"¿Conectamos el catálogo?",
+ orders:"¿Preparará pedidos de prueba?",
+ product:"Añade tus productos",
+ review:"Revisa y guarda"
 };
-export default function AutomaticCommerceWizard({mode,business,agent,onAgentUpdated,onClose,onOpenStudio}:{
- mode:Mode;business:CentralBusiness;agent:PersistedAgent;
- onAgentUpdated:(v:PersistedAgent)=>void;onClose:()=>void;onOpenStudio:()=>void;
+export default function AutomaticCommerceWizard({business,agent,onAgentUpdated,onClose,onOpenStudio}:{
+ business:CentralBusiness;agent:PersistedAgent;
+ onAgentUpdated:(value:PersistedAgent)=>void;onClose:()=>void;onOpenStudio:()=>void;
 }){
- const [step,setStep]=useState<Step>("business"),[returnReview,setReturnReview]=useState(false);
- const [owner,setOwner]=useState(""),[busy,setBusy]=useState(""),[error,setError]=useState("");
- const [loading,setLoading]=useState(true),[done,setDone]=useState(false);
- const [inventoryRead,setInventoryRead]=useState(agent.setup.cap_catalog==="Sí");
- const [catalog,setCatalog]=useState<CatalogItem[]>([]);
- const [permission,setPermission]=useState<CommerceAgentPermissions>({
-  channel:agent.setup.channel==="Teléfono"||agent.setup.channel==="Teléfono y chat"?
-   agent.setup.channel:"Chat",
-  cap_sales:agent.setup.cap_sales==="Sí",
-  perm_prepare_order:agent.setup.perm_prepare_order==="Sí",
-  perm_confirm_order:agent.setup.perm_confirm_order==="Sí",
-  perm_payment_link:agent.setup.perm_payment_link==="Sí"
- });
- const steps:Step[]=mode==="inventory"?["business","access","catalog","review"]:
-  ["business","access","permissions","review"];
+ const [step,setStep]=useState<Step>("access");
+ const [catalogRead,setCatalogRead]=useState(agent.setup.cap_catalog==="Sí");
+ const [orders,setOrders]=useState(agent.setup.cap_sales==="Sí"&&agent.setup.perm_prepare_order==="Sí");
+ const [accept,setAccept]=useState(agent.setup.perm_confirm_order==="Sí");
+ const [products,setProducts]=useState<CatalogItem[]>([]);
+ const [loading,setLoading]=useState(true);
+ const [authorized,setAuthorized]=useState(false);
+ const [busy,setBusy]=useState(false);
+ const [error,setError]=useState("");
  const index=steps.indexOf(step);
- useEffect(()=>{let mounted=true;(async()=>{
-  try{
-   const db=getSupabase();if(!db)throw Error("No hay conexión.");
-   const {data:{user},error}=await db.auth.getUser();
-   if(error||!user||user.is_anonymous||user.id!==agent.owner_id||
-    user.id!==business.owner_id)throw Error("Selecciona el agente principal del negocio.");
-   const {data:central}=await db.from("vmv_marketing_businesses").select("id")
-    .eq("id",business.id).eq("owner_id",user.id).maybeSingle();
-   if(!central)throw Error("Negocio no autorizado.");
-   if(mounted)setOwner(user.id);
-  }catch(e){if(mounted)setError(e instanceof Error?e.message:"No se pudo abrir.");}
-  finally{if(mounted)setLoading(false);}
- })();return()=>{mounted=false;};},[business.id,agent.id]);
- const next=()=>{setError("");
-  if(returnReview){setReturnReview(false);setStep("review");return;}
-  setStep(steps[Math.min(index+1,steps.length-1)]);
- };
- const back=()=>{if(returnReview){setReturnReview(false);setStep("review");return;}
-  if(!index){onClose();return;}setStep(steps[index-1]);};
- const edit=(value:Step)=>{setDone(false);setReturnReview(true);setStep(value);};
+ useEffect(()=>{
+  let live=true;
+  void(async()=>{
+   try{
+    const db=getSupabase();if(!db)throw Error("Sin conexión.");
+    const {data:{user},error:authError}=await db.auth.getUser();
+    if(authError||!user||user.is_anonymous||user.id!==business.owner_id||
+       user.id!==agent.owner_id)throw Error("Inicia sesión con el dueño del negocio.");
+    const {data:workspace,error:workspaceError}=await db.from("vmv_ai_businesses")
+     .select("central_business_id").eq("id",agent.business_id)
+     .eq("owner_id",user.id).maybeSingle();
+    if(workspaceError||workspace?.central_business_id!==business.id)
+     throw Error("Elige el agente principal de este negocio.");
+    const catalog=await listCatalog(agent.business_id);
+    if(live){setProducts(catalog);setAuthorized(true);}
+   }catch(e){if(live)setError(e instanceof Error?e.message:"No se pudo abrir.");}
+   finally{if(live)setLoading(false);}
+  })();
+  return()=>{live=false;};
+ },[agent.id,agent.business_id,agent.owner_id,business.id,business.owner_id]);
+ const next=()=>{setError("");setStep(steps[Math.min(index+1,steps.length-1)]);};
+ const back=()=>{setError("");if(!index)onClose();else setStep(steps[index-1]);};
  const save=async()=>{
-  if(busy||!owner||done)return;
-  if(!window.confirm("¿Guardar los permisos de "+(mode==="inventory"?"inventario":"ventas")+
-   " de Mi agente? Esto no inicia ventas ni cobros automáticamente."))return;
-  setBusy("save");setError("");
+  if(!authorized||busy)return;
+  setBusy(true);setError("");
   try{
-   const updated=mode==="inventory"?
-    await setAgentCatalogReadAccess(agent,inventoryRead):
-    await saveCommerceAgentPermissions(agent,permission);
-   onAgentUpdated(updated);setDone(true);
+   const updated=await saveCommerceSetup(agent,{
+    catalog:catalogRead,orders:catalogRead&&orders,accept:catalogRead&&orders&&accept
+   });
+   onAgentUpdated(updated);
+   onOpenStudio();
   }catch(e){setError(e instanceof Error?e.message:"No se pudo guardar.");}
-  finally{setBusy("");}
+  finally{setBusy(false);}
  };
- const card=(label:string,value:string,target:Step)=><div className={styles.reviewCard} key={label}>
-  <span><small>{label}</small><strong>{value}</strong></span>
-  <button type="button" aria-label={"Editar "+label} className={styles.edit}
-   onClick={()=>edit(target)}><Pencil size={17}/></button>
- </div>;
- return <section className={styles.root+" "+theme.flow} aria-label="Inventario y Ventas con AI Agents">
-  <header className={styles.top}><button type="button" onClick={back} aria-label="Volver"><ArrowLeft size={19}/></button>
-   <span>{mode==="inventory"?"Inventario":"Ventas"} · Mi agente</span><span>{index+1}/{steps.length}</span></header>
-  <div className={styles.track}><span className={theme.agentProgress} style={{width:(index+1)/steps.length*100+"%"}}/></div>
+ return <section className={styles.root+" "+theme.flow} aria-label="Configurar Productos y Pedidos">
+  <header className={styles.top}>
+   <button type="button" aria-label="Volver" onClick={back}><ArrowLeft size={19}/></button>
+   <span>Productos/Pedidos · Configuración inicial</span><span>{index+1}/4</span>
+  </header>
+  <div className={styles.track}><span className={theme.agentProgress} style={{width:(index+1)*25+"%"}}/></div>
   <div className={styles.robot+" "+theme.agentRobot}><Bot size={35}/><Sparkles size={16}/></div>
-  <h1 className={styles.question+" "+theme.agentHeading}>{title[step]}</h1>
-  {loading?<p role="status" className={styles.note}><LoaderCircle size={17}/> Cargando negocio…</p>:null}
-  {!loading&&owner&&step==="business"?<div className={styles.panel}>
-   <strong className={styles.emphasis+" "+theme.agentText}>{business.name}</strong>
-   <button type="button" className={styles.optionActive} onClick={next}><Check size={17}/> Sí, este negocio</button>
+  <h1 className={styles.question+" "+theme.agentHeading}>{labels[step]}</h1>
+  {loading?<p className={styles.note} role="status"><LoaderCircle size={17}/> Cargando…</p>:null}
+  {!loading&&authorized&&step==="access"?<div className={styles.panel}>
+   <p className={styles.note}>{agent.name} · {business.name}</p>
+   <div className={styles.optionsVertical}>
+    <button type="button" className={catalogRead?styles.optionActive:styles.option}
+     onClick={()=>setCatalogRead(true)}><Check size={17}/> Sí, conectar</button>
+    <button type="button" className={!catalogRead?styles.optionActive:styles.option}
+     onClick={()=>{setCatalogRead(false);setOrders(false);setAccept(false);}}>No, dejar desconectado</button>
+   </div>
   </div>:null}
-  {!loading&&owner&&step==="access"?<div className={styles.panel}>
-   {mode==="inventory"?<>
-    <p className={styles.note}>El inventario existe independientemente de Mi agente. Tú eliges si podrá consultarlo en el chat.</p>
-    <div className={styles.optionsVertical}>
-     <button type="button" className={inventoryRead?styles.optionActive:styles.option}
-      onClick={()=>setInventoryRead(true)}>Sí, conectar el inventario al chat</button>
-     <button type="button" className={!inventoryRead?styles.optionActive:styles.option}
-      onClick={()=>setInventoryRead(false)}>No, mantenerlo privado</button>
-    </div>
-   </>:<div className={styles.optionsVertical}>
-    <p className={styles.note}>¿Quieres que el agente informe precios de catálogo y pueda preparar pedidos de prueba?</p>
-    <button type="button" className={permission.cap_sales?styles.optionActive:styles.option}
-     onClick={()=>setPermission(p=>({...p,cap_sales:true}))}>Sí, activar ventas</button>
-    <button type="button" className={!permission.cap_sales?styles.optionActive:styles.option}
-     onClick={()=>setPermission(p=>({...p,channel:"Chat",cap_sales:false,perm_prepare_order:false,
-      perm_confirm_order:false,perm_payment_link:false}))}>No, mantener ventas desactivadas</button>
-   </div>}
+  {!loading&&authorized&&step==="orders"?<div className={styles.panel}>
+   <p className={styles.note}>Solo pruebas. Sin cobros reales.</p>
+   <div className={styles.optionsVertical}>
+    <button type="button" disabled={!catalogRead}
+     className={orders?styles.optionActive:styles.option}
+     onClick={()=>setOrders(true)}><Check size={17}/> Sí, preparar pedidos</button>
+    <button type="button" className={!orders?styles.optionActive:styles.option}
+     onClick={()=>{setOrders(false);setAccept(false);}}>No, solo mostrar productos</button>
+   </div>
+   {catalogRead&&orders?<label className={styles.checkLine}>
+    <input type="checkbox" checked={accept} onChange={e=>setAccept(e.target.checked)}/>
+    Registrar aceptación expresa en pruebas
+   </label>:null}
+   {!catalogRead?<p className={styles.note}>Conecta el catálogo en el paso anterior.</p>:null}
   </div>:null}
-  {!loading&&owner&&step==="catalog"&&mode==="inventory"?<div className={styles.panel}>
-   <AgentWebCatalogEditor workspaceId={agent.business_id} onChange={setCatalog}/>
-   <p className={styles.note}>La lista se mantiene sincronizada con el inventario comercial del mismo negocio.</p>
+  {!loading&&authorized&&step==="product"?<div className={styles.panel}>
+   <p className={styles.note}>{products.length} producto(s). Puedes añadirlos ahora o después.</p>
+   <AgentWebCatalogEditor workspaceId={agent.business_id} onChange={setProducts}/>
   </div>:null}
-  {!loading&&owner&&step==="permissions"&&mode==="sales"?<div className={styles.panel}>
-   <label className={styles.field}>¿Dónde atenderá las ventas?
-    <select value={permission.channel}
-     onChange={e=>setPermission(p=>({...p,channel:e.target.value as CommerceAgentPermissions["channel"]}))}>
-     <option value="Chat">Chat web</option>
-     <option value="Teléfono">Teléfono</option>
-     <option value="Teléfono y chat">Teléfono y chat</option>
-    </select></label>
-   <label className={styles.checkLine}><input type="checkbox" disabled={!permission.cap_sales}
-    checked={permission.perm_prepare_order}
-    onChange={e=>setPermission(p=>({...p,perm_prepare_order:e.target.checked,
-     perm_confirm_order:e.target.checked?p.perm_confirm_order:false,
-     perm_payment_link:e.target.checked?p.perm_payment_link:false}))}/>
-    Preparar pedidos de prueba con precios verificados</label>
-   <label className={styles.checkLine}><input type="checkbox" disabled={!permission.perm_prepare_order}
-    checked={permission.perm_confirm_order}
-    onChange={e=>setPermission(p=>({...p,perm_confirm_order:e.target.checked}))}/>
-    Registrar aceptación del comprador en pruebas</label>
-   <label className={styles.checkLine}><input type="checkbox" disabled={!permission.perm_prepare_order}
-    checked={permission.perm_payment_link}
-    onChange={e=>setPermission(p=>({...p,perm_payment_link:e.target.checked}))}/>
-    Ofrecer enlace de pago de prueba cuando corresponda</label>
-   <a className={styles.option} href={"/vista-app/finanzas?business="+encodeURIComponent(business.id)}>
-    Conectar Stripe en Finanzas</a>
-   <p className={styles.note}>La configuración de pagos exige verificación independiente. Activar este permiso no inicia cobros reales.</p>
+  {!loading&&authorized&&step==="review"?<div className={styles.panel}>
+   <div className={styles.review}>
+    <div className={styles.reviewCard}><span><small>Agente y catálogo</small>
+     <strong>{catalogRead?"Conectados":"Desconectados"}</strong></span></div>
+    <div className={styles.reviewCard}><span><small>Pedidos de prueba</small>
+     <strong>{catalogRead&&orders?"Permitidos":"Desactivados"}</strong></span></div>
+    <div className={styles.reviewCard}><span><small>Productos guardados</small>
+     <strong>{products.length}</strong></span></div>
+   </div>
+   <p className={styles.note}><ShieldCheck size={15}/> Esto no publica un chat ni activa cobros reales.</p>
   </div>:null}
-  {!loading&&owner&&step==="review"?<div className={styles.panel}>
-   {done?<div className={styles.info}><Check size={18}/> Permisos guardados en Mi agente.
-    <button type="button" className={styles.option} onClick={onOpenStudio}>
-     Abrir {mode==="inventory"?"Inventario":"Pedidos y Ventas"} <ArrowRight size={17}/></button>
-   </div>:<div className={styles.review}>
-    {card("Negocio",business.name,"business")}
-    {mode==="inventory"?<>
-     {card("Catálogo en chat",inventoryRead?"Conectado":"Privado","access")}
-     {card("Productos",catalog.filter(p=>p.approved&&p.active).length+" activos y aprobados","catalog")}
-    </>:<>
-     {card("Ventas",permission.cap_sales?"Habilitadas":"Desactivadas","access")}
-     {card("Canal",permission.channel,"permissions")}
-     {card("Pedidos de prueba",permission.perm_prepare_order?"Sí":"No","permissions")}
-     {card("Confirmación",permission.perm_confirm_order?"Sí":"No","permissions")}
-     {card("Enlaces de prueba",permission.perm_payment_link?"Sí":"No","permissions")}
-    </>}
-   </div>}
-   <p className={styles.note}>No se crean compras, pagos ni reservas automáticamente.</p>
+  {error?<p className={styles.error} role="alert">{error}</p>:null}
+  {!loading&&authorized?<div className={styles.footer}>
+   <button type="button" className={styles.primary+" "+theme.agentButton}
+    disabled={busy} onClick={step==="review"?()=>void save():next}>
+    {busy?<LoaderCircle size={17}/>:step==="review"?<ShieldCheck size={17}/>:<ArrowRight size={17}/>}
+    {step==="review"?"Guardar y abrir":"Continuar"}
+   </button>
   </div>:null}
-  {error?<p role="alert" className={styles.error}>{error}</p>:null}
-  {!loading&&owner?<div className={styles.footer}>
-   {step==="review"?<button type="button" className={styles.primary+" "+theme.agentButton}
-    onClick={()=>void save()} disabled={Boolean(busy)||done}>
-    {busy?<LoaderCircle size={17}/>:<ShieldCheck size={18}/>}
-    {done?"Guardado":"Confirmar y guardar"} <ArrowRight size={17}/></button>:
-   step!=="business"?<button type="button" className={styles.primary+" "+theme.agentButton}
-    onClick={next} disabled={Boolean(busy)}>
-    {returnReview?"Volver a Revisión":"Continuar"} <ArrowRight size={17}/></button>:null}
-  </div>:null}
-  <p className={styles.footnote}><ShieldCheck size={14}/> Control de permisos por el propietario.</p>
  </section>;
 }
