@@ -19,7 +19,8 @@ type Form={prompt:string;caption:string;mode:"text"|"image";model:"gen4.5"|"klin
  ratio:"1280:720"|"720:1280";duration:5|10};
 const initial:Form={prompt:"",caption:"",mode:"text",model:"gen4.5",ratio:"720:1280",duration:5};
 const defaultPilot:AutopilotPlan={id:"",niche:"",audience:"Público general",goal:"Atraer clientes",style:"realistic",frequency:3,
- model:"gen4.5",monthly_budget_cents:1500,delivery:"download"};
+ model:"gen4.5",monthly_budget_cents:1500,delivery:"download",
+ creative_seed:"",research_video_id:"",research_scan_id:null};
 function errMessage(code:string,en:boolean){
  const map:Record<string,[string,string]>={
   video_not_enabled_for_account:["Video Generator aún no está habilitado para esta cuenta.","Video Generator isn't enabled for this account yet."],
@@ -181,7 +182,10 @@ export default function VideoGeneratorPage(){
     goal:r.pilots[0].goal,style:r.pilots[0].style,frequency:r.pilots[0].frequency,
     model:r.pilots[0].model==="kling"?"kling":"gen4.5",
     monthly_budget_cents:[0,1500,3000,6000].includes(r.pilots[0].monthly_budget_cents)?r.pilots[0].monthly_budget_cents:1500,
-    delivery:r.pilots[0].delivery==="social_draft"?"social_draft":"download"
+    delivery:r.pilots[0].delivery==="social_draft"?"social_draft":"download",
+    creative_seed:String(r.pilots[0].creative_seed||"").slice(0,450),
+    research_video_id:String(r.pilots[0].research_video_id||""),
+    research_scan_id:typeof r.pilots[0].research_scan_id==="string"?r.pilots[0].research_scan_id:null
    });
   }catch(e){setError(e instanceof Error?e.message:"unavailable");}
   finally{setReady(true);}
@@ -263,7 +267,9 @@ export default function VideoGeneratorPage(){
    const result=await api("/pilot","POST",{
     ...(next.id?{id:next.id}:{}),
     niche:next.niche,audience:next.audience,goal:next.goal,style:next.style,frequency:next.frequency,
-    model:next.model,monthly_budget_cents:next.monthly_budget_cents,delivery:next.delivery
+    model:next.model,monthly_budget_cents:next.monthly_budget_cents,delivery:next.delivery,
+    creative_seed:next.creative_seed,research_video_id:next.research_video_id,
+    research_scan_id:next.research_scan_id
    });
    setPilots(prev=>[result.pilot,...prev.filter(p=>p.id!==result.pilot.id)]);
    setPilot({...next,id:result.pilot.id});
