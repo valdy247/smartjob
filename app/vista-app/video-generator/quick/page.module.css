@@ -54,3 +54,5 @@
 @media(max-width:550px){.page{padding:15px 13px 43px}.panel{gap:15px}.frameGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.frame>img,.frameEmpty{height:155px}.choice,.selected{padding:14px;min-height:106px}}
 @media(max-width:370px){.twocol{grid-template-columns:1fr}.steps span{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
+
+.skipVoice{min-height:40px;display:inline-flex;align-items:center;justify-content:center;border:0;background:#eef7f0;color:#268064;border-radius:11px;padding:9px 12px;cursor:pointer;font-size:12px;font-weight:800}
