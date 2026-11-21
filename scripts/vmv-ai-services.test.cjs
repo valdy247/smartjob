@@ -211,7 +211,8 @@ test("Booking wizard opens live services, slots and requests directly and does n
   const ast=ts.createSourceFile(path,code,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
   assert.deepEqual(ast.parseDiagnostics.map(d=>ts.flattenDiagnosticMessageText(d.messageText," ")),[],path);
  }
- assert.match(wizard,/onOpenStudio\(goal\)/);
+ assert.match(wizard,/onOpenStudio\(goal==="slots"\?"availability":goal\)/);
+ assert.match(studio,/Mi disponibilidad/);
  assert.match(wizard,/bookings_onboarded:"Sí"/);
  assert.match(wizard,/openGoal\("services"\)/);
  assert.match(wizard,/openGoal\("slots"\)/);
