@@ -5,6 +5,7 @@ import {askAiAgent,aiAgentModelPathAvailable} from "@/lib/vmv-ai-agents/model";
 import {centralPublicBusiness,approvedCentralSnapshot} from "@/lib/vmv-ai-agents/central-public-context";
 import {ownerCatalogSnapshot} from "@/lib/vmv-ai-agents/catalog-snapshot";
 import {customerCatalog,hideStockCounts} from "@/lib/vmv-ai-agents/customer-catalog";
+import {bookingChatTurn} from "@/lib/vmv-ai-agents/booking-chat";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -231,6 +232,20 @@ export async function POST(req:NextRequest){
   const history=(previous||[]).reverse()
    .filter(x=>(x.role==="user"||x.role==="assistant"||x.role==="human")&&typeof x.content==="string")
    .map(x=>({role:(x.role==="human"?"assistant":x.role) as "user"|"assistant",content:x.content.slice(0,800)}));
+  // Booking actions run through the server-authoritative availability RPC, never AI text.
+  const bookingReply=await bookingChatTurn({
+   db,owner:c.link.owner_id,business:c.agent.business_id,agent:c.agent.id,
+   configuration:config,history,message:text,session:sessionId,source:"web_chat"
+  });
+  if(bookingReply){
+   const saved=await db.rpc("vmv_web_public_chat_finish",{
+    p_owner:c.link.owner_id,p_session_id:sessionId,p_response:bookingReply
+   });
+   if(saved.error||saved.data!==true)throw Error("store_booking_reply_failed");
+   const response=reply({reply:bookingReply,mode:"bot",offerContact:false});
+   setVisitorCookie(response,kind,slug,token,req);
+   return response;
+  }
   const rawReply=(await askAiAgent({
    system,messages:[...history,{role:"user",content:text}],temperature:0.3,
    maxOutputTokens:275,timeoutMs:14500
