@@ -30,7 +30,7 @@ export async function POST(req:NextRequest){
  const email=typeof body.email==="string"?body.email.trim():"";
  const phone=typeof body.phone==="string"?body.phone.trim():"";
  if(![agentId,conversationId,productId,requestId].every(x=>uuid.test(x))||
-  !Number.isInteger(quantity)||!(typeof quantity==="number"&&quantity>=1&&quantity<=50)||
+  typeof quantity!=="number"||!Number.isInteger(quantity)||quantity<1||quantity>50||
   name.length<2||name.length>80||email.length>180||phone.length>35||
   (!email&&!phone)||(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))||
   (phone&&!/^\+?[0-9 ()-]{7,35}$/.test(phone)))
