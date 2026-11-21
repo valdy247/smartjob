@@ -80,7 +80,7 @@ export default function AdsStudio({mode="wizard",registerHeaderBack}:{mode?:"wiz
  const [finished,setFinished]=useState<{kind:"saved"|"sent"|"paused"|"failed";id:string}|null>(null);
  const resumedOnce=useRef(false);
  const [insights,setInsights]=useState<Record<string,{rows:InsightRow[];period:string}>>({});
- const [creativeChecks,setCreativeChecks]=useState<Record<string,{ok:boolean;reason:string;subcode?:number|null}>>({});
+ const [creativeChecks,setCreativeChecks]=useState<Record<string,{ok:boolean;reason:string;subcode?:number|null;metaMessage?:string;metaTrace?:string}>>({});
  const [historyFilter,setHistoryFilter]=useState<"pending"|"active"|"completed">("pending");
  const [agentBrief,setAgentBrief]=useState<AgentAdBrief|null>(null);
  const [handoffLoading,setHandoffLoading]=useState(false);
@@ -666,7 +666,11 @@ export default function AdsStudio({mode="wizard",registerHeaderBack}:{mode?:"wiz
      <strong>{creativeChecks[c.id].ok?localized("Validación completada","Validation completed"):
       localized("Diagnóstico de Meta","Meta diagnosis")}</strong>
      <p>{creativeMessage(creativeChecks[c.id])}</p>
+     {creativeChecks[c.id].metaMessage?<p>{localized("Detalle de Meta: ","Meta details: ")}
+      {creativeChecks[c.id].metaMessage}</p>:null}
      {creativeChecks[c.id].subcode?<small>{localized("Código Meta: ","Meta code: ")}{creativeChecks[c.id].subcode}</small>:null}
+     {creativeChecks[c.id].metaTrace?<small>{localized("Referencia técnica de Meta: ","Meta trace reference: ")}
+      {creativeChecks[c.id].metaTrace}</small>:null}
      {!creativeChecks[c.id].ok&&creativeChecks[c.id].reason==="meta_app_in_development_mode"?
       <a className={styles.secondary} href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer">
        <ExternalLink size={15}/>{localized("Abrir Meta Developers","Open Meta Developers")}</a>:null}
