@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import type {LucideIcon} from "lucide-react";
 import styles from "./page.module.css";
+import AgentSettingsEntry from "../AgentSettingsEntry";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
 import type {MessageKey} from "@/lib/i18n";
@@ -382,11 +383,6 @@ export default function AIAgentsPreview(){
        <div className={styles.heroPills}><span>{principal?translate("agents.principalPrefix")+": "+principal.name:proposal?translate("agents.chooseAgent"):translate("agents.notConfigured")}</span></div>
       </div>
       {notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
-      <div className={styles.sectionHeading}><div><h2>{translate("agents.yourAgent")}: {principal?.name||proposal?.name||translate("agents.notConfigured")}</h2>
-       <p>{selectedBusiness?.name||translate("agents.selectBusiness")}</p></div>
-       <a className={styles.profileSettingsLink} href={agentProfileUrl(principal||proposal||undefined)}>
-        <Settings2 size={15}/>{language==="en"?"Configure":"Configurar"}
-       </a></div>
       <div className={styles.sectionHeading}><div><h2>{translate("agents.capabilities")}</h2>
        </div></div>
       <div className={styles.tiles}>
@@ -439,38 +435,13 @@ export default function AIAgentsPreview(){
         <strong>Anuncio automático</strong><small>Tu agente prepara el anuncio</small>
        </button>
       </div>
-      <div className={styles.sectionHeading}><h2>{translate("agents.existing")}{principal?" "+translate("agents.andPrincipal"):""}</h2><span className={styles.agentCounter}>{visibleAgents.length}</span></div>
-      {visibleAgents.length===0?<div className={styles.empty}>
-       <Bot size={30}/><strong>{translate("agents.emptyTitle")}</strong>
-       
-       <button type="button" className={styles.demoButton} onClick={demo}><Sparkles size={16}/> {translate("agents.exploreTaxi")}</button>
-      </div>:<div className={styles.agents}>
-       {visibleAgents.map(a=>{const t=typeInfo(a.kind);return <article className={styles.agent} key={a.id}>
-        <div className={styles.agentTop}><span style={{background:t.bg,color:t.fg}} className={styles.agentIcon}><t.Icon size={21}/></span>
-         <span className={styles.agentMeta}><strong>{a.name}</strong><small>{agentKind(a.kind)} · {a.language}</small></span>
-         <span className={styles.agentState}>{principal?.id===a.id?translate("agents.state.principal"):a.status==="paused"?translate("agents.state.paused"):phone?.agentId===a.id?translate("agents.state.selected"):a.status==="active"?translate("agents.state.activeStudio"):inspectAgent(a).requiredPassed?translate("agents.state.readyToConfigure"):translate("agents.state.draft")}</span>
-        </div>
-        <p>{a.purpose}</p>
-        <div className={styles.readinessMini}>
-         <span className={styles.readinessText}>{translate("agents.readiness")}: {inspectAgent(a).percent}%</span>
-         <span className={styles.readinessTrack}><span style={{width:inspectAgent(a).percent+"%"}}/></span>
-        </div>
-        <div className={styles.agentButtons}>
-         <button type="button" className={styles.buttonPrimary} onClick={()=>test(a)}><MessageCircle size={15}/> {translate("agents.test")}</button>
-         {phone&&a.revision>0&&(!selectedWorkspace||principal?.id===a.id)?<button type="button" disabled={busy} className={styles.buttonSecondary}
-           onClick={()=>void select(a)}><PhoneCall size={15}/>{phone.agentId===a.id?translate("agents.phoneSelected"):translate("agents.chooseForPhone")}</button>:null}
-         {!principal||principal.id!==a.id?<button type="button" className={styles.buttonSecondary}
-          disabled={!selectedWorkspace||busy||!a.revision}
-          onClick={()=>void designate(a).catch(e=>setNotice(translate("agents.notice.designateError")))}>
-          <Bot size={15}/> {translate("agents.makePrincipal")}</button>:null}
-         <a className={styles.buttonSecondary} href={agentProfileUrl(a)}><Settings2 size={15}/> {language==="en"?"Configure":"Configurar"}</a>
-         <button type="button" className={styles.buttonSecondary} onClick={()=>void toggleStatus(a)}>
-          {a.status==="active"?<PauseCircle size={15}/>:<PlayCircle size={15}/>} {a.status==="active"?translate("agents.pause"):translate("agents.activateStudio")}
-         </button>
-        </div>
-       </article>})}
-      </div>}
-      <div className={styles.disclaimer}><ShieldCheck size={16}/> {translate("agents.disclaimer")}</div>
+      <AgentSettingsEntry
+       label={language==="en"?"My agent":"Mi agente"}
+       name={principal?.name||proposal?.name||(visibleAgents.length?(language==="en"?"Choose your primary agent":"Elige tu agente principal"):(language==="en"?"Set up your agent":"Configura tu agente"))}
+       description={!selectedBusiness?(language==="en"?"Complete your business first":"Primero completa tu negocio"):principal?(inspectAgent(principal).requiredPassed?(language==="en"?"Edit identity and settings":"Editar identidad y configuración"):(language==="en"?"Complete setup":"Completar configuración")):(language==="en"?"Name, personality and capabilities":"Nombre, personalidad y funciones")}
+       href={agentProfileUrl(principal||proposal||undefined)}
+      />
+
      </>:null}
      {businessDialog?<BusinessProfileDialog businessId={selectedBusiness?.id} initialName={workspaces.find(w=>w.id===legacyId)?.name}
       legacy={selectedWorkspace?[]:unlinked} initialLegacyId={legacyId} onClose={()=>{setBusinessDialog(false);setPendingKind(null);}} onSaved={businessSaved}/>:null}
