@@ -88,3 +88,49 @@ test("Owner decides activation and sees separate real visitor inbox",()=>{
  assert.match(hub,/site_kind:site.kind/);
  assert.match(hub,/Desvincular web/);
 });
+
+
+test("Customer stock counts are hidden; orders are owner-reviewed and cannot auto-charge",()=>{
+ const helper=read("lib/vmv-ai-agents/customer-catalog.ts");
+ const simulator=read("app/api/vmv/ai-agents/simulate/route.ts");
+ const publicChat=source["app/api/vmv/public-chat/route.ts"];
+ const action=read("app/api/vmv/public-chat/action/route.ts");
+ const ownerPreview=read("app/api/vmv/ai-agents/commerce/request-order/route.ts");
+ const form=read("components/VMVChatOrderCard.tsx");
+ const sql=read("supabase/sql/vmv_ai_agent_chat_order_requests_20261121.sql");
+ const hub=read("app/vista-app/ai-agents/CommerceStudio.tsx");
+ const store=read("app/vista-app/ai-agents/commerceStore.ts");
+ for(const [name,code] of [
+  ["components/VMVChatOrderCard.tsx",form],
+  ["app/api/vmv/public-chat/action/route.ts",action],
+  ["app/api/vmv/ai-agents/commerce/request-order/route.ts",ownerPreview]
+ ]){
+  const ast=ts.createSourceFile(name,code,ts.ScriptTarget.Latest,true,
+   name.endsWith(".tsx")?ts.ScriptKind.TSX:ts.ScriptKind.TS);
+  assert.deepEqual(ast.parseDiagnostics.map(d=>ts.flattenDiagnosticMessageText(d.messageText," ")),[],name);
+ }
+ assert.match(simulator,/customerCatalog\(webPreview/);
+ assert.match(simulator,/hideStockCounts\(rawReply\)/);
+ assert.match(publicChat,/customerCatalog\(items\)/);
+ assert.match(publicChat,/hideStockCounts\(rawReply\)/);
+ assert.match(helper,/export function customerCatalog/);
+ assert.doesNotMatch(helper,/availableQuantity:item\.availableQuantity/);
+ assert.match(form,/Pedido #/);
+ assert.match(form,/acceptOrder:true/);
+ assert.match(action,/visitorSession\(req,body.kind,body.slug\)/);
+ assert.match(action,/body.action==="order"/);
+ assert.match(action,/body.acceptOrder!==true/);
+ assert.match(action,/vmv_ai_agent_capture_order/);
+ assert.match(ownerPreview,/auth.getUser\(token\)/);
+ assert.match(ownerPreview,/vmv_ai_agent_capture_order/);
+ assert.match(sql,/security invoker/);
+ assert.match(sql,/grant execute on function public.vmv_ai_agent_capture_order/);
+ assert.match(sql,/to service_role/);
+ assert.match(sql,/status,payment_status/);
+ assert.match(sql,/requires_review','not_started/);
+ assert.match(sql,/vmv_ai_owner_review_chat_order/);
+ assert.match(hub,/Pedido #/);
+ assert.match(hub,/Requerir pago/);
+ assert.match(store,/reviewChatOrder/);
+ assert.doesNotMatch(action,/checkoutSession|createPaymentIntent/);
+});
