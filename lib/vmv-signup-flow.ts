@@ -2,7 +2,7 @@ export type SignupAnswer=Record<string,string>;
 export type SignupOption={value:string;es:string;en:string};
 export type SignupQuestion={
  id:string;es:string;en:string;hintEs?:string;hintEn?:string;
- kind?:"text"|"textarea"|"choice"|"multi"|"email"|"tel"|"url"|"password"|"number"|"timewindow";
+ kind?:"text"|"textarea"|"choice"|"multi"|"email"|"tel"|"url"|"password"|"number"|"timewindow"|"date"|"time";
  optional?:boolean;max?:number;options?:SignupOption[];section:string;
 };
 const option=(value:string,es:string,en=es):SignupOption=>({value,es,en});
@@ -52,6 +52,9 @@ export function signupQuestions(data:SignupAnswer):SignupQuestion[]{
    q("city","¿En qué ciudad está tu negocio?","What city is your business in?","Tu ubicación","text",false,120),
    q("region","¿En qué estado o provincia?","What state or province?","Tu ubicación","text",false,120),
    q("postal","¿Cuál es tu código postal?","What's your postal code?","Tu ubicación","text",true,20)
+  );
+  if(data.country==="other")sections.push(
+   q("country_code","¿Cuáles son las dos letras de tu país?","What's your country's two-letter code?","Tu ubicación","text",false,2)
   );
   if(data.business_type!=="service_area")sections.push(
    q("street","¿Cuál es la dirección de tu local?","What's your business street address?","Tu ubicación","text",false,180),
@@ -116,9 +119,19 @@ export function signupQuestions(data:SignupAnswer):SignupQuestion[]{
      option("America/Los_Angeles","Pacífico / Pacific"),option("America/Phoenix","Arizona"),
      option("America/Anchorage","Alaska"),option("Pacific/Honolulu","Hawái / Hawaii"),option("America/Puerto_Rico","Puerto Rico")
     ]),
-    q("booking_cancellation","¿Qué política de cancelaciones aplica a las citas?","What's your appointment cancellation policy?","Reservas","textarea",false,450)
+    q("booking_cancellation","¿Qué política de cancelaciones aplica a las citas?","What's your appointment cancellation policy?","Reservas","textarea",false,450),
+    q("availability_mode","¿Cómo quieres abrir tu disponibilidad inicial?","How should we set your initial availability?","Reservas","choice",false,20,[
+     ...(data.hours_policy==="weekly"?[option("weekly","Usar mis horarios semanales (próximos 60 días)","Use my weekly hours (next 60 days)")]:[]),
+     option("single","Elegir un día y horario","Choose a specific date and time"),
+     option("later","Publicaré mis horarios más adelante","I'll publish hours later")
+    ])
    );
   }
+  if(caps.includes("bookings")&&data.availability_mode==="single")sections.push(
+   q("availability_day","¿Qué día podrás atender las primeras citas?","What's your first available date?","Reservas","date",false,10),
+   q("availability_start","¿A qué hora comienza tu disponibilidad?","When does availability start?","Reservas","time",false,5),
+   q("availability_end","¿A qué hora termina?","When does availability end?","Reservas","time",false,5)
+  );
   if(caps.includes("calls"))sections.push(
    q("call_number","¿Qué número debe usar tu negocio para llamadas?","What number should your business use for calls?","Llamadas","tel",false,35),
    q("call_greeting","¿Cómo debe saludar el agente al contestar?","How should the agent greet callers?","Llamadas","textarea",false,280),
@@ -189,6 +202,12 @@ export function signupValidation(step:SignupQuestion,value:string,data:SignupAns
  if(step.kind==="tel"&&!/^\+?[0-9 ()-]{7,35}$/.test(s))return "Comprueba el teléfono.";
  if(step.kind==="number"&&(!/^\d+(?:\.\d{1,2})?$/.test(s)||Number(s)>1000000))return "Escribe un importe válido.";
  if(step.kind==="url"&&!/^https?:\/\//i.test(s))try{new URL("https://"+s);}catch{return "Escribe una dirección web válida.";}
+ if(step.id==="country_code"&&!/^[A-Za-z]{2}$/.test(s))return "Escribe el código de país de dos letras, por ejemplo FR.";
+ if(step.kind==="date"&&(!/^20\d{2}-\d{2}-\d{2}$/.test(s)||!Number.isFinite(Date.parse(s))||
+  s<new Date().toISOString().slice(0,10)||s>new Date(Date.now()+89*86400000).toISOString().slice(0,10)))
+  return "Selecciona una fecha válida dentro de los próximos 90 días.";
+ if(step.kind==="time"&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(s))return "Usa una hora válida: 11:00.";
+ if(step.id==="availability_end"&&data.availability_start&&s<=data.availability_start)return "Debe terminar después de la hora inicial.";
  if(step.kind==="multi"&&!s)return "Selecciona al menos una función.";
  if(step.kind==="timewindow"&&!/^(?:cerrado|closed|(?:[01]\d|2[0-3]):[0-5]\d\s*-\s*(?:[01]\d|2[0-3]):[0-5]\d)$/i.test(s))
   return "Usa 09:00-17:00 o Cerrado.";
