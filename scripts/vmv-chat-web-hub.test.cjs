@@ -24,7 +24,7 @@ test("Chat web remains a single agent capability with four real sections",()=>{
  const page=source["app/vista-app/ai-agents/page.tsx"];
  assert.match(page,/kind==="support"\)\{\s*setSelected\(agent\.id\);setScreen\("chatWeb"\)/);
  assert.match(page,/ChatWebHub/);
- assert.match(page,/Chat web/);
+ assert.match(hub,/Chat web/);
  for(const text of ["title:\"Webs\"","title:\"Probar agente\"","title:\"Conversaciones\"","title:\"Ajustes\""]){
   assert.ok(hub.includes(text),text);
  }
