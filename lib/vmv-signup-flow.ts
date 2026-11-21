@@ -21,10 +21,9 @@ const categories=[
  option("spa","Spa y masajes","Spa & massage"),option("fitness","Gimnasio","Fitness"),
  option("carpentry","Carpintería","Carpentry"),option("general-contractor","Construcción y contratistas","Construction"),
  option("remodeling","Remodelación","Remodeling"),option("cleaning","Limpieza","Cleaning"),
- option("auto-repair","Mecánica automotriz","Auto repair"),option("landscaping","Jardinería","Landscaping"),
- option("real-estate","Inmobiliaria","Real estate"),option("consulting","Consultoría","Consulting"),
- option("professional-services","Servicios profesionales","Professional services"),
- option("retail","Comercio","Retail"),option("technology","Tecnología","Technology"),
+ option("automotive","Mecánica automotriz","Auto repair"),option("landscaping","Jardinería","Landscaping"),
+ option("real-estate","Inmobiliaria","Real estate"),option("consulting","Consultoría y servicios profesionales","Consulting & professional services"),
+ option("retail","Comercio","Retail"),option("software","Tecnología","Technology"),
  option("other","Otro","Other")
 ];
 export function signupQuestions(data:SignupAnswer):SignupQuestion[]{
