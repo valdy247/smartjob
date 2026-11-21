@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useState,type FormEvent} from "react";
+import {useCallback,useEffect,useRef,useState,type FormEvent} from "react";
 import {House,LayoutGrid,PhoneCall,Languages,UserRound,ArrowUpRight,ChevronLeft,Clock3,ContactRound,UserRoundPlus,
  ShieldCheck,Mic,Package,CalendarDays,Users,BarChart3,Workflow,Globe,Bot,Video,
  RefreshCw,Settings2,LoaderCircle,LogOut,LockKeyhole,PhoneForwarded,MessageCircle,Monitor,Cpu,TrendingUp,Search,Bell,Rocket,Megaphone,FileText} from "lucide-react";
@@ -96,6 +96,8 @@ export default function VMVMobilePreview(){
  },[]);
  const [open,setOpen]=useState(false);
  const [serviceFocus,setServiceFocus]=useState<"all"|"web">("all");
+ const webBack=useRef<(()=>void)|null>(null);
+ const registerWebBack=useCallback((callback:(()=>void)|null)=>{webBack.current=callback;},[]);
  const [catalogQuery,setCatalogQuery]=useState("");
  const [catalogGroup,setCatalogGroup]=useState<"all"|"communication"|"digital"|"growth">("all");
  const [panel,setPanel]=useState<Panel>("overview");
@@ -315,7 +317,7 @@ export default function VMVMobilePreview(){
        {ready&&tab==="services"&&(open||serviceFocus==="web")?
         <button type="button" className={styles.headerBack}
          aria-label={translate("native.totalServices")}
-         onClick={()=>{if(open)setOpen(false);else setServiceFocus("all");}}>
+         onClick={()=>{if(open){setOpen(false);return;}if(webBack.current){webBack.current();return;}setServiceFocus("all");}}>
          <ChevronLeft size={19} aria-hidden="true"/></button>:null}
        <div className={styles.appLogo}><span className={styles.mark}>▥</span><b>VMV<span> BUSINESS</span></b></div>
        <div className={styles.appHeaderLanguage}><InterfaceLanguagePicker compact/></div>
@@ -404,7 +406,7 @@ export default function VMVMobilePreview(){
       </div>:null}
       {ready&&tab==="services"&&!open?<div className={`${styles.screen} ${styles.servicesV3}`} data-vmv-shortcut-scope="services">
        {serviceFocus==="web"?<>
-        {user?<BusinessServicesPreview userId={user.id} focus="web"/>:null}
+        {user?<BusinessServicesPreview userId={user.id} focus="web" registerHeaderBack={registerWebBack}/>:null}
        </>:<>
         <h2 className={styles.servicesTitle}>{translate("common.services")}<span className={styles.mint}>.</span></h2>
         <label className={styles.catalogSearch}>
