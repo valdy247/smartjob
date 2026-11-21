@@ -61,3 +61,11 @@ button:focus-visible{outline:3px solid #bfa1f6;outline-offset:2px}
 @keyframes spinPreview{to{transform:rotate(360deg)}}
 @media(max-width:480px){.webIdentity{padding-top:65px}.webFullscreen{padding:0 14px}.webGreeting,.webCustomer,.webAgent{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.webSpin{animation:none}}
+
+.webPurchase{align-self:flex-start;display:grid;gap:9px;border:1px solid #e7d9ee;border-radius:16px;
+ padding:13px 14px;max-width:92%;background:linear-gradient(140deg,#f4edff,#eefbf4)}
+.webPurchase strong{font-size:12px;color:#433152}
+.webPurchase button{border:0;background:#7950ab;color:#fff;border-radius:11px;padding:10px 12px;
+ font-size:11px;font-weight:850;cursor:pointer}
+.webPurchase button:disabled{opacity:.5}
+.webPurchase small{font-size:10px;color:#8a7997;line-height:1.5}
