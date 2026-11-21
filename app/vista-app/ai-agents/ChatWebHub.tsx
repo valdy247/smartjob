@@ -121,6 +121,34 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
   }catch(e){setError(e instanceof Error?e.message:"No se pudo guardar.");}
   finally{setSaving(false);}
  }
+ async function togglePublicChat(site:Site,activate:boolean){
+  if(saving)return;
+  if(activate&&!settingsSaved){
+   setSection("settings");setNotice("Guarda primero los ajustes del chat.");return;
+  }
+  if(activate&&agent.status!=="active"){
+   setError("Activa primero tu agente principal en AI Agents.");return;
+  }
+  if(activate&&!window.confirm(
+   "¿Activar el chat IA público en "+site.business+"? Los visitantes podrán conversar y usarán la cuota diaria de VMV."
+  ))return;
+  setSaving(true);setError("");setNotice("");
+  try{
+   const db=getSupabase();if(!db)throw Error("No hay conexión.");
+   const {data:{user}}=await db.auth.getUser();
+   if(user?.id!==owner)throw Error("Inicia sesión nuevamente.");
+   const {data,error:writeError}=await db.from("vmv_web_chat_site_links")
+    .update({public_chat_enabled:activate})
+    .eq("owner_id",owner).eq("agent_id",agent.id)
+    .eq("site_kind",site.kind).eq("site_slug",site.slug)
+    .select("public_chat_enabled").single();
+   if(writeError||!data||data.public_chat_enabled!==activate)
+    throw Error("No se pudo cambiar el estado. Comprueba que el agente principal esté activo y vinculado.");
+   await load();
+   setNotice(activate?"Chat IA activado para esta web.":"Chat IA pausado. El formulario de contacto permanece.");
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo actualizar el chat.");}
+  finally{setSaving(false);}
+ }
  async function connectCatalog(){
   if(saving||agent.setup.cap_catalog==="Sí")return;
   setSaving(true);setError("");setNotice("");
@@ -207,25 +235,28 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
    {!loading&&sites.length===0?<div className={css.empty}><Globe2 size={28}/><strong>Sin webs de este negocio</strong>
     <span>Crea o publica una desde Web Services.</span>
    </div>:<div className={css.list}>{sites.map(site=>{
-    const record=links.find(link=>link.site_slug===site.slug);
+    const record=links.find(link=>link.site_slug===site.slug&&link.site_kind===site.kind);
     const associated=record?.agent_id===agent.id;
-    return <div className={css.site} key={site.slug}>
+    const live=associated&&record?.public_chat_enabled===true;
+    return <div className={css.site} key={site.kind+"-"+site.slug}>
      <div className={css.siteIcon}><Globe2 size={20}/></div>
-     <div className={css.siteInfo}><strong>{site.business}</strong><small>/{site.slug}</small>
+     <div className={css.siteInfo}><strong>{site.business}</strong><small>{site.kind==="builder"?"Web Studio":"Sitio clásico"} · /{site.slug}</small>
       <span className={associated?css.ready:css.muted}>
-       {associated?"Vinculada · IA sin activar":record?"Otro agente":"Sin vincular"}
+       {live?"Chat IA activo":associated?"Preparada · IA pausada":record?"Otro agente":"Sin vincular"}
       </span>
      </div>
      <div className={css.siteActions}>
-      <a href={"/sites/"+encodeURIComponent(site.slug)} target="_blank" rel="noopener noreferrer" aria-label="Ver sitio"><ArrowUpRight size={17}/></a>
-      {associated?<button type="button" disabled={saving} onClick={()=>void changeSite(site.slug,true)}
-       className={css.disconnect}><Unplug size={15}/> Quitar</button>:
+      <a href={(site.kind==="builder"?"/web/":"/sites/")+encodeURIComponent(site.slug)} target="_blank" rel="noopener noreferrer" aria-label="Ver sitio"><ArrowUpRight size={17}/></a>
+      {associated?<><button type="button" disabled={saving} className={live?css.disconnect:css.activate}
+        onClick={()=>void togglePublicChat(site,!live)}>{live?"Pausar":"Activar IA"}</button>
+       <button type="button" disabled={saving} onClick={()=>void changeSite(site.slug,true)}
+        className={css.disconnect} aria-label="Desvincular web"><Unplug size={15}/></button></>:
        !record?<button type="button" disabled={saving} onClick={()=>void changeSite(site.slug,false)}>Vincular</button>:null}
      </div>
     </div>;
    })}</div>}
    <div className={css.tip}><ShieldCheck size={17}/><span>
-    Vincular solo prepara la conexión. Las consultas web existentes siguen llegando a la bandeja.
+    Activa la IA solo cuando el agente esté listo. Puedes pausarla en cualquier momento.
    </span></div>
   </>:null}
   {section==="conversations"?<>
