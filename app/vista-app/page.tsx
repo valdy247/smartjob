@@ -14,6 +14,7 @@ import BusinessDiagnostic from "./BusinessDiagnostic";
 import {DIAGNOSTIC_METADATA_KEY,getDiagnosticRecommendations,makeDiagnosticRecord,readDiagnosticRecord,type DiagnosticAnswers,type DiagnosticRecord,type DiagnosticService} from "@/lib/business-diagnostic";
 import {useSmartCallAccount,type Tab,type Panel,type CallSettings,type CallRecord,type Voice} from "./useSmartCallAccount";
 import styles from "./vista-app.module.css";
+import VMVAuthGateway from "@/components/VMVAuthGateway";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
 import {VMVQuickAccessSettings,VMVHomePinnedShortcuts,VMVExtraServicesSettings} from "@/components/VMVQuickAccess";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
@@ -327,18 +328,7 @@ export default function VMVMobilePreview(){
      <div className={styles.scrollArea} key={ready?tab+(open?"details":"list"):"login"}>
       {phase==="checking"?<div className={styles.loadingScreen}><LoaderCircle className={styles.spin}/><p>{translate("native.checkingSession")}</p></div>:null}
       {phase==="unconfigured"?<div className={styles.loadingScreen}><LockKeyhole/><p>{translate("native.supabaseMissing")}</p></div>:null}
-      {phase==="signed_out"?<div className={styles.signinScreen}>
-       <span className={styles.screenEyebrow}>{translate("native.secureAccess")}</span><h2>{translate("native.welcome")}<span className={styles.mint}>.</span></h2>
-       <p className={styles.screenLead}>{translate("native.signInExplanation")}</p>
-       <form className={styles.signinForm} onSubmit={login}>
-        <label htmlFor="login-email">{translate("common.email")}</label><input required type="email" id="login-email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={translate("native.emailPlaceholder")}/>
-        <label htmlFor="login-password">{translate("common.password")}</label><input required type="password" id="login-password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={translate("native.passwordPlaceholder")}/>
-        <button type="submit" className={styles.mainAction} disabled={working}>{translate(working?"common.signingIn":"common.signIn")} <ArrowUpRight size={16}/></button>
-       </form>
-       <div className={styles.privacyNote}><ShieldCheck size={16}/><span>{translate("native.signInPrivacy")}</span></div>
-       <a href="/registro" className={styles.registerLink}>{translate("native.registerPrompt")} ↗</a>
-       {error?<p className={styles.errorText} role="alert">{translate("common.loginError")}</p>:null}
-      </div>:null}
+      {phase==="signed_out"&&client?<VMVAuthGateway compact supabase={client}/>:null}
       {phase==="signed_in"&&!profile?<div className={styles.loadingScreen}>
        {loading?<LoaderCircle className={styles.spin}/>:<LockKeyhole/>}
        <h3>{translate(loading?"native.profileLoading":"native.profileError")}</h3>
