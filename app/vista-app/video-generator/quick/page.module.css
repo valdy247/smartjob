@@ -116,3 +116,5 @@
  .track>span{transition:none}
  .wizardContent{animation:none}
 }
+
+.authLoading{display:flex;justify-content:center;align-items:center;gap:10px;min-height:50vh;color:#74538c;font-size:13px;font-weight:850}
