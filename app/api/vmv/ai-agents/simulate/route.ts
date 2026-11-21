@@ -31,6 +31,7 @@ export async function POST(req:NextRequest){
   const conversationId=String(body.conversationId||"");
   const message=typeof body.message==="string"?body.message.trim():"";
   const phonePreview=body.phonePreview===true;
+  const webPreview=body.webPreview===true&&!phonePreview;
   if(!uuid.test(agentId)||!uuid.test(conversationId)||message.length<1||message.length>1000)
     return fail("Comprueba el agente, la conversación y el mensaje.",400);
 
@@ -45,6 +46,13 @@ export async function POST(req:NextRequest){
   const {data:business}=await db.from("vmv_ai_businesses").select("id,name")
     .eq("id",agent.business_id).eq("owner_id",userId).maybeSingle();
   if(!business)return fail("Negocio no autorizado.",403);
+  // The preview is private and never enables a public chat session.
+  const webSettings=webPreview?await db.from("vmv_web_chat_settings")
+   .select("warmth,formality,reply_style,languages,sales_enabled,sales_item_ids,lead_capture,human_handoff")
+   .eq("agent_id",agentId).eq("owner_id",userId).maybeSingle():null;
+  if(webSettings?.error)return fail("No se pudieron cargar los ajustes de Chat web.",503);
+  const prefs=webSettings?.data;
+
 
   let configuration=agent.configuration as Record<string,unknown>||{};
   let catalog:Awaited<ReturnType<typeof ownerCatalogSnapshot>>=[];
@@ -81,7 +89,28 @@ export async function POST(req:NextRequest){
     operations:"Organiza propuestas administrativas, sin ejecutar tareas ni modificar sistemas.",
     custom:"Ayuda exclusivamente dentro de la finalidad aprobada por la empresa."
   };
-  const style=configuration.response_style;
+  const style=webPreview?(prefs?.reply_style||"balanced"):configuration.response_style;
+  const warm=webPreview?(prefs?.warmth??4):4;
+  const formal=webPreview?(prefs?.formality??3):3;
+  const selectedProducts=webPreview&&prefs?.sales_enabled===true&&Array.isArray(prefs.sales_item_ids)?
+   catalog.filter(product=>prefs.sales_item_ids.includes(product.id)&&product.sellableInTest):[];
+  const webTone=webPreview?[
+   "SIMULACIÓN CHAT WEB: contesta al visitante de forma clara y humana, sin afirmar que este simulador es un chat público.",
+   "Amabilidad "+warm+"/5: "+(warm>=4?"cordial, empática y paciente":warm<=2?"directa y respetuosa":"cercana pero concreta")+".",
+   "Formalidad "+formal+"/5: "+(formal>=4?"profesional, sin coloquialismos":formal<=2?"casual y natural":"profesional accesible")+".",
+   "Idioma: "+(prefs?.languages==="es"?"español":prefs?.languages==="en"?"inglés":"contesta en el idioma del visitante")+".",
+   prefs?.lead_capture===true?
+    "Si el visitante muestra interés comercial, puedes pedir nombre y un medio de contacto de forma opcional, sin solicitar datos sensibles.":
+    "No pidas datos de contacto por iniciativa propia.",
+   prefs?.human_handoff===true?
+    "Si la persona pide atención humana o faltan datos, ofrece que el negocio responda por sus canales existentes.":
+    "Cuando falten datos, dilo con claridad; no prometas un traspaso humano automatizado.",
+   prefs?.sales_enabled===true?
+    (selectedProducts.length?
+     "Puedes RECOMENDAR solo productos explícitamente seleccionados y disponibles en esta lista: "+JSON.stringify(selectedProducts).slice(0,12000)+". Usa precios comprobados. No puedes crear pedidos, hacer cobros, reservar stock ni garantizar entregas.":
+     "Aunque ventas esté habilitado, ahora mismo no hay productos seleccionados con disponibilidad verificada; NO ofrezcas compras.") :
+    "No intentes vender ni cerrar una compra por iniciativa propia. Puedes orientar sobre el catálogo aprobado de forma informativa."
+  ].join("\n"):"";
   const responseGuide=phonePreview?
     "SIMULACIÓN DE ATENCIÓN TELEFÓNICA: habla como si el cliente estuviera al teléfono. Responde directamente en tono natural, en UNA o DOS frases de máximo 40 palabras. No uses listas numeradas, viñetas, Markdown, títulos ni textos largos. Evita ofrecer todo el catálogo de una vez. Menciona solo lo necesario para resolver la pregunta y haz como máximo una pregunta breve de seguimiento. Los datos de existencias manuales requieren confirmación. No afirmes que esta simulación es una llamada real.":
     style==="brief"?"Responde en una o dos frases breves.":
@@ -94,6 +123,7 @@ export async function POST(req:NextRequest){
     "Personalidad: "+String(agent.personality||"amable").slice(0,60)+".",
     "Aplica esta personalidad a tu tono y expresiones; no es solo un dato informativo.",
     responseGuide,
+    webTone,
     "Idioma: "+(agent.language==="both"?"usa el idioma del cliente":agent.language==="en"?"inglés":"español")+".",
     roleGuide[String(agent.kind)]||roleGuide.custom,
     "Solo puedes conversar y orientar. Nunca puedes modificar existencias, preparar pedidos, cobrar ni confirmar citas desde este simulador.",
