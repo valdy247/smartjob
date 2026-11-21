@@ -402,3 +402,6 @@
 .creativeValidation p{margin:0;font-size:11px;line-height:1.65;color:#78677c}
 .creativeValidation small{font-size:10px;color:#947d95}
 .creativeValidation .secondary{justify-self:start;text-decoration:none}
+
+/* Single contextual back in the Ads Studio header. */
+button.backLink{appearance:none;border:0;background:transparent;cursor:pointer;font:inherit;min-height:42px}
