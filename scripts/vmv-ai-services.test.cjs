@@ -34,7 +34,7 @@ test("Only existing functional services are in the principal agent's guided serv
  assert.match(root,/bookingsNeedsSetup\(agent\)\?"bookingsWizard":"bookings"/);
  assert.match(dash,/id:"smart-call".*service=call/);
  assert.match(dash,/id:"smart-quote".*service=quote/);
- assert.match(dash,/id:"video-generator".*service=video/);
+ assert.match(dash,/id:"video-generator".*\/vista-app\/video-generator/);
  assert.match(dash,/id:"ads-studio"/);
 });
 test("Smart Call never alters Twilio line route, always verifies ownership and uses optimistic version guards",()=>{
