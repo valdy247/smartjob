@@ -4,6 +4,7 @@ import {ArrowLeft,Bot,LoaderCircle,MessageCircle,Send,ShieldCheck} from "lucide-
 import {getSupabase} from "@/lib/supabase";
 import {setAgentCatalogReadAccess,type PersistedAgent} from "./agentStore";
 import styles from "./AgentLiveTest.module.css";
+import {useAgentHeaderBack} from "./AgentHeaderBack";
 
 type Item={id:string;role:"user"|"assistant";content:string;created_at:string};
 type Conversation={id:string;title:string;created_at:string};
@@ -11,6 +12,7 @@ type Props={agent:PersistedAgent;onClose:()=>void;onEdit:()=>void;webMode?:boole
 const idValid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export default function AgentLiveTest({agent,onClose,onEdit,webMode=false,onAgentUpdated}:Props){
+ const useSharedHeader=useAgentHeaderBack(onClose);
  const [message,setMessage]=useState("");
  const [conversations,setConversations]=useState<Conversation[]>([]);
  const [current,setCurrent]=useState<string|null>(null);
@@ -103,7 +105,7 @@ export default function AgentLiveTest({agent,onClose,onEdit,webMode=false,onAgen
   }finally{setSending(false);}
  }
  return <section className={styles.root}>
-  <button type="button" className={styles.back} onClick={onClose}><ArrowLeft size={17}/>{webMode?"Chat web":"Mis agentes"}</button>
+  {!useSharedHeader?<button type="button" className={styles.back} onClick={onClose}><ArrowLeft size={17}/>{webMode?"Chat web":"Mis agentes"}</button>:null}
   <div className={styles.hero}>
    <span className={styles.avatar}><Bot size={24}/></span>
    <div><strong>{agent.name}</strong><small>{webMode?"Prueba del chat web · sin cobros":"Prueba de IA · sin acciones comerciales"}</small></div>
