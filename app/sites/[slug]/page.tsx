@@ -4,6 +4,7 @@ import {notFound} from "next/navigation";
 import {createClient} from "@supabase/supabase-js";
 import {normalizeWebContent,paletteStyles,webEmail,webPhone,webServices,webCategory,webWhatsApp,webPrimaryContact,webServiceContact,webDirections} from "@/lib/web-services-site";
 import RequestForm from "./RequestForm";
+import WebChatLauncher from "@/app/web-studio/WebChatLauncher";
 import "./site.css";
 
 export const dynamic="force-dynamic";
@@ -100,6 +101,8 @@ export default async function PublishedBusinessWebsite({params}:Props){
     </div>
    </section>
   </main>
+  <WebChatLauncher slug={slug} business={page.business} siteKind="classic" fallbackMode={page.inquiriesEnabled?"inbox":"none"}
+   categoryId={page.categoryId} services={services}/>
   {whatsappLink?<a className="ws-public-whatsapp-float" href={whatsappLink} target="_blank" rel="noopener noreferrer" aria-label="Escribir al negocio por WhatsApp"><span aria-hidden="true">✉</span> WhatsApp</a>:null}
   <footer className="ws-public-footer"><span>{page.business}</span><span>© {new Date().getUTCFullYear()}</span></footer>
  </div>;
