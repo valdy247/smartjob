@@ -258,11 +258,11 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
     </div>
    </div>
    <div className={css.panel}>
-    <div className={css.panelTitle}><ShoppingBag size={19}/><strong>Productos en el chat</strong></div>
+    <div className={css.panelTitle}><ShoppingBag size={19}/><strong>Productos en el chat</strong><span className={css.catalogCount}>{selectedCount} seleccionados</span></div>
     <label className={css.toggle}>
      <span><strong>Ofrecer productos</strong><small>Solo aprobados y disponibles</small></span>
      <input type="checkbox" checked={settings.sales_enabled}
-      disabled={agent.setup.cap_catalog!=="Sí"||!eligible.length}
+      disabled={!settings.sales_enabled&&(agent.setup.cap_catalog!=="Sí"||!eligible.length)}
       onChange={e=>change("sales_enabled",e.target.checked)}/>
     </label>
     {agent.setup.cap_catalog!=="Sí"?<button className={css.catalogConnect} type="button" disabled={saving}
