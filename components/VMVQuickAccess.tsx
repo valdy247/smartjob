@@ -371,3 +371,48 @@ export function VMVHomePinnedShortcuts(){
   </div>)}</div>
  </section>;
 }
+
+
+function hiddenScreenLabel(scope:string,en:boolean){
+ const section=scope.split("#")[1]||"";
+ if(section==="home")return "Home";
+ if(section==="services")return en?"Services":"Servicios";
+ if(section==="account")return en?"Profile":"Perfil";
+ if(section==="marketing-actions")return "Marketing";
+ if(scope.includes("/marketing"))return "Marketing";
+ if(scope.includes("/ai-agents"))return "AI Agents";
+ if(scope.includes("/video-generator"))return "Video Generator";
+ if(scope.includes("/finanzas"))return en?"Finances":"Finanzas";
+ return en?"VMV screen":"Pantalla de VMV";
+}
+export function VMVExtraServicesSettings(){
+ const {language}=useInterfaceLanguage();const en=language==="en";
+ const {state,restoreCard}=useVMVQuickAccess();
+ const [filter,setFilter]=useState("");
+ const hidden=state.hidden.map(entry=>({...entry,item:findShortcut(state,entry.id)}))
+  .filter((entry):entry is typeof entry & {item:Shortcut}=>Boolean(entry.item))
+  .filter(entry=>findMatching(entry.item,filter)||hiddenScreenLabel(entry.scope,en).toLowerCase().includes(filter.toLowerCase()));
+ return <section className={styles.extraServices} id="vmv-extra-services" data-vmv-shortcuts-ui>
+  <div className={styles.settingHeader}>
+   <span className={styles.settingIcon}><RotateCcw size={22}/></span>
+   <div><h3>{en?"Extra services":"Servicios extras"}</h3>
+    <p>{en?"Cards you don't need stay here. Restore them whenever you want.":"Las tarjetas que no necesitas quedan aquí. Puedes recuperarlas cuando quieras."}</p></div>
+   <span className={styles.extraCount}>{state.hidden.length}</span>
+  </div>
+  {state.hidden.length?<label className={styles.search}>
+   <Search size={17}/><input type="search" value={filter} onChange={e=>setFilter(e.target.value)}
+    placeholder={en?"Search hidden cards":"Buscar tarjetas ocultas"}/>
+  </label>:null}
+  <div className={styles.extraList} aria-live="polite">
+   {hidden.map(entry=><div className={styles.extraRow} key={hiddenKey(entry.scope,entry.id)}>
+    <span className={styles.extraCardIcon}><EyeOff size={18}/></span>
+    <span className={styles.extraCopy}><strong>{labelFor(entry.item,en)}</strong>
+     <small>{hiddenScreenLabel(entry.scope,en)}</small></span>
+    <button type="button" onClick={()=>restoreCard(entry.scope,entry.id)}><RotateCcw size={15}/>{en?"Restore":"Restaurar"}</button>
+   </div>)}
+   {!state.hidden.length?<p className={styles.extraEmpty}>{en?"You haven't hidden any cards. Press and hold one to see this option.":"Todavía no has ocultado tarjetas. Mantén pulsada una para ver esta opción."}</p>:null}
+   {state.hidden.length&&!hidden.length?<p className={styles.extraEmpty}>{en?"No results.":"Sin resultados."}</p>:null}
+  </div>
+  <small className={styles.smallHint}>{en?"Restoring a card only changes your screen, never the service or your business data.":"Restaurar una tarjeta solo cambia tu pantalla; no modifica el servicio ni los datos de tu negocio."}</small>
+ </section>;
+}
