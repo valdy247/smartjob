@@ -31,7 +31,7 @@ test("Only existing functional services are in the principal agent's guided serv
  assert.match(root,/AutomaticCommerceWizard/);
  assert.match(root,/AutomaticBookingWizard/);
  assert.match(root,/service==="inventory"\|\|service==="sales"/);
- assert.match(root,/setScreen\("bookingsWizard"\)/);
+ assert.match(root,/bookingsNeedsSetup\(agent\)\?"bookingsWizard":"bookings"/);
  assert.match(dash,/id:"smart-call".*service=call/);
  assert.match(dash,/id:"smart-quote".*service=quote/);
  assert.match(dash,/id:"video-generator".*service=video/);
