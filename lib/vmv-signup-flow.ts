@@ -24,7 +24,7 @@ export function signupQuestions(data:SignupAnswer):SignupQuestion[]{
    q("country","¿En qué país trabajas?","What country do you work in?","Ubicación","choice",false,5,[
     o("US","Estados Unidos","United States"),o("CA","Canadá","Canada"),
     o("MX","México","Mexico"),o("CU","Cuba","Cuba"),o("other","Otro","Other")
-   ])
+   ]),
    ...(data.country==="other"?[q("country_code","Código de país","Country code","Ubicación","text",false,2)]:[]),
    q("category","¿A qué se dedica tu negocio?","What does your business do?","Tu negocio","google_category",false,100),
    q("description","Describe brevemente tu negocio","Describe your business briefly","Tu negocio","textarea",false,550),
