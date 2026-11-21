@@ -698,3 +698,8 @@ button.homeProductCard:hover{transform:translateY(-2px)}
 .smartScreen .smartHeading h2 span{color:#9862e5}
 .smartScreen .smartLineStatus{display:flex;align-items:center;gap:8px;margin:0;color:#756d82;font-size:12px;font-weight:700;line-height:1.45}
 .smartScreen .smartLineStatus>span{display:block;width:8px;height:8px;flex:none;border-radius:50%;background:#18c99b}
+
+/* The phone frame has one contextual back control, always in its header. */
+.headerBack{width:39px;height:39px;min-width:39px;flex:0 0 39px;display:grid;place-items:center;
+ border:0;border-radius:12px;background:#f0e8ff;color:#7346b3;cursor:pointer}
+.headerBack:focus-visible{outline:3px solid #8754d3;outline-offset:2px}
