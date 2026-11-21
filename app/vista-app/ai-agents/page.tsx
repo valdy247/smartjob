@@ -349,6 +349,17 @@ export default function AIAgentsPreview(){
  const commerceNeedsSetup=(agent:Agent)=>agent.setup.commerce_onboarded!=="Sí"&&
   agent.setup.cap_catalog!=="Sí"&&agent.setup.cap_catalog!=="No";
  const patch=(key:keyof AgentDraft,value:string)=>setDraft(prev=>({...prev,[key]:value}));
+ useEffect(()=>{
+  if(loading||!authenticated)return;
+  const params=new URLSearchParams(window.location.search);
+  if(params.get("chatWeb")!=="conversations")return;
+  const agentId=params.get("agent")||"";
+  const target=agents.find(a=>a.id===agentId);
+  if(!target||!target.revision)return;
+  const workspace=workspaces.find(w=>w.id===target.business_id);
+  if(workspace?.central_business_id)setChosenBusiness(workspace.central_business_id);
+  setSelected(target.id);setScreen("chatWeb");setNotice("");
+ },[loading,authenticated,agents,workspaces]);
  const immersive=(screen==="test"&&testFromChatWeb)||screen==="ads"||screen==="web"||screen==="video"||screen==="videoEntry"||screen==="call"||screen==="quote"||screen==="quoteEntry"||screen==="commerceWizard"||screen==="bookingsWizard";
  const registerHeaderBack=useCallback((callback:(()=>void)|null)=>{
   registeredBack.current=callback;
