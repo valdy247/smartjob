@@ -18,11 +18,14 @@ test("AI Agents home has no hardcoded Spanish in user-facing JSX",()=>{
  for(const literal of ["UN AGENTE POR NEGOCIO","Todas tus funciones.","Capacidades de tu agente","Aquí vivirán tus agentes","Explorar ejemplo de taxi","Hacer principal","Activar en estudio"]){
   assert.ok(!home.includes(literal),literal+" cannot bypass locale");
  }
- for(const key of ["agents.onePerBusiness","agents.oneAgent","agents.allFunctions","agents.capabilities",
- "agents.status.needsAttention"]){
-  assert.ok(home.includes('translate("'+key+'")'),key+" is required on home");
-  for(const lang of ["es","en"])assert.ok(catalog[lang][key],lang+" missing "+key);
+ // The promotional hero, title, and agent metadata are intentionally absent:
+ // the home presents only the localized capability cards.
+ for(const key of ["agents.onePerBusiness","agents.oneAgent","agents.allFunctions","agents.capabilities"]){
+  assert.ok(!home.includes('translate("'+key+'")'),key+" must not appear on the cards-only home");
  }
+ assert.ok(home.includes('className={styles.tiles}'),"capability cards remain on home");
+ assert.ok(home.includes('translate("agents.status.needsAttention")'),"card status remains localized");
+ for(const lang of ["es","en"])assert.ok(catalog[lang]["agents.status.needsAttention"],lang+" card status translation");
 });
 test("all AI Agents UI catalog keys have Spanish and English entries",()=>{
  const keys=[...new Set([...page.matchAll(/translate\("(agents\.[\w.]+)"/g)].map(m=>m[1]))];
