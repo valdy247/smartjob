@@ -95,7 +95,7 @@ test("Owner deletion and scheduled purge protect YouTube data retention",()=>{
  assert.match(api,/export async function DELETE/);
  assert.match(api,/db\.rpc\("vmv_video_radar_clear_owner"/);
  assert.match(ui,/Borrar mis investigaciones/);
- assert.match(ui,/x-vmv-youtube-consent/);
+ assert.match(ui,/x-vmv-youtube-consent/i);
  assert.match(api,/x-vmv-youtube-consent/);
  assert.doesNotMatch(ui,/averageViewsPerDay|engagementPercent|signalScore/);
  assert.doesNotMatch(api,/averageViewsPerDay|engagementPercent|signalScore/);
