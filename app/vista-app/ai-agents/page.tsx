@@ -37,7 +37,7 @@ type Agent=PersistedAgent;
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
  {id:"calls",title:"Llamadas",sub:"Atención telefónica",Icon:PhoneCall,bg:"#ede2ff",fg:"#7143c7",purpose:"Orientar a quien llama y derivar a una persona cuando sea necesario."},
  {id:"support",title:"Clientes",sub:"Atención y consultas",Icon:Headphones,bg:"#c8f3e4",fg:"#17624f",purpose:"Responder preguntas habituales sobre productos, servicios y horarios."},
- {id:"bookings",title:"Reservas",sub:"Citas y disponibilidad",Icon:CalendarDays,bg:"#bfe4ff",fg:"#2c6086",purpose:"Informar sobre horarios y ayudar a los clientes a solicitar citas."},
+ {id:"bookings",title:"Servicios/Reservas",sub:"Servicios, horarios y citas",Icon:CalendarDays,bg:"#bfe4ff",fg:"#2c6086",purpose:"Informar sobre horarios y ayudar a los clientes a solicitar citas."},
  {id:"inventory",title:"Productos/Pedidos",sub:"Catálogo y pedidos",Icon:Package,bg:"#ffd4e6",fg:"#9b4776",purpose:"Gestionar productos aprobados, imágenes y pedidos del negocio."},
  {id:"operations",title:"Administración",sub:"Solicitudes y procesos",Icon:BriefcaseBusiness,bg:"#d7ecff",fg:"#416995",purpose:"Orientar y organizar solicitudes administrativas de forma segura."},
  {id:"custom",title:"A mi medida",sub:"Tu propio objetivo",Icon:WandSparkles,bg:"#e7dfff",fg:"#6b45bb",purpose:"Ayudar con el propósito personalizado del negocio."}
@@ -136,7 +136,8 @@ export default function AIAgentsPreview(){
    setScreen("call");
    setNotice(phone?.agentId===agent.id?"":translate("agents.notice.configureCalls"));
   }else if(kind==="bookings"){
-   setResumeBooking(false);setScreen("bookingsWizard");setNotice("");
+   setBookingTab("services");setResumeBooking(false);
+   setScreen(bookingsNeedsSetup(agent)?"bookingsWizard":"bookings");setNotice("");
   }else if(kind==="support"){
    setSelected(agent.id);setScreen("chatWeb");setNotice("");
   }else if(kind==="operations"){
@@ -303,6 +304,9 @@ export default function AIAgentsPreview(){
  const back=()=>{setScreen("home");setMessageNotice("");};
  const commerceNeedsSetup=(agent:Agent)=>agent.setup.commerce_onboarded!=="Sí"&&
   agent.setup.cap_catalog!=="Sí"&&agent.setup.cap_catalog!=="No";
+ // Booking setup is a one-time experience. Older configured agents also skip it.
+ const bookingsNeedsSetup=(agent:Agent)=>agent.setup.bookings_onboarded!=="Sí"&&
+  agent.setup.cap_bookings!=="Sí"&&agent.setup.perm_book_service!=="Sí";
  useEffect(()=>{
   if(loading||!authenticated)return;
   const params=new URLSearchParams(window.location.search);
@@ -339,8 +343,9 @@ export default function AIAgentsPreview(){
   if(service==="inventory"||service==="sales"){
    setCommerceTab("catalog");setScreen(commerceNeedsSetup(principal)?"commerceWizard":"commerce");
   }else {
-   if(service==="bookings")setResumeBooking(false);
-   setScreen(service==="web"?"web":service==="call"?"call":service==="quote"?"quoteEntry":service==="bookings"?"bookingsWizard":"videoEntry");
+   if(service==="bookings"){setResumeBooking(false);setBookingTab("services");}
+   setScreen(service==="web"?"web":service==="call"?"call":service==="quote"?"quoteEntry":
+    service==="bookings"?(bookingsNeedsSetup(principal)?"bookingsWizard":"bookings"):"videoEntry");
   }
   setNotice("");
  },[loading,authenticated,principal?.id,selectedBusiness?.id,selectedWorkspace?.id]);
@@ -470,7 +475,7 @@ export default function AIAgentsPreview(){
      {businessDialog?<BusinessProfileDialog businessId={selectedBusiness?.id} initialName={workspaces.find(w=>w.id===legacyId)?.name}
       legacy={selectedWorkspace?[]:unlinked} initialLegacyId={legacyId} onClose={()=>{setBusinessDialog(false);setPendingKind(null);}} onSaved={businessSaved}/>:null}
      {screen==="bookings"&&active?<BookingStudio agent={active} initialTab={bookingTab}
-      onClose={()=>setScreen("bookingsWizard")}
+      onClose={back}
       onAgentUpdated={updated=>setAgents(old=>old.map(a=>a.id===updated.id?updated:a))}/>:null}
      {screen==="ads"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticAdWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
@@ -556,8 +561,8 @@ export default function AIAgentsPreview(){
        onAgentUpdated={updated=>{setAgents(list=>list.map(a=>a.id===updated.id?updated:a));}}
        onOpenStudio={()=>setScreen("commerce")} onClose={back}/>:null}
      {screen==="bookingsWizard"&&principal&&selectedBusiness&&selectedWorkspace?
-      <AutomaticBookingWizard key={selectedBusiness.id+principal.id+(resumeBooking?"-resume":"-new")}
-       business={selectedBusiness} agent={principal} initialStep={resumeBooking?"goal":"business"}
+      <AutomaticBookingWizard key={selectedBusiness.id+principal.id}
+       business={selectedBusiness} agent={principal} initialStep="business"
        onClose={back}
        onAgentUpdated={updated=>{setAgents(list=>list.map(a=>a.id===updated.id?updated:a));}}
        onOpenStudio={section=>{setBookingTab(section);setResumeBooking(true);setScreen("bookings");}}/>:null}
