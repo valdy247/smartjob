@@ -49,7 +49,7 @@ export default function AutomaticBookingWizard({business,agent,onClose,onAgentUp
     db.from("vmv_ai_booking_services").select("id",{count:"exact",head:true})
      .eq("owner_id",user.id).eq("business_id",agent.business_id)
      .eq("active",true).eq("approved",true),
-    db.from("vmv_ai_booking_slots").select("id",{count:"exact",head:true})
+    db.from("vmv_ai_booking_availability").select("id",{count:"exact",head:true})
      .eq("owner_id",user.id).eq("business_id",agent.business_id)
      .gt("start_at",new Date().toISOString()).eq("active",true),
     db.from("vmv_ai_bookings").select("id",{count:"exact",head:true})
@@ -110,13 +110,13 @@ export default function AutomaticBookingWizard({business,agent,onClose,onAgentUp
   </div>:null}
   {!loading&&owner&&step==="goal"?<div className={styles.panel}>
    <p className={styles.note}>Esta agenda tiene {serviceCount??"…"} servicio(s) registrado(s),
-    {approvedCount??"…"} activo(s) y aprobado(s), {slotCount??"…"} horario(s) futuro(s)
+    {approvedCount??"…"} activo(s) y aprobado(s), {slotCount??"…"} rango(s) disponible(s)
     y {bookingCount??"…"} cita(s). Elige una opción para abrirla directamente.</p>
    <div className={styles.optionsVertical}>
     <button type="button" className={styles.option} onClick={()=>openGoal("services")}>
      <CalendarDays size={17}/> Crear o editar servicios <ArrowRight size={16}/></button>
     <button type="button" className={styles.option} onClick={()=>openGoal("slots")}>
-     <CalendarDays size={17}/> Agregar fechas y horarios <ArrowRight size={16}/></button>
+     <CalendarDays size={17}/> Mi disponibilidad <ArrowRight size={16}/></button>
     <button type="button" className={styles.option} onClick={()=>openGoal("bookings")}>
      <CalendarDays size={17}/> Consultar solicitudes y citas <ArrowRight size={16}/></button>
    </div>
@@ -135,8 +135,8 @@ export default function AutomaticBookingWizard({business,agent,onClose,onAgentUp
   </div>:null}
   {!loading&&owner&&step==="review"?<div className={styles.panel}>
    {done?<div className={styles.info}>Permisos guardados.
-    <button type="button" className={styles.option} onClick={()=>onOpenStudio(goal)}>
-     <CalendarDays size={16}/> Abrir agenda para {goal==="services"?"servicios":goal==="slots"?"horarios":"citas"}
+    <button type="button" className={styles.option} onClick={()=>onOpenStudio(goal==="slots"?"availability":goal)}>
+     <CalendarDays size={16}/> Abrir {goal==="services"?"Mis servicios":goal==="slots"?"Mi disponibilidad":"Reservas"}
     </button></div>:<div className={styles.review}>
     {card("Negocio",business.name,"business")}
     {card("Acción","Gestionar reservas desde la agenda","goal")}
