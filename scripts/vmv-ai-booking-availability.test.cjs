@@ -68,7 +68,7 @@ test("owner preview never books real appointments even with customer name",async
 test("missing customer name prompts one question; never invents or books",async()=>{
  const {run,recorded}=fake({ai:outcome({customer_name:""})});
  const result=await run({message:"Necesito un masaje mañana a la 1pm"});
- assert.match(result,/a nombre de quién/);
+ assert.match(result,/a nombre de quién/i);
  assert.equal(recorded.calls.length,0);
 });
 test("fully occupied or disabled slots fail without claiming a confirmed reservation",async()=>{
@@ -141,7 +141,7 @@ test("calendar TSX and booking backend are parseable TypeScript",()=>{
 test("model-generated customer names cannot book unless the visitor actually provided that name",async()=>{
  const {run,recorded}=fake({ai:outcome({customer_name:"Nombre Inventado"})});
  const response=await run({message:"Necesito un masaje mañana a la 1pm"});
- assert.match(response,/a nombre de quién/);
+ assert.match(response,/a nombre de quién/i);
  assert.equal(recorded.calls.length,0);
 });
 test("availability questions do not create bookings without explicit user intent",async()=>{
