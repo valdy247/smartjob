@@ -58,3 +58,11 @@
  .filters>span{width:100%;margin-left:0}.queryLine button{padding:10px}
 }
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
+
+.consent{display:flex;align-items:flex-start;gap:9px;padding:11px 12px;border-radius:13px;background:#f7f4fb;
+ border:1px solid #e8def0;color:#756387;font-size:11px;line-height:1.55;cursor:pointer}
+.consent input{flex-shrink:0;width:17px;height:17px;accent-color:#8654bd;margin:1px 0 0}
+.consent a{font-weight:850;color:#6c429f;text-decoration:underline}
+.deleteAction{justify-self:end;background:transparent;border:1px solid #eedce3;border-radius:9px;
+ padding:7px 10px;color:#a4516d;font-size:10px;cursor:pointer}
+.deleteAction:disabled{opacity:.45}
