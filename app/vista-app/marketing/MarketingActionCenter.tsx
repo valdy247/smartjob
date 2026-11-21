@@ -90,8 +90,8 @@ const safeSite=(value:string)=>{
 // Technical API errors are not localized; never render their raw messages in either locale.
 const errorMessage=(_error:unknown,localizedFallback:string)=>localizedFallback;
 
-export default function MarketingActionCenter({businessName,industryId,website,onGoToVisibility,preselectedService,onWizardActiveChange,requestsOnly=false,openSocialCaptions=false}:{
- businessName:string;industryId:string;website:string;onGoToVisibility:()=>void;preselectedService?:ServiceCode;onWizardActiveChange?:(active:boolean)=>void;requestsOnly?:boolean;openSocialCaptions?:boolean
+export default function MarketingActionCenter({businessName,industryId,website,onGoToVisibility,preselectedService,onWizardActiveChange,registerHeaderBack,requestsOnly=false,openSocialCaptions=false}:{
+ businessName:string;industryId:string;website:string;onGoToVisibility:()=>void;preselectedService?:ServiceCode;onWizardActiveChange?:(active:boolean)=>void;registerHeaderBack?:(callback:(()=>void)|null)=>void;requestsOnly?:boolean;openSocialCaptions?:boolean
 }){
  const {language,translate}=useInterfaceLanguage();
  const [contentLanguage]=useState(language);
@@ -344,6 +344,18 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const goBack=()=>{setWizardError("");
   if(wizardStep===2&&selected==="seo_improvement"&&webStage>0){setWebStage(webStage-1);closeKeyboard();revealWizard();return;}
   if(wizardStep===3&&selected==="google_profile"){editWizardStep(2);setGoogleStep(googleStepNames.length-1);return;}if(wizardStep===2&&selected==="google_profile"&&googleStep>0){closeKeyboard();setGoogleStep(googleStep-1);revealWizard();return;}if(wizardStep>0&&wizardStep<4)editWizardStep((wizardStep-1) as WizardStep);};
+ const headerActionRef=useRef<()=>void>(()=>{});
+ headerActionRef.current=()=>{
+  if(socialPreviewOpen){setSocialPreviewOpen(false);return;}
+  goBack();
+ };
+ const hasSubscreen=(wizardStep>0&&wizardStep<4)||socialPreviewOpen;
+ useEffect(()=>{
+  if(!registerHeaderBack||!hasSubscreen)return;
+  const handler=()=>headerActionRef.current();
+  registerHeaderBack(handler);
+  return()=>registerHeaderBack(null);
+ },[registerHeaderBack,hasSubscreen]);
  const effectiveCategory=chosenCategory||industryId||savedCategory||"other";
  // The VMV internal industry is NOT an official Google category. Ask for the real category separately.
  const googleGoalText=googleData.action==="create"?contentText(contentLanguage,"marketing.action.googleCreateGoal"):googleData.action==="claim"?contentText(contentLanguage,"marketing.action.googleClaimGoal"):contentText(contentLanguage,"marketing.action.googleImproveGoal");
@@ -1009,7 +1021,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
     {photoNotice?<p role="status" className={styles.photoNotice}>{photoNotice}</p>:null}
     {wizardError?<p role="alert" className={styles.wizardError}>{wizardError}</p>:null}
     {wizardStep>0?<div className={styles.wizardFooter}>
-     <button type="button" className={styles.wizardBack} onClick={goBack} disabled={busy}><ArrowLeft size={16}/> {translate("marketing.copy.previous")}</button>
+     {!registerHeaderBack?<button type="button" className={styles.wizardBack} onClick={goBack} disabled={busy}><ArrowLeft size={16}/> {translate("marketing.copy.previous")}</button>:null}
      {wizardStep===3?<button type="button" className={styles.wizardPrimary} disabled={busy||loading||authState!=="ready"} onClick={()=>void submit()}><Send size={16}/>{busy?translate("marketing.action.submitting"):translate("marketing.action.submit_request")}</button>:
       <button type="button" className={styles.wizardPrimary} onClick={goNext}>{selected==="google_profile"&&wizardStep===2&&googleStep<googleStepNames.length-1?translate("marketing.action.next"):translate("marketing.action.continue")} <ArrowRight size={16}/></button>}
     </div>:null}
