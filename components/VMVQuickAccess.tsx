@@ -1,17 +1,31 @@
 "use client";
 import {createContext,useCallback,useContext,useEffect,useRef,useState,type ReactNode} from "react";
 import {usePathname} from "next/navigation";
-import {ArrowUpRight,Check,House,Link2,MoreHorizontal,Plus,Search,Settings2,Star,Trash2,X} from "lucide-react";
+import {ArrowUpRight,Check,EyeOff,House,Link2,Plus,RotateCcw,Search,Settings2,Star,Trash2,X} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
-import {SHORTCUTS_META_KEY,SHORTCUT_LIMIT,items,fresh,parseState,findShortcut,labelFor,findMatching,safePath,type Shortcut,type ShortcutState} from "@/lib/vmv-quick-access";
+import {SHORTCUTS_META_KEY,SHORTCUT_LIMIT,HIDDEN_LIMIT,hiddenKey,validHiddenScope,items,fresh,parseState,findShortcut,labelFor,findMatching,safePath,type Shortcut,type ShortcutState} from "@/lib/vmv-quick-access";
 import styles from "./VMVQuickAccess.module.css";
 
 type Destination="quick"|"home";
-type AccessContext={ready:boolean;state:ShortcutState;saveEnabled:(flag:boolean)=>void;pin:(item:Shortcut,dest:Destination)=>boolean;unpin:(id:string,dest:Destination)=>void;openPicker:()=>void;openMenu:()=>void};
+type HiddenRequest={item:Shortcut;scope:string};
+type AccessContext={ready:boolean;state:ShortcutState;saveEnabled:(flag:boolean)=>void;pin:(item:Shortcut,dest:Destination)=>boolean;unpin:(id:string,dest:Destination)=>void;hideCard:(entry:HiddenRequest)=>boolean;restoreCard:(scope:string,id:string)=>void;openPicker:()=>void;openMenu:()=>void};
 const Context=createContext<AccessContext|null>(null);
 const cacheKey=(uid:string)=>"vmv-quick-access:"+uid;
 const isAppPath=(path:string)=>path==="/vista-app"||path.startsWith("/vista-app/");
+/** Only actual navigable cards can be dismissed, never navigation, forms or destructive controls. */
+function hideableCard(node:Element):HTMLElement|null{
+ const candidate=node.closest<HTMLElement>("[data-vmv-shortcut-id]")||node.closest<HTMLElement>("button,a[href]");
+ if(!candidate||candidate.closest("nav,[role=navigation],[role=tablist],form,[data-vmv-shortcuts-ui]"))return null;
+ if(candidate.matches(":disabled")||candidate.getAttribute("aria-disabled")==="true")return null;
+ if(!/(?:card|tile|module|feature|catalog|service)/i.test(typeof candidate.className==="string"?candidate.className:""))return null;
+ return candidate;
+}
+function cardScope(card:HTMLElement,pathname:string):string{
+ const name=card.closest<HTMLElement>("[data-vmv-shortcut-scope]")?.dataset.vmvShortcutScope||"";
+ const suffix=/^[a-z0-9_-]{1,38}$/.test(name)?"#"+name:"";
+ return pathname+suffix;
+}
 function findPressItem(element:Element,pathname:string):Shortcut|null{
  if(element.closest("[data-vmv-shortcuts-ui],input,textarea,select,[contenteditable=true],[role=dialog]"))return null;
  const card=element.closest<HTMLElement>("[data-vmv-shortcut-id],a[href],button");
@@ -62,6 +76,8 @@ export function VMVQuickAccessProvider({children}:{children:ReactNode}){
  const [view,setView]=useState<"closed"|"list"|"picker">("closed");
  const [query,setQuery]=useState("");
  const [actionItem,setActionItem]=useState<Shortcut|null>(null);
+ const [actionScope,setActionScope]=useState<string|null>(null);
+ const [pendingHide,setPendingHide]=useState<HiddenRequest|null>(null);
  const [error,setError]=useState("");
  const [success,setSuccess]=useState("");
  const queue=useRef<Promise<void>>(Promise.resolve());
@@ -127,8 +143,25 @@ export function VMVQuickAccessProvider({children}:{children:ReactNode}){
  },[mutate,en]);
  const unpin=useCallback((id:string,dest:Destination)=>{
   mutate(old=>({...old,[dest]:old[dest].filter(v=>v!==id),
-   custom:old.custom.filter(v=>v.id!==id||old.quick.includes(v.id)&&dest==="home"||old.home.includes(v.id)&&dest==="quick")}));
+   custom:old.custom.filter(v=>v.id!==id||old.quick.includes(v.id)&&dest==="home"||old.home.includes(v.id)&&dest==="quick"||old.hidden.some(x=>x.id===v.id))}));
  },[mutate]);
+ const hideCard=useCallback(({item,scope}:HiddenRequest):boolean=>{
+  if(!uidRef.current||!validHiddenScope(scope)||!safePath(item.href))return false;
+  const old=stateRef.current;
+  if(old.hidden.some(x=>x.scope===scope&&x.id===item.id))return true;
+  if(old.hidden.length>=HIDDEN_LIMIT){setError(en?"Too many hidden services. Restore one first.":"Hay demasiados elementos ocultos. Restaura uno primero.");return false;}
+  if(!findShortcut(old,item.id)&&old.custom.length>=HIDDEN_LIMIT){setError(en?"Your personalized list is full.":"Tu lista personalizada está llena.");return false;}
+  mutate(previous=>({...previous,
+   custom:findShortcut(previous,item.id)?previous.custom:[...previous.custom,item],
+   hidden:[...previous.hidden,{id:item.id,scope}]
+  }));
+  setSuccess(en?"Moved to Extra services.":"Movido a Servicios extras.");
+  return true;
+ },[mutate,en]);
+ const restoreCard=useCallback((scope:string,id:string)=>{
+  mutate(old=>({...old,hidden:old.hidden.filter(x=>x.scope!==scope||x.id!==id)}));
+  setSuccess(en?"Card restored.":"Tarjeta restaurada.");
+ },[mutate,en]);
  const openPicker=()=>{setView("picker");setQuery("");setError("");setActionItem(null);};
  const openMenu=()=>{setView("list");setError("");setActionItem(null);};
  useEffect(()=>{
