@@ -3,8 +3,8 @@ import {useEffect,useRef,useState,type FormEvent} from "react";
 import {ArrowLeft,Bot,LoaderCircle,MessageCircle,Send,ShieldCheck} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {setAgentCatalogReadAccess,type PersistedAgent} from "./agentStore";
-import {listCatalog,prepareTestOrder,confirmTestOrder,createTestCheckout,
- type CatalogItem,type TestOrder,formatUsd} from "./commerceStore";
+import {listCatalog,type CatalogItem} from "./commerceStore";
+import VMVChatOrderCard,{type OrderRequest} from "@/components/VMVChatOrderCard";
 import styles from "./AgentLiveTest.module.css";
 import {useAgentHeaderBack} from "./AgentHeaderBack";
 
@@ -19,7 +19,6 @@ export default function AgentLiveTest({agent,onClose,onEdit,webMode=false,onAgen
  const [ownerFirstName,setOwnerFirstName]=useState("");
  const [purchaseCatalog,setPurchaseCatalog]=useState<CatalogItem[]>([]);
  const [purchaseItem,setPurchaseItem]=useState<CatalogItem|null>(null);
- const [purchasing,setPurchasing]=useState(false);
  const [conversations,setConversations]=useState<Conversation[]>([]);
  const [current,setCurrent]=useState<string|null>(null);
  const [messages,setMessages]=useState<Item[]>([]);
@@ -40,7 +39,7 @@ export default function AgentLiveTest({agent,onClose,onEdit,webMode=false,onAgen
    const rows=await listCatalog(agent.business_id);
    if(alive)setPurchaseCatalog(rows.filter(row=>settings.sales_item_ids.includes(row.id)&&
     row.active&&row.approved&&row.price_cents>0&&row.variants?.length===0&&
-    row.extras?.length===0&&(row.stock_mode==="unlimited"||
+    row.extras?.length===0&&(row.stock_mode==="manual"||row.stock_mode==="unlimited"||
      row.stock_mode==="tracked"&&Number(row.available_qty)>0)));
   })().catch(()=>{if(alive)setPurchaseCatalog([]);});
   return()=>{alive=false;};
@@ -135,21 +134,22 @@ export default function AgentLiveTest({agent,onClose,onEdit,webMode=false,onAgen
    setNotice(e instanceof Error?e.message:"No se pudo completar la prueba.");
   }finally{setSending(false);}
  }
- async function testPurchase(){
-  if(!purchaseItem||purchasing)return;
-  setPurchasing(true);setNotice("");
-  try{
-   const id=await prepareTestOrder(agent,purchaseItem,1);
-   await confirmTestOrder(id);
-   const db=getSupabase();if(!db)throw Error("Sin conexión.");
-   const {data,error}=await db.from("vmv_ai_orders").select("*")
-    .eq("id",id).eq("owner_id",agent.owner_id).eq("mode","test").single();
-   if(error||!data)throw Error("No se pudo verificar el pedido de prueba.");
-   const url=await createTestCheckout(data as TestOrder);
-   window.location.assign(url);
-   setNotice("Se abrió un checkout de Stripe en modo prueba. No se realizaron cobros reales.");
-  }catch(e){setNotice(e instanceof Error?e.message:"No fue posible iniciar el pedido de prueba.");}
-  finally{setPurchasing(false);}
+ async function requestOrder(request:OrderRequest){
+  const db=getSupabase();if(!db)throw Error("Sin conexión.");
+  const {data:{session}}=await db.auth.getSession();
+  if(!session?.access_token||!current)throw Error("Abre primero la conversación de prueba.");
+  const response=await fetch("/api/vmv/ai-agents/commerce/request-order",{
+   method:"POST",cache:"no-store",
+   headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
+   body:JSON.stringify({...request,agentId:agent.id,conversationId:current})
+  });
+  const payload=await response.json().catch(()=>({})) as {
+   error?:string;orderNo?:number;totalCents?:number;saved?:boolean
+  };
+  if(!response.ok||payload.saved!==true||typeof payload.orderNo!=="number"||
+   typeof payload.totalCents!=="number")
+   throw Error(payload.error||"No se pudo registrar el pedido de prueba.");
+  return {orderNo:payload.orderNo,totalCents:payload.totalCents};
  }
  if(webMode)return <section className={styles.webFullscreen} aria-label="Probar agente como cliente">
   {!useSharedHeader?<button type="button" className={styles.webBack} onClick={onClose}
@@ -163,12 +163,10 @@ export default function AgentLiveTest({agent,onClose,onEdit,webMode=false,onAgen
    </div>
    {messages.map(item=><div key={item.id}
     className={item.role==="user"?styles.webCustomer:styles.webAgent}>{item.content}</div>)}
-   {purchaseItem?<div className={styles.webPurchase}>
-    <strong>{purchaseItem.name} · {formatUsd(purchaseItem.price_cents)}</strong>
-    <button type="button" disabled={purchasing} onClick={()=>void testPurchase()}>
-     {purchasing?"Preparando…":"Comprar en modo prueba"}</button>
-    <small>Solo Stripe TEST. Nunca se cobra dinero real desde esta prueba.</small>
-   </div>:null}
+   {purchaseItem?<VMVChatOrderCard key={current+"-"+purchaseItem.id}
+    mode="test" products={[purchaseItem,...purchaseCatalog.filter(p=>p.id!==purchaseItem.id)].map(
+     p=>({id:p.id,name:p.name,priceCents:p.price_cents}))}
+    onSubmit={requestOrder}/>:null}
    {sending?<div className={styles.webTyping}><LoaderCircle size={15} className={styles.webSpin}/> Escribiendo…</div>:null}
    {loading?<div className={styles.webTyping}>Preparando chat…</div>:null}
    {notice?<div className={styles.webError} role="alert">{notice}</div>:null}
