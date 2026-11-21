@@ -97,6 +97,7 @@ export default function QuickVideoPage(){
  const [step,setStep]=useState(0);
  const [title,setTitle]=useState("");
  const [scenes,setScenes]=useState<Scene[]>([]);
+ const [storySignature,setStorySignature]=useState("");
  const [images,setImages]=useState<Record<number,string>>({});
  const [audio,setAudio]=useState<ArrayBuffer|null>(null);
  const [approved,setApproved]=useState(false);
@@ -145,7 +146,9 @@ export default function QuickVideoPage(){
   if(typeof draft?.narration==="boolean")setNarration(draft.narration);
   if(topicParam&&topicParam.trim().length>=3)setTopic(topicParam.slice(0,220));
   else if(typeof draft?.topic==="string")setTopic(draft.topic.slice(0,220));
-  if(typeof draft?.step==="number"&&Number.isInteger(draft.step)&&draft.step>=0&&draft.step<=3)setStep(draft.step);
+  if((visualParam==="sticks"||visualParam==="stills")||topicParam){
+   setStep(0);
+  }else if(typeof draft?.step==="number"&&Number.isInteger(draft.step)&&draft.step>=0&&draft.step<=3)setStep(draft.step);
   setDraftRestored(true);
  },[accountId]);
  useEffect(()=>{
@@ -170,7 +173,9 @@ export default function QuickVideoPage(){
    const r=await post("storyboard",{kind,visual,topic:topic.trim(),seconds,language:en?"en":"es"});
    const data=await r.json() as {title:string;scenes:Scene[]};
    if(!Array.isArray(data.scenes)||data.scenes.length<4)throw Error("storyboard_retry");
-   resetMedia();setTitle(data.title);setScenes(data.scenes);setStage("story");
+   resetMedia();setTitle(data.title);setScenes(data.scenes);
+   setStorySignature(JSON.stringify([kind,visual,topic.trim(),seconds,ratio,narration]));
+   setStage("story");
   }catch(e){setError(e instanceof Error?e.message:"storyboard_unavailable");}
   finally{setWorking("");}
  };
@@ -408,9 +413,15 @@ export default function QuickVideoPage(){
      {step<3?<button type="button" className={css.nextAction} disabled={Boolean(working)||(step===1&&topic.trim().length<3)}
       onClick={goNext}>{L("Continuar","Continue")}<ArrowRight size={19}/></button>:
       <button type="button" className={css.nextAction} disabled={Boolean(working)||topic.trim().length<3}
-       onClick={()=>void plan()}>
-       {working==="story"?<LoaderCircle size={19} className={css.spin}/>:<WandSparkles size={19}/>}
-       {working==="story"?L("Preparando…","Preparing…"):L("Crear escenas","Create scenes")}
+       onClick={()=>{if(scenes.length>=4&&storySignature===JSON.stringify([kind,visual,topic.trim(),seconds,ratio,narration])){
+        setStage("story");setError("");
+       }else void plan();}}>
+       {working==="story"?<LoaderCircle size={19} className={css.spin}/>:
+        scenes.length>=4&&storySignature===JSON.stringify([kind,visual,topic.trim(),seconds,ratio,narration])?
+        <ArrowRight size={19}/>:<WandSparkles size={19}/>}
+       {working==="story"?L("Preparando…","Preparing…"):
+        scenes.length>=4&&storySignature===JSON.stringify([kind,visual,topic.trim(),seconds,ratio,narration])?
+         L("Volver a mis escenas","Return to my scenes"):L("Crear escenas","Create scenes")}
       </button>}
     </div>
    </>:null}
