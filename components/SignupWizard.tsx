@@ -150,7 +150,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
    const finished=await completeSignup(supabase);
    const marked=await supabase.auth.updateUser({data:{vmv_signup_v2_completed:true}});
    if(marked.error)throw marked.error;
-   setCompleteAgent(finished.agent);setPhase("ready");
+   setPhase("ready");
    try{sessionStorage.removeItem(draftStorage);}catch{}
   }catch(e){setPhase(old=>old==="saving"?"failed":old);setError(e instanceof Error?e.message:"No pudimos comprobar tu correo.");}
   finally{setBusy(false);}
