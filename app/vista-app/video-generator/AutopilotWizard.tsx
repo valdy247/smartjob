@@ -121,6 +121,7 @@ export default function AutopilotWizard({initial,en,busy,onSave,onExit,onLibrary
    </div>
     {plan.niche.trim().length>=3?<ViralRadar niche={plan.niche} en={en}
      selectedSource={plan.research_video_id}
+     onClear={()=>patch({creative_seed:"",research_video_id:"",research_scan_id:null})}
      onChoose={(idea,scanId)=>patch({
       creative_seed:(idea.hook+" — "+idea.concept).slice(0,450),
       research_video_id:idea.sourceId,research_scan_id:scanId
