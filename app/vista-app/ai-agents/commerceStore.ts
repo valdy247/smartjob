@@ -1,9 +1,11 @@
 import {getSupabase} from "@/lib/supabase";
 import type {PersistedAgent} from "./agentStore";
+import {safeWebImageUrl} from "@/lib/web-services-site";
 export type CatalogItem={
  id:string;owner_id:string;business_id:string;sku:string;name:string;description:string;
  price_cents:number;currency:"usd";stock_mode:"manual"|"tracked"|"unlimited";
  available_qty:number|null;approved:boolean;active:boolean;updated_at:string;
+ image_path?:string|null;
  variants:unknown[];extras:unknown[];web_source_id?:string|null;
 };
 export type TestOrder={
@@ -36,7 +38,7 @@ export async function listCatalog(businessId:string):Promise<CatalogItem[]>{
  return (data||[]) as CatalogItem[];
 }
 export async function saveCatalogItem(input:{
- name:string;sku:string;description:string;price:string;
+ name:string;sku:string;description:string;price:string;image?:string;
  stock_mode:CatalogItem["stock_mode"];available_qty:string;
  approved:boolean;active:boolean;
 },previous:CatalogItem|null,businessId:string){
@@ -56,11 +58,18 @@ export async function saveCatalogItem(input:{
  const qty=tracked?Number(input.available_qty):null;
  if(tracked&&(!Number.isSafeInteger(qty)||qty===null||qty<0||qty>1000000))
   throw Error("Indica existencias enteras verificadas.");
+ const photo=input.image===undefined?undefined:
+  input.image?safeWebImageUrl(input.image):null;
+ if(input.image!==undefined&&input.image&&!photo)
+  throw Error("La foto debe venir de la biblioteca de VMV.");
+ if(photo&&!photo.includes("/smartjob-web-images/"+owner+"/"))
+  throw Error("Selecciona una foto de tu propia biblioteca.");
  const data={
   business_id:business.id,owner_id:owner,
   sku,name,description:input.description.trim().slice(0,700),
   price_cents,currency:"usd",stock_mode:input.stock_mode,
   available_qty:qty,approved:input.approved,active:input.active,
+  ...(photo===undefined?{}:{image_path:photo}),
   updated_at:new Date().toISOString()
  };
  if(previous){
@@ -193,6 +202,37 @@ export async function saveCommerceAgentPermissions(agent:PersistedAgent,
   .select("id,revision,updated_at,configuration").maybeSingle();
  if(error)throw Error("No fue posible guardar los permisos comerciales.");
  if(!data)throw Error("El agente cambió en otro dispositivo. Actualiza AI Agents y vuelve a revisar.");
+ return {...agent,setup:data.configuration as Record<string,string>,
+  revision:data.revision,updated_at:data.updated_at};
+}
+
+/** One-time permissions for Productos/Pedidos; never changes the agent's phone channel. */
+export async function saveCommerceSetup(agent:PersistedAgent,config:{
+ catalog:boolean;orders:boolean;accept:boolean;
+}):Promise<PersistedAgent>{
+ const {db,owner}=await current();
+ if(agent.owner_id!==owner||!uuid.test(agent.id)||!uuid.test(agent.business_id))
+  throw Error("El agente no pertenece a tu negocio.");
+ if(config.orders&&!config.catalog||config.accept&&!config.orders)
+  throw Error("Primero conecta el catálogo y autoriza los pedidos.");
+ const channel=agent.setup.channel||"Chat";
+ if(config.orders&&channel!=="Chat"&&agent.setup.call_disclosure!=="Sí"&&
+    agent.setup.call_consent!=="Sí")
+  throw Error("Primero autoriza el aviso de IA para atender llamadas.");
+ const configuration={...agent.setup,
+  cap_catalog:config.catalog?"Sí":"No",
+  cap_sales:config.orders?"Sí":"No",
+  perm_prepare_order:config.orders?"Sí":"No",
+  perm_confirm_order:config.orders&&config.accept?"Sí":"No",
+  perm_payment_link:config.orders&&agent.setup.perm_payment_link==="Sí"?"Sí":"No",
+  commerce_onboarded:"Sí"
+ };
+ const {data,error}=await db.from("vmv_ai_agents").update({configuration})
+  .eq("id",agent.id).eq("owner_id",owner).eq("business_id",agent.business_id)
+  .eq("revision",agent.revision)
+  .select("id,revision,updated_at,configuration").maybeSingle();
+ if(error)throw Error("No se pudieron guardar los permisos.");
+ if(!data)throw Error("El agente cambió en otro dispositivo. Actualiza la pantalla.");
  return {...agent,setup:data.configuration as Record<string,string>,
   revision:data.revision,updated_at:data.updated_at};
 }
