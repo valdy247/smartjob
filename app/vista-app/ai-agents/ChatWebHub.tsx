@@ -10,6 +10,7 @@ import {getSupabase} from "@/lib/supabase";
 import {listCatalog,type CatalogItem,formatUsd} from "./commerceStore";
 import {setAgentCatalogReadAccess,type PersistedAgent} from "./agentStore";
 import css from "./ChatWebHub.module.css";
+import {useAgentHeaderBack} from "./AgentHeaderBack";
 
 type Section="home"|"sites"|"conversations"|"settings";
 type Settings={
@@ -44,6 +45,13 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
  const [loading,setLoading]=useState(true),[saving,setSaving]=useState(false);
  const [error,setError]=useState(""),[notice,setNotice]=useState("");
  const owner=agent.owner_id;
+ const useSharedHeader=useAgentHeaderBack(()=>{
+  if(section==="conversations"&&chosen){
+   setChosen(null);setMessages([]);return;
+  }
+  if(section==="home"){onBack();return;}
+  setSection("home");setChosen(null);setMessages([]);setError("");setNotice("");
+ });
  const load=useCallback(async()=>{
   setLoading(true);setError("");
   try{
@@ -199,12 +207,13 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
   {id:"settings" as const,title:"Ajustes",detail:"Tono y productos",Icon:SlidersHorizontal,color:"rose"}
  ];
  return <section className={css.root}>
-  <header className={css.header}>
-   <button type="button" className={css.back} onClick={()=>section==="home"?onBack():(setSection("home"),setError(""),setNotice(""))}>
+  {!useSharedHeader?<header className={css.header}>
+   <button type="button" className={css.back}
+    onClick={()=>section==="home"?onBack():(setSection("home"),setError(""),setNotice(""))}>
     <ArrowLeft size={17}/>{section==="home"?"Mis agentes":"Chat web"}
    </button>
    <span className={css.brand}><Headphones size={15}/> VMV BUSINESS</span>
-  </header>
+  </header>:null}
   <div className={css.hero}>
    <div className={css.heroIcon}><Headphones size={27}/></div>
    <div><span className={css.eyebrow}>MI AGENTE · CHAT WEB</span>
@@ -269,7 +278,7 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
      onClick={()=>{setConversationTab("tests");setChosen(null);}}>Pruebas · {conversations.length}</button>
    </div>
    {conversationTab==="ai"?(chosen?<div className={css.thread}>
-     <button type="button" onClick={()=>{setChosen(null);setMessages([]);}}><ArrowLeft size={15}/> Chats recientes</button>
+     {!useSharedHeader?<button type="button" onClick={()=>{setChosen(null);setMessages([]);}}><ArrowLeft size={15}/> Chats recientes</button>:null}
      {messages.map(m=><div key={m.id} className={m.role==="user"?css.userBubble:css.agentBubble}>
       <small>{m.role==="user"?"Visitante":"Agente IA"}</small><p>{m.content}</p></div>)}
      {!messages.length?<span className={css.muted}>Sin mensajes disponibles.</span>:null}
@@ -285,7 +294,7 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
      </div>)}</div>:
      <div className={css.empty}><Inbox size={28}/><strong>Sin solicitudes web</strong><span>Los formularios aparecerán aquí.</span></div>):
     chosen?<div className={css.thread}>
-     <button type="button" onClick={()=>{setChosen(null);setMessages([]);}}><ArrowLeft size={15}/> Conversaciones</button>
+     {!useSharedHeader?<button type="button" onClick={()=>{setChosen(null);setMessages([]);}}><ArrowLeft size={15}/> Conversaciones</button>:null}
      {messages.map(m=><div key={m.id} className={m.role==="user"?css.userBubble:css.agentBubble}>
       <small>{m.role==="user"?"Tú":"Agente"}</small><p>{m.content}</p></div>)}
     </div>:conversations.length?<div className={css.list}>{conversations.map(c=><button type="button" key={c.id}
