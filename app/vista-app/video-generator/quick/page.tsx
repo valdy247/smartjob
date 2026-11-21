@@ -6,6 +6,7 @@ import {ArrowLeft,ArrowRight,BookOpen,CheckCircle2,Clapperboard,Download,Film,
  Clock3,Smartphone,Monitor,VolumeX} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import VMVAuthGateway from "@/components/VMVAuthGateway";
+import {saveQuickVideo} from "@/lib/vmv-video-quick-library";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import css from "./page.module.css";
 
@@ -104,6 +105,8 @@ export default function QuickVideoPage(){
  const [error,setError]=useState("");
  const [videoUrl,setVideoUrl]=useState("");
  const [extension,setExtension]=useState("");
+ const [saving,setSaving]=useState(false),[savedProject,setSavedProject]=useState("");
+ const [saveError,setSaveError]=useState("");
  const [sessionStatus,setSessionStatus]=useState<"loading"|"signed-in"|"signed-out"|"unavailable">("loading");
  const [loginReturnTo,setLoginReturnTo]=useState("/vista-app/video-generator/quick");
  const supabase=getSupabase();
@@ -134,7 +137,7 @@ export default function QuickVideoPage(){
  const resetMedia=()=>{
   mediaRef.current.forEach(URL.revokeObjectURL);mediaRef.current=[];
   if(resultRef.current)URL.revokeObjectURL(resultRef.current);
-  resultRef.current="";setVideoUrl("");setImages({});setAudio(null);setApproved(false);
+  resultRef.current="";setVideoUrl("");setImages({});setAudio(null);setApproved(false);setSavedProject("");setSaveError("");
  };
  const changeKind=(next:Kind)=>{
   setKind(next);setError("");
@@ -267,7 +270,7 @@ export default function QuickVideoPage(){
    const blob=await ended;
    const url=URL.createObjectURL(blob);
    if(resultRef.current)URL.revokeObjectURL(resultRef.current);
-   resultRef.current=url;setVideoUrl(url);
+   resultRef.current=url;setVideoUrl(url);setSavedProject("");setSaveError("");
    const ext=type.includes("mp4")?"mp4":"webm";setExtension(ext);
   }catch(e){setError(e instanceof Error?e.message:"recorder_failed");}
   finally{
@@ -281,7 +284,19 @@ export default function QuickVideoPage(){
   setScenes(prev=>prev.map((s,i)=>i===index?{...s,[key]:value}:s));
   setAudio(null);if(stage==="ready")setStage("story");
   if(resultRef.current)URL.revokeObjectURL(resultRef.current);
-  resultRef.current="";setVideoUrl("");
+  resultRef.current="";setVideoUrl("");setSavedProject("");setSaveError("");
+ };
+ const saveToLibrary=async()=>{
+  if(saving||!videoUrl||savedProject)return;
+  setSaving(true);setSaveError("");
+  try{
+   const client=getSupabase();if(!client)throw Error("login");
+   const response=await fetch(videoUrl);if(!response.ok)throw Error("quick_invalid");
+   const blob=await response.blob();
+   const id=await saveQuickVideo(client,{title,topic,kind,visual,seconds,ratio,narration,scenes},blob);
+   setSavedProject(id);
+  }catch(e){setSaveError(e instanceof Error?e.message:"quick_upload_failed");}
+  finally{setSaving(false);}
  };
  if(sessionStatus==="unavailable")return <main className={css.page}><div className={css.shell}>
   <p className={css.error} role="alert">{L("No se pudo conectar el inicio de sesión. Actualiza la página.","Sign-in couldn't initialize. Refresh the page.")}</p>
@@ -417,11 +432,21 @@ export default function QuickVideoPage(){
       <a className={css.download} href={videoUrl} download={"vmv-"+kind+"-"+visual+"."+extension}>
        <Download size={19}/>{L("Descargar video","Download video")} · {extension.toUpperCase()}
       </a>
+      {savedProject?<Link className={css.librarySaved} href={"/vista-app/video-generator?view=library&quick="+encodeURIComponent(savedProject)}>
+       <CheckCircle2 size={18}/>{L("Guardado · Ver en mi biblioteca","Saved · View in my library")}<ArrowRight size={16}/>
+      </Link>:<button type="button" className={css.saveButton} disabled={saving} onClick={()=>void saveToLibrary()}>
+       {saving?<LoaderCircle size={18} className={css.spin}/>:<ShieldCheck size={18}/>}
+       {saving?L("Guardando en tu cuenta…","Saving to your account…"):
+        L("Guardar en mi biblioteca","Save to my library")}
+      </button>}
+      {saveError?<p className={css.error} role="alert">{saveError==="quick_file_too_large"?L("El archivo supera 25 MB. Descárgalo para conservarlo.","File exceeds 25 MB. Download to keep it."):
+       saveError==="quick_library_limit"?L("Tienes 30 videos guardados. Elimina uno de la biblioteca para guardar otro.","Library is full (30 videos). Delete one to save another."):
+       L("No se pudo sincronizar. Descarga el video antes de salir.","Cloud save failed. Download before leaving.")}</p>:null}
      </div>:null}
     </>:null}
    </section>:null}
    {error?<p className={css.error} role="alert">{errorLabel(error,en)}</p>:null}
-   <p className={css.foot}>{L("Descarga el resultado para conservarlo. Los videos de Stickman se producen en este navegador y aún no se sincronizan en la biblioteca de Runway/Kling.","Download your finished video to keep it. Stickman videos are rendered in this browser and are not yet part of the Runway/Kling library.")}</p>
+   <p className={css.foot}>{L("Descarga el video o guárdalo en tu biblioteca para abrirlo desde otros dispositivos. No se publica automáticamente.","Download your video or save it to your library to access it from other devices. Nothing is published automatically.")}</p>
   </div>
  </main>;
 }
