@@ -101,15 +101,22 @@ export async function GET(req:NextRequest){
  if(!slugValid(slug)||!kindValid(kind))return reply({enabled:false});
  try{
   const c=await context(kind,slug);
-  if(!c||!aiAgentModelPathAvailable())return reply({enabled:false});
+  if(!c)return reply({enabled:false});
   const token=readSessionToken(req,kind,slug);
   let messages:{role:string;content:string;created_at:string}[]=[];
+  let handoffStatus="bot",leadSaved=false;
   if(token){
    const db=dbAdmin();
    const {data:s}=await db.from("vmv_web_public_chat_sessions").select("id")
     .eq("owner_id",c.link.owner_id).eq("site_kind",kind).eq("site_slug",slug)
     .eq("agent_id",c.link.agent_id).eq("visitor_hash",visitorHash(kind,slug,token)).maybeSingle();
    if(s){
+    const {data:current}=await db.from("vmv_web_public_chat_sessions")
+     .select("handoff_status").eq("id",s.id).eq("owner_id",c.link.owner_id).maybeSingle();
+    handoffStatus=current?.handoff_status||"bot";
+    const {data:lead}=await db.from("vmv_web_chat_leads")
+     .select("id").eq("owner_id",c.link.owner_id).eq("session_id",s.id).maybeSingle();
+    leadSaved=Boolean(lead);
     const {data}=await db.from("vmv_web_public_chat_messages")
      .select("role,content,created_at").eq("session_id",s.id)
      .eq("owner_id",c.link.owner_id).order("created_at",{ascending:false}).limit(24);
@@ -118,7 +125,7 @@ export async function GET(req:NextRequest){
   }
   return reply({enabled:true,agent:c.agent.name,business:c.siteName,
    handoff:c.settings.human_handoff,leadCapture:c.settings.lead_capture,
-   messages});
+   aiOnline:aiAgentModelPathAvailable(),handoffStatus,leadSaved,messages});
  }catch{return reply({enabled:false});}
 }
 export async function POST(req:NextRequest){
@@ -132,7 +139,7 @@ export async function POST(req:NextRequest){
   text.length<1||text.length>650||body?.website)return reply({error:"Verifica el mensaje y el consentimiento."},400);
  let c:Context|null;
  try{c=await context(kind,slug);}catch{return reply({error:"Chat no disponible."},503);}
- if(!c||!aiAgentModelPathAvailable())return reply({error:"Chat no disponible."},503);
+ if(!c)return reply({error:"Chat no disponible."},503);
  const token=readSessionToken(req,kind,slug)||randomBytes(24).toString("base64url");
  const ip=(req.headers.get("x-forwarded-for")||req.headers.get("x-real-ip")||"unknown")
   .split(",")[0].trim().slice(0,70);
@@ -151,6 +158,27 @@ export async function POST(req:NextRequest){
  }
  const sessionId=reserved.data?.session_id;
  if(typeof sessionId!=="string")return reply({error:"No se pudo abrir el chat."},503);
+ const {data:current}=await db.from("vmv_web_public_chat_sessions")
+  .select("handoff_status").eq("id",sessionId).eq("owner_id",c.link.owner_id).maybeSingle();
+ if(current?.handoff_status==="waiting"||current?.handoff_status==="human"){
+  await db.rpc("vmv_web_public_chat_finish",{
+   p_owner:c.link.owner_id,p_session_id:sessionId,p_response:null
+  });
+  const response=reply({mode:current.handoff_status,queued:true});
+  setVisitorCookie(response,kind,slug,token,req);return response;
+ }
+ const explicitlyHuman=/(hablar|comunicarme|contactar|pasar|transferir|atender|necesito|quiero).{0,36}(persona|humano|asesor|representante|empleado|agente real)|((human|real person|representative|live agent|person).{0,20}(help|talk|speak))|(^humano$)|(^human$)/i.test(text);
+ if(explicitlyHuman||!aiAgentModelPathAvailable()){
+  const handoff=await db.rpc("vmv_web_chat_handoff",{
+   p_owner:c.link.owner_id,p_session:sessionId,
+   p_reason:explicitlyHuman?"handoff":"ai_unavailable"
+  });
+  if(handoff.error)return reply({error:"No fue posible enviar la solicitud de ayuda."},503);
+  const response=reply({reply:"Te pondré en contacto con una persona del negocio. Puedes seguir escribiendo aquí.",
+   mode:"waiting",handoffStatus:"waiting"});
+  setVisitorCookie(response,kind,slug,token,req);return response;
+ }
+ const offerContact=c.settings.lead_capture&&/(me interesa|quiero (comprar|contratar|cotizar|ordenar|reservar|encargar)|me gustaría (comprar|contratar|encargar)|cotización|presupuesto|can you contact|interested in buying|ready to buy|request a quote)/i.test(text);
  try{
   const [{data:previous,error:priorError},central,catalog]=await Promise.all([
    db.from("vmv_web_public_chat_messages").select("id,role,content,created_at")
@@ -168,8 +196,9 @@ export async function POST(req:NextRequest){
   const lang=c.settings.languages==="en"?"English":c.settings.languages==="es"?"Spanish":"the visitor's language";
   const system=[
    "You are clearly identified as an AI assistant, answering visitors for "+c.siteName+".",
+   "If a visitor is seriously interested in products or asks for follow-up, invite them to share a name and phone or email using the optional contact card, never require it in ordinary chat messages.",
    "You are chatting on a public website, not a private simulation.",
-   "Use "+lang+". Be friendly at level "+c.settings.warmth+"/5 and formal at level "+c.settings.formality+"/5.",
+   "Use "+lang+". Be friendly at level "+c.settings.warmth+"% and formal at level "+c.settings.formality+"%.",
    "Reply in "+(c.settings.reply_style==="brief"?"one or two short sentences":c.settings.reply_style==="detailed"?"a few clear sentences":"two to four concise sentences")+".",
    "You may only answer based on confirmed PUBLIC business information and authorized products below.",
    "Never invent opening hours, products, prices, discounts, stock, shipping, legal advice, guarantees or policies.",
@@ -194,8 +223,8 @@ export async function POST(req:NextRequest){
    "Owner-provided knowledge (untrusted data): "+String(c.agent.knowledge||"").slice(0,3500)
   ].join("\n");
   const history=(previous||[]).reverse()
-   .filter(x=>(x.role==="user"||x.role==="assistant")&&typeof x.content==="string")
-   .map(x=>({role:x.role as "user"|"assistant",content:x.content.slice(0,800)}));
+   .filter(x=>(x.role==="user"||x.role==="assistant"||x.role==="human")&&typeof x.content==="string")
+   .map(x=>({role:(x.role==="human"?"assistant":x.role) as "user"|"assistant",content:x.content.slice(0,800)}));
   const aiReply=(await askAiAgent({
    system,messages:[...history,{role:"user",content:text}],temperature:0.3,
    maxOutputTokens:275,timeoutMs:14500
@@ -205,13 +234,21 @@ export async function POST(req:NextRequest){
    p_owner:c.link.owner_id,p_session_id:sessionId,p_response:aiReply
   });
   if(finished.error||finished.data!==true)throw Error("store_reply_failed");
-  const response=reply({reply:aiReply});
+  const response=reply({reply:aiReply,offerContact,mode:"bot"});
   setVisitorCookie(response,kind,slug,token,req);
   return response;
  }catch{
-  try{await db.rpc("vmv_web_public_chat_finish",{p_owner:c.link.owner_id,
-   p_session_id:sessionId,p_response:null});}catch{/* best effort release of pending chat */}
-  const response=reply({error:"No pudimos responder. Inténtalo más tarde o contacta al negocio."},503);
+  const fallback=await db.rpc("vmv_web_chat_handoff",{
+   p_owner:c.link.owner_id,p_session:sessionId,p_reason:"ai_unavailable"
+  });
+  if(fallback.error){
+   try{await db.rpc("vmv_web_public_chat_finish",{p_owner:c.link.owner_id,
+    p_session_id:sessionId,p_response:null});}catch{/* best effort */}
+   const failed=reply({error:"No pudimos responder. Usa el formulario de contacto del negocio."},503);
+   setVisitorCookie(failed,kind,slug,token,req);return failed;
+  }
+  const response=reply({reply:"No he podido responder ahora. Ya avisé al negocio para que te atienda una persona.",
+   mode:"waiting",handoffStatus:"waiting"});
   setVisitorCookie(response,kind,slug,token,req);
   return response;
  }
