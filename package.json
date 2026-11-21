@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run bridge:test && npm run business-diagnostic:test && npm run web-ai:test && npm run i18n:check && npm run i18n:coverage && npm run i18n:marketing && npm run i18n:services && npm run i18n:agents && npm run i18n:test && npm run testers:test && npm run google-profile:test && npm run marketing-support:test && npm run marketing-captions:test && npm run marketing-site-audit:test && npm run marketing-requests:test && npm run marketing-ads:test && npm run marketing-ads-modal:test && npm run finanzas:test && npm run auto-ad:test && npm run agent-ad-review:test && npm run smart-quote:test && npm run web-agent:test && npm run video-agent:test && npm run video-radar:test && npm run agent-services:test && npm run chat-web:test && npm run public-web-chat:test && npm run quick-access:test && next build",
+    "build": "npm run bridge:test && npm run business-diagnostic:test && npm run web-ai:test && npm run i18n:check && npm run i18n:coverage && npm run i18n:marketing && npm run i18n:services && npm run i18n:agents && npm run i18n:test && npm run testers:test && npm run google-profile:test && npm run marketing-support:test && npm run marketing-captions:test && npm run marketing-site-audit:test && npm run marketing-requests:test && npm run marketing-ads:test && npm run marketing-ads-modal:test && npm run finanzas:test && npm run auto-ad:test && npm run agent-ad-review:test && npm run smart-quote:test && npm run web-agent:test && npm run video-agent:test && npm run video-radar:test && npm run agent-services:test && npm run chat-web:test && npm run public-web-chat:test && npm run chat-handoff:test && npm run quick-access:test && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "i18n:check": "node scripts/check-i18n.mjs",
@@ -38,7 +38,8 @@
     "video-radar:test": "node --test scripts/vmv-video-radar.test.cjs",
     "chat-web:test": "node --test scripts/vmv-chat-web-hub.test.cjs",
     "quick-access:test": "node --test scripts/vmv-quick-access.test.cjs",
-    "public-web-chat:test": "node --test scripts/vmv-public-web-chat.test.cjs"
+    "public-web-chat:test": "node --test scripts/vmv-public-web-chat.test.cjs",
+    "chat-handoff:test": "node --test scripts/vmv-chat-handoff.test.cjs"
   },
   "engines": {
     "node": ">=20.9"
