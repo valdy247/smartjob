@@ -445,6 +445,9 @@ export default function AIAgentsPreview(){
         <h2 style={{fontSize:23,fontWeight:800,margin:"0 0 8px"}}>Video Generator</h2>
         <p style={{fontSize:13,color:"#6d637c",margin:0}}>¿Qué quieres hacer?</p>
        </div>
+       <a href="/vista-app/video-generator/quick?visual=sticks" style={{textDecoration:"none",textAlign:"left",display:"flex",alignItems:"center",gap:16,padding:19,borderRadius:18,border:"1.5px solid #cfb9ee",background:"#f8f4ff",color:"#332346"}}>
+        <Clapperboard size={25} color="#8144ad"/><span style={{display:"grid",gap:4}}><strong>Stickman 2D</strong><small>Historias con personajes de palitos</small></span><ChevronRight size={18} style={{marginLeft:"auto"}}/>
+       </a>
        <button type="button" onClick={()=>setScreen("video")} style={{textAlign:"left",display:"flex",alignItems:"center",gap:16,padding:19,borderRadius:18,border:"1px solid #e9d9ed",background:"#fff",color:"#332346",cursor:"pointer"}}>
         <WandSparkles size={25} color="#8144ad"/><span style={{display:"grid",gap:4}}><strong>Generar video</strong><small>Crear con tu agente IA</small></span><ChevronRight size={18} style={{marginLeft:"auto"}}/>
        </button>
