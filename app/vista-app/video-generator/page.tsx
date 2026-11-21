@@ -9,6 +9,7 @@ import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import styles from "./page.module.css";
 import AutopilotWizard,{type AutopilotPlan} from "./AutopilotWizard";
+import VideoPromptAssistant from "@/components/VideoPromptAssistant";
 import {listQuickVideos,deleteQuickVideo,type QuickVideoProject} from "@/lib/vmv-video-quick-library";
 
 type Job={id:string;pilot_id:string|null;prompt:string;mode:"text"|"image";model:"gen4.5"|"kling";
@@ -422,8 +423,9 @@ export default function VideoGeneratorPage(){
       onChange={e=>patch("prompt",e.target.value)}/>
      <div className={styles.fieldFooter}>
       <span>{form.prompt.length}/1000</span>
-      <button type="button" className={styles.miniAction} disabled={busy!==""||form.prompt.trim().length<3}
-       onClick={()=>void idea()}><WandSparkles size={15}/>{L("Mejorar con IA","Enhance with AI")}</button>
+      <VideoPromptAssistant value={form.prompt} onApply={value=>patch("prompt",value)}
+       kind="video" maxLength={1000} en={en} disabled={busy!==""}
+       context={{visual:form.mode,purpose:"Original 5–10 second AI video",duration:form.duration}}/>
      </div>
     </div>
     <div className={styles.dual}>
@@ -451,6 +453,9 @@ export default function VideoGeneratorPage(){
      <textarea id="vmv-caption" rows={2} maxLength={500} value={form.caption}
       onChange={e=>patch("caption",e.target.value)}
       placeholder={L("Descripción y hashtags opcionales","Optional caption and hashtags")}/>
+     <VideoPromptAssistant value={form.caption} onApply={value=>patch("caption",value)}
+      kind="social" maxLength={500} en={en} disabled={busy!==""}
+      context={{purpose:"Video description for social media"}}/>
     </div>
     <label className={styles.approval}>
      <input type="checkbox" checked={costApproved} onChange={e=>setCostApproved(e.target.checked)}/>
