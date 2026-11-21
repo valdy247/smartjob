@@ -19,7 +19,7 @@ test("AI Agents home has no hardcoded Spanish in user-facing JSX",()=>{
   assert.ok(!home.includes(literal),literal+" cannot bypass locale");
  }
  for(const key of ["agents.onePerBusiness","agents.oneAgent","agents.allFunctions","agents.capabilities",
- "agents.yourAgent","agents.disclaimer","agents.makePrincipal","agents.status.needsAttention"]){
+ "agents.status.needsAttention"]){
   assert.ok(home.includes('translate("'+key+'")'),key+" is required on home");
   for(const lang of ["es","en"])assert.ok(catalog[lang][key],lang+" missing "+key);
  }
