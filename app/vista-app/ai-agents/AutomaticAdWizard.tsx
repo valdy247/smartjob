@@ -193,7 +193,11 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
    Authorization:"Bearer "+session.access_token,...(method==="POST"?{"Content-Type":"application/json"}:{})
   },body:method==="POST"?JSON.stringify(payload):undefined});
   const data=await response.json().catch(()=>null);
-  if(!response.ok)throw Error(String(data?.error||"El servicio no respondió."));
+  if(!response.ok){
+   const detail=Number(data?.metaSubcode);
+   throw Error(String(data?.error||"El servicio no respondió.")+
+    (Number.isInteger(detail)&&detail>0?" · Código Meta: "+detail:""));
+  }
   return data;
  };
  const fetchMeta=async()=>{
@@ -355,8 +359,26 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
     await api("/api/marketing/ads/meta/campaigns","POST",{
      operation:"create_paused",campaignId,confirmPaused:true,approvedTotalCents:totalCents
     });
-   }catch{
-    throw Error("El borrador se guardó, pero Meta no confirmó la campaña pausada. Revísala en Historial de campañas.");
+   }catch(e){
+    const reason=e instanceof Error?e.message:"Error desconocido";
+    const code=reason.split(" · ")[0];
+    const messages:Record<string,string>={
+     meta_app_in_development_mode:"Meta bloqueó la creatividad: la aplicación está en modo Desarrollo.",
+     meta_creative_image_not_found:"Meta no encontró la imagen publicitaria. Vuelve a subirla a la cuenta conectada.",
+     meta_instagram_identity_deprecated:"Meta rechazó la identidad de Instagram configurada.",
+     meta_creative_access_denied:"Meta rechazó el permiso para crear el anuncio. Revisa los permisos publicitarios.",
+     meta_creative_parameters_rejected:"Meta rechazó los parámetros del anuncio; revisa la imagen, el texto y la página.",
+     meta_creative_provider_unavailable:"No se pudo completar la validación de la creatividad con Meta.",
+     meta_reconnect_required:"Meta requiere que vuelvas a conectar la cuenta.",
+     explicit_budget_approval_required:"No coincide el presupuesto que se autorizó con el guardado.",
+     campaign_already_processed:"Esta campaña ya fue procesada. Comprueba Historial antes de intentar otra vez."
+    };
+    const cause=messages[code]||(code.startsWith("provider_creation_incomplete_review_")?
+     "La creación quedó incompleta y pueden existir objetos pausados en Meta. No vuelvas a enviarla.":
+     "Meta no confirmó la campaña pausada. Diagnóstico: "+code);
+    throw Error("Borrador guardado. "+cause+" Referencia VMV: "+campaignId.slice(0,8)+
+     (reason.includes("Código Meta:")?" · "+reason.split("Código Meta:")[1].trim():"")+
+     ". Consulta Historial → Comprobar con Meta (sin publicar).");
    }
    window.location.assign("/vista-app/marketing/ads/campaigns");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo guardar. Intenta nuevamente.");setPending("");}
