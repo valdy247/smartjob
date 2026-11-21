@@ -139,3 +139,22 @@ test("weekly calendar seeding is restricted to signed-in owners and uses central
  assert.ok(sql.includes("to authenticated"));
  assert.ok(sql.includes("from public,anon,authenticated"));
 });
+
+test("registration matches the shared white AI Services wizard, without landing-page decoration",()=>{
+ const wizard=read("components/SignupWizard.tsx");
+ const css=read("components/SignupExperience.module.css");
+ const shared=read("app/vista-app/ai-agents/AutomaticWebWizard.module.css");
+ const flow=read("app/vista-app/ai-agents/AgentServiceFlow.module.css");
+ assert.ok(wizard.includes('import service from "@/app/vista-app/ai-agents/AutomaticWebWizard.module.css"'));
+ assert.ok(wizard.includes('import theme from "@/app/vista-app/ai-agents/AgentServiceFlow.module.css"'));
+ for(const part of ["service.root","service.top","service.track","service.robot","service.question",
+  "service.optionsVertical","service.optionActive","service.field","service.primary","theme.agentButton"])
+  assert.ok(wizard.includes(part),part+" must reuse service wizard styles");
+ assert.ok(css.includes("background:#fff"));
+ assert.ok(shared.includes(".question{"));
+ assert.ok(flow.includes(".agentProgress{"));
+ for(const excluded of ["styles.story","styles.orb","styles.glowOne","styles.badge","styles.footerHint"])
+  assert.ok(!wizard.includes(excluded),"remove decorative "+excluded);
+ assert.ok(!css.includes("radial-gradient"));
+ assert.ok(!css.includes("linear-gradient"));
+});
