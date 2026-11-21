@@ -7,10 +7,10 @@ import styles from "./AgentLiveTest.module.css";
 
 type Item={id:string;role:"user"|"assistant";content:string;created_at:string};
 type Conversation={id:string;title:string;created_at:string};
-type Props={agent:PersistedAgent;onClose:()=>void;onEdit:()=>void;onAgentUpdated?:(agent:PersistedAgent)=>void};
+type Props={agent:PersistedAgent;onClose:()=>void;onEdit:()=>void;webMode?:boolean;onAgentUpdated?:(agent:PersistedAgent)=>void};
 const idValid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export default function AgentLiveTest({agent,onClose,onEdit,onAgentUpdated}:Props){
+export default function AgentLiveTest({agent,onClose,onEdit,webMode=false,onAgentUpdated}:Props){
  const [message,setMessage]=useState("");
  const [conversations,setConversations]=useState<Conversation[]>([]);
  const [current,setCurrent]=useState<string|null>(null);
@@ -92,7 +92,7 @@ export default function AgentLiveTest({agent,onClose,onEdit,onAgentUpdated}:Prop
    setMessages(prior=>[...prior,{id:"local-"+Date.now(),role:"user",content:prompt,created_at:new Date().toISOString()}]);
    const response=await fetch("/api/vmv/ai-agents/simulate",{
     method:"POST",cache:"no-store",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},
-    body:JSON.stringify({agentId:agent.id,conversationId:id,message:prompt})
+    body:JSON.stringify({agentId:agent.id,conversationId:id,message:prompt,webPreview:webMode})
    });
    let payload:{reply?:string;error?:string}={};
    try{payload=await response.json();}catch{}
@@ -103,10 +103,10 @@ export default function AgentLiveTest({agent,onClose,onEdit,onAgentUpdated}:Prop
   }finally{setSending(false);}
  }
  return <section className={styles.root}>
-  <button type="button" className={styles.back} onClick={onClose}><ArrowLeft size={17}/> Mis agentes</button>
+  <button type="button" className={styles.back} onClick={onClose}><ArrowLeft size={17}/>{webMode?"Chat web":"Mis agentes"}</button>
   <div className={styles.hero}>
    <span className={styles.avatar}><Bot size={24}/></span>
-   <div><strong>{agent.name}</strong><small>Prueba de IA · sin acciones comerciales</small></div>
+   <div><strong>{agent.name}</strong><small>{webMode?"Prueba del chat web · sin cobros":"Prueba de IA · sin acciones comerciales"}</small></div>
   </div>
   <div className={styles.notice}><ShieldCheck size={17}/>
    <span>Esta conversación usa un modelo de IA y se guarda en tu cuenta. No realiza llamadas, reservas, pedidos ni cobros.</span>
