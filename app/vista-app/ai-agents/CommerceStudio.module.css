@@ -94,3 +94,11 @@ button:focus-visible{outline:3px solid #ad86ec;outline-offset:2px}
  font-weight:850;cursor:pointer}
 .orderActions button:first-child{background:#8052d4;color:#fff;border-color:#8052d4}
 .orderActions button:disabled,.orderCard>button:disabled{opacity:.5;cursor:wait}
+
+/* Servicios/Reservas shares the same catalog cards; only the row controls differ. */
+.serviceRowActions{display:flex;flex-direction:column;justify-content:center;flex-shrink:0;gap:7px;align-items:stretch}
+.serviceRowActions button{display:flex;justify-content:center;gap:5px;min-height:33px}
+@media(max-width:380px){
+ .serviceRowActions{max-width:92px}
+ .tabs button{font-size:10px;gap:4px}
+}
