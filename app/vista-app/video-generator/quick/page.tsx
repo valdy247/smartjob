@@ -145,7 +145,7 @@ export default function QuickVideoPage(){
   if(typeof draft?.narration==="boolean")setNarration(draft.narration);
   if(topicParam&&topicParam.trim().length>=3)setTopic(topicParam.slice(0,220));
   else if(typeof draft?.topic==="string")setTopic(draft.topic.slice(0,220));
-  if(Number.isInteger(draft?.step)&&draft!.step!>=0&&draft!.step!<=3)setStep(draft!.step!);
+  if(typeof draft?.step==="number"&&Number.isInteger(draft.step)&&draft.step>=0&&draft.step<=3)setStep(draft.step);
   setDraftRestored(true);
  },[accountId]);
  useEffect(()=>{
