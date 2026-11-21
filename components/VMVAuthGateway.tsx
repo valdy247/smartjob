@@ -6,10 +6,11 @@ import {InterfaceLanguagePicker} from "./InterfaceLanguagePicker";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import styles from "./VMVAuthGateway.module.css";
 
-export default function VMVAuthGateway({supabase,compact=false}:{
- supabase:SupabaseClient;compact?:boolean
+export default function VMVAuthGateway({supabase,compact=false,returnTo}:{
+ supabase:SupabaseClient;compact?:boolean;returnTo?:string
 }){
  const {language}=useInterfaceLanguage(),es=language!=="en";
+ const destination=returnTo&&(returnTo==="/vista-app/video-generator/quick"||returnTo.startsWith("/vista-app/video-generator/quick?"))?returnTo:"/vista-app";
  const [email,setEmail]=useState(""),[password,setPassword]=useState("");
  const [forgot,setForgot]=useState(false),[visible,setVisible]=useState(false);
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
@@ -26,7 +27,7 @@ export default function VMVAuthGateway({supabase,compact=false}:{
    }else{
     const {error:problem}=await supabase.auth.signInWithPassword({email:email.trim(),password});
     if(problem)throw problem;
-    window.location.assign("/vista-app");
+    window.location.assign(destination);
    }
   }catch(e){setError(e instanceof Error?e.message:(es?"No pudimos iniciar sesión.":"We couldn't sign you in."));}
   finally{setBusy(false);}
@@ -35,7 +36,7 @@ export default function VMVAuthGateway({supabase,compact=false}:{
   if(busy)return;setBusy(true);setError("");
   try{
    const {error:problem}=await supabase.auth.signInWithOAuth({
-    provider,options:{redirectTo:window.location.origin+"/vista-app"}
+    provider,options:{redirectTo:window.location.origin+destination}
    });
    if(problem)throw problem;
   }catch(e){
