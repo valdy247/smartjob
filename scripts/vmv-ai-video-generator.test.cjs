@@ -25,9 +25,9 @@ test("The creator uses the signed-in account and user prompt without business da
  assert.match(wizard,/session.user.id!==owner/);
  assert.doesNotMatch(wizard,/Contexto del negocio|businessId|vmv_ai_catalog_items|vmv_marketing_businesses|workspaceId/);
 });
-test("The AI Agent is the only reachable new video creation entry",()=>{
+test("Video Studio unifies navigation while the AI Agent controls advanced generation",()=>{
  assert.match(agents,/setScreen\("video"\)/);
- assert.match(catalog,/id:"video-generator".*service=video/);
+ assert.match(catalog,/id:"video-generator".*\/vista-app\/video-generator/);
  assert.match(catalog,/disabled={item\.id==="instagram-connect"}/);
  assert.match(studio,/onClick=\{\(\)=>window\.location\.assign\("\/vista-app\/ai-agents\?service=video"\)\}/);
  assert.match(studio,/<AutopilotWizard initial=\{pilot\}/);
@@ -121,10 +121,10 @@ test("Pilot-specific quota keeps normal owners unchanged and never opens unappro
  assert.match(start,/confirmCost/);
 });
 
-test("Video wizard result can finish and reopen the Services tab",()=>{
+test("Video wizard result opens the shared Video Generator library",()=>{
  assert.match(wizard,/stage==="result"&&<>/);
- assert.match(wizard,/Finalizar y volver a Servicios/);
- assert.match(wizard,/window\.location\.assign\("\/vista-app\?tab=services"\)/);
+ assert.match(wizard,/Ver en Video Generator/);
+ assert.match(wizard,/\/vista-app\/video-generator\?view=library&job=/);
  assert.match(wizard,/onClick=\{onRestart\}>Crear de nuevo/);
  assert.match(catalog,/requestedTab==="account"\|\|requestedTab==="services"/);
  assert.match(catalog,/setTab\(requestedTab\)/);
