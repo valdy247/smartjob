@@ -153,15 +153,37 @@ export async function POST(req:NextRequest){
    !validDestination(draft.destination))return fail("campaign_invalid",409);
 
  if(operation==="create_paused"){
-  if(input?.confirmPaused!==true||input?.approvedTotalCents!==draft.totalBudgetCents)
+  // Save sanitized diagnostic codes to the existing draft and runtime logs.
+  // Do not persist Meta tokens, ad copy, customer data, or raw provider messages.
+  const diagnostic=async(stage:string,code:string,subcode:number|null=null)=>{
+   const value=stage+":"+code+(subcode?":sub_"+subcode:"");
+   const {error:writeError}=await db.from("vmv_marketing_ads_campaigns")
+    .update({error_code:value,updated_at:new Date().toISOString()})
+    .eq("id",record.id).eq("owner_id",owner).eq("status","draft");
+   console.warn("[vmv-meta-ads] paused creation blocked",{
+    campaignRef:record.id.slice(0,8),stage,code,subcode,
+    diagnosticSaved:!writeError
+   });
+  };
+  if(input?.confirmPaused!==true||input?.approvedTotalCents!==draft.totalBudgetCents){
+   await diagnostic("approval","explicit_budget_approval_required");
    return fail("explicit_budget_approval_required",403);
-  if(record.status!=="draft")return fail("campaign_already_processed",409);
+  }
+  if(record.status!=="draft"){
+   console.warn("[vmv-meta-ads] paused creation skipped; already processed",{
+    campaignRef:record.id.slice(0,8),status:record.status
+   });
+   return fail("campaign_already_processed",409);
+  }
   // Dry-run first: reject a bad creative BEFORE any campaign, ad set or ad is written to Meta.
   try{await validateMetaLinkCreative(selectedAccount,active.token,draft);}
   catch(error){
    const reason=metaCreativeReason(error);
-   return NextResponse.json({error:reason,createdInMeta:false,adSpendActive:false,
-    ...(error instanceof MetaApiError&&error.subcode?{metaSubcode:error.subcode}:{})},
+   const metaCode=error instanceof MetaApiError?error.code:"provider_unavailable";
+   const subcode=error instanceof MetaApiError&&Number.isInteger(error.subcode)?error.subcode:null;
+   await diagnostic("preflight",metaCode,subcode);
+   return NextResponse.json({error:reason,campaignId:record.id,stage:"preflight",
+    createdInMeta:false,adSpendActive:false,...(subcode?{metaSubcode:subcode}:{})},
     {status:409,headers:noCache});
   }
   // The compare-and-set lock prevents duplicate external Meta campaign creation.
