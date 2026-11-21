@@ -248,8 +248,9 @@ export function VMVQuickAccessProvider({children}:{children:ReactNode}){
     <div className={styles.sheetHeading}><div><span className={styles.eyebrow}>{en?"CARD OPTIONS":"OPCIONES DE TARJETA"}</span>
      <h2 id="vmv-longpress-title">{labelFor(actionItem,en)}</h2></div>
      <button type="button" className={styles.close} onClick={()=>setActionItem(null)} aria-label={en?"Close":"Cerrar"}><X size={18}/></button></div>
-    <button type="button" className={styles.actionRow} onClick={()=>{pin(actionItem,"quick");setActionItem(null);}}><Link2 size={19}/>{state.quick.includes(actionItem.id)?en?"Already in shortcuts":"Ya está en accesos":en?"Agregar a acceso directo":"Agregar a acceso directo"}<ArrowUpRight size={16}/></button>
-    <button type="button" className={styles.actionRow} onClick={()=>{pin(actionItem,"home");setActionItem(null);}}><House size={19}/>{state.home.includes(actionItem.id)?en?"Already on Home":"Ya está en Home":en?"Agregar a Home":"Agregar a Home"}<ArrowUpRight size={16}/></button>
+    <button type="button" className={styles.actionRow} onClick={()=>{if(pin(actionItem,"quick"))setActionItem(null);}}><Link2 size={19}/>{state.quick.includes(actionItem.id)?en?"Already in shortcuts":"Ya está en accesos":en?"Agregar a acceso directo":"Agregar a acceso directo"}<ArrowUpRight size={16}/></button>
+    <button type="button" className={styles.actionRow} onClick={()=>{if(pin(actionItem,"home"))setActionItem(null);}}><House size={19}/>{state.home.includes(actionItem.id)?en?"Already on Home":"Ya está en Home":en?"Agregar a Home":"Agregar a Home"}<ArrowUpRight size={16}/></button>
+    {error?<p role="alert" className={styles.error}>{error}</p>:null}
     {actionItem.group==="Personalizado"?<p className={styles.smallHint}>{en?"This shortcut opens the section containing this card.":"Este acceso abre la sección donde se encuentra la tarjeta."}</p>:null}
    </section>
   </div>:null}
