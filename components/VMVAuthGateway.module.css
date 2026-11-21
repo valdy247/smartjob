@@ -1,0 +1,43 @@
+.page,.compact{--auth-ink:#2e2144;--auth-violet:#8656d5;font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:var(--auth-ink);display:flex;justify-content:center;align-items:center;position:relative}
+.page{min-height:100vh;padding:30px 16px;background:radial-gradient(circle at 84% 10%,#e9d8ff 0%,transparent 40%),radial-gradient(circle at 8% 85%,#dff8eb 0%,transparent 35%),#fbfaff}
+.compact{min-height:520px;padding:10px 13px 30px;background:transparent}
+.container{width:100%;max-width:430px;background:#fff;border:1px solid #eee3f6;border-radius:28px;padding:clamp(19px,4vw,35px);box-shadow:0 24px 65px #7c5b9a18;box-sizing:border-box}
+.compact .container{padding:22px 18px;box-shadow:none;border:1px solid #eee5f6;border-radius:23px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:11px}
+.logo{display:flex;align-items:center;gap:9px;font-weight:950;font-size:22px;letter-spacing:-1px;color:#423157}
+.logo b{color:#a391b9;font-size:8px;letter-spacing:.15em;margin-left:3px}
+.logoIcon{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#e2cfff,#e1f7eb);color:#754bb4}
+.welcome{margin-top:38px}
+.welcome .label{font-size:10px;letter-spacing:.17em;color:#9675ba;font-weight:900}
+.welcome h1{font-size:clamp(27px,3vw,33px);font-weight:900;letter-spacing:-.06em;line-height:1.14;margin:12px 0 8px;color:#302044}
+.welcome p{font-size:12px;color:#9788a3;line-height:1.6;margin:0}
+.social{display:grid;gap:10px;margin:27px 0 18px}
+.social button{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;min-height:48px;background:#fff;border:1px solid #e3d9eb;border-radius:13px;color:#473257;font-size:12px;font-weight:850;cursor:pointer}
+.social button:hover{background:#f9f5ff;border-color:#bd9ee4}
+.social button:disabled{opacity:.6;cursor:wait}
+.google,.apple{width:22px;height:22px;display:grid;place-items:center;font-size:17px;font-weight:900}
+.google{background:conic-gradient(#4285f4 0 85deg,#34a853 85deg 160deg,#fbbc05 160deg 240deg,#ea4335 240deg);background-clip:text;-webkit-background-clip:text;color:transparent}
+.apple{font-size:14px;color:#fff;background:#18141b;border-radius:50%}
+.or{display:flex;align-items:center;gap:12px;color:#a79aac;font-size:10px;white-space:nowrap;font-weight:750}
+.or span{flex:1;height:1px;background:#eee7f4}
+.form{display:flex;flex-direction:column;margin-top:17px;gap:8px}
+.form label{display:block;font-size:11px;font-weight:850;color:#675478;margin:8px 0 0}
+.inputWrap{display:flex;align-items:center;gap:10px;padding:0 13px;border:1px solid #e2d8eb;border-radius:12px;color:#a28bae;background:#fff;min-height:49px}
+.inputWrap:focus-within{border-color:#a883de;box-shadow:0 0 0 3px #a883de25}
+.inputWrap>svg{flex:0 0 17px}
+.inputWrap input{border:0;outline:0;min-width:0;flex:1;width:100%;min-height:46px;background:transparent;color:#3b2853;font-size:14px}
+.inputWrap input::placeholder{color:#bbafc9}
+.labelRow{display:flex;align-items:center;justify-content:space-between;gap:5px}
+.labelRow button{border:0;background:transparent;color:#835ac5;font-size:10px;font-weight:850;cursor:pointer}
+.inputWrap .eye{border:0;background:none;color:#a184c0;cursor:pointer;padding:6px}
+.submit{display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(145deg,#9669e3,#7546c6);color:white;border:0;border-radius:13px;min-height:50px;font-size:12px;font-weight:850;cursor:pointer;margin-top:14px}
+.submit:disabled{opacity:.58;cursor:wait}
+.bottomLink{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:5px;margin-top:25px;font-size:11px;color:#9484a2}
+.bottomLink a,.loginLink{font:850 11px Inter,ui-sans-serif,system-ui,sans-serif;color:#8153c6;text-decoration:none}
+.loginLink{border:0;background:transparent;display:block;margin:20px auto;cursor:pointer}
+.security{display:flex;align-items:center;justify-content:center;gap:7px;font-size:10px;color:#aa9ab7;margin:23px 0 0}
+.security svg{color:#88ac9b}
+.error,.notice{border-radius:12px;padding:10px 12px;margin:7px 0;color:#ad4b65;background:#fff0f3;font-size:11px;line-height:1.5}
+.notice{color:#34846a;background:#e7f8ef}
+@media(max-width:450px){.compact .container{padding:19px 15px}.compact .welcome{margin-top:23px}.compact .social{margin-top:18px}.compact .logo{font-size:19px}.compact .welcome h1{font-size:27px}.compact .security{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.container *{transition:none!important}}
