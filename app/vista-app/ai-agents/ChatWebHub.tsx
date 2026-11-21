@@ -21,9 +21,9 @@ type Settings={
 type Site={slug:string;business:string;kind:"classic"|"builder";published_at:string};
 type Link={site_slug:string;site_kind:"classic"|"builder";agent_id:string;public_chat_enabled:boolean};
 type Conversation={id:string;title:string;created_at:string};
-type VisitorChat={id:string;site_slug:string;site_kind:"classic"|"builder";created_at:string;updated_at:string};
+type VisitorChat={id:string;site_slug:string;site_kind:"classic"|"builder";handoff_status:"bot"|"waiting"|"human";created_at:string;updated_at:string};
 type Inquiry={id:string;site_slug:string;visitor_name:string;message:string;service:string;status:string;created_at:string};
-type Message={id:string;role:"user"|"assistant";content:string;created_at:string};
+type Message={id:string;role:"user"|"assistant"|"human";content:string;created_at:string};
 const defaults:Settings={warmth:80,formality:55,reply_style:"balanced",languages:"auto",
  sales_enabled:false,sales_item_ids:[],lead_capture:true,human_handoff:true};
 const norm=(s:string)=>s.trim().toLocaleLowerCase("es");
@@ -42,6 +42,8 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
  const [inquiries,setInquiries]=useState<Inquiry[]>([]);
  const [conversationTab,setConversationTab]=useState<"ai"|"website"|"tests">("ai");
  const [chosen,setChosen]=useState<string|null>(null),[messages,setMessages]=useState<Message[]>([]);
+ const [humanMessage,setHumanMessage]=useState(""),[replyBusy,setReplyBusy]=useState(false);
+ const [alerts,setAlerts]=useState<{id:string;session_id:string;source:string;read_at:string|null;created_at:string}[]>([]);
  const [loading,setLoading]=useState(true),[saving,setSaving]=useState(false);
  const [error,setError]=useState(""),[notice,setNotice]=useState("");
  const owner=agent.owner_id;
@@ -58,7 +60,7 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
    const db=getSupabase();if(!db)throw Error("Sin conexión con VMV.");
    const {data:{user},error:authError}=await db.auth.getUser();
    if(authError||!user||user.is_anonymous||user.id!==owner)throw Error("Inicia sesión nuevamente.");
-   const [prefs,publications,builderSites,bound,products,tests,requests,visitors]=await Promise.all([
+   const [prefs,publications,builderSites,bound,products,tests,requests,visitors,notifications]=await Promise.all([
     db.from("vmv_web_chat_settings").select("*").eq("owner_id",owner).eq("agent_id",agent.id).maybeSingle(),
     db.from("smartjob_web_publications").select("slug,content,published_at").eq("owner_id",owner).limit(100),
     db.from("smartjob_builder_public_pages").select("site_slug,site_name,published_at")
@@ -69,10 +71,12 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
      .order("created_at",{ascending:false}).limit(20),
     db.from("smartjob_web_inquiries").select("id,site_slug,visitor_name,message,service,status,created_at")
      .eq("owner_id",owner).order("created_at",{ascending:false}).limit(100),
-    db.from("vmv_web_public_chat_sessions").select("id,site_slug,site_kind,created_at,updated_at")
-     .eq("owner_id",owner).eq("agent_id",agent.id).order("updated_at",{ascending:false}).limit(40)
+    db.from("vmv_web_public_chat_sessions").select("id,site_slug,site_kind,handoff_status,created_at,updated_at")
+     .eq("owner_id",owner).eq("agent_id",agent.id).order("updated_at",{ascending:false}).limit(40),
+    db.from("vmv_web_chat_alerts").select("id,session_id,source,read_at,created_at")
+     .eq("owner_id",owner).is("read_at",null).order("created_at",{ascending:false}).limit(40)
    ]);
-   if(prefs.error||publications.error||builderSites.error||bound.error||tests.error||requests.error||visitors.error)
+   if(prefs.error||publications.error||builderSites.error||bound.error||tests.error||requests.error||visitors.error||notifications.error)
     throw Error("No pudimos cargar todos los datos de Chat web.");
    const raw=(publications.data||[]) as {slug:string;content:Record<string,unknown>;published_at:string}[];
    const ownSites:Site[]=raw.filter(s=>norm(String(s.content?.business||""))===norm(businessName))
@@ -82,7 +86,10 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
     .map(s=>({slug:s.site_slug,business:s.site_name,published_at:s.published_at,kind:"builder" as const}));
    const allSites=[...modern,...ownSites];
    setSites(allSites);setLinks((bound.data||[]) as Link[]);setCatalog(products);
-   setVisitorChats((visitors.data||[]) as VisitorChat[]);
+   setVisitorChats(((visitors.data||[]) as VisitorChat[]).sort((a,b)=>
+    (a.handoff_status==="waiting"?-1:b.handoff_status==="waiting"?1:0)||
+    Date.parse(b.updated_at)-Date.parse(a.updated_at)));
+   setAlerts((notifications.data||[]) as typeof alerts);
    setConversations((tests.data||[]) as Conversation[]);
    setInquiries(((requests.data||[]) as Inquiry[]).filter(r=>allSites.some(s=>s.slug===r.site_slug)));
    setSettingsSaved(Boolean(prefs.data));
