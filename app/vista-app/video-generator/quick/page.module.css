@@ -139,3 +139,10 @@
 .foot{color:#9a8aa7}
 @media(max-width:550px){.reviewGrid{grid-template-columns:1fr}.reviewGrid button{min-height:49px;padding:11px 13px;font-size:12px}.settingsStack{gap:12px}.compactOption,.compactActive{flex-basis:120px}}
 @media(prefers-reduced-motion:reduce){.compactOption,.compactActive,.reviewGrid button{transition:none}}
+
+
+.promptActions{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:2px}
+.promptActions .counter{margin-left:auto}
+.frameText details{border-top:1px solid #f0eaf5;padding-top:7px}
+.frameText details textarea{margin-bottom:7px}
+.frameText details .trigger{max-width:100%}
