@@ -57,3 +57,14 @@ REVOKE ALL ON FUNCTION public.vmv_video_radar_claim(uuid,text,integer) FROM publ
 GRANT EXECUTE ON FUNCTION public.vmv_video_radar_claim(uuid,text,integer) TO service_role;
 COMMENT ON TABLE public.vmv_video_radar_scans IS
  'Private search snapshots from official YouTube Data API. Scores are metadata heuristics, not retention or live virality measurements.';
+
+-- Owner-approved creative inspiration references; never auto-produce or auto-publish.
+ALTER TABLE public.vmv_video_pilots
+ ADD COLUMN IF NOT EXISTS creative_seed text NOT NULL DEFAULT ''
+  CHECK(length(creative_seed)<=450),
+ ADD COLUMN IF NOT EXISTS research_video_id text NOT NULL DEFAULT ''
+  CHECK(research_video_id='' OR research_video_id ~ '^[a-zA-Z0-9_-]{11}$'),
+ ADD COLUMN IF NOT EXISTS research_scan_id uuid
+  REFERENCES public.vmv_video_radar_scans(id) ON DELETE SET NULL;
+COMMENT ON COLUMN public.vmv_video_pilots.creative_seed IS
+ 'Owner-selected original creative brief derived from explicitly linked public sources, not copied video material.';
