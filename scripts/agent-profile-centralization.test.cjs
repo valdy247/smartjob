@@ -8,6 +8,7 @@ const read=file=>fs.readFileSync(path.join(root,file),"utf8");
 const ai=read("app/vista-app/ai-agents/page.tsx");
 const profile=read("app/vista-app/AccountBusinessAgent.tsx");
 const account=read("app/vista-app/page.tsx");
+const shared=read("app/vista-app/AgentSettingsEntry.tsx");
 
 test("Identity and Activity do not render standalone AI Agent tiles",()=>{
  assert.ok(ai.includes('types.filter(type=>type.id!=="custom"&&type.id!=="operations").map'));
@@ -17,7 +18,11 @@ test("Identity and Activity do not render standalone AI Agent tiles",()=>{
  assert.ok(!ai.includes("import AgentQualityLab"));
 });
 test("existing AI Agents expose one Profile configuration entry",()=>{
- assert.ok(ai.includes('href={agentProfileUrl(a)}'));
+ assert.ok(ai.includes('href={agentProfileUrl(principal||proposal||undefined)}'));
+ assert.ok(ai.includes('import AgentSettingsEntry from "../AgentSettingsEntry"'));
+ assert.ok(ai.includes('<AgentSettingsEntry'));
+ assert.ok(!ai.includes('translate("agents.existing")'));
+ assert.ok(!ai.includes('visibleAgents.map(a=>'));
  assert.ok(ai.includes('const edit=(agent:Agent,step:0|1|2|3=0)=>openAgentProfile(agent,"agent",step);'));
  assert.ok(ai.includes('const quality=(agent:Agent)=>openAgentProfile(agent,"quality");'));
  assert.ok(!ai.includes('translate("agents.editIdentity")'));
@@ -25,6 +30,11 @@ test("existing AI Agents expose one Profile configuration entry",()=>{
 });
 test("Profile is the one place to configure identity and inspect activity/quality",()=>{
  assert.ok(account.includes("<AccountBusinessAgent"));
+ assert.ok(profile.includes('import AgentSettingsEntry from "./AgentSettingsEntry"'));
+ assert.ok(profile.includes('<AgentSettingsEntry'));
+ assert.ok(shared.includes('className={styles.card}'));
+ assert.ok(shared.includes('className={styles.agentIcon}'));
+ assert.ok(shared.includes('className={styles.copy}'));
  assert.ok(profile.includes('const AgentSetupWizard=dynamic(()=>import("./ai-agents/AgentSetupWizard"))'));
  assert.ok(profile.includes('const AgentQualityLab=dynamic(()=>import("./ai-agents/AgentQualityLab"))'));
  assert.ok(profile.includes('L("Configuración","Settings")'));
@@ -44,7 +54,7 @@ test("deep links preserve selected business and section, without altering an age
  assert.ok(profile.includes("storeAgent({...value,setup:{...value.setup,central_source_updated_at:business.updated_at}}"));
 });
 test("affected VMV components remain valid TypeScript/TSX",()=>{
- for(const file of ["app/vista-app/ai-agents/page.tsx","app/vista-app/AccountBusinessAgent.tsx"]){
+ for(const file of ["app/vista-app/ai-agents/page.tsx","app/vista-app/AccountBusinessAgent.tsx","app/vista-app/AgentSettingsEntry.tsx"]){
   const source=ts.createSourceFile(file,read(file),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
   assert.deepEqual(source.parseDiagnostics.map(e=>String(e.messageText)),[],file);
  }
