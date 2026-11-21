@@ -122,7 +122,8 @@ export default function AIAgentsPreview(){
   a.revision>0&&a.setup.central_source_updated_at&&
   a.setup.central_source_updated_at!==selectedBusiness.updated_at):[];
 
- const typeInfo=(kind:Kind)=>types.find(t=>t.id===kind)||types[6];
+ const typeInfo=(kind:Kind)=>types.find(t=>t.id===kind)||
+  types.find(t=>t.id===(kind==="sales"?"inventory":"custom"))!;
  const label=(kind:Kind)=>translate(("agents.capability."+kind) as MessageKey);
  const description=(kind:Kind)=>translate(("agents.capabilityDetail."+kind) as MessageKey);
  const agentKind=(kind:Kind)=>translate(("agents.type."+kind) as MessageKey);
