@@ -75,7 +75,6 @@ export default function QuickVideoPage(){
   ["¿Quieres narración?","Add a voice-over?"],
   ["¿Listo para comenzar?","Ready to create?"]
  ];
- const stepNumber=stage==="setup"?step+1:stage==="story"?8:9;
  const goPrevious=()=>{
   if(working)return;
   if(stage!=="setup"){resetMedia();setStage("setup");setStep(6);return;}
@@ -108,6 +107,7 @@ export default function QuickVideoPage(){
  const [extension,setExtension]=useState("");
  const mediaRef=useRef<string[]>([]);
  const resultRef=useRef("");
+ const stepNumber=stage==="setup"?step+1:stage==="story"?8:9;
  useEffect(()=>{
   const q=new URLSearchParams(window.location.search);
   const kindParam=q.get("kind"),visualParam=q.get("visual"),topicParam=q.get("topic");
