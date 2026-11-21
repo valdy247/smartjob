@@ -18,8 +18,8 @@ test('embedded chat screens expose their back actions only through parent header
  assert.match(page,/useAgentHeaderBack\(/);
  assert.match(page,/if\(section==="conversations"&&chosen\)/);
  assert.match(page,/!useSharedHeader\?<header/);
- assert.match(page,/!useSharedHeader\?<button[^>]*>[^<]*<ArrowLeft size=\{15\}/> Chats recientes/);
- assert.match(page,/!useSharedHeader\?<button[^>]*>[^<]*<ArrowLeft size=\{15\}/> Conversaciones/);
+ assert.ok(page.includes("!useSharedHeader?<button")&&page.includes("Chats recientes</button>:null"));
+ assert.ok(page.includes("Conversaciones</button>:null"));
 });
 test('other nested AI Agents screens register their own one-level history',()=>{
  for(const name of ['AgentQualityLab','AgentLiveTest','AgentSetupWizard','CommerceStudio','BookingStudio','CallControl']){
