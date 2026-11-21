@@ -84,6 +84,13 @@ export default function QuickVideoPage(){
  const [extension,setExtension]=useState("");
  const mediaRef=useRef<string[]>([]);
  const resultRef=useRef("");
+ useEffect(()=>{
+  const q=new URLSearchParams(window.location.search);
+  const kindParam=q.get("kind"),visualParam=q.get("visual"),topicParam=q.get("topic");
+  if(kindParam==="promo"||kindParam==="facts")setKind(kindParam);
+  if(visualParam==="sticks"||visualParam==="stills")setVisual(visualParam);
+  if(topicParam&&topicParam.trim().length>=3)setTopic(topicParam.slice(0,220));
+ },[]);
  useEffect(()=>()=>{mediaRef.current.forEach(URL.revokeObjectURL);if(resultRef.current)URL.revokeObjectURL(resultRef.current);},[]);
  const resetMedia=()=>{
   mediaRef.current.forEach(URL.revokeObjectURL);mediaRef.current=[];
