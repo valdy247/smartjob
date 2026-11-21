@@ -20,6 +20,7 @@ const contactNumber=(s:string)=>{
  return digits.length===10?"+1"+digits:digits.length===11&&digits.startsWith("1")?"+"+digits:"";
 };
 const kind=(s:string)=>s==="service_area"||s==="hybrid"?s:"storefront";
+const countryCode=(data:SignupAnswer)=>data.country==="other"?clean(data.country_code,2).toUpperCase():clean(data.country,2).toUpperCase();
 const caps=(s:string)=>new Set(s.split(",").filter(x=>["support","calls","bookings","sales","website","marketing","ads","inventory"].includes(x)));
 const safeMeta=(value:unknown):SignupBlueprint=>{
  if(!value||typeof value!=="object"||Array.isArray(value))throw Error("No encontramos el registro guiado de esta cuenta.");
@@ -62,7 +63,7 @@ export async function completeSignup(db:SupabaseClient):Promise<{business:boolea
   business_name:data.business_now==="yes"?clean(data.business_name,120):"",
   city:data.business_now==="yes"?clean(data.city,120):"",
   state:data.business_now==="yes"?clean(data.region,120):"",
-  country:/^[a-z]{2}$/i.test(data.country||"")?data.country.toUpperCase():"US",
+  country:/^[A-Z]{2}$/.test(countryCode(data))?countryCode(data):"US",
   website_url:data.business_now==="yes"?url(data.website||""):null
  };
  const initial=initialAccountProfile(owner,metadata);
@@ -87,7 +88,7 @@ export async function completeSignup(db:SupabaseClient):Promise<{business:boolea
   id:blueprint.businessId,owner_id:owner,name:clean(data.business_name,120),
   legal_name:clean(data.legal_name,150),description:clean(data.description,550),
   category_id:clean(data.category,80)||"other",
-  country:/^[a-z]{2}$/i.test(data.country||"")?data.country.toUpperCase():"US",
+  country:/^[A-Z]{2}$/.test(countryCode(data))?countryCode(data):"US",
   kind:kind(data.business_type) as "storefront"|"service_area"|"hybrid",
   street:kind(data.business_type)==="service_area"?"":clean(data.street,180),
   unit:kind(data.business_type)==="service_area"?"":clean(data.unit,80),
@@ -200,6 +201,36 @@ export async function completeSignup(db:SupabaseClient):Promise<{business:boolea
      const {data:retry}=await db.from("vmv_ai_booking_services")
       .select("id").eq("id",blueprint.serviceIds[i-1]).eq("owner_id",owner).maybeSingle();
      if(!retry)throw Error("No pudimos guardar "+name+": "+serviceError.message);
+    }
+   }
+  }
+  // The initial availability also comes from the owner, never from an AI guess.
+  if(data.availability_mode==="weekly"&&data.hours_policy==="weekly"){
+   const result=await db.rpc("vmv_ai_owner_seed_signup_availability",{
+    p_workspace:workspaceId,p_zone:zone,p_days:60
+   });
+   if(result.error)throw Error("No pudimos preparar tu disponibilidad: "+result.error.message);
+  }else if(data.availability_mode==="single"){
+   const day=clean(data.availability_day,10),start=clean(data.availability_start,5),
+    end=clean(data.availability_end,5);
+   if(!/^20\d{2}-\d{2}-\d{2}$/.test(day)||!/^\d{2}:\d{2}$/.test(start)||
+    !/^\d{2}:\d{2}$/.test(end)||start>=end)
+    throw Error("Revisa la primera fecha y el horario de disponibilidad.");
+   const {data:existingWindow,error:windowReadError}=await db.from("vmv_ai_booking_availability")
+    .select("id").eq("owner_id",owner).eq("business_id",workspaceId)
+    .eq("day",day).eq("start_local",start).eq("end_local",end)
+    .eq("time_zone",zone).maybeSingle();
+   if(windowReadError)throw Error("No se pudo revisar tu disponibilidad inicial.");
+   if(!existingWindow){
+    const result=await db.rpc("vmv_ai_owner_add_availability",{
+     p_business:workspaceId,p_date:day,p_start:start,p_end:end,p_zone:zone
+    });
+    if(result.error||!result.data){
+     const {data:retry}=await db.from("vmv_ai_booking_availability")
+      .select("id").eq("owner_id",owner).eq("business_id",workspaceId)
+      .eq("day",day).eq("start_local",start).eq("end_local",end)
+      .eq("time_zone",zone).maybeSingle();
+     if(!retry)throw Error("No se pudo publicar tu primer horario. Selecciona otro día o rango.");
     }
    }
   }
