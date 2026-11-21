@@ -56,3 +56,30 @@
 @media(min-width:650px){.overlay{align-items:center}.fab{bottom:25px}.toast{bottom:97px}}
 @media(max-width:360px){.sheet,.actionDialog{padding:17px}.homeGrid{grid-template-columns:1fr}.catalogItem{padding:7px}.catalogItem>.itemAdd,.catalogItem>.homeAdd{flex-basis:30px;width:30px}}
 @media(prefers-reduced-motion:reduce){.fab,.switchUi,.switchUi:after{transition:none}.toast{animation:none}}
+
+:global([data-vmv-hidden-card="true"]){display:none!important}
+.hideAction{display:flex;align-items:center;gap:13px;min-height:54px;padding:13px;border:1px solid #eddbe9;border-radius:14px;background:#fff8fb;color:#9a537d;text-align:left;font:inherit;font-size:12px;font-weight:850;cursor:pointer}
+.hideAction>svg:last-child{margin-left:auto;color:#b79cae}
+.hideAction:hover{background:#fbedf4}
+.hideMessage{display:flex;flex-direction:column;gap:9px;padding:18px 15px;border:1px solid #eae3f4;border-radius:15px;background:#faf7fd}
+.hideMessageIcon{display:grid;place-items:center;width:46px;height:46px;border-radius:13px;background:#f1e9fc;color:#8054aa}
+.hideMessage strong{font-size:14px;letter-spacing:-.2px;color:#3f304c}
+.hideMessage p{margin:0;font-size:12px;line-height:1.65;color:#796a85}
+.confirmActions{display:flex;gap:10px;margin-top:5px}
+.confirmActions button{display:inline-flex;justify-content:center;align-items:center;gap:8px;min-height:45px;flex:1;border:1px solid #dcd0e7;border-radius:12px;background:#fff;color:#6d587c;font:inherit;font-size:12px;font-weight:850;cursor:pointer}
+.confirmActions button:last-child{background:#7954b4;color:#fff;border-color:#7954b4}
+.confirmActions button:focus-visible,.hideAction:focus-visible,.extraRow button:focus-visible{outline:3px solid #a77ace;outline-offset:2px}
+.extraServices{display:flex;flex-direction:column;gap:16px;padding:19px;border:1px solid #e9e1f3;border-radius:19px;background:#fff;color:#302642;box-shadow:0 4px 16px #3520470b;scroll-margin-top:18px}
+.extraServices .settingHeader h3{font-size:16px;margin:0 0 3px}
+.extraServices .settingHeader p{margin:0;color:#85778e;font-size:11px;line-height:1.5}
+.extraCount{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;border-radius:10px;background:#f0e8fc;color:#794eb7;font-size:12px;font-weight:900}
+.extraList{display:flex;flex-direction:column;gap:9px;max-height:370px;overflow-y:auto;overscroll-behavior:contain}
+.extraRow{display:flex;align-items:center;gap:11px;min-width:0;border:1px solid #ede8f3;border-radius:13px;background:#fdfbff;padding:10px}
+.extraCardIcon{display:grid;place-items:center;width:39px;height:39px;flex:0 0 39px;border-radius:12px;background:#f3ecfc;color:#9369ba}
+.extraCopy{display:flex;flex-direction:column;flex:1;gap:4px;min-width:0}
+.extraCopy strong{font-size:12px;color:#4b375c;overflow-wrap:anywhere}
+.extraCopy small{color:#9483a1;font-size:10px}
+.extraRow button{display:flex;align-items:center;gap:6px;flex:0 0 auto;border:1px solid #dcd0eb;border-radius:9px;background:#fff;color:#7955a1;min-height:37px;padding:8px 10px;font:inherit;font-size:11px;font-weight:830;cursor:pointer}
+.extraRow button:hover{background:#f5ecff}
+.extraEmpty{margin:0;padding:14px;border-radius:12px;background:#fbf9fd;color:#8a7999;font-size:11px;line-height:1.6}
+@media(max-width:390px){.extraServices{padding:14px}.extraRow{gap:7px;padding:8px}.extraRow button{font-size:10px;padding:7px}.confirmActions{flex-wrap:wrap}}
