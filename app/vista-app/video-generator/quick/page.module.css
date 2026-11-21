@@ -56,3 +56,63 @@
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
 
 .skipVoice{min-height:40px;display:inline-flex;align-items:center;justify-content:center;border:0;background:#eef7f0;color:#268064;border-radius:11px;padding:9px 12px;cursor:pointer;font-size:12px;font-weight:800}
+
+
+/* Shared VMV service-wizard language: one question, centered selection, progress and actions. */
+.wizardTop{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:2px}
+.stepCounter{font-size:12px;font-weight:850;color:#9384a3}
+.track{height:7px;background:#e9e2f3;border-radius:99px;overflow:hidden;margin:14px 0 27px}
+.track>span{height:100%;display:block;background:linear-gradient(90deg,#ab83d4,#67cbb2);border-radius:99px;transition:width .2s ease}
+.wizardHead{text-align:center;margin:0 auto 25px;max-width:560px}
+.headIcon{width:62px;height:62px;margin:0 auto 15px;border-radius:21px;display:grid;place-items:center;
+ background:linear-gradient(145deg,#eadcff,#d9f9eb);color:#8251b6;box-shadow:0 10px 28px #804db420}
+.wizardHead h1{margin:0;font-size:clamp(26px,4.5vw,34px);line-height:1.15;
+ font-weight:900;color:#30223d;letter-spacing:-.055em}
+.wizardContent{min-height:242px;display:grid;align-content:start;animation:appear .18s ease}
+@keyframes appear{from{opacity:.7;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.optionGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.option,.optionSelected{position:relative;display:flex;min-height:174px;flex-direction:column;align-items:center;
+ justify-content:center;gap:11px;padding:22px 12px;border-radius:22px;border:1.5px solid #ebe4f1;
+ background:white;color:#443254;box-shadow:0 7px 28px #5137810c;cursor:pointer;transition:.16s ease}
+.option:hover{border-color:#b49cdb;transform:translateY(-1px)}
+.optionSelected{border:2px solid #946cc8;background:linear-gradient(145deg,#fcf8ff,#f1fcf8);
+ box-shadow:0 10px 30px #68439518}
+.option strong,.optionSelected strong{font-size:15px;line-height:1.35;letter-spacing:-.02em;font-weight:850;text-align:center}
+.option small,.optionSelected small{color:#918299;font-size:11px;font-weight:700;text-align:center}
+.optionIcon{width:61px;height:61px;display:grid;place-items:center;border-radius:19px;
+ background:linear-gradient(135deg,#eee3ff,#e2f8f1);color:#8155b6}
+.optionGrid>button:nth-child(2) .optionIcon{background:linear-gradient(145deg,#e8f1ff,#dbf9f2);color:#427ea9}
+.selectedTick{position:absolute;top:12px;right:12px;color:#8154bb}
+.largeValue{font-size:30px!important;letter-spacing:-.06em!important}
+.topicWrap{max-width:610px;width:100%;margin:0 auto;display:grid;gap:8px}
+.topicWrap .topic{width:100%;min-height:180px;resize:vertical;border:1.5px solid #d9c7e9;border-radius:18px;
+ background:#fff;padding:17px;color:#33223e;font-size:16px;outline:none;line-height:1.6}
+.topicWrap .topic:focus{border-color:#8352bd;box-shadow:0 0 0 3px #af89ce24}
+.counter{text-align:right;color:#9683a5;font-size:11px}
+.reviewGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:650px;margin:0 auto;width:100%}
+.reviewGrid span{display:flex;align-items:center;gap:9px;min-height:60px;
+ border:1px solid #eee7f3;background:#fff;border-radius:16px;padding:15px;color:#563f71;font-size:13px;font-weight:800}
+.reviewGrid svg{flex-shrink:0;color:#9269c1}
+.wizardActions{display:flex;gap:11px;align-items:stretch;justify-content:space-between;margin:26px auto 0;max-width:800px}
+.backAction,.nextAction{min-height:54px;border-radius:16px;display:inline-flex;align-items:center;
+ justify-content:center;gap:9px;padding:13px 16px;font-size:13px;font-weight:900;cursor:pointer}
+.backAction{border:1px solid #e5d8f0;background:white;color:#755695;min-width:108px}
+.nextAction{flex:1;border:0;color:#fff;background:linear-gradient(100deg,#8b53c3,#6c4ba7);
+ box-shadow:0 9px 24px #7143a828}
+.backAction:disabled,.nextAction:disabled{opacity:.46;cursor:not-allowed}
+.panel{border-color:#e9e1f0;box-shadow:0 10px 32px #6843950a}
+.primary{background:linear-gradient(100deg,#8b53c3,#6c4ba7)}
+@media(max-width:550px){
+ .wizardHead{margin-bottom:21px}
+ .wizardContent{min-height:230px}
+ .option,.optionSelected{min-height:159px;padding:16px 10px}
+ .optionIcon{width:54px;height:54px}
+ .option strong,.optionSelected strong{font-size:13px}
+ .wizardActions{margin-top:18px}
+ .reviewGrid span{font-size:12px;min-height:58px;padding:12px}
+}
+@media(prefers-reduced-motion:reduce){
+ .option,.optionSelected{transition:none}
+ .track>span{transition:none}
+ .wizardContent{animation:none}
+}
