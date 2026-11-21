@@ -66,8 +66,7 @@ export default function AutomaticBookingWizard({business,agent,onClose,onAgentUp
   finally{if(live)setLoading(false);}
  })();return()=>{live=false;};},[business.id,agent.id]);
  const openGoal=(nextGoal:Goal)=>{
-  setError("");setGoal(nextGoal);
-  onOpenStudio(nextGoal);
+  setError("");setGoal(nextGoal);setStep("permissions");
  };
  const next=()=>{if(step==="business"&&!businessConfirmed)return;
   setError("");if(editing){setEditing(false);setStep("review");return;}
@@ -83,7 +82,7 @@ export default function AutomaticBookingWizard({business,agent,onClose,onAgentUp
   try{
    const next=await storeAgent({...agent,setup:{...agent.setup,
     cap_bookings:enabled?"Sí":"No",
-    perm_book_service:enabled&&confirm?"Sí":"No"
+    perm_book_service:enabled&&confirm?"Sí":"No",bookings_onboarded:"Sí"
    }},agent);
    onAgentUpdated(next);setDone(true);
   }catch(e){setError(e instanceof Error?e.message:"No se pudieron guardar los permisos.");}
@@ -123,7 +122,7 @@ export default function AutomaticBookingWizard({business,agent,onClose,onAgentUp
    </div>
    {!approvedCount?<p className={styles.note}>Todavía no hay servicios activos y aprobados.
     Puedes crear uno o activar un servicio existente. Las opciones se pueden abrir aunque la agenda esté vacía.</p>:null}
-   <p className={styles.note}>Si solo necesitas configurar al agente para atender reservas, pulsa «Continuar».</p>
+   <p className={styles.note}>Elige qué deseas preparar. Al terminar, entrarás directamente a Servicios/Reservas.</p>
   </div>:null}
   {!loading&&owner&&step==="permissions"?<div className={styles.panel}>
    <label className={styles.checkLine}><input type="checkbox" checked={enabled}
@@ -144,7 +143,7 @@ export default function AutomaticBookingWizard({business,agent,onClose,onAgentUp
     {card("Atención de citas",enabled?"Permitida":"Desactivada","permissions")}
     {card("Confirmar reservas",enabled&&confirm?"Con disponibilidad verificada":"No","permissions")}
    </div>}
-   <p className={styles.note}>El agente conserva el mismo negocio. La creación real de servicios y horarios se hace en la agenda VMV existente.</p>
+   <p className={styles.note}>El agente conserva el mismo negocio. Después podrás crear servicios y horarios sin volver a este asistente.</p>
   </div>:null}
   {error?<p role="alert" className={styles.error}>{error}</p>:null}
   {!loading&&owner?<div className={styles.footer}>
