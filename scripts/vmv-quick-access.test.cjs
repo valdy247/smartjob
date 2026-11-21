@@ -7,7 +7,7 @@ const registry=fs.readFileSync(path.resolve("lib/vmv-quick-access.ts"),"utf8");
 const compiled=ts.transpileModule(registry,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 const mod={exports:{}};
 new Function("module","exports","require",compiled)(mod,mod.exports,require);
-const {items,fresh,parseState,findShortcut,safePath,findMatching,SHORTCUT_LIMIT}=mod.exports;
+const {items,fresh,parseState,findShortcut,safePath,findMatching,SHORTCUT_LIMIT,HIDDEN_LIMIT,validHiddenScope,hiddenKey}=mod.exports;
 test("all searchable VMV shortcuts have unique identifiers and safe internal deep links",()=>{
  const ids=new Set(),links=new Set();
  assert.ok(items.length>=30);
@@ -73,4 +73,64 @@ test("Marketing service deep links reach their specific tools",()=>{
  assert.ok(page.includes('service==="review_strategy"'));
  assert.ok(actions.includes("openSocialCaptions={")===false||actions.includes("openSocialCaptions"));
  assert.ok(actions.includes('data-vmv-shortcut-id="social-captions"'));
+});
+
+test("old shortcut settings migrate without any hidden services",()=>{
+ const prefs=parseState({enabled:true,quick:["ads"],home:["marketing"],custom:[],updatedAt:77});
+ assert.deepEqual(prefs.hidden,[]);
+ assert.deepEqual(prefs.quick,["ads"]);
+ assert.equal(prefs.enabled,true);
+});
+test("dismissed cards are strictly scoped, deduplicated and cannot inject routes",()=>{
+ assert.equal(validHiddenScope("/vista-app#home"),true);
+ assert.equal(validHiddenScope("/vista-app#services"),true);
+ assert.equal(validHiddenScope("/vista-app/marketing#marketing-actions"),true);
+ assert.equal(validHiddenScope("https://evil.example"),false);
+ assert.equal(validHiddenScope("/admin"),false);
+ const result=parseState({hidden:[
+  {id:"marketing",scope:"/vista-app#home"},
+  {id:"marketing",scope:"/vista-app#services"},
+  {id:"marketing",scope:"/vista-app#home"},
+  {id:"unknown",scope:"/vista-app#home"},
+  {id:"ads",scope:"https://evil.example"},
+  {id:"ads",scope:"/vista-app/marketing"}
+ ]});
+ assert.deepEqual(result.hidden,[
+  {id:"marketing",scope:"/vista-app#home"},
+  {id:"marketing",scope:"/vista-app#services"},
+  {id:"ads",scope:"/vista-app/marketing"}
+ ]);
+ assert.notEqual(hiddenKey("/vista-app#home","marketing"),hiddenKey("/vista-app#services","marketing"));
+});
+test("unbounded hidden items and custom names are rejected during rehydration",()=>{
+ const custom={id:"custom:12345abc",es:"Mi tarjeta",en:"My card",href:"/vista-app/marketing",group:"Personalizado"};
+ const hidden=Array.from({length:100},(_,i)=>({id:items[i%items.length].id,scope:"/vista-app#home"}));
+ const prefs=parseState({custom:[custom],hidden:[...hidden,{id:custom.id,scope:"/vista-app/marketing"}]});
+ assert.ok(prefs.hidden.length<=HIDDEN_LIMIT);
+ assert.ok(prefs.hidden.every(x=>validHiddenScope(x.scope)));
+ assert.ok(prefs.custom.some(x=>x.id===custom.id));
+});
+test("long-press offers a confirmation, rather than deleting or disabling services",()=>{
+ const source=fs.readFileSync(path.resolve("components/VMVQuickAccess.tsx"),"utf8");
+ assert.ok(source.includes('No necesito esto'));
+ assert.ok(source.includes('¿Ocultar esta tarjeta?'));
+ assert.ok(source.includes('Este elemento ya no estará en esta pantalla.'));
+ assert.ok(source.includes('Ajustes → Servicios extras.'));
+ assert.ok(source.includes('setPendingHide({item:actionItem,scope:actionScope})'));
+ assert.ok(source.includes('onClick={()=>{if(hideCard(pendingHide))setPendingHide(null);}}'));
+ assert.ok(source.includes('card.classList.toggle(styles.cardHidden,shouldHide)'));
+ assert.ok(source.includes('new MutationObserver(schedule)'));
+ assert.ok(source.includes('candidate.closest("nav,[role=navigation],[role=tablist],form,[data-vmv-shortcuts-ui]")'));
+});
+test("Profile contains Extra services list and restoring removes the hidden entry",()=>{
+ const source=fs.readFileSync(path.resolve("components/VMVQuickAccess.tsx"),"utf8");
+ const home=fs.readFileSync(path.resolve("app/vista-app/page.tsx"),"utf8");
+ assert.ok(source.includes('export function VMVExtraServicesSettings()'));
+ assert.ok(source.includes('hidden:old.hidden.filter(x=>x.scope!==scope||x.id!==id)'));
+ assert.ok(source.includes('onClick={()=>restoreCard(entry.scope,entry.id)}'));
+ assert.ok(home.includes("<VMVExtraServicesSettings/>"));
+ assert.ok(home.includes('target==="extras"?"vmv-extra-services"'));
+ assert.ok(home.includes('data-vmv-shortcut-scope="home"'));
+ assert.ok(home.includes('data-vmv-shortcut-scope="services"'));
+ assert.ok(home.includes('data-vmv-shortcut-scope="account"'));
 });
