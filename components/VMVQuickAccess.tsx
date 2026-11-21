@@ -317,8 +317,27 @@ export function VMVQuickAccessProvider({children}:{children:ReactNode}){
      <button type="button" className={styles.close} onClick={()=>setActionItem(null)} aria-label={en?"Close":"Cerrar"}><X size={18}/></button></div>
     <button type="button" className={styles.actionRow} onClick={()=>{if(pin(actionItem,"quick"))setActionItem(null);}}><Link2 size={19}/>{state.quick.includes(actionItem.id)?en?"Already in shortcuts":"Ya está en accesos":en?"Agregar a acceso directo":"Agregar a acceso directo"}<ArrowUpRight size={16}/></button>
     <button type="button" className={styles.actionRow} onClick={()=>{if(pin(actionItem,"home"))setActionItem(null);}}><House size={19}/>{state.home.includes(actionItem.id)?en?"Already on Home":"Ya está en Home":en?"Agregar a Home":"Agregar a Home"}<ArrowUpRight size={16}/></button>
+    {actionScope?<button type="button" className={styles.hideAction} onClick={()=>{
+     setPendingHide({item:actionItem,scope:actionScope});setActionItem(null);setError("");
+    }}><EyeOff size={19}/>{en?"I don't need this":"No necesito esto"}<ArrowUpRight size={16}/></button>:null}
     {error?<p role="alert" className={styles.error}>{error}</p>:null}
     {actionItem.group==="Personalizado"?<p className={styles.smallHint}>{en?"This shortcut opens the section containing this card.":"Este acceso abre la sección donde se encuentra la tarjeta."}</p>:null}
+   </section>
+  </div>:null}
+  {active&&!!uid&&pendingHide?<div className={styles.overlay} data-vmv-shortcuts-ui onMouseDown={e=>{if(e.target===e.currentTarget)setPendingHide(null);}}>
+   <section className={styles.actionDialog} role="dialog" aria-modal="true" aria-labelledby="vmv-hide-title" aria-describedby="vmv-hide-description">
+    <div className={styles.sheetHeading}><div><span className={styles.eyebrow}>{en?"PERSONALIZE YOUR SCREEN":"PERSONALIZA TU PANTALLA"}</span>
+     <h2 id="vmv-hide-title">{en?"Hide this card?":"¿Ocultar esta tarjeta?"}</h2></div>
+     <button type="button" className={styles.close} aria-label={en?"Close":"Cerrar"} onClick={()=>setPendingHide(null)}><X size={18}/></button></div>
+    <div className={styles.hideMessage}><span className={styles.hideMessageIcon}><EyeOff size={22}/></span>
+     <strong>{labelFor(pendingHide.item,en)}</strong>
+     <p id="vmv-hide-description">{en?"This item will no longer appear on this screen. You can bring it back from Settings → Extra services.":"Este elemento ya no estará en esta pantalla. Lo puedes traer de vuelta desde Ajustes → Servicios extras."}</p>
+    </div>
+    {error?<p className={styles.error} role="alert">{error}</p>:null}
+    <div className={styles.confirmActions}>
+     <button type="button" onClick={()=>setPendingHide(null)}>{en?"Cancel":"Cancelar"}</button>
+     <button type="button" onClick={()=>{if(hideCard(pendingHide))setPendingHide(null);}}><EyeOff size={16}/>{en?"Hide card":"Ocultar tarjeta"}</button>
+    </div>
    </section>
   </div>:null}
   {active&&!!uid&&success?<div className={styles.toast} role="status" onAnimationEnd={()=>setSuccess("")}>{success}</div>:null}
@@ -336,7 +355,7 @@ export function VMVQuickAccessSettings(){
    <button type="button" onClick={openPicker}><Plus size={16}/>{en?"Add shortcut":"Agregar acceso directo"}</button>
    <button type="button" onClick={openMenu}><Star size={16}/>{en?"Manage shortcuts":"Administrar accesos"}</button>
   </div>
-  <small className={styles.smallHint}>{en?"Tip: press and hold any navigable card to add it to Shortcuts or Home.":"Consejo: mantén pulsada una tarjeta navegable para añadirla a Acceso directo o Home."}</small>
+  <small className={styles.smallHint}>{en?"Tip: press and hold cards to add them to Shortcuts or Home, or move them to Extra services.":"Consejo: mantén pulsadas las tarjetas para añadirlas a Acceso directo, a Home o moverlas a Servicios extras."}</small>
  </section>;
 }
 export function VMVHomePinnedShortcuts(){
