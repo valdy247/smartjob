@@ -1,0 +1,227 @@
+"use client";
+import {useEffect,useRef,useState,type FormEvent} from "react";
+import {ArrowLeft,Bot,LoaderCircle,MessageCircle,Send,ShieldCheck} from "lucide-react";
+import {getSupabase} from "@/lib/supabase";
+import {setAgentCatalogReadAccess,type PersistedAgent} from "./agentStore";
+import {listCatalog,type CatalogItem} from "./commerceStore";
+import VMVChatOrderCard,{type OrderRequest} from "@/components/VMVChatOrderCard";
+import styles from "./AgentLiveTest.module.css";
+import {useAgentHeaderBack} from "./AgentHeaderBack";
+
+type Item={id:string;role:"user"|"assistant";content:string;created_at:string};
+type Conversation={id:string;title:string;created_at:string};
+type Props={agent:PersistedAgent;onClose:()=>void;onEdit:()=>void;webMode?:boolean;onAgentUpdated?:(agent:PersistedAgent)=>void};
+const idValid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export default function AgentLiveTest({agent,onClose,onEdit,webMode=false,onAgentUpdated}:Props){
+ const useSharedHeader=useAgentHeaderBack(onClose);
+ const [message,setMessage]=useState("");
+ const [ownerFirstName,setOwnerFirstName]=useState("");
+ const [purchaseCatalog,setPurchaseCatalog]=useState<CatalogItem[]>([]);
+ const [purchaseItem,setPurchaseItem]=useState<CatalogItem|null>(null);
+ const [conversations,setConversations]=useState<Conversation[]>([]);
+ const [current,setCurrent]=useState<string|null>(null);
+ const [messages,setMessages]=useState<Item[]>([]);
+ const [sending,setSending]=useState(false);
+ const [savingCatalog,setSavingCatalog]=useState(false);
+ const [loading,setLoading]=useState(true);
+ const [notice,setNotice]=useState("");
+ const listBottom=useRef<HTMLDivElement|null>(null);
+ useEffect(()=>{listBottom.current?.scrollIntoView({behavior:"smooth",block:"nearest"});},[messages.length]);
+ useEffect(()=>{
+  if(!webMode||agent.setup.cap_catalog!=="Sí"||agent.setup.cap_sales!=="Sí")return;
+  let alive=true;
+  void (async()=>{
+   const db=getSupabase();if(!db)return;
+   const {data:settings}=await db.from("vmv_web_chat_settings")
+    .select("sales_enabled,sales_item_ids").eq("agent_id",agent.id).eq("owner_id",agent.owner_id).maybeSingle();
+   if(!settings?.sales_enabled||!Array.isArray(settings.sales_item_ids))return;
+   const rows=await listCatalog(agent.business_id);
+   if(alive)setPurchaseCatalog(rows.filter(row=>settings.sales_item_ids.includes(row.id)&&
+    row.active&&row.approved&&row.price_cents>0&&row.variants?.length===0&&
+    row.extras?.length===0&&(row.stock_mode==="manual"||row.stock_mode==="unlimited"||
+     row.stock_mode==="tracked"&&Number(row.available_qty)>0)));
+  })().catch(()=>{if(alive)setPurchaseCatalog([]);});
+  return()=>{alive=false;};
+ },[webMode,agent.id,agent.business_id,agent.owner_id,agent.setup.cap_catalog,agent.setup.cap_sales]);
+ useEffect(()=>{
+  let live=true;
+  const init=async()=>{
+   const db=getSupabase();
+   if(!db)throw Error("Supabase no está disponible.");
+   const {data:{user},error}=await db.auth.getUser();
+   if(error||!user||user.is_anonymous||agent.owner_id!==user.id)throw Error("Inicia sesión en tu cuenta para probar este agente.");
+   const {data:history,error:loadError}=await db.from("vmv_ai_conversations")
+    .select("id,title,created_at").eq("agent_id",agent.id).eq("owner_id",user.id)
+    .order("created_at",{ascending:false}).limit(15);
+   if(loadError)throw Error("No se pudieron cargar las simulaciones.");
+   if(live){
+    setConversations((history||[]) as Conversation[]);
+    const label=String(user.user_metadata?.first_name||user.user_metadata?.full_name||"").trim().split(/\s+/)[0];
+    if(label&&label.length<=40)setOwnerFirstName(label);
+   }
+  };
+  void init().catch(e=>{if(live)setNotice(e instanceof Error?e.message:"No se pudo abrir el simulador.");})
+   .finally(()=>{if(live)setLoading(false);});
+  return ()=>{live=false;};
+ },[agent.id,agent.owner_id]);
+ async function readMessages(conversationId:string){
+  if(!idValid.test(conversationId))throw Error("Conversación inválida.");
+  const db=getSupabase();if(!db)throw Error("Sin conexión.");
+  const {data:{user},error:userError}=await db.auth.getUser();
+  if(userError||!user||user.id!==agent.owner_id)throw Error("Inicia sesión nuevamente.");
+  const {data,error}=await db.from("vmv_ai_messages")
+   .select("id,role,content,created_at")
+   .eq("conversation_id",conversationId).eq("owner_id",user.id)
+   .order("created_at",{ascending:true}).limit(100);
+  if(error)throw Error("No se pudieron recuperar los mensajes.");
+  setMessages((data||[]) as Item[]);
+ }
+ async function openConversation(conversationId:string){
+  if(sending)return;
+  setNotice("");setLoading(true);
+  try{await readMessages(conversationId);setCurrent(conversationId);}
+  catch(e){setNotice(e instanceof Error?e.message:"No se pudo abrir.");}
+  finally{setLoading(false);}
+ }
+ async function connectCatalog(){
+  if(savingCatalog||sending||agent.setup.cap_catalog==="Sí")return;
+  setSavingCatalog(true);setNotice("");
+  try{
+   const updated=await setAgentCatalogReadAccess(agent,true);
+   onAgentUpdated?.(updated);
+   setNotice("Inventario conectado a "+updated.name+". Pregunta nuevamente por los productos; los precios son aprobados y el stock manual necesita confirmación.");
+  }catch(e){setNotice(e instanceof Error?e.message:"No se pudo conectar el inventario.");}
+  finally{setSavingCatalog(false);}
+ }
+ async function send(){
+  const prompt=message.trim().slice(0,1000);
+  if(!prompt||sending||!agent.revision)return;
+  setSending(true);setNotice("");
+  try{
+   const db=getSupabase();if(!db)throw Error("Supabase no está disponible.");
+   const [{data:auth},{data:identity,error:identityError}]=await Promise.all([
+    db.auth.getSession(),db.auth.getUser()
+   ]);
+   const token=auth.session?.access_token;
+   if(identityError||!identity.user||identity.user.id!==agent.owner_id||!token)
+    throw Error("Tu sesión expiró. Vuelve a iniciar sesión.");
+   let id=current;
+   if(!id){
+    const {data:created,error:insertError}=await db.from("vmv_ai_conversations")
+     .insert({owner_id:identity.user.id,agent_id:agent.id,title:prompt.slice(0,90)})
+     .select("id").single();
+    if(insertError||!created?.id)throw Error("No se pudo crear la conversación de prueba.");
+    id=created.id as string;setCurrent(id);
+    setConversations(previous=>[{id:id!,title:prompt.slice(0,90),created_at:new Date().toISOString()},...previous].slice(0,15));
+   }
+   setMessage("");
+   setMessages(prior=>[...prior,{id:"local-"+Date.now(),role:"user",content:prompt,created_at:new Date().toISOString()}]);
+   const response=await fetch("/api/vmv/ai-agents/simulate",{
+    method:"POST",cache:"no-store",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},
+    body:JSON.stringify({agentId:agent.id,conversationId:id,message:prompt,webPreview:webMode})
+   });
+   let payload:{reply?:string;error?:string}={};
+   try{payload=await response.json();}catch{}
+   if(!response.ok||!payload.reply)throw Error(payload.error||"El agente no respondió; intenta nuevamente.");
+   await readMessages(id);
+   if(webMode&&/(comprar|compra|checkout|pay|buy|purchase)/i.test(prompt)){
+    const matching=purchaseCatalog.filter(item=>prompt.toLocaleLowerCase().includes(item.name.toLocaleLowerCase()));
+    const chosen=matching.length===1?matching[0]:matching.length===0&&purchaseCatalog.length===1?purchaseCatalog[0]:null;
+    if(chosen)setPurchaseItem(chosen);
+   }
+  }catch(e){
+   setNotice(e instanceof Error?e.message:"No se pudo completar la prueba.");
+  }finally{setSending(false);}
+ }
+ async function requestOrder(request:OrderRequest){
+  const db=getSupabase();if(!db)throw Error("Sin conexión.");
+  const {data:{session}}=await db.auth.getSession();
+  if(!session?.access_token||!current)throw Error("Abre primero la conversación de prueba.");
+  const response=await fetch("/api/vmv/ai-agents/commerce/request-order",{
+   method:"POST",cache:"no-store",
+   headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
+   body:JSON.stringify({...request,agentId:agent.id,conversationId:current})
+  });
+  const payload=await response.json().catch(()=>({})) as {
+   error?:string;orderNo?:number;totalCents?:number;saved?:boolean
+  };
+  if(!response.ok||payload.saved!==true||typeof payload.orderNo!=="number"||
+   typeof payload.totalCents!=="number")
+   throw Error(payload.error||"No se pudo registrar el pedido de prueba.");
+  return {orderNo:payload.orderNo,totalCents:payload.totalCents};
+ }
+ if(webMode)return <section className={styles.webFullscreen} aria-label="Probar agente como cliente">
+  {!useSharedHeader?<button type="button" className={styles.webBack} onClick={onClose}
+   aria-label="Volver a Chat web"><ArrowLeft size={23}/></button>:null}
+  <div className={styles.webIdentity}><div className={styles.webRobot}><Bot size={32}/></div>
+   <strong>{agent.name}</strong><small>Chat web</small></div>
+  <div className={styles.webConversation} aria-live="polite">
+   <div className={styles.webGreeting}>
+    Hola{ownerFirstName?", "+ownerFirstName:""}. En este chat puedes probar mis respuestas
+    como si fueras un cliente real. ¿En qué puedo ayudarte?
+   </div>
+   {messages.map(item=><div key={item.id}
+    className={item.role==="user"?styles.webCustomer:styles.webAgent}>{item.content}</div>)}
+   {purchaseItem?<VMVChatOrderCard key={current+"-"+purchaseItem.id}
+    mode="test" products={[purchaseItem,...purchaseCatalog.filter(p=>p.id!==purchaseItem.id)].map(
+     p=>({id:p.id,name:p.name,priceCents:p.price_cents}))}
+    onSubmit={requestOrder}/>:null}
+   {sending?<div className={styles.webTyping}><LoaderCircle size={15} className={styles.webSpin}/> Escribiendo…</div>:null}
+   {loading?<div className={styles.webTyping}>Preparando chat…</div>:null}
+   {notice?<div className={styles.webError} role="alert">{notice}</div>:null}
+   <div ref={listBottom}/>
+  </div>
+  <form className={styles.webComposer} onSubmit={e=>{e.preventDefault();void send();}}>
+   <label htmlFor="web-chat-preview-message" className={styles.webSrOnly}>Escribe tu mensaje</label>
+   <input id="web-chat-preview-message" autoComplete="off" value={message}
+    onChange={e=>setMessage(e.target.value)} maxLength={1000} disabled={sending||loading}
+    placeholder="Mensaje…"/>
+   <button type="submit" disabled={sending||loading||!message.trim()} aria-label="Enviar mensaje"><Send size={20}/></button>
+  </form>
+ </section>;
+ return <section className={styles.root}>
+  {!useSharedHeader?<button type="button" className={styles.back} onClick={onClose}><ArrowLeft size={17}/>{webMode?"Chat web":"Mis agentes"}</button>:null}
+  <div className={styles.hero}>
+   <span className={styles.avatar}><Bot size={24}/></span>
+   <div><strong>{agent.name}</strong><small>{webMode?"Prueba del chat web · sin cobros":"Prueba de IA · sin acciones comerciales"}</small></div>
+  </div>
+  <div className={styles.notice}><ShieldCheck size={17}/>
+   <span>Esta conversación usa un modelo de IA y se guarda en tu cuenta. No realiza llamadas, reservas, pedidos ni cobros.</span>
+  </div>
+  <div className={styles.catalogAccess}>
+   <div><strong>Inventario del negocio</strong>
+    <small>{agent.setup.cap_catalog==="Sí"?
+     "Conectado · El chat puede consultar productos activos y aprobados. La disponibilidad manual requiere confirmación.":
+     "Sin conectar · Autoriza acceso de solo lectura para que el agente sepa qué vendes."}</small></div>
+   {agent.setup.cap_catalog!=="Sí"?<button type="button" disabled={savingCatalog||sending}
+    onClick={()=>void connectCatalog()}>{savingCatalog?"Conectando…":"Conectar inventario"}</button>:null}
+  </div>
+  {conversations.length>0?<div className={styles.history}>
+   <label htmlFor="agent-test-conversation">Conversaciones anteriores</label>
+   <select id="agent-test-conversation" value={current||""} disabled={sending}
+    onChange={e=>{if(!e.target.value){setCurrent(null);setMessages([]);}else void openConversation(e.target.value);}}>
+    <option value="">Nueva conversación</option>
+    {conversations.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}
+   </select>
+  </div>:null}
+  <div className={styles.chat} aria-live="polite">
+   {loading?<p className={styles.empty}><LoaderCircle size={17}/> Cargando…</p>:messages.length===0?
+    <p className={styles.empty}><MessageCircle size={19}/> Escribe una pregunta para probar el agente.</p>:
+    messages.map(item=><p key={item.id} className={item.role==="user"?styles.customer:styles.agentReply}>
+     <small>{item.role==="user"?"CLIENTE":"AGENTE IA"}</small>
+     <span>{item.content}</span>
+    </p>)}
+   {sending?<p className={styles.empty}><LoaderCircle size={17}/> El agente está respondiendo…</p>:null}
+   <div ref={listBottom}/>
+  </div>
+  {notice?<div className={styles.error} role="alert">{notice}</div>:null}
+  <label className={styles.entryLabel} htmlFor="agent-test-prompt">Tu mensaje de prueba</label>
+  <textarea id="agent-test-prompt" rows={3} maxLength={1000} value={message}
+   onChange={e=>setMessage(e.target.value)}
+   placeholder="Hola, ¿qué productos ofrecen y cuál es el horario?" disabled={sending}/>
+  <button type="button" className={styles.send} disabled={sending||!message.trim()}
+   onClick={()=>void send()}><Send size={17}/>{sending?"Respondiendo…":"Enviar al agente"}</button>
+  <button type="button" className={styles.edit} onClick={onEdit}>Editar información del agente</button>
+ </section>;
+}

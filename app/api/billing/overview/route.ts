@@ -3,6 +3,7 @@ import {authenticatedUser} from "@/lib/auth-server";
 import {PLAN_CATALOG,TOPUP_CATALOG,topupPriceEnv,getBillingAccount,balance,testMinutesHeld,eligible,priceEnv,stripeTestReady,
  type PlanCode} from "@/lib/vmv-billing";
 import {noStore} from "@/lib/vmv-stripe";
+import {nationalMinutes} from "@/lib/vmv-national-minutes";
 import {allowSpendWithAccount,confirmedSubscription,realBillingConfigured,ownerPreviewPilot} from "@/lib/vmv-entitlements";
 const isPlanCode=(x:string):x is PlanCode=>x==="starter"||x==="pro"||x==="premium";
 export const runtime="nodejs";export const dynamic="force-dynamic";
@@ -15,6 +16,9 @@ export async function GET(req:NextRequest){
   topupCentsPerMinute:p.topupCentsPerMinute,rolloverCap:p.rolloverCap,
   customVoice:p.customVoice,customGreeting:p.customGreeting
  }));
+ let national;
+ try{national=await nationalMinutes(uid,account);}
+ catch{return NextResponse.json({error:"national_usage_unavailable"},{status:503,headers:noStore});}
  const selected=account?.plan_code||"none";
  const topup=isPlanCode(selected)?TOPUP_CATALOG[selected]:null;
  const taxReady=["automatic","not_collected"].includes(process.env.SMARTJOB_TAX_MODE||"");
@@ -24,6 +28,7 @@ export async function GET(req:NextRequest){
   plans,plan:account?.plan_code||"none",status:account?.status||"inactive",
   subscriptionActive:allowSpendWithAccount(account,"direct_call"),previewPilotActive:ownerPreviewPilot(account),testSubscriptionActive:!realBillingConfigured()&&eligible(account)&&confirmedSubscription(account),
   periodEnd:account?.current_period_end||null,
+  national,
   minutes:{included:account?.included_minutes||0,used:account?.used_minutes||0,
    reserved:account?.reserved_minutes||0,rollover:account?.rollover_minutes||0,
    topup:account?.topup_minutes||0,available:balance(account),

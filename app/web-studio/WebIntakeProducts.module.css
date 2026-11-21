@@ -1,0 +1,41 @@
+.panel{display:flex;flex-direction:column;gap:11px;padding:2px 0;min-width:0;color:#42324f}
+.panel[hidden]{display:none}
+.head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.head>div{display:flex;flex-direction:column;gap:5px}
+.head strong{font-size:14px;color:#5c3a80}
+.head small{font-size:11px;color:#8b7c99;line-height:1.5}
+.head>button{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;background:#8856d7;
+ color:white;border-radius:11px;padding:11px 15px;font-weight:850;font-size:12px;min-height:43px;cursor:pointer}
+.head>button:disabled{opacity:.5;cursor:not-allowed}
+.status{font-size:11px;color:#817192;line-height:1.4;margin:0}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.card{border:1px solid #e6daf0;border-radius:14px;overflow:hidden;background:#fdfbff;min-width:0}
+.cardHead{display:flex;align-items:center;gap:7px;padding:7px}
+.expand{display:flex;align-items:center;flex:1;gap:10px;min-width:0;padding:6px;border:0;
+ color:#483453;background:transparent;cursor:pointer;text-align:left}
+.expand>span:nth-child(2){display:flex;flex-direction:column;min-width:0;flex:1;gap:4px}
+.expand small{font-size:9px;letter-spacing:.08em;color:#8b61bd;font-weight:900}
+.expand strong{font-size:12px;overflow-wrap:anywhere;line-height:1.4}
+.thumb,.thumbEmpty{height:53px;width:60px;flex:0 0 60px;border-radius:9px;object-fit:contain;
+ display:flex;align-items:center;justify-content:center;background:#f1eaf8}
+.thumbEmpty{color:#9368be}
+.remove{display:grid;place-items:center;background:#fff2f5;color:#ab4e66;
+ border:1px solid #edd5de;border-radius:9px;min-width:36px;min-height:36px;cursor:pointer}
+.edit{display:flex;flex-direction:column;gap:13px;padding:14px;border-top:1px solid #eadff2;background:#fff}
+.edit label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:850;color:#6e538a}
+.edit label small{font-weight:500;font-size:10px;color:#9b87a7}
+.edit input,.edit textarea{display:block;width:100%;border:1px solid #e4d7ef;border-radius:10px;
+ background:#fdfbff;padding:11px 12px;min-height:43px;color:#31263e;font:inherit;font-size:12px;
+ box-sizing:border-box}
+.edit textarea{resize:vertical;min-height:75px;line-height:1.5}
+.imageField{display:flex;flex-direction:column;gap:10px;border-top:1px solid #eee6f4;padding-top:10px}
+.imageField>strong{font-size:11px;color:#775394}
+.empty{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:10px;
+ min-height:75px;padding:17px;border:1px dashed #d7c4e9;border-radius:13px;
+ text-align:center;font-size:12px;line-height:1.5;color:#927ba8}
+.error{display:flex;gap:8px;align-items:center;justify-content:space-between;background:#fff0f2;
+ border:1px solid #efd0d9;border-radius:11px;padding:10px;font-size:11px;color:#9e3f59}
+.error button{border:1px solid #ddb1c1;border-radius:9px;background:#fff;padding:8px 10px;
+ color:#93435d;cursor:pointer;font-size:11px;font-weight:850}
+.panel button:focus-visible,.panel input:focus-visible,.panel textarea:focus-visible{outline:3px solid #9b6bdf;outline-offset:2px}
+@media(max-width:720px){.cards{grid-template-columns:1fr}.head>button{flex:1 1 auto}.head{align-items:stretch}}

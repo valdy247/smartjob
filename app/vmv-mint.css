@@ -727,3 +727,73 @@ body:has(.auth-wrap)::before,body:has(.shell)::before{background:radial-gradient
 .vmv-signup-line-options strong{font-size:13px}
 .vmv-signup-line-options small{font-size:11px;line-height:1.45;color:#738a84}
 @media(max-width:400px){.vmv-signup-line-options{gap:8px}.vmv-signup-line-options button{padding:12px}.vmv-signup-line-options button.selected{padding:11px}}
+
+
+/* VMV Translator v4 · bilingual lavender hero and pastel modes.
+   Visual-only; preserves all existing voice/text behavior and validation. */
+.vmv-translator-v4{max-width:none;color:#2a2040;padding:0 0 35px}
+.vmv-translator-banner{position:relative;isolation:isolate;overflow:hidden;min-height:245px;border:0;border-radius:25px;background:linear-gradient(126deg,#7d4de3 0%,#9566ef 62%,#b388f8 100%);color:#fff;padding:23px 21px 22px;box-shadow:0 15px 27px #7551c132}
+.vmv-translator-banner-copy{position:relative;z-index:2;display:flex;flex-direction:column;align-items:flex-start;max-width:83%}
+.vmv-translator-banner-eyebrow{font-size:9px;font-weight:850;letter-spacing:.11em;color:#f3e8ff}
+.vmv-translator-banner h2{color:white;line-height:1.06;letter-spacing:-.065em;font-size:clamp(24px,7vw,35px);font-weight:850;margin:29px 0 18px;text-wrap:balance}
+.vmv-translator-banner h2 em{font-style:normal;color:#ffe19a}
+.vmv-translator-language-pill{display:inline-flex;align-items:center;gap:8px;border-radius:100px;background:#ffffff2c;border:1px solid #ffffff64;backdrop-filter:blur(8px);color:#fff;padding:10px 12px;font-size:10px;font-weight:800;white-space:nowrap}
+.vmv-translator-language-pill>span:nth-child(2){color:#ffe498;font-size:17px;font-weight:700}
+.vmv-translator-banner-art{position:absolute;right:-23px;top:19px;width:160px;height:191px;display:grid;place-items:center;pointer-events:none;z-index:1}
+.vmv-translator-orbit{position:absolute;border-radius:50%;width:156px;height:156px;border:19px solid #e1c7ff6b;transform:rotate(-30deg)}
+.vmv-translator-orbit-two{width:121px;height:121px;border-width:14px;border-color:#f8cfff6b;transform:translate(-5px,19px) rotate(20deg)}
+.vmv-translator-bubble{position:absolute;display:grid;place-items:center;box-shadow:0 10px 17px #49338c50}
+.vmv-translator-bubble-one{width:79px;height:79px;right:30px;top:43px;border-radius:25px;background:linear-gradient(138deg,#ffdc90,#ffb078);color:#7443bc;transform:rotate(-16deg)}
+.vmv-translator-bubble-two{width:48px;height:48px;right:4px;bottom:20px;border-radius:17px;background:linear-gradient(138deg,#b9f0dd,#68cfb8);color:#376185;transform:rotate(17deg)}
+.vmv-translator-spark{position:absolute;top:2px;right:40px;font-size:35px;color:#ffe17a}
+.vmv-translator-mode-header{margin:26px 0 15px}
+.vmv-translator-mode-header h3{font-size:23px;line-height:1.15;letter-spacing:-.067em;font-weight:850;margin:0;color:#29223c}
+.vmv-translator-mode-header h3 span{color:#9662e8}
+.vmv-translator-v4 .vmv-interpreter-methods{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.vmv-translator-v4 .vmv-interpreter-methods>button{position:relative;overflow:hidden;min-height:180px;padding:17px 15px;border:0;border-radius:22px;display:flex;flex-direction:column;align-items:flex-start;gap:0;box-shadow:none;transition:transform .17s ease,filter .17s ease}
+.vmv-translator-v4 .vmv-interpreter-methods>button:hover{border:0;box-shadow:0 10px 20px #7859ab21;filter:brightness(1.02);transform:translateY(-2px)}
+.vmv-translator-v4 .vmv-interpreter-methods>button:focus-visible{outline:3px solid #8655e1;outline-offset:3px}
+.vmv-translator-v4 .vmv-voice-choice{background:#bdecd9;color:#1f5546}
+.vmv-translator-v4 .vmv-text-choice{background:#ffdb8e;color:#755122}
+.vmv-translator-v4 .vmv-voice-choice .vmv-method-icon{background:#ffffff8f;color:#268a71}
+.vmv-translator-v4 .vmv-text-choice .vmv-method-icon{background:#ffffff9c;color:#a4672f}
+.vmv-translator-v4 .vmv-method-icon{height:51px;width:51px;border-radius:17px;flex-shrink:0}
+.vmv-translator-v4 .vmv-method-title{display:flex;flex-direction:column;gap:5px;margin-top:auto;align-items:flex-start}
+.vmv-translator-v4 .vmv-method-title strong{font-size:19px;font-weight:850;letter-spacing:-.04em;color:inherit}
+.vmv-translator-v4 .vmv-method-title small{font-size:10px;color:inherit;opacity:.72;font-weight:700}
+.vmv-translator-v4 .vmv-method-arrow{position:absolute;top:15px;right:14px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#ffffff69;color:inherit}
+.vmv-translator-v4 .vmv-method-arrow svg{margin:0!important;color:inherit!important}
+/* Keep both modes consistent with VMV Home rather than the former dark green. */
+.vmv-interpreter-stage.is-voice{background:radial-gradient(ellipse at 50% 10%,#554288 0%,#2c2349 54%,#1f1a33 100%);color:#faf8ff}
+.vmv-interpreter-stage.is-text{background:#fbfaff;color:#2c2340}
+.vmv-interpreter-stage .vmv-interpreter-close{border-radius:16px}
+.vmv-interpreter-stage .vmv-interpreter-header small{color:#d9c7ee}
+.vmv-interpreter-stage .vmv-interpreter-header small span{color:#ffd98f}
+.vmv-interpreter-stage .vmv-interpreter-skip{color:#f5d8ff;background:#ffffff23}
+.vmv-interpreter-stage.is-text .vmv-interpreter-close{border-color:#e4d8ef}
+.vmv-interpreter-stage.is-text .vmv-interpreter-skip{color:#7049b5;background:#eee5ff}
+.vmv-interpreter-stage .vmv-interpreter-kicker{color:#d7bdfb}
+.vmv-interpreter-stage.is-text .vmv-interpreter-kicker{color:#8357c7}
+.vmv-interpreter-stage .vmv-interview-orb{background:linear-gradient(145deg,#fce4a0,#f4b483);color:#6542a0;box-shadow:0 0 36px #c8a3ee43}
+.vmv-interpreter-stage .vmv-interpreter-listen{color:#f0dcff;background:#ffffff23}
+.vmv-interpreter-stage.is-text .vmv-interpreter-listen{color:#7448bb;background:#eee4ff}
+.vmv-interpreter-stage .vmv-interview-form textarea,.vmv-interpreter-stage .vmv-text-composer textarea{outline-color:#a678ed;border-radius:19px}
+.vmv-interpreter-stage .vmv-interview-form>button{background:#9670e7;color:#fff}
+.vmv-interpreter-stage .vmv-interpreter-consent input{accent-color:#a878ff}
+.vmv-interpreter-stage .vmv-one-mic{background:linear-gradient(140deg,#c2a0ff,#9260e5);border-color:#f1e4ff38;color:#fff;box-shadow:0 0 0 9px #b78af512,0 16px 40px #9768e731}
+.vmv-interpreter-stage .vmv-one-mic.is-recording{background:linear-gradient(145deg,#ffdd9c,#ffaf89);color:#50387c;box-shadow:0 0 0 12px #ffc08a30}
+.vmv-interpreter-stage .vmv-one-mic:focus-visible{outline-color:#e0bfff}
+.vmv-interpreter-stage .vmv-mic-instruction{color:#d6c6e5}
+.vmv-interpreter-stage .vmv-transcript-badge{color:#e1d3ef;background:#ffffff1d}
+.vmv-interpreter-stage .vmv-transcript-translated{color:#f7e4ff!important}
+.vmv-interpreter-stage .vmv-transcript-separator{color:#fdcf84}
+.vmv-interpreter-stage .vmv-interpreter-progress{color:#e5c9ff}
+.vmv-interpreter-stage .vmv-text-turn{border-color:#eadff5;border-radius:22px}
+.vmv-interpreter-stage .vmv-text-turn span{color:#8357c7}
+.vmv-interpreter-stage .vmv-text-turn button{background:#ebe0fc;color:#7549b7}
+.vmv-interpreter-stage .vmv-text-composer form{border-color:#e7dcf3}
+.vmv-interpreter-stage .vmv-text-composer form>button{background:#9563e5;color:#fff}
+.vmv-interpreter-stage .vmv-language-detected{border-color:#dfcff4;color:#7652bc}
+@media(max-width:500px){.vmv-translator-banner{min-height:224px;padding:20px 17px}.vmv-translator-banner-art{right:-44px;top:28px;opacity:.83}.vmv-translator-banner h2{margin-top:28px;max-width:250px}.vmv-translator-v4 .vmv-interpreter-methods>button{padding:15px 13px;min-height:162px}.vmv-translator-v4 .vmv-method-title strong{font-size:17px}}
+@media(max-width:350px){.vmv-translator-language-pill{gap:4px;font-size:9px;padding:8px}.vmv-translator-banner-art{opacity:.5}.vmv-translator-v4 .vmv-interpreter-methods{gap:9px}}
+@media(prefers-reduced-motion:reduce){.vmv-translator-v4 .vmv-interpreter-methods>button{transition:none}}

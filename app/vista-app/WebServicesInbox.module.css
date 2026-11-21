@@ -1,0 +1,46 @@
+.root{color:#29213d;margin:16px 0 25px;min-width:0}
+.root *{box-sizing:border-box}
+.root button:focus-visible,.root a:focus-visible,.root select:focus-visible{outline:3px solid #996de2;outline-offset:2px}
+.back{background:transparent;border:0;color:#8556cc;font-weight:850;font-size:12px;display:inline-flex;align-items:center;gap:6px;padding:8px 0;cursor:pointer;margin-bottom:16px}
+.heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;gap:10px}
+.heading span{font-size:10px;letter-spacing:.13em;font-weight:850;color:#9478b7}
+.heading h2{font-size:29px;letter-spacing:-1.3px;line-height:1.1;margin:5px 0 0;font-weight:900}
+.heading h2 b{color:#8d5ce2}
+.refresh{width:40px;height:40px;display:grid;place-items:center;background:#f0e7ff;color:#8656cb;border:0;border-radius:13px;cursor:pointer}
+.refresh:disabled{opacity:.5}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-bottom:14px}
+.stats>div{display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:17px;background:#e9ddff}
+.stats>div:last-child{background:#c6f1e2}
+.stats span{font-size:11px;font-weight:850;color:#675476}
+.stats strong{font-size:28px;font-weight:900;letter-spacing:-1px}
+.filters{display:flex;padding:5px;gap:5px;border-radius:14px;background:#f1ebf8;margin-bottom:14px}
+.filters button{flex:1;padding:11px 6px;border:0;background:transparent;color:#84749d;font-size:12px;font-weight:800;border-radius:10px;cursor:pointer}
+.filters .active{background:#fff;color:#7948c4;box-shadow:0 2px 8px #25113b17}
+.cards{display:flex;flex-direction:column;gap:13px}
+.card{border:1px solid #e7dff0;border-radius:19px;background:#fff;padding:16px;min-width:0;box-shadow:0 7px 22px #1c112607}
+.cardTop{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.cardTop>div{display:flex;flex-direction:column;min-width:0;gap:5px}
+.person{font-size:16px;letter-spacing:-.4px;overflow-wrap:anywhere}
+.date{font-size:10px;color:#8b8296;font-weight:650}
+.stage{font-size:10px;font-weight:850;color:#8158c6;padding:7px 9px;background:#f0e8ff;border-radius:999px;flex-shrink:0}
+.stage[data-status=accepted],.stage[data-status=completed]{color:#23755b;background:#e0f6e8}
+.stage[data-status=quoted]{color:#976a27;background:#fff2d9}
+.stage[data-status=archived]{color:#7e7b89;background:#f0eff1}
+.service{display:inline-flex;background:#e9ddff;border-radius:9px;padding:7px 9px;margin-top:13px;font-size:11px;font-weight:850;color:#7444ac}
+.message{color:#494053;line-height:1.6;font-size:13px;overflow-wrap:anywhere;white-space:pre-wrap;margin:13px 0}
+.details{display:flex;flex-direction:column;gap:9px;margin:13px 0 0;padding:12px;border-radius:12px;background:#faf8fe}
+.details>div{display:flex;flex-direction:column;gap:4px}
+.details dt{color:#9276ad;font-size:10px;font-weight:800}
+.details dd{margin:0;overflow-wrap:anywhere;font-size:12px;line-height:1.5}
+.details a{color:#7947bd;display:inline-flex;align-items:center;gap:4px}
+.contacts{display:flex;flex-wrap:wrap;gap:9px;margin-top:13px}
+.contacts a{display:inline-flex;align-items:center;gap:7px;border:1px solid #ded0f1;background:#fbf8ff;color:#8054b9;border-radius:11px;padding:10px 12px;font-size:12px;font-weight:850;text-decoration:none}
+.statusSelector{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:15px;padding-top:13px;border-top:1px solid #ede7f4}
+.statusSelector span{font-size:12px;color:#776384;font-weight:850}
+.statusSelector select{font:inherit;min-height:38px;padding:7px 10px;color:#5e3f92;border:1px solid #d9cbea;background:#fcfaff;border-radius:10px;max-width:65%;min-width:0}
+.statusSelector select:disabled{opacity:.5}
+.emptyState{padding:41px 15px;border:1px dashed #dfd1ee;border-radius:18px;text-align:center;color:#9578b7;display:flex;flex-direction:column;align-items:center;gap:12px}
+.emptyState strong{font-size:13px;color:#72548f}
+.empty{color:#87759c;font-size:13px;text-align:center;padding:25px}
+.error{background:#fff0f2;color:#ae4462;font-size:12px;border-radius:10px;padding:12px;margin:0 0 13px}
+@media(max-width:360px){.heading h2{font-size:26px}.card{padding:13px}.contacts a{padding:9px}}

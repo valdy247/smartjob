@@ -1,0 +1,64 @@
+/* Registration deliberately inherits the same UI components as the AI service wizards.
+   White screen; one question; identical progress, robot, option and primary styles. */
+.outer{min-height:100dvh;width:100%;background:#fff;color:#291f3d;padding:20px;box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+.outer *{box-sizing:border-box}
+.wizard{background:#fff;min-height:calc(100dvh - 40px)}
+.topRight{display:flex;align-items:center;justify-content:flex-end;gap:11px;font-size:11px;font-weight:850}
+.topRight>span{min-width:39px;text-align:right;font-variant-numeric:tabular-nums}
+.screenContent{width:100%;min-width:0;flex:1;display:flex;flex-direction:column;align-items:center}
+.screenContent>form{width:100%}
+.screenContent>h1{overflow-wrap:anywhere}
+.choiceList{max-height:min(48dvh,390px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#dfd0f0 transparent;padding:2px}
+.choiceList button{flex:none}
+.inputRow{display:flex;align-items:center;position:relative;width:100%;min-width:0}
+.inputRow input{width:100%;min-width:0}
+.inputRow:has(.eye) input{padding-right:49px}
+.eye{position:absolute;right:9px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:35px;height:35px;border:0;border-radius:11px;background:#f2e9fc;color:#7b4abb;cursor:pointer}
+.optional{font-size:11px;color:#92839e;text-align:center}
+.success{padding:11px 14px;margin:0;background:#ecf8f0;color:#27795b;border-radius:13px;font-size:12px;line-height:1.5;text-align:left}
+.screenContent>p{margin:10px 0}
+@media(max-width:600px){
+ .outer{padding:12px 17px}
+ .wizard{min-height:calc(100dvh - 24px)}
+ .screenContent>h1{max-width:100%}
+ .topRight{gap:7px}
+ .choiceList{max-height:min(49dvh,430px)}
+}
+@media(prefers-reduced-motion:reduce){.outer *{scroll-behavior:auto!important}}
+
+
+/* Smart, owner-confirmed onboarding fields. All controls stay within the white Services wizard. */
+.smartField{position:relative;width:100%;min-width:0;display:grid;gap:7px;text-align:left}
+.searchInput{min-height:49px;border:1px solid #e1d4ee;border-radius:14px;display:flex;align-items:center;gap:9px;padding:0 13px;color:#8b59bf;background:white}
+.searchInput input{width:100%;flex:1;min-width:0;min-height:47px;border:0;outline:0;background:none;color:#2d2143;font-size:14px}
+.searchResults{width:100%;display:grid;gap:2px;overflow-y:auto;max-height:210px;border:1px solid #e4d6f1;border-radius:14px;background:#fff;padding:5px;box-shadow:0 12px 24px #2d1f3e11}
+.searchResults button{display:flex;align-items:center;gap:9px;min-height:42px;border:0;border-radius:9px;text-align:left;background:#fff;color:#443353;font-size:12px;cursor:pointer;padding:8px 12px}
+.searchResults button:hover,.searchResults button:focus-visible{background:#f5effe}
+.searchResults button span{display:flex;flex-direction:column;gap:2px}.searchResults small{font-size:10px;color:#9483a4}
+.smartHint,.smartGood,.smartError{margin:2px 0;display:flex;align-items:center;gap:5px;min-height:19px;font-size:11px;line-height:1.45;color:#97899f}
+.smartGood{color:#327e65}.smartError{color:#b34966}
+.naturalSchedule{display:grid;gap:10px}
+.naturalSchedule textarea{border:1px solid #e1d4ee;border-radius:14px;width:100%;min-height:102px;padding:12px;resize:vertical;font:inherit;color:#30203f;font-size:13px}
+.naturalSchedule textarea:focus{outline:2px solid #9770c9}
+.naturalSchedule>button{width:100%}
+.toggles>button{justify-content:space-between;flex-direction:row-reverse}
+.switchOuter{width:33px;height:20px;flex:0 0 33px;border-radius:15px;background:#e7dcea;display:flex;align-items:center;padding:3px;box-sizing:border-box}
+.switchOn,.switchOff{width:14px;height:14px;border-radius:50%;display:block;background:#fff;box-shadow:0 1px 3px #33264333;transition:transform .15s}
+.switchOuter:has(.switchOn){background:#8d55d8}
+.switchOn{transform:translateX(13px)}
+.modalBackdrop{position:fixed;inset:0;background:#22143355;display:flex;align-items:center;justify-content:center;z-index:1100;padding:12px}
+.hoursModal{box-sizing:border-box;background:#fff;border:1px solid #ebdcf6;border-radius:19px;box-shadow:0 25px 80px #1d142544;width:min(100%,520px);max-height:min(92dvh,780px);overflow-y:auto;padding:19px 16px 16px;text-align:left}
+.hoursModal h2{margin:0;font-size:20px;letter-spacing:-.5px;color:#382545}
+.hoursModal>p{margin:7px 0 12px;min-height:13px;color:#837494;font-size:11px}
+.hoursRows{display:grid;gap:0}
+.hoursRow{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:53px;padding:8px 1px;border-bottom:1px solid #f2ecf7}
+.daySwitch{display:inline-flex;align-items:center;gap:8px;min-width:113px;font-size:12px;font-weight:750;color:#554469;cursor:pointer}
+.daySwitch input{width:17px;height:17px;accent-color:#8651bf}
+.hoursRow>small{font-size:11px;color:#a093ab;margin-right:8px}
+.timePickers{display:flex;align-items:center;gap:5px}
+.timePickers select{max-width:90px;border:1px solid #e3d9eb;background:#fff;min-height:35px;padding:5px;border-radius:9px;font-size:12px;color:#382747}
+.modalActions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:17px}
+.modalActions button{min-height:45px;background:#fff;border:1px solid #e4d5f0;border-radius:12px;color:#714ba5;font-size:12px;font-weight:850;cursor:pointer}
+.modalActions button:last-child{background:#8253c7;color:white;display:flex;justify-content:center;align-items:center;gap:7px;border-color:#8253c7}
+.modalActions button:disabled{opacity:.6;cursor:wait}
+@media(max-width:370px){.hoursModal{padding:14px 10px}.daySwitch{min-width:98px;font-size:11px}.timePickers select{max-width:75px;padding:2px;font-size:11px}}

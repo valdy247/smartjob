@@ -68,7 +68,8 @@ export async function POST(req:NextRequest){
     if(!route)return twiml(say("This line is not active.","en-US")+"<Hangup/>");
     if(!ivrEligible(route))return twiml(say("Mobile reception is unavailable.","en-US")+"<Hangup/>");
     // Even a direct Spanish call uses a paid Twilio leg. No plan = no menu or dial.
-    if(!await paidServiceAllowed(route.user_id,"direct_call"))return twiml("<Hangup/>");
+    if(!await paidServiceAllowed(route.user_id,"direct_call")&&
+       !await paidServiceAllowed(route.user_id,"translated_call"))return twiml("<Hangup/>");
     if(!chosenLanguage){
       const prefs=await getPaidCallPreferences(route.user_id);
       return menuResponse(prefs?.greeting_customer||undefined,0,testSpanishToEnglishFor(route.user_id));
@@ -142,7 +143,7 @@ export async function POST(req:NextRequest){
   if(atCapacity){
     return twiml(say("All interpreters are currently busy. Please try again shortly.","en-US")+"<Hangup/>");
   }
-  if(route&&!await reservePhoneSession(bridge,route)){
+  if(route&&!await reservePhoneSession(bridge,route,"translated",from)){
     return twiml(say("All interpreters are currently busy. Please try again later.","en-US")+"<Hangup/>");
   }
   let reservedMinutes=0;

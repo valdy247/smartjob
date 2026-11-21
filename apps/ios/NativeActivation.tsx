@@ -4,7 +4,7 @@ import type {Session} from "@supabase/supabase-js";
 import {api,supabase} from "./session";
 
 export type NativeProfile={
- id:string;first_name:string;phone:string;owner_language:string;assistant_name:string;
+ id:string;first_name:string;business_name?:string|null;phone:string;owner_language:string;assistant_name:string;
  line_choice?:"keep"|"new";line_carrier?:string;preferred_plan?:"starter"|"pro"|"premium"|null;
  plan_prompt_seen?:boolean;line_setup_completed?:boolean;
 };
@@ -73,14 +73,14 @@ export function NativeActivation({session,profile,onComplete}:{session:Session;p
      <Text style={styles.brand}>VMV <Text style={{color:"#07B894"}}>CALL</Text></Text></View>
     {phase==="plans"?<>
      <Text style={styles.eyebrow}>PRIMER ACCESO</Text><Text style={styles.title}>Elige tu plan.</Text>
-     <Text style={styles.subtitle}>{pilotActive?"Tu plan de prueba ya está activo. No necesitas comprar otro para probar OpenAI Realtime.":"Puedes decidirlo después. No se cobrarán planes hasta habilitar pagos reales."}</Text>
+     <Text style={styles.subtitle}>{pilotActive?"Prueba activa. No necesitas comprar otro plan.":"Puedes decidirlo después. Sin cobros reales por ahora."}</Text>
      {loading?<ActivityIndicator color={colors.mint}/>:plans.map(p=><Pressable key={p.id}
       accessibilityRole="button" style={styles.plan} onPress={()=>{setPlan(p.id);setPhase("configure");setStep(0);setError("");}}>
       <View style={styles.between}><Text style={styles.planTitle}>{p.name}</Text>
        <Text style={styles.price}>{"$"}{(p.priceCents/100).toFixed(2)}/mes</Text></View>
       <Text style={styles.details}>{p.minutes} minutos traducidos · Configurar →</Text>
      </Pressable>)}
-     {pilotActive?<Text style={styles.pilotNotice}>✓ Prueba privada activa. Entra a Llamadas para conectar tu iPhone y consultar tus minutos VMV.</Text>:<Text style={styles.warning}>Estos precios son de referencia. Los cobros reales aún no están habilitados.</Text>}
+     {pilotActive?<Text style={styles.pilotNotice}>✓ Prueba activa. Abre Llamadas para conectar tu iPhone.</Text>:<Text style={styles.warning}>Precios de referencia · sin cobros reales.</Text>}
      <Pressable accessibilityRole="button" style={styles.secondary} onPress={()=>void skip()} disabled={busy}>
       <Text style={styles.secondaryText}>{busy?"Guardando…":pilotActive?"Continuar a VMV Call →":"Omitir por ahora →"}</Text></Pressable>
     </>:<>
@@ -106,7 +106,7 @@ export function NativeActivation({session,profile,onComplete}:{session:Session;p
      </>:<><Text style={styles.title}>Casi listo.</Text>
       <Text style={styles.subtitle}>{plan?.toUpperCase()} · {line==="keep"?"Tu número":"Número nuevo"} · {language==="es"?"Español":"English"}</Text>
       <Pressable accessibilityRole="checkbox" accessibilityState={{checked:ack}} style={styles.consent} onPress={()=>setAck(!ack)}>
-       <Text style={{fontSize:24,color:"#0AA784"}}>{ack?"☑":"☐"}</Text><Text style={styles.consentText}>Entiendo que primero se debe confirmar un pago real, verificar el número y aprobar la línea. No habrá compras automáticas.</Text>
+       <Text style={{fontSize:24,color:"#0AA784"}}>{ack?"☑":"☐"}</Text><Text style={styles.consentText}>Entiendo: se requiere pago real confirmado, número verificado y aprobación. Sin compras automáticas.</Text>
       </Pressable>
      </>}
      <Pressable accessibilityRole="button" disabled={busy||(step===2&&!ack)} style={[styles.primary,busy&&styles.disabled]}
@@ -122,22 +122,22 @@ export function NativeActivation({session,profile,onComplete}:{session:Session;p
  </Modal>;
 }
 const styles=StyleSheet.create({
- safe:{flex:1,backgroundColor:"#F7FCFA"},content:{paddingHorizontal:24,paddingTop:18,paddingBottom:65,maxWidth:660,width:"100%",alignSelf:"center"},
+ safe:{flex:1,backgroundColor:"#FDFCFF"},content:{paddingHorizontal:24,paddingTop:18,paddingBottom:65,maxWidth:660,width:"100%",alignSelf:"center"},
  mark:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:43},
- wave:{backgroundColor:"#27E7C4",width:50,height:50,borderRadius:16,justifyContent:"center",alignItems:"center",flexDirection:"row",gap:3},
+ wave:{backgroundColor:"#C9A9F8",width:50,height:50,borderRadius:16,justifyContent:"center",alignItems:"center",flexDirection:"row",gap:3},
  
- brand:{fontSize:25,color:"#16222D",fontWeight:"900",letterSpacing:-1},
- eyebrow:{color:"#0DAA87",fontSize:11,letterSpacing:2,fontWeight:"800",marginBottom:12},
- title:{fontSize:34,fontWeight:"800",letterSpacing:-1.2,color:"#16222D",marginBottom:9},
- subtitle:{fontSize:14,lineHeight:21,color:"#6C827C",marginBottom:23},
- plan:{borderWidth:1,borderColor:"#D8EDE5",borderRadius:21,padding:19,backgroundColor:"#FFF",marginBottom:12},
+ brand:{fontSize:25,color:"#171127",fontWeight:"900",letterSpacing:-1},
+ eyebrow:{color:"#8559D8",fontSize:11,letterSpacing:2,fontWeight:"800",marginBottom:12},
+ title:{fontSize:34,fontWeight:"800",letterSpacing:-1.2,color:"#171127",marginBottom:9},
+ subtitle:{fontSize:14,lineHeight:21,color:"#74677F",marginBottom:23},
+ plan:{borderWidth:1,borderColor:"#EAE2F3",borderRadius:21,padding:19,backgroundColor:"#FFF",marginBottom:12},
  between:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
  planTitle:{fontSize:19,color:"#16222D",fontWeight:"800"},price:{fontSize:15,color:"#08765F",fontWeight:"800"},
  details:{fontSize:12,lineHeight:18,color:"#68847C",marginTop:7},
  warning:{fontSize:12,lineHeight:20,color:"#9B7144",backgroundColor:"#FFF6E8",borderRadius:13,padding:13,marginVertical:12},
  pilotNotice:{fontSize:12,lineHeight:20,color:"#08765F",backgroundColor:"#E6FAF1",borderRadius:13,padding:13,marginVertical:12},
  option:{borderRadius:18,borderWidth:1,borderColor:"#D6EAE2",backgroundColor:"#FFF",padding:18,marginBottom:12},
- selected:{borderWidth:2,borderColor:"#16CC9F",backgroundColor:"#E9FFF6"},
+ selected:{borderWidth:2,borderColor:"#9D72E7",backgroundColor:"#F0E5FF"},
  optionTitle:{fontSize:15,color:"#18352F",fontWeight:"800"},
  row:{flexDirection:"row",gap:12,marginBottom:12},smallOption:{flex:1,borderRadius:15,borderWidth:1,borderColor:"#D6EAE2",padding:16},
  label:{fontSize:12,color:"#567A6C",fontWeight:"800",marginTop:13,marginBottom:9},
@@ -146,8 +146,8 @@ const styles=StyleSheet.create({
  chipText:{fontSize:12,fontWeight:"700",color:"#355B4F"},
  consent:{flexDirection:"row",alignItems:"flex-start",gap:9,borderRadius:16,padding:16,backgroundColor:"#E9FFF6"},
  consentText:{fontSize:12,lineHeight:18,color:"#466A5D",flex:1},
- primary:{backgroundColor:"#2CE1BA",minHeight:52,justifyContent:"center",alignItems:"center",borderRadius:16,marginTop:22},
- disabled:{opacity:.5},primaryText:{color:"#064535",fontSize:15,fontWeight:"900"},
- secondary:{padding:16,alignItems:"center",marginTop:12},secondaryText:{fontSize:13,color:"#0C9473",fontWeight:"800"},
+ primary:{backgroundColor:"#C9A6F6",minHeight:52,justifyContent:"center",alignItems:"center",borderRadius:16,marginTop:22},
+ disabled:{opacity:.5},primaryText:{color:"#21132F",fontSize:15,fontWeight:"900"},
+ secondary:{padding:16,alignItems:"center",marginTop:12},secondaryText:{fontSize:13,color:"#794FC5",fontWeight:"800"},
  error:{marginTop:12,fontSize:12,color:"#AE4160",backgroundColor:"#FFF1F4",padding:13,borderRadius:12}
 });

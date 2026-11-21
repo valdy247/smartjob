@@ -1,0 +1,80 @@
+.serviceList{display:grid;gap:8px;max-height:min(48dvh,385px);overflow-y:auto}
+.service{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;
+ border:1px solid #e7dcf2;border-radius:14px;padding:11px}
+.service label{display:flex;align-items:center;gap:9px;flex:1;min-width:0}
+.service label input{width:18px;height:18px;accent-color:#7f4abb;flex-shrink:0}
+.service label span{display:grid;gap:5px;min-width:0}
+.service strong{font-size:12px;color:#352547;overflow-wrap:anywhere}
+.service small{font-size:10px;color:#897b98}
+.service>input{width:72px;border:1px solid #dcd0ed;border-radius:10px;background:#fff;
+ padding:9px;color:#3e2b50;font-size:12px}
+.serviceForm{display:grid;gap:12px;background:#fcfaff;border:1px solid #e5daf2;
+ border-radius:17px;padding:14px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.total{color:#653da6;font-size:17px}
+.success{display:grid;gap:13px;justify-items:center;text-align:center;
+ background:#f1fbf6;border:1px solid #cce9db;border-radius:17px;padding:20px;color:#20715e}
+.success strong{font-size:17px}.success p{font-size:11px;margin:0}
+.success a{font-size:12px;color:#7250b4;text-decoration:underline}
+@media(max-width:410px){.pair{grid-template-columns:1fr}}
+
+
+/* Shared AI Agents catalog connections, using Smart Quote's existing soft violet cards. */
+.sourceGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.sourceCard,.sourceConnected{display:flex;align-items:center;gap:10px;min-height:77px;border-radius:15px;padding:11px;
+ border:1px solid #e4d9f0;background:#fff;color:#77569a;text-align:left;cursor:pointer}
+.sourceConnected{background:#f1eaff;border-color:#a279dc;color:#693cab}
+.sourceCard>svg:first-child,.sourceConnected>svg:first-child{flex-shrink:0}
+.sourceCard>svg:last-child,.sourceConnected>svg:last-child{margin-left:auto;flex-shrink:0}
+.sourceCard span,.sourceConnected span{display:grid;gap:5px;min-width:0}
+.sourceCard strong,.sourceConnected strong{font-size:12px;line-height:1.35}
+.sourceCard small,.sourceConnected small{font-size:10px;color:#907b9d;line-height:1.35}
+.refresh{align-self:center;display:inline-flex;align-items:center;gap:8px;background:transparent;
+ border:0;color:#7959aa;font-weight:750;font-size:11px;padding:8px 10px;cursor:pointer}
+.refresh:disabled{opacity:.5;cursor:wait}
+.kindSwitch{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.kindOn,.kindOff{min-height:41px;border:1px solid #e4d9f0;border-radius:12px;
+ background:#fff;color:#7b6794;font-size:12px;font-weight:800;cursor:pointer}
+.kindOn{background:#efe7fb;border-color:#a47dde;color:#6c42a4}
+@media(max-width:420px){.sourceGrid{grid-template-columns:1fr}}
+
+
+/* Shared Smart Quote entrance and concise mobile-first catalogue switches. */
+.entry{box-sizing:border-box;width:min(100%,540px);margin:0 auto;min-height:calc(100dvh - 56px);padding:8px 8px 28px;display:flex;flex-direction:column;gap:24px;color:#2d2240}
+.entryTop{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:800;color:#72568e}
+.entryTop button{border:0;background:#f0e7fc;color:#7047b5;border-radius:13px;width:42px;height:42px;display:grid;place-items:center;cursor:pointer}
+.entryHero{text-align:center;margin-top:clamp(38px,10dvh,110px);display:grid;justify-items:center;gap:12px}
+.entryHero>svg{width:80px;height:80px;padding:21px;background:linear-gradient(145deg,#e9d9ff,#e3f8ee);color:#7745b8;border-radius:24px;box-shadow:0 15px 35px #6b48a320}
+.entryHero h1{font-weight:900;font-size:29px;letter-spacing:-.05em;margin:3px 0 0}
+.entryHero p{font-size:13px;color:#7e708e;line-height:1.6;max-width:300px;margin:0}
+.entryActions{display:grid;gap:14px}
+.entryActions>a,.entryActions>button{display:flex;align-items:center;gap:15px;width:100%;border:1px solid #e8dff1;background:white;color:#352743;border-radius:20px;text-align:left;padding:18px 16px;text-decoration:none;cursor:pointer;box-shadow:0 10px 30px #4932730d}
+.entryActions>a>span:nth-child(2),.entryActions>button>span:nth-child(2){display:grid;gap:5px;flex:1}
+.entryActions strong{font-size:15px}.entryActions small{font-size:11px;color:#8d7f9a}
+.entryIcon{width:48px;height:48px;border-radius:15px;background:#f0e9ff;color:#7950b3;display:grid;place-items:center;flex-shrink:0}
+.entryActions>a:focus-visible,.entryActions>button:focus-visible{outline:3px solid #a580d9;outline-offset:2px}
+.switches{display:grid;gap:10px}
+.switchRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 14px;background:#fff;border:1px solid #e6d9f0;border-radius:16px;cursor:pointer}
+.switchRow>span:first-child{display:grid;gap:5px;min-width:0}
+.switchRow strong{font-size:13px;color:#443251}
+.switchRow small{font-size:11px;line-height:1.4;color:#8a7c94}
+.switchRow input{position:absolute;width:1px;height:1px;opacity:0}
+.switchTrack{width:47px;height:28px;border-radius:100px;background:#dcd3e8;padding:3px;flex-shrink:0;transition:background .15s}
+.switchTrack:before{content:"";display:block;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 5px #36244136;transition:transform .15s}
+.switchRow input:checked+.switchTrack{background:#8654c6}
+.switchRow input:checked+.switchTrack:before{transform:translateX(19px)}
+.switchRow input:focus-visible+.switchTrack{outline:3px solid #b8a0dc;outline-offset:3px}
+.templates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.template,.templateSelected{padding:12px 8px;min-height:153px;display:grid;gap:9px;justify-items:center;border:1px solid #e6daef;background:white;border-radius:16px;color:#493758;cursor:pointer}
+.templateSelected{border-color:#9c6bd7;background:#f7f0ff;box-shadow:0 0 0 2px #9c6bd720}
+.template strong,.templateSelected strong{font-size:12px}
+.template small,.templateSelected small{font-size:10px;color:#897a93}
+.miniSheet{width:74px;height:88px;background:white;border:1px solid #e1dde5;border-radius:5px;box-shadow:0 3px 10px #38244412;display:flex;flex-direction:column;gap:7px;padding:12px 8px;overflow:hidden}
+.miniSheet:before{content:"";height:13px;background:var(--document-accent,#8054b5);border-radius:2px}
+.miniSheet i{height:4px;background:#e2dbe9;border-radius:2px}
+.miniSheet i:nth-child(3){width:65%}.miniSheet i:nth-child(4){width:80%}
+.deliveryActions{display:grid;gap:10px}
+.secondaryAction{width:100%;min-height:50px;background:#fff;border:1px solid #ded1ee;border-radius:15px;color:#6b489a;font-weight:850;cursor:pointer}
+.previewNote{padding:13px 14px;border-radius:14px;background:#faf7ff;border:1px solid #e9dff3;font-size:11px;color:#776583;line-height:1.65}
+@media(max-width:390px){.templates{gap:6px}.template,.templateSelected{padding:9px 4px}.miniSheet{width:60px}}
+@media(prefers-reduced-motion:reduce){.switchTrack,.switchTrack:before{transition:none}}

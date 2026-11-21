@@ -1,0 +1,345 @@
+"use client";
+import {useEffect,useMemo,useState} from "react";
+import {ArrowLeft,ArrowRight,CalendarDays,Check,CheckCircle2,ChevronDown,Clock3,PlugZap,ShieldCheck,Sparkles} from "lucide-react";
+import VoiceSample from "./VoiceSample";
+import AgentConnections from "./AgentConnections";
+import styles from "./AgentSetupWizard.module.css";
+import {useAgentHeaderBack} from "./AgentHeaderBack";
+import {useInterfaceLanguage} from "@/lib/i18n-web";
+import type {MessageKey} from "@/lib/i18n";
+
+export type AgentKind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
+export type WizardDraft={
+ name:string;kind:AgentKind;purpose:string;personality:string;language:string;
+ instructions:string;knowledge:string;setup:Record<string,string>;
+};
+type Question={id:string;title:string;hint?:string;kind?:"text"|"textarea"|"choice"|"multi"|"state"|"hours";options?:string[];required?:boolean;when?:(a:Record<string,string>)=>boolean};
+type Section={title:string;subtitle:string;questions:Question[]};
+type Props={workspaceId?:string;onReviewBusiness?:(draft:WizardDraft)=>void;initial:WizardDraft;onSave:(updated:WizardDraft)=>Promise<void>|void;onCancel:()=>void;isPreview?:boolean;initialStep?:0|1|2|3;saving?:boolean;authRequired?:boolean;recoverDraft?:boolean};
+const q=(id:string,title:string,options:string[],required=false,when?:Question["when"]):Question=>({id,title,kind:"choice",options,required,when});
+const t=(id:string,title:string,required=false,hint?:string):Question=>({id,title,required,hint,kind:"text"});
+const a=(id:string,title:string,required=false,hint?:string):Question=>({id,title,required,hint,kind:"textarea"});
+const wants=(s:Record<string,string>,id:string)=>s[id]==="Sí";
+const US_STATES=["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming","Washington D.C."];
+const days=[["mon","Lunes"],["tue","Martes"],["wed","Miércoles"],["thu","Jueves"],["fri","Viernes"],["sat","Sábado"],["sun","Domingo"]] as const;
+const times=Array.from({length:49},(_,i)=>String(Math.floor(i/2)).padStart(2,"0")+":"+(i%2?"30":"00"));
+const taxiBusiness=(a:Record<string,string>)=>/taxi|taxista|transport|traslado|conductor|chofer|ch[oó]fer|ride.?share|limo|car service|uber|lyft/i.test(a.industry||"");
+const stateQuestion:Question={id:"state",title:"¿En qué estado está tu negocio?",kind:"state",required:true,when:a=>a.country!=="Otro país"};
+const hourQuestion:Question={id:"hours",title:"¿Cuándo atiendes a los clientes?",kind:"hours"};
+const availableTools={calendar:false,inventory:false}; // Enable only after verified tenant connector authorization.
+function bookingQuestions(a:Record<string,string>):Question[]{
+ const taxi=taxiBusiness(a);
+ return [
+  ...(taxi?[
+    q("booking_service_type","¿Qué viajes pueden solicitarte?",["Viajes dentro de la ciudad","Traslados al aeropuerto","Viajes programados","Servicio por horas","Otro"],true),
+    t("booking_custom_service","¿Qué otro servicio de transporte ofreces?",true)
+  ].map(item=>item.id==="booking_custom_service"?{...item,when:(x:Record<string,string>)=>x.booking_service_type==="Otro"}:item):[
+    t("booking_services","¿Qué servicio pueden reservarte?",true,"Por ejemplo: "+(a.industry||"consulta, servicio, cita")),
+    q("booking_duration","¿Cuánto dura normalmente ese servicio?",["15 minutos","30 minutos","1 hora","2 horas","Variable, según el cliente"],true)
+  ]),
+  q("booking_lead","¿Con cuánto tiempo de anticipación aceptas una reserva?",["De inmediato","15 minutos","30 minutos","1 hora","2 horas","24 horas","Otro"],true),
+  t("booking_lead_other","¿Con cuánto tiempo exactamente?",true,undefined),
+  q("booking_cancel","¿Hasta cuándo permites cancelar sin penalización?",["En cualquier momento","30 minutos antes","1 hora antes","2 horas antes","24 horas antes","No permito cancelaciones","Otro"],true),
+  t("booking_cancel_other","¿Cuál es la regla de cancelación?",true),
+  q("booking_confirmation","¿Cuándo le decimos al cliente que la reserva está confirmada?",["Después de que yo la confirme","Solo cuando una agenda autorizada lo confirme"],true),
+  q("booking_staff",taxi?"¿Quién puede atender los viajes?":"¿Quién atiende las reservas?",taxi?["Solo yo","Varios conductores"]:["Solo yo","Varias personas","Varias sucursales"],true),
+  t("booking_staff_details",taxi?"¿Cuántos conductores trabajan?":"¿Qué personas o sedes pueden atender?",true)
+ ].map(item=>{
+  if(item.id==="booking_lead_other")return {...item,when:(x:Record<string,string>)=>x.booking_lead==="Otro"};
+  if(item.id==="booking_cancel_other")return {...item,when:(x:Record<string,string>)=>x.booking_cancel==="Otro"};
+  if(item.id==="booking_staff_details")return {...item,when:(x:Record<string,string>)=>x.booking_staff!=="Solo yo"};
+  return item;
+ });
+}
+
+const roleQuestions:Record<AgentKind,Question[]>={
+ calls:[
+ q("calls_goal","¿Qué debe hacer al recibir una llamada?",["Responder preguntas","Tomar mensajes","Identificar posibles ventas","Solicitar citas","Transferir a una persona"],true),
+ q("call_forward","Si necesita una persona, ¿qué debe ocurrir?",["Tomar mensaje y avisar al dueño","Transferir a un número autorizado (futuro)","Indicar horario de atención"],true),
+ t("call_hello","¿Cómo debe saludar por teléfono?",false,"Ej. Gracias por llamar a..."),
+ q("call_after_hours","¿Qué hacer fuera de horario?",["Informar horario","Solicitar mensaje","Derivar a emergencia solo si existe protocolo"],true),
+ q("call_consent","¿La empresa tiene una política de aviso y consentimiento para llamadas con IA?",["Sí","Aún debemos definirla"],true)
+ ],
+ support:[
+ a("support_topics","¿Qué preguntas realizan más tus clientes?",true,"Ej. devoluciones, ubicación, tiempos de entrega"),
+ q("support_returns","¿Debe explicar políticas de devolución o garantía?",["Sí, con políticas aprobadas","No"],true),
+ a("support_exceptions","¿Cuáles son los casos que requieren un empleado?",false)
+ ],
+ sales:[
+ q("sales_goal","¿Cuál es el objetivo comercial principal?",["Informar productos","Calificar interesados","Solicitar datos de contacto con permiso","Preparar una cotización para revisión"],true),
+ a("sales_catalog","¿Qué productos o servicios ofrece la empresa?",true,"Nombres, descripción y precios confirmados"),
+ q("sales_discounts","¿Puede ofrecer descuentos?",["No","Solo descuentos aprobados por escrito"],true),
+ q("sales_handoff","¿Qué hacer si un cliente quiere comprar?",["Derivar a una persona","Recopilar solicitud para revisión"],true)
+ ],
+ bookings:[],
+
+ inventory:[
+ q("inventory_goal","¿Qué necesita saber el agente del inventario?",["Disponibilidad de productos","Características y precios","Productos agotados","Solicitudes de reposición"],true),
+ a("inventory_products","¿Qué productos o categorías debe conocer?",true,"Categorías y datos autorizados"),
+ q("inventory_freshness","Si no hay datos actuales de existencias, ¿qué dirá?",["Que debe confirmar la disponibilidad","Que lo revisará una persona"],true),
+ q("inventory_mutations","¿Quieres que prepare solicitudes de ajuste para aprobación?",["Sí, solo propuestas","No"],true)
+ ],
+ operations:[
+ q("ops_goal","¿Qué solicitudes administrativas gestionaría?",["Solicitudes internas","Organización de información","Seguimiento de tareas","Resumen para el dueño"],true),
+ a("ops_process","Describe el proceso que debe seguir",true),
+ q("ops_permissions","¿Puede modificar información del negocio?",["No, solo sugerir cambios","Solo tras aprobación humana e integración futura"],true)
+ ],
+ custom:[
+ a("custom_tasks","Explica las tareas que deseas delegar al agente",true),
+ q("custom_outcome","¿Qué resultado esperas?",["Responder y orientar","Preparar solicitudes","Derivar oportunidades a personas","Resumir información"],true),
+ a("custom_limits","¿Qué nunca debería hacer?",true)
+ ]
+};
+function sections(kind:AgentKind,answers:Record<string,string>):Section[]{
+ return ([
+  {title:"Identidad del agente",subtitle:"Comencemos por definir su función y personalidad.",questions:[]},
+  {title:"Conoce tu negocio",subtitle:"Lo esencial para que responda correctamente.",questions:[
+   t("business_name","¿Cómo se llama el negocio?",true),
+   t("industry","¿A qué se dedica?",true),
+   q("country","¿En qué país está tu negocio?",["Estados Unidos","Otro país"],true),
+   t("city","¿En qué ciudad atiendes?",true,"Ej. Columbus"),
+   stateQuestion,
+   {...t("region_other","¿En qué estado, provincia o región?",true),when:x=>x.country==="Otro país"},
+   hourQuestion,
+   t("contact","¿Qué teléfono o correo comercial pueden usar tus clientes?"),
+   q("policy_type","¿Tienes reglas de cambios o cancelaciones que el cliente deba conocer?",["No, ninguna especial","Sí, tengo reglas","Prefiero confirmarlas personalmente"],true),
+   {...a("policies","Explícanos esas reglas para que el agente las conozca",true),when:x=>x.policy_type==="Sí, tengo reglas"}
+  ]},
+  {title:"Qué debe hacer",subtitle:"Preguntas específicas para el trabajo de este agente.",questions:kind==="bookings"?bookingQuestions(answers):roleQuestions[kind]},
+  // Hidden until a tenant-scoped, authorized VMV connector is genuinely available.
+  ...(availableTools.calendar||availableTools.inventory?[{title:"Herramientas conectadas",subtitle:"Permisos específicos.",questions:[
+   ...(availableTools.calendar?[q("calendar_needed","¿Deseas dar permiso de lectura a la agenda?",["Sí","No"],true)]:[]),
+   ...(availableTools.inventory&&["inventory","sales"].includes(kind)?[q("inventory_needed","¿Deseas consultar el inventario autorizado?",["Sí","No"],true)]:[])
+  ]}]:[]),
+  {title:"Reglas y supervisión",subtitle:"Tú decides los límites de este agente.",questions:[
+   ...(answers.central_business_id?[q("policy_type","¿Tienes reglas de cambios o cancelaciones?",["No, ninguna especial","Sí, tengo reglas","Prefiero confirmarlas personalmente"],true),{...a("policies","¿Cuáles son esas reglas?",true),when:(x:Record<string,string>)=>x.policy_type==="Sí, tengo reglas"}]:[]),
+   q("human_review","¿Qué hacer si no conoce la respuesta?",["Reconocerlo y derivar a un humano","Pedir datos y solicitar revisión humana"],true),
+   q("data_scope","¿Qué datos personales puede solicitar?",["Solo nombre y medio de contacto con permiso","Ninguno"],true),
+   q("call_disclosure","¿Aceptas que el agente avise que es una inteligencia artificial?",["Sí","Todavía no"],true,
+    a=>a.channel==="Teléfono"||a.channel==="Teléfono y chat"),
+   a("restrictions","¿Qué promesas o acciones debe evitar?",false,"No inventar precios, citas, disponibilidad...")
+  ]},
+  {title:"Revisar y preparar",subtitle:"Comprueba la información antes de crear tu agente.",questions:[]}
+ ] satisfies Section[]).filter(section=>!(answers.central_business_id&&section.title==="Conoce tu negocio"));
+}
+function inputValue(v:Record<string,string>,key:string){return v[key]||"";}
+
+type ChoiceOption=readonly [value:string,label:string];
+function ChoiceSelect({label,value,options,onChange}:{
+ label:string;value:string;options:readonly ChoiceOption[];onChange:(value:string)=>void
+}){
+ const {translate}=useInterfaceLanguage();
+ return <label className={styles.selectField}>
+  <span className={styles.fieldTitle}>{label}</span>
+  <span className={styles.selectWrap}>
+   <select className={styles.selectInput} value={value} onChange={e=>onChange(e.target.value)}>
+    {options.map(([optionValue,optionLabel])=><option key={optionValue} value={optionValue}>{translate(("agents.wizard.option."+optionLabel) as MessageKey)}</option>)}
+   </select>
+   <ChevronDown size={18} aria-hidden="true"/>
+  </span>
+ </label>;
+}
+function MultipleChoiceSelect({label,options,isSelected,onToggle}:{
+ label:string;options:readonly ChoiceOption[];isSelected:(value:string)=>boolean;onToggle:(value:string)=>void
+}){
+ const {translate}=useInterfaceLanguage();
+ const selected=options.filter(([key])=>isSelected(key));
+ return <div className={styles.selectField}>
+  <span className={styles.fieldTitle}>{label}</span>
+  <details className={styles.multiSelect}>
+   <summary className={styles.multiSummary}>
+    <span className={styles.multiValue}>{selected.length?selected.map(([,name])=>translate(("agents.wizard.option."+name) as MessageKey)).join(" · "):translate("agents.wizard.selectOptions")}</span>
+    <span className={styles.multiCount}>{selected.length}/{options.length}</span>
+    <ChevronDown size={18} className={styles.multiChevron} aria-hidden="true"/>
+   </summary>
+   <div className={styles.multiMenu}>
+    {options.map(([key,name])=><label key={key} className={styles.multiOption}>
+     <input type="checkbox" checked={isSelected(key)} onChange={()=>onToggle(key)}/>
+     <span>{translate(("agents.wizard.option."+name) as MessageKey)}</span>
+    </label>)}
+   </div>
+  </details>
+ </div>;
+}
+export default function AgentSetupWizard({initial,onSave,onCancel,onReviewBusiness,workspaceId,isPreview=false,initialStep=0,saving=false,authRequired=false,recoverDraft=false}:Props){
+ const {translate}=useInterfaceLanguage();
+ const [draft,setDraft]=useState<WizardDraft>(()=>({...initial,setup:{...(initial.setup||{})}}));
+ const [step,setStep]=useState<number>(initial.setup.central_business_id&&initialStep>0?initialStep-1:initialStep);
+ const [recoveryReady,setRecoveryReady]=useState(false);
+ const [draftRestored,setDraftRestored]=useState(false);
+ // This temporary recovery is per browser tab, never a published agent or server save.
+ useEffect(()=>{
+  if(recoverDraft){
+   try{
+    const raw=sessionStorage.getItem("vmv-ai-unsaved-wizard-v1");
+    if(raw){
+     const saved=JSON.parse(raw) as {at?:number;draft?:WizardDraft;step?:number};
+     const candidate=saved.draft;
+     if(typeof saved.at==="number"&&Date.now()-saved.at<86400000&&
+        candidate&&candidate.kind===initial.kind&&typeof candidate.name==="string"&&
+        typeof candidate.purpose==="string"&&candidate.setup&&typeof candidate.setup==="object"&&
+        !Array.isArray(candidate.setup)&&
+        (candidate.setup.central_business_id||"")===(initial.setup.central_business_id||"")){
+       setDraft({...candidate,setup:{...candidate.setup}});
+       setStep(Math.min(3,Math.max(0,Number(saved.step)||0)));
+       setDraftRestored(true);
+     }
+    }
+   }catch{/* Browser storage can be restricted. Never prevent editing. */}
+  }
+  setRecoveryReady(true);
+ },[initial.kind,recoverDraft]);
+ useEffect(()=>{
+  if(!recoverDraft||!recoveryReady)return;
+  try{sessionStorage.setItem("vmv-ai-unsaved-wizard-v1",
+   JSON.stringify({at:Date.now(),draft,step}));}catch{/* Session-only backup is optional. */}
+ },[draft,step,recoverDraft,recoveryReady]);
+ const [error,setError]=useState("");
+ const steps=useMemo(()=>sections(draft.kind,draft.setup),[draft.kind,draft.setup]);
+ const current=steps[step];
+ const centralFields=new Set((draft.setup.central_prefill_fields||"").split("|").filter(Boolean));
+ const questionTitle=(question:Question)=>translate(("agents.wizard.q."+question.id) as MessageKey);
+ const questionHint=(question:Question)=>question.hint?(question.id==="booking_services"?translate("agents.wizard.hint.booking_services",{industry:draft.setup.industry||"consultation, service, appointment"}):translate(("agents.wizard.hint."+question.id) as MessageKey)):"";
+ const choiceLabel=(value:string)=>{try{return translate(("agents.wizard.option."+value) as MessageKey);}catch{return value;}};
+ const shown=current.questions.filter(x=>(!x.when||x.when(draft.setup))&&
+  !(draft.setup.central_business_id&&centralFields.has(x.id)));
+ const value=(key:keyof WizardDraft,next:string)=>setDraft(d=>({...d,[key]:next}));
+ const answer=(key:string,next:string)=>setDraft(d=>({
+  ...d,
+  // The reviewed language and personality must be what both web and iPhone save.
+  language:key==="language_rule"?next:d.language,
+  personality:key==="personality_rule"?next:d.personality,
+  setup:{...d.setup,[key]:next}
+ }));
+ const next=async()=>{
+  const missing=step===0?(!draft.name.trim()||!draft.purpose.trim()):shown.some(q=>q.required&&!inputValue(draft.setup,q.id).trim());
+  if(missing){setError(translate("agents.wizard.mandatory"));return;}
+  setError("");if(step===steps.length-1){
+   if(saving)return;
+   try{await onSave(draft);}catch(e){
+    setError(translate("agents.wizard.saveFailed"));
+   }
+   return;
+  }setStep(x=>x+1);
+ };
+ const back=()=>{setError("");if(step===0)onCancel();else setStep(x=>x-1);};
+ const useSharedHeader=useAgentHeaderBack(back);
+ const yesCalendar=availableTools.calendar&&wants(draft.setup,"calendar_needed"),yesInventory=availableTools.inventory&&wants(draft.setup,"inventory_needed");
+ const setHours=(mode:string)=>{
+  const pairs:Record<string,string>={};
+  if(mode==="24/7"){days.forEach(([key])=>{pairs["h_"+key+"_active"]="Sí";pairs["h_"+key+"_open"]="00:00";pairs["h_"+key+"_close"]="24:00";});}
+  if(mode==="Lunes a viernes · 9–5"){days.forEach(([key],i)=>{pairs["h_"+key+"_active"]=i<5?"Sí":"No";pairs["h_"+key+"_open"]="09:00";pairs["h_"+key+"_close"]="17:00";});}
+  if(mode==="Todos los días · 9–5"){days.forEach(([key])=>{pairs["h_"+key+"_active"]="Sí";pairs["h_"+key+"_open"]="09:00";pairs["h_"+key+"_close"]="17:00";});}
+  setDraft(d=>({...d,setup:{...d.setup,...pairs,hours_mode:mode}}));
+ };
+ return <section className={styles.root}>
+  <div className={styles.progressHead}><span>{translate("agents.wizard.configure")}</span><strong>{step+1} / {steps.length}</strong></div>
+  <div className={styles.progressTrack}><div className={styles.progressBar} style={{width:((step+1)/steps.length*100)+"%"}}/></div>
+  <div className={styles.stepDots}>{steps.map((s,i)=><button key={s.title} type="button" className={i===step?styles.stepActive:i<step?styles.stepDone:styles.stepDot}
+    onClick={()=>{if(i<step){setStep(i);setError("");}}} aria-label={translate("agents.wizard.step")+" "+(i+1)+": "+translate(("agents.wizard.section."+s.title) as MessageKey)}>
+    {i<step?<Check size={13}/>:i+1}</button>)}</div>
+  <div className={styles.titleGroup}><h1>{translate(("agents.wizard.section."+current.title) as MessageKey)}</h1></div>
+  {draftRestored?<p className={styles.reviewMessage} role="status">{translate("agents.wizard.restored")}</p>:null}
+  {step===0&&draft.setup.central_business_id?<div className={styles.context}>
+   <ShieldCheck size={17}/><strong>{draft.setup.business_name}</strong>
+   {onReviewBusiness?<button type="button" onClick={()=>onReviewBusiness(draft)}>{draft.setup.city&&draft.setup.state?translate("agents.wizard.editBusiness"):translate("agents.wizard.completeBusiness")}</button>:null}
+  </div>:null}
+  {authRequired?<div className={styles.reviewMessage} role="alert">
+   <ShieldCheck size={18}/><p>{translate("agents.wizard.loginRequired")} <a href="/vista-app">{translate("common.signIn")}</a></p>
+  </div>:null}
+  {step===0?<div className={styles.fields}>
+   <label className={styles.field}>{translate("agents.wizard.agentName")}<input maxLength={80} value={draft.name} onChange={e=>value("name",e.target.value)} placeholder={translate("agents.wizard.agentNamePlaceholder")}/></label>
+   <label className={styles.field}>{translate("agents.wizard.mission")}<textarea maxLength={240} rows={3} value={draft.purpose} onChange={e=>value("purpose",e.target.value)} placeholder={translate("agents.wizard.missionPlaceholder")}/></label>
+   <ChoiceSelect label={translate("agents.wizard.phoneVoice")} value={draft.setup.voice_preset||"default"}
+    options={[["default","Predeterminada de Twilio"],["female","Femenina · Polly"],["male","Masculina · Polly"]]}
+    onChange={next=>answer("voice_preset",next)}/>
+   <VoiceSample preset={draft.setup.voice_preset||"default"} language={draft.setup.language_rule||draft.language||"Español"}/>
+   <ChoiceSelect label={translate("agents.wizard.conversationLanguage")} value={draft.setup.language_rule||draft.language||"Español"}
+    options={[["Español","Español"],["English","English"],["Bilingüe","Bilingüe"]]}
+    onChange={next=>answer("language_rule",next)}/>
+   <ChoiceSelect label={translate("agents.wizard.personality")} value={draft.setup.personality_rule||draft.personality||"Amable y profesional"}
+    options={[["Amable y profesional","Amable y profesional"],["Cercano","Cercano"],["Formal","Formal"],["Directo","Directo"]]}
+    onChange={next=>answer("personality_rule",next)}/>
+   <ChoiceSelect label={translate("agents.wizard.responseLength")} value={draft.setup.response_style||"balanced"}
+    options={[["brief","Breve"],["balanced","Equilibrada"],["detailed","Detallada"]]}
+    onChange={next=>answer("response_style",next)}/>
+   <ChoiceSelect label={translate("agents.wizard.channel")} value={draft.setup.channel||"Chat"}
+    options={[["Teléfono","Teléfono"],["Chat","Chat"],["Teléfono y chat","Teléfono y chat"]]}
+    onChange={next=>answer("channel",next)}/>
+   <AgentConnections centralId={draft.setup.central_business_id} workspaceId={workspaceId} setup={draft.setup} onChange={answer}/>
+   <MultipleChoiceSelect label={translate("agents.wizard.allowedTasks")}
+    options={[["cap_attend","Atender preguntas"],["cap_sales","Vender por teléfono o chat"],["cap_bookings","Solicitar reservas"]]}
+    isSelected={key=>draft.setup[key]==="Sí"}
+    onToggle={key=>answer(key,draft.setup[key]==="Sí"?"No":"Sí")}/>
+   {draft.setup.cap_sales==="Sí"?<>
+    <MultipleChoiceSelect label={translate("agents.wizard.salesAuthorizations")}
+     options={[["perm_prepare_order","Preparar pedidos"],["perm_confirm_order","Confirmar tras aceptación"],["perm_payment_link","Ofrecer enlace de pago verificado"]]}
+     isSelected={key=>draft.setup[key]==="Sí"}
+     onToggle={key=>answer(key,draft.setup[key]==="Sí"?"No":"Sí")}/>
+    <p className={styles.hint}>{translate("agents.wizard.salesSafety")}</p>
+   </>:null}
+   {draft.setup.cap_bookings==="Sí"&&<><p className={styles.fieldTitle}>{translate("agents.wizard.bookingsAuthorization")}</p>
+    <button type="button" aria-pressed={draft.setup.perm_book_service==="Sí"}
+     className={draft.setup.perm_book_service==="Sí"?styles.choiceActive:styles.choice}
+     onClick={()=>answer("perm_book_service",draft.setup.perm_book_service==="Sí"?"No":"Sí")}>
+     {draft.setup.perm_book_service==="Sí"?"✓ ":""}{translate("agents.wizard.saveApprovedBookings")}</button>
+    <p className={styles.hint}>{translate("agents.wizard.bookingsSafety")}</p></>}
+  </div>:null}
+  {step>0&&step<steps.length-1?<div className={styles.fields}>
+   {current.title==="Qué debe hacer"&&draft.setup.industry?<div className={styles.context}><Sparkles size={15}/> {translate("agents.wizard.business")}: <strong>{draft.setup.industry}</strong> · {draft.setup.city||""}{draft.setup.state?", "+draft.setup.state:""}. {translate("agents.wizard.businessHint")}</div>:null}
+   {shown.map(question=><div className={styles.question} key={question.id}>
+   <label className={styles.fieldTitle} htmlFor={question.kind==="text"||question.kind==="textarea"?"w-"+question.id:undefined}>{questionTitle(question)}{question.required?<span className={styles.required}> *</span>:null}</label>
+   {question.hint?<p className={styles.hint}>{questionHint(question)}</p>:null}
+   {question.kind==="hours"?<div className={styles.hours}>
+    <div className={styles.choices}>{["24/7","Lunes a viernes · 9–5","Todos los días · 9–5","Personalizado"].map(mode=><button type="button" key={mode}
+     className={draft.setup.hours_mode===mode?styles.choiceActive:styles.choice} onClick={()=>setHours(mode)}>{choiceLabel(mode)}</button>)}</div>
+    {draft.setup.hours_mode&&<div className={styles.daySchedule}>{days.map(([key,day])=><div className={styles.dayRow} key={key}>
+      <strong>{translate(("agents.wizard.weekday."+key) as MessageKey)}</strong><label className={styles.dayToggle}><input type="checkbox"
+       checked={draft.setup["h_"+key+"_active"]==="Sí"} onChange={e=>{answer("h_"+key+"_active",e.target.checked?"Sí":"No");}}/> {translate("agents.wizard.dayOpen")}</label>
+      {draft.setup["h_"+key+"_active"]==="Sí"&&<div className={styles.dayTimes}>
+       <select aria-label={translate("agents.wizard.opening")+" "+translate(("agents.wizard.weekday."+key) as MessageKey)} value={draft.setup["h_"+key+"_open"]||"09:00"} onChange={e=>answer("h_"+key+"_open",e.target.value)}>{times.slice(0,48).map(x=><option key={x}>{x}</option>)}</select>
+       <span>{translate("agents.wizard.to")}</span>
+       <select aria-label={translate("agents.wizard.closing")+" "+translate(("agents.wizard.weekday."+key) as MessageKey)} value={draft.setup["h_"+key+"_close"]||"17:00"} onChange={e=>answer("h_"+key+"_close",e.target.value)}>{times.slice(1).map(x=><option key={x}>{x}</option>)}</select>
+      </div>}</div>)}</div>}
+    </div>:question.kind==="state"?<select id={"w-"+question.id} className={styles.input} aria-label={questionTitle(question)} value={draft.setup.state||""} onChange={e=>answer("state",e.target.value)}>
+     <option value="">{translate("agents.wizard.chooseState")}</option>{US_STATES.map(x=><option key={x} value={x}>{x}</option>)}</select>:
+    question.kind==="choice"?<div className={styles.choices}>{(question.options||[]).map(opt=><button key={opt} type="button"
+    className={inputValue(draft.setup,question.id)===opt?styles.choiceActive:styles.choice}
+    aria-pressed={inputValue(draft.setup,question.id)===opt}
+    onClick={()=>answer(question.id,opt)}>{inputValue(draft.setup,question.id)===opt?<CheckCircle2 size={15}/>:null}{choiceLabel(opt)}</button>)}</div>:
+    question.kind==="textarea"?<textarea id={"w-"+question.id} rows={3} maxLength={500} className={styles.input}
+     placeholder={translate("agents.wizard.shortAnswer")} value={inputValue(draft.setup,question.id)} onChange={e=>answer(question.id,e.target.value)}/>:
+    <input id={"w-"+question.id} type="text" maxLength={200} className={styles.input}
+     placeholder={question.hint?questionHint(question):translate("agents.wizard.writeHere")} value={inputValue(draft.setup,question.id)} onChange={e=>answer(question.id,e.target.value)}/>}
+   </div>)}
+   {false?<div className={styles.connections}>
+    <div className={styles.connection}><CalendarDays size={21}/><span><strong>VMV Scheduling</strong><small>{translate("agents.wizard.connectorUnavailable")}</small></span><b>{translate("agents.wizard.notConnected")}</b></div>
+    <div className={styles.connection}><PlugZap size={21}/><span><strong>VMV Inventory</strong><small>{translate("agents.wizard.connectorUnavailable")}</small></span><b>{translate("agents.wizard.notConnected")}</b></div>
+    {(yesCalendar||yesInventory)?<p className={styles.connectionNote}>{translate("agents.wizard.connectorNote")}</p>:null}
+   </div>:null}
+  </div>:null}
+  {step===steps.length-1?<div className={styles.review}>
+    <div className={styles.reviewCard}><strong>{draft.name||translate("agents.wizard.unnamed")}</strong><span>{draft.purpose||translate("agents.wizard.noPurpose")}</span></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.business")}</span><b>{draft.setup.business_name||"—"}</b></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.location")}</span><b>{[draft.setup.city,draft.setup.country==="Otro país"?draft.setup.region_other:draft.setup.state,draft.setup.country].filter(Boolean).join(", ")||"—"}</b></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.hours")}</span><b>{draft.setup.hours_mode?choiceLabel(draft.setup.hours_mode):translate("agents.wizard.notDefined")}</b></div>
+    {draft.kind==="bookings"&&<div className={styles.reviewLine}><span>{translate("agents.wizard.advanceBooking")}</span><b>{draft.setup.booking_lead||"—"}</b></div>}
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.reviewVoice")}</span><b>{draft.setup.voice_preset==="female"?choiceLabel("Femenina · Polly"):draft.setup.voice_preset==="male"?choiceLabel("Masculina · Polly"):translate("agents.wizard.phoneDefault")}</b></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.personality")}</span><b>{draft.personality?choiceLabel(draft.personality):choiceLabel("Amable y profesional")}</b></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.answers")}</span><b>{draft.setup.response_style==="brief"?choiceLabel("Breves"):draft.setup.response_style==="detailed"?choiceLabel("Detalladas"):choiceLabel("Equilibradas")}</b></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.language")}</span><b>{choiceLabel(draft.setup.language_rule||"Español")}</b></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.bookings")}</span><b>{draft.setup.cap_bookings==="Sí"?translate("agents.wizard.bookingsChoice"):translate("agents.notConfigured")}</b></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.inventory")}</span><b>{draft.setup.cap_catalog==="Sí"?translate("agents.wizard.catalogChoice"):translate("agents.notConfigured")}</b></div>
+    <div className={styles.reviewLine}><span>{translate("agents.wizard.oversight")}</span><b>{draft.setup.human_review?choiceLabel(draft.setup.human_review):translate("agents.wizard.human")}</b></div>
+    <div className={styles.reviewMessage}><ShieldCheck size={20}/><p>{translate("agents.wizard.reviewCaution")}</p></div>
+    {isPreview?<p className={styles.previewNote}>{translate("agents.wizard.previewNotice")}</p>:<p className={styles.previewNote}>{translate("agents.wizard.saveAccountNotice")}</p>}
+  </div>:null}
+  {error?<p className={styles.error} role="alert">{error}</p>:null}
+  <div className={styles.actions}>{!useSharedHeader?<button type="button" className={styles.prev} onClick={back}><ArrowLeft size={17}/>{step===0?translate("agents.wizard.cancel"):translate("agents.wizard.back")}</button>:null}
+   {recoverDraft&&step===0?<button type="button" className={styles.prev} disabled={saving||!draft.name.trim()}
+    onClick={()=>{void Promise.resolve(onSave(draft)).catch((e:unknown)=>setError(translate("agents.wizard.draftSaveError")));}}>
+    {translate("agents.wizard.saveDraft")}</button>:null}
+   <button type="button" disabled={saving} className={styles.next} onClick={()=>void next()}>{saving?translate("agents.wizard.saving"):step===steps.length-1?translate("agents.wizard.saveAgent"):translate("agents.wizard.continue")}
+   {step===steps.length-1?<Check size={17}/>:<ArrowRight size={17}/>}</button></div>
+ </section>;
+}

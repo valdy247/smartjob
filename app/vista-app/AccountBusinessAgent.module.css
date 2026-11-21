@@ -1,0 +1,30 @@
+.root{display:grid;gap:12px;margin:14px 0}
+.card{width:100%;display:flex;align-items:center;gap:13px;padding:17px;border:1px solid #e8def4;border-radius:22px;background:#fff;color:#1c2536;text-align:left;cursor:pointer;min-width:0;font:inherit}
+.card:disabled{opacity:.65;cursor:wait}
+.businessIcon,.agentIcon{flex-shrink:0;display:grid;place-items:center;width:48px;height:48px;border-radius:16px;color:#7650c4;background:#eee4ff}
+.agentIcon{background:#ddf5ef;color:#167e70}
+.copy{display:grid;gap:5px;min-width:0;flex:1}
+.copy small{font-size:11px;font-weight:800;color:#746987}
+.copy strong{font-size:16px;overflow-wrap:anywhere}
+.copy>span{font-size:11px;color:#82788e;line-height:1.45}
+.selector,.choose label{display:grid;gap:7px;font-size:12px;font-weight:750}
+.selector select,.choose select{width:100%;padding:11px;border:1px solid #e4d9ef;border-radius:12px;background:#fff;color:inherit;font:inherit;box-sizing:border-box}
+.feedback{font-size:12px;line-height:1.5;color:#655774;margin:0}
+.feedback button{display:inline-flex;align-items:center;gap:5px;padding:8px;border:0;background:transparent;color:#7750bd;font-weight:800;cursor:pointer}
+.dialog{padding:16px;width:min(680px,calc(100vw - 20px));max-height:90dvh;border:1px solid #e4d8f2;border-radius:24px;background:#fbf9ff;color:#211c30;box-sizing:border-box;overflow:auto;margin:auto}
+.dialog::backdrop{background:#21122c70}
+.dialog>header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.dialog>header button{width:40px;height:40px;border:0;border-radius:12px;background:#eee5fb;color:#7750bd;font-size:24px;cursor:pointer}
+.choose{display:grid;gap:16px;padding:8px;font-size:13px}
+.choose>button{padding:13px;border:0;border-radius:13px;background:#8a58df;color:white;font-weight:800;cursor:pointer}
+.card:focus-visible,.dialog button:focus-visible{outline:3px solid #8a58df;outline-offset:3px}
+
+.financeIcon{flex-shrink:0;display:grid;place-items:center;width:48px;height:48px;border-radius:16px;background:#e9e7ff;color:#6650bb}
+
+/* Profile is the sole editing and quality workspace for the saved agent. */
+.agentTabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;padding:5px;border:1px solid #e9e0f4;border-radius:14px;background:#f1ebf9;margin:0 0 15px}
+.agentTab,.agentTabActive{min-height:42px;padding:10px 8px;border:0;border-radius:11px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;transition:background .15s,color .15s}
+.agentTab{background:transparent;color:#796b8c}
+.agentTabActive{background:white;color:#7045aa;box-shadow:0 3px 10px #37234814}
+@media(max-width:380px){.agentTab,.agentTabActive{font-size:11px;padding:9px 5px}}
+@media(prefers-reduced-motion:reduce){.agentTab,.agentTabActive{transition:none}}
