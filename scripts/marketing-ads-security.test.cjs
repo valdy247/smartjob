@@ -141,14 +141,27 @@ test("Agent ad wizard preserves Meta preflight rejection details and keeps user 
  assert.match(route,/\.update\(\{error_code:value,updated_at:new Date\(\)\.toISOString\(\)\}\)/);
  assert.match(route,/\.eq\("owner_id",owner\)\.eq\("status","draft"\)/);
  assert.match(route,/createdInMeta:false,adSpendActive:false/);
+ assert.match(route,/metaMessage:error.providerMessage/);
  assert.match(wizard,/Borrador guardado\. /);
  assert.match(wizard,/Meta rechazó los parámetros del anuncio/);
  assert.match(wizard,/Referencia VMV: /);
  assert.doesNotMatch(wizard,/El borrador se guardó, pero Meta no confirmó la campaña pausada/);
  assert.match(history,/Comprobar con Meta · sin publicar/);
  assert.match(history,/c\.status==="draft"\?<button type="button"/);
+ assert.match(history,/creativeChecks\[c\.id\]\.metaMessage/);
  assert.match(creativeCheck,/validateMetaLinkCreative/);
+ assert.match(creativeCheck,/metaTrace:error.traceId/);
  assert.match(creativeCheck,/createdInMeta:false,adSpendActive:false/);
  assert.doesNotMatch(creativeCheck,/operation:"create_paused"/);
  assert.match(route,/process\.env\.VMV_ADS_META_PUBLISH_ENABLED!=="true"/);
+});
+
+test("Meta Graph errors retain sanitized owner-facing explanation and support trace",()=>{
+ const code=fs.readFileSync(path.resolve("lib/vmv-marketing-ads-meta.ts"),"utf8");
+ assert.match(code,/providerMessage:string\|null=null,public traceId:string\|null=null/);
+ assert.match(code,/error_user_msg/);
+ assert.match(code,/fbtrace_id/);
+ assert.match(code,/access_token=\[redacted\]/);
+ assert.match(code,/Bearer \[redacted\]/);
+ assert.match(code,/\\.slice\(0,360\)/);
 });
