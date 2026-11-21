@@ -234,6 +234,18 @@ export async function POST(req:NextRequest){
    p_owner:c.link.owner_id,p_session_id:sessionId,p_response:aiReply
   });
   if(finished.error||finished.data!==true)throw Error("store_reply_failed");
+  const needsPerson=c.settings.human_handoff&&
+   /(no (tengo|cuento con) (esa |la )?informaci[oó]n|no puedo (confirmar|responder|ayudarte)|necesito (que |consultar|verificar)|desconozco|no s[eé] (la |el |si )|i (do not|don't) know|i (cannot|can't) (confirm|answer)|not sure)/i.test(aiReply);
+  if(needsPerson){
+   const escalation=await db.rpc("vmv_web_chat_handoff",{
+    p_owner:c.link.owner_id,p_session:sessionId,p_reason:"handoff"
+   });
+   if(!escalation.error&&escalation.data===true){
+    const response=reply({reply:aiReply+"\nVoy a pedir ayuda a una persona del equipo.",
+     offerContact,mode:"waiting",handoffStatus:"waiting"});
+    setVisitorCookie(response,kind,slug,token,req);return response;
+   }
+  }
   const response=reply({reply:aiReply,offerContact,mode:"bot"});
   setVisitorCookie(response,kind,slug,token,req);
   return response;
