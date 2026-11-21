@@ -1,5 +1,5 @@
 "use client";
-import {useCallback,useEffect,useMemo,useState} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import Link from "next/link";
 import {ArrowLeft,ArrowUpRight,CalendarDays,Check,CheckCircle2,ChevronRight,
  Clapperboard,Download,Film,ImagePlus,Library,LoaderCircle,Play,RefreshCw,
@@ -115,6 +115,8 @@ export default function VideoGeneratorPage(){
  const {language}=useInterfaceLanguage(),en=language==="en";
  const L=(es:string,english:string)=>en?english:es;
  const [screen,setScreen]=useState<Screen>("home");
+ const pilotBack=useRef<(()=>void)|null>(null);
+ const registerPilotBack=useCallback((callback:(()=>void)|null)=>{pilotBack.current=callback;},[]);
  const [jobs,setJobs]=useState<Job[]>([]),[pilots,setPilots]=useState<Pilot[]>([]);
  const [form,setForm]=useState<Form>(initial);
  const [image,setImage]=useState(""),[imageLoading,setImageLoading]=useState(false);
@@ -319,7 +321,7 @@ export default function VideoGeneratorPage(){
  return <main className={styles.page}><div className={styles.shell}>
   <header className={styles.topbar}>
    {screen==="home"?<Link href="/vista-app" className={styles.back}><ArrowLeft size={17}/> VMV Business</Link>:
-    <button type="button" className={styles.back} onClick={()=>open("home")}><ArrowLeft size={17}/>{L("Video Generator","Video Generator")}</button>}
+    <button type="button" className={styles.back} onClick={()=>{if(screen==="pilot"&&pilotBack.current){pilotBack.current();return;}open("home");}}><ArrowLeft size={17}/>{L("Video Generator","Video Generator")}</button>}
    <div className={styles.topRight}><InterfaceLanguagePicker compact/><span className={styles.pill}><Sparkles size={14}/> Beta</span></div>
   </header>
   {screen==="home"?<>
@@ -418,6 +420,7 @@ export default function VideoGeneratorPage(){
    </section>
   </>:null}
   {screen==="pilot"&&ready?<AutopilotWizard initial={pilot} en={en} busy={busy==="pilot"}
+   registerHeaderBack={registerPilotBack}
    onSave={savePilot} onExit={()=>open("home")} onLibrary={()=>open("library")}/>:null}
   {screen==="library"?<>
    <div className={styles.heading}><span className={styles.eyebrow}><Library size={15}/>{L("TUS CREACIONES","YOUR CREATIONS")}</span>
