@@ -5,6 +5,7 @@ import {ArrowLeft,ArrowRight,BookOpen,CheckCircle2,Clapperboard,Download,Film,
  ImageIcon,LoaderCircle,Mic2,Play,RefreshCw,ShieldCheck,Sparkles,WandSparkles,
  Clock3,Smartphone,Monitor,VolumeX} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
+import VMVAuthGateway from "@/components/VMVAuthGateway";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import css from "./page.module.css";
 
@@ -105,10 +106,26 @@ export default function QuickVideoPage(){
  const [error,setError]=useState("");
  const [videoUrl,setVideoUrl]=useState("");
  const [extension,setExtension]=useState("");
+ const [sessionStatus,setSessionStatus]=useState<"loading"|"signed-in"|"signed-out"|"unavailable">("loading");
+ const [loginReturnTo,setLoginReturnTo]=useState("/vista-app/video-generator/quick");
+ const supabase=getSupabase();
+ useEffect(()=>{
+  const client=getSupabase();
+  if(!client){setSessionStatus("unavailable");return;}
+  let live=true;
+  const {data:{subscription}}=client.auth.onAuthStateChange((_event,session)=>{
+   if(live)setSessionStatus(session?"signed-in":"signed-out");
+  });
+  void client.auth.getSession().then(({data,error})=>{
+   if(live)setSessionStatus(error?"signed-out":data.session?"signed-in":"signed-out");
+  }).catch(()=>{if(live)setSessionStatus("signed-out");});
+  return()=>{live=false;subscription.unsubscribe();};
+ },[]);
  const mediaRef=useRef<string[]>([]);
  const resultRef=useRef("");
  const stepNumber=stage==="setup"?step+1:stage==="story"?8:9;
  useEffect(()=>{
+  setLoginReturnTo(window.location.pathname+window.location.search);
   const q=new URLSearchParams(window.location.search);
   const kindParam=q.get("kind"),visualParam=q.get("visual"),topicParam=q.get("topic");
   if(kindParam==="promo"||kindParam==="facts")setKind(kindParam);
@@ -271,6 +288,14 @@ export default function QuickVideoPage(){
   if(resultRef.current)URL.revokeObjectURL(resultRef.current);
   resultRef.current="";setVideoUrl("");
  };
+ if(sessionStatus==="unavailable")return <main className={css.page}><div className={css.shell}>
+  <p className={css.error} role="alert">{L("No se pudo conectar el inicio de sesión. Actualiza la página.","Sign-in couldn't initialize. Refresh the page.")}</p>
+ </div></main>;
+ if(sessionStatus==="loading")return <main className={css.page}><div className={css.shell}>
+  <div className={css.authLoading}><LoaderCircle size={22} className={css.spin}/>{L("Comprobando sesión…","Checking session…")}</div>
+ </div></main>;
+ if(sessionStatus==="signed-out"&&supabase)
+  return <VMVAuthGateway supabase={supabase} compact returnTo={loginReturnTo}/>;
  return <main className={css.page}>
   <div className={css.shell}>
    <header className={css.header}>
