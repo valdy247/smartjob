@@ -18,9 +18,9 @@ test("registration begins with first name, then a personalized greeting and agen
  const first=signupQuestions({})[0];
  assert.equal(first.id,"first");assert.match(first.es,/Hola.*cómo te llamas/i);
  const questions=signupQuestions({first:"Valdy"});
- assert.equal(questions[1].id,"last");assert.match(questions[1].es,/Valdy/);
- assert.equal(questions[2].id,"agent_name");
- assert.equal(questions[3].id,"business_now");
+ assert.equal(questions[1].id,"agent_name");assert.match(questions[1].es,/Valdy/);
+ assert.equal(questions[2].id,"business_now");
+ assert.ok(questions.find(q=>q.id==="last"),"surname is collected later as an account detail");
 });
 test("declining business preserves personal setup without inventing a company",()=>{
  const questions=ids({first:"Valdy",last:"Mena",agent_name:"Papi",business_now:"no"});
