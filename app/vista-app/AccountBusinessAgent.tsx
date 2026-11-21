@@ -1,7 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import {useEffect,useRef,useState} from "react";
-import {Bot,BriefcaseBusiness,ChevronRight,RefreshCw,Wallet} from "lucide-react";
+import {BriefcaseBusiness,ChevronRight,RefreshCw,Wallet} from "lucide-react";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 const BusinessProfileDialog=dynamic(()=>import("./ai-agents/BusinessProfileDialog"));
 import type {WizardDraft} from "./ai-agents/AgentSetupWizard";
@@ -11,6 +11,7 @@ import {businessMissing,centralPrefill,choosePrincipalAgent,loadBusinessChoices,
 import {loadAgents,storeAgent,type PersistedAgent} from "./ai-agents/agentStore";
 import {inspectAgent} from "./ai-agents/agentQuality";
 import styles from "./AccountBusinessAgent.module.css";
+import AgentSettingsEntry from "./AgentSettingsEntry";
 
 function AgentDialog({children,onClose,busy,title}:{children:React.ReactNode;onClose:()=>void;busy:boolean;title:string}){
  const ref=useRef<HTMLDialogElement>(null);
@@ -119,9 +120,13 @@ export default function AccountBusinessAgent({ownerId,initialName=""}:{ownerId:s
   <button type="button" className={styles.card} disabled={loading||Boolean(error)} onClick={()=>setBusinessOpen(true)}>
    <span className={styles.businessIcon}><BriefcaseBusiness size={23}/></span><span className={styles.copy}><small>{L("Mi negocio","My business")}</small><strong>{loading?L("Cargando…","Loading…"):business?.name||L("Configura tu negocio","Set up your business")}</strong><span>{business?(businessMissing(business).length?L("Completar perfil","Complete profile"):L("Editar perfil","Edit profile")):L("Tus datos, una sola vez","Your details, just once")}</span></span><ChevronRight size={18}/>
   </button>
-  <button type="button" className={styles.card} disabled={loading||Boolean(error)||Boolean(agentError)} onClick={()=>openAgent()}>
-   <span className={styles.agentIcon}><Bot size={23}/></span><span className={styles.copy}><small>{L("Mi agente","My agent")}</small><strong>{loading?L("Cargando…","Loading…"):principal?.name||(scopedAgents.length?L("Elige tu agente principal","Choose your primary agent"):L("Configura tu agente","Set up your agent"))}</strong><span>{!business?L("Primero completa tu negocio","Complete your business first"):principal?(inspectAgent(principal).requiredPassed?L("Editar identidad y configuración","Edit identity and settings"):L("Completar configuración","Complete setup")):L("Nombre, personalidad y funciones","Name, personality and capabilities")}</span></span><ChevronRight size={18}/>
-  </button>
+  <AgentSettingsEntry
+   label={L("Mi agente","My agent")}
+   name={loading?L("Cargando…","Loading…"):principal?.name||(scopedAgents.length?L("Elige tu agente principal","Choose your primary agent"):L("Configura tu agente","Set up your agent"))}
+   description={!business?L("Primero completa tu negocio","Complete your business first"):principal?(inspectAgent(principal).requiredPassed?L("Editar identidad y configuración","Edit identity and settings"):L("Completar configuración","Complete setup")):L("Nombre, personalidad y funciones","Name, personality and capabilities")}
+   disabled={loading||Boolean(error)||Boolean(agentError)}
+   onClick={()=>openAgent()}
+  />
   <a className={styles.card} href={"/vista-app/finanzas"+(businessId?"?business="+encodeURIComponent(businessId):"")}
    style={{textDecoration:"none"}}>
    <span className={styles.financeIcon}><Wallet size={23}/></span>
