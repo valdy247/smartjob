@@ -70,7 +70,7 @@ test("Preview Runway only starts after independent human credit authorization",(
  assert.match(wizard,/\/api\/video-generator",\{/);
  assert.match(wizard,/setJobId\(result.job.id\);move\("result"\)/);
  assert.match(wizard,/Texto a imagen/);
- assert.match(wizard,/Mejorar con IA/);
+ assert.match(wizard,/VideoPromptAssistant value=\{prompt\}/);
  assert.doesNotMatch(wizard,/automaticPublish|publish\(|postToInstagram|activate\(/);
 });
 test("Video wizard uses consistent white-background soft color shifts and reduced-motion support",()=>{
