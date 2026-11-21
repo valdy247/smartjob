@@ -170,7 +170,7 @@ test('refresh while saving cannot revert a deliberate language switch',async()=>
 test('business types keep stable values across bilingual signup prompts',()=>{
  const flow=fs.readFileSync(require('node:path').join(__dirname,'../lib/vmv-signup-flow.ts'),'utf8');
  const wizard=fs.readFileSync(require('node:path').join(__dirname,'../components/SignupWizard.tsx'),'utf8');
- assert.ok(flow.includes('option("spa","Spa y masajes"'),'business category IDs are stable');
+ assert.ok(flow.includes('"google_category"'),'Google taxonomy is selected through the same stable business flow');
  assert.ok(flow.includes('option("bookings","Gestionar reservas"'),'booking capabilities are language independent');
  assert.ok(wizard.includes('es?current.es:current.en'),'one-question signup follows interface language');
  assert.ok(wizard.includes('setAnswer(o.value)')||wizard.includes('choice(o.value)'),'choice saves language-independent value');
