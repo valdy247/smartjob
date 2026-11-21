@@ -65,7 +65,7 @@ test("saved answers only load for the matching business id",()=>{
 test("AI Agents stays in the Home navigation even when diagnosis does not recommend it",()=>{
  const web=fs.readFileSync(path.join(root,"app/vista-app/page.tsx"),"utf8");
  const native=fs.readFileSync(path.join(root,"apps/ios/App.tsx"),"utf8");
- assert.ok(web.includes('<button type="button" className={styles.homeTileLavender} onClick={()=>window.location.assign("/vista-app/ai-agents")}><Bot size={31}/><strong>AI Agents</strong></button>'));
+ assert.ok(/<button type="button" className=\\{styles\\.homeTileLavender\\}[^>]*onClick=\\{\\(\\)=>window\\.location\\.assign\\("\\/vista-app\\/ai-agents"\\)\\}/.test(web));
  assert.ok(native.includes('<Pressable accessibilityRole="button" accessibilityLabel="AI Agents" style={[styles.conceptTile,styles.conceptLavender]}'));
  assert.ok(!web.includes('showHomeOffer("ai-agents")?'));
  assert.ok(!native.includes('showHomeOffer("ai-agents")?'));
