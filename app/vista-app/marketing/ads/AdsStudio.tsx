@@ -678,6 +678,11 @@ export default function AdsStudio({mode="wizard",registerHeaderBack}:{mode?:"wiz
      <a href="/vista-app/soporte" className={styles.secondary}>{localized("Solicitar ayuda","Get support")}</a>
     </div>:null}
     <div className={styles.inlineActions}>
+     {c.status==="draft"?<button type="button" className={styles.secondary} disabled={!!busy}
+      onClick={()=>void checkCreative(c)}>
+      {busy==="creative:"+c.id?<LoaderCircle size={15} className={styles.spinIcon}/>:<ShieldCheck size={15}/>}
+      {localized("Comprobar con Meta · sin publicar","Check with Meta · no publishing")}
+     </button>:null}
      {c.status==="draft"?<a className={styles.primary} href={"/vista-app/marketing/ads/create?draft="+encodeURIComponent(c.id)}>
       {localized("Continuar campaña","Resume campaign")}</a>:null}
      {c.status==="paused"&&publishReady?<button className={styles.primary} type="button" disabled={!!busy} onClick={()=>publish(c)}>
