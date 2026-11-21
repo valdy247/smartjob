@@ -72,7 +72,8 @@ test("First-time product setup preserves agent identity, permissions and catalog
  assert.match(hub,/toggleCatalogRead/);
  assert.match(hub,/ProductImageField/);
  assert.match(bookings,/vmv_ai_booking_services/);
- assert.match(bookings,/vmv_ai_booking_slots/);
+ assert.match(bookings,/vmv_ai_booking_availability/);
+ assert.match(read(base+"BookingStudio.tsx"),/vmv_ai_booking_slots/);
  assert.match(bookings,/storeAgent\(\{\.\.\.agent,setup/);
  assert.match(bookings,/cap_bookings:enabled/);
  assert.match(bookings,/perm_book_service:enabled&&confirm/);
