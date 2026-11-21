@@ -90,8 +90,8 @@ const safeSite=(value:string)=>{
 // Technical API errors are not localized; never render their raw messages in either locale.
 const errorMessage=(_error:unknown,localizedFallback:string)=>localizedFallback;
 
-export default function MarketingActionCenter({businessName,industryId,website,onGoToVisibility,preselectedService,onWizardActiveChange,requestsOnly=false}:{
- businessName:string;industryId:string;website:string;onGoToVisibility:()=>void;preselectedService?:ServiceCode;onWizardActiveChange?:(active:boolean)=>void;requestsOnly?:boolean
+export default function MarketingActionCenter({businessName,industryId,website,onGoToVisibility,preselectedService,onWizardActiveChange,requestsOnly=false,openSocialCaptions=false}:{
+ businessName:string;industryId:string;website:string;onGoToVisibility:()=>void;preselectedService?:ServiceCode;onWizardActiveChange?:(active:boolean)=>void;requestsOnly?:boolean;openSocialCaptions?:boolean
 }){
  const {language,translate}=useInterfaceLanguage();
  const [contentLanguage]=useState(language);
@@ -134,7 +134,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
  const [caseActionBusy,setCaseActionBusy]=useState(false);
  const [selected,setSelected]=useState<ServiceCode>(preselectedService||"google_profile");
  const [wizardStep,setWizardStep]=useState<WizardStep>(preselectedService?1:0);
- const [socialPreviewOpen,setSocialPreviewOpen]=useState(false);
+ const [socialPreviewOpen,setSocialPreviewOpen]=useState(openSocialCaptions);
  const [googleStep,setGoogleStep]=useState(0);
  const [editLoadedGoogle,setEditLoadedGoogle]=useState(false);
  const [webStage,setWebStage]=useState(0);
@@ -880,13 +880,13 @@ export default function MarketingActionCenter({businessName,industryId,website,o
      <div className={styles.servicePicker}>
       {services.filter(service=>["google_profile","seo_improvement","review_strategy"].includes(service.id)).map(service=>{
        const ServiceIcon=serviceIcons[service.id];
-       return <button type="button" key={service.id} onClick={()=>chooseService(service.id)} className={styles.serviceTile} aria-label={translate("marketing.action.chooseServiceAria",{service:serviceName(service.id)})}>
+       return <button type="button" key={service.id} data-vmv-shortcut-id={service.id==="google_profile"?"google-profile":service.id==="seo_improvement"?"seo":"reputation"} onClick={()=>chooseService(service.id)} className={styles.serviceTile} aria-label={translate("marketing.action.chooseServiceAria",{service:serviceName(service.id)})}>
         <span className={styles.serviceIcon}><ServiceIcon size={23} strokeWidth={1.8}/></span>
         <span className={styles.serviceText}><strong>{serviceName(service.id)}</strong><small>{serviceWhy(service.id)}</small></span>
         <span className={styles.serviceCta}>{en?"Start":"Empezar"}</span>
        </button>;
       })}
-      <button type="button" onClick={()=>setSocialPreviewOpen(true)} className={styles.serviceTile} aria-label={en?"Create social media captions":"Crear descripciones para redes"}>
+      <button type="button" data-vmv-shortcut-id="social-captions" onClick={()=>setSocialPreviewOpen(true)} className={styles.serviceTile} aria-label={en?"Create social media captions":"Crear descripciones para redes"}>
        <span className={styles.serviceIcon}><Video size={23} strokeWidth={1.8}/></span>
        <span className={styles.serviceText}><strong>{en?"Social media captions":"Descripciones para redes"}</strong><small>{en?"Caption suggestions from your videos.":"Descripciones recomendadas a partir de tus videos."}</small></span>
        <span className={styles.serviceCta}>{en?"Start":"Empezar"}</span>
