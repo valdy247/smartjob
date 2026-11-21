@@ -877,7 +877,7 @@ export default function MarketingActionCenter({businessName,industryId,website,o
      </li>)}
     </ol>:null}
     {wizardStep===0?(socialPreviewOpen?<SocialCaptionPreview businessName={name} onBack={()=>setSocialPreviewOpen(false)}/>:<div className={styles.wizardBody}>
-     <div className={styles.servicePicker}>
+     <div className={styles.servicePicker} data-vmv-shortcut-scope="marketing-actions">
       {services.filter(service=>["google_profile","seo_improvement","review_strategy"].includes(service.id)).map(service=>{
        const ServiceIcon=serviceIcons[service.id];
        return <button type="button" key={service.id} data-vmv-shortcut-id={service.id==="google_profile"?"google-profile":service.id==="seo_improvement"?"seo":"reputation"} onClick={()=>chooseService(service.id)} className={styles.serviceTile} aria-label={translate("marketing.action.chooseServiceAria",{service:serviceName(service.id)})}>
