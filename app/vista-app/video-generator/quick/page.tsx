@@ -68,23 +68,21 @@ export default function QuickVideoPage(){
  const {language}=useInterfaceLanguage(),en=language==="en";
  const L=(es:string,english:string)=>en?english:es;
  const questionTitles:[string,string][]=[
-  ["¿Qué quieres crear?","What do you want to create?"],
+  ["Elige tu estilo","Choose your style"],
   ["¿De qué trata el video?","What's your video about?"],
-  ["¿Qué estilo prefieres?","Choose your visual style"],
-  ["¿Cuánto debe durar?","How long should it be?"],
-  ["¿En qué formato?","Choose the format"],
-  ["¿Quieres narración?","Add a voice-over?"],
-  ["¿Listo para comenzar?","Ready to create?"]
+  ["Ajustes del video","Video settings"],
+  ["Revisa tu creación","Review your creation"]
  ];
  const goPrevious=()=>{
   if(working)return;
-  if(stage!=="setup"){resetMedia();setStage("setup");setStep(6);return;}
+  if(stage==="ready"){setStage("story");setError("");return;}
+  if(stage==="story"){setStage("setup");setStep(3);setError("");return;}
   if(step>0){setStep(current=>current-1);setError("");return;}
-  window.location.assign("/vista-app/video-generator?setup=autopilot");
+  window.location.assign("/vista-app/video-generator");
  };
  const goNext=()=>{
   if(working)return;
-  if(step<6&&!(step===1&&topic.trim().length<3)){
+  if(step<3&&!(step===1&&topic.trim().length<3)){
    setStep(current=>current+1);setError("");
   }
  };
@@ -93,7 +91,7 @@ export default function QuickVideoPage(){
  const [seconds,setSeconds]=useState<15|30>(30);
  const [ratio,setRatio]=useState<"portrait"|"landscape">("portrait");
  const [narration,setNarration]=useState(true);
- const [topic,setTopic]=useState("VMV Business: ayuda a los emprendedores a organizar y hacer crecer su negocio");
+ const [topic,setTopic]=useState("");
  const [stage,setStage]=useState<Stage>("setup");
  const [step,setStep]=useState(0);
  const [title,setTitle]=useState("");
@@ -123,7 +121,7 @@ export default function QuickVideoPage(){
  },[]);
  const mediaRef=useRef<string[]>([]);
  const resultRef=useRef("");
- const stepNumber=stage==="setup"?step+1:stage==="story"?8:9;
+ const stepNumber=stage==="setup"?step+1:stage==="story"?5:6;
  useEffect(()=>{
   setLoginReturnTo(window.location.pathname+window.location.search);
   const q=new URLSearchParams(window.location.search);
@@ -139,19 +137,16 @@ export default function QuickVideoPage(){
   resultRef.current="";setVideoUrl("");setImages({});setAudio(null);setApproved(false);
  };
  const changeKind=(next:Kind)=>{
-  resetMedia();setKind(next);setStage("setup");setError("");
-  setTopic(next==="promo"?
-   "VMV Business: ayuda a los emprendedores a organizar y hacer crecer su negocio":
-   "Datos curiosos y sorprendentes sobre el universo");
+  setKind(next);setError("");
  };
  const plan=async()=>{
   if(working||topic.trim().length<3)return;
-  setWorking("story");setError("");setProgress("");resetMedia();
+  setWorking("story");setError("");setProgress("");
   try{
    const r=await post("storyboard",{kind,visual,topic:topic.trim(),seconds,language:en?"en":"es"});
    const data=await r.json() as {title:string;scenes:Scene[]};
    if(!Array.isArray(data.scenes)||data.scenes.length<4)throw Error("storyboard_retry");
-   setTitle(data.title);setScenes(data.scenes);setStage("story");
+   resetMedia();setTitle(data.title);setScenes(data.scenes);setStage("story");
   }catch(e){setError(e instanceof Error?e.message:"storyboard_unavailable");}
   finally{setWorking("");}
  };
@@ -299,94 +294,85 @@ export default function QuickVideoPage(){
  return <main className={css.page}>
   <div className={css.shell}>
    <header className={css.header}>
-    <Link href="/vista-app/video-generator?setup=autopilot" className={css.back}><ArrowLeft size={18}/> VMV Business</Link>
+    <Link href="/vista-app/video-generator" className={css.back}><ArrowLeft size={18}/> Video Generator</Link>
     <span className={css.preview}><Sparkles size={14}/> Beta</span>
    </header>
    <div className={css.wizardTop}>
     <span className={css.eyebrow}><Clapperboard size={15}/> VIDEO WIZARD</span>
-    <span className={css.stepCounter}>{L("Paso","Step")} {stepNumber}/9</span>
+    <span className={css.stepCounter}>{L("Paso","Step")} {stepNumber}/6</span>
    </div>
    <div className={css.track} role="progressbar" aria-label={L("Progreso del Wizard","Wizard progress")}
-     aria-valuemin={1} aria-valuemax={9} aria-valuenow={stepNumber}>
-    <span style={{width:(stepNumber/9*100)+"%"}}/>
+     aria-valuemin={1} aria-valuemax={6} aria-valuenow={stepNumber}>
+    <span style={{width:(stepNumber/6*100)+"%"}}/>
    </div>
    {stage==="setup"?<>
     <section className={css.wizardHead} aria-live="polite">
-     <span className={css.headIcon}>
-      {step===0?<Clapperboard size={28}/>:step===1?<WandSparkles size={28}/>:
-       step===2?<Film size={28}/>:step===3?<Clock3 size={28}/>:
-       step===4?<Smartphone size={28}/>:step===5?<Mic2 size={28}/>:<CheckCircle2 size={28}/>}
-     </span>
+     <span className={css.headIcon}>{step===0?<Film size={28}/>:step===1?<WandSparkles size={28}/>:
+      step===2?<Clock3 size={28}/>:<CheckCircle2 size={28}/>}</span>
      <h1>{questionTitles[step][en?1:0]}</h1>
     </section>
     <section className={css.wizardContent} key={step}>
      {step===0?<div className={css.optionGrid}>
-      <button type="button" aria-pressed={kind==="promo"} className={kind==="promo"?css.optionSelected:css.option}
-       onClick={()=>changeKind("promo")}><span className={css.optionIcon}><Clapperboard size={29}/></span>
-       <strong>{L("Promoción","Promotion")}</strong>{kind==="promo"?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
-      <button type="button" aria-pressed={kind==="facts"} className={kind==="facts"?css.optionSelected:css.option}
-       onClick={()=>changeKind("facts")}><span className={css.optionIcon}><BookOpen size={29}/></span>
-       <strong>{L("Datos curiosos","Fun facts")}</strong>{kind==="facts"?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
-     </div>:null}
-     {step===1?<div className={css.topicWrap}>
-      <textarea autoFocus id="vmv-quick-topic" aria-label={L("Describe la idea del video","Describe your video idea")}
-       className={css.topic} rows={4} maxLength={220} value={topic}
-       placeholder={L("Escribe tu idea…","Write your idea…")} onChange={e=>setTopic(e.target.value)}/>
-      <span className={css.counter}>{topic.length}/220</span>
-     </div>:null}
-     {step===2?<div className={css.optionGrid}>
       <button type="button" aria-pressed={visual==="sticks"} className={visual==="sticks"?css.optionSelected:css.option}
        onClick={()=>setVisual("sticks")}><span className={css.optionIcon}><Film size={29}/></span>
-       <strong>Stick figure</strong><small>Cartoon 2D</small>
+       <strong>Stickman 2D</strong><small>{L("Personajes de palitos animados","Animated stick figures")}</small>
        {visual==="sticks"?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
       <button type="button" aria-pressed={visual==="stills"} className={visual==="stills"?css.optionSelected:css.option}
        onClick={()=>setVisual("stills")}><span className={css.optionIcon}><ImageIcon size={29}/></span>
-       <strong>{L("Imágenes IA","AI images")}</strong><small>{L("Estáticas","Still frames")}</small>
+       <strong>{L("Imágenes IA","AI images")}</strong><small>{L("Escenas ilustradas","Illustrated scenes")}</small>
        {visual==="stills"?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
      </div>:null}
-     {step===3?<div className={css.optionGrid}>
-      {([15,30] as const).map(n=><button type="button" key={n}
-       aria-pressed={seconds===n} className={seconds===n?css.optionSelected:css.option}
-       onClick={()=>setSeconds(n)}><span className={css.optionIcon}><Clock3 size={29}/></span>
-       <strong className={css.largeValue}>{n} s</strong>
-       {seconds===n?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>)}
+     {step===1?<div className={css.topicWrap}>
+      <div className={css.compactOptions}>
+       <button type="button" aria-pressed={kind==="promo"} className={kind==="promo"?css.compactActive:css.compactOption}
+        onClick={()=>changeKind("promo")}><Clapperboard size={16}/>{L("Promoción","Promotion")}</button>
+       <button type="button" aria-pressed={kind==="facts"} className={kind==="facts"?css.compactActive:css.compactOption}
+        onClick={()=>changeKind("facts")}><BookOpen size={16}/>{L("Datos curiosos","Fun facts")}</button>
+      </div>
+      <textarea autoFocus id="vmv-quick-topic" aria-label={L("Describe la idea del video","Describe your video idea")}
+       className={css.topic} rows={4} maxLength={220} value={topic}
+       placeholder={L("Ej. Un stickman explica 3 errores al emprender","E.g. A stick figure explains 3 business mistakes")}
+       onChange={e=>setTopic(e.target.value)}/>
+      <span className={css.counter}>{topic.length}/220</span>
      </div>:null}
-     {step===4?<div className={css.optionGrid}>
-      <button type="button" aria-pressed={ratio==="portrait"} className={ratio==="portrait"?css.optionSelected:css.option}
-       onClick={()=>setRatio("portrait")}><span className={css.optionIcon}><Smartphone size={29}/></span>
-       <strong>9:16</strong><small>{L("Vertical","Portrait")}</small>
-       {ratio==="portrait"?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
-      <button type="button" aria-pressed={ratio==="landscape"} className={ratio==="landscape"?css.optionSelected:css.option}
-       onClick={()=>setRatio("landscape")}><span className={css.optionIcon}><Monitor size={29}/></span>
-       <strong>16:9</strong><small>{L("Horizontal","Landscape")}</small>
-       {ratio==="landscape"?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
+     {step===2?<div className={css.settingsStack}>
+      <div className={css.settingsGroup}><strong>{L("Duración","Duration")}</strong>
+       <div className={css.compactOptions}>{([15,30] as const).map(n=>
+        <button key={n} type="button" aria-pressed={seconds===n}
+         className={seconds===n?css.compactActive:css.compactOption} onClick={()=>setSeconds(n)}>{n} s</button>)}</div>
+      </div>
+      <div className={css.settingsGroup}><strong>{L("Formato","Format")}</strong>
+       <div className={css.compactOptions}>
+        <button type="button" aria-pressed={ratio==="portrait"} className={ratio==="portrait"?css.compactActive:css.compactOption}
+         onClick={()=>setRatio("portrait")}><Smartphone size={16}/>{L("Vertical","Vertical")} 9:16</button>
+        <button type="button" aria-pressed={ratio==="landscape"} className={ratio==="landscape"?css.compactActive:css.compactOption}
+         onClick={()=>setRatio("landscape")}><Monitor size={16}/>{L("Horizontal","Landscape")} 16:9</button>
+       </div>
+      </div>
+      <div className={css.settingsGroup}><strong>{L("Narración","Narration")}</strong>
+       <div className={css.compactOptions}>
+        <button type="button" aria-pressed={narration} className={narration?css.compactActive:css.compactOption}
+         onClick={()=>setNarration(true)}><Mic2 size={16}/>{L("Con voz","With voice")}</button>
+        <button type="button" aria-pressed={!narration} className={!narration?css.compactActive:css.compactOption}
+         onClick={()=>setNarration(false)}><VolumeX size={16}/>{L("Sin voz","No voice")}</button>
+       </div>
+      </div>
      </div>:null}
-     {step===5?<div className={css.optionGrid}>
-      <button type="button" aria-pressed={narration} className={narration?css.optionSelected:css.option}
-       onClick={()=>setNarration(true)}><span className={css.optionIcon}><Mic2 size={29}/></span>
-       <strong>{L("Con narración IA","AI narration")}</strong>
-       {narration?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
-      <button type="button" aria-pressed={!narration} className={!narration?css.optionSelected:css.option}
-       onClick={()=>setNarration(false)}><span className={css.optionIcon}><VolumeX size={29}/></span>
-       <strong>{L("Sin narración","No narration")}</strong>
-       {!narration?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
-     </div>:null}
-     {step===6?<div className={css.reviewGrid}>
-      <span><Clapperboard size={17}/>{kind==="promo"?L("Promoción","Promotion"):L("Datos curiosos","Fun facts")}</span>
-      <span><Film size={17}/>{visual==="sticks"?"Stick figure":L("Imágenes IA","AI images")}</span>
-      <span><Clock3 size={17}/>{seconds} s</span>
-      <span>{ratio==="portrait"?<Smartphone size={17}/>:<Monitor size={17}/>}
-       {ratio==="portrait"?"9:16":"16:9"}</span>
-      <span><Mic2 size={17}/>{narration?L("Con voz","Voice on"):L("Sin voz","No voice")}</span>
+     {step===3?<div className={css.reviewGrid}>
+      <button type="button" onClick={()=>setStep(0)}><Film size={17}/>{visual==="sticks"?"Stickman 2D":L("Imágenes IA","AI images")}</button>
+      <button type="button" onClick={()=>setStep(1)}><WandSparkles size={17}/>{topic.slice(0,75)}</button>
+      <button type="button" onClick={()=>setStep(2)}><Clock3 size={17}/>{seconds} s · {ratio==="portrait"?"9:16":"16:9"}</button>
+      <button type="button" onClick={()=>setStep(2)}><Mic2 size={17}/>{narration?L("Con voz","With voice"):L("Sin voz","Without voice")}</button>
      </div>:null}
     </section>
     <div className={css.wizardActions}>
      <button type="button" className={css.backAction} onClick={goPrevious} disabled={Boolean(working)}>
       <ArrowLeft size={18}/>{L("Atrás","Back")}
      </button>
-     {step<6?<button type="button" className={css.nextAction} disabled={Boolean(working)||(step===1&&topic.trim().length<3)}
+     {step<3?<button type="button" className={css.nextAction} disabled={Boolean(working)||(step===1&&topic.trim().length<3)}
       onClick={goNext}>{L("Continuar","Continue")}<ArrowRight size={19}/></button>:
-      <button type="button" className={css.nextAction} disabled={Boolean(working)} onClick={()=>void plan()}>
+      <button type="button" className={css.nextAction} disabled={Boolean(working)||topic.trim().length<3}
+       onClick={()=>void plan()}>
        {working==="story"?<LoaderCircle size={19} className={css.spin}/>:<WandSparkles size={19}/>}
        {working==="story"?L("Preparando…","Preparing…"):L("Crear escenas","Create scenes")}
       </button>}
@@ -394,7 +380,7 @@ export default function QuickVideoPage(){
    </>:null}
    {stage!=="setup"?<section className={css.panel}>
     <div className={css.sectionTitle}>
-     <div><span className={css.eyebrow}>{visual==="sticks"?"STICK FIGURE":"AI STILLS"}</span>
+     <div><span className={css.eyebrow}>{visual==="sticks"?"STICKMAN 2D":"AI IMAGES"}</span>
       <h2>{title}</h2></div>
      <button type="button" className={css.iconButton} onClick={goPrevious} disabled={Boolean(working)} aria-label={L("Editar idea","Edit idea")}><RefreshCw size={18}/></button>
     </div>
@@ -435,7 +421,7 @@ export default function QuickVideoPage(){
     </>:null}
    </section>:null}
    {error?<p className={css.error} role="alert">{errorLabel(error,en)}</p>:null}
-   <p className={css.foot}>{L("Prueba privada · sin publicación automática. El formato de exportación depende del navegador.","Private test · no automatic posting. Export format depends on browser.")}</p>
+   <p className={css.foot}>{L("Descarga el resultado para conservarlo. Los videos de Stickman se producen en este navegador y aún no se sincronizan en la biblioteca de Runway/Kling.","Download your finished video to keep it. Stickman videos are rendered in this browser and are not yet part of the Runway/Kling library.")}</p>
   </div>
  </main>;
 }
