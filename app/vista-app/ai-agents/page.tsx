@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {
  ArrowLeft,ArrowUpRight,Bot,BookOpen,BookCheck,BriefcaseBusiness,CalendarDays,Check,
- ChevronRight,ClipboardList,Headphones,MessageCircle,Package,PauseCircle,
+ ChevronRight,Headphones,MessageCircle,Package,PauseCircle,Settings2,
  PhoneCall,PlayCircle,ShieldCheck,ShoppingBag,Sparkles,WandSparkles,Megaphone,Globe2,Video,FileText,Plus,Workflow
 } from "lucide-react";
 import type {LucideIcon} from "lucide-react";
@@ -11,8 +11,6 @@ import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
 import type {MessageKey} from "@/lib/i18n";
 import BusinessProfileDialog from "./BusinessProfileDialog";
-import AgentSetupWizard,{type WizardDraft} from "./AgentSetupWizard";
-import AgentQualityLab from "./AgentQualityLab";
 import CommerceStudio from "./CommerceStudio";
 import BookingStudio,{type BookingTab} from "./BookingStudio";
 import CallControl from "./CallControl";
@@ -34,8 +32,7 @@ import {loadAgents,loadPhoneSelection,selectPhoneAgent,setStudyStatus,storeAgent
 
 type Kind="calls"|"support"|"sales"|"bookings"|"inventory"|"operations"|"custom";
 type Status="draft"|"active"|"paused";
-type Screen="videoEntry"|"home"|"editor"|"test"|"quality"|"commerce"|"commerceWizard"|"phone"|"bookings"|"bookingsWizard"|"ads"|"web"|"video"|"call"|"quote"|"quoteEntry"|"chatWeb";
-type AgentDraft=WizardDraft;
+type Screen="videoEntry"|"home"|"test"|"commerce"|"commerceWizard"|"phone"|"bookings"|"bookingsWizard"|"ads"|"web"|"video"|"call"|"quote"|"quoteEntry"|"chatWeb";
 type Agent=PersistedAgent;
 const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string;purpose:string}[]=[
  {id:"calls",title:"Llamadas",sub:"Atención telefónica",Icon:PhoneCall,bg:"#ede2ff",fg:"#7143c7",purpose:"Orientar a quien llama y derivar a una persona cuando sea necesario."},
@@ -45,18 +42,10 @@ const types:{id:Kind;title:string;sub:string;Icon:LucideIcon;bg:string;fg:string
  {id:"operations",title:"Administración",sub:"Solicitudes y procesos",Icon:BriefcaseBusiness,bg:"#d7ecff",fg:"#416995",purpose:"Orientar y organizar solicitudes administrativas de forma segura."},
  {id:"custom",title:"A mi medida",sub:"Tu propio objetivo",Icon:WandSparkles,bg:"#e7dfff",fg:"#6b45bb",purpose:"Ayudar con el propósito personalizado del negocio."}
 ];
-function blank(kind:Kind):AgentDraft{
- const item=types.find(t=>t.id===kind)||types.find(t=>t.id==="custom")!;
- return {kind,name:kind==="custom"?"Mi agente":"Agente de "+item.title,
-  purpose:item.purpose,personality:"Amable y profesional",language:"Español",
-  instructions:"",knowledge:"",setup:{}};
-}
 export default function AIAgentsPreview(){
  const {language,translate}=useInterfaceLanguage();
  const [screen,setScreen]=useState<Screen>("home");
  const registeredBack=useRef<(()=>void)|null>(null);
- const [editStep,setEditStep]=useState<0|1|2|3>(0);
- const [draft,setDraft]=useState<AgentDraft>(()=>blank("support"));
  const [agents,setAgents]=useState<Agent[]>([]);
  const [businesses,setBusinesses]=useState<CentralBusiness[]>([]);
  const [workspaces,setWorkspaces]=useState<AiWorkspace[]>([]);
@@ -118,7 +107,6 @@ export default function AIAgentsPreview(){
  const visibleAgents=agents.filter(a=>selectedWorkspace?
   a.business_id===selectedWorkspace.id:legacyId?a.business_id===legacyId:false);
  const unlinked=workspaces.filter(x=>!x.central_business_id);
- const linkedWorkspaceForNew=selectedWorkspace?.id||null;
  const missingBusinessInfo=selectedBusiness?businessMissing(selectedBusiness):[];
  const staleAgents=selectedBusiness&&selectedWorkspace?visibleAgents.filter(a=>
   a.revision>0&&a.setup.central_source_updated_at&&
@@ -188,10 +176,9 @@ export default function AIAgentsPreview(){
     setNotice(translate("agents.notice.linkLegacyWorkspace"));
     return;
    }
-   // Only a genuinely empty workspace may start the one-time identity wizard.
-   setPendingKind(kind);
-   setDraft(centralPrefill(selectedBusiness,blank("support")));
-   setSelected(null);setEditStep(0);setScreen("editor");setNotice("");
+   // The single identity and configuration wizard lives under Profile > My agent.
+   setPendingKind(null);
+   openAgentProfile(undefined,"agent",0,selectedBusiness.id);
   }catch(e){
    setNotice(translate("agents.notice.verifyAgentError"));
   }
@@ -201,7 +188,6 @@ export default function AIAgentsPreview(){
   setAgents(list);setBusinesses(profile.businesses);setWorkspaces(profile.workspaces);setChosenBusiness(id);
   const saved=profile.businesses.find(b=>b.id===id);
   if(!saved)throw Error(translate("agents.notice.businessListError"));
-  if(screen==="editor")setDraft(current=>centralPrefill(saved,current));
   setBusinessDialog(false);setNotice(translate("agents.notice.businessSaved"));
   if(pendingKind){
    const match=profile.workspaces.find(w=>w.central_business_id===id);
@@ -209,51 +195,20 @@ export default function AIAgentsPreview(){
    if(candidate){setPendingKind(null);openFor(pendingKind,candidate);}
    else if(match&&list.filter(a=>a.business_id===match.id).length>0){
     setNotice(translate("agents.notice.choosePrincipalAfterLink"));setPendingKind(null);
-   }else{setDraft(centralPrefill(saved,blank("support")));setSelected(null);setEditStep(0);setScreen("editor");}
+   }else{setPendingKind(null);openAgentProfile(undefined,"agent",0,id);}
   }
  };
- const edit=(agent:Agent,step:0|1|2|3=0)=>{setSelected(agent.id);setEditStep(step);setDraft(selectedBusiness?centralPrefill(selectedBusiness,{...agent,setup:{...agent.setup}}):{
-  name:agent.name,kind:agent.kind,purpose:agent.purpose,personality:agent.personality,
-  language:agent.language,instructions:agent.instructions,knowledge:agent.knowledge,setup:{...agent.setup}
- });setScreen("editor");};
- const save=async(nextDraft:AgentDraft=draft)=>{
-  if(busy)throw Error(translate("agents.notice.alreadySaving"));
-  if(!nextDraft.name.trim())throw Error(translate("agents.notice.agentNameRequired"));
-  setBusy(true);
-  try{
-   const before=selected?agents.find(a=>a.id===selected):null;
-   // Owner selection does not change an existing agent's business or phone binding.
-   const workspaceId=before?.business_id||
-    (selectedBusiness?await provisionAiWorkspace(selectedBusiness.id):linkedWorkspaceForNew);
-   // Saving after the review step approves the current central profile version;
-   // background loads never overwrite an in-progress agent edit.
-   const reviewed=selectedBusiness&&before?.business_id===selectedWorkspace?.id?
-    {...nextDraft,setup:{...nextDraft.setup,
-      central_source_updated_at:selectedBusiness.updated_at}}:nextDraft;
-   const saved=await storeAgent(reviewed,before?.revision?before:null,workspaceId||undefined);
-   try{sessionStorage.removeItem("vmv-ai-unsaved-wizard-v1");}catch{/* storage unavailable */}
-   // The insert response confirms the write. A secondary phone lookup must not
-   // turn a successful save into a misleading failure.
-   setAgents(old=>[saved,...old.filter(a=>a.id!==saved.id)]);
-   setAuthenticated(true);
-   let assigned=true;
-   if(!before&&workspaceId){
-    try{
-     await choosePrincipalAgent(workspaceId,saved.id,null);
-     setWorkspaces(old=>old.map(w=>w.id===workspaceId?{...w,primary_agent_id:saved.id}:w));
-    }catch{assigned=false;}
-   }
-   setNotice(assigned?translate("agents.notice.agentSaved"):
-    translate("agents.notice.primaryChanged"));
-   if(assigned&&pendingKind){const chosen=pendingKind;setPendingKind(null);openFor(chosen,saved);}
-   else{setPendingKind(null);setScreen("home");}
-   void reload().catch(()=>{/* saved record already returned by Supabase */});
-  }catch(e){
-   const message=translate("agents.notice.saveFailed");
-   setNotice(message);
-   throw Error(message);
-  }finally{setBusy(false);}
+ const agentProfileUrl=(agent?:Agent,view:"agent"|"quality"="agent",step:0|1|2|3=0,businessOverride?:string)=>{
+  const businessId=businessOverride||workspaces.find(w=>w.id===agent?.business_id)?.central_business_id||selectedBusiness?.id||"";
+  const params=new URLSearchParams({tab:"account",setup:view});
+  if(businessId)params.set("business",businessId);
+  if(step)params.set("step",String(step));
+  return "/vista-app?"+params.toString();
  };
+ const openAgentProfile=(agent?:Agent,view:"agent"|"quality"="agent",step:0|1|2|3=0,businessOverride?:string)=>{
+  window.location.assign(agentProfileUrl(agent,view,step,businessOverride));
+ };
+ const edit=(agent:Agent,step:0|1|2|3=0)=>openAgentProfile(agent,"agent",step);
  const demo=()=>{
   const schedule=Object.fromEntries(["mon","tue","wed","thu","fri","sat","sun"].flatMap(day=>[
    ["h_"+day+"_active","Sí"],["h_"+day+"_open","09:00"],["h_"+day+"_close","17:00"]]));
@@ -277,7 +232,7 @@ export default function AIAgentsPreview(){
   setNotice(translate("agents.notice.demoLoaded"));
  };
  const test=(agent:Agent)=>{setTestFromChatWeb(false);setSelected(agent.id);setScreen("test");setMessage("");setMessageNotice("");};
- const quality=(agent:Agent)=>{setSelected(agent.id);setScreen("quality");};
+ const quality=(agent:Agent)=>openAgentProfile(agent,"quality");
  const toggleStatus=async(agent:Agent)=>{
   if(busy)return;
   if(!agent.revision){setNotice(translate("agents.notice.saveExampleFirst"));return;}
@@ -348,7 +303,6 @@ export default function AIAgentsPreview(){
  const back=()=>{setScreen("home");setMessageNotice("");};
  const commerceNeedsSetup=(agent:Agent)=>agent.setup.commerce_onboarded!=="Sí"&&
   agent.setup.cap_catalog!=="Sí"&&agent.setup.cap_catalog!=="No";
- const patch=(key:keyof AgentDraft,value:string)=>setDraft(prev=>({...prev,[key]:value}));
  useEffect(()=>{
   if(loading||!authenticated)return;
   const params=new URLSearchParams(window.location.search);
@@ -428,7 +382,7 @@ export default function AIAgentsPreview(){
       <div className={styles.sectionHeading}><div><h2>{translate("agents.capabilities")}</h2>
        </div></div>
       <div className={styles.tiles}>
-       {types.map(type=>{const title=label(type.id);
+       {types.filter(type=>type.id!=="custom"&&type.id!=="operations").map(type=>{const title=label(type.id);
        const configured=principal?.setup||{};
        const status=!principal?translate("agents.status.notConfigured"):
         type.id==="calls"?(phone?.agentId===principal.id&&phone.serverEnrolled?
@@ -497,12 +451,11 @@ export default function AIAgentsPreview(){
          <button type="button" className={styles.buttonPrimary} onClick={()=>test(a)}><MessageCircle size={15}/> {translate("agents.test")}</button>
          {phone&&a.revision>0&&(!selectedWorkspace||principal?.id===a.id)?<button type="button" disabled={busy} className={styles.buttonSecondary}
            onClick={()=>void select(a)}><PhoneCall size={15}/>{phone.agentId===a.id?translate("agents.phoneSelected"):translate("agents.chooseForPhone")}</button>:null}
-         <button type="button" className={styles.buttonSecondary} onClick={()=>quality(a)}><BookCheck size={15}/> {translate("agents.quality")}</button>
          {!principal||principal.id!==a.id?<button type="button" className={styles.buttonSecondary}
           disabled={!selectedWorkspace||busy||!a.revision}
           onClick={()=>void designate(a).catch(e=>setNotice(translate("agents.notice.designateError")))}>
           <Bot size={15}/> {translate("agents.makePrincipal")}</button>:null}
-         <button type="button" className={styles.buttonSecondary} onClick={()=>edit(a)}><ClipboardList size={15}/> {translate("agents.editIdentity")}</button>
+         <a className={styles.buttonSecondary} href={agentProfileUrl(a)}><Settings2 size={15}/> {language==="en"?"Configure":"Configurar"}</a>
          <button type="button" className={styles.buttonSecondary} onClick={()=>void toggleStatus(a)}>
           {a.status==="active"?<PauseCircle size={15}/>:<PlayCircle size={15}/>} {a.status==="active"?translate("agents.pause"):translate("agents.activateStudio")}
          </button>
@@ -513,10 +466,6 @@ export default function AIAgentsPreview(){
      </>:null}
      {businessDialog?<BusinessProfileDialog businessId={selectedBusiness?.id} initialName={workspaces.find(w=>w.id===legacyId)?.name}
       legacy={selectedWorkspace?[]:unlinked} initialLegacyId={legacyId} onClose={()=>{setBusinessDialog(false);setPendingKind(null);}} onSaved={businessSaved}/>:null}
-     {screen==="editor"?<AgentSetupWizard key={(selected||draft.kind)+"-"+editStep+"-"+draft.setup.central_source_updated_at}
-      initial={draft} workspaceId={active?.business_id||selectedWorkspace?.id} onReviewBusiness={current=>{setDraft(current);setBusinessDialog(true);}} initialStep={editStep} saving={busy} isPreview={false} authRequired={!authenticated} recoverDraft={!selected} onCancel={back}
-      onSave={async updated=>{setDraft(updated);await save(updated);}}/>:null}
-     {screen==="quality"&&active?<AgentQualityLab agent={active} onClose={back} onEdit={step=>edit(active,step)}/>:null}
      {screen==="bookings"&&active?<BookingStudio agent={active} initialTab={bookingTab}
       onClose={()=>setScreen("bookingsWizard")}
       onAgentUpdated={updated=>setAgents(old=>old.map(a=>a.id===updated.id?updated:a))}/>:null}
