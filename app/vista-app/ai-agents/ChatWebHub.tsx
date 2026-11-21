@@ -24,7 +24,7 @@ type Conversation={id:string;title:string;created_at:string};
 type VisitorChat={id:string;site_slug:string;site_kind:"classic"|"builder";created_at:string;updated_at:string};
 type Inquiry={id:string;site_slug:string;visitor_name:string;message:string;service:string;status:string;created_at:string};
 type Message={id:string;role:"user"|"assistant";content:string;created_at:string};
-const defaults:Settings={warmth:4,formality:3,reply_style:"balanced",languages:"auto",
+const defaults:Settings={warmth:80,formality:55,reply_style:"balanced",languages:"auto",
  sales_enabled:false,sales_item_ids:[],lead_capture:true,human_handoff:true};
 const norm=(s:string)=>s.trim().toLocaleLowerCase("es");
 const when=(d:string)=>new Date(d).toLocaleDateString("es-US",{month:"short",day:"numeric"});
@@ -305,13 +305,13 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
   </>:null}
   {section==="settings"?<>
    <div className={css.panel}>
-    <div className={css.settingRow}><div><strong>Amabilidad</strong><small>{settings.warmth<=2?"Directo":settings.warmth===3?"Equilibrado":"Cercano"}</small></div>
-     <span>{settings.warmth}/5</span></div>
-    <input type="range" min={1} max={5} step={1} value={settings.warmth}
+    <div className={css.settingRow}><div><strong>Amabilidad</strong><small>{settings.warmth<35?"Directo":settings.warmth<70?"Equilibrado":"Cercano"}</small></div>
+     <span>{settings.warmth}%</span></div>
+    <input type="range" min={1} max={100} step={1} value={settings.warmth}
      onChange={e=>change("warmth",Number(e.target.value))} aria-label="Amabilidad" className={css.slider}/>
-    <div className={css.settingRow}><div><strong>Formalidad</strong><small>{settings.formality<=2?"Casual":settings.formality===3?"Equilibrado":"Profesional"}</small></div>
-     <span>{settings.formality}/5</span></div>
-    <input type="range" min={1} max={5} step={1} value={settings.formality}
+    <div className={css.settingRow}><div><strong>Formalidad</strong><small>{settings.formality<35?"Casual":settings.formality<70?"Equilibrado":"Profesional"}</small></div>
+     <span>{settings.formality}%</span></div>
+    <input type="range" min={1} max={100} step={1} value={settings.formality}
      onChange={e=>change("formality",Number(e.target.value))} aria-label="Formalidad" className={css.slider}/>
     <label className={css.fieldTitle}>Respuesta</label>
     <div className={css.choices}>
@@ -346,7 +346,7 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
    </div>
    <div className={css.panel}>
     <div className={css.panelTitle}><Settings2 size={19}/><strong>Atención al cliente</strong></div>
-    <label className={css.toggle}><span><strong>Recibir contactos</strong><small>Solicitar datos cuando haga falta</small></span>
+    <label className={css.toggle}><span><strong>Guardar contactos</strong><small>Nombre y teléfono o correo, con permiso</small></span>
      <input type="checkbox" checked={settings.lead_capture} onChange={e=>change("lead_capture",e.target.checked)}/></label>
     <label className={css.toggle}><span><strong>Transferir a humano</strong><small>Si el cliente lo pide o hay dudas</small></span>
      <input type="checkbox" checked={settings.human_handoff} onChange={e=>change("human_handoff",e.target.checked)}/></label>
