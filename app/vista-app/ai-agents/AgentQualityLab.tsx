@@ -5,10 +5,12 @@ import {ArrowLeft,BookCheck,Check,CheckCircle2,ChevronDown,ChevronUp,Clipboard,
 import type {WizardDraft} from "./AgentSetupWizard";
 import {inspectAgent} from "./agentQuality";
 import styles from "./AgentQualityLab.module.css";
+import {useAgentHeaderBack} from "./AgentHeaderBack";
 
 type Tab="checklist"|"tests"|"brief";
 type Props={agent:WizardDraft;onClose:()=>void;onEdit:(step:0|1|2|3)=>void};
 export default function AgentQualityLab({agent,onClose,onEdit}:Props){
+ const useSharedHeader=useAgentHeaderBack(onClose);
  const report=useMemo(()=>inspectAgent(agent),[agent]);
  const [tab,setTab]=useState<Tab>("checklist");
  const [expanded,setExpanded]=useState<string|null>(null);
@@ -23,8 +25,8 @@ export default function AgentQualityLab({agent,onClose,onEdit}:Props){
  const requiredMissing=report.missing.filter(c=>c.priority==="required").length;
  const safeSummary=report.requiredPassed?"Configuración esencial cubierta":"Aún faltan datos esenciales";
  return <div className={styles.root}>
-  <div className={styles.topBar}><button type="button" onClick={onClose} className={styles.backButton}>
-   <ArrowLeft size={16}/> Mis agentes</button><span className={styles.previewTag}>LAB · VISTA PREVIA</span></div>
+  <div className={styles.topBar}>{!useSharedHeader?<button type="button" onClick={onClose} className={styles.backButton}>
+   <ArrowLeft size={16}/> Mis agentes</button>:null}<span className={styles.previewTag}>LAB · VISTA PREVIA</span></div>
   <div className={styles.hero}>
    <div className={styles.heroKicker}><Sparkles size={15}/> VMV AGENT QUALITY LAB</div>
    <h1>Antes de hablar,<br/>que esté preparado.</h1>
