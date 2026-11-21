@@ -27,7 +27,7 @@ const safeMeta=(value:unknown):SignupBlueprint=>{
  const v=value as Record<string,unknown>;
  if(v.version!==2||typeof v.businessId!=="string"||typeof v.agentId!=="string"||
   !isId(v.businessId)||!isId(v.agentId)||!Array.isArray(v.serviceIds)||
-  v.serviceIds.length!==4||!v.serviceIds.every(x=>typeof x==="string"&&isId(x))||
+  v.serviceIds.length!==10||!v.serviceIds.every(x=>typeof x==="string"&&isId(x))||
   !v.answers||typeof v.answers!=="object"||Array.isArray(v.answers))
   throw Error("Los datos iniciales no son válidos. Contacta a soporte.");
  const answers:SignupAnswer={};
@@ -39,7 +39,7 @@ const safeMeta=(value:unknown):SignupBlueprint=>{
 export function blueprintForSignup(data:SignupAnswer):SignupBlueprint{
  const answers=Object.fromEntries(Object.entries(data).filter(([key])=>key!=="password"&&key!=="repeat_password"));
  return {version:2,businessId:crypto.randomUUID(),agentId:crypto.randomUUID(),
-  serviceIds:Array.from({length:4},()=>crypto.randomUUID()),answers};
+  serviceIds:Array.from({length:10},()=>crypto.randomUUID()),answers};
 }
 /** Retriable, owner-scoped provisioning ONLY after Supabase confirms verified email. */
 export async function completeSignup(db:SupabaseClient):Promise<{business:boolean;agent:string}>{
@@ -176,7 +176,7 @@ export async function completeSignup(db:SupabaseClient):Promise<{business:boolea
  if(workspaceError||!workspace)throw Error("No se pudo verificar el agente principal.");
  if(!workspace.primary_agent_id)await choosePrincipalAgent(workspaceId,blueprint.agentId,null);
  if(caps(data.capabilities||"").has("bookings")){
-  const count=Math.min(4,Math.max(0,Number(data.booking_count)||0));
+  const count=Math.min(10,Math.max(0,Number(data.booking_count)||0));
   const zone=["America/New_York","America/Chicago","America/Denver","America/Los_Angeles",
    "America/Phoenix","America/Anchorage","Pacific/Honolulu","America/Puerto_Rico"].includes(data.booking_zone)?
    data.booking_zone:"America/New_York";
