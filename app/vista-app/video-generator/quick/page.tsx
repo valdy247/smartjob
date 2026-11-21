@@ -327,6 +327,10 @@ export default function QuickVideoPage(){
       {working==="images"?<LoaderCircle className={css.spin} size={18}/>:<Sparkles size={18}/>}
       {progress||L("Generar imágenes y voz","Generate images and voice")}
      </button>
+     {!working&&scenes.every((_,i)=>Boolean(images[i]))?<button type="button" className={css.skipVoice}
+      onClick={()=>{setNarration(false);setAudio(null);setError("");setStage("ready");}}>
+      {L("Continuar sin narración","Continue without narration")}
+     </button>:null}
     </>:null}
     {stage==="ready"?<>
      <div className={css.done}><CheckCircle2 size={21}/>{L("Escenas listas","Scenes ready")}</div>
