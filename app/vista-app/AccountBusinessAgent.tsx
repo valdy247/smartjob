@@ -6,6 +6,7 @@ import {useInterfaceLanguage} from "@/lib/i18n-web";
 const BusinessProfileDialog=dynamic(()=>import("./ai-agents/BusinessProfileDialog"));
 import type {WizardDraft} from "./ai-agents/AgentSetupWizard";
 const AgentSetupWizard=dynamic(()=>import("./ai-agents/AgentSetupWizard"));
+const AgentQualityLab=dynamic(()=>import("./ai-agents/AgentQualityLab"));
 import {businessMissing,centralPrefill,choosePrincipalAgent,loadBusinessChoices,provisionAiWorkspace,type CentralBusiness,type AiWorkspace} from "./ai-agents/centralBusiness";
 import {loadAgents,storeAgent,type PersistedAgent} from "./ai-agents/agentStore";
 import {inspectAgent} from "./ai-agents/agentQuality";
@@ -23,6 +24,8 @@ export default function AccountBusinessAgent({ownerId,initialName=""}:{ownerId:s
  const [businesses,setBusinesses]=useState<CentralBusiness[]>([]),[workspaces,setWorkspaces]=useState<AiWorkspace[]>([]),[agents,setAgents]=useState<PersistedAgent[]>([]);
  const [businessId,setBusinessId]=useState("");const [loading,setLoading]=useState(true),[error,setError]=useState(""),[agentError,setAgentError]=useState("");
  const [businessOpen,setBusinessOpen]=useState(false),[agentOpen,setAgentOpen]=useState(false),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
+ const [agentView,setAgentView]=useState<"configure"|"quality">("configure");
+ const [agentStep,setAgentStep]=useState<0|1|2|3>(0);
  const [draft,setDraft]=useState<WizardDraft|null>(null),[editing,setEditing]=useState<PersistedAgent|null>(null),[candidate,setCandidate]=useState("");
  const [resumeAgent,setResumeAgent]=useState(false),[setupRequested,setSetupRequested]=useState(false);
  const setupHandled=useRef(false);
@@ -55,8 +58,9 @@ export default function AccountBusinessAgent({ownerId,initialName=""}:{ownerId:s
  useEffect(()=>{
   if(businesses.some(b=>b.id===businessId))try{sessionStorage.setItem("vmv-active-business:"+ownerId,businessId);}catch{/* Optional preference only. */}
  },[ownerId,businessId,businesses]);
- const openAgent=()=>{
-  setNotice("");if(!business){setResumeAgent(true);setBusinessOpen(true);return;}
+ const openAgent=(step:0|1|2|3=0,view:"configure"|"quality"="configure")=>{
+  setNotice("");setAgentStep(step);setAgentView(view);
+  if(!business){setResumeAgent(true);setBusinessOpen(true);return;}
   setCandidate("");setEditing(principal);
   setDraft(centralPrefill(business,principal?{...principal,setup:{...principal.setup}}:{
    name:L("Mi agente","My agent"),kind:"support",purpose:L("Atender a los clientes de mi negocio con información autorizada.","Help my business customers using approved information."),
@@ -66,20 +70,23 @@ export default function AccountBusinessAgent({ownerId,initialName=""}:{ownerId:s
  useEffect(()=>{
   if(loading||error||agentError||setupHandled.current)return;
   const query=new URLSearchParams(window.location.search);
-  if(query.get("setup")!=="agent")return;
+  const setup=query.get("setup");
+  if(setup!=="agent"&&setup!=="quality")return;
   const requested=query.get("business");
   if(requested&&!businesses.some(b=>b.id===requested)){
    setupHandled.current=true;setNotice(L("No tienes acceso al negocio solicitado. Selecciona uno de tu cuenta.","The requested business is unavailable. Select one from your account."));return;
   }
   if(requested&&businessId!==requested){setBusinessId(requested);return;}
-  setupHandled.current=true;setSetupRequested(true);openAgent();
+  const requestedStep=Number(query.get("step")||0);
+  const step=(Number.isInteger(requestedStep)&&requestedStep>=0&&requestedStep<=3?requestedStep:0) as 0|1|2|3;
+  setupHandled.current=true;setSetupRequested(true);openAgent(step,setup==="quality"?"quality":"configure");
  },[loading,error,agentError,businessId,businesses]);
  useEffect(()=>{
   if(resumeAgent&&business&&!loading&&!businessOpen){setResumeAgent(false);openAgent();}
  },[resumeAgent,business,loading,businessOpen]);
  const finishSetup=()=>{
   setSetupRequested(false);
-  const url=new URL(window.location.href);url.searchParams.delete("setup");
+  const url=new URL(window.location.href);url.searchParams.delete("setup");url.searchParams.delete("step");
   window.history.replaceState(null,"",url.pathname+url.search+url.hash);
  };
  const save=async(value:WizardDraft)=>{
@@ -112,7 +119,7 @@ export default function AccountBusinessAgent({ownerId,initialName=""}:{ownerId:s
   <button type="button" className={styles.card} disabled={loading||Boolean(error)} onClick={()=>setBusinessOpen(true)}>
    <span className={styles.businessIcon}><BriefcaseBusiness size={23}/></span><span className={styles.copy}><small>{L("Mi negocio","My business")}</small><strong>{loading?L("Cargando…","Loading…"):business?.name||L("Configura tu negocio","Set up your business")}</strong><span>{business?(businessMissing(business).length?L("Completar perfil","Complete profile"):L("Editar perfil","Edit profile")):L("Tus datos, una sola vez","Your details, just once")}</span></span><ChevronRight size={18}/>
   </button>
-  <button type="button" className={styles.card} disabled={loading||Boolean(error)||Boolean(agentError)} onClick={openAgent}>
+  <button type="button" className={styles.card} disabled={loading||Boolean(error)||Boolean(agentError)} onClick={()=>openAgent()}>
    <span className={styles.agentIcon}><Bot size={23}/></span><span className={styles.copy}><small>{L("Mi agente","My agent")}</small><strong>{loading?L("Cargando…","Loading…"):principal?.name||(scopedAgents.length?L("Elige tu agente principal","Choose your primary agent"):L("Configura tu agente","Set up your agent"))}</strong><span>{!business?L("Primero completa tu negocio","Complete your business first"):principal?(inspectAgent(principal).requiredPassed?L("Editar identidad y configuración","Edit identity and settings"):L("Completar configuración","Complete setup")):L("Nombre, personalidad y funciones","Name, personality and capabilities")}</span></span><ChevronRight size={18}/>
   </button>
   <a className={styles.card} href={"/vista-app/finanzas"+(businessId?"?business="+encodeURIComponent(businessId):"")}
@@ -127,9 +134,14 @@ export default function AccountBusinessAgent({ownerId,initialName=""}:{ownerId:s
   {setupRequested?<p role="status" className={styles.feedback}>{L("Termina de configurar tu agente para usar sus funciones.","Finish setting up your agent to use its capabilities.")}</p>:null}
   {notice?<p role="status" className={styles.feedback}>{notice}</p>:null}
   {businessOpen?<BusinessProfileDialog businessId={business?.id} initialName={initialName||unlinked[0]?.name} legacy={workspace?[]:unlinked} onClose={()=>{wizardDraft.current=null;setBusinessOpen(false);setResumeAgent(false);if(!agentOpen)finishSetup();}} onSaved={async id=>{const profile=await loadBusinessChoices();const refreshed=profile.businesses.find(b=>b.id===id);if(refreshed&&wizardDraft.current){setDraft(centralPrefill(refreshed,wizardDraft.current));wizardDraft.current=null;}setBusinessOpen(false);await reload(id);}}/>:null}
-  {agentOpen&&draft?<AgentDialog title={setupRequested?L("Termina de configurar tu agente","Finish setting up your agent"):L("Mi agente","My agent")} busy={busy} onClose={()=>{setAgentOpen(false);finishSetup();}}>
-   {!principal&&scopedAgents.length>0?<div className={styles.choose}><p>{L("Elige uno de tus agentes existentes. Sus datos e historial se conservarán.","Choose an existing agent. Its data and history will be preserved.")}</p><label>{L("Agente principal","Primary agent")}<select value={candidate} disabled={busy} onChange={e=>setCandidate(e.target.value)}><option value="">{L("Seleccionar","Select")}</option>{scopedAgents.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label><button type="button" disabled={busy||!candidate} onClick={()=>void designate()}>{L("Guardar selección","Save selection")}</button></div>:
-    <AgentSetupWizard key={draft.setup.central_source_updated_at} initial={draft} workspaceId={workspace?.id} onReviewBusiness={current=>{wizardDraft.current=current;setBusinessOpen(true);}} onSave={save} saving={busy} onCancel={()=>{setAgentOpen(false);finishSetup();}} recoverDraft={false}/>}
+  {agentOpen&&draft?<AgentDialog title={L("Mi agente","My agent")} busy={busy} onClose={()=>{setAgentOpen(false);setAgentView("configure");finishSetup();}}>
+   {principal?<div className={styles.agentTabs} role="tablist" aria-label={L("Opciones de Mi agente","My agent settings")}>
+    <button type="button" role="tab" aria-selected={agentView==="configure"} className={agentView==="configure"?styles.agentTabActive:styles.agentTab} onClick={()=>setAgentView("configure")}>{L("Configuración","Settings")}</button>
+    <button type="button" role="tab" aria-selected={agentView==="quality"} className={agentView==="quality"?styles.agentTabActive:styles.agentTab} onClick={()=>setAgentView("quality")}>{L("Calidad y actividad","Quality & activity")}</button>
+   </div>:null}
+   {agentView==="quality"&&principal?<AgentQualityLab agent={principal} onClose={()=>setAgentView("configure")} onEdit={step=>{setAgentStep(step);setAgentView("configure");}}/>:
+   !principal&&scopedAgents.length>0?<div className={styles.choose}><p>{L("Elige uno de tus agentes existentes. Sus datos e historial se conservarán.","Choose an existing agent. Its data and history will be preserved.")}</p><label>{L("Agente principal","Primary agent")}<select value={candidate} disabled={busy} onChange={e=>setCandidate(e.target.value)}><option value="">{L("Seleccionar","Select")}</option>{scopedAgents.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label><button type="button" disabled={busy||!candidate} onClick={()=>void designate()}>{L("Guardar selección","Save selection")}</button></div>:
+    <AgentSetupWizard key={draft.setup.central_source_updated_at+"-"+agentStep} initialStep={agentStep} initial={draft} workspaceId={workspace?.id} onReviewBusiness={current=>{wizardDraft.current=current;setBusinessOpen(true);}} onSave={save} saving={busy} onCancel={()=>{setAgentOpen(false);finishSetup();}} recoverDraft={false}/>}
   </AgentDialog>:null}
  </section>;
 }
