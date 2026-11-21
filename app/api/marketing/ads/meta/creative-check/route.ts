@@ -36,7 +36,14 @@ export async function POST(req:NextRequest){
   const reason=metaCreativeReason(error);
   const subcode=error instanceof MetaApiError&&Number.isInteger(error.subcode)&&
    Number(error.subcode)>0?error.subcode:null;
-  console.warn("[meta-ads] non-mutating creative validation rejected",{reason,subcode});
-  return reply({ok:false,reason,subcode,createdInMeta:false,adSpendActive:false});
+  console.warn("[meta-ads] non-mutating creative validation rejected",{
+   campaignRef:campaign.id.slice(0,8),reason,subcode,
+   metaCode:error instanceof MetaApiError?error.code:null,
+   metaTrace:error instanceof MetaApiError?error.traceId:null
+  });
+  return reply({ok:false,reason,subcode,
+   ...(error instanceof MetaApiError&&error.providerMessage?{metaMessage:error.providerMessage}:{}),
+   ...(error instanceof MetaApiError&&error.traceId?{metaTrace:error.traceId}:{}),
+   createdInMeta:false,adSpendActive:false});
  }
 }
