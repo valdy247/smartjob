@@ -39,8 +39,10 @@ test("all AI Agents UI catalog keys have Spanish and English entries",()=>{
 test("locale switching does not remount or rewrite saved agent content",()=>{
  assert.ok(!page.includes("key={language}"));
  assert.ok(!page.includes("setAgents([])"));
- assert.ok(page.includes('setDraft(current=>centralPrefill(saved,current))'));
- assert.ok(page.includes("setAgents(old=>[saved,...old.filter(a=>a.id!==saved.id)])"));
+ const profile=fs.readFileSync("app/vista-app/AccountBusinessAgent.tsx","utf8");
+ assert.ok(profile.includes("centralPrefill(business,principal?"));
+ assert.ok(profile.includes('storeAgent({...value,setup:{...value.setup,central_source_updated_at:business.updated_at}}'));
+ assert.ok(page.includes('openAgentProfile(agent,"agent",step)'));
  assert.ok(page.includes('useEffect(()=>{setNotice("");},[language])'));
 });
 test("AI Agents route parses as valid TSX",()=>{
