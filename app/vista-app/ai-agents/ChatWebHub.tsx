@@ -4,7 +4,7 @@ import {
  ArrowLeft,ArrowUpRight,Bot,Check,CheckCircle2,ChevronRight,
  Globe2,Headphones,Inbox,LoaderCircle,MessageCircle,Package,
  RefreshCw,Settings2,ShieldCheck,ShoppingBag,SlidersHorizontal,
- Sparkles,Unplug,Users,X
+ Sparkles,Unplug,Users,X,Send
 } from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {listCatalog,type CatalogItem,formatUsd} from "./commerceStore";
@@ -106,6 +106,62 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
   finally{setLoading(false);}
  },[owner,agent.id,agent.business_id,businessName]);
  useEffect(()=>{void load();},[load]);
+ const refreshChatInbox=useCallback(async()=>{
+  const db=getSupabase();if(!db)return;
+  const [current,unread]=await Promise.all([
+   db.from("vmv_web_public_chat_sessions")
+    .select("id,site_slug,site_kind,handoff_status,created_at,updated_at")
+    .eq("owner_id",owner).eq("agent_id",agent.id).order("updated_at",{ascending:false}).limit(40),
+   db.from("vmv_web_chat_alerts").select("id,session_id,source,read_at,created_at")
+    .eq("owner_id",owner).is("read_at",null).order("created_at",{ascending:false}).limit(40)
+  ]);
+  if(!current.error)setVisitorChats(((current.data||[]) as VisitorChat[]).sort((a,b)=>
+   (a.handoff_status==="waiting"?-1:b.handoff_status==="waiting"?1:0)||
+   Date.parse(b.updated_at)-Date.parse(a.updated_at)));
+  if(!unread.error)setAlerts((unread.data||[]) as typeof alerts);
+  if(chosen&&conversationTab==="ai"){
+   const {data}=await db.from("vmv_web_public_chat_messages")
+    .select("id,role,content,created_at").eq("owner_id",owner)
+    .eq("session_id",chosen).order("created_at",{ascending:true}).limit(100);
+   if(data)setMessages(data as Message[]);
+  }
+ },[owner,agent.id,chosen,conversationTab]);
+ useEffect(()=>{
+  if(section!=="conversations")return;
+  const db=getSupabase();if(!db)return;
+  void refreshChatInbox();
+  const channel=db.channel("vmv-chat-hub-"+agent.id)
+   .on("postgres_changes",{event:"*",schema:"public",table:"vmv_web_public_chat_messages",
+    filter:"owner_id=eq."+owner},()=>void refreshChatInbox())
+   .on("postgres_changes",{event:"*",schema:"public",table:"vmv_web_public_chat_sessions",
+    filter:"owner_id=eq."+owner},()=>void refreshChatInbox())
+   .on("postgres_changes",{event:"*",schema:"public",table:"vmv_web_chat_alerts",
+    filter:"owner_id=eq."+owner},()=>void refreshChatInbox()).subscribe();
+  const interval=window.setInterval(()=>void refreshChatInbox(),4000);
+  return()=>{window.clearInterval(interval);void db.removeChannel(channel);};
+ },[section,owner,agent.id,refreshChatInbox]);
+ async function humanAction(action:"reply"|"claim"|"resolve"){
+  if(replyBusy||!chosen)return;
+  const value=humanMessage.trim();
+  if(action==="reply"&&(!value||value.length>800))return;
+  setReplyBusy(true);setError("");
+  try{
+   const db=getSupabase();if(!db)throw Error("Sin conexión.");
+   const {data:{session}}=await db.auth.getSession();
+   if(!session?.access_token)throw Error("Inicia sesión nuevamente.");
+   const r=await fetch("/api/vmv/web-chat-owner",{
+    method:"POST",cache:"no-store",
+    headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
+    body:JSON.stringify({sessionId:chosen,action,...(action==="reply"?{message:value}:{})})
+   });
+   const data=await r.json() as {error?:string};
+   if(!r.ok)throw Error(data.error||"No se pudo atender al visitante.");
+   if(action==="reply")setHumanMessage("");
+   if(action==="resolve")setNotice("Atención humana finalizada. El agente puede volver a responder.");
+   await refreshChatInbox();
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo actualizar.");}
+  finally{setReplyBusy(false);}
+ }
  const change=<K extends keyof Settings>(key:K,value:Settings[K])=>{setSettings(p=>({...p,[key]:value}));setNotice("");};
  const eligible=catalog.filter(c=>c.approved&&c.active&&c.price_cents>0&&
   (c.stock_mode==="unlimited"||(c.stock_mode==="tracked"&&Number(c.available_qty)>0)));
@@ -196,6 +252,11 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
  async function showConversation(id:string){
   if(loading||saving)return;
   setChosen(id);setMessages([]);setError("");
+  if(conversationTab==="ai"){
+   const db=getSupabase();
+   if(db)void db.from("vmv_web_chat_alerts").update({read_at:new Date().toISOString()})
+    .eq("owner_id",owner).eq("session_id",id).then(()=>setAlerts(p=>p.filter(a=>a.session_id!==id)));
+  }
   try{
    const db=getSupabase();if(!db)throw Error("Sin conexión.");
    const table=conversationTab==="ai"?"vmv_web_public_chat_messages":"vmv_ai_messages";
@@ -289,10 +350,27 @@ export default function ChatWebHub({agent,businessName,onBack,onTest,onAgentUpda
      {messages.map(m=><div key={m.id} className={m.role==="user"?css.userBubble:css.agentBubble}>
       <small>{m.role==="user"?"Visitante":"Agente IA"}</small><p>{m.content}</p></div>)}
      {!messages.length?<span className={css.muted}>Sin mensajes disponibles.</span>:null}
+     {visitorChats.find(c=>c.id===chosen)?.handoff_status==="waiting"||
+      visitorChats.find(c=>c.id===chosen)?.handoff_status==="human"?
+      <div className={css.humanComposer}>
+       <span>{visitorChats.find(c=>c.id===chosen)?.handoff_status==="waiting"?
+        "El visitante espera una persona.":"Atención humana activa"}</span>
+       <form onSubmit={e=>{e.preventDefault();void humanAction("reply");}}>
+        <input value={humanMessage} maxLength={800} placeholder="Responder al cliente…"
+         onChange={e=>setHumanMessage(e.target.value)} disabled={replyBusy}
+         aria-label="Respuesta al visitante"/>
+        <button type="submit" disabled={replyBusy||!humanMessage.trim()}><Send size={17}/></button>
+       </form>
+       <button type="button" onClick={()=>void humanAction("resolve")} disabled={replyBusy}
+        className={css.resolveChat}><Check size={15}/> Finalizar atención humana</button>
+      </div>:null}
     </div>:visitorChats.length?<div className={css.list}>{visitorChats.map(c=><button
      key={c.id} type="button" className={css.testRow} onClick={()=>void showConversation(c.id)}>
      <span className={css.siteIcon}><Bot size={18}/></span>
-     <span><strong>Visitante · {c.site_slug}</strong><small>{when(c.updated_at)} · {c.site_kind==="builder"?"Web Studio":"Sitio clásico"}</small></span><ChevronRight size={17}/>
+     <span><strong>{c.handoff_status==="waiting"?"Esperando atención":"Visitante"} · {c.site_slug}</strong>
+      <small>{when(c.updated_at)} · {c.handoff_status==="human"?"Atendiendo":c.handoff_status==="waiting"?"Necesita respuesta":"Chat IA"}</small></span>
+      {alerts.some(a=>a.session_id===c.id)?<span className={css.waitBadge}>Nuevo</span>:null}
+      <ChevronRight size={17}/>
     </button>)}</div>:<div className={css.empty}><Bot size={28}/><strong>Sin chats IA todavía</strong><span>Las conversaciones reales aparecerán aquí.</span></div>):
     conversationTab==="website"?(inquiries.length?
      <div className={css.list}>{inquiries.slice(0,20).map(item=><div key={item.id} className={css.conversation}>
