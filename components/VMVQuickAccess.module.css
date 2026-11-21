@@ -57,7 +57,7 @@
 @media(max-width:360px){.sheet,.actionDialog{padding:17px}.homeGrid{grid-template-columns:1fr}.catalogItem{padding:7px}.catalogItem>.itemAdd,.catalogItem>.homeAdd{flex-basis:30px;width:30px}}
 @media(prefers-reduced-motion:reduce){.fab,.switchUi,.switchUi:after{transition:none}.toast{animation:none}}
 
-:global([data-vmv-hidden-card="true"]){display:none!important}
+.cardHidden{display:none!important}
 .hideAction{display:flex;align-items:center;gap:13px;min-height:54px;padding:13px;border:1px solid #eddbe9;border-radius:14px;background:#fff8fb;color:#9a537d;text-align:left;font:inherit;font-size:12px;font-weight:850;cursor:pointer}
 .hideAction>svg:last-child{margin-left:auto;color:#b79cae}
 .hideAction:hover{background:#fbedf4}
