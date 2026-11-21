@@ -183,7 +183,9 @@ export async function POST(req:NextRequest){
    const subcode=error instanceof MetaApiError&&Number.isInteger(error.subcode)?error.subcode:null;
    await diagnostic("preflight",metaCode,subcode);
    return NextResponse.json({error:reason,campaignId:record.id,stage:"preflight",
-    createdInMeta:false,adSpendActive:false,...(subcode?{metaSubcode:subcode}:{})},
+    createdInMeta:false,adSpendActive:false,...(subcode?{metaSubcode:subcode}:{}),
+    ...(error instanceof MetaApiError&&error.providerMessage?{metaMessage:error.providerMessage}:{}),
+    ...(error instanceof MetaApiError&&error.traceId?{metaTrace:error.traceId}:{})},
     {status:409,headers:noCache});
   }
   // The compare-and-set lock prevents duplicate external Meta campaign creation.
