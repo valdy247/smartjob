@@ -463,14 +463,14 @@ test("A saved character photo can be used to seed new scenes while preserving in
 });
 test("Soundtrack is synchronized after recorder begins, never before music decoding completes",()=>{
  const studio=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
- assert.match(studio,/voiceSource=voice/);
+ assert.match(studio,/voiceSources\.push\(voice\)/);
  assert.match(studio,/musicSource=background/);
  assert.match(studio,/recorder\.start\(300\)/);
- assert.match(studio,/voiceSource\?\.start\(startsAt\)/);
+ assert.match(studio,/voiceSources\.forEach\(\(source,index\)=>/);
  assert.match(studio,/musicSource\?\.start\(startsAt\)/);
  const start=studio.indexOf("recorder.start(300)");
  assert.ok(start>0);
- assert.ok(studio.indexOf("voiceSource?.start(startsAt)",start)>start);
+ assert.ok(studio.indexOf("voiceSources.forEach((source,index)=>",start)>start);
 });
 
 test("Final VMV Motion UX uses one visual library instead of recovery menus and technical buttons",()=>{
@@ -830,6 +830,38 @@ test("VMV Motion exports six five-second clips even when narration is 24.2s",()=
  assert.match(montage,/const remaining=Math\.max\(0,outputSeconds-/);
  assert.doesNotMatch(montage,/endTime=speech\?\.sceneEnds/);
  assert.doesNotMatch(montage,/remaining=Math\.max\(0,decodedDuration-/);
- assert.match(montage,/if\(decodedDuration>outputSeconds\+0\.35\)/);
+ assert.match(montage,/createSceneVoiceTimeline\(speech\.sceneEnds,decodedDuration,urls\.length,outputSeconds\)/);
  assert.match(page,/Math\.abs\(measured-montageSeconds\)>1\.5/);
+});
+
+test("Scene-locked narration starts each phrase at 0/5/10/15/20/25s, without fifth-scene drift",()=>{
+ const {transpileModule,ModuleKind,ScriptTarget}=require("typescript");
+ const Module=require("node:module");
+ const source=read("lib/vmv-motion-audio-sync.ts");
+ const m=new Module("lib/vmv-motion-audio-sync.ts",module);
+ m._compile(transpileModule(source,{compilerOptions:{
+  module:ModuleKind.CommonJS,target:ScriptTarget.ES2022}}).outputText,
+  "lib/vmv-motion-audio-sync.ts");
+ const {createSceneVoiceTimeline,createSceneCaptionCues}=m.exports;
+ const sceneEnds=[4.1,8.2,12.3,16.4,20.2,24.2];
+ const slots=createSceneVoiceTimeline(sceneEnds,24.2,6,30);
+ assert.deepEqual(slots.map(s=>s.timelineStart),[0,5,10,15,20,25]);
+ assert.deepEqual(slots.map(s=>s.sourceStart),[0,4.1,8.2,12.3,16.4,20.2]);
+ assert.equal(slots[5].sourceEnd,24.2);
+ assert.ok(slots.every(s=>(s.sourceEnd-s.sourceStart)/s.playbackRate<=s.timelineSeconds));
+ const aligned={characters:["A"," ","B"," ","C"],
+  character_start_times_seconds:[0.1,0.3,0.4,4.3,4.5],
+  character_end_times_seconds:[0.2,0.3,4.1,4.4,4.8]};
+ const cues=createSceneCaptionCues(aligned,slots);
+ assert.equal(cues.length,2);
+ assert.ok(cues[0].start<5&&cues[0].end<=5);
+ assert.ok(cues[1].start>=5&&cues[1].end<=10);
+ assert.throws(()=>createSceneVoiceTimeline(null,24.2,6,30),/marcas de tiempo/);
+ assert.throws(()=>createSceneVoiceTimeline([4,8,12,16,20,24],24.2,12,60),/marcas de tiempo/);
+ assert.throws(()=>createSceneVoiceTimeline([7,9,13,17,20,24.2],24.2,6,30),/Acorta esa frase/);
+ const studio=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ assert.match(studio,/source\.start\(startsAt\+scene\.timelineStart,/);
+ assert.match(studio,/scene\.sourceStart,scene\.sourceEnd-scene\.sourceStart/);
+ assert.match(studio,/createSceneCaptionCues\(speech\.alignment,voiceSlots\)/);
+ assert.doesNotMatch(studio,/voiceSource\?\.start\(startsAt\)/);
 });

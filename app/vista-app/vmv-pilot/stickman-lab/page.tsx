@@ -5,6 +5,7 @@ import {ArrowLeft,BookOpen,CarFront,Check,Clapperboard,Cloud,Copy,Download,Folde
 import {getSupabase} from "@/lib/supabase";
 import VMVAuthGateway from "@/components/VMVAuthGateway";
 import PilotVoiceStep from "../PilotVoiceStep";
+import {createSceneVoiceTimeline,createSceneCaptionCues,type SceneVoiceSlot} from "@/lib/vmv-motion-audio-sync";
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {drawStickmanFrame,stickmanStory,userStickmanStory,STICKMAN_WIDTH,STICKMAN_HEIGHT,STICKMAN_SECONDS,
  type StickmanTopic,type StickmanLanguage,type StickmanStory} from "@/lib/vmv-stickman-engine";
@@ -52,7 +53,6 @@ async function loadVoice(phrases:string[],voice:"alloy"|"nova"):Promise<ArrayBuf
 }
 type SpeechAlignment={characters:string[];character_start_times_seconds:number[];character_end_times_seconds:number[]};
 type ContinuousSpeech={audio:ArrayBuffer;alignment:SpeechAlignment;duration:number;sceneEnds?:number[]|null};
-type CaptionCue={start:number;end:number;text:string};
 async function loadContinuousVoice(phrases:string[],provider:"openai"|"elevenlabs"="elevenlabs",voiceId=""):Promise<ContinuousSpeech>{
  const sb=getSupabase();if(!sb)throw Error("Inicia sesión para crear la narración.");
  const {data:{session}}=await sb.auth.getSession();
@@ -82,22 +82,6 @@ async function loadContinuousVoice(phrases:string[],provider:"openai"|"elevenlab
   throw Error("El proveedor no devolvió audio y tiempos válidos.");
  return {audio:base64ToBuffer(result.audio),alignment:result.alignment as SpeechAlignment,duration:result.duration,
   sceneEnds:Array.isArray(result.sceneEnds)?result.sceneEnds:null};
-}
-function captionCues(alignment:SpeechAlignment):CaptionCue[]{
- const {characters,character_start_times_seconds:starts,character_end_times_seconds:ends}=alignment;
- const cues:CaptionCue[]=[];let words:{text:string;start:number;end:number}[]=[];
- let word="",start=0,end=0;
- const flush=()=>{if(word.trim())words.push({text:word.trim(),start,end});word="";};
- for(let i=0;i<characters.length;i++){
-  const char=characters[i];
-  if(/\s/u.test(char)){flush();continue;}
-  if(!word)start=starts[i];word+=char;end=ends[i];
- }flush();
- for(let i=0;i<words.length;i+=5){
-  const group=words.slice(i,i+5);
-  cues.push({start:group[0].start,end:group[group.length-1].end,text:group.map(w=>w.text).join(" ")});
- }
- return cues;
 }
 type PendingStoryboard={prompt:string;data?:{title?:string;scenes:Array<{speech:string;caption:string;imagePrompt:string;camera?:{focusX:number;focusY:number;startZoom:number;endZoom:number}}>};images:StickmanStory["scenes"][number][]};
 async function createTerraStory(prompt:string,pending:PendingStoryboard):Promise<StickmanStory>{
@@ -606,7 +590,8 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
  if(!ctx||!canvas.captureStream)throw Error("Este navegador no puede unir videos.");
  const stream=canvas.captureStream(24);
  let audioContext:AudioContext|null=null;
- let voiceSource:AudioBufferSourceNode|null=null;
+ const voiceSources:AudioBufferSourceNode[]=[];
+ let voiceSlots:SceneVoiceSlot[]=[];
  let musicSource:AudioBufferSourceNode|null=null;
  const effectSources:AudioBufferSourceNode[]=[];
  let recorder:MediaRecorder|null=null;
@@ -631,7 +616,7 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
    videos.push(video);
   }
   ctx.fillStyle="#111";ctx.fillRect(0,0,720,1280);
- const cues=speech?captionCues(speech.alignment):[];
+ let cues:ReturnType<typeof createSceneCaptionCues>=[];
  let decodedDuration=0;
  if(speech||options.music||options.effects?.length){
   audioContext=new AudioContext();await audioContext.resume();
@@ -639,14 +624,17 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
   if(speech){
    const decoded=await audioContext.decodeAudioData(speech.audio.slice(0));
    decodedDuration=decoded.duration;
-   // Keep the selected duration; an overlong voice needs a shorter script.
-   if(decodedDuration>outputSeconds+0.35)
-    throw Error("La narración dura "+decodedDuration.toFixed(1)+" s y supera los "+
-     outputSeconds+" s del video. Acorta las frases; tus clips siguen guardados.");
-   const voice=audioContext.createBufferSource();voice.buffer=decoded;
+   voiceSlots=createSceneVoiceTimeline(speech.sceneEnds,decodedDuration,urls.length,outputSeconds);
+   cues=createSceneCaptionCues(speech.alignment,voiceSlots);
    const gain=audioContext.createGain();gain.gain.value=Math.min(2,Math.max(0,options.voiceVolume));
-   voice.connect(gain);gain.connect(mix);
-   voiceSource=voice;
+   gain.connect(mix);
+   for(const scene of voiceSlots){
+    const voice=audioContext.createBufferSource();
+    voice.buffer=decoded;
+    voice.playbackRate.value=scene.playbackRate;
+    voice.connect(gain);
+    voiceSources.push(voice);
+   }
   }
   if(options.music){
    const bytes=await options.music.arrayBuffer();
@@ -682,7 +670,13 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
   // a large music file cannot consume the opening narration before capture.
   if(audioContext){
    const startsAt=audioContext.currentTime+0.04;
-   voiceSource?.start(startsAt);
+   // Schedule the spoken line from each scene at 0,5,10,15,20,25s,
+   // while keeping the original video at the exact selected duration.
+   voiceSources.forEach((source,index)=>{
+    const scene=voiceSlots[index];
+    source.start(startsAt+scene.timelineStart,
+     scene.sourceStart,scene.sourceEnd-scene.sourceStart);
+   });
    musicSource?.start(startsAt);
    effectSources.forEach((source,index)=>
     source.start(startsAt+Math.max(0,options.effects?.[index]?.start||0)));
