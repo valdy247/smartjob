@@ -8,7 +8,8 @@ const reply=(data:Record<string,unknown>,status=200)=>NextResponse.json(data,{st
 const color=(v:unknown)=>typeof v==="string"&&/^#[0-9a-fA-F]{6}$/.test(v)?v:null;
 const num=(v:unknown,min:number,max:number)=>typeof v==="number"&&Number.isFinite(v)&&v>=min&&v<=max?v:null;
 type Shape={kind:"path"|"ellipse"|"rect";fill:string;stroke:string;strokeWidth:number;x:number;y:number;w:number;h:number;d:string;motion:"none"|"float"|"walk"|"sway"|"zoom";amplitude:number;phase:number};
-type Scene={speech:string;caption:string;background:string;shapes:Shape[]};
+type Camera={focusX:number;focusY:number;startZoom:number;endZoom:number};
+type Scene={speech:string;caption:string;background:string;shapes:Shape[];camera:Camera};
 function parse(raw:unknown):{title:string;scenes:[Scene,Scene,Scene]}|null{
  if(!raw||typeof raw!=="object")return null;
  const obj=raw as Record<string,unknown>;
@@ -39,8 +40,11 @@ function parse(raw:unknown):{title:string;scenes:[Scene,Scene,Scene]}|null{
     w:s.w as number,h:s.h as number,d,motion:s.motion as Shape["motion"],
     amplitude:s.amplitude as number,phase:s.phase as number});
   }
+  const c=(e.camera&&typeof e.camera==="object"?e.camera:{}) as Record<string,unknown>;
+  const camera:Camera={focusX:num(c.focusX,90,450)??270,focusY:num(c.focusY,260,630)??435,
+   startZoom:num(c.startZoom,1,1.18)??1.02,endZoom:num(c.endZoom,1.12,1.55)??1.25};
   scenes.push({speech:e.speech.trim(),caption:e.caption.trim(),
-   background:e.background as string,shapes});
+   background:e.background as string,shapes,camera});
  }
  return {title:typeof obj.title==="string"?obj.title.slice(0,80):"VMV Motion",
   scenes:scenes as [Scene,Scene,Scene]};
@@ -48,8 +52,12 @@ function parse(raw:unknown):{title:string;scenes:[Scene,Scene,Scene]}|null{
 const system=[
  "You are VMV Motion's 2D VECTOR ANIMATOR and art director.",
  "Generate exactly 3 scenes, 5 seconds each, from the user's topic. Return JSON only.",
- 'Schema: {"title":"...","scenes":[{"speech":"...","caption":"...","background":"#RRGGBB","shapes":[{"kind":"path|ellipse|rect","fill":"#RRGGBB","stroke":"#RRGGBB","strokeWidth":2,"x":0,"y":0,"w":0,"h":0,"d":"M ... Z","motion":"none|float|walk|sway|zoom","amplitude":8,"phase":0}]}]}',
- "Canvas size 540x960, visible storytelling region y=140..720. Use 8-18 shapes per scene, grouped visually by drawing order.",
+ 'Schema: {"title":"...","scenes":[{"speech":"...","caption":"...","background":"#RRGGBB","camera":{"focusX":270,"focusY":435,"startZoom":1.02,"endZoom":1.3},"shapes":[{"kind":"path|ellipse|rect","fill":"#RRGGBB","stroke":"#RRGGBB","strokeWidth":2,"x":0,"y":0,"w":0,"h":0,"d":"M ... Z","motion":"none|float|walk|sway|zoom","amplitude":8,"phase":0}]}]}',
+ "Canvas size 540x960, illustration region y=200..745. Use 12-22 shapes per scene, in drawing order.",
+ "Include camera object with focusX 90..450, focusY 260..630, startZoom 1..1.18 and endZoom 1.12..1.55. Aim camera at the primary subject.",
+ "Opening shot is a strong hook, second shows ACTION, third reveals the payoff; vary compositions rather than repeating a generic scene.",
+ "Main subject must be instantly recognizable without reading captions. Give characters clear faces, limbs and distinctive silhouettes; props must look like their named objects.",
+ "LEGO bricks need studs and interlocking layers, not plain stacked bars. Avoid decorative floating circles or random stick figures.",
  "Every requested central character or object MUST be recognizably drawn with multiple shapes, not replaced by generic backgrounds.",
  "Use SVG path d for expressive silhouettes with curves C and Q. For ellipse and rect use x,y,w,h.",
  "All coordinates are absolute canvas coordinates. For path use x=0,y=0,w=0,h=0 and absolute M/L/C/Q commands.",
