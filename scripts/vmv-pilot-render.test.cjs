@@ -17,7 +17,8 @@ const files=[
  "app/api/video-generator/pilot-voices/route.ts",
  "app/api/video-generator/pilot-voice-preview/route.ts",
  "lib/vmv-pilot-elevenlabs.ts",
- "lib/vmv-pilot-voice-config.ts"
+ "lib/vmv-pilot-voice-config.ts",
+ "lib/vmv-pilot-quality.ts"
 ];
 const source=Object.fromEntries(files.map(p=>[p,read(p)]));
 test("Video Pilot wizard and durable API parse TypeScript",()=>{
@@ -36,19 +37,20 @@ test("Wizard supports niche, audience and goals outside business",()=>{
   assert.ok(ui.includes(phrase),phrase);
  assert.match(ui,/setStep\(1\)/);
  assert.match(ui,/setStep\(3\)/);
- assert.match(ui,/Autorizo usar créditos/);
+ assert.match(ui,/Autorizo generar el video y consumir créditos/);
 });
 test("Clip worker actually uses image-to-video, five seconds and an MP4 compositor",()=>{
  const w=read("services/vmv-pilot-worker/worker.mjs");
  assert.match(w,/image_to_video/);
- assert.match(w,/model:"gen4\.5"/);
+ assert.match(w,/variant==="turbo"\?"gen4_turbo"/);
+ assert.match(w,/variant==="high"\?"gen4\.5"/);
  assert.match(w,/duration:5/);
  assert.match(w,/ffmpeg/);
  assert.match(w,/subtitles=/);
  assert.match(w,/atempo=/);
- assert.match(w,/Math\.floor\(78\*\(i\+1\)\/scenes\.length\)/);
+ assert.match(w,/Math\.floor\(65\*completed\/total\)/);
  assert.match(w,/STYLES|STYLE/);
- assert.match(w,/await persistAsset\(job,"clip_"\+i/);
+ assert.match(w,/await persistAsset\(job,item\.key,item\.clip,"video\/mp4"\)/);
 });
 test("Durable job requires per-video credit consent and enforces privacy and limits",()=>{
  const api=source["app/api/video-generator/pilot-render/route.ts"];
@@ -92,7 +94,7 @@ test("Pilot requires a trend decision before summary; no nested Radar inside fin
  const ui=source["app/vista-app/vmv-pilot/page.tsx"];
  const trend=source["app/vista-app/vmv-pilot/PilotTrendStep.tsx"];
  assert.match(ui,/step===9\?<PilotTrendStep/);
- assert.match(ui,/step===10\?<div className=\{css.review\}/);
+ assert.match(ui,/step===11\?<div className=\{css.review\}/);
  assert.doesNotMatch(ui,/<ViralRadar/);
  assert.match(trend,/Sí, analizar/);
  assert.match(trend,/No, continuar/);
@@ -119,7 +121,7 @@ test("Selected voice and target language are verified before a persistent job is
  assert.match(api,/validPilotLanguage\(language\)/);
  assert.match(api,/validPilotVoice\(voiceProvider,voiceId\)/);
  assert.match(api,/verifyElevenLabsVoice\(voiceId,language\)/);
- assert.match(api,/vmv_pilot_render_enqueue_v2/);
+ assert.match(api,/vmv_pilot_render_enqueue_v3/);
  assert.match(pilot,/ideas_language!==language/);
  assert.match(pilot,/voice_provider:voiceProvider/);
  const sql=read("supabase/sql/vmv_pilot_languages_and_voices_20261121.sql");
@@ -158,4 +160,47 @@ test("Voice cards preview real audio in the chosen video language without select
  assert.match(sql,/vmv_pilot_voice_preview_claim/);
  assert.match(sql,/IF n>=12 THEN RETURN false/);
  assert.match(sql,/ENABLE ROW LEVEL SECURITY/);
+});
+
+test("Quality wizard creates one or two videos with explicit animation price and credit approval",()=>{
+ const ui=source["app/vista-app/vmv-pilot/page.tsx"];
+ const quality=source["lib/vmv-pilot-quality.ts"];
+ assert.match(ui,/step===10\?<div className=\{css.choices\}/);
+ assert.match(ui,/step===11\?<div className=\{css.review\}/);
+ assert.match(ui,/Probar ambas/);
+ assert.match(ui,/Generar ambos videos/);
+ assert.match(ui,/qualityMode:form\.qualityMode/);
+ assert.match(ui,/Autorizo generar 2 videos y consumir créditos/);
+ assert.match(quality,/centsPerSecond:5/);
+ assert.match(quality,/centsPerSecond:12/);
+ assert.match(quality,/centsPerSecond:17/);
+});
+test("The compare mode is a single idempotent job and NOT two separate paid AI preparations",()=>{
+ const api=source["app/api/video-generator/pilot-render/route.ts"];
+ const sql=read("supabase/sql/vmv_pilot_quality_comparison_20261122.sql");
+ const worker=read("services/vmv-pilot-worker/worker.mjs");
+ assert.match(api,/vmv_pilot_render_enqueue_v3/);
+ assert.match(api,/validPilotQuality\(qualityMode\)/);
+ assert.match(sql,/quality_mode IN \('turbo','high','compare'\)/);
+ assert.match(sql,/PERFORM pg_advisory_xact_lock/);
+ assert.match(sql,/UNIQUE|pilot_render_daily_limit/);
+ assert.match(worker,/job\.quality_mode==="compare"\?\["turbo","high"\]/);
+ assert.match(worker,/await aiScript\(job\)/);
+ assert.match(worker,/await generateSpeech\(job,scenes\[i\]\.speech,voice\)/);
+ assert.match(worker,/await makeImage\(job,scenes\[i\]/);
+ assert.match(worker,/Promise\.allSettled\(pending\.map/);
+ assert.match(worker,/await runwayStart\(job,scenes\[i\],images\[i\],variant\)/);
+ assert.match(worker,/outputs:\{\.\.\.\(job\.outputs\|\|\{\}\),\[variant\]:pathKey\}/);
+});
+test("Only owner-specific completed MP4 variants are signed, preference uses PATCH without spending",()=>{
+ const api=source["app/api/video-generator/pilot-render/route.ts"];
+ const dock=source["components/VMVPilotRenderDock.tsx"];
+ assert.match(api,/variantPath\(owner,row\.id,variant\)/);
+ assert.match(api,/createSignedUrl/);
+ assert.match(api,/export async function PATCH/);
+ assert.match(api,/update\(\{preferred_model:preferredModel\}\)/);
+ assert.match(dock,/className=\{job\?\.quality_mode==="compare"\?css\.comparison:css\.single\}/);
+ assert.match(dock,/Usar /);
+ assert.match(dock,/videoUrls/);
+ assert.match(dock,/preferred_model:variant/);
 });
