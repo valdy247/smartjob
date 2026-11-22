@@ -3,6 +3,7 @@ import {createHmac,timingSafeEqual} from "node:crypto";
 import {experimental_startVideo as startVideo,experimental_getVideoStatus as getVideoStatus} from "ai";
 import {authenticatedUser} from "@/lib/auth-server";
 import {videoAllowed,videoDb,videoHeaders} from "@/lib/vmv-video-generator";
+import {classifyGatewayVideoFailure} from "@/lib/vmv-gateway-video-error.mjs";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -217,24 +218,19 @@ export async function POST(req:NextRequest){
   });
   return reply({status:"pending",token:seal(owner,result.operation),model:MODEL,duration:DURATION,estimatedCostUsd:COST_USD,beat});
  }catch(e){
-  const issue=e as {name?:unknown;statusCode?:unknown;status?:unknown;response?:{status?:unknown;body?:unknown};data?:unknown;cause?:unknown};
-  const name=e instanceof Error?e.name:"unknown";
-  const status=[issue?.statusCode,issue?.status,issue?.response?.status].find(v=>typeof v==="number");
-  const message=e instanceof Error?e.message:"";
-  // Avoid logging user prompts, credentials, URLs, or raw upstream response bodies.
-  const cause=issue?.cause as {name?:unknown;statusCode?:unknown;message?:unknown}|undefined;
-  const safeDetails={
-   name:name.slice(0,100),status:typeof status==="number"?status:undefined,
-   causeName:typeof cause?.name==="string"?cause.name.slice(0,100):undefined,
-   causeStatus:typeof cause?.statusCode==="number"?cause.statusCode:undefined,
-   isAuth:/Unauthorized|Authentication|invalid.api.key/i.test(name+" "+message),
-   isCredits:/insufficient|billing|credit|quota|payment.required/i.test(message),
-   isParameters:/invalid|parameter|resolution|unsupported|aspect.ratio/i.test(message)
-  };
-  console.warn("[vmv-seedance-start]",safeDetails);
-  if(safeDetails.isAuth||status===401||status===403)return reply({error:"ai_gateway_auth_not_configured"},503);
-  if(safeDetails.isCredits||status===402)return reply({error:"ai_gateway_credits_required"},402);
-  if(safeDetails.isParameters||status===400||status===422)return reply({error:"seedance_invalid_parameters"},422);
-  return reply({error:"seedance_gateway_unavailable"},503);
+  const problem=classifyGatewayVideoFailure(e);
+  // Only log the allowlisted error category, operation number and HTTP status.
+  // Upstream bodies/messages may contain sensitive prompts or identifiers.
+  console.warn("[vmv-seedance-start]",{
+   beat:beat+1,status:problem.status,providerType:problem.providerType,
+   budgetScope:problem.budgetScope,error:problem.error
+  });
+  const http=problem.error==="seedance_invalid_parameters"?422:
+   problem.error==="ai_gateway_rate_limited"?429:
+   problem.status===402?402:503;
+  return reply({error:problem.error,
+   ...(problem.providerType?{providerType:problem.providerType}:{}),
+   ...(problem.budgetScope?{budgetScope:problem.budgetScope}:{}),
+   beat},http);
  }
 }
