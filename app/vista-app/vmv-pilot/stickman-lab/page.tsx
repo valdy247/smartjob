@@ -391,15 +391,31 @@ async function seedanceRequest(accessToken:string,body:Record<string,unknown>){
  }
  return data;
 }
-async function loadSeedanceForStitching(accessToken:string,token:string):Promise<string>{
+async function loadSeedanceForStitching(accessToken:string,token:string,sourceUrl:string,beat:number):Promise<string>{
  const response=await fetch("/api/video-generator/motion-seedance",{
   method:"POST",cache:"no-store",
   headers:{"Content-Type":"application/json",Authorization:"Bearer "+accessToken},
-  body:JSON.stringify({action:"download",token})
+  // Reuse the already completed provider URL. This is NOT a new generation.
+  body:JSON.stringify({action:"download",token,sourceUrl})
  });
- if(!response.ok)throw Error("No se pudo recuperar el clip desde Seedance. Si el enlace expiró, conserva el clip original.");
+ if(!response.ok){
+  const failure=await response.json().catch(()=>null);
+  const reason=typeof failure?.error==="string"?failure.error:"unknown";
+  const messages:Record<string,string>={
+   invalid_video_job:"El identificador del clip caducó. No se generó ningún clip nuevo.",
+   video_not_ready:"El trabajo todavía no está completado.",
+   video_provider_status_unavailable:"El proveedor no permite consultar el trabajo antiguo. Intentamos recuperar la copia guardada.",
+   video_source_expired:"Caducó el enlace temporal del MP4. Si no existe una copia privada, el proveedor debe renovar el enlace.",
+   video_source_unavailable:"El servidor que aloja el MP4 no respondió correctamente.",
+   video_source_rejected:"El enlace del MP4 no pasó las validaciones de descarga segura.",
+   video_source_invalid:"El MP4 es demasiado grande o está incompleto.",
+   video_download_unavailable:"No se pudo descargar el MP4."
+  };
+  throw Error("Escena "+(beat+1)+": "+(messages[reason]||"No se pudo recuperar el MP4")+
+   " (HTTP "+response.status+", "+reason+"). No se inició otra generación.");
+ }
  const bytes=await response.blob();
- if(bytes.size<1000||bytes.size>26000000)throw Error("El clip recibido está incompleto.");
+ if(bytes.size<1000||bytes.size>26000000)throw Error("Escena "+(beat+1)+": el MP4 recibido está incompleto.");
  return URL.createObjectURL(new Blob([bytes],{type:"video/mp4"}));
 }
 async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=null,showSubtitles=false):Promise<{blob:Blob;extension:"mp4"|"webm"}>{
@@ -1008,7 +1024,10 @@ export default function StickmanLabPage(){
    const localUrls:string[]=[];
    let video:Blob,extension:"mp4"|"webm";
    try{
-    for(let i=0;i<MOTION_SCENES;i++)localUrls.push(await loadSeedanceForStitching(accessToken,job.tokens[i]));
+    for(let i=0;i<MOTION_SCENES;i++){
+     setDirectorStatus("Recuperando MP4 guardado "+(i+1)+"/"+MOTION_SCENES+" · sin regenerar");
+     localUrls.push(await loadSeedanceForStitching(accessToken,job.tokens[i],job.urls[i],i));
+    }
     ({blob:video,extension}=await stitchSeedanceClips(localUrls,speech,subtitles));
    }finally{localUrls.forEach(url=>URL.revokeObjectURL(url));}
    const finalUrl=URL.createObjectURL(video);
