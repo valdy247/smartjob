@@ -67,7 +67,7 @@ export async function POST(req:NextRequest){
     if(!url)return reply({error:"video_result_unavailable",status:state},502);
     return reply({status:"completed",url,mediaType:"video/mp4"});
    }
-   return reply({status:state==="failed"?"failed":"pending"});
+   return reply({status:state==="error"?"failed":"pending"});
   }catch(e){
    console.warn("[vmv-minimax-status]",e instanceof Error?e.name:"unknown");
    return reply({error:"video_status_unavailable"},503);
@@ -84,7 +84,7 @@ export async function POST(req:NextRequest){
  try{
   const result=await startVideo({
    model:MODEL,prompt:cinematicPrompt(prompt),duration:DURATION,
-   aspectRatio:"9:16",resolution:RESOLUTION
+   aspectRatio:"9:16",resolution:"720x1280"
   });
   return reply({status:"pending",token:seal(owner,result.operation),model:MODEL,duration:DURATION,estimatedCostUsd:COST_USD});
  }catch(e){
