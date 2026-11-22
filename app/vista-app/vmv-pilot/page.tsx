@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
+import {useRouter} from "next/navigation";
 import {ArrowLeft,ArrowRight,CalendarDays,Check,Clock3,History,LoaderCircle,Plus,Target,Volume2,VolumeX,Subtitles,WandSparkles} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
@@ -33,6 +34,7 @@ const defaults={id:"",niche:"",audience:"Público general",goal:"Hacer crecer mi
  seconds:60 as 15|30|60,narration:true,subtitles:true};
 
 export default function VMVPilotPage(){
+ const router=useRouter();
  const {language}=useInterfaceLanguage(),en=language==="en";
  const L=(es:string,english:string)=>en?english:es;
  const [screen,setScreen]=useState<Screen>("home"),[step,setStep]=useState(0);
@@ -78,7 +80,7 @@ export default function VMVPilotPage(){
   setError("");
   if(screen==="create"&&step>0){setStep(n=>n-1);return;}
   if(screen!=="home"){setScreen("home");return;}
-  window.location.assign("/vista-app?tab=services");
+  router.push("/vista-app?tab=services");
  };
  const generate=async()=>{
   if(busy||!approved||form.niche.trim().length<3)return;
