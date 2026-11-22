@@ -448,3 +448,27 @@ test("Video finishing and publishing are honest and available by stage",()=>{
  const director=read("app/api/video-generator/motion-terra/route.ts");
  assert.match(director,/reusableCharacterBible:characterGuide/);
 });
+
+test("A saved character photo can be used to seed new scenes while preserving independent backgrounds",()=>{
+ const studio=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ const image=read("app/api/video-generator/motion-image/route.ts");
+ assert.match(studio,/setCharacterFrames\(previews\)/);
+ assert.match(studio,/setCharacterReferencePath/);
+ assert.match(studio,/referenceMode:"character"/);
+ assert.match(studio,/referencePath:characterReferencePath/);
+ assert.match(image,/characterReference=body\?\.referenceMode==="character"/);
+ assert.match(image,/Use the attached image ONLY as a visual reference/);
+ assert.match(image,/Do not reuse unrelated background objects/);
+ assert.match(image,/referencePath\.startsWith\(owner\+"\/"\)/);
+});
+test("Soundtrack is synchronized after recorder begins, never before music decoding completes",()=>{
+ const studio=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ assert.match(studio,/voiceSource=voice/);
+ assert.match(studio,/musicSource=background/);
+ assert.match(studio,/recorder\.start\(300\)/);
+ assert.match(studio,/voiceSource\?\.start\(startsAt\)/);
+ assert.match(studio,/musicSource\?\.start\(startsAt\)/);
+ const start=studio.indexOf("recorder.start(300)");
+ assert.ok(start>0);
+ assert.ok(studio.indexOf("voiceSource?.start(startsAt)",start)>start);
+});
