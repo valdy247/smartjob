@@ -1,5 +1,5 @@
 import {NextRequest,NextResponse} from "next/server";
-import {createHmac,timingSafeEqual} from "node:crypto";
+import {createHmac,createHash,timingSafeEqual} from "node:crypto";
 import {experimental_startVideo as startVideo,experimental_getVideoStatus as getVideoStatus} from "ai";
 import {authenticatedUser} from "@/lib/auth-server";
 import {videoAllowed,videoDb,videoHeaders} from "@/lib/vmv-video-generator";
@@ -119,6 +119,46 @@ async function fetchClip(raw:string):Promise<Uint8Array>{
  }
  throw Error("media_redirect_limit");
 }
+// ByteDance's completed Seedance clips are hosted on signed Volcengine TOS
+// links. A previously signed operation token proves ownership; never accept
+// arbitrary remote download URLs or grant unauthenticated URL fetching.
+function trustedSeedanceUrl(raw:string):boolean{
+ if(!isSafeMediaUrl(raw))return false;
+ try{
+  const hostname=new URL(raw).hostname.toLowerCase();
+  return (hostname==="volces.com"||hostname.endsWith(".volces.com"))&&
+   /\.mp4(?:$|\/)/i.test(new URL(raw).pathname);
+ }catch{return false;}
+}
+const CLIP_BUCKET="vmv-motion-clips-preview";
+function clipPath(owner:string,token:string){
+ return owner+"/"+createHash("sha256").update(token).digest("hex")+".mp4";
+}
+function serveClip(bytes:Uint8Array){
+ return new NextResponse(Buffer.from(bytes),{headers:{
+  ...videoHeaders,"Content-Type":"video/mp4","Content-Length":String(bytes.byteLength),
+  "Cache-Control":"private, no-store","Content-Disposition":"inline; filename=seedance-clip.mp4"
+ }});
+}
+async function savePrivateClip(owner:string,token:string,data:Uint8Array){
+ try{
+  const db=videoDb(),storage=db.storage;
+  const bucket=await storage.getBucket(CLIP_BUCKET);
+  if(bucket.error){
+   const made=await storage.createBucket(CLIP_BUCKET,{
+    public:false,fileSizeLimit:26000000,allowedMimeTypes:["video/mp4"]
+   });
+   if(made.error&&!/already.exists|duplicate/i.test(made.error.message))
+    throw Error("clip_bucket_unavailable");
+  }
+  const upload=await storage.from(CLIP_BUCKET).upload(clipPath(owner,token),Buffer.from(data),{
+   contentType:"video/mp4",cacheControl:"3600",upsert:true
+  });
+  if(upload.error)throw Error("clip_storage_upload_failed");
+ }catch(e){
+  console.warn("[vmv-seedance-archive]",e instanceof Error?e.message.slice(0,65):"unknown");
+ }
+}
 export async function POST(req:NextRequest){
  const owner=await authenticatedUser(req);
  if(!owner||!videoAllowed(owner))return reply({error:"video_not_enabled_for_account"},403);
@@ -127,17 +167,49 @@ export async function POST(req:NextRequest){
   const token=typeof body?.token==="string"?body.token:"";
   const operation=unseal(token,owner);
   if(!operation)return reply({error:"invalid_video_job"},403);
+  // First use our private copy, which remains available after provider URLs
+  // and gateway credit checks expire.
   try{
-   const {status,url}=await finishedVideo(operation);
-   if(status!=="completed"||!url)return reply({error:"video_not_ready"},409);
-   const data=await fetchClip(url);
-   return new NextResponse(Buffer.from(data),{headers:{
-    ...videoHeaders,"Content-Type":"video/mp4","Content-Length":String(data.length),
-    "Cache-Control":"private, no-store","Content-Disposition":"inline; filename=seedance-clip.mp4"
-   }});
+   const cached=await videoDb().storage.from(CLIP_BUCKET).download(clipPath(owner,token));
+   if(!cached.error&&cached.data){
+    const bytes=new Uint8Array(await cached.data.arrayBuffer());
+    if(bytes.length>=1000&&bytes.length<=26000000)return serveClip(bytes);
+   }
+  }catch{}
+  const sourceUrl=typeof body?.sourceUrl==="string"?body.sourceUrl:"";
+  let mediaUrl:string|null=null;
+  if(sourceUrl&&trustedSeedanceUrl(sourceUrl)){
+   // Existing signed TOS URL: no paid model call, and no gateway status call.
+   mediaUrl=sourceUrl;
+  }else{
+   if(sourceUrl)console.warn("[vmv-seedance-download]",{reason:"unsupported_video_host"});
+   try{
+    const result=await finishedVideo(operation);
+    if(result.status!=="completed"||!result.url)return reply({error:"video_not_ready"},409);
+    mediaUrl=result.url;
+   }catch(e){
+    const issue=classifyGatewayVideoFailure(e);
+    console.warn("[vmv-seedance-download]",{reason:"provider_status_failed",status:issue.status,
+     providerType:issue.providerType});
+    return reply({error:"video_provider_status_unavailable",
+     ...(issue.providerType?{providerType:issue.providerType}:{})},502);
+   }
+  }
+  try{
+   // Reject unsafe destination and any unsafe redirect before fetching.
+   // Existing fetchClip imposes a 26 MB cap and content-type restrictions.
+   const data=await fetchClip(mediaUrl);
+   // Persist the MP4 so voice/stitch retries never depend on expiring links.
+   await savePrivateClip(owner,token,data);
+   return serveClip(data);
   }catch(e){
-   console.warn("[vmv-seedance-download]",e instanceof Error?e.message.slice(0,70):"unknown");
-   return reply({error:"video_download_unavailable"},502);
+   const message=e instanceof Error?e.message:"unknown";
+   const reason=/^media_fetch_(403|404|410)$/.test(message)?"video_source_expired":
+    /^media_fetch_\d+$/.test(message)?"video_source_unavailable":
+    /invalid_media_origin|missing_media_location|media_redirect_limit/.test(message)?"video_source_rejected":
+    /media_too_large|invalid_media_size/.test(message)?"video_source_invalid":"video_download_unavailable";
+   console.warn("[vmv-seedance-download]",{reason,source:"seedance_video_file"});
+   return reply({error:reason},502);
   }
  }
  if(body?.action==="status"){
