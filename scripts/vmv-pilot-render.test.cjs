@@ -365,3 +365,17 @@ test("Gateway errors distinguish an exhausted budget from funds, payment restric
  assert.match(ui,/ai_gateway_payment_rejected/);
  assert.match(ui,/No se hizo ningún reintento automático/);
 });
+
+test("Saved storyboard .jpg previews use the correct validation rule and cost no model calls",()=>{
+ const api=read("app/api/video-generator/motion-image/route.ts");
+ const preview=api.split('if(body?.action==="preview"){')[1]?.split(' const prompt=')[0];
+ assert.ok(preview,"Preview-only branch must exist");
+ const sourceRule=preview.match(/!\/(\^[^\n]*?)\/\.test\(imagePath\)/)?.[1];
+ assert.equal(sourceRule,'^[-a-z0-9/]+\\.jpg$',"Do not double-escape the JPG extension in a regex literal");
+ const rule=new RegExp(sourceRule);
+ assert.equal(rule.test("01234567-89ab-4def-8012-123456789abc/01234567-89ab-4def-8012-123456789abc.jpg"),true);
+ assert.equal(rule.test("01234567-89ab-4def-8012-123456789abc/other.png"),false);
+ assert.equal(rule.test("../private.jpg"),false);
+ assert.match(preview,/createSignedUrl\(imagePath,7200\)/);
+ assert.doesNotMatch(preview,/api\.openai\.com|startVideo\(/);
+});
