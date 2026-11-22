@@ -717,3 +717,12 @@ test("VMV Motion aborts frozen frames instead of exporting audio over a stalled 
  assert.match(studio,/video\.currentTime\+0\.4<expectedMediaProgress/);
  assert.match(studio,/Se canceló la exportación para evitar un video congelado con audio/);
 });
+
+test("VMV Motion preserves previous cloud render and checks recording duration before publishing",()=>{
+ const s=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ assert.match(s,/const revisionId=crypto\.randomUUID\(\)/);
+ assert.match(s,/Math\.abs\(measured-montageSeconds\)>1\.5/);
+ assert.match(s,/No se guardó el archivo defectuoso/);
+ assert.match(s,/No se reemplazó ninguna versión anterior/);
+ assert.match(s,/await motionLibrary\(accessToken,\{\s*action:"render-upload",id,extension,\.\.\.\(revisionId\?\{revisionId\}:\{\}\)/);
+});
