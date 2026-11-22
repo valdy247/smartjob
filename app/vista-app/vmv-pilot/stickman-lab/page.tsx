@@ -64,7 +64,7 @@ async function loadContinuousVoice(phrases:string[]):Promise<ContinuousSpeech>{
  if(!response.ok)throw Error(
   result?.error==="elevenlabs_not_configured_in_preview"?"Falta ELEVENLABS_API_KEY en Vercel Preview.":
   result?.error==="elevenlabs_key_rejected"?"ElevenLabs rechazó la clave API.":
-  result?.error==="elevenlabs_credits_required"?"ElevenLabs necesita créditos disponibles.":
+  result?.error==="elevenlabs_credits_required"?"ElevenLabs requiere un plan compatible con la voz seleccionada o créditos adicionales. En cuentas Free, algunas voces no están disponibles por API. Tus clips de Seedance siguen guardados.":
   result?.error==="elevenlabs_rate_limited"?"ElevenLabs alcanzó el límite de solicitudes.":
   result?.error==="elevenlabs_voice_unavailable"?"La voz configurada no está disponible para esta cuenta de ElevenLabs. Verifica ELEVENLABS_VOICE_ID.":
   result?.error==="elevenlabs_access_denied"?"Esta clave no tiene permisos para generar voz en ElevenLabs.":
@@ -722,7 +722,7 @@ export default function StickmanLabPage(){
      config?.error==="elevenlabs_voice_unavailable"?"ElevenLabs no reconoce la voz configurada. Establece una voz disponible en ELEVENLABS_VOICE_ID; tus 12 clips siguen guardados.":
      config?.error==="elevenlabs_key_rejected"?"ElevenLabs rechazó la API key de Preview. Comprueba ELEVENLABS_API_KEY; tus 12 clips siguen guardados.":
      config?.error==="elevenlabs_access_denied"?"La API key no tiene permisos suficientes para acceder a ElevenLabs; los clips siguen guardados.":
-     config?.error==="elevenlabs_credits_required"?"ElevenLabs requiere créditos disponibles; tus clips de Seedance siguen guardados.":
+     config?.error==="elevenlabs_credits_required"?"El plan de ElevenLabs o los créditos disponibles no permiten utilizar esta voz por API. Tus clips de Seedance siguen guardados.":
      "No se pudo verificar ElevenLabs (HTTP "+String(config?.upstreamStatus||check.status)+
       (config?.providerCode&&config.providerCode!=="unknown"?", "+config.providerCode:"")+
       "). Tus 12 clips siguen guardados."
