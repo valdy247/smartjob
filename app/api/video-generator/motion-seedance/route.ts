@@ -166,20 +166,30 @@ export async function POST(req:NextRequest){
  const owner=await authenticatedUser(req);
  if(!owner||!videoAllowed(owner))return reply({error:"video_not_enabled_for_account"},403);
  const body=await req.json().catch(()=>null);
- if(body?.action==="download"||body?.action==="archive"){
+ if(body?.action==="download"||body?.action==="archive"||body?.action==="stitch-url"){
   const archiveOnly=body.action==="archive";
+  const signedOnly=body.action==="stitch-url";
   const token=typeof body?.token==="string"?body.token:"";
   const operation=unseal(token,owner,true);
   if(!operation)return reply({error:"invalid_video_job"},403);
   const jobFresh=Boolean(unseal(token,owner));
+  const signedClip=async()=>{
+   const result=await videoDb().storage.from(CLIP_BUCKET)
+    .createSignedUrl(clipPath(owner,token),1800);
+   if(result.error||!result.data?.signedUrl)return null;
+   return reply({url:result.data.signedUrl,mediaType:"video/mp4"});
+  };
   // First use our private copy, which remains available after provider URLs
   // and gateway credit checks expire.
   try{
    const cached=await videoDb().storage.from(CLIP_BUCKET).download(clipPath(owner,token));
    if(!cached.error&&cached.data){
     const bytes=new Uint8Array(await cached.data.arrayBuffer());
-    if(bytes.length>=1000&&bytes.length<=26000000)
-     return archiveOnly?reply({saved:true,cached:true}):serveClip(bytes);
+    if(bytes.length>=1000&&bytes.length<=26000000){
+     if(archiveOnly)return reply({saved:true,cached:true});
+     if(signedOnly)return await signedClip()||reply({error:"clip_signed_url_unavailable"},503);
+     return serveClip(bytes);
+    }
    }
   }catch{}
   const sourceUrl=typeof body?.sourceUrl==="string"?body.sourceUrl:"";
@@ -211,6 +221,9 @@ export async function POST(req:NextRequest){
    // Persist the MP4 so voice/stitch retries never depend on expiring links.
    const saved=await savePrivateClip(owner,token,data);
    if(archiveOnly)return saved?reply({saved:true}):reply({error:"clip_archive_unavailable"},503);
+   if(signedOnly)return saved?
+    await signedClip()||reply({error:"clip_signed_url_unavailable"},503):
+    reply({error:"clip_archive_unavailable"},503);
    return serveClip(data);
   }catch(e){
    const message=e instanceof Error?e.message:"unknown";

@@ -383,7 +383,7 @@ test("Saved storyboard .jpg previews use the correct validation rule and cost no
 test("Seedance montage downloads existing completed MP4s without rechecking gateway status or regenerating",()=>{
  const api=read("app/api/video-generator/motion-seedance/route.ts");
  const ui=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
- const download=api.split('if(body?.action==="download"||body?.action==="archive"){')[1]?.split('if(body?.action==="status"){')[0];
+ const download=api.split('if(body?.action==="download"||body?.action==="archive"||body?.action==="stitch-url"){')[1]?.split('if(body?.action==="status"){')[0];
  assert.ok(download,"Existing clips must have a download route");
  assert.match(download,/unseal\(token,owner\)/);
  assert.match(download,/storage\.from\(CLIP_BUCKET\)\.download/);
@@ -395,7 +395,7 @@ test("Seedance montage downloads existing completed MP4s without rechecking gate
  assert.doesNotMatch(clipBranch,/startVideo\(|getVideoStatus\(/);
  assert.match(api,/endsWith\("\.volces\.com"\)/);
  assert.match(api,/fileSizeLimit:26000000/);
- assert.match(ui,/body:JSON\.stringify\(\{action:"download",token,sourceUrl\}\)/);
+ assert.match(ui,/body:JSON\.stringify\(\{action:"stitch-url",token,sourceUrl\}\)/);
  assert.match(ui,/loadSeedanceForStitching\(accessToken,job\.tokens\[i\],job\.urls\[i\],i\)/);
  assert.match(ui,/Recuperando MP4 guardado/);
  assert.match(ui,/No se inició otra generación/);
@@ -432,7 +432,7 @@ test("Single-scene editing does not invalidate other paid Seedance clips",()=>{
  assert.match(studio,/await seedanceRequest\(accessToken,\{action:"archive"/);
  assert.match(api,/allowArchived=false/);
  assert.match(api,/if\(!jobFresh\)return reply\(\{error:"video_archive_missing"\},410\)/);
- assert.match(api,/archiveOnly\?reply\(\{saved:true,cached:true\}\):serveClip\(bytes\)/);
+ assert.match(api,/if\(archiveOnly\)return reply\(\{saved:true,cached:true\}\)/);
 });
 test("Video finishing and publishing are honest and available by stage",()=>{
  const studio=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
@@ -605,4 +605,21 @@ test("Private VMV Motion library can share original renders without sign-in or t
  assert.match(page,/navigator\.clipboard\.writeText\(libraryShare\.url\)/);
  assert.match(page,/descargar el archivo original/);
  assert.doesNotMatch(api,/ffmpeg|transcode|MediaRecorder/);
+});
+
+test("Completed Seedance clips are signed rather than proxied through Vercel response",()=>{
+ const api=read("app/api/video-generator/motion-seedance/route.ts");
+ const ui=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ assert.match(api,/body\?\.action==="stitch-url"/);
+ assert.match(api,/unseal\(token,owner,true\)/);
+ assert.match(api,/createSignedUrl\(clipPath\(owner,token\),1800\)/);
+ assert.match(api,/if\(signedOnly\)return await signedClip\(\)/);
+ assert.match(api,/const saved=await savePrivateClip\(owner,token,data\)/);
+ assert.match(ui,/action:"stitch-url",token,sourceUrl/);
+ assert.match(ui,/await fetch\(ticket\.url,\{cache:"no-store"\}\)/);
+ assert.match(ui,/la descarga directa del MP4 falló/);
+ const loader=ui.split("async function loadSeedanceForStitching(")[1]?.split("type MotionSfx=")[0];
+ assert.ok(loader);
+ assert.doesNotMatch(loader,/await response\.blob\(\)/);
+ assert.doesNotMatch(loader,/startVideo\(|generateMinimax\(/);
 });
