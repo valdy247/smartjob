@@ -60,6 +60,7 @@ export default function VMVPilotPage(){
  const L=(es:string,english:string)=>en?english:es;
  const [screen,setScreen]=useState<Screen>("home"),[step,setStep]=useState(0);
  const [form,setForm]=useState(defaults),[approved,setApproved]=useState(false);
+ const [motionEngine,setMotionEngine]=useState(false);
  const [pilots,setPilots]=useState<Pilot[]>([]);
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
  const [customNiche,setCustomNiche]=useState(false),[customAudience,setCustomAudience]=useState(false);
@@ -89,8 +90,9 @@ export default function VMVPilotPage(){
   finally{setLoading(false);}
  };
  useEffect(()=>{void refresh();},[]);
- const start=()=>{setForm(defaults);setStep(0);setCustomNiche(false);setCustomAudience(false);setError("");setApproved(false);setScreen("create");};
+ const start=()=>{setMotionEngine(false);setForm(defaults);setStep(0);setCustomNiche(false);setCustomAudience(false);setError("");setApproved(false);setScreen("create");};
  const edit=(pilot:Pilot)=>{
+  setMotionEngine(false);
   setForm({...defaults,id:pilot.id,niche:pilot.niche,audience:pilot.audience,
    goal:pilot.goal,style:pilot.style,frequency:pilot.frequency,
    monthly_budget_cents:pilot.monthly_budget_cents||0,
@@ -130,9 +132,30 @@ export default function VMVPilotPage(){
     language:form.language,voiceProvider:form.voiceProvider,voiceId:form.voiceId,
     qualityMode:form.qualityMode
    };
-   window.dispatchEvent(new CustomEvent<PilotRenderRequest>("vmv-pilot:generate",{detail:details}));
    setPilots(prev=>[saved,...prev.filter(p=>p.id!==saved.id)]);
-   setScreen("history");
+   if(motionEngine){
+    const requestId=crypto.randomUUID();
+    const brief=[
+     "Produce an original, coherent 60-second social video.",
+     "Topic: "+form.niche.trim()+".",
+     "Goal: "+form.goal+". Audience: "+form.audience+".",
+     "Visual style: vibrant 2D STICKMAN cartoon with expressive actions and richly colored backgrounds.",
+     "Spoken language: "+form.language+".",
+     form.creative_seed?"Research-backed selected trend/idea: "+form.creative_seed+".":"Find an engaging original angle within this category.",
+     "Start with a captivating hook and do not reveal surprise subjects before their narration.",
+     "Session ID (metadata only, never narrate): "+requestId
+    ].join(" ").slice(0,1950);
+    const handoff={requestId,createdAt:Date.now(),prompt:brief,pilotId:saved.id,
+     topic:form.niche,goal:form.goal,audience:form.audience,idea:form.creative_seed,
+     language:form.language,style:form.style,seconds:60,subtitles:form.subtitles,
+     narration:form.narration,voiceProvider:form.voiceProvider,voiceId:form.voiceId,
+     confirmedCost:true};
+    sessionStorage.setItem("vmv-pilot-motion-handoff-v1",JSON.stringify(handoff));
+    router.push("/vista-app/vmv-pilot/stickman-lab?pilotMotion="+encodeURIComponent(requestId));
+   }else{
+    window.dispatchEvent(new CustomEvent<PilotRenderRequest>("vmv-pilot:generate",{detail:details}));
+    setScreen("history");
+   }
   }catch(e){setError(e instanceof Error?e.message:L("No se pudo guardar.","Couldn't save campaign."));}
   finally{setBusy(false);}
  };
@@ -235,19 +258,20 @@ export default function VMVPilotPage(){
      onSkip={()=>{update({creative_seed:"",research_video_id:"",research_scan_id:null});setStep(10);}}
      onChoose={selectedIdea}/>:null}
    {step===10?<div className={css.choices}>{pilotQualityOptions.map(item=>
-    <button type="button" key={item.id} onClick={()=>{update({qualityMode:item.id});setStep(11);}}>
+    <button type="button" key={item.id} onClick={()=>{setMotionEngine(false);update({qualityMode:item.id});setStep(11);}}>
      {item.id==="turbo"?<Zap size={21}/>:item.id==="high"?<Sparkles size={21}/>:<GitCompareArrows size={21}/>}
      <strong>{item.id==="compare"?L("Probar ambas","Test both"):item.id==="high"?L("Alta","High"):item.name}</strong>
      <small className={css.qualityPrice}>{priceUSD(animationCostCents(form.seconds,item.id))}</small>
     </button>)}
     <p className={css.qualityNote}>{L("Costo estimado de animación · otros servicios aparte","Estimated animation cost · other services extra")}</p>
     {form.style==="stickman"?<button type="button" className={css.ownEngine}
-     onClick={()=>router.push("/vista-app/vmv-pilot/stickman-lab")}>
-     <Clapperboard size={19}/>{L("Probar motor Stickman propio · Sin Runway","Try our own Stickman engine · No Runway")}
+     onClick={()=>{update({qualityMode:"turbo",seconds:60});setMotionEngine(true);setApproved(false);setStep(11);}}>
+     <Clapperboard size={19}/>{L("Crear con VMV Motion · Seedance 720p · 60 s","Create with VMV Motion · Seedance 720p · 60 s")}
      <ArrowRight size={17}/>
     </button>:null}
    </div>:null}
    {step===11?<div className={css.review}>
+    {motionEngine?<div><span>Motor</span><strong>VMV Motion · Seedance 720p · 60 s</strong></div>:null}
     <div><span>{L("Tema","Topic")}</span><strong>{form.niche}</strong></div>
     <div><span>{L("Estilo","Style")}</span><strong>{stylesOptions.find(s=>s.id===form.style)?.label||"Producto"}</strong></div>
     <div><span>{L("Duración","Duration")}</span><strong>{form.seconds}s · 9:16</strong></div>
@@ -271,7 +295,7 @@ export default function VMVPilotPage(){
     <button type="button" className={css.primary} onClick={()=>void generate()}
      disabled={!approved||busy||form.niche.trim().length<3}>
      {busy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
-     {busy?L("Preparando…","Preparing…"):form.qualityMode==="compare"?L("Generar ambos videos","Generate both videos"):L("Generar video","Generate video")}</button>
+     {busy?L("Preparando…","Preparing…"):motionEngine?L("Crear con VMV Motion","Create with VMV Motion"):form.qualityMode==="compare"?L("Generar ambos videos","Generate both videos"):L("Generar video","Generate video")}</button>
    </div>:null}
   </>:null}
   {screen==="history"?<>
