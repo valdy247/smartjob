@@ -11,6 +11,7 @@ import styles from "./page.module.css";
 import AutopilotWizard,{type AutopilotPlan} from "./AutopilotWizard";
 import VideoPromptAssistant from "@/components/VideoPromptAssistant";
 import CreativeGenerator,{type CreativeMode} from "./CreativeGenerator";
+import CreativeImageHistory from "./CreativeImageHistory";
 import {listQuickVideos,deleteQuickVideo,type QuickVideoProject} from "@/lib/vmv-video-quick-library";
 
 type Job={id:string;pilot_id:string|null;prompt:string;mode:"text"|"image";model:"gen4.5"|"kling";
@@ -361,7 +362,7 @@ export default function VideoGeneratorPage(){
  return <main className={styles.page}><div className={styles.shell}>
   <header className={styles.topbar}>
    {screen==="home"?<Link href="/vista-app" className={styles.back}><ArrowLeft size={17}/> VMV Business</Link>:
-    <button type="button" className={styles.back} onClick={()=>{if(screen==="pilot"&&pilotBack.current){pilotBack.current();return;}if(screen==="studio"&&studioBack.current){studioBack.current();return;}open(screen==="studio"?"menu":"home");}}><ArrowLeft size={17}/>{L("Video Generator","Video Generator")}</button>}
+    <button type="button" className={styles.back} onClick={()=>{if(screen==="pilot"&&pilotBack.current){pilotBack.current();return;}if(screen==="studio"&&studioBack.current){studioBack.current();return;}open(screen==="studio"?"menu":"home");}}><ArrowLeft size={17}/>{L("Imagen / Video Generator","Image / Video Generator")}</button>}
    <div className={styles.topRight}><InterfaceLanguagePicker compact/><span className={styles.pill}><Sparkles size={14}/> Beta</span></div>
   </header>
   {screen==="home"?<>
@@ -470,8 +471,9 @@ export default function VideoGeneratorPage(){
    onSave={savePilot} onExit={()=>open("home")} onLibrary={()=>open("library")}/>:null}
   {screen==="library"?<>
    <div className={styles.heading}><span className={styles.eyebrow}><Library size={15}/>{L("TUS CREACIONES","YOUR CREATIONS")}</span>
-    <h1>{L("Mi biblioteca","My library")}</h1>
+    <h1>{L("Historial","History")}</h1>
    </div>
+   <CreativeImageHistory en={en}/>
    <section className={styles.quickLibrary} aria-label={L("Videos Stickman e Imágenes IA guardados","Saved Stickman and AI image videos")}>
     <div className={styles.quickHeader}>
      <div><strong>{L("Stickman e Imágenes IA","Stickman & AI images")} · {quickProjects.length}</strong>
