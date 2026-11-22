@@ -50,7 +50,7 @@ async function loadVoice(phrases:string[],voice:"alloy"|"nova"):Promise<ArrayBuf
  });
 }
 type SpeechAlignment={characters:string[];character_start_times_seconds:number[];character_end_times_seconds:number[]};
-type ContinuousSpeech={audio:ArrayBuffer;alignment:SpeechAlignment;duration:number};
+type ContinuousSpeech={audio:ArrayBuffer;alignment:SpeechAlignment;duration:number;sceneEnds?:number[]|null};
 type CaptionCue={start:number;end:number;text:string};
 async function loadContinuousVoice(phrases:string[]):Promise<ContinuousSpeech>{
  const sb=getSupabase();if(!sb)throw Error("Inicia sesión para crear la narración.");
@@ -70,7 +70,8 @@ async function loadContinuousVoice(phrases:string[]):Promise<ContinuousSpeech>{
  );
  if(typeof result.audio!=="string"||!result.alignment||!Number.isFinite(result.duration))
   throw Error("ElevenLabs no devolvió audio y tiempos válidos.");
- return {audio:base64ToBuffer(result.audio),alignment:result.alignment as SpeechAlignment,duration:result.duration};
+ return {audio:base64ToBuffer(result.audio),alignment:result.alignment as SpeechAlignment,duration:result.duration,
+  sceneEnds:Array.isArray(result.sceneEnds)?result.sceneEnds:null};
 }
 function captionCues(alignment:SpeechAlignment):CaptionCue[]{
  const {characters,character_start_times_seconds:starts,character_end_times_seconds:ends}=alignment;
@@ -373,7 +374,8 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
   for(const [index,video] of videos.entries()){
    video.currentTime=0;
    await video.play();
-   const duration=Number.isFinite(video.duration)?Math.min(5,video.duration):5;
+   const endTime=speech?.sceneEnds?.[index]??(index+1)*5;
+   // Each scene gets exactly its spoken duration. Longer speech holds the end frame.
    await new Promise<void>((resolve,reject)=>{
     const frame=()=>{
      try{
@@ -381,7 +383,7 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
       const width=video.videoWidth*ratio,height=video.videoHeight*ratio;
       ctx.drawImage(video,(720-width)/2,(1280-height)/2,width,height);
       drawCaption(Math.max(0,(performance.now()-videoStart)/1000));
-      if(video.currentTime>=duration-.05||video.ended){resolve();return;}
+      if((performance.now()-videoStart)/1000>=endTime){resolve();return;}
       raf=requestAnimationFrame(frame);
      }catch{reject(Error("El navegador no pudo componer uno de los clips."));}
     };
