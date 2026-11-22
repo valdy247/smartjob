@@ -11,7 +11,8 @@ export type StickmanTopic="space"|"race";
 export type StickmanLanguage="es"|"en";
 export type StickmanAction="earth"|"jupiter"|"comparison"|"track"|"beach"|"finish"|"custom";
 export type MotionShape={kind:"path"|"ellipse"|"rect";fill:string;stroke:string;strokeWidth:number;x:number;y:number;w:number;h:number;d:string;motion:"none"|"float"|"walk"|"sway"|"zoom";amplitude:number;phase:number};
-export type StickmanScene={action:StickmanAction;speech:string;heading?:string;background?:string;shapes?:MotionShape[];motif?:"nature"|"city"|"science"|"food"|"people"|"abstract"};
+export type MotionCamera={focusX:number;focusY:number;startZoom:number;endZoom:number};
+export type StickmanScene={camera?:MotionCamera;action:StickmanAction;speech:string;heading?:string;background?:string;shapes?:MotionShape[];motif?:"nature"|"city"|"science"|"food"|"people"|"abstract"};
 export type StickmanStory={name:string;scenes:[StickmanScene,StickmanScene,StickmanScene]};
 const stories:Record<StickmanLanguage,Record<StickmanTopic,StickmanStory>>={
  es:{
@@ -321,6 +322,21 @@ function drawTerraScene(ctx:CanvasRenderingContext2D,scene:StickmanScene,t:numbe
  const bg=ctx.createLinearGradient(0,0,0,960);
  bg.addColorStop(0,"rgba(255,255,255,.13)");bg.addColorStop(1,"rgba(0,0,0,.22)");
  ctx.fillStyle=bg;ctx.fillRect(0,0,540,960);
+ // Camera acts on the illustration only; captions and subtitles remain legible.
+ // Each five-second beat moves from a wider establishing shot to a close-up.
+ const camera=scene.camera;
+ const smooth=(v:number)=>{const x=clamp(v,0,1);return x*x*(3-2*x);};
+ const progression=smooth(local/5);
+ const startZoom=camera?.startZoom??1.02;
+ const endZoom=camera?.endZoom??1.25;
+ const focusX=camera?.focusX??270;
+ const focusY=camera?.focusY??435;
+ const zoom=startZoom+(endZoom-startZoom)*progression;
+ ctx.save();
+ ctx.beginPath();ctx.rect(0,185,540,575);ctx.clip();
+ ctx.translate(270,450);
+ ctx.scale(zoom,zoom);
+ ctx.translate(-focusX,-focusY);
  for(const shape of scene.shapes||[]){
   ctx.save();
   const offset=Math.sin(t*2.3+shape.phase)*shape.amplitude;
@@ -345,6 +361,7 @@ function drawTerraScene(ctx:CanvasRenderingContext2D,scene:StickmanScene,t:numbe
   }
   ctx.restore();
  }
+ ctx.restore();
  // Motion title and progress live in safe zones outside the illustrations.
  rounded(ctx,34,88,472,6,3,"rgba(255,255,255,.22)");
  rounded(ctx,34,88,472*clamp(local/5,0,1),6,3,"#d4afff");
@@ -416,6 +433,11 @@ export function drawStickmanFrame(
    }
    stickman(ctx,157,523,.75,time,"cheer");
   }
+ }
+ // Short editorial cut-in provides a clear scene change without obscuring the story.
+ if(story.scenes[scene].shapes?.length&&scene>0&&local<.16){
+  ctx.fillStyle=`rgba(255,255,255,${.36*(1-local/.16)})`;
+  ctx.fillRect(0,0,540,960);
  }
  if(showSubtitles)subtitles(ctx,story.scenes[scene].speech,local);
  ctx.restore();
