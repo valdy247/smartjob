@@ -11,9 +11,14 @@ import {speechTimeline} from "./speech-timeline.mjs";
 const required=["OPENAI_API_KEY","AI_GATEWAY_API_KEY","VMV_PILOT_OWNER_ID"];
 const supabaseUrl=process.env.SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseSecret=process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY;
-if(!supabaseUrl||!supabaseSecret)throw Error("Missing Supabase worker configuration");
-for(const key of required)if(!process.env[key]?.trim())throw Error("Missing configuration: "+key);
-const db=createClient(supabaseUrl,supabaseSecret,{auth:{persistSession:false,autoRefreshToken:false}});
+// Deploy safely before credentials are configured. In standby the worker claims
+// no jobs, spends no credits, and its readiness endpoint stays unavailable.
+const db=supabaseUrl&&supabaseSecret?
+ createClient(supabaseUrl,supabaseSecret,{auth:{persistSession:false,autoRefreshToken:false}}):null;
+const missingConfig=()=>[
+ ...(!db?["SUPABASE_URL or SUPABASE_SECRET_KEY"]:[]),
+ ...required.filter(key=>!process.env[key]?.trim())
+];
 const WORK="vmv-pilot-working",FINAL="vmv-pilot-renders";
 const OPENAI="https://api.openai.com/v1";
 const STYLE={
@@ -24,16 +29,17 @@ const STYLE={
  product:"STRICT polished photorealistic product advertisement with studio lights and physically realistic materials. No cartoon."
 };
 const LANGUAGES={es:"Spanish",en:"English",pt:"Portuguese",fr:"French",de:"German",it:"Italian"};
-const STOP=()=>process.env.VMV_PILOT_WORKER_ENABLED!=="true";
+const STOP=()=>process.env.VMV_PILOT_WORKER_ENABLED!=="true"||missingConfig().length>0;
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const log=(event,details={})=>console.log("[vmv-pilot-worker]",event,JSON.stringify(details));
 let closing=false,active=false;
 process.on("SIGTERM",()=>{closing=true;});
 process.on("SIGINT",()=>{closing=true;});
 createServer((req,res)=>{
- const ok=req.url==="/healthz";
- res.writeHead(ok?200:404,{"Content-Type":"text/plain","Cache-Control":"no-store"});
- res.end(ok?"ok":"not found");
+ const health=req.url==="/healthz",ready=req.url==="/readyz";
+ const status=health?200:ready?(STOP()?503:200):404;
+ res.writeHead(status,{"Content-Type":"text/plain","Cache-Control":"no-store"});
+ res.end(health?"ok":ready?(STOP()?"standby":"ready"):"not found");
 }).listen(Number(process.env.PORT||10000),"0.0.0.0");
 const auth=k=>({Authorization:"Bearer "+process.env[k]});
 async function request(url,options={},ms=80000){
