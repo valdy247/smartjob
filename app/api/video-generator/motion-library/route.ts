@@ -83,6 +83,7 @@ export async function POST(req:NextRequest){
  if(len>360000)return reply({error:"motion_library_request_too_large"},413);
  const body=await req.json().catch(()=>null);
  const action=typeof body?.action==="string"?body.action:"";
+
  if(action==="save"){
   const project:unknown=body?.project;
   if(!validSnapshot(project,owner))return reply({error:"motion_project_invalid"},400);
@@ -155,6 +156,32 @@ export async function POST(req:NextRequest){
    if(signed.error||!signed.data?.token)return reply({error:"motion_render_storage_unavailable"},503);
    return reply({path,token:signed.data.token,bucket:RENDER_BUCKET});
   }catch{return reply({error:"motion_render_storage_unavailable"},503);}
+ }
+ // A short-lived bearer URL downloads the exact stored video bytes.
+ // The Storage bucket remains private and project ownership is verified above.
+ if(action==="render-share"){
+  if(!validId(body?.id))return reply({error:"motion_project_id_invalid"},400);
+  try{
+   const project=await readProject(owner,body.id);
+   if(!project)return reply({error:"motion_project_not_found"},404);
+   const active=project.seedance.activeRenderId||"";
+   const revision=active?project.seedance.voiceRevisions?.find(v=>v.id===active):undefined;
+   if(active&&!revision)return reply({error:"motion_render_revision_invalid"},409);
+   const extensions:("mp4"|"webm")[]=revision?[revision.extension]:["mp4","webm"];
+   for(const extension of extensions){
+    // Never sign arbitrary paths or revisions supplied by the caller.
+    const path=renderPath(owner,body.id,extension,revision?.id);
+    const filename="VMV-Motion-"+body.id.slice(0,8)+"."+extension;
+    const expiresIn=7*24*60*60;
+    const signed=await storage().from(RENDER_BUCKET).createSignedUrl(
+     path,expiresIn,{download:filename});
+    if(!signed.error&&signed.data?.signedUrl){
+     return reply({url:signed.data.signedUrl,filename,
+      expiresAt:new Date(Date.now()+expiresIn*1000).toISOString()});
+    }
+   }
+   return reply({error:"motion_render_not_found"},404);
+  }catch{return reply({error:"motion_render_share_unavailable"},503);}
  }
  if(action==="render-url"){
   if(body?.revisionId!==undefined&&!validId(body.revisionId))

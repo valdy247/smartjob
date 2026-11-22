@@ -304,3 +304,16 @@
 .asmrOption span{display:flex;align-items:center;gap:8px;color:#4d3165;font-weight:850}
 .asmrOption input[type=checkbox]{width:17px;height:17px;accent-color:#945acc}
 .asmrOption small{font-size:11px;line-height:1.5;color:#8b759b;font-weight:500}
+
+/* VMV Motion sharing: direct signed download of stored bytes, no re-encode. */
+.librarySharePanel{background:#f9f5fe;border:1px solid #d9c7ee;padding:15px;border-radius:15px;
+ display:flex;flex-direction:column;gap:10px;width:100%;margin:12px 0}
+.librarySharePanel p{font-size:12px;line-height:1.6;color:#715983;margin:0}
+.libraryShareHeader{display:flex;align-items:center;gap:8px;color:#4d2e68}
+.libraryShareHeader strong{flex:1;font-size:13px}
+.libraryShareHeader .ghostButton{flex:none}
+.libraryShareLink{display:flex;flex-wrap:wrap;gap:8px}
+.libraryShareLink input{min-width:0;flex:1 1 190px;background:white;border:1px solid #d7c5e7;
+ border-radius:10px;padding:11px;color:#4c3b5e;font-size:12px}
+.libraryShareLink button{display:flex;align-items:center;gap:6px;border:0;border-radius:10px;
+ background:#8651b5;color:white;font-size:12px;font-weight:800;padding:10px 15px;cursor:pointer}

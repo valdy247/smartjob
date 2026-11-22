@@ -585,3 +585,21 @@ test("VMV Motion ASMR is a separate credit-confirmed audio-only path and preserv
  assert.match(api,/duration_seconds:duration/);
  assert.match(api,/Absolutely no speech, no narration, no vocals, no music/);
 });
+
+test("Private VMV Motion library can share original renders without sign-in or transcoding",()=>{
+ const api=read("app/api/video-generator/motion-library/route.ts");
+ const page=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ assert.match(api,/if\(action==="render-share"\)/);
+ assert.match(api,/const project=await readProject\(owner,body\.id\)/);
+ assert.match(api,/createSignedUrl\(\s*path,expiresIn,\{download:filename\}\)/);
+ assert.match(api,/const expiresIn=7\*24\*60\*60/);
+ assert.match(api,/const path=renderPath\(owner,body\.id,extension,revision\?\.id\)/);
+ assert.match(api,/active\?project\.seedance\.voiceRevisions\?\.find/);
+ assert.match(api,/public:false/);
+ assert.match(page,/shareLibraryVideo\(item\.id\)/);
+ assert.match(page,/shareLibraryVideo\(currentCloudId\(\)\)/);
+ assert.match(page,/action:"render-share",id/);
+ assert.match(page,/navigator\.clipboard\.writeText\(libraryShare\.url\)/);
+ assert.match(page,/descargar el archivo original/);
+ assert.doesNotMatch(api,/ffmpeg|transcode|MediaRecorder/);
+});
