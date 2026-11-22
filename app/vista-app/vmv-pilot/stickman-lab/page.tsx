@@ -1655,7 +1655,7 @@ export default function StickmanLabPage(){
      const disabled=step==="revisar"&&!directorPlan?.frames.length||
       step==="editar"&&directorPlan?.frames.length!==MOTION_SCENES||
       step==="publicar"&&!seedJoined&&!lastRenderedCloudUrl;
-     return <button key={step} type="button" disabled={disabled}
+     return <button key={step} type="button" disabled={disabled||directorBusy||seedBusy||rendering||projectSwitching}
       aria-current={studioStep===step?"step":undefined}
       className={studioStep===step?css.stepActive:""}
       onClick={()=>setStudioStep(step)}>
@@ -1703,10 +1703,12 @@ export default function StickmanLabPage(){
      <summary>Personajes y estilo visual <span>Opcional</span></summary>
      <p>Reutiliza la apariencia de un proyecto anterior. La IA mantiene rasgos y colores, sin copiar escenarios que no correspondan.</p>
      {cloudProjects.length?<select aria-label="Personajes de otro proyecto" defaultValue=""
+      disabled={characterLoading}
       onChange={event=>{if(event.target.value)void importCharacters(event.target.value);}}>
-      <option value="">Usar personajes de un proyecto…</option>
+      <option value="">Elegir un estilo guardado…</option>
       {cloudProjects.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}
      </select>:null}
+     {characterLoading?<p className={css.inlineLoading} role="status"><LoaderCircle className={css.spin} size={15}/> Preparando referencias…</p>:null}
      {characterFrames.length?<div>
       <p>Referencia visual opcional: selecciona una imagen donde se vea claramente el personaje.</p>
       <div className={css.shotStrip} role="group" aria-label="Referencias de personajes">
@@ -1886,14 +1888,19 @@ export default function StickmanLabPage(){
      </section>:null}
     {studioStep==="revisar"&&customMode&&directorPlan?.frames.length?<section className={css.storyReview} aria-label="Revisión de escenas">
      <div className={css.storyHeading}>
-      <h2>Revisa antes de animar</h2>
+      <h2>Revisa tus escenas</h2>
       <p>{directorPlan.title} · {directorPlan.frames.length}/{MOTION_SCENES} imágenes ·
        {(directorPlan.approved||[]).filter(Boolean).length}/{MOTION_SCENES} aprobadas</p>
-      <button type="button" disabled={framesRefreshing}
-       onClick={()=>void refreshDirectorFrames(directorPlan.prompt,true)}>
-       {framesRefreshing?"Recuperando imágenes…":"Recuperar imágenes"}
-      </button>
-      {frameRefreshError?<p role="alert">{frameRefreshError}</p>:null}
+      {framesRefreshing?<p className={css.inlineLoading} role="status">
+       <LoaderCircle className={css.spin} size={15}/> Cargando tus imágenes…
+      </p>:null}
+      {frameRefreshError?<div className={css.inlineError} role="alert">
+       <span>{frameRefreshError}</span>
+       <button type="button" disabled={framesRefreshing}
+        onClick={()=>void refreshDirectorFrames(directorPlan.prompt,true)}>
+        <RotateCcw size={14}/> Reintentar
+       </button>
+      </div>:null}
      </div>
      {directorPlan.scenes.map((scene,index)=>{
       const frame=directorPlan.frames[index];
@@ -1957,13 +1964,15 @@ export default function StickmanLabPage(){
      })}
      {directorPlan.frames.length<MOTION_SCENES?<button type="button" className={css.generate}
       disabled={directorBusy} onClick={()=>void prepareStoryboard()}>
-      {directorBusy?directorStatus:"Continuar generando las imágenes pendientes"}</button>:null}
+      {directorBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
+      {directorBusy?directorStatus||"Creando imágenes…":"Continuar con las imágenes"}
+     </button>:null}
      {directorPlan.frames.length===MOTION_SCENES?<button type="button" className={css.generate}
       disabled={directorBusy||seedBusy||framesRefreshing||editingSpeech!==null||regeneratingScene!==null||
        !directorPlan.scenes.every((scene,i)=>directorPlan.approved?.[i]===true&&
         (directorPlan.draftPrompts?.[i]??scene.imagePrompt)===scene.imagePrompt)}
-      onClick={()=>void animateApproved()}>
-      {directorBusy?directorStatus:savedClipCount===MOTION_SCENES?"Reintentar voz y montaje · conservar 12 clips":"Dar movimiento · Seedance 720p"}
+      onClick={()=>setStudioStep("editar")}>
+      Continuar al editor
      </button>:null}
      <small>Seedance se inicia solo tras aprobar todas las escenas. Regenerar imágenes consume créditos de OpenAI.
       Animar 12 clips cuesta aproximadamente US$1.24 de Seedance, más imágenes y voz opcional.
