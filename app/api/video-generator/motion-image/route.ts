@@ -12,6 +12,14 @@ export async function POST(req:NextRequest){
  if(!owner||!videoAllowed(owner))return reply({error:"video_not_enabled_for_account"},403);
  if(Number(req.headers.get("content-length")||0)>7000)return reply({error:"request_too_large"},413);
  const body=await req.json().catch(()=>null);
+ if(body?.action==="preview"){
+  const imagePath=typeof body?.referencePath==="string"?body.referencePath:"";
+  if(!imagePath.startsWith(owner+"/")||!/^[-a-z0-9/]+\\.jpg$/.test(imagePath))
+   return reply({error:"invalid_image_reference"},403);
+  const signed=await videoDb().storage.from("vmv-motion-frames-preview").createSignedUrl(imagePath,7200);
+  if(signed.error||!signed.data?.signedUrl)return reply({error:"image_reference_unavailable"},409);
+  return reply({imageUrl:signed.data.signedUrl,referencePath:imagePath});
+ }
  const prompt=typeof body?.prompt==="string"?body.prompt.trim():"";
  const movieMode=body?.mode==="storyframe";
  const referencePath=typeof body?.referencePath==="string"?body.referencePath:"";
