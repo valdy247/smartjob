@@ -12,7 +12,7 @@ export type StickmanLanguage="es"|"en";
 export type StickmanAction="earth"|"jupiter"|"comparison"|"track"|"beach"|"finish"|"custom";
 export type MotionShape={kind:"path"|"ellipse"|"rect";fill:string;stroke:string;strokeWidth:number;x:number;y:number;w:number;h:number;d:string;motion:"none"|"float"|"walk"|"sway"|"zoom";amplitude:number;phase:number};
 export type MotionCamera={focusX:number;focusY:number;startZoom:number;endZoom:number};
-export type StickmanScene={camera?:MotionCamera;action:StickmanAction;speech:string;heading?:string;background?:string;shapes?:MotionShape[];motif?:"nature"|"city"|"science"|"food"|"people"|"abstract"};
+export type StickmanScene={image?:HTMLImageElement;camera?:MotionCamera;action:StickmanAction;speech:string;heading?:string;background?:string;shapes?:MotionShape[];motif?:"nature"|"city"|"science"|"food"|"people"|"abstract"};
 export type StickmanStory={name:string;scenes:[StickmanScene,StickmanScene,StickmanScene]};
 const stories:Record<StickmanLanguage,Record<StickmanTopic,StickmanStory>>={
  es:{
@@ -317,6 +317,39 @@ function drawCustomScene(ctx:CanvasRenderingContext2D,scene:StickmanScene,index:
 }
 
 
+function drawImageScene(ctx:CanvasRenderingContext2D,scene:StickmanScene,local:number){
+ const img=scene.image;
+ if(!img||!img.complete||!img.naturalWidth)return;
+ ctx.fillStyle="#151522";ctx.fillRect(0,0,540,960);
+ const camera=scene.camera;
+ const phase=clamp(local/5,0,1);
+ const eased=phase*phase*(3-2*phase);
+ const zoom=(camera?.startZoom??1.01)+((camera?.endZoom??1.30)-(camera?.startZoom??1.01))*eased;
+ // Cover screen with no letterboxing; camera focus follows the director's point.
+ const cover=Math.max(540/img.naturalWidth,960/img.naturalHeight);
+ const scale=cover*zoom;
+ const focalX=camera?.focusX??270,focalY=camera?.focusY??435;
+ const x=270-focalX*scale/cover,y=480-focalY*scale/cover;
+ ctx.save();ctx.beginPath();ctx.rect(0,0,540,960);ctx.clip();
+ ctx.drawImage(img,x,y,img.naturalWidth*scale,img.naturalHeight*scale);
+ ctx.restore();
+ // Readability overlays, separated from the camera transformation.
+ const shade=ctx.createLinearGradient(0,0,0,960);
+ shade.addColorStop(0,"rgba(10,9,23,.46)");
+ shade.addColorStop(.22,"rgba(10,9,23,0)");
+ shade.addColorStop(.71,"rgba(10,9,23,0)");
+ shade.addColorStop(1,"rgba(10,9,23,.56)");
+ ctx.fillStyle=shade;ctx.fillRect(0,0,540,960);
+ rounded(ctx,34,88,472,6,3,"rgba(255,255,255,.25)");
+ rounded(ctx,34,88,472*phase,6,3,"#ffe4a3");
+ ctx.font="800 32px system-ui, sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
+ const lines=wrappedText(ctx,scene.heading||"",460,2);
+ lines.forEach((part,i)=>{
+  rounded(ctx,30,120+i*42,480,39,13,"rgba(20,17,40,.63)");
+  ctx.fillStyle="#ffffff";ctx.fillText(part,270,140+i*42,452);
+ });
+}
+
 function drawTerraScene(ctx:CanvasRenderingContext2D,scene:StickmanScene,t:number,local:number){
  ctx.fillStyle=scene.background||"#252145";ctx.fillRect(0,0,540,960);
  const bg=ctx.createLinearGradient(0,0,0,960);
@@ -393,7 +426,9 @@ export function drawStickmanFrame(
  const action=story.scenes[scene].action;
  const isSpace=action==="earth"||action==="jupiter"||action==="comparison";
  ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,540,960);
- if(story.scenes[scene].shapes?.length){
+ if(story.scenes[scene].image){
+  drawImageScene(ctx,story.scenes[scene],local);
+ }else if(story.scenes[scene].shapes?.length){
   drawTerraScene(ctx,story.scenes[scene],time,local);
  }else if(action==="custom"){
   drawCustomScene(ctx,story.scenes[scene],scene,time,local);
@@ -435,7 +470,7 @@ export function drawStickmanFrame(
   }
  }
  // Short editorial cut-in provides a clear scene change without obscuring the story.
- if(story.scenes[scene].shapes?.length&&scene>0&&local<.16){
+ if((story.scenes[scene].image||story.scenes[scene].shapes?.length)&&scene>0&&local<.16){
   ctx.fillStyle=`rgba(255,255,255,${.36*(1-local/.16)})`;
   ctx.fillRect(0,0,540,960);
  }
