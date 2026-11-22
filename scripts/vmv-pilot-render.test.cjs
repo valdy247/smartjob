@@ -820,3 +820,16 @@ test("Voice change inside VMV Motion can audition gender-labelled ElevenLabs mal
  assert.match(speech,/"onyx"/);
  assert.match(cfg,/id:"onyx"/);
 });
+
+test("VMV Motion exports six five-second clips even when narration is 24.2s",()=>{
+ const page=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ const montage=page.split("async function stitchSeedanceClips(")[1]?.split("export default function StickmanLabPage")[0];
+ assert.ok(montage);
+ assert.match(montage,/const endTime=\(index\+1\)\*segmentSeconds/);
+ assert.match(montage,/const segmentStart=index\*segmentSeconds/);
+ assert.match(montage,/const remaining=Math\.max\(0,outputSeconds-/);
+ assert.doesNotMatch(montage,/endTime=speech\?\.sceneEnds/);
+ assert.doesNotMatch(montage,/remaining=Math\.max\(0,decodedDuration-/);
+ assert.match(montage,/if\(decodedDuration>outputSeconds\+0\.35\)/);
+ assert.match(page,/Math\.abs\(measured-montageSeconds\)>1\.5/);
+});

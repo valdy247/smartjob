@@ -639,6 +639,10 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
   if(speech){
    const decoded=await audioContext.decodeAudioData(speech.audio.slice(0));
    decodedDuration=decoded.duration;
+   // Keep the selected duration; an overlong voice needs a shorter script.
+   if(decodedDuration>outputSeconds+0.35)
+    throw Error("La narración dura "+decodedDuration.toFixed(1)+" s y supera los "+
+     outputSeconds+" s del video. Acorta las frases; tus clips siguen guardados.");
    const voice=audioContext.createBufferSource();voice.buffer=decoded;
    const gain=audioContext.createGain();gain.gain.value=Math.min(2,Math.max(0,options.voiceVolume));
    voice.connect(gain);gain.connect(mix);
@@ -713,7 +717,8 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
    video.playbackRate=playbackSpeed;
    try{await video.play();}
    catch{throw Error("Chrome interrumpió el clip "+(index+1)+". Mantén esta pestaña visible y vuelve a intentar el montaje; los clips están guardados.");}
-   const endTime=speech?.sceneEnds?.[index]??(index+1)*segmentSeconds;
+   // Speech alignment is only for subtitles, not for changing scene length.
+   const endTime=(index+1)*segmentSeconds;
    // Validate actual media progress, not only wall-clock progress. Otherwise a
    // stalled decoder can create seconds of identical frames while audio keeps going.
    const clipStartedAt=performance.now();
@@ -724,7 +729,7 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
    };
    const startFrameCount=quality.getVideoPlaybackQuality?.().totalVideoFrames;
    if(typeof startFrameCount==="number")lastFrameCount=startFrameCount;
-   const segmentStart=index?(speech?.sceneEnds?.[index-1]??index*segmentSeconds):0;
+   const segmentStart=index*segmentSeconds;
    const expectedLength=endTime-segmentStart;
    if(expectedLength<=0)throw Error("La duración de una escena no es válida.");
    await new Promise<void>((resolve,reject)=>{
@@ -777,16 +782,20 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
    });
    video.pause();
   }
-  // Hold the final video frame if the complete narration runs longer than its images.
-  const remaining=Math.max(0,decodedDuration-((performance.now()-videoStart)/1000)+0.3);
-  if(remaining>0&&speech){
-   await new Promise<void>(resolve=>{
+  // Fill a residual scheduling gap only up to the chosen movie duration.
+  const remaining=Math.max(0,outputSeconds-(performance.now()-videoStart)/1000);
+  if(remaining>0){
+   await new Promise<void>((resolve,reject)=>{
     const until=performance.now()+remaining*1000;
     const draw=()=>{
-     drawCaption(Math.max(0,(performance.now()-videoStart)/1000));
-     if(performance.now()>=until){resolve();return;}
-     raf=requestAnimationFrame(draw);
-    };raf=requestAnimationFrame(draw);
+     try{
+      requireForeground();
+      drawCaption(Math.max(0,(performance.now()-videoStart)/1000));
+      if(performance.now()>=until){resolve();return;}
+      raf=requestAnimationFrame(draw);
+     }catch(e){reject(e);}
+    };
+    raf=requestAnimationFrame(draw);
    });
   }
   recorder.stop();
