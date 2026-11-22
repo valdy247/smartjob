@@ -113,6 +113,7 @@ async function restoreAsset(job,key,local){
 }
 async function aiScript(job){
  const n=job.seconds/5;
+ for(let attempt=0;attempt<3;attempt++){
  const system=[
   "You are an original short video director creating a "+job.seconds+"-second vertical video.",
   "Return JSON with title and scenes array. EXACTLY "+n+" scenes, five seconds each.",
@@ -145,10 +146,17 @@ async function aiScript(job){
  }));
  if(scenes.some(s=>s.speech.length<10||s.imagePrompt.length<30||
   s.speech.split(/\s+/).length>13))throw Error("script_timing_invalid");
- await verifyScriptLanguage(job,scenes);
+ try{
+  await verifyScriptLanguage(job,scenes);
+ }catch(error){
+  if(error instanceof Error&&error.message==="script_language_mismatch"&&attempt<2)continue;
+  throw error;
+ }
  await patch(job,{title:String(parsed.title||job.topic).slice(0,140),
   scenes,status:"working",phase:"Voz",progress:7});
  return scenes;
+ }
+ throw Error("script_language_mismatch");
 }
 async function verifyScriptLanguage(job,scenes){
  if(!LANGUAGES[job.language])throw Error("video_language_invalid");
@@ -346,6 +354,9 @@ async function processJob(job){
   if(!Array.isArray(job.scenes)||job.scenes.length!==job.seconds/5){
    await patch(job,{status:"planning",phase:"Guion",progress:2});
    await aiScript(job);
+  }else{
+   // Also validate a resumed script before using more provider credits.
+   await verifyScriptLanguage(job,job.scenes);
   }
   const scenes=job.scenes,clips=[],voices=[],prefix=job.owner_id+"/"+job.id;
   if(!LANGUAGES[job.language])throw Error("video_language_invalid");
