@@ -91,7 +91,7 @@ export async function POST(req:NextRequest){
  try{
   const result=await startVideo({
    model:MODEL,prompt:cinematicPrompt(prompt,beat),duration:DURATION,
-   aspectRatio:"9:16",resolution:"720x1280"
+   aspectRatio:"9:16",resolution:"1280x720"
   });
   return reply({status:"pending",token:seal(owner,result.operation),model:MODEL,duration:DURATION,estimatedCostUsd:COST_USD,beat});
  }catch(e){
