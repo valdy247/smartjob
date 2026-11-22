@@ -721,35 +721,7 @@ export default function StickmanLabPage(){
    return next;
   });
  },[]);
- const restoreCloudProject=useCallback(async(id:string)=>{
-  if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
-  const sb=getSupabase();if(!sb)return;
-  const {data:{session}}=await sb.auth.getSession();
-  if(!session?.access_token)return;
-  setCloudLoading(true);setError("");
-  try{
-   const result=await motionLibrary(session.access_token,{action:"load",id});
-   const project=result.project as {id:string;plan:DirectorPlan;seedance:SeedanceSaved;
-    publish?:Partial<MotionPublishDraft>};
-   if(!project?.plan||!project.seedance)throw Error("Proyecto incompleto.");
-   const active=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
-   if(active?.prompt&&active.scenes?.length===MOTION_SCENES&&currentCloudId()!==id)
-    archiveMotionProject(active);
-   resetForProject(project.plan.prompt);
-   setCloudId(id);
-   saveDirectorPlan(project.plan);
-   saveSeedance(project.seedance);
-   const draft={...EMPTY_PUBLISH,...project.publish};
-   try{localStorage.setItem(publishStorageKey(id),JSON.stringify(draft));}catch{}
-   setPublishDraft(draft);
-   setDirectorPlan(project.plan);
-   setSavedClipCount(project.seedance.urls.filter(Boolean).length);
-   setStudioStep(project.seedance.urls.filter(Boolean).length===MOTION_SCENES?"editar":"revisar");
-   setCloudStatus("Proyecto recuperado");
-   setArchivedProjects(archivedMotionProjects());
-  }catch(e){setError(e instanceof Error?e.message:"No se pudo recuperar el proyecto en la nube.");}
-  finally{setCloudLoading(false);}
- },[resetForProject]);
+
  useEffect(()=>{
   try{
    const requestId=new URLSearchParams(window.location.search).get("pilotMotion");
@@ -848,6 +820,35 @@ export default function StickmanLabPage(){
   pendingStoryboard.current={prompt:"",images:[]};
   if(seedJoinedRef.current){URL.revokeObjectURL(seedJoinedRef.current);seedJoinedRef.current="";}
  },[]);
+ const restoreCloudProject=useCallback(async(id:string)=>{
+  if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
+  const sb=getSupabase();if(!sb)return;
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session?.access_token)return;
+  setCloudLoading(true);setError("");
+  try{
+   const result=await motionLibrary(session.access_token,{action:"load",id});
+   const project=result.project as {id:string;plan:DirectorPlan;seedance:SeedanceSaved;
+    publish?:Partial<MotionPublishDraft>};
+   if(!project?.plan||!project.seedance)throw Error("Proyecto incompleto.");
+   const active=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
+   if(active?.prompt&&active.scenes?.length===MOTION_SCENES&&currentCloudId()!==id)
+    archiveMotionProject(active);
+   resetForProject(project.plan.prompt);
+   setCloudId(id);
+   saveDirectorPlan(project.plan);
+   saveSeedance(project.seedance);
+   const draft={...EMPTY_PUBLISH,...project.publish};
+   try{localStorage.setItem(publishStorageKey(id),JSON.stringify(draft));}catch{}
+   setPublishDraft(draft);
+   setDirectorPlan(project.plan);
+   setSavedClipCount(project.seedance.urls.filter(Boolean).length);
+   setStudioStep(project.seedance.urls.filter(Boolean).length===MOTION_SCENES?"editar":"revisar");
+   setCloudStatus("Proyecto recuperado");
+   setArchivedProjects(archivedMotionProjects());
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo recuperar el proyecto en la nube.");}
+  finally{setCloudLoading(false);}
+ },[resetForProject]);
  const newMotionProject=useCallback(()=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
   const active=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
