@@ -56,8 +56,21 @@ export default function ViralRadar({niche,en,selectedSource,onChoose,onClear}:Pr
   if(!consent)return;
   let active=true;
   void request("").then(data=>{
-   if(active){setConfigured(data.configured===true);setHistory((data.history||[]) as Scan[]);}
-  }).catch(()=>{if(active)setConfigured(null);});
+   if(active){
+    setConfigured(data.configured===true);
+    setHistory((data.history||[]) as Scan[]);
+    if(typeof data.health==="string"&&data.health!=="ok"&&data.health!=="unknown"){
+     const code=data.health as string;
+     setError(errors[code]?.[en?1:0]||L("YouTube no pudo verificar la conexión.","Could not verify YouTube connection."));
+    }
+   }
+  }).catch(e=>{
+   if(active){
+    setConfigured(null);
+    const code=e instanceof Error?e.message:"network";
+    setError(errors[code]?.[en?1:0]||L("Radar no se pudo conectar.","Radar could not connect."));
+   }
+  });
   return()=>{active=false;};
  },[consent]);
  useEffect(()=>{setTerm(niche);setScan(null);},[niche]);
