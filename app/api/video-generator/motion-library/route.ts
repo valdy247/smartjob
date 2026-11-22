@@ -58,7 +58,7 @@ async function finishedRender(owner:string,id:string,project:ProjectSnapshot):
  return null;
 }
 type ProjectSnapshot={
- id:string;plan:{prompt:string;title?:string;storyBible?:string;scenes:unknown[];frames:unknown[]};
+ id:string;plan:{prompt:string;title?:string;storyBible?:string;seconds?:number;scenes:unknown[];frames:unknown[]};
  seedance:{prompt:string;tokens:string[];urls:string[];
   voicePreset?:"elevenlabs"|"alloy"|"nova"|"echo";
   elevenVoiceId?:string;
@@ -73,11 +73,12 @@ function validSnapshot(input:unknown,owner:string):input is ProjectSnapshot{
  const x=input as Partial<ProjectSnapshot>;
  if(!validId(x.id)||!x.plan||typeof x.plan.prompt!=="string"||
   x.plan.prompt.length<8||x.plan.prompt.length>2000||
-  !Array.isArray(x.plan.scenes)||x.plan.scenes.length!==12||
-  !Array.isArray(x.plan.frames)||x.plan.frames.length>12||
+  !Array.isArray(x.plan.scenes)||![3,6,12].includes(x.plan.scenes.length)||
+  (x.plan.seconds!==undefined&&x.plan.seconds!==x.plan.scenes.length*5)||
+  !Array.isArray(x.plan.frames)||x.plan.frames.length>x.plan.scenes.length||
   !x.seedance||x.seedance.prompt!==x.plan.prompt||
-  !Array.isArray(x.seedance.tokens)||x.seedance.tokens.length>12||
-  !Array.isArray(x.seedance.urls)||x.seedance.urls.length>12)return false;
+  !Array.isArray(x.seedance.tokens)||x.seedance.tokens.length>x.plan.scenes.length||
+  !Array.isArray(x.seedance.urls)||x.seedance.urls.length>x.plan.scenes.length)return false;
  // Do not accept cross-user or inline base64 payloads from client snapshots.
  for(const frame of x.plan.frames){
   const path=(frame as {referencePath?:unknown})?.referencePath;

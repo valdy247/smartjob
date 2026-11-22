@@ -138,7 +138,7 @@ export default function VMVPilotPage(){
    if(motionEngine){
     const requestId=crypto.randomUUID();
     const brief=[
-     "Produce an original, coherent 60-second social video.",
+     "Produce an original, coherent "+form.seconds+"-second social video.",
      "Topic: "+form.niche.trim()+".",
      "Goal: "+form.goal+". Audience: "+form.audience+".",
      "Visual style: vibrant 2D STICKMAN cartoon with expressive actions and richly colored backgrounds.",
@@ -150,7 +150,7 @@ export default function VMVPilotPage(){
     const handoff={requestId,createdAt:Date.now(),prompt:brief,pilotId:saved.id,
      topic:form.niche,goal:form.goal,audience:form.audience,idea:form.creative_seed,
      researchScanId:form.research_scan_id,researchVideoId:form.research_video_id,
-     language:form.language,style:form.style,seconds:60,subtitles:form.subtitles,
+     language:form.language,style:form.style,seconds:form.seconds,subtitles:form.subtitles,
      narration:form.narration,voiceProvider:form.voiceProvider,voiceId:form.voiceId,
      confirmedCost:true};
     sessionStorage.setItem("vmv-pilot-motion-handoff-v1",JSON.stringify(handoff));
@@ -279,13 +279,13 @@ export default function VMVPilotPage(){
     </button>)}
     <p className={css.qualityNote}>{L("Costo estimado de animación · otros servicios aparte","Estimated animation cost · other services extra")}</p>
     {form.style==="stickman"&&["es","en"].includes(form.language)?<button type="button" className={css.ownEngine}
-     onClick={()=>{update({qualityMode:"turbo",seconds:60});setMotionEngine(true);setApproved(false);setStep(11);}}>
-     <Clapperboard size={19}/>{L("Crear con VMV Motion · Seedance 720p · 60 s","Create with VMV Motion · Seedance 720p · 60 s")}
+     onClick={()=>{update({qualityMode:"turbo"});setMotionEngine(true);setApproved(false);setStep(11);}}>
+     <Clapperboard size={19}/>{"Crear con VMV Motion · Seedance 720p · "+form.seconds+" s"}
      <ArrowRight size={17}/>
     </button>:null}
    </div>:null}
    {step===11?<div className={css.review}>
-    {motionEngine?<div><span>Motor</span><strong>VMV Motion · Seedance 720p · 60 s</strong></div>:null}
+    {motionEngine?<div><span>Motor</span><strong>VMV Motion · Seedance 720p · {form.seconds} s</strong></div>:null}
     <div><span>{L("Tema","Topic")}</span><strong>{form.niche}</strong></div>
     <div><span>{L("Estilo","Style")}</span><strong>{stylesOptions.find(s=>s.id===form.style)?.label||"Producto"}</strong></div>
     <div><span>{L("Duración","Duration")}</span><strong>{form.seconds}s · 9:16</strong></div>

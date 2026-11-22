@@ -128,7 +128,7 @@ export async function POST(req:NextRequest){
  if(Number(req.headers.get("content-length")||0)>15000)return reply({error:"voice_request_too_large"},413);
  const body=await req.json().catch(()=>null);
  const segments=body?.scenes;
- if(body?.confirmCost!==true||!Array.isArray(segments)||segments.length!==12||
+ if(body?.confirmCost!==true||!Array.isArray(segments)||![3,6,12].includes(segments.length)||
   segments.some((s:unknown)=>typeof s!=="string"||s.trim().length<8||s.length>220))
   return reply({error:"invalid_voice_request"},400);
  const provider:SpeechProvider=body?.provider==="openai"?"openai":"elevenlabs";
@@ -164,7 +164,7 @@ export async function POST(req:NextRequest){
   const alignment=data.alignment as Alignment;
   const duration=alignment.character_end_times_seconds.at(-1)||0;
   if(duration<10||duration>100)return reply({error:"elevenlabs_invalid_duration"},502);
-  // Translate the original twelve script segments into real spoken-time boundaries.
+  // Translate all selected-duration script segments into spoken-time boundaries.
   const spoken=segments.map((s:string)=>s.trim());
   let position=0;
   const sceneEnds=spoken.map((segment:string,i:number)=>{
@@ -177,7 +177,7 @@ export async function POST(req:NextRequest){
   const aligned=alignment.characters.length>=text.length*0.9&&
    sceneEnds.every((time:number,i:number)=>Number.isFinite(time)&&time>0&&
     (i===0||time>sceneEnds[i-1]))&&
-   Math.abs(sceneEnds[11]-duration)<1.5;
+   Math.abs(sceneEnds[sceneEnds.length-1]-duration)<1.5;
   return reply({audio,mediaType:"audio/mpeg",alignment,duration,
    sceneEnds:aligned?sceneEnds:null});
  }catch(e){

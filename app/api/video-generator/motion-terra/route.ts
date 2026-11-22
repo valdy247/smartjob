@@ -5,15 +5,16 @@ import {validRadarId} from "@/lib/vmv-video-radar";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=180;
-const SCENE_COUNT=12;
+const allowedSeconds=[15,30,60] as const;
+const sceneCount=(seconds:number)=>seconds/5;
 const reply=(data:Record<string,unknown>,status=200)=>NextResponse.json(data,{status,headers:videoHeaders});
 type Camera={focusX:number;focusY:number;startZoom:number;endZoom:number};
 type Scene={speech:string;caption:string;imagePrompt:string;motionPrompt:string;camera:Camera};
 const num=(v:unknown,min:number,max:number)=>typeof v==="number"&&Number.isFinite(v)&&v>=min&&v<=max?v:null;
-function parse(raw:unknown):{title:string;storyBible:string;scenes:Scene[]}|null{
+function parse(raw:unknown,count:number):{title:string;storyBible:string;scenes:Scene[]}|null{
  if(!raw||typeof raw!=="object")return null;
  const obj=raw as Record<string,unknown>;
- if(!Array.isArray(obj.scenes)||obj.scenes.length!==SCENE_COUNT)return null;
+ if(!Array.isArray(obj.scenes)||obj.scenes.length!==count)return null;
  const scenes:Scene[]=[];
  for(const rawScene of obj.scenes){
   if(!rawScene||typeof rawScene!=="object")return null;
@@ -33,25 +34,46 @@ function parse(raw:unknown):{title:string;storyBible:string;scenes:Scene[]}|null
   storyBible:typeof obj.storyBible==="string"?obj.storyBible.slice(0,1200):"",
   scenes:scenes};
 }
-const narrationSystem=[
- "You are an expert short-form video narrator. Write a SINGLE compelling 60-second narration in the user's language. The narration is AUDIO ONLY, not instructions for the images.",
- "Adapt the story to the user-selected category, audience, objective and research idea. For Spanish, aim for 96-108 spoken words total across exactly twelve connected short phrases, each approximately five seconds. Start with a strong hook, advance one continuous story and deliver an earned payoff. Never reveal a surprise subject before the narration introduces it.",
- "NONFICTION JOURNALISM RULE: For stories about a real event, identify the actual person/company/product, the specific action or type of video, when and where it happened if established, why it mattered, and the documented outcome. Introduce the named subject early; do not spend 30 seconds saying 'someone did something'. At least 3 of the twelve beats must deliver a new concrete fact, not a generic moral.",
- "Never invent a scandal, controversy, accusation, quotation, subscriber loss, financial amount, apology, chronology or personal misconduct involving a real person. If source material provides no verified identity and facts, do NOT invent a real example: choose a clear fictional case and explicitly call it 'historia ficticia'/'fictional scenario', or switch to general practical advice that does not imply a documented event. Do not state 'hace unos años', 'un creador con millones', 'un video polémico' without substantiated specifics.",
- "If the supplied research idea names a real incident with concrete details, ground the whole story in those details; don't transform it into a generic unnamed anecdote. Make the visuals depict the correct identifiable event and objects but never fabricate a likeness or claim visual authenticity.",
- "Avoid unsupported factual claims, dead air, repetition, filler, and directions such as camera or scene descriptions.",
- 'Return JSON only: {"title":"...","speech":["0-5 second speech","5-10 second speech","10-15 second speech","15-20 second speech","20-25 second speech","25-30 second speech","30-35 second speech","35-40 second speech","40-45 second speech","45-50 second speech","50-55 second speech","55-60 second speech"]}.'
+const narrationSystem=(seconds:number)=>[
+ "You are an expert short-form video narrator. Write a SINGLE compelling "+seconds+
+ "-second narration in the user's language. The narration is AUDIO ONLY, not instructions for the images.",
+ "Adapt the story to the selected category, audience, objective and research idea. "+
+ "For Spanish, aim for "+Math.round(seconds*1.6)+"-"+Math.round(seconds*1.8)+
+ " spoken words total across exactly "+sceneCount(seconds)+" connected short phrases, "+
+ "each about five seconds. Start with a strong hook, advance a continuous story and deliver an earned payoff. "+
+ "Never reveal a surprise subject before narration introduces it.",
+ "NONFICTION JOURNALISM RULE: For real events, identify the actual person, company or product, "+
+ "specific action, established time and location, and documented outcome. Include concrete facts "+
+ "rather than inventing controversy or implying a real incident without evidence.",
+ "Never invent a scandal, accusation, quotation, losses, financial figures or misconduct involving real people. "+
+ "If specific facts are missing, use a clearly fictional scenario or accurate general practical advice.",
+ "If a supplied research idea names a real incident with supporting metadata, "+
+ "use only grounded details and avoid fabricating outcomes.",
+ "Avoid unsupported factual claims, dead air, repetition, filler or camera directions.",
+ "Return JSON only: {title, speech: ["+
+ Array.from({length:sceneCount(seconds)},(_,i)=>'"'+(i*5)+'-'+((i+1)*5)+' second speech"').join(",")+"]}. "+
+ "Exactly "+sceneCount(seconds)+" nonempty phrases are required."
 ].join(" ");
-const visualSystem=[
- "You are the VISUAL FILM DIRECTOR. Match every shot to the action and subject of its corresponding narration segment. Preserve the reveal order. NEVER show a character, animal or surprise before it is introduced in the narration.",
- "Design exactly twelve VISUALLY distinct but logically consecutive five-second shots that make a compelling 60-second film. Each shot must communicate new visual information with purposeful subject movement, a clear composition, and distinct cinematic action. No redundant shots, generic crowds, repeated zoom-outs, or camera motion substituting for action.",
- "For educational facts, show clever visual metaphors, useful scale comparisons or transformations. Do not render physically nonsensical elements: a globe must not hover over a desert after transitioning to ground level. For character stories, the same protagonist should look consistent across cuts.",
- "Continuity means logical storytelling and stable appearance of recurring characters and recognizable art direction; NOT preservation of all previous objects, exact camera position or scene location. Freely change setting, distance, cast visibility, camera angle and props when the story logically requires it.",
- "Invent one coherent styleGuide stating only persistent art style, palette and recurring character traits, not a mandatory set of objects or fixed background. It should NOT force the same environment in all shots.",
- "Each imagePrompt must be an independent, concise 50-90-word English first-frame prompt for its one matching speech segment, portrait 9:16, showing ONLY what is known and relevant at that point. Keep character designs consistent without importing unrelated props.",
- "Each motionPrompt is one short English sentence describing on-screen subject movement over five seconds, starting from the still. No recaps or instant time jumps.",
- "Use a consistent polished 2D hand-drawn STICKMAN CARTOON style, adapted to this particular subject and audience. Human or animal characters, when actually present in the story, have expressive eyes, articulated limbs and purposeful physical motion; environments and objects are richly colored with clean vector-like backgrounds and bold outlines. Characters and objects must match ONLY the chosen narration: NEVER insert a dog, rat, fish, car, lab or another prop unless required by the story. Keep recurring character designs stable. No photorealism, static slideshows, zoom-only scenes, baked-in lettering, logos or speech bubbles.",
- 'Return JSON only: {"storyBible":"shared aesthetic/recurring character traits only","scenes":[{"caption":"2-5 words in narration language","imagePrompt":"English first-frame visual direction","motionPrompt":"English five-second motion"}]} exactly 12 scenes. Speech is NOT part of this output.'
+const visualSystem=(seconds:number)=>[
+ "You are the VISUAL FILM DIRECTOR. Match every shot to the subject of its corresponding narration segment, "+
+ "preserve reveal order and do not show characters before they are introduced.",
+ "Design exactly "+sceneCount(seconds)+" VISUALLY distinct, logically consecutive five-second shots "+
+ "that form a compelling "+seconds+"-second film. Each shot needs new visual information, purposeful "+
+ "subject movement and a distinct cinematic action.",
+ "For educational facts, use accurate visual metaphors and scale comparisons; keep protagonists "+
+ "recognizable across cuts.",
+ "Continuity means stable characters and art direction, not identical camera position or scenery.",
+ "Provide a reusable style bible for appearance, palette and recurring traits; do not force props "+
+ "from previous shots into new locations.",
+ "Each imagePrompt must be an independent, concise 50-90 word English portrait 9:16 first-frame "+
+ "direction for its corresponding narrated action.",
+ "Each motionPrompt is a short English description of what moves during the five-second clip.",
+ "Use polished 2D hand-drawn STICKMAN CARTOON style with expressive characters and colored "+
+ "environments. Do not insert irrelevant animals, people, objects, lettering, logos or speech bubbles.",
+ 'Return JSON only: {"storyBible":"shared aesthetic and recurring traits",'+
+ '"scenes":[{"caption":"2-5 words","imagePrompt":"English first-frame visual",'+
+ '"motionPrompt":"English five-second motion"}]}. Exactly '+sceneCount(seconds)+
+ " scenes are required; speech is supplied separately."
 ].join(" ");
 async function askOpenAI(system:string,user:string,maxTokens:number){
  const response=await fetch("https://api.openai.com/v1/chat/completions",{
@@ -89,6 +111,10 @@ export async function POST(req:NextRequest){
  const body=await req.json().catch(()=>null);
  const prompt=typeof body?.prompt==="string"?body.prompt.trim():"";
  const characterGuide=typeof body?.characterGuide==="string"?body.characterGuide.trim().slice(0,1100):"";
+ const seconds=Number(body?.seconds??60);
+ if(!allowedSeconds.some(allowed=>allowed===seconds))
+  return reply({error:"invalid_motion_duration"},400);
+ const requiredScenes=sceneCount(seconds);
  if(prompt.length<8||prompt.length>2000||body?.confirmCost!==true)return reply({error:"invalid_motion_request"},400);
  if(!process.env.OPENAI_API_KEY)return reply({error:"openai_key_not_configured"},503);
  // Private preview is already restricted to the explicitly allowlisted owner.
@@ -123,19 +149,19 @@ export async function POST(req:NextRequest){
    userGoal:prompt,selectedRadarEvidence:evidence,
    editorialPolicy:"Expand the chosen concept into a concrete educational story, using specific people, products, times or examples ONLY when supported by dependable provided evidence. The YouTube source metadata suggests an angle, not proof of its assertions. If concrete verified case facts are missing, do not invent a named person, video, incident, controversy or outcome; instead teach an actionable specific process, mechanism or lesson with accurate general examples. Do not falsely imply a real scandal happened. Avoid vague anonymous anecdotes."
   });
-  const narration=await askOpenAI(narrationSystem,groundedBrief,1500);
-  if(!Array.isArray(narration.speech)||narration.speech.length!==SCENE_COUNT||
+  const narration=await askOpenAI(narrationSystem(seconds),groundedBrief,1500);
+  if(!Array.isArray(narration.speech)||narration.speech.length!==requiredScenes||
    narration.speech.some(v=>typeof v!=="string"||v.trim().length<8||v.length>165)){
    console.warn("[vmv-motion-director] invalid narration",{count:Array.isArray(narration.speech)?narration.speech.length:null});
    return reply({error:"motion_scene_retry",stage:"narration",reason:"invalid_segment_count_or_length"},422);
   }
   const spoken=narration.speech as string[];
-  const visuals=await askOpenAI(visualSystem,JSON.stringify({
+  const visuals=await askOpenAI(visualSystem(seconds),JSON.stringify({
    idea:prompt,title:narration.title,narrationForTimingOnly:spoken,
    reusableCharacterBible:characterGuide||undefined,
    visualConsistencyInstruction:characterGuide?"Follow the supplied recurring character traits and palette, adapting scenes to the story without copying irrelevant props.":undefined
   }),9000);
-  if(!Array.isArray(visuals.scenes)||visuals.scenes.length!==SCENE_COUNT){
+  if(!Array.isArray(visuals.scenes)||visuals.scenes.length!==requiredScenes){
    console.warn("[vmv-motion-director] invalid visual scenes",{count:Array.isArray(visuals.scenes)?visuals.scenes.length:null});
    return reply({error:"motion_scene_retry",stage:"storyboard",reason:"invalid_scene_count"},422);
   }
@@ -143,12 +169,12 @@ export async function POST(req:NextRequest){
    scenes:visuals.scenes.map((scene,i)=>({
     ...(scene as Record<string,unknown>),speech:spoken[i]
    }))};
-  const parsed=parse(enriched);
+  const parsed=parse(enriched,requiredScenes);
   if(!parsed){
    console.warn("[vmv-motion-director] invalid storyboard fields");
    return reply({error:"motion_scene_retry",stage:"storyboard",reason:"invalid_scene_fields"},422);
   }
-  return reply({...parsed,model:"gpt-4.1-mini",directorVersion:4,durationSeconds:60,
+  return reply({...parsed,model:"gpt-4.1-mini",directorVersion:5,durationSeconds:seconds,
    research:evidence?{sourceUrl:evidence.sourceUrl,sourceTitle:evidence.sourceTitle,
     limits:"YouTube metadata only; underlying claims not independently verified."}:null});
  }catch(e){
