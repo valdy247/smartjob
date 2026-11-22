@@ -474,6 +474,8 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
  if(!ctx||!canvas.captureStream)throw Error("Este navegador no puede unir videos.");
  const stream=canvas.captureStream(24);
  let audioContext:AudioContext|null=null;
+ let voiceSource:AudioBufferSourceNode|null=null;
+ let musicSource:AudioBufferSourceNode|null=null;
  let recorder:MediaRecorder|null=null;
  let raf=0;
  const videos:HTMLVideoElement[]=[];
@@ -507,7 +509,7 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
    const voice=audioContext.createBufferSource();voice.buffer=decoded;
    const gain=audioContext.createGain();gain.gain.value=Math.min(2,Math.max(0,options.voiceVolume));
    voice.connect(gain);gain.connect(mix);
-   voice.start(audioContext.currentTime+0.3);
+   voiceSource=voice;
   }
   if(options.music){
    const bytes=await options.music.arrayBuffer();
@@ -517,7 +519,7 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
    const background=audioContext.createBufferSource();background.buffer=decoded;background.loop=true;
    const gain=audioContext.createGain();gain.gain.value=Math.min(0.7,Math.max(0,options.musicVolume));
    background.connect(gain);gain.connect(mix);
-   background.start(audioContext.currentTime+0.3);
+   musicSource=background;
   }
   for(const track of mix.stream.getAudioTracks())stream.addTrack(track);
  }
@@ -530,6 +532,13 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
    reject(Error("El archivo final está vacío."));
  });
   recorder.start(300);
+  // Schedule all audio AFTER decoding and starting the recorder, so adding
+  // a large music file cannot consume the opening narration before capture.
+  if(audioContext){
+   const startsAt=audioContext.currentTime+0.3;
+   voiceSource?.start(startsAt);
+   musicSource?.start(startsAt);
+  }
   const videoStart=performance.now();
   const drawCaption=(time:number)=>{
    if(!showSubtitles||!speech)return;
