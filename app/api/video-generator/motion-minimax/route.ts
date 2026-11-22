@@ -76,8 +76,6 @@ export async function POST(req:NextRequest){
  if(body?.action!=="start"||body?.confirmCost!==true)return reply({error:"cost_confirmation_required"},400);
  const prompt=typeof body?.prompt==="string"?body.prompt.trim():"";
  if(prompt.length<8||prompt.length>500)return reply({error:"invalid_video_prompt"},400);
- if(!process.env.AI_GATEWAY_API_KEY&&!process.env.VERCEL_OIDC_TOKEN)
-  return reply({error:"ai_gateway_auth_not_configured"},503);
  if(!process.env.SUPABASE_SERVICE_ROLE_KEY&&!process.env.OPENAI_API_KEY)
   return reply({error:"token_signing_secret_missing"},503);
  const {data:claimed,error:quotaError}=await videoDb().rpc("smartjob_web_ai_claim_video_test_slot",{p_owner:owner});
