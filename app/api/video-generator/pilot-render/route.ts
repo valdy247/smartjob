@@ -1,13 +1,15 @@
 import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {videoAllowed,videoDb,videoHeaders,validUuid} from "@/lib/vmv-video-generator";
+import {validPilotLanguage,validPilotVoice} from "@/lib/vmv-pilot-voice-config";
+import {verifyElevenLabsVoice} from "@/lib/vmv-pilot-elevenlabs";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=30;
 const reply=(data:Record<string,unknown>,status=200)=>
  NextResponse.json(data,{status,headers:videoHeaders});
-const publicFields="id,pilot_id,topic,style,seconds,narration,subtitles,language,status,phase,progress,title,output_path,failure_code,created_at,updated_at,finished_at";
+const publicFields="id,pilot_id,topic,style,seconds,narration,subtitles,language,voice_provider,voice_id,status,phase,progress,title,output_path,failure_code,created_at,updated_at,finished_at";
 type RenderRow={id:string;output_path:string|null;[key:string]:unknown};
 async function present(row:RenderRow){
  const {output_path,...safe}=row;
@@ -55,20 +57,24 @@ export async function POST(req:NextRequest){
  const topic=typeof body?.topic==="string"?body.topic.trim():"";
  const audience=typeof body?.audience==="string"?body.audience.trim():"";
  const goal=typeof body?.goal==="string"?body.goal.trim():"";
- const style=body?.style,seconds=Number(body?.seconds);
+ const style=body?.style,seconds=Number(body?.seconds),language=body?.language;
+ const voiceProvider=body?.voiceProvider,voiceId=body?.voiceId;
  if(!validUuid(pilotId)||!validUuid(clientKey)||body?.confirmCost!==true||
   topic.length<3||topic.length>220||audience.length>180||goal.length>180||
   !["stickman","realistic","cinematic","animated","product"].includes(style)||
   ![15,30,60].includes(seconds)||typeof body?.narration!=="boolean"||
-  typeof body?.subtitles!=="boolean"||!["es","en"].includes(body?.language))
+  typeof body?.subtitles!=="boolean"||!validPilotLanguage(language)||
+  !validPilotVoice(voiceProvider,voiceId)||body.narration!==(voiceProvider!=="none"))
   return reply({error:"invalid_render_request"},400);
+ if(voiceProvider==="elevenlabs"&&!await verifyElevenLabsVoice(voiceId,language))
+  return reply({error:"elevenlabs_voice_unavailable"},400);
  try{
   const db=videoDb();
-  const {data,error}=await db.rpc("vmv_pilot_render_enqueue",{
+  const {data,error}=await db.rpc("vmv_pilot_render_enqueue_v2",{
    p_owner:owner,p_pilot:pilotId,p_key:clientKey,
    p_topic:topic,p_audience:audience,p_goal:goal,p_style:style,
    p_seconds:seconds,p_narration:body.narration,p_subtitles:body.subtitles,
-   p_language:body.language
+   p_language:language,p_voice_provider:voiceProvider,p_voice_id:voiceId
   });
   if(error){
    const code=String(error.message||"");
