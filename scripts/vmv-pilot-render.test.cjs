@@ -247,7 +247,7 @@ test("The lab is reachable from Pilot and does not change the existing paid wiza
  const ui=source["app/vista-app/vmv-pilot/page.tsx"];
  assert.match(ui,/stickman-lab/);
  assert.match(ui,/Probar nuestro motor Stickman/);
- assert.match(ui,/Probar motor Stickman propio/);
+ assert.match(ui,/Crear con VMV Motion/);
  assert.match(ui,/PilotTrendStep/);
  assert.match(ui,/Generar ambos videos/);
 });
@@ -267,4 +267,22 @@ test("Pilot uses Seedance 720p with durable jobs and one uninterrupted narration
  assert.match(timeline,/character_start_times_seconds/);
  assert.match(quality,/seedance-v1\.0-pro-fast/);
  assert.match(quality,/seedance-v1\.0-pro/);
+});
+
+test("Pilot wizard opens a fresh consented Motion production with its trend and voice settings",()=>{
+ const wizard=read("app/vista-app/vmv-pilot/page.tsx");
+ const motion=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ const speech=read("app/api/video-generator/speech/continuous/route.ts");
+ assert.match(wizard,/vmv-pilot-motion-handoff-v1/);
+ assert.match(wizard,/form\.creative_seed/);
+ assert.match(wizard,/voiceProvider:form\.voiceProvider/);
+ assert.match(wizard,/confirmedCost:true/);
+ assert.match(wizard,/pilotMotion=/);
+ assert.match(motion,/PILOT_MOTION_HANDOFF_KEY/);
+ assert.match(motion,/setPilotAuto\(true\)/);
+ assert.match(motion,/await prepareStoryboard\(\)/);
+ assert.match(motion,/await animateApproved\(\)/);
+ assert.match(motion,/vmv-motion-archive-/);
+ assert.match(speech,/openaiContinuous/);
+ assert.match(speech,/timestamp_granularities/);
 });
