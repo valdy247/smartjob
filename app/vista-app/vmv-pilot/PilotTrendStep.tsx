@@ -5,7 +5,8 @@ import {getSupabase} from "@/lib/supabase";
 import type {RadarIdea,RadarVideo} from "@/lib/vmv-video-radar";
 import css from "./PilotTrendStep.module.css";
 
-type Scan={id:string;status:string;query:string;items:RadarVideo[];ideas:RadarIdea[];failure:string|null};
+type Scan={id:string;status:string;query:string;days?:number;createdAt?:string;
+ items:RadarVideo[];ideas:RadarIdea[];failure:string|null};
 type Props={niche:string;language:string;en:boolean;onSkip:()=>void;onChoose:(idea:RadarIdea,scanId:string)=>void};
 const messages:Record<string,[string,string]>={
  login:["Inicia sesión nuevamente.","Sign in again."],
@@ -85,17 +86,36 @@ export default function PilotTrendStep({niche,language,en,onSkip,onChoose}:Props
    <button type="button" onClick={skip}>{L("Omitir","Skip")}</button>
   </div>:null}
   {mode==="results"?<>
-   <div className={css.found}><Check size={16}/>{L("3 oportunidades","3 opportunities")}</div>
+   <div className={css.found}><Check size={16}/>{L("3 ideas inspiradas en YouTube","3 ideas inspired by YouTube")}</div>
+   <p className={css.disclosure}>
+    {L("Las ideas y sus títulos son propuestas de IA. Las vistas pertenecen exclusivamente a los videos originales de YouTube, no a las ideas propuestas. Son cifras acumuladas, no una medición de viralidad en tiempo real.",
+     "Idea headlines are AI suggestions. View counts belong only to the original YouTube videos, not the suggested ideas. These are cumulative totals, not real-time virality measurements.")}
+    {" "}{L("Búsqueda de videos publicados en los últimos 30 días.",
+      "Search limited to videos published within the last 30 days.")}
+   </p>
    <div className={css.ideas}>{scan?.ideas.slice(0,3).map((idea,i)=>{
     const video=scan.items.find(v=>v.id===idea.sourceId);
     return <article className={css.idea} key={idea.sourceId+"-"+i}>
      <button type="button" className={css.ideaMain} onClick={()=>onChoose(idea,scan.id)}>
       <span className={css.number}>{i+1}</span>
-      <span className={css.words}><strong>{trim(idea.hook,110)}</strong><small>{trim(idea.concept,145)}</small></span>
+      <span className={css.words}>
+       <span className={css.ideaLabel}>{L("Idea sugerida por IA","AI-suggested idea")}</span>
+       <strong>{trim(idea.hook,110)}</strong><small>{trim(idea.concept,145)}</small>
+      </span>
       <ChevronRight size={18}/>
      </button>
-     {video?<a className={css.sourceLink} href={video.url} target="_blank" rel="noopener noreferrer">
-      {compact(video.views)} {L("vistas","views")} · YouTube <ArrowUpRight size={13}/></a>:null}
+     {video?<div className={css.sourceCard}>
+      <span className={css.sourceLabel}>{L("Video original verificado en YouTube","Original video from YouTube")}</span>
+      <a className={css.sourceLink} href={video.url} target="_blank" rel="noopener noreferrer"
+       aria-label={L("Abrir video original de YouTube","Open original YouTube video")}>
+       {video.thumbnail?<img src={video.thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer"/>:null}
+       <span className={css.sourceWords}>
+        <strong>{trim(video.title,140)}</strong>
+        <small>{trim(video.channel,70)} · {new Date(video.publishedAt).toLocaleDateString(en?"en-US":"es-US")}</small>
+        <span>{compact(video.views)} {L("vistas acumuladas del video original","cumulative views on the original video")} <ArrowUpRight size={13}/></span>
+       </span>
+      </a>
+     </div>:null}
     </article>;
    })}</div>
    <button type="button" className={css.minor} onClick={skip}>{L("Continuar sin análisis","Continue without research")}</button>

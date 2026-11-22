@@ -101,3 +101,21 @@ test("Owner deletion and scheduled purge protect YouTube data retention",()=>{
  assert.doesNotMatch(api,/averageViewsPerDay|engagementPercent|signalScore/);
  assert.match(ui,/youtube\.com\/t\/terms/);
 });
+
+test("Pilot trends distinguish AI ideas from genuine source video titles and views",()=>{
+ const pilot=read("app/vista-app/vmv-pilot/PilotTrendStep.tsx");
+ const styles=read("app/vista-app/vmv-pilot/PilotTrendStep.module.css");
+ assert.match(pilot,/Idea sugerida por IA/);
+ assert.match(pilot,/Video original verificado en YouTube/);
+ assert.match(pilot,/video\.title/);
+ assert.match(pilot,/video\.channel/);
+ assert.match(pilot,/video\.publishedAt/);
+ assert.match(pilot,/video\.url/);
+ assert.match(pilot,/video\.thumbnail/);
+ assert.match(pilot,/video\.views/);
+ assert.match(pilot,/vistas acumuladas del video original/);
+ assert.match(pilot,/no una medición de viralidad en tiempo real/);
+ assert.match(pilot,/onChoose\(idea,scan\.id\)/);
+ assert.match(styles,/\.sourceCard/);
+ assert.match(styles,/\.disclosure/);
+});
