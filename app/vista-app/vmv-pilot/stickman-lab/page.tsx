@@ -424,7 +424,7 @@ export default function StickmanLabPage(){
   try{
    const saved=JSON.parse(sessionStorage.getItem(DIRECTOR_PLAN_KEY)||"null");
    if(saved?.prompt&&typeof saved.prompt==="string"&&saved.scenes?.length===MOTION_SCENES){
-    setCustomPrompt(saved.prompt);
+    setCustomPrompt(saved.prompt);setCustomMode(true);setWithVoice(true);
     const plan=readDirectorPlan(saved.prompt);
     if(plan){
      setDirectorPlan(plan);
