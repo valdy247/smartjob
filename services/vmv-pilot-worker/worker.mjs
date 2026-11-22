@@ -242,7 +242,9 @@ async function makeImage(job,scene,reference){
  if(typeof image!=="string"||image.length<5000||image.length>13000000)throw Error("image_invalid");
  return Buffer.from(image,"base64");
 }
-async function runwayStart(job,scene,file){
+async function runwayStart(job,scene,file,variant){
+ const model=variant==="turbo"?"gen4_turbo":variant==="high"?"gen4.5":null;
+ if(!model)throw Error("invalid_quality_variant");
  const prompt=[
   "Animate the supplied image into exactly FIVE seconds of clear, meaningful action.",
   "STRICTLY preserve "+STYLE[job.style],
@@ -255,7 +257,7 @@ async function runwayStart(job,scene,file){
  if(base64.length>4200000)throw Error("image_too_large");
  const response=await request(RUNWAY+"/image_to_video",{
   method:"POST",headers:{...auth("RUNWAYML_API_SECRET"),"Content-Type":"application/json","X-Runway-Version":"2024-11-06"},
-  body:JSON.stringify({model:"gen4.5",promptText:prompt,promptImage:"data:image/jpeg;base64,"+base64,
+  body:JSON.stringify({model,promptText:prompt,promptImage:"data:image/jpeg;base64,"+base64,
    ratio:"720:1280",duration:5})
  },30000);
  if(!response.ok)throw Error("runway_start_"+response.status);
@@ -286,11 +288,12 @@ const timecode=seconds=>{
  const s=Math.floor(seconds%60),ms=Math.floor((seconds%1)*1000);
  return [h,m,s].map(n=>String(n).padStart(2,"0")).join(":")+","+String(ms).padStart(3,"0");
 };
-async function assemble(job,dir,clips,voices){
- const concat=path.join(dir,"concat.txt"),raw=path.join(dir,"raw.mp4"),final=path.join(dir,"final.mp4");
+async function assemble(job,dir,clips,voices,variant){
+ if(variant!=="turbo"&&variant!=="high")throw Error("invalid_quality_variant");
+ const concat=path.join(dir,"concat-"+variant+".txt"),raw=path.join(dir,"raw-"+variant+".mp4"),final=path.join(dir,"final-"+variant+".mp4");
  const clipPaths=[];
  for(let i=0;i<clips.length;i++){
-  const normalized=path.join(dir,"norm-"+i+".mp4");
+  const normalized=path.join(dir,"norm-"+variant+"-"+i+".mp4");
   await shell("ffmpeg",["-hide_banner","-loglevel","error","-y","-i",clips[i],
    "-vf","scale=540:960:force_original_aspect_ratio=increase,crop=540:960,fps=24,format=yuv420p,tpad=stop_mode=clone:stop_duration=5",
    "-t","5","-an","-c:v","libx264","-preset","veryfast","-crf","27","-movflags","+faststart",normalized]);
