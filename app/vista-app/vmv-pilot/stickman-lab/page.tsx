@@ -203,7 +203,11 @@ async function seedanceRequest(accessToken:string,body:Record<string,unknown>){
  const data=await response.json().catch(()=>null);
  if(!response.ok)throw Error(data?.error==="motion_limit"?"Límite diario de pruebas alcanzado. Los clips terminados se conservan.":
   data?.error==="video_status_unavailable"?"No se pudo consultar el estado; reintenta para recuperar el trabajo sin generar otro.":
-  data?.error==="seedance_video_start_failed"?"Seedance rechazó el trabajo. Comprueba los créditos y permisos de AI Gateway.":
+  data?.error==="ai_gateway_auth_not_configured"?"Vercel AI Gateway rechazó la autenticación o los permisos.":
+  data?.error==="ai_gateway_credits_required"?"Vercel AI Gateway informa que se necesitan créditos o configurar pagos.":
+  data?.error==="seedance_invalid_parameters"?"Seedance rechazó un parámetro de video. No vuelvas a pagar hasta corregirlo.":
+  data?.error==="seedance_gateway_unavailable"?"Vercel AI Gateway tuvo un fallo interno antes de iniciar Seedance. No se ha confirmado que sea por créditos.":
+  data?.error==="seedance_video_start_failed"?"Seedance no pudo iniciar la generación.":
   data?.error==="invalid_video_job"?"El identificador del trabajo caducó.": "No pudimos contactar a Seedance.");
  return data;
 }
