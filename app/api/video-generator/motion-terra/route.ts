@@ -77,7 +77,7 @@ export async function POST(req:NextRequest){
  if(len>4000)return reply({error:"request_too_large"},413);
  const body=await req.json().catch(()=>null);
  const prompt=typeof body?.prompt==="string"?body.prompt.trim():"";
- if(prompt.length<8||prompt.length>500||body?.confirmCost!==true)return reply({error:"invalid_motion_request"},400);
+ if(prompt.length<8||prompt.length>2000||body?.confirmCost!==true)return reply({error:"invalid_motion_request"},400);
  if(!process.env.OPENAI_API_KEY)return reply({error:"openai_key_not_configured"},503);
  // Private preview is already restricted to the explicitly allowlisted owner.
  // No daily test quota: the owner controls each paid generation via confirmCost.
