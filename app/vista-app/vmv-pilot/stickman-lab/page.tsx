@@ -595,6 +595,22 @@ export default function StickmanLabPage(){
    saveDirectorPlan(next);return next;
   });setPreviousScene(null);setError("");
  },[]);
+ const togglePrevious=useCallback(async(index:number)=>{
+  if(previousScene===index){setPreviousScene(null);return;}
+  const saved=readDirectorPlan(customPrompt);
+  const versions=saved?.previous?.[index];
+  const older=versions?.[versions.length-1];if(!saved||!older)return;
+  try{
+   const sb=getSupabase();if(!sb)throw Error("Inicia sesión para recuperar la imagen anterior.");
+   const {data:{session}}=await sb.auth.getSession();
+   if(!session?.access_token)throw Error("Inicia sesión para recuperar la imagen anterior.");
+   const result=await directorCall(session.access_token,"/api/video-generator/motion-image",
+    {action:"preview",referencePath:older.referencePath});
+   const updated={...saved,previous:{...saved.previous,
+    [index]:[...versions!.slice(0,-1),{...older,imageUrl:result.imageUrl as string}]}};
+   saveDirectorPlan(updated);setDirectorPlan(updated);setPreviousScene(index);
+  }catch(e){setError(e instanceof Error?e.message:"La versión anterior no está disponible.");}
+ },[previousScene,customPrompt]);
  const animateApproved=useCallback(async()=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
   const plan=readDirectorPlan(customPrompt);
@@ -794,7 +810,7 @@ export default function StickmanLabPage(){
            Regenerar
           </button>
           {older?<button type="button" disabled={directorBusy||seedBusy}
-           onClick={()=>setPreviousScene(viewingOld?null:index)}>
+           onClick={()=>void togglePrevious(index)}>
            {viewingOld?"Volver a actual":"Ver anterior"}</button>:null}
           {viewingOld?<button type="button" disabled={directorBusy||seedBusy}
            onClick={()=>restorePrevious(index)}>Restaurar anterior</button>:null}
