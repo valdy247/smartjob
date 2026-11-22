@@ -45,3 +45,29 @@
 .promptField textarea{width:100%;resize:vertical;min-height:104px;border:1px solid #e6dcec;border-radius:17px;padding:15px;background:#fff;color:#352544;font:inherit;font-size:14px;line-height:1.5;outline:none}
 .promptField textarea:focus{border-color:#9b6bcd;box-shadow:0 0 0 3px #a36edc22}
 .promptField small{font-size:11px;color:#9986a5;text-align:right}
+
+
+/* Storyboard approval: mobile-first vertical list of stills and narration. */
+.storyReview{width:100%;display:flex;flex-direction:column;gap:14px;padding:10px 0}
+.storyHeading{display:flex;flex-direction:column;gap:5px;text-align:left}
+.storyHeading h2{font-size:20px;letter-spacing:-.035em;margin:0;color:#342143}
+.storyHeading p{font-size:12px;color:#796b8a;margin:0}
+.sceneCard{background:#fbf9fd;border:1px solid #e7dfef;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.sceneCard h3{margin:0;font-size:15px;color:#432c5b;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.sceneCard h3 span{font-size:11px;color:#877495;font-weight:700}
+.sceneBody{display:grid;grid-template-columns:minmax(120px,190px) minmax(0,1fr);gap:15px;align-items:start}
+.sceneVisual{width:100%;display:flex;flex-direction:column;gap:5px}
+.sceneVisual img,.sceneEmpty{width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:12px;background:#eae4f0}
+.sceneEmpty{display:grid;place-items:center;color:#786689;font-size:12px;padding:10px;text-align:center}
+.sceneVisual small{font-size:11px;color:#8457b1}
+.sceneDescription{min-width:0;display:flex;flex-direction:column;gap:8px}
+.sceneDescription strong,.sceneDescription label{font-size:12px;color:#5a426f;font-weight:800}
+.sceneDescription p{margin:0;line-height:1.5;font-size:13px;color:#392c45}
+.sceneDescription textarea{resize:vertical;min-height:88px;width:100%;border-radius:11px;border:1px solid #dcd0e8;padding:10px;color:#392a45;background:#fff;font:inherit;font-size:12px;line-height:1.5}
+.sceneDescription textarea:focus-visible{outline:3px solid #ad83dd;outline-offset:1px}
+.sceneActions{display:flex;flex-wrap:wrap;gap:7px}
+.sceneActions button{display:flex;align-items:center;justify-content:center;gap:5px;border-radius:9px;border:1px solid #dccde9;background:#fff;color:#67468a;padding:9px 11px;font-size:11px;font-weight:800;cursor:pointer}
+.sceneActions button.approved{background:#e9f6ed;border-color:#a4d8b2;color:#21633b}
+.sceneActions button:disabled{opacity:.5;cursor:not-allowed}
+.storyReview>small{font-size:11px;line-height:1.6;color:#82738c}
+@media(max-width:550px){.sceneBody{grid-template-columns:1fr}.sceneVisual{max-width:190px;margin:0 auto}.sceneCard{padding:12px}.sceneActions button{flex:1}}
