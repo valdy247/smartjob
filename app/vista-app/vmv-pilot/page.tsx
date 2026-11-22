@@ -147,6 +147,7 @@ export default function VMVPilotPage(){
     ].join(" ").slice(0,1950);
     const handoff={requestId,createdAt:Date.now(),prompt:brief,pilotId:saved.id,
      topic:form.niche,goal:form.goal,audience:form.audience,idea:form.creative_seed,
+     researchScanId:form.research_scan_id,researchVideoId:form.research_video_id,
      language:form.language,style:form.style,seconds:60,subtitles:form.subtitles,
      narration:form.narration,voiceProvider:form.voiceProvider,voiceId:form.voiceId,
      confirmedCost:true};
