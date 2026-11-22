@@ -5,3 +5,6 @@
 .preview{position:absolute;right:9px;top:9px;width:29px;height:29px;border-radius:50%;border:1px solid #e7dbed;display:grid;place-items:center;color:#8c5bc2;background:#f5effa;cursor:pointer}
 .select:focus-visible,.none:focus-visible,.preview:focus-visible{outline:3px solid #9162c2;outline-offset:2px}
 .loading{display:flex;align-items:center;justify-content:center;padding:15px;color:#9366c0}.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+
+.preview:disabled{opacity:.58;cursor:wait}
+.error{font-size:12px;color:#a54c64;text-align:center;margin:13px 4px 0;line-height:1.45}
