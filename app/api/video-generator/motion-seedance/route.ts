@@ -169,7 +169,7 @@ export async function POST(req:NextRequest){
  if(storyBible.length>1200)return reply({error:"seedance_story_bible_too_long"},400);
  if(!process.env.SUPABASE_SERVICE_ROLE_KEY&&!process.env.OPENAI_API_KEY)
   return reply({error:"token_signing_secret_missing"},503);
- if(!process.env.AI_GATEWAY_API_KEY)return reply({error:"ai_gateway_auth_not_configured"},503);
+ // The AI SDK can authenticate through Vercel OIDC; do not require a separate key.
  const clips=action==="preflight"?body?.clips:[body];
  if(!Array.isArray(clips)||!clips.length||clips.length>12)
   return reply({error:"invalid_scene_list"},400);
