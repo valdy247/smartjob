@@ -2,7 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {generateSpeech} from "ai";
 import {gateway} from "@ai-sdk/gateway";
 import {authenticatedUser} from "@/lib/auth-server";
-import {videoAllowed,videoDb,videoHeaders} from "@/lib/vmv-video-generator";
+import {videoAllowed,videoHeaders} from "@/lib/vmv-video-generator";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -19,10 +19,8 @@ export async function POST(req:NextRequest){
  if(body?.confirmCost!==true||!Array.isArray(scenes)||scenes.length<3||scenes.length>12||
   scenes.some((s:unknown)=>typeof s!=="string"||s.trim().length<12||s.length>220))
   return reply("invalid_voice_request",400);
- // Shared persistent video-test quota, rather than per-process in-memory throttling.
- const {data:granted,error:claimError}=await videoDb().rpc("smartjob_web_ai_claim_video_test_slot",{p_owner:owner});
- if(claimError)return reply("voice_quota_unavailable",503);
- if(granted!==true)return reply("voice_limit",429);
+ // Private preview is already restricted to the explicitly allowlisted owner.
+ // No daily test quota: the owner controls each paid generation via confirmCost.
  try{
   const outputs:Array<{audio:string;mediaType:string}>=[];
   // Throttle TTS concurrency to avoid bursts and uncontrolled cost.
