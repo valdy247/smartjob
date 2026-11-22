@@ -266,7 +266,7 @@ export function SignupWizard({supabase,onBack}:{supabase:SupabaseClient;onBack:(
        className={service.primary+" "+theme.agentButton} disabled={busy}>
        {busy?(es?"Creando cuenta…":"Creating account…"):
         index===steps.length-1?(es?"Crear cuenta":"Create account"):
-         (es?"Continuar":"Continue")}
+         null}
        <ArrowRight size={17}/>
       </button>
      </footer>
