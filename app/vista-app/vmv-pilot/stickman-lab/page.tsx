@@ -776,7 +776,7 @@ export default function StickmanLabPage(){
        <h3>Escena {index+1} <span>{index*5}–{(index+1)*5} s {approved?"· Aprobada":""}</span></h3>
        <div className={css.sceneBody}>
         <div className={css.sceneVisual}>
-         {frame?<img src={viewingOld?older.imageUrl:frame.imageUrl}
+         {frame?<img src={viewingOld?(older?.imageUrl||frame.imageUrl):frame.imageUrl}
           alt={"Fotograma "+(index+1)+(viewingOld?" anterior":" actual")} loading="lazy"/>:
           <div className={css.sceneEmpty}>Imagen pendiente</div>}
          {viewingOld?<small>Versión anterior</small>:null}
