@@ -231,7 +231,7 @@ export default function AutopilotWizard({initial,en,busy,onSave,onExit,onLibrary
    {!registerHeaderBack?<button type="button" className={css.back} disabled={busy} onClick={goBack}>
     <ArrowLeft size={18}/>{step?L("Atrás","Back"):L("Salir","Exit")}</button>:null}
    {step<6?<button type="button" className={css.action} disabled={!valid||busy}
-    onClick={()=>setStep(i=>Math.min(6,i+1))}>{L("Continuar","Continue")}<ArrowRight size={19}/></button>:
+    onClick={()=>setStep(i=>Math.min(6,i+1))}><ArrowRight size={19}/></button>:
     <button type="button" className={css.action} disabled={busy||!valid}
      onClick={()=>void save(false)}>
      {busy?<LoaderCircle size={19} className={css.spin}/>:<Check size={19}/>}
