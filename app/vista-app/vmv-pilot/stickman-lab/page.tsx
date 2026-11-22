@@ -421,17 +421,19 @@ export default function StickmanLabPage(){
   finally{miniBusyRef.current=false;setMiniBusy(false);}
  },[customPrompt,pollMinimax]);
 
- const prepareDirector=useCallback(async()=>{
+ const createCompleteVideo=useCallback(async()=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current||customPrompt.trim().length<8)return;
-  directorBusyRef.current=true;setDirectorBusy(true);setError("");
+  directorBusyRef.current=true;seedBusyRef.current=true;
+  setDirectorBusy(true);setSeedBusy(true);setError("");setSeedJoined("");
   try{
-   const client=getSupabase();if(!client)throw Error("Inicia sesión.");
+   const client=getSupabase();if(!client)throw Error("Inicia sesión para generar el video.");
    const {data:{session}}=await client.auth.getSession();
-   if(!session?.access_token)throw Error("Inicia sesión.");
+   if(!session?.access_token)throw Error("Inicia sesión para generar el video.");
+   const accessToken=session.access_token;
    let plan=readDirectorPlan(customPrompt);
    if(!plan){
-    setDirectorStatus("IA directora: escribiendo historia y personajes");
-    const result=await directorCall(session.access_token,"/api/video-generator/motion-terra",{prompt:customPrompt});
+    setDirectorStatus("1/4 · Escribiendo el guion y definiendo los personajes");
+    const result=await directorCall(accessToken,"/api/video-generator/motion-terra",{prompt:customPrompt});
     if(!Array.isArray(result.scenes)||result.scenes.length!==3)throw Error("La IA no devolvió tres escenas.");
     plan={prompt:customPrompt,title:String(result.title||"VMV Motion"),storyBible:String(result.storyBible||""),
      scenes:result.scenes.map((row:DirectorBeat)=>({
@@ -441,87 +443,66 @@ export default function StickmanLabPage(){
     saveDirectorPlan(plan);
    }
    for(let i=plan.frames.length;i<3;i++){
-    setDirectorStatus("Creando imagen "+(i+1)+" de 3 · "+(i?"con referencia anterior":"imagen base"));
-    const image=await directorCall(session.access_token,"/api/video-generator/motion-image",{
-     mode:"storyframe",prompt:[plan.storyBible,plan.scenes[i].imagePrompt,
-      i>0?"Keep the identities, kitchen or environment, wardrobe and art style IDENTICAL to the preceding image. This is a NEW consecutive moment; change the pose to the start of the NEXT action.":""].filter(Boolean).join(" ").slice(0,1750),
+    setDirectorStatus("2/4 · Dibujando escena "+(i+1)+"/3 con continuidad visual");
+    const image=await directorCall(accessToken,"/api/video-generator/motion-image",{
+     mode:"storyframe",
+     prompt:[plan.storyBible,plan.scenes[i].imagePrompt,
+      i>0?"Maintain exactly the same character identity, environment, clothes and illustration style as the reference. Change only character positions and actions for the next story beat.":""].filter(Boolean).join(" ").slice(0,1750),
      referencePath:i>0?plan.frames[i-1].referencePath:""
     });
-    if(typeof image.imageUrl!=="string"||typeof image.referencePath!=="string")throw Error("La imagen no devolvió una referencia válida.");
+    if(typeof image.imageUrl!=="string"||typeof image.referencePath!=="string")
+     throw Error("No se obtuvo la imagen de la escena "+(i+1)+".");
     plan.frames.push({imageUrl:image.imageUrl,referencePath:image.referencePath});
-    saveDirectorPlan(plan);setDirectorPlan({...plan,frames:[...plan.frames]});
+    saveDirectorPlan(plan);
    }
-   setDirectorPlan(plan);setDirectorStatus("Guion e imágenes listas. Revisa las escenas antes de pagar el video.");
-  }catch(e){setError(e instanceof Error?e.message:"Falló la dirección IA.");setDirectorStatus("");}
-  finally{directorBusyRef.current=false;setDirectorBusy(false);}
- },[customPrompt]);
- const generateSeedance=useCallback(async()=>{
-  if(seedBusyRef.current||renderingRef.current||customPrompt.trim().length<8)return;
-  seedBusyRef.current=true;setSeedBusy(true);setError("");setSeedJoined("");
-  try{
-   const client=getSupabase();if(!client)throw Error("Inicia sesión.");
-   const {data:{session}}=await client.auth.getSession();
-   if(!session?.access_token)throw Error("Inicia sesión.");
-   const plan=readDirectorPlan(customPrompt);
-   if(!plan||plan.frames.length!==3)throw Error("Primero prepara las tres imágenes con la IA directora.");
+   setDirectorPlan(plan);
    const job=readSeedance(customPrompt);
    setSeedUrls(job.urls.filter(Boolean));
    for(let beat=0;beat<3;beat++){
     if(job.urls[beat])continue;
     let token=job.tokens[beat];
     if(!token){
-     setSeedStage("Iniciando escena "+(beat+1)+" de 3");
-     const started=await seedanceRequest(session.access_token,{action:"start",prompt:customPrompt,beat,confirmCost:true,
-      imagePath:plan.frames[beat].referencePath,motionPrompt:plan.scenes[beat].motionPrompt,storyBible:plan.storyBible});
-     if(typeof started?.token!=="string")throw Error("Seedance no entregó un ID de trabajo.");
+     setDirectorStatus("3/4 · Animando escena "+(beat+1)+"/3");
+     const started=await seedanceRequest(accessToken,{
+      action:"start",prompt:customPrompt,beat,confirmCost:true,
+      imagePath:plan.frames[beat].referencePath,
+      motionPrompt:plan.scenes[beat].motionPrompt,storyBible:plan.storyBible
+     });
+     if(typeof started?.token!=="string")throw Error("No se obtuvo el identificador de la escena "+(beat+1)+".");
      token=started.token;job.tokens[beat]=token;saveSeedance(job);
     }
-    setSeedStage("Animando escena "+(beat+1)+" de 3");
+    setDirectorStatus("3/4 · Esperando animación "+(beat+1)+"/3");
     let completed=false;
     for(let n=0;n<120;n++){
-     const result=await seedanceRequest(session.access_token,{action:"status",token});
-     if(result?.status==="completed"&&typeof result.url==="string"){
-      job.urls[beat]=result.url;saveSeedance(job);setSeedUrls(job.urls.filter(Boolean));
+     const response=await seedanceRequest(accessToken,{action:"status",token});
+     if(response?.status==="completed"&&typeof response.url==="string"){
+      job.urls[beat]=response.url;saveSeedance(job);setSeedUrls(job.urls.filter(Boolean));
       completed=true;break;
      }
-     if(result?.status==="failed")throw Error("Seedance falló en la escena "+(beat+1)+". Las anteriores están guardadas.");
+     if(response?.status==="failed")throw Error("Seedance no completó la escena "+(beat+1)+". Se conservaron las anteriores.");
      await new Promise<void>(resolve=>setTimeout(resolve,5000));
     }
-    if(!completed)throw Error("La escena "+(beat+1)+" sigue procesándose. Reanuda para consultar sin volver a pagar.");
+    if(!completed)throw Error("La escena "+(beat+1)+" sigue procesándose. Pulsa Generar video para recuperar su estado, sin pagarla otra vez.");
    }
-   setSeedStage("Tres escenas listas · puedes unirlas");
-  }catch(e){setError(e instanceof Error?e.message:"Falló la creación Seedance.");setSeedStage("");}
-  finally{seedBusyRef.current=false;setSeedBusy(false);}
- },[customPrompt]);
- const newSeedanceSequence=useCallback(()=>{
-  if(seedBusyRef.current||seedJoining)return;
-  if(!window.confirm("¿Crear 3 escenas nuevas con continuidad narrativa? Puede costar aproximadamente US$0.31 a 720p. Los clips anteriores dejarán de aparecer en este estudio."))return;
-  try{sessionStorage.removeItem(SEEDANCE_KEY);}catch{}
-  setSeedUrls([]);setSeedJoined("");setSeedStage("");
-  void generateSeedance();
- },[generateSeedance,seedJoining]);
- const joinSeedance=useCallback(async()=>{
-  if(seedJoining||seedUrls.length!==3)return;
-  setSeedJoining(true);setError("");
-  try{
-   const client=getSupabase();if(!client)throw Error("Inicia sesión.");
-   const {data:{session}}=await client.auth.getSession();
-   if(!session?.access_token)throw Error("Inicia sesión.");
-   const job=readSeedance(customPrompt);
-   if(job.tokens.filter(Boolean).length!==3)throw Error("No se encontraron los tres trabajos guardados para descargar.");
+   setDirectorStatus("4/4 · Uniendo los tres clips");
    const localUrls:string[]=[];
-   let blob:Blob,extension:"mp4"|"webm";
+   let video:Blob,extension:"mp4"|"webm";
    try{
-    for(let i=0;i<3;i++)localUrls.push(await loadSeedanceForStitching(session.access_token,job.tokens[i]));
-    ({blob,extension}=await stitchSeedanceClips(localUrls));
-   }finally{localUrls.forEach(u=>URL.revokeObjectURL(u));}
-   const url=URL.createObjectURL(blob);
+    for(let i=0;i<3;i++)localUrls.push(await loadSeedanceForStitching(accessToken,job.tokens[i]));
+    ({blob:video,extension}=await stitchSeedanceClips(localUrls));
+   }finally{localUrls.forEach(url=>URL.revokeObjectURL(url));}
+   const finalUrl=URL.createObjectURL(video);
    if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);
-   seedJoinedRef.current=url;setSeedJoined(url);
-   setExtension(extension);
-  }catch(e){setError(e instanceof Error?e.message:"No se pudo unir el video.");}
-  finally{setSeedJoining(false);}
- },[seedUrls,seedJoining,customPrompt]);
+   seedJoinedRef.current=finalUrl;setSeedJoined(finalUrl);setExtension(extension);
+   setDirectorStatus("Video terminado · 15 segundos");
+  }catch(e){
+   setError(e instanceof Error?e.message:"No se pudo terminar el video.");
+   setDirectorStatus("");
+  }finally{
+   directorBusyRef.current=false;seedBusyRef.current=false;
+   setDirectorBusy(false);setSeedBusy(false);
+  }
+ },[customPrompt]);
  const generate=useCallback(async()=>{
   if(renderingRef.current)return;
   const target=canvas.current;
@@ -564,10 +545,10 @@ export default function StickmanLabPage(){
    </div>
    {customMode?<label className={css.promptField}>
     <span>¿Qué quieres contar?</span>
-    <textarea disabled={rendering} value={customPrompt} maxLength={500} rows={4}
+    <textarea disabled={rendering||directorBusy} value={customPrompt} maxLength={500} rows={4}
      placeholder="Ejemplo: Un pequeño elefante busca agua en la selva. Encuentra un río y ayuda a sus amigos a beber."
      onChange={e=>{setCustomPrompt(e.target.value);setTerraStory(null);setDirectorPlan(null);setSeedUrls([]);pendingStoryboard.current={prompt:"",images:[]};}}/>
-    <small>{customPrompt.length}/500 · 3 escenas de 5 segundos</small>
+    <small>{customPrompt.length}/500 · Video de 15 segundos con IA</small>
    </label>:<div className={css.topics}>
     <button type="button" className={topic==="space"?css.active:""}
      onClick={()=>{if(!rendering)setTopic("space");}} disabled={rendering}>
@@ -623,39 +604,17 @@ export default function StickmanLabPage(){
       <video src={miniUrl} controls playsInline preload="metadata"/>
       <a href={miniUrl} target="_blank" rel="noreferrer"><Download size={16}/>Abrir MP4 para guardar</a>
      </div>:null}
-    {customMode?<button className={css.generate} type="button" disabled={directorBusy||seedBusy||rendering||customPrompt.trim().length<8}
-     onClick={()=>void prepareDirector()}>
-     {directorBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
-     {directorBusy?directorStatus:directorPlan?.prompt===customPrompt&&directorPlan.frames.length===3?"3 imágenes listas · IA directora":"1. Preparar guion + 3 imágenes IA (con costo)"}
-    </button>:null}
-    {customMode&&directorPlan?.prompt===customPrompt&&directorPlan.frames.length>0?<div className={css.result}>
-     <div className={css.resultTitle}><Check size={18}/><strong>{directorPlan.title} · {directorPlan.frames.length}/3 imágenes</strong></div>
-     <small>{directorPlan.storyBible}</small>
-     {directorPlan.frames.map((frame,i)=><div key={frame.referencePath}>
-      <small>Escena {i+1}: {directorPlan.scenes[i]?.caption}</small>
-      <img src={frame.imageUrl} alt={"Fotograma inicial de la escena "+(i+1)} style={{maxWidth:"100%",maxHeight:350,borderRadius:12,objectFit:"contain"}}/>
-     </div>)}
-    </div>:null}
     {customMode?<button className={css.generate} type="button"
-     disabled={seedBusy||directorBusy||rendering||miniBusy||customPrompt.trim().length<8||directorPlan?.prompt!==customPrompt||directorPlan.frames.length!==3}
-     onClick={()=>void generateSeedance()}>
-     {seedBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
-     {seedBusy?seedStage:"2. Animar las 3 escenas · Seedance 720p · ~US$0.31"}
+     disabled={directorBusy||seedBusy||rendering||customPrompt.trim().length<8}
+     onClick={()=>void createCompleteVideo()}>
+     {directorBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
+     {directorBusy?directorStatus:"Generar video"}
     </button>:null}
-    {customMode?<small>Primero prepara el storyboard e imágenes (OpenAI cobra esas generaciones). Después Seedance anima 3 clips de 5 segundos por ~US$0.103 cada uno, total ~US$0.31. No hay reintentos automáticos.</small>:null}
-    {seedUrls.length>0?<div className={css.result}>
-     <div className={css.resultTitle}><Check size={18}/><strong>Seedance · {seedUrls.length}/3 escenas listas</strong></div>
-     {seedUrls.map((url,i)=><div key={i}>
-      <small>Escena {i+1}</small>
-      <video src={url} controls playsInline preload="metadata"/>
-      <a href={url} target="_blank" rel="noreferrer"><Download size={16}/>Guardar clip {i+1}</a>
-     </div>)}
-     {seedUrls.length===3?<button className={css.generate} type="button" disabled={seedBusy||seedJoining}
-      onClick={newSeedanceSequence}>Crear nueva secuencia con escenas diferentes · ~US$0.31</button>:null}
-     {seedUrls.length===3?<button className={css.generate} type="button" disabled={seedJoining}
-      onClick={()=>void joinSeedance()}>{seedJoining?"Uniendo clips…":"Unir las 3 escenas · sin costo de IA"}</button>:null}
-     {seedJoined?<><video src={seedJoined} controls playsInline/>
-      <a href={seedJoined} download={"vmv-seedance-15s."+extension}><Download size={16}/>Descargar video completo</a></>:null}
+    {customMode?<small>Un solo proceso: IA directora, 3 imágenes de referencia, 3 animaciones Seedance y MP4 final. El clic autoriza los costos de OpenAI y ~US$0.31 de Seedance a 720p, sin reintentos automáticos. Si falla, el mismo botón reanuda lo ya generado.</small>:null}
+    {customMode&&seedJoined?<div className={css.result}>
+     <div className={css.resultTitle}><Check size={18}/><strong>Video terminado · 15 segundos</strong></div>
+     <video src={seedJoined} controls playsInline/>
+     <a href={seedJoined} download={"vmv-motion-15s."+extension}><Download size={16}/>Descargar video</a>
     </div>:null}
     {error?<p role="alert" className={css.error}>{error}</p>:null}
     {videoUrl?<div className={css.result}>
