@@ -14,7 +14,7 @@ export async function POST(req:NextRequest){
  const body=await req.json().catch(()=>null);
  if(body?.action==="preview"){
   const imagePath=typeof body?.referencePath==="string"?body.referencePath:"";
-  if(!imagePath.startsWith(owner+"/")||!/^[-a-z0-9/]+\\.jpg$/.test(imagePath))
+  if(!imagePath.startsWith(owner+"/")||!/^[-a-z0-9/]+\.jpg$/.test(imagePath))
    return reply({error:"invalid_image_reference"},403);
   const signed=await videoDb().storage.from("vmv-motion-frames-preview").createSignedUrl(imagePath,7200);
   if(signed.error||!signed.data?.signedUrl)return reply({error:"image_reference_unavailable"},409);
