@@ -94,6 +94,7 @@ export default function VMVPilotRenderDock(){
    }
    update(23,"Escenas");
    const ratio="portrait";
+   let characterReference="";
    for(let i=0;i<scenes.length;i++){
     const prompt=STYLE_BIBLE[input.style]+
      "Same immutable visual style, same recurring character appearance, same palette in ALL scenes. "+
@@ -101,9 +102,20 @@ export default function VMVPilotRenderDock(){
      ". Exactly one visual moment illustrating this phrase: "+scenes[i].speech+
      ". Vertical portrait 9:16 safe composition. No written words, no captions, no logos. 2D or photo style only as specified.";
     const result=await post("image",{output:"image",prompt:prompt.slice(0,2750),
-     size:"1024x1536",quality:"standard"});
+     size:"1024x1536",quality:"standard",
+     ...((input.style==="stickman"||input.style==="animated")&&characterReference?
+      {sourceImage:characterReference}:{})});
     const blob=await result.blob();
     if(!["image/jpeg","image/png","image/webp"].includes(blob.type))throw Error("Imagen inválida");
+    if(i===0&&(input.style==="stickman"||input.style==="animated")){
+     const imageData=await new Promise<string>((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onload=()=>resolve(String(reader.result||""));
+      reader.onerror=()=>reject(Error("invalid_image"));
+      reader.readAsDataURL(blob);
+     });
+     if(imageData.length<4100000)characterReference=imageData;
+    }
     images.push(await createImageBitmap(blob));
     update(23+53*(i+1)/scenes.length,"Escena "+(i+1)+"/"+scenes.length);
    }
