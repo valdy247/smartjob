@@ -29,7 +29,8 @@ test("Video Studio unifies navigation while the AI Agent controls advanced gener
  assert.match(agents,/setScreen\("video"\)/);
  assert.match(catalog,/id:"video-generator".*\/vista-app\/video-generator/);
  assert.match(catalog,/disabled={item\.id==="instagram-connect"}/);
- assert.match(studio,/onClick=\{\(\)=>window\.location\.assign\("\/vista-app\/ai-agents\?service=video"\)\}/);
+ assert.match(studio,/screen==="studio"\?<CreativeGenerator/);
+ assert.match(studio,/open\("menu"\)/);
  assert.match(studio,/<AutopilotWizard initial=\{pilot\}/);
  assert.match(agents,/\/vista-app\/video-generator\?setup=autopilot/);
  assert.match(studio,/\/vista-app\/ai-agents\?service=video&pilot=/);
