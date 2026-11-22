@@ -2357,6 +2357,7 @@ export default function StickmanLabPage(){
        {voiceEditorOpen?<div className={css.voiceChangerBody}>
         <p>Elige otra voz para toda la historia. El sistema actualizará la narración y los subtítulos.</p>
         <PilotVoiceStep language={language} en={language==="en"}
+         disabled={directorBusy||seedBusy||rendering}
          selectedProvider={voicePreset==="elevenlabs"?"elevenlabs":"openai"}
          selectedVoiceId={voicePreset==="elevenlabs"?pilotVoiceId:voicePreset}
          onChoose={(provider,id)=>{

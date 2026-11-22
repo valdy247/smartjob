@@ -4,12 +4,16 @@ import {Volume2,VolumeX,LoaderCircle,Play,Pause} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {PILOT_VOICES,type PilotVoiceProvider,type PilotLanguage} from "@/lib/vmv-pilot-voice-config";
 import css from "./PilotVoiceStep.module.css";
-type Voice={id:string;name:string;provider:"openai"|"elevenlabs"};
-type Props={language:PilotLanguage;en:boolean;onChoose:(provider:PilotVoiceProvider,id:string,name:string)=>void};
-export default function PilotVoiceStep({language,en,onChoose}:Props){
+type Voice={id:string;name:string;provider:"openai"|"elevenlabs";
+ gender?:"male"|"female"|"unknown";previewUrl?:string};
+type Props={language:PilotLanguage;en:boolean;disabled?:boolean;
+ selectedProvider?:"openai"|"elevenlabs";selectedVoiceId?:string;
+ onChoose:(provider:PilotVoiceProvider,id:string,name:string)=>void};
+export default function PilotVoiceStep({language,en,disabled=false,selectedProvider,selectedVoiceId,onChoose}:Props){
  const [voices,setVoices]=useState<Voice[]>([]);
  const [loading,setLoading]=useState(true),[loadingId,setLoadingId]=useState("");
  const [playingId,setPlayingId]=useState(""),[error,setError]=useState("");
+ const [genderFilter,setGenderFilter]=useState<"male"|"all">("male");
  const playing=useRef<HTMLAudioElement|null>(null);
  const controller=useRef<AbortController|null>(null);
  const cache=useRef<Map<string,string>>(new Map());
@@ -30,7 +34,8 @@ export default function PilotVoiceStep({language,en,onChoose}:Props){
     const r=await fetch("/api/video-generator/pilot-voices?language="+encodeURIComponent(language),{
      cache:"no-store",headers:{Authorization:"Bearer "+access}});
     const data=await r.json();
-    if(r.ok&&alive&&Array.isArray(data.elevenlabs))setVoices(data.elevenlabs.slice(0,3));
+    if(r.ok&&alive&&Array.isArray(data.elevenlabs))
+     setVoices(data.elevenlabs.slice(0,16));
    }catch{/* Standard narrator voices are still available. */}
    finally{if(alive)setLoading(false);}
   })();
@@ -43,7 +48,10 @@ export default function PilotVoiceStep({language,en,onChoose}:Props){
   const seq=++playToken.current;
   controller.current?.abort();
   stop();setError("");
-  let url=cache.current.get(key);
+  // ElevenLabs provides a public voice sample URL: listening does not call TTS.
+  // OpenAI samples are generated only after the user explicitly taps Escuchar.
+  let url=v.provider==="elevenlabs"&&v.previewUrl?.startsWith("https://")?
+   v.previewUrl:cache.current.get(key);
   if(!url){
    setLoadingId(key);
    const abort=new AbortController();controller.current=abort;
@@ -93,16 +101,35 @@ export default function PilotVoiceStep({language,en,onChoose}:Props){
    }
   }
  };
- const displayed:Voice[]=[...voices,...PILOT_VOICES.slice(0,2)];
+ const allVoices:Voice[]=[...voices,...PILOT_VOICES];
+ const displayed=genderFilter==="male"?
+  allVoices.filter(v=>v.gender==="male"||
+   (v.provider==="openai"&&["onyx","echo"].includes(v.id))):allVoices;
  return <div className={css.root}>
+  <div className={css.filters} role="group" aria-label={en?"Filter voices":"Filtrar voces"}>
+   <button type="button" className={genderFilter==="male"?css.active:""}
+    aria-pressed={genderFilter==="male"} onClick={()=>setGenderFilter("male")}>
+    {en?"Male / deep voices":"Masculinas / graves"}
+   </button>
+   <button type="button" className={genderFilter==="all"?css.active:""}
+    aria-pressed={genderFilter==="all"} onClick={()=>setGenderFilter("all")}>
+    {en?"All voices":"Todas las voces"}
+   </button>
+  </div>
   <div className={css.grid}>{displayed.map(v=>{
    const key=language+":"+v.provider+":"+v.id;
-   return <div key={key} className={css.card}>
-    <button type="button" className={css.select} onClick={()=>{stop();onChoose(v.provider,v.id,v.name);}}>
+   const selected=selectedProvider===v.provider&&selectedVoiceId===v.id;
+   return <div key={key} className={selected?css.cardSelected:css.card}>
+    <button type="button" className={css.select}
+     aria-pressed={selected} disabled={disabled}
+     onClick={()=>{stop();onChoose(v.provider,v.id,v.name);}}>
      <Volume2 size={22}/><strong>{v.name}</strong>
-     <small>{v.provider==="elevenlabs"?"ElevenLabs":en?"Standard":"Estándar"}</small>
+     <small>{v.provider==="elevenlabs"?"ElevenLabs":en?"OpenAI · deep timbre":"OpenAI · voz grave"}
+      {v.gender==="male"?(en?" · Male":" · Masculina"):
+       v.gender==="female"?(en?" · Female":" · Femenina"):""}</small>
+     {selected?<span className={css.selectedLabel}>{en?"Selected":"Seleccionada"}</span>:null}
     </button>
-    <button type="button" className={css.preview} disabled={Boolean(loadingId)}
+    <button type="button" className={css.preview} disabled={disabled||Boolean(loadingId)}
      aria-label={(playingId===key?(en?"Pause ":"Pausar "):(en?"Listen to ":"Escuchar "))+v.name}
      title={en?"Listen":"Escuchar"} onClick={()=>void play(v)}>
      {loadingId===key?<LoaderCircle size={16} className={css.spin}/>:
@@ -112,11 +139,16 @@ export default function PilotVoiceStep({language,en,onChoose}:Props){
     </button>
    </div>;
   })}
-   <button type="button" className={css.none} onClick={()=>{stop();onChoose("none","none",en?"No voice":"Sin voz");}}>
+   <button type="button" className={css.none} disabled={disabled}
+    onClick={()=>{stop();onChoose("none","none",en?"No voice":"Sin voz");}}>
     <VolumeX size={22}/><strong>{en?"No voice":"Sin voz"}</strong>
    </button>
   </div>
   {loading?<div className={css.loading}><LoaderCircle size={14} className={css.spin}/></div>:null}
   {error?<p role="status" className={css.error}>{error}</p>:null}
+  <p className={css.disclaimer}>
+   {en?"Listen before selecting. ElevenLabs samples are prerecorded. OpenAI voice previews are generated only when you press Listen and may use a few credits.":
+    "Escucha antes de elegir. Las muestras de ElevenLabs son grabaciones existentes. Las de OpenAI se generan solo al pulsar Escuchar y pueden consumir algunos créditos."}
+  </p>
  </div>;
 }

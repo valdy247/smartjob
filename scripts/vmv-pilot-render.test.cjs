@@ -796,3 +796,27 @@ test("The six user-written celery voice lines remain unchanged and in order",()=
  assert.match(api,/const narration=suppliedSpeech\?/);
  assert.match(api,/const spoken=narration\.speech as string\[\]/);
 });
+
+test("Voice change inside VMV Motion can audition gender-labelled ElevenLabs male samples and OpenAI Onyx",()=>{
+ const studio=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ const choices=read("app/vista-app/vmv-pilot/PilotVoiceStep.tsx");
+ const api=read("app/api/video-generator/pilot-voices/route.ts");
+ const speech=read("app/api/video-generator/speech/continuous/route.ts");
+ const cfg=read("lib/vmv-pilot-voice-config.ts");
+ assert.match(studio,/import PilotVoiceStep from "\.\.\/PilotVoiceStep"/);
+ assert.match(studio,/<PilotVoiceStep language=\{language\}/);
+ assert.match(studio,/chooseProjectVoice\(/);
+ assert.match(studio,/setPilotVoiceId\(elevenId\)/);
+ assert.match(studio,/job\.elevenVoiceId=elevenId\|\|pilotVoiceId/);
+ assert.match(choices,/Masculinas \/ graves/);
+ assert.match(choices,/Todas las voces/);
+ assert.match(choices,/\["onyx","echo"\]\.includes\(v\.id\)/);
+ assert.match(choices,/v\.previewUrl\?\.startsWith\("https:\/\/"\)/);
+ assert.match(choices,/new Audio\(url\)/);
+ assert.match(choices,/audio\.play\(\)/);
+ assert.match(choices,/pilot-voice-preview/);
+ assert.match(api,/gender:v\.labels\?\.gender/);
+ assert.match(api,/previewUrl:/);
+ assert.match(speech,/"onyx"/);
+ assert.match(cfg,/id:"onyx"/);
+});
