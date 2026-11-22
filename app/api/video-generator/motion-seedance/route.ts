@@ -195,6 +195,7 @@ export async function POST(req:NextRequest){
      ...(issue.providerType?{providerType:issue.providerType}:{})},502);
    }
   }
+  if(!mediaUrl)return reply({error:"video_source_unavailable"},502);
   try{
    // Reject unsafe destination and any unsafe redirect before fetching.
    // Existing fetchClip imposes a 26 MB cap and content-type restrictions.
