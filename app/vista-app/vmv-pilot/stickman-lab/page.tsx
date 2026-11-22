@@ -555,7 +555,7 @@ export default function StickmanLabPage(){
      <ArrowLeft size={19}/></button>
     <strong>VMV Pilot</strong><span className={css.beta}>LAB</span>
    </header>
-   <div className={css.intro}><h1>VMV Motion</h1><span>Ilustraciones IA · Animación 2D</span></div>
+   <div className={css.intro}><h1>VMV Motion</h1><span>IA directora · Seedance · Historia continua</span></div>
    <div className={css.modeRow}>
     <button type="button" className={customMode?css.modeActive:""} disabled={rendering}
      onClick={()=>setCustomMode(true)}>Tu historia</button>
@@ -606,19 +606,19 @@ export default function StickmanLabPage(){
       {v==="alloy"?"Alloy":"Nova"}</button>)}
      <small>{language==="es"?"Usa créditos de voz":"Uses voice credits"}</small>
     </div>:null}
-    <button className={css.generate} type="button"
+    {!customMode?<button className={css.generate} type="button"
      onClick={()=>void generate()} disabled={rendering||(customMode&&customPrompt.trim().length<8)}>
      {rendering?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
      {rendering?(stage+" · "+progress+"%"):(language==="es"?"Generar video":"Generate video")}
-    </button>
-    {customMode?<button className={css.generate} type="button"
+    </button>:null}
+    {false&&customMode?<button className={css.generate} type="button"
      disabled={miniBusy||rendering||customPrompt.trim().length<8}
      onClick={()=>void generateMinimax()}>
      {miniBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
      {miniBusy?miniStage||"Generando con MiniMax":"Video con movimiento real · MiniMax H3 Max · ~US$1.20"}
     </button>:null}
-    {customMode?<small>MiniMax genera un video vertical de 15 segundos a 768p. El precio mostrado es estimado; confirmar este botón inicia una generación pagada en Vercel AI Gateway. No incluye narración ni subtítulos automáticos.</small>:null}
-    {miniUrl?<div className={css.result}>
+    {false&&customMode?<small>MiniMax genera un video vertical de 15 segundos a 768p. El precio mostrado es estimado; confirmar este botón inicia una generación pagada en Vercel AI Gateway. No incluye narración ni subtítulos automáticos.</small>:null}
+    {false&&miniUrl?<div className={css.result}>
       <div className={css.resultTitle}><Check size={18}/><strong>Video con MiniMax listo</strong></div>
       <video src={miniUrl} controls playsInline preload="metadata"/>
       <a href={miniUrl} target="_blank" rel="noreferrer"><Download size={16}/>Abrir MP4 para guardar</a>
@@ -640,7 +640,7 @@ export default function StickmanLabPage(){
      disabled={seedBusy||directorBusy||rendering||miniBusy||customPrompt.trim().length<8||directorPlan?.prompt!==customPrompt||directorPlan.frames.length!==3}
      onClick={()=>void generateSeedance()}>
      {seedBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
-     {seedBusy?seedStage:"Seedance Pro Fast · 3 escenas de 5s · 720p · ~US$0.31"}
+     {seedBusy?seedStage:"2. Animar las 3 escenas · Seedance 720p · ~US$0.31"}
     </button>:null}
     {customMode?<small>Primero prepara el storyboard e imágenes (OpenAI cobra esas generaciones). Después Seedance anima 3 clips de 5 segundos por ~US$0.103 cada uno, total ~US$0.31. No hay reintentos automáticos.</small>:null}
     {seedUrls.length>0?<div className={css.result}>
