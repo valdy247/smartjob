@@ -1430,21 +1430,34 @@ export default function StickmanLabPage(){
  const animateApproved=useCallback(async(mode:"normal"|"voice"="normal")=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
   const plan=readDirectorPlan(customPrompt);
+  const voiceOnly=mode==="voice";
+  if(voiceOnly){
+   const prior=readSeedance(customPrompt);
+   if(!withVoice||!Array.from({length:MOTION_SCENES},(_,i)=>
+    Boolean(prior.tokens[i]&&prior.urls[i])).every(Boolean)){
+    setError("Para cambiar la voz necesitas los 12 clips terminados.");return;
+   }
+   if(!window.confirm("Se generará una nueva narración utilizando créditos de voz y "+
+    "se volverán a unir los 12 clips existentes. No se cobrará otra animación "+
+    "de Seedance y conservaremos el video original. ¿Continuar?"))return;
+  }
   if(!plan||plan.frames.length!==MOTION_SCENES||
    !Array.from({length:MOTION_SCENES},(_,i)=>i).every(i=>plan.approved?.[i]===true&&
     (plan.draftPrompts?.[i]??plan.scenes[i].imagePrompt)===plan.scenes[i].imagePrompt)){
    setError("Aprueba las 12 imágenes y regenera cualquier escena cuyo prompt hayas editado.");return;
   }
   directorBusyRef.current=true;seedBusyRef.current=true;setDirectorBusy(true);setSeedBusy(true);
-  setError("");setSeedJoined("");
+  setError("");setDirectorStatus(voiceOnly?"Preparando nueva narración…":"Preparando tu video…");
   try{
    const client=getSupabase();if(!client)throw Error("Inicia sesión para generar el video.");
    const {data:{session}}=await client.auth.getSession();
    if(!session?.access_token)throw Error("Inicia sesión para generar el video.");
    const accessToken=session.access_token;
+   const provider=voicePreset==="elevenlabs"?"elevenlabs":"openai";
+   const selectedVoiceId=provider==="openai"?voicePreset:pilotVoiceId;
    if(withVoice){
-    const params=new URLSearchParams({provider:pilotAuto?pilotVoiceProvider:"elevenlabs"});
-    if(pilotAuto&&pilotVoiceId)params.set("voiceId",pilotVoiceId);
+    const params=new URLSearchParams({provider});
+    if(selectedVoiceId)params.set("voiceId",selectedVoiceId);
     const check=await fetch("/api/video-generator/speech/continuous?"+params.toString(),{headers:{Authorization:"Bearer "+accessToken},cache:"no-store"});
     const config=await check.json().catch(()=>null);
     if(!check.ok||!config?.configured)throw Error(
@@ -1452,19 +1465,23 @@ export default function StickmanLabPage(){
      config?.error==="elevenlabs_key_rejected"?"ElevenLabs rechazó la API key de Preview. Comprueba ELEVENLABS_API_KEY; tus 12 clips siguen guardados.":
      config?.error==="elevenlabs_access_denied"?"La API key no tiene permisos suficientes para acceder a ElevenLabs; los clips siguen guardados.":
      config?.error==="elevenlabs_credits_required"?"El plan de ElevenLabs o los créditos disponibles no permiten utilizar esta voz por API. Tus clips de Seedance siguen guardados.":
-     "No se pudo verificar ElevenLabs (HTTP "+String(config?.upstreamStatus||check.status)+
+     "No se pudo verificar el proveedor de voz (HTTP "+String(config?.upstreamStatus||check.status)+
       (config?.providerCode&&config.providerCode!=="unknown"?", "+config.providerCode:"")+
       "). Tus 12 clips siguen guardados."
     );
    }
    const job=readSeedance(customPrompt);setSeedUrls(job.urls.filter(Boolean));setSavedClipCount(job.urls.filter(Boolean).length);
+   if(voiceOnly&&!Array.from({length:MOTION_SCENES},(_,i)=>
+    Boolean(job.tokens[i]&&job.urls[i])).every(Boolean))
+    throw Error("Faltan clips guardados. No se inició ninguna animación.");
    if(job.needsMotion?.some(Boolean))throw Error(
     "Hay imágenes o acciones modificadas sin animar. En Editar, genera únicamente esas escenas antes de montar.");
    if(job.draftTokens&&Object.keys(job.draftTokens).length)throw Error(
     "Una escena sigue procesándose. Termínala desde Editar antes del montaje.");
    // Check all pending scenes before authorizing the first new Seedance task.
    // A failed preflight never consumes Seedance video credits.
-   const pending=Array.from({length:MOTION_SCENES},(_,beat)=>beat).filter(beat=>!job.tokens[beat]&&!job.urls[beat]);
+   const pending=voiceOnly?[]:Array.from({length:MOTION_SCENES},(_,beat)=>beat)
+    .filter(beat=>!job.tokens[beat]&&!job.urls[beat]);
    if(pending.length){
     setDirectorStatus("Verificando las imágenes antes de animar · sin costo");
     await seedanceRequest(accessToken,{action:"preflight",confirmCost:true,prompt:customPrompt,
@@ -1503,7 +1520,7 @@ export default function StickmanLabPage(){
    }
    setDirectorStatus("Preparando narración, subtítulos y montaje");
    const speech=withVoice?await loadContinuousVoice(plan.scenes.map(scene=>scene.speech),
-    pilotAuto?pilotVoiceProvider:"elevenlabs",pilotAuto?pilotVoiceId:""):null;
+    provider,selectedVoiceId):null;
    const localUrls:string[]=[];
    let video:Blob,extension:"mp4"|"webm";
    try{
