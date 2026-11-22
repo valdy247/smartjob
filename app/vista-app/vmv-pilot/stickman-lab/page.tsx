@@ -155,7 +155,7 @@ async function exportCanvas(canvas:HTMLCanvasElement,
    };
    raf=requestAnimationFrame(draw);
   });
-  if(recorder.state!=="inactive")recorder.stop();
+  if(recorder&&recorder.state!=="inactive")recorder.stop();
   const blob=await completed;
   return {blob,format};
  }finally{
@@ -260,14 +260,7 @@ async function stitchSeedanceClips(urls:string[],voices:ArrayBuffer[]=[],caption
  if(!ctx||!canvas.captureStream)throw Error("Este navegador no puede unir videos.");
  const stream=canvas.captureStream(24);
  let audioContext:AudioContext|null=null;
- const recorder=new MediaRecorder(stream,{mimeType:format.mime,videoBitsPerSecond:2800000,audioBitsPerSecond:128000});
- const chunks:BlobPart[]=[];
- const finished=new Promise<Blob>((resolve,reject)=>{
-  recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
-  recorder.onerror=()=>reject(Error("Falló la unión de los clips."));
-  recorder.onstop=()=>chunks.length?resolve(new Blob(chunks,{type:format.mime})):
-   reject(Error("El archivo final está vacío."));
- });
+ let recorder:MediaRecorder|null=null;
  let raf=0;
  const videos:HTMLVideoElement[]=[];
  try{
@@ -298,6 +291,14 @@ async function stitchSeedanceClips(urls:string[],voices:ArrayBuffer[]=[],caption
   });
   for(const track of mix.stream.getAudioTracks())stream.addTrack(track);
  }
+ recorder=new MediaRecorder(stream,{mimeType:format.mime,videoBitsPerSecond:2800000,audioBitsPerSecond:128000});
+ const chunks:BlobPart[]=[];
+ const finished=new Promise<Blob>((resolve,reject)=>{
+  recorder!.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+  recorder!.onerror=()=>reject(Error("Falló la unión de los clips."));
+  recorder!.onstop=()=>chunks.length?resolve(new Blob(chunks,{type:format.mime})):
+   reject(Error("El archivo final está vacío."));
+ });
   recorder.start(300);
   for(const [index,video] of videos.entries()){
    video.currentTime=0;
