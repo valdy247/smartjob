@@ -562,7 +562,7 @@ test("A new narration is billed only after all existing video clips can be downl
  assert.ok(start>=0&&finish>start);
  const montage=page.slice(start,finish);
  const download=montage.indexOf('localUrls.push(await loadSeedanceForStitching');
- const voice=montage.indexOf('const speech=withVoice&&!asmrEnabled?await loadContinuousVoice');
+ const voice=montage.indexOf('const speech=narrationEnabled?await loadContinuousVoice');
  assert.ok(download>=0&&voice>download,
   "Existing MP4 retrieval must finish before new voice spending begins");
  assert.match(montage,/const pending=voiceOnly\?\[\]/);
