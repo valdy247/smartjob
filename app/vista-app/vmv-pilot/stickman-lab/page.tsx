@@ -182,10 +182,10 @@ async function minimaxRequest(accessToken:string,body:Record<string,unknown>){
  return data;
 }
 
-const MOTION_SCENES=6;
+const MOTION_SCENES=12;
 type DirectorBeat={speech:string;caption:string;imagePrompt:string;motionPrompt:string};
 type DirectorPlan={prompt:string;title:string;storyBible:string;scenes:DirectorBeat[];frames:{imageUrl:string;referencePath:string}[]};
-const DIRECTOR_PLAN_KEY="vmv-motion-director-plan-v4-30s";
+const DIRECTOR_PLAN_KEY="vmv-motion-director-plan-v5-60s";
 function readDirectorPlan(prompt:string):DirectorPlan|null{
  try{
   const d=JSON.parse(sessionStorage.getItem(DIRECTOR_PLAN_KEY)||"null");
@@ -214,7 +214,7 @@ async function directorCall(accessToken:string,endpoint:string,data:Record<strin
  return result;
 }
 type SeedanceSaved={prompt:string;tokens:string[];urls:string[]};
-const SEEDANCE_KEY="vmv-motion-seedance-director-v4-30s";
+const SEEDANCE_KEY="vmv-motion-seedance-director-v5-60s";
 function readSeedance(prompt:string):SeedanceSaved{
  try{
   const state=JSON.parse(sessionStorage.getItem(SEEDANCE_KEY)||"null");
@@ -470,7 +470,7 @@ export default function StickmanLabPage(){
    if(!plan){
     setDirectorStatus("1/4 · Escribiendo el guion y definiendo los personajes");
     const result=await directorCall(accessToken,"/api/video-generator/motion-terra",{prompt:customPrompt});
-    if(!Array.isArray(result.scenes)||result.scenes.length!==MOTION_SCENES)throw Error("La IA no devolvió seis escenas.");
+    if(!Array.isArray(result.scenes)||result.scenes.length!==MOTION_SCENES)throw Error("La IA no devolvió doce escenas.");
     plan={prompt:customPrompt,title:String(result.title||"VMV Motion"),storyBible:String(result.storyBible||""),
      scenes:result.scenes.map((row:DirectorBeat)=>({
       speech:row.speech,caption:row.caption,imagePrompt:row.imagePrompt,
@@ -585,7 +585,7 @@ export default function StickmanLabPage(){
     <textarea disabled={rendering||directorBusy} value={customPrompt} maxLength={2000} rows={4}
      placeholder="Ejemplo: Un pequeño elefante busca agua en la selva. Encuentra un río y ayuda a sus amigos a beber."
      onChange={e=>{setCustomPrompt(e.target.value);setTerraStory(null);setDirectorPlan(null);setSeedUrls([]);pendingStoryboard.current={prompt:"",images:[]};}}/>
-    <small>{customPrompt.length}/2000 · Video de 30 segundos con IA</small>
+    <small>{customPrompt.length}/2000 · Video de 60 segundos con IA</small>
    </label>:<div className={css.topics}>
     <button type="button" className={topic==="space"?css.active:""}
      onClick={()=>{if(!rendering)setTopic("space");}} disabled={rendering}>
@@ -602,7 +602,7 @@ export default function StickmanLabPage(){
        onClick={()=>setPlaying(v=>!v)} aria-label={playing?"Pausar":"Reproducir"}>
        {playing?<Pause size={18}/>:<Play size={18}/>}
       </button>:null}
-     <span className={css.duration}>30s · 9:16</span>
+     <span className={css.duration}>{customMode?"60s":"30s"} · 9:16</span>
     </div>
     <div className={css.controls}>
      <div className={css.languages} aria-label="Idioma">
@@ -647,11 +647,11 @@ export default function StickmanLabPage(){
      {directorBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
      {directorBusy?directorStatus:"Generar video"}
     </button>:null}
-    {customMode?<small>Un solo proceso: IA directora, 6 imágenes independientes, 6 animaciones Seedance y video final. El clic autoriza los costos de OpenAI y ~US$0.62 de Seedance a 720p, sin reintentos automáticos. Si falla, el mismo botón reanuda lo ya generado.</small>:null}
+    {customMode?<small>Un solo proceso: IA directora, 12 imágenes independientes, 12 animaciones Seedance y video final. El clic autoriza los costos de OpenAI y ~US$1.24 de Seedance a 720p, sin reintentos automáticos. Si falla, el mismo botón reanuda lo ya generado.</small>:null}
     {customMode&&seedJoined?<div className={css.result}>
-     <div className={css.resultTitle}><Check size={18}/><strong>Video terminado · 30 segundos</strong></div>
+     <div className={css.resultTitle}><Check size={18}/><strong>Video terminado · 60 segundos</strong></div>
      <video src={seedJoined} controls playsInline/>
-     <a href={seedJoined} download={"vmv-motion-30s."+extension}><Download size={16}/>Descargar video</a>
+     <a href={seedJoined} download={"vmv-motion-60s."+extension}><Download size={16}/>Descargar video</a>
     </div>:null}
     {error?<p role="alert" className={css.error}>{error}</p>:null}
     {videoUrl?<div className={css.result}>
