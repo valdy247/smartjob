@@ -517,7 +517,7 @@ test("Library covers are privately signed and cannot reference another owner's s
  assert.match(api,/path\.startsWith\(owner\+"\/"\)/);
  assert.match(api,/validSnapshot\(project,owner\)/);
  assert.match(api,/createSignedUrl\(first\.referencePath,3600\)/);
- assert.match(api,/scenes:project\.plan\.frames\.length,coverUrl/);
+ assert.match(api,/scenes:project\.plan\.frames\.length,sceneCount:project\.plan\.scenes\.length/);
  assert.match(studio,/coverUrl\?:string/);
  assert.match(studio,/item\.coverUrl\?<img src=\{item\.coverUrl\}/);
  assert.match(studio,/currentTarget\.style\.display="none"/);
