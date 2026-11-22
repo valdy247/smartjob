@@ -95,8 +95,24 @@ export async function POST(req:NextRequest){
   });
   return reply({status:"pending",token:seal(owner,result.operation),model:MODEL,duration:DURATION,estimatedCostUsd:COST_USD,beat});
  }catch(e){
+  const issue=e as {name?:unknown;statusCode?:unknown;status?:unknown;response?:{status?:unknown;body?:unknown};data?:unknown;cause?:unknown};
   const name=e instanceof Error?e.name:"unknown";
-  console.warn("[vmv-seedance-start]",name);
-  return reply({error:/Unauthorized|Authentication/i.test(name)?"ai_gateway_auth_not_configured":"seedance_video_start_failed"},503);
+  const status=[issue?.statusCode,issue?.status,issue?.response?.status].find(v=>typeof v==="number");
+  const message=e instanceof Error?e.message:"";
+  // Avoid logging user prompts, credentials, URLs, or raw upstream response bodies.
+  const cause=issue?.cause as {name?:unknown;statusCode?:unknown;message?:unknown}|undefined;
+  const safeDetails={
+   name:name.slice(0,100),status:typeof status==="number"?status:undefined,
+   causeName:typeof cause?.name==="string"?cause.name.slice(0,100):undefined,
+   causeStatus:typeof cause?.statusCode==="number"?cause.statusCode:undefined,
+   isAuth:/Unauthorized|Authentication|invalid.api.key/i.test(name+" "+message),
+   isCredits:/insufficient|billing|credit|quota|payment.required/i.test(message),
+   isParameters:/invalid|parameter|resolution|unsupported|aspect.ratio/i.test(message)
+  };
+  console.warn("[vmv-seedance-start]",safeDetails);
+  if(safeDetails.isAuth||status===401||status===403)return reply({error:"ai_gateway_auth_not_configured"},503);
+  if(safeDetails.isCredits||status===402)return reply({error:"ai_gateway_credits_required"},402);
+  if(safeDetails.isParameters||status===400||status===422)return reply({error:"seedance_invalid_parameters"},422);
+  return reply({error:"seedance_gateway_unavailable"},503);
  }
 }
