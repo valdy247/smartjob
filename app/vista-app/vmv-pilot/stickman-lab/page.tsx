@@ -895,6 +895,9 @@ export default function StickmanLabPage(){
     setSubtitles(handoff.subtitles);setWithVoice(handoff.narration);
     setPilotVoiceProvider(handoff.voiceProvider==="openai"?"openai":"elevenlabs");
     setPilotVoiceId(handoff.voiceId||"");
+    setVoicePreset(handoff.voiceProvider==="openai"?
+     (["alloy","nova","echo"].includes(handoff.voiceId)?handoff.voiceId as VoicePreset:"alloy"):
+     "elevenlabs");
     setResearchSource(handoff.researchScanId&&handoff.researchVideoId?{scanId:handoff.researchScanId,videoId:handoff.researchVideoId}:null);
     setDirectorPlan(readDirectorPlan(handoff.prompt));
     setSavedClipCount(readSeedance(handoff.prompt).urls.filter(Boolean).length);
@@ -906,6 +909,10 @@ export default function StickmanLabPage(){
     saveDirectorPlan(saved);
     const recovered=readSeedance(saved.prompt);
     if(recovered.urls.length||recovered.tokens.length)saveSeedance(recovered);
+    setVoicePreset(recovered.voicePreset||"elevenlabs");
+    setPilotVoiceId(recovered.elevenVoiceId||"");
+    setVoiceRevisions(recovered.voiceRevisions||[]);
+    setActiveRenderId(recovered.activeRenderId||"");
     setCustomPrompt(saved.prompt);setCustomMode(true);setWithVoice(true);
     setSavedClipCount(readSeedance(saved.prompt).urls.filter(Boolean).length);
     const plan=readDirectorPlan(saved.prompt);
@@ -969,6 +976,8 @@ export default function StickmanLabPage(){
   if(clipPreviewRef.current){URL.revokeObjectURL(clipPreviewRef.current);clipPreviewRef.current="";}
   setSelectedClipPreview("");setSelectedScene(0);
   setMusicFile(null);setShareStatus("");
+  setVoicePreset("elevenlabs");setPilotVoiceId("");setVoiceEditorOpen(false);
+  setVoiceRevisions([]);setActiveRenderId("");
   setDirectorStatus("");setError("");setPreviousScene(null);
   frameRefreshPromptRef.current="";setFrameRefreshError("");
   setEditingSpeech(null);setSpeechDraft("");
@@ -977,7 +986,7 @@ export default function StickmanLabPage(){
   pendingStoryboard.current={prompt:"",images:[]};
   if(seedJoinedRef.current){URL.revokeObjectURL(seedJoinedRef.current);seedJoinedRef.current="";}
  },[]);
- const restoreCloudProject=useCallback(async(id:string)=>{
+ const restoreCloudProject=useCallback(async(id:string,changeVoice=false)=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
   const sb=getSupabase();if(!sb)return;
   const {data:{session}}=await sb.auth.getSession();
@@ -1000,14 +1009,29 @@ export default function StickmanLabPage(){
    setPublishDraft(draft);
    setDirectorPlan(project.plan);
    setSavedClipCount(project.seedance.urls.filter(Boolean).length);
+   setVoicePreset(project.seedance.voicePreset||"elevenlabs");
+   setPilotVoiceId(project.seedance.elevenVoiceId||"");
+   setVoiceRevisions(project.seedance.voiceRevisions||[]);
+   setActiveRenderId(project.seedance.activeRenderId||"");
+   setVoiceEditorOpen(changeVoice);
    setStudioStep(project.seedance.urls.filter(Boolean).length===MOTION_SCENES?"editar":"revisar");
    setLastRenderedCloudUrl("");
-   for(const ext of ["mp4","webm"] as const){
+   const current=project.seedance.voiceRevisions?.find(
+    revision=>revision.id===project.seedance.activeRenderId);
+   const candidates:[string,"mp4"|"webm"][]=[
+    ...(current?[[current.id,current.extension] as [string,"mp4"|"webm"]]:[]),
+    ["","mp4"],["","webm"]
+   ];
+   for(const [revisionId,ext] of candidates){
     try{
-     const savedVideo=await motionLibrary(session.access_token,{action:"render-url",id,extension:ext});
+     const savedVideo=await motionLibrary(session.access_token,{
+      action:"render-url",id,extension:ext,...(revisionId?{revisionId}:{})
+     });
      if(typeof savedVideo.url==="string"){
       setSeedJoined(savedVideo.url);setExtension(ext);setLastRenderedCloudUrl(savedVideo.url);
-      setStudioStep("publicar");break;
+      setActiveRenderId(revisionId);
+      if(!changeVoice)setStudioStep("publicar");
+      break;
      }
     }catch{}
    }
@@ -1034,7 +1058,7 @@ export default function StickmanLabPage(){
   }catch(e){setError(e instanceof Error?e.message:"No se pudo guardar el proyecto anterior.");}
   finally{setProjectSwitching(false);}
  },[resetForProject,router]);
- const restoreMotionProject=useCallback(async(id:string)=>{
+ const restoreMotionProject=useCallback(async(id:string,changeVoice=false)=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
   const selected=archivedMotionProjects().find(item=>item.id===id);
   if(!selected)return;
@@ -1053,6 +1077,11 @@ export default function StickmanLabPage(){
    setPublishDraft(readPublishDraft(currentCloudId()));
    setDirectorPlan(selected.plan);
    setSavedClipCount(selected.seedance.urls.filter(Boolean).length);
+   setVoicePreset(selected.seedance.voicePreset||"elevenlabs");
+   setPilotVoiceId(selected.seedance.elevenVoiceId||"");
+   setVoiceRevisions(selected.seedance.voiceRevisions||[]);
+   setActiveRenderId(selected.seedance.activeRenderId||"");
+   setVoiceEditorOpen(changeVoice);
    setStudioStep(selected.seedance.urls.filter(Boolean).length===MOTION_SCENES?"editar":"revisar");
    const remaining=archivedMotionProjects().filter(item=>item.id!==id);
    try{localStorage.setItem(MOTION_PROJECTS_KEY,JSON.stringify(remaining));}catch{}
