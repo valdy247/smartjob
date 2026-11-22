@@ -182,6 +182,83 @@ async function minimaxRequest(accessToken:string,body:Record<string,unknown>){
  return data;
 }
 
+type SeedanceSaved={prompt:string;tokens:string[];urls:string[]};
+const SEEDANCE_KEY="vmv-motion-seedance-v1";
+function readSeedance(prompt:string):SeedanceSaved{
+ try{
+  const state=JSON.parse(sessionStorage.getItem(SEEDANCE_KEY)||"null");
+  if(state?.prompt===prompt&&Array.isArray(state.tokens)&&Array.isArray(state.urls))
+   return {prompt,tokens:state.tokens,urls:state.urls};
+ }catch{}
+ return {prompt,tokens:[],urls:[]};
+}
+function saveSeedance(value:SeedanceSaved){
+ try{sessionStorage.setItem(SEEDANCE_KEY,JSON.stringify(value));}catch{}
+}
+async function seedanceRequest(accessToken:string,body:Record<string,unknown>){
+ const response=await fetch("/api/video-generator/motion-seedance",{
+  method:"POST",cache:"no-store",headers:{"Content-Type":"application/json",
+   Authorization:"Bearer "+accessToken},body:JSON.stringify(body)
+ });
+ const data=await response.json().catch(()=>null);
+ if(!response.ok)throw Error(data?.error==="motion_limit"?"Límite diario de pruebas alcanzado. Los clips terminados se conservan.":
+  data?.error==="video_status_unavailable"?"No se pudo consultar el estado; reintenta para recuperar el trabajo sin generar otro.":
+  data?.error==="seedance_video_start_failed"?"Seedance rechazó el trabajo. Comprueba los créditos y permisos de AI Gateway.":
+  data?.error==="invalid_video_job"?"El identificador del trabajo caducó.": "No pudimos contactar a Seedance.");
+ return data;
+}
+async function stitchSeedanceClips(urls:string[]):Promise<{blob:Blob;extension:"mp4"|"webm"}>{
+ if(urls.length!==3)throw Error("Faltan clips para unir.");
+ const format=chosenFormat();
+ const canvas=document.createElement("canvas");canvas.width=720;canvas.height=1280;
+ const ctx=canvas.getContext("2d",{alpha:false});
+ if(!ctx||!canvas.captureStream)throw Error("Este navegador no puede unir videos.");
+ const stream=canvas.captureStream(24);
+ const recorder=new MediaRecorder(stream,{mimeType:format.mime,videoBitsPerSecond:2800000});
+ const chunks:BlobPart[]=[];
+ const finished=new Promise<Blob>((resolve,reject)=>{
+  recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+  recorder.onerror=()=>reject(Error("Falló la unión de los clips."));
+  recorder.onstop=()=>chunks.length?resolve(new Blob(chunks,{type:format.mime})):
+   reject(Error("El archivo final está vacío."));
+ });
+ let raf=0;
+ try{
+  recorder.start(300);
+  for(const url of urls){
+   const video=document.createElement("video");
+   video.crossOrigin="anonymous";video.muted=true;video.playsInline=true;video.preload="auto";video.src=url;
+   await new Promise<void>((resolve,reject)=>{
+    video.onloadeddata=()=>resolve();
+    video.onerror=()=>reject(Error("El proveedor no permite cargar uno de los clips para unirlos."));
+    video.load();
+   });
+   await video.play();
+   const duration=Number.isFinite(video.duration)?Math.min(5,video.duration):5;
+   await new Promise<void>((resolve,reject)=>{
+    const frame=()=>{
+     try{
+      const ratio=Math.max(canvas.width/video.videoWidth,canvas.height/video.videoHeight);
+      const width=video.videoWidth*ratio,height=video.videoHeight*ratio;
+      ctx.drawImage(video,(720-width)/2,(1280-height)/2,width,height);
+      if(video.currentTime>=duration-.05||video.ended){resolve();return;}
+      raf=requestAnimationFrame(frame);
+     }catch{reject(Error("El proveedor bloquea la composición en Canvas (CORS). Puedes guardar los clips individuales."));}
+    };
+    raf=requestAnimationFrame(frame);
+   });
+   video.pause();video.removeAttribute("src");video.load();
+  }
+  recorder.stop();
+  const blob=await finished;
+  return {blob,extension:format.extension};
+ }finally{
+  cancelAnimationFrame(raf);
+  if(recorder.state!=="inactive")recorder.stop();
+  stream.getTracks().forEach(track=>track.stop());
+ }
+}
+
 export default function StickmanLabPage(){
  const router=useRouter();
  const [auth,setAuth]=useState<"checking"|"signed_in"|"signed_out">("checking");
@@ -197,6 +274,13 @@ export default function StickmanLabPage(){
  const [progress,setProgress]=useState(0),[stage,setStage]=useState("");
  const [videoUrl,setVideoUrl]=useState(""),[extension,setExtension]=useState<"mp4"|"webm">("webm");
  const [error,setError]=useState("");
+ const [seedBusy,setSeedBusy]=useState(false);
+ const [seedStage,setSeedStage]=useState("");
+ const [seedUrls,setSeedUrls]=useState<string[]>([]);
+ const [seedJoined,setSeedJoined]=useState("");
+ const [seedJoining,setSeedJoining]=useState(false);
+ const seedJoinedRef=useRef("");
+ const seedBusyRef=useRef(false);
  const [miniBusy,setMiniBusy]=useState(false);
  const [miniStage,setMiniStage]=useState("");
  const [miniUrl,setMiniUrl]=useState("");
@@ -237,7 +321,7 @@ export default function StickmanLabPage(){
   raf=requestAnimationFrame(step);
   return()=>cancelAnimationFrame(raf);
  },[topic,language,subtitles,customMode,customPrompt,terraStory]);
- useEffect(()=>()=>{if(urlRef.current)URL.revokeObjectURL(urlRef.current);},[]);
+ useEffect(()=>()=>{if(urlRef.current)URL.revokeObjectURL(urlRef.current);if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);},[]);
  const pollMinimax=useCallback(async(token:string,accessToken:string)=>{
   setMiniStage("MiniMax está animando los personajes");
   for(let i=0;i<120;i++){
@@ -280,6 +364,53 @@ export default function StickmanLabPage(){
   finally{miniBusyRef.current=false;setMiniBusy(false);}
  },[customPrompt,pollMinimax]);
 
+ const generateSeedance=useCallback(async()=>{
+  if(seedBusyRef.current||renderingRef.current||customPrompt.trim().length<8)return;
+  seedBusyRef.current=true;setSeedBusy(true);setError("");setSeedJoined("");
+  try{
+   const client=getSupabase();if(!client)throw Error("Inicia sesión.");
+   const {data:{session}}=await client.auth.getSession();
+   if(!session?.access_token)throw Error("Inicia sesión.");
+   const job=readSeedance(customPrompt);
+   setSeedUrls(job.urls.filter(Boolean));
+   for(let beat=0;beat<3;beat++){
+    if(job.urls[beat])continue;
+    let token=job.tokens[beat];
+    if(!token){
+     setSeedStage("Iniciando escena "+(beat+1)+" de 3");
+     const started=await seedanceRequest(session.access_token,{action:"start",prompt:customPrompt,beat,confirmCost:true});
+     if(typeof started?.token!=="string")throw Error("Seedance no entregó un ID de trabajo.");
+     token=started.token;job.tokens[beat]=token;saveSeedance(job);
+    }
+    setSeedStage("Animando escena "+(beat+1)+" de 3");
+    let completed=false;
+    for(let n=0;n<120;n++){
+     const result=await seedanceRequest(session.access_token,{action:"status",token});
+     if(result?.status==="completed"&&typeof result.url==="string"){
+      job.urls[beat]=result.url;saveSeedance(job);setSeedUrls(job.urls.filter(Boolean));
+      completed=true;break;
+     }
+     if(result?.status==="failed")throw Error("Seedance falló en la escena "+(beat+1)+". Las anteriores están guardadas.");
+     await new Promise<void>(resolve=>setTimeout(resolve,5000));
+    }
+    if(!completed)throw Error("La escena "+(beat+1)+" sigue procesándose. Reanuda para consultar sin volver a pagar.");
+   }
+   setSeedStage("Tres escenas listas · puedes unirlas");
+  }catch(e){setError(e instanceof Error?e.message:"Falló la creación Seedance.");setSeedStage("");}
+  finally{seedBusyRef.current=false;setSeedBusy(false);}
+ },[customPrompt]);
+ const joinSeedance=useCallback(async()=>{
+  if(seedJoining||seedUrls.length!==3)return;
+  setSeedJoining(true);setError("");
+  try{
+   const {blob,extension}=await stitchSeedanceClips(seedUrls);
+   const url=URL.createObjectURL(blob);
+   if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);
+   seedJoinedRef.current=url;setSeedJoined(url);
+   setExtension(extension);
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo unir el video.");}
+  finally{setSeedJoining(false);}
+ },[seedUrls,seedJoining]);
  const generate=useCallback(async()=>{
   if(renderingRef.current)return;
   const target=canvas.current;
@@ -381,6 +512,25 @@ export default function StickmanLabPage(){
       <video src={miniUrl} controls playsInline preload="metadata"/>
       <a href={miniUrl} target="_blank" rel="noreferrer"><Download size={16}/>Abrir MP4 para guardar</a>
      </div>:null}
+    {customMode?<button className={css.generate} type="button"
+     disabled={seedBusy||rendering||miniBusy||customPrompt.trim().length<8}
+     onClick={()=>void generateSeedance()}>
+     {seedBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
+     {seedBusy?seedStage:"Seedance Pro Fast · 3 escenas de 5s · 720p · ~US$0.31"}
+    </button>:null}
+    {customMode?<small>Al pulsar Seedance se autorizan hasta tres clips pagados de ~US$0.103 cada uno. Sin voz. Cada escena terminada queda guardada en esta pestaña y puedes reanudar sin recrearla.</small>:null}
+    {seedUrls.length>0?<div className={css.result}>
+     <div className={css.resultTitle}><Check size={18}/><strong>Seedance · {seedUrls.length}/3 escenas listas</strong></div>
+     {seedUrls.map((url,i)=><div key={i}>
+      <small>Escena {i+1}</small>
+      <video src={url} controls playsInline preload="metadata"/>
+      <a href={url} target="_blank" rel="noreferrer"><Download size={16}/>Guardar clip {i+1}</a>
+     </div>)}
+     {seedUrls.length===3?<button className={css.generate} type="button" disabled={seedJoining}
+      onClick={()=>void joinSeedance()}>{seedJoining?"Uniendo clips…":"Unir las 3 escenas · sin costo de IA"}</button>:null}
+     {seedJoined?<><video src={seedJoined} controls playsInline/>
+      <a href={seedJoined} download={"vmv-seedance-15s."+extension}><Download size={16}/>Descargar video completo</a></>:null}
+    </div>:null}
     {error?<p role="alert" className={css.error}>{error}</p>:null}
     {videoUrl?<div className={css.result}>
      <div className={css.resultTitle}><Check size={18}/><strong>{language==="es"?"Video terminado":"Finished video"}</strong></div>
