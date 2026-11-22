@@ -1,0 +1,14 @@
+.section{border-radius:20px;background:#fff;border:1px solid #e9e2ec;padding:18px;margin:0 0 24px;color:#2e2538}
+.heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 15px}
+.heading strong{display:inline-flex;gap:8px;align-items:center;font-size:15px}
+.heading button{cursor:pointer;border:0;background:transparent;color:#9472b7;display:grid;place-items:center;padding:8px}
+.status,.note{font-size:12px;color:#8d8299}
+.note{margin:16px 0 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:12px}
+.card{border:1px solid #e9e2ec;border-radius:14px;overflow:hidden;background:#fdfcff}
+.card img{width:100%;height:140px;object-fit:cover;display:block}
+.details{padding:9px 10px;display:flex;gap:4px;justify-content:space-between;align-items:center;font-size:11px}
+.details strong{font-size:12px}
+.details span{color:#8d8299}
+.buttons{padding:0 10px 10px;display:flex;gap:8px;justify-content:flex-end}
+.buttons a,.buttons button{display:grid;place-items:center;cursor:pointer;background:#f7f2fb;color:#805eb3;border:0;border-radius:10px;padding:9px}
