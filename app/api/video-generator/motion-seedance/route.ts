@@ -169,9 +169,8 @@ export async function POST(req:NextRequest){
  if(prompt.length<8||prompt.length>500)return reply({error:"invalid_video_prompt"},400);
  if(!process.env.SUPABASE_SERVICE_ROLE_KEY&&!process.env.OPENAI_API_KEY)
   return reply({error:"token_signing_secret_missing"},503);
- const {data:claimed,error:quotaError}=await videoDb().rpc("smartjob_web_ai_claim_video_test_slot",{p_owner:owner});
- if(quotaError)return reply({error:"motion_quota_unavailable"},503);
- if(claimed!==true)return reply({error:"motion_limit"},429);
+ // Private preview is already restricted to the explicitly allowlisted owner.
+ // No daily test quota: the owner controls each paid generation via confirmCost.
  try{
   const signed=await videoDb().storage.from("vmv-motion-frames-preview").createSignedUrl(imagePath,7200);
   if(signed.error||!signed.data?.signedUrl)return reply({error:"storyboard_image_missing"},409);
