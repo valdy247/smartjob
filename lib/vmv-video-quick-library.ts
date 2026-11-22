@@ -3,7 +3,7 @@ export const QUICK_VIDEO_BUCKET="vmv-video-quick" as const;
 export type QuickScene={speech:string;imagePrompt:string;caption:string};
 export type QuickVideoProject={
  id:string;owner_id:string;title:string;topic:string;kind:"promo"|"facts";
- visual:"sticks"|"stills";seconds:15|30;ratio:"portrait"|"landscape";
+ visual:"sticks"|"stills";seconds:15|30|60;ratio:"portrait"|"landscape";
  narration:boolean;scenes:QuickScene[];media_path:string;output_mime:"video/mp4"|"video/webm";
  created_at:string;url?:string;
 };
@@ -16,7 +16,7 @@ async function owner(db:SupabaseClient){
 function validDetails(x:QuickVideoDetails){
  if(x.topic.trim().length<3||x.topic.length>220||x.title.length>140||
   !["promo","facts"].includes(x.kind)||!["sticks","stills"].includes(x.visual)||
-  ![15,30].includes(x.seconds)||!["portrait","landscape"].includes(x.ratio)||
+  ![15,30,60].includes(x.seconds)||!["portrait","landscape"].includes(x.ratio)||
   !Array.isArray(x.scenes)||x.scenes.length<4||x.scenes.length>12||
   x.scenes.some(s=>typeof s.speech!=="string"||typeof s.caption!=="string"||
    typeof s.imagePrompt!=="string"||s.speech.length>500||s.caption.length>500||s.imagePrompt.length>2000))
