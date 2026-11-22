@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
-import {videoAllowed,videoHeaders} from "@/lib/vmv-video-generator";
+import {videoAllowed,videoHeaders,videoDb,validUuid} from "@/lib/vmv-video-generator";
+import {validRadarId} from "@/lib/vmv-video-radar";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=180;
@@ -92,27 +93,42 @@ export async function POST(req:NextRequest){
  // Private preview is already restricted to the explicitly allowlisted owner.
  // No daily test quota: the owner controls each paid generation via confirmCost.
  try{
-  let narration:Record<string,unknown>|null=null;
-  let spoken:string[]=[];
-  const factualIncident=/creador|influencer|imperio digital|digital empire|esc[aá]ndalo|pol[eé]mic|controvers|cancelaci[oó]n|viral scandal/i.test(prompt);
-  for(let attempt=0;attempt<2;attempt++){
-   narration=await askOpenAI(narrationSystem,attempt===0?prompt:
-    prompt+"\nREVISE: Earlier narration made unsupported accusations with anonymous people. Be concrete and specific ONLY where the source actually identifies a documented event. Otherwise tell an explicitly labeled fictional case or give practical advice without pretending to recount a real scandal.",1500);
-   if(!Array.isArray(narration.speech)||narration.speech.length!==SCENE_COUNT||
-    narration.speech.some(v=>typeof v!=="string"||v.trim().length<8||v.length>165)){
-    if(attempt===0)continue;
-    return reply({error:"motion_scene_retry",stage:"narration",reason:"invalid_segment_count_or_length"},422);
+  // The Radar produces ideas from YouTube metadata, not transcripts or independent
+  // reporting. Retrieve the chosen original source under its owner's account.
+  // A title/description may provide an angle; it cannot establish an alleged scandal.
+  type RadarEvidence={sourceUrl:string;sourceTitle:string;channel:string;
+   publishedAt:string;description:string;concept:string;limitations:string};
+  let evidence:RadarEvidence|null=null;
+  if(validUuid(body?.researchScanId)&&validRadarId(body?.researchVideoId)){
+   const {data:scan}=await videoDb().from("vmv_video_radar_scans")
+    .select("results,ideas,status").eq("id",body.researchScanId).eq("owner_id",owner).maybeSingle();
+   if(scan?.status==="ready"&&Array.isArray(scan.results)&&Array.isArray(scan.ideas)){
+    const source=scan.results.find((v:{id?:string})=>v.id===body.researchVideoId);
+    const chosen=scan.ideas.find((v:{sourceId?:string})=>v.sourceId===body.researchVideoId);
+    if(source&&chosen){
+     evidence={
+      sourceUrl:"https://www.youtube.com/watch?v="+body.researchVideoId,
+      sourceTitle:String(source.title||"").slice(0,180),
+      channel:String(source.channel||"").slice(0,120),
+      publishedAt:String(source.publishedAt||"").slice(0,40),
+      description:String(source.description||"").slice(0,450),
+      concept:String(chosen.hook||"").slice(0,160)+" — "+String(chosen.concept||"").slice(0,350),
+      limitations:"Only original YouTube public metadata is available. We have not watched the video, checked its transcript or independently verified descriptions, personal allegations or event outcomes."
+     };
+    }
    }
-   spoken=narration.speech as string[];
-   const script=spoken.join(" ");
-   const genericCase=/\b(?:un creador|una creadora|un influencer|alguien|cierta persona|one creator|an influencer)\b/i.test(script);
-   const vagueScandal=/\b(?:video pol[eé]mico|informaci[oó]n incorrecta|millones de seguidores|perdi[oó] suscriptores|fans se sintieron traicionados|hace algunos a[ñn]os)\b/i.test(script);
-   const fictionDeclared=/\b(?:fictici[ao]|imaginari[ao]|hypothetical|fictional|imagine|imagina)\b/i.test(script);
-   if(!factualIncident||!genericCase||!vagueScandal||fictionDeclared)break;
-   if(attempt===1)return reply({error:"motion_scene_retry",stage:"narration",
-    reason:"real_incident_needs_identifiable_verified_details"},422);
   }
-  if(!narration||spoken.length!==SCENE_COUNT)throw Error("motion_scene_retry");
+  const groundedBrief=JSON.stringify({
+   userGoal:prompt,selectedRadarEvidence:evidence,
+   editorialPolicy:"Expand the chosen concept into a concrete educational story, using specific people, products, times or examples ONLY when supported by dependable provided evidence. The YouTube source metadata suggests an angle, not proof of its assertions. If concrete verified case facts are missing, do not invent a named person, video, incident, controversy or outcome; instead teach an actionable specific process, mechanism or lesson with accurate general examples. Do not falsely imply a real scandal happened. Avoid vague anonymous anecdotes."
+  });
+  const narration=await askOpenAI(narrationSystem,groundedBrief,1500);
+  if(!Array.isArray(narration.speech)||narration.speech.length!==SCENE_COUNT||
+   narration.speech.some(v=>typeof v!=="string"||v.trim().length<8||v.length>165)){
+   console.warn("[vmv-motion-director] invalid narration",{count:Array.isArray(narration.speech)?narration.speech.length:null});
+   return reply({error:"motion_scene_retry",stage:"narration",reason:"invalid_segment_count_or_length"},422);
+  }
+  const spoken=narration.speech as string[];
   const visuals=await askOpenAI(visualSystem,JSON.stringify({
    idea:prompt,title:narration.title,narrationForTimingOnly:spoken
   }),9000);
@@ -129,7 +145,9 @@ export async function POST(req:NextRequest){
    console.warn("[vmv-motion-director] invalid storyboard fields");
    return reply({error:"motion_scene_retry",stage:"storyboard",reason:"invalid_scene_fields"},422);
   }
-  return reply({...parsed,model:"gpt-4.1-mini",directorVersion:3,durationSeconds:60});
+  return reply({...parsed,model:"gpt-4.1-mini",directorVersion:4,durationSeconds:60,
+   research:evidence?{sourceUrl:evidence.sourceUrl,sourceTitle:evidence.sourceTitle,
+    limits:"YouTube metadata only; underlying claims not independently verified."}:null});
  }catch(e){
   const message=e instanceof Error?e.message:"unknown";
   console.warn("[vmv-motion-openai]",message);
