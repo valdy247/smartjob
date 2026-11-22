@@ -441,7 +441,7 @@ test("Video finishing and publishing are honest and available by stage",()=>{
  assert.match(studio,/voiceVolume:/);
  assert.match(studio,/fadeSeconds/);
  assert.match(studio,/navigator\.clipboard\.writeText/);
- assert.match(studio,/navigator as Navigator/);
+ assert.match(studio,/await shareLibraryVideo\(currentCloudId\(\)\)/);
  assert.match(studio,/No publica automáticamente/);
  assert.match(studio,/Registro manual/);
  assert.match(studio,/currentCloudId\(\)/);
@@ -594,8 +594,8 @@ test("Private VMV Motion library can share original renders without sign-in or t
  const page=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
  assert.match(api,/if\(action==="render-share"\)/);
  assert.match(api,/const project=await readProject\(owner,body\.id\)/);
- assert.match(api,/createSignedUrl\(\s*saved\.path,expiresIn,\{download:filename\}\)/);
- assert.match(api,/const expiresIn=7\*24\*60\*60/);
+ assert.match(api,/createMotionShareToken\(saved\.path\)/);
+ assert.match(api,/new URL\("\/video-share\/"\+share\.token,origin\)/);
  assert.match(api,/const saved=await finishedRender\(owner,body\.id,project\)/);
  assert.match(api,/const active=project\.seedance\.activeRenderId/);
  assert.match(api,/public:false/);
@@ -682,4 +682,28 @@ test("VMV Motion allows 60-second ASMR and music without speeding up 12 saved cl
  assert.match(page,/seis segmentos ASMR de 10 segundos/);
  assert.match(sfx,/!\[5,10\]\.includes\(duration\)/);
  assert.doesNotMatch(page,/if\(enabled\)\{job\.narrationEnabled=false;job\.montageSeconds=30;/);
+});
+
+test("Sharing from Publicar opens the same public VMV download as Biblioteca (not iCloud)",()=>{
+ const route=read("app/api/video-generator/motion-library/route.ts");
+ const share=read("lib/vmv-motion-share.ts");
+ const publicPage=read("app/video-share/[token]/route.ts");
+ const studio=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ assert.match(route,/createMotionShareToken\(saved\.path\)/);
+ assert.match(route,/VERCEL_BRANCH_URL/);
+ assert.match(share,/const secondsInWeek=7\*24\*60\*60/);
+ assert.match(share,/createHmac\("sha256"/);
+ assert.match(share,/timingSafeEqual\(actual,expected\)/);
+ assert.match(share,/const allowedPath=new RegExp/);
+ assert.match(share,/expiry<=nowSeconds/);
+ assert.match(publicPage,/export async function GET/);
+ assert.match(publicPage,/readMotionShareToken\(token\)/);
+ assert.match(publicPage,/createSignedUrl\(share\.path,120,\{download:share\.filename\}\)/);
+ assert.match(publicPage,/NextResponse\.redirect\(signed\.data\.signedUrl/);
+ assert.match(publicPage,/Descargar video original/);
+ assert.match(publicPage,/noindex, nofollow/);
+ assert.doesNotMatch(publicPage,/authenticatedUser|\.download\(share\.path\)|MediaRecorder|ffmpeg/);
+ assert.match(studio,/await shareLibraryVideo\(currentCloudId\(\)\)/);
+ assert.match(studio,/Compartir enlace/);
+ assert.doesNotMatch(studio,/await mobile\.share\(/);
 });

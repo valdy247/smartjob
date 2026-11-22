@@ -1783,24 +1783,11 @@ export default function StickmanLabPage(){
  },[customPrompt,publishDraft]);
  const shareFinishedVideo=useCallback(async()=>{
   if(!seedJoined){setShareStatus("Primero monta o recupera el video final.");return;}
-  try{
-   const response=await fetch(seedJoined);
-   if(!response.ok)throw Error("download");
-   const blob=await response.blob();
-   const file=new File([blob],"vmv-motion."+extension,{type:extension==="mp4"?"video/mp4":"video/webm"});
-   const mobile=navigator as Navigator&{canShare?:(data:ShareData)=>boolean;share?:(data:ShareData)=>Promise<void>};
-   if(!mobile.share||!mobile.canShare?.({files:[file]})){
-    setShareStatus("Tu navegador no admite compartir el archivo directamente. Descarga el video y súbelo en la plataforma elegida.");
-    return;
-   }
-   await mobile.share({files:[file],title:publishDraft.title||"VMV Motion",
-    text:[publishDraft.caption,publishDraft.hashtags].filter(Boolean).join("\n")});
-   setShareStatus("Se abrió el menú de compartir. Comprueba la publicación en la red social.");
-  }catch(e){
-   if(e instanceof Error&&e.name==="AbortError")return;
-   setShareStatus("No fue posible abrir el menú. Descarga el video para compartirlo.");
-  }
- },[seedJoined,extension,publishDraft]);
+  // Both Publicar and Biblioteca use a public VMV URL, never the native OS share sheet.
+  setShareStatus("");
+  setLibraryOpen(true);
+  await shareLibraryVideo(currentCloudId());
+ },[seedJoined,shareLibraryVideo]);
  const refreshCloudRender=useCallback(async()=>{
   const sb=getSupabase();if(!sb)return;
   const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)return;
@@ -2534,7 +2521,7 @@ export default function StickmanLabPage(){
      <div className={css.editorActions}>
       <button type="button" onClick={()=>void copyPublication()}>Copiar texto</button>
       {seedJoined?<button type="button" onClick={()=>void shareFinishedVideo()}>
-       Compartir video</button>:null}
+       Compartir enlace</button>:null}
      </div>
      <p className={css.mutedNote}>Abre tu plataforma para subir el MP4. No publicamos en tu nombre sin conectar y autorizar esa cuenta.</p>
      <div className={css.socialLinks}>

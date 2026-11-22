@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {videoAllowed,videoDb,videoHeaders} from "@/lib/vmv-video-generator";
+import {createMotionShareToken} from "@/lib/vmv-motion-share";
 
 // Cloud project snapshots are private, owner-scoped, and do not run any AI.
 // MP4 uploads use Supabase signed uploads so large videos never cross the
@@ -197,15 +198,15 @@ export async function POST(req:NextRequest){
    if(!project)return reply({error:"motion_project_not_found"},404);
    const saved=await finishedRender(owner,body.id,project);
    if(!saved)return reply({error:"motion_render_not_found"},404);
-   // The signed URL serves the exact uploaded file; it never recompresses.
+   // Give recipients a public VMV download page instead of a native iCloud link.
+   const share=createMotionShareToken(saved.path);
+   if(!share)return reply({error:"motion_render_share_unavailable"},503);
+   const stableHost=process.env.VERCEL_BRANCH_URL;
+   const origin=stableHost&&/^[a-z0-9-]+\.vercel\.app$/i.test(stableHost)?
+    "https://"+stableHost:req.nextUrl.origin;
+   const url=new URL("/video-share/"+share.token,origin).toString();
    const filename="VMV-Motion-"+body.id.slice(0,8)+"."+saved.extension;
-   const expiresIn=7*24*60*60;
-   const signed=await storage().from(RENDER_BUCKET).createSignedUrl(
-    saved.path,expiresIn,{download:filename});
-   if(!signed.error&&signed.data?.signedUrl)
-    return reply({url:signed.data.signedUrl,filename,
-     expiresAt:new Date(Date.now()+expiresIn*1000).toISOString()});
-   return reply({error:"motion_render_share_unavailable"},503);
+   return reply({url,filename,expiresAt:share.expiresAt});
   }catch{return reply({error:"motion_render_share_unavailable"},503);}
  }
  if(action==="render-url"){
