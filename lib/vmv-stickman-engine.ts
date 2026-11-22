@@ -9,8 +9,8 @@ export const STICKMAN_SCENE_SECONDS=5;
 export const STICKMAN_SECONDS=15;
 export type StickmanTopic="space"|"race";
 export type StickmanLanguage="es"|"en";
-export type StickmanAction="earth"|"jupiter"|"comparison"|"track"|"beach"|"finish";
-export type StickmanScene={action:StickmanAction;speech:string};
+export type StickmanAction="earth"|"jupiter"|"comparison"|"track"|"beach"|"finish"|"custom";
+export type StickmanScene={action:StickmanAction;speech:string;heading?:string;motif?:"nature"|"city"|"science"|"food"|"people"|"abstract"};
 export type StickmanStory={name:string;scenes:[StickmanScene,StickmanScene,StickmanScene]};
 const stories:Record<StickmanLanguage,Record<StickmanTopic,StickmanStory>>={
  es:{
@@ -192,6 +192,128 @@ function raceCar(ctx:CanvasRenderingContext2D,x:number,y:number,s:number,t:numbe
  }
  ctx.restore();
 }
+
+/**
+ * A user-authored story is never replaced by invented facts.
+ * Split the text into 3 visual beats, preserving the original wording.
+ * This is a lightweight local storyboard, not an AI scriptwriter.
+ */
+export function userStickmanStory(raw:string):StickmanStory{
+ const clean=raw.trim().replace(/\s+/g," ").slice(0,500);
+ if(clean.length<8)throw Error("Escribe una historia de al menos 8 caracteres.");
+ const segments=clean.match(/[^.!?;]+[.!?;]?/g)?.map(x=>x.trim()).filter(Boolean)||[];
+ const chunks:string[]=[];
+ if(segments.length>=3){
+  const buckets=[[],[],[]] as string[][];
+  segments.forEach((segment,i)=>buckets[Math.min(2,Math.floor(i*3/segments.length))].push(segment));
+  chunks.push(...buckets.map(parts=>parts.join(" ")));
+ }else{
+  const words=clean.split(" ");
+  const size=Math.ceil(words.length/3);
+  for(let i=0;i<3;i++)chunks.push(words.slice(i*size,(i+1)*size).join(" "));
+ }
+ const fallback=chunks.filter(Boolean).at(-1)||clean;
+ const motif=detectMotif(clean);
+ return {name:clean.slice(0,70),scenes:([0,1,2] as const).map((i)=>({
+  action:"custom" as const,
+  speech:chunks[i]||fallback,
+  heading:chunks[i]||fallback,
+  motif
+ })) as [StickmanScene,StickmanScene,StickmanScene]};
+}
+function detectMotif(text:string):NonNullable<StickmanScene["motif"]>{
+ const t=text.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+ if(/\b(bosque|arbol|flor|mar|playa|animal|perro|gato|elefante|naturaleza|forest|tree|ocean|animal|dog|cat|elephant)\b/.test(t))return "nature";
+ if(/\b(ciudad|edificio|calle|auto|coche|carro|tren|city|building|street|car|train)\b/.test(t))return "city";
+ if(/\b(planeta|espacio|estrella|cohete|ciencia|universo|robot|space|planet|star|rocket|science|robot)\b/.test(t))return "science";
+ if(/\b(comida|pastel|cocina|pan|fruta|restaurante|food|cake|kitchen|bread|fruit|restaurant)\b/.test(t))return "food";
+ if(/\b(persona|amigo|familia|nino|hombre|mujer|gente|people|friend|family|child|man|woman)\b/.test(t))return "people";
+ return "abstract";
+}
+function wrappedText(ctx:CanvasRenderingContext2D,text:string,maxWidth:number,maxLines:number):string[]{
+ const words=text.split(/\s+/),lines:string[]=[];let line="";
+ for(const word of words){
+  const next=line?line+" "+word:word;
+  if(ctx.measureText(next).width>maxWidth&&line){lines.push(line);line=word;}else line=next;
+ }
+ if(line)lines.push(line);
+ if(lines.length>maxLines){
+  const shown=lines.slice(0,maxLines);
+  shown[maxLines-1]=shown[maxLines-1].slice(0,Math.max(0,shown[maxLines-1].length-3))+"…";
+  return shown;
+ }
+ return lines;
+}
+function drawCustomScene(ctx:CanvasRenderingContext2D,scene:StickmanScene,index:number,time:number,local:number){
+ const palettes=[
+  ["#171b43","#6248a3","#e4c9ff"],
+  ["#153a55","#288c9e","#a5f3e6"],
+  ["#34204b","#aa5c93","#ffe3ab"]
+ ] as const;
+ const [dark,light,accent]=palettes[index];
+ const bg=ctx.createLinearGradient(0,0,540,960);
+ bg.addColorStop(0,dark);bg.addColorStop(1,light);
+ ctx.fillStyle=bg;ctx.fillRect(0,0,540,960);
+ // Moving, theme-sensitive 2D vector artwork; never a fabricated photo.
+ ctx.save();ctx.translate(270,350);
+ ctx.rotate(Math.sin(time*.5)*.045);
+ for(let i=0;i<6;i++){
+  const a=i*TAU/6+time*.14;
+  ellipse(ctx,Math.cos(a)*190,Math.sin(a)*220,14+i*2,14+i*2,accent);
+ }
+ ctx.restore();
+ const motif=scene.motif||"abstract";
+ if(motif==="nature"){
+  ellipse(ctx,270,650,330,75,"#5bbca2");
+  for(let i=0;i<4;i++){
+   const x=70+i*135;
+   line(ctx,[x,540,x,345+Math.sin(time+i)*8],"#704f63",15);
+   ellipse(ctx,x,320+Math.sin(time+i)*8,56,66,"#8ee4b2");
+  }
+ }else if(motif==="city"){
+  for(let i=0;i<6;i++){
+   const x=i*101-20,h=110+(i*61)%170;
+   rounded(ctx,x,570-h,78,h,8,i%2?"#8c8ac7":"#b0a2d8");
+   for(let j=0;j<4;j++)ellipse(ctx,x+22+(j%2)*32,590-h+Math.floor(j/2)*38,6,7,"#ffe3ab");
+  }
+ }else if(motif==="science"){
+  earth(ctx,270,338,112,time);
+  for(let i=0;i<3;i++)star(ctx,80+i*185,200+i*58,12,.8);
+ }else if(motif==="food"){
+  rounded(ctx,110,480,320,45,20,"#f4d7aa");
+  rounded(ctx,160,370,220,114,20,"#f5b9c9");
+  rounded(ctx,165,355,210,29,15,"#fff0e5");
+  for(let i=0;i<6;i++)ellipse(ctx,184+i*35,360+Math.sin(time+i)*4,8,8,"#d95e83");
+ }else if(motif==="people"){
+  stickman(ctx,180,420,.9,time,"walk");
+  stickman(ctx,385,440,.82,time+.7,"cheer");
+ }else{
+  const pulse=1+Math.sin(time*2)*.08;
+  ellipse(ctx,270,342,155*pulse,155*pulse,accent);
+  ellipse(ctx,270,342,118,118,"#ffffff");
+  ctx.save();ctx.translate(270,342);ctx.rotate(time*.28);
+  for(let i=0;i<8;i++){
+   const a=i*TAU/8;
+   ellipse(ctx,Math.cos(a)*76,Math.sin(a)*76,10,10,light);
+  }
+  ctx.restore();
+ }
+ if(motif!=="people")stickman(ctx,260+Math.sin(time*1.7)*11,653,.93,time,index===2?"cheer":"point");
+ // Kinetic story headline. Full text is retained as speech/subtitles.
+ ctx.font="800 30px system-ui, sans-serif";
+ ctx.textAlign="center";ctx.textBaseline="middle";
+ const lines=wrappedText(ctx,scene.heading||scene.speech,455,3);
+ const y=105-(lines.length-1)*20;
+ lines.forEach((part,i)=>{
+  ctx.fillStyle="rgba(18,18,41,.45)";
+  rounded(ctx,28,y-18+i*43,484,41,14,"rgba(18,18,41,.45)");
+  ctx.fillStyle="#ffffff";ctx.fillText(part,270,y+i*43,448);
+ });
+ // Scene transition and progress line
+ rounded(ctx,48,777,444,5,3,"rgba(255,255,255,.25)");
+ rounded(ctx,48,777,444*clamp(local/5,0,1),5,3,accent);
+}
+
 function subtitles(ctx:CanvasRenderingContext2D,text:string,local:number){
  const words=text.split(/\s+/).filter(Boolean);
  const count=Math.max(1,Math.ceil(words.length/4));
@@ -212,7 +334,9 @@ export function drawStickmanFrame(
  const action=story.scenes[scene].action;
  const isSpace=action==="earth"||action==="jupiter"||action==="comparison";
  ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,540,960);
- if(isSpace){
+ if(action==="custom"){
+  drawCustomScene(ctx,story.scenes[scene],scene,time,local);
+ }else if(isSpace){
   paintSpace(ctx,time);
   if(action==="earth"){
    earth(ctx,278,355,155,local);
