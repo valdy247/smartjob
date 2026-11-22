@@ -400,3 +400,51 @@ test("Seedance montage downloads existing completed MP4s without rechecking gate
  assert.match(ui,/Recuperando MP4 guardado/);
  assert.match(ui,/No se inició otra generación/);
 });
+
+test("Cloud Motion Library is owner-scoped and final renders use signed storage uploads",()=>{
+ const api=read("app/api/video-generator/motion-library/route.ts");
+ const studio=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ assert.match(api,/authenticatedUser\(req\)/);
+ assert.match(api,/videoAllowed\(owner\)/);
+ assert.match(api,/public:false/);
+ assert.match(api,/projectPath\(owner,snapshot\.id\)/);
+ assert.match(api,/createSignedUploadUrl\(path,\{upsert:true\}\)/);
+ assert.match(api,/createSignedUrl\(/);
+ assert.match(api,/validSnapshot\(project\)/);
+ assert.match(studio,/setCloudProjects/);
+ assert.match(studio,/action:"save"/);
+ assert.match(studio,/action:"list"/);
+ assert.match(studio,/action:"load"/);
+ assert.match(studio,/action:"render-upload"/);
+ assert.match(studio,/uploadToSignedUrl/);
+ assert.match(studio,/action:"render-url"/);
+});
+test("Single-scene editing does not invalidate other paid Seedance clips",()=>{
+ const api=read("app/api/video-generator/motion-seedance/route.ts");
+ const studio=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ assert.match(studio,/renderSingleScene=useCallback/);
+ assert.match(studio,/job\.draftTokens/);
+ assert.match(studio,/job\.needsMotion/);
+ assert.match(studio,/latest\.tokens\[index\]=pending/);
+ assert.match(studio,/latest\.urls\[index\]=status\.url/);
+ assert.match(studio,/latest\.history=/);
+ assert.match(studio,/revertClip=useCallback/);
+ assert.match(studio,/await seedanceRequest\(accessToken,\{action:"archive"/);
+ assert.match(api,/allowArchived=false/);
+ assert.match(api,/if\(!jobFresh\)return reply\(\{error:"video_archive_missing"\},410\)/);
+ assert.match(api,/archiveOnly\?reply\(\{saved:true,cached:true\}\):serveClip\(bytes\)/);
+});
+test("Video finishing and publishing are honest and available by stage",()=>{
+ const studio=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ assert.match(studio,/["']crear["']\|["']revisar["']\|["']editar["']\|["']publicar["']/);
+ assert.match(studio,/musicVolume:/);
+ assert.match(studio,/voiceVolume:/);
+ assert.match(studio,/fadeSeconds/);
+ assert.match(studio,/navigator\.clipboard\.writeText/);
+ assert.match(studio,/navigator as Navigator/);
+ assert.match(studio,/No publica automáticamente/);
+ assert.match(studio,/Registro manual/);
+ assert.match(studio,/currentCloudId\(\)/);
+ const director=read("app/api/video-generator/motion-terra/route.ts");
+ assert.match(director,/reusableCharacterBible:characterGuide/);
+});
