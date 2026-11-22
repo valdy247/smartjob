@@ -23,7 +23,7 @@ export async function POST(req:NextRequest){
     !["standard","high"].includes(quality))return reply({error:"invalid_video_request"},400);
  const input=standalone?body?.prompt:body?.direction;
  const sourceImage=standalone&&typeof body?.sourceImage==="string"?body.sourceImage:"";
- const match=sourceImage?/^data:image/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(sourceImage):null;
+ const match=sourceImage?new RegExp("^data:image/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$").exec(sourceImage):null;
  if(sourceImage&&(!match||sourceImage.length>4100000))return reply({error:"image_invalid"},400);
  const sourceBytes=match?Buffer.from(match[2],"base64"):null;
  if(sourceBytes&&(sourceBytes.length<1024||sourceBytes.length>3*1024*1024))
