@@ -60,3 +60,9 @@
 
 .qualityPrice{margin-left:auto;font-size:13px;min-width:64px;text-align:right;font-variant-numeric:tabular-nums;color:#7e6095;font-weight:750}
 .qualityNote{font-size:11px;color:#978aa2;text-align:center;margin:8px 0 0}
+
+.labLink,.ownEngine{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;min-height:52px;border:1px solid #e9ddf1;border-radius:15px;background:#fff;color:#8052b3;font-weight:760;font-size:12px;padding:12px 14px;cursor:pointer}
+.labLink{margin-top:17px}.labLink svg:last-child,.ownEngine svg:last-child{margin-left:auto}
+.ownEngine{margin-top:12px;font-size:12px}
+.labLink:hover,.ownEngine:hover{border-color:#b98dda;background:#fdfaff}
+.labLink:focus-visible,.ownEngine:focus-visible{outline:3px solid #9c67d1;outline-offset:2px}
