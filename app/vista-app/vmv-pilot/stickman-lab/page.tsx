@@ -231,16 +231,31 @@ async function minimaxRequest(accessToken:string,body:Record<string,unknown>){
  return data;
 }
 
-const MOTION_SCENES=12;
+const MOTION_SCENES=12; // maximum scene count for legacy 60-second projects
+type MotionSeconds=15|30|60;
+const validMotionSeconds=(seconds:unknown):seconds is MotionSeconds=>
+ seconds===15||seconds===30||seconds===60;
+const scenesForSeconds=(seconds:MotionSeconds)=>seconds/5;
 type PilotMotionHandoff={requestId:string;createdAt:number;prompt:string;pilotId:string;
  topic:string;goal:string;audience:string;idea:string;researchScanId:string|null;researchVideoId:string;language:string;style:string;
  seconds:number;subtitles:boolean;narration:boolean;voiceProvider:string;voiceId:string;confirmedCost:boolean};
 const PILOT_MOTION_HANDOFF_KEY="vmv-pilot-motion-handoff-v1";
 type DirectorBeat={speech:string;caption:string;imagePrompt:string;motionPrompt:string};
 type DirectorFrame={imageUrl:string;referencePath:string;prompt?:string};
-type DirectorPlan={prompt:string;title:string;storyBible:string;scenes:DirectorBeat[];frames:DirectorFrame[];
+type DirectorPlan={prompt:string;title:string;storyBible:string;seconds?:MotionSeconds;scenes:DirectorBeat[];frames:DirectorFrame[];
  approved?:boolean[];draftPrompts?:string[];previous?:Record<string,DirectorFrame[]>};
 const DIRECTOR_PLAN_KEY="vmv-motion-director-plan-v5-60s";
+function validMotionPlan(plan:Partial<DirectorPlan>|null|undefined):plan is DirectorPlan{
+ return Boolean(plan?.prompt&&Array.isArray(plan.scenes)&&
+  [3,6,12].includes(plan.scenes.length)&&
+  (plan.seconds===undefined||plan.scenes.length===plan.seconds/5)&&
+  Array.isArray(plan.frames)&&plan.frames.length<=plan.scenes.length);
+}
+const sceneTotal=(plan:DirectorPlan|null|undefined,seconds:MotionSeconds=60)=>
+ plan?.scenes?.length||scenesForSeconds(seconds);
+const baseMotionSeconds=(plan:DirectorPlan|null|undefined):MotionSeconds=>
+ validMotionSeconds(plan?.seconds)?plan.seconds:
+ plan?.scenes.length===3?15:plan?.scenes.length===6?30:60;
 const MOTION_RECOVERY_MS=24*60*60*1000;
 function readSavedMotion(key:string):unknown{
  // Prefer the current tab's state, then recover recent state from another tab.
@@ -266,7 +281,7 @@ function saveMotion(key:string,value:unknown){
 }
 function readDirectorPlan(prompt:string):DirectorPlan|null{
  const d=readSavedMotion(DIRECTOR_PLAN_KEY) as Partial<DirectorPlan>|null;
- if(d?.prompt===prompt&&Array.isArray(d.scenes)&&d.scenes.length===MOTION_SCENES&&Array.isArray(d.frames))
+ if(d?.prompt===prompt&&validMotionPlan(d))
   return d as DirectorPlan;
  return null;
 }
@@ -312,7 +327,8 @@ type SeedanceSaved={prompt:string;tokens:string[];urls:string[];
  draftTokens?:Record<string,string>;
  voicePreset?:VoicePreset;elevenVoiceId?:string;
  voiceRevisions?:SavedVoiceRevision[];activeRenderId?:string;
- asmrEnabled?:boolean;montageSeconds?:30|60;narrationEnabled?:boolean};
+ asmrEnabled?:boolean;montageSeconds?:MotionSeconds;narrationEnabled?:boolean;
+ seconds?:MotionSeconds};
 const VOICE_CHOICES:{id:VoicePreset;label:string;detail:string}[]=[
  {id:"alloy",label:"Alloy",detail:"Equilibrada y natural"},
  {id:"nova",label:"Nova",detail:"Cálida y expresiva"},
@@ -337,8 +353,9 @@ function readSeedance(prompt:string):SeedanceSaved{
    voiceRevisions:Array.isArray(state.voiceRevisions)?state.voiceRevisions:[],
    activeRenderId:typeof state.activeRenderId==="string"?state.activeRenderId:"",
    asmrEnabled:state.asmrEnabled===true,
-   montageSeconds:state.montageSeconds===30?30:60,
-   narrationEnabled:state.narrationEnabled===true};
+   montageSeconds:validMotionSeconds(state.montageSeconds)?state.montageSeconds:60,
+   narrationEnabled:state.narrationEnabled===true,
+   seconds:validMotionSeconds(state.seconds)?state.seconds:undefined};
  return {prompt,tokens:[],urls:[],narrationEnabled:false};
 }
 function saveSeedance(value:SeedanceSaved){saveMotion(SEEDANCE_KEY,value);}
@@ -388,7 +405,7 @@ function archivedMotionProjects():MotionProjectArchive[]{
    return typeof item.id==="string"&&typeof item.savedAt==="number"&&
     Date.now()-item.savedAt>=0&&Date.now()-item.savedAt<MOTION_RECOVERY_MS&&
     typeof item.plan?.prompt==="string"&&Array.isArray(item.plan.scenes)&&
-    item.plan.scenes.length===MOTION_SCENES&&Array.isArray(item.plan.frames)&&
+    validMotionPlan(item.plan)&&
     item.seedance?.prompt===item.plan.prompt;
   }).slice(0,10);
  }catch{return [];}
@@ -801,7 +818,7 @@ export default function StickmanLabPage(){
  const [musicVolume,setMusicVolume]=useState(18);
  const [fadeSeconds,setFadeSeconds]=useState(0.2);
  const [asmrEnabled,setAsmrEnabled]=useState(false);
- const [montageSeconds,setMontageSeconds]=useState<30|60>(60);
+ const [montageSeconds,setMontageSeconds]=useState<MotionSeconds>(60);
  const [musicFile,setMusicFile]=useState<File|null>(null);
  const [shareStatus,setShareStatus]=useState("");
  const [libraryShare,setLibraryShare]=useState<{id:string;url:string;filename:string;expiresAt:string}|null>(null);
@@ -900,7 +917,7 @@ export default function StickmanLabPage(){
   let closed=false;let timer:ReturnType<typeof setTimeout>|null=null;
   const sync=async()=>{
    const saved=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
-   if(!saved?.prompt||saved.scenes?.length!==MOTION_SCENES)return;
+   if(!saved?.prompt||!validMotionPlan(saved))return;
    const sb=getSupabase();if(!sb)return;
    const {data:{session}}=await sb.auth.getSession();
    if(!session?.access_token)return;
@@ -1052,7 +1069,7 @@ export default function StickmanLabPage(){
    const handoff=JSON.parse(sessionStorage.getItem(PILOT_MOTION_HANDOFF_KEY)||"null") as PilotMotionHandoff|null;
    if(requestId&&handoff?.requestId===requestId&&handoff.confirmedCost===true&&
     handoff.createdAt>Date.now()-2*60*60*1000&&handoff.createdAt<=Date.now()+30000&&
-    handoff.seconds===60&&handoff.style==="stickman"&&
+    validMotionSeconds(handoff.seconds)&&handoff.style==="stickman"&&
     ["es","en"].includes(handoff.language)&&handoff.prompt.length>=8&&handoff.prompt.length<=2000){
     const old=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
     if(old?.prompt&&old.prompt!==handoff.prompt){
@@ -1065,6 +1082,9 @@ export default function StickmanLabPage(){
     setSubtitles(handoff.subtitles);setWithVoice(handoff.narration);
     const handed=readSeedance(handoff.prompt);
     handed.narrationEnabled=handoff.narration;
+    handed.seconds=handoff.seconds;
+    handed.montageSeconds=handoff.seconds;
+    setMontageSeconds(handoff.seconds);
     saveSeedance(handed);
     setPilotVoiceProvider(handoff.voiceProvider==="openai"?"openai":"elevenlabs");
     setPilotVoiceId(handoff.voiceId||"");
@@ -1077,22 +1097,22 @@ export default function StickmanLabPage(){
     setPilotAuto(true);setStudioStep("revisar");return;
    }
    const saved=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
-   if(saved?.prompt&&typeof saved.prompt==="string"&&saved.scenes?.length===MOTION_SCENES){
+   if(saved?.prompt&&typeof saved.prompt==="string"&&validMotionPlan(saved)){
     // Migrate this tab's existing project into cross-tab recovery storage.
     saveDirectorPlan(saved);
     const recovered=readSeedance(saved.prompt);
     if(recovered.urls.length||recovered.tokens.length)saveSeedance(recovered);
     setVoicePreset(recovered.voicePreset||"elevenlabs");
     setAsmrEnabled(recovered.asmrEnabled===true);
-    setMontageSeconds(recovered.montageSeconds===30?30:60);
+    setMontageSeconds(validMotionSeconds(recovered.montageSeconds)?recovered.montageSeconds:baseMotionSeconds(saved));
     setPilotVoiceId(recovered.elevenVoiceId||"");
     setVoiceRevisions(recovered.voiceRevisions||[]);
     setActiveRenderId(recovered.activeRenderId||"");
     setCustomPrompt(saved.prompt);setCustomMode(true);
-    setWithVoice(recovered.narrationEnabled===true&&!recovered.asmrEnabled&&recovered.montageSeconds!==30);
+    setWithVoice(recovered.narrationEnabled===true&&!recovered.asmrEnabled);
     setSavedClipCount(readSeedance(saved.prompt).urls.filter(Boolean).length);
     const plan=readDirectorPlan(saved.prompt);
-    if(plan){setDirectorPlan(plan);setStudioStep(recovered.urls.filter(Boolean).length===MOTION_SCENES?"editar":"revisar");}
+    if(plan){setDirectorPlan(plan);setStudioStep(recovered.urls.filter(Boolean).length===plan.scenes.length?"editar":"revisar");}
     setPublishDraft(readPublishDraft(currentCloudId()));
    }
   }catch{}
@@ -1175,7 +1195,7 @@ export default function StickmanLabPage(){
     publish?:Partial<MotionPublishDraft>};
    if(!project?.plan||!project.seedance)throw Error("Proyecto incompleto.");
    const active=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
-   if(active?.prompt&&active.scenes?.length===MOTION_SCENES&&currentCloudId()!==id)
+   if(active?.prompt&&validMotionPlan(active)&&currentCloudId()!==id)
     archiveMotionProject(active);
    resetForProject(project.plan.prompt);
    setCloudId(id);
@@ -1188,14 +1208,14 @@ export default function StickmanLabPage(){
    setSavedClipCount(project.seedance.urls.filter(Boolean).length);
    setVoicePreset(project.seedance.voicePreset||"elevenlabs");
    setAsmrEnabled(changeVoice?false:project.seedance.asmrEnabled===true);
-   setMontageSeconds(changeVoice?60:project.seedance.montageSeconds===30?30:60);
+   setMontageSeconds(validMotionSeconds(project.seedance.montageSeconds)?project.seedance.montageSeconds:baseMotionSeconds(project.plan));
    setWithVoice(changeVoice||project.seedance.narrationEnabled===true&&
-    project.seedance.asmrEnabled!==true&&project.seedance.montageSeconds!==30);
+    project.seedance.asmrEnabled!==true);
    setPilotVoiceId(project.seedance.elevenVoiceId||"");
    setVoiceRevisions(project.seedance.voiceRevisions||[]);
    setActiveRenderId(project.seedance.activeRenderId||"");
    setVoiceEditorOpen(changeVoice);
-   setStudioStep(project.seedance.urls.filter(Boolean).length===MOTION_SCENES?"editar":"revisar");
+   setStudioStep(project.seedance.urls.filter(Boolean).length===project.plan.scenes.length?"editar":"revisar");
    setLastRenderedCloudUrl("");
    const current=project.seedance.voiceRevisions?.find(
     revision=>revision.id===project.seedance.activeRenderId);
@@ -1226,7 +1246,7 @@ export default function StickmanLabPage(){
   setProjectSwitching(true);
   const active=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
   try{
-   if(active?.prompt&&active.scenes?.length===MOTION_SCENES){
+   if(active?.prompt&&validMotionPlan(active)){
     archiveMotionProject(active);
     try{await flushActiveMotionToCloud(active);}
     catch{setCloudStatus("La copia local se conservó; la sincronización en la nube está pendiente.");}
@@ -1246,7 +1266,7 @@ export default function StickmanLabPage(){
   setProjectSwitching(true);
   try{
    const active=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
-   if(active?.prompt&&active.prompt!==selected.plan.prompt&&active.scenes?.length===MOTION_SCENES){
+   if(active?.prompt&&active.prompt!==selected.plan.prompt&&validMotionPlan(active)){
     archiveMotionProject(active);
     try{await flushActiveMotionToCloud(active);}
     catch{setCloudStatus("El proyecto anterior se conservó localmente; la nube no respondió.");}
@@ -1260,14 +1280,14 @@ export default function StickmanLabPage(){
    setSavedClipCount(selected.seedance.urls.filter(Boolean).length);
    setVoicePreset(selected.seedance.voicePreset||"elevenlabs");
    setAsmrEnabled(changeVoice?false:selected.seedance.asmrEnabled===true);
-   setMontageSeconds(changeVoice?60:selected.seedance.montageSeconds===30?30:60);
+   setMontageSeconds(validMotionSeconds(selected.seedance.montageSeconds)?selected.seedance.montageSeconds:baseMotionSeconds(selected.plan));
    setWithVoice(changeVoice||selected.seedance.narrationEnabled===true&&
-    selected.seedance.asmrEnabled!==true&&selected.seedance.montageSeconds!==30);
+    selected.seedance.asmrEnabled!==true);
    setPilotVoiceId(selected.seedance.elevenVoiceId||"");
    setVoiceRevisions(selected.seedance.voiceRevisions||[]);
    setActiveRenderId(selected.seedance.activeRenderId||"");
    setVoiceEditorOpen(changeVoice);
-   setStudioStep(selected.seedance.urls.filter(Boolean).length===MOTION_SCENES?"editar":"revisar");
+   setStudioStep(selected.seedance.urls.filter(Boolean).length===selected.plan.scenes.length?"editar":"revisar");
    const remaining=archivedMotionProjects().filter(item=>item.id!==id);
    try{localStorage.setItem(MOTION_PROJECTS_KEY,JSON.stringify(remaining));}catch{}
    setArchivedProjects(remaining);setLibraryOpen(false);
@@ -1326,22 +1346,25 @@ export default function StickmanLabPage(){
    if(!session?.access_token)throw Error("Inicia sesión para preparar las escenas.");
    const accessToken=session.access_token;
    let plan=readDirectorPlan(customPrompt);
+   const chosenSeconds=plan?baseMotionSeconds(plan):
+    (readSeedance(customPrompt).seconds||montageSeconds);
+   const requiredScenes=sceneTotal(plan,chosenSeconds);
    if(!plan){
-    setDirectorStatus("Escribiendo narración y diseñando las 12 escenas");
-    const result=await directorCall(accessToken,"/api/video-generator/motion-terra",{prompt:customPrompt,
+    setDirectorStatus("Escribiendo narración y diseñando "+requiredScenes+" escenas");
+    const result=await directorCall(accessToken,"/api/video-generator/motion-terra",{prompt:customPrompt,seconds:chosenSeconds,
     ...(characterGuide?{characterGuide}:{}),
     ...(pilotAuto&&researchSource?{researchScanId:researchSource.scanId,researchVideoId:researchSource.videoId}:{})});
-    if(!Array.isArray(result.scenes)||result.scenes.length!==MOTION_SCENES)
-     throw Error("La IA no devolvió doce escenas.");
-    plan={prompt:customPrompt,title:String(result.title||"VMV Motion"),storyBible:String(result.storyBible||""),
+    if(!Array.isArray(result.scenes)||result.scenes.length!==requiredScenes)
+     throw Error("La IA no devolvió "+requiredScenes+" escenas.");
+    plan={prompt:customPrompt,title:String(result.title||"VMV Motion"),storyBible:String(result.storyBible||""),seconds:chosenSeconds,
      scenes:result.scenes.map((row:DirectorBeat)=>({
       speech:row.speech,caption:row.caption,imagePrompt:row.imagePrompt,motionPrompt:row.motionPrompt||row.imagePrompt
      })),frames:[],approved:[],draftPrompts:result.scenes.map((row:DirectorBeat)=>row.imagePrompt),previous:{}};
     saveDirectorPlan(plan);
    }
    setDirectorPlan({...plan});
-   for(let i=plan.frames.length;i<MOTION_SCENES;i++){
-    setDirectorStatus("Creando imagen "+(i+1)+"/"+MOTION_SCENES);
+   for(let i=plan.frames.length;i<requiredScenes;i++){
+    setDirectorStatus("Creando imagen "+(i+1)+"/"+requiredScenes);
     const image=await directorCall(accessToken,"/api/video-generator/motion-image",{
      mode:"storyframe",
      ...(characterReferencePath?{referencePath:characterReferencePath,referenceMode:"character"}:{}),
@@ -1354,17 +1377,17 @@ export default function StickmanLabPage(){
     plan.frames.push({imageUrl:image.imageUrl,referencePath:image.referencePath,prompt:plan.scenes[i].imagePrompt});
     saveDirectorPlan(plan);setDirectorPlan({...plan,frames:[...plan.frames]});
    }
-   if(pilotAuto&&plan.frames.length===MOTION_SCENES){
-    plan.approved=Array(MOTION_SCENES).fill(true);
+   if(pilotAuto&&plan.frames.length===requiredScenes){
+    plan.approved=Array(requiredScenes).fill(true);
     saveDirectorPlan(plan);setDirectorPlan({...plan,approved:[...plan.approved]});
    }
-   setDirectorStatus(pilotAuto?"Storyboard listo · el piloto preparará las animaciones":"Revisa las 12 escenas y apruébalas antes de animar");
+   setDirectorStatus(pilotAuto?"Storyboard listo · el piloto preparará las animaciones":"Revisa las "+requiredScenes+" escenas y apruébalas antes de animar");
    setStudioStep("revisar");
   }catch(e){
    setError(e instanceof Error?e.message:"No se pudieron preparar las imágenes.");
    setDirectorStatus("");
   }finally{directorBusyRef.current=false;setDirectorBusy(false);}
- },[customPrompt,pilotAuto,researchSource,characterGuide,characterReferencePath]);
+ },[customPrompt,pilotAuto,researchSource,characterGuide,characterReferencePath,montageSeconds]);
  const beginSpeechEdit=useCallback((index:number)=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
   const plan=readDirectorPlan(customPrompt);
