@@ -410,7 +410,7 @@ test("Cloud Motion Library is owner-scoped and final renders use signed storage 
  assert.match(api,/projectPath\(owner,snapshot\.id\)/);
  assert.match(api,/createSignedUploadUrl\(path,\{upsert:true\}\)/);
  assert.match(api,/createSignedUrl\(/);
- assert.match(api,/validSnapshot\(project\)/);
+ assert.match(api,/validSnapshot\(project,owner\)/);
  assert.match(studio,/setCloudProjects/);
  assert.match(studio,/action:"save"/);
  assert.match(studio,/action:"list"/);
