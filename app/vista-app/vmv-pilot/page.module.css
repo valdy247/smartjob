@@ -57,3 +57,6 @@
 .selectedIdea span{font-size:12px;color:#88749a}
 .selectedIdea strong{font-size:13px;font-weight:700;color:#31203c;text-align:left;line-height:1.45}
 .selectedIdea button{width:max-content;border:0;background:none;color:#8759bb;font-size:12px;cursor:pointer;padding:5px 0}
+
+.qualityPrice{margin-left:auto;font-size:13px;min-width:64px;text-align:right;font-variant-numeric:tabular-nums;color:#7e6095;font-weight:750}
+.qualityNote{font-size:11px;color:#978aa2;text-align:center;margin:8px 0 0}
