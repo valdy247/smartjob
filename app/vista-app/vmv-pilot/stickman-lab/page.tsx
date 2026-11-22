@@ -60,7 +60,10 @@ async function createTerraStory(prompt:string):Promise<StickmanStory>{
   body:JSON.stringify({prompt,confirmCost:true})
  });
  const data=await response.json().catch(()=>null);
- if(!response.ok)throw Error(data?.error==="motion_limit"?"Límite de pruebas alcanzado.":
+ if(!response.ok)throw Error(data?.error==="terra_gateway_paid_credits_required"?"GPT Terra requiere créditos de pago en Vercel AI Gateway. No se ha activado ningún gasto.":
+  data?.error==="terra_credits_exhausted"?"No hay créditos disponibles para GPT Terra.":
+  data?.error==="terra_rate_limited"?"Terra recibió demasiadas solicitudes. Intenta más tarde.":
+  data?.error==="motion_limit"?"Límite de pruebas alcanzado.":
   data?.error==="motion_scene_retry"?"Terra no creó escenas válidas. Intenta de nuevo.":
   data?.error==="video_not_enabled_for_account"?"La prueba de IA no está habilitada para tu cuenta.":
   "No pudimos generar las escenas con GPT Terra. Revisa la configuración del proveedor.");
