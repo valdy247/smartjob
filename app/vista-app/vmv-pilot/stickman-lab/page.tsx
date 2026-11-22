@@ -155,7 +155,7 @@ async function exportCanvas(canvas:HTMLCanvasElement,
    };
    raf=requestAnimationFrame(draw);
   });
-  if(recorder&&recorder.state!=="inactive")recorder.stop();
+  if(recorder!==null){const activeRecorder=recorder as MediaRecorder;if(activeRecorder.state!=="inactive")activeRecorder.stop();}
   const blob=await completed;
   return {blob,format};
  }finally{
