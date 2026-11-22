@@ -531,7 +531,7 @@ export default function StickmanLabPage(){
    const finalUrl=URL.createObjectURL(video);
    if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);
    seedJoinedRef.current=finalUrl;setSeedJoined(finalUrl);setExtension(extension);
-   setDirectorStatus("Video terminado · 30 segundos"+(withVoice?" con voz":""));
+   setDirectorStatus("Video terminado · 60 segundos"+(withVoice?" con voz":""));
   }catch(e){
    setError(e instanceof Error?e.message:"No se pudo terminar el video.");
    setDirectorStatus("");
