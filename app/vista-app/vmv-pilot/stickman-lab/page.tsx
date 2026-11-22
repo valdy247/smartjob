@@ -221,7 +221,7 @@ export default function StickmanLabPage(){
       {v==="alloy"?"Alloy":"Nova"}</button>)}
      <small>{language==="es"?"Usa créditos de voz":"Uses voice credits"}</small>
     </div>:null}
-    <button className={css.generate} type="button" disabled={rendering}
+    <button className={css.generate} type="button"
      onClick={()=>void generate()} disabled={rendering||(customMode&&customPrompt.trim().length<8)}>
      {rendering?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
      {rendering?(stage+" · "+progress+"%"):(language==="es"?"Generar video":"Generate video")}
