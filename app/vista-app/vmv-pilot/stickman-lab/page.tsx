@@ -635,6 +635,10 @@ export default function StickmanLabPage(){
  const [fadeSeconds,setFadeSeconds]=useState(0.2);
  const [musicFile,setMusicFile]=useState<File|null>(null);
  const [shareStatus,setShareStatus]=useState("");
+ const [characterGuide,setCharacterGuide]=useState("");
+ const [selectedClipPreview,setSelectedClipPreview]=useState("");
+ const clipPreviewRef=useRef("");
+
 
  const [lastRenderedCloudUrl,setLastRenderedCloudUrl]=useState("");
 
@@ -708,8 +712,11 @@ export default function StickmanLabPage(){
   raf=requestAnimationFrame(step);
   return()=>cancelAnimationFrame(raf);
  },[topic,language,subtitles,customMode,customPrompt,terraStory]);
- useEffect(()=>()=>{if(urlRef.current)URL.revokeObjectURL(urlRef.current);if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);},[]);
- useEffect(()=>{setArchivedProjects(archivedMotionProjects());},[]);
+ useEffect(()=>()=>{if(urlRef.current)URL.revokeObjectURL(urlRef.current);if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);if(clipPreviewRef.current)URL.revokeObjectURL(clipPreviewRef.current);},[]);
+ useEffect(()=>{
+  setArchivedProjects(archivedMotionProjects());
+  try{setCharacterGuide(localStorage.getItem("vmv-motion-character-guide-v1")||"");}catch{}
+ },[]);
  // Debounced, owner-authenticated cloud backup. It never triggers generation.
  useEffect(()=>{
   if(auth!=="signed_in")return;
@@ -755,6 +762,31 @@ export default function StickmanLabPage(){
   return()=>{closed=true;if(timer)clearTimeout(timer);
    window.removeEventListener("vmv-motion-saved",schedule);};
  },[auth]);
+ const importCharacters=useCallback(async(id:string)=>{
+  const sb=getSupabase();if(!sb)return;
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session?.access_token)return;
+  try{
+   const result=await motionLibrary(session.access_token,{action:"load",id});
+   const guide=String(result.project?.plan?.storyBible||"").slice(0,1100);
+   if(!guide)throw Error("Ese proyecto no tiene una guía visual guardada.");
+   setCharacterGuide(guide);
+   try{localStorage.setItem("vmv-motion-character-guide-v1",guide);}catch{}
+   setShareStatus("Personajes y estilo de referencia preparados. Se aplicarán a la nueva historia.");
+  }catch(e){setError(e instanceof Error?e.message:"No se encontró la guía de personajes.");}
+ },[]);
+ const previewSelectedClip=useCallback(async(index:number)=>{
+  if(clipPreviewRef.current){URL.revokeObjectURL(clipPreviewRef.current);clipPreviewRef.current="";}
+  setSelectedClipPreview("");
+  const job=readSeedance(customPrompt);
+  if(!job.tokens[index])return;
+  const sb=getSupabase();if(!sb)return;
+  const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)return;
+  try{
+   const url=await loadSeedanceForStitching(session.access_token,job.tokens[index],job.urls[index],index);
+   clipPreviewRef.current=url;setSelectedClipPreview(url);
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo recuperar la vista previa.");}
+ },[customPrompt]);
  const updatePublish=useCallback((patch:Partial<MotionPublishDraft>)=>{
   setPublishDraft(current=>{
    const next={...current,...patch};
@@ -855,6 +887,9 @@ export default function StickmanLabPage(){
   setStudioStep(prompt?"revisar":"crear");
   setResearchSource(null);setDirectorPlan(null);setTerraStory(null);
   setSeedUrls([]);setSavedClipCount(0);setSeedJoined("");
+  if(clipPreviewRef.current){URL.revokeObjectURL(clipPreviewRef.current);clipPreviewRef.current="";}
+  setSelectedClipPreview("");setSelectedScene(0);
+  setMusicFile(null);setShareStatus("");
   setDirectorStatus("");setError("");setPreviousScene(null);
   frameRefreshPromptRef.current="";setFrameRefreshError("");
   setEditingSpeech(null);setSpeechDraft("");
@@ -989,7 +1024,9 @@ export default function StickmanLabPage(){
    let plan=readDirectorPlan(customPrompt);
    if(!plan){
     setDirectorStatus("Escribiendo narración y diseñando las 12 escenas");
-    const result=await directorCall(accessToken,"/api/video-generator/motion-terra",{prompt:customPrompt,...(pilotAuto&&researchSource?{researchScanId:researchSource.scanId,researchVideoId:researchSource.videoId}:{})});
+    const result=await directorCall(accessToken,"/api/video-generator/motion-terra",{prompt:customPrompt,
+    ...(characterGuide?{characterGuide}:{}),
+    ...(pilotAuto&&researchSource?{researchScanId:researchSource.scanId,researchVideoId:researchSource.videoId}:{})});
     if(!Array.isArray(result.scenes)||result.scenes.length!==MOTION_SCENES)
      throw Error("La IA no devolvió doce escenas.");
     plan={prompt:customPrompt,title:String(result.title||"VMV Motion"),storyBible:String(result.storyBible||""),
@@ -1022,7 +1059,7 @@ export default function StickmanLabPage(){
    setError(e instanceof Error?e.message:"No se pudieron preparar las imágenes.");
    setDirectorStatus("");
   }finally{directorBusyRef.current=false;setDirectorBusy(false);}
- },[customPrompt,pilotAuto,researchSource]);
+ },[customPrompt,pilotAuto,researchSource,characterGuide]);
  const beginSpeechEdit=useCallback((index:number)=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
   const plan=readDirectorPlan(customPrompt);
