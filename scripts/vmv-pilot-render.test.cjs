@@ -303,3 +303,17 @@ test("Pilot passes trusted source research to Motion instead of inventing celebr
  assert.match(director,/do not invent a named person/);
  assert.match(director,/research:evidence/);
 });
+
+test("Seedance preflight validates all pending storyboard frames before paid generation",()=>{
+ const api=read("app/api/video-generator/motion-seedance/route.ts");
+ const motion=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ assert.match(api,/action==="preflight"/);
+ assert.match(api,/if\(action==="preflight"\)return reply\(\{ready:true/);
+ assert.match(api,/seedance_motion_prompt_invalid/);
+ assert.match(api,/seedance_image_owner_mismatch/);
+ assert.doesNotMatch(api,/if\(!process\.env\.AI_GATEWAY_API_KEY\)return reply/);
+ assert.match(motion,/action:"preflight"/);
+ assert.match(motion,/pending\.map\(beat/);
+ assert.match(motion,/HTTP "\+response\.status/);
+ assert.match(motion,/Tus imágenes y los clips anteriores se conservan/);
+});
