@@ -56,7 +56,22 @@ export async function POST(req:NextRequest){
   const alignment=data.alignment as Alignment;
   const duration=alignment.character_end_times_seconds.at(-1)||0;
   if(duration<10||duration>100)return reply({error:"elevenlabs_invalid_duration"},502);
-  return reply({audio,mediaType:"audio/mpeg",alignment,duration});
+  // Translate the original twelve script segments into real spoken-time boundaries.
+  const spoken=segments.map((s:string)=>s.trim());
+  let position=0;
+  const sceneEnds=spoken.map((segment:string,i:number)=>{
+   position+=segment.length;
+   const offset=Math.min(position-1,alignment.character_end_times_seconds.length-1);
+   const time=alignment.character_end_times_seconds[offset]??0;
+   if(i<spoken.length-1)position++;
+   return time;
+  });
+  const aligned=alignment.characters.length>=text.length*0.9&&
+   sceneEnds.every((time:number,i:number)=>Number.isFinite(time)&&time>0&&
+    (i===0||time>sceneEnds[i-1]))&&
+   Math.abs(sceneEnds[11]-duration)<1.5;
+  return reply({audio,mediaType:"audio/mpeg",alignment,duration,
+   sceneEnds:aligned?sceneEnds:null});
  }catch(e){
   console.warn("[vmv-elevenlabs] request failure",e instanceof Error?e.name:"unknown");
   return reply({error:"elevenlabs_unavailable"},503);
