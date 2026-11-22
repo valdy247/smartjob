@@ -342,7 +342,13 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
  let recorder:MediaRecorder|null=null;
  let raf=0;
  const videos:HTMLVideoElement[]=[];
+ let activePreview:HTMLVideoElement|null=null;
+ const requireForeground=()=>{
+  if(document.visibilityState!=="visible")
+   throw Error("Chrome pausó el montaje al cambiar de pestaña. Vuelve a esta pestaña y reintenta; tus 12 clips están guardados.");
+ };
  try{
+  requireForeground();
   // Load all local object URLs BEFORE recording to avoid long blank gaps.
   for(const url of urls){
    const video=document.createElement("video");
@@ -391,20 +397,33 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
     ctx.strokeText(part,360,y);ctx.fillText(part,360,y);});
   };
   for(const [index,video] of videos.entries()){
+   requireForeground();
+   if(activePreview){activePreview.pause();activePreview.remove();activePreview=null;}
+   // Chrome can power-pause video-only media not visible in the document.
+   video.style.position="fixed";video.style.right="12px";video.style.bottom="12px";
+   video.style.width="112px";video.style.height="200px";
+   video.style.objectFit="cover";video.style.borderRadius="10px";
+   video.style.zIndex="1000";video.style.pointerEvents="none";
+   video.style.boxShadow="0 8px 24px rgba(0,0,0,.24)";
+   video.setAttribute("aria-label","Vista previa del clip durante el montaje");
+   document.body.appendChild(video);activePreview=video;
    video.currentTime=0;
-   await video.play();
+   try{await video.play();}
+   catch{throw Error("Chrome interrumpió el clip "+(index+1)+". Mantén esta pestaña visible y vuelve a intentar el montaje; los 12 clips están guardados.");}
    const endTime=speech?.sceneEnds?.[index]??(index+1)*5;
    // Each scene gets exactly its spoken duration. Longer speech holds the end frame.
    await new Promise<void>((resolve,reject)=>{
     const frame=()=>{
      try{
+      requireForeground();
+      if(video.paused&&!video.ended)throw Error("paused_by_browser");
       const ratio=Math.max(canvas.width/video.videoWidth,canvas.height/video.videoHeight);
       const width=video.videoWidth*ratio,height=video.videoHeight*ratio;
       ctx.drawImage(video,(720-width)/2,(1280-height)/2,width,height);
       drawCaption(Math.max(0,(performance.now()-videoStart)/1000));
       if((performance.now()-videoStart)/1000>=endTime){resolve();return;}
       raf=requestAnimationFrame(frame);
-     }catch{reject(Error("El navegador no pudo componer uno de los clips."));}
+     }catch{reject(Error("Chrome pausó la reproducción mientras se unían los clips. Mantén esta pestaña abierta y visible; los 12 clips siguen guardados."));}
     };
     raf=requestAnimationFrame(frame);
    });
@@ -426,6 +445,7 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
   const blob=await finished;
   return {blob,extension:format.extension};
  }finally{
+  if(activePreview){activePreview.pause();activePreview.remove();}
   cancelAnimationFrame(raf);
   if(recorder!==null){const finalRecorder=recorder as MediaRecorder;if(finalRecorder.state!=="inactive")finalRecorder.stop();}
   for(const video of videos){video.pause();video.removeAttribute("src");video.load();}
