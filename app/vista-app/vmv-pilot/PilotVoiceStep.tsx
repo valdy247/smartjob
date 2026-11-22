@@ -124,7 +124,9 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
      aria-pressed={selected} disabled={disabled}
      onClick={()=>{stop();onChoose(v.provider,v.id,v.name);}}>
      <Volume2 size={22}/><strong>{v.name}</strong>
-     <small>{v.provider==="elevenlabs"?"ElevenLabs":en?"OpenAI · deep timbre":"OpenAI · voz grave"}
+     <small>{v.provider==="elevenlabs"?"ElevenLabs":
+       ["onyx","echo"].includes(v.id)?(en?"OpenAI · deep voice":"OpenAI · voz grave"):
+       "OpenAI · estándar"}
       {v.gender==="male"?(en?" · Male":" · Masculina"):
        v.gender==="female"?(en?" · Female":" · Femenina"):""}</small>
      {selected?<span className={css.selectedLabel}>{en?"Selected":"Seleccionada"}</span>:null}
