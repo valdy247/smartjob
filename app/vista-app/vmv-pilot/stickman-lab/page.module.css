@@ -36,3 +36,12 @@
 .note{font-size:11px;color:#9b8ba6;text-align:center;margin:16px auto;max-width:490px;line-height:1.5}
 @media(max-width:440px){.page{padding:16px 13px 60px}.stage{padding:11px}.canvasWrap{max-width:310px}.controls{gap:10px}.intro{align-items:start;flex-direction:column;gap:6px}}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
+
+.modeRow{display:flex;gap:7px;padding:5px;border:1px solid #e8ddf0;background:#f0eaf6;border-radius:15px;margin-bottom:14px}
+.modeRow button{flex:1;min-height:42px;border:0;border-radius:11px;background:transparent;color:#826c94;font-weight:800;font-size:13px;cursor:pointer}
+.modeRow button.modeActive{background:#fff;color:#8050b4;box-shadow:0 3px 12px #4a306218}
+.promptField{display:flex;flex-direction:column;gap:8px;margin-bottom:15px}
+.promptField span{font-size:12px;font-weight:800;color:#65516e}
+.promptField textarea{width:100%;resize:vertical;min-height:104px;border:1px solid #e6dcec;border-radius:17px;padding:15px;background:#fff;color:#352544;font:inherit;font-size:14px;line-height:1.5;outline:none}
+.promptField textarea:focus{border-color:#9b6bcd;box-shadow:0 0 0 3px #a36edc22}
+.promptField small{font-size:11px;color:#9986a5;text-align:right}
