@@ -865,3 +865,33 @@ test("Scene-locked narration starts each phrase at 0/5/10/15/20/25s, without fif
  assert.match(studio,/createSceneCaptionCues\(speech\.alignment,voiceSlots\)/);
  assert.doesNotMatch(studio,/voiceSource\?\.start\(startsAt\)/);
 });
+
+test("VMV Motion publication copy comes from real contextual AI instead of repeated hashtags",()=>{
+ const studio=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ const route=read("app/api/video-generator/motion-publication/route.ts");
+ assert.match(studio,/const suggestPublication=useCallback\(async\(\)=>/);
+ assert.match(studio,/fetch\("\/api\/video-generator\/motion-publication"/);
+ assert.match(studio,/Authorization:"Bearer "\+session\.access_token/);
+ assert.match(studio,/platform:publishDraft\.platform,language/);
+ assert.match(studio,/prompt:plan\.prompt,title:plan\.title,storyBible:plan\.storyBible/);
+ assert.match(studio,/scenes:plan\.scenes\.map\(scene=>/);
+ assert.match(studio,/speech:scene\.speech,caption:scene\.caption/);
+ assert.match(studio,/updatePublish\(\{title:result\.title,caption:result\.caption,hashtags:result\.hashtags\}\)/);
+ assert.match(studio,/publicationAiBusy/);
+ assert.match(studio,/Generar descripción y hashtags con IA/);
+ assert.doesNotMatch(studio,/hashtags:"#VMVMotion #Historias #VideoConIA"/);
+ assert.match(route,/authenticatedUser\(req\)/);
+ assert.match(route,/videoAllowed\(owner\)/);
+ assert.match(route,/askAiAgent\(\{/);
+ assert.match(route,/storyScenes:scenes\.map/);
+ assert.match(route,/Use EVERY scene of the provided narrative/);
+ assert.match(route,/health, food and wellness/);
+ assert.match(route,/never assume you have watched the finished MP4/i);
+ assert.match(route,/3-5 accurate niche hashtags/);
+ assert.match(route,/YouTube Shorts/);
+ assert.match(route,/Instagram Reels/);
+ assert.match(route,/TikTok/);
+ assert.match(route,/source:"ai"/);
+ assert.match(route,/motion_publication_invalid_ai_output/);
+ assert.doesNotMatch(route,/hashtags:"#VMVMotion/);
+});
