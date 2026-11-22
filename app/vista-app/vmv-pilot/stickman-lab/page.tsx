@@ -211,8 +211,24 @@ async function directorCall(accessToken:string,endpoint:string,data:Record<strin
   result?.error==="image_reference_unavailable"?"No se encontró la imagen anterior para mantener la continuidad.":
   result?.error==="openai_quota_or_rate_limit"?"OpenAI no tiene cuota disponible.":
   result?.error==="image_safety_rejected"?"OpenAI bloqueó esta imagen por moderación. Ajusta su descripción antes de volver a generar.":
-  result?.error==="image_bad_request"?"OpenAI rechazó la imagen. No se realizarán más intentos automáticos.":
-  "La IA no pudo preparar la historia o imagen. Puedes reanudar sin recrear las escenas ya terminadas."
+  result?.error==="image_bad_request"?"OpenAI rechazó la imagen"+(result?.providerCode?" ("+result.providerCode+")":"")+". No se realizarán más intentos automáticos.":
+  result?.error==="motion_scene_retry"?"La IA devolvió un guion de 60 segundos incompleto o con escenas inválidas. El guion necesita regenerarse; las imágenes completadas permanecen guardadas.":
+  result?.error==="motion_ai_unavailable"?"Falló la preparación del guion con OpenAI (motion_ai_unavailable). Revisa los registros de Vercel.":
+  result?.error==="openai_request_failed"?"OpenAI no pudo procesar el guion (openai_request_failed).":
+  result?.error==="openai_key_not_configured"?"Falta configurar OpenAI en el entorno Preview.":
+  result?.error==="openai_key_invalid"?"La clave de OpenAI fue rechazada.":
+  result?.error==="terra_rate_limited"?"OpenAI alcanzó un límite temporal. El trabajo guardado se conserva.":
+  result?.error==="invalid_motion_request"?"La solicitud del guion supera los límites admitidos.":
+  result?.error==="request_too_large"?"El texto enviado es demasiado grande para la API.":
+  result?.error==="image_invalid_response"?"La imagen generada no tiene un formato válido.":
+  result?.error==="image_size_unavailable"?"La imagen excede el tamaño admitido para guardarla.":
+  result?.error==="image_url_unavailable"?"La imagen se creó, pero no se pudo generar su vista previa.":
+  result?.error==="image_provider_failed"?"El servicio de generación de imágenes falló.":
+  result?.error==="image_reference_unavailable"?"No se pudo recuperar el fotograma de referencia.":
+  result?.error==="invalid_image_request"?"El prompt de imagen no cumple los límites (35–1800 caracteres).":
+  result?.error==="video_not_enabled_for_account"?"La generación de video no está habilitada para esta cuenta.":
+  result?.error==="image_storage_unavailable"?"El almacenamiento de imágenes no está disponible.":
+  "No se pudo completar la preparación ("+String(result?.error||"http_"+response.status).slice(0,70)+"). Las escenas terminadas siguen guardadas."
  );
  return result;
 }
