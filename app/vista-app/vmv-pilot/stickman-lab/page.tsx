@@ -318,7 +318,7 @@ function readSeedance(prompt:string):SeedanceSaved{
 }
 function saveSeedance(value:SeedanceSaved){saveMotion(SEEDANCE_KEY,value);}
 type MotionProjectArchive={id:string;label:string;savedAt:number;plan:DirectorPlan;seedance:SeedanceSaved;cloudId?:string};
-type CloudMotionProject={id:string;title:string;updatedAt:string;clips:number;scenes:number};
+type CloudMotionProject={id:string;title:string;updatedAt:string;clips:number;scenes:number;coverUrl?:string};
 type MotionPublishDraft={title:string;caption:string;hashtags:string;platform:string;
  scheduledFor:string;postedAt:string;views:number;leads:number;sales:number;
  revenueUsd:number;spendUsd:number};
@@ -1618,7 +1618,10 @@ export default function StickmanLabPage(){
      <div className={css.libraryGrid}>
       {directorPlan?<button type="button" className={css.libraryCard}
        onClick={()=>setLibraryOpen(false)}>
-       <span className={css.libraryPoster}><Clapperboard size={27}/><span>EN EDICIÓN</span></span>
+       <span className={css.libraryPoster}><Clapperboard size={27}/>
+        {directorPlan.frames[0]?.imageUrl?<img src={directorPlan.frames[0].imageUrl}
+         alt="" onError={event=>{event.currentTarget.style.display="none";}}/>:null}
+        <span>EN EDICIÓN</span></span>
        <span className={css.libraryCardBody}><strong>{directorPlan.title||"Mi video"}</strong>
         <small>{directorPlan.frames.length} imágenes · {savedClipCount} clips</small>
         <span className={css.libraryCardLink}>Continuar editando</span>
@@ -1629,7 +1632,9 @@ export default function StickmanLabPage(){
         disabled={cloudLoading||projectSwitching}
         onClick={()=>void restoreCloudProject(item.id)}>
         <span className={css.libraryPoster}><Clapperboard size={27}/>
-         <span>{item.clips===MOTION_SCENES?"VIDEO COMPLETO":"EN PROGRESO"}</span></span>
+         {item.coverUrl?<img src={item.coverUrl} alt=""
+          onError={event=>{event.currentTarget.style.display="none";}}/>:null}
+         <span>{item.clips===MOTION_SCENES?"12 CLIPS GUARDADOS":"EN PROGRESO"}</span></span>
         <span className={css.libraryCardBody}><strong>{item.title||"Mi video"}</strong>
          <small>{item.scenes} imágenes · {item.clips} clips</small>
          <span className={css.libraryCardLink}>Abrir proyecto</span>
@@ -1640,7 +1645,10 @@ export default function StickmanLabPage(){
        <button key={item.id} type="button" className={css.libraryCard}
         disabled={cloudLoading||projectSwitching}
         onClick={()=>void restoreMotionProject(item.id)}>
-        <span className={css.libraryPoster}><BookOpen size={27}/><span>EN ESTE DISPOSITIVO</span></span>
+        <span className={css.libraryPoster}><BookOpen size={27}/>
+         {item.plan.frames[0]?.imageUrl?<img src={item.plan.frames[0].imageUrl}
+          alt="" onError={event=>{event.currentTarget.style.display="none";}}/>:null}
+         <span>EN ESTE DISPOSITIVO</span></span>
         <span className={css.libraryCardBody}><strong>{item.label||"Mi video"}</strong>
          <small>{item.plan.frames.length} imágenes · {item.seedance.urls.filter(Boolean).length} clips</small>
          <span className={css.libraryCardLink}>Abrir proyecto</span>
