@@ -234,17 +234,34 @@ type DirectorFrame={imageUrl:string;referencePath:string;prompt?:string};
 type DirectorPlan={prompt:string;title:string;storyBible:string;scenes:DirectorBeat[];frames:DirectorFrame[];
  approved?:boolean[];draftPrompts?:string[];previous?:Record<string,DirectorFrame[]>};
 const DIRECTOR_PLAN_KEY="vmv-motion-director-plan-v5-60s";
-function readDirectorPlan(prompt:string):DirectorPlan|null{
+const MOTION_RECOVERY_MS=24*60*60*1000;
+function readSavedMotion(key:string):unknown{
+ // Prefer the current tab's state, then recover recent state from another tab.
  try{
-  const d=JSON.parse(sessionStorage.getItem(DIRECTOR_PLAN_KEY)||"null");
-  if(d?.prompt===prompt&&Array.isArray(d.scenes)&&d.scenes.length===MOTION_SCENES&&Array.isArray(d.frames))
-   return d as DirectorPlan;
+  const current=sessionStorage.getItem(key);
+  if(current){const parsed=JSON.parse(current);if(parsed?.prompt)return parsed;}
+ }catch{}
+ try{
+  const archive=JSON.parse(localStorage.getItem(key+"-recovery")||"null");
+  if(archive&&Number.isFinite(archive.savedAt)&&Date.now()-archive.savedAt>=0&&
+   Date.now()-archive.savedAt<MOTION_RECOVERY_MS&&archive.data?.prompt){
+   try{sessionStorage.setItem(key,JSON.stringify(archive.data));}catch{}
+   return archive.data;
+  }
  }catch{}
  return null;
 }
-function saveDirectorPlan(plan:DirectorPlan){
- try{sessionStorage.setItem(DIRECTOR_PLAN_KEY,JSON.stringify(plan));}catch{}
+function saveMotion(key:string,value:unknown){
+ try{sessionStorage.setItem(key,JSON.stringify(value));}catch{}
+ try{localStorage.setItem(key+"-recovery",JSON.stringify({savedAt:Date.now(),data:value}));}catch{}
 }
+function readDirectorPlan(prompt:string):DirectorPlan|null{
+ const d=readSavedMotion(DIRECTOR_PLAN_KEY) as Partial<DirectorPlan>|null;
+ if(d?.prompt===prompt&&Array.isArray(d.scenes)&&d.scenes.length===MOTION_SCENES&&Array.isArray(d.frames))
+  return d as DirectorPlan;
+ return null;
+}
+function saveDirectorPlan(plan:DirectorPlan){saveMotion(DIRECTOR_PLAN_KEY,plan);}
 async function directorCall(accessToken:string,endpoint:string,data:Record<string,unknown>){
  const response=await fetch(endpoint,{method:"POST",cache:"no-store",
   headers:{"Content-Type":"application/json",Authorization:"Bearer "+accessToken},
@@ -281,16 +298,12 @@ async function directorCall(accessToken:string,endpoint:string,data:Record<strin
 type SeedanceSaved={prompt:string;tokens:string[];urls:string[]};
 const SEEDANCE_KEY="vmv-motion-seedance-director-v5-60s";
 function readSeedance(prompt:string):SeedanceSaved{
- try{
-  const state=JSON.parse(sessionStorage.getItem(SEEDANCE_KEY)||"null");
-  if(state?.prompt===prompt&&Array.isArray(state.tokens)&&Array.isArray(state.urls))
-   return {prompt,tokens:state.tokens,urls:state.urls};
- }catch{}
+ const state=readSavedMotion(SEEDANCE_KEY) as Partial<SeedanceSaved>|null;
+ if(state?.prompt===prompt&&Array.isArray(state.tokens)&&Array.isArray(state.urls))
+  return {prompt,tokens:state.tokens,urls:state.urls};
  return {prompt,tokens:[],urls:[]};
 }
-function saveSeedance(value:SeedanceSaved){
- try{sessionStorage.setItem(SEEDANCE_KEY,JSON.stringify(value));}catch{}
-}
+function saveSeedance(value:SeedanceSaved){saveMotion(SEEDANCE_KEY,value);}
 async function seedanceRequest(accessToken:string,body:Record<string,unknown>){
  const response=await fetch("/api/video-generator/motion-seedance",{
   method:"POST",cache:"no-store",headers:{"Content-Type":"application/json",
@@ -493,8 +506,12 @@ export default function StickmanLabPage(){
  useEffect(()=>()=>{if(urlRef.current)URL.revokeObjectURL(urlRef.current);if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);},[]);
  useEffect(()=>{
   try{
-   const saved=JSON.parse(sessionStorage.getItem(DIRECTOR_PLAN_KEY)||"null");
+   const saved=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
    if(saved?.prompt&&typeof saved.prompt==="string"&&saved.scenes?.length===MOTION_SCENES){
+    // Migrate this tab's existing project into cross-tab recovery storage.
+    saveDirectorPlan(saved);
+    const recovered=readSeedance(saved.prompt);
+    if(recovered.urls.length||recovered.tokens.length)saveSeedance(recovered);
     setCustomPrompt(saved.prompt);setCustomMode(true);setWithVoice(true);
     setSavedClipCount(readSeedance(saved.prompt).urls.filter(Boolean).length);
     const plan=readDirectorPlan(saved.prompt);
