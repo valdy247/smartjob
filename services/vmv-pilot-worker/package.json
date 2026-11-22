@@ -7,6 +7,11 @@
     "start": "node worker.mjs",
     "check": "node --check worker.mjs"
   },
-  "engines": {"node": ">=22"},
-  "dependencies": {"@supabase/supabase-js": "2.80.0"}
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.80.0",
+    "ai": "7.0.166"
+  }
 }
