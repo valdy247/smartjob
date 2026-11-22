@@ -5,9 +5,11 @@ import {Check,Download,Film,LoaderCircle,X} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import css from "./VMVPilotRenderDock.module.css";
 
+import type {PilotLanguage,PilotVoiceProvider} from "@/lib/vmv-pilot-voice-config";
 type PilotStyle="stickman"|"realistic"|"cinematic"|"animated"|"product";
 export type PilotRenderRequest={pilotId:string;topic:string;audience:string;goal:string;
- style:PilotStyle;seconds:15|30|60;narration:boolean;subtitles:boolean;language:"es"|"en"};
+ style:PilotStyle;seconds:15|30|60;narration:boolean;subtitles:boolean;language:PilotLanguage;
+ voiceProvider:PilotVoiceProvider;voiceId:string};
 type Job={
  id:string;pilot_id:string;topic:string;status:"queued"|"planning"|"working"|"assembling"|"completed"|"failed";
  phase:string;progress:number;title:string;videoUrl:string|null;failure_code:string|null;
@@ -21,7 +23,9 @@ const dictionary:Record<string,string>={
  pilot_render_invalid_owner:"Campaña no disponible.",
  video_not_enabled_for_account:"Esta prueba no está habilitada para la cuenta.",
  pilot_render_unavailable:"No se pudo crear el trabajo.",
- invalid_render_request:"La configuración no es válida."
+ invalid_render_request:"La configuración no es válida.",
+ elevenlabs_voice_unavailable:"La voz de ElevenLabs no está disponible para ese idioma.",
+ pilot_voice_invalid:"La voz no coincide con el idioma seleccionado."
 };
 async function authorized(path:string,options:RequestInit={}):Promise<unknown>{
  const supabase=getSupabase();
