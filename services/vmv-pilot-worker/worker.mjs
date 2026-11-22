@@ -285,7 +285,7 @@ async function validateSceneImage(job,scene,buffer){
     "Confirm its main character, action and location match the scene's narration and visual description.",
     "Reject frames that reveal a future subject, feature the wrong animal or contradict the narration.",
     "Accept reasonable symbolic visuals, text-free cinematic staging and minor incidental artistic details.",
-    "Return JSON only: {\\\"valid\\\":true|false}. Do not infer unseen events."
+    'Return JSON only: {"valid":true} or {"valid":false}. Do not infer unseen events.'
    ].join(" ")},
    {role:"user",content:[
     {type:"text",text:JSON.stringify({speech:scene.speech,imagePrompt:scene.imagePrompt,
