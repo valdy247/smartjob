@@ -178,12 +178,12 @@ export async function POST(req:NextRequest){
   const result=await startVideo({
    model:MODEL,
    prompt:{image:signed.data.signedUrl,text:[
-    "Animate this provided image as the first frame of a single five-second consecutive 2D cartoon scene.",
-    "The exact characters, environment, appearance and props IN THE IMAGE are immutable; do not redesign them.",
-    storyBible?"Fixed visual bible: "+storyBible:"",
+    "Animate the supplied opening image as a five-second shot in its EXISTING genre and art style, whether documentary, cinematic, 3D, or cartoon.",
+    "Preserve the image’s initial subject identities, material realism, art direction and layout THROUGH THIS SHOT, while allowing motion and logically required changes during the five seconds.",
+    storyBible?"Common art direction and recurring character traits: "+storyBible:"",
     "ANIMATE ONLY THIS SCENE: "+motionPrompt,
-    "Do not replay other scenes, restart the story, or add extra characters. Show real body and hand movement, physical interaction and expressive reactions.",
-    "Keep the same painted art style and cinematic composition. No added text, logos, captions or speech."
+    "Do not replay other scenes, restart the story or introduce unrelated objects. Follow exactly the motion direction. Animate meaningful physical action and visual transformations rather than only camera zoom.",
+    "Preserve this shot’s chosen visual genre and cinematic composition. No added text, logos, captions or speech."
    ].join(" ")},
    duration:DURATION,aspectRatio:"9:16",resolution:"1280x720"
   });
