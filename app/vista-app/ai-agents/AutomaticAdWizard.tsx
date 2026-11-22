@@ -604,7 +604,7 @@ export default function AutomaticAdWizard({business,workspaceId,agent,onClose}:{
   {!loading&&owner?<div className={styles.footer}>
     {step==="location"?null:step!=="review"?<button type="button" className={styles.next+" "+theme.agentButton}
      disabled={!canContinue||Boolean(pending)} onClick={next}>
-     {returnToReview?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={18}/></button>:
+     {returnToReview?"Guardar y volver a Revisión":null} <ArrowRight size={18}/></button>:
      <button type="button" className={styles.generate+" "+theme.agentButton}
       disabled={!validBudget||!specialConfirmed||Boolean(pending)} onClick={()=>void finish()}>
       {pending==="send"?<LoaderCircle size={17} className={styles.spin}/>:<Megaphone size={18}/>}
