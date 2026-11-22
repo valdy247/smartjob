@@ -3,6 +3,7 @@ import {authenticatedUser} from "@/lib/auth-server";
 import {videoAllowed,videoDb,videoHeaders,validUuid} from "@/lib/vmv-video-generator";
 import {askAiAgent} from "@/lib/vmv-ai-agents/model";
 import {cleanRadarQuery,validRadarId,videoToRadar,type RadarVideo,type RadarIdea} from "@/lib/vmv-video-radar";
+import {validPilotLanguage,pilotLanguageName} from "@/lib/vmv-pilot-voice-config";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -10,10 +11,10 @@ export const maxDuration=45;
 const reply=(data:Record<string,unknown>,status=200)=>
  NextResponse.json(data,{status,headers:videoHeaders});
 type Scan={id:string;owner_id:string;query:string;days:number;status:string;
- results:RadarVideo[];ideas:RadarIdea[];created_at:string;failure_code:string|null};
+ results:RadarVideo[];ideas:RadarIdea[];ideas_language?:string;created_at:string;failure_code:string|null};
 const show=(scan:Scan)=>({scan:{
  id:scan.id,query:scan.query,days:scan.days,status:scan.status,
- items:scan.results||[],ideas:scan.ideas||[],createdAt:scan.created_at,
+ items:scan.results||[],ideas:scan.ideas||[],ideasLanguage:scan.ideas_language||"es",createdAt:scan.created_at,
  failure:scan.failure_code
 }});
 async function account(req:NextRequest){
@@ -22,7 +23,7 @@ async function account(req:NextRequest){
 }
 async function readScan(id:string,owner:string){
  const {data,error}=await videoDb().from("vmv_video_radar_scans")
-  .select("id,owner_id,query,days,status,results,ideas,created_at,failure_code")
+  .select("id,owner_id,query,days,status,results,ideas,ideas_language,created_at,failure_code")
   .eq("owner_id",owner).eq("id",id).maybeSingle();
  if(error||!data)return null;
  return data as Scan;
@@ -70,7 +71,7 @@ export async function GET(req:NextRequest){
  const query=cleanRadarQuery(req.nextUrl.searchParams.get("q"));
  if(!query){
   const {data,error}=await videoDb().from("vmv_video_radar_scans")
-   .select("id,owner_id,query,days,status,results,ideas,created_at,failure_code")
+   .select("id,owner_id,query,days,status,results,ideas,ideas_language,created_at,failure_code")
    .eq("owner_id",owner).eq("status","ready")
    .gte("created_at",new Date(Date.now()-29*86400000).toISOString())
    .order("created_at",{ascending:false}).limit(4);
@@ -129,9 +130,10 @@ export async function POST(req:NextRequest){
  if(req.headers.get("x-vmv-youtube-consent")!=="accepted")return reply({error:"radar_consent_required"},403);
  const body=await req.json().catch(()=>null);
  if(!validUuid(body?.scanId))return reply({error:"radar_invalid_scan"},400);
+ const language=validPilotLanguage(body?.language)?body.language:"es";
  const scan=await readScan(body.scanId,owner);
  if(!scan||scan.status!=="ready")return reply({error:"radar_scan_not_found"},404);
- if(scan.ideas?.length)return reply(show(scan));
+ if(scan.ideas?.length&&scan.ideas_language===language)return reply(show(scan));
  const items=scan.results.slice(0,5);
  if(!items.length)return reply({error:"radar_empty"},409);
  try{
@@ -145,7 +147,7 @@ export async function POST(req:NextRequest){
     "Propose 3 distinct original concepts relevant to the niche and creator goals; do not assume a business or product exists.",
     "Reply with strict JSON only: {ideas:[{sourceId,hook,concept,cta,reason}]}.",
     "sourceId MUST match an input video id. Reasons must say the idea is a hypothesis based on metadata.",
-    "Hooks and concepts in natural Latin American Spanish. No invented claims or numbers; marketing CTA only for business topics."
+    "Hooks and concepts STRICTLY in "+pilotLanguageName(language)+". No invented claims or numbers; marketing CTA only for business topics."
    ].join(" "),
    messages:[{role:"user",content:JSON.stringify({
     niche:scan.query,videos:items.map(v=>({
@@ -168,7 +170,7 @@ export async function POST(req:NextRequest){
   if(!ideas.length)return reply({error:"radar_ai_unavailable"},503);
   const db=videoDb();
   const {data,error}=await db.from("vmv_video_radar_scans")
-   .update({ideas,updated_at:new Date().toISOString()}).eq("id",scan.id)
+   .update({ideas,ideas_language:language,updated_at:new Date().toISOString()}).eq("id",scan.id)
    .eq("owner_id",owner).eq("status","ready").select("*").single();
   return error||!data?reply({error:"radar_database_unavailable"},503):reply(show(data as Scan));
  }catch{return reply({error:"radar_ai_unavailable"},503);}
