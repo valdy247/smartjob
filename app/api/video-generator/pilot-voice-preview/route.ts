@@ -67,7 +67,9 @@ export async function POST(req:NextRequest){
    audio=new Uint8Array(bytes);
   }
   if(audio.byteLength<1000||audio.byteLength>900000)return error("voice_preview_unavailable",503);
-  return new NextResponse(audio,{status:200,headers:{
+  const payload=new Uint8Array(new ArrayBuffer(audio.byteLength));
+  payload.set(audio);
+  return new NextResponse(payload,{status:200,headers:{
    ...videoHeaders,"Content-Type":"audio/mpeg","X-Content-Type-Options":"nosniff",
    "Content-Length":String(audio.byteLength)
   }});
