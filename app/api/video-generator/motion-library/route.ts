@@ -31,7 +31,7 @@ type ProjectSnapshot={
   scheduledFor?:string;postedAt?:string;views?:number;leads?:number;sales?:number};
  updatedAt?:string;
 };
-function validSnapshot(input:unknown):input is ProjectSnapshot{
+function validSnapshot(input:unknown,owner:string):input is ProjectSnapshot{
  if(!input||typeof input!=="object")return false;
  const x=input as Partial<ProjectSnapshot>;
  if(!validId(x.id)||!x.plan||typeof x.plan.prompt!=="string"||
@@ -44,7 +44,8 @@ function validSnapshot(input:unknown):input is ProjectSnapshot{
  // Do not accept cross-user or inline base64 payloads from client snapshots.
  for(const frame of x.plan.frames){
   const path=(frame as {referencePath?:unknown})?.referencePath;
-  if(typeof path!=="string"||path.length>180||path.includes(".."))return false;
+  if(typeof path!=="string"||path.length>180||
+   !path.startsWith(owner+"/")||!/^[-a-z0-9/]+\.jpg$/.test(path))return false;
  }
  return true;
 }
@@ -53,7 +54,7 @@ async function readProject(owner:string,id:string){
  if(file.error||!file.data)return null;
  const json=await file.data.text();
  if(json.length>300000)return null;
- try{const project=JSON.parse(json) as unknown;return validSnapshot(project)?project:null;}
+ try{const project=JSON.parse(json) as unknown;return validSnapshot(project,owner)?project:null;}
  catch{return null;}
 }
 export async function POST(req:NextRequest){
@@ -65,7 +66,7 @@ export async function POST(req:NextRequest){
  const action=typeof body?.action==="string"?body.action:"";
  if(action==="save"){
   const project:unknown=body?.project;
-  if(!validSnapshot(project))return reply({error:"motion_project_invalid"},400);
+  if(!validSnapshot(project,owner))return reply({error:"motion_project_invalid"},400);
   const snapshot:ProjectSnapshot={...project,updatedAt:new Date().toISOString()};
   // Keep complete project (scene prompts, private reference paths, tokens).
   // Signed images may expire; the client re-signs them when restored.
@@ -94,10 +95,19 @@ export async function POST(req:NextRequest){
     const id=file.name.slice(0,-5);
     const project=await readProject(owner,id);
     if(!project)return null;
+    const first=project.plan.frames[0] as {referencePath?:string}|undefined;
+    let coverUrl="";
+    if(first?.referencePath?.startsWith(owner+"/")){
+     try{
+      const signed=await storage().from("vmv-motion-frames-preview")
+       .createSignedUrl(first.referencePath,3600);
+      if(!signed.error&&signed.data?.signedUrl)coverUrl=signed.data.signedUrl;
+     }catch{}
+    }
     return {id,title:String(project.plan.title||"Proyecto").slice(0,100),
      updatedAt:project.updatedAt||file.updated_at||"",
      clips:project.seedance.urls.filter(Boolean).length,
-     scenes:project.plan.frames.length};
+     scenes:project.plan.frames.length,coverUrl};
    }));
    return reply({projects:loaded.filter(Boolean)});
   }catch{return reply({error:"motion_cloud_list_unavailable"},503);}
