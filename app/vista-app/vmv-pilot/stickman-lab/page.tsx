@@ -230,7 +230,7 @@ async function minimaxRequest(accessToken:string,body:Record<string,unknown>){
 
 const MOTION_SCENES=12;
 type PilotMotionHandoff={requestId:string;createdAt:number;prompt:string;pilotId:string;
- topic:string;goal:string;audience:string;idea:string;language:string;style:string;
+ topic:string;goal:string;audience:string;idea:string;researchScanId:string|null;researchVideoId:string;language:string;style:string;
  seconds:number;subtitles:boolean;narration:boolean;voiceProvider:string;voiceId:string;confirmedCost:boolean};
 const PILOT_MOTION_HANDOFF_KEY="vmv-pilot-motion-handoff-v1";
 type DirectorBeat={speech:string;caption:string;imagePrompt:string;motionPrompt:string};
@@ -468,6 +468,7 @@ export default function StickmanLabPage(){
  const [pilotVoiceProvider,setPilotVoiceProvider]=useState<"openai"|"elevenlabs">("elevenlabs");
  const [pilotVoiceId,setPilotVoiceId]=useState("");
  const autoStartRef=useRef(false);
+ const [researchSource,setResearchSource]=useState<{scanId:string;videoId:string}|null>(null);
  const [customMode,setCustomMode]=useState(false);
  const [terraStory,setTerraStory]=useState<StickmanStory|null>(null);
  const [language,setLanguage]=useState<StickmanLanguage>("es");
@@ -550,6 +551,7 @@ export default function StickmanLabPage(){
     setSubtitles(handoff.subtitles);setWithVoice(handoff.narration);
     setPilotVoiceProvider(handoff.voiceProvider==="openai"?"openai":"elevenlabs");
     setPilotVoiceId(handoff.voiceId||"");
+    setResearchSource(handoff.researchScanId&&handoff.researchVideoId?{scanId:handoff.researchScanId,videoId:handoff.researchVideoId}:null);
     setDirectorPlan(readDirectorPlan(handoff.prompt));
     setSavedClipCount(readSeedance(handoff.prompt).urls.filter(Boolean).length);
     setPilotAuto(true);return;
@@ -636,7 +638,7 @@ export default function StickmanLabPage(){
    let plan=readDirectorPlan(customPrompt);
    if(!plan){
     setDirectorStatus("Escribiendo narración y diseñando las 12 escenas");
-    const result=await directorCall(accessToken,"/api/video-generator/motion-terra",{prompt:customPrompt});
+    const result=await directorCall(accessToken,"/api/video-generator/motion-terra",{prompt:customPrompt,...(pilotAuto&&researchSource?{researchScanId:researchSource.scanId,researchVideoId:researchSource.videoId}:{})});
     if(!Array.isArray(result.scenes)||result.scenes.length!==MOTION_SCENES)
      throw Error("La IA no devolvió doce escenas.");
     plan={prompt:customPrompt,title:String(result.title||"VMV Motion"),storyBible:String(result.storyBible||""),
@@ -668,7 +670,7 @@ export default function StickmanLabPage(){
    setError(e instanceof Error?e.message:"No se pudieron preparar las imágenes.");
    setDirectorStatus("");
   }finally{directorBusyRef.current=false;setDirectorBusy(false);}
- },[customPrompt,pilotAuto]);
+ },[customPrompt,pilotAuto,researchSource]);
  const updateScenePrompt=useCallback((index:number,prompt:string)=>{
   setDirectorPlan(current=>{
    if(!current)return current;
