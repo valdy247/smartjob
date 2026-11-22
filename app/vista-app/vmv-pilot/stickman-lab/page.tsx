@@ -260,21 +260,6 @@ async function stitchSeedanceClips(urls:string[],voices:ArrayBuffer[]=[],caption
  if(!ctx||!canvas.captureStream)throw Error("Este navegador no puede unir videos.");
  const stream=canvas.captureStream(24);
  let audioContext:AudioContext|null=null;
- if(voices.length){
-  audioContext=new AudioContext();
-  await audioContext.resume();
-  const decoded=await Promise.all(voices.map(b=>audioContext!.decodeAudioData(b.slice(0))));
-  const mix=audioContext.createMediaStreamDestination();
-  const begin=audioContext.currentTime+.5;
-  decoded.forEach((buffer,i)=>{
-   const rate=Math.max(1,buffer.duration/4.9);
-   if(rate>1.8)throw Error("La narración de la escena "+(i+1)+" es demasiado larga para el video.");
-   const source=audioContext!.createBufferSource();
-   source.buffer=buffer;source.playbackRate.value=rate;source.connect(mix);
-   source.start(begin+i*5);
-  });
-  for(const track of mix.stream.getAudioTracks())stream.addTrack(track);
- }
  const recorder=new MediaRecorder(stream,{mimeType:format.mime,videoBitsPerSecond:2800000,audioBitsPerSecond:128000});
  const chunks:BlobPart[]=[];
  const finished=new Promise<Blob>((resolve,reject)=>{
@@ -298,6 +283,21 @@ async function stitchSeedanceClips(urls:string[],voices:ArrayBuffer[]=[],caption
    videos.push(video);
   }
   ctx.fillStyle="#111";ctx.fillRect(0,0,720,1280);
+ if(voices.length){
+  audioContext=new AudioContext();
+  await audioContext.resume();
+  const decoded=await Promise.all(voices.map(b=>audioContext!.decodeAudioData(b.slice(0))));
+  const mix=audioContext.createMediaStreamDestination();
+  const begin=audioContext.currentTime+.12;
+  decoded.forEach((buffer,i)=>{
+   const rate=Math.max(1,buffer.duration/4.9);
+   if(rate>1.8)throw Error("La narración de la escena "+(i+1)+" es demasiado larga para el video.");
+   const source=audioContext!.createBufferSource();
+   source.buffer=buffer;source.playbackRate.value=rate;source.connect(mix);
+   source.start(begin+i*5);
+  });
+  for(const track of mix.stream.getAudioTracks())stream.addTrack(track);
+ }
   recorder.start(300);
   for(const [index,video] of videos.entries()){
    video.currentTime=0;
