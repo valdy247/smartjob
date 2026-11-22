@@ -140,7 +140,7 @@ function serveClip(bytes:Uint8Array){
   "Cache-Control":"private, no-store","Content-Disposition":"inline; filename=seedance-clip.mp4"
  }});
 }
-async function savePrivateClip(owner:string,token:string,data:Uint8Array){
+async function savePrivateClip(owner:string,token:string,data:Uint8Array):Promise<boolean>{
  try{
   const db=videoDb(),storage=db.storage;
   const bucket=await storage.getBucket(CLIP_BUCKET);
@@ -155,15 +155,18 @@ async function savePrivateClip(owner:string,token:string,data:Uint8Array){
    contentType:"video/mp4",cacheControl:"3600",upsert:true
   });
   if(upload.error)throw Error("clip_storage_upload_failed");
+  return true;
  }catch(e){
   console.warn("[vmv-seedance-archive]",e instanceof Error?e.message.slice(0,65):"unknown");
+  return false;
  }
 }
 export async function POST(req:NextRequest){
  const owner=await authenticatedUser(req);
  if(!owner||!videoAllowed(owner))return reply({error:"video_not_enabled_for_account"},403);
  const body=await req.json().catch(()=>null);
- if(body?.action==="download"){
+ if(body?.action==="download"||body?.action==="archive"){
+  const archiveOnly=body.action==="archive";
   const token=typeof body?.token==="string"?body.token:"";
   const operation=unseal(token,owner);
   if(!operation)return reply({error:"invalid_video_job"},403);
@@ -173,7 +176,8 @@ export async function POST(req:NextRequest){
    const cached=await videoDb().storage.from(CLIP_BUCKET).download(clipPath(owner,token));
    if(!cached.error&&cached.data){
     const bytes=new Uint8Array(await cached.data.arrayBuffer());
-    if(bytes.length>=1000&&bytes.length<=26000000)return serveClip(bytes);
+    if(bytes.length>=1000&&bytes.length<=26000000)
+     return archiveOnly?reply({saved:true,cached:true}):serveClip(bytes);
    }
   }catch{}
   const sourceUrl=typeof body?.sourceUrl==="string"?body.sourceUrl:"";
@@ -201,7 +205,8 @@ export async function POST(req:NextRequest){
    // Existing fetchClip imposes a 26 MB cap and content-type restrictions.
    const data=await fetchClip(mediaUrl);
    // Persist the MP4 so voice/stitch retries never depend on expiring links.
-   await savePrivateClip(owner,token,data);
+   const saved=await savePrivateClip(owner,token,data);
+   if(archiveOnly)return saved?reply({saved:true}):reply({error:"clip_archive_unavailable"},503);
    return serveClip(data);
   }catch(e){
    const message=e instanceof Error?e.message:"unknown";
