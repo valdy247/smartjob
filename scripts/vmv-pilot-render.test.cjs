@@ -573,7 +573,10 @@ test("VMV Motion ASMR is a separate credit-confirmed audio-only path and preserv
  const page=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
  const api=read("app/api/video-generator/motion-sfx/route.ts");
  assert.match(page,/asmrEnabled/);
- assert.match(page,/setWithVoice\(false\);setSubtitles\(false\);setMusicFile\(null\)/);
+ assert.match(page,/if\(enabled\)\{setWithVoice\(false\);setSubtitles\(false\);/);
+ assert.doesNotMatch(page,/music:asmrEnabled\?null:musicFile/);
+ assert.match(page,/music:musicFile,musicVolume:musicVolume\/100/);
+ assert.match(page,/compatible con ASMR/);
  assert.match(page,/loadMotionSfx\(accessToken,customPrompt,plan.scenes/);
  assert.match(page,/motionSfxCache\.set\(cacheKey,audio\)/);
  assert.match(page,/video\.playbackRate=options\.seconds===30\?2:1/);
