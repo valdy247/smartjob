@@ -41,3 +41,8 @@
 .inspiration{font-size:12px;color:#3c8b67}
 .spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 @media(min-width:680px){.tiles>button{min-height:190px}.styleGrid>button{padding:11px}}
+
+.consent{display:flex;gap:10px;align-items:center;font-size:12px;color:#645272;margin-top:20px;padding:10px 2px;line-height:1.4;cursor:pointer}
+.consent input{width:18px;height:18px;accent-color:#935ece;flex-shrink:0}
+.campaignAction{display:inline-flex;align-items:center;gap:8px;border:0;background:#f1eafb;color:#744ca2;padding:10px 15px;margin-top:14px;border-radius:11px;font-size:13px;font-weight:800;cursor:pointer}
+.campaignAction:focus-visible{outline:3px solid #a577dd;outline-offset:2px}
