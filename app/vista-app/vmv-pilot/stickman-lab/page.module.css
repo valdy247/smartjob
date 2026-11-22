@@ -253,3 +253,48 @@
 .libraryPoster>span{position:relative;z-index:2;background:#ffffffed;
  padding:6px 9px;border:1px solid #fff;border-radius:999px;
  box-shadow:0 2px 8px #30213912;max-width:100%;font-size:9px}
+
+/* Nondestructive library voice remixes. */
+.libraryCardMain{display:flex;flex-direction:column;flex:1;min-width:0;padding:0;background:transparent;
+ border:0;color:inherit;text-align:inherit;font:inherit;cursor:pointer}
+.libraryCardMain:disabled{opacity:.56;cursor:wait}
+.libraryCardMain:focus-visible,.libraryVoiceAction:focus-visible,.voiceChoiceGrid button:focus-visible,
+.versionList button:focus-visible{outline:3px solid #aa7ed8;outline-offset:2px}
+.libraryVoiceAction{display:flex;align-items:center;justify-content:center;gap:8px;
+ background:#fbf7ff;color:#7951a8;border:0;border-top:1px solid #e8deef;
+ padding:12px 14px;font-size:12px;font-weight:850;cursor:pointer;width:100%;min-height:44px}
+.libraryVoiceAction:hover{background:#efe3fb;color:#673c94}
+.libraryVoiceAction:disabled{opacity:.5;cursor:wait}
+.voiceChanger{width:100%;border:1px solid #e6d8f0;border-radius:17px;background:#fdfaff;overflow:hidden}
+.voiceChangerHeader{display:flex;align-items:center;gap:12px;padding:13px;min-width:0}
+.voiceChangerIcon{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;
+ background:#f2e4fd;color:#8655bb;flex:none}
+.voiceChangerHeader>div{flex:1;min-width:0}
+.voiceChangerHeader h3{margin:0;color:#3e2c4a;font-size:14px;font-weight:850}
+.voiceChangerHeader p{margin:5px 0 0;color:#877690;font-size:11px}
+.voiceChangerHeader .ghostButton{flex:none}
+.voiceChangerBody{border-top:1px solid #e9ddf1;padding:14px;display:flex;flex-direction:column;gap:13px}
+.voiceChangerBody>p{font-size:12px;line-height:1.5;color:#77678b;margin:0}
+.voiceChangerBody>small{font-size:11px;line-height:1.6;color:#877890;text-align:center}
+.voiceChoiceGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.voiceChoiceGrid button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;
+ background:#fff;color:#7855a3;border:1px solid #e7dced;padding:12px;
+ border-radius:13px;cursor:pointer;text-align:left;font:inherit;min-height:97px}
+.voiceChoiceGrid button strong{font-size:13px;color:#443050}
+.voiceChoiceGrid button small{font-size:10px;color:#937f9e;line-height:1.35}
+.voiceChoiceGrid button.voiceChoiceActive{background:#f4eafc;border-color:#a87bd7;
+ box-shadow:0 0 0 1px #a87bd73b}
+.voiceChoiceGrid button:disabled{opacity:.5;cursor:wait}
+.voiceChangerBody .generate{max-width:none;margin-top:4px}
+.videoVersions{width:100%;border:1px solid #e9ddf1;background:#fdfaff;border-radius:15px;padding:14px}
+.videoVersions h3{font-size:14px;color:#4a345e;margin:0}
+.videoVersions p{font-size:11px;color:#8a7899;margin:5px 0 12px}
+.versionList{display:flex;flex-wrap:wrap;gap:7px}
+.versionList button{padding:9px 13px;border:1px solid #dfceed;color:#7951a7;
+ background:#fff;border-radius:10px;cursor:pointer;font-size:12px;font-weight:800}
+.versionList button.versionActive{background:#925bca;border-color:#925bca;color:#fff}
+.versionList button:disabled{opacity:.55;cursor:wait}
+@media(max-width:420px){
+ .voiceChangerHeader{flex-wrap:wrap}.voiceChangerHeader .ghostButton{margin-left:auto}
+ .voiceChoiceGrid button{min-height:100px}
+}
