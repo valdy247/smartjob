@@ -40,6 +40,14 @@ export async function POST(req:NextRequest){
  const context=raw?.context&&typeof raw.context==="object"&&!Array.isArray(raw.context)?
   raw.context as Record<string,unknown>:{};
  const visual=typeof context.visual==="string"?context.visual.slice(0,40):"";
+ const stylePresets:Record<string,string>={
+  stickman:"Minimal 2D stickman. Simplified round heads, slender limbs, clean outlines, flat backgrounds, explicit actions, recognizable expressions and consistent characters. NEVER turn stick figures into realistic people.",
+  sticks:"Minimal 2D stickman, recognizable white round heads, thin limbs, consistent line art.",
+  realistic:"Photorealistic detail, natural lighting, believable proportions and product fidelity. Do not add fanciful illustrations.",
+  cartoon:"Expressive illustrated cartoon with colorful coherent palette, simplified shapes and consistent character design.",
+  cinematic:"Cinematic composition, intentional film lighting, camera movement when video, expressive atmosphere and depth."
+ };
+ const styleGuide=Object.prototype.hasOwnProperty.call(stylePresets,visual)?stylePresets[visual]:"";
  const purpose=typeof context.purpose==="string"?context.purpose.slice(0,80):"";
  const duration=typeof context.duration==="number"&&[5,10,15,30].includes(context.duration)?context.duration:undefined;
  const now=Date.now(),previous=limitsByOwner.get(owner);
@@ -51,6 +59,7 @@ export async function POST(req:NextRequest){
    system:[
     "You are VMV Business's specialized creative prompt assistant.",
     roles[type],
+    ...(styleGuide&&(type==="image"||type==="scene_image"||type==="video")?["Selected user style is binding: "+styleGuide]:[]),
     "Improve the user's own text, maintaining their idea, factual assertions, named objects, characters, relationships, original language and intended business context.",
     "Never change the species or visual identity of a referenced subject; do not invent business capabilities, offers, statistics, reviews, prices or outcomes.",
     "When the input describes an observed or uploaded picture, NEVER add objects not confirmed as visible. Improve wording only.",
