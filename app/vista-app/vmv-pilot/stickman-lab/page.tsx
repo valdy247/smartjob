@@ -1,7 +1,7 @@
 "use client";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {useRouter} from "next/navigation";
-import {ArrowLeft,CarFront,Check,Download,Globe2,LoaderCircle,Pause,Play,Volume2,WandSparkles} from "lucide-react";
+import {ArrowLeft,CarFront,Check,Download,Globe2,LoaderCircle,Pause,Play,RotateCcw,Volume2,WandSparkles} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import VMVAuthGateway from "@/components/VMVAuthGateway";
 import type {SupabaseClient} from "@supabase/supabase-js";
@@ -184,7 +184,9 @@ async function minimaxRequest(accessToken:string,body:Record<string,unknown>){
 
 const MOTION_SCENES=12;
 type DirectorBeat={speech:string;caption:string;imagePrompt:string;motionPrompt:string};
-type DirectorPlan={prompt:string;title:string;storyBible:string;scenes:DirectorBeat[];frames:{imageUrl:string;referencePath:string}[]};
+type DirectorFrame={imageUrl:string;referencePath:string};
+type DirectorPlan={prompt:string;title:string;storyBible:string;scenes:DirectorBeat[];frames:DirectorFrame[];
+ approved?:boolean[];draftPrompts?:string[];previous?:Record<string,DirectorFrame[]>};
 const DIRECTOR_PLAN_KEY="vmv-motion-director-plan-v5-60s";
 function readDirectorPlan(prompt:string):DirectorPlan|null{
  try{
@@ -208,6 +210,7 @@ async function directorCall(accessToken:string,endpoint:string,data:Record<strin
   result?.error==="image_storage_unavailable"?"No se pudo guardar el fotograma de referencia.": 
   result?.error==="image_reference_unavailable"?"No se encontró la imagen anterior para mantener la continuidad.":
   result?.error==="openai_quota_or_rate_limit"?"OpenAI no tiene cuota disponible.":
+  result?.error==="image_safety_rejected"?"OpenAI bloqueó esta imagen por moderación. Ajusta su descripción antes de volver a generar.":
   result?.error==="image_bad_request"?"OpenAI rechazó la imagen. No se realizarán más intentos automáticos.":
   "La IA no pudo preparar la historia o imagen. Puedes reanudar sin recrear las escenas ya terminadas."
  );
@@ -366,6 +369,8 @@ export default function StickmanLabPage(){
  const [directorBusy,setDirectorBusy]=useState(false);
  const [directorStatus,setDirectorStatus]=useState("");
  const [directorPlan,setDirectorPlan]=useState<DirectorPlan|null>(null);
+ const [regeneratingScene,setRegeneratingScene]=useState<number|null>(null);
+ const [previousScene,setPreviousScene]=useState<number|null>(null);
  const directorBusyRef=useRef(false);
  const [seedBusy,setSeedBusy]=useState(false);
  const [seedStage,setSeedStage]=useState("");
@@ -415,6 +420,32 @@ export default function StickmanLabPage(){
   return()=>cancelAnimationFrame(raf);
  },[topic,language,subtitles,customMode,customPrompt,terraStory]);
  useEffect(()=>()=>{if(urlRef.current)URL.revokeObjectURL(urlRef.current);if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);},[]);
+ useEffect(()=>{
+  try{
+   const saved=JSON.parse(sessionStorage.getItem(DIRECTOR_PLAN_KEY)||"null");
+   if(saved?.prompt&&typeof saved.prompt==="string"&&saved.scenes?.length===MOTION_SCENES){
+    setCustomPrompt(saved.prompt);
+    const plan=readDirectorPlan(saved.prompt);
+    if(plan){
+     setDirectorPlan(plan);
+     // Signed previews expire; refresh URLs without purchasing new generations.
+     void (async()=>{
+      const sb=getSupabase();if(!sb)return;
+      const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)return;
+      const refreshed:DirectorFrame[]=[];
+      for(const frame of plan.frames){
+       try{
+        const img=await directorCall(session.access_token,"/api/video-generator/motion-image",
+         {action:"preview",referencePath:frame.referencePath});
+        refreshed.push({...frame,imageUrl:img.imageUrl});
+       }catch{refreshed.push(frame);}
+      }
+      setDirectorPlan(old=>old?.prompt===plan.prompt?{...old,frames:refreshed}:old);
+     })();
+    }
+   }
+  }catch{}
+ },[]);
  const pollMinimax=useCallback(async(token:string,accessToken:string)=>{
   setMiniStage("MiniMax está animando los personajes");
   for(let i=0;i<120;i++){
