@@ -279,63 +279,59 @@ const timecode=seconds=>{
  const s=Math.floor(seconds%60),ms=Math.floor((seconds%1)*1000);
  return [h,m,s].map(n=>String(n).padStart(2,"0")).join(":")+","+String(ms).padStart(3,"0");
 };
-async function assemble(job,dir,clips,voices,variant){
- if(variant!=="turbo"&&variant!=="high")throw Error("invalid_quality_variant");
- const concat=path.join(dir,"concat-"+variant+".txt"),raw=path.join(dir,"raw-"+variant+".mp4"),final=path.join(dir,"final-"+variant+".mp4");
+async function assemble(job,dir,clips,narrationFile,timing,variant){
+ if(!["turbo","high"].includes(variant)||clips.length!==job.seconds/5)
+  throw Error("invalid_montage_request");
+ const concat=path.join(dir,"concat-"+variant+".txt"),
+  raw=path.join(dir,"raw-"+variant+".mp4"),
+  final=path.join(dir,"final-"+variant+".mp4");
+ const originalDuration=Number(timing?.duration)||job.seconds;
+ const speed=originalDuration/job.seconds;
+ if(narrationFile&&(speed<0.78||speed>1.25))throw Error("voice_length_requires_script_revision");
+ const segments=timing?.segments;
+ if(!Array.isArray(segments)||segments.length!==clips.length)throw Error("scene_timing_invalid");
  const clipPaths=[];
  for(let i=0;i<clips.length;i++){
+  const segment=segments[i];
+  const sceneSeconds=segment.duration/speed;
+  if(!Number.isFinite(sceneSeconds)||sceneSeconds<0.2||sceneSeconds>20)throw Error("scene_timing_invalid");
   const normalized=path.join(dir,"norm-"+variant+"-"+i+".mp4");
+  const scale=(sceneSeconds/5).toFixed(6);
+  const vf="scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,"+
+   "setpts=(PTS-STARTPTS)*"+scale+",fps=24,format=yuv420p,tpad=stop_mode=clone:stop_duration=12";
   await shell("ffmpeg",["-hide_banner","-loglevel","error","-y","-i",clips[i],
-   "-vf","scale=540:960:force_original_aspect_ratio=increase,crop=540:960,fps=24,format=yuv420p,tpad=stop_mode=clone:stop_duration=5",
-   "-t","5","-an","-c:v","libx264","-preset","veryfast","-crf","27","-movflags","+faststart",normalized]);
+   "-vf",vf,"-t",sceneSeconds.toFixed(4),"-an","-c:v","libx264",
+   "-preset","veryfast","-crf","26","-movflags","+faststart",normalized],240000);
   clipPaths.push(normalized);
  }
  await writeFile(concat,clipPaths.map(file=>"file '"+file.replace(/'/g,"")+"'").join("\n")+"\n");
- await shell("ffmpeg",["-hide_banner","-loglevel","error","-y","-safe","0","-f","concat","-i",concat,
-  "-c","copy","-movflags","+faststart",raw]);
- let audio=null;
- if(job.narration){
-  const normalizedVoices=[];
-  for(let i=0;i<voices.length;i++){
-   const len=await probe(voices[i]),fit=Math.max(1,len/4.85);
-   if(fit>1.85)throw Error("voice_too_long_for_five_seconds");
-   const output=path.join(dir,"voice-"+i+".m4a");
-   await shell("ffmpeg",["-hide_banner","-loglevel","error","-y","-i",voices[i],
-    "-af","atempo="+fit.toFixed(4)+",apad,atrim=0:5,asetpts=PTS-STARTPTS",
-    "-ac","2","-ar","48000","-c:a","aac","-b:a","128k",output]);
-   normalizedVoices.push(output);
-  }
-  const voicesTxt=path.join(dir,"voices.txt");
-  await writeFile(voicesTxt,normalizedVoices.map(f=>"file '"+f.replace(/'/g,"")+"'").join("\n")+"\n");
-  audio=path.join(dir,"audio.m4a");
-  await shell("ffmpeg",["-hide_banner","-loglevel","error","-y","-safe","0","-f","concat","-i",voicesTxt,
-   "-c","copy",audio]);
- }
+ await shell("ffmpeg",["-hide_banner","-loglevel","error","-y",
+  "-safe","0","-f","concat","-i",concat,
+  "-c","copy","-movflags","+faststart",raw],240000);
  let vf=null;
- if(job.subtitles){
-  const subtitleFile=path.join(dir,"subtitles.srt");let srt="",index=1;
-  for(let i=0;i<job.scenes.length;i++){
-   const scene=job.scenes[i],words=scene.speech.split(/\s+/).filter(Boolean);
-   const parts=[];for(let j=0;j<words.length;j+=4)parts.push(words.slice(j,j+4).join(" "));
-   for(let j=0;j<parts.length;j++){
-    const from=i*5+j*5/parts.length,to=i*5+(j+1)*5/parts.length;
-    srt+=index+++"\n"+timecode(from)+" --> "+timecode(to)+"\n"+parts[j]+"\n\n";
-   }
-  }
-  await writeFile(subtitleFile,srt);
-  vf="subtitles="+subtitleFile+":force_style='FontName=DejaVu Sans,FontSize=25,Alignment=2,MarginV=80,Outline=2,PrimaryColour=&H00FFFFFF'";
+ if(job.subtitles&&job.narration&&Array.isArray(timing.cues)&&timing.cues.length){
+  const subs=path.join(dir,"subtitles-"+variant+".srt");
+  const lines=timing.cues.map((cue,index)=>
+   String(index+1)+"\n"+timecode(cue.start/speed)+" --> "+
+    timecode(Math.max(cue.start/speed+.08,cue.end/speed))+"\n"+
+    String(cue.text).replace(/[\r\n]/g," ")+"\n\n").join("");
+  await writeFile(subs,lines);
+  vf="subtitles="+subs+
+   ":force_style='FontName=DejaVu Sans,FontSize=24,Alignment=2,MarginV=80,Outline=2,PrimaryColour=&H00FFFFFF'";
  }
  const args=["-hide_banner","-loglevel","error","-y","-i",raw];
- if(audio)args.push("-i",audio);
+ if(narrationFile)args.push("-i",narrationFile);
  if(vf)args.push("-vf",vf);
  args.push("-c:v",vf?"libx264":"copy");
- if(vf)args.push("-preset","veryfast","-crf","27");
- if(audio)args.push("-c:a","aac","-b:a","128k","-map","0:v:0","-map","1:a:0");
- else args.push("-an");
+ if(vf)args.push("-preset","veryfast","-crf","26");
+ if(narrationFile){
+  args.push("-map","0:v:0","-map","1:a:0","-af","atempo="+speed.toFixed(5),
+   "-c:a","aac","-b:a","128k");
+ }else args.push("-an");
  args.push("-t",String(job.seconds),"-movflags","+faststart",final);
  await shell("ffmpeg",args,300000);
  const output=await stat(final);
- if(output.size<20000||output.size>100*1024*1024)throw Error("render_file_invalid");
+ if(output.size<20000||output.size>150*1024*1024)throw Error("render_file_invalid");
  return final;
 }
 async function processJob(job){
