@@ -834,6 +834,8 @@ export default function StickmanLabPage(){
  const [renderLoading,setRenderLoading]=useState(false);
  const [studioStep,setStudioStep]=useState<"crear"|"revisar"|"editar"|"publicar">("crear");
  const [publishDraft,setPublishDraft]=useState<MotionPublishDraft>({...EMPTY_PUBLISH});
+ const [publicationAiBusy,setPublicationAiBusy]=useState(false);
+ const publicationAiRef=useRef(false);
  const [selectedScene,setSelectedScene]=useState(0);
  const [motionDraft,setMotionDraft]=useState("");
  const [sceneRendering,setSceneRendering]=useState<number|null>(null);
@@ -1889,14 +1891,52 @@ export default function StickmanLabPage(){
     await animateApproved();
   })();
  },[pilotAuto,auth,customPrompt,prepareStoryboard,animateApproved]);
- const suggestPublication=useCallback(()=>{
-  const plan=readDirectorPlan(customPrompt);if(!plan)return;
-  const first=plan.scenes[0]?.speech||"",last=plan.scenes.at(-1)?.speech||"";
-  updatePublish({title:plan.title,
-   caption:first+" "+last+"\n\n¿Qué opinas? Cuéntanos en los comentarios.",
-   hashtags:"#VMVMotion #Historias #VideoConIA"});
-  setShareStatus("Texto preparado. Revísalo antes de publicarlo.");
- },[customPrompt,updatePublish]);
+ const suggestPublication=useCallback(async()=>{
+  if(publicationAiRef.current)return;
+  const plan=readDirectorPlan(customPrompt);
+  if(!plan?.scenes.length){
+   setShareStatus("Primero prepara las escenas del video para generar una descripción contextual.");
+   return;
+  }
+  publicationAiRef.current=true;
+  setPublicationAiBusy(true);
+  setShareStatus("La IA está analizando el guion y preparando el texto para "+publishDraft.platform+"…");
+  try{
+   const sb=getSupabase();
+   const {data:{session}}=await sb!.auth.getSession();
+   if(!session?.access_token)throw Error("Inicia sesión para crear la publicación con IA.");
+   const response=await fetch("/api/video-generator/motion-publication",{
+    method:"POST",cache:"no-store",
+    headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
+    body:JSON.stringify({
+     platform:publishDraft.platform,language,
+     prompt:plan.prompt,title:plan.title,storyBible:plan.storyBible,
+     scenes:plan.scenes.map(scene=>({
+      speech:scene.speech,caption:scene.caption,
+      visual:(scene.imagePrompt||scene.motionPrompt||"").slice(0,230)
+     }))
+    })
+   });
+   const result=await response.json().catch(()=>null);
+   if(!response.ok){
+    if(response.status===400)throw Error("No se pudo leer el guion completo. Revisa las escenas del proyecto.");
+    throw Error(result?.error==="motion_publication_invalid_ai_output"?
+     "La IA devolvió un texto incompleto. Intenta generar otra propuesta.":
+     "No se pudo generar el texto con IA. Comprueba el servicio e inténtalo de nuevo.");
+   }
+   if(result?.source!=="ai"||typeof result?.title!=="string"||
+    typeof result?.caption!=="string"||typeof result?.hashtags!=="string")
+    throw Error("La IA no devolvió una publicación válida.");
+   updatePublish({title:result.title,caption:result.caption,hashtags:result.hashtags});
+   setShareStatus("Título, descripción y hashtags creados con IA para "+
+    publishDraft.platform+". Revísalos antes de publicar; no son resultados garantizados.");
+  }catch(e){
+   setShareStatus(e instanceof Error?e.message:"La generación con IA no está disponible.");
+  }finally{
+   publicationAiRef.current=false;
+   setPublicationAiBusy(false);
+  }
+ },[customPrompt,language,publishDraft.platform,updatePublish]);
  const copyPublication=useCallback(async()=>{
   const plan=readDirectorPlan(customPrompt);
   const content=[publishDraft.title||plan?.title||"VMV Motion",
@@ -2618,13 +2658,18 @@ export default function StickmanLabPage(){
       <p>Prepara tu publicación y mide resultados sin salir de VMV Motion.</p>
      </div></div>
      <div className={css.editorActions}>
-      <button type="button" className={css.ghostButton} onClick={suggestPublication}>
-       Sugerir descripción</button>
+      <button type="button" className={css.ghostButton}
+       disabled={publicationAiBusy} onClick={()=>void suggestPublication()}>
+       {publicationAiBusy?<LoaderCircle size={16} className={css.spin}/>:null}
+       {publicationAiBusy?"Generando con IA…":"Generar descripción y hashtags con IA"}</button>
       <button type="button" className={css.ghostButton} onClick={openVoiceEditor}>
        <Volume2 size={16}/> Cambiar voz</button>
       <button type="button" className={css.ghostButton} onClick={()=>setStudioStep("editar")}>
        Editar escenas</button>
      </div>
+     <p className={css.mutedNote}>La IA utiliza las {directorPlan.scenes.length} escenas de tu video
+      y adapta el título, la descripción y los hashtags a {publishDraft.platform}. Puedes editar todo
+      antes de publicar. Generar una propuesta utiliza IA.</p>
      {voiceRevisions.length?<div className={css.videoVersions}>
       <h3>Versiones del video</h3>
       <p>El video original siempre estará disponible.</p>
@@ -2651,7 +2696,10 @@ export default function StickmanLabPage(){
        <input maxLength={300} value={publishDraft.hashtags}
         placeholder="#Video #Historia" onChange={e=>updatePublish({hashtags:e.target.value})}/></label>
       <label>Plataforma
-       <select value={publishDraft.platform} onChange={e=>updatePublish({platform:e.target.value})}>
+       <select value={publishDraft.platform} onChange={e=>{
+        updatePublish({platform:e.target.value});
+        setShareStatus("Plataforma cambiada. Pulsa «Generar descripción y hashtags con IA» para adaptar el texto.");
+       }}>
         <option>TikTok</option><option>Instagram</option><option>YouTube</option>
        </select></label>
       <label>Fecha planificada <small>No publica automáticamente</small>
