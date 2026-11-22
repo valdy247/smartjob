@@ -3,7 +3,7 @@ import {useCallback,useEffect,useRef,useState} from "react";
 import {useRouter} from "next/navigation";
 import {ArrowLeft,CarFront,Check,Download,Globe2,LoaderCircle,Pause,Play,Volume2,WandSparkles} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
-import {drawStickmanFrame,stickmanStory,STICKMAN_WIDTH,STICKMAN_HEIGHT,STICKMAN_SECONDS,
+import {drawStickmanFrame,stickmanStory,userStickmanStory,STICKMAN_WIDTH,STICKMAN_HEIGHT,STICKMAN_SECONDS,
  type StickmanTopic,type StickmanLanguage} from "@/lib/vmv-stickman-engine";
 import css from "./page.module.css";
 
@@ -109,6 +109,8 @@ async function exportCanvas(canvas:HTMLCanvasElement,
 export default function StickmanLabPage(){
  const router=useRouter();
  const [topic,setTopic]=useState<StickmanTopic>("space");
+ const [customPrompt,setCustomPrompt]=useState("");
+ const [customMode,setCustomMode]=useState(false);
  const [language,setLanguage]=useState<StickmanLanguage>("es");
  const [subtitles,setSubtitles]=useState(true),[withVoice,setWithVoice]=useState(false);
  const [voice,setVoice]=useState<"alloy"|"nova">("alloy");
@@ -119,7 +121,7 @@ export default function StickmanLabPage(){
  const canvas=useRef<HTMLCanvasElement>(null);
  const playingRef=useRef(true),renderingRef=useRef(false),urlRef=useRef("");
  const timelineRef=useRef(0),lastFrameRef=useRef(0);
- const story=stickmanStory(topic,language);
+ const story=customMode&&customPrompt.trim().length>=8?userStickmanStory(customPrompt):stickmanStory(topic,language);
  useEffect(()=>{
   playingRef.current=playing;
  },[playing]);
@@ -132,13 +134,13 @@ export default function StickmanLabPage(){
    if(!renderingRef.current){
     if(playingRef.current)timelineRef.current=(timelineRef.current+dt)%STICKMAN_SECONDS;
     const ctx=canvas.current?.getContext("2d",{alpha:false});
-    if(ctx)drawStickmanFrame(ctx,stickmanStory(topic,language),timelineRef.current,subtitles);
+    if(ctx)drawStickmanFrame(ctx,customMode&&customPrompt.trim().length>=8?userStickmanStory(customPrompt):stickmanStory(topic,language),timelineRef.current,subtitles);
    }
    raf=requestAnimationFrame(step);
   };
   raf=requestAnimationFrame(step);
   return()=>cancelAnimationFrame(raf);
- },[topic,language,subtitles]);
+ },[topic,language,subtitles,customMode,customPrompt]);
  useEffect(()=>()=>{if(urlRef.current)URL.revokeObjectURL(urlRef.current);},[]);
  const generate=useCallback(async()=>{
   if(renderingRef.current)return;
@@ -147,7 +149,7 @@ export default function StickmanLabPage(){
   renderingRef.current=true;setRendering(true);setProgress(0);
   setError("");setStage(withVoice?"Preparando voz":"Animando");
   try{
-   const selected=stickmanStory(topic,language);
+   const selected=customMode?userStickmanStory(customPrompt):stickmanStory(topic,language);
    // Zero animation-provider credits. Optional voice requires explicit consent.
    const spoken=withVoice?await loadVoice(selected.scenes.map(s=>s.speech),voice):[];
    setStage("Montando video");
@@ -160,7 +162,7 @@ export default function StickmanLabPage(){
    setError(e instanceof Error?e.message:"No pudimos crear esta prueba.");
    setStage("");setProgress(0);
   }finally{renderingRef.current=false;setRendering(false);}
- },[topic,language,subtitles,withVoice,voice]);
+ },[topic,language,subtitles,withVoice,voice,customMode,customPrompt]);
  return <main className={css.page}>
   <div className={css.shell}>
    <header className={css.header}>
@@ -169,14 +171,26 @@ export default function StickmanLabPage(){
     <strong>VMV Pilot</strong><span className={css.beta}>LAB</span>
    </header>
    <div className={css.intro}><h1>Stickman Studio</h1><span>Motor propio · 2D</span></div>
-   <div className={css.topics}>
+   <div className={css.modeRow}>
+    <button type="button" className={customMode?css.modeActive:""} disabled={rendering}
+     onClick={()=>setCustomMode(true)}>Tu historia</button>
+    <button type="button" className={!customMode?css.modeActive:""} disabled={rendering}
+     onClick={()=>setCustomMode(false)}>Ejemplos</button>
+   </div>
+   {customMode?<label className={css.promptField}>
+    <span>¿Qué quieres contar?</span>
+    <textarea disabled={rendering} value={customPrompt} maxLength={500} rows={4}
+     placeholder="Ejemplo: Un pequeño elefante busca agua en la selva. Encuentra un río y ayuda a sus amigos a beber."
+     onChange={e=>setCustomPrompt(e.target.value)}/>
+    <small>{customPrompt.length}/500 · 3 escenas de 5 segundos</small>
+   </label>:<div className={css.topics}>
     <button type="button" className={topic==="space"?css.active:""}
      onClick={()=>{if(!rendering)setTopic("space");}} disabled={rendering}>
      <Globe2 size={21}/>{language==="es"?"Planetas":"Planets"}</button>
     <button type="button" className={topic==="race"?css.active:""}
      onClick={()=>{if(!rendering)setTopic("race");}} disabled={rendering}>
      <CarFront size={21}/>{language==="es"?"Fórmula 1":"Formula 1"}</button>
-   </div>
+   </div>}
    <section className={css.stage}>
     <div className={css.canvasWrap}>
      <canvas ref={canvas} width={STICKMAN_WIDTH} height={STICKMAN_HEIGHT}
@@ -208,20 +222,20 @@ export default function StickmanLabPage(){
      <small>{language==="es"?"Usa créditos de voz":"Uses voice credits"}</small>
     </div>:null}
     <button className={css.generate} type="button" disabled={rendering}
-     onClick={()=>void generate()}>
+     onClick={()=>void generate()} disabled={rendering||(customMode&&customPrompt.trim().length<8)}>
      {rendering?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
-     {rendering?(stage+" · "+progress+"%"):(language==="es"?"Crear prueba":"Create test")}
+     {rendering?(stage+" · "+progress+"%"):(language==="es"?"Generar video":"Generate video")}
     </button>
     {error?<p role="alert" className={css.error}>{error}</p>:null}
     {videoUrl?<div className={css.result}>
      <div className={css.resultTitle}><Check size={18}/><strong>{language==="es"?"Video terminado":"Finished video"}</strong></div>
      <video src={videoUrl} controls playsInline preload="metadata"/>
-     <a href={videoUrl} download={"vmv-stickman-"+topic+"."+extension}>
+     <a href={videoUrl} download={"vmv-stickman-"+(customMode?"historia":topic)+"."+extension}>
       <Download size={16}/>{language==="es"?"Descargar":"Download"}</a>
     </div>:null}
    </section>
    <p className={css.note}>{language==="es"
-    ?"Animación propia sin Runway. La exportación funciona con la pestaña abierta."
+    ?"Animación propia sin Runway. Tu texto se convierte en 3 composiciones 2D. La biblioteca visual aún es limitada. Mantén la pestaña abierta durante la exportación."
     :"Original animation without Runway. Keep this tab open during export."}</p>
   </div>
  </main>;
