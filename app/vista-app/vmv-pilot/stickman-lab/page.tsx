@@ -702,9 +702,13 @@ export default function StickmanLabPage(){
     const check=await fetch("/api/video-generator/speech/continuous",{headers:{Authorization:"Bearer "+accessToken},cache:"no-store"});
     const config=await check.json().catch(()=>null);
     if(!check.ok||!config?.configured)throw Error(
-     config?.error==="elevenlabs_voice_unavailable"?"La voz predeterminada de ElevenLabs no está disponible para tu cuenta. Configura una voz válida antes de continuar.":
-     config?.error==="elevenlabs_key_rejected"?"ElevenLabs rechazó la API key.":
-     "No se pudo verificar la voz de ElevenLabs. Se conservan todas las animaciones completadas."
+     config?.error==="elevenlabs_voice_unavailable"?"ElevenLabs no reconoce la voz configurada. Establece una voz disponible en ELEVENLABS_VOICE_ID; tus 12 clips siguen guardados.":
+     config?.error==="elevenlabs_key_rejected"?"ElevenLabs rechazó la API key de Preview. Comprueba ELEVENLABS_API_KEY; tus 12 clips siguen guardados.":
+     config?.error==="elevenlabs_access_denied"?"La API key no tiene permisos suficientes para acceder a ElevenLabs; los clips siguen guardados.":
+     config?.error==="elevenlabs_credits_required"?"ElevenLabs requiere créditos disponibles; tus clips de Seedance siguen guardados.":
+     "No se pudo verificar ElevenLabs (HTTP "+String(config?.upstreamStatus||check.status)+
+      (config?.providerCode&&config.providerCode!=="unknown"?", "+config.providerCode:"")+
+      "). Tus 12 clips siguen guardados."
     );
    }
    const job=readSeedance(customPrompt);setSeedUrls(job.urls.filter(Boolean));setSavedClipCount(job.urls.filter(Boolean).length);
