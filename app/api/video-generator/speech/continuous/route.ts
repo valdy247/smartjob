@@ -16,6 +16,25 @@ function validAlignment(v:unknown):v is Alignment{
   a.character_start_times_seconds.every(t=>typeof t==="number"&&Number.isFinite(t))&&
   a.character_end_times_seconds.every(t=>typeof t==="number"&&Number.isFinite(t));
 }
+function providerFailure(detail:unknown,status:number){
+ const body=(detail&&typeof detail==="object"?detail:{}) as Record<string,unknown>;
+ const nested=(body.detail&&typeof body.detail==="object"?body.detail:{}) as Record<string,unknown>;
+ const raw=typeof nested.status==="string"?nested.status:
+  typeof nested.code==="string"?nested.code:
+  typeof nested.error==="string"?nested.error:
+  typeof body.error==="string"?body.error:"";
+ const code=/^[a-z0-9_-]{1,70}$/i.test(raw)?raw:"unknown";
+ const invalidKey=["invalid_api_key","missing_api_key","invalid_key"].includes(code);
+ const voiceMissing=["voice_not_found","invalid_voice_id","voice_id_not_found"].includes(code);
+ const credits=["quota_exceeded","insufficient_credits","not_enough_credits"].includes(code);
+ const access=["model_access_denied","permission_denied","feature_not_available"].includes(code);
+ const error=invalidKey||status===401?"elevenlabs_key_rejected":
+  voiceMissing||status===404?"elevenlabs_voice_unavailable":
+  credits||status===402?"elevenlabs_credits_required":
+  access||status===403?"elevenlabs_access_denied":
+  status===429?"elevenlabs_rate_limited":"elevenlabs_generation_failed";
+ return {error,providerCode:code,upstreamStatus:status};
+}
 export async function GET(req:NextRequest){
  const owner=await authenticatedUser(req);
  if(!owner||!videoAllowed(owner))return reply({error:"video_not_enabled_for_account"},403);
@@ -28,10 +47,10 @@ export async function GET(req:NextRequest){
    method:"GET",cache:"no-store",headers:{"xi-api-key":key},signal:AbortSignal.timeout(12000)
   });
   if(!check.ok){
-   console.warn("[vmv-elevenlabs] voice preflight status",check.status);
-   return reply({configured:false,error:check.status===401||check.status===403?
-    "elevenlabs_key_rejected":check.status===404?"elevenlabs_voice_unavailable":
-    "elevenlabs_voice_check_failed"},503);
+   const detail=await check.json().catch(()=>null);
+   const failure=providerFailure(detail,check.status);
+   console.warn("[vmv-elevenlabs] voice preflight failure",failure);
+   return reply({configured:false,...failure},503);
   }
   return reply({configured:true});
  }catch{
@@ -62,24 +81,9 @@ export async function POST(req:NextRequest){
   });
   if(!response.ok){
    const detail=await response.json().catch(()=>null);
-   const reported=typeof detail?.detail?.status==="string"?detail.detail.status:
-    typeof detail?.detail?.error==="string"?detail.detail.error:
-    typeof detail?.error==="string"?detail.error:"";
-   // Log only a bounded provider error code, never prompts, API keys or full response payloads.
-   const providerCode=/^[a-z0-9_\\-]{1,70}$/i.test(reported)?reported:"unknown";
-   console.warn("[vmv-elevenlabs] upstream failure",{status:response.status,providerCode});
-   const knownCode=["voice_not_found","invalid_voice_id","model_not_found","model_access_denied",
-    "max_character_limit_exceeded","text_too_long","quota_exceeded","insufficient_credits",
-    "invalid_api_key","missing_api_key","invalid_request","invalid_output_format",
-    "invalid_output_format_for_model","feature_not_available","permission_denied"].includes(providerCode)?
-     providerCode:"unknown";
-   return reply({error:response.status===401?"elevenlabs_key_rejected":
-    response.status===402?"elevenlabs_credits_required":
-    response.status===403?"elevenlabs_access_denied":
-    response.status===429?"elevenlabs_rate_limited":
-    ["voice_not_found","invalid_voice_id"].includes(knownCode)?"elevenlabs_voice_unavailable":
-    ["quota_exceeded","insufficient_credits"].includes(knownCode)?"elevenlabs_credits_required":
-    "elevenlabs_generation_failed",providerCode:knownCode,upstreamStatus:response.status},502);
+   const failure=providerFailure(detail,response.status);
+   console.warn("[vmv-elevenlabs] TTS failure",failure);
+   return reply(failure,response.status===429?429:502);
   }
   const data=await response.json().catch(()=>null);
   const audio=typeof data?.audio_base64==="string"?data.audio_base64:"";
