@@ -384,6 +384,15 @@ function forgetActiveMotionProject(){
  }
 }
 
+async function flushActiveMotionToCloud(plan:DirectorPlan){
+ const sb=getSupabase();if(!sb)throw Error("No hay conexión con Supabase.");
+ const {data:{session}}=await sb.auth.getSession();
+ if(!session?.access_token)throw Error("La sesión no está activa.");
+ const id=currentCloudId();
+ await motionLibrary(session.access_token,{action:"save",project:{
+  id,plan,seedance:readSeedance(plan.prompt),publish:readPublishDraft(id)
+ }});
+}
 async function seedanceRequest(accessToken:string,body:Record<string,unknown>){
  let response:Response;
  try{
@@ -960,11 +969,15 @@ export default function StickmanLabPage(){
   }catch(e){setError(e instanceof Error?e.message:"No se pudo recuperar el proyecto en la nube.");}
   finally{setCloudLoading(false);}
  },[resetForProject]);
- const newMotionProject=useCallback(()=>{
+ const newMotionProject=useCallback(async()=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
   const active=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
   try{
-   if(active?.prompt&&active.scenes?.length===MOTION_SCENES)archiveMotionProject(active);
+   if(active?.prompt&&active.scenes?.length===MOTION_SCENES){
+    archiveMotionProject(active);
+    try{await flushActiveMotionToCloud(active);}
+    catch{setCloudStatus("La copia local se conservó; la sincronización en la nube está pendiente.");}
+   }
    forgetActiveMotionProject();
    resetForProject();
    setPublishDraft({...EMPTY_PUBLISH});setLastRenderedCloudUrl("");
@@ -972,14 +985,17 @@ export default function StickmanLabPage(){
    router.replace("/vista-app/vmv-pilot/stickman-lab");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo preservar el proyecto anterior.");}
  },[resetForProject,router]);
- const restoreMotionProject=useCallback((id:string)=>{
+ const restoreMotionProject=useCallback(async(id:string)=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
   const selected=archivedMotionProjects().find(item=>item.id===id);
   if(!selected)return;
   try{
    const active=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
-   if(active?.prompt&&active.prompt!==selected.plan.prompt&&active.scenes?.length===MOTION_SCENES)
+   if(active?.prompt&&active.prompt!==selected.plan.prompt&&active.scenes?.length===MOTION_SCENES){
     archiveMotionProject(active);
+    try{await flushActiveMotionToCloud(active);}
+    catch{setCloudStatus("El proyecto anterior se conservó localmente; la nube no respondió.");}
+   }
    resetForProject(selected.plan.prompt);
    setCloudId(selected.cloudId||crypto.randomUUID());
    saveDirectorPlan(selected.plan);
