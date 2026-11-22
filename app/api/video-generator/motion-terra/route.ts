@@ -1,6 +1,4 @@
 import {NextRequest,NextResponse} from "next/server";
-import {generateText} from "ai";
-import {gateway} from "@ai-sdk/gateway";
 import {authenticatedUser} from "@/lib/auth-server";
 import {videoAllowed,videoDb,videoHeaders} from "@/lib/vmv-video-generator";
 export const runtime="nodejs";
@@ -71,32 +69,31 @@ export async function POST(req:NextRequest){
  const body=await req.json().catch(()=>null);
  const prompt=typeof body?.prompt==="string"?body.prompt.trim():"";
  if(prompt.length<8||prompt.length>500||body?.confirmCost!==true)return reply({error:"invalid_motion_request"},400);
+ if(!process.env.OPENAI_API_KEY)return reply({error:"openai_key_not_configured"},503);
  const {data:granted,error:quotaError}=await videoDb().rpc("smartjob_web_ai_claim_video_test_slot",{p_owner:owner});
  if(quotaError)return reply({error:"motion_quota_unavailable"},503);
  if(granted!==true)return reply({error:"motion_limit"},429);
  try{
-  let answer="";
-  if(process.env.OPENAI_API_KEY){
-   const response=await fetch("https://api.openai.com/v1/chat/completions",{
-    method:"POST",cache:"no-store",
-    headers:{"Content-Type":"application/json",Authorization:"Bearer "+process.env.OPENAI_API_KEY},
-    body:JSON.stringify({model:"gpt-6.1-terra",messages:[{role:"system",content:system},
-     {role:"user",content:prompt}],max_completion_tokens:6500,store:false}),
-    signal:AbortSignal.timeout(50000)
-   });
-   if(!response.ok)throw Error("terra_http_"+response.status);
-   const result=await response.json();
-   answer=result?.choices?.[0]?.message?.content||"";
-  }else{
-   const result=await generateText({model:gateway("openai/gpt-6.1-terra"),
-    system,prompt,maxOutputTokens:6500,abortSignal:AbortSignal.timeout(50000)});
-   answer=result.text;
+  const response=await fetch("https://api.openai.com/v1/chat/completions",{
+   method:"POST",cache:"no-store",
+   headers:{"Content-Type":"application/json",Authorization:"Bearer "+process.env.OPENAI_API_KEY},
+   body:JSON.stringify({model:"gpt-4.1-mini",messages:[{role:"system",content:system},
+    {role:"user",content:prompt}],max_tokens:6500,response_format:{type:"json_object"},store:false}),
+   signal:AbortSignal.timeout(50000)
+  });
+  if(!response.ok){
+   if(response.status===401)return reply({error:"openai_key_invalid"},503);
+   if(response.status===429)return reply({error:"openai_quota_or_rate_limit"},429);
+   console.warn("[vmv-motion-openai] HTTP",response.status);
+   return reply({error:"openai_request_failed"},503);
   }
+  const result=await response.json();
+  const answer=typeof result?.choices?.[0]?.message?.content==="string"?result.choices[0].message.content:"";
   const start=answer.indexOf("{"),end=answer.lastIndexOf("}");
   if(start<0||end<start)throw Error("terra_empty");
   const parsed=parse(JSON.parse(answer.slice(start,end+1)));
   if(!parsed)return reply({error:"motion_scene_retry"},503);
-  return reply({...parsed,model:"gpt-6.1-terra"});
+  return reply({...parsed,model:"gpt-4.1-mini"});
  }catch(e){
   const message=e instanceof Error?e.message:"unknown";
   console.warn("[vmv-motion-terra]",message);
