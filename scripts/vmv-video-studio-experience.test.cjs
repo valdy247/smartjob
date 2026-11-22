@@ -12,12 +12,14 @@ const agentHome=read("app/vista-app/ai-agents/page.tsx");
 const library=read("lib/vmv-video-quick-library.ts");
 const sql=read("supabase/sql/vmv_video_quick_library_20261121.sql");
 
-test("all entry points show the same Video Generator and Stickman is one click away",()=>{
+test("all entry points keep Video Generator and offer four focused creation modes",()=>{
  assert.ok(home.includes('action:()=>window.location.assign("/vista-app/video-generator")'));
- assert.ok(studio.includes('href="/vista-app/video-generator/quick?visual=sticks"'));
- assert.ok(studio.includes('href="/vista-app/video-generator/quick?visual=stills"'));
- assert.ok(studio.includes('onClick={()=>window.location.assign("/vista-app/ai-agents?service=video")}'));
- assert.ok(studio.includes('onClick={()=>open("pilot")}'));
+ assert.ok(studio.includes('onClick={()=>open("menu")}'));
+ assert.ok(studio.includes('onClick={()=>open("library")}'));
+ assert.ok(studio.includes('"text-image"'));
+ assert.ok(studio.includes('"edit-image"'));
+ assert.ok(studio.includes('"image-video"'));
+ assert.ok(studio.includes('"text-video"'));
  assert.ok(agentHome.includes('href="/vista-app/video-generator/quick?visual=sticks"'));
  assert.ok(agent.includes('window.location.assign("/vista-app/video-generator/quick?visual=sticks")'));
 });
@@ -87,6 +89,7 @@ test("Runway/Kling video jobs and video caption safety remain separate from Stic
 test("updated TS and TSX source files remain parseable",()=>{
  const files=[
   "app/vista-app/video-generator/page.tsx",
+  "app/vista-app/video-generator/CreativeGenerator.tsx",
   "app/vista-app/video-generator/quick/page.tsx",
   "app/vista-app/ai-agents/AutomaticVideoWizard.tsx",
   "app/vista-app/ai-agents/page.tsx",
@@ -98,4 +101,16 @@ test("updated TS and TSX source files remain parseable",()=>{
    p.endsWith(".tsx")?ts.ScriptKind.TSX:ts.ScriptKind.TS);
   assert.deepEqual(src.parseDiagnostics.map(e=>ts.flattenDiagnosticMessageText(e.messageText," ")),[],p);
  }
+});
+
+test("minimal creator advances on style selection and preserves authorized generation",()=>{
+ const flow=read("app/vista-app/video-generator/CreativeGenerator.tsx");
+ const image=read("app/api/video-generator/image/route.ts");
+ assert.match(flow,/chooseStyle\(item\.id\)/);
+ assert.match(flow,/newStage\(mode==="edit-image"\?"upload"/);
+ assert.match(flow,/VideoPromptAssistant value=\{prompt\}/);
+ assert.match(flow,/checked=\{confirmed\}/);
+ assert.match(flow,/confirmCost:true/);
+ assert.match(image,/sourceBytes\?\{text:instructions/);
+ assert.doesNotMatch(flow,/Continuar|Continue/);
 });
