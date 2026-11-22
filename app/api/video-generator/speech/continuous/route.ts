@@ -35,12 +35,77 @@ function providerFailure(detail:unknown,status:number){
   status===429?"elevenlabs_rate_limited":"elevenlabs_generation_failed";
  return {error,providerCode:code,upstreamStatus:status};
 }
+type SpeechProvider="openai"|"elevenlabs";
+const openaiVoices=new Set(["alloy","nova","echo"]);
+async function openaiContinuous(segments:string[],voiceId:string){
+ const apiKey=process.env.OPENAI_API_KEY;
+ if(!apiKey)return reply({error:"openai_key_not_configured"},503);
+ if(!openaiVoices.has(voiceId))return reply({error:"invalid_voice_request"},400);
+ const spoken=segments.map(s=>s.trim()),text=spoken.join(" ");
+ const speech=await fetch("https://api.openai.com/v1/audio/speech",{
+  method:"POST",cache:"no-store",headers:{"Content-Type":"application/json",Authorization:"Bearer "+apiKey},
+  body:JSON.stringify({model:"tts-1",voice:voiceId,input:text,response_format:"mp3"}),
+  signal:AbortSignal.timeout(95000)
+ });
+ if(!speech.ok)return reply({error:"openai_voice_unavailable",upstreamStatus:speech.status},502);
+ const buffer=Buffer.from(await speech.arrayBuffer());
+ if(buffer.length<2000||buffer.length>8_000_000)return reply({error:"openai_voice_unavailable"},502);
+ const body=new FormData();
+ body.set("model","whisper-1");body.set("response_format","verbose_json");
+ body.append("timestamp_granularities[]","word");
+ body.set("file",new Blob([buffer],{type:"audio/mpeg"}),"narration.mp3");
+ const transcribed=await fetch("https://api.openai.com/v1/audio/transcriptions",{
+  method:"POST",cache:"no-store",headers:{Authorization:"Bearer "+apiKey},body,
+  signal:AbortSignal.timeout(95000)
+ });
+ if(!transcribed.ok)return reply({error:"openai_alignment_unavailable",upstreamStatus:transcribed.status},502);
+ const result=await transcribed.json().catch(()=>null);
+ const actualWords=Array.isArray(result?.words)?result.words as Array<{start:number;end:number;word:string}>:[];
+ const duration=Number(result?.duration)||Number(actualWords.at(-1)?.end)||0;
+ if(duration<10||duration>100)return reply({error:"openai_invalid_duration"},502);
+ const scriptWords=[...text.matchAll(/\S+/g)];
+ const useWhisper=actualWords.length>=scriptWords.length*.80&&actualWords.length<=scriptWords.length*1.2&&
+  actualWords.every(w=>Number.isFinite(w.start)&&Number.isFinite(w.end));
+ const characters:string[]=[],starts:number[]=[],ends:number[]=[];
+ const boundaries:number[]=[];
+ let wordIndex=0;
+ const append=(letter:string,start:number,end:number)=>{
+  characters.push(letter);starts.push(Math.max(0,start));ends.push(Math.min(duration,Math.max(start+.001,end)));
+ };
+ let charIndex=0;
+ for(const match of scriptWords){
+  const word=match[0],begin=match.index;
+  while(charIndex<begin){append(text[charIndex],ends.at(-1)||0,ends.at(-1)||0);charIndex++;}
+  const start=useWhisper?actualWords[wordIndex]?.start:duration*(wordIndex/scriptWords.length);
+  const end=useWhisper?actualWords[wordIndex]?.end:duration*((wordIndex+1)/scriptWords.length);
+  for(let j=0;j<word.length;j++){
+   const s=start+(end-start)*(j/word.length),e=start+(end-start)*((j+1)/word.length);
+   append(word[j],s,e);charIndex++;
+  }
+  wordIndex++;
+ }
+ while(charIndex<text.length){append(text[charIndex],ends.at(-1)||duration,ends.at(-1)||duration);charIndex++;}
+ let position=0;
+ for(let i=0;i<spoken.length;i++){
+  position+=spoken[i].length;boundaries.push(ends[position-1]||duration);
+  if(i<spoken.length-1)position++;
+ }
+ const valid=boundaries.every((end,i)=>Number.isFinite(end)&&end>0&&(i===0||end>boundaries[i-1]));
+ return reply({audio:buffer.toString("base64"),mediaType:"audio/mpeg",
+  alignment:{characters,character_start_times_seconds:starts,character_end_times_seconds:ends},
+  duration,sceneEnds:valid?boundaries:null});
+}
 export async function GET(req:NextRequest){
  const owner=await authenticatedUser(req);
  if(!owner||!videoAllowed(owner))return reply({error:"video_not_enabled_for_account"},403);
+ const provider=req.nextUrl.searchParams.get("provider")||"elevenlabs";
+ if(provider==="none")return reply({configured:true});
+ if(provider==="openai")return reply({configured:Boolean(process.env.OPENAI_API_KEY),
+  ...(process.env.OPENAI_API_KEY?{}:{error:"openai_key_not_configured"})},process.env.OPENAI_API_KEY?200:503);
+ if(provider!=="elevenlabs")return reply({configured:false,error:"invalid_voice_provider"},400);
  const key=process.env.ELEVENLABS_API_KEY;
  if(!key)return reply({configured:false,error:"elevenlabs_not_configured_in_preview"},503);
- const voiceId=process.env.ELEVENLABS_VOICE_ID||"21m00Tcm4TlvDq8ikWAM";
+ const voiceId=req.nextUrl.searchParams.get("voiceId")||process.env.ELEVENLABS_VOICE_ID||"21m00Tcm4TlvDq8ikWAM";
  if(!/^[a-zA-Z0-9]{20}$/.test(voiceId))return reply({configured:false,error:"elevenlabs_voice_not_configured"},503);
  try{
   const check=await fetch("https://api.elevenlabs.io/v1/voices/"+voiceId,{
@@ -66,9 +131,16 @@ export async function POST(req:NextRequest){
  if(body?.confirmCost!==true||!Array.isArray(segments)||segments.length!==12||
   segments.some((s:unknown)=>typeof s!=="string"||s.trim().length<8||s.length>220))
   return reply({error:"invalid_voice_request"},400);
+ const provider:SpeechProvider=body?.provider==="openai"?"openai":"elevenlabs";
+ if(body?.provider!==undefined&&!["elevenlabs","openai"].includes(body.provider))
+  return reply({error:"invalid_voice_provider"},400);
+ if(provider==="openai"){
+  try{return await openaiContinuous(segments,body?.voiceId||"alloy");}
+  catch{return reply({error:"openai_voice_unavailable"},503);}
+ }
  const key=process.env.ELEVENLABS_API_KEY;
  if(!key)return reply({error:"elevenlabs_not_configured_in_preview"},503);
- const voiceId=process.env.ELEVENLABS_VOICE_ID||"21m00Tcm4TlvDq8ikWAM";
+ const voiceId=typeof body?.voiceId==="string"?body.voiceId:(process.env.ELEVENLABS_VOICE_ID||"21m00Tcm4TlvDq8ikWAM");
  if(!/^[a-zA-Z0-9]{20}$/.test(voiceId))return reply({error:"elevenlabs_voice_not_configured"},503);
  const text=segments.map((s:string)=>s.trim()).join(" ");
  if(text.length>4000)return reply({error:"voice_request_too_large"},413);
