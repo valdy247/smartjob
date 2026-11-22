@@ -165,6 +165,23 @@ async function exportCanvas(canvas:HTMLCanvasElement,
   if(audio)void audio.close();
  }
 }
+const MINIMAX_PENDING_KEY="vmv-motion-minimax-pending-v1";
+async function minimaxRequest(accessToken:string,body:Record<string,unknown>){
+ const response=await fetch("/api/video-generator/motion-minimax",{
+  method:"POST",cache:"no-store",
+  headers:{"Content-Type":"application/json",Authorization:"Bearer "+accessToken},
+  body:JSON.stringify(body)
+ });
+ const data=await response.json().catch(()=>null);
+ if(!response.ok)throw Error(data?.error==="motion_limit"?"Se alcanzó el límite diario de pruebas.":
+  data?.error==="ai_gateway_auth_not_configured"?"Vercel AI Gateway no tiene credenciales configuradas.":
+  data?.error==="minimax_video_start_failed"?"MiniMax no pudo iniciar el video. Revisa los créditos de AI Gateway.":
+  data?.error==="video_result_unavailable"?"MiniMax finalizó, pero no proporcionó un enlace válido.": 
+  data?.error==="video_status_unavailable"?"No pudimos consultar el progreso de MiniMax. Puedes reintentar sin pagar otro video.":
+  "No pudimos iniciar o consultar el video MiniMax.");
+ return data;
+}
+
 export default function StickmanLabPage(){
  const router=useRouter();
  const [auth,setAuth]=useState<"checking"|"signed_in"|"signed_out">("checking");
@@ -180,6 +197,10 @@ export default function StickmanLabPage(){
  const [progress,setProgress]=useState(0),[stage,setStage]=useState("");
  const [videoUrl,setVideoUrl]=useState(""),[extension,setExtension]=useState<"mp4"|"webm">("webm");
  const [error,setError]=useState("");
+ const [miniBusy,setMiniBusy]=useState(false);
+ const [miniStage,setMiniStage]=useState("");
+ const [miniUrl,setMiniUrl]=useState("");
+ const miniBusyRef=useRef(false);
  const canvas=useRef<HTMLCanvasElement>(null);
  const pendingStoryboard=useRef<PendingStoryboard>({prompt:"",images:[]});
  const playingRef=useRef(true),renderingRef=useRef(false),urlRef=useRef("");
@@ -217,6 +238,48 @@ export default function StickmanLabPage(){
   return()=>cancelAnimationFrame(raf);
  },[topic,language,subtitles,customMode,customPrompt,terraStory]);
  useEffect(()=>()=>{if(urlRef.current)URL.revokeObjectURL(urlRef.current);},[]);
+ const pollMinimax=useCallback(async(token:string,accessToken:string)=>{
+  setMiniStage("MiniMax está animando los personajes");
+  for(let i=0;i<120;i++){
+   const result=await minimaxRequest(accessToken,{action:"status",token});
+   if(result?.status==="completed"){
+    const url=typeof result.url==="string"?result.url:"";
+    if(!/^https:\/\//.test(url))throw Error("MiniMax no devolvió un video válido.");
+    setMiniUrl(url);setMiniStage("Video MiniMax terminado");
+    try{sessionStorage.removeItem(MINIMAX_PENDING_KEY);}catch{}
+    return;
+   }
+   if(result?.status==="failed"){
+    try{sessionStorage.removeItem(MINIMAX_PENDING_KEY);}catch{}
+    throw Error("MiniMax no pudo completar el video. Comprueba el historial de AI Gateway.");
+   }
+   await new Promise<void>(resolve=>setTimeout(resolve,5000));
+  }
+  throw Error("La generación sigue en proceso. Puedes volver a consultar el estado desde esta pestaña.");
+ },[]);
+ const generateMinimax=useCallback(async()=>{
+  if(miniBusyRef.current||renderingRef.current||customPrompt.trim().length<8)return;
+  miniBusyRef.current=true;setMiniBusy(true);setError("");setMiniUrl("");
+  try{
+   const sb=getSupabase();if(!sb)throw Error("Inicia sesión para generar video.");
+   const {data:{session}}=await sb.auth.getSession();
+   if(!session?.access_token)throw Error("Inicia sesión para generar video.");
+   let token="";
+   try{const saved=JSON.parse(sessionStorage.getItem(MINIMAX_PENDING_KEY)||"null");
+    if(saved?.prompt===customPrompt&&typeof saved.token==="string")token=saved.token;
+   }catch{}
+   if(!token){
+    setMiniStage("Enviando trabajo a MiniMax");
+    const result=await minimaxRequest(session.access_token,{action:"start",prompt:customPrompt,confirmCost:true});
+    if(typeof result?.token!=="string")throw Error("MiniMax no entregó un identificador de video.");
+    token=result.token;
+    try{sessionStorage.setItem(MINIMAX_PENDING_KEY,JSON.stringify({prompt:customPrompt,token}));}catch{}
+   }
+   await pollMinimax(token,session.access_token);
+  }catch(e){setError(e instanceof Error?e.message:"Falló la generación MiniMax.");setMiniStage("");}
+  finally{miniBusyRef.current=false;setMiniBusy(false);}
+ },[customPrompt,pollMinimax]);
+
  const generate=useCallback(async()=>{
   if(renderingRef.current)return;
   const target=canvas.current;
@@ -306,6 +369,18 @@ export default function StickmanLabPage(){
      {rendering?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
      {rendering?(stage+" · "+progress+"%"):(language==="es"?"Generar video":"Generate video")}
     </button>
+    {customMode?<button className={css.generate} type="button"
+     disabled={miniBusy||rendering||customPrompt.trim().length<8}
+     onClick={()=>void generateMinimax()}>
+     {miniBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
+     {miniBusy?miniStage||"Generando con MiniMax":"Video con movimiento real · MiniMax H3 Max · ~US$1.20"}
+    </button>:null}
+    {customMode?<small>MiniMax genera un video vertical de 15 segundos a 768p. El precio mostrado es estimado; confirmar este botón inicia una generación pagada en Vercel AI Gateway. No incluye narración ni subtítulos automáticos.</small>:null}
+    {miniUrl?<div className={css.result}>
+      <div className={css.resultTitle}><Check size={18}/><strong>Video con MiniMax listo</strong></div>
+      <video src={miniUrl} controls playsInline preload="metadata"/>
+      <a href={miniUrl} target="_blank" rel="noreferrer"><Download size={16}/>Abrir MP4 para guardar</a>
+     </div>:null}
     {error?<p role="alert" className={css.error}>{error}</p>:null}
     {videoUrl?<div className={css.result}>
      <div className={css.resultTitle}><Check size={18}/><strong>{language==="es"?"Video terminado":"Finished video"}</strong></div>
