@@ -24,7 +24,7 @@ function seal(owner:string,operation:unknown){
  const digest=createHmac("sha256",secret()).update(payload).digest("base64url");
  return payload+"."+digest;
 }
-function unseal(token:string,owner:string):unknown|null{
+function unseal(token:string,owner:string,allowArchived=false):unknown|null{
  try{
   if(token.length>10000)return null;
   const [payload,signature,...rest]=token.split(".");
@@ -34,7 +34,8 @@ function unseal(token:string,owner:string):unknown|null{
   if(left.length!==right.length||!timingSafeEqual(left,right))return null;
   const data=JSON.parse(Buffer.from(payload,"base64url").toString("utf8"));
   if(data.owner!==owner||!Number.isFinite(data.createdAt)||
-   Date.now()-data.createdAt>24*60*60*1000||data.createdAt>Date.now()+60000)return null;
+   (!allowArchived&&Date.now()-data.createdAt>24*60*60*1000)||
+   data.createdAt>Date.now()+60000)return null;
   return data.operation;
  }catch{return null;}
 }
@@ -168,8 +169,9 @@ export async function POST(req:NextRequest){
  if(body?.action==="download"||body?.action==="archive"){
   const archiveOnly=body.action==="archive";
   const token=typeof body?.token==="string"?body.token:"";
-  const operation=unseal(token,owner);
+  const operation=unseal(token,owner,true);
   if(!operation)return reply({error:"invalid_video_job"},403);
+  const jobFresh=Boolean(unseal(token,owner));
   // First use our private copy, which remains available after provider URLs
   // and gateway credit checks expire.
   try{
@@ -187,6 +189,8 @@ export async function POST(req:NextRequest){
    mediaUrl=sourceUrl;
   }else{
    if(sourceUrl)console.warn("[vmv-seedance-download]",{reason:"unsupported_video_host"});
+   // Provider operations expire after 24 hours; archived files do not.
+   if(!jobFresh)return reply({error:"video_archive_missing"},410);
    try{
     const result=await finishedVideo(operation);
     if(result.status!=="completed"||!result.url)return reply({error:"video_not_ready"},409);
