@@ -550,6 +550,9 @@ export default function StickmanLabPage(){
  const [directorBusy,setDirectorBusy]=useState(false);
  const [directorStatus,setDirectorStatus]=useState("");
  const [directorPlan,setDirectorPlan]=useState<DirectorPlan|null>(null);
+ const [framesRefreshing,setFramesRefreshing]=useState(false);
+ const [frameRefreshError,setFrameRefreshError]=useState("");
+ const frameRefreshPromptRef=useRef("");
  const [regeneratingScene,setRegeneratingScene]=useState<number|null>(null);
  const [editingSpeech,setEditingSpeech]=useState<number|null>(null);
  const [speechDraft,setSpeechDraft]=useState("");
@@ -638,31 +641,63 @@ export default function StickmanLabPage(){
     setCustomPrompt(saved.prompt);setCustomMode(true);setWithVoice(true);
     setSavedClipCount(readSeedance(saved.prompt).urls.filter(Boolean).length);
     const plan=readDirectorPlan(saved.prompt);
-    if(plan){
-     setDirectorPlan(plan);
-     // Signed previews expire; refresh URLs without purchasing new generations.
-     void (async()=>{
-      const sb=getSupabase();if(!sb)return;
-      const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)return;
-      const refreshed:DirectorFrame[]=[];
-      for(const frame of plan.frames){
-       try{
-        const img=await directorCall(session.access_token,"/api/video-generator/motion-image",
-         {action:"preview",referencePath:frame.referencePath});
-        refreshed.push({...frame,imageUrl:img.imageUrl});
-       }catch{refreshed.push(frame);}
-      }
-      setDirectorPlan(old=>old?.prompt===plan.prompt?{...old,frames:refreshed}:old);
-     })();
-    }
+    if(plan)setDirectorPlan(plan);
    }
   }catch{}
  },[]);
+ // Frame objects remain in private storage; signed preview URLs expire.
+ // "preview" only signs existing frames and never triggers model charges.
+ const refreshDirectorFrames=useCallback(async(prompt:string,force=false)=>{
+  if(!prompt||(frameRefreshPromptRef.current===prompt&&!force))return;
+  const client=getSupabase();if(!client)return;
+  const {data:{session}}=await client.auth.getSession();
+  if(!session?.access_token)return;
+  const saved=readDirectorPlan(prompt);
+  if(!saved?.frames.length)return;
+  frameRefreshPromptRef.current=prompt;
+  setFramesRefreshing(true);setFrameRefreshError("");
+  const paths=new Set<string>();
+  for(const frame of saved.frames)if(frame.referencePath)paths.add(frame.referencePath);
+  for(const versions of Object.values(saved.previous||{}))
+   for(const frame of versions)if(frame.referencePath)paths.add(frame.referencePath);
+  const fresh=new Map<string,string>();
+  for(const path of paths){
+   try{
+    const result=await directorCall(session.access_token,"/api/video-generator/motion-image",
+     {action:"preview",referencePath:path});
+    if(typeof result?.imageUrl==="string"&&result.imageUrl.startsWith("https://"))
+     fresh.set(path,result.imageUrl);
+   }catch{}
+  }
+  // Keep latest narration edits and approval decisions intact; replace URLs only.
+  const latest=readDirectorPlan(prompt);
+  if(latest&&fresh.size){
+   const remap=(frame:DirectorFrame):DirectorFrame=>{
+    const url=fresh.get(frame.referencePath);
+    return url?{...frame,imageUrl:url}:frame;
+   };
+   const previous:Record<string,DirectorFrame[]>={};
+   for(const [key,versions] of Object.entries(latest.previous||{}))
+    previous[key]=versions.map(remap);
+   const updated={...latest,frames:latest.frames.map(remap),previous};
+   saveDirectorPlan(updated);
+   setDirectorPlan(current=>current?.prompt===prompt?updated:current);
+  }
+  if(fresh.size<paths.size)
+   setFrameRefreshError("No se pudieron recuperar todas las vistas previas ("+
+    fresh.size+"/"+paths.size+"). Pulsa «Recuperar imágenes» para reintentar sin pagar.");
+  setFramesRefreshing(false);
+ },[]);
+ useEffect(()=>{
+  if(auth==="signed_in"&&directorPlan?.prompt)
+   void refreshDirectorFrames(directorPlan.prompt);
+ },[auth,directorPlan?.prompt,refreshDirectorFrames]);
  const resetForProject=useCallback((prompt="")=>{
   setCustomPrompt(prompt);setCustomMode(true);setPilotAuto(false);
   setResearchSource(null);setDirectorPlan(null);setTerraStory(null);
   setSeedUrls([]);setSavedClipCount(0);setSeedJoined("");
   setDirectorStatus("");setError("");setPreviousScene(null);
+  frameRefreshPromptRef.current="";setFrameRefreshError("");
   setEditingSpeech(null);setSpeechDraft("");
   setWithVoice(true);setSubtitles(true);
   autoStartRef.current=false;
@@ -1117,6 +1152,11 @@ export default function StickmanLabPage(){
       <h2>Revisa antes de animar</h2>
       <p>{directorPlan.title} · {directorPlan.frames.length}/{MOTION_SCENES} imágenes ·
        {(directorPlan.approved||[]).filter(Boolean).length}/{MOTION_SCENES} aprobadas</p>
+      <button type="button" disabled={framesRefreshing}
+       onClick={()=>void refreshDirectorFrames(directorPlan.prompt,true)}>
+       {framesRefreshing?"Recuperando imágenes…":"Recuperar imágenes"}
+      </button>
+      {frameRefreshError?<p role="alert">{frameRefreshError}</p>:null}
      </div>
      {directorPlan.scenes.map((scene,index)=>{
       const frame=directorPlan.frames[index];
@@ -1182,7 +1222,7 @@ export default function StickmanLabPage(){
       disabled={directorBusy} onClick={()=>void prepareStoryboard()}>
       {directorBusy?directorStatus:"Continuar generando las imágenes pendientes"}</button>:null}
      {directorPlan.frames.length===MOTION_SCENES?<button type="button" className={css.generate}
-      disabled={directorBusy||seedBusy||editingSpeech!==null||regeneratingScene!==null||
+      disabled={directorBusy||seedBusy||framesRefreshing||editingSpeech!==null||regeneratingScene!==null||
        !directorPlan.scenes.every((scene,i)=>directorPlan.approved?.[i]===true&&
         (directorPlan.draftPrompts?.[i]??scene.imagePrompt)===scene.imagePrompt)}
       onClick={()=>void animateApproved()}>
