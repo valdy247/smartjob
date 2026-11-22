@@ -594,11 +594,12 @@ test("Private VMV Motion library can share original renders without sign-in or t
  const page=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
  assert.match(api,/if\(action==="render-share"\)/);
  assert.match(api,/const project=await readProject\(owner,body\.id\)/);
- assert.match(api,/createSignedUrl\(\s*path,expiresIn,\{download:filename\}\)/);
+ assert.match(api,/createSignedUrl\(\s*saved\.path,expiresIn,\{download:filename\}\)/);
  assert.match(api,/const expiresIn=7\*24\*60\*60/);
- assert.match(api,/const path=renderPath\(owner,body\.id,extension,revision\?\.id\)/);
+ assert.match(api,/const saved=await finishedRender\(owner,body\.id,project\)/);
  assert.match(api,/active\?project\.seedance\.voiceRevisions\?\.find/);
  assert.match(api,/public:false/);
+ assert.match(page,/item\.ready\?<button type="button"/);
  assert.match(page,/shareLibraryVideo\(item\.id\)/);
  assert.match(page,/shareLibraryVideo\(currentCloudId\(\)\)/);
  assert.match(page,/action:"render-share",id/);
@@ -642,4 +643,24 @@ test("VMV Motion only runs paid narration with an explicit persisted opt-in",()=
  assert.match(page,/Desactivada: no se generará narración/);
  assert.doesNotMatch(page,/setCustomMode\(true\);setWithVoice\(true\)/);
  assert.doesNotMatch(page,/setCustomPrompt\(saved\.prompt\);setCustomMode\(true\);setWithVoice\(true\)/);
+});
+
+test("Library sharing appears only for saved render files and desktop uses a visible share dialog",()=>{
+ const api=read("app/api/video-generator/motion-library/route.ts");
+ const page=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ const css=read("app/vista-app/vmv-pilot/stickman-lab/page.module.css");
+ assert.match(api,/async function finishedRender\(owner:string,id:string,project:ProjectSnapshot\)/);
+ assert.match(api,/const root=await bucket\.list\(owner\+"\/"\+id,\{limit:100\}\)/);
+ assert.match(api,/saved\.has\("final\."\+extension\)/);
+ assert.match(api,/const ready=Boolean\(await finishedRender/);
+ assert.match(api,/if\(!saved\)return reply\(\{error:"motion_render_not_found"\},404\)/);
+ assert.match(page,/item\.ready\?<button type="button"/);
+ assert.match(page,/Montar para compartir/);
+ assert.match(page,/libraryShareOverlay/);
+ assert.match(page,/role="dialog" aria-modal="true"/);
+ assert.match(page,/Enviar por WhatsApp/);
+ assert.match(page,/Enviar por correo/);
+ assert.match(page,/Probar descarga/);
+ assert.match(page,/document\.execCommand\("copy"\)/);
+ assert.match(css,/\.libraryShareOverlay\{position:fixed/);
 });

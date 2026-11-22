@@ -26,6 +26,36 @@ function projectPath(owner:string,id:string){return owner+"/"+id+".json";}
 function renderPath(owner:string,id:string,extension:string,revisionId?:string){
  return owner+"/"+id+"/"+(revisionId&&validId(revisionId)?"versions/"+revisionId:"final")+"."+extension;
 }
+// Sharing requires a real, completed file in the private render bucket.
+// Twelve animated clips alone are not a downloadable final video.
+async function finishedRender(owner:string,id:string,project:ProjectSnapshot):
+ Promise<{path:string;extension:"mp4"|"webm"}|null>{
+ const bucket=storage().from(RENDER_BUCKET);
+ const root=await bucket.list(owner+"/"+id,{limit:100});
+ if(root.error)return null;
+ const saved=new Set((root.data||[]).filter(x=>x.id!==null).map(x=>x.name));
+ const active=project.seedance.activeRenderId;
+ const revisions=[...(project.seedance.voiceRevisions||[])].reverse();
+ if(active&&validId(active)||!saved.has("final.mp4")&&!saved.has("final.webm")){
+  const versions=await bucket.list(owner+"/"+id+"/versions",{limit:100});
+  if(!versions.error){
+   const present=new Set((versions.data||[]).filter(x=>x.id!==null).map(x=>x.name));
+   const candidates=active?[
+    ...revisions.filter(v=>v.id===active),
+    ...revisions.filter(v=>v.id!==active)
+   ]:revisions;
+   for(const revision of candidates){
+    if(present.has(revision.id+"."+revision.extension))
+     return {path:renderPath(owner,id,revision.extension,revision.id),
+      extension:revision.extension};
+   }
+  }
+ }
+ for(const extension of ["mp4","webm"] as const)
+  if(saved.has("final."+extension))
+   return {path:renderPath(owner,id,extension),extension};
+ return null;
+}
 type ProjectSnapshot={
  id:string;plan:{prompt:string;title?:string;storyBible?:string;scenes:unknown[];frames:unknown[]};
  seedance:{prompt:string;tokens:string[];urls:string[];
@@ -124,10 +154,11 @@ export async function POST(req:NextRequest){
       if(!signed.error&&signed.data?.signedUrl)coverUrl=signed.data.signedUrl;
      }catch{}
     }
+    const ready=Boolean(await finishedRender(owner,id,project).catch(()=>null));
     return {id,title:String(project.plan.title||"Proyecto").slice(0,100),
      updatedAt:project.updatedAt||file.updated_at||"",
      clips:project.seedance.urls.filter(Boolean).length,
-     scenes:project.plan.frames.length,coverUrl};
+     scenes:project.plan.frames.length,coverUrl,ready};
    }));
    return reply({projects:loaded.filter(Boolean)});
   }catch{return reply({error:"motion_cloud_list_unavailable"},503);}
@@ -164,23 +195,17 @@ export async function POST(req:NextRequest){
   try{
    const project=await readProject(owner,body.id);
    if(!project)return reply({error:"motion_project_not_found"},404);
-   const active=project.seedance.activeRenderId||"";
-   const revision=active?project.seedance.voiceRevisions?.find(v=>v.id===active):undefined;
-   if(active&&!revision)return reply({error:"motion_render_revision_invalid"},409);
-   const extensions:("mp4"|"webm")[]=revision?[revision.extension]:["mp4","webm"];
-   for(const extension of extensions){
-    // Never sign arbitrary paths or revisions supplied by the caller.
-    const path=renderPath(owner,body.id,extension,revision?.id);
-    const filename="VMV-Motion-"+body.id.slice(0,8)+"."+extension;
-    const expiresIn=7*24*60*60;
-    const signed=await storage().from(RENDER_BUCKET).createSignedUrl(
-     path,expiresIn,{download:filename});
-    if(!signed.error&&signed.data?.signedUrl){
-     return reply({url:signed.data.signedUrl,filename,
-      expiresAt:new Date(Date.now()+expiresIn*1000).toISOString()});
-    }
-   }
-   return reply({error:"motion_render_not_found"},404);
+   const saved=await finishedRender(owner,body.id,project);
+   if(!saved)return reply({error:"motion_render_not_found"},404);
+   // The signed URL serves the exact uploaded file; it never recompresses.
+   const filename="VMV-Motion-"+body.id.slice(0,8)+"."+saved.extension;
+   const expiresIn=7*24*60*60;
+   const signed=await storage().from(RENDER_BUCKET).createSignedUrl(
+    saved.path,expiresIn,{download:filename});
+   if(!signed.error&&signed.data?.signedUrl)
+    return reply({url:signed.data.signedUrl,filename,
+     expiresAt:new Date(Date.now()+expiresIn*1000).toISOString()});
+   return reply({error:"motion_render_share_unavailable"},503);
   }catch{return reply({error:"motion_render_share_unavailable"},503);}
  }
  if(action==="render-url"){

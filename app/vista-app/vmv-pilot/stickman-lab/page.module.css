@@ -317,3 +317,21 @@
  border-radius:10px;padding:11px;color:#4c3b5e;font-size:12px}
 .libraryShareLink button{display:flex;align-items:center;gap:6px;border:0;border-radius:10px;
  background:#8651b5;color:white;font-size:12px;font-weight:800;padding:10px 15px;cursor:pointer}
+
+/* Desktop-safe share dialog: keep feedback adjacent to the action, not above the grid. */
+.libraryShareOverlay{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:20px}
+.libraryShareBackdrop{position:absolute;inset:0;border:0;background:#251a37ad;cursor:pointer}
+.libraryShareOverlay .librarySharePanel{position:relative;z-index:1;
+ width:min(100%,590px);margin:0;max-height:calc(100dvh - 40px);overflow:auto;
+ background:#fff;box-shadow:0 24px 76px #1f143554;border-radius:22px;padding:24px;gap:17px}
+.libraryShareHeader{gap:10px}
+.libraryShareHeader strong{font-size:16px}
+.libraryShareActions{display:flex;flex-wrap:wrap;gap:10px}
+.libraryShareActions a,.librarySharePrimary{display:inline-flex;align-items:center;
+ justify-content:center;text-align:center;border:1px solid #dac9ed;border-radius:11px;
+ background:#f6effd;color:#623995;padding:11px 14px;font:inherit;font-size:12px;
+ font-weight:800;text-decoration:none;cursor:pointer}
+.libraryShareActions a:hover,.librarySharePrimary:hover{background:#eee0fc}
+.libraryShareStatus{background:#f5eefb;padding:9px 12px;border-radius:10px}
+@media(max-width:520px){.libraryShareOverlay .librarySharePanel{padding:18px}
+ .libraryShareActions a{flex:1 1 42%}.libraryShareLink button{flex:1 1 100%;justify-content:center}}

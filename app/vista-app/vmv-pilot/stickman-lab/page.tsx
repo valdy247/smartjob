@@ -343,7 +343,7 @@ function readSeedance(prompt:string):SeedanceSaved{
 }
 function saveSeedance(value:SeedanceSaved){saveMotion(SEEDANCE_KEY,value);}
 type MotionProjectArchive={id:string;label:string;savedAt:number;plan:DirectorPlan;seedance:SeedanceSaved;cloudId?:string};
-type CloudMotionProject={id:string;title:string;updatedAt:string;clips:number;scenes:number;coverUrl?:string};
+type CloudMotionProject={id:string;title:string;updatedAt:string;clips:number;scenes:number;coverUrl?:string;ready?:boolean};
 type MotionPublishDraft={title:string;caption:string;hashtags:string;platform:string;
  scheduledFor:string;postedAt:string;views:number;leads:number;sales:number;
  revenueUsd:number;spendUsd:number};
@@ -771,6 +771,9 @@ export default function StickmanLabPage(){
  const [libraryShare,setLibraryShare]=useState<{id:string;url:string;filename:string;expiresAt:string}|null>(null);
  const [libraryShareBusy,setLibraryShareBusy]=useState("");
  const [libraryShareNotice,setLibraryShareNotice]=useState("");
+ const [libraryShareError,setLibraryShareError]=useState<"missing-video"|"no-project"|"unavailable"|null>(null);
+ const [libraryShareTargetId,setLibraryShareTargetId]=useState("");
+ const libraryShareInputRef=useRef<HTMLInputElement|null>(null);
  const [characterGuide,setCharacterGuide]=useState("");
  const [characterFrames,setCharacterFrames]=useState<DirectorFrame[]>([]);
  const [characterReferencePath,setCharacterReferencePath]=useState("");
@@ -875,7 +878,8 @@ export default function StickmanLabPage(){
     setCloudProjects(current=>{
      const entry:CloudMotionProject={id,title:saved.title||"Proyecto",
       updatedAt:String(result.updatedAt||""),clips:readSeedance(saved.prompt).urls.filter(Boolean).length,
-      scenes:saved.frames.length};
+      scenes:saved.frames.length,
+      ready:Boolean(lastRenderedCloudUrl)||Boolean(current.find(item=>item.id===id)?.ready)};
      return [entry,...current.filter(item=>item.id!==id)].slice(0,40);
     });
    }catch{if(!closed)setCloudStatus("Solo en este dispositivo · comprueba la conexión");}
@@ -903,6 +907,7 @@ export default function StickmanLabPage(){
  const shareLibraryVideo=useCallback(async(id:string)=>{
   if(libraryShareBusy)return;
   setLibraryShareBusy(id);setLibraryShare(null);setLibraryShareNotice("");
+  setLibraryShareError(null);setLibraryShareTargetId(id);
   try{
    const sb=getSupabase();if(!sb)throw Error("Inicia sesión para compartir el video.");
    const {data:{session}}=await sb.auth.getSession();
@@ -912,23 +917,34 @@ export default function StickmanLabPage(){
     throw Error("No se pudo crear un enlace de descarga seguro.");
    setLibraryShare({id,url:result.url,filename:String(result.filename||"VMV-Motion.mp4"),
     expiresAt:String(result.expiresAt||"")});
-   setLibraryShareNotice("Enlace creado. Solo la persona que lo reciba tendrá acceso al archivo.");
+   setLibraryShareNotice("Enlace creado: cualquiera que lo tenga podrá descargar el video durante 7 días.");
   }catch(e){
    const message=e instanceof Error?e.message:"";
-   setLibraryShareNotice(message==="motion_render_not_found"?
-    "Este proyecto todavía no tiene un video final guardado. Móntalo y guárdalo antes de compartir.":
-    message==="motion_project_not_found"?
-    "Primero guarda este proyecto y el video en la nube para compartirlo.":
-    "No se pudo crear el enlace de descarga. Inténtalo nuevamente.");
+   setLibraryShareError(message==="motion_render_not_found"?"missing-video":
+    message==="motion_project_not_found"?"no-project":"unavailable");
+   setLibraryShareNotice("");
+   if(message==="motion_render_not_found")
+    setCloudProjects(current=>current.map(item=>item.id===id?{...item,ready:false}:item));
   }finally{setLibraryShareBusy("");}
  },[libraryShareBusy]);
  const copyLibraryShare=useCallback(async()=>{
   if(!libraryShare)return;
   try{
+   if(!navigator.clipboard?.writeText)throw Error("clipboard_unavailable");
    await navigator.clipboard.writeText(libraryShare.url);
    setLibraryShareNotice("Enlace copiado. Puedes enviarlo por mensaje o correo.");
   }catch{
-   setLibraryShareNotice("Selecciona el enlace del campo y cópialo manualmente.");
+   const field=libraryShareInputRef.current;
+   if(field){
+    field.focus();field.select();
+    try{
+     if(document.execCommand("copy")){
+      setLibraryShareNotice("Enlace copiado. Ya puedes enviarlo.");
+      return;
+     }
+    }catch{}
+   }
+   setLibraryShareNotice("El enlace está seleccionado: pulsa Ctrl+C (o Cmd+C) para copiarlo.");
   }
  },[libraryShare]);
  const refreshLibrary=useCallback(async()=>{
@@ -1100,7 +1116,7 @@ export default function StickmanLabPage(){
   if(clipPreviewRef.current){URL.revokeObjectURL(clipPreviewRef.current);clipPreviewRef.current="";}
   setSelectedClipPreview("");setSelectedScene(0);
   setMusicFile(null);setAsmrEnabled(false);setMontageSeconds(60);setShareStatus("");
-  setLibraryShare(null);setLibraryShareNotice("");
+  setLibraryShare(null);setLibraryShareError(null);setLibraryShareNotice("");
   setVoicePreset("elevenlabs");setPilotVoiceId("");setVoiceEditorOpen(false);
   setVoiceRevisions([]);setActiveRenderId("");
   setDirectorStatus("");setError("");setPreviousScene(null);
@@ -1907,23 +1923,59 @@ export default function StickmanLabPage(){
       <button type="button" className={css.refreshLibrary} onClick={()=>void refreshLibrary()}
        aria-label="Actualizar biblioteca"><RotateCcw size={17}/></button>}
     </div>
-    {libraryShare?<div className={css.librarySharePanel} role="region" aria-label="Enlace para descargar video">
-      <div className={css.libraryShareHeader}>
-       <Share2 size={18}/><strong>Enlace de descarga sin compresión</strong>
-       <button type="button" className={css.ghostButton} onClick={()=>setLibraryShare(null)}>
-        Cerrar</button>
-      </div>
-      <p>Quien reciba este enlace puede descargar el archivo original ({libraryShare.filename})
-       sin registrarse. Caduca el {new Date(libraryShare.expiresAt).toLocaleString("es-US")}.
-       Cualquiera que tenga el enlace podrá acceder hasta que expire.</p>
-      <div className={css.libraryShareLink}>
-       <input type="text" aria-label="Enlace de descarga" readOnly value={libraryShare.url}
-        onFocus={e=>e.currentTarget.select()}/>
-       <button type="button" onClick={()=>void copyLibraryShare()}>
-        <Copy size={16}/> Copiar enlace</button>
+    {libraryShare||libraryShareError?
+     <div className={css.libraryShareOverlay}>
+      <button type="button" className={css.libraryShareBackdrop}
+       aria-label="Cerrar ventana de compartir"
+       onClick={()=>{setLibraryShare(null);setLibraryShareError(null);}}/>
+      <div className={css.librarySharePanel} role="dialog" aria-modal="true"
+       aria-label={libraryShare?"Compartir video":"Estado de video para compartir"}>
+       <div className={css.libraryShareHeader}>
+        <Share2 size={19}/>
+        <strong>{libraryShare?"Compartir video original":"Video pendiente de compartir"}</strong>
+        <button type="button" className={css.ghostButton}
+         onClick={()=>{setLibraryShare(null);setLibraryShareError(null);}}>Cerrar</button>
+       </div>
+       {libraryShare?<>
+        <p>Comparte el archivo original ({libraryShare.filename}), sin compresión adicional
+         y sin pedir que el destinatario inicie sesión. El enlace caduca el
+         {" "+new Date(libraryShare.expiresAt).toLocaleString("es-US")}.</p>
+        <div className={css.libraryShareLink}>
+         <input ref={libraryShareInputRef} type="text" aria-label="Enlace de descarga"
+          readOnly value={libraryShare.url} onFocus={e=>e.currentTarget.select()}/>
+         <button type="button" onClick={()=>void copyLibraryShare()}>
+          <Copy size={16}/> Copiar enlace</button>
+        </div>
+        <div className={css.libraryShareActions}>
+         <a href={"https://wa.me/?text="+encodeURIComponent("Descarga mi video de VMV Motion: "+libraryShare.url)}
+          target="_blank" rel="noopener noreferrer">Enviar por WhatsApp</a>
+         <a href={"mailto:?subject="+encodeURIComponent("Video de VMV Motion")+"&body="+
+          encodeURIComponent("Puedes descargar el video original aquí:\n"+libraryShare.url)}>
+          Enviar por correo</a>
+         <a href={libraryShare.url} target="_blank" rel="noopener noreferrer">
+          Probar descarga</a>
+        </div>
+       </>:<>
+        <p>{libraryShareError==="missing-video"?
+         "Las 12 animaciones pueden estar guardadas, pero todavía no existe un video final en la nube. Primero debes montarlo. No necesitas volver a generar los clips.":
+         libraryShareError==="no-project"?
+         "El proyecto aún no está disponible en la nube. Ábrelo y guarda el montaje antes de compartir.":
+         "No pudimos crear el enlace de descarga. Comprueba tu conexión y vuelve a intentarlo."}</p>
+        {libraryShareError!=="unavailable"?
+         <button type="button" className={css.librarySharePrimary}
+          onClick={()=>{
+           const id=libraryShareTargetId;
+           setLibraryShareError(null);setLibraryShare(null);
+           if(id===currentCloudId()){
+            setLibraryOpen(false);setStudioStep("editar");
+           }else if(id){
+            void restoreCloudProject(id);
+           }
+          }}>Abrir editor para montar</button>:null}
+       </>}
+       {libraryShareNotice?<p role="status" className={css.libraryShareStatus}>{libraryShareNotice}</p>:null}
       </div>
      </div>:null}
-    {libraryShareNotice?<p role="status" className={css.cloudState}>{libraryShareNotice}</p>:null}
     {cloudLoading?<div className={css.libraryLoading} role="status">
      <LoaderCircle size={24} className={css.spin}/> Cargando proyectos…
     </div>:null}
@@ -1941,10 +1993,14 @@ export default function StickmanLabPage(){
          <span className={css.libraryCardLink}>Continuar editando</span>
         </span>
        </button>
-       {savedClipCount===MOTION_SCENES?<button type="button" className={css.libraryVoiceAction}
+       {savedClipCount===MOTION_SCENES&&Boolean(lastRenderedCloudUrl)?<button type="button" className={css.libraryVoiceAction}
         disabled={Boolean(libraryShareBusy)} onClick={()=>void shareLibraryVideo(currentCloudId())}>
         {libraryShareBusy===currentCloudId()?<LoaderCircle size={16} className={css.spin}/>:<Share2 size={16}/>}
         Compartir enlace
+       </button>:null}
+       {savedClipCount===MOTION_SCENES&&!lastRenderedCloudUrl?<button type="button"
+        className={css.libraryVoiceAction} onClick={()=>{setLibraryOpen(false);setStudioStep("editar");}}>
+        <Clapperboard size={16}/> Montar para compartir
        </button>:null}
        {savedClipCount===MOTION_SCENES?<button className={css.libraryVoiceAction}
         type="button" onClick={()=>{setLibraryOpen(false);openVoiceEditor();}}>
@@ -1965,11 +2021,17 @@ export default function StickmanLabPage(){
           <span className={css.libraryCardLink}>Abrir proyecto</span>
          </span>
         </button>
-        {item.clips===MOTION_SCENES?<button type="button" className={css.libraryVoiceAction}
+        {item.ready?<button type="button" className={css.libraryVoiceAction}
          disabled={Boolean(libraryShareBusy)||cloudLoading||projectSwitching}
          onClick={()=>void shareLibraryVideo(item.id)}>
          {libraryShareBusy===item.id?<LoaderCircle size={16} className={css.spin}/>:<Share2 size={16}/>}
          Compartir enlace
+        </button>:null}
+        {item.clips===MOTION_SCENES&&!item.ready?<button type="button"
+         className={css.libraryVoiceAction}
+         disabled={cloudLoading||projectSwitching}
+         onClick={()=>void restoreCloudProject(item.id)}>
+         <Clapperboard size={16}/> Montar para compartir
         </button>:null}
         {item.clips===MOTION_SCENES?<button type="button" className={css.libraryVoiceAction}
          disabled={cloudLoading||projectSwitching}
@@ -1992,12 +2054,11 @@ export default function StickmanLabPage(){
           <span className={css.libraryCardLink}>Abrir proyecto</span>
          </span>
         </button>
-        {item.seedance.urls.filter(Boolean).length===MOTION_SCENES&&item.cloudId?
+        {item.seedance.urls.filter(Boolean).length===MOTION_SCENES?
          <button type="button" className={css.libraryVoiceAction}
-          disabled={Boolean(libraryShareBusy)||cloudLoading||projectSwitching}
-          onClick={()=>void shareLibraryVideo(item.cloudId!)}>
-          {libraryShareBusy===item.cloudId?<LoaderCircle size={16} className={css.spin}/>:<Share2 size={16}/>}
-          Compartir enlace
+          disabled={cloudLoading||projectSwitching}
+          onClick={()=>void restoreMotionProject(item.id)}>
+          <Clapperboard size={16}/> Abrir para compartir
          </button>:null}
         {item.seedance.urls.filter(Boolean).length===MOTION_SCENES?
          <button type="button" className={css.libraryVoiceAction}
