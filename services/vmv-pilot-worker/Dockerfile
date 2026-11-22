@@ -1,5 +1,6 @@
-FROM node:22-alpine
-RUN apk add --no-cache ffmpeg font-dejavu
+FROM node:22-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev --no-audit --no-fund
