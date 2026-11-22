@@ -66,3 +66,15 @@
 .ownEngine{margin-top:12px;font-size:12px}
 .labLink:hover,.ownEngine:hover{border-color:#b98dda;background:#fdfaff}
 .labLink:focus-visible,.ownEngine:focus-visible{outline:3px solid #9c67d1;outline-offset:2px}
+
+/* One continuous loading experience from the guided wizard to VMV Motion. */
+.transitionOverlay{position:fixed;z-index:1100;inset:0;display:flex;align-items:center;justify-content:center;
+ background:#f8f7fbee;backdrop-filter:blur(8px);padding:20px}
+.transitionCard{width:min(100%,360px);background:#fff;border:1px solid #e8def1;border-radius:25px;
+ box-shadow:0 23px 70px #47306416;display:flex;align-items:center;justify-content:center;
+ flex-direction:column;gap:12px;padding:39px 24px;text-align:center;color:#935ece}
+.transitionIcon{width:60px;height:60px;border:1px solid #e5d0f5;border-radius:19px;background:#f4e9fc;
+ display:grid;place-items:center;color:#8e57c3}
+.transitionCard>strong{font-size:16px;color:#392849;letter-spacing:-.03em;margin-top:4px;font-weight:850}
+.transitionCard>p{font-size:12px;color:#8b7e99;line-height:1.6;margin:0;max-width:255px}
+@media(prefers-reduced-motion:reduce){.transitionCard{transition:none}}
