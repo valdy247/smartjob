@@ -2322,8 +2322,8 @@ export default function StickmanLabPage(){
            if(value===30){setProjectNarration(false);setSubtitles(false);}
            if(customPrompt){const job=readSeedance(customPrompt);job.montageSeconds=value;
             saveSeedance(job);}}}>
-          <option value="30">30 segundos · Shorts</option>
-          <option value="60">60 segundos · original</option>
+          <option value="30">30 segundos · clips acelerados</option>
+          <option value="60">60 segundos · velocidad original</option>
          </select>
         </label>
         <label className={css.asmrOption}>
@@ -2331,13 +2331,15 @@ export default function StickmanLabPage(){
           disabled={directorBusy||seedBusy}
           onChange={e=>{const enabled=e.target.checked;setAsmrEnabled(enabled);
            if(enabled){setProjectNarration(false);setSubtitles(false);
-            setMontageSeconds(30);setVoiceEditorOpen(false);}
+            setVoiceEditorOpen(false);}
            if(customPrompt){const job=readSeedance(customPrompt);
             job.asmrEnabled=enabled;
-            if(enabled){job.narrationEnabled=false;job.montageSeconds=30;}
+            if(enabled){job.narrationEnabled=false;}
+            // ASMR can be mixed at either 30s or 60s. Never change the selected duration.
+            job.montageSeconds=montageSeconds;
             saveSeedance(job);}}}/>
           Sonidos ASMR con IA</span>
-         <small>ElevenLabs genera 6 efectos por video sin voz ni subtítulos. Puedes combinarlos con música de fondo. Requiere créditos y autorización.</small>
+         <small>Compatible con 30 o 60 segundos. En 60 segundos, ElevenLabs genera seis segmentos ASMR de 10 segundos. Puedes mezclarlos con tu música sin narración. Requiere autorización y créditos.</small>
         </label>
         <label className={css.asmrOption}>
          <span><input type="checkbox" checked={withVoice&&!asmrEnabled&&montageSeconds===60}
@@ -2367,7 +2369,7 @@ export default function StickmanLabPage(){
          </select>
         </label>
        </div>
-       <p>Sin voz de IA puedes añadir música y sonidos ASMR a la vez. La música debe ser tuya o estar autorizada. Los clips guardados se reutilizan, sin volver a animarlos. En 30 segundos se aceleran los 12 clips; los efectos ASMR nuevos consumen créditos de ElevenLabs.</p>
+       <p>Los 12 clips de 5 segundos se conservan: 60 segundos mantiene su velocidad original; 30 segundos acelera los clips en el montaje. Puedes combinar música autorizada y sonidos ASMR sin narración. Solo los efectos ASMR nuevos consumen créditos de ElevenLabs.</p>
       </details>
       {directorStatus?<p className={css.cloudState} role="status">{directorStatus}</p>:null}
       <button type="button" className={css.generate}

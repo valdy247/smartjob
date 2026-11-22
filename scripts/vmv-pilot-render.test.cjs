@@ -638,7 +638,8 @@ test("VMV Motion only runs paid narration with an explicit persisted opt-in",()=
  assert.match(page,/const speech=narrationEnabled\?await loadContinuousVoice/);
  assert.match(page,/latest\.narrationEnabled=narrationEnabled/);
  assert.match(page,/job\.narrationEnabled=enabled/);
- assert.match(page,/job\.narrationEnabled=false;job\.montageSeconds=30/);
+ assert.match(page,/if\(enabled\)\{job\.narrationEnabled=false;\}/);
+ assert.match(page,/job\.montageSeconds=montageSeconds/);
  assert.match(page,/Narración con voz IA/);
  assert.match(page,/Desactivada: no se generará narración/);
  assert.doesNotMatch(page,/setCustomMode\(true\);setWithVoice\(true\)/);
@@ -663,4 +664,22 @@ test("Library sharing appears only for saved render files and desktop uses a vis
  assert.match(page,/Probar descarga/);
  assert.match(page,/document\.execCommand\("copy"\)/);
  assert.match(css,/\.libraryShareOverlay\{position:fixed/);
+});
+
+test("VMV Motion allows 60-second ASMR and music without speeding up 12 saved clips",()=>{
+ const page=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ const sfx=read("app/api/video-generator/motion-sfx/route.ts");
+ const asmrControl=page.split('Sonidos ASMR con IA</span>')[0].split('onChange={e=>{const enabled=e.target.checked;').pop()||"";
+ assert.match(asmrControl,/setProjectNarration\(false\)/);
+ assert.doesNotMatch(asmrControl,/setMontageSeconds\(30\)/);
+ assert.match(asmrControl,/job\.montageSeconds=montageSeconds/);
+ assert.match(page,/const durationSeconds=seconds\/6/);
+ assert.match(page,/seconds:montageSeconds/);
+ assert.match(page,/video\.playbackRate=options\.seconds===30\?2:1/);
+ assert.match(page,/music:musicFile,musicVolume:musicVolume\/100/);
+ assert.match(page,/const effects=asmrEnabled\?await loadMotionSfx/);
+ assert.match(page,/60 segundos · velocidad original/);
+ assert.match(page,/seis segmentos ASMR de 10 segundos/);
+ assert.match(sfx,/!\[5,10\]\.includes\(duration\)/);
+ assert.doesNotMatch(page,/if\(enabled\)\{job\.narrationEnabled=false;job\.montageSeconds=30;/);
 });
