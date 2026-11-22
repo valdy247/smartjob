@@ -537,13 +537,13 @@ test("Library video voice change uses existing clips with a separate paid-confir
  assert.match(page,/const pending=voiceOnly\?\[\]/);
  assert.match(page,/if\(job\.urls\[beat\]\)continue/);
  assert.match(page,/loadContinuousVoice\(plan\.scenes\.map/);
- assert.match(page,/stitchSeedanceClips\(localUrls,speech,subtitles/);
+ assert.match(page,/stitchSeedanceClips\(localUrls,speech,asmrEnabled\?false:subtitles/);
  assert.match(speech,/openaiVoices=new Set\(\["alloy","nova","echo"\]\)/);
 });
 test("Changing a saved video's voice creates a new private render and retains the original",()=>{
  const page=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
  const api=read("app/api/video-generator/motion-library/route.ts");
- assert.match(page,/const revisionId=voiceOnly\?crypto\.randomUUID\(\):""/);
+ assert.match(page,/const revisionId=voiceOnly\|\|\(asmrEnabled&&Boolean\(seedJoined\)\)\?crypto\.randomUUID\(\):""/);
  assert.match(page,/voiceRevisions=\[/);
  assert.match(page,/action:"render-upload",id,extension,\.\.\.\(revisionId/);
  assert.match(page,/activeRenderId=revisionId/);
@@ -562,9 +562,26 @@ test("A new narration is billed only after all existing video clips can be downl
  assert.ok(start>=0&&finish>start);
  const montage=page.slice(start,finish);
  const download=montage.indexOf('localUrls.push(await loadSeedanceForStitching');
- const voice=montage.indexOf('const speech=withVoice?await loadContinuousVoice');
+ const voice=montage.indexOf('const speech=withVoice&&!asmrEnabled?await loadContinuousVoice');
  assert.ok(download>=0&&voice>download,
   "Existing MP4 retrieval must finish before new voice spending begins");
  assert.match(montage,/const pending=voiceOnly\?\[\]/);
  assert.match(montage,/if\(job\.urls\[beat\]\)continue/);
+});
+
+test("VMV Motion ASMR is a separate credit-confirmed audio-only path and preserves clips",()=>{
+ const page=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ const api=read("app/api/video-generator/motion-sfx/route.ts");
+ assert.match(page,/asmrEnabled/);
+ assert.match(page,/setWithVoice\(false\);setSubtitles\(false\);setMusicFile\(null\)/);
+ assert.match(page,/loadMotionSfx\(accessToken,customPrompt,plan.scenes/);
+ assert.match(page,/motionSfxCache\.set\(cacheKey,audio\)/);
+ assert.match(page,/video\.playbackRate=options\.seconds===30\?2:1/);
+ assert.match(page,/effectSources\.forEach\(\(source,index\)=>/);
+ assert.match(api,/authenticatedUser\(req\)/);
+ assert.match(api,/videoAllowed\(owner\)/);
+ assert.match(api,/body\?\.confirmCost!==true/);
+ assert.match(api,/eleven_text_to_sound_v3/);
+ assert.match(api,/duration_seconds:duration/);
+ assert.match(api,/Absolutely no speech, no narration, no vocals, no music/);
 });
