@@ -158,25 +158,54 @@ export async function POST(req:NextRequest){
    return reply({error:"video_status_unavailable"},503);
   }
  }
- if(body?.action!=="start"||body?.confirmCost!==true)return reply({error:"cost_confirmation_required"},400);
+ // Verify every scene before the first paid animation operation. This preflight
+ // only reads Supabase image references and configuration; it never calls Seedance.
+ const action=body?.action;
+ if(!["start","preflight"].includes(action))return reply({error:"invalid_motion_action"},400);
+ if(body?.confirmCost!==true)return reply({error:"cost_confirmation_required"},400);
  const prompt=typeof body?.prompt==="string"?body.prompt.trim():"";
- const beat=body?.beat;
- const imagePath=typeof body?.imagePath==="string"?body.imagePath:"";
- const motionPrompt=typeof body?.motionPrompt==="string"?body.motionPrompt.trim():"";
  const storyBible=typeof body?.storyBible==="string"?body.storyBible.trim():"";
- if(!imagePath.startsWith(owner+"/")||!/^[-a-z0-9/]+\.jpg$/.test(imagePath)||motionPrompt.length<18||motionPrompt.length>650||storyBible.length>1200)return reply({error:"storyboard_images_required"},400);
- if(!Number.isInteger(beat)||beat<0||beat>11)return reply({error:"invalid_scene_index"},400);
  if(prompt.length<8||prompt.length>2000)return reply({error:"invalid_video_prompt"},400);
+ if(storyBible.length>1200)return reply({error:"seedance_story_bible_too_long"},400);
  if(!process.env.SUPABASE_SERVICE_ROLE_KEY&&!process.env.OPENAI_API_KEY)
   return reply({error:"token_signing_secret_missing"},503);
+ if(!process.env.AI_GATEWAY_API_KEY)return reply({error:"ai_gateway_auth_not_configured"},503);
+ const clips=action==="preflight"?body?.clips:[body];
+ if(!Array.isArray(clips)||!clips.length||clips.length>12)
+  return reply({error:"invalid_scene_list"},400);
+ const validated:{beat:number;imagePath:string;motionPrompt:string}[]=[];
+ for(const item of clips){
+  const beat=item?.beat,imagePath=typeof item?.imagePath==="string"?item.imagePath:"";
+  const motionPrompt=typeof item?.motionPrompt==="string"?item.motionPrompt.trim():"";
+  if(!Number.isInteger(beat)||beat<0||beat>11)
+   return reply({error:"invalid_scene_index",beat},400);
+  if(!imagePath.startsWith(owner+"/"))
+   return reply({error:"seedance_image_owner_mismatch",beat},403);
+  if(!/^[-a-z0-9/]+\.jpg$/.test(imagePath))
+   return reply({error:"seedance_image_path_invalid",beat},400);
+  if(motionPrompt.length<18||motionPrompt.length>650)
+   return reply({error:"seedance_motion_prompt_invalid",beat,length:motionPrompt.length},400);
+  validated.push({beat,imagePath,motionPrompt});
+ }
+ // Check the entire storyboard before spending on the first animation.
+ const signedUrls:string[]=[];
+ for(const clip of validated){
+  try{
+   const signed=await videoDb().storage.from("vmv-motion-frames-preview").createSignedUrl(clip.imagePath,7200);
+   if(signed.error||!signed.data?.signedUrl)
+    return reply({error:"storyboard_image_missing",beat:clip.beat},409);
+   signedUrls.push(signed.data.signedUrl);
+  }catch{return reply({error:"image_storage_unavailable",beat:clip.beat},503);}
+ }
+ if(action==="preflight")return reply({ready:true,clips:validated.length,model:MODEL,estimatedCostUsd:Number((validated.length*COST_USD).toFixed(3))});
+ const {beat,imagePath,motionPrompt}=validated[0];
  // Private preview is already restricted to the explicitly allowlisted owner.
- // No daily test quota: the owner controls each paid generation via confirmCost.
+ // Only an explicit confirmed request can start a paid generation.
  try{
-  const signed=await videoDb().storage.from("vmv-motion-frames-preview").createSignedUrl(imagePath,7200);
-  if(signed.error||!signed.data?.signedUrl)return reply({error:"storyboard_image_missing"},409);
+  const signedUrl=signedUrls[0];
   const result=await startVideo({
    model:MODEL,
-   prompt:{image:signed.data.signedUrl,text:[
+   prompt:{image:signedUrl,text:[
     "Animate the supplied opening image as a five-second shot in its EXISTING genre and art style, whether documentary, cinematic, 3D, or cartoon.",
     "Preserve the image’s initial subject identities, material realism, art direction and layout THROUGH THIS SHOT, while allowing motion and logically required changes during the five seconds.",
     storyBible?"Common art direction and recurring character traits: "+storyBible:"",
