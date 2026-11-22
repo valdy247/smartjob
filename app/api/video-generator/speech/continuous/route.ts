@@ -19,7 +19,24 @@ function validAlignment(v:unknown):v is Alignment{
 export async function GET(req:NextRequest){
  const owner=await authenticatedUser(req);
  if(!owner||!videoAllowed(owner))return reply({error:"video_not_enabled_for_account"},403);
- return reply({configured:!!process.env.ELEVENLABS_API_KEY});
+ const key=process.env.ELEVENLABS_API_KEY;
+ if(!key)return reply({configured:false,error:"elevenlabs_not_configured_in_preview"},503);
+ const voiceId=process.env.ELEVENLABS_VOICE_ID||"21m00Tcm4TlvDq8ikWAM";
+ if(!/^[a-zA-Z0-9]{20}$/.test(voiceId))return reply({configured:false,error:"elevenlabs_voice_not_configured"},503);
+ try{
+  const check=await fetch("https://api.elevenlabs.io/v1/voices/"+voiceId,{
+   method:"GET",cache:"no-store",headers:{"xi-api-key":key},signal:AbortSignal.timeout(12000)
+  });
+  if(!check.ok){
+   console.warn("[vmv-elevenlabs] voice preflight status",check.status);
+   return reply({configured:false,error:check.status===401||check.status===403?
+    "elevenlabs_key_rejected":check.status===404?"elevenlabs_voice_unavailable":
+    "elevenlabs_voice_check_failed"},503);
+  }
+  return reply({configured:true});
+ }catch{
+  return reply({configured:false,error:"elevenlabs_voice_check_failed"},503);
+ }
 }
 export async function POST(req:NextRequest){
  const owner=await authenticatedUser(req);
@@ -44,10 +61,25 @@ export async function POST(req:NextRequest){
    signal:AbortSignal.timeout(110000)
   });
   if(!response.ok){
-   console.warn("[vmv-elevenlabs] upstream status",response.status);
-   return reply({error:response.status===401||response.status===403?"elevenlabs_key_rejected":
+   const detail=await response.json().catch(()=>null);
+   const reported=typeof detail?.detail?.status==="string"?detail.detail.status:
+    typeof detail?.detail?.error==="string"?detail.detail.error:
+    typeof detail?.error==="string"?detail.error:"";
+   // Log only a bounded provider error code, never prompts, API keys or full response payloads.
+   const providerCode=/^[a-z0-9_\\-]{1,70}$/i.test(reported)?reported:"unknown";
+   console.warn("[vmv-elevenlabs] upstream failure",{status:response.status,providerCode});
+   const knownCode=["voice_not_found","invalid_voice_id","model_not_found","model_access_denied",
+    "max_character_limit_exceeded","text_too_long","quota_exceeded","insufficient_credits",
+    "invalid_api_key","missing_api_key","invalid_request","invalid_output_format",
+    "invalid_output_format_for_model","feature_not_available","permission_denied"].includes(providerCode)?
+     providerCode:"unknown";
+   return reply({error:response.status===401?"elevenlabs_key_rejected":
     response.status===402?"elevenlabs_credits_required":
-    response.status===429?"elevenlabs_rate_limited":"elevenlabs_generation_failed"},response.status===429?429:502);
+    response.status===403?"elevenlabs_access_denied":
+    response.status===429?"elevenlabs_rate_limited":
+    ["voice_not_found","invalid_voice_id"].includes(knownCode)?"elevenlabs_voice_unavailable":
+    ["quota_exceeded","insufficient_credits"].includes(knownCode)?"elevenlabs_credits_required":
+    "elevenlabs_generation_failed",providerCode:knownCode,upstreamStatus:response.status},502);
   }
   const data=await response.json().catch(()=>null);
   const audio=typeof data?.audio_base64==="string"?data.audio_base64:"";
