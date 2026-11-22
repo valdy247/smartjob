@@ -274,6 +274,33 @@ async function makeImage(job,scene,reference){
  if(typeof image!=="string"||image.length<5000||image.length>13000000)throw Error("image_invalid");
  return Buffer.from(image,"base64");
 }
+async function validateSceneImage(job,scene,buffer){
+ const b64=buffer.toString("base64");
+ const response=await request(OPENAI+"/chat/completions",{
+  method:"POST",headers:{...auth("OPENAI_API_KEY"),"Content-Type":"application/json"},
+  body:JSON.stringify({model:"gpt-4.1-mini",temperature:0,max_tokens:180,
+   response_format:{type:"json_object"},
+   messages:[{role:"system",content:[
+    "You review one storyboard frame for a short video.",
+    "Confirm its main character, action and location match the scene's narration and visual description.",
+    "Reject frames that reveal a future subject, feature the wrong animal or contradict the narration.",
+    "Accept reasonable symbolic visuals, text-free cinematic staging and minor incidental artistic details.",
+    "Return JSON only: {\\\"valid\\\":true|false}. Do not infer unseen events."
+   ].join(" ")},
+   {role:"user",content:[
+    {type:"text",text:JSON.stringify({speech:scene.speech,imagePrompt:scene.imagePrompt,
+     artStyle:STYLE[job.style]})},
+    {type:"image_url",image_url:{url:"data:image/jpeg;base64,"+b64,detail:"low"}}
+   ]}]})
+ },45000);
+ if(!response.ok)throw Error("scene_visual_check_unavailable");
+ const data=await response.json();
+ let result;try{result=JSON.parse(data.choices[0].message.content);}catch{
+  throw Error("scene_visual_check_unavailable");
+ }
+ if(typeof result.valid!=="boolean")throw Error("scene_visual_check_unavailable");
+ return result.valid;
+}
 const timecode=seconds=>{
  const h=Math.floor(seconds/3600),m=Math.floor((seconds%3600)/60);
  const s=Math.floor(seconds%60),ms=Math.floor((seconds%1)*1000);
@@ -385,9 +412,16 @@ async function processJob(job){
    if(closing)throw Error("worker_stopping");
    const image=path.join(dir,"image-"+i+".jpg");
    if(!await restoreAsset(job,"image_"+i,image)){
-    const buf=await makeImage(job,scenes[i],
-     i>0&&["stickman","animated"].includes(job.style)?reference:null);
-    await writeFile(image,buf);
+    // Motion previews must represent THIS scene; never force the opening
+    // frame's cast into unrelated later reveals.
+    let accepted=null;
+    for(let attempt=0;attempt<2;attempt++){
+     const buf=await makeImage(job,scenes[i],null);
+     if(await validateSceneImage(job,scenes[i],buf)){accepted=buf;break;}
+     log("frame_rejected",{job:job.id,scene:i+1,attempt:attempt+1});
+    }
+    if(!accepted)throw Error("scene_visual_mismatch");
+    await writeFile(image,accepted);
     await persistAsset(job,"image_"+i,image,"image/jpeg");
    }
    if(i===0)reference=image;
