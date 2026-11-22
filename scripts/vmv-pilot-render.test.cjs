@@ -597,14 +597,14 @@ test("Private VMV Motion library can share original renders without sign-in or t
  assert.match(api,/createSignedUrl\(\s*saved\.path,expiresIn,\{download:filename\}\)/);
  assert.match(api,/const expiresIn=7\*24\*60\*60/);
  assert.match(api,/const saved=await finishedRender\(owner,body\.id,project\)/);
- assert.match(api,/active\?project\.seedance\.voiceRevisions\?\.find/);
+ assert.match(api,/const active=project\.seedance\.activeRenderId/);
  assert.match(api,/public:false/);
  assert.match(page,/item\.ready\?<button type="button"/);
  assert.match(page,/shareLibraryVideo\(item\.id\)/);
  assert.match(page,/shareLibraryVideo\(currentCloudId\(\)\)/);
  assert.match(page,/action:"render-share",id/);
  assert.match(page,/navigator\.clipboard\.writeText\(libraryShare\.url\)/);
- assert.match(page,/descargar el archivo original/);
+ assert.match(page,/Comparte el archivo original/);
  assert.doesNotMatch(api,/ffmpeg|transcode|MediaRecorder/);
 });
 
