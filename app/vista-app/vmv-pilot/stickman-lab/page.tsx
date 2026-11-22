@@ -258,6 +258,8 @@ function readSavedMotion(key:string):unknown{
 function saveMotion(key:string,value:unknown){
  try{sessionStorage.setItem(key,JSON.stringify(value));}catch{}
  try{localStorage.setItem(key+"-recovery",JSON.stringify({savedAt:Date.now(),data:value}));}catch{}
+ // Event is consumed by the mounted studio to debounce cloud backups.
+ if(typeof window!=="undefined")window.dispatchEvent(new Event("vmv-motion-saved"));
 }
 function readDirectorPlan(prompt:string):DirectorPlan|null{
  const d=readSavedMotion(DIRECTOR_PLAN_KEY) as Partial<DirectorPlan>|null;
@@ -308,7 +310,40 @@ function readSeedance(prompt:string):SeedanceSaved{
  return {prompt,tokens:[],urls:[]};
 }
 function saveSeedance(value:SeedanceSaved){saveMotion(SEEDANCE_KEY,value);}
-type MotionProjectArchive={id:string;label:string;savedAt:number;plan:DirectorPlan;seedance:SeedanceSaved};
+type MotionProjectArchive={id:string;label:string;savedAt:number;plan:DirectorPlan;seedance:SeedanceSaved;cloudId?:string};
+type CloudMotionProject={id:string;title:string;updatedAt:string;clips:number;scenes:number};
+type MotionPublishDraft={title:string;caption:string;hashtags:string;platform:string;
+ scheduledFor:string;postedAt:string;views:number;leads:number;sales:number};
+const EMPTY_PUBLISH:MotionPublishDraft={title:"",caption:"",hashtags:"",platform:"TikTok",
+ scheduledFor:"",postedAt:"",views:0,leads:0,sales:0};
+const CLOUD_ID_KEY="vmv-motion-cloud-project-v1";
+function currentCloudId():string{
+ try{
+  let id=localStorage.getItem(CLOUD_ID_KEY)||"";
+  if(!/^[0-9a-f-]{36}$/i.test(id)){id=crypto.randomUUID();localStorage.setItem(CLOUD_ID_KEY,id);}
+  return id;
+ }catch{return "";}
+}
+function setCloudId(id:string){
+ if(/^[0-9a-f-]{36}$/i.test(id))try{localStorage.setItem(CLOUD_ID_KEY,id);}catch{}
+}
+function publishStorageKey(id:string){return "vmv-motion-publish-"+id;}
+function readPublishDraft(id:string):MotionPublishDraft{
+ try{
+  const data=JSON.parse(localStorage.getItem(publishStorageKey(id))||"null");
+  if(data&&typeof data==="object")return {...EMPTY_PUBLISH,...data};
+ }catch{}
+ return {...EMPTY_PUBLISH};
+}
+async function motionLibrary(accessToken:string,body:Record<string,unknown>){
+ const response=await fetch("/api/video-generator/motion-library",{
+  method:"POST",cache:"no-store",headers:{"Content-Type":"application/json",
+   Authorization:"Bearer "+accessToken},body:JSON.stringify(body)
+ });
+ const result=await response.json().catch(()=>null);
+ if(!response.ok)throw Error(String(result?.error||"motion_library_unavailable"));
+ return result;
+}
 const MOTION_PROJECTS_KEY="vmv-motion-projects-v1";
 function archivedMotionProjects():MotionProjectArchive[]{
  try{
@@ -329,12 +364,13 @@ function archiveMotionProject(plan:DirectorPlan){
  const seedance=readSeedance(plan.prompt);
  const current=archivedMotionProjects().filter(item=>item.plan.prompt!==plan.prompt);
  const entry:MotionProjectArchive={id:crypto.randomUUID(),
-  label:plan.title||plan.prompt.slice(0,64),savedAt:Date.now(),plan,seedance};
+  label:plan.title||plan.prompt.slice(0,64),savedAt:Date.now(),plan,seedance,cloudId:currentCloudId()};
  try{
   localStorage.setItem(MOTION_PROJECTS_KEY,JSON.stringify([entry,...current].slice(0,10)));
  }catch{throw Error("No se pudo guardar una copia del proyecto anterior. No se inició una historia nueva para evitar perder clips.");}
 }
 function forgetActiveMotionProject(){
+ try{localStorage.removeItem(CLOUD_ID_KEY);}catch{}
  for(const key of [DIRECTOR_PLAN_KEY,SEEDANCE_KEY]){
   try{sessionStorage.removeItem(key);localStorage.removeItem(key+"-recovery");}catch{}
  }
@@ -554,6 +590,13 @@ export default function StickmanLabPage(){
  const [researchSource,setResearchSource]=useState<{scanId:string;videoId:string}|null>(null);
  const [customMode,setCustomMode]=useState(false);
  const [archivedProjects,setArchivedProjects]=useState<MotionProjectArchive[]>([]);
+ const [cloudProjects,setCloudProjects]=useState<CloudMotionProject[]>([]);
+ const [cloudStatus,setCloudStatus]=useState("Local");
+ const [cloudLoading,setCloudLoading]=useState(false);
+ const [studioStep,setStudioStep]=useState<"crear"|"revisar"|"editar"|"publicar">("crear");
+ const [publishDraft,setPublishDraft]=useState<MotionPublishDraft>({...EMPTY_PUBLISH});
+ const [lastRenderedCloudUrl,setLastRenderedCloudUrl]=useState("");
+
 
  const [terraStory,setTerraStory]=useState<StickmanStory|null>(null);
  const [language,setLanguage]=useState<StickmanLanguage>("es");
@@ -624,6 +667,89 @@ export default function StickmanLabPage(){
  },[topic,language,subtitles,customMode,customPrompt,terraStory]);
  useEffect(()=>()=>{if(urlRef.current)URL.revokeObjectURL(urlRef.current);if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);},[]);
  useEffect(()=>{setArchivedProjects(archivedMotionProjects());},[]);
+ // Debounced, owner-authenticated cloud backup. It never triggers generation.
+ useEffect(()=>{
+  if(auth!=="signed_in")return;
+  let closed=false;let timer:ReturnType<typeof setTimeout>|null=null;
+  const sync=async()=>{
+   const saved=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
+   if(!saved?.prompt||saved.scenes?.length!==MOTION_SCENES)return;
+   const sb=getSupabase();if(!sb)return;
+   const {data:{session}}=await sb.auth.getSession();
+   if(!session?.access_token)return;
+   const id=currentCloudId();if(!id)return;
+   setCloudStatus("Guardando…");
+   try{
+    const result=await motionLibrary(session.access_token,{action:"save",
+     project:{id,plan:saved,seedance:readSeedance(saved.prompt),publish:readPublishDraft(id)}});
+    if(closed)return;
+    setCloudStatus("En la nube");
+    setCloudProjects(current=>{
+     const entry:CloudMotionProject={id,title:saved.title||"Proyecto",
+      updatedAt:String(result.updatedAt||""),clips:readSeedance(saved.prompt).urls.filter(Boolean).length,
+      scenes:saved.frames.length};
+     return [entry,...current.filter(item=>item.id!==id)].slice(0,40);
+    });
+   }catch{if(!closed)setCloudStatus("Solo en este dispositivo · comprueba la conexión");}
+  };
+  const schedule=()=>{
+   if(timer)clearTimeout(timer);
+   timer=setTimeout(()=>{void sync();},1400);
+  };
+  window.addEventListener("vmv-motion-saved",schedule);
+  const load=async()=>{
+   const sb=getSupabase();if(!sb)return;
+   const {data:{session}}=await sb.auth.getSession();
+   if(!session?.access_token||closed)return;
+   setCloudLoading(true);
+   try{
+    const result=await motionLibrary(session.access_token,{action:"list"});
+    if(!closed)setCloudProjects(Array.isArray(result.projects)?result.projects:[]);
+   }catch{if(!closed)setCloudStatus("La biblioteca en la nube no respondió");}
+   if(!closed)setCloudLoading(false);
+  };
+  void load();schedule();
+  return()=>{closed=true;if(timer)clearTimeout(timer);
+   window.removeEventListener("vmv-motion-saved",schedule);};
+ },[auth]);
+ const updatePublish=useCallback((patch:Partial<MotionPublishDraft>)=>{
+  setPublishDraft(current=>{
+   const next={...current,...patch};
+   const id=currentCloudId();
+   if(id)try{localStorage.setItem(publishStorageKey(id),JSON.stringify(next));}catch{}
+   window.dispatchEvent(new Event("vmv-motion-saved"));
+   return next;
+  });
+ },[]);
+ const restoreCloudProject=useCallback(async(id:string)=>{
+  if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
+  const sb=getSupabase();if(!sb)return;
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session?.access_token)return;
+  setCloudLoading(true);setError("");
+  try{
+   const result=await motionLibrary(session.access_token,{action:"load",id});
+   const project=result.project as {id:string;plan:DirectorPlan;seedance:SeedanceSaved;
+    publish?:Partial<MotionPublishDraft>};
+   if(!project?.plan||!project.seedance)throw Error("Proyecto incompleto.");
+   const active=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
+   if(active?.prompt&&active.scenes?.length===MOTION_SCENES&&currentCloudId()!==id)
+    archiveMotionProject(active);
+   resetForProject(project.plan.prompt);
+   setCloudId(id);
+   saveDirectorPlan(project.plan);
+   saveSeedance(project.seedance);
+   const draft={...EMPTY_PUBLISH,...project.publish};
+   try{localStorage.setItem(publishStorageKey(id),JSON.stringify(draft));}catch{}
+   setPublishDraft(draft);
+   setDirectorPlan(project.plan);
+   setSavedClipCount(project.seedance.urls.filter(Boolean).length);
+   setStudioStep(project.seedance.urls.filter(Boolean).length===MOTION_SCENES?"editar":"revisar");
+   setCloudStatus("Proyecto recuperado");
+   setArchivedProjects(archivedMotionProjects());
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo recuperar el proyecto en la nube.");}
+  finally{setCloudLoading(false);}
+ },[resetForProject]);
  useEffect(()=>{
   try{
    const requestId=new URLSearchParams(window.location.search).get("pilotMotion");
@@ -646,7 +772,7 @@ export default function StickmanLabPage(){
     setResearchSource(handoff.researchScanId&&handoff.researchVideoId?{scanId:handoff.researchScanId,videoId:handoff.researchVideoId}:null);
     setDirectorPlan(readDirectorPlan(handoff.prompt));
     setSavedClipCount(readSeedance(handoff.prompt).urls.filter(Boolean).length);
-    setPilotAuto(true);return;
+    setPilotAuto(true);setStudioStep("revisar");return;
    }
    const saved=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
    if(saved?.prompt&&typeof saved.prompt==="string"&&saved.scenes?.length===MOTION_SCENES){
@@ -657,7 +783,8 @@ export default function StickmanLabPage(){
     setCustomPrompt(saved.prompt);setCustomMode(true);setWithVoice(true);
     setSavedClipCount(readSeedance(saved.prompt).urls.filter(Boolean).length);
     const plan=readDirectorPlan(saved.prompt);
-    if(plan)setDirectorPlan(plan);
+    if(plan){setDirectorPlan(plan);setStudioStep(recovered.urls.filter(Boolean).length===MOTION_SCENES?"editar":"revisar");}
+    setPublishDraft(readPublishDraft(currentCloudId()));
    }
   }catch{}
  },[]);
@@ -710,6 +837,7 @@ export default function StickmanLabPage(){
  },[auth,directorPlan?.prompt,refreshDirectorFrames]);
  const resetForProject=useCallback((prompt="")=>{
   setCustomPrompt(prompt);setCustomMode(true);setPilotAuto(false);
+  setStudioStep(prompt?"revisar":"crear");
   setResearchSource(null);setDirectorPlan(null);setTerraStory(null);
   setSeedUrls([]);setSavedClipCount(0);setSeedJoined("");
   setDirectorStatus("");setError("");setPreviousScene(null);
@@ -727,6 +855,7 @@ export default function StickmanLabPage(){
    if(active?.prompt&&active.scenes?.length===MOTION_SCENES)archiveMotionProject(active);
    forgetActiveMotionProject();
    resetForProject();
+   setPublishDraft({...EMPTY_PUBLISH});setLastRenderedCloudUrl("");
    setArchivedProjects(archivedMotionProjects());
    router.replace("/vista-app/vmv-pilot/stickman-lab");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo preservar el proyecto anterior.");}
@@ -739,11 +868,14 @@ export default function StickmanLabPage(){
    const active=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
    if(active?.prompt&&active.prompt!==selected.plan.prompt&&active.scenes?.length===MOTION_SCENES)
     archiveMotionProject(active);
+   resetForProject(selected.plan.prompt);
+   setCloudId(selected.cloudId||crypto.randomUUID());
    saveDirectorPlan(selected.plan);
    saveSeedance(selected.seedance);
-   resetForProject(selected.plan.prompt);
+   setPublishDraft(readPublishDraft(currentCloudId()));
    setDirectorPlan(selected.plan);
    setSavedClipCount(selected.seedance.urls.filter(Boolean).length);
+   setStudioStep(selected.seedance.urls.filter(Boolean).length===MOTION_SCENES?"editar":"revisar");
    const remaining=archivedMotionProjects().filter(item=>item.id!==id);
    try{localStorage.setItem(MOTION_PROJECTS_KEY,JSON.stringify(remaining));}catch{}
    setArchivedProjects(remaining);
@@ -831,6 +963,7 @@ export default function StickmanLabPage(){
     saveDirectorPlan(plan);setDirectorPlan({...plan,approved:[...plan.approved]});
    }
    setDirectorStatus(pilotAuto?"Storyboard listo · el piloto preparará las animaciones":"Revisa las 12 escenas y apruébalas antes de animar");
+   setStudioStep("revisar");
   }catch(e){
    setError(e instanceof Error?e.message:"No se pudieron preparar las imágenes.");
    setDirectorStatus("");
