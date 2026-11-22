@@ -88,6 +88,7 @@ export async function POST(req:NextRequest){
  if(len>4000)return reply({error:"request_too_large"},413);
  const body=await req.json().catch(()=>null);
  const prompt=typeof body?.prompt==="string"?body.prompt.trim():"";
+ const characterGuide=typeof body?.characterGuide==="string"?body.characterGuide.trim().slice(0,1100):"";
  if(prompt.length<8||prompt.length>2000||body?.confirmCost!==true)return reply({error:"invalid_motion_request"},400);
  if(!process.env.OPENAI_API_KEY)return reply({error:"openai_key_not_configured"},503);
  // Private preview is already restricted to the explicitly allowlisted owner.
@@ -130,7 +131,9 @@ export async function POST(req:NextRequest){
   }
   const spoken=narration.speech as string[];
   const visuals=await askOpenAI(visualSystem,JSON.stringify({
-   idea:prompt,title:narration.title,narrationForTimingOnly:spoken
+   idea:prompt,title:narration.title,narrationForTimingOnly:spoken,
+   reusableCharacterBible:characterGuide||undefined,
+   visualConsistencyInstruction:characterGuide?"Follow the supplied recurring character traits and palette, adapting scenes to the story without copying irrelevant props.":undefined
   }),9000);
   if(!Array.isArray(visuals.scenes)||visuals.scenes.length!==SCENE_COUNT){
    console.warn("[vmv-motion-director] invalid visual scenes",{count:Array.isArray(visuals.scenes)?visuals.scenes.length:null});
