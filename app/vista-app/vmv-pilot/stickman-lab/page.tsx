@@ -308,6 +308,35 @@ function readSeedance(prompt:string):SeedanceSaved{
  return {prompt,tokens:[],urls:[]};
 }
 function saveSeedance(value:SeedanceSaved){saveMotion(SEEDANCE_KEY,value);}
+type MotionProjectArchive={id:string;label:string;savedAt:number;plan:DirectorPlan;seedance:SeedanceSaved};
+const MOTION_PROJECTS_KEY="vmv-motion-projects-v1";
+function archivedMotionProjects():MotionProjectArchive[]{
+ try{
+  const raw=JSON.parse(localStorage.getItem(MOTION_PROJECTS_KEY)||"[]") as unknown;
+  if(!Array.isArray(raw))return [];
+  return raw.filter((v):v is MotionProjectArchive=>Boolean(v&&typeof v==="object"&&
+   typeof v.id==="string"&&typeof v.savedAt==="number"&&
+   Date.now()-v.savedAt>=0&&Date.now()-v.savedAt<MOTION_RECOVERY_MS&&
+   v.plan?.prompt&&Array.isArray(v.plan.scenes)&&v.plan.scenes.length===MOTION_SCENES&&
+   Array.isArray(v.plan.frames)&&v.seedance?.prompt===v.plan.prompt))
+   .slice(0,10);
+ }catch{return [];}
+}
+function archiveMotionProject(plan:DirectorPlan){
+ const seedance=readSeedance(plan.prompt);
+ const current=archivedMotionProjects().filter(item=>item.plan.prompt!==plan.prompt);
+ const entry:MotionProjectArchive={id:crypto.randomUUID(),
+  label:plan.title||plan.prompt.slice(0,64),savedAt:Date.now(),plan,seedance};
+ try{
+  localStorage.setItem(MOTION_PROJECTS_KEY,JSON.stringify([entry,...current].slice(0,10)));
+ }catch{throw Error("No se pudo guardar una copia del proyecto anterior. No se inició una historia nueva para evitar perder clips.");}
+}
+function forgetActiveMotionProject(){
+ for(const key of [DIRECTOR_PLAN_KEY,SEEDANCE_KEY]){
+  try{sessionStorage.removeItem(key);localStorage.removeItem(key+"-recovery");}catch{}
+ }
+}
+
 async function seedanceRequest(accessToken:string,body:Record<string,unknown>){
  let response:Response;
  try{
@@ -493,6 +522,8 @@ export default function StickmanLabPage(){
  const autoStartRef=useRef(false);
  const [researchSource,setResearchSource]=useState<{scanId:string;videoId:string}|null>(null);
  const [customMode,setCustomMode]=useState(false);
+ const [archivedProjects,setArchivedProjects]=useState<MotionProjectArchive[]>([]);
+
  const [terraStory,setTerraStory]=useState<StickmanStory|null>(null);
  const [language,setLanguage]=useState<StickmanLanguage>("es");
  const [subtitles,setSubtitles]=useState(true),[withVoice,setWithVoice]=useState(false);
@@ -556,6 +587,7 @@ export default function StickmanLabPage(){
   return()=>cancelAnimationFrame(raf);
  },[topic,language,subtitles,customMode,customPrompt,terraStory]);
  useEffect(()=>()=>{if(urlRef.current)URL.revokeObjectURL(urlRef.current);if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);},[]);
+ useEffect(()=>{setArchivedProjects(archivedMotionProjects());},[]);
  useEffect(()=>{
   try{
    const requestId=new URLSearchParams(window.location.search).get("pilotMotion");
@@ -566,8 +598,9 @@ export default function StickmanLabPage(){
     ["es","en"].includes(handoff.language)&&handoff.prompt.length>=8&&handoff.prompt.length<=2000){
     const old=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
     if(old?.prompt&&old.prompt!==handoff.prompt){
-     try{localStorage.setItem("vmv-motion-archive-"+handoff.requestId,
-      JSON.stringify({plan:old,seedance:readSeedance(old.prompt),savedAt:Date.now()}));}catch{}
+     archiveMotionProject(old);
+     forgetActiveMotionProject();
+     setArchivedProjects(archivedMotionProjects());
     }
     setCustomPrompt(handoff.prompt);setCustomMode(true);
     setLanguage(handoff.language as StickmanLanguage);
@@ -608,6 +641,44 @@ export default function StickmanLabPage(){
    }
   }catch{}
  },[]);
+ const resetForProject=useCallback((prompt="")=>{
+  setCustomPrompt(prompt);setCustomMode(true);setPilotAuto(false);
+  setResearchSource(null);setDirectorPlan(null);setTerraStory(null);
+  setSeedUrls([]);setSavedClipCount(0);setSeedJoined("");
+  setDirectorStatus("");setError("");setPreviousScene(null);
+  setWithVoice(true);setSubtitles(true);
+  autoStartRef.current=false;
+  pendingStoryboard.current={prompt:"",images:[]};
+  if(seedJoinedRef.current){URL.revokeObjectURL(seedJoinedRef.current);seedJoinedRef.current="";}
+ },[]);
+ const newMotionProject=useCallback(()=>{
+  if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
+  const active=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
+  try{
+   if(active?.prompt&&active.scenes?.length===MOTION_SCENES)archiveMotionProject(active);
+   forgetActiveMotionProject();
+   resetForProject();
+   setArchivedProjects(archivedMotionProjects());
+   router.replace("/vista-app/vmv-pilot/stickman-lab");
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo preservar el proyecto anterior.");}
+ },[resetForProject,router]);
+ const restoreMotionProject=useCallback((id:string)=>{
+  if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
+  const selected=archivedMotionProjects().find(item=>item.id===id);
+  if(!selected)return;
+  try{
+   const active=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
+   if(active?.prompt&&active.prompt!==selected.plan.prompt&&active.scenes?.length===MOTION_SCENES)
+    archiveMotionProject(active);
+   saveDirectorPlan(selected.plan);
+   saveSeedance(selected.seedance);
+   resetForProject(selected.plan.prompt);
+   setDirectorPlan(selected.plan);
+   setSavedClipCount(selected.seedance.urls.filter(Boolean).length);
+   setArchivedProjects(archivedMotionProjects().filter(item=>item.id!==id));
+   router.replace("/vista-app/vmv-pilot/stickman-lab");
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo recuperar el proyecto.");}
+ },[resetForProject,router]);
  const pollMinimax=useCallback(async(token:string,accessToken:string)=>{
   setMiniStage("MiniMax está animando los personajes");
   for(let i=0;i<120;i++){
@@ -903,6 +974,17 @@ export default function StickmanLabPage(){
     <strong>VMV Pilot</strong><span className={css.beta}>LAB</span>
    </header>
    <div className={css.intro}><h1>VMV Motion</h1><span>IA directora · Seedance · Historia continua</span></div>
+   <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:18}}>
+    <button type="button" className={css.generate}
+     style={{width:"auto",padding:"10px 16px",margin:0}}
+     disabled={directorBusy||seedBusy||rendering}
+     onClick={newMotionProject}>+ Nueva historia</button>
+    {archivedProjects.length?<select aria-label="Recuperar historia anterior"
+      defaultValue="" onChange={event=>{if(event.target.value)restoreMotionProject(event.target.value);}}>
+      <option value="" disabled>Recuperar historia anterior</option>
+      {archivedProjects.map(item=><option key={item.id} value={item.id}>{item.label.slice(0,65)}</option>)}
+     </select>:null}
+   </div>
    <div className={css.modeRow}>
     <button type="button" className={customMode?css.modeActive:""} disabled={rendering}
      onClick={()=>{setCustomMode(true);setWithVoice(true);}}>Tu historia</button>
