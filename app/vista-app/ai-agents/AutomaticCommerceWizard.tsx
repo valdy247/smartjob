@@ -118,7 +118,7 @@ export default function AutomaticCommerceWizard({business,agent,onAgentUpdated,o
    <button type="button" className={styles.primary+" "+theme.agentButton}
     disabled={busy} onClick={step==="review"?()=>void save():next}>
     {busy?<LoaderCircle size={17}/>:step==="review"?<ShieldCheck size={17}/>:<ArrowRight size={17}/>}
-    {step==="review"?"Guardar y abrir":"Continuar"}
+    {step==="review"?"Guardar y abrir":null}
    </button>
   </div>:null}
  </section>;
