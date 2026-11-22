@@ -184,7 +184,7 @@ async function minimaxRequest(accessToken:string,body:Record<string,unknown>){
 
 const MOTION_SCENES=12;
 type DirectorBeat={speech:string;caption:string;imagePrompt:string;motionPrompt:string};
-type DirectorFrame={imageUrl:string;referencePath:string};
+type DirectorFrame={imageUrl:string;referencePath:string;prompt?:string};
 type DirectorPlan={prompt:string;title:string;storyBible:string;scenes:DirectorBeat[];frames:DirectorFrame[];
  approved?:boolean[];draftPrompts?:string[];previous?:Record<string,DirectorFrame[]>};
 const DIRECTOR_PLAN_KEY="vmv-motion-director-plan-v5-60s";
@@ -696,7 +696,7 @@ export default function StickmanLabPage(){
     <span>¿Qué quieres contar?</span>
     <textarea disabled={rendering||directorBusy} value={customPrompt} maxLength={2000} rows={4}
      placeholder="Ejemplo: Un pequeño elefante busca agua en la selva. Encuentra un río y ayuda a sus amigos a beber."
-     onChange={e=>{setCustomPrompt(e.target.value);setTerraStory(null);setDirectorPlan(null);setSeedUrls([]);pendingStoryboard.current={prompt:"",images:[]};}}/>
+     onChange={e=>{setCustomPrompt(e.target.value);setTerraStory(null);setDirectorPlan(null);setSeedUrls([]);setPreviousScene(null);pendingStoryboard.current={prompt:"",images:[]};}}/>
     <small>{customPrompt.length}/2000 · Video de 60 segundos con IA</small>
    </label>:<div className={css.topics}>
     <button type="button" className={topic==="space"?css.active:""}
@@ -753,13 +753,73 @@ export default function StickmanLabPage(){
       <video src={miniUrl} controls playsInline preload="metadata"/>
       <a href={miniUrl} target="_blank" rel="noreferrer"><Download size={16}/>Abrir MP4 para guardar</a>
      </div>:null}
-    {customMode?<button className={css.generate} type="button"
+    {customMode&&!directorPlan?.frames.length?<button className={css.generate} type="button"
      disabled={directorBusy||seedBusy||rendering||customPrompt.trim().length<8}
-     onClick={()=>void createCompleteVideo()}>
+     onClick={()=>void prepareStoryboard()}>
      {directorBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
-     {directorBusy?directorStatus:"Generar video"}
+     {directorBusy?directorStatus:"Generar imágenes y revisar"}
     </button>:null}
-    {customMode?<small>Un solo proceso: IA directora, 12 imágenes independientes, 12 animaciones Seedance y video final. El clic autoriza los costos de OpenAI y ~US$1.24 de Seedance a 720p, sin reintentos automáticos. Si falla, el mismo botón reanuda lo ya generado.</small>:null}
+    {customMode&&directorPlan?.frames.length?<section className={css.storyReview} aria-label="Revisión de escenas">
+     <div className={css.storyHeading}>
+      <h2>Revisa antes de animar</h2>
+      <p>{directorPlan.title} · {directorPlan.frames.length}/{MOTION_SCENES} imágenes ·
+       {(directorPlan.approved||[]).filter(Boolean).length}/{MOTION_SCENES} aprobadas</p>
+     </div>
+     {directorPlan.scenes.map((scene,index)=>{
+      const frame=directorPlan.frames[index];
+      const history=directorPlan.previous?.[index]||[];
+      const older=history[history.length-1];
+      const viewingOld=previousScene===index&&!!older;
+      const draft=directorPlan.draftPrompts?.[index]??scene.imagePrompt;
+      const approved=directorPlan.approved?.[index]===true&&draft===scene.imagePrompt;
+      return <article className={css.sceneCard} key={index}>
+       <h3>Escena {index+1} <span>{index*5}–{(index+1)*5} s {approved?"· Aprobada":""}</span></h3>
+       <div className={css.sceneBody}>
+        <div className={css.sceneVisual}>
+         {frame?<img src={viewingOld?older.imageUrl:frame.imageUrl}
+          alt={"Fotograma "+(index+1)+(viewingOld?" anterior":" actual")} loading="lazy"/>:
+          <div className={css.sceneEmpty}>Imagen pendiente</div>}
+         {viewingOld?<small>Versión anterior</small>:null}
+        </div>
+        <div className={css.sceneDescription}>
+         <strong>Narración</strong>
+         <p>{scene.speech}</p>
+         <label htmlFor={"motion-prompt-"+index}>Prompt de imagen</label>
+         <textarea id={"motion-prompt-"+index} value={draft} maxLength={1700} rows={4}
+          disabled={directorBusy||seedBusy} onChange={e=>updateScenePrompt(index,e.target.value)}/>
+         <div className={css.sceneActions}>
+          <button type="button" disabled={!frame||directorBusy||seedBusy}
+           onClick={()=>void regenerateScene(index)}>
+           {regeneratingScene===index?<LoaderCircle className={css.spin} size={15}/>:<RotateCcw size={15}/>}
+           Regenerar
+          </button>
+          {older?<button type="button" disabled={directorBusy||seedBusy}
+           onClick={()=>setPreviousScene(viewingOld?null:index)}>
+           {viewingOld?"Volver a actual":"Ver anterior"}</button>:null}
+          {viewingOld?<button type="button" disabled={directorBusy||seedBusy}
+           onClick={()=>restorePrevious(index)}>Restaurar anterior</button>:null}
+          <button type="button" className={approved?css.approved:""}
+           disabled={!frame||viewingOld||directorBusy||seedBusy||draft!==scene.imagePrompt}
+           onClick={()=>approveScene(index)}><Check size={15}/>{approved?"Aprobada":"Aprobar"}</button>
+         </div>
+        </div>
+       </div>
+      </article>;
+     })}
+     {directorPlan.frames.length<MOTION_SCENES?<button type="button" className={css.generate}
+      disabled={directorBusy} onClick={()=>void prepareStoryboard()}>
+      {directorBusy?directorStatus:"Continuar generando las imágenes pendientes"}</button>:null}
+     {directorPlan.frames.length===MOTION_SCENES?<button type="button" className={css.generate}
+      disabled={directorBusy||seedBusy||regeneratingScene!==null||
+       !directorPlan.scenes.every((scene,i)=>directorPlan.approved?.[i]===true&&
+        (directorPlan.draftPrompts?.[i]??scene.imagePrompt)===scene.imagePrompt)}
+      onClick={()=>void animateApproved()}>
+      {directorBusy?directorStatus:"Dar movimiento · Seedance 720p"}
+     </button>:null}
+     <small>Seedance se inicia solo tras aprobar todas las escenas. Regenerar imágenes consume créditos de OpenAI.
+      Animar 12 clips cuesta aproximadamente US$1.24 de Seedance, más imágenes y voz opcional.
+      Si se interrumpe, se conservan los clips completados.</small>
+    </section>:null}
     {customMode&&seedJoined?<div className={css.result}>
      <div className={css.resultTitle}><Check size={18}/><strong>Video terminado · 60 segundos</strong></div>
      <video src={seedJoined} controls playsInline/>
