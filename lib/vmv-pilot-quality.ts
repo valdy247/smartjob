@@ -1,8 +1,8 @@
 export type PilotQuality="turbo"|"high"|"compare";
 export type PilotVariant="turbo"|"high";
 export const pilotQualityOptions=[
- {id:"turbo",name:"Turbo",model:"gen4_turbo",centsPerSecond:5},
- {id:"high",name:"Alta",model:"gen4.5",centsPerSecond:12},
+ {id:"turbo",name:"Turbo",model:"seedance-v1.0-pro-fast",centsPerSecond:5},
+ {id:"high",name:"Alta",model:"seedance-v1.0-pro",centsPerSecond:12},
  {id:"compare",name:"Probar ambas",model:"both",centsPerSecond:17}
 ] as const;
 export const validPilotQuality=(value:unknown):value is PilotQuality=>
