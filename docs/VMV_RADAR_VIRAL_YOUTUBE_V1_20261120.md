@@ -48,3 +48,11 @@ En Vercel (proyecto `smartjob`, Preview de esta rama) **NO está configurada** `
 Modelo normalizado interno `RadarVideo` y fuente `source=youtube`. Añadir Instagram/TikTok como adaptadores de fuente **solo después** de autenticar/autorizar el acceso, verificar su política y aislar los datos por negocio. No tratar estadísticas de diferentes plataformas como directamente comparables.
 
 No habilitar investigación recurrente ni publicación autónoma hasta contar con cuotas, consentimientos, auditoría de APIs y un botón global de pausa con efecto real en el servidor.
+
+## Actualización del Preview (22 de noviembre de 2026)
+- Investigación limitada a 20 búsquedas nuevas por ventana móvil de 24 horas en la cuenta de prueba permitida, en lugar de 6.
+- Una investigación fallida no descuenta cuota. Una investigación pendiente o completada sí descuenta.
+- El mismo tema y periodo se cachea durante seis horas; la interfaz lo señala como resultado guardado.
+- En VMV Pilot se puede seleccionar la ventana de 7, 30 o 90 días. Cambiar la ventana busca un conjunto de fuentes potencialmente diferente y descuenta cuota si no hay caché.
+- Ante el límite se puede seguir creando contenido sobre el tema escrito por el usuario sin usar Radar.
+- El límite se debe revisar por plan y disponibilidad de la API de YouTube antes de habilitar usuarios adicionales.

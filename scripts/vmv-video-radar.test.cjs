@@ -119,3 +119,24 @@ test("Pilot trends distinguish AI ideas from genuine source video titles and vie
  assert.match(styles,/\.sourceCard/);
  assert.match(styles,/\.disclosure/);
 });
+
+test("Pilot Radar explains cached searches, allows alternate periods and honors owner-provided themes",()=>{
+ const api=read("app/api/video-generator/radar/route.ts");
+ const pilot=read("app/vista-app/vmv-pilot/PilotTrendStep.tsx");
+ const radar=read("app/vista-app/video-generator/ViralRadar.tsx");
+ const css=read("app/vista-app/vmv-pilot/PilotTrendStep.module.css");
+ const quota=read("supabase/sql/vmv_video_radar_quota_20261122.sql");
+ assert.match(api,/reused:true/);
+ assert.match(api,/reused:false/);
+ assert.match(pilot,/\(\[7,30,90\] as const\)/);
+ assert.match(pilot,/setCached\(initial\.reused===true\)/);
+ assert.match(pilot,/Resultados guardados \(6 horas\)/);
+ assert.match(pilot,/Crear con mi tema sin análisis/);
+ assert.match(pilot,/Crear con mi tema sin investigar/);
+ assert.match(pilot,/20 investigaciones nuevas por 24 horas/);
+ assert.match(radar,/Máx\. 20 búsquedas nuevas\/24 h/);
+ assert.match(css,/\.periodPicker/);
+ assert.match(quota,/IF used>=20 THEN RAISE EXCEPTION 'radar_daily_limit'/);
+ assert.match(quota,/status IN \('ready','pending'\)/);
+ assert.match(quota,/GRANT EXECUTE ON FUNCTION public\.vmv_video_radar_claim/);
+});
