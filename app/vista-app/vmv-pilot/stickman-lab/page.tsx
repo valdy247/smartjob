@@ -647,6 +647,8 @@ export default function StickmanLabPage(){
  const [musicFile,setMusicFile]=useState<File|null>(null);
  const [shareStatus,setShareStatus]=useState("");
  const [characterGuide,setCharacterGuide]=useState("");
+ const [characterFrames,setCharacterFrames]=useState<DirectorFrame[]>([]);
+ const [characterReferencePath,setCharacterReferencePath]=useState("");
  const [selectedClipPreview,setSelectedClipPreview]=useState("");
  const clipPreviewRef=useRef("");
 
@@ -783,7 +785,17 @@ export default function StickmanLabPage(){
    if(!guide)throw Error("Ese proyecto no tiene una guía visual guardada.");
    setCharacterGuide(guide);
    try{localStorage.setItem("vmv-motion-character-guide-v1",guide);}catch{}
-   setShareStatus("Personajes y estilo de referencia preparados. Se aplicarán a la nueva historia.");
+   const frames=Array.isArray(result.project?.plan?.frames)?
+    result.project.plan.frames as DirectorFrame[]:[];
+   const previews=await Promise.all(frames.slice(0,12).map(async frame=>{
+    try{
+     const signed=await directorCall(session.access_token,"/api/video-generator/motion-image",
+      {action:"preview",referencePath:frame.referencePath});
+     return {...frame,imageUrl:signed.imageUrl as string};
+    }catch{return frame;}
+   }));
+   setCharacterFrames(previews);setCharacterReferencePath("");
+   setShareStatus("Selecciona un fotograma que muestre bien al personaje que deseas conservar.");
   }catch(e){setError(e instanceof Error?e.message:"No se encontró la guía de personajes.");}
  },[]);
  const previewSelectedClip=useCallback(async(index:number)=>{
@@ -1051,6 +1063,7 @@ export default function StickmanLabPage(){
     setDirectorStatus("Creando imagen "+(i+1)+"/"+MOTION_SCENES);
     const image=await directorCall(accessToken,"/api/video-generator/motion-image",{
      mode:"storyframe",
+     ...(characterReferencePath?{referencePath:characterReferencePath,referenceMode:"character"}:{}),
      prompt:["GLOBAL ART DIRECTION AND RECURRING CHARACTER TRAITS: "+plan.storyBible,
       "THIS SHOT ONLY: "+plan.scenes[i].imagePrompt,
       "Draw only this shot. Preserve the same recurring cast and art style, without copying unrelated objects from other scenes."].join(" ").slice(0,1750)
@@ -1070,7 +1083,7 @@ export default function StickmanLabPage(){
    setError(e instanceof Error?e.message:"No se pudieron preparar las imágenes.");
    setDirectorStatus("");
   }finally{directorBusyRef.current=false;setDirectorBusy(false);}
- },[customPrompt,pilotAuto,researchSource,characterGuide]);
+ },[customPrompt,pilotAuto,researchSource,characterGuide,characterReferencePath]);
  const beginSpeechEdit=useCallback((index:number)=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
   const plan=readDirectorPlan(customPrompt);
@@ -1576,6 +1589,20 @@ export default function StickmanLabPage(){
       <option value="">Usar personajes de un proyecto…</option>
       {cloudProjects.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}
      </select>:null}
+     {characterFrames.length?<div>
+      <p>Referencia visual opcional: selecciona una imagen donde se vea claramente el personaje.</p>
+      <div className={css.shotStrip} role="group" aria-label="Referencias de personajes">
+       {characterFrames.map((frame,index)=><button key={frame.referencePath}
+        type="button" aria-pressed={characterReferencePath===frame.referencePath}
+        className={characterReferencePath===frame.referencePath?css.shotSelected:""}
+        onClick={()=>setCharacterReferencePath(current=>
+         current===frame.referencePath?"":frame.referencePath)}>
+        <img src={frame.imageUrl} alt={"Referencia de personaje "+(index+1)}/>
+        <span>Fotograma {index+1}</span>
+       </button>)}
+      </div>
+      {characterReferencePath?<small>Esta referencia orientará las nuevas imágenes. La edición con imagen puede incrementar el costo de OpenAI.</small>:null}
+     </div>:null}
      <textarea value={characterGuide} maxLength={1100} rows={3}
       aria-label="Guía visual de personajes"
       placeholder="Rostro, peinado, ropa, colores, proporciones y estilo de los personajes recurrentes…"
