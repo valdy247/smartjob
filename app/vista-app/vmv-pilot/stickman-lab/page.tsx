@@ -1518,9 +1518,9 @@ export default function StickmanLabPage(){
     }
     if(!completed)throw Error("La escena "+(beat+1)+" continúa procesándose. Pulsa Dar movimiento para recuperar su estado.");
    }
-   setDirectorStatus("Preparando narración, subtítulos y montaje");
-   const speech=withVoice?await loadContinuousVoice(plan.scenes.map(scene=>scene.speech),
-    provider,selectedVoiceId):null;
+   // Verify all twelve stored MP4s BEFORE the provider charges new voice
+   // credits. A missing expired clip must never result in paid orphan narration.
+   setDirectorStatus("Verificando los 12 clips guardados · sin cargo");
    const localUrls:string[]=[];
    let video:Blob,extension:"mp4"|"webm";
    try{
@@ -1528,6 +1528,11 @@ export default function StickmanLabPage(){
      setDirectorStatus("Recuperando MP4 guardado "+(i+1)+"/"+MOTION_SCENES+" · sin regenerar");
      localUrls.push(await loadSeedanceForStitching(accessToken,job.tokens[i],job.urls[i],i));
     }
+    setDirectorStatus(voiceOnly?"Generando únicamente la nueva voz…":
+     "Preparando narración, subtítulos y montaje");
+    const speech=withVoice?await loadContinuousVoice(plan.scenes.map(scene=>scene.speech),
+     provider,selectedVoiceId):null;
+    setDirectorStatus("Montando el video con la nueva narración…");
     ({blob:video,extension}=await stitchSeedanceClips(localUrls,speech,subtitles,{
      music:musicFile,musicVolume:musicVolume/100,
      voiceVolume:narrationVolume/100,fadeSeconds
