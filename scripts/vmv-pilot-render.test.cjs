@@ -543,7 +543,7 @@ test("Library video voice change uses existing clips with a separate paid-confir
 test("Changing a saved video's voice creates a new private render and retains the original",()=>{
  const page=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
  const api=read("app/api/video-generator/motion-library/route.ts");
- assert.match(page,/const revisionId=voiceOnly\|\|\(asmrEnabled&&Boolean\(seedJoined\)\)\?crypto\.randomUUID\(\):""/);
+ assert.match(page,/const revisionId=crypto\.randomUUID\(\)/);
  assert.match(page,/voiceRevisions=\[/);
  assert.match(page,/action:"render-upload",id,extension,\.\.\.\(revisionId/);
  assert.match(page,/activeRenderId=revisionId/);
