@@ -301,10 +301,23 @@ async function directorCall(accessToken:string,endpoint:string,data:Record<strin
  );
  return result;
 }
+type VoicePreset="elevenlabs"|"alloy"|"nova"|"echo";
+type SavedVoiceRevision={id:string;extension:"mp4"|"webm";voice:string;createdAt:string};
 type SeedanceSaved={prompt:string;tokens:string[];urls:string[];
  clipPrompt?:string[];needsMotion?:boolean[];
  history?:Record<string,{token:string;url:string}[]>;
- draftTokens?:Record<string,string>};
+ draftTokens?:Record<string,string>;
+ voicePreset?:VoicePreset;elevenVoiceId?:string;
+ voiceRevisions?:SavedVoiceRevision[];activeRenderId?:string};
+const VOICE_CHOICES:{id:VoicePreset;label:string;detail:string}[]=[
+ {id:"alloy",label:"Alloy",detail:"Equilibrada y natural"},
+ {id:"nova",label:"Nova",detail:"Cálida y expresiva"},
+ {id:"echo",label:"Echo",detail:"Profunda y serena"},
+ {id:"elevenlabs",label:"ElevenLabs",detail:"Voz configurada en tu estudio"}
+];
+function selectedVoiceName(preset:VoicePreset):string{
+ return VOICE_CHOICES.find(choice=>choice.id===preset)?.label||"Narración";
+}
 const SEEDANCE_KEY="vmv-motion-seedance-director-v5-60s";
 function readSeedance(prompt:string):SeedanceSaved{
  const state=readSavedMotion(SEEDANCE_KEY) as Partial<SeedanceSaved>|null;
@@ -313,7 +326,12 @@ function readSeedance(prompt:string):SeedanceSaved{
    clipPrompt:Array.isArray(state.clipPrompt)?state.clipPrompt:[],
    needsMotion:Array.isArray(state.needsMotion)?state.needsMotion:[],
    history:state.history&&typeof state.history==="object"?state.history:{},
-   draftTokens:state.draftTokens&&typeof state.draftTokens==="object"?state.draftTokens:{}};
+   draftTokens:state.draftTokens&&typeof state.draftTokens==="object"?state.draftTokens:{},
+   voicePreset:["alloy","nova","echo","elevenlabs"].includes(String(state.voicePreset))?
+    state.voicePreset:"elevenlabs",
+   elevenVoiceId:typeof state.elevenVoiceId==="string"?state.elevenVoiceId:"",
+   voiceRevisions:Array.isArray(state.voiceRevisions)?state.voiceRevisions:[],
+   activeRenderId:typeof state.activeRenderId==="string"?state.activeRenderId:""};
  return {prompt,tokens:[],urls:[]};
 }
 function saveSeedance(value:SeedanceSaved){saveMotion(SEEDANCE_KEY,value);}
@@ -638,6 +656,10 @@ export default function StickmanLabPage(){
  const [pilotAuto,setPilotAuto]=useState(false);
  const [pilotVoiceProvider,setPilotVoiceProvider]=useState<"openai"|"elevenlabs">("elevenlabs");
  const [pilotVoiceId,setPilotVoiceId]=useState("");
+ const [voicePreset,setVoicePreset]=useState<VoicePreset>("elevenlabs");
+ const [voiceEditorOpen,setVoiceEditorOpen]=useState(false);
+ const [voiceRevisions,setVoiceRevisions]=useState<SavedVoiceRevision[]>([]);
+ const [activeRenderId,setActiveRenderId]=useState("");
  const autoStartRef=useRef(false);
  const [researchSource,setResearchSource]=useState<{scanId:string;videoId:string}|null>(null);
  const [customMode,setCustomMode]=useState(false);
