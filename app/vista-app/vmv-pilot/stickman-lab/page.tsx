@@ -49,11 +49,14 @@ async function loadVoice(phrases:string[],voice:"alloy"|"nova"):Promise<ArrayBuf
   return base64ToBuffer(item.audio);
  });
 }
-async function createTerraStory(prompt:string):Promise<StickmanStory>{
+type PendingStoryboard={prompt:string;data?:{title?:string;scenes:Array<{speech:string;caption:string;imagePrompt:string;camera?:{focusX:number;focusY:number;startZoom:number;endZoom:number}}>};images:StickmanStory["scenes"][number][]};
+async function createTerraStory(prompt:string,pending:PendingStoryboard):Promise<StickmanStory>{
  const sb=getSupabase();
  if(!sb)throw Error("Inicia sesión para generar con OpenAI.");
  const {data:{session}}=await sb.auth.getSession();
- if(!session?.access_token)throw Error("Inicia sesión para generar con Terra.");
+ if(!session?.access_token)throw Error("Inicia sesión para generar con OpenAI.");
+ if(pending.prompt!==prompt){pending.prompt=prompt;pending.data=undefined;pending.images=[];}
+ if(!pending.data){
  const response=await fetch("/api/video-generator/motion-terra",{
   method:"POST",cache:"no-store",
   headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
@@ -72,8 +75,11 @@ async function createTerraStory(prompt:string):Promise<StickmanStory>{
   data?.error==="video_not_enabled_for_account"?"La prueba de IA no está habilitada para tu cuenta.":
   "No pudimos generar las escenas con OpenAI. Revisa la configuración del proveedor.");
  if(!Array.isArray(data?.scenes)||data.scenes.length!==3)throw Error("OpenAI devolvió escenas incompletas.");
- const scenes:StickmanStory["scenes"]=[] as unknown as StickmanStory["scenes"];
- for(let i=0;i<3;i++){
+ pending.data=data;
+ }
+ const data=pending.data!;
+ const scenes:StickmanStory["scenes"]=pending.images.slice() as StickmanStory["scenes"];
+ for(let i=pending.images.length;i<3;i++){
   const scene=data.scenes[i] as {speech:string;caption:string;imagePrompt:string;camera?:{focusX:number;focusY:number;startZoom:number;endZoom:number}};
   if(typeof scene.imagePrompt!=="string"||scene.imagePrompt.length<35)throw Error("El guion de imágenes está incompleto.");
   const imageResponse=await fetch("/api/video-generator/motion-image",{
@@ -87,12 +93,15 @@ async function createTerraStory(prompt:string):Promise<StickmanStory>{
    throw Error(error==="image_daily_limit"?"Alcanzaste el límite diario de imágenes.":
     error==="openai_quota_or_rate_limit"?"OpenAI no tiene cuota disponible o está saturado.":
     error==="openai_key_invalid"?"La clave de OpenAI no es válida.":
+    error==="image_safety_rejected"?"OpenAI rechazó el contenido visual de la escena "+(i+1)+". Modifica la descripción de esa escena.":
+    error==="image_bad_request"?"OpenAI rechazó las instrucciones de la escena "+(i+1)+(imageData?.providerCode?" ("+imageData.providerCode+")":"")+".":
     "No pudimos crear la ilustración de la escena "+(i+1)+".");
   }
   const image=new Image();
   image.src="data:"+(imageData?.mediaType||"image/jpeg")+";base64,"+imageData?.imageBase64;
   await image.decode();
-  scenes.push({action:"custom",speech:scene.speech,heading:scene.caption,camera:scene.camera,image});
+  const complete={action:"custom" as const,speech:scene.speech,heading:scene.caption,camera:scene.camera,image};
+  scenes.push(complete);pending.images.push(complete);
  }
  return {name:String(data.title||"VMV Motion"),scenes};
 }
@@ -172,6 +181,7 @@ export default function StickmanLabPage(){
  const [videoUrl,setVideoUrl]=useState(""),[extension,setExtension]=useState<"mp4"|"webm">("webm");
  const [error,setError]=useState("");
  const canvas=useRef<HTMLCanvasElement>(null);
+ const pendingStoryboard=useRef<PendingStoryboard>({prompt:"",images:[]});
  const playingRef=useRef(true),renderingRef=useRef(false),urlRef=useRef("");
  const timelineRef=useRef(0),lastFrameRef=useRef(0);
  const story=customMode?(terraStory|| (customPrompt.trim().length>=8?userStickmanStory(customPrompt):stickmanStory(topic,language))):stickmanStory(topic,language);
@@ -214,7 +224,7 @@ export default function StickmanLabPage(){
   renderingRef.current=true;setRendering(true);setProgress(0);
   setError("");setStage(customMode?"Creando ilustraciones con OpenAI":withVoice?"Preparando voz":"Animando");
   try{
-   const selected=customMode?await createTerraStory(customPrompt):stickmanStory(topic,language);
+   const selected=customMode?await createTerraStory(customPrompt,pendingStoryboard.current):stickmanStory(topic,language);
    if(customMode)setTerraStory(selected);
    // Zero animation-provider credits. Optional voice requires explicit consent.
    const spoken=withVoice?await loadVoice(selected.scenes.map(s=>s.speech),voice):[];
@@ -251,7 +261,7 @@ export default function StickmanLabPage(){
     <span>¿Qué quieres contar?</span>
     <textarea disabled={rendering} value={customPrompt} maxLength={500} rows={4}
      placeholder="Ejemplo: Un pequeño elefante busca agua en la selva. Encuentra un río y ayuda a sus amigos a beber."
-     onChange={e=>{setCustomPrompt(e.target.value);setTerraStory(null);}}/>
+     onChange={e=>{setCustomPrompt(e.target.value);setTerraStory(null);pendingStoryboard.current={prompt:"",images:[]};}}/>
     <small>{customPrompt.length}/500 · 3 escenas de 5 segundos</small>
    </label>:<div className={css.topics}>
     <button type="button" className={topic==="space"?css.active:""}
