@@ -646,6 +646,7 @@ export default function StickmanLabPage(){
  const [cloudStatus,setCloudStatus]=useState("Local");
  const [cloudLoading,setCloudLoading]=useState(false);
  const [libraryOpen,setLibraryOpen]=useState(false);
+ const [activeLibraryId,setActiveLibraryId]=useState("");
  const [projectSwitching,setProjectSwitching]=useState(false);
  const [bootstrapping,setBootstrapping]=useState(true);
  const [clipPreviewLoading,setClipPreviewLoading]=useState(false);
@@ -1557,18 +1558,97 @@ export default function StickmanLabPage(){
    setStage("");setProgress(0);
   }finally{renderingRef.current=false;setRendering(false);}
  },[topic,language,subtitles,withVoice,voice,customMode,customPrompt]);
- if(auth==="checking")return <main className={css.page}><div className={css.shell}>Verificando sesión…</div></main>;
+ if(auth==="checking"||bootstrapping)return <main className={css.page}>
+  <div className={css.loadingScreen} role="status" aria-live="polite">
+   <span className={css.loadingLogo}><Clapperboard size={26}/></span>
+   <LoaderCircle size={35} className={css.spin}/>
+   <strong>Preparando VMV Motion</strong>
+   <span>Cargando tu estudio creativo…</span>
+  </div>
+ </main>;
  if(auth==="signed_out")return authClient?<VMVAuthGateway supabase={authClient} compact
   returnTo="/vista-app/vmv-pilot/stickman-lab"/>:
   <main className={css.page}><p>La autenticación no está configurada en esta versión de prueba.</p></main>;
  return <main className={css.page}>
   <div className={css.shell}>
    <header className={css.header}>
-    <button type="button" aria-label="Volver a VMV Pilot" onClick={()=>router.push("/vista-app/vmv-pilot")}>
+    <button type="button" aria-label="Volver al asistente" onClick={()=>router.push("/vista-app/vmv-pilot")}>
      <ArrowLeft size={19}/></button>
-    <strong>VMV Pilot</strong><span className={css.beta}>LAB</span>
+    <div className={css.headerBrand}><strong>VMV Motion</strong><small>Estudio creativo</small></div>
+    <Clapperboard size={20} className={css.headerIcon}/>
    </header>
-   <div className={css.intro}><h1>VMV Motion</h1><span>Estudio creativo · 60 s · 9:16</span></div>
+   <nav className={css.workspaceTabs} aria-label="Secciones del estudio">
+    <button type="button" className={!libraryOpen?css.workspaceActive:""}
+     aria-current={!libraryOpen?"page":undefined}
+     onClick={()=>setLibraryOpen(false)} disabled={projectSwitching}>
+     <WandSparkles size={17}/> Estudio
+    </button>
+    <button type="button" className={libraryOpen?css.workspaceActive:""}
+     aria-current={libraryOpen?"page":undefined}
+     disabled={directorBusy||seedBusy||rendering||projectSwitching}
+     onClick={()=>{setActiveLibraryId(currentCloudId());setLibraryOpen(true);void refreshLibrary();}}>
+     <FolderOpen size={17}/> Biblioteca
+    </button>
+    <button type="button" className={css.newProjectButton}
+     disabled={directorBusy||seedBusy||rendering||projectSwitching}
+     onClick={()=>void newMotionProject()}><Plus size={17}/> Nuevo</button>
+   </nav>
+   {libraryOpen?<section className={css.libraryPage} aria-label="Biblioteca de videos">
+    <div className={css.libraryHeading}>
+     <div><span className={css.eyebrow}>TUS CREACIONES</span>
+      <h1>Biblioteca</h1>
+      <p>Tus videos guardados y listos para seguir editando.</p>
+     </div>
+     {cloudLoading?<LoaderCircle size={21} className={css.spin}/>:
+      <button type="button" className={css.refreshLibrary} onClick={()=>void refreshLibrary()}
+       aria-label="Actualizar biblioteca"><RotateCcw size={17}/></button>}
+    </div>
+    {cloudLoading?<div className={css.libraryLoading} role="status">
+     <LoaderCircle size={24} className={css.spin}/> Cargando proyectos…
+    </div>:null}
+    {directorPlan||cloudProjects.length||archivedProjects.length?
+     <div className={css.libraryGrid}>
+      {directorPlan?<button type="button" className={css.libraryCard}
+       onClick={()=>setLibraryOpen(false)}>
+       <span className={css.libraryPoster}><Clapperboard size={27}/><span>EN EDICIÓN</span></span>
+       <span className={css.libraryCardBody}><strong>{directorPlan.title||"Mi video"}</strong>
+        <small>{directorPlan.frames.length} imágenes · {savedClipCount} clips</small>
+        <span className={css.libraryCardLink}>Continuar editando</span>
+       </span>
+      </button>:null}
+      {cloudProjects.filter(item=>item.id!==activeLibraryId||!directorPlan).map(item=>
+       <button key={item.id} type="button" className={css.libraryCard}
+        disabled={cloudLoading||projectSwitching}
+        onClick={()=>void restoreCloudProject(item.id)}>
+        <span className={css.libraryPoster}><Clapperboard size={27}/>
+         <span>{item.clips===MOTION_SCENES?"VIDEO COMPLETO":"EN PROGRESO"}</span></span>
+        <span className={css.libraryCardBody}><strong>{item.title||"Mi video"}</strong>
+         <small>{item.scenes} imágenes · {item.clips} clips</small>
+         <span className={css.libraryCardLink}>Abrir proyecto</span>
+        </span>
+       </button>)}
+      {archivedProjects.filter(item=>!cloudProjects.some(cloud=>cloud.id===item.cloudId)
+       &&item.cloudId!==activeLibraryId).map(item=>
+       <button key={item.id} type="button" className={css.libraryCard}
+        disabled={cloudLoading||projectSwitching}
+        onClick={()=>void restoreMotionProject(item.id)}>
+        <span className={css.libraryPoster}><BookOpen size={27}/><span>EN ESTE DISPOSITIVO</span></span>
+        <span className={css.libraryCardBody}><strong>{item.label||"Mi video"}</strong>
+         <small>{item.plan.frames.length} imágenes · {item.seedance.urls.filter(Boolean).length} clips</small>
+         <span className={css.libraryCardLink}>Abrir proyecto</span>
+        </span>
+       </button>)}
+     </div>:
+     !cloudLoading?<div className={css.libraryEmpty}>
+      <BookOpen size={27}/><h2>Tu biblioteca empieza aquí</h2>
+      <p>Los videos que crees se guardarán en este espacio.</p>
+      <button className={css.generate} type="button" onClick={()=>setLibraryOpen(false)}>
+       Crear un video</button>
+     </div>:null}
+    {error?<p role="alert" className={css.error}>{error}</p>:null}
+   </section>:<>
+   <div className={css.intro}><h1>{directorPlan?.title||"Crea tu video"}</h1>
+    <span>60 segundos · 9:16 · Estilo animado</span></div>
    {customMode?<nav className={css.studioNav} aria-label="Fases de producción">
     {(["crear","revisar","editar","publicar"] as const).map((step,i)=>{
      const names=["Crear","Revisar","Editar","Publicar"];
@@ -1982,6 +2062,7 @@ export default function StickmanLabPage(){
    <p className={css.note}>{language==="es"
     ?(customMode?"Primero revisa y aprueba las 12 imágenes. Después Seedance les da movimiento a 720p y el sistema une los clips, agrega voz y subtítulos si están activados.":"Los ejemplos usan animación Stickman local. Activa Tu historia para crear video con Seedance.")
     :"AI-generated images, cinematic camera and subtitles. OpenAI image generation has a cost."}</p>
+  </>}
   </div>
  </main>;
 }
