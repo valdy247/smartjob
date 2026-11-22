@@ -1421,38 +1421,80 @@ export default function StickmanLabPage(){
      <ArrowLeft size={19}/></button>
     <strong>VMV Pilot</strong><span className={css.beta}>LAB</span>
    </header>
-   <div className={css.intro}><h1>VMV Motion</h1><span>IA directora · Seedance · Historia continua</span></div>
+   <div className={css.intro}><h1>VMV Motion</h1><span>Estudio creativo · 60 s · 9:16</span></div>
+   {customMode?<nav className={css.studioNav} aria-label="Fases de producción">
+    {(["crear","revisar","editar","publicar"] as const).map((step,i)=>{
+     const names=["Crear","Revisar","Editar","Publicar"];
+     const disabled=step==="revisar"&&!directorPlan?.frames.length||
+      step==="editar"&&directorPlan?.frames.length!==MOTION_SCENES||
+      step==="publicar"&&!seedJoined&&!lastRenderedCloudUrl;
+     return <button key={step} type="button" disabled={disabled}
+      aria-current={studioStep===step?"step":undefined}
+      className={studioStep===step?css.stepActive:""}
+      onClick={()=>setStudioStep(step)}>
+      <span>{i+1}</span>{names[i]}
+     </button>;
+    })}
+   </nav>:null}
+   {customMode&&directorPlan?.prompt?<p className={css.cloudState} role="status">
+    {cloudStatus==="En la nube"||cloudStatus.includes("guardado")?"✓ ":""}
+    {cloudStatus}
+   </p>:null}
    <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:18}}>
     <button type="button" className={css.generate}
      style={{width:"auto",padding:"10px 16px",margin:0}}
      disabled={directorBusy||seedBusy||rendering}
      onClick={newMotionProject}>+ Nueva historia</button>
+    {cloudProjects.length?<select aria-label="Abrir proyecto de la nube" value=""
+      disabled={cloudLoading||directorBusy||seedBusy}
+      onChange={event=>{if(event.target.value)void restoreCloudProject(event.target.value);}}>
+      <option value="" disabled>{cloudLoading?"Cargando proyectos…":"Mis proyectos en la nube"}</option>
+      {cloudProjects.map(item=><option key={item.id} value={item.id}>
+       {item.title.slice(0,40)} · {item.clips}/12 clips
+      </option>)}
+     </select>:null}
     {archivedProjects.length?<select aria-label="Recuperar historia anterior"
       defaultValue="" onChange={event=>{if(event.target.value)restoreMotionProject(event.target.value);}}>
       <option value="" disabled>Recuperar historia anterior</option>
       {archivedProjects.map(item=><option key={item.id} value={item.id}>{item.label.slice(0,65)}</option>)}
      </select>:null}
    </div>
-   <div className={css.modeRow}>
+   {studioStep==="crear"?<div className={css.modeRow}>
     <button type="button" className={customMode?css.modeActive:""} disabled={rendering}
      onClick={()=>{setCustomMode(true);setWithVoice(true);}}>Tu historia</button>
     <button type="button" className={!customMode?css.modeActive:""} disabled={rendering}
      onClick={()=>setCustomMode(false)}>Ejemplos</button>
-   </div>
-   {customMode?<label className={css.promptField}>
+   </div>:null}
+   {studioStep==="crear"&&customMode?<label className={css.promptField}>
     <span>¿Qué quieres contar?</span>
     <textarea disabled={rendering||directorBusy} value={customPrompt} maxLength={2000} rows={4}
      placeholder="Ejemplo: Un pequeño elefante busca agua en la selva. Encuentra un río y ayuda a sus amigos a beber."
      onChange={e=>{setCustomPrompt(e.target.value);setTerraStory(null);setDirectorPlan(null);setSeedUrls([]);setPreviousScene(null);pendingStoryboard.current={prompt:"",images:[]};}}/>
     <small>{customPrompt.length}/2000 · Video de 60 segundos con IA</small>
-   </label>:<div className={css.topics}>
+   </label>:studioStep==="crear"?<div className={css.topics}>
     <button type="button" className={topic==="space"?css.active:""}
      onClick={()=>{if(!rendering)setTopic("space");}} disabled={rendering}>
      <Globe2 size={21}/>{language==="es"?"Planetas":"Planets"}</button>
     <button type="button" className={topic==="race"?css.active:""}
      onClick={()=>{if(!rendering)setTopic("race");}} disabled={rendering}>
      <CarFront size={21}/>{language==="es"?"Fórmula 1":"Formula 1"}</button>
-   </div>}
+   </div>:null}
+   {studioStep==="crear"&&customMode?<section className={css.characterPanel}>
+    <details>
+     <summary>Personajes y estilo visual <span>Opcional</span></summary>
+     <p>Reutiliza la apariencia de un proyecto anterior. La IA mantiene rasgos y colores, sin copiar escenarios que no correspondan.</p>
+     {cloudProjects.length?<select aria-label="Personajes de otro proyecto" defaultValue=""
+      onChange={event=>{if(event.target.value)void importCharacters(event.target.value);}}>
+      <option value="">Usar personajes de un proyecto…</option>
+      {cloudProjects.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}
+     </select>:null}
+     <textarea value={characterGuide} maxLength={1100} rows={3}
+      aria-label="Guía visual de personajes"
+      placeholder="Rostro, peinado, ropa, colores, proporciones y estilo de los personajes recurrentes…"
+      onChange={event=>{setCharacterGuide(event.target.value);
+       try{localStorage.setItem("vmv-motion-character-guide-v1",event.target.value);}catch{}}}/>
+    </details>
+   </section>:null}
    <section className={css.stage}>
     {!customMode?<div className={css.canvasWrap}>
      <canvas ref={canvas} width={STICKMAN_WIDTH} height={STICKMAN_HEIGHT}
@@ -1463,7 +1505,7 @@ export default function StickmanLabPage(){
       </button>:null}
      <span className={css.duration}>{customMode?"60s":"30s"} · 9:16</span>
     </div>:null}
-    <div className={css.controls}>
+    {studioStep!=="publicar"?<div className={css.controls}>
      <div className={css.languages} aria-label="Idioma">
       <button type="button" disabled={rendering} className={language==="es"?css.selected:""}
        onClick={()=>setLanguage("es")}>ES</button>
@@ -1476,15 +1518,15 @@ export default function StickmanLabPage(){
      <label className={css.toggle}><input disabled={rendering} type="checkbox"
       checked={withVoice} onChange={e=>setWithVoice(e.target.checked)}/>
       <Volume2 size={15}/>{language==="es"?"Voz IA":"AI voice"}</label>
-    </div>
-    {withVoice&&customMode?<div className={css.voiceOptions}><strong>ElevenLabs · Narración continua</strong><small>Audio y subtítulos sincronizados</small></div>:null}
-    {withVoice&&!customMode?<div className={css.voiceOptions}>
+    </div>:null}
+    {studioStep!=="publicar"&&withVoice&&customMode?<div className={css.voiceOptions}><strong>ElevenLabs · Narración continua</strong><small>Audio y subtítulos sincronizados</small></div>:null}
+    {studioStep==="crear"&&withVoice&&!customMode?<div className={css.voiceOptions}>
      {(["alloy","nova"] as const).map(v=><button key={v} type="button"
       disabled={rendering} className={voice===v?css.selected:""} onClick={()=>setVoice(v)}>
       {v==="alloy"?"Alloy":"Nova"}</button>)}
      <small>{language==="es"?"Usa créditos de voz":"Uses voice credits"}</small>
     </div>:null}
-    {!customMode?<button className={css.generate} type="button"
+    {studioStep==="crear"&&!customMode?<button className={css.generate} type="button"
      onClick={()=>void generate()} disabled={rendering||(customMode&&customPrompt.trim().length<8)}>
      {rendering?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
      {rendering?(stage+" · "+progress+"%"):(language==="es"?"Generar video":"Generate video")}
@@ -1501,13 +1543,13 @@ export default function StickmanLabPage(){
       <video src={miniUrl} controls playsInline preload="metadata"/>
       <a href={miniUrl} target="_blank" rel="noreferrer"><Download size={16}/>Abrir MP4 para guardar</a>
      </div>:null}
-    {customMode&&!directorPlan?.frames.length?<button className={css.generate} type="button"
+    {studioStep==="crear"&&customMode&&!directorPlan?.frames.length?<button className={css.generate} type="button"
      disabled={directorBusy||seedBusy||rendering||customPrompt.trim().length<8}
      onClick={()=>void prepareStoryboard()}>
      {directorBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
      {directorBusy?directorStatus:"Generar video"}
     </button>:null}
-    {customMode&&directorPlan?.frames.length?<section className={css.storyReview} aria-label="Revisión de escenas">
+    {studioStep==="revisar"&&customMode&&directorPlan?.frames.length?<section className={css.storyReview} aria-label="Revisión de escenas">
      <div className={css.storyHeading}>
       <h2>Revisa antes de animar</h2>
       <p>{directorPlan.title} · {directorPlan.frames.length}/{MOTION_SCENES} imágenes ·
@@ -1592,7 +1634,7 @@ export default function StickmanLabPage(){
       Animar 12 clips cuesta aproximadamente US$1.24 de Seedance, más imágenes y voz opcional.
       Si se interrumpe, se conservan los clips completados.</small>
     </section>:null}
-    {customMode&&seedJoined?<div className={css.result}>
+    {studioStep==="publicar"&&customMode&&seedJoined?<div className={css.result}>
      <div className={css.resultTitle}><Check size={18}/><strong>Video terminado · 60 segundos</strong></div>
      <video src={seedJoined} controls playsInline/>
      <a href={seedJoined} download={"vmv-motion-60s."+extension}><Download size={16}/>Descargar video</a>
