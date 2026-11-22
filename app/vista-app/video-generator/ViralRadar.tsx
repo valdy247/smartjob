@@ -22,7 +22,7 @@ const errors:Record<string,[string,string]>={
  radar_youtube_quota_or_access:["YouTube rechazó la consulta o alcanzó su cuota.","YouTube denied this search or its quota was reached."],
  radar_youtube_unavailable:["YouTube no respondió. Prueba más tarde.","YouTube is temporarily unavailable."],
  radar_database_unavailable:["No se pudo guardar esta búsqueda.","Research could not be saved."],
- radar_daily_limit:["Límite de 6 investigaciones por día.","Maximum 6 fresh searches per day."],
+ radar_daily_limit:["Límite de 20 investigaciones nuevas por 24 horas.","Maximum 20 new searches per 24 hours."],
  radar_ai_unavailable:["La IA no pudo preparar ideas. Puedes seguir viendo las fuentes.","AI couldn't prepare ideas. Sources remain available."],
  radar_empty:["No hay videos adecuados para generar ideas.","No suitable videos to build ideas."],
  radar_consent_required:["Acepta primero las condiciones del Radar.","Accept the Radar terms before searching."]
@@ -154,7 +154,7 @@ export default function ViralRadar({niche,en,selectedSource,onChoose,onClear}:Pr
    <div className={css.filters}>
     {([7,30,90] as const).map(days=><button type="button" key={days} onClick={()=>setPeriod(days)}
      aria-pressed={period===days} className={period===days?css.activePeriod:""}>{days} {L("días","days")}</button>)}
-    <span>{L("Máx. 6 búsquedas nuevas/día","Up to 6 new searches/day")}</span>
+    <span>{L("Máx. 20 búsquedas nuevas/24 h","Up to 20 new searches/24h")}</span>
    </div>
    {configured===false?<p className={css.notice}>
     {L("YouTube todavía no está conectado. El administrador debe configurar YOUTUBE_DATA_API_KEY.",
