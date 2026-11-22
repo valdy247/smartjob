@@ -78,9 +78,9 @@ export default function AutomaticCommerceWizard({business,agent,onAgentUpdated,o
    <p className={styles.note}>{agent.name} · {business.name}</p>
    <div className={styles.optionsVertical}>
     <button type="button" className={catalogRead?styles.optionActive:styles.option}
-     onClick={()=>setCatalogRead(true)}><Check size={17}/> Sí, conectar</button>
+     onClick={()=>{setCatalogRead(true);setStep("orders");}}><Check size={17}/> Sí, conectar</button>
     <button type="button" className={!catalogRead?styles.optionActive:styles.option}
-     onClick={()=>{setCatalogRead(false);setOrders(false);setAccept(false);}}>No, dejar desconectado</button>
+     onClick={()=>{setCatalogRead(false);setOrders(false);setAccept(false);setStep("orders");}}>No, dejar desconectado</button>
    </div>
   </div>:null}
   {!loading&&authorized&&step==="orders"?<div className={styles.panel}>
@@ -90,10 +90,10 @@ export default function AutomaticCommerceWizard({business,agent,onAgentUpdated,o
      className={orders?styles.optionActive:styles.option}
      onClick={()=>setOrders(true)}><Check size={17}/> Sí, preparar pedidos</button>
     <button type="button" className={!orders?styles.optionActive:styles.option}
-     onClick={()=>{setOrders(false);setAccept(false);}}>No, solo mostrar productos</button>
+     onClick={()=>{setOrders(false);setAccept(false);setStep("product");}}>No, solo mostrar productos</button>
    </div>
    {catalogRead&&orders?<label className={styles.checkLine}>
-    <input type="checkbox" checked={accept} onChange={e=>setAccept(e.target.checked)}/>
+    <input type="checkbox" checked={accept} onChange={e=>{setAccept(e.target.checked);if(e.target.checked)setStep("product");}}/>
     Registrar aceptación expresa en pruebas
    </label>:null}
    {!catalogRead?<p className={styles.note}>Conecta el catálogo en el paso anterior.</p>:null}
