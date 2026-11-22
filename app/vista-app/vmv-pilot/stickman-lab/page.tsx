@@ -1742,13 +1742,31 @@ export default function StickmanLabPage(){
      voiceVolume:narrationVolume/100,fadeSeconds,effects,seconds:montageSeconds
     }));
    }finally{localUrls.forEach(url=>URL.revokeObjectURL(url));}
+   // Do not mark a browser recording complete before checking its container metadata.
+   // In particular, a 66s MediaRecorder output is not a valid 60s montage.
    const finalUrl=URL.createObjectURL(video);
-   if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);
-   seedJoinedRef.current=finalUrl;setSeedJoined(finalUrl);setExtension(extension);
-   setStudioStep("publicar");
-   setDirectorStatus("Video terminado · "+montageSeconds+" segundos"+(asmrEnabled?" con ASMR":narrationEnabled?" con voz":""));
-   // Each voice-only edit is versioned; the original "final" video survives.
-   const revisionId=voiceOnly||(asmrEnabled&&Boolean(seedJoined))?crypto.randomUUID():"";
+   try{
+    const measured=await new Promise<number>((resolve,reject)=>{
+     const probe=document.createElement("video");
+     const timeout=window.setTimeout(()=>{probe.removeAttribute("src");probe.load();reject(Error("No se pudo validar la duración del MP4."));},12000);
+     probe.preload="metadata";
+     probe.onloadedmetadata=()=>{
+      window.clearTimeout(timeout);
+      const duration=probe.duration;
+      probe.removeAttribute("src");probe.load();
+      resolve(duration);
+     };
+     probe.onerror=()=>{window.clearTimeout(timeout);reject(Error("El montaje no contiene video reproducible."));};
+     probe.src=finalUrl;
+    });
+    if(!Number.isFinite(measured)||Math.abs(measured-montageSeconds)>1.5)
+     throw Error("El montaje dura "+measured.toFixed(1)+" s en lugar de "+montageSeconds+" s. No se guardó el archivo defectuoso; tus clips siguen disponibles.");
+   }catch(e){
+    URL.revokeObjectURL(finalUrl);
+    throw e;
+   }
+   // Never overwrite final.mp4: every export is an independent revision.
+   const revisionId=crypto.randomUUID();
    try{
     const id=currentCloudId();
     await motionLibrary(accessToken,{action:"save",project:{
@@ -1768,11 +1786,10 @@ export default function StickmanLabPage(){
     });
     setLastRenderedCloudUrl(String(source.url||""));
     const latest=readSeedance(customPrompt);
-    if(revisionId){
-     const version:SavedVoiceRevision={id:revisionId,extension,
-      voice:asmrEnabled?"ASMR · "+montageSeconds+" s":selectedVoiceName(voicePreset),createdAt:new Date().toISOString()};
-     latest.voiceRevisions=[...(latest.voiceRevisions||[]),version].slice(-30);
-    }
+    const version:SavedVoiceRevision={id:revisionId,extension,
+     voice:asmrEnabled?"ASMR · "+montageSeconds+" s":narrationEnabled?selectedVoiceName(voicePreset):"Sin narración · "+montageSeconds+" s",
+     createdAt:new Date().toISOString()};
+    latest.voiceRevisions=[...(latest.voiceRevisions||[]),version].slice(-30);
     latest.activeRenderId=revisionId;latest.voicePreset=voicePreset;
     latest.asmrEnabled=asmrEnabled;latest.montageSeconds=montageSeconds;
     latest.narrationEnabled=narrationEnabled;
@@ -1783,8 +1800,15 @@ export default function StickmanLabPage(){
      id,plan,seedance:latest,publish:readPublishDraft(id)
     }});
     setCloudStatus("Video y proyecto guardados en la nube");
+    if(seedJoinedRef.current&&seedJoinedRef.current!==finalUrl&&seedJoinedRef.current.startsWith("blob:"))
+     URL.revokeObjectURL(seedJoinedRef.current);
+    seedJoinedRef.current=finalUrl;setSeedJoined(finalUrl);setExtension(extension);
+    setStudioStep("publicar");
+    setDirectorStatus("Video terminado · "+montageSeconds+" segundos"+(asmrEnabled?" con ASMR":narrationEnabled?" con voz":""));
    }catch{
-    setCloudStatus("Video generado; descarga una copia. No se pudo guardar el montaje en la nube.");
+    URL.revokeObjectURL(finalUrl);
+    setCloudStatus("No se pudo guardar el montaje. El video anterior permanece intacto.");
+    throw Error("El nuevo montaje no se pudo guardar. No se reemplazó ninguna versión anterior.");
    }
   }catch(e){setError(e instanceof Error?e.message:"No se pudo terminar el video.");setDirectorStatus("");}
   finally{directorBusyRef.current=false;seedBusyRef.current=false;setDirectorBusy(false);setSeedBusy(false);}
