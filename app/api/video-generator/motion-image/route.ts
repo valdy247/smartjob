@@ -42,7 +42,7 @@ export async function POST(req:NextRequest){
    headers:{...(form?{}:{"Content-Type":"application/json"}),Authorization:"Bearer "+process.env.OPENAI_API_KEY},
    body:form??JSON.stringify({
     model:"gpt-image-1-mini",size:"1024x1536",quality:"medium",output_format:"jpeg",
-    n:1,prompt:"One original 2D illustration frame for a vertical 9:16 cartoon movie. "+prompt
+    n:1,prompt:"Create ONE original opening frame for a cinematic vertical 9:16 short film. Follow the specific genre, art direction, subject matter, setting and shot composition provided. Do not introduce objects or characters from other scenes. Do not add captions, labels or logos. "+prompt
    })
   });
   if(!response.ok){
