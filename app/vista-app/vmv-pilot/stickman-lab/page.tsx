@@ -538,16 +538,20 @@ async function loadSeedanceForStitching(accessToken:string,token:string,sourceUr
 }
 type MotionSfx={audio:ArrayBuffer;start:number};
 type MotionMix={music:File|null;musicVolume:number;voiceVolume:number;fadeSeconds:number;
- effects?:MotionSfx[];seconds?:30|60};
+ effects?:MotionSfx[];seconds?:MotionSeconds};
 const motionSfxCache=new Map<string,ArrayBuffer>();
 async function loadMotionSfx(accessToken:string,prompt:string,scenes:DirectorBeat[],
- seconds:30|60,onProgress:(step:number)=>void):Promise<MotionSfx[]>{
- if(scenes.length!==MOTION_SCENES)throw Error("Faltan escenas para sincronizar el ASMR.");
+ seconds:MotionSeconds,onProgress:(step:number)=>void):Promise<MotionSfx[]>{
+ if(![3,6,12].includes(scenes.length)||scenes.length*5<seconds)
+  throw Error("El número de escenas no coincide con la duración elegida.");
  const effects:MotionSfx[]=[];
- const durationSeconds=seconds/6;
- for(let slot=0;slot<6;slot++){
+ const groups=Math.min(6,scenes.length);
+ const perGroup=scenes.length/groups;
+ const durationSeconds=seconds/groups;
+ for(let slot=0;slot<groups;slot++){
   onProgress(slot+1);
-  const descriptions=[scenes[slot*2].motionPrompt,scenes[slot*2+1].motionPrompt];
+  const descriptions=scenes.slice(slot*perGroup,(slot+1)*perGroup)
+   .map(scene=>scene.motionPrompt);
   const cacheKey=JSON.stringify([prompt,durationSeconds,slot,descriptions]);
   let audio=motionSfxCache.get(cacheKey);
   if(!audio){
@@ -579,7 +583,12 @@ async function loadMotionSfx(accessToken:string,prompt:string,scenes:DirectorBea
 async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=null,showSubtitles=false,
  options:MotionMix={music:null,musicVolume:0.18,voiceVolume:1,fadeSeconds:0.2}
 ):Promise<{blob:Blob;extension:"mp4"|"webm"}>{
- if(urls.length!==MOTION_SCENES)throw Error("Faltan clips para unir.");
+ const outputSeconds=options.seconds||urls.length*5;
+ if(![15,30,60].includes(outputSeconds)||![3,6,12].includes(urls.length)||
+  outputSeconds>urls.length*5)
+  throw Error("La duración elegida no coincide con los clips; conserva las escenas guardadas.");
+ const segmentSeconds=outputSeconds/urls.length;
+ const playbackSpeed=5/segmentSeconds;
  const format=chosenFormat();
  const canvas=document.createElement("canvas");canvas.width=720;canvas.height=1280;
  const ctx=canvas.getContext("2d",{alpha:false});
@@ -595,7 +604,7 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
  let activePreview:HTMLVideoElement|null=null;
  const requireForeground=()=>{
   if(document.visibilityState!=="visible")
-   throw Error("Chrome pausó el montaje al cambiar de pestaña. Vuelve a esta pestaña y reintenta; tus 12 clips están guardados.");
+   throw Error("Chrome pausó el montaje al cambiar de pestaña. Vuelve a esta pestaña y reintenta; tus clips están guardados.");
  };
  try{
   requireForeground();
@@ -690,10 +699,10 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
    video.setAttribute("aria-label","Vista previa del clip durante el montaje");
    document.body.appendChild(video);activePreview=video;
    video.currentTime=0;
-   video.playbackRate=options.seconds===30?2:1;
+   video.playbackRate=playbackSpeed;
    try{await video.play();}
-   catch{throw Error("Chrome interrumpió el clip "+(index+1)+". Mantén esta pestaña visible y vuelve a intentar el montaje; los 12 clips están guardados.");}
-   const endTime=speech?.sceneEnds?.[index]??(index+1)*(options.seconds===30?2.5:5);
+   catch{throw Error("Chrome interrumpió el clip "+(index+1)+". Mantén esta pestaña visible y vuelve a intentar el montaje; los clips están guardados.");}
+   const endTime=speech?.sceneEnds?.[index]??(index+1)*segmentSeconds;
    // Validate actual media progress, not only wall-clock progress. Otherwise a
    // stalled decoder can create seconds of identical frames while audio keeps going.
    const clipStartedAt=performance.now();
@@ -704,7 +713,7 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
    };
    const startFrameCount=quality.getVideoPlaybackQuality?.().totalVideoFrames;
    if(typeof startFrameCount==="number")lastFrameCount=startFrameCount;
-   const segmentStart=index?(speech?.sceneEnds?.[index-1]??index*(options.seconds===30?2.5:5)):0;
+   const segmentStart=index?(speech?.sceneEnds?.[index-1]??index*segmentSeconds):0;
    const expectedLength=endTime-segmentStart;
    if(expectedLength<=0)throw Error("La duración de una escena no es válida.");
    await new Promise<void>((resolve,reject)=>{
@@ -736,21 +745,21 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
       const fade=Math.max(0,Math.min(0.45,options.fadeSeconds));
       if(fade>0){
        const incoming=index>0?Math.max(0,1-(current-segmentStart)/fade):0;
-       const outgoing=index<MOTION_SCENES-1?Math.max(0,1-(endTime-current)/fade):0;
+       const outgoing=index<urls.length-1?Math.max(0,1-(endTime-current)/fade):0;
        const opacity=Math.min(0.8,Math.max(incoming,outgoing)*0.8);
        if(opacity>0){ctx.fillStyle="rgba(0,0,0,"+opacity+")";ctx.fillRect(0,0,720,1280);}
       }
       drawCaption(Math.max(0,current));
       if((performance.now()-videoStart)/1000>=endTime){
        const expectedMediaProgress=Math.min(video.duration||expectedLength,
-        expectedLength*(options.seconds===30?2:1));
+        expectedLength*playbackSpeed);
        if(!video.ended&&video.currentTime+0.4<expectedMediaProgress)
         throw Error("video_incomplete");
        resolve();return;
       }
       raf=requestAnimationFrame(frame);
      }catch{
-      reject(Error("La imagen del clip "+(index+1)+" dejó de avanzar durante el montaje. Se canceló la exportación para evitar un video congelado con audio. Vuelve a intentarlo en una pestaña visible; los 12 clips siguen guardados."));
+      reject(Error("La imagen del clip "+(index+1)+" dejó de avanzar durante el montaje. Se canceló la exportación para evitar un video congelado con audio. Vuelve a intentarlo en una pestaña visible; los clips siguen guardados."));
      }
     };
     raf=requestAnimationFrame(frame);
@@ -1595,11 +1604,11 @@ export default function StickmanLabPage(){
  },[customPrompt]);
  const setProjectNarration=useCallback((enabled:boolean)=>{
   setWithVoice(enabled);
-  if(enabled){setAsmrEnabled(false);setMontageSeconds(60);}
+  if(enabled){setAsmrEnabled(false);}
   if(!customPrompt)return;
   const job=readSeedance(customPrompt);
   job.narrationEnabled=enabled;
-  if(enabled){job.asmrEnabled=false;job.montageSeconds=60;}
+  if(enabled){job.asmrEnabled=false;}
   saveSeedance(job);
  },[customPrompt]);
  const chooseProjectVoice=useCallback((preset:VoicePreset)=>{
@@ -1607,12 +1616,12 @@ export default function StickmanLabPage(){
   setAsmrEnabled(false);setVoicePreset(preset);setWithVoice(true);
   const job=readSeedance(customPrompt);
   job.voicePreset=preset;job.narrationEnabled=true;job.asmrEnabled=false;
-  job.montageSeconds=60;setMontageSeconds(60);
+  job.montageSeconds=montageSeconds;
   if(pilotVoiceId)job.elevenVoiceId=pilotVoiceId;
   saveSeedance(job);
- },[customPrompt,pilotVoiceId]);
+ },[customPrompt,pilotVoiceId,montageSeconds]);
  const openVoiceEditor=useCallback(()=>{
-  setAsmrEnabled(false);setWithVoice(true);setMontageSeconds(60);
+  setAsmrEnabled(false);setWithVoice(true);
   setVoiceEditorOpen(true);setStudioStep("editar");setError("");
  },[]);
  const selectVideoVersion=useCallback(async(revisionId:string)=>{
@@ -1647,10 +1656,11 @@ export default function StickmanLabPage(){
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
   const plan=readDirectorPlan(customPrompt);
   const voiceOnly=mode==="voice";
+  const requiredScenes=sceneTotal(plan,montageSeconds);
   const storedNarration=readSeedance(customPrompt).narrationEnabled===true;
   // Only an explicit, persisted choice can start paid narration.
   const narrationEnabled=voiceOnly?withVoice:
-   (withVoice&&storedNarration&&!asmrEnabled&&montageSeconds===60);
+   (withVoice&&storedNarration&&!asmrEnabled);
   if(asmrEnabled&&!voiceOnly&&!window.confirm(
    "Se generarán hasta seis efectos de sonido ASMR con ElevenLabs usando créditos de IA. "+
    "Si faltan clips también se utilizarán créditos de Seedance para animarlos. "+
@@ -1658,18 +1668,18 @@ export default function StickmanLabPage(){
   ))return;
   if(voiceOnly){
    const prior=readSeedance(customPrompt);
-   if(!withVoice||!Array.from({length:MOTION_SCENES},(_,i)=>
+   if(!withVoice||!Array.from({length:requiredScenes},(_,i)=>
     Boolean(prior.tokens[i]&&prior.urls[i])).every(Boolean)){
-    setError("Para cambiar la voz necesitas los 12 clips terminados.");return;
+    setError("Para cambiar la voz necesitas los "+requiredScenes+" clips terminados.");return;
    }
    if(!window.confirm("Se generará una nueva narración utilizando créditos de voz y "+
-    "se volverán a unir los 12 clips existentes. No se cobrará otra animación "+
+    "se volverán a unir los "+requiredScenes+" clips existentes. No se cobrará otra animación "+
     "de Seedance y conservaremos el video original. ¿Continuar?"))return;
   }
-  if(!plan||plan.frames.length!==MOTION_SCENES||
-   !Array.from({length:MOTION_SCENES},(_,i)=>i).every(i=>plan.approved?.[i]===true&&
+  if(!plan||plan.frames.length!==requiredScenes||
+   !Array.from({length:requiredScenes},(_,i)=>i).every(i=>plan.approved?.[i]===true&&
     (plan.draftPrompts?.[i]??plan.scenes[i].imagePrompt)===plan.scenes[i].imagePrompt)){
-   setError("Aprueba las 12 imágenes y regenera cualquier escena cuyo prompt hayas editado.");return;
+   setError("Aprueba las "+requiredScenes+" imágenes y regenera las escenas editadas.");return;
   }
   directorBusyRef.current=true;seedBusyRef.current=true;setDirectorBusy(true);setSeedBusy(true);
   setError("");setDirectorStatus(voiceOnly?"Preparando nueva narración…":"Preparando tu video…");
@@ -1686,17 +1696,17 @@ export default function StickmanLabPage(){
     const check=await fetch("/api/video-generator/speech/continuous?"+params.toString(),{headers:{Authorization:"Bearer "+accessToken},cache:"no-store"});
     const config=await check.json().catch(()=>null);
     if(!check.ok||!config?.configured)throw Error(
-     config?.error==="elevenlabs_voice_unavailable"?"ElevenLabs no reconoce la voz configurada. Establece una voz disponible en ELEVENLABS_VOICE_ID; tus 12 clips siguen guardados.":
-     config?.error==="elevenlabs_key_rejected"?"ElevenLabs rechazó la API key de Preview. Comprueba ELEVENLABS_API_KEY; tus 12 clips siguen guardados.":
+     config?.error==="elevenlabs_voice_unavailable"?"ElevenLabs no reconoce la voz configurada. Establece una voz disponible en ELEVENLABS_VOICE_ID; tus clips siguen guardados.":
+     config?.error==="elevenlabs_key_rejected"?"ElevenLabs rechazó la API key de Preview. Comprueba ELEVENLABS_API_KEY; tus clips siguen guardados.":
      config?.error==="elevenlabs_access_denied"?"La API key no tiene permisos suficientes para acceder a ElevenLabs; los clips siguen guardados.":
      config?.error==="elevenlabs_credits_required"?"El plan de ElevenLabs o los créditos disponibles no permiten utilizar esta voz por API. Tus clips de Seedance siguen guardados.":
      "No se pudo verificar el proveedor de voz (HTTP "+String(config?.upstreamStatus||check.status)+
       (config?.providerCode&&config.providerCode!=="unknown"?", "+config.providerCode:"")+
-      "). Tus 12 clips siguen guardados."
+      "). Tus clips siguen guardados."
     );
    }
    const job=readSeedance(customPrompt);setSeedUrls(job.urls.filter(Boolean));setSavedClipCount(job.urls.filter(Boolean).length);
-   if(voiceOnly&&!Array.from({length:MOTION_SCENES},(_,i)=>
+   if(voiceOnly&&!Array.from({length:requiredScenes},(_,i)=>
     Boolean(job.tokens[i]&&job.urls[i])).every(Boolean))
     throw Error("Faltan clips guardados. No se inició ninguna animación.");
    if(job.needsMotion?.some(Boolean))throw Error(
@@ -1705,7 +1715,7 @@ export default function StickmanLabPage(){
     "Una escena sigue procesándose. Termínala desde Editar antes del montaje.");
    // Check all pending scenes before authorizing the first new Seedance task.
    // A failed preflight never consumes Seedance video credits.
-   const pending=voiceOnly?[]:Array.from({length:MOTION_SCENES},(_,beat)=>beat)
+   const pending=voiceOnly?[]:Array.from({length:requiredScenes},(_,beat)=>beat)
     .filter(beat=>!job.tokens[beat]&&!job.urls[beat]);
    if(pending.length){
     setDirectorStatus("Verificando las imágenes antes de animar · sin costo");
@@ -1713,11 +1723,11 @@ export default function StickmanLabPage(){
      storyBible:plan.storyBible,clips:pending.map(beat=>({beat,
       imagePath:plan.frames[beat].referencePath,motionPrompt:plan.scenes[beat].motionPrompt}))});
    }
-   for(let beat=0;beat<MOTION_SCENES;beat++){
+   for(let beat=0;beat<requiredScenes;beat++){
     if(job.urls[beat])continue;
     let token=job.tokens[beat];
     if(!token){
-     setDirectorStatus("Animando escena "+(beat+1)+"/"+MOTION_SCENES+" · Seedance 720p");
+     setDirectorStatus("Animando escena "+(beat+1)+"/"+requiredScenes+" · Seedance 720p");
      const started=await seedanceRequest(accessToken,{
       action:"start",prompt:customPrompt,beat,confirmCost:true,
       imagePath:plan.frames[beat].referencePath,
@@ -1726,7 +1736,7 @@ export default function StickmanLabPage(){
      if(typeof started?.token!=="string")throw Error("Seedance no inició la escena "+(beat+1)+".");
      token=started.token;job.tokens[beat]=token;saveSeedance(job);
     }
-    setDirectorStatus("Esperando animación "+(beat+1)+"/"+MOTION_SCENES);
+    setDirectorStatus("Esperando animación "+(beat+1)+"/"+requiredScenes);
     let completed=false;
     for(let n=0;n<120;n++){
      const response=await seedanceRequest(accessToken,{action:"status",token});
@@ -1745,12 +1755,12 @@ export default function StickmanLabPage(){
    }
    // Verify all twelve stored MP4s BEFORE the provider charges new voice
    // credits. A missing expired clip must never result in paid orphan narration.
-   setDirectorStatus("Verificando los 12 clips guardados · sin cargo");
+   setDirectorStatus("Verificando los "+requiredScenes+" clips guardados · sin cargo");
    const localUrls:string[]=[];
    let video:Blob,extension:"mp4"|"webm";
    try{
-    for(let i=0;i<MOTION_SCENES;i++){
-     setDirectorStatus("Recuperando MP4 guardado "+(i+1)+"/"+MOTION_SCENES+" · sin regenerar");
+    for(let i=0;i<requiredScenes;i++){
+     setDirectorStatus("Recuperando MP4 guardado "+(i+1)+"/"+requiredScenes+" · sin regenerar");
      localUrls.push(await loadSeedanceForStitching(accessToken,job.tokens[i],job.urls[i],i));
     }
     setDirectorStatus(asmrEnabled?"Preparando sonidos ASMR sincronizados…":
@@ -1843,13 +1853,13 @@ export default function StickmanLabPage(){
   void (async()=>{
    await prepareStoryboard();
    const plan=readDirectorPlan(customPrompt);
-   if(plan?.frames.length===MOTION_SCENES&&plan.approved?.every(Boolean))
+   if(plan&&plan.frames.length===plan.scenes.length&&plan.approved?.every(Boolean))
     await animateApproved();
   })();
  },[pilotAuto,auth,customPrompt,prepareStoryboard,animateApproved]);
  const suggestPublication=useCallback(()=>{
   const plan=readDirectorPlan(customPrompt);if(!plan)return;
-  const first=plan.scenes[0]?.speech||"",last=plan.scenes[11]?.speech||"";
+  const first=plan.scenes[0]?.speech||"",last=plan.scenes.at(-1)?.speech||"";
   updatePublish({title:plan.title,
    caption:first+" "+last+"\n\n¿Qué opinas? Cuéntanos en los comentarios.",
    hashtags:"#VMVMotion #Historias #VideoConIA"});
@@ -1891,7 +1901,7 @@ export default function StickmanLabPage(){
  },[extension,customPrompt]);
  useEffect(()=>{
   if(auth!=="signed_in"||!directorPlan?.prompt||seedJoined||
-   readSeedance(directorPlan.prompt).urls.filter(Boolean).length!==MOTION_SCENES)return;
+   readSeedance(directorPlan.prompt).urls.filter(Boolean).length!==directorPlan.scenes.length)return;
   let active=true;
   const load=async()=>{
    const sb=getSupabase();if(!sb)return;
