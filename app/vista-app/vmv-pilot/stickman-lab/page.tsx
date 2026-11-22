@@ -1101,6 +1101,93 @@ export default function StickmanLabPage(){
    saveDirectorPlan(updated);setDirectorPlan(updated);setPreviousScene(index);
   }catch(e){setError(e instanceof Error?e.message:"La versión anterior no está disponible.");}
  },[previousScene,customPrompt]);
+ const saveMotionDirection=useCallback(()=>{
+  const plan=readDirectorPlan(customPrompt),prompt=motionDraft.trim();
+  if(!plan?.scenes[selectedScene]||prompt.length<18||prompt.length>650){
+   setError("Describe la acción de esta escena en 18 a 650 caracteres.");return;
+  }
+  const scenes=[...plan.scenes],before=scenes[selectedScene].motionPrompt;
+  scenes[selectedScene]={...scenes[selectedScene],motionPrompt:prompt};
+  const updated={...plan,scenes};saveDirectorPlan(updated);setDirectorPlan(updated);
+  if(before!==prompt){
+   const job=readSeedance(plan.prompt);
+   if(job.urls[selectedScene]){
+    job.clipPrompt=job.clipPrompt||[];
+    if(!job.clipPrompt[selectedScene])job.clipPrompt[selectedScene]=before;
+    job.needsMotion=job.needsMotion||[];job.needsMotion[selectedScene]=true;
+    saveSeedance(job);
+   }
+  }
+  setError("");setDirectorStatus("Movimiento de la escena "+(selectedScene+1)+" guardado");
+ },[customPrompt,selectedScene,motionDraft]);
+ const renderSingleScene=useCallback(async(index:number)=>{
+  if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
+  const plan=readDirectorPlan(customPrompt),job=readSeedance(customPrompt);
+  if(!plan?.frames[index]||!plan.approved?.[index]){
+   setError("Primero aprueba la imagen de esta escena.");return;
+  }
+  if(job.urls[index]&&!job.draftTokens?.[index]&&!window.confirm(
+   "Animar solamente la escena "+(index+1)+" cuesta aproximadamente US$0.103. "+
+   "Los demás clips se conservarán. ¿Autorizar esta generación?"))return;
+  seedBusyRef.current=true;setSeedBusy(true);setSceneRendering(index);setError("");
+  try{
+   const sb=getSupabase();if(!sb)throw Error("Inicia sesión.");
+   const {data:{session}}=await sb.auth.getSession();
+   if(!session?.access_token)throw Error("Inicia sesión.");
+   const accessToken=session.access_token;
+   let pending=job.draftTokens?.[index]||"";
+   if(!pending){
+    const result=await seedanceRequest(accessToken,{
+     action:"start",confirmCost:true,prompt:customPrompt,beat:index,
+     imagePath:plan.frames[index].referencePath,
+     motionPrompt:plan.scenes[index].motionPrompt,storyBible:plan.storyBible
+    });
+    if(typeof result.token!=="string")throw Error("No se inició el trabajo.");
+    pending=result.token;
+    job.draftTokens={...job.draftTokens,[index]:pending};saveSeedance(job);
+   }
+   let completed=false;
+   for(let n=0;n<120;n++){
+    setDirectorStatus("Animando solo escena "+(index+1)+" · Seedance");
+    const status=await seedanceRequest(accessToken,{action:"status",token:pending});
+    if(status?.status==="completed"&&typeof status.url==="string"){
+     const latest=readSeedance(customPrompt);
+     if(latest.tokens[index]&&latest.urls[index]){
+      const previous=latest.history?.[index]||[];
+      latest.history={...latest.history,[index]:[...previous,
+       {token:latest.tokens[index],url:latest.urls[index]}].slice(-4)};
+     }
+     latest.tokens[index]=pending;latest.urls[index]=status.url;
+     latest.clipPrompt=latest.clipPrompt||[];latest.clipPrompt[index]=plan.scenes[index].motionPrompt;
+     latest.needsMotion=latest.needsMotion||[];latest.needsMotion[index]=false;
+     latest.draftTokens={...latest.draftTokens};delete latest.draftTokens[index];
+     saveSeedance(latest);setSavedClipCount(latest.urls.filter(Boolean).length);
+     setSeedJoined("");setDirectorStatus("Escena "+(index+1)+" lista. Monta el video sin regenerar las demás.");
+     completed=true;
+     try{await seedanceRequest(accessToken,{action:"archive",token:pending,sourceUrl:status.url});}
+     catch{setDirectorStatus("Clip terminado; copia privada pendiente.");}
+     break;
+    }
+    if(status?.status==="failed"){
+     const latest=readSeedance(customPrompt);
+     latest.draftTokens={...latest.draftTokens};delete latest.draftTokens[index];saveSeedance(latest);
+     throw Error("Seedance falló. Se conserva la versión anterior de esta escena.");
+    }
+    await new Promise<void>(resolve=>setTimeout(resolve,5000));
+   }
+   if(!completed)throw Error("La escena sigue procesándose. Reanúdala desde Editar sin volver a pagar.");
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo renovar la escena.");}
+  finally{seedBusyRef.current=false;setSeedBusy(false);setSceneRendering(null);}
+ },[customPrompt]);
+ const revertClip=useCallback((index:number)=>{
+  const job=readSeedance(customPrompt),history=[...(job.history?.[index]||[])];
+  const previous=history.pop();if(!previous)return;
+  const active={token:job.tokens[index],url:job.urls[index]};
+  job.tokens[index]=previous.token;job.urls[index]=previous.url;
+  job.history={...job.history,[index]:[...history,active].slice(-4)};
+  job.needsMotion=job.needsMotion||[];job.needsMotion[index]=false;
+  saveSeedance(job);setSeedJoined("");setError("");
+ },[customPrompt]);
  const animateApproved=useCallback(async()=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
   const plan=readDirectorPlan(customPrompt);
@@ -1132,6 +1219,10 @@ export default function StickmanLabPage(){
     );
    }
    const job=readSeedance(customPrompt);setSeedUrls(job.urls.filter(Boolean));setSavedClipCount(job.urls.filter(Boolean).length);
+   if(job.needsMotion?.some(Boolean))throw Error(
+    "Hay imágenes o acciones modificadas sin animar. En Editar, genera únicamente esas escenas antes de montar.");
+   if(job.draftTokens&&Object.keys(job.draftTokens).length)throw Error(
+    "Una escena sigue procesándose. Termínala desde Editar antes del montaje.");
    // Check all pending scenes before authorizing the first new Seedance task.
    // A failed preflight never consumes Seedance video credits.
    const pending=Array.from({length:MOTION_SCENES},(_,beat)=>beat).filter(beat=>!job.tokens[beat]&&!job.urls[beat]);
@@ -1159,7 +1250,11 @@ export default function StickmanLabPage(){
     for(let n=0;n<120;n++){
      const response=await seedanceRequest(accessToken,{action:"status",token});
      if(response?.status==="completed"&&typeof response.url==="string"){
-      job.urls[beat]=response.url;saveSeedance(job);setSeedUrls(job.urls.filter(Boolean));setSavedClipCount(job.urls.filter(Boolean).length);
+      job.urls[beat]=response.url;
+      job.clipPrompt=job.clipPrompt||[];job.clipPrompt[beat]=plan.scenes[beat].motionPrompt;
+      saveSeedance(job);setSeedUrls(job.urls.filter(Boolean));setSavedClipCount(job.urls.filter(Boolean).length);
+      // Archive immediately when the provider URL is still valid.
+      try{await seedanceRequest(accessToken,{action:"archive",token,sourceUrl:response.url});}catch{}
       completed=true;break;
      }
      if(response?.status==="failed")throw Error("Seedance no completó la escena "+(beat+1)+". Las anteriores siguen guardadas.");
