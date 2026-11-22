@@ -16,6 +16,11 @@ function validAlignment(v:unknown):v is Alignment{
   a.character_start_times_seconds.every(t=>typeof t==="number"&&Number.isFinite(t))&&
   a.character_end_times_seconds.every(t=>typeof t==="number"&&Number.isFinite(t));
 }
+export async function GET(req:NextRequest){
+ const owner=await authenticatedUser(req);
+ if(!owner||!videoAllowed(owner))return reply({error:"video_not_enabled_for_account"},403);
+ return reply({configured:!!process.env.ELEVENLABS_API_KEY});
+}
 export async function POST(req:NextRequest){
  const owner=await authenticatedUser(req);
  if(!owner||!videoAllowed(owner))return reply({error:"video_not_enabled_for_account"},403);
