@@ -160,7 +160,8 @@ export async function POST(req:NextRequest){
     return {id,title:String(project.plan.title||"Proyecto").slice(0,100),
      updatedAt:project.updatedAt||file.updated_at||"",
      clips:project.seedance.urls.filter(Boolean).length,
-     scenes:project.plan.frames.length,coverUrl,ready};
+     scenes:project.plan.frames.length,sceneCount:project.plan.scenes.length,
+     seconds:project.plan.scenes.length*5,coverUrl,ready};
    }));
    return reply({projects:loaded.filter(Boolean)});
   }catch{return reply({error:"motion_cloud_list_unavailable"},503);}

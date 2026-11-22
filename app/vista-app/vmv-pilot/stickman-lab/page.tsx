@@ -360,7 +360,7 @@ function readSeedance(prompt:string):SeedanceSaved{
 }
 function saveSeedance(value:SeedanceSaved){saveMotion(SEEDANCE_KEY,value);}
 type MotionProjectArchive={id:string;label:string;savedAt:number;plan:DirectorPlan;seedance:SeedanceSaved;cloudId?:string};
-type CloudMotionProject={id:string;title:string;updatedAt:string;clips:number;scenes:number;coverUrl?:string;ready?:boolean};
+type CloudMotionProject={id:string;title:string;updatedAt:string;clips:number;scenes:number;sceneCount?:number;seconds?:number;coverUrl?:string;ready?:boolean};
 type MotionPublishDraft={title:string;caption:string;hashtags:string;platform:string;
  scheduledFor:string;postedAt:string;views:number;leads:number;sales:number;
  revenueUsd:number;spendUsd:number};
@@ -940,7 +940,7 @@ export default function StickmanLabPage(){
     setCloudProjects(current=>{
      const entry:CloudMotionProject={id,title:saved.title||"Proyecto",
       updatedAt:String(result.updatedAt||""),clips:readSeedance(saved.prompt).urls.filter(Boolean).length,
-      scenes:saved.frames.length,
+      scenes:saved.frames.length,sceneCount:saved.scenes.length,seconds:saved.scenes.length*5,
       ready:Boolean(lastRenderedCloudUrl)||Boolean(current.find(item=>item.id===id)?.ready)};
      return [entry,...current.filter(item=>item.id!==id)].slice(0,40);
     });
@@ -1768,7 +1768,7 @@ export default function StickmanLabPage(){
     const speech=narrationEnabled?await loadContinuousVoice(plan.scenes.map(scene=>scene.speech),
      provider,selectedVoiceId):null;
     const effects=asmrEnabled?await loadMotionSfx(accessToken,customPrompt,plan.scenes,
-     montageSeconds,n=>setDirectorStatus("Creando sonido ASMR "+n+"/6 · guardando los clips")):[];
+     montageSeconds,n=>setDirectorStatus("Creando sonido ASMR "+n+"/"+Math.min(6,plan.scenes.length)+" · guardando los clips")):[];
     setDirectorStatus(asmrEnabled?"Montando el video con ASMR…":"Montando el video con la nueva narración…");
     ({blob:video,extension}=await stitchSeedanceClips(localUrls,speech,asmrEnabled?false:subtitles,{
      music:musicFile,musicVolume:musicVolume/100,
@@ -2073,16 +2073,16 @@ export default function StickmanLabPage(){
          <span className={css.libraryCardLink}>Continuar editando</span>
         </span>
        </button>
-       {savedClipCount===MOTION_SCENES&&Boolean(lastRenderedCloudUrl)?<button type="button" className={css.libraryVoiceAction}
+       {savedClipCount===sceneTotal(directorPlan,montageSeconds)&&Boolean(lastRenderedCloudUrl)?<button type="button" className={css.libraryVoiceAction}
         disabled={Boolean(libraryShareBusy)} onClick={()=>void shareLibraryVideo(currentCloudId())}>
         {libraryShareBusy===currentCloudId()?<LoaderCircle size={16} className={css.spin}/>:<Share2 size={16}/>}
         Compartir enlace
        </button>:null}
-       {savedClipCount===MOTION_SCENES&&!lastRenderedCloudUrl?<button type="button"
+       {savedClipCount===sceneTotal(directorPlan,montageSeconds)&&!lastRenderedCloudUrl?<button type="button"
         className={css.libraryVoiceAction} onClick={()=>{setLibraryOpen(false);setStudioStep("editar");}}>
         <Clapperboard size={16}/> Montar para compartir
        </button>:null}
-       {savedClipCount===MOTION_SCENES?<button className={css.libraryVoiceAction}
+       {savedClipCount===sceneTotal(directorPlan,montageSeconds)?<button className={css.libraryVoiceAction}
         type="button" onClick={()=>{setLibraryOpen(false);openVoiceEditor();}}>
         <Volume2 size={16}/> Cambiar voz
        </button>:null}
@@ -2095,7 +2095,7 @@ export default function StickmanLabPage(){
          <span className={css.libraryPoster}><Clapperboard size={27}/>
           {item.coverUrl?<img src={item.coverUrl} alt=""
            onError={event=>{event.currentTarget.style.display="none";}}/>:null}
-          <span>{item.clips===MOTION_SCENES?"12 CLIPS GUARDADOS":"EN PROGRESO"}</span></span>
+          <span>{item.clips===(item.sceneCount||12)?item.clips+" CLIPS GUARDADOS":"EN PROGRESO"}</span></span>
          <span className={css.libraryCardBody}><strong>{item.title||"Mi video"}</strong>
           <small>{item.scenes} imágenes · {item.clips} clips</small>
           <span className={css.libraryCardLink}>Abrir proyecto</span>
@@ -2107,13 +2107,13 @@ export default function StickmanLabPage(){
          {libraryShareBusy===item.id?<LoaderCircle size={16} className={css.spin}/>:<Share2 size={16}/>}
          Compartir enlace
         </button>:null}
-        {item.clips===MOTION_SCENES&&!item.ready?<button type="button"
+        {item.clips===(item.sceneCount||12)&&!item.ready?<button type="button"
          className={css.libraryVoiceAction}
          disabled={cloudLoading||projectSwitching}
          onClick={()=>void restoreCloudProject(item.id)}>
          <Clapperboard size={16}/> Montar para compartir
         </button>:null}
-        {item.clips===MOTION_SCENES?<button type="button" className={css.libraryVoiceAction}
+        {item.clips===(item.sceneCount||12)?<button type="button" className={css.libraryVoiceAction}
          disabled={cloudLoading||projectSwitching}
          onClick={()=>void restoreCloudProject(item.id,true)}>
          <Volume2 size={16}/> Cambiar voz
@@ -2134,13 +2134,13 @@ export default function StickmanLabPage(){
           <span className={css.libraryCardLink}>Abrir proyecto</span>
          </span>
         </button>
-        {item.seedance.urls.filter(Boolean).length===MOTION_SCENES?
+        {item.seedance.urls.filter(Boolean).length===item.plan.scenes.length?
          <button type="button" className={css.libraryVoiceAction}
           disabled={cloudLoading||projectSwitching}
           onClick={()=>void restoreMotionProject(item.id)}>
           <Clapperboard size={16}/> Abrir para compartir
          </button>:null}
-        {item.seedance.urls.filter(Boolean).length===MOTION_SCENES?
+        {item.seedance.urls.filter(Boolean).length===item.plan.scenes.length?
          <button type="button" className={css.libraryVoiceAction}
           disabled={cloudLoading||projectSwitching}
           onClick={()=>void restoreMotionProject(item.id,true)}>
@@ -2162,7 +2162,7 @@ export default function StickmanLabPage(){
     {(["crear","revisar","editar","publicar"] as const).map((step,i)=>{
      const names=["Crear","Revisar","Editar","Publicar"];
      const disabled=step==="revisar"&&!directorPlan?.frames.length||
-      step==="editar"&&directorPlan?.frames.length!==MOTION_SCENES||
+      step==="editar"&&directorPlan?.frames.length!==directorPlan?.scenes.length||
       step==="publicar"&&!seedJoined&&!lastRenderedCloudUrl;
      return <button key={step} type="button" disabled={disabled||directorBusy||seedBusy||rendering||projectSwitching}
       aria-current={studioStep===step?"step":undefined}
@@ -2198,7 +2198,7 @@ export default function StickmanLabPage(){
     <textarea disabled={rendering||directorBusy||Boolean(directorPlan?.frames.length)} value={customPrompt} maxLength={2000} rows={4}
      placeholder="Ejemplo: Un pequeño elefante busca agua en la selva. Encuentra un río y ayuda a sus amigos a beber."
      onChange={e=>{setCustomPrompt(e.target.value);setTerraStory(null);setDirectorPlan(null);setSeedUrls([]);setPreviousScene(null);pendingStoryboard.current={prompt:"",images:[]};}}/>
-    <small>{directorPlan?.frames.length?"Idea guardada. Para otra historia, selecciona «Nuevo».":customPrompt.length+"/2000 · Video de 60 segundos"}</small>
+    <small>{directorPlan?.frames.length?"Idea guardada. Para otra historia, selecciona «Nuevo».":customPrompt.length+"/2000 · Video de "+montageSeconds+" segundos"}</small>
    </label>:studioStep==="crear"?<div className={css.topics}>
     <button type="button" className={topic==="space"?css.active:""}
      onClick={()=>{if(!rendering)setTopic("space");}} disabled={rendering}>
@@ -2293,11 +2293,11 @@ export default function StickmanLabPage(){
      {directorBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
      {directorBusy?directorStatus:"Generar video"}
     </button>:null}
-    {studioStep==="editar"&&customMode&&directorPlan?.frames.length===MOTION_SCENES?
+    {studioStep==="editar"&&customMode&&directorPlan?.frames.length===directorPlan?.scenes.length?
      <section className={css.studioPanel} aria-label="Editor del video">
       <div className={css.studioSectionHeading}>
        <div><h2>Editar tu video</h2>
-        <p>Cambia una escena sin perder las demás. {savedClipCount}/12 clips guardados.</p></div>
+        <p>Cambia una escena sin perder las demás. {savedClipCount}/{directorPlan.scenes.length} clips guardados.</p></div>
        <button type="button" className={css.ghostButton} onClick={()=>setStudioStep("revisar")}>
         Revisar imágenes</button>
       </div>
@@ -2324,7 +2324,7 @@ export default function StickmanLabPage(){
          </button>)}
         </div>
         <button type="button" className={css.generate}
-         disabled={directorBusy||seedBusy||savedClipCount!==MOTION_SCENES||
+         disabled={directorBusy||seedBusy||savedClipCount!==directorPlan.scenes.length||
           framesRefreshing||editingSpeech!==null}
          onClick={()=>void animateApproved("voice")}>
          {directorBusy?<LoaderCircle className={css.spin} size={18}/>:<Volume2 size={18}/>}
@@ -2397,13 +2397,15 @@ export default function StickmanLabPage(){
        <div className={css.finishGrid}>
         <label>Duración del video final
          <select value={String(montageSeconds)}
-          onChange={e=>{const value=e.target.value==="30"?30:60;
+          onChange={e=>{const value=Number(e.target.value);
+           if(!validMotionSeconds(value)||value>directorPlan.scenes.length*5)return;
            setMontageSeconds(value);
-           if(value===30){setProjectNarration(false);setSubtitles(false);}
            if(customPrompt){const job=readSeedance(customPrompt);job.montageSeconds=value;
             saveSeedance(job);}}}>
-          <option value="30">30 segundos · clips acelerados</option>
-          <option value="60">60 segundos · velocidad original</option>
+          <option value="15">15 segundos{directorPlan.scenes.length===3?" · original":" · montaje corto"}</option>
+          <option value="30" disabled={directorPlan.scenes.length<6}>
+           30 segundos{directorPlan.scenes.length===6?" · original":" · montaje corto"}</option>
+          <option value="60" disabled={directorPlan.scenes.length<12}>60 segundos · original</option>
          </select>
         </label>
         <label className={css.asmrOption}>
@@ -2419,18 +2421,18 @@ export default function StickmanLabPage(){
             job.montageSeconds=montageSeconds;
             saveSeedance(job);}}}/>
           Sonidos ASMR con IA</span>
-         <small>Compatible con 30 o 60 segundos. En 60 segundos, ElevenLabs genera seis segmentos ASMR de 10 segundos. Puedes mezclarlos con tu música sin narración. Requiere autorización y créditos.</small>
+         <small>Compatible con 15, 30 o 60 segundos. Los efectos se sincronizan con las escenas y pueden mezclarse con música sin narración. Requiere autorización y créditos.</small>
         </label>
         <label className={css.asmrOption}>
-         <span><input type="checkbox" checked={withVoice&&!asmrEnabled&&montageSeconds===60}
+         <span><input type="checkbox" checked={withVoice&&!asmrEnabled}
           disabled={directorBusy||seedBusy}
           onChange={e=>setProjectNarration(e.target.checked)}/>
           Narración con voz IA</span>
-         <small>{withVoice&&!asmrEnabled&&montageSeconds===60?
+         <small>{withVoice&&!asmrEnabled?
           "Activada: se generará voz al montar. Puede consumir créditos.":
           "Desactivada: no se generará narración. Los sonidos ASMR y la música funcionan por separado."}</small>
         </label>
-        {withVoice&&!asmrEnabled&&montageSeconds===60?<label>Volumen de narración <strong>{narrationVolume}%</strong>
+        {withVoice&&!asmrEnabled?<label>Volumen de narración <strong>{narrationVolume}%</strong>
          <input type="range" min="0" max="150" step="5" value={narrationVolume}
           onChange={e=>setNarrationVolume(Number(e.target.value))}/></label>:null}
         <label>Música de fondo (opcional · compatible con ASMR)
@@ -2449,25 +2451,25 @@ export default function StickmanLabPage(){
          </select>
         </label>
        </div>
-       <p>Los 12 clips de 5 segundos se conservan: 60 segundos mantiene su velocidad original; 30 segundos acelera los clips en el montaje. Puedes combinar música autorizada y sonidos ASMR sin narración. Solo los efectos ASMR nuevos consumen créditos de ElevenLabs.</p>
+       <p>Se conservan los {directorPlan.scenes.length} clips de 5 segundos. La duración original es {directorPlan.scenes.length*5} segundos. Puedes añadir música y sonidos ASMR sin volver a animar las escenas.</p>
       </details>
       {directorStatus?<p className={css.cloudState} role="status">{directorStatus}</p>:null}
       <button type="button" className={css.generate}
        disabled={directorBusy||seedBusy||framesRefreshing||editingSpeech!==null||
-        directorPlan.frames.length!==MOTION_SCENES||
+        directorPlan.frames.length!==directorPlan.scenes.length||
         !directorPlan.scenes.every((scene,i)=>directorPlan.approved?.[i]===true&&
          (directorPlan.draftPrompts?.[i]??scene.imagePrompt)===scene.imagePrompt)}
        onClick={()=>void animateApproved()}>
-       {directorBusy?directorStatus:savedClipCount===12?
-        "Montar video · conservar 12 clips":"Continuar animaciones pendientes"}
+       {directorBusy?directorStatus:savedClipCount===directorPlan.scenes.length?
+        "Montar video · conservar "+directorPlan.scenes.length+" clips":"Continuar animaciones pendientes"}
       </button>
       <small className={css.mutedNote}>Regenerar un clip requiere autorización. El montaje reutiliza las demás escenas y no vuelve a pagar Seedance.</small>
      </section>:null}
     {studioStep==="revisar"&&customMode&&directorPlan?.frames.length?<section className={css.storyReview} aria-label="Revisión de escenas">
      <div className={css.storyHeading}>
       <h2>Revisa tus escenas</h2>
-      <p>{directorPlan.title} · {directorPlan.frames.length}/{MOTION_SCENES} imágenes ·
-       {(directorPlan.approved||[]).filter(Boolean).length}/{MOTION_SCENES} aprobadas</p>
+      <p>{directorPlan.title} · {directorPlan.frames.length}/{directorPlan.scenes.length} imágenes ·
+       {(directorPlan.approved||[]).filter(Boolean).length}/{directorPlan.scenes.length} aprobadas</p>
       {framesRefreshing?<p className={css.inlineLoading} role="status">
        <LoaderCircle className={css.spin} size={15}/> Cargando tus imágenes…
       </p>:null}
@@ -2539,12 +2541,12 @@ export default function StickmanLabPage(){
        </div>
       </article>;
      })}
-     {directorPlan.frames.length<MOTION_SCENES?<button type="button" className={css.generate}
+     {directorPlan.frames.length<directorPlan.scenes.length?<button type="button" className={css.generate}
       disabled={directorBusy} onClick={()=>void prepareStoryboard()}>
       {directorBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
       {directorBusy?directorStatus||"Creando imágenes…":"Continuar con las imágenes"}
      </button>:null}
-     {directorPlan.frames.length===MOTION_SCENES?<button type="button" className={css.generate}
+     {directorPlan.frames.length===directorPlan.scenes.length?<button type="button" className={css.generate}
       disabled={directorBusy||seedBusy||framesRefreshing||editingSpeech!==null||regeneratingScene!==null||
        !directorPlan.scenes.every((scene,i)=>directorPlan.approved?.[i]===true&&
         (directorPlan.draftPrompts?.[i]??scene.imagePrompt)===scene.imagePrompt)}
@@ -2552,7 +2554,7 @@ export default function StickmanLabPage(){
       Continuar al editor
      </button>:null}
      <small>Seedance se inicia solo tras aprobar todas las escenas. Regenerar imágenes consume créditos de OpenAI.
-      Animar 12 clips cuesta aproximadamente US$1.24 de Seedance, más imágenes y voz opcional.
+      Animar {directorPlan.scenes.length} clips cuesta aproximadamente US${(directorPlan.scenes.length*0.103).toFixed(2)} de Seedance Turbo, más imágenes y voz opcional.
       Si se interrumpe, se conservan los clips completados.</small>
     </section>:null}
     {studioStep==="publicar"&&customMode&&seedJoined?<div className={css.result}>

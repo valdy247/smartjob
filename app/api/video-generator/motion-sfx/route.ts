@@ -25,7 +25,7 @@ export async function POST(req:NextRequest){
  if(body?.confirmCost!==true)return reply({error:"cost_confirmation_required"},400);
  if(!Number.isInteger(slot)||slot<0||slot>5||
   ![5,10].includes(duration)||topic.length<8||topic.length>2000||
-  !Array.isArray(scenes)||scenes.length!==2||
+  !Array.isArray(scenes)||![1,2].includes(scenes.length)||
   scenes.some((s:unknown)=>typeof s!=="string"||s.trim().length<18||s.length>650))
   return reply({error:"invalid_sfx_request"},400);
  const key=process.env.ELEVENLABS_API_KEY;
@@ -34,7 +34,7 @@ export async function POST(req:NextRequest){
   "Clean studio-quality, extremely satisfying soft liquid ASMR Foley sound design.",
   "The scene is "+topic.slice(0,360)+".",
   "First action: "+scenes[0].trim().slice(0,440)+".",
-  "Then a second distinct action: "+scenes[1].trim().slice(0,440)+".",
+  scenes[1]?"Then a second distinct action: "+scenes[1].trim().slice(0,440)+".":"",
   "Sound of soft glossy spheres blending, gentle squishes, crisp pops, deep rounded bubbles,",
   "subtle smooth whooshes and soft viscous stretching. Keep the sequence continuous.",
   "Very close, detailed stereo recording, soothing, low harshness and no clipping.",
