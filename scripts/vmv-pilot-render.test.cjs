@@ -522,3 +522,35 @@ test("Library covers are privately signed and cannot reference another owner's s
  assert.match(studio,/item\.coverUrl\?<img src=\{item\.coverUrl\}/);
  assert.match(studio,/currentTarget\.style\.display="none"/);
 });
+
+test("Library video voice change uses existing clips with a separate paid-confirmed narration",()=>{
+ const page=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ const speech=read("app/api/video-generator/speech/continuous/route.ts");
+ assert.match(page,/restoreCloudProject\(item\.id,true\)/);
+ assert.match(page,/restoreMotionProject\(item\.id,true\)/);
+ assert.match(page,/Cambiar voz/);
+ assert.match(page,/VOICE_CHOICES/);
+ assert.match(page,/Crear versión con esta voz/);
+ assert.match(page,/animateApproved\("voice"\)/);
+ assert.match(page,/const voiceOnly=mode==="voice"/);
+ assert.match(page,/window\.confirm\("Se generará una nueva narración/);
+ assert.match(page,/const pending=voiceOnly\?\[\]/);
+ assert.match(page,/if\(job\.urls\[beat\]\)continue/);
+ assert.match(page,/loadContinuousVoice\(plan\.scenes\.map/);
+ assert.match(page,/stitchSeedanceClips\(localUrls,speech,subtitles/);
+ assert.match(speech,/openaiVoices=new Set\(\["alloy","nova","echo"\]\)/);
+});
+test("Changing a saved video's voice creates a new private render and retains the original",()=>{
+ const page=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ const api=read("app/api/video-generator/motion-library/route.ts");
+ assert.match(page,/const revisionId=voiceOnly\?crypto\.randomUUID\(\):""/);
+ assert.match(page,/voiceRevisions=\[/);
+ assert.match(page,/action:"render-upload",id,extension,\.\.\.\(revisionId/);
+ assert.match(page,/activeRenderId=revisionId/);
+ assert.match(page,/selectVideoVersion=useCallback/);
+ assert.match(page,/voiceRevisions\.map/);
+ assert.match(api,/renderPath\(owner:string,id:string,extension:string,revisionId\?:string\)/);
+ assert.match(api,/versions\/\+revisionId/);
+ assert.match(api,/validId\(body\.revisionId\)/);
+ assert.match(api,/validSnapshot\(project,owner\)/);
+});
