@@ -538,7 +538,7 @@ test("Library video voice change uses existing clips with a separate paid-confir
  assert.match(page,/if\(job\.urls\[beat\]\)continue/);
  assert.match(page,/loadContinuousVoice\(plan\.scenes\.map/);
  assert.match(page,/stitchSeedanceClips\(localUrls,speech,asmrEnabled\?false:subtitles/);
- assert.match(speech,/openaiVoices=new Set\(\["alloy","nova","echo"\]\)/);
+ assert.match(speech,/openaiVoices=new Set\(\["alloy","nova","echo","onyx"\]\)/);
 });
 test("Changing a saved video's voice creates a new private render and retains the original",()=>{
  const page=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
