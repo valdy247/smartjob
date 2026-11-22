@@ -378,38 +378,90 @@ async function processJob(job){
    }
    await verifyAudioLanguage(job,voices,dir);
   }else if(job.voice_provider!=="none")throw Error("voice_invalid");
+  const variants=job.quality_mode==="compare"?["turbo","high"]:
+   job.quality_mode==="turbo"?["turbo"]:job.quality_mode==="high"?["high"]:null;
+  if(!variants)throw Error("quality_mode_invalid");
+  const images=[],clipsByVariant=Object.fromEntries(variants.map(v=>[v,[]]));
+  // One common image per scene, identical for both video models.
   let reference=null;
   for(let i=0;i<scenes.length;i++){
    if(closing)throw Error("worker_stopping");
-   const scene=scenes[i],image=path.join(dir,"image-"+i+".jpg"),clip=path.join(dir,"clip-"+i+".mp4");
+   const image=path.join(dir,"image-"+i+".jpg");
    if(!await restoreAsset(job,"image_"+i,image)){
-    const buf=await makeImage(job,scene,
+    const buf=await makeImage(job,scenes[i],
      i>0&&["stickman","animated"].includes(job.style)?reference:null);
     await writeFile(image,buf);
     await persistAsset(job,"image_"+i,image,"image/jpeg");
    }
    if(i===0)reference=image;
-   if(!await restoreAsset(job,"clip_"+i,clip)){
-    let task=job.assets?.["task_"+i];
-    if(!task){
-     task=await runwayStart(job,scene,image);
-     await patch(job,{assets:{...job.assets,["task_"+i]:task}});
-    }
-    const url=await runwayWait(task);
-    await writeFile(clip,await bytes(await request(url,{},60000),60*1024*1024));
-    await persistAsset(job,"clip_"+i,clip,"video/mp4");
-   }
-   clips.push(clip);
-   await patch(job,{status:"working",phase:"Escena "+(i+1)+"/"+scenes.length,
-    progress:Math.min(88,10+Math.floor(78*(i+1)/scenes.length))});
+   images.push(image);
+   await patch(job,{status:"working",phase:"Imágenes "+(i+1)+"/"+scenes.length,
+    progress:15+Math.floor(8*(i+1)/scenes.length)});
   }
-  await patch(job,{status:"assembling",phase:"Montaje",progress:90});
-  const final=await assemble(job,dir,clips,voices);
-  const finalPath=prefix+".mp4";
-  await upload(FINAL,finalPath,final,"video/mp4");
+  let completed=0;
+  const total=variants.length*scenes.length;
+  for(let i=0;i<scenes.length;i++){
+   if(closing)throw Error("worker_stopping");
+   const pending=[];
+   // Submit BOTH models before waiting, so Runway can animate in parallel.
+   // Identical scene prompt and source JPEG; the only variable is model ID.
+   for(const variant of variants){
+    const key="clip_"+variant+"_"+i;
+    const clip=path.join(dir,key+".mp4");
+    if(await restoreAsset(job,key,clip)){
+     clipsByVariant[variant].push(clip);
+     completed++;
+     continue;
+    }
+    const taskKey="task_"+variant+"_"+i;
+    let task=job.assets?.[taskKey];
+    if(!task){
+     task=await runwayStart(job,scenes[i],images[i],variant);
+     await patch(job,{assets:{...job.assets,[taskKey]:task}});
+    }
+    pending.push({variant,key,clip,task});
+   }
+   // Both paid video tasks now run concurrently; no per-model regeneration
+   // of prompts, source images, audio, captions or script.
+   const settled=await Promise.allSettled(pending.map(item=>runwayWait(item.task)));
+   let firstError=null;
+   for(let j=0;j<pending.length;j++){
+    const item=pending[j],status=settled[j];
+    if(status.status!=="fulfilled"){
+     firstError=firstError||status.reason;
+     continue;
+    }
+    try{
+     const video=await bytes(await request(status.value,{},65000),60*1024*1024);
+     await writeFile(item.clip,video);
+     await persistAsset(job,item.key,item.clip,"video/mp4");
+     clipsByVariant[item.variant].push(item.clip);
+     completed++;
+     await patch(job,{status:"working",
+      phase:"Escena "+(i+1)+"/"+scenes.length+(variants.length>1?" · "+(item.variant==="turbo"?"Turbo":"Alta"):""),
+      progress:23+Math.floor(65*completed/total)});
+    }catch(e){firstError=firstError||e;}
+   }
+   if(firstError)throw firstError;
+  }
+  // Compose every version from the SAME narration and subtitle timeline.
+  for(let i=0;i<variants.length;i++){
+   const variant=variants[i],pathKey=prefix+"/"+variant+".mp4";
+   if(job.outputs?.[variant]===pathKey)continue;
+   await patch(job,{status:"assembling",phase:"Montaje "+(variant==="turbo"?"Turbo":"Alta"),
+    progress:90+Math.floor(7*i/variants.length)});
+   const final=await assemble(job,dir,clipsByVariant[variant],voices,variant);
+   await upload(FINAL,pathKey,final,"video/mp4");
+   await patch(job,{outputs:{...(job.outputs||{}),[variant]:pathKey},
+    progress:90+Math.floor(7*(i+1)/variants.length)});
+  }
+  const preferred=job.preferred_model&&variants.includes(job.preferred_model)
+   ?job.preferred_model:variants[0];
   await patch(job,{status:"completed",phase:"Listo",progress:100,
-   output_path:finalPath,finished_at:new Date().toISOString(),failure_code:null});
-  log("render_completed",{job:job.id,seconds:job.seconds});
+   output_path:prefix+"/"+preferred+".mp4",
+   preferred_model:job.quality_mode==="compare"?null:preferred,
+   finished_at:new Date().toISOString(),failure_code:null});
+  log("render_completed",{job:job.id,seconds:job.seconds,quality:job.quality_mode,variants:variants.length});
  }finally{
   clearInterval(heartbeat);
   await rm(dir,{recursive:true,force:true});
