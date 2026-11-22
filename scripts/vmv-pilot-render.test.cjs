@@ -11,7 +11,12 @@ const files=[
  "app/api/video-generator/pilot-render/route.ts",
  "app/api/video-generator/pilot/route.ts",
  "app/api/video-generator/radar/route.ts",
- "app/vista-app/video-generator/ViralRadar.tsx"
+ "app/vista-app/video-generator/ViralRadar.tsx",
+ "app/vista-app/vmv-pilot/PilotTrendStep.tsx",
+ "app/vista-app/vmv-pilot/PilotVoiceStep.tsx",
+ "app/api/video-generator/pilot-voices/route.ts",
+ "lib/vmv-pilot-elevenlabs.ts",
+ "lib/vmv-pilot-voice-config.ts"
 ];
 const source=Object.fromEntries(files.map(p=>[p,read(p)]));
 test("Video Pilot wizard and durable API parse TypeScript",()=>{
@@ -80,4 +85,55 @@ test("Saving campaign alone cannot start a paid generation or publish content",(
  assert.match(api,/status:"paused"/);
  assert.match(api,/next_run_at:null/);
  assert.doesNotMatch(api,/publishToSocial|startRunway|generateSpeech/);
+});
+
+test("Pilot requires a trend decision before summary; no nested Radar inside final review",()=>{
+ const ui=source["app/vista-app/vmv-pilot/page.tsx"];
+ const trend=source["app/vista-app/vmv-pilot/PilotTrendStep.tsx"];
+ assert.match(ui,/step===9\?<PilotTrendStep/);
+ assert.match(ui,/step===10\?<div className=\{css.review\}/);
+ assert.doesNotMatch(ui,/<ViralRadar/);
+ assert.match(trend,/Sí, analizar/);
+ assert.match(trend,/No, continuar/);
+ assert.match(trend,/setPhase\(L\("Creando propuestas"/);
+ assert.match(trend,/scanId:current\.id,language/);
+ assert.match(trend,/onChoose\(idea,scan\.id\)/);
+ assert.match(trend,/youtube\.com\/t\/terms/);
+});
+test("Six supported video languages and voice choice are independent of interface language",()=>{
+ const ui=source["app/vista-app/vmv-pilot/page.tsx"];
+ const voice=source["app/vista-app/vmv-pilot/PilotVoiceStep.tsx"];
+ const cfg=source["lib/vmv-pilot-voice-config.ts"];
+ for(const lang of ['"es"','"en"','"pt"','"fr"','"de"','"it"'])assert.ok(cfg.includes(lang));
+ assert.match(ui,/Idioma del video/);
+ assert.match(ui,/step===6/);
+ assert.match(ui,/step===7\?<PilotVoiceStep/);
+ assert.match(ui,/language:form\.language,voiceProvider:form\.voiceProvider,voiceId:form\.voiceId/);
+ assert.match(voice,/onChoose\(v\.provider,v\.id,v\.name\)/);
+ assert.match(voice,/No voice/);
+});
+test("Selected voice and target language are verified before a persistent job is accepted",()=>{
+ const api=source["app/api/video-generator/pilot-render/route.ts"];
+ const pilot=source["app/api/video-generator/pilot/route.ts"];
+ assert.match(api,/validPilotLanguage\(language\)/);
+ assert.match(api,/validPilotVoice\(voiceProvider,voiceId\)/);
+ assert.match(api,/verifyElevenLabsVoice\(voiceId,language\)/);
+ assert.match(api,/vmv_pilot_render_enqueue_v2/);
+ assert.match(pilot,/ideas_language!==language/);
+ assert.match(pilot,/voice_provider:voiceProvider/);
+ const sql=read("supabase/sql/vmv_pilot_languages_and_voices_20261121.sql");
+ assert.match(sql,/CREATE OR REPLACE FUNCTION public\.vmv_pilot_render_enqueue_v2/);
+ assert.match(sql,/p_voice_provider/);
+ assert.match(sql,/CHECK\(language IN \('es','en','pt','fr','de','it'\)\)/);
+});
+test("Worker blocks videos where script or actual narration has the wrong language",()=>{
+ const worker=read("services/vmv-pilot-worker/worker.mjs");
+ assert.match(worker,/verifyScriptLanguage\(job,scenes\)/);
+ assert.match(worker,/script_language_mismatch/);
+ assert.match(worker,/verifyAudioLanguage\(job,voices,dir\)/);
+ assert.match(worker,/audio_language_mismatch/);
+ assert.match(worker,/eleven_multilingual_v2/);
+ assert.match(worker,/job\.voice_provider==="elevenlabs"/);
+ assert.match(worker,/voice:job\.voice_id/);
+ assert.match(worker,/duration:5/);
 });
