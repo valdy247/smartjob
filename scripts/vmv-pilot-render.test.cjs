@@ -319,3 +319,16 @@ test("Seedance preflight validates all pending storyboard frames before paid gen
  assert.match(motion,/HTTP "\+response\.status/);
  assert.match(motion,/Tus imágenes y los clips anteriores se conservan/);
 });
+
+test("Motion storyboard supports editable narration with saved changes and approval invalidation",()=>{
+ const motion=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ assert.match(motion,/Editar narración/);
+ assert.match(motion,/Guardar narración/);
+ assert.match(motion,/Cancelar/);
+ assert.match(motion,/setSpeechDraft/);
+ assert.match(motion,/scenes\[index\]=\{\.\.\.scenes\[index\],speech\}/);
+ assert.match(motion,/if\(changed\)approved\[index\]=false/);
+ assert.match(motion,/saveDirectorPlan\(next\)/);
+ assert.match(motion,/readSeedance\(plan\.prompt\)\.tokens\.some\(Boolean\)/);
+ assert.match(motion,/editingSpeech!==null\|\|regeneratingScene/);
+});
