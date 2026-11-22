@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
 import {useRouter} from "next/navigation";
-import {ArrowLeft,ArrowRight,CalendarDays,Check,Clock3,History,LoaderCircle,Plus,Target,Volume2,VolumeX,Subtitles,WandSparkles,Lightbulb,FlaskConical,Landmark,Gamepad2,BookOpen,BriefcaseBusiness,Cpu,UsersRound,Pencil,Smile,GraduationCap,Heart,ShoppingBag,PartyPopper} from "lucide-react";
+import {ArrowLeft,ArrowRight,CalendarDays,Check,Clock3,History,LoaderCircle,Plus,Target,Volume2,VolumeX,Subtitles,WandSparkles,Lightbulb,FlaskConical,Landmark,Gamepad2,BookOpen,BriefcaseBusiness,Cpu,UsersRound,Pencil,Smile,GraduationCap,Heart,ShoppingBag,PartyPopper,Zap,Sparkles,GitCompareArrows} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
@@ -9,6 +9,7 @@ import {Preview} from "../video-generator/CreativeGenerator";
 import PilotTrendStep from "./PilotTrendStep";
 import PilotVoiceStep from "./PilotVoiceStep";
 import {PILOT_LANGUAGES,type PilotLanguage,type PilotVoiceProvider} from "@/lib/vmv-pilot-voice-config";
+import {pilotQualityOptions,animationCostCents,priceUSD,type PilotQuality} from "@/lib/vmv-pilot-quality";
 import type {RadarIdea} from "@/lib/vmv-video-radar";
 import type {PilotRenderRequest} from "@/components/VMVPilotRenderDock";
 import css from "./page.module.css";
@@ -18,7 +19,7 @@ type Style="stickman"|"realistic"|"cinematic"|"animated"|"product";
 type Pilot={id:string;niche:string;audience:string;goal:string;style:Style;frequency:number;
  monthly_budget_cents:number;delivery:string;status:string;created_at:string;
  research_scan_id:string|null;creative_seed:string;research_video_id:string;
- language?:PilotLanguage;voice_provider?:PilotVoiceProvider;voice_id?:string;seconds?:number;subtitles?:boolean};
+ language?:PilotLanguage;voice_provider?:PilotVoiceProvider;voice_id?:string;seconds?:number;subtitles?:boolean;quality_mode?:PilotQuality};
 const goals=[
  ["Entretener","Entertain"],["Enseñar","Teach"],["Informar","Inform"],
  ["Inspirar","Inspire"],["Promocionar","Promote"],["Vender","Sell"]
@@ -51,7 +52,7 @@ const defaults={id:"",niche:"",audience:"Público general",goal:"Entretener",
  style:"stickman" as Style,frequency:3,monthly_budget_cents:0,
  creative_seed:"",research_video_id:"",research_scan_id:null as string|null,
  seconds:60 as 15|30|60,narration:true,subtitles:true,language:"es" as PilotLanguage,
- voiceProvider:"openai" as PilotVoiceProvider,voiceId:"alloy",voiceLabel:"Alloy"};
+ voiceProvider:"openai" as PilotVoiceProvider,voiceId:"alloy",voiceLabel:"Alloy",qualityMode:"turbo" as PilotQuality};
 
 export default function VMVPilotPage(){
  const router=useRouter();
@@ -102,8 +103,8 @@ export default function VMVPilotPage(){
     pilot.voice_provider==="elevenlabs"?"ElevenLabs":pilot.voice_id||"Alloy",
    narration:pilot.voice_provider!=="none",
    seconds:([15,30,60] as const).find(v=>v===pilot.seconds)||60,
-   subtitles:pilot.subtitles!==false});
-  setStep(10);setCustomNiche(false);setCustomAudience(false);setError("");setApproved(false);setScreen("create");
+   subtitles:pilot.subtitles!==false,qualityMode:pilot.quality_mode||"turbo"});
+  setStep(11);setCustomNiche(false);setCustomAudience(false);setError("");setApproved(false);setScreen("create");
  };
  const back=()=>{
   setError("");
@@ -126,7 +127,8 @@ export default function VMVPilotPage(){
     topic:(form.creative_seed||form.niche).slice(0,220),
     audience:form.audience,goal:form.goal,style:form.style,
     seconds:form.seconds,narration:form.narration,subtitles:form.subtitles,
-    language:form.language,voiceProvider:form.voiceProvider,voiceId:form.voiceId
+    language:form.language,voiceProvider:form.voiceProvider,voiceId:form.voiceId,
+    qualityMode:form.qualityMode
    };
    window.dispatchEvent(new CustomEvent<PilotRenderRequest>("vmv-pilot:generate",{detail:details}));
    setPilots(prev=>[saved,...prev.filter(p=>p.id!==saved.id)]);
@@ -150,6 +152,7 @@ export default function VMVPilotPage(){
   L("Elige una voz","Choose a voice"),
   L("Subtítulos","Subtitles"),
   L("¿Analizar tendencias?","Analyze trends?"),
+  L("Calidad","Quality"),
   L("Tu video","Your video")
  ];
  return <main className={css.page}><div className={css.shell}>
@@ -165,7 +168,7 @@ export default function VMVPilotPage(){
    </div>
   </>:null}
   {screen==="create"?<>
-   <div className={css.progress}>{step+1} / 11</div>
+   <div className={css.progress}>{step+1} / 12</div>
    <h1>{titles[step]}</h1>
    {step===0?customNiche?<div className={css.inputPanel}>
     <input autoFocus value={form.niche} maxLength={160}
@@ -226,10 +229,21 @@ export default function VMVPilotPage(){
    {step===9?<PilotTrendStep niche={form.niche} language={form.language} en={en}
      onSkip={()=>{update({creative_seed:"",research_video_id:"",research_scan_id:null});setStep(10);}}
      onChoose={selectedIdea}/>:null}
-   {step===10?<div className={css.review}>
+   {step===10?<div className={css.choices}>{pilotQualityOptions.map(item=>
+    <button type="button" key={item.id} onClick={()=>{update({qualityMode:item.id});setStep(11);}}>
+     {item.id==="turbo"?<Zap size={21}/>:item.id==="high"?<Sparkles size={21}/>:<GitCompareArrows size={21}/>}
+     <strong>{item.id==="compare"?L("Probar ambas","Test both"):item.id==="high"?L("Alta","High"):item.name}</strong>
+     <small className={css.qualityPrice}>{priceUSD(animationCostCents(form.seconds,item.id))}</small>
+    </button>)}
+    <p className={css.qualityNote}>{L("Costo estimado de animación · otros servicios aparte","Estimated animation cost · other services extra")}</p>
+   </div>:null}
+   {step===11?<div className={css.review}>
     <div><span>{L("Tema","Topic")}</span><strong>{form.niche}</strong></div>
     <div><span>{L("Estilo","Style")}</span><strong>{stylesOptions.find(s=>s.id===form.style)?.label||"Producto"}</strong></div>
     <div><span>{L("Duración","Duration")}</span><strong>{form.seconds}s · 9:16</strong></div>
+    <div><span>{L("Calidad","Quality")}</span><strong>{form.qualityMode==="compare"?L("Probar ambas · 2 videos","Test both · 2 videos"):form.qualityMode==="high"?L("Alta","High"):"Turbo"}</strong></div>
+    <div><span>{L("Animación estimada","Estimated animation")}</span>
+     <strong>{priceUSD(animationCostCents(form.seconds,form.qualityMode))}</strong></div>
     <div><span>{L("Idioma","Language")}</span><strong>{PILOT_LANGUAGES.find(x=>x.id===form.language)?.native}</strong></div>
     <div><span>{L("Voz","Voice")}</span><strong>{form.narration?form.voiceLabel:L("Sin voz","No voice")}</strong></div>
     <div><span>{L("Subtítulos","Subtitles")}</span><strong>{form.subtitles?L("Sí","Yes"):L("No","No")}</strong></div>
@@ -240,12 +254,14 @@ export default function VMVPilotPage(){
     </div>:null}
     <label className={css.consent}>
      <input type="checkbox" checked={approved} onChange={e=>setApproved(e.target.checked)}/>
-     <span>{L("Autorizo usar créditos de IA para este video.","I approve AI credits for this video.")}</span>
+     <span>{form.qualityMode==="compare"
+      ?L("Autorizo generar 2 videos y consumir créditos de IA.","I approve 2 videos and AI credit usage.")
+      :L("Autorizo generar el video y consumir créditos de IA.","I approve video generation and AI credit usage.")}</span>
     </label>
     <button type="button" className={css.primary} onClick={()=>void generate()}
      disabled={!approved||busy||form.niche.trim().length<3}>
      {busy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
-     {busy?L("Preparando…","Preparing…"):L("Generar video","Generate video")}</button>
+     {busy?L("Preparando…","Preparing…"):form.qualityMode==="compare"?L("Generar ambos videos","Generate both videos"):L("Generar video","Generate video")}</button>
    </div>:null}
   </>:null}
   {screen==="history"?<>
