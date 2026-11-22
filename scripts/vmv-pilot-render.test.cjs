@@ -246,7 +246,7 @@ test("The free preview never calls a paid generator; voice generation is opt-in"
 test("The lab is reachable from Pilot and does not change the existing paid wizard",()=>{
  const ui=source["app/vista-app/vmv-pilot/page.tsx"];
  assert.match(ui,/stickman-lab/);
- assert.match(ui,/Probar nuestro motor Stickman/);
+ assert.match(ui,/Abrir laboratorio manual de VMV Motion/);
  assert.match(ui,/Crear con VMV Motion/);
  assert.match(ui,/PilotTrendStep/);
  assert.match(ui,/Generar ambos videos/);
