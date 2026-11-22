@@ -1,0 +1,38 @@
+.page{min-height:100dvh;padding:19px 16px 70px;background:#f8f7fb;color:#2e1c40;font-family:Inter,"DM Sans",system-ui,sans-serif}
+.page *{box-sizing:border-box}.shell{max-width:740px;margin:0 auto}
+.header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:35px}
+.header>button{width:42px;height:42px;background:#fff;border:1px solid #e9def0;border-radius:13px;color:#75509d;display:grid;place-items:center;cursor:pointer}
+.header strong{font-size:15px;font-weight:850;letter-spacing:-.02em}
+.beta{background:#f0e7f8;color:#8554a8;border:1px solid #e8dcf0;border-radius:99px;padding:6px 12px;font-size:10px;font-weight:850;letter-spacing:.09em}
+.intro{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+.intro h1{font-size:clamp(25px,5vw,33px);margin:0;font-weight:860;letter-spacing:-.05em}
+.intro span{color:#897999;font-size:12px}
+.topics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-bottom:16px}
+.topics button{min-height:65px;display:flex;justify-content:center;align-items:center;gap:11px;background:#fff;border:1px solid #e6dced;color:#684d86;border-radius:17px;font-weight:750;cursor:pointer}
+.topics button.active{border-color:#9963cf;color:#7650ae;background:#f4ecfb;box-shadow:0 0 0 2px #b48ce42b}
+.stage{background:#fff;border:1px solid #e9e0f1;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:16px;align-items:center;box-shadow:0 10px 32px #49305b0b}
+.canvasWrap{width:min(100%,340px);aspect-ratio:9/16;overflow:hidden;background:#15152f;border-radius:22px;position:relative;box-shadow:0 9px 26px #18112a25}
+.canvasWrap canvas{width:100%;height:100%;display:block;object-fit:contain}
+.play{position:absolute;left:13px;top:13px;width:37px;height:37px;border-radius:50%;background:#ffffffde;border:1px solid #ffffffb8;display:grid;place-items:center;color:#593f8d;cursor:pointer}
+.duration{position:absolute;right:13px;top:13px;background:#25193b8c;color:#fff;border-radius:99px;padding:7px 10px;font-size:11px;font-weight:750}
+.controls{width:100%;display:flex;align-items:center;flex-wrap:wrap;justify-content:center;gap:14px}
+.languages{display:flex;gap:4px;border:1px solid #ebe2f1;border-radius:12px;padding:4px;background:#f9f6fb}
+.languages button,.voiceOptions button{border:0;background:transparent;color:#80688e;font-size:12px;font-weight:800;border-radius:9px;padding:9px 13px;cursor:pointer}
+.languages button.selected,.voiceOptions button.selected{background:#935ece;color:#fff}
+.toggle{display:flex;gap:7px;align-items:center;color:#584763;font-size:12px;font-weight:650;cursor:pointer}
+.toggle input{accent-color:#9560cb;width:17px;height:17px;cursor:pointer}
+.voiceOptions{display:flex;align-items:center;justify-content:center;gap:9px;background:#f7f2fa;border-radius:12px;padding:6px 9px;flex-wrap:wrap}
+.voiceOptions small{font-size:10px;color:#91859b}
+.generate{width:100%;max-width:520px;background:#925bca;border:0;color:#fff;min-height:53px;border-radius:15px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:800;cursor:pointer}
+.generate:disabled{opacity:.7;cursor:wait}
+.generate:focus-visible,.topics button:focus-visible,.languages button:focus-visible{outline:3px solid #aa7bda;outline-offset:2px}
+.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.error{color:#a73755;font-size:12px;line-height:1.4;margin:0}
+.result{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;padding-top:15px;border-top:1px solid #eee4f2}
+.resultTitle{display:flex;align-items:center;gap:7px;color:#7550a3}
+.resultTitle strong{font-size:14px}
+.result video{display:block;width:min(100%,300px);aspect-ratio:9/16;background:#171328;border-radius:16px}
+.result a{display:flex;justify-content:center;align-items:center;gap:7px;background:#f0e7f9;color:#7753a0;border-radius:12px;padding:12px 20px;text-decoration:none;font-weight:800;font-size:13px}
+.note{font-size:11px;color:#9b8ba6;text-align:center;margin:16px auto;max-width:490px;line-height:1.5}
+@media(max-width:440px){.page{padding:16px 13px 60px}.stage{padding:11px}.canvasWrap{max-width:310px}.controls{gap:10px}.intro{align-items:start;flex-direction:column;gap:6px}}
+@media(prefers-reduced-motion:reduce){.spin{animation:none}}
