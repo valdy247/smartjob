@@ -463,7 +463,7 @@ export default function AutomaticCallWizard({business,agent,workspaceId,onClose,
     {busy==="save"?"Guardando…":saved?"Guardado":"Aprobar y guardar reglas"} <ArrowRight size={17}/></button>:
    <button type="button" className={styles.primary+" "+theme.agentButton}
     onClick={next} disabled={Boolean(busy)||!valid||(step==="line"&&lineChoice==="current"&&!line)}>
-    {returnReview?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={17}/></button>}
+    {returnReview?"Guardar y volver a Revisión":null} <ArrowRight size={17}/></button>}
   </div>:null}
   <p className={styles.footnote}><ShieldCheck size={14}/> Smart Call mantiene el control del número y la facturación.</p>
  </section>;
