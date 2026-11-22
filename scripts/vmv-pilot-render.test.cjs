@@ -554,3 +554,17 @@ test("Changing a saved video's voice creates a new private render and retains th
  assert.match(api,/validId\(body\.revisionId\)/);
  assert.match(api,/validSnapshot\(project,owner\)/);
 });
+
+test("A new narration is billed only after all existing video clips can be downloaded",()=>{
+ const page=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ const start=page.indexOf('const animateApproved=useCallback(async(mode:"normal"|"voice"="normal")');
+ const finish=page.indexOf('},[customPrompt,withVoice,voice,subtitles',start);
+ assert.ok(start>=0&&finish>start);
+ const montage=page.slice(start,finish);
+ const download=montage.indexOf('localUrls.push(await loadSeedanceForStitching');
+ const voice=montage.indexOf('const speech=withVoice?await loadContinuousVoice');
+ assert.ok(download>=0&&voice>download,
+  "Existing MP4 retrieval must finish before new voice spending begins");
+ assert.match(montage,/const pending=voiceOnly\?\[\]/);
+ assert.match(montage,/if\(job\.urls\[beat\]\)continue/);
+});
