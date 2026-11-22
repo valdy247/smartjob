@@ -31,7 +31,7 @@ function parse(raw:unknown):{title:string;scenes:[Scene,Scene,Scene]}|null{
    const kind=x.kind;
    const d=typeof x.d==="string"?x.d.trim():"";
    // Path2D accepts SVG commands only. Drop invalid elements; never render markup or remote assets.
-   if(kind==="path"&&(d.length<8||d.length>1800||!/^[MmLlHhVvCcSsQqTtAaZz0-9.,+\\- eE]*$/.test(d)))continue;
+   if(kind==="path"&&(d.length<8||d.length>1800||!/^[MmLlHhVvCcSsQqTtAaZz0-9.,+ eE-]*$/.test(d)))continue;
    const motion=["none","float","walk","sway","zoom"].includes(String(x.motion))
     ?x.motion as Shape["motion"]:"none";
    shapes.push({
