@@ -470,7 +470,7 @@ function VideoWizardSession({onClose,onRestart}:{onClose:()=>void;onRestart:()=>
    {stage==="review"?<button className={base.primary+" "+theme.agentButton} disabled={Boolean(busy)||!confirmCredits||(!standalone&&!configured)}
     onClick={()=>void (standalone?startImage():submit())}>{busy?"Generando…":standalone?"Generar imagen":"Generar video"}</button>:
     <button className={base.primary+" "+theme.agentButton} disabled={!valid||Boolean(busy)} onClick={next}>
-     {editing?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={17}/></button>}
+     {editing?"Guardar y volver a Revisión":null} <ArrowRight size={17}/></button>}
   </div>}
  </section>;
 }
