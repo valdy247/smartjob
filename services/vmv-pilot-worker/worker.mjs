@@ -214,6 +214,36 @@ async function generateSpeech(job,text,file){
   await writeFile(file,await bytes(response,1500000));
  }else throw Error("voice_invalid");
 }
+async function generateContinuousSpeech(job,scenes,file){
+ const text=scenes.map(scene=>scene.speech.trim()).join(" ");
+ if(job.voice_provider!=="elevenlabs"){
+  await generateSpeech(job,text,file);
+  return null;
+ }
+ if(!process.env.ELEVENLABS_API_KEY)throw Error("elevenlabs_key_missing");
+ const response=await request("https://api.elevenlabs.io/v1/text-to-speech/"+
+  encodeURIComponent(job.voice_id)+"/with-timestamps?output_format=mp3_44100_128",{
+   method:"POST",headers:{"xi-api-key":process.env.ELEVENLABS_API_KEY,"Content-Type":"application/json"},
+   body:JSON.stringify({text,model_id:"eleven_multilingual_v2"})
+  },120000);
+ if(!response.ok){
+  const status=response.status;
+  const err=await response.json().catch(()=>null);
+  const reason=String(err?.detail?.status||"unknown").replace(/[^a-z0-9_-]/gi,"").slice(0,48);
+  throw Error("elevenlabs_narration_"+status+"_"+reason);
+ }
+ const body=await response.json();
+ const base64=body?.audio_base64;
+ if(typeof base64!=="string"||base64.length<3000||base64.length>10000000)
+  throw Error("elevenlabs_audio_invalid");
+ const alignment=body?.alignment;
+ if(!alignment||!Array.isArray(alignment.characters)||
+  !Array.isArray(alignment.character_start_times_seconds)||
+  !Array.isArray(alignment.character_end_times_seconds))
+  throw Error("elevenlabs_alignment_unavailable");
+ await writeFile(file,Buffer.from(base64,"base64"));
+ return alignment;
+}
 async function makeImage(job,scene,reference){
  const prompt=[
   "Portrait 9:16 image to animate as a five-second real video clip.",
