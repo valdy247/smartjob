@@ -5,6 +5,7 @@ import {cookies,headers} from "next/headers";
 import {InterfaceLanguageProvider} from "@/lib/i18n-web";
 import {VMVQuickAccessProvider} from "@/components/VMVQuickAccess";
 import VMVChatHandoffNotifications from "@/components/VMVChatHandoffNotifications";
+import VMVPilotRenderDock from "@/components/VMVPilotRenderDock";
 import {t,visitorLanguage,type InterfaceLanguage} from "@/lib/i18n";
 
 async function requestLanguage():Promise<InterfaceLanguage>{
@@ -19,5 +20,5 @@ export async function generateMetadata():Promise<Metadata>{
 export const viewport:Viewport={width:"device-width",initialScale:1,viewportFit:"cover",themeColor:"#f8fbfa"};
 export default async function RootLayout({children}:{children:React.ReactNode}){
  const language=await requestLanguage();
- return <html lang={language} suppressHydrationWarning><body><InterfaceLanguageProvider><VMVQuickAccessProvider>{children}<VMVChatHandoffNotifications/></VMVQuickAccessProvider></InterfaceLanguageProvider></body></html>;
+ return <html lang={language} suppressHydrationWarning><body><InterfaceLanguageProvider><VMVQuickAccessProvider>{children}<VMVPilotRenderDock/><VMVChatHandoffNotifications/></VMVQuickAccessProvider></InterfaceLanguageProvider></body></html>;
 }
