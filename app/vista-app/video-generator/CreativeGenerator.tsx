@@ -17,7 +17,7 @@ const visualStyles:{id:Style;es:string;en:string;instruction:string}[]=[
  {id:"cinematic",es:"Cinemático",en:"Cinematic",instruction:"Premium cinematic composition, deliberate camera angle, evocative film lighting, depth and atmospheric storytelling."}
 ];
 
-function Preview({id}:{id:Style}){
+export function Preview({id}:{id:Style}){
  if(id==="stickman")return <svg className={css.sample} viewBox="0 0 240 144" role="img" aria-label="Stickman">
   <rect width="240" height="144" fill="#f8f7f1"/><path d="M0 116H240" stroke="#dce8db" strokeWidth="2"/>
   <circle cx="116" cy="44" r="20" fill="white" stroke="#222" strokeWidth="4"/>
