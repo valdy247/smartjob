@@ -12,7 +12,8 @@ export const validPilotLanguage=(v:unknown):v is PilotLanguage=>
 export const PILOT_VOICES=[
  {id:"alloy",name:"Alloy",provider:"openai" as const},
  {id:"nova",name:"Nova",provider:"openai" as const},
- {id:"echo",name:"Echo",provider:"openai" as const}
+ {id:"echo",name:"Echo",provider:"openai" as const},
+ {id:"onyx",name:"Onyx",provider:"openai" as const}
 ];
 export type PilotVoiceProvider="openai"|"elevenlabs"|"none";
 export const validPilotVoice=(provider:unknown,id:unknown)=>{

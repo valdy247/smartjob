@@ -4,6 +4,7 @@ import {useRouter} from "next/navigation";
 import {ArrowLeft,BookOpen,CarFront,Check,Clapperboard,Cloud,Copy,Download,FolderOpen,Globe2,LoaderCircle,Pause,Play,Plus,RotateCcw,Share2,Volume2,WandSparkles} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import VMVAuthGateway from "@/components/VMVAuthGateway";
+import PilotVoiceStep from "../PilotVoiceStep";
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {drawStickmanFrame,stickmanStory,userStickmanStory,STICKMAN_WIDTH,STICKMAN_HEIGHT,STICKMAN_SECONDS,
  type StickmanTopic,type StickmanLanguage,type StickmanStory} from "@/lib/vmv-stickman-engine";
@@ -328,7 +329,7 @@ async function directorCall(accessToken:string,endpoint:string,data:Record<strin
  );
  return result;
 }
-type VoicePreset="elevenlabs"|"alloy"|"nova"|"echo";
+type VoicePreset="elevenlabs"|"alloy"|"nova"|"echo"|"onyx";
 type SavedVoiceRevision={id:string;extension:"mp4"|"webm";voice:string;createdAt:string};
 type SeedanceSaved={prompt:string;tokens:string[];urls:string[];
  clipPrompt?:string[];needsMotion?:boolean[];
@@ -341,7 +342,8 @@ type SeedanceSaved={prompt:string;tokens:string[];urls:string[];
 const VOICE_CHOICES:{id:VoicePreset;label:string;detail:string}[]=[
  {id:"alloy",label:"Alloy",detail:"Equilibrada y natural"},
  {id:"nova",label:"Nova",detail:"Cálida y expresiva"},
- {id:"echo",label:"Echo",detail:"Profunda y serena"},
+ {id:"echo",label:"Echo",detail:"Grave y serena"},
+ {id:"onyx",label:"Onyx",detail:"Muy grave y envolvente"},
  {id:"elevenlabs",label:"ElevenLabs",detail:"Voz configurada en tu estudio"}
 ];
 function selectedVoiceName(preset:VoicePreset):string{
@@ -356,7 +358,7 @@ function readSeedance(prompt:string):SeedanceSaved{
    needsMotion:Array.isArray(state.needsMotion)?state.needsMotion:[],
    history:state.history&&typeof state.history==="object"?state.history:{},
    draftTokens:state.draftTokens&&typeof state.draftTokens==="object"?state.draftTokens:{},
-   voicePreset:["alloy","nova","echo","elevenlabs"].includes(String(state.voicePreset))?
+   voicePreset:["alloy","nova","echo","onyx","elevenlabs"].includes(String(state.voicePreset))?
     state.voicePreset:"elevenlabs",
    elevenVoiceId:typeof state.elevenVoiceId==="string"?state.elevenVoiceId:"",
    voiceRevisions:Array.isArray(state.voiceRevisions)?state.voiceRevisions:[],
@@ -1114,7 +1116,7 @@ export default function StickmanLabPage(){
     setPilotVoiceProvider(handoff.voiceProvider==="openai"?"openai":"elevenlabs");
     setPilotVoiceId(handoff.voiceId||"");
     setVoicePreset(handoff.voiceProvider==="openai"?
-     (["alloy","nova","echo"].includes(handoff.voiceId)?handoff.voiceId as VoicePreset:"alloy"):
+     (["alloy","nova","echo","onyx"].includes(handoff.voiceId)?handoff.voiceId as VoicePreset:"alloy"):
      "elevenlabs");
     setResearchSource(handoff.researchScanId&&handoff.researchVideoId?{scanId:handoff.researchScanId,videoId:handoff.researchVideoId}:null);
     setDirectorPlan(readDirectorPlan(handoff.prompt));
@@ -1128,6 +1130,7 @@ export default function StickmanLabPage(){
     const recovered=readSeedance(saved.prompt);
     if(recovered.urls.length||recovered.tokens.length)saveSeedance(recovered);
     setVoicePreset(recovered.voicePreset||"elevenlabs");
+    setPilotVoiceId(recovered.elevenVoiceId||"");
     setAsmrEnabled(recovered.asmrEnabled===true);
     manualDurationRef.current=true;
     setMontageSeconds(validMotionSeconds(recovered.montageSeconds)?recovered.montageSeconds:baseMotionSeconds(saved));
@@ -1634,13 +1637,16 @@ export default function StickmanLabPage(){
   if(enabled){job.asmrEnabled=false;}
   saveSeedance(job);
  },[customPrompt]);
- const chooseProjectVoice=useCallback((preset:VoicePreset)=>{
+ const chooseProjectVoice=useCallback((preset:VoicePreset,elevenId?:string)=>{
   if(!customPrompt)return;
+  if(elevenId&&!/^[A-Za-z0-9]{15,32}$/.test(elevenId))return;
   setAsmrEnabled(false);setVoicePreset(preset);setWithVoice(true);
+  if(preset==="elevenlabs"&&elevenId)setPilotVoiceId(elevenId);
   const job=readSeedance(customPrompt);
   job.voicePreset=preset;job.narrationEnabled=true;job.asmrEnabled=false;
   job.montageSeconds=montageSeconds;
-  if(pilotVoiceId)job.elevenVoiceId=pilotVoiceId;
+  if(preset==="elevenlabs"&&(elevenId||pilotVoiceId))
+   job.elevenVoiceId=elevenId||pilotVoiceId;
   saveSeedance(job);
  },[customPrompt,pilotVoiceId,montageSeconds]);
  const openVoiceEditor=useCallback(()=>{
@@ -2350,16 +2356,14 @@ export default function StickmanLabPage(){
        </div>
        {voiceEditorOpen?<div className={css.voiceChangerBody}>
         <p>Elige otra voz para toda la historia. El sistema actualizará la narración y los subtítulos.</p>
-        <div className={css.voiceChoiceGrid} role="group" aria-label="Voces disponibles">
-         {VOICE_CHOICES.map(choice=><button key={choice.id} type="button"
-          aria-pressed={voicePreset===choice.id}
-          className={voicePreset===choice.id?css.voiceChoiceActive:""}
-          disabled={directorBusy||seedBusy}
-          onClick={()=>chooseProjectVoice(choice.id)}>
-          <Volume2 size={18}/>
-          <strong>{choice.label}</strong><small>{choice.detail}</small>
-         </button>)}
-        </div>
+        <PilotVoiceStep language={language} en={language==="en"}
+         selectedProvider={voicePreset==="elevenlabs"?"elevenlabs":"openai"}
+         selectedVoiceId={voicePreset==="elevenlabs"?pilotVoiceId:voicePreset}
+         onChoose={(provider,id)=>{
+          if(provider==="none"){setProjectNarration(false);return;}
+          chooseProjectVoice(provider==="elevenlabs"?"elevenlabs":id as VoicePreset,
+           provider==="elevenlabs"?id:undefined);
+         }}/>
         <button type="button" className={css.generate}
          disabled={directorBusy||seedBusy||savedClipCount!==directorPlan.scenes.length||
           framesRefreshing||editingSpeech!==null}

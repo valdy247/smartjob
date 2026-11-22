@@ -36,7 +36,7 @@ function providerFailure(detail:unknown,status:number){
  return {error,providerCode:code,upstreamStatus:status};
 }
 type SpeechProvider="openai"|"elevenlabs";
-const openaiVoices=new Set(["alloy","nova","echo"]);
+const openaiVoices=new Set(["alloy","nova","echo","onyx"]);
 async function openaiContinuous(segments:string[],voiceId:string){
  const apiKey=process.env.OPENAI_API_KEY;
  if(!apiKey)return reply({error:"openai_key_not_configured"},503);

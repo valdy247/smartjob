@@ -13,13 +13,14 @@ export async function GET(req:NextRequest){
  const language=req.nextUrl.searchParams.get("language");
  if(!validPilotLanguage(language))
   return NextResponse.json({error:"invalid_language"},{status:400,headers:videoHeaders});
- const result:{standard:typeof PILOT_VOICES;elevenlabs:Array<{id:string;name:string;provider:"elevenlabs";previewUrl:string}>;elevenlabsAvailable:boolean}={
+ const result:{standard:typeof PILOT_VOICES;elevenlabs:Array<{id:string;name:string;
+ provider:"elevenlabs";previewUrl:string;gender:"male"|"female"|"unknown"}>;elevenlabsAvailable:boolean}={
   standard:PILOT_VOICES,elevenlabs:[],elevenlabsAvailable:false
  };
  const key=process.env.ELEVENLABS_API_KEY?.trim();
  if(key){
   try{
-   const params=new URLSearchParams({language,page_size:"20"});
+   const params=new URLSearchParams({language,page_size:"40"});
    const response=await fetch("https://api.elevenlabs.io/v2/voices?"+params,{
     cache:"no-store",headers:{"xi-api-key":key,Accept:"application/json"},
     signal:AbortSignal.timeout(10000)
@@ -28,10 +29,15 @@ export async function GET(req:NextRequest){
     const data=await response.json() as {voices?:ExternalVoice[]};
     const voices=(data.voices||[]).filter(v=>v&&
      typeof v.voice_id==="string"&&/^[a-zA-Z0-9]{15,32}$/.test(v.voice_id)&&
-     typeof v.name==="string"&&v.name.length>0
-     &&(!v.labels?.language||v.labels.language===language));
-    result.elevenlabs=voices.slice(0,6).map(v=>({
+     typeof v.name==="string"&&v.name.length>0);
+    // The provider supplies a voice gender label; never guess from the name.
+    const ordered=voices.sort((a,b)=>
+     Number(b.labels?.gender?.toLowerCase()==="male")-
+     Number(a.labels?.gender?.toLowerCase()==="male"));
+    result.elevenlabs=ordered.slice(0,16).map(v=>({
      id:v.voice_id!,name:v.name!.slice(0,60),provider:"elevenlabs",
+     gender:v.labels?.gender?.toLowerCase()==="male"?"male":
+      v.labels?.gender?.toLowerCase()==="female"?"female":"unknown",
      previewUrl:typeof v.preview_url==="string"&&v.preview_url.startsWith("https://")?v.preview_url:""
     }));
     result.elevenlabsAvailable=result.elevenlabs.length>0;
