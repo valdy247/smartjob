@@ -461,7 +461,10 @@ async function loadSeedanceForStitching(accessToken:string,token:string,sourceUr
  if(bytes.size<1000||bytes.size>26000000)throw Error("Escena "+(beat+1)+": el MP4 recibido está incompleto.");
  return URL.createObjectURL(new Blob([bytes],{type:"video/mp4"}));
 }
-async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=null,showSubtitles=false):Promise<{blob:Blob;extension:"mp4"|"webm"}>{
+type MotionMix={music:File|null;musicVolume:number;voiceVolume:number;fadeSeconds:number};
+async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=null,showSubtitles=false,
+ options:MotionMix={music:null,musicVolume:0.18,voiceVolume:1,fadeSeconds:0.2}
+):Promise<{blob:Blob;extension:"mp4"|"webm"}>{
  if(urls.length!==MOTION_SCENES)throw Error("Faltan clips para unir.");
  const format=chosenFormat();
  const canvas=document.createElement("canvas");canvas.width=720;canvas.height=1280;
@@ -493,15 +496,28 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
   ctx.fillStyle="#111";ctx.fillRect(0,0,720,1280);
  const cues=speech?captionCues(speech.alignment):[];
  let decodedDuration=0;
- if(speech){
+ if(speech||options.music){
   audioContext=new AudioContext();await audioContext.resume();
-  const decoded=await audioContext.decodeAudioData(speech.audio.slice(0));
-  decodedDuration=decoded.duration;
   const mix=audioContext.createMediaStreamDestination();
-  const source=audioContext.createBufferSource();source.buffer=decoded;source.connect(mix);
+  if(speech){
+   const decoded=await audioContext.decodeAudioData(speech.audio.slice(0));
+   decodedDuration=decoded.duration;
+   const voice=audioContext.createBufferSource();voice.buffer=decoded;
+   const gain=audioContext.createGain();gain.gain.value=Math.min(2,Math.max(0,options.voiceVolume));
+   voice.connect(gain);gain.connect(mix);
+   voice.start(audioContext.currentTime+0.3);
+  }
+  if(options.music){
+   const bytes=await options.music.arrayBuffer();
+   if(bytes.byteLength>30000000)throw Error("La pista musical supera los 30 MB.");
+   const decoded=await audioContext.decodeAudioData(bytes.slice(0));
+   if(!decoded.duration||decoded.duration<1)throw Error("La pista musical no contiene audio válido.");
+   const background=audioContext.createBufferSource();background.buffer=decoded;background.loop=true;
+   const gain=audioContext.createGain();gain.gain.value=Math.min(0.7,Math.max(0,options.musicVolume));
+   background.connect(gain);gain.connect(mix);
+   background.start(audioContext.currentTime+0.3);
+  }
   for(const track of mix.stream.getAudioTracks())stream.addTrack(track);
-  // A single uninterrupted narration track.
-  source.start(audioContext.currentTime+0.3);
  }
  recorder=new MediaRecorder(stream,{mimeType:format.mime,videoBitsPerSecond:2800000,audioBitsPerSecond:128000});
  const chunks:BlobPart[]=[];
@@ -550,7 +566,16 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
       const ratio=Math.max(canvas.width/video.videoWidth,canvas.height/video.videoHeight);
       const width=video.videoWidth*ratio,height=video.videoHeight*ratio;
       ctx.drawImage(video,(720-width)/2,(1280-height)/2,width,height);
-      drawCaption(Math.max(0,(performance.now()-videoStart)/1000));
+      const current=(performance.now()-videoStart)/1000;
+      const segmentStart=index? (speech?.sceneEnds?.[index-1]??index*5):0;
+      const fade=Math.max(0,Math.min(0.45,options.fadeSeconds));
+      if(fade>0){
+       const incoming=index>0?Math.max(0,1-(current-segmentStart)/fade):0;
+       const outgoing=index<MOTION_SCENES-1?Math.max(0,1-(endTime-current)/fade):0;
+       const opacity=Math.min(0.8,Math.max(incoming,outgoing)*0.8);
+       if(opacity>0){ctx.fillStyle="rgba(0,0,0,"+opacity+")";ctx.fillRect(0,0,720,1280);}
+      }
+      drawCaption(Math.max(0,current));
       if((performance.now()-videoStart)/1000>=endTime){resolve();return;}
       raf=requestAnimationFrame(frame);
      }catch{reject(Error("Chrome pausó la reproducción mientras se unían los clips. Mantén esta pestaña abierta y visible; los 12 clips siguen guardados."));}
@@ -1272,7 +1297,10 @@ export default function StickmanLabPage(){
      setDirectorStatus("Recuperando MP4 guardado "+(i+1)+"/"+MOTION_SCENES+" · sin regenerar");
      localUrls.push(await loadSeedanceForStitching(accessToken,job.tokens[i],job.urls[i],i));
     }
-    ({blob:video,extension}=await stitchSeedanceClips(localUrls,speech,subtitles));
+    ({blob:video,extension}=await stitchSeedanceClips(localUrls,speech,subtitles,{
+     music:musicFile,musicVolume:musicVolume/100,
+     voiceVolume:narrationVolume/100,fadeSeconds
+    }));
    }finally{localUrls.forEach(url=>URL.revokeObjectURL(url));}
    const finalUrl=URL.createObjectURL(video);
    if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);
@@ -1280,7 +1308,8 @@ export default function StickmanLabPage(){
    setDirectorStatus("Video terminado · 60 segundos"+(withVoice?" con voz":""));
   }catch(e){setError(e instanceof Error?e.message:"No se pudo terminar el video.");setDirectorStatus("");}
   finally{directorBusyRef.current=false;seedBusyRef.current=false;setDirectorBusy(false);setSeedBusy(false);}
- },[customPrompt,withVoice,voice,subtitles,pilotAuto,pilotVoiceProvider,pilotVoiceId]);
+ },[customPrompt,withVoice,voice,subtitles,pilotAuto,pilotVoiceProvider,pilotVoiceId,
+  musicFile,musicVolume,narrationVolume,fadeSeconds]);
  useEffect(()=>{
   if(!pilotAuto||auth!=="signed_in"||customPrompt.length<8||autoStartRef.current)return;
   autoStartRef.current=true;
