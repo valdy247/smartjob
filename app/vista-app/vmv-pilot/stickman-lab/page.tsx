@@ -211,6 +211,17 @@ async function seedanceRequest(accessToken:string,body:Record<string,unknown>){
   data?.error==="invalid_video_job"?"El identificador del trabajo caducó.": "No pudimos contactar a Seedance.");
  return data;
 }
+async function loadSeedanceForStitching(accessToken:string,token:string):Promise<string>{
+ const response=await fetch("/api/video-generator/motion-seedance",{
+  method:"POST",cache:"no-store",
+  headers:{"Content-Type":"application/json",Authorization:"Bearer "+accessToken},
+  body:JSON.stringify({action:"download",token})
+ });
+ if(!response.ok)throw Error("No se pudo recuperar el clip desde Seedance. Si el enlace expiró, conserva el clip original.");
+ const bytes=await response.blob();
+ if(bytes.size<1000||bytes.size>26000000)throw Error("El clip recibido está incompleto.");
+ return URL.createObjectURL(new Blob([bytes],{type:"video/mp4"}));
+}
 async function stitchSeedanceClips(urls:string[]):Promise<{blob:Blob;extension:"mp4"|"webm"}>{
  if(urls.length!==3)throw Error("Faltan clips para unir.");
  const format=chosenFormat();
@@ -227,16 +238,23 @@ async function stitchSeedanceClips(urls:string[]):Promise<{blob:Blob;extension:"
    reject(Error("El archivo final está vacío."));
  });
  let raf=0;
+ const videos:HTMLVideoElement[]=[];
  try{
-  recorder.start(300);
+  // Load all local object URLs BEFORE recording to avoid long blank gaps.
   for(const url of urls){
    const video=document.createElement("video");
-   video.crossOrigin="anonymous";video.muted=true;video.playsInline=true;video.preload="auto";video.src=url;
+   video.muted=true;video.playsInline=true;video.preload="auto";video.src=url;
    await new Promise<void>((resolve,reject)=>{
     video.onloadeddata=()=>resolve();
-    video.onerror=()=>reject(Error("El proveedor no permite cargar uno de los clips para unirlos."));
+    video.onerror=()=>reject(Error("No se puede decodificar uno de los clips descargados."));
     video.load();
    });
+   videos.push(video);
+  }
+  ctx.fillStyle="#111";ctx.fillRect(0,0,720,1280);
+  recorder.start(300);
+  for(const video of videos){
+   video.currentTime=0;
    await video.play();
    const duration=Number.isFinite(video.duration)?Math.min(5,video.duration):5;
    await new Promise<void>((resolve,reject)=>{
@@ -247,11 +265,11 @@ async function stitchSeedanceClips(urls:string[]):Promise<{blob:Blob;extension:"
       ctx.drawImage(video,(720-width)/2,(1280-height)/2,width,height);
       if(video.currentTime>=duration-.05||video.ended){resolve();return;}
       raf=requestAnimationFrame(frame);
-     }catch{reject(Error("El proveedor bloquea la composición en Canvas (CORS). Puedes guardar los clips individuales."));}
+     }catch{reject(Error("El navegador no pudo componer uno de los clips."));}
     };
     raf=requestAnimationFrame(frame);
    });
-   video.pause();video.removeAttribute("src");video.load();
+   video.pause();
   }
   recorder.stop();
   const blob=await finished;
@@ -259,6 +277,7 @@ async function stitchSeedanceClips(urls:string[]):Promise<{blob:Blob;extension:"
  }finally{
   cancelAnimationFrame(raf);
   if(recorder.state!=="inactive")recorder.stop();
+  for(const video of videos){video.pause();video.removeAttribute("src");video.load();}
   stream.getTracks().forEach(track=>track.stop());
  }
 }
@@ -403,18 +422,35 @@ export default function StickmanLabPage(){
   }catch(e){setError(e instanceof Error?e.message:"Falló la creación Seedance.");setSeedStage("");}
   finally{seedBusyRef.current=false;setSeedBusy(false);}
  },[customPrompt]);
+ const newSeedanceSequence=useCallback(()=>{
+  if(seedBusyRef.current||seedJoining)return;
+  if(!window.confirm("¿Crear 3 escenas nuevas con continuidad narrativa? Puede costar aproximadamente US$0.31 a 720p. Los clips anteriores dejarán de aparecer en este estudio."))return;
+  try{sessionStorage.removeItem(SEEDANCE_KEY);}catch{}
+  setSeedUrls([]);setSeedJoined("");setSeedStage("");
+  void generateSeedance();
+ },[generateSeedance,seedJoining]);
  const joinSeedance=useCallback(async()=>{
   if(seedJoining||seedUrls.length!==3)return;
   setSeedJoining(true);setError("");
   try{
-   const {blob,extension}=await stitchSeedanceClips(seedUrls);
+   const client=getSupabase();if(!client)throw Error("Inicia sesión.");
+   const {data:{session}}=await client.auth.getSession();
+   if(!session?.access_token)throw Error("Inicia sesión.");
+   const job=readSeedance(customPrompt);
+   if(job.tokens.filter(Boolean).length!==3)throw Error("No se encontraron los tres trabajos guardados para descargar.");
+   const localUrls:string[]=[];
+   let blob:Blob,extension:"mp4"|"webm";
+   try{
+    for(let i=0;i<3;i++)localUrls.push(await loadSeedanceForStitching(session.access_token,job.tokens[i]));
+    ({blob,extension}=await stitchSeedanceClips(localUrls));
+   }finally{localUrls.forEach(u=>URL.revokeObjectURL(u));}
    const url=URL.createObjectURL(blob);
    if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);
    seedJoinedRef.current=url;setSeedJoined(url);
    setExtension(extension);
   }catch(e){setError(e instanceof Error?e.message:"No se pudo unir el video.");}
   finally{setSeedJoining(false);}
- },[seedUrls,seedJoining]);
+ },[seedUrls,seedJoining,customPrompt]);
  const generate=useCallback(async()=>{
   if(renderingRef.current)return;
   const target=canvas.current;
@@ -522,7 +558,7 @@ export default function StickmanLabPage(){
      {seedBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
      {seedBusy?seedStage:"Seedance Pro Fast · 3 escenas de 5s · 720p · ~US$0.31"}
     </button>:null}
-    {customMode?<small>Al pulsar Seedance se autorizan hasta tres clips pagados de ~US$0.103 cada uno. Sin voz. Cada escena terminada queda guardada en esta pestaña y puedes reanudar sin recrearla.</small>:null}
+    {customMode?<small>Seedance genera 3 escenas de 5 segundos por ~US$0.103 cada una (total ~US$0.31). La versión nueva separa descubrimiento, conflicto y desenlace. Los clips anteriores se conservan mientras no solicites una secuencia nueva.</small>:null}
     {seedUrls.length>0?<div className={css.result}>
      <div className={css.resultTitle}><Check size={18}/><strong>Seedance · {seedUrls.length}/3 escenas listas</strong></div>
      {seedUrls.map((url,i)=><div key={i}>
@@ -530,6 +566,8 @@ export default function StickmanLabPage(){
       <video src={url} controls playsInline preload="metadata"/>
       <a href={url} target="_blank" rel="noreferrer"><Download size={16}/>Guardar clip {i+1}</a>
      </div>)}
+     {seedUrls.length===3?<button className={css.generate} type="button" disabled={seedBusy||seedJoining}
+      onClick={newSeedanceSequence}>Crear nueva secuencia con escenas diferentes · ~US$0.31</button>:null}
      {seedUrls.length===3?<button className={css.generate} type="button" disabled={seedJoining}
       onClick={()=>void joinSeedance()}>{seedJoining?"Uniendo clips…":"Unir las 3 escenas · sin costo de IA"}</button>:null}
      {seedJoined?<><video src={seedJoined} controls playsInline/>
