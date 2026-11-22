@@ -320,16 +320,16 @@ test("Seedance preflight validates all pending storyboard frames before paid gen
  assert.match(motion,/Tus imágenes y los clips anteriores se conservan/);
 });
 
-test("Motion storyboard supports editable narration with saved changes and approval invalidation",()=>{
+test("Motion narration stays editable after paid clips without invalidating image approvals",()=>{
  const motion=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
  assert.match(motion,/Editar narración/);
  assert.match(motion,/Guardar narración/);
  assert.match(motion,/Cancelar/);
  assert.match(motion,/setSpeechDraft/);
  assert.match(motion,/scenes\[index\]=\{\.\.\.scenes\[index\],speech\}/);
- assert.match(motion,/if\(changed\)approved\[index\]=false/);
+ assert.match(motion,/Editing narration does not invalidate approved images/);
  assert.match(motion,/saveDirectorPlan\(next\)/);
- assert.match(motion,/readSeedance\(plan\.prompt\)\.tokens\.some\(Boolean\)/);
+ assert.match(motion,/if\(changed\)\{setSeedJoined\(""\)/);
  assert.match(motion,/editingSpeech!==null\|\|regeneratingScene/);
 });
 
