@@ -336,7 +336,7 @@ async function assemble(job,dir,clips,narrationFile,timing,variant){
   "-safe","0","-f","concat","-i",concat,
   "-c","copy","-movflags","+faststart",raw],240000);
  let vf=null;
- if(job.subtitles&&job.narration&&Array.isArray(timing.cues)&&timing.cues.length){
+ if(job.subtitles&&Array.isArray(timing.cues)&&timing.cues.length){
   const subs=path.join(dir,"subtitles-"+variant+".srt");
   const lines=timing.cues.map((cue,index)=>
    String(index+1)+"\n"+timecode(cue.start/speed)+" --> "+
