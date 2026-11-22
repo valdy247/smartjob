@@ -1,7 +1,7 @@
 "use client";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {useRouter} from "next/navigation";
-import {ArrowLeft,CarFront,Check,Download,Globe2,LoaderCircle,Pause,Play,RotateCcw,Volume2,WandSparkles} from "lucide-react";
+import {ArrowLeft,BookOpen,CarFront,Check,Clapperboard,Cloud,Download,FolderOpen,Globe2,LoaderCircle,Pause,Play,Plus,RotateCcw,Volume2,WandSparkles} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import VMVAuthGateway from "@/components/VMVAuthGateway";
 import type {SupabaseClient} from "@supabase/supabase-js";
@@ -645,6 +645,12 @@ export default function StickmanLabPage(){
  const [cloudProjects,setCloudProjects]=useState<CloudMotionProject[]>([]);
  const [cloudStatus,setCloudStatus]=useState("Local");
  const [cloudLoading,setCloudLoading]=useState(false);
+ const [libraryOpen,setLibraryOpen]=useState(false);
+ const [projectSwitching,setProjectSwitching]=useState(false);
+ const [bootstrapping,setBootstrapping]=useState(true);
+ const [clipPreviewLoading,setClipPreviewLoading]=useState(false);
+ const [characterLoading,setCharacterLoading]=useState(false);
+ const [renderLoading,setRenderLoading]=useState(false);
  const [studioStep,setStudioStep]=useState<"crear"|"revisar"|"editar"|"publicar">("crear");
  const [publishDraft,setPublishDraft]=useState<MotionPublishDraft>({...EMPTY_PUBLISH});
  const [selectedScene,setSelectedScene]=useState(0);
@@ -784,7 +790,7 @@ export default function StickmanLabPage(){
   return()=>{closed=true;if(timer)clearTimeout(timer);
    window.removeEventListener("vmv-motion-saved",schedule);};
  },[auth]);
- const importCharacters=useCallback(async(id:string)=>{
+ const importCharacters=useCallback(async(id:string)=>{setCharacterLoading(true);
   const sb=getSupabase();if(!sb)return;
   const {data:{session}}=await sb.auth.getSession();
   if(!session?.access_token)return;
@@ -806,8 +812,9 @@ export default function StickmanLabPage(){
    setCharacterFrames(previews);setCharacterReferencePath("");
    setShareStatus("Selecciona un fotograma que muestre bien al personaje que deseas conservar.");
   }catch(e){setError(e instanceof Error?e.message:"No se encontró la guía de personajes.");}
+  finally{setCharacterLoading(false);}
  },[]);
- const previewSelectedClip=useCallback(async(index:number)=>{
+ const previewSelectedClip=useCallback(async(index:number)=>{setClipPreviewLoading(true);
   if(clipPreviewRef.current){URL.revokeObjectURL(clipPreviewRef.current);clipPreviewRef.current="";}
   setSelectedClipPreview("");
   const job=readSeedance(customPrompt);
@@ -817,7 +824,8 @@ export default function StickmanLabPage(){
   try{
    const url=await loadSeedanceForStitching(session.access_token,job.tokens[index],job.urls[index],index);
    clipPreviewRef.current=url;setSelectedClipPreview(url);
-  }catch(e){setError(e instanceof Error?e.message:"No se pudo recuperar la vista previa.");}
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo cargar la vista previa.");}
+  finally{setClipPreviewLoading(false);}
  },[customPrompt]);
  const updatePublish=useCallback((patch:Partial<MotionPublishDraft>)=>{
   setPublishDraft(current=>{
@@ -866,6 +874,7 @@ export default function StickmanLabPage(){
     setPublishDraft(readPublishDraft(currentCloudId()));
    }
   }catch{}
+  finally{setBootstrapping(false);}
  },[]);
  // Frame objects remain in private storage; signed preview URLs expire.
  // "preview" only signs existing frames and never triggers model charges.
@@ -906,8 +915,7 @@ export default function StickmanLabPage(){
    setDirectorPlan(current=>current?.prompt===prompt?updated:current);
   }
   if(fresh.size<paths.size)
-   setFrameRefreshError("No se pudieron recuperar todas las vistas previas ("+
-    fresh.size+"/"+paths.size+"). Pulsa «Recuperar imágenes» para reintentar sin pagar.");
+   setFrameRefreshError("No se pudieron cargar algunas imágenes. Puedes reintentar sin generar otras.");
   setFramesRefreshing(false);
  },[]);
  useEffect(()=>{
@@ -935,7 +943,7 @@ export default function StickmanLabPage(){
   const sb=getSupabase();if(!sb)return;
   const {data:{session}}=await sb.auth.getSession();
   if(!session?.access_token)return;
-  setCloudLoading(true);setError("");
+  setCloudLoading(true);setProjectSwitching(true);setError("");
   try{
    const result=await motionLibrary(session.access_token,{action:"load",id});
    const project=result.project as {id:string;plan:DirectorPlan;seedance:SeedanceSaved;
@@ -965,12 +973,13 @@ export default function StickmanLabPage(){
     }catch{}
    }
    setCloudStatus("Proyecto recuperado");
-   setArchivedProjects(archivedMotionProjects());
-  }catch(e){setError(e instanceof Error?e.message:"No se pudo recuperar el proyecto en la nube.");}
-  finally{setCloudLoading(false);}
+   setArchivedProjects(archivedMotionProjects());setLibraryOpen(false);
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo abrir el proyecto guardado.");}
+  finally{setCloudLoading(false);setProjectSwitching(false);}
  },[resetForProject]);
  const newMotionProject=useCallback(async()=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
+  setProjectSwitching(true);
   const active=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
   try{
    if(active?.prompt&&active.scenes?.length===MOTION_SCENES){
@@ -979,14 +988,16 @@ export default function StickmanLabPage(){
     catch{setCloudStatus("La copia local se conservó; la sincronización en la nube está pendiente.");}
    }
    forgetActiveMotionProject();
-   resetForProject();
+   resetForProject();setLibraryOpen(false);
    setPublishDraft({...EMPTY_PUBLISH});setLastRenderedCloudUrl("");
    setArchivedProjects(archivedMotionProjects());
    router.replace("/vista-app/vmv-pilot/stickman-lab");
-  }catch(e){setError(e instanceof Error?e.message:"No se pudo preservar el proyecto anterior.");}
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo guardar el proyecto anterior.");}
+  finally{setProjectSwitching(false);}
  },[resetForProject,router]);
  const restoreMotionProject=useCallback(async(id:string)=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
+  setProjectSwitching(true);
   const selected=archivedMotionProjects().find(item=>item.id===id);
   if(!selected)return;
   try{
@@ -1006,9 +1017,10 @@ export default function StickmanLabPage(){
    setStudioStep(selected.seedance.urls.filter(Boolean).length===MOTION_SCENES?"editar":"revisar");
    const remaining=archivedMotionProjects().filter(item=>item.id!==id);
    try{localStorage.setItem(MOTION_PROJECTS_KEY,JSON.stringify(remaining));}catch{}
-   setArchivedProjects(remaining);
+   setArchivedProjects(remaining);setLibraryOpen(false);
    router.replace("/vista-app/vmv-pilot/stickman-lab");
-  }catch(e){setError(e instanceof Error?e.message:"No se pudo recuperar el proyecto.");}
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo abrir el proyecto.");}
+  finally{setProjectSwitching(false);}
  },[resetForProject,router]);
  const pollMinimax=useCallback(async(token:string,accessToken:string)=>{
   setMiniStage("MiniMax está animando los personajes");
@@ -1470,7 +1482,7 @@ export default function StickmanLabPage(){
    setShareStatus("No fue posible abrir el menú. Descarga el video para compartirlo.");
   }
  },[seedJoined,extension,publishDraft]);
- const refreshCloudRender=useCallback(async()=>{
+ const refreshCloudRender=useCallback(async()=>{setRenderLoading(true);
   const sb=getSupabase();if(!sb)return;
   const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)return;
   try{
@@ -1481,7 +1493,8 @@ export default function StickmanLabPage(){
    setLastRenderedCloudUrl(result.url);
    setSeedJoined(result.url);
    setShareStatus("Video final recuperado desde la nube.");
-  }catch{setShareStatus("Todavía no existe una copia del montaje final en la nube.");}
+  }catch{setShareStatus("Todavía no existe una copia del montaje final guardada.");}
+  finally{setRenderLoading(false);}
  },[extension]);
  useEffect(()=>{
   if(auth!=="signed_in"||!directorPlan?.prompt||seedJoined||
