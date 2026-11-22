@@ -332,3 +332,33 @@ test("Motion storyboard supports editable narration with saved changes and appro
  assert.match(motion,/readSeedance\(plan\.prompt\)\.tokens\.some\(Boolean\)/);
  assert.match(motion,/editingSpeech!==null\|\|regeneratingScene/);
 });
+
+test("Gateway errors distinguish an exhausted budget from funds, payment restrictions, and unknown 402",async()=>{
+ const {classifyGatewayVideoFailure:classify}=await import("../lib/vmv-gateway-video-error.mjs");
+ const budget=classify({name:"GatewayInternalServerError",cause:{
+  name:"AI_APICallError",statusCode:402,
+  responseBody:JSON.stringify({error:{type:"quota_for_entity_exceeded",
+   message:'Project budget exceeded. Current spend: $5.05, limit: $5.00. API key id abc_secret'}})
+ }});
+ assert.equal(budget.error,"ai_gateway_budget_exceeded");
+ assert.equal(budget.status,402);
+ assert.equal(budget.providerType,"quota_for_entity_exceeded");
+ assert.equal(budget.budgetScope,"project");
+ assert.doesNotMatch(JSON.stringify(budget),/abc_secret|Current spend/);
+ assert.equal(classify({statusCode:402,responseBody:JSON.stringify({error:{type:"insufficient_funds"}})}).error,
+  "ai_gateway_funds_unavailable");
+ assert.equal(classify({cause:{statusCode:402,responseBody:'{"error":{"type":"payment_required"}}'}}).error,
+  "ai_gateway_billing_restricted");
+ assert.equal(classify({name:"GatewayInternalServerError",cause:{statusCode:402}}).error,
+  "ai_gateway_payment_rejected");
+ assert.equal(classify({statusCode:422}).error,"seedance_invalid_parameters");
+ const route=read("app/api/video-generator/motion-seedance/route.ts");
+ const ui=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ assert.match(route,/classifyGatewayVideoFailure\(e\)/);
+ assert.match(route,/providerType:problem\.providerType/);
+ assert.match(route,/budgetScope:problem\.budgetScope/);
+ assert.match(ui,/ai_gateway_budget_exceeded/);
+ assert.match(ui,/ai_gateway_funds_unavailable/);
+ assert.match(ui,/ai_gateway_payment_rejected/);
+ assert.match(ui,/No se hizo ningún reintento automático/);
+});
