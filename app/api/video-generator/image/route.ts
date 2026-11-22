@@ -13,7 +13,7 @@ export async function POST(req:NextRequest){
  const owner=await authenticatedUser(req);
  if(!owner||!videoAllowed(owner))return reply({error:"video_not_enabled_for_account"},403);
  const size=Number(req.headers.get("content-length")||0);
- if(size>96*1024)return reply({error:"invalid_video_request"},413);
+ if(size>4600000)return reply({error:"invalid_video_request"},413);
  const body=await req.json().catch(()=>null);
  const db=videoDb();
  const standalone=body?.output==="image";
@@ -22,6 +22,12 @@ export async function POST(req:NextRequest){
  if(!["1024x1024","1024x1536","1536x1024"].includes(dimensions)||
     !["standard","high"].includes(quality))return reply({error:"invalid_video_request"},400);
  const input=standalone?body?.prompt:body?.direction;
+ const sourceImage=standalone&&typeof body?.sourceImage==="string"?body.sourceImage:"";
+ const match=sourceImage?/^data:image/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(sourceImage):null;
+ if(sourceImage&&(!match||sourceImage.length>4100000))return reply({error:"image_invalid"},400);
+ const sourceBytes=match?Buffer.from(match[2],"base64"):null;
+ if(sourceBytes&&(sourceBytes.length<1024||sourceBytes.length>3*1024*1024))
+  return reply({error:"image_invalid"},400);
  const description=typeof input==="string"?input.trim():"";
  if(description.length<3)return reply({error:"complete_video_brief"},400);
  if(description.length>IMAGE_PROMPT_LIMIT)return reply({error:"image_prompt_too_long"},400);
@@ -30,7 +36,7 @@ export async function POST(req:NextRequest){
  if(quotaError)return reply({error:"image_quota_unavailable"},503);
  if(claimed!==true)return reply({error:"image_daily_limit"},429);
  try{
-  const instructions=standalone?"Create the still image described by the user. Respect the requested subject, composition and style.":[
+  const instructions=standalone?(sourceBytes?"Edit the supplied original image according to the request. Preserve everything the user did not explicitly ask to change, especially subject identity and composition.":"Create the still image described by the user. Respect the requested subject, composition and style."):[
    "Create one original starting frame for an image-to-video sequence.",
    "Use the subject, setting and style requested by the user."
   ].join(" ");
@@ -38,7 +44,7 @@ export async function POST(req:NextRequest){
   const modelId="openai/gpt-image-1-mini";
   const request={
    maxRetries:0,
-   prompt:instructions+"\n"+description,
+   prompt:sourceBytes?{text:instructions+"\n"+description,images:[sourceBytes]}:instructions+"\n"+description,
    size:dimensions,abortSignal:signal
   };
   let result;
@@ -46,7 +52,7 @@ export async function POST(req:NextRequest){
    result=await generateImage({...request,model:gateway.imageModel(modelId),
     providerOptions:{openai:{quality:quality==="high"?"high":"medium",output_format:"jpeg"}}});
   }catch(error){
-   if(!(error instanceof Error)||error.name!=="GatewayInternalServerError"||signal.aborted)throw error;
+   if(sourceBytes||!(error instanceof Error)||error.name!=="GatewayInternalServerError"||signal.aborted)throw error;
    const fallback=quality==="high"?"minimax/minimax-h3-image":"minimax/minimax-h3-image-highspeed";
    console.warn("[vmv-video-reference] using alternate image model",{modelId,fallback,dimensions});
    result=await generateImage({...request,model:gateway.imageModel(fallback),
