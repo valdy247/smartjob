@@ -4,7 +4,7 @@ import {useRouter} from "next/navigation";
 import {ArrowLeft,CarFront,Check,Download,Globe2,LoaderCircle,Pause,Play,Volume2,WandSparkles} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {drawStickmanFrame,stickmanStory,userStickmanStory,STICKMAN_WIDTH,STICKMAN_HEIGHT,STICKMAN_SECONDS,
- type StickmanTopic,type StickmanLanguage} from "@/lib/vmv-stickman-engine";
+ type StickmanTopic,type StickmanLanguage,type StickmanStory,type MotionShape} from "@/lib/vmv-stickman-engine";
 import css from "./page.module.css";
 
 type Format={mime:string;extension:"mp4"|"webm"};
@@ -47,6 +47,28 @@ async function loadVoice(phrases:string[],voice:"alloy"|"nova"):Promise<ArrayBuf
   return base64ToBuffer(item.audio);
  });
 }
+async function createTerraStory(prompt:string):Promise<StickmanStory>{
+ const sb=getSupabase();
+ if(!sb)throw Error("Inicia sesión para generar con Terra.");
+ const {data:{session}}=await sb.auth.getSession();
+ if(!session?.access_token)throw Error("Inicia sesión para generar con Terra.");
+ const response=await fetch("/api/video-generator/motion-terra",{
+  method:"POST",cache:"no-store",
+  headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
+  body:JSON.stringify({prompt,confirmCost:true})
+ });
+ const data=await response.json().catch(()=>null);
+ if(!response.ok)throw Error(data?.error==="motion_limit"?"Límite de pruebas alcanzado.":
+  data?.error==="motion_scene_retry"?"Terra no creó escenas válidas. Intenta de nuevo.":
+  data?.error==="video_not_enabled_for_account"?"La prueba de IA no está habilitada para tu cuenta.":
+  "No pudimos generar las escenas con GPT Terra. Revisa la configuración del proveedor.");
+ if(!Array.isArray(data?.scenes)||data.scenes.length!==3)throw Error("Terra devolvió escenas incompletas.");
+ return {name:String(data.title||"VMV Motion"),scenes:data.scenes.map((scene:{
+  speech:string;caption:string;background:string;shapes:MotionShape[]
+ })=>({action:"custom" as const,speech:scene.speech,heading:scene.caption,
+  background:scene.background,shapes:scene.shapes})) as StickmanStory["scenes"]};
+}
+
 async function exportCanvas(canvas:HTMLCanvasElement,
  story:ReturnType<typeof stickmanStory>,showSubtitles:boolean,
  voiceParts:ArrayBuffer[],onProgress:(n:number)=>void):Promise<{blob:Blob;format:Format}>{
@@ -111,6 +133,7 @@ export default function StickmanLabPage(){
  const [topic,setTopic]=useState<StickmanTopic>("space");
  const [customPrompt,setCustomPrompt]=useState("");
  const [customMode,setCustomMode]=useState(false);
+ const [terraStory,setTerraStory]=useState<StickmanStory|null>(null);
  const [language,setLanguage]=useState<StickmanLanguage>("es");
  const [subtitles,setSubtitles]=useState(true),[withVoice,setWithVoice]=useState(false);
  const [voice,setVoice]=useState<"alloy"|"nova">("alloy");
@@ -121,7 +144,7 @@ export default function StickmanLabPage(){
  const canvas=useRef<HTMLCanvasElement>(null);
  const playingRef=useRef(true),renderingRef=useRef(false),urlRef=useRef("");
  const timelineRef=useRef(0),lastFrameRef=useRef(0);
- const story=customMode&&customPrompt.trim().length>=8?userStickmanStory(customPrompt):stickmanStory(topic,language);
+ const story=customMode?(terraStory|| (customPrompt.trim().length>=8?userStickmanStory(customPrompt):stickmanStory(topic,language))):stickmanStory(topic,language);
  useEffect(()=>{
   playingRef.current=playing;
  },[playing]);
@@ -134,22 +157,23 @@ export default function StickmanLabPage(){
    if(!renderingRef.current){
     if(playingRef.current)timelineRef.current=(timelineRef.current+dt)%STICKMAN_SECONDS;
     const ctx=canvas.current?.getContext("2d",{alpha:false});
-    if(ctx)drawStickmanFrame(ctx,customMode&&customPrompt.trim().length>=8?userStickmanStory(customPrompt):stickmanStory(topic,language),timelineRef.current,subtitles);
+    if(ctx)drawStickmanFrame(ctx,customMode?(terraStory||(customPrompt.trim().length>=8?userStickmanStory(customPrompt):stickmanStory(topic,language))):stickmanStory(topic,language),timelineRef.current,subtitles);
    }
    raf=requestAnimationFrame(step);
   };
   raf=requestAnimationFrame(step);
   return()=>cancelAnimationFrame(raf);
- },[topic,language,subtitles,customMode,customPrompt]);
+ },[topic,language,subtitles,customMode,customPrompt,terraStory]);
  useEffect(()=>()=>{if(urlRef.current)URL.revokeObjectURL(urlRef.current);},[]);
  const generate=useCallback(async()=>{
   if(renderingRef.current)return;
   const target=canvas.current;
   if(!target)return;
   renderingRef.current=true;setRendering(true);setProgress(0);
-  setError("");setStage(withVoice?"Preparando voz":"Animando");
+  setError("");setStage(customMode?"GPT Terra dibujando escenas":withVoice?"Preparando voz":"Animando");
   try{
-   const selected=customMode?userStickmanStory(customPrompt):stickmanStory(topic,language);
+   const selected=customMode?await createTerraStory(customPrompt):stickmanStory(topic,language);
+   if(customMode)setTerraStory(selected);
    // Zero animation-provider credits. Optional voice requires explicit consent.
    const spoken=withVoice?await loadVoice(selected.scenes.map(s=>s.speech),voice):[];
    setStage("Montando video");
@@ -181,7 +205,7 @@ export default function StickmanLabPage(){
     <span>¿Qué quieres contar?</span>
     <textarea disabled={rendering} value={customPrompt} maxLength={500} rows={4}
      placeholder="Ejemplo: Un pequeño elefante busca agua en la selva. Encuentra un río y ayuda a sus amigos a beber."
-     onChange={e=>setCustomPrompt(e.target.value)}/>
+     onChange={e=>{setCustomPrompt(e.target.value);setTerraStory(null);}}/>
     <small>{customPrompt.length}/500 · 3 escenas de 5 segundos</small>
    </label>:<div className={css.topics}>
     <button type="button" className={topic==="space"?css.active:""}
@@ -235,7 +259,7 @@ export default function StickmanLabPage(){
     </div>:null}
    </section>
    <p className={css.note}>{language==="es"
-    ?"Animación propia sin Runway. Tu texto se convierte en 3 composiciones 2D. La biblioteca visual aún es limitada. Mantén la pestaña abierta durante la exportación."
+    ?"Tu historia usa GPT-6.1 Terra para dibujar tres escenas vectoriales originales y consume tokens de IA. Nuestro motor anima y exporta sin Runway. Mantén la pestaña abierta."
     :"Original animation without Runway. Keep this tab open during export."}</p>
   </div>
  </main>;
