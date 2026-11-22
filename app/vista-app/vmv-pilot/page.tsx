@@ -191,7 +191,7 @@ export default function VMVPilotPage(){
    </div>
    <button type="button" className={css.labLink}
     onClick={()=>router.push("/vista-app/vmv-pilot/stickman-lab")}>
-    <Clapperboard size={19}/>{L("Probar nuestro motor Stickman · Gratis","Test our Stickman engine · Free")}
+    <Clapperboard size={19}/>{L("Abrir laboratorio manual de VMV Motion","Open manual VMV Motion lab")}
     <ArrowRight size={16}/>
    </button>
   </>:null}
@@ -264,7 +264,7 @@ export default function VMVPilotPage(){
      <small className={css.qualityPrice}>{priceUSD(animationCostCents(form.seconds,item.id))}</small>
     </button>)}
     <p className={css.qualityNote}>{L("Costo estimado de animación · otros servicios aparte","Estimated animation cost · other services extra")}</p>
-    {form.style==="stickman"?<button type="button" className={css.ownEngine}
+    {form.style==="stickman"&&["es","en"].includes(form.language)?<button type="button" className={css.ownEngine}
      onClick={()=>{update({qualityMode:"turbo",seconds:60});setMotionEngine(true);setApproved(false);setStep(11);}}>
      <Clapperboard size={19}/>{L("Crear con VMV Motion · Seedance 720p · 60 s","Create with VMV Motion · Seedance 720p · 60 s")}
      <ArrowRight size={17}/>
