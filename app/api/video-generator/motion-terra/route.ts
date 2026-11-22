@@ -98,7 +98,13 @@ export async function POST(req:NextRequest){
   if(!parsed)return reply({error:"motion_scene_retry"},503);
   return reply({...parsed,model:"gpt-6.1-terra"});
  }catch(e){
-  console.warn("[vmv-motion-terra]",e instanceof Error?e.message:"unknown");
+  const message=e instanceof Error?e.message:"unknown";
+  console.warn("[vmv-motion-terra]",message);
+  if(/free tier users do not have access|upgrade to paid credits/i.test(message))
+   return reply({error:"terra_gateway_paid_credits_required"},402);
+  if(/insufficient_quota|billing|credits exhausted/i.test(message))
+   return reply({error:"terra_credits_exhausted"},402);
+  if(/rate.limit|429/i.test(message))return reply({error:"terra_rate_limited"},429);
   return reply({error:"motion_ai_unavailable"},503);
  }
 }
