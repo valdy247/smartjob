@@ -43,10 +43,14 @@ test("Wizard supports niche, audience and goals outside business",()=>{
 });
 test("Clip worker actually uses image-to-video, five seconds and an MP4 compositor",()=>{
  const w=read("services/vmv-pilot-worker/worker.mjs");
- assert.match(w,/image_to_video/);
- assert.match(w,/variant==="turbo"\?"gen4_turbo"/);
- assert.match(w,/variant==="high"\?"gen4\.5"/);
- assert.match(w,/duration:5/);
+ const engine=read("services/vmv-pilot-worker/motion-engine.mjs");
+ assert.match(engine,/experimental_startVideo/);
+ assert.match(engine,/experimental_getVideoStatus/);
+ assert.match(engine,/bytedance\/seedance-v1\.0-pro-fast/);
+ assert.match(engine,/bytedance\/seedance-v1\.0-pro/);
+ assert.match(w,/startMotionClip/);
+ assert.match(w,/waitMotionClip/);
+ assert.match(engine,/duration:5/);
  assert.match(w,/ffmpeg/);
  assert.match(w,/subtitles=/);
  assert.match(w,/atempo=/);
@@ -135,12 +139,12 @@ test("Worker blocks videos where script or actual narration has the wrong langua
  const worker=read("services/vmv-pilot-worker/worker.mjs");
  assert.match(worker,/verifyScriptLanguage\(job,scenes\)/);
  assert.match(worker,/script_language_mismatch/);
- assert.match(worker,/verifyAudioLanguage\(job,voices,dir\)/);
+ assert.match(worker,/verifyAudioLanguage\(job,\[narrationFile\],dir\)/);
  assert.match(worker,/audio_language_mismatch/);
  assert.match(worker,/eleven_multilingual_v2/);
  assert.match(worker,/job\.voice_provider==="elevenlabs"/);
  assert.match(worker,/voice:job\.voice_id/);
- assert.match(worker,/duration:5/);
+ assert.match(read("services/vmv-pilot-worker/motion-engine.mjs"),/duration:5/);
 });
 
 test("Voice cards preview real audio in the chosen video language without selecting the voice",()=>{
@@ -188,10 +192,10 @@ test("The compare mode is a single idempotent job and NOT two separate paid AI p
  assert.match(sql,/UNIQUE|pilot_render_daily_limit/);
  assert.match(worker,/job\.quality_mode==="compare"\?\["turbo","high"\]/);
  assert.match(worker,/await aiScript\(job\)/);
- assert.match(worker,/await generateSpeech\(job,scenes\[i\]\.speech,voice\)/);
+ assert.match(worker,/await generateContinuousSpeech\(job,scenes,narrationFile\)/);
  assert.match(worker,/await makeImage\(job,scenes\[i\]/);
  assert.match(worker,/Promise\.allSettled\(pending\.map/);
- assert.match(worker,/await runwayStart\(job,scenes\[i\],images\[i\],variant\)/);
+ assert.match(worker,/await startMotionClip\(/);
  assert.match(worker,/outputs:\{\.\.\.\(job\.outputs\|\|\{\}\),\[variant\]:pathKey\}/);
 });
 test("Only owner-specific completed MP4 variants are signed, preference uses PATCH without spending",()=>{
@@ -246,4 +250,21 @@ test("The lab is reachable from Pilot and does not change the existing paid wiza
  assert.match(ui,/Probar motor Stickman propio/);
  assert.match(ui,/PilotTrendStep/);
  assert.match(ui,/Generar ambos videos/);
+});
+
+test("Pilot uses Seedance 720p with durable jobs and one uninterrupted narration",()=>{
+ const worker=read("services/vmv-pilot-worker/worker.mjs");
+ const engine=read("services/vmv-pilot-worker/motion-engine.mjs");
+ const timeline=read("services/vmv-pilot-worker/speech-timeline.mjs");
+ const quality=read("lib/vmv-pilot-quality.ts");
+ assert.match(worker,/voice_continuous/);
+ assert.match(worker,/voice_timeline/);
+ assert.match(worker,/speechTimeline\(scenes/);
+ assert.match(worker,/await persistAsset\(job,item\.key,item\.clip,"video\/mp4"\)/);
+ assert.match(worker,/taskKey/);
+ assert.match(engine,/resolution:"1280x720"/);
+ assert.match(engine,/createSignedUrl/);
+ assert.match(timeline,/character_start_times_seconds/);
+ assert.match(quality,/seedance-v1\.0-pro-fast/);
+ assert.match(quality,/seedance-v1\.0-pro/);
 });
