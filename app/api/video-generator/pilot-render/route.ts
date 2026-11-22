@@ -12,9 +12,6 @@ type RenderRow={id:string;output_path:string|null;[key:string]:unknown};
 async function present(row:RenderRow){
  const {output_path,...safe}=row;
  if(!output_path||row.status!=="completed")return {...safe,videoUrl:null};
- if(!output_path.startsWith(String(row.owner_id||""))){
-  // Never trust a stored path; it must use the owner's exact ID below.
- }
  const {data,error}=await videoDb().storage.from("vmv-pilot-renders")
   .createSignedUrl(output_path,3600);
  return {...safe,videoUrl:error?null:data?.signedUrl||null};
@@ -32,7 +29,7 @@ export async function GET(req:NextRequest){
    if(error)return reply({error:"pilot_render_unavailable"},503);
    if(!data)return reply({error:"render_not_found"},404);
    const render=data as RenderRow;
-   if(render.output_path&&!render.output_path.startsWith(owner+"/"+render.id+".mp4"))
+   if(render.output_path&&render.output_path!==owner+"/"+render.id+".mp4")
     return reply({error:"render_path_invalid"},503);
    return reply({job:await present(render)});
   }
@@ -40,7 +37,7 @@ export async function GET(req:NextRequest){
   if(error)return reply({error:"pilot_render_unavailable"},503);
   const jobs=await Promise.all((data||[]).map(async r=>{
    const row=r as RenderRow;
-   if(row.output_path&&!row.output_path.startsWith(owner+"/"+row.id+".mp4"))
+   if(row.output_path&&row.output_path!==owner+"/"+row.id+".mp4")
     return {...row,output_path:undefined,videoUrl:null};
    return present(row);
   }));
