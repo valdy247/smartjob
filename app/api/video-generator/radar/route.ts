@@ -74,8 +74,17 @@ export async function GET(req:NextRequest){
    .eq("owner_id",owner).eq("status","ready")
    .gte("created_at",new Date(Date.now()-29*86400000).toISOString())
    .order("created_at",{ascending:false}).limit(4);
-  return error?reply({error:"radar_database_unavailable"},503):
-   reply({history:(data||[]).map(row=>show(row as Scan).scan),configured:Boolean(youtubeKey()),source:"youtube"});
+  if(error)return reply({error:"radar_database_unavailable"},503);
+  // Cheap owner-only provider probe: distinguish a configured key from an authorized one.
+  let health=youtubeKey()?"unknown":"radar_youtube_key_missing";
+  if(youtubeKey()&&req.headers.get("x-vmv-youtube-consent")==="accepted"){
+   try{
+    await youtubeJson("videos",new URLSearchParams({part:"snippet",id:"jNQXAC9IVRw",maxResults:"1"}));
+    health="ok";
+   }catch(e){health=e instanceof Error?e.message:"radar_youtube_unavailable";}
+  }
+  return reply({history:(data||[]).map(row=>show(row as Scan).scan),
+   configured:Boolean(youtubeKey()),health,source:"youtube"});
  }
  if(req.headers.get("x-vmv-youtube-consent")!=="accepted")return reply({error:"radar_consent_required"},403);
  const days=Number(req.nextUrl.searchParams.get("days")||"30");
@@ -128,15 +137,15 @@ export async function POST(req:NextRequest){
  try{
   const response=await askAiAgent({
    system:[
-    "You are a market researcher for ORIGINAL short-form business video ideas.",
+    "You are an original content trend researcher for entertainment, education, personal creators AND businesses.",
     "Use ONLY the supplied video titles, descriptions, public view counts and publication dates.",
     "You have NOT watched the videos, heard the audio, read transcripts, or observed retention or growth history.",
     "Do not assert specific shots/hooks/engagement mechanics from a video unless its metadata explicitly supports it.",
     "Never reproduce original video content, brand slogans or copyrighted characters.",
-    "Propose 3 distinct practical original concepts for the supplied niche.",
+    "Propose 3 distinct original concepts relevant to the niche and creator goals; do not assume a business or product exists.",
     "Reply with strict JSON only: {ideas:[{sourceId,hook,concept,cta,reason}]}.",
     "sourceId MUST match an input video id. Reasons must say the idea is a hypothesis based on metadata.",
-    "Hooks and concepts in natural Latin American Spanish. No invented claims, numbers or customer guarantees."
+    "Hooks and concepts in natural Latin American Spanish. No invented claims or numbers; marketing CTA only for business topics."
    ].join(" "),
    messages:[{role:"user",content:JSON.stringify({
     niche:scan.query,videos:items.map(v=>({
