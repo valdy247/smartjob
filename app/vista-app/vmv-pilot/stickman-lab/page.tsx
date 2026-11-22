@@ -2293,7 +2293,7 @@ export default function StickmanLabPage(){
      {directorBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
      {directorBusy?directorStatus:"Generar video"}
     </button>:null}
-    {studioStep==="editar"&&customMode&&directorPlan?.frames.length===directorPlan?.scenes.length?
+    {studioStep==="editar"&&customMode&&directorPlan&&directorPlan.frames.length===directorPlan.scenes.length?
      <section className={css.studioPanel} aria-label="Editor del video">
       <div className={css.studioSectionHeading}>
        <div><h2>Editar tu video</h2>
