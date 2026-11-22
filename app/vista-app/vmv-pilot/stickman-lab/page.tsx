@@ -236,6 +236,11 @@ type MotionSeconds=15|30|60;
 const validMotionSeconds=(seconds:unknown):seconds is MotionSeconds=>
  seconds===15||seconds===30||seconds===60;
 const scenesForSeconds=(seconds:MotionSeconds)=>seconds/5;
+function durationFromPrompt(prompt:string):MotionSeconds|null{
+ const found=prompt.slice(0,1000).match(/\b(15|30|60)\s*(?:\*{0,2}\s*)?(?:segundos?|seconds?|s)\b/i);
+ const duration=found?Number(found[1]):null;
+ return validMotionSeconds(duration)?duration:null;
+}
 type PilotMotionHandoff={requestId:string;createdAt:number;prompt:string;pilotId:string;
  topic:string;goal:string;audience:string;idea:string;researchScanId:string|null;researchVideoId:string;language:string;style:string;
  seconds:number;subtitles:boolean;narration:boolean;voiceProvider:string;voiceId:string;confirmedCost:boolean};
@@ -299,7 +304,11 @@ async function directorCall(accessToken:string,endpoint:string,data:Record<strin
   result?.error==="openai_quota_or_rate_limit"?"OpenAI no tiene cuota disponible.":
   result?.error==="image_safety_rejected"?"OpenAI bloqueó esta imagen por moderación. Ajusta su descripción antes de volver a generar.":
   result?.error==="image_bad_request"?"OpenAI rechazó la imagen"+(result?.providerCode?" ("+result.providerCode+")":"")+". No se realizarán más intentos automáticos.":
-  result?.error==="motion_scene_retry"?(result?.stage==="narration"?"El guion tiene fragmentos incompletos. No se generaron imágenes nuevas.":result?.stage==="storyboard"?"El storyboard no contiene las 12 escenas válidas. No se generaron imágenes nuevas.":result?.reason==="output_truncated"?"La respuesta de OpenAI se cortó antes de terminar. Prueba generar el guion nuevamente.":"OpenAI devolvió una respuesta incompleta. No se generaron imágenes nuevas."):
+  result?.error==="motion_scene_retry"?(result?.stage==="narration"?
+   "La IA no devolvió "+(result?.expectedScenes||"todas las")+" frases para la duración elegida. Si escribiste las frases por escena, se conservarán al reintentar. No se generaron imágenes nuevas.":
+   result?.stage==="storyboard"?"La IA no devolvió las escenas completas para este video. No se generaron imágenes nuevas.":
+   result?.reason==="output_truncated"?"La respuesta de OpenAI se cortó antes de terminar. Prueba generar el guion nuevamente.":
+   "OpenAI devolvió una respuesta incompleta. No se generaron imágenes nuevas."):
   result?.error==="motion_ai_unavailable"?"Falló la preparación del guion con OpenAI (motion_ai_unavailable). Revisa los registros de Vercel.":
   result?.error==="openai_request_failed"?"OpenAI no pudo procesar el guion (openai_request_failed).":
   result?.error==="openai_key_not_configured"?"Falta configurar OpenAI en el entorno Preview.":
@@ -828,6 +837,7 @@ export default function StickmanLabPage(){
  const [fadeSeconds,setFadeSeconds]=useState(0.2);
  const [asmrEnabled,setAsmrEnabled]=useState(false);
  const [montageSeconds,setMontageSeconds]=useState<MotionSeconds>(60);
+ const manualDurationRef=useRef(false);
  const [musicFile,setMusicFile]=useState<File|null>(null);
  const [shareStatus,setShareStatus]=useState("");
  const [libraryShare,setLibraryShare]=useState<{id:string;url:string;filename:string;expiresAt:string}|null>(null);
@@ -882,6 +892,11 @@ export default function StickmanLabPage(){
  const playingRef=useRef(true),renderingRef=useRef(false),urlRef=useRef("");
  const timelineRef=useRef(0),lastFrameRef=useRef(0);
  const story=customMode?(terraStory|| (customPrompt.trim().length>=8?userStickmanStory(customPrompt):stickmanStory(topic,language))):stickmanStory(topic,language);
+ useEffect(()=>{
+  if(bootstrapping||pilotAuto||!customMode||studioStep!=="crear"||directorPlan||manualDurationRef.current)return;
+  const detected=durationFromPrompt(customPrompt);
+  if(detected&&detected!==montageSeconds)setMontageSeconds(detected);
+ },[bootstrapping,pilotAuto,customMode,studioStep,directorPlan,customPrompt,montageSeconds]);
  useEffect(()=>{setMotionDraft(directorPlan?.scenes?.[selectedScene]?.motionPrompt||"");},
   [selectedScene,directorPlan?.prompt,directorPlan?.scenes?.[selectedScene]?.motionPrompt]);
  useEffect(()=>{
@@ -1093,6 +1108,7 @@ export default function StickmanLabPage(){
     handed.narrationEnabled=handoff.narration;
     handed.seconds=handoff.seconds;
     handed.montageSeconds=handoff.seconds;
+    manualDurationRef.current=true;
     setMontageSeconds(handoff.seconds);
     saveSeedance(handed);
     setPilotVoiceProvider(handoff.voiceProvider==="openai"?"openai":"elevenlabs");
@@ -1113,6 +1129,7 @@ export default function StickmanLabPage(){
     if(recovered.urls.length||recovered.tokens.length)saveSeedance(recovered);
     setVoicePreset(recovered.voicePreset||"elevenlabs");
     setAsmrEnabled(recovered.asmrEnabled===true);
+    manualDurationRef.current=true;
     setMontageSeconds(validMotionSeconds(recovered.montageSeconds)?recovered.montageSeconds:baseMotionSeconds(saved));
     setPilotVoiceId(recovered.elevenVoiceId||"");
     setVoiceRevisions(recovered.voiceRevisions||[]);
@@ -1174,6 +1191,7 @@ export default function StickmanLabPage(){
    void refreshDirectorFrames(directorPlan.prompt);
  },[auth,directorPlan?.prompt,refreshDirectorFrames]);
  const resetForProject=useCallback((prompt="")=>{
+  manualDurationRef.current=false;
   setCustomPrompt(prompt);setCustomMode(true);setPilotAuto(false);
   setStudioStep(prompt?"revisar":"crear");
   setResearchSource(null);setDirectorPlan(null);setTerraStory(null);
@@ -1217,6 +1235,7 @@ export default function StickmanLabPage(){
    setSavedClipCount(project.seedance.urls.filter(Boolean).length);
    setVoicePreset(project.seedance.voicePreset||"elevenlabs");
    setAsmrEnabled(changeVoice?false:project.seedance.asmrEnabled===true);
+   manualDurationRef.current=true;
    setMontageSeconds(validMotionSeconds(project.seedance.montageSeconds)?project.seedance.montageSeconds:baseMotionSeconds(project.plan));
    setWithVoice(changeVoice||project.seedance.narrationEnabled===true&&
     project.seedance.asmrEnabled!==true);
@@ -1289,6 +1308,7 @@ export default function StickmanLabPage(){
    setSavedClipCount(selected.seedance.urls.filter(Boolean).length);
    setVoicePreset(selected.seedance.voicePreset||"elevenlabs");
    setAsmrEnabled(changeVoice?false:selected.seedance.asmrEnabled===true);
+   manualDurationRef.current=true;
    setMontageSeconds(validMotionSeconds(selected.seedance.montageSeconds)?selected.seedance.montageSeconds:baseMotionSeconds(selected.plan));
    setWithVoice(changeVoice||selected.seedance.narrationEnabled===true&&
     selected.seedance.asmrEnabled!==true);
@@ -1355,11 +1375,14 @@ export default function StickmanLabPage(){
    if(!session?.access_token)throw Error("Inicia sesión para preparar las escenas.");
    const accessToken=session.access_token;
    let plan=readDirectorPlan(customPrompt);
-   const chosenSeconds=plan?baseMotionSeconds(plan):
-    (readSeedance(customPrompt).seconds||montageSeconds);
+   // Respect the creator's visible duration, not a stale value from a previous draft.
+   const chosenSeconds=plan?baseMotionSeconds(plan):montageSeconds;
    const requiredScenes=sceneTotal(plan,chosenSeconds);
    if(!plan){
-    setDirectorStatus("Escribiendo narración y diseñando "+requiredScenes+" escenas");
+    const saved=readSeedance(customPrompt);
+    saved.seconds=chosenSeconds;saved.montageSeconds=chosenSeconds;
+    saveSeedance(saved);
+    setDirectorStatus("Preparando guion de "+chosenSeconds+" s y "+requiredScenes+" escenas");
     const result=await directorCall(accessToken,"/api/video-generator/motion-terra",{prompt:customPrompt,seconds:chosenSeconds,
     ...(characterGuide?{characterGuide}:{}),
     ...(pilotAuto&&researchSource?{researchScanId:researchSource.scanId,researchVideoId:researchSource.videoId}:{})});
@@ -2198,7 +2221,7 @@ export default function StickmanLabPage(){
     <textarea disabled={rendering||directorBusy||Boolean(directorPlan?.frames.length)} value={customPrompt} maxLength={2000} rows={4}
      placeholder="Ejemplo: Un pequeño elefante busca agua en la selva. Encuentra un río y ayuda a sus amigos a beber."
      onChange={e=>{setCustomPrompt(e.target.value);setTerraStory(null);setDirectorPlan(null);setSeedUrls([]);setPreviousScene(null);pendingStoryboard.current={prompt:"",images:[]};}}/>
-    <small>{directorPlan?.frames.length?"Idea guardada. Para otra historia, selecciona «Nuevo».":customPrompt.length+"/2000 · Video de "+montageSeconds+" segundos"}</small>
+    <small>{directorPlan?.frames.length?"Idea guardada. Para otra historia, selecciona «Nuevo».":customPrompt.length+"/2000 · Video de "+montageSeconds+" segundos · "+scenesForSeconds(montageSeconds)+" escenas"}</small>
    </label>:studioStep==="crear"?<div className={css.topics}>
     <button type="button" className={topic==="space"?css.active:""}
      onClick={()=>{if(!rendering)setTopic("space");}} disabled={rendering}>
@@ -2206,6 +2229,20 @@ export default function StickmanLabPage(){
     <button type="button" className={topic==="race"?css.active:""}
      onClick={()=>{if(!rendering)setTopic("race");}} disabled={rendering}>
      <CarFront size={21}/>{language==="es"?"Fórmula 1":"Formula 1"}</button>
+   </div>:null}
+   {studioStep==="crear"&&customMode?<div className={css.createDuration} role="group" aria-label="Duración del video">
+    <span>Duración</span>
+    {([15,30,60] as const).map(seconds=><button key={seconds} type="button"
+     aria-pressed={montageSeconds===seconds}
+     className={montageSeconds===seconds?css.createDurationActive:""}
+     disabled={rendering||directorBusy||seedBusy||Boolean(directorPlan?.frames.length)}
+     onClick={()=>{
+      manualDurationRef.current=true;setMontageSeconds(seconds);
+      if(customPrompt){
+       const saved=readSeedance(customPrompt);
+       saved.seconds=seconds;saved.montageSeconds=seconds;saveSeedance(saved);
+      }
+     }}>{seconds} s</button>)}
    </div>:null}
    {studioStep==="crear"&&customMode?<section className={css.characterPanel}>
     <details>
@@ -2247,7 +2284,7 @@ export default function StickmanLabPage(){
        onClick={()=>setPlaying(v=>!v)} aria-label={playing?"Pausar":"Reproducir"}>
        {playing?<Pause size={18}/>:<Play size={18}/>}
       </button>:null}
-     <span className={css.duration}>{customMode?"60s":"30s"} · 9:16</span>
+     <span className={css.duration}>{customMode?montageSeconds+"s":"30s"} · 9:16</span>
     </div>:null}
     {studioStep==="crear"?<div className={css.controls}>
      <div className={css.languages} aria-label="Idioma">
