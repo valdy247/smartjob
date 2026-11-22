@@ -6,9 +6,12 @@ import path from "node:path";
 import {spawn} from "node:child_process";
 import {randomUUID} from "node:crypto";
 
-const required=["SUPABASE_URL","SUPABASE_SERVICE_ROLE_KEY","OPENAI_API_KEY","RUNWAYML_API_SECRET","VMV_PILOT_OWNER_ID"];
+const required=["OPENAI_API_KEY","RUNWAYML_API_SECRET","VMV_PILOT_OWNER_ID"];
+const supabaseUrl=process.env.SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseSecret=process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY;
+if(!supabaseUrl||!supabaseSecret)throw Error("Missing Supabase worker configuration");
 for(const key of required)if(!process.env[key]?.trim())throw Error("Missing configuration: "+key);
-const db=createClient(process.env.SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+const db=createClient(supabaseUrl,supabaseSecret,{auth:{persistSession:false,autoRefreshToken:false}});
 const WORK="vmv-pilot-working",FINAL="vmv-pilot-renders";
 const OPENAI="https://api.openai.com/v1",RUNWAY="https://api.dev.runwayml.com/v1";
 const STYLE={
@@ -71,16 +74,17 @@ async function probe(file){
  });
 }
 async function patch(job,changes){
- const {error}=await db.from("vmv_pilot_render_jobs").update({...changes,updated_at:new Date().toISOString()})
-  .eq("id",job.id).eq("owner_id",job.owner_id).eq("lease_token",job.lease_token);
- if(error)throw Error("job_progress_unavailable");
+ const {data,error}=await db.from("vmv_pilot_render_jobs").update({...changes,updated_at:new Date().toISOString()})
+  .eq("id",job.id).eq("owner_id",job.owner_id).eq("lease_token",job.lease_token)
+  .select("id").maybeSingle();
+ if(error||!data)throw Error("job_progress_unavailable");
  Object.assign(job,changes);
 }
 async function keepAlive(job){
- const {error}=await db.from("vmv_pilot_render_jobs")
+ const {data,error}=await db.from("vmv_pilot_render_jobs")
   .update({lease_expires_at:new Date(Date.now()+15*60000).toISOString()})
-  .eq("id",job.id).eq("lease_token",job.lease_token);
- if(error)log("heartbeat_failed",{job:job.id});
+  .eq("id",job.id).eq("lease_token",job.lease_token).select("id").maybeSingle();
+ if(error||!data)log("heartbeat_failed",{job:job.id});
 }
 async function upload(bucket,remote,local,mime){
  const buffer=await readFile(local);
