@@ -488,57 +488,143 @@ export default function StickmanLabPage(){
   finally{miniBusyRef.current=false;setMiniBusy(false);}
  },[customPrompt,pollMinimax]);
 
- const createCompleteVideo=useCallback(async()=>{
+ const prepareStoryboard=useCallback(async()=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current||customPrompt.trim().length<8)return;
-  directorBusyRef.current=true;seedBusyRef.current=true;
-  setDirectorBusy(true);setSeedBusy(true);setError("");setSeedJoined("");
+  directorBusyRef.current=true;setDirectorBusy(true);setError("");
+  try{
+   const client=getSupabase();if(!client)throw Error("Inicia sesión para preparar las escenas.");
+   const {data:{session}}=await client.auth.getSession();
+   if(!session?.access_token)throw Error("Inicia sesión para preparar las escenas.");
+   const accessToken=session.access_token;
+   let plan=readDirectorPlan(customPrompt);
+   if(!plan){
+    setDirectorStatus("Escribiendo narración y diseñando las 12 escenas");
+    const result=await directorCall(accessToken,"/api/video-generator/motion-terra",{prompt:customPrompt});
+    if(!Array.isArray(result.scenes)||result.scenes.length!==MOTION_SCENES)
+     throw Error("La IA no devolvió doce escenas.");
+    plan={prompt:customPrompt,title:String(result.title||"VMV Motion"),storyBible:String(result.storyBible||""),
+     scenes:result.scenes.map((row:DirectorBeat)=>({
+      speech:row.speech,caption:row.caption,imagePrompt:row.imagePrompt,motionPrompt:row.motionPrompt||row.imagePrompt
+     })),frames:[],approved:[],draftPrompts:result.scenes.map((row:DirectorBeat)=>row.imagePrompt),previous:{}};
+    saveDirectorPlan(plan);
+   }
+   setDirectorPlan({...plan});
+   for(let i=plan.frames.length;i<MOTION_SCENES;i++){
+    setDirectorStatus("Creando imagen "+(i+1)+"/"+MOTION_SCENES);
+    const image=await directorCall(accessToken,"/api/video-generator/motion-image",{
+     mode:"storyframe",
+     prompt:["GLOBAL ART DIRECTION AND RECURRING CHARACTER TRAITS: "+plan.storyBible,
+      "THIS SHOT ONLY: "+plan.scenes[i].imagePrompt,
+      "Draw only this shot. Preserve the same recurring cast and art style, without copying unrelated objects from other scenes."].join(" ").slice(0,1750)
+    });
+    if(typeof image.imageUrl!=="string"||typeof image.referencePath!=="string")
+     throw Error("No se obtuvo la imagen de la escena "+(i+1)+".");
+    plan.frames.push({imageUrl:image.imageUrl,referencePath:image.referencePath,prompt:plan.scenes[i].imagePrompt});
+    saveDirectorPlan(plan);setDirectorPlan({...plan,frames:[...plan.frames]});
+   }
+   setDirectorStatus("Revisa las 12 escenas y apruébalas antes de animar");
+  }catch(e){
+   setError(e instanceof Error?e.message:"No se pudieron preparar las imágenes.");
+   setDirectorStatus("");
+  }finally{directorBusyRef.current=false;setDirectorBusy(false);}
+ },[customPrompt]);
+ const updateScenePrompt=useCallback((index:number,prompt:string)=>{
+  setDirectorPlan(current=>{
+   if(!current)return current;
+   const drafts=[...(current.draftPrompts||current.scenes.map(scene=>scene.imagePrompt))];
+   drafts[index]=prompt;
+   const approved=[...(current.approved||[])];approved[index]=false;
+   const next={...current,draftPrompts:drafts,approved};saveDirectorPlan(next);return next;
+  });
+ },[]);
+ const approveScene=useCallback((index:number)=>{
+  setDirectorPlan(current=>{
+   if(!current||!current.frames[index])return current;
+   const edited=current.draftPrompts?.[index]??current.scenes[index].imagePrompt;
+   if(edited!==current.scenes[index].imagePrompt){setError("Regenera la imagen para aplicar el prompt modificado.");return current;}
+   const approved=[...(current.approved||[])];approved[index]=true;
+   const next={...current,approved};saveDirectorPlan(next);return next;
+  });
+  setError("");
+ },[]);
+ const regenerateScene=useCallback(async(index:number)=>{
+  if(directorBusyRef.current||seedBusyRef.current||!directorPlan?.frames[index])return;
+  if(readSeedance(directorPlan.prompt).tokens.some(Boolean)){
+   setError("Ya existen animaciones Seedance. No reemplaces imágenes de un video iniciado; crea una historia nueva para evitar mezclar escenas.");
+   return;
+  }
+  const prompt=(directorPlan.draftPrompts?.[index]??directorPlan.scenes[index].imagePrompt).trim();
+  if(prompt.length<35||prompt.length>1700){setError("El prompt de la escena debe tener entre 35 y 1700 caracteres.");return;}
+  directorBusyRef.current=true;setRegeneratingScene(index);setError("");
+  try{
+   const sb=getSupabase();if(!sb)throw Error("Inicia sesión.");
+   const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Inicia sesión.");
+   const result=await directorCall(session.access_token,"/api/video-generator/motion-image",{
+    mode:"storyframe",prompt:["GLOBAL ART DIRECTION AND RECURRING CHARACTER TRAITS: "+directorPlan.storyBible,
+     "THIS SHOT ONLY: "+prompt,
+     "Create one fresh still frame in the same 2D cartoon style, using only the action and subjects in this scene."].join(" ").slice(0,1750)
+   });
+   if(typeof result.imageUrl!=="string"||typeof result.referencePath!=="string")throw Error("No se recibió la nueva imagen.");
+   const current=readDirectorPlan(directorPlan.prompt);
+   if(!current)throw Error("No se encontró el storyboard guardado.");
+   const frames=[...current.frames],scenes=[...current.scenes];
+   const previous={...(current.previous||{})};
+   previous[index]=[...(previous[index]||[]),{...frames[index],prompt:scenes[index].imagePrompt}].slice(-5);
+   frames[index]={imageUrl:result.imageUrl,referencePath:result.referencePath,prompt};
+   scenes[index]={...scenes[index],imagePrompt:prompt};
+   const approved=[...(current.approved||[])];approved[index]=false;
+   const drafts=[...(current.draftPrompts||scenes.map(s=>s.imagePrompt))];drafts[index]=prompt;
+   const next={...current,frames,scenes,approved,previous,draftPrompts:drafts};
+   saveDirectorPlan(next);setDirectorPlan(next);setPreviousScene(null);
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo regenerar la escena.");}
+  finally{directorBusyRef.current=false;setRegeneratingScene(null);}
+ },[directorPlan]);
+ const restorePrevious=useCallback((index:number)=>{
+  setDirectorPlan(current=>{
+   if(!current)return current;
+   const history=[...(current.previous?.[index]||[])];
+   const former=history.pop();if(!former)return current;
+   const active=current.frames[index],frames=[...current.frames],scenes=[...current.scenes];
+   frames[index]=former;
+   scenes[index]={...scenes[index],imagePrompt:former.prompt||scenes[index].imagePrompt};
+   history.push({...active,prompt:current.scenes[index].imagePrompt});
+   const approved=[...(current.approved||[])];approved[index]=false;
+   const draftPrompts=[...(current.draftPrompts||scenes.map(s=>s.imagePrompt))];
+   draftPrompts[index]=scenes[index].imagePrompt;
+   const next={...current,frames,scenes,approved,draftPrompts,previous:{...current.previous,[index]:history}};
+   saveDirectorPlan(next);return next;
+  });setPreviousScene(null);setError("");
+ },[]);
+ const animateApproved=useCallback(async()=>{
+  if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
+  const plan=readDirectorPlan(customPrompt);
+  if(!plan||plan.frames.length!==MOTION_SCENES||
+   !Array.from({length:MOTION_SCENES},(_,i)=>i).every(i=>plan.approved?.[i]===true&&
+    (plan.draftPrompts?.[i]??plan.scenes[i].imagePrompt)===plan.scenes[i].imagePrompt)){
+   setError("Aprueba las 12 imágenes y regenera cualquier escena cuyo prompt hayas editado.");return;
+  }
+  directorBusyRef.current=true;seedBusyRef.current=true;setDirectorBusy(true);setSeedBusy(true);
+  setError("");setSeedJoined("");
   try{
    const client=getSupabase();if(!client)throw Error("Inicia sesión para generar el video.");
    const {data:{session}}=await client.auth.getSession();
    if(!session?.access_token)throw Error("Inicia sesión para generar el video.");
    const accessToken=session.access_token;
-   let plan=readDirectorPlan(customPrompt);
-   if(!plan){
-    setDirectorStatus("1/4 · Escribiendo el guion y definiendo los personajes");
-    const result=await directorCall(accessToken,"/api/video-generator/motion-terra",{prompt:customPrompt});
-    if(!Array.isArray(result.scenes)||result.scenes.length!==MOTION_SCENES)throw Error("La IA no devolvió doce escenas.");
-    plan={prompt:customPrompt,title:String(result.title||"VMV Motion"),storyBible:String(result.storyBible||""),
-     scenes:result.scenes.map((row:DirectorBeat)=>({
-      speech:row.speech,caption:row.caption,imagePrompt:row.imagePrompt,
-      motionPrompt:row.motionPrompt||row.imagePrompt
-     })),frames:[]};
-    saveDirectorPlan(plan);
-   }
-   for(let i=plan.frames.length;i<MOTION_SCENES;i++){
-    setDirectorStatus("2/4 · Diseñando plano "+(i+1)+"/"+MOTION_SCENES+" según el guion visual");
-    const image=await directorCall(accessToken,"/api/video-generator/motion-image",{
-     mode:"storyframe",
-     prompt:["GLOBAL ART DIRECTION AND RECURRING CHARACTER TRAITS: "+plan.storyBible,
-      "THIS SHOT ONLY: "+plan.scenes[i].imagePrompt,
-      "Create this frame independently from text. Respect the visual story logic but DO NOT include any objects, backgrounds, or people solely because they appeared in another scene."].join(" ").slice(0,1750)
-    });
-    if(typeof image.imageUrl!=="string"||typeof image.referencePath!=="string")
-     throw Error("No se obtuvo la imagen de la escena "+(i+1)+".");
-    plan.frames.push({imageUrl:image.imageUrl,referencePath:image.referencePath});
-    saveDirectorPlan(plan);
-   }
-   setDirectorPlan(plan);
-   const job=readSeedance(customPrompt);
-   setSeedUrls(job.urls.filter(Boolean));
+   const job=readSeedance(customPrompt);setSeedUrls(job.urls.filter(Boolean));
    for(let beat=0;beat<MOTION_SCENES;beat++){
     if(job.urls[beat])continue;
     let token=job.tokens[beat];
     if(!token){
-     setDirectorStatus("3/4 · Animando escena "+(beat+1)+"/"+MOTION_SCENES);
+     setDirectorStatus("Animando escena "+(beat+1)+"/"+MOTION_SCENES+" · Seedance 720p");
      const started=await seedanceRequest(accessToken,{
       action:"start",prompt:customPrompt,beat,confirmCost:true,
       imagePath:plan.frames[beat].referencePath,
       motionPrompt:plan.scenes[beat].motionPrompt,storyBible:plan.storyBible
      });
-     if(typeof started?.token!=="string")throw Error("No se obtuvo el identificador de la escena "+(beat+1)+".");
+     if(typeof started?.token!=="string")throw Error("Seedance no inició la escena "+(beat+1)+".");
      token=started.token;job.tokens[beat]=token;saveSeedance(job);
     }
-    setDirectorStatus("3/4 · Esperando animación "+(beat+1)+"/"+MOTION_SCENES);
+    setDirectorStatus("Esperando animación "+(beat+1)+"/"+MOTION_SCENES);
     let completed=false;
     for(let n=0;n<120;n++){
      const response=await seedanceRequest(accessToken,{action:"status",token});
@@ -546,12 +632,12 @@ export default function StickmanLabPage(){
       job.urls[beat]=response.url;saveSeedance(job);setSeedUrls(job.urls.filter(Boolean));
       completed=true;break;
      }
-     if(response?.status==="failed")throw Error("Seedance no completó la escena "+(beat+1)+". Se conservaron las anteriores.");
+     if(response?.status==="failed")throw Error("Seedance no completó la escena "+(beat+1)+". Las anteriores siguen guardadas.");
      await new Promise<void>(resolve=>setTimeout(resolve,5000));
     }
-    if(!completed)throw Error("La escena "+(beat+1)+" sigue procesándose. Pulsa Generar video para recuperar su estado, sin pagarla otra vez.");
+    if(!completed)throw Error("La escena "+(beat+1)+" continúa procesándose. Pulsa Dar movimiento para recuperar su estado.");
    }
-   setDirectorStatus("4/4 · Preparando narración y montaje");
+   setDirectorStatus("Preparando narración, subtítulos y montaje");
    const speechParts=withVoice?await loadVoice(plan.scenes.map(scene=>scene.speech),voice):[];
    const localUrls:string[]=[];
    let video:Blob,extension:"mp4"|"webm";
@@ -563,13 +649,8 @@ export default function StickmanLabPage(){
    if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);
    seedJoinedRef.current=finalUrl;setSeedJoined(finalUrl);setExtension(extension);
    setDirectorStatus("Video terminado · 60 segundos"+(withVoice?" con voz":""));
-  }catch(e){
-   setError(e instanceof Error?e.message:"No se pudo terminar el video.");
-   setDirectorStatus("");
-  }finally{
-   directorBusyRef.current=false;seedBusyRef.current=false;
-   setDirectorBusy(false);setSeedBusy(false);
-  }
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo terminar el video.");setDirectorStatus("");}
+  finally{directorBusyRef.current=false;seedBusyRef.current=false;setDirectorBusy(false);setSeedBusy(false);}
  },[customPrompt,withVoice,voice,subtitles]);
  const generate=useCallback(async()=>{
   if(renderingRef.current)return;
