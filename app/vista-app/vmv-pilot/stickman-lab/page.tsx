@@ -1631,8 +1631,11 @@ export default function StickmanLabPage(){
   const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)return;
   setRenderLoading(true);
   try{
+   const job=readSeedance(customPrompt);
+   const latest=job.voiceRevisions?.find(v=>v.id===job.activeRenderId);
    const result=await motionLibrary(session.access_token,{
-    action:"render-url",id:currentCloudId(),extension
+    action:"render-url",id:currentCloudId(),extension:latest?.extension||extension,
+    ...(latest?{revisionId:latest.id}:{})
    });
    if(typeof result.url!=="string")throw Error("URL inválida.");
    setLastRenderedCloudUrl(result.url);
@@ -1640,7 +1643,7 @@ export default function StickmanLabPage(){
    setShareStatus("Video final recuperado desde la nube.");
   }catch{setShareStatus("Todavía no existe una copia del montaje final guardada.");}
   finally{setRenderLoading(false);}
- },[extension]);
+ },[extension,customPrompt]);
  useEffect(()=>{
   if(auth!=="signed_in"||!directorPlan?.prompt||seedJoined||
    readSeedance(directorPlan.prompt).urls.filter(Boolean).length!==MOTION_SCENES)return;
@@ -1648,13 +1651,20 @@ export default function StickmanLabPage(){
   const load=async()=>{
    const sb=getSupabase();if(!sb)return;
    const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)return;
-   for(const ext of ["mp4","webm"] as const){
+   const job=readSeedance(directorPlan.prompt);
+   const version=job.voiceRevisions?.find(v=>v.id===job.activeRenderId);
+   const choices:[string,"mp4"|"webm"][]=[
+    ...(version?[[version.id,version.extension] as [string,"mp4"|"webm"]]:[]),
+    ["","mp4"],["","webm"]
+   ];
+   for(const [revisionId,ext] of choices){
     try{
      const file=await motionLibrary(session.access_token,{
-      action:"render-url",id:currentCloudId(),extension:ext
+      action:"render-url",id:currentCloudId(),extension:ext,
+      ...(revisionId?{revisionId}:{})
      });
      if(active&&typeof file.url==="string"){
-      setSeedJoined(file.url);setExtension(ext);
+      setSeedJoined(file.url);setExtension(ext);setActiveRenderId(revisionId);
       setLastRenderedCloudUrl(file.url);setStudioStep("publicar");break;
      }
     }catch{}
