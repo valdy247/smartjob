@@ -31,20 +31,44 @@ function parse(raw:unknown):{title:string;storyBible:string;scenes:[Scene,Scene,
   storyBible:typeof obj.storyBible==="string"?obj.storyBible.slice(0,1200):"",
   scenes:scenes as [Scene,Scene,Scene]};
 }
-const system=[
- "You are an expert director, screenwriter and visual storytelling artist for 15-second vertical short videos. Match the genre requested by the user: 2D character cartoon for cartoon stories, cinematic scientific visualization for educational facts, or other requested style. Never force cartoons on documentary content.",
- "Write exactly three consecutive five-second beats with compelling distinct visual information: 1 striking hook, 2 tangible escalation or evidence, 3 surprising visual reveal/payoff. For educational videos, use a precise visual comparison or transformation, not a static crowd with endless zoom-out. Never repeat camera-only zooms as the entire action.",
- "Create one STORY BIBLE describing in precise English the characters, colors, clothing, height ratio, props and environment. Repeat these immutable visual details in EACH imagePrompt.",
- "Return JSON only, with keys title, storyBible and scenes. scenes is an array of exactly 3 objects, each with: speech (Spanish short narration), caption (2-5 words), imagePrompt (full English illustrated start frame description), motionPrompt (English exact 5-second motion direction), camera (focusX 270, focusY 435, startZoom 1.02, endZoom 1.3).",
- "In each imagePrompt write a full, independently usable English text-to-image prompt for one complete portrait 9:16 illustrated frame. Show the exact action and expression at its strongest instant.",
- "Image quality must be premium and appropriate to the topic, with visual substance and coherent motion possibilities, dramatic but believable scale, readable subject and strong composition. Avoid generic stock-like images, motionless large groups, and repeated zooming.",
- "Describe consistent character appearance, colors and clothes identically in every prompt. Put the cast's exact visual traits explicitly into EACH scene prompt to improve continuity.",
- "Composition: subjects occupy the middle 70%, leave upper and lower safe areas for captions. NO lettering, NO logos, NO speech bubbles, NO watermarks.",
- "Every scene must have a recognizable environment; show the STARTING pose BEFORE that beat begins so animation can perform the assigned action. The same location and cast must be recognizable in every frame.",
- "motionPrompt: detailed English direction for how to animate the supplied starting image during ONLY its five-second beat. No recap, no jumping forward. 2-4 exact character actions, camera moves and end pose.",
- "Plan continuous camera grammar: each scene has an intentional visual change and distinct action, not merely a zoom. Camera focus coordinates refer to a 540x960 portrait frame.",
- "For each five-second beat, speech must fit naturally in 5 seconds (8-12 Spanish words at energetic pace). The full 3 speeches must form one fluid narration with a strong initial hook and meaningful end, not three disjoint statements. Captions are 2-5 words, both in the user's language. No made-up facts."
+const narrationSystem=[
+ "You are an expert short-form video narrator. Write a SINGLE compelling 15-second narration in the user's language. The narration is AUDIO ONLY, not instructions for the images.",
+ "Create a strong curiosity hook, concise scientific or story explanation, and a surprising payoff. For Spanish, use 31-37 spoken words across three approximately equal five-second segments; each segment must be a continuous part of one single speech, not three separate mini-stories.",
+ "Avoid unsupported factual claims, dead air, repetition, filler, and directions such as camera or scene descriptions.",
+ 'Return JSON only: {"title":"...","speech":["0-5 second speech","5-10 second speech","10-15 second speech"]}.'
 ].join(" ");
+const visualSystem=[
+ "You are the VISUAL FILM DIRECTOR, working independently from the narrator. The audio narration is supplied for timing and subject knowledge ONLY. Never illustrate each sentence literally and never treat narration text as an image prompt.",
+ "Design exactly three VISUALLY distinct but logically consecutive five-second shots that make a compelling 15-second film. Each shot must communicate new visual information with purposeful subject movement, a clear composition, and distinct cinematic action. No redundant shots, generic crowds, repeated zoom-outs, or camera motion substituting for action.",
+ "For educational facts, show clever visual metaphors, useful scale comparisons or transformations. Do not render physically nonsensical elements: a globe must not hover over a desert after transitioning to ground level. For character stories, the same protagonist should look consistent across cuts.",
+ "Continuity means logical storytelling and stable appearance of recurring characters and recognizable art direction; NOT preservation of all previous objects, exact camera position or scene location. Freely change setting, distance, cast visibility, camera angle and props when the story logically requires it.",
+ "Invent one coherent styleGuide stating only persistent art style, palette and recurring character traits, not a mandatory set of objects or fixed background. It should NOT force the same environment in all shots.",
+ "Each imagePrompt must be a self-sufficient English prompt for generating ONE original first frame from text, portrait 9:16, with the exact shot's own people, objects, location, framing, and art direction. Explicitly say which recurring features are kept and which scene-specific elements are present. No dependence on previous image and never instruct the model to copy it.",
+ "Each motionPrompt must independently specify the exact 5-second movement and changing visual content to animate FROM the scene's first frame, using verbs and concrete subject action. No recap or instant time-travel.",
+ "Match requested genre: cinematic photorealistic scientific visualization for documentary education, polished stylized 2D for cartoons, or user's stated look. No baked-in lettering, logos or speech bubbles.",
+ 'Return JSON only: {"storyBible":"shared aesthetic/recurring character traits only","scenes":[{"caption":"2-5 words in narration language","imagePrompt":"English first-frame visual direction","motionPrompt":"English five-second motion"}]} exactly 3 scenes. Speech is NOT part of this output.'
+].join(" ");
+async function askOpenAI(system:string,user:string,maxTokens:number){
+ const response=await fetch("https://api.openai.com/v1/chat/completions",{
+  method:"POST",cache:"no-store",
+  headers:{"Content-Type":"application/json",Authorization:"Bearer "+process.env.OPENAI_API_KEY},
+  body:JSON.stringify({model:"gpt-4.1-mini",messages:[{role:"system",content:system},
+   {role:"user",content:user}],max_tokens:maxTokens,response_format:{type:"json_object"},store:false}),
+  signal:AbortSignal.timeout(50000)
+ });
+ if(!response.ok){
+  console.warn("[vmv-motion-director] provider status",response.status);
+  if(response.status===401)throw Error("openai_key_invalid");
+  if(response.status===429)throw Error("openai_quota_or_rate_limit");
+  throw Error("openai_request_failed");
+ }
+ const result=await response.json();
+ const content=result?.choices?.[0]?.message?.content;
+ if(typeof content!=="string"||!content.trim())throw Error("motion_scene_retry");
+ const parsed=JSON.parse(content) as unknown;
+ if(!parsed||typeof parsed!=="object")throw Error("motion_scene_retry");
+ return parsed as Record<string,unknown>;
+}
 export async function POST(req:NextRequest){
  const owner=await authenticatedUser(req);
  if(!owner||!videoAllowed(owner))return reply({error:"video_not_enabled_for_account"},403);
@@ -58,26 +82,23 @@ export async function POST(req:NextRequest){
  if(quotaError)return reply({error:"motion_quota_unavailable"},503);
  if(granted!==true)return reply({error:"motion_limit"},429);
  try{
-  const response=await fetch("https://api.openai.com/v1/chat/completions",{
-   method:"POST",cache:"no-store",
-   headers:{"Content-Type":"application/json",Authorization:"Bearer "+process.env.OPENAI_API_KEY},
-   body:JSON.stringify({model:"gpt-4.1-mini",messages:[{role:"system",content:system},
-    {role:"user",content:prompt}],max_tokens:2300,response_format:{type:"json_object"},store:false}),
-   signal:AbortSignal.timeout(50000)
-  });
-  if(!response.ok){
-   if(response.status===401)return reply({error:"openai_key_invalid"},503);
-   if(response.status===429)return reply({error:"openai_quota_or_rate_limit"},429);
-   console.warn("[vmv-motion-openai] HTTP",response.status);
-   return reply({error:"openai_request_failed"},503);
-  }
-  const result=await response.json();
-  const answer=typeof result?.choices?.[0]?.message?.content==="string"?result.choices[0].message.content:"";
-  const start=answer.indexOf("{"),end=answer.lastIndexOf("}");
-  if(start<0||end<start){console.warn("[vmv-motion-openai] no JSON object",result?.choices?.[0]?.finish_reason||"unknown");return reply({error:"motion_scene_retry"},503);}
-  const parsed=parse(JSON.parse(answer.slice(start,end+1)));
-  if(!parsed){console.warn("[vmv-motion-openai] scene validation failed",result?.choices?.[0]?.finish_reason||"unknown");return reply({error:"motion_scene_retry"},503);}
-  return reply({...parsed,model:"gpt-4.1-mini"});
+  const narration=await askOpenAI(narrationSystem,prompt,550);
+  if(!Array.isArray(narration.speech)||narration.speech.length!==3||
+   narration.speech.some(v=>typeof v!=="string"||v.trim().length<8||v.length>165))
+   return reply({error:"motion_scene_retry"},503);
+  const spoken=narration.speech as string[];
+  const visuals=await askOpenAI(visualSystem,JSON.stringify({
+   idea:prompt,title:narration.title,narrationForTimingOnly:spoken
+  }),2000);
+  if(!Array.isArray(visuals.scenes)||visuals.scenes.length!==3)
+   return reply({error:"motion_scene_retry"},503);
+  const enriched={title:narration.title,storyBible:visuals.storyBible,
+   scenes:visuals.scenes.map((scene,i)=>({
+    ...(scene as Record<string,unknown>),speech:spoken[i]
+   }))};
+  const parsed=parse(enriched);
+  if(!parsed)return reply({error:"motion_scene_retry"},503);
+  return reply({...parsed,model:"gpt-4.1-mini",directorVersion:2});
  }catch(e){
   const message=e instanceof Error?e.message:"unknown";
   console.warn("[vmv-motion-openai]",message);
