@@ -24,7 +24,7 @@ test("Campaign wizard asks one question at a time and waits for paid credits aut
  const ui=src["app/vista-app/vmv-pilot/page.tsx"];
  assert.match(ui,/Crear campaña/);assert.match(ui,/Mis campañas/);
  assert.match(ui,/Generar video/);
- assert.match(ui,/approved/);assert.match(ui,/confirmCost/);
+ assert.match(ui,/approved/);assert.match(ui,/Autorizo usar créditos/);
  assert.match(ui,/seconds:60 as 15\|30\|60/);
  assert.match(ui,/Subtítulos/);
  assert.match(ui,/stickman/);
