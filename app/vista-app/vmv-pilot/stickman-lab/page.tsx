@@ -1538,22 +1538,39 @@ export default function StickmanLabPage(){
    seedJoinedRef.current=finalUrl;setSeedJoined(finalUrl);setExtension(extension);
    setStudioStep("publicar");
    setDirectorStatus("Video terminado · 60 segundos"+(withVoice?" con voz":""));
-   // Direct signed upload avoids Vercel's small function-body limit.
-   // The final export becomes durable and accessible from other devices.
+   // Each voice-only edit is versioned; the original "final" video survives.
+   const revisionId=voiceOnly?crypto.randomUUID():"";
    try{
     const id=currentCloudId();
     await motionLibrary(accessToken,{action:"save",project:{
      id,plan,seedance:readSeedance(customPrompt),publish:readPublishDraft(id)
     }});
-    const ticket=await motionLibrary(accessToken,{action:"render-upload",id,extension});
+    const ticket=await motionLibrary(accessToken,{
+     action:"render-upload",id,extension,...(revisionId?{revisionId}:{})
+    });
     const sb=getSupabase();
     if(!sb)throw Error("No se puede acceder al almacenamiento.");
     const uploaded=await sb.storage.from(ticket.bucket).uploadToSignedUrl(
      ticket.path,ticket.token,video,{contentType:"video/"+extension}
     );
     if(uploaded.error)throw Error("Falló la copia del video final.");
-    const source=await motionLibrary(accessToken,{action:"render-url",id,extension});
+    const source=await motionLibrary(accessToken,{
+     action:"render-url",id,extension,...(revisionId?{revisionId}:{})
+    });
     setLastRenderedCloudUrl(String(source.url||""));
+    const latest=readSeedance(customPrompt);
+    if(revisionId){
+     const version:SavedVoiceRevision={id:revisionId,extension,
+      voice:selectedVoiceName(voicePreset),createdAt:new Date().toISOString()};
+     latest.voiceRevisions=[...(latest.voiceRevisions||[]),version].slice(-30);
+    }
+    latest.activeRenderId=revisionId;latest.voicePreset=voicePreset;
+    if(provider==="elevenlabs"&&selectedVoiceId)latest.elevenVoiceId=selectedVoiceId;
+    saveSeedance(latest);setVoiceRevisions(latest.voiceRevisions||[]);
+    setActiveRenderId(revisionId);
+    await motionLibrary(accessToken,{action:"save",project:{
+     id,plan,seedance:latest,publish:readPublishDraft(id)
+    }});
     setCloudStatus("Video y proyecto guardados en la nube");
    }catch{
     setCloudStatus("Video generado; descarga una copia. No se pudo guardar el montaje en la nube.");
@@ -1561,7 +1578,7 @@ export default function StickmanLabPage(){
   }catch(e){setError(e instanceof Error?e.message:"No se pudo terminar el video.");setDirectorStatus("");}
   finally{directorBusyRef.current=false;seedBusyRef.current=false;setDirectorBusy(false);setSeedBusy(false);}
  },[customPrompt,withVoice,voice,subtitles,pilotAuto,pilotVoiceProvider,pilotVoiceId,
-  musicFile,musicVolume,narrationVolume,fadeSeconds]);
+  voicePreset,musicFile,musicVolume,narrationVolume,fadeSeconds]);
  useEffect(()=>{
   if(!pilotAuto||auth!=="signed_in"||customPrompt.length<8||autoStartRef.current)return;
   autoStartRef.current=true;
