@@ -70,12 +70,12 @@ async function createTerraStory(prompt:string):Promise<StickmanStory>{
   data?.error==="motion_limit"?"Límite de pruebas alcanzado.":
   data?.error==="motion_scene_retry"?"Terra no creó escenas válidas. Intenta de nuevo.":
   data?.error==="video_not_enabled_for_account"?"La prueba de IA no está habilitada para tu cuenta.":
-  "No pudimos generar las escenas con GPT Terra. Revisa la configuración del proveedor.");
- if(!Array.isArray(data?.scenes)||data.scenes.length!==3)throw Error("Terra devolvió escenas incompletas.");
+  "No pudimos generar las escenas con OpenAI. Revisa la configuración del proveedor.");
+ if(!Array.isArray(data?.scenes)||data.scenes.length!==3)throw Error("OpenAI devolvió escenas incompletas.");
  return {name:String(data.title||"VMV Motion"),scenes:data.scenes.map((scene:{
-  speech:string;caption:string;background:string;shapes:MotionShape[]
+  speech:string;caption:string;background:string;shapes:MotionShape[];camera?:{focusX:number;focusY:number;startZoom:number;endZoom:number}
  })=>({action:"custom" as const,speech:scene.speech,heading:scene.caption,
-  background:scene.background,shapes:scene.shapes})) as StickmanStory["scenes"]};
+  background:scene.background,shapes:scene.shapes,camera:scene.camera})) as StickmanStory["scenes"]};
 }
 
 async function exportCanvas(canvas:HTMLCanvasElement,
@@ -193,7 +193,7 @@ export default function StickmanLabPage(){
   const target=canvas.current;
   if(!target)return;
   renderingRef.current=true;setRendering(true);setProgress(0);
-  setError("");setStage(customMode?"GPT Terra dibujando escenas":withVoice?"Preparando voz":"Animando");
+  setError("");setStage(customMode?"IA preparando escenas y cámara":withVoice?"Preparando voz":"Animando");
   try{
    const selected=customMode?await createTerraStory(customPrompt):stickmanStory(topic,language);
    if(customMode)setTerraStory(selected);
@@ -286,7 +286,7 @@ export default function StickmanLabPage(){
     </div>:null}
    </section>
    <p className={css.note}>{language==="es"
-    ?"Tu historia usa GPT-6.1 Terra para dibujar tres escenas vectoriales originales y consume tokens de IA. Nuestro motor anima y exporta sin Runway. Mantén la pestaña abierta."
+    ?"Tu historia usa OpenAI para planificar escenas vectoriales y movimientos de cámara. Consume tokens de IA. Nuestro motor anima y exporta sin Runway."
     :"Original animation without Runway. Keep this tab open during export."}</p>
   </div>
  </main>;
