@@ -15,6 +15,7 @@ const files=[
  "app/vista-app/vmv-pilot/PilotTrendStep.tsx",
  "app/vista-app/vmv-pilot/PilotVoiceStep.tsx",
  "app/api/video-generator/pilot-voices/route.ts",
+ "app/api/video-generator/pilot-voice-preview/route.ts",
  "lib/vmv-pilot-elevenlabs.ts",
  "lib/vmv-pilot-voice-config.ts"
 ];
@@ -136,4 +137,25 @@ test("Worker blocks videos where script or actual narration has the wrong langua
  assert.match(worker,/job\.voice_provider==="elevenlabs"/);
  assert.match(worker,/voice:job\.voice_id/);
  assert.match(worker,/duration:5/);
+});
+
+test("Voice cards preview real audio in the chosen video language without selecting the voice",()=>{
+ const view=source["app/vista-app/vmv-pilot/PilotVoiceStep.tsx"];
+ const api=source["app/api/video-generator/pilot-voice-preview/route.ts"];
+ assert.match(view,/onClick=\{\(\)=>void play\(v\)\}/);
+ assert.match(view,/onChoose\(v\.provider,v\.id,v\.name\)/);
+ assert.match(view,/new Audio\(url\)/);
+ assert.match(view,/audio\.play\(\)/);
+ assert.match(view,/URL\.createObjectURL\(blob\)/);
+ assert.match(view,/URL\.revokeObjectURL/);
+ assert.match(api,/generateSpeech/);
+ assert.match(api,/eleven_multilingual_v2/);
+ assert.match(api,/samples\[language\]/);
+ assert.match(api,/videoAllowed\(owner\)/);
+ assert.match(api,/vmv_pilot_voice_preview_claim/);
+ assert.match(api,/Content-Type":"audio\/mpeg"/);
+ const sql=read("supabase/sql/vmv_pilot_voice_previews_20261122.sql");
+ assert.match(sql,/vmv_pilot_voice_preview_claim/);
+ assert.match(sql,/IF n>=12 THEN RETURN false/);
+ assert.match(sql,/ENABLE ROW LEVEL SECURITY/);
 });
