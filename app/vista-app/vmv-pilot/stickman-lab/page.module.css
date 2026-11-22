@@ -298,3 +298,9 @@
  .voiceChangerHeader{flex-wrap:wrap}.voiceChangerHeader .ghostButton{margin-left:auto}
  .voiceChoiceGrid button{min-height:100px}
 }
+
+/* Sound-only montage option, scoped to the VMV Motion finishing panel. */
+.asmrOption{align-items:flex-start;justify-content:center;gap:5px}
+.asmrOption span{display:flex;align-items:center;gap:8px;color:#4d3165;font-weight:850}
+.asmrOption input[type=checkbox]{width:17px;height:17px;accent-color:#945acc}
+.asmrOption small{font-size:11px;line-height:1.5;color:#8b759b;font-weight:500}
