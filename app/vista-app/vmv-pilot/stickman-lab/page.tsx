@@ -790,10 +790,25 @@ export default function StickmanLabPage(){
   return()=>{closed=true;if(timer)clearTimeout(timer);
    window.removeEventListener("vmv-motion-saved",schedule);};
  },[auth]);
- const importCharacters=useCallback(async(id:string)=>{setCharacterLoading(true);
+ const refreshLibrary=useCallback(async()=>{
+  const sb=getSupabase();
+  if(!sb)return;
+  setCloudLoading(true);
+  try{
+   const {data:{session}}=await sb.auth.getSession();
+   if(!session?.access_token)throw Error("Inicia sesión para ver tus videos.");
+   const result=await motionLibrary(session.access_token,{action:"list"});
+   setCloudProjects(Array.isArray(result.projects)?result.projects:[]);
+   setError("");
+  }catch(e){
+   setError(e instanceof Error?e.message:"La biblioteca no está disponible. Tus proyectos locales siguen guardados.");
+  }finally{setCloudLoading(false);}
+ },[]);
+ const importCharacters=useCallback(async(id:string)=>{
   const sb=getSupabase();if(!sb)return;
   const {data:{session}}=await sb.auth.getSession();
   if(!session?.access_token)return;
+  setCharacterLoading(true);
   try{
    const result=await motionLibrary(session.access_token,{action:"load",id});
    const guide=String(result.project?.plan?.storyBible||"").slice(0,1100);
@@ -814,13 +829,14 @@ export default function StickmanLabPage(){
   }catch(e){setError(e instanceof Error?e.message:"No se encontró la guía de personajes.");}
   finally{setCharacterLoading(false);}
  },[]);
- const previewSelectedClip=useCallback(async(index:number)=>{setClipPreviewLoading(true);
+ const previewSelectedClip=useCallback(async(index:number)=>{
   if(clipPreviewRef.current){URL.revokeObjectURL(clipPreviewRef.current);clipPreviewRef.current="";}
   setSelectedClipPreview("");
   const job=readSeedance(customPrompt);
   if(!job.tokens[index])return;
   const sb=getSupabase();if(!sb)return;
   const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)return;
+  setClipPreviewLoading(true);
   try{
    const url=await loadSeedanceForStitching(session.access_token,job.tokens[index],job.urls[index],index);
    clipPreviewRef.current=url;setSelectedClipPreview(url);
@@ -997,9 +1013,9 @@ export default function StickmanLabPage(){
  },[resetForProject,router]);
  const restoreMotionProject=useCallback(async(id:string)=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
-  setProjectSwitching(true);
   const selected=archivedMotionProjects().find(item=>item.id===id);
   if(!selected)return;
+  setProjectSwitching(true);
   try{
    const active=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
    if(active?.prompt&&active.prompt!==selected.plan.prompt&&active.scenes?.length===MOTION_SCENES){
@@ -1482,9 +1498,10 @@ export default function StickmanLabPage(){
    setShareStatus("No fue posible abrir el menú. Descarga el video para compartirlo.");
   }
  },[seedJoined,extension,publishDraft]);
- const refreshCloudRender=useCallback(async()=>{setRenderLoading(true);
+ const refreshCloudRender=useCallback(async()=>{
   const sb=getSupabase();if(!sb)return;
   const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)return;
+  setRenderLoading(true);
   try{
    const result=await motionLibrary(session.access_token,{
     action:"render-url",id:currentCloudId(),extension
