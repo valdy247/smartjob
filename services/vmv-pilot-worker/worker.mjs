@@ -5,17 +5,19 @@ import {tmpdir} from "node:os";
 import path from "node:path";
 import {spawn} from "node:child_process";
 import {randomUUID} from "node:crypto";
+import {startMotionClip,waitMotionClip} from "./motion-engine.mjs";
+import {speechTimeline} from "./speech-timeline.mjs";
 
-const required=["OPENAI_API_KEY","RUNWAYML_API_SECRET","VMV_PILOT_OWNER_ID"];
+const required=["OPENAI_API_KEY","AI_GATEWAY_API_KEY","VMV_PILOT_OWNER_ID"];
 const supabaseUrl=process.env.SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseSecret=process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY;
 if(!supabaseUrl||!supabaseSecret)throw Error("Missing Supabase worker configuration");
 for(const key of required)if(!process.env[key]?.trim())throw Error("Missing configuration: "+key);
 const db=createClient(supabaseUrl,supabaseSecret,{auth:{persistSession:false,autoRefreshToken:false}});
 const WORK="vmv-pilot-working",FINAL="vmv-pilot-renders";
-const OPENAI="https://api.openai.com/v1",RUNWAY="https://api.dev.runwayml.com/v1";
+const OPENAI="https://api.openai.com/v1";
 const STYLE={
- stickman:"STRICT minimalist flat 2D STICKMAN animation, small white round head, tiny black eyes, short messy hair, solid blue shirt, thin black limbs, bold black outlines, bright flat colors. NEVER 3D, photography or photorealistic characters.",
+ stickman:"STRICT colorful flat 2D STICKMAN CARTOON. Animals are recognizable as expressive stick-animals with big eyes, bold outlines and articulated limbs. Cars, roads and backgrounds are vividly colored. NEVER photorealistic characters.",
  realistic:"STRICT photorealism, real physics and natural light. No cartoons or illustration.",
  cinematic:"STRICT high-end cinematic live-action film, realistic light, warm grading and depth of field. No cartoons.",
  animated:"STRICT hand-drawn flat colorful 2D animated cartoon, consistent line weight, characters and palette. No live action or 3D.",
@@ -121,9 +123,9 @@ async function aiScript(job){
   "STRICT narration AND captions language: "+LANGUAGES[job.language]+". NEVER use a different language for any spoken or displayed words.",
   "STRICT immutable visual bible for EVERY scene: "+STYLE[job.style],
   "Stickman characters and visual palette must be CONSISTENT across the entire story.",
-  "Narration must align to visuals scene-by-scene, not random aesthetic footage.",
+  "Narration must align exactly to visuals scene-by-scene. Never show a character or future surprise before the narration reveals it.",
   "Use original, factually accurate claims, no copied third-party scripts or protected characters.",
-  "First scene hooks viewers; finish coherently.",
+  "Open with a compelling hook without spoiling the reveal; finish coherently. Every scene advances the same continuous story.",
   "Output valid JSON only: {\"title\":\"...\",\"scenes\":[{\"speech\":\"...\",\"imagePrompt\":\"...\",\"caption\":\"...\"}]}"
  ].join(" ");
  const response=await request(OPENAI+"/chat/completions",{
@@ -241,47 +243,6 @@ async function makeImage(job,scene,reference){
  const image=data?.data?.[0]?.b64_json;
  if(typeof image!=="string"||image.length<5000||image.length>13000000)throw Error("image_invalid");
  return Buffer.from(image,"base64");
-}
-async function runwayStart(job,scene,file,variant){
- const model=variant==="turbo"?"gen4_turbo":variant==="high"?"gen4.5":null;
- if(!model)throw Error("invalid_quality_variant");
- const prompt=[
-  "Animate the supplied image into exactly FIVE seconds of clear, meaningful action.",
-  "STRICTLY preserve "+STYLE[job.style],
-  "Motion specifically illustrates: "+scene.speech,
-  "Visual action: "+scene.imagePrompt,
-  "Keep the same character, same art style, same face and clothes throughout.",
-  "No captions, logos, text or speech. No camera-only zoom replacing character motion."
- ].join(" ").slice(0,990);
- const base64=(await readFile(file)).toString("base64");
- if(base64.length>4200000)throw Error("image_too_large");
- const response=await request(RUNWAY+"/image_to_video",{
-  method:"POST",headers:{...auth("RUNWAYML_API_SECRET"),"Content-Type":"application/json","X-Runway-Version":"2024-11-06"},
-  body:JSON.stringify({model,promptText:prompt,promptImage:"data:image/jpeg;base64,"+base64,
-   ratio:"720:1280",duration:5})
- },30000);
- if(!response.ok)throw Error("runway_start_"+response.status);
- const data=await response.json();
- if(typeof data?.id!=="string"||!/^[A-Za-z0-9_-]{8,100}$/.test(data.id))throw Error("runway_task_invalid");
- return data.id;
-}
-async function runwayWait(id){
- for(let i=0;i<75;i++){
-  if(closing)throw Error("worker_stopping");
-  const response=await request(RUNWAY+"/tasks/"+encodeURIComponent(id),{
-   headers:{...auth("RUNWAYML_API_SECRET"),"X-Runway-Version":"2024-11-06"}
-  },20000);
-  if(!response.ok)throw Error("runway_poll_"+response.status);
-  const data=await response.json();
-  if(data?.status==="FAILED"||data?.status==="CANCELED")throw Error("runway_failed");
-  if(data?.status==="SUCCEEDED"){
-   const url=Array.isArray(data.output)?data.output[0]:null;
-   if(typeof url!=="string"||!url.startsWith("https://"))throw Error("runway_output_invalid");
-   return url;
-  }
-  await sleep(12000);
- }
- throw Error("runway_timeout");
 }
 const timecode=seconds=>{
  const h=Math.floor(seconds/3600),m=Math.floor((seconds%3600)/60);
@@ -403,7 +364,7 @@ async function processJob(job){
   for(let i=0;i<scenes.length;i++){
    if(closing)throw Error("worker_stopping");
    const pending=[];
-   // Submit BOTH models before waiting, so Runway can animate in parallel.
+   // Submit BOTH models before waiting, so Seedance can animate in parallel.
    // Identical scene prompt and source JPEG; the only variable is model ID.
    for(const variant of variants){
     const key="clip_"+variant+"_"+i;
@@ -416,14 +377,15 @@ async function processJob(job){
     const taskKey="task_"+variant+"_"+i;
     let task=job.assets?.[taskKey];
     if(!task){
-     task=await runwayStart(job,scenes[i],images[i],variant);
+     task=await startMotionClip({db,bucket:WORK,imagePath:job.assets?.["image_"+i],
+       style:STYLE[job.style],scene:scenes[i],variant});
      await patch(job,{assets:{...job.assets,[taskKey]:task}});
     }
     pending.push({variant,key,clip,task});
    }
    // Both paid video tasks now run concurrently; no per-model regeneration
    // of prompts, source images, audio, captions or script.
-   const settled=await Promise.allSettled(pending.map(item=>runwayWait(item.task)));
+   const settled=await Promise.allSettled(pending.map(item=>waitMotionClip(item.task,item.variant,()=>closing)));
    let firstError=null;
    for(let j=0;j<pending.length;j++){
     const item=pending[j],status=settled[j];
