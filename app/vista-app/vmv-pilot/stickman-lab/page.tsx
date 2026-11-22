@@ -66,7 +66,13 @@ async function loadContinuousVoice(phrases:string[]):Promise<ContinuousSpeech>{
   result?.error==="elevenlabs_key_rejected"?"ElevenLabs rechazó la clave API.":
   result?.error==="elevenlabs_credits_required"?"ElevenLabs necesita créditos disponibles.":
   result?.error==="elevenlabs_rate_limited"?"ElevenLabs alcanzó el límite de solicitudes.":
-  "ElevenLabs no pudo generar la narración continua ("+String(result?.error||response.status)+")."
+  result?.error==="elevenlabs_voice_unavailable"?"La voz configurada no está disponible para esta cuenta de ElevenLabs. Verifica ELEVENLABS_VOICE_ID.":
+  result?.error==="elevenlabs_access_denied"?"Esta clave no tiene permisos para generar voz en ElevenLabs.":
+  result?.providerCode==="max_character_limit_exceeded"||result?.providerCode==="text_too_long"?"ElevenLabs rechazó el texto por longitud.":
+  result?.providerCode==="model_access_denied"||result?.providerCode==="feature_not_available"?"Tu plan de ElevenLabs no permite usar el modelo o esta función.":
+  "ElevenLabs rechazó la narración ("+String(result?.error||response.status)+
+   (result?.providerCode&&result.providerCode!=="unknown"?" / "+result.providerCode:"")+
+   "). Los 12 clips existentes se conservan."
  );
  if(typeof result.audio!=="string"||!result.alignment||!Number.isFinite(result.duration))
   throw Error("ElevenLabs no devolvió audio y tiempos válidos.");
@@ -439,6 +445,7 @@ export default function StickmanLabPage(){
  const [seedBusy,setSeedBusy]=useState(false);
  const [seedStage,setSeedStage]=useState("");
  const [seedUrls,setSeedUrls]=useState<string[]>([]);
+ const [savedClipCount,setSavedClipCount]=useState(0);
  const [seedJoined,setSeedJoined]=useState("");
  const [seedJoining,setSeedJoining]=useState(false);
  const seedJoinedRef=useRef("");
@@ -489,6 +496,7 @@ export default function StickmanLabPage(){
    const saved=JSON.parse(sessionStorage.getItem(DIRECTOR_PLAN_KEY)||"null");
    if(saved?.prompt&&typeof saved.prompt==="string"&&saved.scenes?.length===MOTION_SCENES){
     setCustomPrompt(saved.prompt);setCustomMode(true);setWithVoice(true);
+    setSavedClipCount(readSeedance(saved.prompt).urls.filter(Boolean).length);
     const plan=readDirectorPlan(saved.prompt);
     if(plan){
      setDirectorPlan(plan);
@@ -693,9 +701,13 @@ export default function StickmanLabPage(){
    if(withVoice){
     const check=await fetch("/api/video-generator/speech/continuous",{headers:{Authorization:"Bearer "+accessToken},cache:"no-store"});
     const config=await check.json().catch(()=>null);
-    if(!check.ok||!config?.configured)throw Error("ElevenLabs aún no está configurado en Vercel Preview. No se iniciaron animaciones de pago.");
+    if(!check.ok||!config?.configured)throw Error(
+     config?.error==="elevenlabs_voice_unavailable"?"La voz predeterminada de ElevenLabs no está disponible para tu cuenta. Configura una voz válida antes de continuar.":
+     config?.error==="elevenlabs_key_rejected"?"ElevenLabs rechazó la API key.":
+     "No se pudo verificar la voz de ElevenLabs. Se conservan todas las animaciones completadas."
+    );
    }
-   const job=readSeedance(customPrompt);setSeedUrls(job.urls.filter(Boolean));
+   const job=readSeedance(customPrompt);setSeedUrls(job.urls.filter(Boolean));setSavedClipCount(job.urls.filter(Boolean).length);
    for(let beat=0;beat<MOTION_SCENES;beat++){
     if(job.urls[beat])continue;
     let token=job.tokens[beat];
@@ -714,7 +726,7 @@ export default function StickmanLabPage(){
     for(let n=0;n<120;n++){
      const response=await seedanceRequest(accessToken,{action:"status",token});
      if(response?.status==="completed"&&typeof response.url==="string"){
-      job.urls[beat]=response.url;saveSeedance(job);setSeedUrls(job.urls.filter(Boolean));
+      job.urls[beat]=response.url;saveSeedance(job);setSeedUrls(job.urls.filter(Boolean));setSavedClipCount(job.urls.filter(Boolean).length);
       completed=true;break;
      }
      if(response?.status==="failed")throw Error("Seedance no completó la escena "+(beat+1)+". Las anteriores siguen guardadas.");
@@ -900,7 +912,7 @@ export default function StickmanLabPage(){
        !directorPlan.scenes.every((scene,i)=>directorPlan.approved?.[i]===true&&
         (directorPlan.draftPrompts?.[i]??scene.imagePrompt)===scene.imagePrompt)}
       onClick={()=>void animateApproved()}>
-      {directorBusy?directorStatus:"Dar movimiento · Seedance 720p"}
+      {directorBusy?directorStatus:savedClipCount===MOTION_SCENES?"Reintentar voz y montaje · conservar 12 clips":"Dar movimiento · Seedance 720p"}
      </button>:null}
      <small>Seedance se inicia solo tras aprobar todas las escenas. Regenerar imágenes consume créditos de OpenAI.
       Animar 12 clips cuesta aproximadamente US$1.24 de Seedance, más imágenes y voz opcional.
