@@ -13,12 +13,12 @@ const reply=(data:Record<string,unknown>,status=200)=>NextResponse.json(data,{st
 const validId=(value:unknown):value is string=>typeof value==="string"&&
  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 const storage=()=>videoDb().storage;
-async function ensureBucket(name:string,size:number,mime:string){
+async function ensureBucket(name:string,size:number,mimes:string[]){
  const store=storage();
  const exists=await store.getBucket(name);
  if(!exists.error)return true;
  const created=await store.createBucket(name,{
-  public:false,fileSizeLimit:size,allowedMimeTypes:[mime]
+  public:false,fileSizeLimit:size,allowedMimeTypes:mimes
  });
  return !created.error||/already.exists|duplicate|already exists/i.test(created.error.message);
 }
@@ -72,7 +72,7 @@ export async function POST(req:NextRequest){
   const bytes=Buffer.from(JSON.stringify(snapshot));
   if(bytes.length>300000)return reply({error:"motion_project_too_large"},413);
   try{
-   if(!await ensureBucket(PROJECT_BUCKET,350000,"application/json"))
+   if(!await ensureBucket(PROJECT_BUCKET,350000,["application/json"]))
     return reply({error:"motion_library_unavailable"},503);
    const uploaded=await storage().from(PROJECT_BUCKET).upload(
     projectPath(owner,snapshot.id),bytes,{
@@ -116,8 +116,7 @@ export async function POST(req:NextRequest){
   try{
    const project=await readProject(owner,body.id);
    if(!project)return reply({error:"motion_project_not_found"},404);
-   if(!await ensureBucket(RENDER_BUCKET,100000000,
-    extension==="mp4"?"video/mp4":"video/webm"))
+   if(!await ensureBucket(RENDER_BUCKET,100000000,["video/mp4","video/webm"]))
     return reply({error:"motion_render_storage_unavailable"},503);
    const path=renderPath(owner,body.id,extension);
    const signed=await storage().from(RENDER_BUCKET).createSignedUploadUrl(path,{upsert:true});
