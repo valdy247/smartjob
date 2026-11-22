@@ -46,3 +46,9 @@
 .consent input{width:18px;height:18px;accent-color:#935ece;flex-shrink:0}
 .campaignAction{display:inline-flex;align-items:center;gap:8px;border:0;background:#f1eafb;color:#744ca2;padding:10px 15px;margin-top:14px;border-radius:11px;font-size:13px;font-weight:800;cursor:pointer}
 .campaignAction:focus-visible{outline:3px solid #a577dd;outline-offset:2px}
+
+.optionGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.optionGrid button{min-width:0;min-height:113px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:20px;border:1px solid #e7def0;background:#fff;color:#8455b5;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease}
+.optionGrid button:hover{border-color:#b58ae1;box-shadow:0 8px 24px #6b4f9815}
+.optionGrid button strong{color:#301c44;font-size:14px;font-weight:700}
+.optionGrid button:focus-visible{outline:3px solid #a577dd;outline-offset:3px}
