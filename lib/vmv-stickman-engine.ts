@@ -10,7 +10,8 @@ export const STICKMAN_SECONDS=15;
 export type StickmanTopic="space"|"race";
 export type StickmanLanguage="es"|"en";
 export type StickmanAction="earth"|"jupiter"|"comparison"|"track"|"beach"|"finish"|"custom";
-export type StickmanScene={action:StickmanAction;speech:string;heading?:string;motif?:"nature"|"city"|"science"|"food"|"people"|"abstract"};
+export type MotionShape={kind:"path"|"ellipse"|"rect";fill:string;stroke:string;strokeWidth:number;x:number;y:number;w:number;h:number;d:string;motion:"none"|"float"|"walk"|"sway"|"zoom";amplitude:number;phase:number};
+export type StickmanScene={action:StickmanAction;speech:string;heading?:string;background?:string;shapes?:MotionShape[];motif?:"nature"|"city"|"science"|"food"|"people"|"abstract"};
 export type StickmanStory={name:string;scenes:[StickmanScene,StickmanScene,StickmanScene]};
 const stories:Record<StickmanLanguage,Record<StickmanTopic,StickmanStory>>={
  es:{
@@ -314,6 +315,47 @@ function drawCustomScene(ctx:CanvasRenderingContext2D,scene:StickmanScene,index:
  rounded(ctx,48,777,444*clamp(local/5,0,1),5,3,accent);
 }
 
+
+function drawTerraScene(ctx:CanvasRenderingContext2D,scene:StickmanScene,t:number,local:number){
+ ctx.fillStyle=scene.background||"#252145";ctx.fillRect(0,0,540,960);
+ const bg=ctx.createLinearGradient(0,0,0,960);
+ bg.addColorStop(0,"rgba(255,255,255,.13)");bg.addColorStop(1,"rgba(0,0,0,.22)");
+ ctx.fillStyle=bg;ctx.fillRect(0,0,540,960);
+ for(const shape of scene.shapes||[]){
+  ctx.save();
+  const offset=Math.sin(t*2.3+shape.phase)*shape.amplitude;
+  if(shape.motion==="float")ctx.translate(0,offset);
+  if(shape.motion==="walk")ctx.translate(offset,Math.abs(offset)*.13);
+  if(shape.motion==="sway"){ctx.translate(shape.x,shape.y);ctx.rotate(offset*.012);ctx.translate(-shape.x,-shape.y);}
+  if(shape.motion==="zoom"){const scale=1+offset*.003;ctx.translate(270,460);ctx.scale(scale,scale);ctx.translate(-270,-460);}
+  ctx.fillStyle=shape.fill;ctx.strokeStyle=shape.stroke;ctx.lineWidth=shape.strokeWidth;
+  ctx.lineCap="round";ctx.lineJoin="round";
+  if(shape.kind==="path"){
+   try{
+    const p=new Path2D(shape.d);
+    ctx.fill(p);if(shape.strokeWidth>0)ctx.stroke(p);
+   }catch{/* Invalid path skips only this shape, never executes model code. */}
+  }else if(shape.kind==="ellipse"){
+   ctx.beginPath();ctx.ellipse(shape.x+shape.w/2,shape.y+shape.h/2,
+    Math.max(.1,shape.w/2),Math.max(.1,shape.h/2),0,0,TAU);
+   ctx.fill();if(shape.strokeWidth>0)ctx.stroke();
+  }else{
+   ctx.beginPath();ctx.roundRect(shape.x,shape.y,shape.w,shape.h,Math.min(12,shape.w/4,shape.h/4));
+   ctx.fill();if(shape.strokeWidth>0)ctx.stroke();
+  }
+  ctx.restore();
+ }
+ // Motion title and progress live in safe zones outside the illustrations.
+ rounded(ctx,34,88,472,6,3,"rgba(255,255,255,.22)");
+ rounded(ctx,34,88,472*clamp(local/5,0,1),6,3,"#d4afff");
+ ctx.font="800 32px system-ui, sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
+ const lines=wrappedText(ctx,scene.heading||"",460,2);
+ lines.forEach((text,i)=>{
+  rounded(ctx,30,120+i*42,480,39,13,"rgba(20,17,40,.56)");
+  ctx.fillStyle="#ffffff";ctx.fillText(text,270,140+i*42,452);
+ });
+}
+
 function subtitles(ctx:CanvasRenderingContext2D,text:string,local:number){
  const words=text.split(/\s+/).filter(Boolean);
  const count=Math.max(1,Math.ceil(words.length/4));
@@ -334,7 +376,9 @@ export function drawStickmanFrame(
  const action=story.scenes[scene].action;
  const isSpace=action==="earth"||action==="jupiter"||action==="comparison";
  ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,540,960);
- if(action==="custom"){
+ if(story.scenes[scene].shapes?.length){
+  drawTerraScene(ctx,story.scenes[scene],time,local);
+ }else if(action==="custom"){
   drawCustomScene(ctx,story.scenes[scene],scene,time,local);
  }else if(isSpace){
   paintSpace(ctx,time);
