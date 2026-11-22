@@ -10,7 +10,10 @@ export default function VMVAuthGateway({supabase,compact=false,returnTo}:{
  supabase:SupabaseClient;compact?:boolean;returnTo?:string
 }){
  const {language}=useInterfaceLanguage(),es=language!=="en";
- const destination=returnTo&&(returnTo==="/vista-app/video-generator/quick"||returnTo.startsWith("/vista-app/video-generator/quick?"))?returnTo:"/vista-app";
+ const destination=returnTo&&[
+  "/vista-app/video-generator/quick",
+  "/vista-app/vmv-pilot/stickman-lab"
+ ].some(path=>returnTo===path||returnTo.startsWith(path+"?"))?returnTo:"/vista-app";
  const [email,setEmail]=useState(""),[password,setPassword]=useState("");
  const [forgot,setForgot]=useState(false),[visible,setVisible]=useState(false);
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
