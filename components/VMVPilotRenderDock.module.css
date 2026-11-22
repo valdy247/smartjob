@@ -12,3 +12,19 @@
 .actions a{display:flex;align-items:center;justify-content:center;gap:5px;flex:1;border-radius:11px;background:#f1eafb;color:#7046a0;font-size:12px;text-decoration:none;padding:10px 6px;font-weight:750}
 .notice{font-size:12px;color:#b14c68;line-height:1.5;margin:0}
 @media(max-width:440px){.dock{top:65px;right:10px}.card{width:calc(100vw - 82px);padding:12px}}
+.compareCard{width:min(595px,calc(100vw - 94px))}
+.compareTitle{margin:0 0 10px;font-size:14px;font-weight:750;color:#35243f}
+.comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.single{display:grid;grid-template-columns:1fr}
+.variant{display:flex;flex-direction:column;gap:8px;min-width:0}
+.variantTitle{display:flex;justify-content:space-between;align-items:center;color:#7851a1;font-size:13px}
+.variant video{width:100%;aspect-ratio:9/16;max-height:350px;border-radius:12px;background:#121019;display:block}
+.cost{font-size:11px;color:#917fa2;text-align:center}
+.download,.use,.library{display:flex;justify-content:center;align-items:center;gap:6px;border:0;border-radius:10px;padding:10px 5px;text-align:center;font-weight:750;font-size:12px;text-decoration:none;cursor:pointer}
+.download{background:#f0e8f7;color:#755096}
+.use{background:#8959c1;color:#fff}
+.use:disabled{opacity:.6;cursor:default}
+.library{font-size:11px;background:transparent;color:#8562a1;margin-top:7px}
+@media(max-width:440px){.compareCard{width:calc(100vw - 82px)}.comparison{gap:7px}
+ .variant video{max-height:255px}.variantTitle{font-size:12px}
+ .download,.use{font-size:11px;padding:9px 2px}}
