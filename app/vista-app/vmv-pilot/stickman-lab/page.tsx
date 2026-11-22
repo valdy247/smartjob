@@ -539,6 +539,8 @@ export default function StickmanLabPage(){
  const [directorStatus,setDirectorStatus]=useState("");
  const [directorPlan,setDirectorPlan]=useState<DirectorPlan|null>(null);
  const [regeneratingScene,setRegeneratingScene]=useState<number|null>(null);
+ const [editingSpeech,setEditingSpeech]=useState<number|null>(null);
+ const [speechDraft,setSpeechDraft]=useState("");
  const [previousScene,setPreviousScene]=useState<number|null>(null);
  const directorBusyRef=useRef(false);
  const [seedBusy,setSeedBusy]=useState(false);
@@ -649,6 +651,7 @@ export default function StickmanLabPage(){
   setResearchSource(null);setDirectorPlan(null);setTerraStory(null);
   setSeedUrls([]);setSavedClipCount(0);setSeedJoined("");
   setDirectorStatus("");setError("");setPreviousScene(null);
+  setEditingSpeech(null);setSpeechDraft("");
   setWithVoice(true);setSubtitles(true);
   autoStartRef.current=false;
   pendingStoryboard.current={prompt:"",images:[]};
@@ -770,6 +773,39 @@ export default function StickmanLabPage(){
    setDirectorStatus("");
   }finally{directorBusyRef.current=false;setDirectorBusy(false);}
  },[customPrompt,pilotAuto,researchSource]);
+ const beginSpeechEdit=useCallback((index:number)=>{
+  if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
+  const plan=readDirectorPlan(customPrompt);
+  if(!plan?.scenes[index])return;
+  if(readSeedance(plan.prompt).tokens.some(Boolean)){
+   setError("La animación ya comenzó. Para mantener voz e imágenes sincronizadas, no puedes cambiar la narración de este proyecto.");
+   return;
+  }
+  setSpeechDraft(plan.scenes[index].speech);
+  setEditingSpeech(index);setError("");
+ },[customPrompt]);
+ const saveSpeechEdit=useCallback((index:number)=>{
+  if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
+  const speech=speechDraft.trim().replace(/\s+/g," ");
+  if(speech.length<8||speech.length>165){
+   setError("La narración debe tener entre 8 y 165 caracteres por escena para conservar el ritmo del video.");
+   return;
+  }
+  const plan=readDirectorPlan(customPrompt);
+  if(!plan?.scenes[index]){setError("No se encontró esta escena guardada.");return;}
+  if(readSeedance(plan.prompt).tokens.some(Boolean)){
+   setError("La animación ya comenzó. No se puede editar la narración después de iniciar Seedance.");
+   return;
+  }
+  const scenes=[...plan.scenes];
+  const changed=scenes[index].speech!==speech;
+  scenes[index]={...scenes[index],speech};
+  const approved=[...(plan.approved||[])];
+  if(changed)approved[index]=false;
+  const next={...plan,scenes,approved};
+  saveDirectorPlan(next);setDirectorPlan(next);
+  setEditingSpeech(null);setSpeechDraft("");setError("");
+ },[customPrompt,speechDraft]);
  const updateScenePrompt=useCallback((index:number,prompt:string)=>{
   setDirectorPlan(current=>{
    if(!current)return current;
@@ -1088,7 +1124,26 @@ export default function StickmanLabPage(){
         </div>
         <div className={css.sceneDescription}>
          <strong>Narración</strong>
-         <p>{scene.speech}</p>
+         {editingSpeech===index?<div>
+          <textarea aria-label={"Editar narración de escena "+(index+1)}
+           value={speechDraft} maxLength={165} rows={3}
+           disabled={directorBusy||seedBusy||rendering}
+           onChange={event=>setSpeechDraft(event.target.value)}/>
+          <small>{speechDraft.trim().length}/165 caracteres · Aproximadamente 5 segundos</small>
+          <div className={css.sceneActions}>
+           <button type="button" disabled={directorBusy||seedBusy||rendering||speechDraft.trim().length<8}
+            onClick={()=>saveSpeechEdit(index)}><Check size={15}/>Guardar narración</button>
+           <button type="button" disabled={directorBusy||seedBusy||rendering}
+            onClick={()=>{setEditingSpeech(null);setSpeechDraft("");setError("");}}>Cancelar</button>
+          </div>
+         </div>:<>
+          <p>{scene.speech}</p>
+          <div className={css.sceneActions}>
+           <button type="button"
+            disabled={directorBusy||seedBusy||rendering||readSeedance(directorPlan.prompt).tokens.some(Boolean)}
+            onClick={()=>beginSpeechEdit(index)}>Editar narración</button>
+          </div>
+         </>}
          <label htmlFor={"motion-prompt-"+index}>Prompt de imagen</label>
          <textarea id={"motion-prompt-"+index} value={draft} maxLength={1700} rows={4}
           disabled={directorBusy||seedBusy} onChange={e=>updateScenePrompt(index,e.target.value)}/>
@@ -1115,7 +1170,7 @@ export default function StickmanLabPage(){
       disabled={directorBusy} onClick={()=>void prepareStoryboard()}>
       {directorBusy?directorStatus:"Continuar generando las imágenes pendientes"}</button>:null}
      {directorPlan.frames.length===MOTION_SCENES?<button type="button" className={css.generate}
-      disabled={directorBusy||seedBusy||regeneratingScene!==null||
+      disabled={directorBusy||seedBusy||editingSpeech!==null||regeneratingScene!==null||
        !directorPlan.scenes.every((scene,i)=>directorPlan.approved?.[i]===true&&
         (directorPlan.draftPrompts?.[i]??scene.imagePrompt)===scene.imagePrompt)}
       onClick={()=>void animateApproved()}>
