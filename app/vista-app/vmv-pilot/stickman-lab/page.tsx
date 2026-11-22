@@ -677,17 +677,45 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
    try{await video.play();}
    catch{throw Error("Chrome interrumpió el clip "+(index+1)+". Mantén esta pestaña visible y vuelve a intentar el montaje; los 12 clips están guardados.");}
    const endTime=speech?.sceneEnds?.[index]??(index+1)*(options.seconds===30?2.5:5);
-   // Each scene gets exactly its spoken duration. Longer speech holds the end frame.
+   // Validate actual media progress, not only wall-clock progress. Otherwise a
+   // stalled decoder can create seconds of identical frames while audio keeps going.
+   const clipStartedAt=performance.now();
+   let lastMediaTime=video.currentTime,lastMediaAdvance=clipStartedAt;
+   let lastFrameCount=-1,lastFrameAdvance=clipStartedAt;
+   const quality=video as HTMLVideoElement&{
+    getVideoPlaybackQuality?:()=>{totalVideoFrames:number};
+   };
+   const startFrameCount=quality.getVideoPlaybackQuality?.().totalVideoFrames;
+   if(typeof startFrameCount==="number")lastFrameCount=startFrameCount;
+   const segmentStart=index?(speech?.sceneEnds?.[index-1]??index*(options.seconds===30?2.5:5)):0;
+   const expectedLength=endTime-segmentStart;
+   if(expectedLength<=0)throw Error("La duración de una escena no es válida.");
    await new Promise<void>((resolve,reject)=>{
     const frame=()=>{
      try{
       requireForeground();
       if(video.paused&&!video.ended)throw Error("paused_by_browser");
+      const now=performance.now();
+      if(video.currentTime>lastMediaTime+0.035){
+       lastMediaTime=video.currentTime;lastMediaAdvance=now;
+      }
+      const count=quality.getVideoPlaybackQuality?.().totalVideoFrames;
+      if(typeof count==="number"){
+       if(count>lastFrameCount){lastFrameCount=count;lastFrameAdvance=now;}
+       // Some browsers report frame counters that do not update for local blobs;
+       // media-time watchdog still applies independently.
+      }
+      if(now-lastMediaAdvance>1200&&!video.ended)
+       throw Error("video_stalled");
+      if(typeof count==="number"&&lastFrameCount>=0&&now-lastFrameAdvance>1500&&!video.ended)
+       throw Error("video_frames_stalled");
+      // A stalled media element must never be treated as a completed 5s clip.
+      if((now-clipStartedAt)/1000>expectedLength+2.5)
+       throw Error("video_timing_overrun");
       const ratio=Math.max(canvas.width/video.videoWidth,canvas.height/video.videoHeight);
       const width=video.videoWidth*ratio,height=video.videoHeight*ratio;
       ctx.drawImage(video,(720-width)/2,(1280-height)/2,width,height);
       const current=(performance.now()-videoStart)/1000;
-      const segmentStart=index? (speech?.sceneEnds?.[index-1]??index*(options.seconds===30?2.5:5)):0;
       const fade=Math.max(0,Math.min(0.45,options.fadeSeconds));
       if(fade>0){
        const incoming=index>0?Math.max(0,1-(current-segmentStart)/fade):0;
@@ -696,9 +724,17 @@ async function stitchSeedanceClips(urls:string[],speech:ContinuousSpeech|null=nu
        if(opacity>0){ctx.fillStyle="rgba(0,0,0,"+opacity+")";ctx.fillRect(0,0,720,1280);}
       }
       drawCaption(Math.max(0,current));
-      if((performance.now()-videoStart)/1000>=endTime){resolve();return;}
+      if((performance.now()-videoStart)/1000>=endTime){
+       const expectedMediaProgress=Math.min(video.duration||expectedLength,
+        expectedLength*(options.seconds===30?2:1));
+       if(!video.ended&&video.currentTime+0.4<expectedMediaProgress)
+        throw Error("video_incomplete");
+       resolve();return;
+      }
       raf=requestAnimationFrame(frame);
-     }catch{reject(Error("Chrome pausó la reproducción mientras se unían los clips. Mantén esta pestaña abierta y visible; los 12 clips siguen guardados."));}
+     }catch{
+      reject(Error("La imagen del clip "+(index+1)+" dejó de avanzar durante el montaje. Se canceló la exportación para evitar un video congelado con audio. Vuelve a intentarlo en una pestaña visible; los 12 clips siguen guardados."));
+     }
     };
     raf=requestAnimationFrame(frame);
    });
