@@ -582,10 +582,10 @@ export default function StickmanLabPage(){
    </div>
    {customMode?<label className={css.promptField}>
     <span>¿Qué quieres contar?</span>
-    <textarea disabled={rendering||directorBusy} value={customPrompt} maxLength={500} rows={4}
+    <textarea disabled={rendering||directorBusy} value={customPrompt} maxLength={2000} rows={4}
      placeholder="Ejemplo: Un pequeño elefante busca agua en la selva. Encuentra un río y ayuda a sus amigos a beber."
      onChange={e=>{setCustomPrompt(e.target.value);setTerraStory(null);setDirectorPlan(null);setSeedUrls([]);pendingStoryboard.current={prompt:"",images:[]};}}/>
-    <small>{customPrompt.length}/500 · Video de 30 segundos con IA</small>
+    <small>{customPrompt.length}/2000 · Video de 30 segundos con IA</small>
    </label>:<div className={css.topics}>
     <button type="button" className={topic==="space"?css.active:""}
      onClick={()=>{if(!rendering)setTopic("space");}} disabled={rendering}>
