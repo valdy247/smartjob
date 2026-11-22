@@ -1549,6 +1549,108 @@ export default function StickmanLabPage(){
      {directorBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
      {directorBusy?directorStatus:"Generar video"}
     </button>:null}
+    {studioStep==="editar"&&customMode&&directorPlan?.frames.length===MOTION_SCENES?
+     <section className={css.studioPanel} aria-label="Editor del video">
+      <div className={css.studioSectionHeading}>
+       <div><h2>Editar tu video</h2>
+        <p>Cambia una escena sin perder las demás. {savedClipCount}/12 clips guardados.</p></div>
+       <button type="button" className={css.ghostButton} onClick={()=>setStudioStep("revisar")}>
+        Revisar imágenes</button>
+      </div>
+      <div className={css.shotStrip} role="group" aria-label="Selecciona la escena">
+       {directorPlan.frames.map((frame,index)=>{
+        const job=readSeedance(directorPlan.prompt);
+        const ready=Boolean(job.urls[index]),pending=Boolean(job.needsMotion?.[index]);
+        return <button type="button" key={index} aria-pressed={selectedScene===index}
+         className={selectedScene===index?css.shotSelected:""}
+         onClick={()=>{setSelectedScene(index);setSelectedClipPreview("");setError("");}}>
+         <img src={frame.imageUrl} alt={"Escena "+(index+1)} loading="lazy"/>
+         <span>{index+1}{pending?" · Editada":ready?" · Lista":""}</span>
+        </button>;
+       })}
+      </div>
+      <div className={css.editorFocus}>
+       <div className={css.editorMedia}>
+        {selectedClipPreview?<video src={selectedClipPreview} controls playsInline preload="metadata"/>:
+         <img src={directorPlan.frames[selectedScene].imageUrl} alt={"Fotograma escena "+(selectedScene+1)}/>}
+        {readSeedance(directorPlan.prompt).urls[selectedScene]?
+         <button type="button" className={css.ghostButton}
+          onClick={()=>void previewSelectedClip(selectedScene)}>
+          {selectedClipPreview?"Volver a cargar clip":"Reproducir clip guardado"}</button>:null}
+       </div>
+       <div className={css.editorFields}>
+        <h3>Escena {selectedScene+1} <span>{selectedScene*5}–{(selectedScene+1)*5} s</span></h3>
+        <label htmlFor="scene-motion-description">Movimiento de la escena</label>
+        <textarea id="scene-motion-description" value={motionDraft} maxLength={650} rows={4}
+         disabled={seedBusy||directorBusy}
+         onChange={event=>setMotionDraft(event.target.value)}/>
+        <div className={css.editorActions}>
+         <button type="button" disabled={seedBusy||directorBusy||motionDraft.trim().length<18}
+          onClick={saveMotionDirection}>Guardar movimiento</button>
+         <button type="button" disabled={seedBusy||directorBusy}
+          onClick={()=>void renderSingleScene(selectedScene)}>
+          {sceneRendering===selectedScene?"Animando…":
+           readSeedance(directorPlan.prompt).draftTokens?.[selectedScene]?
+            "Recuperar animación":"Animar solo esta escena · ~$0.10"}
+         </button>
+        </div>
+        {readSeedance(directorPlan.prompt).needsMotion?.[selectedScene]?
+         <small className={css.attention}>Esta escena cambió. Reanímala antes del montaje final.</small>:null}
+        {readSeedance(directorPlan.prompt).history?.[selectedScene]?.length?
+         <button className={css.ghostButton} type="button" disabled={seedBusy}
+          onClick={()=>revertClip(selectedScene)}>Recuperar clip anterior</button>:null}
+        <label>Narración</label>
+        {editingSpeech===selectedScene?<div className={css.narrationEdit}>
+         <textarea aria-label={"Narración escena "+(selectedScene+1)}
+          maxLength={165} value={speechDraft} rows={3}
+          onChange={event=>setSpeechDraft(event.target.value)}/>
+         <div className={css.editorActions}>
+          <button type="button" onClick={()=>saveSpeechEdit(selectedScene)}>Guardar voz</button>
+          <button type="button" onClick={()=>setEditingSpeech(null)}>Cancelar</button>
+         </div>
+        </div>:<div className={css.narrationEdit}>
+         <p>{directorPlan.scenes[selectedScene].speech}</p>
+         <button type="button" className={css.ghostButton}
+          onClick={()=>beginSpeechEdit(selectedScene)}>Editar narración sin rehacer video</button>
+        </div>}
+       </div>
+      </div>
+      <details className={css.finishingOptions}>
+       <summary>Acabado de video <span>Voz · música · transiciones</span></summary>
+       <div className={css.finishGrid}>
+        <label>Volumen de narración <strong>{narrationVolume}%</strong>
+         <input type="range" min="0" max="150" step="5" value={narrationVolume}
+          onChange={e=>setNarrationVolume(Number(e.target.value))}/></label>
+        <label>Música propia o con licencia
+         <input type="file" accept="audio/*" aria-label="Música de fondo"
+          onChange={e=>{const file=e.target.files?.[0]||null;
+           if(file&&file.size>30000000){setError("La música debe ocupar menos de 30 MB.");return;}
+           setMusicFile(file);}}/>
+        </label>
+        {musicFile?<label>Volumen de música <strong>{musicVolume}%</strong>
+         <input type="range" min="0" max="70" step="2" value={musicVolume}
+          onChange={e=>setMusicVolume(Number(e.target.value))}/></label>:null}
+        <label>Transición entre escenas
+         <select value={String(fadeSeconds)} onChange={e=>setFadeSeconds(Number(e.target.value))}>
+          <option value="0">Corte directo</option><option value="0.2">Suave · 0.2 s</option>
+          <option value="0.4">Cinematográfica · 0.4 s</option>
+         </select>
+        </label>
+       </div>
+       <p>Utiliza únicamente audio propio o autorizado. Los cambios se aplican al volver a montar.</p>
+      </details>
+      {directorStatus?<p className={css.cloudState} role="status">{directorStatus}</p>:null}
+      <button type="button" className={css.generate}
+       disabled={directorBusy||seedBusy||framesRefreshing||editingSpeech!==null||
+        directorPlan.frames.length!==MOTION_SCENES||
+        !directorPlan.scenes.every((scene,i)=>directorPlan.approved?.[i]===true&&
+         (directorPlan.draftPrompts?.[i]??scene.imagePrompt)===scene.imagePrompt)}
+       onClick={()=>void animateApproved()}>
+       {directorBusy?directorStatus:savedClipCount===12?
+        "Montar video · conservar 12 clips":"Continuar animaciones pendientes"}
+      </button>
+      <small className={css.mutedNote}>Regenerar un clip requiere autorización. El montaje reutiliza las demás escenas y no vuelve a pagar Seedance.</small>
+     </section>:null}
     {studioStep==="revisar"&&customMode&&directorPlan?.frames.length?<section className={css.storyReview} aria-label="Revisión de escenas">
      <div className={css.storyHeading}>
       <h2>Revisa antes de animar</h2>
