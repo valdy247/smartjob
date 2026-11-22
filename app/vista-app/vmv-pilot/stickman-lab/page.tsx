@@ -354,7 +354,12 @@ async function seedanceRequest(accessToken:string,body:Record<string,unknown>){
    motion_limit:"Límite diario de pruebas alcanzado. Los clips terminados se conservan.",
    video_status_unavailable:"No se pudo consultar el estado del trabajo existente. Reintenta sin generar otro.",
    ai_gateway_auth_not_configured:"Vercel AI Gateway no está configurado para Seedance en Preview.",
-   ai_gateway_credits_required:"Vercel AI Gateway informa que se necesitan créditos o configurar pagos.",
+   ai_gateway_credits_required:"AI Gateway rechazó el pago o un presupuesto. Esto no demuestra falta de saldo.",
+   ai_gateway_budget_exceeded:"Un presupuesto de AI Gateway llegó a su límite. El crédito disponible no evita ese bloqueo.",
+   ai_gateway_funds_unavailable:"AI Gateway rechazó la operación por saldo utilizable insuficiente en el contexto que la ejecuta.",
+   ai_gateway_billing_restricted:"AI Gateway requiere verificar o habilitar la facturación para esta solicitud.",
+   ai_gateway_payment_rejected:"AI Gateway devolvió HTTP 402, pero no especificó si es presupuesto o saldo. No compres créditos sin identificar el límite.",
+   ai_gateway_rate_limited:"AI Gateway aplicó un límite temporal de solicitudes. Las escenas anteriores se conservan.",
    seedance_invalid_parameters:"Seedance rechazó un parámetro de video. No se ha confirmado una generación nueva.",
    seedance_gateway_unavailable:"El proveedor de Seedance no está disponible. No se ha confirmado una generación nueva.",
    seedance_video_start_failed:"Seedance no pudo iniciar la generación.",
@@ -375,7 +380,14 @@ async function seedanceRequest(accessToken:string,body:Record<string,unknown>){
   };
   const code=typeof data?.error==="string"?data.error:"";
   const beat=Number.isInteger(data?.beat)?" (escena "+(data.beat+1)+")":"";
-  throw Error((messages[code]||"La API de animación respondió con un error desconocido")+" (HTTP "+response.status+(code?", "+code:"")+")"+beat+". Tus imágenes y los clips anteriores se conservan.");
+  const scopeNames:Record<string,string>={project:"proyecto",team:"equipo",user:"usuario",api_key:"clave API"};
+  const scope=code==="ai_gateway_budget_exceeded"&&typeof data?.budgetScope==="string"?
+   " Presupuesto afectado: "+(scopeNames[data.budgetScope]||"no identificado")+".":"";
+  const knownType=typeof data?.providerType==="string"&&/^[a-z_]{3,60}$/.test(data.providerType)?
+   " Motivo del proveedor: "+data.providerType+".":"";
+  throw Error((messages[code]||"La API de animación respondió con un error desconocido")+
+   " (HTTP "+response.status+(code?", "+code:"")+")"+beat+"."+scope+knownType+
+   " Tus imágenes y los clips anteriores se conservan. No se hizo ningún reintento automático.");
  }
  return data;
 }
