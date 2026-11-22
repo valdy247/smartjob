@@ -35,6 +35,9 @@ function parse(raw:unknown):{title:string;storyBible:string;scenes:Scene[]}|null
 const narrationSystem=[
  "You are an expert short-form video narrator. Write a SINGLE compelling 60-second narration in the user's language. The narration is AUDIO ONLY, not instructions for the images.",
  "Adapt the story to the user-selected category, audience, objective and research idea. For Spanish, aim for 96-108 spoken words total across exactly twelve connected short phrases, each approximately five seconds. Start with a strong hook, advance one continuous story and deliver an earned payoff. Never reveal a surprise subject before the narration introduces it.",
+ "NONFICTION JOURNALISM RULE: For stories about a real event, identify the actual person/company/product, the specific action or type of video, when and where it happened if established, why it mattered, and the documented outcome. Introduce the named subject early; do not spend 30 seconds saying 'someone did something'. At least 3 of the twelve beats must deliver a new concrete fact, not a generic moral.",
+ "Never invent a scandal, controversy, accusation, quotation, subscriber loss, financial amount, apology, chronology or personal misconduct involving a real person. If source material provides no verified identity and facts, do NOT invent a real example: choose a clear fictional case and explicitly call it 'historia ficticia'/'fictional scenario', or switch to general practical advice that does not imply a documented event. Do not state 'hace unos años', 'un creador con millones', 'un video polémico' without substantiated specifics.",
+ "If the supplied research idea names a real incident with concrete details, ground the whole story in those details; don't transform it into a generic unnamed anecdote. Make the visuals depict the correct identifiable event and objects but never fabricate a likeness or claim visual authenticity.",
  "Avoid unsupported factual claims, dead air, repetition, filler, and directions such as camera or scene descriptions.",
  'Return JSON only: {"title":"...","speech":["0-5 second speech","5-10 second speech","10-15 second speech","15-20 second speech","20-25 second speech","25-30 second speech","30-35 second speech","35-40 second speech","40-45 second speech","45-50 second speech","50-55 second speech","55-60 second speech"]}.'
 ].join(" ");
@@ -96,6 +99,16 @@ export async function POST(req:NextRequest){
    return reply({error:"motion_scene_retry",stage:"narration",reason:"invalid_segment_count_or_length"},422);
   }
   const spoken=narration.speech as string[];
+  // Never silently manufacture a real-life controversy with an anonymous
+  // protagonist and an unspecified video. The writer must revise the premise.
+  const factualIncident=/creador|influencer|imperio digital|digital empire|esc[aá]ndalo|pol[eé]mic|controvers|cancelaci[oó]n|viral scandal/i.test(prompt);
+  const genericCase=/\b(?:un creador|una creadora|un influencer|alguien|cierta persona|one creator|an influencer)\b/i.test(spoken.join(" "));
+  const inventedFactualClaim=/\b(?:video pol[eé]mico|informaci[oó]n incorrecta|miles de seguidores|millones de seguidores|perdi[oó] suscriptores|fans se sintieron traicionados|a[ñn]os atr[aá]s|hace algunos a[ñn]os)\b/i.test(spoken.join(" "));
+  const fictionDeclared=/\b(?:fictici[ao]|imaginari[ao]|hypothetical|fictional|imagine|imagina)\b/i.test(spoken.join(" "));
+  if(factualIncident&&genericCase&&inventedFactualClaim&&!fictionDeclared){
+   return reply({error:"motion_scene_retry",stage:"narration",
+    reason:"real_incident_needs_identifiable_verified_details"},422);
+  }
   const visuals=await askOpenAI(visualSystem,JSON.stringify({
    idea:prompt,title:narration.title,narrationForTimingOnly:spoken
   }),9000);
