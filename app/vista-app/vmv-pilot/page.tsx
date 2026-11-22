@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
 import {useRouter} from "next/navigation";
-import {ArrowLeft,ArrowRight,CalendarDays,Check,Clock3,History,LoaderCircle,Plus,Target,Volume2,VolumeX,Subtitles,WandSparkles,Lightbulb,FlaskConical,Landmark,Gamepad2,BookOpen,BriefcaseBusiness,Cpu,UsersRound,Pencil,Smile,GraduationCap,Heart,ShoppingBag,PartyPopper,Zap,Sparkles,GitCompareArrows} from "lucide-react";
+import {ArrowLeft,ArrowRight,CalendarDays,Check,Clock3,History,LoaderCircle,Plus,Target,Volume2,VolumeX,Subtitles,WandSparkles,Lightbulb,FlaskConical,Landmark,Gamepad2,BookOpen,BriefcaseBusiness,Cpu,UsersRound,Pencil,Smile,GraduationCap,Heart,ShoppingBag,PartyPopper,Zap,Sparkles,GitCompareArrows,Clapperboard} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
@@ -166,6 +166,11 @@ export default function VMVPilotPage(){
     <button type="button" onClick={start}><WandSparkles size={31}/><strong>{L("Crear campaña","Create campaign")}</strong></button>
     <button type="button" onClick={()=>{setScreen("history");void refresh();}}><History size={31}/><strong>{L("Mis campañas","My campaigns")}</strong></button>
    </div>
+   <button type="button" className={css.labLink}
+    onClick={()=>router.push("/vista-app/vmv-pilot/stickman-lab")}>
+    <Clapperboard size={19}/>{L("Probar nuestro motor Stickman · Gratis","Test our Stickman engine · Free")}
+    <ArrowRight size={16}/>
+   </button>
   </>:null}
   {screen==="create"?<>
    <div className={css.progress}>{step+1} / 12</div>
@@ -236,6 +241,11 @@ export default function VMVPilotPage(){
      <small className={css.qualityPrice}>{priceUSD(animationCostCents(form.seconds,item.id))}</small>
     </button>)}
     <p className={css.qualityNote}>{L("Costo estimado de animación · otros servicios aparte","Estimated animation cost · other services extra")}</p>
+    {form.style==="stickman"?<button type="button" className={css.ownEngine}
+     onClick={()=>router.push("/vista-app/vmv-pilot/stickman-lab")}>
+     <Clapperboard size={19}/>{L("Probar motor Stickman propio · Sin Runway","Try our own Stickman engine · No Runway")}
+     <ArrowRight size={17}/>
+    </button>:null}
    </div>:null}
    {step===11?<div className={css.review}>
     <div><span>{L("Tema","Topic")}</span><strong>{form.niche}</strong></div>
