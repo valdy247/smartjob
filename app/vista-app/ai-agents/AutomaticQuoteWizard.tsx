@@ -441,7 +441,7 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
    </div>:
    <button type="button" className={styles.primary+" "+theme.agentButton}
     disabled={!valid||Boolean(busy)} onClick={next}>
-    {busy==="prepare"?"Preparando PDF…":editing?"Guardar y volver a Revisión":step==="design"?"Preparar cotización":"Continuar"} <ArrowRight size={17}/></button>}
+    {busy==="prepare"?"Preparando PDF…":editing?"Guardar y volver a Revisión":step==="design"?"Preparar cotización":null} <ArrowRight size={17}/></button>}
   </div>:null}
  </section>;
 }
