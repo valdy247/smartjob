@@ -335,3 +335,7 @@
 .libraryShareStatus{background:#f5eefb;padding:9px 12px;border-radius:10px}
 @media(max-width:520px){.libraryShareOverlay .librarySharePanel{padding:18px}
  .libraryShareActions a{flex:1 1 42%}.libraryShareLink button{flex:1 1 100%;justify-content:center}}
+
+/* An animated ancestor creates a containing block for position:fixed.
+   Disable the grid entrance transform while the share dialog is open. */
+.libraryPage:has(.libraryShareOverlay){animation:none}
