@@ -286,3 +286,20 @@ test("Pilot wizard opens a fresh consented Motion production with its trend and 
  assert.match(speech,/openaiContinuous/);
  assert.match(speech,/timestamp_granularities/);
 });
+
+test("Pilot passes trusted source research to Motion instead of inventing celebrity controversies",()=>{
+ const wizard=read("app/vista-app/vmv-pilot/page.tsx");
+ const lab=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ const director=read("app/api/video-generator/motion-terra/route.ts");
+ assert.match(wizard,/researchScanId:form\.research_scan_id/);
+ assert.match(wizard,/researchVideoId:form\.research_video_id/);
+ assert.match(lab,/researchSource/);
+ assert.match(lab,/researchScanId:researchSource\.scanId/);
+ assert.match(director,/vmv_video_radar_scans/);
+ assert.match(director,/\.eq\("owner_id",owner\)/);
+ assert.match(director,/validRadarId\(body\?\.researchVideoId\)/);
+ assert.match(director,/YouTube public metadata/);
+ assert.match(director,/not proof of its assertions/);
+ assert.match(director,/do not invent a named person/);
+ assert.match(director,/research:evidence/);
+});
