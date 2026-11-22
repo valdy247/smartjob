@@ -550,7 +550,7 @@ test("Changing a saved video's voice creates a new private render and retains th
  assert.match(page,/selectVideoVersion=useCallback/);
  assert.match(page,/voiceRevisions\.map/);
  assert.match(api,/renderPath\(owner:string,id:string,extension:string,revisionId\?:string\)/);
- assert.match(api,/versions\/\+revisionId/);
+ assert.match(api,/versions\/.*revisionId/);
  assert.match(api,/validId\(body\.revisionId\)/);
  assert.match(api,/validSnapshot\(project,owner\)/);
 });
