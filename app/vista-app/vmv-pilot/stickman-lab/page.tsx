@@ -1640,7 +1640,7 @@ export default function StickmanLabPage(){
      montageSeconds,n=>setDirectorStatus("Creando sonido ASMR "+n+"/6 · guardando los clips")):[];
     setDirectorStatus(asmrEnabled?"Montando el video con ASMR…":"Montando el video con la nueva narración…");
     ({blob:video,extension}=await stitchSeedanceClips(localUrls,speech,asmrEnabled?false:subtitles,{
-     music:asmrEnabled?null:musicFile,musicVolume:musicVolume/100,
+     music:musicFile,musicVolume:musicVolume/100,
      voiceVolume:narrationVolume/100,fadeSeconds,effects,seconds:montageSeconds
     }));
    }finally{localUrls.forEach(url=>URL.revokeObjectURL(url));}
@@ -2220,15 +2220,15 @@ export default function StickmanLabPage(){
          <span><input type="checkbox" checked={asmrEnabled}
           disabled={directorBusy||seedBusy}
           onChange={e=>{const enabled=e.target.checked;setAsmrEnabled(enabled);
-           if(enabled){setWithVoice(false);setSubtitles(false);setMusicFile(null);
+           if(enabled){setWithVoice(false);setSubtitles(false);
             setMontageSeconds(30);setVoiceEditorOpen(false);}}}/>
           Sonidos ASMR con IA</span>
-         <small>ElevenLabs genera 6 efectos por video. Sin voz, subtítulos ni música. Requiere créditos y autorización.</small>
+         <small>ElevenLabs genera 6 efectos por video sin voz ni subtítulos. Puedes combinarlos con música de fondo. Requiere créditos y autorización.</small>
         </label>
         <label>Volumen de narración <strong>{narrationVolume}%</strong>
          <input type="range" min="0" max="150" step="5" value={narrationVolume}
           onChange={e=>setNarrationVolume(Number(e.target.value))}/></label>
-        <label>Música propia o con licencia
+        <label>Música de fondo (opcional · compatible con ASMR)
          <input type="file" accept="audio/*" aria-label="Música de fondo"
           onChange={e=>{const file=e.target.files?.[0]||null;
            if(file&&file.size>30000000){setError("La música debe ocupar menos de 30 MB.");return;}
@@ -2244,7 +2244,7 @@ export default function StickmanLabPage(){
          </select>
         </label>
        </div>
-       <p>Los clips de Seedance se reutilizan. Para 30 segundos el montaje acelera los 12 clips existentes, sin animar otros. El ASMR consume créditos de ElevenLabs solo si hay sonidos nuevos.</p>
+       <p>Sin voz de IA puedes añadir música y sonidos ASMR a la vez. La música debe ser tuya o estar autorizada. Los clips guardados se reutilizan, sin volver a animarlos. En 30 segundos se aceleran los 12 clips; los efectos ASMR nuevos consumen créditos de ElevenLabs.</p>
       </details>
       {directorStatus?<p className={css.cloudState} role="status">{directorStatus}</p>:null}
       <button type="button" className={css.generate}
