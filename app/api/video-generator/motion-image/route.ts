@@ -28,7 +28,18 @@ export async function POST(req:NextRequest){
    })
   });
   if(!response.ok){
-   console.warn("[vmv-motion-image] OpenAI HTTP",response.status);
+   const failure=await response.json().catch(()=>null);
+   const providerError=failure?.error;
+   // Diagnose by error category only; never log full prompts, provider messages or credentials.
+   const code=typeof providerError?.code==="string"?providerError.code.slice(0,80):"unknown";
+   const type=typeof providerError?.type==="string"?providerError.type.slice(0,80):"unknown";
+   const param=typeof providerError?.param==="string"?providerError.param.slice(0,60):"none";
+   console.warn("[vmv-motion-image] OpenAI rejected image",{status:response.status,code,type,param});
+   if(response.status===400){
+    if(/safety|moderation|content_policy|policy_violation|blocked/i.test(code+" "+type))
+     return reply({error:"image_safety_rejected"},422);
+    return reply({error:"image_bad_request",providerCode:code==="unknown"?undefined:code},422);
+   }
    if(response.status===401)return reply({error:"openai_key_invalid"},503);
    if(response.status===429)return reply({error:"openai_quota_or_rate_limit"},429);
    return reply({error:"image_provider_failed"},503);
