@@ -64,7 +64,7 @@ test("Floating progress is server-reported and restores on reload",()=>{
  assert.match(dock,/pilot-render/);
  assert.match(dock,/setInterval/);
  assert.match(dock,/refresh/);
- assert.match(dock,/job\.progress/);
+ assert.match(dock,/job\?\.progress/);
  assert.match(dock,/vmv-pilot:generate/);
  assert.match(dock,/video controls playsInline/);
  assert.doesNotMatch(dock,/MediaRecorder|createImageBitmap|canvas\.captureStream/);
