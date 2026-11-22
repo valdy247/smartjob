@@ -1956,6 +1956,39 @@ export default function StickmanLabPage(){
        <button type="button" className={css.ghostButton} onClick={()=>setStudioStep("revisar")}>
         Revisar imágenes</button>
       </div>
+      <section className={css.voiceChanger} aria-label="Cambiar voz del video">
+       <div className={css.voiceChangerHeader}>
+        <span className={css.voiceChangerIcon}><Volume2 size={19}/></span>
+        <div><h3>Narración del video</h3>
+         <p>Voz seleccionada: {selectedVoiceName(voicePreset)}</p></div>
+        <button type="button" className={css.ghostButton}
+         disabled={directorBusy||seedBusy}
+         onClick={()=>setVoiceEditorOpen(value=>!value)}>
+         {voiceEditorOpen?"Cerrar":"Cambiar voz"}</button>
+       </div>
+       {voiceEditorOpen?<div className={css.voiceChangerBody}>
+        <p>Elige otra voz para toda la historia. El sistema actualizará la narración y los subtítulos.</p>
+        <div className={css.voiceChoiceGrid} role="group" aria-label="Voces disponibles">
+         {VOICE_CHOICES.map(choice=><button key={choice.id} type="button"
+          aria-pressed={voicePreset===choice.id}
+          className={voicePreset===choice.id?css.voiceChoiceActive:""}
+          disabled={directorBusy||seedBusy}
+          onClick={()=>chooseProjectVoice(choice.id)}>
+          <Volume2 size={18}/>
+          <strong>{choice.label}</strong><small>{choice.detail}</small>
+         </button>)}
+        </div>
+        <button type="button" className={css.generate}
+         disabled={directorBusy||seedBusy||savedClipCount!==MOTION_SCENES||
+          framesRefreshing||editingSpeech!==null}
+         onClick={()=>void animateApproved("voice")}>
+         {directorBusy?<LoaderCircle className={css.spin} size={18}/>:<Volume2 size={18}/>}
+         {directorBusy?"Creando voz y montaje…":"Crear versión con esta voz"}
+        </button>
+        <small>Solo se cobran créditos de voz. No se regeneran los clips de Seedance.
+         El video original permanece guardado.</small>
+       </div>:null}
+      </section>
       <div className={css.shotStrip} role="group" aria-label="Selecciona la escena">
        {directorPlan.frames.map((frame,index)=>{
         const job=readSeedance(directorPlan.prompt);
