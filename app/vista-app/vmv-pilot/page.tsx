@@ -63,6 +63,7 @@ export default function VMVPilotPage(){
  const [motionEngine,setMotionEngine]=useState(false);
  const [pilots,setPilots]=useState<Pilot[]>([]);
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
+ const [transitioning,setTransitioning]=useState(false);
  const [customNiche,setCustomNiche]=useState(false),[customAudience,setCustomAudience]=useState(false);
  const [error,setError]=useState("");
  const update=(changes:Partial<typeof defaults>)=>setForm(prev=>({...prev,...changes}));
@@ -117,6 +118,7 @@ export default function VMVPilotPage(){
  const generate=async()=>{
   if(busy||!approved||form.niche.trim().length<3)return;
   setBusy(true);setError("");
+  let navigating=false;
   try{
    const data=await request("POST",{
     ...form,id:form.id||undefined,niche:form.niche.trim(),audience:form.audience.trim(),
@@ -152,13 +154,15 @@ export default function VMVPilotPage(){
      narration:form.narration,voiceProvider:form.voiceProvider,voiceId:form.voiceId,
      confirmedCost:true};
     sessionStorage.setItem("vmv-pilot-motion-handoff-v1",JSON.stringify(handoff));
+    navigating=true;
+    setTransitioning(true);
     router.push("/vista-app/vmv-pilot/stickman-lab?pilotMotion="+encodeURIComponent(requestId));
    }else{
     window.dispatchEvent(new CustomEvent<PilotRenderRequest>("vmv-pilot:generate",{detail:details}));
     setScreen("history");
    }
   }catch(e){setError(e instanceof Error?e.message:L("No se pudo guardar.","Couldn't save campaign."));}
-  finally{setBusy(false);}
+  finally{if(!navigating){setBusy(false);setTransitioning(false);}}
  };
  const selectedIdea=(idea:RadarIdea,scanId:string)=>{
   update({creative_seed:(idea.hook+" — "+idea.concept).slice(0,450),
@@ -179,7 +183,16 @@ export default function VMVPilotPage(){
   L("Calidad","Quality"),
   L("Tu video","Your video")
  ];
- return <main className={css.page}><div className={css.shell}>
+ return <main className={css.page}>
+  {transitioning?<div className={css.transitionOverlay} role="status" aria-live="polite">
+   <div className={css.transitionCard}>
+    <span className={css.transitionIcon}><Clapperboard size={26}/></span>
+    <LoaderCircle className={css.spin} size={34}/>
+    <strong>Preparando tu estudio</strong>
+    <p>Estamos abriendo VMV Motion y organizando tu proyecto.</p>
+   </div>
+  </div>:null}
+  <div className={css.shell}>
   <header className={css.header}>
    <button type="button" onClick={back} aria-label={L("Atrás","Back")}><ArrowLeft size={20}/></button>
    <strong>VMV Pilot</strong><InterfaceLanguagePicker compact/>
@@ -191,8 +204,8 @@ export default function VMVPilotPage(){
     <button type="button" onClick={()=>{setScreen("history");void refresh();}}><History size={31}/><strong>{L("Mis campañas","My campaigns")}</strong></button>
    </div>
    <button type="button" className={css.labLink}
-    onClick={()=>router.push("/vista-app/vmv-pilot/stickman-lab")}>
-    <Clapperboard size={19}/>{L("Abrir laboratorio manual de VMV Motion","Open manual VMV Motion lab")}
+    onClick={()=>{setTransitioning(true);router.push("/vista-app/vmv-pilot/stickman-lab");}}>
+    <Clapperboard size={19}/>{L("Abrir VMV Motion","Open VMV Motion studio")}
     <ArrowRight size={16}/>
    </button>
   </>:null}
