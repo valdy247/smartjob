@@ -312,7 +312,7 @@ type SeedanceSaved={prompt:string;tokens:string[];urls:string[];
  draftTokens?:Record<string,string>;
  voicePreset?:VoicePreset;elevenVoiceId?:string;
  voiceRevisions?:SavedVoiceRevision[];activeRenderId?:string;
- asmrEnabled?:boolean;montageSeconds?:30|60};
+ asmrEnabled?:boolean;montageSeconds?:30|60;narrationEnabled?:boolean};
 const VOICE_CHOICES:{id:VoicePreset;label:string;detail:string}[]=[
  {id:"alloy",label:"Alloy",detail:"Equilibrada y natural"},
  {id:"nova",label:"Nova",detail:"Cálida y expresiva"},
@@ -337,8 +337,9 @@ function readSeedance(prompt:string):SeedanceSaved{
    voiceRevisions:Array.isArray(state.voiceRevisions)?state.voiceRevisions:[],
    activeRenderId:typeof state.activeRenderId==="string"?state.activeRenderId:"",
    asmrEnabled:state.asmrEnabled===true,
-   montageSeconds:state.montageSeconds===30?30:60};
- return {prompt,tokens:[],urls:[]};
+   montageSeconds:state.montageSeconds===30?30:60,
+   narrationEnabled:state.narrationEnabled===true};
+ return {prompt,tokens:[],urls:[],narrationEnabled:false};
 }
 function saveSeedance(value:SeedanceSaved){saveMotion(SEEDANCE_KEY,value);}
 type MotionProjectArchive={id:string;label:string;savedAt:number;plan:DirectorPlan;seedance:SeedanceSaved;cloudId?:string};
@@ -1010,6 +1011,9 @@ export default function StickmanLabPage(){
     setCustomPrompt(handoff.prompt);setCustomMode(true);
     setLanguage(handoff.language as StickmanLanguage);
     setSubtitles(handoff.subtitles);setWithVoice(handoff.narration);
+    const handed=readSeedance(handoff.prompt);
+    handed.narrationEnabled=handoff.narration;
+    saveSeedance(handed);
     setPilotVoiceProvider(handoff.voiceProvider==="openai"?"openai":"elevenlabs");
     setPilotVoiceId(handoff.voiceId||"");
     setVoicePreset(handoff.voiceProvider==="openai"?
@@ -1032,7 +1036,8 @@ export default function StickmanLabPage(){
     setPilotVoiceId(recovered.elevenVoiceId||"");
     setVoiceRevisions(recovered.voiceRevisions||[]);
     setActiveRenderId(recovered.activeRenderId||"");
-    setCustomPrompt(saved.prompt);setCustomMode(true);setWithVoice(true);
+    setCustomPrompt(saved.prompt);setCustomMode(true);
+    setWithVoice(recovered.narrationEnabled===true&&!recovered.asmrEnabled&&recovered.montageSeconds!==30);
     setSavedClipCount(readSeedance(saved.prompt).urls.filter(Boolean).length);
     const plan=readDirectorPlan(saved.prompt);
     if(plan){setDirectorPlan(plan);setStudioStep(recovered.urls.filter(Boolean).length===MOTION_SCENES?"editar":"revisar");}
@@ -1101,7 +1106,7 @@ export default function StickmanLabPage(){
   setDirectorStatus("");setError("");setPreviousScene(null);
   frameRefreshPromptRef.current="";setFrameRefreshError("");
   setEditingSpeech(null);setSpeechDraft("");
-  setWithVoice(true);setSubtitles(true);
+  setWithVoice(false);setSubtitles(true);
   autoStartRef.current=false;
   pendingStoryboard.current={prompt:"",images:[]};
   if(seedJoinedRef.current){URL.revokeObjectURL(seedJoinedRef.current);seedJoinedRef.current="";}
@@ -1130,8 +1135,10 @@ export default function StickmanLabPage(){
    setDirectorPlan(project.plan);
    setSavedClipCount(project.seedance.urls.filter(Boolean).length);
    setVoicePreset(project.seedance.voicePreset||"elevenlabs");
-   setAsmrEnabled(project.seedance.asmrEnabled===true);
-   setMontageSeconds(project.seedance.montageSeconds===30?30:60);
+   setAsmrEnabled(changeVoice?false:project.seedance.asmrEnabled===true);
+   setMontageSeconds(changeVoice?60:project.seedance.montageSeconds===30?30:60);
+   setWithVoice(changeVoice||project.seedance.narrationEnabled===true&&
+    project.seedance.asmrEnabled!==true&&project.seedance.montageSeconds!==30);
    setPilotVoiceId(project.seedance.elevenVoiceId||"");
    setVoiceRevisions(project.seedance.voiceRevisions||[]);
    setActiveRenderId(project.seedance.activeRenderId||"");
@@ -1200,8 +1207,10 @@ export default function StickmanLabPage(){
    setDirectorPlan(selected.plan);
    setSavedClipCount(selected.seedance.urls.filter(Boolean).length);
    setVoicePreset(selected.seedance.voicePreset||"elevenlabs");
-   setAsmrEnabled(selected.seedance.asmrEnabled===true);
-   setMontageSeconds(selected.seedance.montageSeconds===30?30:60);
+   setAsmrEnabled(changeVoice?false:selected.seedance.asmrEnabled===true);
+   setMontageSeconds(changeVoice?60:selected.seedance.montageSeconds===30?30:60);
+   setWithVoice(changeVoice||selected.seedance.narrationEnabled===true&&
+    selected.seedance.asmrEnabled!==true&&selected.seedance.montageSeconds!==30);
    setPilotVoiceId(selected.seedance.elevenVoiceId||"");
    setVoiceRevisions(selected.seedance.voiceRevisions||[]);
    setActiveRenderId(selected.seedance.activeRenderId||"");
@@ -1509,16 +1518,27 @@ export default function StickmanLabPage(){
   job.needsMotion=job.needsMotion||[];job.needsMotion[index]=false;
   saveSeedance(job);setSeedJoined("");setError("");
  },[customPrompt]);
+ const setProjectNarration=useCallback((enabled:boolean)=>{
+  setWithVoice(enabled);
+  if(enabled){setAsmrEnabled(false);setMontageSeconds(60);}
+  if(!customPrompt)return;
+  const job=readSeedance(customPrompt);
+  job.narrationEnabled=enabled;
+  if(enabled){job.asmrEnabled=false;job.montageSeconds=60;}
+  saveSeedance(job);
+ },[customPrompt]);
  const chooseProjectVoice=useCallback((preset:VoicePreset)=>{
   if(!customPrompt)return;
   setAsmrEnabled(false);setVoicePreset(preset);setWithVoice(true);
   const job=readSeedance(customPrompt);
-  job.voicePreset=preset;
+  job.voicePreset=preset;job.narrationEnabled=true;job.asmrEnabled=false;
+  job.montageSeconds=60;setMontageSeconds(60);
   if(pilotVoiceId)job.elevenVoiceId=pilotVoiceId;
   saveSeedance(job);
  },[customPrompt,pilotVoiceId]);
  const openVoiceEditor=useCallback(()=>{
-  setAsmrEnabled(false);setWithVoice(true);setVoiceEditorOpen(true);setStudioStep("editar");setError("");
+  setAsmrEnabled(false);setWithVoice(true);setMontageSeconds(60);
+  setVoiceEditorOpen(true);setStudioStep("editar");setError("");
  },[]);
  const selectVideoVersion=useCallback(async(revisionId:string)=>{
   const client=getSupabase();if(!client)return;
@@ -1552,6 +1572,10 @@ export default function StickmanLabPage(){
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
   const plan=readDirectorPlan(customPrompt);
   const voiceOnly=mode==="voice";
+  const storedNarration=readSeedance(customPrompt).narrationEnabled===true;
+  // Only an explicit, persisted choice can start paid narration.
+  const narrationEnabled=voiceOnly?withVoice:
+   (withVoice&&storedNarration&&!asmrEnabled&&montageSeconds===60);
   if(asmrEnabled&&!voiceOnly&&!window.confirm(
    "Se generarán hasta seis efectos de sonido ASMR con ElevenLabs usando créditos de IA. "+
    "Si faltan clips también se utilizarán créditos de Seedance para animarlos. "+
@@ -1581,7 +1605,7 @@ export default function StickmanLabPage(){
    const accessToken=session.access_token;
    const provider=voicePreset==="elevenlabs"?"elevenlabs":"openai";
    const selectedVoiceId=provider==="openai"?voicePreset:pilotVoiceId;
-   if(withVoice){
+   if(narrationEnabled){
     const params=new URLSearchParams({provider});
     if(selectedVoiceId)params.set("voiceId",selectedVoiceId);
     const check=await fetch("/api/video-generator/speech/continuous?"+params.toString(),{headers:{Authorization:"Bearer "+accessToken},cache:"no-store"});
@@ -1656,7 +1680,7 @@ export default function StickmanLabPage(){
     }
     setDirectorStatus(asmrEnabled?"Preparando sonidos ASMR sincronizados…":
      voiceOnly?"Generando únicamente la nueva voz…":"Preparando narración, subtítulos y montaje");
-    const speech=withVoice&&!asmrEnabled?await loadContinuousVoice(plan.scenes.map(scene=>scene.speech),
+    const speech=narrationEnabled?await loadContinuousVoice(plan.scenes.map(scene=>scene.speech),
      provider,selectedVoiceId):null;
     const effects=asmrEnabled?await loadMotionSfx(accessToken,customPrompt,plan.scenes,
      montageSeconds,n=>setDirectorStatus("Creando sonido ASMR "+n+"/6 · guardando los clips")):[];
@@ -1670,7 +1694,7 @@ export default function StickmanLabPage(){
    if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);
    seedJoinedRef.current=finalUrl;setSeedJoined(finalUrl);setExtension(extension);
    setStudioStep("publicar");
-   setDirectorStatus("Video terminado · "+montageSeconds+" segundos"+(asmrEnabled?" con ASMR":withVoice?" con voz":""));
+   setDirectorStatus("Video terminado · "+montageSeconds+" segundos"+(asmrEnabled?" con ASMR":narrationEnabled?" con voz":""));
    // Each voice-only edit is versioned; the original "final" video survives.
    const revisionId=voiceOnly||(asmrEnabled&&Boolean(seedJoined))?crypto.randomUUID():"";
    try{
@@ -1699,6 +1723,7 @@ export default function StickmanLabPage(){
     }
     latest.activeRenderId=revisionId;latest.voicePreset=voicePreset;
     latest.asmrEnabled=asmrEnabled;latest.montageSeconds=montageSeconds;
+    latest.narrationEnabled=narrationEnabled;
     if(provider==="elevenlabs"&&selectedVoiceId)latest.elevenVoiceId=selectedVoiceId;
     saveSeedance(latest);setVoiceRevisions(latest.voiceRevisions||[]);
     setActiveRenderId(revisionId);
@@ -2023,7 +2048,7 @@ export default function StickmanLabPage(){
     </div>:null}
    {studioStep==="crear"?<div className={css.modeRow}>
     <button type="button" className={customMode?css.modeActive:""} disabled={rendering}
-     onClick={()=>{setCustomMode(true);setWithVoice(true);}}>Tu historia</button>
+     onClick={()=>setCustomMode(true)}>Tu historia</button>
     <button type="button" className={!customMode?css.modeActive:""} disabled={rendering}
      onClick={()=>setCustomMode(false)}>Ejemplos</button>
    </div>:null}
@@ -2094,7 +2119,7 @@ export default function StickmanLabPage(){
       checked={subtitles} onChange={e=>setSubtitles(e.target.checked)}/>
       {language==="es"?"Subtítulos":"Captions"}</label>
      <label className={css.toggle}><input disabled={rendering} type="checkbox"
-      checked={withVoice} onChange={e=>setWithVoice(e.target.checked)}/>
+      checked={withVoice} onChange={e=>setProjectNarration(e.target.checked)}/>
       <Volume2 size={15}/>{language==="es"?"Voz IA":"AI voice"}</label>
     </div>:null}
     {studioStep==="crear"&&withVoice&&customMode?<div className={css.voiceOptions}><strong>ElevenLabs · Narración continua</strong><small>Audio y subtítulos sincronizados</small></div>:null}
@@ -2139,11 +2164,11 @@ export default function StickmanLabPage(){
        <div className={css.voiceChangerHeader}>
         <span className={css.voiceChangerIcon}><Volume2 size={19}/></span>
         <div><h3>Narración del video</h3>
-         <p>Voz seleccionada: {selectedVoiceName(voicePreset)}</p></div>
+         <p>{withVoice?"Voz seleccionada: "+selectedVoiceName(voicePreset):"Sin voz IA · solo música y efectos"}</p></div>
         <button type="button" className={css.ghostButton}
          disabled={directorBusy||seedBusy}
          onClick={()=>setVoiceEditorOpen(value=>!value)}>
-         {voiceEditorOpen?"Cerrar":"Cambiar voz"}</button>
+         {voiceEditorOpen?"Cerrar":withVoice?"Cambiar voz":"Activar voz"}</button>
        </div>
        {voiceEditorOpen?<div className={css.voiceChangerBody}>
         <p>Elige otra voz para toda la historia. El sistema actualizará la narración y los subtítulos.</p>
@@ -2233,7 +2258,9 @@ export default function StickmanLabPage(){
          <select value={String(montageSeconds)}
           onChange={e=>{const value=e.target.value==="30"?30:60;
            setMontageSeconds(value);
-           if(value===30){setWithVoice(false);setSubtitles(false);}}}>
+           if(value===30){setProjectNarration(false);setSubtitles(false);}
+           if(customPrompt){const job=readSeedance(customPrompt);job.montageSeconds=value;
+            saveSeedance(job);}}}>
           <option value="30">30 segundos · Shorts</option>
           <option value="60">60 segundos · original</option>
          </select>
@@ -2242,14 +2269,27 @@ export default function StickmanLabPage(){
          <span><input type="checkbox" checked={asmrEnabled}
           disabled={directorBusy||seedBusy}
           onChange={e=>{const enabled=e.target.checked;setAsmrEnabled(enabled);
-           if(enabled){setWithVoice(false);setSubtitles(false);
-            setMontageSeconds(30);setVoiceEditorOpen(false);}}}/>
+           if(enabled){setProjectNarration(false);setSubtitles(false);
+            setMontageSeconds(30);setVoiceEditorOpen(false);}
+           if(customPrompt){const job=readSeedance(customPrompt);
+            job.asmrEnabled=enabled;
+            if(enabled){job.narrationEnabled=false;job.montageSeconds=30;}
+            saveSeedance(job);}}}/>
           Sonidos ASMR con IA</span>
          <small>ElevenLabs genera 6 efectos por video sin voz ni subtítulos. Puedes combinarlos con música de fondo. Requiere créditos y autorización.</small>
         </label>
-        <label>Volumen de narración <strong>{narrationVolume}%</strong>
+        <label className={css.asmrOption}>
+         <span><input type="checkbox" checked={withVoice&&!asmrEnabled&&montageSeconds===60}
+          disabled={directorBusy||seedBusy}
+          onChange={e=>setProjectNarration(e.target.checked)}/>
+          Narración con voz IA</span>
+         <small>{withVoice&&!asmrEnabled&&montageSeconds===60?
+          "Activada: se generará voz al montar. Puede consumir créditos.":
+          "Desactivada: no se generará narración. Los sonidos ASMR y la música funcionan por separado."}</small>
+        </label>
+        {withVoice&&!asmrEnabled&&montageSeconds===60?<label>Volumen de narración <strong>{narrationVolume}%</strong>
          <input type="range" min="0" max="150" step="5" value={narrationVolume}
-          onChange={e=>setNarrationVolume(Number(e.target.value))}/></label>
+          onChange={e=>setNarrationVolume(Number(e.target.value))}/></label>:null}
         <label>Música de fondo (opcional · compatible con ASMR)
          <input type="file" accept="audio/*" aria-label="Música de fondo"
           onChange={e=>{const file=e.target.files?.[0]||null;

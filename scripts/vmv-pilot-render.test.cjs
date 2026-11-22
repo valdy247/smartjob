@@ -623,3 +623,23 @@ test("Completed Seedance clips are signed rather than proxied through Vercel res
  assert.doesNotMatch(loader,/await response\.blob\(\)/);
  assert.doesNotMatch(loader,/startVideo\(|generateMinimax\(/);
 });
+
+test("VMV Motion only runs paid narration with an explicit persisted opt-in",()=>{
+ const page=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ assert.match(page,/narrationEnabled\?:boolean/);
+ assert.match(page,/narrationEnabled:state\.narrationEnabled===true/);
+ assert.match(page,/setWithVoice\(recovered\.narrationEnabled===true/);
+ assert.match(page,/setWithVoice\(changeVoice\|\|project\.seedance\.narrationEnabled===true/);
+ assert.match(page,/setWithVoice\(changeVoice\|\|selected\.seedance\.narrationEnabled===true/);
+ assert.match(page,/const narrationEnabled=voiceOnly\?withVoice:/);
+ assert.match(page,/withVoice&&storedNarration&&!asmrEnabled&&montageSeconds===60/);
+ assert.match(page,/if\(narrationEnabled\)\{/);
+ assert.match(page,/const speech=narrationEnabled\?await loadContinuousVoice/);
+ assert.match(page,/latest\.narrationEnabled=narrationEnabled/);
+ assert.match(page,/job\.narrationEnabled=enabled/);
+ assert.match(page,/job\.narrationEnabled=false;job\.montageSeconds=30/);
+ assert.match(page,/Narración con voz IA/);
+ assert.match(page,/Desactivada: no se generará narración/);
+ assert.doesNotMatch(page,/setCustomMode\(true\);setWithVoice\(true\)/);
+ assert.doesNotMatch(page,/setCustomPrompt\(saved\.prompt\);setCustomMode\(true\);setWithVoice\(true\)/);
+});
