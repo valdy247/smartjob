@@ -351,6 +351,9 @@ test("Gateway errors distinguish an exhausted budget from funds, payment restric
   "ai_gateway_billing_restricted");
  assert.equal(classify({name:"GatewayInternalServerError",cause:{statusCode:402}}).error,
   "ai_gateway_payment_rejected");
+ assert.equal(classify({name:"GatewayInternalServerError",cause:{
+  statusCode:402,message:"Gateway failed: quota_for_entity_exceeded: Project budget exceeded. Current spend: $5.05, limit: $5.00"
+ }}).error,"ai_gateway_budget_exceeded");
  assert.equal(classify({statusCode:422}).error,"seedance_invalid_parameters");
  const route=read("app/api/video-generator/motion-seedance/route.ts");
  const ui=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
