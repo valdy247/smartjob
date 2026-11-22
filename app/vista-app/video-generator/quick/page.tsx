@@ -79,6 +79,7 @@ export default function QuickVideoPage(){
   if(working)return;
   if(stage==="ready"){setStage("story");setError("");return;}
   if(stage==="story"){setStage("setup");setStep(3);setError("");return;}
+  if(step===2&&settingsStep>0){setSettingsStep(i=>i-1);setError("");return;}
   if(step>0){setStep(current=>current-1);setError("");return;}
   window.location.assign("/vista-app/video-generator");
  };
@@ -96,6 +97,7 @@ export default function QuickVideoPage(){
  const [topic,setTopic]=useState("");
  const [stage,setStage]=useState<Stage>("setup");
  const [step,setStep]=useState(0);
+ const [settingsStep,setSettingsStep]=useState(0);
  const [title,setTitle]=useState("");
  const [scenes,setScenes]=useState<Scene[]>([]);
  const [storySignature,setStorySignature]=useState("");
@@ -365,11 +367,11 @@ export default function QuickVideoPage(){
     <section className={css.wizardContent} key={step}>
      {step===0?<div className={css.optionGrid}>
       <button type="button" aria-pressed={visual==="sticks"} className={visual==="sticks"?css.optionSelected:css.option}
-       onClick={()=>setVisual("sticks")}><span className={css.optionIcon}><Film size={29}/></span>
+       onClick={()=>{setVisual("sticks");setStep(1);}}><span className={css.optionIcon}><Film size={29}/></span>
        <strong>Stickman 2D</strong><small>{L("Personajes de palitos animados","Animated stick figures")}</small>
        {visual==="sticks"?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
       <button type="button" aria-pressed={visual==="stills"} className={visual==="stills"?css.optionSelected:css.option}
-       onClick={()=>setVisual("stills")}><span className={css.optionIcon}><ImageIcon size={29}/></span>
+       onClick={()=>{setVisual("stills");setStep(1);}}><span className={css.optionIcon}><ImageIcon size={29}/></span>
        <strong>{L("Imágenes IA","AI images")}</strong><small>{L("Escenas ilustradas","Illustrated scenes")}</small>
        {visual==="stills"?<CheckCircle2 className={css.selectedTick} size={20}/>:null}</button>
      </div>:null}
@@ -392,29 +394,30 @@ export default function QuickVideoPage(){
       </div>
      </div>:null}
      {step===2?<div className={css.settingsStack}>
-      <div className={css.settingsGroup}><strong>{L("Duración","Duration")}</strong>
-       <div className={css.compactOptions}>{([15,30] as const).map(n=>
-        <button key={n} type="button" aria-pressed={seconds===n}
-         className={seconds===n?css.compactActive:css.compactOption} onClick={()=>setSeconds(n)}>{n} s</button>)}</div>
-      </div>
-      <div className={css.settingsGroup}><strong>{L("Formato","Format")}</strong>
-       <div className={css.compactOptions}>
-        <button type="button" aria-pressed={ratio==="portrait"} className={ratio==="portrait"?css.compactActive:css.compactOption}
-         onClick={()=>setRatio("portrait")}><Smartphone size={16}/>{L("Vertical","Vertical")} 9:16</button>
-        <button type="button" aria-pressed={ratio==="landscape"} className={ratio==="landscape"?css.compactActive:css.compactOption}
-         onClick={()=>setRatio("landscape")}><Monitor size={16}/>{L("Horizontal","Landscape")} 16:9</button>
-       </div>
-      </div>
-      <div className={css.settingsGroup}><strong>{L("Narración","Narration")}</strong>
-       <div className={css.compactOptions}>
-        <button type="button" aria-pressed={narration} className={narration?css.compactActive:css.compactOption}
-         onClick={()=>setNarration(true)}><Mic2 size={16}/>{L("Con voz","With voice")}</button>
-        <button type="button" aria-pressed={!narration} className={!narration?css.compactActive:css.compactOption}
-         onClick={()=>setNarration(false)}><VolumeX size={16}/>{L("Sin voz","No voice")}</button>
-       </div>
-      </div>
-     </div>:null}
-     {step===3?<div className={css.reviewGrid}>
+       {settingsStep===0?<div className={css.settingsGroup}><strong>{L("Duración","Duration")}</strong>
+        <div className={css.compactOptions}>{([15,30] as const).map(n=>
+         <button key={n} type="button" aria-pressed={seconds===n}
+          className={seconds===n?css.compactActive:css.compactOption}
+          onClick={()=>{setSeconds(n);setSettingsStep(1);}}>{n} s</button>)}</div>
+       </div>:null}
+       {settingsStep===1?<div className={css.settingsGroup}><strong>{L("Formato","Format")}</strong>
+        <div className={css.compactOptions}>
+         <button type="button" aria-pressed={ratio==="portrait"} className={ratio==="portrait"?css.compactActive:css.compactOption}
+          onClick={()=>{setRatio("portrait");setSettingsStep(2);}}><Smartphone size={16}/>9:16</button>
+         <button type="button" aria-pressed={ratio==="landscape"} className={ratio==="landscape"?css.compactActive:css.compactOption}
+          onClick={()=>{setRatio("landscape");setSettingsStep(2);}}><Monitor size={16}/>16:9</button>
+        </div>
+       </div>:null}
+       {settingsStep===2?<div className={css.settingsGroup}><strong>{L("Narración","Narration")}</strong>
+        <div className={css.compactOptions}>
+         <button type="button" aria-pressed={narration} className={narration?css.compactActive:css.compactOption}
+          onClick={()=>{setNarration(true);setStep(3);setSettingsStep(0);}}><Mic2 size={16}/>{L("Con voz","With voice")}</button>
+         <button type="button" aria-pressed={!narration} className={!narration?css.compactActive:css.compactOption}
+          onClick={()=>{setNarration(false);setStep(3);setSettingsStep(0);}}><VolumeX size={16}/>{L("Sin voz","No voice")}</button>
+        </div>
+       </div>:null}
+      </div>:null}
+      {step===3?<div className={css.reviewGrid}>
       <button type="button" onClick={()=>setStep(0)}><Film size={17}/>{visual==="sticks"?"Stickman 2D":L("Imágenes IA","AI images")}</button>
       <button type="button" onClick={()=>setStep(1)}><WandSparkles size={17}/>{topic.slice(0,75)}</button>
       <button type="button" onClick={()=>setStep(2)}><Clock3 size={17}/>{seconds} s · {ratio==="portrait"?"9:16":"16:9"}</button>
@@ -425,9 +428,9 @@ export default function QuickVideoPage(){
      <button type="button" className={css.backAction} onClick={goPrevious} disabled={Boolean(working)}>
       <ArrowLeft size={18}/>{L("Atrás","Back")}
      </button>
-     {step<3?<button type="button" className={css.nextAction} disabled={Boolean(working)||(step===1&&topic.trim().length<3)}
-      onClick={goNext}>{L("Continuar","Continue")}<ArrowRight size={19}/></button>:
-      <button type="button" className={css.nextAction} disabled={Boolean(working)||topic.trim().length<3}
+     {step===1?<button type="button" className={css.nextAction} aria-label={L("Ir a duración","Choose duration")} disabled={Boolean(working)||(step===1&&topic.trim().length<3)}
+      onClick={()=>{setSettingsStep(0);goNext();}}><ArrowRight size={19}/></button>:
+      step===3?<button type="button" className={css.nextAction} disabled={Boolean(working)||topic.trim().length<3}
        onClick={()=>{if(scenes.length>=4&&storySignature===JSON.stringify([kind,visual,topic.trim(),seconds,ratio,narration])){
         setStage("story");setError("");
        }else void plan();}}>
@@ -437,7 +440,7 @@ export default function QuickVideoPage(){
        {working==="story"?L("Preparando…","Preparing…"):
         scenes.length>=4&&storySignature===JSON.stringify([kind,visual,topic.trim(),seconds,ratio,narration])?
          L("Volver a mis escenas","Return to my scenes"):L("Crear escenas","Create scenes")}
-      </button>}
+      </button>:null}
     </div>
    </>:null}
    {stage!=="setup"?<section className={css.panel}>
@@ -481,7 +484,7 @@ export default function QuickVideoPage(){
      </button>
      {!working&&scenes.every((_,i)=>Boolean(images[i]))?<button type="button" className={css.skipVoice}
       onClick={()=>{setNarration(false);setAudio(null);setError("");setStage("ready");}}>
-      {L("Continuar sin narración","Continue without narration")}
+      {L("Omitir narración","Skip narration")}
      </button>:null}
     </>:null}
     {stage==="ready"?<>
