@@ -23,10 +23,16 @@ async function ensureBucket(name:string,size:number,mimes:string[]){
  return !created.error||/already.exists|duplicate|already exists/i.test(created.error.message);
 }
 function projectPath(owner:string,id:string){return owner+"/"+id+".json";}
-function renderPath(owner:string,id:string,extension:string){return owner+"/"+id+"/final."+extension;}
+function renderPath(owner:string,id:string,extension:string,revisionId?:string){
+ return owner+"/"+id+"/"+(revisionId&&validId(revisionId)?"versions/"+revisionId:"final")+"."+extension;
+}
 type ProjectSnapshot={
  id:string;plan:{prompt:string;title?:string;storyBible?:string;scenes:unknown[];frames:unknown[]};
- seedance:{prompt:string;tokens:string[];urls:string[]};
+ seedance:{prompt:string;tokens:string[];urls:string[];
+  voicePreset?:"elevenlabs"|"alloy"|"nova"|"echo";
+  elevenVoiceId?:string;
+  voiceRevisions?:Array<{id:string;extension:"mp4"|"webm";voice:string;createdAt:string}>;
+  activeRenderId?:string;};
  publish?:{title?:string;caption?:string;hashtags?:string;platform?:string;
   scheduledFor?:string;postedAt?:string;views?:number;leads?:number;sales?:number};
  updatedAt?:string;
@@ -46,6 +52,19 @@ function validSnapshot(input:unknown,owner:string):input is ProjectSnapshot{
   const path=(frame as {referencePath?:unknown})?.referencePath;
   if(typeof path!=="string"||path.length>180||
    !path.startsWith(owner+"/")||!/^[-a-z0-9/]+\.jpg$/.test(path))return false;
+ }
+ const voice=x.seedance.voicePreset;
+ if(voice!==undefined&&!["elevenlabs","alloy","nova","echo"].includes(voice))return false;
+ if(x.seedance.elevenVoiceId!==undefined&&
+  (typeof x.seedance.elevenVoiceId!=="string"||x.seedance.elevenVoiceId.length>30))return false;
+ if(x.seedance.activeRenderId!==undefined&&
+  x.seedance.activeRenderId!==""&&!validId(x.seedance.activeRenderId))return false;
+ if(x.seedance.voiceRevisions!==undefined){
+  if(!Array.isArray(x.seedance.voiceRevisions)||x.seedance.voiceRevisions.length>30||
+   x.seedance.voiceRevisions.some(v=>!validId(v?.id)||
+    !["mp4","webm"].includes(v.extension)||typeof v.voice!=="string"||
+    v.voice.length>60||typeof v.createdAt!=="string"||v.createdAt.length>40))
+   return false;
  }
  return true;
 }
@@ -128,20 +147,26 @@ export async function POST(req:NextRequest){
    if(!project)return reply({error:"motion_project_not_found"},404);
    if(!await ensureBucket(RENDER_BUCKET,100000000,["video/mp4","video/webm"]))
     return reply({error:"motion_render_storage_unavailable"},503);
-   const path=renderPath(owner,body.id,extension);
+   const revisionId=body?.revisionId;
+   if(revisionId!==undefined&&!validId(revisionId))
+    return reply({error:"motion_render_revision_invalid"},400);
+   const path=renderPath(owner,body.id,extension,revisionId);
    const signed=await storage().from(RENDER_BUCKET).createSignedUploadUrl(path,{upsert:true});
    if(signed.error||!signed.data?.token)return reply({error:"motion_render_storage_unavailable"},503);
    return reply({path,token:signed.data.token,bucket:RENDER_BUCKET});
   }catch{return reply({error:"motion_render_storage_unavailable"},503);}
  }
  if(action==="render-url"){
+  if(body?.revisionId!==undefined&&!validId(body.revisionId))
+   return reply({error:"motion_render_revision_invalid"},400);
   if(!validId(body?.id)||!["mp4","webm"].includes(body?.extension))
    return reply({error:"motion_render_invalid"},400);
   try{
    const project=await readProject(owner,body.id);
    if(!project)return reply({error:"motion_project_not_found"},404);
    const signed=await storage().from(RENDER_BUCKET).createSignedUrl(
-    renderPath(owner,body.id,body.extension),3600);
+    renderPath(owner,body.id,body.extension,
+     validId(body?.revisionId)?body.revisionId:undefined),3600);
    if(signed.error||!signed.data?.signedUrl)return reply({error:"motion_render_not_found"},404);
    return reply({url:signed.data.signedUrl});
   }catch{return reply({error:"motion_render_not_found"},404);}
