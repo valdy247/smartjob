@@ -507,7 +507,7 @@ export default function StickmanLabPage(){
      if(typeof started?.token!=="string")throw Error("No se obtuvo el identificador de la escena "+(beat+1)+".");
      token=started.token;job.tokens[beat]=token;saveSeedance(job);
     }
-    setDirectorStatus("3/4 · Esperando animación "+(beat+1)+"/3");
+    setDirectorStatus("3/4 · Esperando animación "+(beat+1)+"/"+MOTION_SCENES);
     let completed=false;
     for(let n=0;n<120;n++){
      const response=await seedanceRequest(accessToken,{action:"status",token});
