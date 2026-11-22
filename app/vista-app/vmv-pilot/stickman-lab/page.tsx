@@ -887,6 +887,16 @@ export default function StickmanLabPage(){
    setDirectorPlan(project.plan);
    setSavedClipCount(project.seedance.urls.filter(Boolean).length);
    setStudioStep(project.seedance.urls.filter(Boolean).length===MOTION_SCENES?"editar":"revisar");
+   setLastRenderedCloudUrl("");
+   for(const ext of ["mp4","webm"] as const){
+    try{
+     const savedVideo=await motionLibrary(session.access_token,{action:"render-url",id,extension:ext});
+     if(typeof savedVideo.url==="string"){
+      setSeedJoined(savedVideo.url);setExtension(ext);setLastRenderedCloudUrl(savedVideo.url);
+      setStudioStep("publicar");break;
+     }
+    }catch{}
+   }
    setCloudStatus("Proyecto recuperado");
    setArchivedProjects(archivedMotionProjects());
   }catch(e){setError(e instanceof Error?e.message:"No se pudo recuperar el proyecto en la nube.");}
@@ -1305,7 +1315,28 @@ export default function StickmanLabPage(){
    const finalUrl=URL.createObjectURL(video);
    if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);
    seedJoinedRef.current=finalUrl;setSeedJoined(finalUrl);setExtension(extension);
+   setStudioStep("publicar");
    setDirectorStatus("Video terminado · 60 segundos"+(withVoice?" con voz":""));
+   // Direct signed upload avoids Vercel's small function-body limit.
+   // The final export becomes durable and accessible from other devices.
+   try{
+    const id=currentCloudId();
+    await motionLibrary(accessToken,{action:"save",project:{
+     id,plan,seedance:readSeedance(customPrompt),publish:readPublishDraft(id)
+    }});
+    const ticket=await motionLibrary(accessToken,{action:"render-upload",id,extension});
+    const sb=getSupabase();
+    if(!sb)throw Error("No se puede acceder al almacenamiento.");
+    const uploaded=await sb.storage.from(ticket.bucket).uploadToSignedUrl(
+     ticket.path,ticket.token,video,{contentType:"video/"+extension}
+    );
+    if(uploaded.error)throw Error("Falló la copia del video final.");
+    const source=await motionLibrary(accessToken,{action:"render-url",id,extension});
+    setLastRenderedCloudUrl(String(source.url||""));
+    setCloudStatus("Video y proyecto guardados en la nube");
+   }catch{
+    setCloudStatus("Video generado; descarga una copia. No se pudo guardar el montaje en la nube.");
+   }
   }catch(e){setError(e instanceof Error?e.message:"No se pudo terminar el video.");setDirectorStatus("");}
   finally{directorBusyRef.current=false;seedBusyRef.current=false;setDirectorBusy(false);setSeedBusy(false);}
  },[customPrompt,withVoice,voice,subtitles,pilotAuto,pilotVoiceProvider,pilotVoiceId,
