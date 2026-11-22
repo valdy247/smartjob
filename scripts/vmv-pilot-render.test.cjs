@@ -177,9 +177,9 @@ test("Quality wizard creates one or two videos with explicit animation price and
  assert.match(ui,/Generar ambos videos/);
  assert.match(ui,/qualityMode:form\.qualityMode/);
  assert.match(ui,/Autorizo generar 2 videos y consumir créditos/);
- assert.match(quality,/centsPerSecond:5/);
- assert.match(quality,/centsPerSecond:12/);
- assert.match(quality,/centsPerSecond:17/);
+ assert.match(quality,/centsPerSecond:2\.06/);
+ assert.match(quality,/centsPerSecond:5\.15/);
+ assert.match(quality,/centsPerSecond:7\.21/);
 });
 test("The compare mode is a single idempotent job and NOT two separate paid AI preparations",()=>{
  const api=source["app/api/video-generator/pilot-render/route.ts"];
