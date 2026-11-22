@@ -309,19 +309,42 @@ function readSeedance(prompt:string):SeedanceSaved{
 }
 function saveSeedance(value:SeedanceSaved){saveMotion(SEEDANCE_KEY,value);}
 async function seedanceRequest(accessToken:string,body:Record<string,unknown>){
- const response=await fetch("/api/video-generator/motion-seedance",{
-  method:"POST",cache:"no-store",headers:{"Content-Type":"application/json",
-   Authorization:"Bearer "+accessToken},body:JSON.stringify(body)
- });
+ let response:Response;
+ try{
+  response=await fetch("/api/video-generator/motion-seedance",{
+   method:"POST",cache:"no-store",headers:{"Content-Type":"application/json",
+    Authorization:"Bearer "+accessToken},body:JSON.stringify(body)
+  });
+ }catch{throw Error("No hubo respuesta de la red. Revisa tu conexión antes de volver a iniciar la animación; las imágenes siguen guardadas.");}
  const data=await response.json().catch(()=>null);
- if(!response.ok)throw Error(data?.error==="motion_limit"?"Límite diario de pruebas alcanzado. Los clips terminados se conservan.":
-  data?.error==="video_status_unavailable"?"No se pudo consultar el estado; reintenta para recuperar el trabajo sin generar otro.":
-  data?.error==="ai_gateway_auth_not_configured"?"Vercel AI Gateway rechazó la autenticación o los permisos.":
-  data?.error==="ai_gateway_credits_required"?"Vercel AI Gateway informa que se necesitan créditos o configurar pagos.":
-  data?.error==="seedance_invalid_parameters"?"Seedance rechazó un parámetro de video. No vuelvas a pagar hasta corregirlo.":
-  data?.error==="seedance_gateway_unavailable"?"Vercel AI Gateway tuvo un fallo interno antes de iniciar Seedance. No se ha confirmado que sea por créditos.":
-  data?.error==="seedance_video_start_failed"?"Seedance no pudo iniciar la generación.":
-  data?.error==="invalid_video_job"?"El identificador del trabajo caducó.": "No pudimos contactar a Seedance.");
+ if(!response.ok){
+  const messages:Record<string,string>={
+   motion_limit:"Límite diario de pruebas alcanzado. Los clips terminados se conservan.",
+   video_status_unavailable:"No se pudo consultar el estado del trabajo existente. Reintenta sin generar otro.",
+   ai_gateway_auth_not_configured:"Vercel AI Gateway no está configurado para Seedance en Preview.",
+   ai_gateway_credits_required:"Vercel AI Gateway informa que se necesitan créditos o configurar pagos.",
+   seedance_invalid_parameters:"Seedance rechazó un parámetro de video. No se ha confirmado una generación nueva.",
+   seedance_gateway_unavailable:"El proveedor de Seedance no está disponible. No se ha confirmado una generación nueva.",
+   seedance_video_start_failed:"Seedance no pudo iniciar la generación.",
+   invalid_video_job:"El identificador de la animación caducó; conserva las imágenes y los clips anteriores.",
+   video_not_enabled_for_account:"Tu sesión no tiene acceso al motor de video. Revisa el inicio de sesión.",
+   cost_confirmation_required:"Falta confirmar la autorización de la generación.",
+   invalid_motion_action:"La solicitud del motor no tiene una acción válida.",
+   invalid_scene_list:"El storyboard no tiene doce referencias válidas.",
+   invalid_scene_index:"Una escena tiene un número incorrecto.",
+   invalid_video_prompt:"La descripción del video no cumple los límites de longitud.",
+   seedance_story_bible_too_long:"La descripción visual del storyboard es demasiado larga.",
+   seedance_image_owner_mismatch:"La imagen pertenece a una sesión o usuario diferente.",
+   seedance_image_path_invalid:"La referencia de la imagen tiene un formato no admitido.",
+   seedance_motion_prompt_invalid:"La indicación de movimiento de una escena está vacía o fuera de los límites.",
+   storyboard_image_missing:"No se pudo recuperar la imagen original para animarla.",
+   image_storage_unavailable:"El almacenamiento temporal de imágenes no respondió.",
+   token_signing_secret_missing:"Falta la configuración segura del identificador del trabajo."
+  };
+  const code=typeof data?.error==="string"?data.error:"";
+  const beat=Number.isInteger(data?.beat)?" (escena "+(data.beat+1)+")":"";
+  throw Error((messages[code]||"La API de animación respondió con un error desconocido")+" (HTTP "+response.status+(code?", "+code:"")+")"+beat+". Tus imágenes y los clips anteriores se conservan.");
+ }
  return data;
 }
 async function loadSeedanceForStitching(accessToken:string,token:string):Promise<string>{
@@ -785,6 +808,15 @@ export default function StickmanLabPage(){
     );
    }
    const job=readSeedance(customPrompt);setSeedUrls(job.urls.filter(Boolean));setSavedClipCount(job.urls.filter(Boolean).length);
+   // Check all pending scenes before authorizing the first new Seedance task.
+   // A failed preflight never consumes Seedance video credits.
+   const pending=Array.from({length:MOTION_SCENES},(_,beat)=>beat).filter(beat=>!job.tokens[beat]&&!job.urls[beat]);
+   if(pending.length){
+    setDirectorStatus("Verificando las imágenes antes de animar · sin costo");
+    await seedanceRequest(accessToken,{action:"preflight",confirmCost:true,prompt:customPrompt,
+     storyBible:plan.storyBible,clips:pending.map(beat=>({beat,
+      imagePath:plan.frames[beat].referencePath,motionPrompt:plan.scenes[beat].motionPrompt}))});
+   }
    for(let beat=0;beat<MOTION_SCENES;beat++){
     if(job.urls[beat])continue;
     let token=job.tokens[beat];
