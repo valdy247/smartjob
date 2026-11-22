@@ -282,7 +282,9 @@ test("Pilot wizard opens a fresh consented Motion production with its trend and 
  assert.match(motion,/setPilotAuto\(true\)/);
  assert.match(motion,/await prepareStoryboard\(\)/);
  assert.match(motion,/await animateApproved\(\)/);
- assert.match(motion,/vmv-motion-archive-/);
+ assert.match(motion,/vmv-motion-projects-v1/);
+ assert.match(motion,/archiveMotionProject/);
+ assert.match(motion,/newMotionProject/);
  assert.match(speech,/openaiContinuous/);
  assert.match(speech,/timestamp_granularities/);
 });
