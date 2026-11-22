@@ -283,11 +283,13 @@ async function stitchSeedanceClips(urls:string[],voices:ArrayBuffer[]=[],caption
   const mix=audioContext.createMediaStreamDestination();
   const begin=audioContext.currentTime+.12;
   decoded.forEach((buffer,i)=>{
-   const rate=Math.max(1,buffer.duration/4.9);
-   if(rate>1.8)throw Error("La narración de la escena "+(i+1)+" es demasiado larga para el video.");
+   // Do not speed up PCM playback: playbackRate changes pitch and creates a chipmunk voice.
+   // Keep the natural voice and bound each segment to its five-second scene.
    const source=audioContext!.createBufferSource();
-   source.buffer=buffer;source.playbackRate.value=rate;source.connect(mix);
-   source.start(begin+i*5);
+   source.buffer=buffer;source.playbackRate.value=1;source.connect(mix);
+   const start=begin+i*5;
+   source.start(start);
+   source.stop(start+Math.min(buffer.duration,4.98));
   });
   for(const track of mix.stream.getAudioTracks())stream.addTrack(track);
  }
