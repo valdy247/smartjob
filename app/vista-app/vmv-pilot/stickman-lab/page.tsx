@@ -314,12 +314,15 @@ function archivedMotionProjects():MotionProjectArchive[]{
  try{
   const raw=JSON.parse(localStorage.getItem(MOTION_PROJECTS_KEY)||"[]") as unknown;
   if(!Array.isArray(raw))return [];
-  return raw.filter((v):v is MotionProjectArchive=>Boolean(v&&typeof v==="object"&&
-   typeof v.id==="string"&&typeof v.savedAt==="number"&&
-   Date.now()-v.savedAt>=0&&Date.now()-v.savedAt<MOTION_RECOVERY_MS&&
-   v.plan?.prompt&&Array.isArray(v.plan.scenes)&&v.plan.scenes.length===MOTION_SCENES&&
-   Array.isArray(v.plan.frames)&&v.seedance?.prompt===v.plan.prompt))
-   .slice(0,10);
+  return raw.filter((v):v is MotionProjectArchive=>{
+   if(!v||typeof v!=="object")return false;
+   const item=v as Partial<MotionProjectArchive>;
+   return typeof item.id==="string"&&typeof item.savedAt==="number"&&
+    Date.now()-item.savedAt>=0&&Date.now()-item.savedAt<MOTION_RECOVERY_MS&&
+    typeof item.plan?.prompt==="string"&&Array.isArray(item.plan.scenes)&&
+    item.plan.scenes.length===MOTION_SCENES&&Array.isArray(item.plan.frames)&&
+    item.seedance?.prompt===item.plan.prompt;
+  }).slice(0,10);
  }catch{return [];}
 }
 function archiveMotionProject(plan:DirectorPlan){
@@ -675,7 +678,9 @@ export default function StickmanLabPage(){
    resetForProject(selected.plan.prompt);
    setDirectorPlan(selected.plan);
    setSavedClipCount(selected.seedance.urls.filter(Boolean).length);
-   setArchivedProjects(archivedMotionProjects().filter(item=>item.id!==id));
+   const remaining=archivedMotionProjects().filter(item=>item.id!==id);
+   try{localStorage.setItem(MOTION_PROJECTS_KEY,JSON.stringify(remaining));}catch{}
+   setArchivedProjects(remaining);
    router.replace("/vista-app/vmv-pilot/stickman-lab");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo recuperar el proyecto.");}
  },[resetForProject,router]);
