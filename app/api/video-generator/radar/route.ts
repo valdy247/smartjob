@@ -105,7 +105,7 @@ export async function GET(req:NextRequest){
   if(!validUuid(scanId))return reply({error:"radar_database_unavailable"},503);
   if(reserved.data?.reused===true){
    const cached=await readScan(scanId,owner);
-   return cached?reply(show(cached),cached.status==="pending"?202:200):
+   return cached?reply({...show(cached),reused:true},cached.status==="pending"?202:200):
     reply({error:"radar_database_unavailable"},503);
   }
   try{
@@ -114,7 +114,7 @@ export async function GET(req:NextRequest){
     .update({status:"ready",results:videos,updated_at:new Date().toISOString(),failure_code:null})
     .eq("id",scanId).eq("owner_id",owner).select("*").single();
    if(error||!data)throw Error("radar_database_unavailable");
-   return reply(show(data as Scan));
+   return reply({...show(data as Scan),reused:false});
   }catch(e){
    const code=e instanceof Error&&e.message.startsWith("radar_")?e.message:"radar_youtube_unavailable";
    await db.from("vmv_video_radar_scans").update({status:"failed",failure_code:code,updated_at:new Date().toISOString()})
