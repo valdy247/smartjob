@@ -10,13 +10,14 @@ import {useInterfaceLanguage} from "@/lib/i18n-web";
 import styles from "./page.module.css";
 import AutopilotWizard,{type AutopilotPlan} from "./AutopilotWizard";
 import VideoPromptAssistant from "@/components/VideoPromptAssistant";
+import CreativeGenerator,{type CreativeMode} from "./CreativeGenerator";
 import {listQuickVideos,deleteQuickVideo,type QuickVideoProject} from "@/lib/vmv-video-quick-library";
 
 type Job={id:string;pilot_id:string|null;prompt:string;mode:"text"|"image";model:"gen4.5"|"kling";
  ratio:"1280:720"|"720:1280";duration:number;status:string;output_url:string|null;
  failure_code:string|null;caption:string|null;created_at:string;updated_at:string};
 type Pilot=AutopilotPlan & {status:string;created_at:string};
-type Screen="home"|"create"|"pilot"|"library";
+type Screen="home"|"menu"|"studio"|"create"|"pilot"|"library";
 type Form={prompt:string;caption:string;mode:"text"|"image";model:"gen4.5"|"kling";
  ratio:"1280:720"|"720:1280";duration:5|10};
 const initial:Form={prompt:"",caption:"",mode:"text",model:"gen4.5",ratio:"720:1280",duration:5};
@@ -118,6 +119,9 @@ export default function VideoGeneratorPage(){
  const L=(es:string,english:string)=>en?english:es;
  const [screen,setScreen]=useState<Screen>("home");
  const pilotBack=useRef<(()=>void)|null>(null);
+ const studioBack=useRef<(()=>void)|null>(null);
+ const registerStudioBack=useCallback((callback:(()=>void)|null)=>{studioBack.current=callback;},[]);
+ const [generatorKind,setGeneratorKind]=useState<CreativeMode>("text-image");
  const registerPilotBack=useCallback((callback:(()=>void)|null)=>{pilotBack.current=callback;},[]);
  const [jobs,setJobs]=useState<Job[]>([]),[pilots,setPilots]=useState<Pilot[]>([]);
  const [quickProjects,setQuickProjects]=useState<QuickVideoProject[]>([]);
@@ -265,7 +269,7 @@ export default function VideoGeneratorPage(){
   return()=>window.clearInterval(timer);
  },[current?.id,current?.status,refreshJob]);
  const failures=jobs.filter(j=>j.status==="FAILED").length;
- const open=(next:Screen)=>{setScreen(next);setError("");setNotice("");if(next==="library")void loadQuick();};
+ const open=(next:Screen)=>{setScreen(next);setError("");setNotice("");if(next==="library"){void loadQuick();void load();}};
  const generate=async()=>{
   if(busy||!costApproved)return;
   setBusy("generate");setError("");setNotice("");
@@ -357,45 +361,38 @@ export default function VideoGeneratorPage(){
  return <main className={styles.page}><div className={styles.shell}>
   <header className={styles.topbar}>
    {screen==="home"?<Link href="/vista-app" className={styles.back}><ArrowLeft size={17}/> VMV Business</Link>:
-    <button type="button" className={styles.back} onClick={()=>{if(screen==="pilot"&&pilotBack.current){pilotBack.current();return;}open("home");}}><ArrowLeft size={17}/>{L("Video Generator","Video Generator")}</button>}
+    <button type="button" className={styles.back} onClick={()=>{if(screen==="pilot"&&pilotBack.current){pilotBack.current();return;}if(screen==="studio"&&studioBack.current){studioBack.current();return;}open(screen==="studio"?"menu":"home");}}><ArrowLeft size={17}/>{L("Video Generator","Video Generator")}</button>}
    <div className={styles.topRight}><InterfaceLanguagePicker compact/><span className={styles.pill}><Sparkles size={14}/> Beta</span></div>
   </header>
   {screen==="home"?<>
-   <div className={styles.intro}><span className={styles.eyebrow}><Video size={15}/> VMV VIDEO GENERATOR</span>
-    <h1>{L("Crea videos con IA","Create videos with AI")}</h1>
-    <p>{L("Un estudio sencillo para crear, organizar y preparar tus videos.","A simple studio to create, organize and prepare videos.")}</p>
-   </div>
-   <div className={styles.choiceGrid}>
-    <Link href="/vista-app/video-generator/quick?visual=sticks" className={styles.choice+" "+styles.featured}>
-     <span className={styles.choiceIcon}><Clapperboard size={23}/></span>
-     <strong>Stickman 2D</strong>
-     <small>{L("Crea historias con personajes de palitos, voz y subtítulos.","Make stick-figure stories with voice and captions.")}</small>
-     <ArrowUpRight size={18} className={styles.choiceArrow}/>
-    </Link>
-    <button type="button" className={styles.choice} onClick={()=>window.location.assign("/vista-app/ai-agents?service=video")}>
-     <span className={styles.choiceIcon}><Film size={23}/></span>
-     <strong>{L("Video con IA","AI video")}</strong>
-     <small>{L("Texto o imagen a video con Runway / Kling.","Text or image to video with Runway / Kling.")}</small>
-     <ArrowUpRight size={18} className={styles.choiceArrow}/>
+   <div className={styles.intro}><h1>{L("Imagen / Video Generator","Image / Video Generator")}</h1></div>
+   <div className={styles.vmvEntry}>
+    <button type="button" className={styles.vmvEntryCard} onClick={()=>open("menu")}>
+     <WandSparkles size={31}/><strong>{L("Generar","Create")}</strong>
     </button>
-    <Link href="/vista-app/video-generator/quick?visual=stills" className={styles.choice}>
-     <span className={styles.choiceIcon}><ImagePlus size={23}/></span>
-     <strong>{L("Videos con imágenes IA","AI image stories")}</strong>
-     <small>{L("Crea escenas ilustradas, añade voz y exporta.","Generate illustrated scenes, voice and export.")}</small>
-     <ArrowUpRight size={18} className={styles.choiceArrow}/>
-    </Link>
+    <button type="button" className={styles.vmvEntryCard} onClick={()=>open("library")}>
+     <Library size={31}/><strong>{L("Historial","History")}</strong>
+    </button>
    </div>
-   <button type="button" className={styles.libraryShortcut} onClick={()=>open("pilot")} style={{marginBottom:12}}>
-    <Workflow size={19}/><span>{L("Planificar contenido · Autopilot","Plan content · Autopilot")}</span><ChevronRight size={17}/>
-   </button>
-   <button type="button" className={styles.libraryShortcut} onClick={()=>open("library")}>
-    <Library size={19}/><span>{L("Mi biblioteca","My library")}</span>
-    <span className={styles.count}>{jobs.length+quickProjects.length}</span><ChevronRight size={17}/>
-   </button>
-   {ready&&!configured?<div className={styles.setup}><ShieldCheck size={17}/>
-    {L("La generación con Runway/Kling requiere conexión y acceso al piloto; Stickman e imágenes IA se gestionan por separado.","Runway/Kling generation needs a connected pilot account; Stickman and AI image stories are separate.")}</div>:null}
-   {failures>0?<p className={styles.foot}>{L("Generaciones fallidas registradas: ","Failed attempts recorded: ")}{failures}</p>:null}
   </>:null}
+  {screen==="menu"?<>
+   <div className={styles.heading}><h1>{L("Generar","Create")}</h1></div>
+   <div className={styles.vmvGeneratorOptions}>
+    {([
+     ["text-image",ImagePlus,"Texto a imagen","Text to image"],
+     ["edit-image",WandSparkles,"Modificar imagen","Edit image"],
+     ["image-video",Clapperboard,"Imagen a video","Image to video"],
+     ["text-video",Film,"Texto a video","Text to video"]
+    ] as const).map(([id,Icon,es,english])=>
+     <button key={id} type="button" className={styles.vmvGeneratorOption} onClick={()=>{
+      setGeneratorKind(id);open("studio");
+     }}><Icon size={32}/><strong>{en?english:es}</strong></button>)}
+   </div>
+  </>:null}
+  {screen==="studio"?<CreativeGenerator mode={generatorKind} en={en}
+   onBack={()=>open("menu")} onLibrary={()=>open("library")}
+   onVideoCreated={id=>{setSelected(id);void refreshJob(id);}}
+   registerBack={registerStudioBack}/>:null}
   {screen==="create"?<>
    <div className={styles.heading}><span className={styles.eyebrow}><Film size={15}/>{L("ESTUDIO DE VIDEO","VIDEO STUDIO")}</span>
     <h1>{L("Crear video","Create video")}</h1>
