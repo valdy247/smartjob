@@ -23,6 +23,7 @@ export async function POST(req:NextRequest){
  const prompt=typeof body?.prompt==="string"?body.prompt.trim():"";
  const movieMode=body?.mode==="storyframe";
  const referencePath=typeof body?.referencePath==="string"?body.referencePath:"";
+ const characterReference=body?.referenceMode==="character";
  if(movieMode&&referencePath&&(!referencePath.startsWith(owner+"/")||!/^[-a-z0-9/]+\.jpg$/.test(referencePath)))return reply({error:"invalid_image_reference"},403);
  if(body?.confirmCost!==true||prompt.length<35||prompt.length>1800)return reply({error:"invalid_image_request"},400);
  if(!process.env.OPENAI_API_KEY)return reply({error:"openai_key_not_configured"},503);
@@ -39,7 +40,9 @@ export async function POST(req:NextRequest){
   const form=inputImage?new FormData():null;
   if(form){
    form.set("model","gpt-image-1-mini");
-   form.set("prompt","Continue the SAME animated short and KEEP the cast, environment, lighting, color palette and artwork consistent with the supplied previous scene image. Change ONLY the on-screen action and character poses as described. Create the NEXT distinct five-second scene start frame, not a repeat of the previous shot. No captions or text. "+prompt);
+   form.set("prompt",(characterReference?
+    "Use the attached image ONLY as a visual reference for recurring character identity: match their face, color palette, clothing, body proportions and illustration style. Draw a DISTINCT new shot specified below, with its own actions and environment. Do not reuse unrelated background objects, text or subjects from the reference image. Keep portrait 9:16. No captions or text. ":
+    "Continue the SAME animated short and KEEP the cast, environment, lighting, color palette and artwork consistent with the supplied previous scene image. Change ONLY the on-screen action and character poses as described. Create the NEXT distinct five-second scene start frame, not a repeat of the previous shot. No captions or text. ")+prompt);
    form.set("size","1024x1536");form.set("quality","medium");form.set("output_format","jpeg");form.set("n","1");
    form.set("image",inputImage!,"previous-scene.jpg");
   }
