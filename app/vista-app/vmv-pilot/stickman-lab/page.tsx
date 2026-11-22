@@ -1743,44 +1743,65 @@ export default function StickmanLabPage(){
     </div>:null}
     {directorPlan||cloudProjects.length||archivedProjects.length?
      <div className={css.libraryGrid}>
-      {directorPlan?<button type="button" className={css.libraryCard}
-       onClick={()=>setLibraryOpen(false)}>
-       <span className={css.libraryPoster}><Clapperboard size={27}/>
-        {directorPlan.frames[0]?.imageUrl?<img src={directorPlan.frames[0].imageUrl}
-         alt="" onError={event=>{event.currentTarget.style.display="none";}}/>:null}
-        <span>EN EDICIÓN</span></span>
-       <span className={css.libraryCardBody}><strong>{directorPlan.title||"Mi video"}</strong>
-        <small>{directorPlan.frames.length} imágenes · {savedClipCount} clips</small>
-        <span className={css.libraryCardLink}>Continuar editando</span>
-       </span>
-      </button>:null}
-      {cloudProjects.filter(item=>item.id!==activeLibraryId||!directorPlan).map(item=>
-       <button key={item.id} type="button" className={css.libraryCard}
-        disabled={cloudLoading||projectSwitching}
-        onClick={()=>void restoreCloudProject(item.id)}>
+      {directorPlan?<div className={css.libraryCard}>
+       <button type="button" className={css.libraryCardMain}
+        onClick={()=>setLibraryOpen(false)}>
         <span className={css.libraryPoster}><Clapperboard size={27}/>
-         {item.coverUrl?<img src={item.coverUrl} alt=""
-          onError={event=>{event.currentTarget.style.display="none";}}/>:null}
-         <span>{item.clips===MOTION_SCENES?"12 CLIPS GUARDADOS":"EN PROGRESO"}</span></span>
-        <span className={css.libraryCardBody}><strong>{item.title||"Mi video"}</strong>
-         <small>{item.scenes} imágenes · {item.clips} clips</small>
-         <span className={css.libraryCardLink}>Abrir proyecto</span>
+         {directorPlan.frames[0]?.imageUrl?<img src={directorPlan.frames[0].imageUrl}
+          alt="" onError={event=>{event.currentTarget.style.display="none";}}/>:null}
+         <span>EN EDICIÓN</span></span>
+        <span className={css.libraryCardBody}><strong>{directorPlan.title||"Mi video"}</strong>
+         <small>{directorPlan.frames.length} imágenes · {savedClipCount} clips</small>
+         <span className={css.libraryCardLink}>Continuar editando</span>
         </span>
-       </button>)}
+       </button>
+       {savedClipCount===MOTION_SCENES?<button className={css.libraryVoiceAction}
+        type="button" onClick={()=>{setLibraryOpen(false);openVoiceEditor();}}>
+        <Volume2 size={16}/> Cambiar voz
+       </button>:null}
+      </div>:null}
+      {cloudProjects.filter(item=>item.id!==activeLibraryId||!directorPlan).map(item=>
+       <div key={item.id} className={css.libraryCard}>
+        <button type="button" className={css.libraryCardMain}
+         disabled={cloudLoading||projectSwitching}
+         onClick={()=>void restoreCloudProject(item.id)}>
+         <span className={css.libraryPoster}><Clapperboard size={27}/>
+          {item.coverUrl?<img src={item.coverUrl} alt=""
+           onError={event=>{event.currentTarget.style.display="none";}}/>:null}
+          <span>{item.clips===MOTION_SCENES?"12 CLIPS GUARDADOS":"EN PROGRESO"}</span></span>
+         <span className={css.libraryCardBody}><strong>{item.title||"Mi video"}</strong>
+          <small>{item.scenes} imágenes · {item.clips} clips</small>
+          <span className={css.libraryCardLink}>Abrir proyecto</span>
+         </span>
+        </button>
+        {item.clips===MOTION_SCENES?<button type="button" className={css.libraryVoiceAction}
+         disabled={cloudLoading||projectSwitching}
+         onClick={()=>void restoreCloudProject(item.id,true)}>
+         <Volume2 size={16}/> Cambiar voz
+        </button>:null}
+       </div>)}
       {archivedProjects.filter(item=>!cloudProjects.some(cloud=>cloud.id===item.cloudId)
        &&item.cloudId!==activeLibraryId).map(item=>
-       <button key={item.id} type="button" className={css.libraryCard}
-        disabled={cloudLoading||projectSwitching}
-        onClick={()=>void restoreMotionProject(item.id)}>
-        <span className={css.libraryPoster}><BookOpen size={27}/>
-         {item.plan.frames[0]?.imageUrl?<img src={item.plan.frames[0].imageUrl}
-          alt="" onError={event=>{event.currentTarget.style.display="none";}}/>:null}
-         <span>EN ESTE DISPOSITIVO</span></span>
-        <span className={css.libraryCardBody}><strong>{item.label||"Mi video"}</strong>
-         <small>{item.plan.frames.length} imágenes · {item.seedance.urls.filter(Boolean).length} clips</small>
-         <span className={css.libraryCardLink}>Abrir proyecto</span>
-        </span>
-       </button>)}
+       <div key={item.id} className={css.libraryCard}>
+        <button type="button" className={css.libraryCardMain}
+         disabled={cloudLoading||projectSwitching}
+         onClick={()=>void restoreMotionProject(item.id)}>
+         <span className={css.libraryPoster}><BookOpen size={27}/>
+          {item.plan.frames[0]?.imageUrl?<img src={item.plan.frames[0].imageUrl}
+           alt="" onError={event=>{event.currentTarget.style.display="none";}}/>:null}
+          <span>EN ESTE DISPOSITIVO</span></span>
+         <span className={css.libraryCardBody}><strong>{item.label||"Mi video"}</strong>
+          <small>{item.plan.frames.length} imágenes · {item.seedance.urls.filter(Boolean).length} clips</small>
+          <span className={css.libraryCardLink}>Abrir proyecto</span>
+         </span>
+        </button>
+        {item.seedance.urls.filter(Boolean).length===MOTION_SCENES?
+         <button type="button" className={css.libraryVoiceAction}
+          disabled={cloudLoading||projectSwitching}
+          onClick={()=>void restoreMotionProject(item.id,true)}>
+          <Volume2 size={16}/> Cambiar voz
+         </button>:null}
+       </div>)}
      </div>:
      !cloudLoading?<div className={css.libraryEmpty}>
       <BookOpen size={27}/><h2>Tu biblioteca empieza aquí</h2>
