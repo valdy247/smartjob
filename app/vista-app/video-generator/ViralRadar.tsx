@@ -11,6 +11,13 @@ type Scan={id:string;query:string;days:number;status:string;items:RadarVideo[];
 type Props={niche:string;en:boolean;selectedSource:string;onChoose:(idea:RadarIdea,scanId:string)=>void;onClear:()=>void};
 const compact=(n:number)=>new Intl.NumberFormat("es-US",{notation:"compact",maximumFractionDigits:1}).format(n);
 const errors:Record<string,[string,string]>={
+ login:["Tu sesión expiró. Inicia sesión de nuevo.","Your session expired. Sign in again."],
+ network:["No se pudo conectar con Radar. Recarga la página e inténtalo otra vez.","Radar could not connect. Refresh and try again."],
+ radar_youtube_invalid:["YouTube devolvió datos inesperados. Vuelve a intentar.","YouTube returned unexpected data. Try again."],
+ radar_invalid_window:["Elige un período válido.","Choose a valid date range."],
+ radar_invalid_scan:["La búsqueda no es válida. Inténtalo otra vez.","This search is invalid. Try again."],
+ radar_scan_not_found:["La búsqueda anterior expiró. Inicia otra.","Previous research expired. Start another search."],
+ video_not_enabled_for_account:["Radar no está habilitado en esta cuenta.","Radar is not enabled for this account."],
  radar_youtube_key_missing:["Falta conectar YouTube Data API en Vercel.","Connect YouTube Data API in Vercel."],
  radar_youtube_quota_or_access:["YouTube rechazó la consulta o alcanzó su cuota.","YouTube denied this search or its quota was reached."],
  radar_youtube_unavailable:["YouTube no respondió. Prueba más tarde.","YouTube is temporarily unavailable."],
@@ -40,8 +47,9 @@ export default function ViralRadar({niche,en,selectedSource,onChoose,onClear}:Pr
    headers:{Authorization:"Bearer "+token,"X-VMV-YouTube-Consent":consent?"accepted":"",...(body?{"Content-Type":"application/json"}:{})},
    ...(body?{body:JSON.stringify(body)}:{})
   });
-  const data=await res.json().catch(()=>({error:"network"}));
-  if(!res.ok)throw Error(String(data.error||"network"));
+  const data=await res.json().catch(()=>null);
+  if(!data||typeof data!=="object")throw Error("network");
+  if(!res.ok)throw Error(String(data.error||(res.status===401||res.status===403?"login":"network")));
   return data;
  };
  useEffect(()=>{
@@ -71,7 +79,7 @@ export default function ViralRadar({niche,en,selectedSource,onChoose,onClear}:Pr
    const data=await request("?q="+encodeURIComponent(q)+"&days="+period);
    setScan(data.scan as Scan);
   }catch(e){const code=e instanceof Error?e.message:"network";setError(
-   errors[code]?.[en?1:0]||L("No se pudo investigar este tema.","Couldn't research this topic.")
+   errors[code]?.[en?1:0]||L("No se pudo investigar. Error: ","Research failed. Error: ")+code.slice(0,70)
   );}
   finally{setLoading("");}
  };
@@ -102,8 +110,8 @@ export default function ViralRadar({niche,en,selectedSource,onChoose,onClear}:Pr
    setOpen(v=>!v);
   }}>
    <span className={css.launchIcon}><Search size={21}/></span>
-   <span><strong>{L("Investigar mi mercado","Research my market")}</strong>
-    <small>{L("Ver videos reales y detectar oportunidades","See real videos and spot opportunities")}</small>
+   <span><strong>{L("Explorar tendencias","Explore trends")}</strong>
+    <small>{L("Encontrar videos e ideas","Find videos and ideas")}</small>
    </span>
    {open?<ChevronUp size={19}/>:<ChevronDown size={19}/>}
   </button>
