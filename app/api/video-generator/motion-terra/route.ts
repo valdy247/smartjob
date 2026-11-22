@@ -1,6 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
-import {videoAllowed,videoDb,videoHeaders} from "@/lib/vmv-video-generator";
+import {videoAllowed,videoHeaders} from "@/lib/vmv-video-generator";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=180;
@@ -79,9 +79,8 @@ export async function POST(req:NextRequest){
  const prompt=typeof body?.prompt==="string"?body.prompt.trim():"";
  if(prompt.length<8||prompt.length>500||body?.confirmCost!==true)return reply({error:"invalid_motion_request"},400);
  if(!process.env.OPENAI_API_KEY)return reply({error:"openai_key_not_configured"},503);
- const {data:granted,error:quotaError}=await videoDb().rpc("smartjob_web_ai_claim_video_test_slot",{p_owner:owner});
- if(quotaError)return reply({error:"motion_quota_unavailable"},503);
- if(granted!==true)return reply({error:"motion_limit"},429);
+ // Private preview is already restricted to the explicitly allowlisted owner.
+ // No daily test quota: the owner controls each paid generation via confirmCost.
  try{
   const narration=await askOpenAI(narrationSystem,prompt,850);
   if(!Array.isArray(narration.speech)||narration.speech.length!==SCENE_COUNT||
