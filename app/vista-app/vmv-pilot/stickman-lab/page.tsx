@@ -301,12 +301,19 @@ async function directorCall(accessToken:string,endpoint:string,data:Record<strin
  );
  return result;
 }
-type SeedanceSaved={prompt:string;tokens:string[];urls:string[]};
+type SeedanceSaved={prompt:string;tokens:string[];urls:string[];
+ clipPrompt?:string[];needsMotion?:boolean[];
+ history?:Record<string,{token:string;url:string}[]>;
+ draftTokens?:Record<string,string>};
 const SEEDANCE_KEY="vmv-motion-seedance-director-v5-60s";
 function readSeedance(prompt:string):SeedanceSaved{
  const state=readSavedMotion(SEEDANCE_KEY) as Partial<SeedanceSaved>|null;
  if(state?.prompt===prompt&&Array.isArray(state.tokens)&&Array.isArray(state.urls))
-  return {prompt,tokens:state.tokens,urls:state.urls};
+  return {prompt,tokens:state.tokens,urls:state.urls,
+   clipPrompt:Array.isArray(state.clipPrompt)?state.clipPrompt:[],
+   needsMotion:Array.isArray(state.needsMotion)?state.needsMotion:[],
+   history:state.history&&typeof state.history==="object"?state.history:{},
+   draftTokens:state.draftTokens&&typeof state.draftTokens==="object"?state.draftTokens:{}};
  return {prompt,tokens:[],urls:[]};
 }
 function saveSeedance(value:SeedanceSaved){saveMotion(SEEDANCE_KEY,value);}
@@ -595,6 +602,15 @@ export default function StickmanLabPage(){
  const [cloudLoading,setCloudLoading]=useState(false);
  const [studioStep,setStudioStep]=useState<"crear"|"revisar"|"editar"|"publicar">("crear");
  const [publishDraft,setPublishDraft]=useState<MotionPublishDraft>({...EMPTY_PUBLISH});
+ const [selectedScene,setSelectedScene]=useState(0);
+ const [motionDraft,setMotionDraft]=useState("");
+ const [sceneRendering,setSceneRendering]=useState<number|null>(null);
+ const [narrationVolume,setNarrationVolume]=useState(100);
+ const [musicVolume,setMusicVolume]=useState(18);
+ const [fadeSeconds,setFadeSeconds]=useState(0.2);
+ const [musicFile,setMusicFile]=useState<File|null>(null);
+ const [shareStatus,setShareStatus]=useState("");
+
  const [lastRenderedCloudUrl,setLastRenderedCloudUrl]=useState("");
 
 
@@ -634,6 +650,8 @@ export default function StickmanLabPage(){
  const playingRef=useRef(true),renderingRef=useRef(false),urlRef=useRef("");
  const timelineRef=useRef(0),lastFrameRef=useRef(0);
  const story=customMode?(terraStory|| (customPrompt.trim().length>=8?userStickmanStory(customPrompt):stickmanStory(topic,language))):stickmanStory(topic,language);
+ useEffect(()=>{setMotionDraft(directorPlan?.scenes?.[selectedScene]?.motionPrompt||"");},
+  [selectedScene,directorPlan?.prompt]);
  useEffect(()=>{
   let active=true;
   const client=getSupabase();setAuthClient(client);
@@ -974,10 +992,6 @@ export default function StickmanLabPage(){
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
   const plan=readDirectorPlan(customPrompt);
   if(!plan?.scenes[index])return;
-  if(readSeedance(plan.prompt).tokens.some(Boolean)){
-   setError("La animación ya comenzó. Para mantener voz e imágenes sincronizadas, no puedes cambiar la narración de este proyecto.");
-   return;
-  }
   setSpeechDraft(plan.scenes[index].speech);
   setEditingSpeech(index);setError("");
  },[customPrompt]);
@@ -990,17 +1004,13 @@ export default function StickmanLabPage(){
   }
   const plan=readDirectorPlan(customPrompt);
   if(!plan?.scenes[index]){setError("No se encontró esta escena guardada.");return;}
-  if(readSeedance(plan.prompt).tokens.some(Boolean)){
-   setError("La animación ya comenzó. No se puede editar la narración después de iniciar Seedance.");
-   return;
-  }
   const scenes=[...plan.scenes];
   const changed=scenes[index].speech!==speech;
   scenes[index]={...scenes[index],speech};
-  const approved=[...(plan.approved||[])];
-  if(changed)approved[index]=false;
-  const next={...plan,scenes,approved};
+  // Editing narration does not invalidate approved images or paid clips.
+  const next={...plan,scenes};
   saveDirectorPlan(next);setDirectorPlan(next);
+  if(changed){setSeedJoined("");setStudioStep("editar");}
   setEditingSpeech(null);setSpeechDraft("");setError("");
  },[customPrompt,speechDraft]);
  const updateScenePrompt=useCallback((index:number,prompt:string)=>{
@@ -1024,10 +1034,10 @@ export default function StickmanLabPage(){
  },[]);
  const regenerateScene=useCallback(async(index:number)=>{
   if(directorBusyRef.current||seedBusyRef.current||!directorPlan?.frames[index])return;
-  if(readSeedance(directorPlan.prompt).tokens.some(Boolean)){
-   setError("Ya existen animaciones Seedance. No reemplaces imágenes de un video iniciado; crea una historia nueva para evitar mezclar escenas.");
-   return;
-  }
+  const seedance=readSeedance(directorPlan.prompt);
+  if(seedance.tokens[index]&&!window.confirm(
+   "Cambiar esta imagen consume créditos de OpenAI. Después tendrás que animar SOLO la escena "+
+   (index+1)+" (~US$0.10), conservando los otros clips. ¿Continuar?"))return;
   const prompt=(directorPlan.draftPrompts?.[index]??directorPlan.scenes[index].imagePrompt).trim();
   if(prompt.length<35||prompt.length>1700){setError("El prompt de la escena debe tener entre 35 y 1700 caracteres.");return;}
   directorBusyRef.current=true;setRegeneratingScene(index);setError("");
@@ -1051,6 +1061,11 @@ export default function StickmanLabPage(){
    const drafts=[...(current.draftPrompts||scenes.map(s=>s.imagePrompt))];drafts[index]=prompt;
    const next={...current,frames,scenes,approved,previous,draftPrompts:drafts};
    saveDirectorPlan(next);setDirectorPlan(next);setPreviousScene(null);
+   if(seedance.tokens[index]){
+    const job=readSeedance(next.prompt);
+    job.needsMotion=job.needsMotion||[];job.needsMotion[index]=true;saveSeedance(job);
+    setStudioStep("editar");
+   }
   }catch(e){setError(e instanceof Error?e.message:"No se pudo regenerar la escena.");}
   finally{directorBusyRef.current=false;setRegeneratingScene(null);}
  },[directorPlan]);
@@ -1345,7 +1360,7 @@ export default function StickmanLabPage(){
           <p>{scene.speech}</p>
           <div className={css.sceneActions}>
            <button type="button"
-            disabled={directorBusy||seedBusy||rendering||readSeedance(directorPlan.prompt).tokens.some(Boolean)}
+            disabled={directorBusy||seedBusy||rendering}
             onClick={()=>beginSpeechEdit(index)}>Editar narración</button>
           </div>
          </>}
