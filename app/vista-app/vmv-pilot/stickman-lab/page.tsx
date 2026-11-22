@@ -62,6 +62,9 @@ async function loadContinuousVoice(phrases:string[],provider:"openai"|"elevenlab
  });
  const result=await response.json().catch(()=>null);
  if(!response.ok)throw Error(
+  result?.error==="openai_key_not_configured"?"La voz de OpenAI no está configurada.":
+  result?.error==="openai_voice_unavailable"?"OpenAI no pudo crear esta voz. Tus clips siguen guardados.":
+  result?.error==="openai_alignment_unavailable"?"No se pudo sincronizar la nueva voz con los subtítulos.":
   result?.error==="elevenlabs_not_configured_in_preview"?"Falta ELEVENLABS_API_KEY en Vercel Preview.":
   result?.error==="elevenlabs_key_rejected"?"ElevenLabs rechazó la clave API.":
   result?.error==="elevenlabs_credits_required"?"ElevenLabs requiere un plan compatible con la voz seleccionada o créditos adicionales. En cuentas Free, algunas voces no están disponibles por API. Tus clips de Seedance siguen guardados.":
@@ -70,12 +73,12 @@ async function loadContinuousVoice(phrases:string[],provider:"openai"|"elevenlab
   result?.error==="elevenlabs_access_denied"?"Esta clave no tiene permisos para generar voz en ElevenLabs.":
   result?.providerCode==="max_character_limit_exceeded"||result?.providerCode==="text_too_long"?"ElevenLabs rechazó el texto por longitud.":
   result?.providerCode==="model_access_denied"||result?.providerCode==="feature_not_available"?"Tu plan de ElevenLabs no permite usar el modelo o esta función.":
-  "ElevenLabs rechazó la narración ("+String(result?.error||response.status)+
+  "La generación de voz no se completó ("+String(result?.error||response.status)+
    (result?.providerCode&&result.providerCode!=="unknown"?" / "+result.providerCode:"")+
    "). Los 12 clips existentes se conservan."
  );
  if(typeof result.audio!=="string"||!result.alignment||!Number.isFinite(result.duration))
-  throw Error("ElevenLabs no devolvió audio y tiempos válidos.");
+  throw Error("El proveedor no devolvió audio y tiempos válidos.");
  return {audio:base64ToBuffer(result.audio),alignment:result.alignment as SpeechAlignment,duration:result.duration,
   sceneEnds:Array.isArray(result.sceneEnds)?result.sceneEnds:null};
 }
@@ -1385,7 +1388,46 @@ export default function StickmanLabPage(){
   job.needsMotion=job.needsMotion||[];job.needsMotion[index]=false;
   saveSeedance(job);setSeedJoined("");setError("");
  },[customPrompt]);
- const animateApproved=useCallback(async()=>{
+ const chooseProjectVoice=useCallback((preset:VoicePreset)=>{
+  if(!customPrompt)return;
+  setVoicePreset(preset);setWithVoice(true);
+  const job=readSeedance(customPrompt);
+  job.voicePreset=preset;
+  if(pilotVoiceId)job.elevenVoiceId=pilotVoiceId;
+  saveSeedance(job);
+ },[customPrompt,pilotVoiceId]);
+ const openVoiceEditor=useCallback(()=>{
+  setWithVoice(true);setVoiceEditorOpen(true);setStudioStep("editar");setError("");
+ },[]);
+ const selectVideoVersion=useCallback(async(revisionId:string)=>{
+  const client=getSupabase();if(!client)return;
+  const {data:{session}}=await client.auth.getSession();
+  if(!session?.access_token)return;
+  const job=readSeedance(customPrompt);
+  const version=job.voiceRevisions?.find(revision=>revision.id===revisionId);
+  if(revisionId&&!version){setError("La versión seleccionada no existe.");return;}
+  const formats:("mp4"|"webm")[]=version?[version.extension]:["mp4","webm"];
+  setRenderLoading(true);setError("");
+  try{
+   for(const format of formats){
+    try{
+     const response=await motionLibrary(session.access_token,{
+      action:"render-url",id:currentCloudId(),extension:format,
+      ...(revisionId?{revisionId}:{})
+     });
+     if(typeof response.url!=="string")continue;
+     setSeedJoined(response.url);setExtension(format);setLastRenderedCloudUrl(response.url);
+     setActiveRenderId(revisionId);job.activeRenderId=revisionId;
+     saveSeedance(job);
+     setShareStatus(revisionId?"Versión de voz recuperada.":"Video original recuperado.");
+     return;
+    }catch{}
+   }
+   throw Error("No se encontró ese video guardado. La versión actual sigue disponible.");
+  }catch(e){setError(e instanceof Error?e.message:"No se pudo abrir la versión.");}
+  finally{setRenderLoading(false);}
+ },[customPrompt]);
+ const animateApproved=useCallback(async(mode:"normal"|"voice"="normal")=>{
   if(directorBusyRef.current||seedBusyRef.current||renderingRef.current)return;
   const plan=readDirectorPlan(customPrompt);
   if(!plan||plan.frames.length!==MOTION_SCENES||
