@@ -3,6 +3,7 @@ import {useCallback,useEffect,useState} from "react";
 import {ArrowLeft,Check,Download,ImagePlus,LoaderCircle,RefreshCw,Sparkles,Upload,Video,WandSparkles} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import VideoPromptAssistant from "@/components/VideoPromptAssistant";
+import {saveCreativeImage} from "@/lib/vmv-creative-image-history";
 import css from "./CreativeGenerator.module.css";
 
 export type CreativeMode="text-image"|"edit-image"|"image-video"|"text-video";
@@ -133,6 +134,7 @@ export default function CreativeGenerator({mode,en,onBack,onLibrary,registerBack
    if(!response.ok){const body=await response.json().catch(()=>({}));throw Error(String(body.error||"image_generation_failed"));}
    const blob=await response.blob();
    if(!blob.type.startsWith("image/"))throw Error("La imagen recibida no es válida.");
+   try{await saveCreativeImage(blob,en?selected.en:selected.es,entry);}catch{setError(L("La imagen se creó, pero no se pudo guardar en el historial.","Image created, but could not be saved to history."));}
    if(base){
     const file=new File([blob],"generated.jpg",{type:blob.type});
     setImage(await fileAsData(file));setGeneratedBase(true);setConfirmed(false);newStage("baseResult");
