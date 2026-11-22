@@ -21,6 +21,7 @@ const STYLE={
  animated:"STRICT hand-drawn flat colorful 2D animated cartoon, consistent line weight, characters and palette. No live action or 3D.",
  product:"STRICT polished photorealistic product advertisement with studio lights and physically realistic materials. No cartoon."
 };
+const LANGUAGES={es:"Spanish",en:"English",pt:"Portuguese",fr:"French",de:"German",it:"Italian"};
 const STOP=()=>process.env.VMV_PILOT_WORKER_ENABLED!=="true";
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const log=(event,details={})=>console.log("[vmv-pilot-worker]",event,JSON.stringify(details));
@@ -116,7 +117,7 @@ async function aiScript(job){
   "You are an original short video director creating a "+job.seconds+"-second vertical video.",
   "Return JSON with title and scenes array. EXACTLY "+n+" scenes, five seconds each.",
   "Each scene has speech (7-11 words, max 13), imagePrompt in English (a visually exact action that represents those words), caption (3-8 words).",
-  "Voice language "+(job.language==="es"?"Latin American Spanish":"English")+".",
+  "STRICT narration AND captions language: "+LANGUAGES[job.language]+". NEVER use a different language for any spoken or displayed words.",
   "STRICT immutable visual bible for EVERY scene: "+STYLE[job.style],
   "Stickman characters and visual palette must be CONSISTENT across the entire story.",
   "Narration must align to visuals scene-by-scene, not random aesthetic footage.",
@@ -144,16 +145,64 @@ async function aiScript(job){
  }));
  if(scenes.some(s=>s.speech.length<10||s.imagePrompt.length<30||
   s.speech.split(/\s+/).length>13))throw Error("script_timing_invalid");
+ await verifyScriptLanguage(job,scenes);
  await patch(job,{title:String(parsed.title||job.topic).slice(0,140),
-  scenes,status:"working",phase:"Escenas",progress:7});
+  scenes,status:"working",phase:"Voz",progress:7});
  return scenes;
 }
-async function generateSpeech(text,file){
- const response=await request(OPENAI+"/audio/speech",{
+async function verifyScriptLanguage(job,scenes){
+ if(!LANGUAGES[job.language])throw Error("video_language_invalid");
+ const response=await request(OPENAI+"/chat/completions",{
   method:"POST",headers:{...auth("OPENAI_API_KEY"),"Content-Type":"application/json"},
-  body:JSON.stringify({model:"tts-1",voice:"alloy",input:text,response_format:"mp3",speed:1.0})
- },90000);
- await writeFile(file,await bytes(response,1500000));
+  body:JSON.stringify({model:"gpt-4.1-mini",temperature:0,max_tokens:350,
+   response_format:{type:"json_object"},
+   messages:[{role:"system",content:"Detect the language of EACH speech and caption. Respond ONLY JSON {languages:[ISO 639-1 code per scene]}. Do not translate, do not assume the requested language. Use one code per scene."},
+    {role:"user",content:JSON.stringify(scenes.map(x=>({speech:x.speech,caption:x.caption})))}]})
+ },45000);
+ if(!response.ok)throw Error("script_language_check_unavailable");
+ const data=await response.json();
+ let parsed;
+ try{parsed=JSON.parse(data.choices[0].message.content);}catch{throw Error("script_language_unverified");}
+ if(!Array.isArray(parsed.languages)||parsed.languages.length!==scenes.length||
+   parsed.languages.some(code=>code!==job.language))throw Error("script_language_mismatch");
+}
+async function verifyAudioLanguage(job,voices,dir){
+ const manifest=path.join(dir,"language-voices.txt"),joined=path.join(dir,"language-check.mp3");
+ await writeFile(manifest,voices.map(file=>"file '"+file.replace(/'/g,"")+"'").join("\n")+"\n");
+ await shell("ffmpeg",["-hide_banner","-loglevel","error","-y","-safe","0",
+  "-f","concat","-i",manifest,"-c","copy",joined]);
+ const body=new FormData();
+ body.set("model","whisper-1");body.set("response_format","verbose_json");
+ body.set("file",new Blob([await readFile(joined)],{type:"audio/mpeg"}),"speech.mp3");
+ const response=await request(OPENAI+"/audio/transcriptions",{
+  method:"POST",headers:auth("OPENAI_API_KEY"),body
+ },100000);
+ if(!response.ok)throw Error("audio_language_check_unavailable");
+ const data=await response.json();
+ const detected=String(data.language||"").trim().toLowerCase();
+ const names={es:["es","spanish","español"],en:["en","english"],
+  pt:["pt","portuguese","português"],fr:["fr","french","français"],
+  de:["de","german","deutsch"],it:["it","italian","italiano"]};
+ if(!names[job.language]?.includes(detected))throw Error("audio_language_mismatch");
+}
+async function generateSpeech(job,text,file){
+ if(job.voice_provider==="elevenlabs"){
+  if(!process.env.ELEVENLABS_API_KEY)throw Error("elevenlabs_key_missing");
+  if(!/^[A-Za-z0-9]{15,32}$/.test(job.voice_id))throw Error("voice_invalid");
+  const response=await request("https://api.elevenlabs.io/v1/text-to-speech/"+
+   encodeURIComponent(job.voice_id)+"?output_format=mp3_44100_128",{
+    method:"POST",headers:{"xi-api-key":process.env.ELEVENLABS_API_KEY,
+     "Content-Type":"application/json",Accept:"audio/mpeg"},
+    body:JSON.stringify({text,model_id:"eleven_multilingual_v2"})
+   },90000);
+  await writeFile(file,await bytes(response,1500000));
+ }else if(job.voice_provider==="openai"&&["alloy","nova","echo"].includes(job.voice_id)){
+  const response=await request(OPENAI+"/audio/speech",{
+   method:"POST",headers:{...auth("OPENAI_API_KEY"),"Content-Type":"application/json"},
+   body:JSON.stringify({model:"tts-1",voice:job.voice_id,input:text,response_format:"mp3",speed:1.0})
+  },90000);
+  await writeFile(file,await bytes(response,1500000));
+ }else throw Error("voice_invalid");
 }
 async function makeImage(job,scene,reference){
  const prompt=[
@@ -299,17 +348,26 @@ async function processJob(job){
    await aiScript(job);
   }
   const scenes=job.scenes,clips=[],voices=[],prefix=job.owner_id+"/"+job.id;
-  let reference=null;
-  for(let i=0;i<scenes.length;i++){
-   if(closing)throw Error("worker_stopping");
-   const scene=scenes[i],voice=path.join(dir,"audio-"+i+".mp3"),image=path.join(dir,"image-"+i+".jpg"),clip=path.join(dir,"clip-"+i+".mp4");
-   if(job.narration){
+  if(!LANGUAGES[job.language])throw Error("video_language_invalid");
+  if(job.narration){
+   if(job.voice_provider==="none"||!job.voice_id)throw Error("voice_invalid");
+   for(let i=0;i<scenes.length;i++){
+    if(closing)throw Error("worker_stopping");
+    const voice=path.join(dir,"audio-"+i+".mp3");
     if(!await restoreAsset(job,"voice_"+i,voice)){
-     await generateSpeech(scene.speech,voice);
+     await generateSpeech(job,scenes[i].speech,voice);
      await persistAsset(job,"voice_"+i,voice,"audio/mpeg");
     }
     voices.push(voice);
+    await patch(job,{status:"working",phase:"Narración "+(i+1)+"/"+scenes.length,
+     progress:8+Math.floor(6*(i+1)/scenes.length)});
    }
+   await verifyAudioLanguage(job,voices,dir);
+  }else if(job.voice_provider!=="none")throw Error("voice_invalid");
+  let reference=null;
+  for(let i=0;i<scenes.length;i++){
+   if(closing)throw Error("worker_stopping");
+   const scene=scenes[i],image=path.join(dir,"image-"+i+".jpg"),clip=path.join(dir,"clip-"+i+".mp4");
    if(!await restoreAsset(job,"image_"+i,image)){
     const buf=await makeImage(job,scene,
      i>0&&["stickman","animated"].includes(job.style)?reference:null);
