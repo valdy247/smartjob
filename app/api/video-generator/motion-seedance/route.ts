@@ -166,7 +166,7 @@ export async function POST(req:NextRequest){
  const storyBible=typeof body?.storyBible==="string"?body.storyBible.trim():"";
  if(!imagePath.startsWith(owner+"/")||!/^[-a-z0-9/]+\.jpg$/.test(imagePath)||motionPrompt.length<18||motionPrompt.length>650||storyBible.length>1200)return reply({error:"storyboard_images_required"},400);
  if(!Number.isInteger(beat)||beat<0||beat>5)return reply({error:"invalid_scene_index"},400);
- if(prompt.length<8||prompt.length>500)return reply({error:"invalid_video_prompt"},400);
+ if(prompt.length<8||prompt.length>2000)return reply({error:"invalid_video_prompt"},400);
  if(!process.env.SUPABASE_SERVICE_ROLE_KEY&&!process.env.OPENAI_API_KEY)
   return reply({error:"token_signing_secret_missing"},503);
  // Private preview is already restricted to the explicitly allowlisted owner.
