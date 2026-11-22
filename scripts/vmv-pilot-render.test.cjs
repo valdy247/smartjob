@@ -379,3 +379,24 @@ test("Saved storyboard .jpg previews use the correct validation rule and cost no
  assert.match(preview,/createSignedUrl\(imagePath,7200\)/);
  assert.doesNotMatch(preview,/api\.openai\.com|startVideo\(/);
 });
+
+test("Seedance montage downloads existing completed MP4s without rechecking gateway status or regenerating",()=>{
+ const api=read("app/api/video-generator/motion-seedance/route.ts");
+ const ui=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ const download=api.split('if(body?.action==="download"){')[1]?.split('if(body?.action==="status"){')[0];
+ assert.ok(download,"Existing clips must have a download route");
+ assert.match(download,/unseal\(token,owner\)/);
+ assert.match(download,/storage\.from\(CLIP_BUCKET\)\.download/);
+ assert.match(download,/trustedSeedanceUrl\(sourceUrl\)/);
+ assert.match(download,/mediaUrl=sourceUrl/);
+ assert.match(download,/savePrivateClip\(owner,token,data\)/);
+ const clipBranch=download.split('if(sourceUrl&&trustedSeedanceUrl(sourceUrl)){')[1]?.split('}else{')[0];
+ assert.ok(clipBranch);
+ assert.doesNotMatch(clipBranch,/startVideo\(|getVideoStatus\(/);
+ assert.match(api,/endsWith\("\.volces\.com"\)/);
+ assert.match(api,/fileSizeLimit:26000000/);
+ assert.match(ui,/body:JSON\.stringify\(\{action:"download",token,sourceUrl\}\)/);
+ assert.match(ui,/loadSeedanceForStitching\(accessToken,job\.tokens\[i\],job\.urls\[i\],i\)/);
+ assert.match(ui,/Recuperando MP4 guardado/);
+ assert.match(ui,/No se inició otra generación/);
+});
