@@ -1,0 +1,14 @@
+.dock{position:fixed;top:72px;right:16px;z-index:11000;font-family:Inter,system-ui,sans-serif;color:#35223e;display:flex;align-items:flex-start;gap:10px;flex-direction:row-reverse}
+.ring{padding:0;background:#fff;border:1px solid #e4d8eb;border-radius:50%;width:51px;height:51px;display:grid;place-items:center;box-shadow:0 5px 24px #38264728;cursor:pointer;flex-shrink:0}
+.circle{width:43px;height:43px;border-radius:50%;display:grid;place-items:center}
+.circle>span{width:34px;height:34px;background:#fff;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:900;color:#66428b}
+.card{margin-top:4px;width:min(325px,calc(100vw - 98px));padding:15px 16px;border-radius:20px;background:#fff;border:1px solid #e9e0ee;box-shadow:0 14px 45px #45325324;display:grid;gap:10px}
+.head{display:flex;justify-content:space-between;align-items:center}.head strong{font-size:14px}.head button{border:0;background:transparent;color:#8b729d;cursor:pointer;padding:3px}
+.working{display:flex;align-items:center;gap:10px;color:#8051a7;font-size:13px;min-height:33px}.working span{flex:1}.working strong{font-variant-numeric:tabular-nums}
+.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.hint{font-size:11px;color:#9c8fa5;margin:0}
+.finished video{width:100%;max-height:350px;border-radius:13px;background:#101319;display:block;aspect-ratio:9/16}
+.actions{display:flex;justify-content:space-between;gap:8px;margin-top:12px}
+.actions a{display:flex;align-items:center;justify-content:center;gap:5px;flex:1;border-radius:11px;background:#f1eafb;color:#7046a0;font-size:12px;text-decoration:none;padding:10px 6px;font-weight:750}
+.notice{font-size:12px;color:#b14c68;line-height:1.5;margin:0}
+@media(max-width:440px){.dock{top:65px;right:10px}.card{width:calc(100vw - 82px);padding:12px}}
