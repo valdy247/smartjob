@@ -107,6 +107,8 @@ export default function PilotVoiceStep({language,en,onChoose}:Props){
      title={en?"Listen":"Escuchar"} onClick={()=>void play(v)}>
      {loadingId===key?<LoaderCircle size={16} className={css.spin}/>:
       playingId===key?<Pause size={15}/>:<Play size={15}/>}
+     <span>{loadingId===key?(en?"Loading":"Cargando"):
+      playingId===key?(en?"Pause":"Pausar"):(en?"Listen":"Escuchar")}</span>
     </button>
    </div>;
   })}
