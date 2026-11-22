@@ -2,6 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {videoAllowed,videoHeaders,videoDb,validUuid} from "@/lib/vmv-video-generator";
 import {validRadarId} from "@/lib/vmv-video-radar";
+import {extractTimedNarration} from "@/lib/vmv-motion-script";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=180;
@@ -149,11 +150,18 @@ export async function POST(req:NextRequest){
    userGoal:prompt,selectedRadarEvidence:evidence,
    editorialPolicy:"Expand the chosen concept into a concrete educational story, using specific people, products, times or examples ONLY when supported by dependable provided evidence. The YouTube source metadata suggests an angle, not proof of its assertions. If concrete verified case facts are missing, do not invent a named person, video, incident, controversy or outcome; instead teach an actionable specific process, mechanism or lesson with accurate general examples. Do not falsely imply a real scandal happened. Avoid vague anonymous anecdotes."
   });
-  const narration=await askOpenAI(narrationSystem(seconds),groundedBrief,1500);
+  // The creator's timed dialogue is authoritative. Retain it verbatim and
+  // avoid requesting a second, paid rewrite from the narration model.
+  const suppliedSpeech=extractTimedNarration(prompt,requiredScenes);
+  const narration=suppliedSpeech?
+   {title:"Mi historia animada",speech:suppliedSpeech}:
+   await askOpenAI(narrationSystem(seconds),groundedBrief,1500);
   if(!Array.isArray(narration.speech)||narration.speech.length!==requiredScenes||
    narration.speech.some(v=>typeof v!=="string"||v.trim().length<8||v.length>165)){
-   console.warn("[vmv-motion-director] invalid narration",{count:Array.isArray(narration.speech)?narration.speech.length:null});
-   return reply({error:"motion_scene_retry",stage:"narration",reason:"invalid_segment_count_or_length"},422);
+   console.warn("[vmv-motion-director] invalid narration",{
+    count:Array.isArray(narration.speech)?narration.speech.length:null,expected:requiredScenes});
+   return reply({error:"motion_scene_retry",stage:"narration",expectedScenes:requiredScenes,
+    reason:"invalid_segment_count_or_length"},422);
   }
   const spoken=narration.speech as string[];
   const visuals=await askOpenAI(visualSystem(seconds),JSON.stringify({

@@ -754,3 +754,45 @@ test("Wizard duration is preserved through Motion handoff, storyboard, saved cli
  assert.match(speech,/\[3,6,12\]\.includes\(segments\.length\)/);
  assert.match(sfx,/\[1,2\]\.includes\(scenes\.length\)/);
 });
+
+test("Direct-story duration respects explicit 30 seconds and can be selected before generation",()=>{
+ const page=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ assert.match(page,/function durationFromPrompt\(prompt:string\)/);
+ assert.match(page,/const manualDurationRef=useRef\(false\)/);
+ assert.match(page,/const detected=durationFromPrompt\(customPrompt\)/);
+ assert.match(page,/if\(detected&&detected!==montageSeconds\)setMontageSeconds\(detected\)/);
+ assert.match(page,/\(\[15,30,60\] as const\)\.map\(seconds/);
+ assert.match(page,/aria-pressed=\{montageSeconds===seconds\}/);
+ assert.match(page,/const chosenSeconds=plan\?baseMotionSeconds\(plan\):montageSeconds/);
+ assert.match(page,/saved\.seconds=chosenSeconds;saved\.montageSeconds=chosenSeconds/);
+ assert.match(page,/manualDurationRef\.current=true/);
+ assert.doesNotMatch(page,/El guion tiene fragmentos incompletos/);
+});
+test("The six user-written celery voice lines remain unchanged and in order",()=>{
+ const {transpileModule,ModuleKind,ScriptTarget}=require("typescript");
+ const Module=require("node:module");
+ const source=read("lib/vmv-motion-script.ts");
+ const compiled=transpileModule(source,{
+  compilerOptions:{module:ModuleKind.CommonJS,target:ScriptTarget.ES2022}}).outputText;
+ const file=new Module("lib/vmv-motion-script.ts",module);
+ file._compile(compiled,"lib/vmv-motion-script.ts");
+ const {extractTimedNarration}=file.exports;
+ const timed=[
+  "**0–5 s:** «¡Hola! Soy el apio. Sí, ese vegetal crujiente que muchos ignoran».",
+  "**5–10 s:** «Si me comes, te aporto mucha agua para complementar tu hidratación».",
+  "**10–15 s:** «También tengo fibra, que ayuda a mantener una digestión saludable».",
+  "**15–20 s:** «Y aporto vitamina K, importante para la salud de tus huesos».",
+  "**20–25 s:** «Puedes disfrutarme en ensaladas, sopas o con tu salsa favorita».",
+  "**25–30 s:** «¡No me ignores en el refrigerador! ¿Ya sabías todo esto de mí?»."
+ ].join("\n");
+ const found=extractTimedNarration(timed,6);
+ assert.equal(found?.length,6);
+ assert.equal(found?.[0],"¡Hola! Soy el apio. Sí, ese vegetal crujiente que muchos ignoran");
+ assert.equal(found?.[5],"¡No me ignores en el refrigerador! ¿Ya sabías todo esto de mí?");
+ assert.equal(extractTimedNarration(timed.replace("**20–25 s:**","**15–20 s:**"),6),null);
+ assert.equal(extractTimedNarration(timed,12),null);
+ const api=read("app/api/video-generator/motion-terra/route.ts");
+ assert.match(api,/const suppliedSpeech=extractTimedNarration\(prompt,requiredScenes\)/);
+ assert.match(api,/const narration=suppliedSpeech\?/);
+ assert.match(api,/const spoken=narration\.speech as string\[\]/);
+});

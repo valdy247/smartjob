@@ -339,3 +339,11 @@
 /* An animated ancestor creates a containing block for position:fixed.
    Disable the grid entrance transform while the share dialog is open. */
 .libraryPage:has(.libraryShareOverlay){animation:none}
+
+/* Compact duration selector for creator-authored short videos. */
+.createDuration{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:-3px 0 14px}
+.createDuration>span{font-size:12px;color:#65516e;font-weight:800;margin-right:6px}
+.createDuration button{border:1px solid #e4d8ed;border-radius:11px;background:white;
+ color:#72588c;font-size:12px;font-weight:800;padding:9px 15px;cursor:pointer}
+.createDuration button.createDurationActive{background:#935ece;color:#fff;border-color:#935ece}
+.createDuration button:disabled{opacity:.55;cursor:default}
