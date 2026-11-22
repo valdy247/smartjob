@@ -295,7 +295,7 @@ export function AIAgentWizard({initial,onSave,onCancel,saving=false,initialStep=
       <Text style={styles.backText}>Guardar borrador</Text></Pressable>:null}
     <Pressable accessibilityRole="button" disabled={saving} onPress={next}
       style={[styles.forward,saving?{opacity:.6}:null]}>
-      <Text style={styles.forwardText}>{step===steps.length-1?"Guardar agente":saving?"Guardando…":"Continuar"}</Text>
+      <Text style={styles.forwardText}>{step===steps.length-1?"Guardar agente":saving?"Guardando…":""}</Text>
       <Ionicons name={step===steps.length-1?"checkmark":"arrow-forward"} size={17} color="#FFF"/>
     </Pressable>
   </View>
