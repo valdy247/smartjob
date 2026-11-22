@@ -60,7 +60,11 @@ async function createTerraStory(prompt:string):Promise<StickmanStory>{
   body:JSON.stringify({prompt,confirmCost:true})
  });
  const data=await response.json().catch(()=>null);
- if(!response.ok)throw Error(data?.error==="terra_gateway_paid_credits_required"?"GPT Terra requiere créditos de pago en Vercel AI Gateway. No se ha activado ningún gasto.":
+ if(!response.ok)throw Error(data?.error==="openai_key_not_configured"?"Falta configurar OPENAI_API_KEY en Vercel Preview.":
+  data?.error==="openai_key_invalid"?"La clave de OpenAI no es válida.":
+  data?.error==="openai_quota_or_rate_limit"?"OpenAI rechazó la solicitud por cuota o límite temporal.":
+  data?.error==="openai_request_failed"?"OpenAI no pudo procesar la solicitud.":
+  data?.error==="terra_gateway_paid_credits_required"?"GPT Terra requiere créditos de pago en Vercel AI Gateway. No se ha activado ningún gasto.":
   data?.error==="terra_credits_exhausted"?"No hay créditos disponibles para GPT Terra.":
   data?.error==="terra_rate_limited"?"Terra recibió demasiadas solicitudes. Intenta más tarde.":
   data?.error==="motion_limit"?"Límite de pruebas alcanzado.":
