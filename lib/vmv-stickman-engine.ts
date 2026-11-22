@@ -329,9 +329,11 @@ function drawImageScene(ctx:CanvasRenderingContext2D,scene:StickmanScene,local:n
  const cover=Math.max(540/img.naturalWidth,960/img.naturalHeight);
  const scale=cover*zoom;
  const focalX=camera?.focusX??270,focalY=camera?.focusY??435;
- const x=270-focalX*scale/cover,y=480-focalY*scale/cover;
+ const width=img.naturalWidth*scale,height=img.naturalHeight*scale;
+ const x=Math.max(540-width,Math.min(0,270-focalX*zoom));
+ const y=Math.max(960-height,Math.min(0,480-focalY*zoom));
  ctx.save();ctx.beginPath();ctx.rect(0,0,540,960);ctx.clip();
- ctx.drawImage(img,x,y,img.naturalWidth*scale,img.naturalHeight*scale);
+ ctx.drawImage(img,x,y,width,height);
  ctx.restore();
  // Readability overlays, separated from the camera transformation.
  const shade=ctx.createLinearGradient(0,0,0,960);
