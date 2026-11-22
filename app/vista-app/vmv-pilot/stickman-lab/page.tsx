@@ -1570,6 +1570,14 @@ export default function StickmanLabPage(){
   returnTo="/vista-app/vmv-pilot/stickman-lab"/>:
   <main className={css.page}><p>La autenticación no está configurada en esta versión de prueba.</p></main>;
  return <main className={css.page}>
+  {projectSwitching?<div className={css.loadingOverlay} role="status" aria-live="polite">
+   <div className={css.loadingScreen}>
+    <span className={css.loadingLogo}><FolderOpen size={25}/></span>
+    <LoaderCircle className={css.spin} size={34}/>
+    <strong>Abriendo tu proyecto</strong>
+    <span>Preparando escenas, clips y edición…</span>
+   </div>
+  </div>:null}
   <div className={css.shell}>
    <header className={css.header}>
     <button type="button" aria-label="Volver al asistente" onClick={()=>router.push("/vista-app/vmv-pilot")}>
