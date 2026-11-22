@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
 import {useRouter} from "next/navigation";
-import {ArrowLeft,ArrowRight,CalendarDays,Check,Clock3,History,LoaderCircle,Plus,Target,Volume2,VolumeX,Subtitles,WandSparkles} from "lucide-react";
+import {ArrowLeft,ArrowRight,CalendarDays,Check,Clock3,History,LoaderCircle,Plus,Target,Volume2,VolumeX,Subtitles,WandSparkles,Lightbulb,FlaskConical,Landmark,Gamepad2,BookOpen,BriefcaseBusiness,Cpu,UsersRound,Pencil,Smile,GraduationCap,Heart,ShoppingBag,PartyPopper} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
@@ -17,10 +17,26 @@ type Pilot={id:string;niche:string;audience:string;goal:string;style:Style;frequ
  monthly_budget_cents:number;delivery:string;status:string;created_at:string;
  research_scan_id:string|null;creative_seed:string;research_video_id:string};
 const goals=[
- ["Atraer clientes","Attract customers"],
- ["Conseguir reservas","Get bookings"],
- ["Generar ventas","Drive sales"],
- ["Hacer crecer mi marca","Grow my brand"]
+ ["Entretener","Entertain"],["Enseñar","Teach"],["Informar","Inform"],
+ ["Inspirar","Inspire"],["Promocionar","Promote"],["Vender","Sell"]
+] as const;
+const niches=[
+ {es:"Curiosidades",en:"Fun facts",Icon:Lightbulb},
+ {es:"Ciencia",en:"Science",Icon:FlaskConical},
+ {es:"Historia",en:"History",Icon:Landmark},
+ {es:"Tecnología",en:"Technology",Icon:Cpu},
+ {es:"Entretenimiento",en:"Entertainment",Icon:Gamepad2},
+ {es:"Educación",en:"Education",Icon:BookOpen},
+ {es:"Negocios",en:"Business",Icon:BriefcaseBusiness}
+] as const;
+const audiences=[
+ {es:"Todos",en:"Everyone",value:"Público general",Icon:UsersRound},
+ {es:"Niños",en:"Kids",value:"Niños",Icon:Smile},
+ {es:"Adolescentes",en:"Teens",value:"Adolescentes",Icon:Gamepad2},
+ {es:"Jóvenes",en:"Young adults",value:"Jóvenes",Icon:GraduationCap},
+ {es:"Adultos",en:"Adults",value:"Adultos",Icon:UsersRound},
+ {es:"Familias",en:"Families",value:"Familias",Icon:Heart},
+ {es:"Emprendedores",en:"Entrepreneurs",value:"Emprendedores",Icon:ShoppingBag}
 ] as const;
 const stylesOptions:{id:Style;label:string;preview:"realistic"|"cinematic"|"cartoon"|"stickman"}[]=[
  {id:"stickman",label:"Stickman",preview:"stickman"},
@@ -28,7 +44,7 @@ const stylesOptions:{id:Style;label:string;preview:"realistic"|"cinematic"|"cart
  {id:"animated",label:"Cartoon",preview:"cartoon"},
  {id:"cinematic",label:"Cinemático",preview:"cinematic"}
 ];
-const defaults={id:"",niche:"",audience:"Público general",goal:"Hacer crecer mi marca",
+const defaults={id:"",niche:"",audience:"Público general",goal:"Entretener",
  style:"stickman" as Style,frequency:3,monthly_budget_cents:0,
  creative_seed:"",research_video_id:"",research_scan_id:null as string|null,
  seconds:60 as 15|30|60,narration:true,subtitles:true};
@@ -41,6 +57,7 @@ export default function VMVPilotPage(){
  const [form,setForm]=useState(defaults),[approved,setApproved]=useState(false);
  const [pilots,setPilots]=useState<Pilot[]>([]);
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
+ const [customNiche,setCustomNiche]=useState(false),[customAudience,setCustomAudience]=useState(false);
  const [error,setError]=useState("");
  const update=(changes:Partial<typeof defaults>)=>setForm(prev=>({...prev,...changes}));
  const token=async()=>{
@@ -67,14 +84,14 @@ export default function VMVPilotPage(){
   finally{setLoading(false);}
  };
  useEffect(()=>{void refresh();},[]);
- const start=()=>{setForm(defaults);setStep(0);setError("");setApproved(false);setScreen("create");};
+ const start=()=>{setForm(defaults);setStep(0);setCustomNiche(false);setCustomAudience(false);setError("");setApproved(false);setScreen("create");};
  const edit=(pilot:Pilot)=>{
   setForm({...defaults,id:pilot.id,niche:pilot.niche,audience:pilot.audience,
    goal:pilot.goal,style:pilot.style,frequency:pilot.frequency,
    monthly_budget_cents:pilot.monthly_budget_cents||0,
    creative_seed:pilot.creative_seed||"",research_video_id:pilot.research_video_id||"",
    research_scan_id:pilot.research_scan_id||null});
-  setStep(8);setError("");setApproved(false);setScreen("create");
+  setStep(8);setCustomNiche(false);setCustomAudience(false);setError("");setApproved(false);setScreen("create");
  };
  const back=()=>{
   setError("");
@@ -135,25 +152,37 @@ export default function VMVPilotPage(){
   {screen==="create"?<>
    <div className={css.progress}>{step+1} / 9</div>
    <h1>{titles[step]}</h1>
-   {step===0?<div className={css.inputPanel}>
+   {step===0?customNiche?<div className={css.inputPanel}>
     <input autoFocus value={form.niche} maxLength={160}
-     placeholder={L("Ej. Curiosidades del universo","e.g. Space curiosities")}
+     placeholder={L("Tu nicho","Your niche")}
      onChange={e=>update({niche:e.target.value,creative_seed:"",research_video_id:"",research_scan_id:null})}
      onKeyDown={e=>{if(e.key==="Enter"&&form.niche.trim().length>=3)setStep(1);}}/>
     <button type="button" className={css.arrow} aria-label={L("Siguiente","Next")}
      disabled={form.niche.trim().length<3} onClick={()=>setStep(1)}><ArrowRight/></button>
-   </div>:null}
+   </div>:<div className={css.optionGrid}>{niches.map(({es, en:english,Icon})=>
+    <button type="button" key={es} onClick={()=>{update({niche:es,creative_seed:"",research_video_id:"",research_scan_id:null});setStep(1);}}>
+     <Icon size={23}/><strong>{en?english:es}</strong>
+    </button>)}
+    <button type="button" onClick={()=>{update({niche:""});setCustomNiche(true);}}>
+     <Pencil size={23}/><strong>{L("Otro","Other")}</strong>
+    </button></div>:null}
    {step===1?<div className={css.choices}>{goals.map(([es,english])=>
     <button type="button" key={es} onClick={()=>{update({goal:es});setStep(2);}}>
      <Target size={18}/>{en?english:es}</button>)}</div>:null}
-   {step===2?<div className={css.inputPanel}>
+   {step===2?customAudience?<div className={css.inputPanel}>
     <input autoFocus value={form.audience} maxLength={180}
-     placeholder={L("Ej. Jóvenes interesados en ciencia","e.g. Young people interested in science")}
+     placeholder={L("Tu público","Your audience")}
      onChange={e=>update({audience:e.target.value})}
      onKeyDown={e=>{if(e.key==="Enter"&&form.audience.trim().length>=3)setStep(3);}}/>
     <button type="button" className={css.arrow} aria-label={L("Siguiente","Next")}
      disabled={form.audience.trim().length<3} onClick={()=>setStep(3)}><ArrowRight/></button>
-   </div>:null}
+   </div>:<div className={css.optionGrid}>{audiences.map(({es,en:english,value,Icon})=>
+    <button type="button" key={es} onClick={()=>{update({audience:value});setStep(3);}}>
+     <Icon size={23}/><strong>{en?english:es}</strong>
+    </button>)}
+    <button type="button" onClick={()=>{update({audience:""});setCustomAudience(true);}}>
+     <Pencil size={23}/><strong>{L("Otro","Other")}</strong>
+    </button></div>:null}
    {step===3?<div className={css.styleGrid}>{stylesOptions.map(item=>
     <button key={item.id} type="button" onClick={()=>{update({style:item.id});setStep(4);}}>
      <Preview id={item.preview}/><strong>{item.label}</strong>
