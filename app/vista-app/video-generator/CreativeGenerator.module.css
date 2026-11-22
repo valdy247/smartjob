@@ -1,0 +1,36 @@
+.flow{width:min(720px,100%);margin:0 auto;padding:12px 0 48px;color:#251a37;font-family:Inter,"DM Sans",system-ui,sans-serif}
+.flow h2{font-size:clamp(23px,4vw,32px);letter-spacing:-.045em;line-height:1.15;margin:18px 0 23px;font-weight:800}
+.progress{display:flex;justify-content:space-between;gap:12px;color:#8a78a2;font-size:12px;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.style{border:1px solid #e6d9f0;background:#fff;border-radius:21px;padding:9px;min-width:0;display:flex;flex-direction:column;gap:9px;align-items:stretch;cursor:pointer;overflow:hidden;color:inherit;transition:transform .16s ease,box-shadow .16s ease,border-color .16s}
+.style:hover,.tile:hover{transform:translateY(-2px);border-color:#bb97e7;box-shadow:0 8px 24px #55398716}
+.style:focus-visible,.tile:focus-visible,.actions button:focus-visible,.primary:focus-visible{outline:3px solid #9258d6;outline-offset:3px}
+.style strong{padding:4px 4px 8px;font-size:14px;text-align:center}
+.sample{width:100%;height:auto;aspect-ratio:5/3;display:block;border-radius:13px;object-fit:cover}
+.tile{min-height:151px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:17px;border:1px solid #e6d9f0;border-radius:22px;background:#fff;color:#60419b;cursor:pointer;font-size:15px;padding:18px}
+.tile strong{color:#251a37}
+.drop{border:2px dashed #cbb2e9;border-radius:20px;min-height:186px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#7044ae;cursor:pointer;background:#fbf8ff;font-size:15px;font-weight:700}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.actions{display:grid;gap:12px}
+.actions button{border:1px solid #e6d9f0;border-radius:16px;background:#fff;min-height:62px;padding:14px 19px;display:flex;align-items:center;justify-content:space-between;font-weight:700;color:#251a37;text-align:left;cursor:pointer}
+.actions button svg{color:#a98cc8}
+.input{display:block;width:100%;resize:vertical;border:1px solid #e6d9f0;border-radius:18px;padding:17px;background:#fff;color:#24172f;min-height:146px;line-height:1.55;font-size:15px;margin:0 0 12px}
+.input:focus{outline:2px solid #9c74d5}
+.primary{border:none;background:linear-gradient(110deg,#8c56cd,#a66add);color:white;border-radius:16px;min-height:51px;padding:13px 20px;font-weight:800;text-align:center;cursor:pointer;display:flex;gap:10px;align-items:center;justify-content:center;text-decoration:none;width:100%;margin-top:16px;font-size:14px}
+.primary:disabled{opacity:.55;cursor:not-allowed}
+.secondary{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-top:12px;border:1px solid #e7daf0;background:#fff;border-radius:14px;padding:13px;color:#6a4698;text-decoration:none;font-size:14px;font-weight:700;cursor:pointer}
+.preview{display:block;max-height:520px;max-width:100%;width:auto;margin:auto;border-radius:16px;object-fit:contain}
+.reference{display:block;max-height:160px;max-width:100%;width:auto;border-radius:14px;object-fit:contain;margin:0 auto 14px}
+.advanced{margin:18px 0 12px;border-top:1px solid #e9e2ed;padding-top:12px;color:#867596;font-size:12px}
+.advanced summary{cursor:pointer;font-weight:700}
+.advanced label{display:block;margin:12px 0 6px}
+.smallChoices{display:flex;gap:9px;flex-wrap:wrap}
+.smallChoices button{border:1px solid #e0d8eb;background:#fff;color:#5c4773;border-radius:12px;padding:9px 13px;cursor:pointer}
+.smallChoices button[aria-pressed=true]{background:#efe5fb;border-color:#b893e8;color:#673da2}
+.consent{display:flex;align-items:center;gap:10px;font-size:12px;color:#695d75;margin-top:16px;cursor:pointer}
+.consent input{accent-color:#8c56cd;width:17px;height:17px}
+.error{margin-top:14px;border:1px solid #f0c1c7;border-radius:12px;color:#9b273a;background:#fff6f6;padding:10px 13px;font-size:12px;overflow-wrap:anywhere}
+.muted{font-size:13px;color:#81738e;text-align:center}
+.spin{animation:vmvSpin 1s linear infinite}
+@keyframes vmvSpin{to{transform:rotate(360deg)}}
+@media(min-width:680px){.grid{gap:17px}.style{padding:11px}.style strong{font-size:16px}.tile{min-height:174px}}
