@@ -52,13 +52,13 @@ async function loadVoice(phrases:string[],voice:"alloy"|"nova"):Promise<ArrayBuf
 type SpeechAlignment={characters:string[];character_start_times_seconds:number[];character_end_times_seconds:number[]};
 type ContinuousSpeech={audio:ArrayBuffer;alignment:SpeechAlignment;duration:number;sceneEnds?:number[]|null};
 type CaptionCue={start:number;end:number;text:string};
-async function loadContinuousVoice(phrases:string[]):Promise<ContinuousSpeech>{
+async function loadContinuousVoice(phrases:string[],provider:"openai"|"elevenlabs"="elevenlabs",voiceId=""):Promise<ContinuousSpeech>{
  const sb=getSupabase();if(!sb)throw Error("Inicia sesión para crear la narración.");
  const {data:{session}}=await sb.auth.getSession();
  if(!session?.access_token)throw Error("Inicia sesión para crear la narración.");
  const response=await fetch("/api/video-generator/speech/continuous",{
   method:"POST",cache:"no-store",headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
-  body:JSON.stringify({scenes:phrases,confirmCost:true})
+  body:JSON.stringify({scenes:phrases,confirmCost:true,provider,voiceId:voiceId||undefined})
  });
  const result=await response.json().catch(()=>null);
  if(!response.ok)throw Error(
@@ -229,6 +229,10 @@ async function minimaxRequest(accessToken:string,body:Record<string,unknown>){
 }
 
 const MOTION_SCENES=12;
+type PilotMotionHandoff={requestId:string;createdAt:number;prompt:string;pilotId:string;
+ topic:string;goal:string;audience:string;idea:string;language:string;style:string;
+ seconds:number;subtitles:boolean;narration:boolean;voiceProvider:string;voiceId:string;confirmedCost:boolean};
+const PILOT_MOTION_HANDOFF_KEY="vmv-pilot-motion-handoff-v1";
 type DirectorBeat={speech:string;caption:string;imagePrompt:string;motionPrompt:string};
 type DirectorFrame={imageUrl:string;referencePath:string;prompt?:string};
 type DirectorPlan={prompt:string;title:string;storyBible:string;scenes:DirectorBeat[];frames:DirectorFrame[];
@@ -460,6 +464,10 @@ export default function StickmanLabPage(){
  const [authClient,setAuthClient]=useState<SupabaseClient|null>(null);
  const [topic,setTopic]=useState<StickmanTopic>("space");
  const [customPrompt,setCustomPrompt]=useState("");
+ const [pilotAuto,setPilotAuto]=useState(false);
+ const [pilotVoiceProvider,setPilotVoiceProvider]=useState<"openai"|"elevenlabs">("elevenlabs");
+ const [pilotVoiceId,setPilotVoiceId]=useState("");
+ const autoStartRef=useRef(false);
  const [customMode,setCustomMode]=useState(false);
  const [terraStory,setTerraStory]=useState<StickmanStory|null>(null);
  const [language,setLanguage]=useState<StickmanLanguage>("es");
@@ -526,6 +534,26 @@ export default function StickmanLabPage(){
  useEffect(()=>()=>{if(urlRef.current)URL.revokeObjectURL(urlRef.current);if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);},[]);
  useEffect(()=>{
   try{
+   const requestId=new URLSearchParams(window.location.search).get("pilotMotion");
+   const handoff=JSON.parse(sessionStorage.getItem(PILOT_MOTION_HANDOFF_KEY)||"null") as PilotMotionHandoff|null;
+   if(requestId&&handoff?.requestId===requestId&&handoff.confirmedCost===true&&
+    handoff.createdAt>Date.now()-2*60*60*1000&&handoff.createdAt<=Date.now()+30000&&
+    handoff.seconds===60&&handoff.style==="stickman"&&
+    ["es","en"].includes(handoff.language)&&handoff.prompt.length>=8&&handoff.prompt.length<=2000){
+    const old=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
+    if(old?.prompt&&old.prompt!==handoff.prompt){
+     try{localStorage.setItem("vmv-motion-archive-"+handoff.requestId,
+      JSON.stringify({plan:old,seedance:readSeedance(old.prompt),savedAt:Date.now()}));}catch{}
+    }
+    setCustomPrompt(handoff.prompt);setCustomMode(true);
+    setLanguage(handoff.language as StickmanLanguage);
+    setSubtitles(handoff.subtitles);setWithVoice(handoff.narration);
+    setPilotVoiceProvider(handoff.voiceProvider==="openai"?"openai":"elevenlabs");
+    setPilotVoiceId(handoff.voiceId||"");
+    setDirectorPlan(readDirectorPlan(handoff.prompt));
+    setSavedClipCount(readSeedance(handoff.prompt).urls.filter(Boolean).length);
+    setPilotAuto(true);return;
+   }
    const saved=readSavedMotion(DIRECTOR_PLAN_KEY) as DirectorPlan|null;
    if(saved?.prompt&&typeof saved.prompt==="string"&&saved.scenes?.length===MOTION_SCENES){
     // Migrate this tab's existing project into cross-tab recovery storage.
@@ -631,12 +659,16 @@ export default function StickmanLabPage(){
     plan.frames.push({imageUrl:image.imageUrl,referencePath:image.referencePath,prompt:plan.scenes[i].imagePrompt});
     saveDirectorPlan(plan);setDirectorPlan({...plan,frames:[...plan.frames]});
    }
-   setDirectorStatus("Revisa las 12 escenas y apruébalas antes de animar");
+   if(pilotAuto&&plan.frames.length===MOTION_SCENES){
+    plan.approved=Array(MOTION_SCENES).fill(true);
+    saveDirectorPlan(plan);setDirectorPlan({...plan,approved:[...plan.approved]});
+   }
+   setDirectorStatus(pilotAuto?"Storyboard listo · el piloto preparará las animaciones":"Revisa las 12 escenas y apruébalas antes de animar");
   }catch(e){
    setError(e instanceof Error?e.message:"No se pudieron preparar las imágenes.");
    setDirectorStatus("");
   }finally{directorBusyRef.current=false;setDirectorBusy(false);}
- },[customPrompt]);
+ },[customPrompt,pilotAuto]);
  const updateScenePrompt=useCallback((index:number,prompt:string)=>{
   setDirectorPlan(current=>{
    if(!current)return current;
@@ -736,7 +768,9 @@ export default function StickmanLabPage(){
    if(!session?.access_token)throw Error("Inicia sesión para generar el video.");
    const accessToken=session.access_token;
    if(withVoice){
-    const check=await fetch("/api/video-generator/speech/continuous",{headers:{Authorization:"Bearer "+accessToken},cache:"no-store"});
+    const params=new URLSearchParams({provider:pilotAuto?pilotVoiceProvider:"elevenlabs"});
+    if(pilotAuto&&pilotVoiceId)params.set("voiceId",pilotVoiceId);
+    const check=await fetch("/api/video-generator/speech/continuous?"+params.toString(),{headers:{Authorization:"Bearer "+accessToken},cache:"no-store"});
     const config=await check.json().catch(()=>null);
     if(!check.ok||!config?.configured)throw Error(
      config?.error==="elevenlabs_voice_unavailable"?"ElevenLabs no reconoce la voz configurada. Establece una voz disponible en ELEVENLABS_VOICE_ID; tus 12 clips siguen guardados.":
@@ -776,7 +810,8 @@ export default function StickmanLabPage(){
     if(!completed)throw Error("La escena "+(beat+1)+" continúa procesándose. Pulsa Dar movimiento para recuperar su estado.");
    }
    setDirectorStatus("Preparando narración, subtítulos y montaje");
-   const speech=withVoice?await loadContinuousVoice(plan.scenes.map(scene=>scene.speech)):null;
+   const speech=withVoice?await loadContinuousVoice(plan.scenes.map(scene=>scene.speech),
+    pilotAuto?pilotVoiceProvider:"elevenlabs",pilotAuto?pilotVoiceId:""):null;
    const localUrls:string[]=[];
    let video:Blob,extension:"mp4"|"webm";
    try{
@@ -789,7 +824,17 @@ export default function StickmanLabPage(){
    setDirectorStatus("Video terminado · 60 segundos"+(withVoice?" con voz":""));
   }catch(e){setError(e instanceof Error?e.message:"No se pudo terminar el video.");setDirectorStatus("");}
   finally{directorBusyRef.current=false;seedBusyRef.current=false;setDirectorBusy(false);setSeedBusy(false);}
- },[customPrompt,withVoice,voice,subtitles]);
+ },[customPrompt,withVoice,voice,subtitles,pilotAuto,pilotVoiceProvider,pilotVoiceId]);
+ useEffect(()=>{
+  if(!pilotAuto||auth!=="signed_in"||customPrompt.length<8||autoStartRef.current)return;
+  autoStartRef.current=true;
+  void (async()=>{
+   await prepareStoryboard();
+   const plan=readDirectorPlan(customPrompt);
+   if(plan?.frames.length===MOTION_SCENES&&plan.approved?.every(Boolean))
+    await animateApproved();
+  })();
+ },[pilotAuto,auth,customPrompt,prepareStoryboard,animateApproved]);
  const generate=useCallback(async()=>{
   if(renderingRef.current)return;
   const target=canvas.current;
