@@ -45,7 +45,7 @@ const TAU=Math.PI*2;
 const PI=Math.PI;
 const oscillate=(n:number)=>Math.sin(n*TAU);
 const clamp=(n:number,a:number,b:number)=>Math.max(a,Math.min(b,n));
-function ellipse(ctx:CanvasRenderingContext2D,x:number,y:number,rx:number,ry:number,color:string){
+function ellipse(ctx:CanvasRenderingContext2D,x:number,y:number,rx:number,ry:number,color:string|CanvasGradient){
  ctx.beginPath();ctx.ellipse(x,y,Math.max(.1,rx),Math.max(.1,ry),0,0,TAU);ctx.fillStyle=color;ctx.fill();
 }
 function line(ctx:CanvasRenderingContext2D,points:number[],color:string,width=5){
@@ -131,9 +131,9 @@ function earth(ctx:CanvasRenderingContext2D,x:number,y:number,r:number,t:number)
  ctx.save();ctx.translate(x,y);
  const glow=ctx.createRadialGradient(0,0,r*.4,0,0,r*1.55);
  glow.addColorStop(0,"rgba(120,205,253,.28)");glow.addColorStop(1,"rgba(120,205,253,0)");
- ellipse(ctx,0,0,r*1.55,r*1.55,glow as unknown as string);
+ ellipse(ctx,0,0,r*1.55,r*1.55,glow);
  const sea=ctx.createLinearGradient(-r,-r,r,r);sea.addColorStop(0,"#6ed4ff");sea.addColorStop(1,"#2c89de");
- ellipse(ctx,0,0,r,r,sea as unknown as string);
+ ellipse(ctx,0,0,r,r,sea);
  ctx.save();ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.clip();
  const shift=(t*42)%(r*2.8);
  for(let k=-2;k<3;k++){
@@ -153,7 +153,7 @@ function earth(ctx:CanvasRenderingContext2D,x:number,y:number,r:number,t:number)
 function jupiter(ctx:CanvasRenderingContext2D,x:number,y:number,r:number,t:number){
  ctx.save();ctx.translate(x,y);
  const base=ctx.createLinearGradient(-r,-r,r,r);base.addColorStop(0,"#f1d6ac");base.addColorStop(1,"#d39175");
- ellipse(ctx,0,0,r,r,base as unknown as string);
+ ellipse(ctx,0,0,r,r,base);
  ctx.save();ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.clip();
  const shift=(t*15)%45;
  for(let i=-8;i<9;i++){
@@ -176,7 +176,7 @@ function raceCar(ctx:CanvasRenderingContext2D,x:number,y:number,s:number,t:numbe
  line(ctx,[-168,-10,-135,-10],"#352d44",12);
  // body is original design, no logo or sponsor livery
  rounded(ctx,-170,-40,350,52,17,"#6544a5");
- ctx.beginPath();ctx.moveTo(-65,-40);ctx.lineTo(-22,-101);ctx.lineTo(49,-101);ctx.lineTo(95,-40);ctx.close();
+ ctx.beginPath();ctx.moveTo(-65,-40);ctx.lineTo(-22,-101);ctx.lineTo(49,-101);ctx.lineTo(95,-40);ctx.closePath();
  ctx.fillStyle="#916ade";ctx.fill();
  rounded(ctx,-157,-17,325,14,8,"#c9b5fc");
  line(ctx,[140,-80,140,-36,181,-36],"#34294c",10);
