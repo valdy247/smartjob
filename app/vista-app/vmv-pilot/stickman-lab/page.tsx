@@ -338,7 +338,7 @@ async function stitchSeedanceClips(urls:string[],voices:ArrayBuffer[]=[],caption
   return {blob,extension:format.extension};
  }finally{
   cancelAnimationFrame(raf);
-  if(recorder.state!=="inactive")recorder.stop();
+  if(recorder!==null){const finalRecorder=recorder as MediaRecorder;if(finalRecorder.state!=="inactive")finalRecorder.stop();}
   for(const video of videos){video.pause();video.removeAttribute("src");video.load();}
   stream.getTracks().forEach(track=>track.stop());
   if(audioContext)void audioContext.close();
