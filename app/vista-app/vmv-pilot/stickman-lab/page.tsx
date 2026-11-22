@@ -688,6 +688,11 @@ export default function StickmanLabPage(){
    const {data:{session}}=await client.auth.getSession();
    if(!session?.access_token)throw Error("Inicia sesión para generar el video.");
    const accessToken=session.access_token;
+   if(withVoice){
+    const check=await fetch("/api/video-generator/speech/continuous",{headers:{Authorization:"Bearer "+accessToken},cache:"no-store"});
+    const config=await check.json().catch(()=>null);
+    if(!check.ok||!config?.configured)throw Error("ElevenLabs aún no está configurado en Vercel Preview. No se iniciaron animaciones de pago.");
+   }
    const job=readSeedance(customPrompt);setSeedUrls(job.urls.filter(Boolean));
    for(let beat=0;beat<MOTION_SCENES;beat++){
     if(job.urls[beat])continue;
@@ -808,7 +813,8 @@ export default function StickmanLabPage(){
       checked={withVoice} onChange={e=>setWithVoice(e.target.checked)}/>
       <Volume2 size={15}/>{language==="es"?"Voz IA":"AI voice"}</label>
     </div>
-    {withVoice?<div className={css.voiceOptions}>
+    {withVoice&&customMode?<div className={css.voiceOptions}><strong>ElevenLabs · Narración continua</strong><small>Audio y subtítulos sincronizados</small></div>:null}
+    {withVoice&&!customMode?<div className={css.voiceOptions}>
      {(["alloy","nova"] as const).map(v=><button key={v} type="button"
       disabled={rendering} className={voice===v?css.selected:""} onClick={()=>setVoice(v)}>
       {v==="alloy"?"Alloy":"Nova"}</button>)}
