@@ -1,4 +1,5 @@
 import {NextRequest,NextResponse} from "next/server";
+import {randomUUID} from "node:crypto";
 import {authenticatedUser} from "@/lib/auth-server";
 import {videoAllowed,videoDb,videoHeaders} from "@/lib/vmv-video-generator";
 export const runtime="nodejs";
@@ -12,6 +13,9 @@ export async function POST(req:NextRequest){
  if(Number(req.headers.get("content-length")||0)>7000)return reply({error:"request_too_large"},413);
  const body=await req.json().catch(()=>null);
  const prompt=typeof body?.prompt==="string"?body.prompt.trim():"";
+ const movieMode=body?.mode==="storyframe";
+ const referencePath=typeof body?.referencePath==="string"?body.referencePath:"";
+ if(movieMode&&referencePath&&(!referencePath.startsWith(owner+"/")||!/^[-a-z0-9/]+\.jpg$/.test(referencePath)))return reply({error:"invalid_image_reference"},403);
  if(body?.confirmCost!==true||prompt.length<35||prompt.length>1800)return reply({error:"invalid_image_request"},400);
  if(!process.env.OPENAI_API_KEY)return reply({error:"openai_key_not_configured"},503);
  // One persistent quota slot per image prevents unrestricted paid image requests.
@@ -19,10 +23,24 @@ export async function POST(req:NextRequest){
  if(quotaError)return reply({error:"image_quota_unavailable"},503);
  if(claimed!==true)return reply({error:"image_daily_limit"},429);
  try{
-  const response=await fetch("https://api.openai.com/v1/images/generations",{
+  const db=videoDb();
+  let inputImage:Blob|null=null;
+  if(movieMode&&referencePath){
+   const downloaded=await db.storage.from("vmv-motion-frames-preview").download(referencePath);
+   if(downloaded.error||!downloaded.data)return reply({error:"image_reference_unavailable"},409);
+   inputImage=downloaded.data;
+  }
+  const form=inputImage?new FormData():null;
+  if(form){
+   form.set("model","gpt-image-1-mini");
+   form.set("prompt","Continue the SAME animated short and KEEP the cast, environment, lighting, color palette and artwork consistent with the supplied previous scene image. Change ONLY the on-screen action and character poses as described. Create the NEXT distinct five-second scene start frame, not a repeat of the previous shot. No captions or text. "+prompt);
+   form.set("size","1024x1536");form.set("quality","medium");form.set("output_format","jpeg");form.set("n","1");
+   form.set("image",inputImage!,"previous-scene.jpg");
+  }
+  const response=await fetch(inputImage?"https://api.openai.com/v1/images/edits":"https://api.openai.com/v1/images/generations",{
    method:"POST",cache:"no-store",signal:AbortSignal.timeout(105000),
-   headers:{"Content-Type":"application/json",Authorization:"Bearer "+process.env.OPENAI_API_KEY},
-   body:JSON.stringify({
+   headers:{...(form?{}:{"Content-Type":"application/json"}),Authorization:"Bearer "+process.env.OPENAI_API_KEY},
+   body:form??JSON.stringify({
     model:"gpt-image-1-mini",size:"1024x1536",quality:"medium",output_format:"jpeg",
     n:1,prompt:"One original 2D illustration frame for a vertical 9:16 cartoon movie. "+prompt
    })
@@ -48,6 +66,23 @@ export async function POST(req:NextRequest){
   const image=data?.data?.[0]?.b64_json;
   if(typeof image!=="string"||image.length<1000||image.length>8500000)
    return reply({error:"image_invalid_response"},502);
+  if(movieMode){
+   const bytes=Buffer.from(image,"base64");
+   if(bytes.length<1024||bytes.length>4500000)return reply({error:"image_size_unavailable"},502);
+   const bucket="vmv-motion-frames-preview";
+   const storage=db.storage;
+   const exists=await storage.getBucket(bucket);
+   if(exists.error){
+    const created=await storage.createBucket(bucket,{public:false,fileSizeLimit:5000000,allowedMimeTypes:["image/jpeg"]});
+    if(created.error&&!/already.exists|duplicate/i.test(created.error.message))return reply({error:"image_storage_unavailable"},503);
+   }
+   const imagePath=owner+"/"+randomUUID()+".jpg";
+   const uploaded=await storage.from(bucket).upload(imagePath,bytes,{contentType:"image/jpeg",upsert:false,cacheControl:"3600"});
+   if(uploaded.error)return reply({error:"image_storage_unavailable"},503);
+   const link=await storage.from(bucket).createSignedUrl(imagePath,7200);
+   if(link.error||!link.data?.signedUrl)return reply({error:"image_url_unavailable"},503);
+   return reply({imageUrl:link.data.signedUrl,referencePath:imagePath,mediaType:"image/jpeg"});
+  }
   return reply({imageBase64:image,mediaType:"image/jpeg"});
  }catch(error){
   console.warn("[vmv-motion-image]",error instanceof Error?error.name:"unknown");
