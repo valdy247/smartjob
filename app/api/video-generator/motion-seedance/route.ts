@@ -161,6 +161,10 @@ export async function POST(req:NextRequest){
  if(body?.action!=="start"||body?.confirmCost!==true)return reply({error:"cost_confirmation_required"},400);
  const prompt=typeof body?.prompt==="string"?body.prompt.trim():"";
  const beat=body?.beat;
+ const imagePath=typeof body?.imagePath==="string"?body.imagePath:"";
+ const motionPrompt=typeof body?.motionPrompt==="string"?body.motionPrompt.trim():"";
+ const storyBible=typeof body?.storyBible==="string"?body.storyBible.trim():"";
+ if(!imagePath.startsWith(owner+"/")||!/^[-a-z0-9/]+\.jpg$/.test(imagePath)||motionPrompt.length<18||motionPrompt.length>650||storyBible.length>1200)return reply({error:"storyboard_images_required"},400);
  if(!Number.isInteger(beat)||beat<0||beat>2)return reply({error:"invalid_scene_index"},400);
  if(prompt.length<8||prompt.length>500)return reply({error:"invalid_video_prompt"},400);
  if(!process.env.SUPABASE_SERVICE_ROLE_KEY&&!process.env.OPENAI_API_KEY)
@@ -169,9 +173,19 @@ export async function POST(req:NextRequest){
  if(quotaError)return reply({error:"motion_quota_unavailable"},503);
  if(claimed!==true)return reply({error:"motion_limit"},429);
  try{
+  const signed=await videoDb().storage.from("vmv-motion-frames-preview").createSignedUrl(imagePath,7200);
+  if(signed.error||!signed.data?.signedUrl)return reply({error:"storyboard_image_missing"},409);
   const result=await startVideo({
-   model:MODEL,prompt:cinematicPrompt(prompt,beat),duration:DURATION,
-   aspectRatio:"9:16",resolution:"1280x720"
+   model:MODEL,
+   prompt:{image:signed.data.signedUrl,text:[
+    "Animate this provided image as the first frame of a single five-second consecutive 2D cartoon scene.",
+    "The exact characters, environment, appearance and props IN THE IMAGE are immutable; do not redesign them.",
+    storyBible?"Fixed visual bible: "+storyBible:"",
+    "ANIMATE ONLY THIS SCENE: "+motionPrompt,
+    "Do not replay other scenes, restart the story, or add extra characters. Show real body and hand movement, physical interaction and expressive reactions.",
+    "Keep the same painted art style and cinematic composition. No added text, logos, captions or speech."
+   ].join(" ")},
+   duration:DURATION,aspectRatio:"9:16",resolution:"1280x720"
   });
   return reply({status:"pending",token:seal(owner,result.operation),model:MODEL,duration:DURATION,estimatedCostUsd:COST_USD,beat});
  }catch(e){
