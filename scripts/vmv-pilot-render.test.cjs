@@ -18,7 +18,9 @@ const files=[
  "app/api/video-generator/pilot-voice-preview/route.ts",
  "lib/vmv-pilot-elevenlabs.ts",
  "lib/vmv-pilot-voice-config.ts",
- "lib/vmv-pilot-quality.ts"
+ "lib/vmv-pilot-quality.ts",
+ "app/vista-app/vmv-pilot/stickman-lab/page.tsx",
+ "lib/vmv-stickman-engine.ts"
 ];
 const source=Object.fromEntries(files.map(p=>[p,read(p)]));
 test("Video Pilot wizard and durable API parse TypeScript",()=>{
@@ -203,4 +205,45 @@ test("Only owner-specific completed MP4 variants are signed, preference uses PAT
  assert.match(dock,/Usar /);
  assert.match(dock,/videoUrls/);
  assert.match(dock,/preferred_model:variant/);
+});
+
+test("Custom Stickman lab uses an independent 2D engine with real geometric motion and 5s timelines",()=>{
+ const engine=source["lib/vmv-stickman-engine.ts"];
+ const page=source["app/vista-app/vmv-pilot/stickman-lab/page.tsx"];
+ assert.match(engine,/export const STICKMAN_SCENE_SECONDS=5/);
+ assert.match(engine,/export const STICKMAN_SECONDS=15/);
+ assert.match(engine,/type StickmanAction=/);
+ assert.match(engine,/action:"earth"/);
+ assert.match(engine,/action:"jupiter"/);
+ assert.match(engine,/action:"beach"/);
+ assert.match(engine,/function stickman\(/);
+ assert.match(engine,/function earth\(/);
+ assert.match(engine,/function jupiter\(/);
+ assert.match(engine,/function raceCar\(/);
+ assert.match(engine,/ctx\.rotate|Math\.sin|oscillate/);
+ assert.match(engine,/export function drawStickmanFrame/);
+ assert.doesNotMatch(engine,/runway|fal\.ai|minimax|fetch\(/i);
+ assert.match(page,/stickmanStory\(topic,language\)/);
+ assert.match(page,/drawStickmanFrame/);
+ assert.match(page,/canvas\.captureStream/);
+ assert.match(page,/new MediaRecorder/);
+ assert.match(page,/videoUrl/);
+ assert.match(page,/download=\{/);
+});
+test("The free preview never calls a paid generator; voice generation is opt-in",()=>{
+ const page=source["app/vista-app/vmv-pilot/stickman-lab/page.tsx"];
+ assert.match(page,/withVoice\?await loadVoice/);
+ assert.match(page,/confirmCost:true/);
+ assert.match(page,/voiceParts\.length/);
+ assert.match(page,/source\.start\(begin\+i\*5\)/);
+ assert.match(page,/speech\/scenes/);
+ assert.doesNotMatch(page,/image_to_video|runwayStart|GEN4/);
+});
+test("The lab is reachable from Pilot and does not change the existing paid wizard",()=>{
+ const ui=source["app/vista-app/vmv-pilot/page.tsx"];
+ assert.match(ui,/stickman-lab/);
+ assert.match(ui,/Probar nuestro motor Stickman/);
+ assert.match(ui,/Probar motor Stickman propio/);
+ assert.match(ui,/PilotTrendStep/);
+ assert.match(ui,/Generar ambos videos/);
 });
