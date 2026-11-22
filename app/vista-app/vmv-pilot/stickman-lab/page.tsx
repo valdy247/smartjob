@@ -252,14 +252,30 @@ async function loadSeedanceForStitching(accessToken:string,token:string):Promise
  if(bytes.size<1000||bytes.size>26000000)throw Error("El clip recibido está incompleto.");
  return URL.createObjectURL(new Blob([bytes],{type:"video/mp4"}));
 }
-async function stitchSeedanceClips(urls:string[]):Promise<{blob:Blob;extension:"mp4"|"webm"}>{
+async function stitchSeedanceClips(urls:string[],voices:ArrayBuffer[]=[],captions:string[]=[],showSubtitles=false):Promise<{blob:Blob;extension:"mp4"|"webm"}>{
  if(urls.length!==3)throw Error("Faltan clips para unir.");
  const format=chosenFormat();
  const canvas=document.createElement("canvas");canvas.width=720;canvas.height=1280;
  const ctx=canvas.getContext("2d",{alpha:false});
  if(!ctx||!canvas.captureStream)throw Error("Este navegador no puede unir videos.");
  const stream=canvas.captureStream(24);
- const recorder=new MediaRecorder(stream,{mimeType:format.mime,videoBitsPerSecond:2800000});
+ let audioContext:AudioContext|null=null;
+ if(voices.length){
+  audioContext=new AudioContext();
+  await audioContext.resume();
+  const decoded=await Promise.all(voices.map(b=>audioContext!.decodeAudioData(b.slice(0))));
+  const mix=audioContext.createMediaStreamDestination();
+  const begin=audioContext.currentTime+.5;
+  decoded.forEach((buffer,i)=>{
+   const rate=Math.max(1,buffer.duration/4.9);
+   if(rate>1.8)throw Error("La narración de la escena "+(i+1)+" es demasiado larga para el video.");
+   const source=audioContext!.createBufferSource();
+   source.buffer=buffer;source.playbackRate.value=rate;source.connect(mix);
+   source.start(begin+i*5);
+  });
+  for(const track of mix.stream.getAudioTracks())stream.addTrack(track);
+ }
+ const recorder=new MediaRecorder(stream,{mimeType:format.mime,videoBitsPerSecond:2800000,audioBitsPerSecond:128000});
  const chunks:BlobPart[]=[];
  const finished=new Promise<Blob>((resolve,reject)=>{
   recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
@@ -283,7 +299,7 @@ async function stitchSeedanceClips(urls:string[]):Promise<{blob:Blob;extension:"
   }
   ctx.fillStyle="#111";ctx.fillRect(0,0,720,1280);
   recorder.start(300);
-  for(const video of videos){
+  for(const [index,video] of videos.entries()){
    video.currentTime=0;
    await video.play();
    const duration=Number.isFinite(video.duration)?Math.min(5,video.duration):5;
@@ -293,6 +309,21 @@ async function stitchSeedanceClips(urls:string[]):Promise<{blob:Blob;extension:"
       const ratio=Math.max(canvas.width/video.videoWidth,canvas.height/video.videoHeight);
       const width=video.videoWidth*ratio,height=video.videoHeight*ratio;
       ctx.drawImage(video,(720-width)/2,(1280-height)/2,width,height);
+      if(showSubtitles&&captions[index]){
+       const text=captions[index].trim();
+       ctx.font="bold 36px system-ui, sans-serif";ctx.textAlign="center";
+       ctx.lineWidth=7;ctx.strokeStyle="#080808";ctx.fillStyle="#ffffff";
+       const words=text.split(/\\s+/),lines:string[]=[];let line="";
+       for(const word of words){
+        const candidate=line?line+" "+word:word;
+        if(ctx.measureText(candidate).width>610&&line){lines.push(line);line=word;}else line=candidate;
+       }
+       if(line)lines.push(line);
+       lines.slice(0,3).forEach((textLine,n)=>{
+        const y=1070+(n-Math.min(lines.length-1,2))*47;
+        ctx.strokeText(textLine,360,y);ctx.fillText(textLine,360,y);
+       });
+      }
       if(video.currentTime>=duration-.05||video.ended){resolve();return;}
       raf=requestAnimationFrame(frame);
      }catch{reject(Error("El navegador no pudo componer uno de los clips."));}
@@ -309,6 +340,7 @@ async function stitchSeedanceClips(urls:string[]):Promise<{blob:Blob;extension:"
   if(recorder.state!=="inactive")recorder.stop();
   for(const video of videos){video.pause();video.removeAttribute("src");video.load();}
   stream.getTracks().forEach(track=>track.stop());
+  if(audioContext)void audioContext.close();
  }
 }
 
@@ -484,17 +516,18 @@ export default function StickmanLabPage(){
     }
     if(!completed)throw Error("La escena "+(beat+1)+" sigue procesándose. Pulsa Generar video para recuperar su estado, sin pagarla otra vez.");
    }
-   setDirectorStatus("4/4 · Uniendo los tres clips");
+   setDirectorStatus("4/4 · Preparando narración y montaje");
+   const speechParts=withVoice?await loadVoice(plan.scenes.map(scene=>scene.speech),voice):[];
    const localUrls:string[]=[];
    let video:Blob,extension:"mp4"|"webm";
    try{
     for(let i=0;i<3;i++)localUrls.push(await loadSeedanceForStitching(accessToken,job.tokens[i]));
-    ({blob:video,extension}=await stitchSeedanceClips(localUrls));
+    ({blob:video,extension}=await stitchSeedanceClips(localUrls,speechParts,plan.scenes.map(scene=>scene.caption),subtitles));
    }finally{localUrls.forEach(url=>URL.revokeObjectURL(url));}
    const finalUrl=URL.createObjectURL(video);
    if(seedJoinedRef.current)URL.revokeObjectURL(seedJoinedRef.current);
    seedJoinedRef.current=finalUrl;setSeedJoined(finalUrl);setExtension(extension);
-   setDirectorStatus("Video terminado · 15 segundos");
+   setDirectorStatus("Video terminado · 15 segundos"+(withVoice?" con voz":""));
   }catch(e){
    setError(e instanceof Error?e.message:"No se pudo terminar el video.");
    setDirectorStatus("");
@@ -502,7 +535,7 @@ export default function StickmanLabPage(){
    directorBusyRef.current=false;seedBusyRef.current=false;
    setDirectorBusy(false);setSeedBusy(false);
   }
- },[customPrompt]);
+ },[customPrompt,withVoice,voice,subtitles]);
  const generate=useCallback(async()=>{
   if(renderingRef.current)return;
   const target=canvas.current;
