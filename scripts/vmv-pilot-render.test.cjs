@@ -246,7 +246,7 @@ test("The free preview never calls a paid generator; voice generation is opt-in"
 test("The lab is reachable from Pilot and does not change the existing paid wizard",()=>{
  const ui=source["app/vista-app/vmv-pilot/page.tsx"];
  assert.match(ui,/stickman-lab/);
- assert.match(ui,/Abrir laboratorio manual de VMV Motion/);
+ assert.match(ui,/Abrir VMV Motion/);
  assert.match(ui,/Crear con VMV Motion/);
  assert.match(ui,/PilotTrendStep/);
  assert.match(ui,/Generar ambos videos/);
@@ -471,4 +471,41 @@ test("Soundtrack is synchronized after recorder begins, never before music decod
  const start=studio.indexOf("recorder.start(300)");
  assert.ok(start>0);
  assert.ok(studio.indexOf("voiceSource?.start(startsAt)",start)>start);
+});
+
+test("Final VMV Motion UX uses one visual library instead of recovery menus and technical buttons",()=>{
+ const motion=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ const styles=read("app/vista-app/vmv-pilot/stickman-lab/page.module.css");
+ assert.match(motion,/Biblioteca de videos/);
+ assert.match(motion,/libraryOpen/);
+ assert.match(motion,/libraryGrid/);
+ assert.match(motion,/cloudProjects\.filter/);
+ assert.match(motion,/archivedProjects\.filter/);
+ assert.match(motion,/restoreCloudProject\(item\.id\)/);
+ assert.match(motion,/restoreMotionProject\(item\.id\)/);
+ assert.match(motion,/Continuar editando/);
+ assert.match(motion,/setLibraryOpen\(false\)/);
+ assert.doesNotMatch(motion,/Abrir proyecto de la nube/);
+ assert.doesNotMatch(motion,/Recuperar historia anterior/);
+ assert.doesNotMatch(motion,/>Recuperar imágenes</);
+ assert.doesNotMatch(motion,/>LAB</);
+ assert.match(styles,/\.workspaceTabs/);
+ assert.match(styles,/\.libraryCard/);
+ assert.match(styles,/@media\(max-width:550px\)/);
+});
+test("Wizard and editor show loading spinners at route changes and while restoring projects",()=>{
+ const wizard=read("app/vista-app/vmv-pilot/page.tsx");
+ const editor=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ const routeLoader=read("app/vista-app/vmv-pilot/stickman-lab/loading.tsx");
+ const wizardLoader=read("app/vista-app/vmv-pilot/loading.tsx");
+ assert.match(wizard,/setTransitioning\(true\)/);
+ assert.match(wizard,/transitionOverlay/);
+ assert.match(wizard,/LoaderCircle className=\{css\.spin\}/);
+ assert.match(editor,/auth==="checking"\|\|bootstrapping/);
+ assert.match(editor,/loadingScreen/);
+ assert.match(editor,/projectSwitching\?<div className=\{css\.loadingOverlay\}/);
+ assert.match(editor,/framesRefreshing\?"Cargando imágenes/);
+ assert.match(editor,/clipPreviewLoading\?"Cargando clip/);
+ assert.match(routeLoader,/LoaderCircle/);
+ assert.match(wizardLoader,/LoaderCircle/);
 });
