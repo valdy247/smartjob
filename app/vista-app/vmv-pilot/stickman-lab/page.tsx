@@ -453,6 +453,7 @@ async function loadSeedanceForStitching(accessToken:string,token:string,sourceUr
    video_source_unavailable:"El servidor que aloja el MP4 no respondió correctamente.",
    video_source_rejected:"El enlace del MP4 no pasó las validaciones de descarga segura.",
    video_source_invalid:"El MP4 es demasiado grande o está incompleto.",
+   video_archive_missing:"La copia privada de este MP4 no existe y el trabajo original caducó. Se requiere recuperar el archivo fuente.",
    video_download_unavailable:"No se pudo descargar el MP4."
   };
   throw Error("Escena "+(beat+1)+": "+(messages[reason]||"No se pudo recuperar el MP4")+
@@ -681,7 +682,7 @@ export default function StickmanLabPage(){
  const timelineRef=useRef(0),lastFrameRef=useRef(0);
  const story=customMode?(terraStory|| (customPrompt.trim().length>=8?userStickmanStory(customPrompt):stickmanStory(topic,language))):stickmanStory(topic,language);
  useEffect(()=>{setMotionDraft(directorPlan?.scenes?.[selectedScene]?.motionPrompt||"");},
-  [selectedScene,directorPlan?.prompt]);
+  [selectedScene,directorPlan?.prompt,directorPlan?.scenes?.[selectedScene]?.motionPrompt]);
  useEffect(()=>{
   let active=true;
   const client=getSupabase();setAuthClient(client);
@@ -1156,8 +1157,13 @@ export default function StickmanLabPage(){
    draftPrompts[index]=scenes[index].imagePrompt;
    const next={...current,frames,scenes,approved,draftPrompts,previous:{...current.previous,[index]:history}};
    saveDirectorPlan(next);return next;
-  });setPreviousScene(null);setError("");
- },[]);
+  });
+  const job=readSeedance(customPrompt);
+  if(job.tokens[index]){
+   job.needsMotion=job.needsMotion||[];job.needsMotion[index]=true;saveSeedance(job);
+  }
+  setPreviousScene(null);setError("");
+ },[customPrompt]);
  const togglePrevious=useCallback(async(index:number)=>{
   if(previousScene===index){setPreviousScene(null);return;}
   const saved=readDirectorPlan(customPrompt);
@@ -1426,6 +1432,41 @@ export default function StickmanLabPage(){
    setShareStatus("No fue posible abrir el menú. Descarga el video para compartirlo.");
   }
  },[seedJoined,extension,publishDraft]);
+ const refreshCloudRender=useCallback(async()=>{
+  const sb=getSupabase();if(!sb)return;
+  const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)return;
+  try{
+   const result=await motionLibrary(session.access_token,{
+    action:"render-url",id:currentCloudId(),extension
+   });
+   if(typeof result.url!=="string")throw Error("URL inválida.");
+   setLastRenderedCloudUrl(result.url);
+   setSeedJoined(result.url);
+   setShareStatus("Video final recuperado desde la nube.");
+  }catch{setShareStatus("Todavía no existe una copia del montaje final en la nube.");}
+ },[extension]);
+ useEffect(()=>{
+  if(auth!=="signed_in"||!directorPlan?.prompt||seedJoined||
+   readSeedance(directorPlan.prompt).urls.filter(Boolean).length!==MOTION_SCENES)return;
+  let active=true;
+  const load=async()=>{
+   const sb=getSupabase();if(!sb)return;
+   const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)return;
+   for(const ext of ["mp4","webm"] as const){
+    try{
+     const file=await motionLibrary(session.access_token,{
+      action:"render-url",id:currentCloudId(),extension:ext
+     });
+     if(active&&typeof file.url==="string"){
+      setSeedJoined(file.url);setExtension(ext);
+      setLastRenderedCloudUrl(file.url);setStudioStep("publicar");break;
+     }
+    }catch{}
+   }
+  };
+  void load();
+  return()=>{active=false;};
+ },[auth,directorPlan?.prompt]);
  const generate=useCallback(async()=>{
   if(renderingRef.current)return;
   const target=canvas.current;
@@ -1780,6 +1821,8 @@ export default function StickmanLabPage(){
      <a href={seedJoined} download={"vmv-motion-60s."+extension}><Download size={16}/>Descargar video</a>
     </div>:null}
     {studioStep==="publicar"&&customMode&&directorPlan?<section className={css.studioPanel} aria-label="Publicar y medir">
+     <button type="button" className={css.ghostButton}
+      onClick={()=>void refreshCloudRender()}>Recuperar video final de la nube</button>
      <div className={css.studioSectionHeading}><div>
       <h2>Listo para compartir</h2>
       <p>Prepara tu publicación y mide resultados sin salir de VMV Motion.</p>
