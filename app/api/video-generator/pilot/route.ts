@@ -13,7 +13,7 @@ export async function POST(req:NextRequest){
  const style=str(body?.style,25),freq=Number(body?.frequency);
  const model=body?.model??"gen4.5",delivery=body?.delivery??"download";
  const monthlyBudget=Number(body?.monthly_budget_cents??0);
- if(niche.length<3||!["realistic","cinematic","animated","product"].includes(style)||
+ if(niche.length<3||!["stickman","realistic","cinematic","animated","product"].includes(style)||
   ![1,3,5,7].includes(freq)||!["gen4.5","kling"].includes(model)||
   !["download","social_draft"].includes(delivery)||
   ![0,1500,3000,6000].includes(monthlyBudget))return reply({error:"complete_pilot_settings"},400);
