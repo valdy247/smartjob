@@ -707,3 +707,13 @@ test("Sharing from Publicar opens the same public VMV download as Biblioteca (no
  assert.match(studio,/Compartir enlace/);
  assert.doesNotMatch(studio,/await mobile\.share\(/);
 });
+
+test("VMV Motion aborts frozen frames instead of exporting audio over a stalled image",()=>{
+ const studio=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ assert.match(studio,/lastMediaAdvance=clipStartedAt/);
+ assert.match(studio,/getVideoPlaybackQuality\?\.\(\)\.totalVideoFrames/);
+ assert.match(studio,/now-lastMediaAdvance>1200/);
+ assert.match(studio,/now-lastFrameAdvance>1500/);
+ assert.match(studio,/video\.currentTime\+0\.4<expectedMediaProgress/);
+ assert.match(studio,/Se canceló la exportación para evitar un video congelado con audio/);
+});
