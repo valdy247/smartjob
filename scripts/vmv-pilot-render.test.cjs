@@ -383,7 +383,7 @@ test("Saved storyboard .jpg previews use the correct validation rule and cost no
 test("Seedance montage downloads existing completed MP4s without rechecking gateway status or regenerating",()=>{
  const api=read("app/api/video-generator/motion-seedance/route.ts");
  const ui=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
- const download=api.split('if(body?.action==="download"){')[1]?.split('if(body?.action==="status"){')[0];
+ const download=api.split('if(body?.action==="download"||body?.action==="archive"){')[1]?.split('if(body?.action==="status"){')[0];
  assert.ok(download,"Existing clips must have a download route");
  assert.match(download,/unseal\(token,owner\)/);
  assert.match(download,/storage\.from\(CLIP_BUCKET\)\.download/);
