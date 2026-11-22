@@ -3,7 +3,7 @@ import {authenticatedUser} from "@/lib/auth-server";
 import {videoAllowed,videoDb,videoHeaders} from "@/lib/vmv-video-generator";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
-export const maxDuration=60;
+export const maxDuration=180;
 const SCENE_COUNT=6;
 const reply=(data:Record<string,unknown>,status=200)=>NextResponse.json(data,{status,headers:videoHeaders});
 type Camera={focusX:number;focusY:number;startZoom:number;endZoom:number};
