@@ -470,7 +470,7 @@ export default function AutomaticWebWizard({business,workspaceId,agent,onClose}:
     {busy==="save"?"Guardando…":"Guardar borrador y abrir Web Studio"} <ArrowRight size={18}/></button>:
    <button type="button" className={styles.primary+" "+theme.agentButton}
     disabled={!validStage||Boolean(busy)} onClick={next}>
-    {returnToReview?"Guardar y volver a Revisión":"Continuar"} <ArrowRight size={18}/></button>}
+    {returnToReview?"Guardar y volver a Revisión":null} <ArrowRight size={18}/></button>}
   </div>:null}
   <p className={styles.footnote}><ShieldCheck size={14}/> No se publica ninguna web sin tu aprobación.</p>
  </section>;
