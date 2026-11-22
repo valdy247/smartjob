@@ -182,8 +182,38 @@ async function minimaxRequest(accessToken:string,body:Record<string,unknown>){
  return data;
 }
 
+type DirectorBeat={speech:string;caption:string;imagePrompt:string;motionPrompt:string};
+type DirectorPlan={prompt:string;title:string;storyBible:string;scenes:DirectorBeat[];frames:{imageUrl:string;referencePath:string}[]};
+const DIRECTOR_PLAN_KEY="vmv-motion-director-plan-v1";
+function readDirectorPlan(prompt:string):DirectorPlan|null{
+ try{
+  const d=JSON.parse(sessionStorage.getItem(DIRECTOR_PLAN_KEY)||"null");
+  if(d?.prompt===prompt&&Array.isArray(d.scenes)&&d.scenes.length===3&&Array.isArray(d.frames))
+   return d as DirectorPlan;
+ }catch{}
+ return null;
+}
+function saveDirectorPlan(plan:DirectorPlan){
+ try{sessionStorage.setItem(DIRECTOR_PLAN_KEY,JSON.stringify(plan));}catch{}
+}
+async function directorCall(accessToken:string,endpoint:string,data:Record<string,unknown>){
+ const response=await fetch(endpoint,{method:"POST",cache:"no-store",
+  headers:{"Content-Type":"application/json",Authorization:"Bearer "+accessToken},
+  body:JSON.stringify({...data,confirmCost:true})
+ });
+ const result=await response.json().catch(()=>null);
+ if(!response.ok)throw Error(
+  result?.error==="image_daily_limit"||result?.error==="motion_limit"?"Se alcanzó el límite de pruebas.":
+  result?.error==="image_storage_unavailable"?"No se pudo guardar el fotograma de referencia.": 
+  result?.error==="image_reference_unavailable"?"No se encontró la imagen anterior para mantener la continuidad.":
+  result?.error==="openai_quota_or_rate_limit"?"OpenAI no tiene cuota disponible.":
+  result?.error==="image_bad_request"?"OpenAI rechazó la imagen. No se realizarán más intentos automáticos.":
+  "La IA no pudo preparar la historia o imagen. Puedes reanudar sin recrear las escenas ya terminadas."
+ );
+ return result;
+}
 type SeedanceSaved={prompt:string;tokens:string[];urls:string[]};
-const SEEDANCE_KEY="vmv-motion-seedance-v1";
+const SEEDANCE_KEY="vmv-motion-seedance-director-v2";
 function readSeedance(prompt:string):SeedanceSaved{
  try{
   const state=JSON.parse(sessionStorage.getItem(SEEDANCE_KEY)||"null");
@@ -297,6 +327,10 @@ export default function StickmanLabPage(){
  const [progress,setProgress]=useState(0),[stage,setStage]=useState("");
  const [videoUrl,setVideoUrl]=useState(""),[extension,setExtension]=useState<"mp4"|"webm">("webm");
  const [error,setError]=useState("");
+ const [directorBusy,setDirectorBusy]=useState(false);
+ const [directorStatus,setDirectorStatus]=useState("");
+ const [directorPlan,setDirectorPlan]=useState<DirectorPlan|null>(null);
+ const directorBusyRef=useRef(false);
  const [seedBusy,setSeedBusy]=useState(false);
  const [seedStage,setSeedStage]=useState("");
  const [seedUrls,setSeedUrls]=useState<string[]>([]);
@@ -387,6 +421,40 @@ export default function StickmanLabPage(){
   finally{miniBusyRef.current=false;setMiniBusy(false);}
  },[customPrompt,pollMinimax]);
 
+ const prepareDirector=useCallback(async()=>{
+  if(directorBusyRef.current||seedBusyRef.current||renderingRef.current||customPrompt.trim().length<8)return;
+  directorBusyRef.current=true;setDirectorBusy(true);setError("");
+  try{
+   const client=getSupabase();if(!client)throw Error("Inicia sesión.");
+   const {data:{session}}=await client.auth.getSession();
+   if(!session?.access_token)throw Error("Inicia sesión.");
+   let plan=readDirectorPlan(customPrompt);
+   if(!plan){
+    setDirectorStatus("IA directora: escribiendo historia y personajes");
+    const result=await directorCall(session.access_token,"/api/video-generator/motion-terra",{prompt:customPrompt});
+    if(!Array.isArray(result.scenes)||result.scenes.length!==3)throw Error("La IA no devolvió tres escenas.");
+    plan={prompt:customPrompt,title:String(result.title||"VMV Motion"),storyBible:String(result.storyBible||""),
+     scenes:result.scenes.map((row:DirectorBeat)=>({
+      speech:row.speech,caption:row.caption,imagePrompt:row.imagePrompt,
+      motionPrompt:row.motionPrompt||row.imagePrompt
+     })),frames:[]};
+    saveDirectorPlan(plan);
+   }
+   for(let i=plan.frames.length;i<3;i++){
+    setDirectorStatus("Creando imagen "+(i+1)+" de 3 · "+(i?"con referencia anterior":"imagen base"));
+    const image=await directorCall(session.access_token,"/api/video-generator/motion-image",{
+     mode:"storyframe",prompt:[plan.storyBible,plan.scenes[i].imagePrompt,
+      i>0?"Keep the identities, kitchen or environment, wardrobe and art style IDENTICAL to the preceding image. This is a NEW consecutive moment; change the pose to the start of the NEXT action.":""].filter(Boolean).join(" ").slice(0,1750),
+     referencePath:i>0?plan.frames[i-1].referencePath:""
+    });
+    if(typeof image.imageUrl!=="string"||typeof image.referencePath!=="string")throw Error("La imagen no devolvió una referencia válida.");
+    plan.frames.push({imageUrl:image.imageUrl,referencePath:image.referencePath});
+    saveDirectorPlan(plan);setDirectorPlan({...plan,frames:[...plan.frames]});
+   }
+   setDirectorPlan(plan);setDirectorStatus("Guion e imágenes listas. Revisa las escenas antes de pagar el video.");
+  }catch(e){setError(e instanceof Error?e.message:"Falló la dirección IA.");setDirectorStatus("");}
+  finally{directorBusyRef.current=false;setDirectorBusy(false);}
+ },[customPrompt]);
  const generateSeedance=useCallback(async()=>{
   if(seedBusyRef.current||renderingRef.current||customPrompt.trim().length<8)return;
   seedBusyRef.current=true;setSeedBusy(true);setError("");setSeedJoined("");
@@ -394,6 +462,8 @@ export default function StickmanLabPage(){
    const client=getSupabase();if(!client)throw Error("Inicia sesión.");
    const {data:{session}}=await client.auth.getSession();
    if(!session?.access_token)throw Error("Inicia sesión.");
+   const plan=readDirectorPlan(customPrompt);
+   if(!plan||plan.frames.length!==3)throw Error("Primero prepara las tres imágenes con la IA directora.");
    const job=readSeedance(customPrompt);
    setSeedUrls(job.urls.filter(Boolean));
    for(let beat=0;beat<3;beat++){
@@ -401,7 +471,8 @@ export default function StickmanLabPage(){
     let token=job.tokens[beat];
     if(!token){
      setSeedStage("Iniciando escena "+(beat+1)+" de 3");
-     const started=await seedanceRequest(session.access_token,{action:"start",prompt:customPrompt,beat,confirmCost:true});
+     const started=await seedanceRequest(session.access_token,{action:"start",prompt:customPrompt,beat,confirmCost:true,
+      imagePath:plan.frames[beat].referencePath,motionPrompt:plan.scenes[beat].motionPrompt,storyBible:plan.storyBible});
      if(typeof started?.token!=="string")throw Error("Seedance no entregó un ID de trabajo.");
      token=started.token;job.tokens[beat]=token;saveSeedance(job);
     }
@@ -495,7 +566,7 @@ export default function StickmanLabPage(){
     <span>¿Qué quieres contar?</span>
     <textarea disabled={rendering} value={customPrompt} maxLength={500} rows={4}
      placeholder="Ejemplo: Un pequeño elefante busca agua en la selva. Encuentra un río y ayuda a sus amigos a beber."
-     onChange={e=>{setCustomPrompt(e.target.value);setTerraStory(null);pendingStoryboard.current={prompt:"",images:[]};}}/>
+     onChange={e=>{setCustomPrompt(e.target.value);setTerraStory(null);setDirectorPlan(null);setSeedUrls([]);pendingStoryboard.current={prompt:"",images:[]};}}/>
     <small>{customPrompt.length}/500 · 3 escenas de 5 segundos</small>
    </label>:<div className={css.topics}>
     <button type="button" className={topic==="space"?css.active:""}
@@ -552,13 +623,26 @@ export default function StickmanLabPage(){
       <video src={miniUrl} controls playsInline preload="metadata"/>
       <a href={miniUrl} target="_blank" rel="noreferrer"><Download size={16}/>Abrir MP4 para guardar</a>
      </div>:null}
+    {customMode?<button className={css.generate} type="button" disabled={directorBusy||seedBusy||rendering||customPrompt.trim().length<8}
+     onClick={()=>void prepareDirector()}>
+     {directorBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
+     {directorBusy?directorStatus:directorPlan?.prompt===customPrompt&&directorPlan.frames.length===3?"3 imágenes listas · IA directora":"1. Preparar guion + 3 imágenes IA (con costo)"}
+    </button>:null}
+    {customMode&&directorPlan?.prompt===customPrompt&&directorPlan.frames.length>0?<div className={css.result}>
+     <div className={css.resultTitle}><Check size={18}/><strong>{directorPlan.title} · {directorPlan.frames.length}/3 imágenes</strong></div>
+     <small>{directorPlan.storyBible}</small>
+     {directorPlan.frames.map((frame,i)=><div key={frame.referencePath}>
+      <small>Escena {i+1}: {directorPlan.scenes[i]?.caption}</small>
+      <img src={frame.imageUrl} alt={"Fotograma inicial de la escena "+(i+1)} style={{maxWidth:"100%",maxHeight:350,borderRadius:12,objectFit:"contain"}}/>
+     </div>)}
+    </div>:null}
     {customMode?<button className={css.generate} type="button"
-     disabled={seedBusy||rendering||miniBusy||customPrompt.trim().length<8}
+     disabled={seedBusy||directorBusy||rendering||miniBusy||customPrompt.trim().length<8||directorPlan?.prompt!==customPrompt||directorPlan.frames.length!==3}
      onClick={()=>void generateSeedance()}>
      {seedBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
      {seedBusy?seedStage:"Seedance Pro Fast · 3 escenas de 5s · 720p · ~US$0.31"}
     </button>:null}
-    {customMode?<small>Seedance genera 3 escenas de 5 segundos por ~US$0.103 cada una (total ~US$0.31). La versión nueva separa descubrimiento, conflicto y desenlace. Los clips anteriores se conservan mientras no solicites una secuencia nueva.</small>:null}
+    {customMode?<small>Primero prepara el storyboard e imágenes (OpenAI cobra esas generaciones). Después Seedance anima 3 clips de 5 segundos por ~US$0.103 cada uno, total ~US$0.31. No hay reintentos automáticos.</small>:null}
     {seedUrls.length>0?<div className={css.result}>
      <div className={css.resultTitle}><Check size={18}/><strong>Seedance · {seedUrls.length}/3 escenas listas</strong></div>
      {seedUrls.map((url,i)=><div key={i}>
