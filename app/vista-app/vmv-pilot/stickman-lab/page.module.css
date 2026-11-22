@@ -158,3 +158,89 @@
  .shotStrip button{flex-basis:67px}
 }
 @media(prefers-reduced-motion:reduce){.studioNav button{transition:none}}
+
+/* Finished VMV Motion interface: project library, unified navigation and loading. */
+.header{margin-bottom:17px}
+.headerBrand{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}
+.headerBrand strong{font-size:17px;font-weight:850;letter-spacing:-.035em;color:#342143}
+.headerBrand small{font-size:11px;font-weight:650;color:#9a87ab}
+.headerIcon{color:#9061c4;flex:none}
+.workspaceTabs{display:flex;align-items:center;gap:7px;margin-bottom:24px;border-bottom:1px solid #e8deee;padding-bottom:14px}
+.workspaceTabs button{appearance:none;border:1px solid transparent;background:transparent;color:#826e93;
+ border-radius:12px;padding:10px 13px;min-height:44px;display:flex;align-items:center;justify-content:center;
+ gap:8px;cursor:pointer;font:inherit;font-size:12px;font-weight:800;transition:background-color .18s,border-color .18s}
+.workspaceTabs button:hover{background:#f0e9f7;color:#6d459d}
+.workspaceTabs button.workspaceActive{background:#fff;border-color:#e5d7f0;color:#8050b3;box-shadow:0 3px 12px #5133610b}
+.workspaceTabs button.newProjectButton{margin-left:auto;background:#915ccc;color:#fff;padding:10px 15px;border:1px solid #915ccc}
+.workspaceTabs button.newProjectButton:hover{background:#8450c0}
+.workspaceTabs button:focus-visible,.libraryCard:focus-visible,.refreshLibrary:focus-visible{
+ outline:3px solid #ad82d7;outline-offset:3px}
+.workspaceTabs button:disabled,.libraryCard:disabled{opacity:.55;cursor:wait}
+.libraryPage{display:flex;flex-direction:column;gap:19px;animation:studioIn .22s ease both}
+.libraryHeading{display:flex;justify-content:space-between;gap:18px;align-items:start}
+.libraryHeading h1{font-size:clamp(25px,5vw,34px);margin:4px 0 7px;line-height:1.2;letter-spacing:-.05em}
+.libraryHeading p{margin:0;color:#8a7999;font-size:13px;line-height:1.6}
+.eyebrow{font-size:10px;font-weight:850;color:#9563c7;letter-spacing:.14em}
+.refreshLibrary{background:#fff;border:1px solid #e5d8ee;border-radius:11px;display:grid;
+ place-items:center;color:#8659b3;width:40px;height:40px;cursor:pointer;flex:none}
+.libraryGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.libraryCard{padding:0;border:1px solid #e7dfee;border-radius:19px;overflow:hidden;background:#fff;
+ color:#382947;display:flex;flex-direction:column;text-align:left;cursor:pointer;
+ box-shadow:0 5px 16px #44316009;transition:transform .18s,border-color .18s,box-shadow .18s}
+.libraryCard:hover{transform:translateY(-2px);border-color:#b99bdb;box-shadow:0 12px 29px #59367a12}
+.libraryPoster{min-height:158px;padding:20px;background:
+ radial-gradient(circle at 80% 12%,#bea1dd75,transparent 45%),
+ linear-gradient(155deg,#f4ebfc,#e5d5f6 55%,#c9b0e6);
+ display:flex;flex-direction:column;justify-content:center;align-items:center;gap:13px;
+ color:#8450ad;text-align:center}
+.libraryPoster>svg{width:39px;height:39px;stroke-width:1.5}
+.libraryPoster span{font-size:9px;letter-spacing:.12em;font-weight:850;color:#795694}
+.libraryCardBody{display:flex;flex-direction:column;gap:8px;padding:15px 16px 17px;min-width:0}
+.libraryCardBody strong{font-size:14px;color:#362342;font-weight:850;line-height:1.35;
+ overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.libraryCardBody small{font-size:11px;color:#8b7b96}
+.libraryCardLink{font-size:11px;color:#8855b3;font-weight:850;margin-top:6px}
+.libraryLoading,.libraryEmpty{display:flex;flex-direction:column;align-items:center;text-align:center;
+ justify-content:center;border-radius:19px;border:1px solid #eae0f0;background:#fff;padding:34px 18px;
+ color:#8a6ba4;gap:11px}
+.libraryLoading{flex-direction:row;font-size:12px;font-weight:750;padding:18px}
+.libraryEmpty h2{font-size:17px;color:#422e53;margin:0}
+.libraryEmpty p{font-size:12px;color:#877790;max-width:280px;line-height:1.6;margin:0}
+.libraryEmpty .generate{margin-top:8px;max-width:210px}
+.saveIndicator{display:inline-flex;align-items:center;gap:7px;margin:-7px 0 17px;
+ color:#8c729f;font-size:11px;font-weight:700;line-height:1.4}
+.saveIndicator>svg{color:#8660af}
+.processingBanner{display:flex;align-items:center;gap:12px;border-radius:15px;
+ border:1px solid #e7d8ee;background:linear-gradient(110deg,#fcf9ff,#f3eafa);
+ color:#684981;padding:13px 16px;font-size:12px;font-weight:800;
+ width:100%;margin-bottom:15px;line-height:1.5}
+.processingBanner svg{flex:none;color:#925cca}
+.inlineLoading{display:inline-flex;align-items:center;gap:8px;color:#825da6;
+ font-size:12px;font-weight:750;margin:6px 0}
+.inlineError{display:flex;align-items:center;justify-content:space-between;
+ gap:9px;flex-wrap:wrap;font-size:11px;color:#984658;background:#fff7f8;border:1px solid #f0d0d6;
+ border-radius:11px;padding:10px}
+.inlineError button{border:1px solid #e5ccd4;background:#fff;border-radius:9px;
+ padding:7px 10px;font-size:11px;font-weight:800;color:#8b486a;cursor:pointer;
+ display:flex;align-items:center;gap:5px}
+.loadingScreen{min-height:72dvh;display:flex;align-items:center;justify-content:center;
+ flex-direction:column;gap:13px;text-align:center;color:#7950a8;animation:studioIn .3s ease both}
+.loadingLogo{height:57px;width:57px;display:grid;place-items:center;border:1px solid #e4d1f2;
+ border-radius:19px;background:#f1e4fc;box-shadow:0 9px 22px #68468b13}
+.loadingScreen>strong{font-size:17px;color:#392548;font-weight:850;letter-spacing:-.03em;margin-top:4px}
+.loadingScreen>span:last-child{font-size:12px;color:#8e7c9a}
+.loadingOverlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+ padding:24px;background:#f8f7fbe8;backdrop-filter:blur(7px)}
+.loadingOverlay .loadingScreen{min-height:auto;background:#fff;border:1px solid #e8dcec;
+ border-radius:25px;padding:36px 46px;box-shadow:0 22px 70px #49336118;width:min(100%,380px)}
+@keyframes studioIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:550px){
+ .workspaceTabs{gap:4px}.workspaceTabs button{font-size:11px;gap:5px;padding:9px 8px}
+ .workspaceTabs button.newProjectButton{padding:9px 10px}
+ .libraryGrid{gap:11px}.libraryPoster{min-height:118px;padding:12px}
+ .libraryCardBody{padding:12px;gap:7px}
+ .libraryCardBody strong{font-size:12px}.libraryCardBody small{font-size:10px}
+ .headerIcon{width:18px}
+}
+@media(max-width:360px){.workspaceTabs button{font-size:10px;padding:9px 6px}.libraryGrid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.libraryCard,.workspaceTabs button,.libraryPage,.loadingScreen{animation:none;transition:none}}
