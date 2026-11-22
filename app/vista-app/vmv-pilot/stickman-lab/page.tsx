@@ -3,6 +3,8 @@ import {useCallback,useEffect,useRef,useState} from "react";
 import {useRouter} from "next/navigation";
 import {ArrowLeft,CarFront,Check,Download,Globe2,LoaderCircle,Pause,Play,Volume2,WandSparkles} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
+import VMVAuthGateway from "@/components/VMVAuthGateway";
+import type {SupabaseClient} from "@supabase/supabase-js";
 import {drawStickmanFrame,stickmanStory,userStickmanStory,STICKMAN_WIDTH,STICKMAN_HEIGHT,STICKMAN_SECONDS,
  type StickmanTopic,type StickmanLanguage,type StickmanStory,type MotionShape} from "@/lib/vmv-stickman-engine";
 import css from "./page.module.css";
@@ -130,6 +132,8 @@ async function exportCanvas(canvas:HTMLCanvasElement,
 }
 export default function StickmanLabPage(){
  const router=useRouter();
+ const [auth,setAuth]=useState<"checking"|"signed_in"|"signed_out">("checking");
+ const [authClient,setAuthClient]=useState<SupabaseClient|null>(null);
  const [topic,setTopic]=useState<StickmanTopic>("space");
  const [customPrompt,setCustomPrompt]=useState("");
  const [customMode,setCustomMode]=useState(false);
@@ -145,6 +149,18 @@ export default function StickmanLabPage(){
  const playingRef=useRef(true),renderingRef=useRef(false),urlRef=useRef("");
  const timelineRef=useRef(0),lastFrameRef=useRef(0);
  const story=customMode?(terraStory|| (customPrompt.trim().length>=8?userStickmanStory(customPrompt):stickmanStory(topic,language))):stickmanStory(topic,language);
+ useEffect(()=>{
+  let active=true;
+  const client=getSupabase();setAuthClient(client);
+  if(!client){setAuth("signed_out");return;}
+  const sync=async()=>{
+   const {data,error}=await client.auth.getUser();
+   if(active)setAuth(!error&&data.user&&!data.user.is_anonymous?"signed_in":"signed_out");
+  };
+  const {data:listener}=client.auth.onAuthStateChange(()=>{queueMicrotask(()=>{if(active)void sync();});});
+  void sync();
+  return()=>{active=false;listener.subscription.unsubscribe();};
+ },[]);
  useEffect(()=>{
   playingRef.current=playing;
  },[playing]);
@@ -187,6 +203,10 @@ export default function StickmanLabPage(){
    setStage("");setProgress(0);
   }finally{renderingRef.current=false;setRendering(false);}
  },[topic,language,subtitles,withVoice,voice,customMode,customPrompt]);
+ if(auth==="checking")return <main className={css.page}><div className={css.shell}>Verificando sesión…</div></main>;
+ if(auth==="signed_out")return authClient?<VMVAuthGateway supabase={authClient} compact
+  returnTo="/vista-app/vmv-pilot/stickman-lab"/>:
+  <main className={css.page}><p>La autenticación no está configurada en esta versión de prueba.</p></main>;
  return <main className={css.page}>
   <div className={css.shell}>
    <header className={css.header}>
