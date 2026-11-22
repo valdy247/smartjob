@@ -18,10 +18,8 @@ export async function POST(req:NextRequest){
  if(movieMode&&referencePath&&(!referencePath.startsWith(owner+"/")||!/^[-a-z0-9/]+\.jpg$/.test(referencePath)))return reply({error:"invalid_image_reference"},403);
  if(body?.confirmCost!==true||prompt.length<35||prompt.length>1800)return reply({error:"invalid_image_request"},400);
  if(!process.env.OPENAI_API_KEY)return reply({error:"openai_key_not_configured"},503);
- // One persistent quota slot per image prevents unrestricted paid image requests.
- const {data:claimed,error:quotaError}=await videoDb().rpc("smartjob_web_ai_claim_video_test_slot",{p_owner:owner});
- if(quotaError)return reply({error:"image_quota_unavailable"},503);
- if(claimed!==true)return reply({error:"image_daily_limit"},429);
+ // Private preview is already restricted to the explicitly allowlisted owner.
+ // No daily test quota: the owner controls each paid generation via confirmCost.
  try{
   const db=videoDb();
   let inputImage:Blob|null=null;
