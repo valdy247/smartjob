@@ -320,9 +320,10 @@ function saveSeedance(value:SeedanceSaved){saveMotion(SEEDANCE_KEY,value);}
 type MotionProjectArchive={id:string;label:string;savedAt:number;plan:DirectorPlan;seedance:SeedanceSaved;cloudId?:string};
 type CloudMotionProject={id:string;title:string;updatedAt:string;clips:number;scenes:number};
 type MotionPublishDraft={title:string;caption:string;hashtags:string;platform:string;
- scheduledFor:string;postedAt:string;views:number;leads:number;sales:number};
+ scheduledFor:string;postedAt:string;views:number;leads:number;sales:number;
+ revenueUsd:number;spendUsd:number};
 const EMPTY_PUBLISH:MotionPublishDraft={title:"",caption:"",hashtags:"",platform:"TikTok",
- scheduledFor:"",postedAt:"",views:0,leads:0,sales:0};
+ scheduledFor:"",postedAt:"",views:0,leads:0,sales:0,revenueUsd:0,spendUsd:0};
 const CLOUD_ID_KEY="vmv-motion-cloud-project-v1";
 function currentCloudId():string{
  try{
@@ -1388,6 +1389,43 @@ export default function StickmanLabPage(){
     await animateApproved();
   })();
  },[pilotAuto,auth,customPrompt,prepareStoryboard,animateApproved]);
+ const suggestPublication=useCallback(()=>{
+  const plan=readDirectorPlan(customPrompt);if(!plan)return;
+  const first=plan.scenes[0]?.speech||"",last=plan.scenes[11]?.speech||"";
+  updatePublish({title:plan.title,
+   caption:first+" "+last+"\n\n¿Qué opinas? Cuéntanos en los comentarios.",
+   hashtags:"#VMVMotion #Historias #VideoConIA"});
+  setShareStatus("Texto preparado. Revísalo antes de publicarlo.");
+ },[customPrompt,updatePublish]);
+ const copyPublication=useCallback(async()=>{
+  const plan=readDirectorPlan(customPrompt);
+  const content=[publishDraft.title||plan?.title||"VMV Motion",
+   publishDraft.caption,publishDraft.hashtags].filter(Boolean).join("\n\n");
+  try{
+   await navigator.clipboard.writeText(content);
+   setShareStatus("Descripción copiada. Ya puedes pegarla en tu red social.");
+  }catch{setShareStatus("Tu navegador no permitió copiar. Selecciona y copia el texto manualmente.");}
+ },[customPrompt,publishDraft]);
+ const shareFinishedVideo=useCallback(async()=>{
+  if(!seedJoined){setShareStatus("Primero monta o recupera el video final.");return;}
+  try{
+   const response=await fetch(seedJoined);
+   if(!response.ok)throw Error("download");
+   const blob=await response.blob();
+   const file=new File([blob],"vmv-motion."+extension,{type:extension==="mp4"?"video/mp4":"video/webm"});
+   const mobile=navigator as Navigator&{canShare?:(data:ShareData)=>boolean;share?:(data:ShareData)=>Promise<void>};
+   if(!mobile.share||!mobile.canShare?.({files:[file]})){
+    setShareStatus("Tu navegador no admite compartir el archivo directamente. Descarga el video y súbelo en la plataforma elegida.");
+    return;
+   }
+   await mobile.share({files:[file],title:publishDraft.title||"VMV Motion",
+    text:[publishDraft.caption,publishDraft.hashtags].filter(Boolean).join("\n")});
+   setShareStatus("Se abrió el menú de compartir. Comprueba la publicación en la red social.");
+  }catch(e){
+   if(e instanceof Error&&e.name==="AbortError")return;
+   setShareStatus("No fue posible abrir el menú. Descarga el video para compartirlo.");
+  }
+ },[seedJoined,extension,publishDraft]);
  const generate=useCallback(async()=>{
   if(renderingRef.current)return;
   const target=canvas.current;
@@ -1741,6 +1779,73 @@ export default function StickmanLabPage(){
      <video src={seedJoined} controls playsInline/>
      <a href={seedJoined} download={"vmv-motion-60s."+extension}><Download size={16}/>Descargar video</a>
     </div>:null}
+    {studioStep==="publicar"&&customMode&&directorPlan?<section className={css.studioPanel} aria-label="Publicar y medir">
+     <div className={css.studioSectionHeading}><div>
+      <h2>Listo para compartir</h2>
+      <p>Prepara tu publicación y mide resultados sin salir de VMV Motion.</p>
+     </div></div>
+     <div className={css.editorActions}>
+      <button type="button" className={css.ghostButton} onClick={suggestPublication}>
+       Sugerir descripción</button>
+      <button type="button" className={css.ghostButton} onClick={()=>setStudioStep("editar")}>
+       Volver a editar</button>
+     </div>
+     <div className={css.publishFields}>
+      <label>Título
+       <input maxLength={100} value={publishDraft.title}
+        placeholder={directorPlan.title} onChange={e=>updatePublish({title:e.target.value})}/></label>
+      <label>Descripción
+       <textarea maxLength={1800} rows={4} value={publishDraft.caption}
+        placeholder="Describe el valor del video e invita a interactuar…"
+        onChange={e=>updatePublish({caption:e.target.value})}/></label>
+      <label>Hashtags
+       <input maxLength={300} value={publishDraft.hashtags}
+        placeholder="#Video #Historia" onChange={e=>updatePublish({hashtags:e.target.value})}/></label>
+      <label>Plataforma
+       <select value={publishDraft.platform} onChange={e=>updatePublish({platform:e.target.value})}>
+        <option>TikTok</option><option>Instagram</option><option>YouTube</option>
+       </select></label>
+      <label>Fecha planificada <small>No publica automáticamente</small>
+       <input type="datetime-local" value={publishDraft.scheduledFor}
+        onChange={e=>updatePublish({scheduledFor:e.target.value})}/></label>
+     </div>
+     <div className={css.editorActions}>
+      <button type="button" onClick={()=>void copyPublication()}>Copiar texto</button>
+      {seedJoined?<button type="button" onClick={()=>void shareFinishedVideo()}>
+       Compartir video</button>:null}
+     </div>
+     <p className={css.mutedNote}>Abre tu plataforma para subir el MP4. No publicamos en tu nombre sin conectar y autorizar esa cuenta.</p>
+     <div className={css.socialLinks}>
+      <a href="https://www.tiktok.com/upload" target="_blank" rel="noreferrer">TikTok</a>
+      <a href="https://www.instagram.com/" target="_blank" rel="noreferrer">Instagram</a>
+      <a href="https://studio.youtube.com/" target="_blank" rel="noreferrer">YouTube Studio</a>
+     </div>
+     <details className={css.finishingOptions}>
+      <summary>Resultados de marketing <span>Registro manual</span></summary>
+      <p>Introduce datos de la publicación real. No son métricas verificadas por las plataformas.</p>
+      <div className={css.finishGrid}>
+       {([["views","Visualizaciones"],["leads","Contactos"],["sales","Ventas"],
+         ["revenueUsd","Ingresos USD"],["spendUsd","Inversión USD"]] as const).map(([key,label])=>
+         <label key={key}>{label}
+          <input type="number" min="0" step={key==="revenueUsd"||key==="spendUsd"?"0.01":"1"}
+           value={publishDraft[key]} onChange={e=>updatePublish({[key]:Math.max(0,Number(e.target.value)||0)})}/>
+         </label>)}
+      </div>
+      <div className={css.metricsSummary}>
+       <span>Conversión a contacto: {publishDraft.views?
+        (publishDraft.leads/publishDraft.views*100).toFixed(1)+"%":"—"}</span>
+       <span>ROI declarado: {publishDraft.spendUsd>0?
+        ((publishDraft.revenueUsd-publishDraft.spendUsd)/publishDraft.spendUsd*100).toFixed(1)+"%":"—"}</span>
+      </div>
+      <button type="button" className={css.ghostButton}
+       onClick={()=>updatePublish({postedAt:new Date().toISOString()})}>
+       {publishDraft.postedAt?"Actualizar fecha de publicación":"Marcar como publicado manualmente"}
+      </button>
+      {publishDraft.postedAt?<p className={css.mutedNote}>
+       Fecha indicada: {new Date(publishDraft.postedAt).toLocaleString("es-US")}</p>:null}
+     </details>
+     {shareStatus?<p role="status" className={css.cloudState}>{shareStatus}</p>:null}
+    </section>:null}
     {error?<p role="alert" className={css.error}>{error}</p>:null}
     {videoUrl?<div className={css.result}>
      <div className={css.resultTitle}><Check size={18}/><strong>{language==="es"?"Video terminado":"Finished video"}</strong></div>
