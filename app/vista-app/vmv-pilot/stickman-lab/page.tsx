@@ -184,7 +184,7 @@ async function minimaxRequest(accessToken:string,body:Record<string,unknown>){
 
 type DirectorBeat={speech:string;caption:string;imagePrompt:string;motionPrompt:string};
 type DirectorPlan={prompt:string;title:string;storyBible:string;scenes:DirectorBeat[];frames:{imageUrl:string;referencePath:string}[]};
-const DIRECTOR_PLAN_KEY="vmv-motion-director-plan-v1";
+const DIRECTOR_PLAN_KEY="vmv-motion-director-plan-v3-independent-visuals";
 function readDirectorPlan(prompt:string):DirectorPlan|null{
  try{
   const d=JSON.parse(sessionStorage.getItem(DIRECTOR_PLAN_KEY)||"null");
@@ -213,7 +213,7 @@ async function directorCall(accessToken:string,endpoint:string,data:Record<strin
  return result;
 }
 type SeedanceSaved={prompt:string;tokens:string[];urls:string[]};
-const SEEDANCE_KEY="vmv-motion-seedance-director-v2";
+const SEEDANCE_KEY="vmv-motion-seedance-director-v3-independent-visuals";
 function readSeedance(prompt:string):SeedanceSaved{
  try{
   const state=JSON.parse(sessionStorage.getItem(SEEDANCE_KEY)||"null");
@@ -476,12 +476,12 @@ export default function StickmanLabPage(){
     saveDirectorPlan(plan);
    }
    for(let i=plan.frames.length;i<3;i++){
-    setDirectorStatus("2/4 · Dibujando escena "+(i+1)+"/3 con continuidad visual");
+    setDirectorStatus("2/4 · Diseñando plano "+(i+1)+"/3 según el guion visual");
     const image=await directorCall(accessToken,"/api/video-generator/motion-image",{
      mode:"storyframe",
-     prompt:[plan.storyBible,plan.scenes[i].imagePrompt,
-      i>0?"Maintain exactly the same character identity, environment, clothes and illustration style as the reference. Change only character positions and actions for the next story beat.":""].filter(Boolean).join(" ").slice(0,1750),
-     referencePath:i>0?plan.frames[i-1].referencePath:""
+     prompt:["GLOBAL ART DIRECTION AND RECURRING CHARACTER TRAITS: "+plan.storyBible,
+      "THIS SHOT ONLY: "+plan.scenes[i].imagePrompt,
+      "Create this frame independently from text. Respect the visual story logic but DO NOT include any objects, backgrounds, or people solely because they appeared in another scene."].join(" ").slice(0,1750)
     });
     if(typeof image.imageUrl!=="string"||typeof image.referencePath!=="string")
      throw Error("No se obtuvo la imagen de la escena "+(i+1)+".");
