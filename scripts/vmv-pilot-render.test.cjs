@@ -579,7 +579,7 @@ test("VMV Motion ASMR is a separate credit-confirmed audio-only path and preserv
  assert.match(page,/compatible con ASMR/);
  assert.match(page,/loadMotionSfx\(accessToken,customPrompt,plan.scenes/);
  assert.match(page,/motionSfxCache\.set\(cacheKey,audio\)/);
- assert.match(page,/video\.playbackRate=options\.seconds===30\?2:1/);
+ assert.match(page,/video\.playbackRate=playbackSpeed/);
  assert.match(page,/effectSources\.forEach\(\(source,index\)=>/);
  assert.match(api,/authenticatedUser\(req\)/);
  assert.match(api,/videoAllowed\(owner\)/);
@@ -633,7 +633,7 @@ test("VMV Motion only runs paid narration with an explicit persisted opt-in",()=
  assert.match(page,/setWithVoice\(changeVoice\|\|project\.seedance\.narrationEnabled===true/);
  assert.match(page,/setWithVoice\(changeVoice\|\|selected\.seedance\.narrationEnabled===true/);
  assert.match(page,/const narrationEnabled=voiceOnly\?withVoice:/);
- assert.match(page,/withVoice&&storedNarration&&!asmrEnabled&&montageSeconds===60/);
+ assert.match(page,/withVoice&&storedNarration&&!asmrEnabled/);
  assert.match(page,/if\(narrationEnabled\)\{/);
  assert.match(page,/const speech=narrationEnabled\?await loadContinuousVoice/);
  assert.match(page,/latest\.narrationEnabled=narrationEnabled/);
@@ -673,13 +673,13 @@ test("VMV Motion allows 60-second ASMR and music without speeding up 12 saved cl
  assert.match(asmrControl,/setProjectNarration\(false\)/);
  assert.doesNotMatch(asmrControl,/setMontageSeconds\(30\)/);
  assert.match(asmrControl,/job\.montageSeconds=montageSeconds/);
- assert.match(page,/const durationSeconds=seconds\/6/);
+ assert.match(page,/const durationSeconds=seconds\/groups/);
  assert.match(page,/seconds:montageSeconds/);
- assert.match(page,/video\.playbackRate=options\.seconds===30\?2:1/);
+ assert.match(page,/video\.playbackRate=playbackSpeed/);
  assert.match(page,/music:musicFile,musicVolume:musicVolume\/100/);
  assert.match(page,/const effects=asmrEnabled\?await loadMotionSfx/);
- assert.match(page,/60 segundos · velocidad original/);
- assert.match(page,/seis segmentos ASMR de 10 segundos/);
+ assert.match(page,/60 segundos · original/);
+ assert.match(page,/Los efectos se sincronizan con las escenas/);
  assert.match(sfx,/!\[5,10\]\.includes\(duration\)/);
  assert.doesNotMatch(page,/if\(enabled\)\{job\.narrationEnabled=false;job\.montageSeconds=30;/);
 });
@@ -725,4 +725,32 @@ test("VMV Motion preserves previous cloud render and checks recording duration b
  assert.match(s,/No se guardó el archivo defectuoso/);
  assert.match(s,/No se reemplazó ninguna versión anterior/);
  assert.match(s,/await motionLibrary\(accessToken,\{\s*action:"render-upload",id,extension,\.\.\.\(revisionId\?\{revisionId\}:\{\}\)/);
+});
+
+test("Wizard duration is preserved through Motion handoff, storyboard, saved clips, audio and library",()=>{
+ const wizard=read("app/vista-app/vmv-pilot/page.tsx");
+ const studio=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ const terra=read("app/api/video-generator/motion-terra/route.ts");
+ const library=read("app/api/video-generator/motion-library/route.ts");
+ const speech=read("app/api/video-generator/speech/continuous/route.ts");
+ const sfx=read("app/api/video-generator/motion-sfx/route.ts");
+ assert.match(wizard,/seconds:form\.seconds,subtitles:form\.subtitles/);
+ assert.match(wizard,/Produce an original, coherent "\+form\.seconds\+"-second/);
+ assert.doesNotMatch(wizard,/update\(\{qualityMode:"turbo",seconds:60\}\)/);
+ assert.match(studio,/validMotionSeconds\(handoff\.seconds\)/);
+ assert.match(studio,/handed\.seconds=handoff\.seconds/);
+ assert.match(studio,/setMontageSeconds\(handoff\.seconds\)/);
+ assert.match(studio,/const requiredScenes=sceneTotal\(plan,chosenSeconds\)/);
+ assert.match(studio,/seconds:chosenSeconds/);
+ assert.match(studio,/for\(let beat=0;beat<requiredScenes;beat\+\+\)/);
+ assert.match(studio,/for\(let i=0;i<requiredScenes;i\+\+\)/);
+ assert.match(studio,/const playbackSpeed=5\/segmentSeconds/);
+ assert.match(studio,/video\.playbackRate=playbackSpeed/);
+ assert.match(studio,/directorPlan\.scenes\.length/);
+ assert.match(terra,/const allowedSeconds=\[15,30,60\]/);
+ assert.match(terra,/sceneCount\(seconds\)/);
+ assert.match(terra,/durationSeconds:seconds/);
+ assert.match(library,/\[3,6,12\]\.includes\(x\.plan\.scenes\.length\)/);
+ assert.match(speech,/\[3,6,12\]\.includes\(segments\.length\)/);
+ assert.match(sfx,/\[1,2\]\.includes\(scenes\.length\)/);
 });
