@@ -2193,9 +2193,25 @@ export default function StickmanLabPage(){
      <div className={css.editorActions}>
       <button type="button" className={css.ghostButton} onClick={suggestPublication}>
        Sugerir descripción</button>
+      <button type="button" className={css.ghostButton} onClick={openVoiceEditor}>
+       <Volume2 size={16}/> Cambiar voz</button>
       <button type="button" className={css.ghostButton} onClick={()=>setStudioStep("editar")}>
-       Volver a editar</button>
+       Editar escenas</button>
      </div>
+     {voiceRevisions.length?<div className={css.videoVersions}>
+      <h3>Versiones del video</h3>
+      <p>El video original siempre estará disponible.</p>
+      <div className={css.versionList}>
+       <button type="button" disabled={renderLoading}
+        className={!activeRenderId?css.versionActive:""}
+        onClick={()=>void selectVideoVersion("")}>Original</button>
+       {voiceRevisions.map((item,index)=><button key={item.id} type="button"
+        className={activeRenderId===item.id?css.versionActive:""}
+        disabled={renderLoading} onClick={()=>void selectVideoVersion(item.id)}>
+        {item.voice} · {index+1}
+       </button>)}
+      </div>
+     </div>:null}
      <div className={css.publishFields}>
       <label>Título
        <input maxLength={100} value={publishDraft.title}
