@@ -33,7 +33,7 @@ function parse(raw:unknown):{title:string;storyBible:string;scenes:[Scene,Scene,
 }
 const narrationSystem=[
  "You are an expert short-form video narrator. Write a SINGLE compelling 15-second narration in the user's language. The narration is AUDIO ONLY, not instructions for the images.",
- "Create a strong curiosity hook, concise scientific or story explanation, and a surprising payoff. For Spanish, use 31-37 spoken words across three approximately equal five-second segments; each segment must be a continuous part of one single speech, not three separate mini-stories.",
+ "Create a strong curiosity hook, concise scientific or story explanation, and a surprising payoff. For Spanish, use 24-27 spoken words total, 8-9 words per five-second segment at natural speaking pace. Keep each segment short enough to fit in five seconds WITHOUT speeding up or cutting words. Each segment is part of one continuous speech, not three separate mini-stories.",
  "Avoid unsupported factual claims, dead air, repetition, filler, and directions such as camera or scene descriptions.",
  'Return JSON only: {"title":"...","speech":["0-5 second speech","5-10 second speech","10-15 second speech"]}.'
 ].join(" ");
