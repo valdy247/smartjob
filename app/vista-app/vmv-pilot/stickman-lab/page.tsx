@@ -252,7 +252,7 @@ async function directorCall(accessToken:string,endpoint:string,data:Record<strin
   result?.error==="openai_quota_or_rate_limit"?"OpenAI no tiene cuota disponible.":
   result?.error==="image_safety_rejected"?"OpenAI bloqueó esta imagen por moderación. Ajusta su descripción antes de volver a generar.":
   result?.error==="image_bad_request"?"OpenAI rechazó la imagen"+(result?.providerCode?" ("+result.providerCode+")":"")+". No se realizarán más intentos automáticos.":
-  result?.error==="motion_scene_retry"?"La IA devolvió un guion de 60 segundos incompleto o con escenas inválidas. El guion necesita regenerarse; las imágenes completadas permanecen guardadas.":
+  result?.error==="motion_scene_retry"?(result?.stage==="narration"?"El guion tiene fragmentos incompletos. No se generaron imágenes nuevas.":result?.stage==="storyboard"?"El storyboard no contiene las 12 escenas válidas. No se generaron imágenes nuevas.":result?.reason==="output_truncated"?"La respuesta de OpenAI se cortó antes de terminar. Prueba generar el guion nuevamente.":"OpenAI devolvió una respuesta incompleta. No se generaron imágenes nuevas."):
   result?.error==="motion_ai_unavailable"?"Falló la preparación del guion con OpenAI (motion_ai_unavailable). Revisa los registros de Vercel.":
   result?.error==="openai_request_failed"?"OpenAI no pudo procesar el guion (openai_request_failed).":
   result?.error==="openai_key_not_configured"?"Falta configurar OpenAI en el entorno Preview.":
