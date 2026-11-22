@@ -119,7 +119,7 @@ export default function CreativeGenerator({mode,en,onBack,onLibrary,registerBack
   finally{setBusy(false);}
  };
  const imageResult=async(base=false)=>{
-  if(busy)return;setBusy(true);setError("");
+  if(busy||!confirmed)return;setBusy(true);setError("");
   try{
    const entry=base?basePrompt:prompt;
    const normalized=selected.instruction+"\n"+(mode==="edit-image"&&!base?
@@ -135,9 +135,9 @@ export default function CreativeGenerator({mode,en,onBack,onLibrary,registerBack
    if(!blob.type.startsWith("image/"))throw Error("La imagen recibida no es válida.");
    if(base){
     const file=new File([blob],"generated.jpg",{type:blob.type});
-    setImage(await fileAsData(file));setGeneratedBase(true);newStage("baseResult");
+    setImage(await fileAsData(file));setGeneratedBase(true);setConfirmed(false);newStage("baseResult");
    }else{
-    setResultBlob(blob);setResultUrl(URL.createObjectURL(blob));newStage("result");
+    setResultBlob(blob);setResultUrl(URL.createObjectURL(blob));setConfirmed(false);newStage("result");
    }
   }catch(e){setError(e instanceof Error?e.message:"No se pudo generar la imagen.");}
   finally{setBusy(false);}
@@ -158,7 +158,7 @@ export default function CreativeGenerator({mode,en,onBack,onLibrary,registerBack
    if(!response.ok)throw Error(String(body.error||"video_generation_failed"));
    const id=String(body.job?.id||"");
    if(!id)throw Error("No se recibió el identificador del video.");
-   setJobId(id);onVideoCreated(id);newStage("result");
+   setJobId(id);setConfirmed(false);onVideoCreated(id);newStage("result");
   }catch(e){setError(e instanceof Error?e.message:"No se pudo generar el video.");}
   finally{setBusy(false);}
  };
@@ -194,8 +194,9 @@ export default function CreativeGenerator({mode,en,onBack,onLibrary,registerBack
    <textarea className={css.input} autoFocus rows={5} maxLength={2000} value={basePrompt}
     onChange={e=>setBasePrompt(e.target.value)} placeholder={L("Describe tu imagen…","Describe your image…")}/>
    <VideoPromptAssistant value={basePrompt} onApply={setBasePrompt} kind="image" maxLength={2000} en={en}
-    context={{visual:selected.instruction,purpose:"Starting image for image-to-video"}} disabled={busy}/>
-   <button type="button" className={css.primary} onClick={()=>void imageResult(true)} disabled={busy||basePrompt.trim().length<3}>
+    context={{visual:selected.id,purpose:"Starting image for image-to-video"}} disabled={busy}/>
+   <label className={css.consent}><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>{L("Autorizo el uso de créditos","I approve credit usage")}</label>
+   <button type="button" className={css.primary} onClick={()=>void imageResult(true)} disabled={busy||!confirmed||basePrompt.trim().length<3}>
     {busy?<LoaderCircle className={css.spin} size={17}/>:<Sparkles size={17}/>} {L("Generar imagen","Generate image")}
    </button></>:null}
   {stage==="baseResult"?<><h2>{L("Imagen creada","Image created")}</h2>
@@ -210,7 +211,7 @@ export default function CreativeGenerator({mode,en,onBack,onLibrary,registerBack
      mode==="edit-image"?L("Describe el cambio…","Describe the change…"):L("Describe tu idea…","Describe your idea…")}/>
    <VideoPromptAssistant value={prompt} onApply={setPrompt} kind={video?"video":"image"}
     maxLength={video?850:4000} en={en} disabled={busy}
-    context={{visual:selected.instruction,purpose:mode==="edit-image"?
+    context={{visual:selected.id,purpose:mode==="edit-image"?
      "Edit the uploaded image; preserve unchanged elements. Selected action: "+action:
      mode==="image-video"?"Animate the supplied image, preserving identity":
      "Create original "+currentTitle,duration:video?duration:undefined}}/>
@@ -222,7 +223,7 @@ export default function CreativeGenerator({mode,en,onBack,onLibrary,registerBack
      <button type="button" aria-pressed={model==="gen4.5"} onClick={()=>setModel("gen4.5")}>Runway</button>
      <button type="button" aria-pressed={model==="kling"} onClick={()=>setModel("kling")}>Kling</button></div></>:
     <><label>{L("Formato","Format")}</label><div className={css.smallChoices}>
-     {([["1024x1536","9:16"],["1024x1024","1:1"],["1536x1024","16:9"]] as const).map(([v,label])=>
+     {([["1024x1536","2:3"],["1024x1024","1:1"],["1536x1024","3:2"]] as const).map(([v,label])=>
       <button key={v} type="button" aria-pressed={size===v} onClick={()=>setSize(v)}>{label}</button>)}
     </div></>}
    </details>
