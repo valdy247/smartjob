@@ -509,3 +509,16 @@ test("Wizard and editor show loading spinners at route changes and while restori
  assert.match(routeLoader,/LoaderCircle/);
  assert.match(wizardLoader,/LoaderCircle/);
 });
+
+test("Library covers are privately signed and cannot reference another owner's storyboard",()=>{
+ const api=read("app/api/video-generator/motion-library/route.ts");
+ const studio=read("app/vista-app/vmv-pilot/stickman-lab/page.tsx");
+ assert.match(api,/function validSnapshot\(input:unknown,owner:string\)/);
+ assert.match(api,/path\.startsWith\(owner\+"\/"\)/);
+ assert.match(api,/validSnapshot\(project,owner\)/);
+ assert.match(api,/createSignedUrl\(first\.referencePath,3600\)/);
+ assert.match(api,/scenes:project\.plan\.frames\.length,coverUrl/);
+ assert.match(studio,/coverUrl\?:string/);
+ assert.match(studio,/item\.coverUrl\?<img src=\{item\.coverUrl\}/);
+ assert.match(studio,/currentTarget\.style\.display="none"/);
+});
