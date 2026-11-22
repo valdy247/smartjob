@@ -688,7 +688,7 @@ export default function StickmanLabPage(){
    <div className={css.intro}><h1>VMV Motion</h1><span>IA directora · Seedance · Historia continua</span></div>
    <div className={css.modeRow}>
     <button type="button" className={customMode?css.modeActive:""} disabled={rendering}
-     onClick={()=>setCustomMode(true)}>Tu historia</button>
+     onClick={()=>{setCustomMode(true);setWithVoice(true);}}>Tu historia</button>
     <button type="button" className={!customMode?css.modeActive:""} disabled={rendering}
      onClick={()=>setCustomMode(false)}>Ejemplos</button>
    </div>
@@ -707,7 +707,7 @@ export default function StickmanLabPage(){
      <CarFront size={21}/>{language==="es"?"Fórmula 1":"Formula 1"}</button>
    </div>}
    <section className={css.stage}>
-    <div className={css.canvasWrap}>
+    {!customMode?<div className={css.canvasWrap}>
      <canvas ref={canvas} width={STICKMAN_WIDTH} height={STICKMAN_HEIGHT}
       aria-label="Vista previa de animación Stickman" role="img"/>
      {!rendering?<button className={css.play} type="button"
@@ -715,7 +715,7 @@ export default function StickmanLabPage(){
        {playing?<Pause size={18}/>:<Play size={18}/>}
       </button>:null}
      <span className={css.duration}>{customMode?"60s":"30s"} · 9:16</span>
-    </div>
+    </div>:null}
     <div className={css.controls}>
      <div className={css.languages} aria-label="Idioma">
       <button type="button" disabled={rendering} className={language==="es"?css.selected:""}
@@ -757,7 +757,7 @@ export default function StickmanLabPage(){
      disabled={directorBusy||seedBusy||rendering||customPrompt.trim().length<8}
      onClick={()=>void prepareStoryboard()}>
      {directorBusy?<LoaderCircle className={css.spin} size={18}/>:<WandSparkles size={18}/>}
-     {directorBusy?directorStatus:"Generar imágenes y revisar"}
+     {directorBusy?directorStatus:"Generar video"}
     </button>:null}
     {customMode&&directorPlan?.frames.length?<section className={css.storyReview} aria-label="Revisión de escenas">
      <div className={css.storyHeading}>
@@ -834,7 +834,7 @@ export default function StickmanLabPage(){
     </div>:null}
    </section>
    <p className={css.note}>{language==="es"
-    ?"Tu historia genera tres ilustraciones con OpenAI y las anima con zoom y transiciones. Consume créditos de OpenAI. No utiliza Runway."
+    ?(customMode?"Primero revisa y aprueba las 12 imágenes. Después Seedance les da movimiento a 720p y el sistema une los clips, agrega voz y subtítulos si están activados.":"Los ejemplos usan animación Stickman local. Activa Tu historia para crear video con Seedance.")
     :"AI-generated images, cinematic camera and subtitles. OpenAI image generation has a cost."}</p>
   </div>
  </main>;
