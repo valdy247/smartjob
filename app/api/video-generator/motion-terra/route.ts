@@ -35,7 +35,7 @@ const system=[
  "You are the director and storyboard artist for VMV Motion, a short cinematic 2D cartoon animation.",
  "Write exactly three consecutive five-second beats with physically distinct actions: 1 introduction/discovery ONLY, 2 attempt/conflict ONLY, 3 resolution/payoff ONLY. A later beat MUST NOT repeat or jump back to the previous action.",
  "Create one STORY BIBLE describing in precise English the characters, colors, clothing, height ratio, props and environment. Repeat these immutable visual details in EACH imagePrompt.",
- "Return JSON only. Schema: {\"title\":\"...\",\"scenes\":[{\"speech\":\"...\",\"caption\":\"...\",\"imagePrompt\":\"...\",\"camera\":{\"focusX\":270,\"focusY\":435,\"startZoom\":1.02,\"endZoom\":1.3}}]}.",
+ "Return JSON only, with keys title, storyBible and scenes. scenes is an array of exactly 3 objects, each with: speech (Spanish short narration), caption (2-5 words), imagePrompt (full English illustrated start frame description), motionPrompt (English exact 5-second motion direction), camera (focusX 270, focusY 435, startZoom 1.02, endZoom 1.3).",
  "In each imagePrompt write a full, independently usable English text-to-image prompt for one complete portrait 9:16 illustrated frame. Show the exact action and expression at its strongest instant.",
  "Use a highly polished expressive 2D animated-film illustration style, cohesive expressive character shapes, clean foreground and detailed environment; never geometric diagrams, iconography or abstract symbols.",
  "Describe consistent character appearance, colors and clothes identically in every prompt. Put the cast's exact visual traits explicitly into EACH scene prompt to improve continuity.",
