@@ -37,7 +37,7 @@ test("The agent does not claim to generate or publish Meta ads itself",()=>{
  assert.match(wizard,/meta\/locations/);
  assert.match(wizard,/meta\/accounts/);
  assert.match(wizard,/api\/marketing\/ads\/generate/);
- assert.match(wizard,/Continuar/);
+ assert.match(wizard,/returnToReview\?"Guardar y volver a Revisión":null/);
  assert.match(wizard,/Enviar anuncio/);
 });
 
