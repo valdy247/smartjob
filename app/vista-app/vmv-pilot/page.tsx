@@ -6,7 +6,9 @@ import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
 import {Preview} from "../video-generator/CreativeGenerator";
-import ViralRadar from "../video-generator/ViralRadar";
+import PilotTrendStep from "./PilotTrendStep";
+import PilotVoiceStep from "./PilotVoiceStep";
+import {PILOT_LANGUAGES,type PilotLanguage,type PilotVoiceProvider} from "@/lib/vmv-pilot-voice-config";
 import type {RadarIdea} from "@/lib/vmv-video-radar";
 import type {PilotRenderRequest} from "@/components/VMVPilotRenderDock";
 import css from "./page.module.css";
@@ -47,7 +49,8 @@ const stylesOptions:{id:Style;label:string;preview:"realistic"|"cinematic"|"cart
 const defaults={id:"",niche:"",audience:"Público general",goal:"Entretener",
  style:"stickman" as Style,frequency:3,monthly_budget_cents:0,
  creative_seed:"",research_video_id:"",research_scan_id:null as string|null,
- seconds:60 as 15|30|60,narration:true,subtitles:true};
+ seconds:60 as 15|30|60,narration:true,subtitles:true,language:"es" as PilotLanguage,
+ voiceProvider:"openai" as PilotVoiceProvider,voiceId:"alloy",voiceLabel:"Alloy"};
 
 export default function VMVPilotPage(){
  const router=useRouter();
@@ -91,7 +94,7 @@ export default function VMVPilotPage(){
    monthly_budget_cents:pilot.monthly_budget_cents||0,
    creative_seed:pilot.creative_seed||"",research_video_id:pilot.research_video_id||"",
    research_scan_id:pilot.research_scan_id||null});
-  setStep(8);setCustomNiche(false);setCustomAudience(false);setError("");setApproved(false);setScreen("create");
+  setStep(10);setCustomNiche(false);setCustomAudience(false);setError("");setApproved(false);setScreen("create");
  };
  const back=()=>{
   setError("");
@@ -114,7 +117,7 @@ export default function VMVPilotPage(){
     topic:(form.creative_seed||form.niche).slice(0,220),
     audience:form.audience,goal:form.goal,style:form.style,
     seconds:form.seconds,narration:form.narration,subtitles:form.subtitles,
-    language:en?"en":"es"
+    language:form.language,voiceProvider:form.voiceProvider,voiceId:form.voiceId
    };
    window.dispatchEvent(new CustomEvent<PilotRenderRequest>("vmv-pilot:generate",{detail:details}));
    setPilots(prev=>[saved,...prev.filter(p=>p.id!==saved.id)]);
@@ -125,6 +128,7 @@ export default function VMVPilotPage(){
  const selectedIdea=(idea:RadarIdea,scanId:string)=>{
   update({creative_seed:(idea.hook+" — "+idea.concept).slice(0,450),
    research_video_id:idea.sourceId,research_scan_id:scanId});
+  setStep(10);
  };
  const titles=[
   L("¿Qué tema?","What's your topic?"),
@@ -133,8 +137,10 @@ export default function VMVPilotPage(){
   L("Elige un estilo","Choose a style"),
   L("Duración","Duration"),
   L("Videos por semana","Videos per week"),
-  L("Narración","Narration"),
+  L("Idioma del video","Video language"),
+  L("Elige una voz","Choose a voice"),
   L("Subtítulos","Subtitles"),
+  L("¿Analizar tendencias?","Analyze trends?"),
   L("Tu video","Your video")
  ];
  return <main className={css.page}><div className={css.shell}>
@@ -150,7 +156,7 @@ export default function VMVPilotPage(){
    </div>
   </>:null}
   {screen==="create"?<>
-   <div className={css.progress}>{step+1} / 9</div>
+   <div className={css.progress}>{step+1} / 11</div>
    <h1>{titles[step]}</h1>
    {step===0?customNiche?<div className={css.inputPanel}>
     <input autoFocus value={form.niche} maxLength={160}
@@ -193,30 +199,36 @@ export default function VMVPilotPage(){
    {step===5?<div className={css.tiles}>{([1,3,5,7] as const).map(n=>
     <button key={n} type="button" onClick={()=>{update({frequency:n});setStep(6);}}>
      <CalendarDays size={25}/><strong>{n}</strong></button>)}</div>:null}
-   {step===6?<div className={css.tiles}>
-    <button type="button" onClick={()=>{update({narration:true});setStep(7);}}>
-     <Volume2 size={29}/><strong>{L("Con voz","With voice")}</strong></button>
-    <button type="button" onClick={()=>{update({narration:false});setStep(7);}}>
-     <VolumeX size={29}/><strong>{L("Sin voz","No voice")}</strong></button>
-   </div>:null}
-   {step===7?<div className={css.tiles}>
-    <button type="button" onClick={()=>{update({subtitles:true});setStep(8);}}>
+   {step===6?<div className={css.optionGrid}>{PILOT_LANGUAGES.map(item=>
+    <button key={item.id} type="button" onClick={()=>{
+     update({language:item.id,voiceProvider:"openai",voiceId:"alloy",voiceLabel:"Alloy",narration:true});
+     setStep(7);
+    }}><Volume2 size={22}/><strong>{item.native}</strong></button>)}</div>:null}
+   {step===7?<PilotVoiceStep language={form.language} en={en} onChoose={(provider,id,name)=>{
+    update({voiceProvider:provider,voiceId:id,voiceLabel:name,narration:provider!=="none"});
+    setStep(8);
+   }}/>:null}
+   {step===8?<div className={css.tiles}>
+    <button type="button" onClick={()=>{update({subtitles:true});setStep(9);}}>
      <Subtitles size={29}/><strong>{L("Con subtítulos","With subtitles")}</strong></button>
-    <button type="button" onClick={()=>{update({subtitles:false});setStep(8);}}>
+    <button type="button" onClick={()=>{update({subtitles:false});setStep(9);}}>
      <Subtitles size={29}/><strong>{L("Sin subtítulos","No subtitles")}</strong></button>
    </div>:null}
-   {step===8?<div className={css.review}>
+   {step===9?<PilotTrendStep niche={form.niche} language={form.language} en={en}
+     onSkip={()=>{update({creative_seed:"",research_video_id:"",research_scan_id:null});setStep(10);}}
+     onChoose={selectedIdea}/>:null}
+   {step===10?<div className={css.review}>
     <div><span>{L("Tema","Topic")}</span><strong>{form.niche}</strong></div>
     <div><span>{L("Estilo","Style")}</span><strong>{stylesOptions.find(s=>s.id===form.style)?.label||"Producto"}</strong></div>
     <div><span>{L("Duración","Duration")}</span><strong>{form.seconds}s · 9:16</strong></div>
-    <div><span>{L("Voz","Voice")}</span><strong>{form.narration?L("Sí","Yes"):L("No","No")}</strong></div>
+    <div><span>{L("Idioma","Language")}</span><strong>{PILOT_LANGUAGES.find(x=>x.id===form.language)?.native}</strong></div>
+    <div><span>{L("Voz","Voice")}</span><strong>{form.narration?form.voiceLabel:L("Sin voz","No voice")}</strong></div>
     <div><span>{L("Subtítulos","Subtitles")}</span><strong>{form.subtitles?L("Sí","Yes"):L("No","No")}</strong></div>
-    <details className={css.research}>
-     <summary>{L("Tendencias","Trends")}</summary>
-     <ViralRadar niche={form.niche} en={en} selectedSource={form.research_video_id}
-      onChoose={selectedIdea} onClear={()=>update({creative_seed:"",research_video_id:"",research_scan_id:null})}/>
-    </details>
-    {form.creative_seed?<p className={css.inspiration}><Check size={16}/>{L("Idea seleccionada","Idea selected")}</p>:null}
+    {form.creative_seed?<div className={css.selectedIdea}>
+     <span>{L("Idea seleccionada","Selected idea")}</span>
+     <strong>{form.creative_seed.slice(0,160)}</strong>
+     <button type="button" onClick={()=>setStep(9)}>{L("Cambiar","Change")}</button>
+    </div>:null}
     <label className={css.consent}>
      <input type="checkbox" checked={approved} onChange={e=>setApproved(e.target.checked)}/>
      <span>{L("Autorizo usar créditos de IA para este video.","I approve AI credits for this video.")}</span>
