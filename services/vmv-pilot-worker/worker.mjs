@@ -352,22 +352,32 @@ async function processJob(job){
    // Also validate a resumed script before using more provider credits.
    await verifyScriptLanguage(job,job.scenes);
   }
-  const scenes=job.scenes,clips=[],voices=[],prefix=job.owner_id+"/"+job.id;
+  const scenes=job.scenes,prefix=job.owner_id+"/"+job.id;
   if(!LANGUAGES[job.language])throw Error("video_language_invalid");
+  let narrationFile=null,timing=speechTimeline(scenes,job.seconds);
   if(job.narration){
    if(job.voice_provider==="none"||!job.voice_id)throw Error("voice_invalid");
-   for(let i=0;i<scenes.length;i++){
-    if(closing)throw Error("worker_stopping");
-    const voice=path.join(dir,"audio-"+i+".mp3");
-    if(!await restoreAsset(job,"voice_"+i,voice)){
-     await generateSpeech(job,scenes[i].speech,voice);
-     await persistAsset(job,"voice_"+i,voice,"audio/mpeg");
-    }
-    voices.push(voice);
-    await patch(job,{status:"working",phase:"Narración "+(i+1)+"/"+scenes.length,
-     progress:8+Math.floor(6*(i+1)/scenes.length)});
+   narrationFile=path.join(dir,"narration.mp3");
+   let alignment=null;
+   if(!await restoreAsset(job,"voice_continuous",narrationFile)){
+    await patch(job,{status:"working",phase:"Narración continua",progress:8});
+    alignment=await generateContinuousSpeech(job,scenes,narrationFile);
+    await persistAsset(job,"voice_continuous",narrationFile,"audio/mpeg");
    }
-   await verifyAudioLanguage(job,voices,dir);
+   const duration=await probe(narrationFile);
+   const tempo=duration/job.seconds;
+   if(tempo<0.78||tempo>1.25)throw Error("voice_length_requires_script_revision");
+   if(alignment){
+    timing=speechTimeline(scenes,duration,alignment);
+    await patch(job,{assets:{...job.assets,voice_timeline:timing}});
+   }else if(job.assets?.voice_timeline?.segments?.length===scenes.length){
+    timing=job.assets.voice_timeline;
+   }else{
+    timing=speechTimeline(scenes,duration);
+    await patch(job,{assets:{...job.assets,voice_timeline:timing}});
+   }
+   await verifyAudioLanguage(job,[narrationFile],dir);
+   await patch(job,{status:"working",phase:"Narración verificada",progress:14});
   }else if(job.voice_provider!=="none")throw Error("voice_invalid");
   const variants=job.quality_mode==="compare"?["turbo","high"]:
    job.quality_mode==="turbo"?["turbo"]:job.quality_mode==="high"?["high"]:null;
@@ -442,7 +452,7 @@ async function processJob(job){
    if(job.outputs?.[variant]===pathKey)continue;
    await patch(job,{status:"assembling",phase:"Montaje "+(variant==="turbo"?"Turbo":"Alta"),
     progress:90+Math.floor(7*i/variants.length)});
-   const final=await assemble(job,dir,clipsByVariant[variant],voices,variant);
+   const final=await assemble(job,dir,clipsByVariant[variant],narrationFile,timing,variant);
    await upload(FINAL,pathKey,final,"video/mp4");
    await patch(job,{outputs:{...(job.outputs||{}),[variant]:pathKey},
     progress:90+Math.floor(7*(i+1)/variants.length)});
