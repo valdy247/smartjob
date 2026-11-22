@@ -320,7 +320,7 @@ async function stitchSeedanceClips(urls:string[],voices:ArrayBuffer[]=[],caption
        const text=captions[index].trim();
        ctx.font="bold 36px system-ui, sans-serif";ctx.textAlign="center";
        ctx.lineWidth=7;ctx.strokeStyle="#080808";ctx.fillStyle="#ffffff";
-       const words=text.split(/\\s+/),lines:string[]=[];let line="";
+       const words=text.split(/\s+/),lines:string[]=[];let line="";
        for(const word of words){
         const candidate=line?line+" "+word:word;
         if(ctx.measureText(candidate).width>610&&line){lines.push(line);line=word;}else line=candidate;
