@@ -92,23 +92,27 @@ export async function POST(req:NextRequest){
  // Private preview is already restricted to the explicitly allowlisted owner.
  // No daily test quota: the owner controls each paid generation via confirmCost.
  try{
-  const narration=await askOpenAI(narrationSystem,prompt,1500);
-  if(!Array.isArray(narration.speech)||narration.speech.length!==SCENE_COUNT||
-   narration.speech.some(v=>typeof v!=="string"||v.trim().length<8||v.length>165)){
-   console.warn("[vmv-motion-director] invalid narration",{count:Array.isArray(narration.speech)?narration.speech.length:null});
-   return reply({error:"motion_scene_retry",stage:"narration",reason:"invalid_segment_count_or_length"},422);
-  }
-  const spoken=narration.speech as string[];
-  // Never silently manufacture a real-life controversy with an anonymous
-  // protagonist and an unspecified video. The writer must revise the premise.
+  let narration:Record<string,unknown>|null=null;
+  let spoken:string[]=[];
   const factualIncident=/creador|influencer|imperio digital|digital empire|esc[aá]ndalo|pol[eé]mic|controvers|cancelaci[oó]n|viral scandal/i.test(prompt);
-  const genericCase=/\b(?:un creador|una creadora|un influencer|alguien|cierta persona|one creator|an influencer)\b/i.test(spoken.join(" "));
-  const inventedFactualClaim=/\b(?:video pol[eé]mico|informaci[oó]n incorrecta|miles de seguidores|millones de seguidores|perdi[oó] suscriptores|fans se sintieron traicionados|a[ñn]os atr[aá]s|hace algunos a[ñn]os)\b/i.test(spoken.join(" "));
-  const fictionDeclared=/\b(?:fictici[ao]|imaginari[ao]|hypothetical|fictional|imagine|imagina)\b/i.test(spoken.join(" "));
-  if(factualIncident&&genericCase&&inventedFactualClaim&&!fictionDeclared){
-   return reply({error:"motion_scene_retry",stage:"narration",
+  for(let attempt=0;attempt<2;attempt++){
+   narration=await askOpenAI(narrationSystem,attempt===0?prompt:
+    prompt+"\nREVISE: Earlier narration made unsupported accusations with anonymous people. Be concrete and specific ONLY where the source actually identifies a documented event. Otherwise tell an explicitly labeled fictional case or give practical advice without pretending to recount a real scandal.",1500);
+   if(!Array.isArray(narration.speech)||narration.speech.length!==SCENE_COUNT||
+    narration.speech.some(v=>typeof v!=="string"||v.trim().length<8||v.length>165)){
+    if(attempt===0)continue;
+    return reply({error:"motion_scene_retry",stage:"narration",reason:"invalid_segment_count_or_length"},422);
+   }
+   spoken=narration.speech as string[];
+   const script=spoken.join(" ");
+   const genericCase=/\b(?:un creador|una creadora|un influencer|alguien|cierta persona|one creator|an influencer)\b/i.test(script);
+   const vagueScandal=/\b(?:video pol[eé]mico|informaci[oó]n incorrecta|millones de seguidores|perdi[oó] suscriptores|fans se sintieron traicionados|hace algunos a[ñn]os)\b/i.test(script);
+   const fictionDeclared=/\b(?:fictici[ao]|imaginari[ao]|hypothetical|fictional|imagine|imagina)\b/i.test(script);
+   if(!factualIncident||!genericCase||!vagueScandal||fictionDeclared)break;
+   if(attempt===1)return reply({error:"motion_scene_retry",stage:"narration",
     reason:"real_incident_needs_identifiable_verified_details"},422);
   }
+  if(!narration||spoken.length!==SCENE_COUNT)throw Error("motion_scene_retry");
   const visuals=await askOpenAI(visualSystem,JSON.stringify({
    idea:prompt,title:narration.title,narrationForTimingOnly:spoken
   }),9000);
