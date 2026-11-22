@@ -17,7 +17,8 @@ type Screen="home"|"create"|"history";
 type Style="stickman"|"realistic"|"cinematic"|"animated"|"product";
 type Pilot={id:string;niche:string;audience:string;goal:string;style:Style;frequency:number;
  monthly_budget_cents:number;delivery:string;status:string;created_at:string;
- research_scan_id:string|null;creative_seed:string;research_video_id:string};
+ research_scan_id:string|null;creative_seed:string;research_video_id:string;
+ language?:PilotLanguage;voice_provider?:PilotVoiceProvider;voice_id?:string;seconds?:number;subtitles?:boolean};
 const goals=[
  ["Entretener","Entertain"],["Enseñar","Teach"],["Informar","Inform"],
  ["Inspirar","Inspire"],["Promocionar","Promote"],["Vender","Sell"]
@@ -93,7 +94,15 @@ export default function VMVPilotPage(){
    goal:pilot.goal,style:pilot.style,frequency:pilot.frequency,
    monthly_budget_cents:pilot.monthly_budget_cents||0,
    creative_seed:pilot.creative_seed||"",research_video_id:pilot.research_video_id||"",
-   research_scan_id:pilot.research_scan_id||null});
+   research_scan_id:pilot.research_scan_id||null,
+   language:pilot.language||"es",
+   voiceProvider:pilot.voice_provider||"openai",
+   voiceId:pilot.voice_id||"alloy",
+   voiceLabel:pilot.voice_provider==="none"?(en?"No voice":"Sin voz"):
+    pilot.voice_provider==="elevenlabs"?"ElevenLabs":pilot.voice_id||"Alloy",
+   narration:pilot.voice_provider!=="none",
+   seconds:([15,30,60] as const).find(v=>v===pilot.seconds)||60,
+   subtitles:pilot.subtitles!==false});
   setStep(10);setCustomNiche(false);setCustomAudience(false);setError("");setApproved(false);setScreen("create");
  };
  const back=()=>{
