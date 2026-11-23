@@ -9,7 +9,7 @@ const reply=(value:Record<string,unknown>,status=200)=>NextResponse.json(value,{
 type Scan={id:string;owner_id:string;query:string;status:string;results:RadarVideo[];failure_code:string|null};
 const transform=(scan:Scan)=>({
  scan:{id:scan.id,status:scan.status,items:(scan.results||[]).slice(0,3).map(v=>({
-  sourceId:v.id,title:v.title,thumbnail:v.thumbnail,url:v.url,channel:v.channel,views:v.views
+  sourceId:v.id,title:v.title,description:v.description,thumbnail:v.thumbnail,url:v.url,channel:v.channel,views:v.views
  }))},source:"youtube",originalMetadataOnly:true
 });
 async function getScan(id:string,owner:string):Promise<Scan|null>{
