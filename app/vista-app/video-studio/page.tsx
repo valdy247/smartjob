@@ -202,21 +202,12 @@ export default function VideoStudioV1(){
   finally{setBusy(false);}
  };
  const makeEditableDraft=()=>{
-  const subject=(ideaPrompt.trim()||selectedTrend?.title|| (topic==="Otro"?otherTopic:topic).trim()||"Mi historia").slice(0,110);
-  const count=Math.max(3,Math.round(seconds/5));
-  const segments:Scene[]=Array.from({length:count},(_,index)=>{
-   const phase=index===0?"Introducción":index===count-1?"Cierre":index<count/2?"Desarrollo":"Continuación";
-   return {
-    speech:index===0?"Presenta la idea de forma breve, interesante y natural.":
-     index===count-1?"Resume el mensaje principal y termina con claridad.":
-     "Explica una parte concreta de tu historia en esta escena.",
-    imagePrompt:"Escena "+(index+1)+" de "+count+". "+phase+" visual de la idea: "+subject+". Describe personajes, acción, entorno y movimientos de cámara; conserva su apariencia entre las escenas.",
-    caption:index===0?"Idea principal":index===count-1?"Mensaje final":"Escena "+(index+1)
-   };
-  });
+  const subject=(ideaPrompt.trim()||selectedTrend?.title||(topic==="Otro"?otherTopic:topic).trim()||"Mi historia").slice(0,110);
+  // Manual editing is explicit: empty scenes can never be mistaken for a completed script.
+  const segments:Scene[]=Array.from({length:seconds/5},()=>({speech:"",imagePrompt:"",caption:""}));
   setTitle(subject.slice(0,100));setScenes(segments);setOutline(null);setManualDraft(true);
-  setDraftProgress(100);setDraftPhase("Borrador editable");
-  setPlanNotice("La IA no completó el guion. Preparamos una estructura editable sin IA para que puedas continuar. Revisa cada escena antes de generar.");
+  setDraftProgress(0);setDraftPhase("");
+  setPlanNotice("Editor manual: escribe la narración y describe cada imagen. Para continuar, completa todas las escenas.");
   setError("");
  };
  const prepare=async(chosenTrend:Trend|null=selectedTrend)=>{
@@ -254,9 +245,8 @@ export default function VideoStudioV1(){
    setScenes(completed);setManualDraft(false);setPlanNotice("");setDraftProgress(100);setDraftPhase("Guion listo para revisar");
   }catch(e){
    const code=e instanceof Error?e.message:"studio_plan_provider_unavailable";
-   if(["authentication_required","studio_plan_invalid_request","studio_plan_confirmation_required"].includes(code)){
-    setError(code);setScenes([]);
-   }else makeEditableDraft();
+   setError(errorMessages[code]?code:"studio_plan_provider_unavailable");
+   setScenes([]);setManualDraft(false);
   }
   finally{setBusy(false);}
  };
@@ -392,10 +382,14 @@ export default function VideoStudioV1(){
     <h2>Tu historia empieza aquí</h2>
     <p>La IA preparará un guion con estructura narrativa, escenas, diálogo y acciones de cámara.</p>
     <button className={styles.primary} onClick={()=>void prepare()}><Sparkles size={18}/> {error?"Volver a intentar":"Generar propuesta"}</button>
-    <button className={styles.secondary} onClick={()=>next(platform==="idea"?"idea":"trends")}><Pencil size={16}/> Editar idea</button>
+    <button className={styles.secondary} type="button" onClick={makeEditableDraft}><Pencil size={16}/> Escribir guion manualmente</button>
+     <button className={styles.secondary} onClick={()=>next(platform==="idea"?"idea":"trends")}><Pencil size={16}/> Editar idea</button>
    </div>:null}
    {!busy&&scenes.length>0?<div className={styles.planContent}>
-    {manualDraft?<div role="status" className={styles.planDraftNote}><ShieldCheck size={17}/><span>{planNotice}</span><button type="button" disabled={busy} onClick={()=>void prepare(platform==="idea"?null:selectedTrend)}>Reintentar IA</button></div>:null}
+    {manualDraft?<div role="status" className={styles.planDraftNote}><ShieldCheck size={17}/><span>{planNotice}</span><button type="button" disabled={busy} onClick={()=>{
+      if(scenes.some(x=>x.speech.trim()||x.imagePrompt.trim())&&!window.confirm("Regenerar con IA reemplazará las escenas que escribiste. ¿Continuar?"))return;
+      void prepare(platform==="idea"?null:selectedTrend);
+     }}>Reintentar IA</button></div>:null}
     <div className={styles.field}><label>Título</label><input value={title} onChange={e=>setTitle(e.target.value)} maxLength={140}/></div>
     {outline?<div className={styles.planSummary}><span className={styles.kicker}>CONCEPTO CREATIVO</span>
      <label>Historia principal</label><textarea rows={3} value={outline.logline} onChange={e=>setOutline(p=>p?{...p,logline:e.target.value}:p)}/>
