@@ -139,7 +139,9 @@ export async function POST(req:NextRequest){
   "Produce original, high-quality entertainment or education, not generic filler.",
   "Audience: "+audience+". Language of script, captions and title: "+lang+".",
   "STYLE BIBLE: "+STYLES[style],
-  "Each clip is FIVE SECONDS. Plan expressive actions that clearly depict the narration.",
+  "Each VISUAL clip is FIVE SECONDS, but the voiceover is ONE CONTINUOUS natural story. Never force a sentence, clause or pause to end at a scene boundary.",
+  "Write the full spoken narration as connected prose across scene boundaries; each speech field is a consecutive segment of the SAME continuous voiceover, not an independent line or mini-story.",
+  "Visual beats must follow the narration, with actions that fit the words at their actual spoken moment.",
   "Maintain character faces, clothing, proportions, palette, setting and geography between scenes.",
   "First-scene hook, cause-and-effect narrative, payoff and a memorable ending.",
   "Use verifiable educational facts only. Avoid invented statistics, fake history or miracle claims.",
@@ -154,7 +156,7 @@ export async function POST(req:NextRequest){
   const system=shared+
    " Create the ENTIRE original short-video screenplay in one response. Return a JSON object with title, logline, hook, ending, characters, setting, beats and scenes. "+
    "Provide exactly "+count+" distinct beats (strings) and exactly "+count+" scenes, each corresponding to one five-second clip. "+
-   "Each scene has speech, imagePrompt and caption. Speech must be 6–12 natural words in "+lang+" that can fit 5 seconds. "+
+   "Each scene has speech, imagePrompt and caption. Aim for 9–13 natural spoken words per five-second visual segment, but prioritize coherent sentences spanning multiple scenes. No artificial pauses or standalone sentence per scene. "+
    "The imagePrompt is a detailed English description of the exact action and relevant subjects in the narration, maintaining consistent appearance and environment. "+
    "Write the scene's content, not instructions about what to write. Every scene must advance the factual explanation or original story. "+
    "When the trend refers to an animal or scientific phenomenon, treat the animals as subjects and describe them in the characters field.";
@@ -178,7 +180,7 @@ export async function POST(req:NextRequest){
   return json({error:"studio_plan_invalid_batch"},400);
  const outline=readOutline(b?.outline,count);
  if(!outline)return json({error:"studio_plan_invalid_outline"},400);
- const system=shared+" Using the fixed narrative outline, generate scenes "+(start+1)+" through "+(start+batchSize)+" of "+count+". Return JSON with a scenes array of exactly "+batchSize+" items, each with speech, imagePrompt and caption fields. Each speech is 6–12 natural spoken words maximum (5s), in "+lang+". The detailed English imagePrompt depicts the same beat, recurring characters, fixed clothing, expression, action, camera angle, background and visual style. Caption 2–7 words faithfully taken from speech. No generic filler.";
+ const system=shared+" Using the fixed narrative outline, generate scenes "+(start+1)+" through "+(start+batchSize)+" of "+count+". Return JSON with a scenes array of exactly "+batchSize+" items, each with speech, imagePrompt and caption fields. Each speech is a consecutive 9–13 word excerpt of one continuous natural narration in "+lang+"; do not end sentences at visual boundaries unless natural. The detailed English imagePrompt depicts the same beat, recurring characters, fixed clothing, expression, action, camera angle, background and visual style. Caption 2–7 words faithfully taken from speech. No generic filler.";
  const result=await askStructured("scenes",system,
   {topic,idea:idea||topic,outline,beats:outline.beats.slice(start,start+batchSize),start,source:sourceContext},
   value=>readScenes(value,batchSize),3000);
