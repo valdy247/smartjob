@@ -57,7 +57,9 @@ test("silent videos bypass text-to-speech and use silent scene-based subtitle ti
  assert.match(jobs,/x\.voiceProvider==="none"&&x\.voiceId!=="none"/);
  assert.match(worker,/voice_provider==="none"&&job\.voice_id==="none"/);
  assert.match(worker,/const narration=silent\?null:/);
- assert.match(worker,/alignmentSource:"silent_visual_timeline"/);
+ assert.match(worker,/silentTimeline\(scenes,duration,job.subtitles\)/);
+ const timeline=read("services/vmv-studio-worker/speech-timeline.mjs");
+ assert.match(timeline,/alignmentSource:"silent_visual_timeline"/);
  assert.match(worker,/if\(!silent\)\{/);
  assert.match(worker,/else args\.push\("-an"\)/);
  assert.match(worker,/assemble\(job,dir,clips,narration,timing,variant\)/);

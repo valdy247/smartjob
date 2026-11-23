@@ -81,10 +81,21 @@ test("Jobs check live worker before the first database credit reservation",()=>{
  const start=jobs.indexOf("export async function POST");
  const stage=jobs.slice(start,jobs.indexOf("export async function PATCH",start));
  assert.ok(stage.includes("if(!cloudLaunchEnabled())"));
- assert.ok(stage.includes("if(!await videoStudioWorkerReady())"));
+ assert.ok(stage.includes("if(!await videoStudioWorkerReady()||!await videoStudioSemanticWorkerReady())"));
  assert.ok(stage.indexOf("videoStudioWorkerReady()")<stage.indexOf('db.rpc("vmv_studio_create_job"'));
  assert.match(stage,/video_studio_worker_not_ready/);
  assert.match(worker,/select\("id",\{head:true\}\)\.limit\(1\)/);
  assert.match(worker,/res\.writeHead\(enabled\?200:503/);
  assert.doesNotMatch(worker.slice(worker.indexOf("createServer("),worker.indexOf("const auth=")),/vmv_studio_claim/);
+});
+
+test("new jobs require the semantic-v2 worker protocol and reject an old worker",async()=>{
+ const env={VERCEL_ENV:"preview",VMV_STUDIO_GENERATION_ENABLED:"true",
+  VMV_STUDIO_WORKER_READY:"true",VMV_STUDIO_WORKER_READY_URL:"https://vmv-studio.onrender.com/readyz"};
+ const cloud=setup(env,async url=>({
+  status:200,text:async()=>url.endsWith("/semantic-readyz")?"semantic-v2":"ready"
+ }));
+ assert.equal(await cloud.videoStudioSemanticWorkerReady(),true);
+ const legacy=setup(env,async()=>({status:404,text:async()=>"not found"}));
+ assert.equal(await legacy.videoStudioSemanticWorkerReady(),false);
 });

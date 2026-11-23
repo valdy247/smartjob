@@ -3,13 +3,15 @@ import {authenticatedUser} from "@/lib/auth-server";
 import {videoDb,validUuid} from "@/lib/vmv-video-generator";
 import {cleanRadarQuery,videoToRadar,type RadarVideo} from "@/lib/vmv-video-radar";
 import {isVideoStudioCountry} from "@/lib/vmv-studio-countries";
+import {filterTopicTrends,trendTopicCategory} from "@/lib/vmv-studio-trend-relevance";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=45;
 const reply=(value:Record<string,unknown>,status=200)=>NextResponse.json(value,{status,headers:{"Cache-Control":"no-store"}});
 type Scan={id:string;owner_id:string;query:string;status:string;results:RadarVideo[];failure_code:string|null};
+const topicFromScan=(scan:Scan)=>scan.query.replace(/\s+\[region:[A-Z]{2}\].*$/,"").trim();
 const transform=(scan:Scan)=>({
- scan:{id:scan.id,status:scan.status,country:scan.query.match(/\[region:([A-Z]{2})\]/)?.[1]||null,items:(scan.results||[]).slice(0,3).map(v=>({
+ scan:{id:scan.id,status:scan.status,country:scan.query.match(/\[region:([A-Z]{2})\]/)?.[1]||null,items:filterTopicTrends(scan.results||[],topicFromScan(scan)).slice(0,3).map(v=>({
   sourceId:v.id,title:v.title,description:v.description,thumbnail:v.thumbnail,url:v.url,channel:v.channel,views:v.views
  }))},source:"youtube",originalMetadataOnly:true
 });
@@ -58,7 +60,7 @@ export async function GET(req:NextRequest){
  try{
   // Reuse existing durable, owner-scoped six-hour cache and twenty searches/day quota.
   const db=videoDb();
-  const claimed=await db.rpc("vmv_video_radar_claim",{p_owner:owner,p_query:query+" [region:"+country+"]",p_days:30});
+  const claimed=await db.rpc("vmv_video_radar_claim",{p_owner:owner,p_query:query+" [region:"+country+"] [topic:v2]",p_days:30});
   if(claimed.error){
    const code=String(claimed.error.message).includes("radar_daily_limit")?"studio_trends_daily_limit":"studio_trends_database_unavailable";
    return reply({error:code},code==="studio_trends_daily_limit"?429:503);
@@ -74,29 +76,30 @@ export async function GET(req:NextRequest){
   // NOT prove that a video is trending in that country. Use the regional
   // mostPopular chart instead, which is explicitly ranked for that region.
   // Never fall back to a worldwide chart when a regional chart is unavailable.
-  const normalized=query.normalize("NFD").replace(/\p{M}/gu,"").toLowerCase();
-  const categories:{[key:string]:string}={
-   curiosidades:"27",historia:"27",ciencia:"28",tecnologia:"28",educacion:"27",
-   entretenimiento:"24",negocios:"22"
-  };
-  const category=Object.entries(categories).find(([topic])=>normalized.includes(topic))?.[1];
+  const category=trendTopicCategory(query);
   const popularParams=(categoryId?:string)=>new URLSearchParams({
    part:"snippet,statistics",chart:"mostPopular",regionCode:country,
    maxResults:"50",...(categoryId?{videoCategoryId:categoryId}:{})
   });
-  let items:Record<string,unknown>[]=[];
+  // Only serve videos relevant to the chosen subject, even when YouTube's
+  // category chart is sparse. Never replace missing matches with unrelated hits.
+  const results:RadarVideo[]=[];
+  const collect=(raw:Record<string,unknown>[])=>{
+   const parsed=raw.map(v=>videoToRadar(v)).filter((v):v is RadarVideo=>Boolean(v));
+   for(const video of filterTopicTrends(parsed,query)){
+    if(!results.some(existing=>existing.id===video.id))results.push(video);
+   }
+  };
   if(category){
-   try{items=await youtubeApi("videos",popularParams(category),key);}
+   try{collect(await youtubeApi("videos",popularParams(category),key));}
    catch(e){
     if(e instanceof Error&&e.message==="studio_youtube_quota")throw e;
-    // Some regions do not publish the requested category chart.
-    // The unfiltered chart still remains country-specific.
+    // Not every country publishes every category. Try its regional chart,
+    // but retain the mandatory topical filter.
    }
   }
-  if(items.length<3)items=await youtubeApi("videos",popularParams(),key);
-  const results:RadarVideo[]=items.map(v=>videoToRadar(v))
-   .filter((v):v is RadarVideo=>Boolean(v)).slice(0,12);
-  if(!results.length)throw Error("studio_country_unavailable");
+  if(results.length<3)collect(await youtubeApi("videos",popularParams(),key));
+  results.splice(12);
   const saved=await db.from("vmv_video_radar_scans")
    .update({status:"ready",results,updated_at:new Date().toISOString(),failure_code:null})
    .eq("id",scanId).eq("owner_id",owner).select("*").single();
