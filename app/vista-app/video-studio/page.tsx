@@ -363,7 +363,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
      <span className={styles.homeCardInfo}><span><strong>Crear video</strong><small>Comienza una nueva historia</small></span><ArrowUpRight size={22}/></span>
     </button>
     <button className={styles.homeCard+" "+styles.libraryCard} onClick={()=>{next("history");void loadHistory();}}>
-     <span className={styles.homeIllustrationAlt}><img src="/video-studio/styles/storybook.svg" alt="" aria-hidden="true"/><span className={styles.homeFloatIcon}><FolderOpen size={23}/></span></span>
+     <span className={styles.homeIllustrationAlt}><img src="/video-studio/styles/cartoon2d.svg" alt="" aria-hidden="true"/><span className={styles.homeFloatIcon}><FolderOpen size={23}/></span></span>
      <span className={styles.homeCardInfo}><span><strong>Historial</strong><small>Tus proyectos y videos guardados</small></span><ArrowUpRight size={22}/></span>
     </button>
    </div>
