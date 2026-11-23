@@ -9,7 +9,7 @@ export function cloudLaunchEnabled():boolean{
   process.env.VMV_STUDIO_WORKER_READY==="true";
 }
 
-export async function videoStudioWorkerReady():Promise<boolean>{
+export async function videoStudioWorkerReady(voiceProvider:"openai"|"elevenlabs"|"none"="openai"):Promise<boolean>{
  if(!cloudLaunchEnabled())return false;
  const raw=process.env.VMV_STUDIO_WORKER_READY_URL?.trim();
  if(!raw||raw.length>250)return false;
@@ -20,6 +20,8 @@ export async function videoStudioWorkerReady():Promise<boolean>{
  if(url.protocol!=="https:"||!url.hostname.endsWith(".onrender.com")||
   url.hostname===".onrender.com"||url.username||url.password||
   url.port||url.pathname!=="/readyz"||url.search||url.hash)return false;
+ // Only the validated configured worker can be probed; never forward user URLs.
+ if(voiceProvider==="elevenlabs")url.pathname="/voice-readyz";
  try{
   const response=await fetch(url.toString(),{
    method:"GET",cache:"no-store",redirect:"error",
