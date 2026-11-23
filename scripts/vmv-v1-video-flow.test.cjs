@@ -28,6 +28,13 @@ test("five style cards have original illustrations and a fullscreen example view
  assert.match(css,/\.styleGraphic img/);
 });
 
+test("Video Studio home has only creation and history cards without the removed Creative Studio banner",()=>{
+ assert.doesNotMatch(ui,/VMV CREATIVE STUDIO|Convierte tus ideas en/);
+ assert.doesNotMatch(ui,/className=\{styles\.welcome\}/);
+ assert.match(ui,/<strong>Crear video<\/strong>/);
+ assert.match(ui,/<strong>Historial<\/strong>/);
+});
+
 test("own idea has short prompt and AI produces editable scenes without null dereference",()=>{
  assert.match(ui,/stage==="idea"/);
  assert.match(ui,/maxLength=\{700\}/);
