@@ -22,7 +22,7 @@ test("V1 enables quota-protected voice demos without altering the original Pilot
  const picker=read("app/vista-app/vmv-pilot/PilotVoiceStep.tsx");
  const preview=read("app/api/video-studio/voice-preview/route.ts");
  assert.match(studio,/catalogEndpoint="\/api\/video-studio\/voices" previewEndpoint="\/api\/video-studio\/voice-preview" activationEndpoint="\/api\/video-studio\/voice-activate" libraryMode sampleMode="limited"/);
- assert.match(picker,/catalogEndpoint="\/api\/video-generator\/pilot-voices",previewEndpoint="\/api\/video-generator\/pilot-voice-preview",sampleMode="paid"/);
+ assert.match(picker,/catalogEndpoint="\/api\/video-generator\/pilot-voices",previewEndpoint="\/api\/video-generator\/pilot-voice-preview",[\s\S]*?libraryMode=false,sampleMode="paid"/);
  assert.match(picker,/const canPreview=sampleMode==="paid"\|\|\(sampleMode==="limited"&&v.provider==="openai"\)\|\|hasPublicSample/);
  assert.match(picker,/disabled=\{disabled\|\|Boolean\(loadingId\)\|\|!canPreview\}/);
  assert.match(picker,/sampleMode==="limited"/);
