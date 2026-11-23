@@ -6,7 +6,7 @@ import path from "node:path";
 import {spawn} from "node:child_process";
 import {randomUUID} from "node:crypto";
 import {startMotionClip,waitMotionClip} from "./motion-engine.mjs";
-import {speechTimeline} from "./speech-timeline.mjs";
+import {speechTimeline,silentTimeline} from "./speech-timeline.mjs";
 
 const required=["OPENAI_API_KEY","AI_GATEWAY_API_KEY"];
 const supabaseUrl=process.env.SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -130,54 +130,6 @@ async function restoreAsset(job,key,local){
  await download(WORK,remote,local);
  return true;
 }
-async function aiScript(job){
- const n=job.seconds/5;
- for(let attempt=0;attempt<3;attempt++){
- const system=[
-  "You are an original short video director creating a "+job.seconds+"-second vertical video.",
-  "Return JSON with title and scenes array. EXACTLY "+n+" scenes, five seconds each.",
-  "Write ONE natural, continuous voiceover of approximately "+Math.round(job.seconds*2.3)+" words before dividing it into visual clips. An ordinary sentence MAY continue through several clips.",
-  "Each scene has a consecutive excerpt of the voiceover in speech, imagePrompt in English (a visually exact action), caption (3-8 words).",
-  "STRICT narration AND captions language: "+LANGUAGES[job.language]+". NEVER use a different language for any spoken or displayed words.",
-  "STRICT immutable visual bible for EVERY scene: "+STYLE[job.style],
-  "Stickman characters and visual palette must be CONSISTENT across the entire story.",
-  "Narration must align exactly to visuals scene-by-scene. Never show a character or future surprise before the narration reveals it.",
-  "Use original, factually accurate claims, no copied third-party scripts or protected characters.",
-  "Open with a compelling hook without spoiling the reveal; finish coherently. Every scene advances the same continuous story.",
-  "Output valid JSON only: {\"title\":\"...\",\"scenes\":[{\"speech\":\"...\",\"imagePrompt\":\"...\",\"caption\":\"...\"}]}"
- ].join(" ");
- const response=await request(OPENAI+"/chat/completions",{
-  method:"POST",headers:{...auth("OPENAI_API_KEY"),"Content-Type":"application/json"},
-  body:JSON.stringify({model:"gpt-4.1-mini",temperature:0.35,max_tokens:4800,
-   response_format:{type:"json_object"},messages:[{role:"system",content:system},
-    {role:"user",content:JSON.stringify({topic:job.topic,audience:job.audience,goal:job.goal})}]})
- },90000);
- if(!response.ok)throw Error("script_provider_"+response.status);
- const data=await response.json();
- const raw=data?.choices?.[0]?.message?.content;
- if(typeof raw!=="string")throw Error("script_empty");
- const parsed=JSON.parse(raw);
- if(!Array.isArray(parsed.scenes)||parsed.scenes.length!==n)throw Error("script_scene_count");
- const scenes=parsed.scenes.map((s,i)=>({
-  index:i,start:i*5,end:i*5+5,
-  speech:String(s.speech||"").trim().slice(0,180),
-  imagePrompt:String(s.imagePrompt||"").trim().slice(0,650),
-  caption:String(s.caption||"").trim().slice(0,100)
- }));
- if(scenes.some(s=>s.speech.length<10||s.imagePrompt.length<30||
-  s.speech.split(/\s+/).length>22))throw Error("script_timing_invalid");
- try{
-  await verifyScriptLanguage(job,scenes);
- }catch(error){
-  if(error instanceof Error&&error.message==="script_language_mismatch"&&attempt<2)continue;
-  throw error;
- }
- await patch(job,{title:String(parsed.title||job.topic).slice(0,140),
-  scenes,status:"working",phase:"Voz",progress:7});
- return scenes;
- }
- throw Error("script_language_mismatch");
-}
 async function verifyScriptLanguage(job,scenes){
  if(!LANGUAGES[job.language])throw Error("video_language_invalid");
  // Scene excerpts are NOT independent sentences: evaluate the whole narration.
@@ -282,7 +234,7 @@ async function generateContinuousSpeech(job,scenes,file){
 }
 async function makeImage(job,scene,reference){
  const prompt=[
-  "Portrait 9:16 image to animate as a five-second real video clip.",
+  "Portrait 9:16 image for a real video moment whose timing follows the narration.",
   "LOCKED STYLE: "+STYLE[job.style],
   "Visual must show the action in: "+scene.speech,
   "Illustration: "+scene.imagePrompt,
@@ -343,7 +295,7 @@ const timecode=seconds=>{
  return [h,m,s].map(n=>String(n).padStart(2,"0")).join(":")+","+String(ms).padStart(3,"0");
 };
 async function assemble(job,dir,clips,narrationFile,timing,variant){
- if(!["turbo","high"].includes(variant)||clips.length!==job.seconds/5)
+ if(!["turbo","high"].includes(variant)||clips.length!==job.scenes.length)
   throw Error("invalid_montage_request");
  const concat=path.join(dir,"concat-"+variant+".txt"),
   raw=path.join(dir,"raw-"+variant+".mp4"),
@@ -359,7 +311,8 @@ async function assemble(job,dir,clips,narrationFile,timing,variant){
   const sceneSeconds=segment.duration;
   if(!Number.isFinite(sceneSeconds)||sceneSeconds<0.2||sceneSeconds>20)throw Error("scene_timing_invalid");
   const normalized=path.join(dir,"norm-"+variant+"-"+i+".mp4");
-  const scale=(sceneSeconds/5).toFixed(6);
+  const sourceSeconds=await probe(clips[i]);
+  const scale=(sceneSeconds/sourceSeconds).toFixed(6);
   const vf="scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,"+
    "setpts=(PTS-STARTPTS)*"+scale+",fps=24,format=yuv420p,tpad=stop_mode=clone:stop_duration=12";
   await shell("ffmpeg",["-hide_banner","-loglevel","error","-y","-i",clips[i],
@@ -397,7 +350,7 @@ async function assemble(job,dir,clips,narrationFile,timing,variant){
  return final;
 }
 async function processJob(job){
- if(!Array.isArray(job.scenes)||job.scenes.length!==job.seconds/5||
+ if(!Array.isArray(job.scenes)||job.scenes.length<3||job.scenes.length>36||
   !STYLE[job.style]||!LANGUAGES[job.language]||job.credits_settled||
   !["turbo","high"].includes(job.quality_mode))throw Error("studio_job_invalid");
  const dir=await mkdtemp(path.join(tmpdir(),"vmv-studio-"));
@@ -452,12 +405,7 @@ async function processJob(job){
   const silent=job.voice_provider==="none"&&job.voice_id==="none";
   const narration=silent?null:path.join(dir,"narration.mp3");
   let duration=job.seconds;
-  let timing=silent?{
-   duration,segments:scenes.map((_,i)=>({index:i,start:i*5,end:(i+1)*5,duration:5})),
-   cues:job.subtitles?scenes.map((scene,i)=>({
-    start:i*5,end:(i+1)*5,text:String(scene.speech||"").trim()
-   })):[],alignmentSource:"silent_visual_timeline"
-  }:job.assets?.voice_timeline;
+  let timing=silent?silentTimeline(scenes,duration,job.subtitles):job.assets?.voice_timeline;
   if(!silent){
    // Voice preflight happens BEFORE spending on animated clips. The scenes are
    // independent visual windows; spoken grammar is never fitted to their edges.
@@ -472,21 +420,35 @@ async function processJob(job){
    if(!alignment&&timing?.segments?.length===n&&
     typeof timing.duration==="number"&&Math.abs(timing.duration-duration)<.25&&
     ["whisper_words","elevenlabs_characters"].includes(timing.alignmentSource)&&
+    timing.alignmentVersion===2&&
     Array.isArray(timing.cues)&&timing.cues.length){
     // A previous attempt already saved verified timestamps for this recording.
    }else{
     if(!alignment)alignment=await transcribeWordTimings(job,narration);
-    timing=speechTimeline(scenes,duration,alignment);
-    if(timing.alignmentSource==="estimated_legacy")throw Error("voice_alignment_unavailable");
+    timing={...speechTimeline(scenes,duration,alignment),alignmentVersion:2};
     await patch(job,{assets:{...job.assets,voice_timeline:timing}});
    }
    await verifyAudioLanguage(job,[narration],dir);
   }
+  if(!Array.isArray(timing?.segments)||timing.segments.length!==n||
+   timing.segments.some(segment=>!Number.isFinite(segment.duration)||segment.duration<.5||segment.duration>20))
+   throw Error("voice_scene_alignment_incomplete");
   const variant=job.quality_mode,clips=[];
   for(let i=0;i<n;i++){
    if(closing)throw Error("worker_stopping");
    const key="clip_"+variant+"_"+i,clip=path.join(dir,key+".mp4");
    if(!await restoreAsset(job,key,clip)){
+    if(scenes[i].motion==="zoom"){
+     const image=path.join(dir,"zoom-"+i+".jpg");
+     await download(WORK,scenes[i].imagePath,image);
+     const frames=Math.ceil(timing.segments[i].duration*24);
+     const vf="scale=760:1360:force_original_aspect_ratio=increase,crop=760:1360,"+
+      "zoompan=z='min(zoom+0.00055,1.16)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=720x1280:fps=24,format=yuv420p";
+     await shell("ffmpeg",["-hide_banner","-loglevel","error","-y","-framerate","24","-loop","1","-i",image,
+      "-vf",vf,"-frames:v",String(frames),"-an","-c:v","libx264","-preset","veryfast",
+      "-crf","26","-movflags","+faststart",clip],240000);
+     await persistAsset(job,key,clip,"video/mp4");
+    }else{
     const taskKey="task_"+variant+"_"+i;
     let task=job.assets?.[taskKey];
     if(!task){
@@ -498,6 +460,7 @@ async function processJob(job){
     const content=await bytes(await request(url,{},65000),60*1024*1024);
     await writeFile(clip,content);
     await persistAsset(job,key,clip,"video/mp4");
+    }
    }
    clips.push(clip);
    await patch(job,{status:"animating",phase:"Animando escena "+(i+1)+"/"+n,
