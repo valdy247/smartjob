@@ -4,7 +4,7 @@ import {askAiAgent} from "@/lib/vmv-ai-agents/model";
 import {validPilotLanguage,pilotLanguageName} from "@/lib/vmv-pilot-voice-config";
 import {isVideoStudioCountry} from "@/lib/vmv-studio-countries";
 import {splitNarrationIntoMoments} from "@/lib/vmv-studio-semantic-beats";
-import {applyStudioAudit,validStudioDraft} from "@/lib/vmv-studio-script-auditor";
+import {applyStudioAudit,validStudioDraft,studioAuditIssues} from "@/lib/vmv-studio-script-auditor";
 import type {StudioAuditDecision,StudioAuditScene} from "@/lib/vmv-studio-script-auditor";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -65,16 +65,12 @@ const outlineProperties={
  beats:{type:"array",items:stringField}
 };
 const outlineKeys=["title","logline","hook","ending","characters","setting","narration","beats"];
-const auditEditSchema={type:"object",additionalProperties:false,
- properties:{index:{type:"integer"},speech:stringField,imagePrompt:stringField,
-  caption:stringField,motion:{type:"string",enum:["animate","zoom"]},reason:stringField},
- required:["index","speech","imagePrompt","caption","motion","reason"]};
-const auditProperties={decision:{type:"string",enum:["pass","fix","block"]},
- reason:stringField,changes:{type:"array",items:auditEditSchema}};
+const auditProperties={decision:{type:"string",enum:["pass","revise"]},
+ reason:stringField,title:stringField,scenes:{type:"array",items:sceneSchema}};
 function outputSchema(stage:"outline"|"scenes"|"audit"):Record<string,unknown>{
  const properties=stage==="audit"?auditProperties:
   stage==="scenes"?{scenes:{type:"array",items:sceneSchema}}:outlineProperties;
- const required=stage==="audit"?["decision","reason","changes"]:
+ const required=stage==="audit"?["decision","reason","title","scenes"]:
   stage==="scenes"?["scenes"]:outlineKeys;
  return {type:"object",additionalProperties:false,properties,required};
 }
@@ -168,11 +164,9 @@ export async function POST(req:NextRequest){
    value=>{
     const valueOutline=readOutline(value);
     if(!valueOutline||!splitNarrationIntoMoments(valueOutline.narration).length)return null;
-    // The user selected an approximate runtime, but the worker must not get
-    // a wildly short or long script that would fail after reserving credits.
-    const spokenWords=valueOutline.narration.trim().split(/\s+/).filter(Boolean).length;
-    const estimatedTime=spokenWords/(language==="es"?2.3:2.25);
-    return Math.abs(estimatedTime-seconds)<=Math.max(5,seconds*.2)?valueOutline:null;
+    // The complete first draft is PRIVATE. The full-story editor will adjust
+    // runtime, story pacing and visuals before anything is shown to the user.
+    return valueOutline;
    },
    Math.min(5000,1400+Math.ceil(seconds/4)*65));
   if(!result.value)return json({error:result.error,detail:"outline"},result.error==="studio_plan_incomplete"?502:503);
@@ -181,59 +175,82 @@ export async function POST(req:NextRequest){
  }
 
  if(mode==="audit"){
-  // The complete narration and storyboard are still server-side work-in-progress:
-  // do not expose the user preview until this single editorial preflight completes.
+  // One compact final-review phase: no credits, no image/video generation.
   const outline=readOutline(b?.outline);
-  const supplied=Array.isArray(b?.scenes)?b.scenes:[];
-  const scenes:StudioAuditScene[]=supplied.map((item:unknown)=>{
+  const source=Array.isArray(b?.scenes)?b.scenes:[];
+  const scenes:StudioAuditScene[]=source.map((item:unknown)=>{
    const v=isRecord(item)?item:{};
    return {speech:safe(v.speech,230),imagePrompt:safe(v.imagePrompt,950),
     caption:safe(v.caption,110),motion:v.motion==="zoom"?"zoom":"animate"};
   });
   if(!outline||!validStudioDraft(outline,scenes))
    return json({error:"studio_plan_invalid_batch"},400);
-  const instruction=shared+
-   " You are the last quality auditor before showing a SHORT-FORM video proposal to the creator. "+
-   "Review the ENTIRE continuous script and EACH visual moment for factual caution, matching visuals, character continuity, "+
-   "hook clarity, coherent payoff, natural voice timing, attention and retention, and whether the proposed animate/zoom motion fits the spoken beat. "+
-   "Potential viral appeal is an editorial judgment, never a promise of views, virality or success. "+
-   "This is an APPROXIMATE voiceover, not rendered audio. Final scene durations are determined later from the recorded speech timestamps. "+
-   "Never enforce 5-second windows; concise moments can be static with a gentle zoom, dynamic action can animate. "+
-   "The narration target is "+seconds+" seconds in "+lang+
-   ". Prefer a natural conversational rhythm, approximately "+Math.round(seconds*(language==="es"?2.3:2.25))+" words; do not add rushed filler. "+
-   "STRICT EDITORIAL POLICY: If the story and visuals work, decision=pass and changes=[]. Make NO gratuitous rewrites. "+
-   "If you detect a concrete material defect, decision=fix and return ONLY minimal scene-level changes, each with its original 0-based index, "+
-   "complete replacement speech, imagePrompt, caption and motion, and a precise reason. "+
-   "Preserve the author's topic, facts, character identity, tone, language and unedited moments. "+
-   "Adjust individual spoken lines only as needed to make timing and visuals coherent; each moment can take a different amount of time. "+
-   "Change at most "+Math.max(2,Math.ceil(scenes.length*.35))+" moments out of "+scenes.length+
-   ". Never edit the title or unrelated scenes. "+
-   "If there is a critical problem that cannot be solved within those minimal edits, decision=block with a concise reason and changes=[]. "+
-   "Do not claim to have seen any source video or recorded voice. "+
-   "For decision=pass, use a short reason. Return only JSON with decision, reason and changes.";
-  type AuditOutcome={status:"blocked";reason:string}|{status:"approved";
-   draft:NonNullable<ReturnType<typeof applyStudioAudit>>};
-  const result=await askStructured<AuditOutcome>("audit",instruction,{
-   topic,idea:idea||topic,style,seconds,language,
-   source:sourceContext,outline,
-   scenes:scenes.map((scene,index)=>({index,...scene}))
-  },value=>{
-   if(!value||typeof value.decision!=="string"||typeof value.reason!=="string"||
-    !Array.isArray(value.changes)||value.reason.trim().length<6||
-    value.reason.length>320)return null;
-   if(value.decision==="block"){
-    return value.changes.length===0?
-     {status:"blocked" as const,reason:safe(value.reason,250)}:null;
+  const baseIssues=studioAuditIssues(outline,scenes,seconds,language);
+  const system=shared+
+   " You are the FINAL VIDEO EDITOR, not a passive critic. This is an automated pre-user-preview editorial stage. "+
+   "Review the complete script and the actual visual prompts side by side. Make sure every shot illustrates the words being spoken, "+
+   "not earlier or later narration, and that the subject, audience, language and style match the user's request. "+
+   "Detect boring repeated images, identical camera angles or compositions, unnecessary repetition, illogical actions, "+
+   "unclear hooks, weak payoff, misleading factual claims, continuity mistakes and any timing mismatch. "+
+   "Use a varied shot list (wide establishing, closeup, action, detail, character interaction, visual demonstration) WHEN meaningful. "+
+   "Keep recurring character identity consistent but show genuinely different objects, positions, actions and framing. "+
+   "If the initial draft has any real issue, you have FULL editorial authority to revise ALL scenes, their spoken lines, "+
+   "scene count, visual prompts, shot types and animate/zoom choices. You do NOT have to preserve the original eight scenes "+
+   "or their durations; choose 3 to 36 meaningful moments and preserve the core topic and user intent. "+
+   "Write a coherent ORIGINAL narration near "+Math.round(seconds*(language==="es"?2.3:2.25))+
+   " words for "+seconds+" seconds in "+lang+". Target a natural, NOT rushed delivery. "+
+   "The duration is estimated, and the worker will later synchronize scenes to actual voice timestamps. "+
+   "Always keep every word in exactly one scene speech, without dividing a sentence at arbitrary five-second boundaries. "+
+   "Each visual prompt MUST be distinctive, concrete and optimized for generating images: composition, action, camera, "+
+   "visible subject, environment, and consistent character details where relevant. No text baked into images. "+
+   "Choose zoom for still or short moments and animate when the action should truly move; never force animation. "+
+   "Do not invent statistics or claim guaranteed viral outcomes. Engagement is a qualitative goal. "+
+   "IMPORTANT: If no changes are necessary and the draft meets all technical constraints, "+
+   "respond {decision:'pass',reason:'...',title:'',scenes:[]}. "+
+   "If ANY changes are necessary, respond {decision:'revise',reason:'...',title:'...',scenes:[...]} with the COMPLETE "+
+   "corrected scene list, not partial edits. Editing all scenes is allowed and encouraged if needed. "+
+   "Use exactly the JSON schema; speech in "+lang+" and detailed English image prompts. "+
+   "Respond quickly; this is a small final polish, NOT an open-ended content generation loop.";
+  let feedback="";
+  let hadValidResponse=false;
+  const outputLimit=Math.min(10500,1700+scenes.length*225);
+  for(let attempt=0;attempt<2;attempt++){
+   try{
+    const response=await askAiAgent({
+     system:system+" Return only STRICT JSON, no markdown.",
+     messages:[{role:"user",content:JSON.stringify({
+      topic,idea:idea||topic,audience,style,seconds,language,
+      source:sourceContext,outline,scenes,issues:baseIssues,
+      ...(feedback?{revisionFeedback:feedback}:{}),
+      instructions:"Never approve a draft that fails any listed issue. Adjust everything necessary."
+     })}],
+     jsonMode:true,jsonSchema:{name:"vmv_video_audit",schema:outputSchema("audit")},
+     maxOutputTokens:outputLimit,temperature:attempt===0?.3:.15,
+     timeoutMs:attempt===0?23000:19000
+    });
+    const parsed=parseAiJson(response);
+    const report=parsed as unknown as StudioAuditDecision;
+    hadValidResponse=Boolean(parsed);
+    const draft=applyStudioAudit(outline,scenes,report,seconds,language);
+    if(draft)return json({...draft,auditPassed:true});
+    // At most one short retry with specific technical issues, not endless loops.
+    const proposed=Array.isArray(parsed?.scenes)?parsed.scenes as StudioAuditScene[]:[];
+    const proposalOutline={...outline,narration:proposed.map(s=>s?.speech||"").join(" ")};
+    const reviewIssues=proposed.length?
+     studioAuditIssues(proposalOutline,proposed,seconds,language):baseIssues;
+    feedback="Your first result failed quality validation: "+
+     (reviewIssues.length?reviewIssues.join("; "):
+      "Use decision=pass only if current input meets all requirements, otherwise give a COMPLETE revised scene list.")+
+     ". Fix all issues without changing the selected topic, then return schema-valid JSON.";
+   }catch(e){
+    const message=e instanceof Error?e.message:"";
+    console.warn("[vmv-video-studio/plan] audit_attempt_failed",{
+     attempt:attempt+1,reason:/HTTP (401|403|429)/.test(message)?"provider_unavailable":"generation"});
+    if(/HTTP (401|403|429)/.test(message))break;
+    feedback="Return a valid concise JSON object with a complete, coherent scene list.";
    }
-   const report=value as unknown as StudioAuditDecision;
-   const draft=applyStudioAudit(outline,scenes,report,seconds,language);
-   return draft?{status:"approved" as const,draft}:null;
-  },Math.min(5200,1900+scenes.length*85));
-  if(!result.value)return json({error:result.error,detail:"audit"},
-   result.error==="studio_plan_incomplete"?502:503);
-  if(result.value.status==="blocked")
-   return json({error:"studio_plan_audit_blocked",reason:result.value.reason},422);
-  return json({...result.value.draft,auditPassed:true});
+  }
+  return json({error:hadValidResponse?"studio_plan_incomplete":"studio_plan_provider_unavailable",detail:"audit"},502);
  }
  const start=Number(b?.start),batchSize=Number(b?.batchSize);
  const outline=readOutline(b?.outline);
