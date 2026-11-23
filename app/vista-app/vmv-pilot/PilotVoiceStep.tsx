@@ -5,14 +5,22 @@ import {getSupabase} from "@/lib/supabase";
 import {PILOT_VOICES,type PilotVoiceProvider,type PilotLanguage} from "@/lib/vmv-pilot-voice-config";
 import css from "./PilotVoiceStep.module.css";
 type Voice={id:string;name:string;provider:"openai"|"elevenlabs";
- gender?:"male"|"female"|"unknown";accent?:string;description?:string;previewUrl?:string};
+ gender?:"male"|"female"|"unknown";accent?:string;description?:string;previewUrl?:string;
+ age?:string;useCase?:string;quality?:string;origin?:"library";publicOwnerId?:string};
 type Props={language:PilotLanguage;en:boolean;disabled?:boolean;
- catalogEndpoint?:string;previewEndpoint?:string;sampleMode?:"paid"|"prerecorded"|"limited";
+ catalogEndpoint?:string;previewEndpoint?:string;activationEndpoint?:string;
+ libraryMode?:boolean;sampleMode?:"paid"|"prerecorded"|"limited";
  selectedProvider?:"openai"|"elevenlabs";selectedVoiceId?:string;
  onChoose:(provider:PilotVoiceProvider,id:string,name:string)=>void};
 export default function PilotVoiceStep({language,en,disabled=false,selectedProvider,selectedVoiceId,onChoose,
- catalogEndpoint="/api/video-generator/pilot-voices",previewEndpoint="/api/video-generator/pilot-voice-preview",sampleMode="paid"}:Props){
+ catalogEndpoint="/api/video-generator/pilot-voices",previewEndpoint="/api/video-generator/pilot-voice-preview",
+ activationEndpoint="/api/video-studio/voice-activate",libraryMode=false,sampleMode="paid"}:Props){
  const [voices,setVoices]=useState<Voice[]>([]);
+ const [libraryVoices,setLibraryVoices]=useState<Voice[]>([]);
+ const [libraryPage,setLibraryPage]=useState(0),[libraryMore,setLibraryMore]=useState(false);
+ const [libraryTotal,setLibraryTotal]=useState<number|null>(null);
+ const [libraryLoading,setLibraryLoading]=useState(false),[libraryError,setLibraryError]=useState("");
+ const [ageFilter,setAgeFilter]=useState(""),[useCaseFilter,setUseCaseFilter]=useState("");
  const [loading,setLoading]=useState(true),[loadingId,setLoadingId]=useState("");
  const [playingId,setPlayingId]=useState(""),[error,setError]=useState("");
  const [genderFilter,setGenderFilter]=useState<"male"|"female"|"all">("all");
@@ -48,6 +56,72 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
   return()=>{alive=false;playToken.current++;controller.current?.abort();playing.current?.pause();
    cache.current.forEach(src=>URL.revokeObjectURL(src));cache.current.clear();};
  },[language,catalogEndpoint]);
+ useEffect(()=>{
+  if(!libraryMode)return;
+  setLibraryVoices([]);setLibraryPage(0);setVisibleCount(24);setLibraryMore(false);
+ },[libraryMode,language,search,genderFilter,ageFilter,accentFilter,useCaseFilter]);
+ useEffect(()=>{
+  if(!libraryMode)return;
+  let alive=true;
+  const abort=new AbortController();
+  const timer=setTimeout(()=>{void(async()=>{
+   setLibraryLoading(true);setLibraryError("");
+   try{
+    const sb=getSupabase(),session=await sb?.auth.getSession();
+    const access=session?.data.session?.access_token;
+    if(!access)throw Error("authentication_required");
+    const params=new URLSearchParams({language,scope:"library",page:String(libraryPage)});
+    if(search.trim())params.set("search",search.trim());
+    if(genderFilter!=="all")params.set("gender",genderFilter);
+    if(ageFilter)params.set("age",ageFilter);
+    if(accentFilter)params.set("accent",accentFilter);
+    if(useCaseFilter)params.set("use_case",useCaseFilter);
+    const response=await fetch(catalogEndpoint+"?"+params,{
+     headers:{Authorization:"Bearer "+access},cache:"no-store",signal:abort.signal
+    });
+    const data=await response.json().catch(()=>null);
+    if(!response.ok)throw Error("voice_library_unavailable");
+    if(!alive)return;
+    const received=Array.isArray(data?.library)?data.library as Voice[]:[];
+    setLibraryVoices(prev=>libraryPage===0?received:[
+     ...prev,...received.filter(v=>!prev.some(p=>p.id===v.id))
+    ]);
+    setLibraryMore(data?.libraryHasMore===true);
+    setLibraryTotal(typeof data?.libraryTotal==="number"?data.libraryTotal:null);
+    if(data?.libraryError)setLibraryError(String(data.libraryError));
+   }catch(e){
+    if(!alive||abort.signal.aborted)return;
+    setLibraryError(e instanceof Error?e.message:"voice_library_unavailable");
+   }finally{if(alive)setLibraryLoading(false);}
+  })();},search?320:0);
+  return()=>{alive=false;clearTimeout(timer);abort.abort();};
+ },[libraryMode,language,catalogEndpoint,libraryPage,search,genderFilter,ageFilter,accentFilter,useCaseFilter]);
+ const choose=async(v:Voice)=>{
+  stop();setError("");
+  if(!libraryMode||v.origin!=="library"){onChoose(v.provider,v.id,v.name);return;}
+  if(!v.publicOwnerId){setError(en?"Voice is unavailable.":"Esta voz no está disponible.");return;}
+  const key=language+":"+v.provider+":"+v.id;
+  setLoadingId(key);
+  try{
+   const sb=getSupabase(),session=await sb?.auth.getSession();
+   const access=session?.data.session?.access_token;
+   if(!access)throw Error("authentication_required");
+   const response=await fetch(activationEndpoint,{
+    method:"POST",cache:"no-store",
+    headers:{Authorization:"Bearer "+access,"Content-Type":"application/json"},
+    body:JSON.stringify({voiceId:v.id,publicOwnerId:v.publicOwnerId,language})
+   });
+   const data=await response.json().catch(()=>null);
+   if(!response.ok)throw Error(String(data?.error||"voice_library_activation_unavailable"));
+   if(typeof data?.voiceId!=="string")throw Error("voice_library_activation_unavailable");
+   onChoose("elevenlabs",data.voiceId,v.name);
+  }catch(e){
+   const code=e instanceof Error?e.message:"voice_library_activation_unavailable";
+   setError(code==="voice_library_plan_required"?
+    (en?"This voice requires an eligible ElevenLabs plan. Select another voice.":"Esta voz requiere un plan compatible de ElevenLabs. Selecciona otra.") :
+    (en?"Couldn't activate this voice. No video credits were charged.":"No pudimos habilitar esta voz. No se descontaron créditos del video."));
+  }finally{setLoadingId("");}
+ };
  const play=async(v:Voice)=>{
   const key=language+":"+v.provider+":"+v.id;
   if(playingId===key){stop();return;}
@@ -107,8 +181,9 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
    }
   }
  };
- const allVoices:Voice[]=[...PILOT_VOICES,...voices];
- const accents=Array.from(new Set(voices.map(v=>v.accent?.trim()).filter((v):v is string=>Boolean(v))))
+ const allVoices:Voice[]=[...PILOT_VOICES,...voices,...libraryVoices].filter((v,i,list)=>
+  list.findIndex(other=>other.provider===v.provider&&other.id===v.id)===i);
+ const accents=Array.from(new Set([...voices,...libraryVoices].map(v=>v.accent?.trim()).filter((v):v is string=>Boolean(v))))
   .sort((a,b)=>a.localeCompare(b));
  const term=search.trim().toLocaleLowerCase();
  const displayed=allVoices.filter(v=>{
@@ -117,6 +192,8 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
    (v.provider==="openai"&&["onyx","echo"].includes(v.id))))return false;
   if(genderFilter==="female"&&v.gender!=="female")return false;
   if(accentFilter&&v.accent!==accentFilter)return false;
+  if(ageFilter&&v.age&&v.age!==ageFilter)return false;
+  if(useCaseFilter&&v.useCase&&v.useCase!==useCaseFilter)return false;
   return !term||[v.name,v.provider,v.accent,v.description].filter(Boolean)
    .join(" ").toLocaleLowerCase().includes(term);
  });
@@ -146,7 +223,26 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
     {accents.map(a=><option key={a} value={a}>{a}</option>)}
    </select>
   </label>:null}
-  <p className={css.count} role="status">{displayed.length} {en?"voices available":"voces disponibles"}</p>
+  {libraryMode?<div className={css.libraryFilters}>
+   <label>{en?"Age":"Edad"}<select value={ageFilter} onChange={e=>setAgeFilter(e.target.value)}>
+    <option value="">{en?"All":"Todas"}</option>
+    <option value="young">{en?"Young":"Joven"}</option>
+    <option value="middle_aged">{en?"Adult":"Adulta"}</option>
+    <option value="old">{en?"Mature":"Madura"}</option>
+   </select></label>
+   <label>{en?"Style":"Uso"}<select value={useCaseFilter} onChange={e=>setUseCaseFilter(e.target.value)}>
+    <option value="">{en?"All styles":"Todos"}</option>
+    <option value="narrative_story">{en?"Narration":"Narración"}</option>
+    <option value="social_media">{en?"Social media":"Redes sociales"}</option>
+    <option value="conversational">{en?"Conversational":"Conversacional"}</option>
+    <option value="advertisement">{en?"Advertising":"Publicidad"}</option>
+    <option value="informative_educational">{en?"Educational":"Educativa"}</option>
+    <option value="characters_animation">{en?"Characters":"Personajes"}</option>
+   </select></label>
+  </div>:null}
+  <p className={css.count} role="status">{displayed.length} {en?"voices loaded":"voces cargadas"}
+   {libraryMode&&libraryTotal!==null?" · "+libraryTotal+" "+(en?"in the library":"en la biblioteca"):""}
+  </p>
   <div className={css.grid}>{visible.map(v=>{
    const key=language+":"+v.provider+":"+v.id;
    const selected=selectedProvider===v.provider&&selectedVoiceId===v.id;
@@ -155,14 +251,16 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
    return <div key={key} className={selected?css.cardSelected:css.card}>
     <button type="button" className={css.select}
      aria-pressed={selected} disabled={disabled}
-     onClick={()=>{stop();onChoose(v.provider,v.id,v.name);}}>
-     <Volume2 size={22}/><strong>{v.name}</strong>
+     onClick={()=>void choose(v)}>
+     {loadingId===key?<LoaderCircle size={22} className={css.spin}/>:<Volume2 size={22}/>}
+     <strong>{v.name}</strong>
      <small>{v.provider==="elevenlabs"?"ElevenLabs":
        ["onyx","echo"].includes(v.id)?(en?"OpenAI · deep voice":"OpenAI · voz grave"):
        "OpenAI · estándar"}
       {v.gender==="male"?(en?" · Male":" · Masculina"):
        v.gender==="female"?(en?" · Female":" · Femenina"):""}</small>
      {v.accent?<small className={css.accent}>{v.accent}</small>:null}
+     {v.origin==="library"?<small>{en?"Studio voice library":"Biblioteca de voces premium"}</small>:null}
      {v.description?<small className={css.voiceDescription} title={v.description}>{v.description}</small>:null}
      {selected?<span className={css.selectedLabel}>{en?"Selected":"Seleccionada"}</span>:null}
     </button>
@@ -182,10 +280,15 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
    </button>
   </div>
   {displayed.length===0?<p className={css.empty}>{en?"No voices match these filters.":"No hay voces que coincidan con estos filtros."}</p>:null}
-  {displayed.length>visible.length?<button type="button" className={css.more}
-   onClick={()=>setVisibleCount(current=>current+24)}>
-   {en?"Show more voices":"Mostrar más voces"} ({displayed.length-visible.length})
+  {displayed.length>visible.length||libraryMode&&libraryMore?<button type="button" className={css.more}
+   disabled={libraryLoading} onClick={()=>{
+    if(displayed.length>visible.length)setVisibleCount(current=>current+24);
+    else setLibraryPage(current=>current+1);
+   }}>
+   {libraryLoading?(en?"Loading voices…":"Cargando voces…"):(en?"Show more voices":"Mostrar más voces")}
   </button>:null}
+  {libraryMode&&libraryLoading?<p className={css.count}>{en?"Searching high-quality voices…":"Buscando voces de alta calidad…"}</p>:null}
+  {libraryMode&&libraryError?<p className={css.error}>{en?"The public voice library is temporarily unavailable. Saved and OpenAI voices remain selectable.":"La biblioteca pública no está disponible en este momento. Puedes elegir las voces guardadas o las de OpenAI."}</p>:null}
   {loading?<div className={css.loading}><LoaderCircle size={14} className={css.spin}/></div>:null}
   {error?<p role="status" className={css.error}>{error}</p>:null}
   <p className={css.disclaimer}>
