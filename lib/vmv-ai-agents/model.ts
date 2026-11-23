@@ -8,6 +8,7 @@ type AskOptions={
  maxOutputTokens?:number;
  temperature?:number;
  timeoutMs?:number;
+ jsonMode?:boolean;
 };
 
 /**
@@ -28,7 +29,7 @@ function modelName(){
 }
 
 export async function askAiAgent({system,messages,maxOutputTokens=170,temperature=0.2,
- timeoutMs=7000}:AskOptions):Promise<string>{
+ timeoutMs=7000,jsonMode=false}:AskOptions):Promise<string>{
  if(!aiAgentModelPathAvailable())throw Error("AI provider authentication not configured");
  const model=modelName();
  if(process.env.OPENAI_API_KEY){
@@ -37,7 +38,8 @@ export async function askAiAgent({system,messages,maxOutputTokens=170,temperatur
    headers:{"Content-Type":"application/json",Authorization:"Bearer "+process.env.OPENAI_API_KEY},
    body:JSON.stringify({model:"gpt-4.1-mini",
     messages:[{role:"system",content:system},...messages],
-    max_tokens:maxOutputTokens,temperature,store:false}),
+    max_tokens:maxOutputTokens,temperature,store:false,
+    ...(jsonMode?{response_format:{type:"json_object"}}:{})}),
    signal:AbortSignal.timeout(timeoutMs)
   });
   if(!response.ok)throw Error("OpenAI provider returned HTTP "+response.status);
