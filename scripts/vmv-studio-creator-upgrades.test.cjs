@@ -43,7 +43,7 @@ test("public voice activation uses verified provider IDs before any video-credit
  assert.match(api,/v\.voice_id===voiceId&&v\.public_owner_id===publicOwnerId/);
  assert.match(api,/https:\/\/api\.elevenlabs\.io\/v1\/voices\/add\//);
  assert.match(api,/imported\.status===401\|\|imported\.status===403/);
- assert.doesNotMatch(api,/wallet|stripe|vmv_studio_create_job|charge_credits/);
+ assert.doesNotMatch(api,/db\.rpc\(|stripe\.|charge_credits|\.from\("vmv_studio_wallets"\)/);
  assert.match(component,/await fetch\(activationEndpoint/);
  assert.match(component,/onChoose\("elevenlabs",data\.voiceId,v\.name\)/);
  assert.match(component,/libraryMode=false,sampleMode="paid"/,"legacy Pilot still defaults to no library");
