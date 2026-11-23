@@ -419,7 +419,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
    <p className={styles.help}>No necesitas saber escribir guiones. Una o dos frases bastan para crear una historia con estructura, personajes y escenas.</p>
    <div className={styles.ideaCard}>
     <label htmlFor="vmv-idea">¿Qué te gustaría contar?</label>
-    <textarea id="vmv-idea" value={ideaPrompt} onChange={e=>{setIdeaPrompt(e.target.value);setScenes([]);}} maxLength={700} rows={5}
+    <textarea id="vmv-idea" value={ideaPrompt} onChange={e=>{setIdeaPrompt(e.target.value);setScenes([]);}} maxLength={3000} rows={5}
      placeholder="Ejemplo: Haz un video divertido sobre los beneficios del apio con un personaje que cuenta curiosidades sorprendentes."/>
     <span>{ideaPrompt.length} / 700</span>
     <p>La IA adaptará el guion a tu público, estilo, idioma y duración.</p>
