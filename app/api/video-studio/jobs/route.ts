@@ -21,7 +21,7 @@ const sceneValid=(s:unknown):s is {speech:string;imagePrompt:string;caption:stri
   typeof (s as Record<string,unknown>).caption==="string"&&
   (s as {caption:string}).caption.length<=110);
 const isSafeId=(v:unknown,max:number)=>typeof v==="string"&&v.length>0&&v.length<=max&&/^[a-zA-Z0-9_-]+$/.test(v);
-type StudioScene={speech:string;imagePrompt:string;caption:string;imagePath?:string|null;approved?:boolean};
+type StudioScene={speech:string;imagePrompt:string;caption:string;motion?:"animate"|"zoom";imagePath?:string|null;approved?:boolean};
 type JobRow={id:string;status:string;scenes:StudioScene[];assets:Record<string,unknown>;output_path:string|null;seconds:number;quality_mode:string;[key:string]:unknown};
 const publicColumns="id,title,topic,audience,style,seconds,language,voice_provider,voice_id,subtitles,quality_mode,source_platform,status,phase,progress,eta_seconds,scenes,assets,output_path,failure_code,charge_credits,credits_settled,version,created_at,updated_at,finished_at";
 async function present(row:JobRow,owner:string,showFrames=true){
@@ -60,7 +60,8 @@ function parseInput(b:unknown){
   !["openai","elevenlabs","none"].includes(String(x.voiceProvider))||
   !isSafeId(x.voiceId,64)||typeof x.subtitles!=="boolean"||
   !validUuid(x.clientKey)||x.confirmCost!==true||!Array.isArray(x.scenes)||
-  x.scenes.length!==Number(seconds)/5||!x.scenes.every(sceneValid)||
+  x.scenes.length<3||x.scenes.length>36||!x.scenes.every(sceneValid)||
+  x.scenes.map((s:StudioScene)=>s.speech.trim()).join(" ").length>9000||
   x.estimatedCredits!==price(Number(seconds),String(x.qualityMode)))return null;
  if(x.voiceProvider==="none"&&x.voiceId!=="none")return null;
  if(x.voiceProvider==="openai"&&!openAi.has(String(x.voiceId)))return null;
@@ -74,7 +75,7 @@ function parseInput(b:unknown){
    voice_id:x.voiceId,subtitles:x.subtitles,quality_mode:x.qualityMode,
    source_platform:typeof x.sourcePlatform==="string"?x.sourcePlatform.slice(0,20):"idea",
    source_url:typeof x.sourceUrl==="string"&&/^https:\/\//.test(x.sourceUrl)?x.sourceUrl.slice(0,1000):null,
-   scenes:x.scenes.map((s:StudioScene)=>({speech:s.speech.trim(),imagePrompt:s.imagePrompt.trim(),caption:s.caption.trim(),approved:false,imagePath:null}))
+   scenes:x.scenes.map((s:StudioScene)=>({speech:s.speech.trim(),imagePrompt:s.imagePrompt.trim(),caption:s.caption.trim(),motion:s.motion==="zoom"?"zoom":"animate",approved:false,imagePath:null}))
   }
  };
 }
