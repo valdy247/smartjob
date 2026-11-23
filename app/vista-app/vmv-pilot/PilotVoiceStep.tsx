@@ -7,9 +7,11 @@ import css from "./PilotVoiceStep.module.css";
 type Voice={id:string;name:string;provider:"openai"|"elevenlabs";
  gender?:"male"|"female"|"unknown";previewUrl?:string};
 type Props={language:PilotLanguage;en:boolean;disabled?:boolean;
+ catalogEndpoint?:string;sampleMode?:"paid"|"prerecorded";
  selectedProvider?:"openai"|"elevenlabs";selectedVoiceId?:string;
  onChoose:(provider:PilotVoiceProvider,id:string,name:string)=>void};
-export default function PilotVoiceStep({language,en,disabled=false,selectedProvider,selectedVoiceId,onChoose}:Props){
+export default function PilotVoiceStep({language,en,disabled=false,selectedProvider,selectedVoiceId,onChoose,
+ catalogEndpoint="/api/video-generator/pilot-voices",sampleMode="paid"}:Props){
  const [voices,setVoices]=useState<Voice[]>([]);
  const [loading,setLoading]=useState(true),[loadingId,setLoadingId]=useState("");
  const [playingId,setPlayingId]=useState(""),[error,setError]=useState("");
@@ -31,7 +33,7 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
     const session=await sb?.auth.getSession();
     const access=session?.data.session?.access_token;
     if(!access)return;
-    const r=await fetch("/api/video-generator/pilot-voices?language="+encodeURIComponent(language),{
+    const r=await fetch(catalogEndpoint+"?language="+encodeURIComponent(language),{
      cache:"no-store",headers:{Authorization:"Bearer "+access}});
     const data=await r.json();
     if(r.ok&&alive&&Array.isArray(data.elevenlabs))
@@ -41,7 +43,7 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
   })();
   return()=>{alive=false;playToken.current++;controller.current?.abort();playing.current?.pause();
    cache.current.forEach(src=>URL.revokeObjectURL(src));cache.current.clear();};
- },[language]);
+ },[language,catalogEndpoint]);
  const play=async(v:Voice)=>{
   const key=language+":"+v.provider+":"+v.id;
   if(playingId===key){stop();return;}
@@ -119,6 +121,7 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
   <div className={css.grid}>{displayed.map(v=>{
    const key=language+":"+v.provider+":"+v.id;
    const selected=selectedProvider===v.provider&&selectedVoiceId===v.id;
+   const canPreview=sampleMode==="paid"||(v.provider==="elevenlabs"&&Boolean(v.previewUrl?.startsWith("https://")));
    return <div key={key} className={selected?css.cardSelected:css.card}>
     <button type="button" className={css.select}
      aria-pressed={selected} disabled={disabled}
@@ -131,9 +134,9 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
        v.gender==="female"?(en?" · Female":" · Femenina"):""}</small>
      {selected?<span className={css.selectedLabel}>{en?"Selected":"Seleccionada"}</span>:null}
     </button>
-    <button type="button" className={css.preview} disabled={disabled||Boolean(loadingId)}
+    <button type="button" className={css.preview} disabled={disabled||Boolean(loadingId)||!canPreview}
      aria-label={(playingId===key?(en?"Pause ":"Pausar "):(en?"Listen to ":"Escuchar "))+v.name}
-     title={en?"Listen":"Escuchar"} onClick={()=>void play(v)}>
+     title={!canPreview?(en?"Sample not enabled yet":"Muestra no disponible todavía"):(en?"Listen":"Escuchar")} onClick={()=>void play(v)}>
      {loadingId===key?<LoaderCircle size={16} className={css.spin}/>:
       playingId===key?<Pause size={15}/>:<Play size={15}/>}
      <span>{loadingId===key?(en?"Loading":"Cargando"):
@@ -149,8 +152,9 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
   {loading?<div className={css.loading}><LoaderCircle size={14} className={css.spin}/></div>:null}
   {error?<p role="status" className={css.error}>{error}</p>:null}
   <p className={css.disclaimer}>
-   {en?"Listen before selecting. ElevenLabs samples are prerecorded. OpenAI voice previews are generated only when you press Listen and may use a few credits.":
-    "Escucha antes de elegir. Las muestras de ElevenLabs son grabaciones existentes. Las de OpenAI se generan solo al pulsar Escuchar y pueden consumir algunos créditos."}
+   {sampleMode==="prerecorded"
+    ?(en?"ElevenLabs prerecorded samples are free to play. OpenAI voice selection is available; paid samples will be enabled after the credit system is tested.":"Las muestras pregrabadas de ElevenLabs se pueden escuchar gratis. Puedes elegir voces de OpenAI; activaremos sus muestras de pago después de probar el sistema de créditos.")
+    :(en?"Listen before selecting. ElevenLabs samples are prerecorded. OpenAI voice previews are generated only when you press Listen and may use a few credits.":"Escucha antes de elegir. Las muestras de ElevenLabs son grabaciones existentes. Las de OpenAI se generan solo al pulsar Escuchar y pueden consumir algunos créditos.")}
   </p>
  </div>;
 }
