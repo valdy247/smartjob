@@ -57,7 +57,7 @@ test("Video Studio accepts native phone embedding without redirecting out of it"
 
 test("own idea has short prompt and AI produces editable scenes without null dereference",()=>{
  assert.match(ui,/stage==="idea"/);
- assert.match(ui,/maxLength=\{700\}/);
+ assert.match(ui,/maxLength=\{3000\}/);
  assert.match(ui,/Crear mi guion con IA/);
  assert.match(ui,/api\("plan","POST",\{\.\.\.shared,mode:"outline"\}\)/);
  assert.match(ui,/mode:"scenes",outline:plan,start:b\.start,batchSize:b\.size/);
