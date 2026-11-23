@@ -56,6 +56,7 @@ export default function AIAgentsPreview(){
  const [commerceTab,setCommerceTab]=useState<"setup"|"catalog">("catalog");
  const [bookingTab,setBookingTab]=useState<BookingTab>("services");
  const [resumeBooking,setResumeBooking]=useState(false);
+ const [quoteAdvanceAfterSwitch,setQuoteAdvanceAfterSwitch]=useState(false);
  const [phone,setPhone]=useState<PhoneSelection|null>(null);
  const [pilotChecks,setPilotChecks]=useState<{key:string;label:string;ok:boolean}[]|null>(null);
  const [pilotChecking,setPilotChecking]=useState(false);
@@ -469,9 +470,9 @@ export default function AIAgentsPreview(){
         const nextAgent=agents.find(a=>a.id===nextWorkspace?.primary_agent_id);
         setChosenBusiness(id);
         if(nextWorkspace&&nextAgent){
-         setSelected(nextAgent.id);setNotice("");
+         setQuoteAdvanceAfterSwitch(true);setSelected(nextAgent.id);setNotice("");
         }else{
-         setScreen("home");
+         setQuoteAdvanceAfterSwitch(false);setScreen("home");
          setNotice("Para configurar las llamadas de ese negocio, primero prepara su agente principal.");
         }
        }}/>:null}
@@ -487,7 +488,7 @@ export default function AIAgentsPreview(){
         if(!principal||!selectedBusiness||!selectedWorkspace){
          setNotice("Prepara el agente principal del negocio antes de crear una cotización.");setScreen("home");return;
         }
-        setScreen("quote");setNotice("");
+        setQuoteAdvanceAfterSwitch(false);setScreen("quote");setNotice("");
        }}><span className={quoteStyles.entryIcon}><Plus size={24}/></span>
         <span><strong>Crear nueva cotización</strong><small>El asistente te guía paso a paso</small></span>
         <ChevronRight size={19}/></button>
@@ -498,7 +499,8 @@ export default function AIAgentsPreview(){
      </section>:null}
      {screen==="quote"&&principal&&selectedBusiness&&selectedWorkspace?
       <AutomaticQuoteWizard key={selectedBusiness.id+principal.id} business={selectedBusiness}
-       workspaceId={selectedWorkspace.id} agent={principal} onClose={()=>setScreen("quoteEntry")}
+       workspaceId={selectedWorkspace.id} agent={principal} onClose={()=>{setQuoteAdvanceAfterSwitch(false);setScreen("quoteEntry");}}
+       initialStep={quoteAdvanceAfterSwitch?"services":"business"}
        businesses={businesses} onChooseBusiness={id=>{
         if(!businesses.some(b=>b.id===id))return;
         const nextWorkspace=workspaces.find(w=>w.central_business_id===id);
