@@ -2,7 +2,9 @@
 import { useEffect,useState } from "react";
 import type { SupabaseClient,User } from "@supabase/supabase-js";
 import { ArrowLeft,Languages,LoaderCircle,PhoneCall,Settings2 } from "lucide-react";
+import {initialAccountProfile} from "@/lib/account-profile";
 import { getSupabase } from "@/lib/supabase";
+import {useInterfaceLanguage} from "@/lib/i18n-web";
 import type { Profile } from "@/lib/types";
 import { Brand } from "@/components/Brand";
 import { AuthPanel } from "@/components/AuthPanel";
@@ -15,6 +17,7 @@ import VMVWorkspace from "@/components/VMVWorkspace";
 type Tab="live"|"calls"|"settings";
 const blankStatus:Record<string,boolean>={auth:false,ai:false,speech:false,voices:false,telephone:false};
 export default function Home(){
+  const {translate}=useInterfaceLanguage();
   const [splash,setSplash]=useState(true),[supabase,setSupabase]=useState<SupabaseClient|null>(null);
   const [user,setUser]=useState<User|null>(null),[profile,setProfile]=useState<Profile|null>(null);
   const [starting,setStarting]=useState(true),[checkingProfile,setCheckingProfile]=useState(true);
@@ -41,7 +44,7 @@ export default function Home(){
     if(!supabase||!user){setProfile(null);setCheckingProfile(false);return;}
     let alive=true;
     const currentUser=user;
-    setCheckingProfile(true);
+    setProfile(null);setCheckingProfile(true);
     // Signup already collected the professional's details. Persist them once after
     // confirmation/login rather than sending the user through a duplicate form.
     async function loadOrCreateProfile(){
@@ -53,31 +56,8 @@ export default function Home(){
         console.error("VMV Call profile lookup",lookupError.message);
         setProfile(null);setCheckingProfile(false);return;
       }
-      const metadata=currentUser.user_metadata||{};
-      const first=String(metadata.first_name||"").trim();
-      const last=String(metadata.last_name||"").trim();
-      const phone=String(metadata.phone||"").trim();
-      const occupation=String(metadata.occupation||"").trim();
-      if(first&&last&&phone&&occupation){
-        const initial:Profile={
-          id:currentUser.id,first_name:first,last_name:last,phone,occupation,
-          city:String(metadata.city||"").trim(),state:String(metadata.state||"").trim(),
-          country:String(metadata.country||"US").slice(0,2).toUpperCase(),assistant_name:String(metadata.assistant_name||"Juan").trim()||"Juan",
-          owner_language:String(metadata.owner_language||"es"),
-          customer_language:String(metadata.customer_language||"en"),
-          // Store wizard choices only in the account holder's own profile (RLS enforced).
-          account_type:metadata.account_type==="personal"?"personal":"business",
-          occupation_code:String(metadata.occupation_code||"").slice(0,24)||null,
-          use_case:String(metadata.use_case||"").slice(0,50)||null,
-          business_name:String(metadata.business_name||"").trim().slice(0,120)||null,
-          website_url:String(metadata.website_url||"").trim().slice(0,250)||null,
-          theme_color:metadata.theme_color==="blue"||metadata.theme_color==="violet"?metadata.theme_color:"mint",
-          font_scale:metadata.font_scale==="small"||metadata.font_scale==="large"?metadata.font_scale:"normal",
-          appearance:metadata.appearance==="dark"||metadata.appearance==="system"?metadata.appearance:"light",
-          reduce_motion:metadata.reduce_motion===true,
-          line_choice:metadata.line_choice==="new"?"new":"keep",
-          line_carrier:"other",preferred_plan:null,plan_prompt_seen:false,line_setup_completed:false
-        };
+      const initial=initialAccountProfile(currentUser.id,currentUser.user_metadata||{});
+      if(initial){
         const {data:created,error:creationError}=await supabase!.from("smartjob_profiles")
           .upsert(initial,{onConflict:"id",ignoreDuplicates:true}).select("*").maybeSingle();
         if(!alive)return;
@@ -133,11 +113,20 @@ export default function Home(){
     return()=>{cancelled=true;};
   },[supabase,user?.id]);
   const signout=async()=>{await supabase?.auth.signOut();};
-  if(splash||starting||checkingProfile)return <div className="splash"><div className="splash-inner"><Brand/><p className="eyebrow" style={{color:"#b1c2b0"}}>Habla sin fronteras.</p><div className="splash-track"/></div></div>;
-  if(!supabase)return <main className="shell" style={{maxWidth:690,paddingTop:45}}><Brand/><div className="card" style={{marginTop:50}}><h1>Configura VMV Call</h1><p className="muted">Para crear cuentas necesitamos conectar el proyecto Supabase con las variables públicas de Vercel. El diseño está listo pero el acceso no está habilitado.</p><code>NEXT_PUBLIC_SUPABASE_URL</code><br/><code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code></div></main>;
+  useEffect(()=>{
+    if(starting||checkingProfile||!user||profile?.id!==user.id||passwordRecovery)return;
+    // Keep password-reset links on their original form, including before the
+    // PASSWORD_RECOVERY event. Other signed-in root visits use the current Home.
+    const query=new URLSearchParams(window.location.search);
+    const fragment=new URLSearchParams(window.location.hash.slice(1));
+    if(query.get("type")==="recovery"||fragment.get("type")==="recovery")return;
+    window.location.replace("/vista-app");
+  },[starting,checkingProfile,user?.id,profile?.id,passwordRecovery]);
+  if(splash||starting||checkingProfile)return <div className="splash"><div className="splash-inner"><Brand/><p className="eyebrow" style={{color:"#b1c2b0"}}>{translate("auth.tagline")}</p><div className="splash-track"/></div></div>;
+  if(!supabase)return <main className="shell" style={{maxWidth:690,paddingTop:45}}><Brand/><div className="card" style={{marginTop:50}}><h1>{translate("auth.setupTitle")}</h1><p className="muted">{translate("auth.setupHint")}</p><code>NEXT_PUBLIC_SUPABASE_URL</code><br/><code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code></div></main>;
   if(!user)return <AuthPanel supabase={supabase}/>;
-  if(passwordRecovery)return <div className="shell" style={{maxWidth:520,paddingTop:55}}><Brand/><form className="card" style={{marginTop:40}} onSubmit={async e=>{e.preventDefault();const r=await supabase.auth.updateUser({password});setPasswordMsg(r.error?.message||"Contraseña actualizada.");if(!r.error){setPasswordRecovery(false);setPassword("");}}}><h1>Nueva contraseña</h1><p className="muted">Crea una contraseña segura para tu cuenta de VMV Call.</p><input className="field" type="password" minLength={8} required value={password} onChange={e=>setPassword(e.target.value)} autoComplete="new-password"/><button type="submit" className="btn primary block" style={{marginTop:16}}>Guardar contraseña</button>{passwordMsg&&<p className="small">{passwordMsg}</p>}</form></div>;
-  if(!profile)return <Onboarding user={user} supabase={supabase} onSaved={setProfile}/>;
+  if(passwordRecovery)return <div className="shell" style={{maxWidth:520,paddingTop:55}}><Brand/><form className="card" style={{marginTop:40}} onSubmit={async e=>{e.preventDefault();const r=await supabase.auth.updateUser({password});setPasswordMsg(r.error?translate("common.saveError"):translate("auth.passwordUpdated"));if(!r.error){setPasswordRecovery(false);setPassword("");}}}><h1>{translate("auth.newPassword")}</h1><p className="muted">{translate("auth.newPasswordHint")}</p><input className="field" type="password" minLength={8} required value={password} onChange={e=>setPassword(e.target.value)} autoComplete="new-password"/><button type="submit" className="btn primary block" style={{marginTop:16}}>{translate("auth.savePassword")}</button>{passwordMsg&&<p className="small">{passwordMsg}</p>}</form></div>;
+  if(!profile||profile.id!==user.id)return <Onboarding user={user} supabase={supabase} onSaved={setProfile}/>;
   if(!profile.plan_prompt_seen)return <ActivationFlow profile={profile} supabase={supabase} onSaved={setProfile} onExit={()=>{}}/>;
   return <VMVWorkspace profile={profile} supabase={supabase} status={status} onProfile={setProfile} onLogout={()=>void signout()}/>;
 }

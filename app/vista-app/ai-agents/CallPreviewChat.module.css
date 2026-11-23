@@ -1,0 +1,43 @@
+.root{display:flex;flex-direction:column;gap:12px;border:1px solid #e9dcf7;border-radius:23px;background:#fff;box-shadow:0 7px 24px #6844aa12;padding:15px;color:#2b203d;min-width:0}
+.top{display:flex;align-items:center;gap:9px}
+.back,.restart,.close{flex-shrink:0;width:33px;height:33px;border:0;border-radius:11px;background:#f5efff;color:#7c4dcc;display:grid;place-items:center;cursor:pointer}
+.restart,.close{background:#fff;color:#826a99}
+.heading{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.heading strong{font-size:16px;font-weight:900;letter-spacing:-.03em}
+.heading small{font-size:10px;font-weight:700;color:#8a7d95}
+.chat{display:flex;flex-direction:column;gap:11px;min-height:150px;max-height:360px;overflow-y:auto;overscroll-behavior:contain;padding:15px 12px;border:1px solid #efe9f6;border-radius:17px;background:#fdfbff;scrollbar-width:thin}
+.botBubble,.userBubble{display:flex;flex-direction:column;gap:5px;max-width:90%;width:max-content;padding:11px 13px;border-radius:15px;font-size:12px;line-height:1.5;overflow-wrap:anywhere;white-space:pre-wrap}
+.botBubble{align-self:flex-start;background:#f0e9fa;color:#3a2b53;border-bottom-left-radius:5px}
+.userBubble{align-self:flex-end;background:#8754da;color:#fff;border-bottom-right-radius:5px}
+.botBubble small,.userBubble small{font-size:9px;font-weight:900;letter-spacing:.08em;opacity:.75}
+.options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.options button{display:flex;gap:7px;align-items:center;justify-content:center;padding:13px 8px;border-radius:13px;border:1px solid #e8dcf5;background:#f7f2ff;color:#7046b4;font:800 12px/1.35 inherit;cursor:pointer}
+.options b{font-size:14px}
+.write{display:flex;gap:8px;align-items:stretch}
+.write input{min-width:0;flex:1;border:1px solid #e8dcef;border-radius:13px;padding:13px 12px;font:600 12px/1.4 inherit;background:#fff;color:#2b203d}
+.write button{display:grid;place-items:center;flex:0 0 43px;border:0;border-radius:12px;background:#8754da;color:#fff;cursor:pointer}
+.write button:disabled,.options button:disabled,.restart:disabled{opacity:.5;cursor:not-allowed}
+.wait{margin:auto 0;color:#8e8099;font-size:12px}
+.error{margin:0;color:#9c4155;background:#fff0f2;border-radius:12px;padding:11px 12px;font-size:12px;line-height:1.5}
+.disclaimer{margin:0;color:#8d8095;font-size:10px;line-height:1.5}
+.root button:focus-visible,.root input:focus-visible{outline:3px solid #b894f7;outline-offset:2px}
+@media(max-width:390px){.root{padding:12px}.options button{font-size:11px}.chat{max-height:320px}}
+@media(prefers-reduced-motion:reduce){.chat{scroll-behavior:auto}}
+
+
+/* Choose guided scenarios without changing the actual phone settings. */
+.scenarios{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.scenario,.scenarioActive{
+ min-width:0;min-height:38px;border:1px solid #eadcf5;border-radius:12px;
+ background:#faf7ff;color:#735b93;cursor:pointer;font-family:inherit;
+ font-size:12px;font-weight:800;line-height:1.25;padding:9px 7px;
+}
+.scenarioActive{background:#8854d9;color:#fff;border-color:#8854d9}
+.scenario:disabled,.scenarioActive:disabled{opacity:.6;cursor:wait}
+.routeNote{font-size:11px;line-height:1.45;color:#7b6b8b;margin:0 1px}
+
+.agentPicker{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:800;color:#715789}
+.agentPicker select{width:100%;min-height:42px;background:#fcfaff;border:1px solid #eadcf5;border-radius:13px;padding:10px 12px;font-family:inherit;font-size:12px;font-weight:750;color:#392a52}
+.agentPicker select:focus-visible{outline:3px solid #b894f7;outline-offset:2px}
+
+.inactiveNote{margin:0;padding:9px 11px;border:1px solid #eadff2;border-radius:12px;background:#fbf7ff;color:#77578c;font-size:11px;line-height:1.45;font-weight:600}

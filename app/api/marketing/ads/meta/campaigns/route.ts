@@ -1,0 +1,300 @@
+import {NextRequest,NextResponse} from "next/server";
+import {authenticatedUser} from "@/lib/auth-server";
+import {billingAdmin} from "@/lib/vmv-billing";
+import {adsMetaReady,activeMeta,authorizedAccounts,authorizedPages,metaGet,metaId,metaPost,
+ noCache,uuid,validDestination,inspectMetaPayment,MetaApiError,metaLinkCreativeFields,metaCreativeReason,validateMetaLinkCreative} from "@/lib/vmv-marketing-ads-meta";
+
+export const runtime="nodejs";
+export const dynamic="force-dynamic";
+type Draft={name:string;headline:string;message:string;destination:string;imageHash:string;
+ pageId:string;instagramId:string|null;placements:"facebook"|"facebook_instagram";
+ dailyBudgetCents:number;durationDays:number;totalBudgetCents:number;country:"US";
+ objective:"OUTCOME_TRAFFIC";specialCategoriesAcknowledged:true;adAccountId:string;cityKey:string;cityName:string;citySearch:string;radiusMiles:10|15|25|50;
+ intake?:{business:string;offer:string;audience:string;benefit:string;stateCode:string;
+  cityDisplay:string;destinationInput:string;utmEnabled:boolean}};
+const asInt=(x:unknown)=>typeof x==="number"&&Number.isInteger(x)?x:null;
+function parseDraft(input:any,adAccountId:string,pages:Awaited<ReturnType<typeof authorizedPages>>,cities:Array<{key:string;name:string;region:string}>):Draft|null{
+ const name=typeof input?.name==="string"?input.name.trim():"";
+ const headline=typeof input?.headline==="string"?input.headline.trim():"";
+ const message=typeof input?.message==="string"?input.message.trim():"";
+ const destination=validDestination(input?.destination);
+ const imageHash=typeof input?.imageHash==="string"?input.imageHash:"";
+ const pageId=typeof input?.pageId==="string"?input.pageId:"";
+ const placements=input?.placements;
+ const city=cities.find(x=>x.key===input?.cityKey&&x.name===input?.cityName);
+ const radius=input?.radiusMiles;
+ const daily=asInt(input?.dailyBudgetCents),days=asInt(input?.durationDays);
+ const page=pages.find(x=>x.id===pageId);
+ if(!page||!name||name.length>80||headline.length<3||headline.length>80||
+  message.length<10||message.length>500||!destination||
+  !/^[a-f\d]{32}$/i.test(imageHash)||!daily||daily<500||daily>25000||
+  !days||days<1||days>30||
+  !["facebook","facebook_instagram"].includes(placements)||
+  (placements==="facebook_instagram"&&!page.instagramId)||
+  input?.specialCategoriesAcknowledged!==true||!city||!metaId(city.key)||
+  ![10,15,25,50].includes(radius))return null;
+ return {name,headline,message,destination,imageHash,pageId,
+  instagramId:page.instagramId,placements,dailyBudgetCents:daily,
+  durationDays:days,totalBudgetCents:daily*days,country:"US",
+  objective:"OUTCOME_TRAFFIC",specialCategoriesAcknowledged:true,adAccountId,
+  cityKey:city.key,cityName:city.name,citySearch:String(input?.citySearch||"").trim().slice(0,80),radiusMiles:radius,
+  intake:{
+   business:String(input?.intake?.business||"").trim().slice(0,80),
+   offer:String(input?.intake?.offer||"").trim().slice(0,200),
+   audience:String(input?.intake?.audience||"").trim().slice(0,130),
+   benefit:String(input?.intake?.benefit||"").trim().slice(0,180),
+   stateCode:/^[A-Z]{2}$/.test(String(input?.intake?.stateCode||""))?String(input.intake.stateCode):"",
+   cityDisplay:String(input?.intake?.cityDisplay||"").trim().slice(0,110),
+   destinationInput:String(input?.intake?.destinationInput||"").trim().slice(0,500),
+   utmEnabled:input?.intake?.utmEnabled===true
+  }};
+}
+const fail=(error:string,status=400)=>NextResponse.json({error},{status,headers:noCache});
+export async function GET(req:NextRequest){
+ const owner=await authenticatedUser(req);if(!owner)return fail("unauthorized",401);
+ const db=billingAdmin();if(!db)return fail("database_unavailable",503);
+ const {data,error}=await db.from("vmv_marketing_ads_campaigns")
+  .select("id,ad_account_id,status,draft,provider_campaign_id,provider_adset_id,provider_ad_id,approved_at,error_code,created_at")
+  .eq("owner_id",owner).order("created_at",{ascending:false}).limit(50);
+ if(error)return fail("campaign_history_unavailable",503);
+ let campaigns=data||[];
+ // Where a published ad set exists, read its current Meta delivery status.
+ // Do not infer completion from a VMV pause or from an elapsed planned duration.
+ const candidates=campaigns.filter(c=>c.status==="active"&&metaId(c.provider_adset_id)).slice(0,20);
+ if(candidates.length){
+  try{
+   const connected=await activeMeta(owner);
+   if(connected){
+    const provider=await metaGet("",connected.token,{
+     ids:candidates.map(c=>c.provider_adset_id).join(","),
+     fields:"id,effective_status,end_time"
+    });
+    campaigns=campaigns.map(c=>{
+     const item=metaId(c.provider_adset_id)?provider[c.provider_adset_id]:null;
+     return {...c,
+      metaAdsetEffectiveStatus:typeof item?.effective_status==="string"?item.effective_status:null,
+      metaAdsetEndAt:typeof item?.end_time==="string"?item.end_time:null
+     };
+    });
+   }
+  }catch{
+   // Show persisted statuses even when Meta delivery lookup is temporarily unavailable.
+  }
+ }
+ return NextResponse.json({campaigns,configured:adsMetaReady(),
+  publishReady:adsMetaReady()&&process.env.VMV_ADS_META_PUBLISH_ENABLED==="true"&&
+   process.env.VMV_ADS_META_ALLOWED_OWNER_ID===owner},{headers:noCache});
+}
+export async function POST(req:NextRequest){
+ if(!adsMetaReady())return fail("meta_pilot_unavailable",503);
+ const owner=await authenticatedUser(req);if(!owner)return fail("unauthorized",401);
+ const input=await req.json().catch(()=>null);
+ const operation=input?.operation;
+ if(!["draft","update_draft","create_paused","activate","pause"].includes(operation))return fail("invalid_action");
+ const db=billingAdmin();if(!db)return fail("database_unavailable",503);
+ let active;
+ try{active=await activeMeta(owner);}catch{return fail("meta_reconnect_required",409);}
+ if(!active)return fail("meta_connect_required",409);
+ const selectedAccount=active.connection.selected_ad_account_id;
+ if(!selectedAccount)return fail("meta_account_selection_required",409);
+ let accounts;
+ try{accounts=await authorizedAccounts(active.token);}catch{return fail("meta_accounts_unavailable",502);}
+ if(!accounts.some(a=>a.id===selectedAccount&&a.status===1&&a.currency==="USD"))
+  return fail("meta_ad_account_not_authorized",403);
+
+ if(operation==="draft"||operation==="update_draft"){
+  if(operation==="draft"&&!uuid(input?.clientKey))return fail("invalid_idempotency_key");
+  if(operation==="update_draft"&&!uuid(input?.campaignId))return fail("invalid_campaign_id");
+  let pages;
+  try{pages=await authorizedPages(active.token);}catch{return fail("meta_pages_unavailable",502);}
+  const citySearch=typeof input?.draft?.citySearch==="string"?input.draft.citySearch.trim():"";
+  if(citySearch.length<3||citySearch.length>80)return fail("select_a_meta_city");
+  let cities:Array<{key:string;name:string;region:string}>=[];
+  try{
+   const found=await metaGet("search",active.token,{type:"adgeolocation",
+    location_types:JSON.stringify(["city"]),q:citySearch,limit:"100"});
+   cities=(Array.isArray(found.data)?found.data:[]).filter((x:any)=>
+    metaId(x.key)&&x.country_code==="US"&&x.type==="city")
+    .map((x:any)=>({key:String(x.key),name:String(x.name||""),region:String(x.region||"")}));
+  }catch{return fail("meta_city_lookup_unavailable",502);}
+  const draft=parseDraft(input?.draft,selectedAccount,pages,cities);
+  if(!draft)return fail("invalid_campaign_details_or_missing_page");
+  if(operation==="update_draft"){
+   const {data:updated,error:updateError}=await db.from("vmv_marketing_ads_campaigns")
+    .update({draft,updated_at:new Date().toISOString()}).eq("id",input.campaignId)
+    .eq("owner_id",owner).eq("connection_id",active.connection.id)
+    .eq("ad_account_id",selectedAccount).eq("status","draft")
+    .select("id,status,draft").maybeSingle();
+   if(updateError||!updated)return fail("saved_draft_not_editable",409);
+   return NextResponse.json({campaign:updated},{headers:noCache});
+  }
+  const {data,error}=await db.from("vmv_marketing_ads_campaigns").insert({
+   owner_id:owner,connection_id:active.connection.id,provider:"meta",
+   ad_account_id:selectedAccount,client_key:input.clientKey,draft,status:"draft"
+  }).select("id,status,draft").single();
+  if(error){
+   if(error.code==="23505"){
+    const existing=await db.from("vmv_marketing_ads_campaigns")
+     .select("id,status,draft").eq("owner_id",owner).eq("client_key",input.clientKey).maybeSingle();
+    if(!existing.error&&existing.data)return NextResponse.json({campaign:existing.data,duplicate:true},{headers:noCache});
+   }
+   return fail("draft_save_failed",503);
+  }
+  return NextResponse.json({campaign:data},{headers:noCache});
+ }
+ if(!uuid(input?.campaignId))return fail("invalid_campaign_id");
+ const {data:record,error:readError}=await db.from("vmv_marketing_ads_campaigns").select("*")
+  .eq("owner_id",owner).eq("id",input.campaignId).maybeSingle();
+ if(readError||!record)return fail("campaign_not_found",404);
+ if(record.connection_id!==active.connection.id||record.ad_account_id!==selectedAccount)
+  return fail("campaign_account_mismatch",409);
+ const draft=record.draft as Draft;
+ if(draft.adAccountId!==selectedAccount||!metaId(draft.pageId)||
+   !validDestination(draft.destination))return fail("campaign_invalid",409);
+
+ if(operation==="create_paused"){
+  // Save sanitized diagnostic codes to the existing draft and runtime logs.
+  // Do not persist Meta tokens, ad copy, customer data, or raw provider messages.
+  const diagnostic=async(stage:string,code:string,subcode:number|null=null)=>{
+   const value=stage+":"+code+(subcode?":sub_"+subcode:"");
+   const {error:writeError}=await db.from("vmv_marketing_ads_campaigns")
+    .update({error_code:value,updated_at:new Date().toISOString()})
+    .eq("id",record.id).eq("owner_id",owner).eq("status","draft");
+   console.warn("[vmv-meta-ads] paused creation blocked",{
+    campaignRef:record.id.slice(0,8),stage,code,subcode,
+    diagnosticSaved:!writeError
+   });
+  };
+  if(input?.confirmPaused!==true||input?.approvedTotalCents!==draft.totalBudgetCents){
+   await diagnostic("approval","explicit_budget_approval_required");
+   return fail("explicit_budget_approval_required",403);
+  }
+  if(record.status!=="draft"){
+   console.warn("[vmv-meta-ads] paused creation skipped; already processed",{
+    campaignRef:record.id.slice(0,8),status:record.status
+   });
+   return fail("campaign_already_processed",409);
+  }
+  // Dry-run first: reject a bad creative BEFORE any campaign, ad set or ad is written to Meta.
+  try{await validateMetaLinkCreative(selectedAccount,active.token,draft);}
+  catch(error){
+   const reason=metaCreativeReason(error);
+   const metaCode=error instanceof MetaApiError?error.code:"provider_unavailable";
+   const subcode=error instanceof MetaApiError&&Number.isInteger(error.subcode)?error.subcode:null;
+   await diagnostic("preflight",metaCode,subcode);
+   return NextResponse.json({error:reason,campaignId:record.id,stage:"preflight",
+    createdInMeta:false,adSpendActive:false,...(subcode?{metaSubcode:subcode}:{}),
+    ...(error instanceof MetaApiError&&error.providerMessage?{metaMessage:error.providerMessage}:{}),
+    ...(error instanceof MetaApiError&&error.traceId?{metaTrace:error.traceId}:{})},
+    {status:409,headers:noCache});
+  }
+  // The compare-and-set lock prevents duplicate external Meta campaign creation.
+  const {data:claimed,error:claimError}=await db.from("vmv_marketing_ads_campaigns")
+   .update({status:"provisioning",approved_at:new Date().toISOString(),
+    approved_snapshot:draft,updated_at:new Date().toISOString()})
+   .eq("id",record.id).eq("owner_id",owner).eq("status","draft").select("id").maybeSingle();
+  if(claimError||!claimed)return fail("campaign_already_processing",409);
+  let step="creative";
+  try{
+   // Create the creative first, so a rejection cannot leave a partial campaign/ad set.
+   const creative=await metaPost(selectedAccount+"/adcreatives",active.token,metaLinkCreativeFields(draft));
+   if(!metaId(creative.id))throw Error("invalid_creative_response");
+   await db.from("vmv_marketing_ads_campaigns").update({provider_creative_id:creative.id}).eq("id",record.id);
+   step="campaign";
+   const campaign=await metaPost(selectedAccount+"/campaigns",active.token,{
+    name:draft.name,objective:"OUTCOME_TRAFFIC",status:"PAUSED",special_ad_categories:"[]",
+    is_adset_budget_sharing_enabled:"false",buying_type:"AUCTION"
+   });
+   if(!metaId(campaign.id))throw Error("invalid_campaign_response");
+   await db.from("vmv_marketing_ads_campaigns").update({provider_campaign_id:campaign.id}).eq("id",record.id);
+   step="adset";
+   const start=Math.floor(Date.now()/1000)+900;
+   const end=start+draft.durationDays*86400;
+   const adset=await metaPost(selectedAccount+"/adsets",active.token,{
+    name:draft.name+" — audiencia",campaign_id:campaign.id,status:"PAUSED",
+    billing_event:"IMPRESSIONS",optimization_goal:"LINK_CLICKS",
+    bid_strategy:"LOWEST_COST_WITHOUT_CAP",
+    lifetime_budget:String(draft.totalBudgetCents),
+    start_time:String(start),end_time:String(end),
+    destination_type:"WEBSITE",
+    targeting:JSON.stringify({geo_locations:{cities:[{key:draft.cityKey,radius:draft.radiusMiles,distance_unit:"mile"}]},age_min:18,
+     publisher_platforms:draft.placements==="facebook"?
+       ["facebook"]:["facebook","instagram"]})
+   });
+   if(!metaId(adset.id))throw Error("invalid_adset_response");
+   await db.from("vmv_marketing_ads_campaigns").update({provider_adset_id:adset.id}).eq("id",record.id);
+   step="ad";
+   const ad=await metaPost(selectedAccount+"/ads",active.token,{
+    name:draft.name+" — anuncio",adset_id:adset.id,
+    creative:JSON.stringify({creative_id:creative.id}),status:"PAUSED"
+   });
+   if(!metaId(ad.id))throw Error("invalid_ad_response");
+   const {error:saveError}=await db.from("vmv_marketing_ads_campaigns").update({
+    provider_ad_id:ad.id,status:"paused",error_code:null,updated_at:new Date().toISOString()
+   }).eq("id",record.id).eq("owner_id",owner).eq("status","provisioning");
+   if(saveError)throw Error("confirmation_not_saved");
+   return NextResponse.json({status:"paused",campaignId:record.id,
+    metaCampaignId:campaign.id,metaAdId:ad.id,adSpendActive:false},{headers:noCache});
+  }catch(error){
+   const metaCode=error instanceof MetaApiError?error.code:"provider_or_save_error";
+   const subcode=error instanceof MetaApiError&&Number.isInteger(error.subcode)&&Number(error.subcode)>0?
+    ":sub_"+String(error.subcode):"";
+   const reason=step==="creative"?metaCreativeReason(error):"provider_creation_incomplete_review_"+step;
+   await db.from("vmv_marketing_ads_campaigns").update({
+    status:"failed",error_code:step+":"+metaCode+subcode,updated_at:new Date().toISOString()
+   }).eq("id",record.id).eq("owner_id",owner);
+   // Keep the stage and reference for customer support. All objects created here are PAUSED.
+   return NextResponse.json({error:reason,
+    campaignId:record.id,stage:step,createdInMeta:step!=="creative",
+    adSpendActive:false,...(error instanceof MetaApiError&&error.subcode?{metaSubcode:error.subcode}:{})},
+    {status:502,headers:noCache});
+  }
+ }
+ if(!metaId(record.provider_campaign_id)||!metaId(record.provider_adset_id)||!metaId(record.provider_ad_id))
+  return fail("campaign_not_fully_created",409);
+ if(operation==="activate"){
+  // Operational kill switch: never active until provider and financial QA have passed.
+  if(process.env.VMV_ADS_META_PUBLISH_ENABLED!=="true"||
+     process.env.VMV_ADS_META_ALLOWED_OWNER_ID!==owner)return fail("publishing_not_enabled",403);
+  if(input?.confirmSpend!==true||input?.approvedTotalCents!==draft.totalBudgetCents||
+     input?.confirmationText!=="PUBLICAR"||record.status!=="paused"||
+     JSON.stringify(record.approved_snapshot)!==JSON.stringify(draft))
+    return fail("fresh_publication_approval_required",403);
+  const payment=await inspectMetaPayment(active.token,selectedAccount);
+  if(payment.state==="missing")return fail("meta_payment_not_detected",409);
+  if(payment.state!=="ready")return fail("meta_payment_not_verified",409);
+  const {data:claimed}=await db.from("vmv_marketing_ads_campaigns")
+   .update({status:"activation_pending",updated_at:new Date().toISOString()})
+   .eq("owner_id",owner).eq("id",record.id).eq("status","paused").select("id").maybeSingle();
+  if(!claimed)return fail("activation_already_in_progress",409);
+  try{
+   // Activate ad and ad set first, campaign last. All objects remain paused if campaign does.
+   await metaPost(record.provider_ad_id,active.token,{status:"ACTIVE"});
+   await metaPost(record.provider_adset_id,active.token,{status:"ACTIVE"});
+   await metaPost(record.provider_campaign_id,active.token,{status:"ACTIVE"});
+   const {error}=await db.from("vmv_marketing_ads_campaigns")
+    .update({status:"active",updated_at:new Date().toISOString()}).eq("id",record.id);
+   if(error)throw Error("status_write_failure");
+   return NextResponse.json({status:"active",campaignId:record.id},{headers:noCache});
+  }catch{
+   // On uncertain outcome, pause the top-level campaign; NEVER claim that it is inactive
+   // until we receive confirmation from Meta, as network errors can hide success.
+   try{await metaPost(record.provider_campaign_id,active.token,{status:"PAUSED"});}catch{}
+   await db.from("vmv_marketing_ads_campaigns").update({
+    status:"activation_pending",error_code:"activation_requires_manual_reconciliation"
+   }).eq("id",record.id);
+   return fail("activation_state_requires_reconciliation",502);
+  }
+ }
+ if(operation==="pause"){
+  if(!["active","activation_pending","paused"].includes(record.status))return fail("campaign_not_active",409);
+  try{
+   await metaPost(record.provider_campaign_id,active.token,{status:"PAUSED"});
+   await db.from("vmv_marketing_ads_campaigns").update({
+    status:"customer_paused",updated_at:new Date().toISOString()
+   }).eq("id",record.id).eq("owner_id",owner);
+   return NextResponse.json({status:"customer_paused"},{headers:noCache});
+  }catch{return fail("could_not_confirm_pause_with_meta",502);}
+ }
+ return fail("unsupported_action");
+}

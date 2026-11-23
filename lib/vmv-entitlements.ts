@@ -2,6 +2,7 @@
 // their existing TEST minute balance only when explicitly enabled on the server.
 // Neither Stripe TEST subscriptions nor user metadata can unlock public production.
 import {balance,eligible,getBillingAccount,billingEnabledFor,billingAdmin,type BillingAccount} from "@/lib/vmv-billing";
+import {nationalPilotFor,nationalAvailable} from "@/lib/vmv-national-minutes";
 
 export type PaidCapability="direct_call"|"translated_call"|"ai";
 
@@ -25,10 +26,10 @@ export function ownerPreviewPilot(account:BillingAccount|null):boolean {
   billingEnabledFor(account.user_id)&&
   account.stripe_mode==="test"&&eligible(account)&&
   ["starter","pro","premium"].includes(account.plan_code)&&
-  balance(account)>0);
+  (balance(account)>0||nationalPilotFor(account.user_id)));
 }
 export function allowSpendWithAccount(account:BillingAccount|null,capability:PaidCapability):boolean {
- if(ownerPreviewPilot(account))return balance(account)>0;
+ if(ownerPreviewPilot(account))return capability==="direct_call"&&nationalPilotFor(account!.user_id)?true:balance(account)>0;
  if(!realBillingConfigured()||!confirmedSubscription(account))return false;
  return capability==="direct_call"||balance(account)>0;
 }
@@ -50,5 +51,8 @@ export async function paidServiceAllowed(uid:string,capability:PaidCapability):P
    else account=await getBillingAccount(uid);
   }
  }
- return allowSpendWithAccount(account,capability);
+ if(!allowSpendWithAccount(account,capability))return false;
+ if(capability==="direct_call"&&account?.plan_code==="starter"&&nationalPilotFor(uid))
+  return nationalAvailable(uid,account);
+ return true;
 }

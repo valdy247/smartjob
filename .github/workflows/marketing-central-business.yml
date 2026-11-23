@@ -1,0 +1,23 @@
+name: Marketing central business checks
+on:
+  push:
+    branches: [feat/vmv-smart-call-control-center]
+    paths:
+      - 'lib/vmv-central-business.ts'
+      - 'lib/google-profile-request.ts'
+      - 'lib/contact-phone.ts'
+      - 'scripts/central-business.test.cjs'
+      - 'scripts/google-profile-request.test.cjs'
+      - '.github/workflows/marketing-central-business.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --ignore-scripts --no-package-lock --no-audit
+      - run: node --test scripts/central-business.test.cjs scripts/google-profile-request.test.cjs

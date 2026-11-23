@@ -1,16 +1,26 @@
 import React,{useEffect,useRef,useState} from "react";
 import {ActivityIndicator,Alert,AppState,KeyboardAvoidingView,Platform,Pressable,
- SafeAreaView,ScrollView,StatusBar,StyleSheet,Text,TextInput,View,Modal,Keyboard,Linking,Image,useWindowDimensions} from "react-native";
+ SafeAreaView,ScrollView,StatusBar,StyleSheet,Text,TextInput,View,Modal,Keyboard,Linking} from "react-native";
 import {Voice,Call,CallInvite} from "@twilio/voice-react-native-sdk";
 import type {Session} from "@supabase/supabase-js";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import {initialAccountProfile} from "../../lib/account-profile";
 import {api,supabase,configured} from "./session";
+import {useNativeInterfaceLanguage} from "./useInterfaceLanguage";
 import {InterpreterPanel} from "./InterpreterPanel";
 import {CallScreen} from "./CallScreen";
+import {SmartCallControlCenter} from "./SmartCallControlCenter";
+import {BusinessServicesPanel} from "./BusinessServicesPanel";
+import {BusinessDiagnostic} from "./BusinessDiagnostic";
+import {DIAGNOSTIC_METADATA_KEY,getDiagnosticRecommendations,makeDiagnosticRecord,readDiagnosticRecord,type DiagnosticAnswers,type DiagnosticRecord,type DiagnosticService} from "../../lib/business-diagnostic";
+import FinancesPanel from "./FinancesPanel";
+import {ContactsPanel} from "./ContactsPanel";
+import {DialPad} from "./DialPad";
 import {NativeActivation,type NativeProfile} from "./NativeActivation";
 import {FALLBACK_MODULES,loadBusinessModules,openBusinessWorkspace,type BusinessModule} from "./businessWorkspace";
 
-const colors={bg:"#F8FBFA",card:"#FFFFFF",line:"#DCE8E6",text:"#151D2A",
- muted:"#6D7784",accent:"#00B997",accentText:"#06392E",red:"#E25673"};
+const colors={bg:"#FDFCFF",card:"#FFFFFF",line:"#ECE6F3",text:"#171127",
+ muted:"#827991",accent:"#8D5EE6",accentText:"#FFFFFF",red:"#E25673"};
 const voice=new Voice();
 let pushRegistryInit:Promise<void>|null=null;
 function ensurePushRegistry():Promise<void>{
@@ -25,17 +35,31 @@ function ensurePushRegistry():Promise<void>{
 }
 
 export default function App(){
- const {height:screenHeight}=useWindowDimensions();
  const [session,setSession]=useState<Session|null>(null);
+ const [authBootstrapped,setAuthBootstrapped]=useState(false);
+ const {language:uiLanguage,ready:uiLanguageReady,saving:languageSaving,error:languageError,retry:retryLanguage,changeLanguage,translate:tr}=useNativeInterfaceLanguage(session,authBootstrapped);
  const [activationProfile,setActivationProfile]=useState<NativeProfile|null>(null);
- const [activeTab,setActiveTab]=useState<"home"|"calls"|"live"|"settings">("home");
+ const [activeTab,setActiveTab]=useState<"home"|"services"|"calls"|"live"|"settings">("home");
+ const [diagnosticOpen,setDiagnosticOpen]=useState(false);
+ const [diagnosticSaved,setDiagnosticSaved]=useState<DiagnosticRecord|null>(null);
+  const [callsView,setCallsView]=useState<"dial"|"history"|"contacts">("dial");
+  const [callTypeFilter,setCallTypeFilter]=useState<"all"|"direct"|"translated">("all");
+  const [contactsPhone,setContactsPhone]=useState("");
+  const [contactsFromHistory,setContactsFromHistory]=useState(false);
+  const [dialTarget,setDialTarget]=useState<{phone:string;name:string}|null>(null);
  const [businessModules,setBusinessModules]=useState<BusinessModule[]>(FALLBACK_MODULES);
- const [image1Unavailable,setImage1Unavailable]=useState(false);
- const [image2Unavailable,setImage2Unavailable]=useState(false);
+ const [activeModule,setActiveModule]=useState<string|null>(null);
+ const [moreModulesOpen,setMoreModulesOpen]=useState(false);
+ const [catalogQuery,setCatalogQuery]=useState("");
+ const [catalogGroup,setCatalogGroup]=useState<"all"|"communication"|"digital"|"growth">("all");
  const [keyboardVisible,setKeyboardVisible]=useState(false),[forwardHelpOpen,setForwardHelpOpen]=useState(false);
- const [settingsPage,setSettingsPage]=useState<"menu"|"numbers"|"billing"|"history"|"security"|"profile"|"style"|"support"|"services">("menu");
- const [callHistory,setCallHistory]=useState<{bridge_sid:string;status:string;duration_seconds:number|null;started_at:string;call_mode:string}[]>([]);
+ const [settingsPage,setSettingsPage]=useState<"menu"|"numbers"|"billing"|"finances"|"history"|"security"|"profile"|"style"|"support"|"services">("menu");
+ const [callHistory,setCallHistory]=useState<{bridge_sid:string;status:string;duration_seconds:number|null;started_at:string;call_mode:string;caller_phone:string|null}[]>([]);
  const [historyBusy,setHistoryBusy]=useState(false);
+ const [callbackBusy,setCallbackBusy]=useState<string|null>(null);
+ const [callerLookupBusy,setCallerLookupBusy]=useState<string|null>(null);
+ const [callbackNotice,setCallbackNotice]=useState("");
+ const [directCallbackActive,setDirectCallbackActive]=useState(false);
  const [assistantPrefs,setAssistantPrefs]=useState({existing_phone:"",desired_language:"es",caller_language:"en",assistant_name:""});
  const [greetingPrefs,setGreetingPrefs]=useState({voice_customer:"default",voice_owner:"default",greeting_customer:"",greeting_owner:""});
  const [greetingEditable,setGreetingEditable]=useState(false);
@@ -43,7 +67,7 @@ export default function App(){
  const [inboundLanguage,setInboundLanguage]=useState<"es"|"en"|"unknown">("unknown");
  // Public catalog metadata, never a source of subscriptions or permissions.
  useEffect(()=>{
-   if(!session?.user.id||activeTab!=="settings"||settingsPage!=="services")return;
+   if(!session?.user.id||!(activeTab==="services"||(activeTab==="settings"&&settingsPage==="services")))return;
    let mounted=true;
    void loadBusinessModules().then(modules=>{if(mounted)setBusinessModules(modules);});
    return()=>{mounted=false;};
@@ -70,6 +94,7 @@ export default function App(){
  const [pilotReadiness,setPilotReadiness]=useState<{lineReady:boolean;engineReady:boolean;webhookChecked:boolean;webhookReady:boolean;webhookPost:boolean;pushConfigured:boolean;nextStep:string}|null>(null);
  const [billingOverview,setBillingOverview]=useState<{
   plan:string;status:string;previewPilotActive?:boolean;minutes:{included:number;used:number;available:number;rollover:number;topup:number};
+  national?:{enabled:boolean;included:number;used:number;reserved:number;available:number;periodStart:string|null;periodEnd:string|null};
   note:string
  }|null>(null);
  const [phoneVerification,setPhoneVerification]=useState<{requestId:string;phone:string;verified:boolean;smsAvailable:boolean;requestStatus:string}|null>(null);
@@ -83,7 +108,11 @@ export default function App(){
  },[]);
  const registeredAt=useRef(0),inviteRef=useRef<CallInvite|null>(null),callRef=useRef<Call|null>(null);
  const registrationInFlight=useRef(false);
+ const callbackRequestedAt=useRef(0);
+ const directCallbackRef=useRef(false);
  const sessionRef=useRef<Session|null>(null);
+ const overviewRequest=useRef(0);
+ const accountEpoch=useRef(0);
  const pendingBusinessLink=useRef<"calls"|"services"|null>(null);
  useEffect(()=>{
    const processLink=(url:string|null)=>{
@@ -94,8 +123,8 @@ export default function App(){
      const target=route[1] as "calls"|"services";
      pendingBusinessLink.current=target;
      if(sessionRef.current?.user){
-       setActiveTab(target==="calls"?"calls":"settings");
-       if(target==="services")setSettingsPage("services");
+       setActiveTab(target==="calls"?"calls":"services");
+       if(target==="services")setActiveModule(null);
        pendingBusinessLink.current=null;
      }
    };
@@ -107,8 +136,8 @@ export default function App(){
    if(!session?.user.id||!pendingBusinessLink.current)return;
    const target=pendingBusinessLink.current;
    pendingBusinessLink.current=null;
-   setActiveTab(target==="calls"?"calls":"settings");
-   if(target==="services")setSettingsPage("services");
+   setActiveTab(target==="calls"?"calls":"services");
+   if(target==="services")setActiveModule(null);
  },[session?.user.id]);
  // Pilot-only diagnostic events; no recordings, transcripts, phone numbers or tokens.
  // A signed Supabase session and active iOS route are required by database RLS.
@@ -130,38 +159,48 @@ export default function App(){
  useEffect(()=>{if(session?.user.id)voiceTelemetry("app_open");},[session?.user.id]);
  useEffect(()=>{
    const client=supabase;
-   if(!client)return;
+   if(!client){setAuthBootstrapped(true);return;}
    let mounted=true;
-   client.auth.getSession().then(({data})=>{if(mounted){setSession(data.session);sessionRef.current=data.session;}});
+   client.auth.getSession().then(({data})=>{if(mounted){setSession(data.session);sessionRef.current=data.session;}}).catch(()=>{}).finally(()=>{if(mounted)setAuthBootstrapped(true);});
    const {data}=client.auth.onAuthStateChange((_event,next)=>{
      if(!mounted)return;
-     setSession(next);sessionRef.current=next;
-     if(!next){setReady(false);setPhoneVerification(null);setSmsCode("");setSmsSent(false);setStatus("Inicia sesión para recibir llamadas");}
+     const changed=sessionRef.current?.user.id!==next?.user.id;
+     if(changed){
+       accountEpoch.current++;overviewRequest.current++;setOverviewBusy(false);setHistoryBusy(false);
+       setActivationProfile(null);setAccountOverview(null);setBillingOverview(null);
+       setPilotReadiness(null);setCallHistory([]);setCallbackNotice("");setError("");
+       setAssistantPrefs({existing_phone:"",desired_language:"es",caller_language:"en",assistant_name:""});
+       setGreetingPrefs({voice_customer:"default",voice_owner:"default",greeting_customer:"",greeting_owner:""});
+       setGreetingEditable(false);setCustomizationMessage("");setActiveModule(null);
+     }
+     setSession(next);sessionRef.current=next;setAuthBootstrapped(true);
+     if(!next){setReady(false);setPhoneVerification(null);setSmsCode("");setSmsSent(false);setStatus("Inicia sesión para recibir llamadas");setCallHistory([]);setCallsView("dial");setDialTarget(null);setCallTypeFilter("all");setContactsPhone("");}
    });
    return()=>{mounted=false;data.subscription.unsubscribe();};
  },[]);
  useEffect(()=>{
   const client=supabase;
   if(!session?.user.id||!client){setActivationProfile(null);return;}
+  setActivationProfile(null);
   let alive=true;
   (async()=>{
    try{
-    const {data:existing}=await client.from("smartjob_profiles")
-     .select("id,first_name,phone,owner_language,assistant_name,line_choice,line_carrier,preferred_plan,plan_prompt_seen,line_setup_completed")
+    const {data:existing,error}=await client.from("smartjob_profiles")
+     .select("id,first_name,business_name,phone,owner_language,assistant_name,line_choice,line_carrier,preferred_plan,plan_prompt_seen,line_setup_completed")
      .eq("id",session.user.id).maybeSingle();
     if(!alive)return;
+    if(error)throw error;
     if(existing){setActivationProfile(existing as NativeProfile);return;}
-    const m=session.user.user_metadata||{};
-    if(!m.first_name||!m.last_name||!m.phone||!m.occupation)return;
-    const {data:created}=await client.from("smartjob_profiles").upsert({
-     id:session.user.id,first_name:String(m.first_name),last_name:String(m.last_name),
-     phone:String(m.phone),occupation:String(m.occupation),
-     city:String(m.city||""),state:String(m.state||""),country:String(m.country||"US"),
-     owner_language:String(m.owner_language||"es"),customer_language:String(m.customer_language||"en"),
-     assistant_name:String(m.assistant_name||"Juan"),line_choice:m.line_choice==="new"?"new":"keep",
-     line_carrier:"other",plan_prompt_seen:false,line_setup_completed:false
-    },{onConflict:"id",ignoreDuplicates:true}).select("*").maybeSingle();
-    if(alive&&created)setActivationProfile(created as NativeProfile);
+    const initial=initialAccountProfile(session.user.id,session.user.user_metadata||{});
+    if(!initial)return;
+    const {data:created,error:creationError}=await client.from("smartjob_profiles")
+      .upsert(initial,{onConflict:"id",ignoreDuplicates:true}).select("*").maybeSingle();
+    if(!alive)return;
+    if(creationError)throw creationError;
+    if(created){setActivationProfile(created as NativeProfile);return;}
+    // A web login may have inserted the shared profile concurrently.
+    const {data:concurrent}=await client.from("smartjob_profiles").select("*").eq("id",session.user.id).maybeSingle();
+    if(alive&&concurrent)setActivationProfile(concurrent as NativeProfile);
    }catch{if(alive)setActivationProfile(null);}
   })();
   return()=>{alive=false;};
@@ -170,6 +209,10 @@ export default function App(){
    // Do not keep a module-global listener bound to a previous React mount.
    // After a screen reload that stale callback can swallow CallInvite events.
    const onInvite=(incoming:CallInvite)=>{
+      const callbackExpected=callbackRequestedAt.current>0&&
+       Date.now()-callbackRequestedAt.current<60000;
+      directCallbackRef.current=callbackExpected;
+      setDirectCallbackActive(callbackExpected);
      setVoiceDiagnostic("Twilio entregó una invitación de llamada al iPhone.");
      voiceTelemetry("invite_received");
      inviteRef.current=incoming;setInvite(incoming);
@@ -181,6 +224,7 @@ export default function App(){
        if(inviteRef.current!==incoming)return;
        inviteRef.current=null;setInvite(null);
        setInboundLanguage("unknown");setStatus("La llamada terminó antes de contestar");
+        directCallbackRef.current=false;setDirectCallbackActive(false);callbackRequestedAt.current=0;
        setVoiceDiagnostic("Twilio canceló la invitación antes de contestar.");
        voiceTelemetry("invite_canceled");
      };
@@ -221,13 +265,32 @@ export default function App(){
  function clearCallState(connected:Call,message="Llamada finalizada"){
    if(callRef.current!==connected)return;
    callRef.current=null;setCall(null);setStatus(message);
+    directCallbackRef.current=false;setDirectCallbackActive(false);callbackRequestedAt.current=0;
+ }
+ async function detectDirectCallback(connected:Call){
+  if(!supabase||!sessionRef.current)return;
+  const sid=connected.getSid();
+  if(!sid||!/^CA[a-f\d]{32}$/i.test(sid))return;
+  try{
+   const {data:session}=await supabase.auth.getSession();
+   if(!session.session||session.session.user.id!==sessionRef.current.user.id)return;
+   const response=await fetch(api+"/api/ios/callback?legSid="+encodeURIComponent(sid),{
+    headers:{Authorization:"Bearer "+session.session.access_token}
+   });
+   const result=await response.json().catch(()=>null);
+   if(response.ok&&result?.isCallback===true&&callRef.current===connected){
+    directCallbackRef.current=true;setDirectCallbackActive(true);
+    setStatus("Llamada normal con cliente");
+   }
+  }catch{/* The live call is not interrupted by a diagnostic request. */}
  }
  function connectCall(connected:Call){
    if(callRef.current===connected)return;
    callRef.current=connected;setCall(connected);setInvite(null);inviteRef.current=null;
-   setStatus("Conectando interpretación…");
+    setStatus(directCallbackRef.current?"Conectando con el cliente…":"Conectando interpretación…");
    connected.addListener(Call.Event.Connected,()=>{
-     if(callRef.current===connected)setStatus("En llamada con interpretación");
+     if(callRef.current===connected)setStatus(directCallbackRef.current?"En llamada normal":"En llamada con interpretación");
+      void detectDirectCallback(connected);
      voiceTelemetry("call_connected");
    });
    connected.addListener(Call.Event.ConnectFailure,(cause:unknown)=>{
@@ -243,6 +306,7 @@ export default function App(){
      clearCallState(connected);
    });
    if(connected.getState()===Call.State.Disconnected)clearCallState(connected);
+    else if(connected.getState()===Call.State.Connected)void detectDirectCallback(connected);
  }
  async function reconcileCurrentCall(){
    const current=callRef.current,uid=sessionRef.current?.user.id;
@@ -350,42 +414,122 @@ export default function App(){
  }
  async function refreshAccountOverview(){
    if(!supabase||!sessionRef.current)return;
+   const owner=sessionRef.current.user.id;
+   const revision=++overviewRequest.current;
+   const current=()=>sessionRef.current?.user.id===owner&&revision===overviewRequest.current;
    setOverviewBusy(true);
    try{
      const {data}=await supabase.auth.getSession();
-     if(!data.session)return;
+     if(!data.session||data.session.user.id!==owner||!current())return;
      const result=await fetch(api+"/api/ios/account-overview",{
        headers:{"Authorization":"Bearer "+data.session.access_token}
      });
      if(!result.ok)throw new Error("No pudimos obtener tu centro de activación.");
-     setAccountOverview(await result.json());
+     const overview=await result.json();
+     if(!current())return;
+     setAccountOverview(overview);
      const billing=await fetch(api+"/api/billing/overview",{
        headers:{"Authorization":"Bearer "+data.session.access_token}
      }).catch(()=>null);
-     if(billing?.ok)setBillingOverview(await billing.json());
+     const billingData=billing?.ok?await billing.json():null;
+     if(!current())return;
+     if(billing?.ok)setBillingOverview(billingData);
     else{setBillingOverview(null);setError("No pudimos consultar tu suscripción VMV. Comprueba la conexión y pulsa Actualizar.");}
-   }catch(e){setError(e instanceof Error?e.message:"Error de conexión.");}
-   finally{setOverviewBusy(false);}
+   }catch(e){if(current())setError(e instanceof Error?e.message:"Error de conexión.");}
+   finally{if(current())setOverviewBusy(false);}
  }
  useEffect(()=>{
   if(!session?.user.id){setAccountOverview(null);setBillingOverview(null);return;}
   void refreshAccountOverview();
  },[session?.user.id]);
+ useEffect(()=>{
+  const listener=AppState.addEventListener("change",state=>{
+   if(state==="active"&&sessionRef.current)void refreshAccountOverview();
+  });
+  return()=>listener.remove();
+ },[]);
  async function refreshCallHistory(){
   if(!supabase||!sessionRef.current)return;
+  const owner=sessionRef.current.user.id;
+  const revision=accountEpoch.current;
+  const current=()=>sessionRef.current?.user.id===owner&&accountEpoch.current===revision;
   setHistoryBusy(true);
   try{
    const {data,error:historyError}=await supabase.from("smartjob_call_sessions")
-     .select("bridge_sid,status,duration_seconds,started_at,call_mode")
-     .eq("owner_id",sessionRef.current.user.id).order("started_at",{ascending:false}).limit(25);
+     .select("bridge_sid,status,duration_seconds,started_at,call_mode,caller_phone")
+     .eq("owner_id",owner).order("started_at",{ascending:false}).limit(25);
+   if(!current())return;
    if(historyError)throw historyError;
    setCallHistory(data||[]);
-  }catch{setError("No se pudo cargar el historial.");}
-  finally{setHistoryBusy(false);}
+  }catch{if(current())setError("No se pudo cargar el historial.");}
+  finally{if(current())setHistoryBusy(false);}
  }
  useEffect(()=>{
-  if(session?.user.id&&activeTab==="settings"&&settingsPage==="history")void refreshCallHistory();
- },[session?.user.id,activeTab,settingsPage]);
+  if(session?.user.id&&(activeTab==="home"||(activeTab==="settings"&&settingsPage==="history")||(activeTab==="calls"&&callsView==="history")))void refreshCallHistory();
+ },[session?.user.id,activeTab,settingsPage,callsView]);
+ async function lookupOriginalCaller(item:{bridge_sid:string;caller_phone:string|null}){
+  if(!supabase||!sessionRef.current||callerLookupBusy)return;
+  setCallerLookupBusy(item.bridge_sid);setCallbackNotice("");
+  try{
+   const {data:identity}=await supabase.auth.getUser();
+   const {data:session}=await supabase.auth.getSession();
+   if(identity.user?.id!==sessionRef.current.user.id||!session.session||
+     session.session.user.id!==identity.user.id)throw Error("Tu sesión expiró.");
+   const response=await fetch(api+"/api/ios/callback/lookup",{
+    method:"POST",headers:{Authorization:"Bearer "+session.session.access_token,
+     "Content-Type":"application/json"},
+    body:JSON.stringify({bridgeSid:item.bridge_sid})
+   });
+   const info=await response.json().catch(()=>null);
+   if(!response.ok||info?.verified!==true)throw Error("Twilio no tiene un número verificable para esta llamada.");
+   await refreshCallHistory();
+   setCallbackNotice("Número verificado en Twilio: "+info.phone+". Ya puedes devolver la llamada.");
+  }catch(e){setCallbackNotice(e instanceof Error?e.message:"No se pudo recuperar el número.");}
+  finally{setCallerLookupBusy(null);}
+ }
+ async function returnCustomerCall(item:{bridge_sid:string;caller_phone:string|null}){
+  if(!item.caller_phone||!supabase||!sessionRef.current||callbackBusy)return;
+  if(callRef.current||inviteRef.current){
+   Alert.alert("Llamada en curso","Finaliza la llamada actual antes de devolver otra.");return;
+  }
+  const to=item.caller_phone;
+  Alert.alert("Devolver llamada con VMV",
+   "Twilio llamará primero a tu iPhone. Cuando contestes, conectará con "+to+
+   " mostrando tu número VMV. Será una llamada normal, sin traducción. Twilio puede generar cargos de voz. ¿Continuar?",[
+    {text:"Cancelar",style:"cancel"},
+    {text:"Devolver llamada",onPress:()=>{void (async()=>{
+     if(!supabase||!sessionRef.current)return;
+     setCallbackBusy(item.bridge_sid);setCallbackNotice("");setError("");
+     try{
+      const {data:identity}=await supabase.auth.getUser();
+      const {data:session}=await supabase.auth.getSession();
+      if(identity.user?.id!==sessionRef.current?.user.id||
+       !session.session||session.session.user.id!==identity.user.id)
+       throw Error("Tu sesión expiró. Vuelve a entrar.");
+      const response=await fetch(api+"/api/ios/callback",{
+       method:"POST",
+       headers:{Authorization:"Bearer "+session.session.access_token,
+        "Content-Type":"application/json"},
+       body:JSON.stringify({bridgeSid:item.bridge_sid,mode:"direct"})
+      });
+      const result=await response.json().catch(()=>null);
+      if(!response.ok||result?.started!==true){
+       const errors:Record<string,string>={
+        callback_not_enabled:"La devolución no está habilitada todavía en este piloto.",
+        callback_rate_limited:"Se alcanzó el límite de devoluciones de prueba.",
+        callback_in_progress:"Ya hay una devolución en curso.",
+        verified_caller_or_line_missing:"No se pudo verificar el número del cliente o la línea VMV.",
+        active_plan_required:"Necesitas tener Smart Call habilitado."
+       };
+       throw Error(errors[result?.error]||"No se pudo conectar con Twilio. Inténtalo nuevamente.");
+      }
+      callbackRequestedAt.current=Date.now();
+      setCallbackNotice("Twilio está llamando a tu iPhone. Contesta para hablar con "+to+".");
+     }catch(e){setCallbackNotice(e instanceof Error?e.message:"Devolución no disponible.");}
+     finally{setCallbackBusy(null);}
+    })();}}
+   ]);
+ }
  async function checkPilotReadiness(){
   if(!supabase||pilotChecking)return;
   setPilotChecking(true);
@@ -468,24 +612,30 @@ export default function App(){
  },[session?.user.id,accountOverview?.connectedToApp]);
  async function loadCustomization(){
   if(!supabase||!sessionRef.current)return;
+  const owner=sessionRef.current.user.id;
+  const revision=accountEpoch.current;
+  const current=()=>sessionRef.current?.user.id===owner&&accountEpoch.current===revision;
   try{
     const {data:settings}=await supabase.from("smartjob_call_settings")
       .select("existing_phone,desired_language,caller_language,assistant_name")
-      .eq("user_id",sessionRef.current.user.id).maybeSingle();
+      .eq("user_id",owner).maybeSingle();
+    if(!current())return;
     if(settings)setAssistantPrefs({
       existing_phone:settings.existing_phone||"",desired_language:settings.desired_language||"es",
-      caller_language:settings.caller_language||"en",assistant_name:settings.assistant_name||"Juan"
+      caller_language:settings.caller_language===settings.desired_language?(settings.desired_language==="en"?"es":"en"):(settings.caller_language||"en"),assistant_name:settings.assistant_name||"Juan"
     });
     else setAssistantPrefs({existing_phone:"",desired_language:"es",caller_language:"en",assistant_name:"Juan"});
     const {data}=await supabase.auth.getSession();
     if(!data.session)return;
+    if(data.session.user.id!==owner||!current())return;
     const response=await fetch(api+"/api/billing/preferences",{headers:{Authorization:"Bearer "+data.session.access_token}});
     if(response.ok){
       const info=await response.json() as {editable?:boolean;settings?:typeof greetingPrefs};
+      if(!current())return;
       setGreetingEditable(info.editable===true);
       if(info.settings)setGreetingPrefs(info.settings);
     }
-  }catch{setCustomizationMessage("No se pudieron cargar todos los ajustes.");}
+  }catch{if(current())setCustomizationMessage("No se pudieron cargar todos los ajustes.");}
  }
  useEffect(()=>{
   if(session?.user.id&&activeTab==="settings"&&(settingsPage==="style"||settingsPage==="profile"))void loadCustomization();
@@ -537,10 +687,10 @@ export default function App(){
    setWorking(true);setError("");
    try{
      const {error:authError}=await supabase.auth.signInWithPassword({email:email.trim(),password});
-     if(authError)throw new Error(authError.message);
+     if(authError)throw new Error(tr("common.loginError"));
      setPassword("");
      setStatus("Sesión iniciada. Activa la recepción de llamadas.");
-   }catch(e){setError(e instanceof Error?e.message:"No se pudo iniciar sesión.");}
+   }catch(e){setError(e instanceof Error?e.message:tr("common.loginError"));}
    finally{setWorking(false);}
  }
  async function accept(){
@@ -568,108 +718,290 @@ export default function App(){
    setReady(false);setInvite(null);setCall(null);
    setStatus("Sesión cerrada");
  }
+ const localePicker=<View style={styles.interfaceLanguageCard}>
+  <Text style={styles.interfaceLanguageTitle}>{tr("common.language")}</Text>
+  <View style={styles.interfaceLanguageChoice} accessibilityRole="radiogroup">
+   {(["es","en"] as const).map(next=><Pressable key={next} accessibilityRole="radio"
+     accessibilityLabel={next==="es"?"Español":"English"}
+     accessibilityState={{checked:uiLanguage===next,disabled:languageSaving}} disabled={languageSaving}
+     style={[styles.interfaceLanguageOption,uiLanguage===next&&styles.interfaceLanguageSelected]}
+     onPress={()=>{void changeLanguage(next).catch(()=>Alert.alert(tr("common.saveError")));}}>
+     <Text style={styles.interfaceLanguageFlag}>{next==="es"?"🇪🇸":"🇺🇸"}</Text>
+     {uiLanguage===next?<Ionicons name="checkmark-circle" size={14} color="#6844B1" style={styles.interfaceLanguageCheck}/>:null}
+    </Pressable>)}
+  </View>
+  <Text style={styles.interfaceLanguageHint}>{tr("common.languageHint")}</Text>
+ </View>;
+ // Services use real destinations; Home shows status and history instead of product tiles.
+ const catalogItems=[
+  {id:"smart-call",name:"Smart Call",group:"communication",Icon:"call-outline" as const,tone:styles.nativeCatalogViolet,status:tr("home.pilot"),open:()=>{setActiveModule("smart-call");setActiveTab("services");}},
+  {id:"translator",name:tr("common.translator"),group:"communication",Icon:"language-outline" as const,tone:styles.nativeCatalogMint,status:tr("catalog.open"),open:()=>setActiveTab("live")},
+  {id:"web",name:"Web Services",group:"digital",Icon:"globe-outline" as const,tone:styles.nativeCatalogYellow,status:tr("catalog.open"),open:()=>{setActiveModule("web-services");setActiveTab("services");}},
+  {id:"agents",name:"AI Agents",group:"digital",Icon:"sparkles-outline" as const,tone:styles.nativeCatalogSky,status:tr("catalog.beta"),open:()=>{setActiveModule("ai-agents");setActiveTab("services");}},
+  {id:"marketing",name:"Marketing",group:"growth",Icon:"trending-up-outline" as const,tone:styles.nativeCatalogPink,status:tr("catalog.beta"),open:()=>{setActiveModule("marketing-analytics");setActiveTab("services");}}
+ ] as const;
+ const normalizedCatalogQuery=catalogQuery.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase();
+ const nativeDiagnostic=diagnosticSaved?.businessId===session?.user.id?diagnosticSaved:readDiagnosticRecord(session?.user.user_metadata,session?.user.id||"");
+ const homeRecommendations=nativeDiagnostic?getDiagnosticRecommendations(nativeDiagnostic.answers):null;
+ const showHomeOffer=(id:DiagnosticService)=>!homeRecommendations||homeRecommendations.some(item=>item.id===id);
+ const saveNeedsAssessment=async(answers:DiagnosticAnswers)=>{
+  if(!supabase||!session?.user.id)throw new Error("Not signed in");
+  const {data:identity,error:authError}=await supabase.auth.getUser();
+  if(authError||identity.user?.id!==session.user.id)throw new Error("Session expired");
+  const next=makeDiagnosticRecord(session.user.id,answers);
+  const {error:saveError}=await supabase.auth.updateUser({data:{[DIAGNOSTIC_METADATA_KEY]:next}});
+  if(saveError)throw saveError;
+  setDiagnosticSaved(next);
+ };
+ const exploreNeedsService=(id:DiagnosticService)=>{
+  setDiagnosticOpen(false);setActiveTab("services");
+  setActiveModule(id==="smart-call"?"smart-call":id==="web-services"?"web-services":
+   id==="ai-agents"?"ai-agents":"marketing-analytics");
+ };
+ const filteredCatalogItems=catalogItems.filter(item=>(catalogGroup==="all"||item.group===catalogGroup)&&
+  (!normalizedCatalogQuery||item.name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase().includes(normalizedCatalogQuery)));
+ if(!uiLanguageReady)return <SafeAreaView style={styles.safe}>{languageError?<View style={{padding:24}}><Text>{tr("language.loadError")}</Text><Button label={tr("common.retry")} onPress={()=>void retryLanguage()}/></View>:<ActivityIndicator style={{marginTop:64}} color={colors.accent}/>}</SafeAreaView>;
  return <SafeAreaView style={styles.safe}>
   <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
   <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":undefined}>
-   <ScrollView scrollEnabled={activeTab!=="home"||screenHeight<720} keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content,session&&{paddingBottom:activeTab==="home"?96:130}]}>
-    <View style={styles.brand}><View style={styles.brandMark}>
+   <ScrollView style={activeTab==="home"?styles.homeScrollSurface:undefined} scrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content,session&&{paddingBottom:150}]}>
+    {session&&activeTab==="home"?null:<View style={styles.brand}><View style={styles.brandMark}>
       <View style={styles.brandWave}>
        <View style={[styles.brandWaveBar,{height:13}]}/><View style={[styles.brandWaveBar,{height:24}]}/>
        <View style={[styles.brandWaveBar,{height:32}]}/><View style={[styles.brandWaveBar,{height:24}]}/>
        <View style={[styles.brandWaveBar,{height:13}]}/>
       </View>
      </View>
-     <Text style={styles.brandText}>VMV<Text style={{color:"#00AD8D"}}> CALL</Text></Text>
-     {session?<Pressable accessibilityRole="button" accessibilityLabel="Abrir ajustes" onPress={()=>{setActiveTab("settings");setSettingsPage("menu");}} style={styles.headerAvatar}><Text style={styles.headerAvatarText}>{String(session.user.user_metadata?.first_name||"V").charAt(0).toUpperCase()}</Text></Pressable>:null}
-    </View>
+     <Text style={styles.brandText}>VMV<Text style={{color:"#8A59D8"}}> BUSINESS</Text></Text>
+     {session?<Pressable accessibilityRole="button" accessibilityLabel={tr("home.openSettings")} onPress={()=>{setActiveTab("settings");setSettingsPage("menu");}} style={styles.headerAvatar}><Text style={styles.headerAvatarText}>{String(session.user.user_metadata?.first_name||"V").charAt(0).toUpperCase()}</Text></Pressable>:null}
+    </View>}
     {!configured?<View style={styles.alert}><Text style={styles.alertText}>Configura el acceso de la app para iniciar sesión.</Text></View>:
     !session?<View style={styles.card}>
-      <Text style={styles.kicker}>BIENVENIDO</Text><Text style={styles.heading}>Habla sin{"\n"}fronteras<Text style={{color:colors.accent}}>.</Text></Text>
+      <Text style={styles.kicker}>{tr("native.welcome")}</Text><Text style={styles.heading}>{tr("auth.tagline")}<Text style={{color:colors.accent}}>.</Text></Text>
       <TextInput style={styles.field} autoCapitalize="none" autoCorrect={false} keyboardType="email-address"
-       textContentType="emailAddress" placeholder="Correo electrónico" placeholderTextColor="#718D95" value={email} onChangeText={setEmail}/>
+       textContentType="emailAddress" placeholder={tr("common.email")} placeholderTextColor="#718D95" value={email} onChangeText={setEmail}/>
       <TextInput style={styles.field} secureTextEntry textContentType="password"
-       placeholder="Contraseña" placeholderTextColor="#718D95" value={password} onChangeText={setPassword}/>
-      <Button label="Entrar" onPress={()=>void login()} disabled={working||!email||!password}/>
-      <Button label="Crear cuenta" secondary onPress={()=>void Linking.openURL(api.replace(/\/$/,"")+"/registro").catch(()=>setError("No se pudo abrir el registro."))}/>
+       placeholder={tr("common.password")} placeholderTextColor="#718D95" value={password} onChangeText={setPassword}/>
+      <Button label={tr("native.enter")} onPress={()=>void login()} disabled={working||!email||!password}/>
+      <Button label={tr("auth.createAccount")} secondary onPress={()=>void Linking.openURL(api.replace(/\/$/,"")+"/registro?lang="+uiLanguage).catch(()=>setError(tr("native.openSignUp")))}/>
+      {localePicker}
      </View>:
     <>
-     {activeTab==="home"?<>
-      <Text style={styles.kicker}>TU ESPACIO</Text>
-      <Text style={styles.heading}>Hola, {String(session.user.user_metadata?.first_name||"").trim()||"bienvenido"}<Text style={{color:colors.accent}}>.</Text></Text>
-      <Text style={styles.homeSubtitle}>Traducción en tiempo real</Text>
-
-      <View style={[styles.homeFeatureCard,styles.homeCallsFeature,styles.homeCallsIllustrated]}>
-       <View style={styles.homeCallIllustration}>
-        {image1Unavailable?<View style={styles.homeImageSlot}><Text style={styles.homeImageLabel}>Imagen 1</Text><Text style={styles.homeImageDescription}>Llamadas traducidas</Text></View>:
-         <Image source={{uri:api.replace(/\/$/,"")+"/vmv/imagen-1.webp"}} style={styles.homeCallArtwork} resizeMode="contain"
-          accessibilityLabel="Dos personas conversando en distintos idiomas mediante traducción telefónica"
-          onError={()=>setImage1Unavailable(true)}/>}
-       </View>
-       <Pressable accessibilityRole="button" accessibilityLabel="Abrir llamadas traducidas" style={styles.homePrimaryButton} onPress={()=>setActiveTab("calls")}>
-        <Text style={styles.homePrimaryText}>☎  Llamadas traducidas  →</Text>
-       </Pressable>
+     {activeTab==="home"?(diagnosticOpen?
+      <BusinessDiagnostic key={session.user.id} language={uiLanguage==="en"?"en":"es"}
+       businessName={activationProfile?.business_name?.trim()||String(session.user.user_metadata?.business_name||"VMV Business")}
+       record={nativeDiagnostic} onSave={saveNeedsAssessment}
+       onClose={()=>setDiagnosticOpen(false)} onExplore={exploreNeedsService}/>:
+      <>
+      <View style={styles.conceptHeader}>
+       <View style={styles.conceptBrand}><Text style={styles.conceptV}>V</Text><Text style={styles.conceptBrandName}>VMV Business</Text></View>
+       <Ionicons name="notifications-outline" size={25} color="#20152D" accessibilityLabel="Notificaciones"/>
       </View>
-
-      <View style={[styles.homeFeatureCard,styles.homeTranslatorFeature,styles.homeTranslatorIllustrated]}>
-       <View style={styles.homeTranslatorIllustration}>
-        {image2Unavailable?<View style={[styles.homeImageSlot,styles.homeImageSlotSmall,styles.homePlaceholderWide]}>
-          <Text style={styles.homeImageLabel}>Imagen 2</Text>
-          <Text style={styles.homeImageDescription}>Traducción en persona</Text>
-         </View>:
-         <Image source={{uri:api.replace(/\/$/,"")+"/vmv/imagen-2.webp"}}
-          style={styles.homeTranslatorArtwork} resizeMode="contain"
-          accessibilityLabel="Un empleador y un trabajador se dan la mano mientras conversan, con un teléfono para traducir"
-          onError={()=>setImage2Unavailable(true)}/>}
-       </View>
-       <Pressable accessibilityRole="button" accessibilityLabel="Abrir traducción en persona"
-        style={styles.homeSecondaryButton} onPress={()=>setActiveTab("live")}>
-        <Text style={styles.homeSecondaryText}>✧  Traducción en persona  →</Text>
-       </Pressable>
+      <View style={styles.conceptWelcome}>
+       <Text style={styles.conceptGreeting} numberOfLines={2}>{uiLanguage==="en"?"Hi":"Hola"}, {String(session.user.user_metadata?.first_name||"VMV").trim()||"VMV"} 👋</Text>
+       <Text style={styles.conceptSubtitle}>{uiLanguage==="en"?"Your whole business, in one place.":"Todo tu negocio, en un solo lugar."}</Text>
       </View>
-
-     </>:null}
+      <View style={styles.conceptGrowthHero}>
+       <View style={styles.conceptRocketHalo}/>
+       <View style={styles.conceptRocket}><Ionicons name="rocket-outline" size={95} color="#7D4BC6"/></View>
+       <View style={styles.conceptHeroCopy}>
+        <Text style={styles.conceptHeroTitle}>{uiLanguage==="en"?"Grow your\nbusiness":"Haz crecer\ntu negocio"}</Text>
+        <Text style={styles.conceptHeroSub}>{uiLanguage==="en"?"Tools, services and AI for entrepreneurs.":"Herramientas, servicios y IA para emprendedores."}</Text>
+        <Pressable accessibilityRole="button" style={styles.conceptStartLabel} onPress={()=>setDiagnosticOpen(true)} accessibilityLabel={uiLanguage==="en"?"Business needs assessment":"Diagnóstico de necesidades del negocio"}>
+         <Text style={styles.conceptStartText}>{uiLanguage==="en"?(nativeDiagnostic?"Update needs":"Get started"):(nativeDiagnostic?"Actualizar necesidades":"Comenzar")}</Text>
+         <Ionicons name="arrow-forward-outline" size={18} color="#181026"/>
+        </Pressable>
+       </View>
+      </View>
+      <View style={styles.conceptTiles}>
+       {showHomeOffer("smart-call")?<Pressable accessibilityRole="button" accessibilityLabel="Smart Call" style={[styles.conceptTile,styles.conceptMint]}
+        onPress={()=>{setActiveModule("smart-call");setActiveTab("services");}}>
+        <Ionicons name="call-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>Smart Call</Text>
+       </Pressable>:null}
+       {showHomeOffer("web-services")?<Pressable accessibilityRole="button" accessibilityLabel="Web Services" style={[styles.conceptTile,styles.conceptPink]}
+        onPress={()=>{setActiveModule("web-services");setActiveTab("services");}}>
+        <Ionicons name="desktop-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>Web Services</Text>
+       </Pressable>:null}
+       <Pressable accessibilityRole="button" accessibilityLabel="AI Agents" style={[styles.conceptTile,styles.conceptLavender]}
+        onPress={()=>{setActiveModule("ai-agents");setActiveTab("services");}}>
+        <Ionicons name="hardware-chip-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>AI Agents</Text>
+       </Pressable>
+       {showHomeOffer("marketing")?<Pressable accessibilityRole="button" accessibilityLabel="Marketing" style={[styles.conceptTile,styles.conceptGreen]}
+        onPress={()=>{setActiveModule("marketing-analytics");setActiveTab("services");}}>
+        <Ionicons name="megaphone-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>Marketing</Text>
+       </Pressable>:null}
+       {homeRecommendations?.some(item=>item.id==="google-business")?<Pressable accessibilityRole="button" accessibilityLabel="Google Business" style={[styles.conceptTile,styles.conceptLavender]}
+        onPress={()=>{setActiveModule("marketing-analytics");setActiveTab("services");}}>
+        <Ionicons name="location-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>Google Business</Text>
+       </Pressable>:null}
+       {homeRecommendations?.length===0?<Pressable accessibilityRole="button" accessibilityLabel={uiLanguage==="en"?"All services":"Todos los servicios"} style={[styles.conceptTile,styles.conceptLavender]}
+        onPress={()=>{setActiveModule(null);setActiveTab("services");}}>
+        <Ionicons name="grid-outline" size={34} color="#1A2430"/><Text style={styles.conceptTileText}>{uiLanguage==="en"?"All services":"Todos los servicios"}</Text>
+       </Pressable>:null}
+      </View>
+      <Text style={styles.conceptBusinessTitle}>{uiLanguage==="en"?"My Business":"Mi Negocio"}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={uiLanguage==="en"?"Overview":"Resumen"}
+       style={styles.conceptSummary} onPress={()=>{setSettingsPage("menu");setActiveTab("settings");}}>
+       <View style={styles.conceptSummaryIcon}><Ionicons name="trending-up-outline" size={25} color="#6F48BC"/></View>
+       <View style={{flex:1}}><Text style={styles.conceptSummaryTitle}>{uiLanguage==="en"?"Overview":"Resumen"}</Text>
+        <Text style={styles.conceptSummarySub}>{uiLanguage==="en"?"Activity and results":"Actividad y resultados"}</Text></View>
+       <Ionicons name="chevron-forward" size={23} color="#21142D"/>
+      </Pressable>
+     </>):null}
      {activeTab==="calls"?<>
-      <Text style={styles.kicker}>TELÉFONO</Text><Text style={styles.heading}>Llamadas<Text style={{color:colors.accent}}>.</Text></Text>
-      <View style={[styles.card,styles.featureCard]}>
-       <View style={styles.compactBetween}><Text style={styles.featureLabel}>☎  Recepción</Text><Text style={[styles.stateTag,{color:ready?colors.accent:"#F6CC83"}]}>{ready?"CONECTADA":"PENDIENTE"}</Text></View>
-       <Text style={styles.featureNumber}>{accountOverview?.twilioPhone||"Sin asignar"}</Text>
-       <Text style={styles.featureMuted}>{ready?"Tu iPhone está registrado y listo para sonar":"Conecta tu iPhone para recibir"}</Text>
-        {accountOverview?.billing?.pilot?<View style={styles.previewPilotCard}><Text style={styles.previewPilotLabel}>✦ PRUEBA PRIVADA · OPENAI REALTIME</Text><Text style={styles.previewPilotCopy}>Tus minutos VMV están habilitados solo para tu cuenta. Llama desde otro teléfono a este número, marca 1 para traducir y contesta aquí.</Text><Text style={styles.previewPilotMinutes}>Saldo: {accountOverview.billing.availableMinutes??billingOverview?.minutes.available??0} minutos</Text><Button label={pilotChecking?"Comprobando…":"Verificar motor y número"} disabled={pilotChecking} onPress={()=>void checkPilotReadiness()}/>{pilotReadiness?<><Text style={styles.previewPilotCopy}>Motor OpenAI: {pilotReadiness.engineReady?"✓ Listo":"○ Pendiente"} · Webhook Twilio: {pilotReadiness.webhookReady&&pilotReadiness.webhookPost?"✓ Conectado":"○ Revisar"}</Text><Text style={styles.previewPilotCopy}>{pilotReadiness.nextStep}</Text></>:null}</View>:null}
-       <Button label={accountOverview?.billing?.active===true?(registering?"Conectando…":ready?"Actualizar conexión":"Conectar iPhone"):"Se necesita plan activo"}
-        disabled={registering} onPress={()=>accountOverview?.billing?.active===true?void registerPhone(): (setActiveTab("settings"),setSettingsPage("billing"))}/>
-       <Text style={styles.helper}>Recepción iPhone: {registering?"Registrando…":ready?"Registrado con Twilio":"No registrado"}</Text>
-       <Text style={styles.helper} accessibilityRole="text">{voiceDiagnostic||"Sin respuesta del SDK"}</Text>
-       <Text style={styles.helper}>Último intento: {lastVoiceAttempt}</Text>
-      </View>
-      <Pressable accessibilityRole="button" style={styles.settingRow} onPress={()=>{setActiveTab("settings");setSettingsPage("numbers");}}>
-       <View style={styles.settingIcon}><Text style={styles.settingEmoji}>📱</Text></View><Text style={styles.settingLabel}>Número y verificación</Text><Text style={styles.settingChevron}>›</Text>
-      </Pressable>
-      <Pressable accessibilityRole="button" style={styles.settingRow} onPress={()=>{setActiveTab("settings");setSettingsPage("history");}}>
-       <View style={styles.settingIcon}><Text style={styles.settingEmoji}>🕒</Text></View><Text style={styles.settingLabel}>Historial</Text><Text style={styles.settingChevron}>›</Text>
-      </Pressable>
-     </>:null}
-     {activeTab==="live"?<InterpreterPanel session={session}/>:null}
+       <View style={styles.callsTabs}>
+        {([{id:"dial",emoji:"⌨️",key:"native.dialpad"},{id:"history",emoji:"🕘",key:"common.history"},{id:"contacts",emoji:"👥",key:"native.contacts"}] as const).map(item=>
+         <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={tr(item.key)}
+          accessibilityState={{selected:callsView===item.id}}
+          style={[styles.callsTab,callsView===item.id&&styles.callsTabActive]}
+          onPress={()=>{
+           setCallsView(item.id);
+           if(item.id==="contacts"){setContactsPhone("");setContactsFromHistory(false);}
+           if(item.id==="dial")setDialTarget(null);
+           if(item.id==="history")setCallTypeFilter("all");
+          }}>
+          <Text style={styles.callsTabEmoji}>{item.emoji}</Text>
+          <Text numberOfLines={1} style={[styles.callsTabLabel,callsView===item.id&&styles.callsTabLabelActive]}>{tr(item.key)}</Text>
+         </Pressable>)}
+       </View>
+       {callsView==="dial"?<DialPad session={session} initialPhone={dialTarget?.phone||""} contactName={dialTarget?.name||""} onStarted={()=>{
+        callbackRequestedAt.current=Date.now();
+       }}/>:null}
+       {callsView==="history"?<>
+        <View style={styles.callsHistoryToolbar}>
+         <View style={styles.callsFilters}>
+          {([{id:"all",label:"Todas"},{id:"direct",label:"Directas"},{id:"translated",label:"Traducidas"}] as const).map(item=>
+           <Pressable key={item.id} accessibilityRole="button" accessibilityState={{selected:callTypeFilter===item.id}}
+            style={[styles.callsFilter,callTypeFilter===item.id&&styles.callsFilterActive]}
+            onPress={()=>setCallTypeFilter(item.id)}>
+            <Text style={[styles.callsFilterText,callTypeFilter===item.id&&styles.callsFilterTextActive]}>{item.label}</Text>
+           </Pressable>)}
+         </View>
+         <Pressable accessibilityRole="button" accessibilityLabel="Actualizar historial" disabled={historyBusy}
+          style={styles.historyRefresh} onPress={()=>void refreshCallHistory()}>
+          <Text style={styles.historyRefreshText}>{historyBusy?"…":"↻"}</Text>
+         </Pressable>
+        </View>
+        <View style={styles.card}>
+         {historyBusy?<ActivityIndicator color={colors.accent}/>:
+          callHistory.filter(item=>callTypeFilter==="all"||item.call_mode===callTypeFilter).length?
+           callHistory.filter(item=>callTypeFilter==="all"||item.call_mode===callTypeFilter).map(item=>
+            <View key={item.bridge_sid} style={styles.historyRow}>
+             <View style={{flex:1}}>
+              <Text style={styles.historyDate}>{item.call_mode==="translated"?"Llamada traducida":"Llamada directa"}</Text>
+              <Text style={styles.historyStatus}>{new Date(item.started_at).toLocaleDateString("es-US",{month:"short",day:"numeric"})} · {new Date(item.started_at).toLocaleTimeString("es-US",{hour:"numeric",minute:"2-digit"})}</Text>
+              <Text style={styles.historyStatus}>{({"completed":"Finalizada","in-progress":"En curso","no-answer":"Sin respuesta","busy":"Ocupada","ringing":"Sonando","initiated":"Iniciando","failed":"Fallida","canceled":"Cancelada"} as Record<string,string>)[item.status]||item.status}</Text>
+             </View>
+             <View style={{alignItems:"flex-end",gap:7}}>
+              <Text style={styles.historyMinutes}>{item.duration_seconds==null?"—":Math.ceil(Math.max(0,item.duration_seconds)/60)+" min"}</Text>
+              {!item.caller_phone?<Pressable accessibilityRole="button" accessibilityLabel="Recuperar número desde Twilio"
+               disabled={Boolean(callerLookupBusy)} onPress={()=>void lookupOriginalCaller(item)}>
+                <Text style={styles.historyCallback}>{callerLookupBusy===item.bridge_sid?"Buscando…":"Buscar número"}</Text>
+               </Pressable>:null}
+              {item.caller_phone?<Pressable accessibilityRole="button" accessibilityLabel="Devolver llamada con el número VMV"
+               disabled={Boolean(callbackBusy)} onPress={()=>void returnCustomerCall(item)}>
+                <Text style={styles.historyCallback}>{callbackBusy===item.bridge_sid?"Conectando…":"☎ Devolver llamada"}</Text>
+               </Pressable>:null}
+              <Pressable accessibilityRole="button" accessibilityLabel="Guardar contacto desde esta llamada" onPress={()=>{
+               setContactsPhone(item.caller_phone||"");setContactsFromHistory(true);setCallsView("contacts");
+              }}><Text style={styles.historySaveContact}>{item.caller_phone?"Guardar contacto":"Añadir contacto"}</Text></Pressable>
+             </View>
+            </View>):
+           <Text style={styles.helper}>No hay llamadas de este tipo.</Text>}
+         {callbackNotice?<Text style={styles.callbackNotice}>{callbackNotice}</Text>:null}
+        </View>
+       </>:null}
+       {callsView==="contacts"?<ContactsPanel key={session.user.id+":"+contactsPhone+":"+contactsFromHistory}
+        session={session} initialPhone={contactsPhone} startInForm={contactsFromHistory}
+        embedded onCall={(phone,name)=>{setDialTarget({phone,name});setContactsPhone("");setContactsFromHistory(false);setCallsView("dial");}}
+        onBack={()=>setCallsView("dial")}/>:null}
+      </>:null}
+      {activeTab==="live"?<InterpreterPanel session={session}/>:null}
+      {activeTab==="services"?<>
+       {activeModule==="smart-call"?<>
+        <Pressable accessibilityRole="button" style={styles.backRow} onPress={()=>setActiveModule(null)}>
+         <Text style={styles.backText}>‹ {tr("native.totalServices")}</Text>
+        </Pressable>
+        <SmartCallControlCenter session={session} onOpenCalls={()=>setActiveTab("calls")} onSettingsSaved={()=>void loadCustomization()}/>
+       </>:activeModule==="web-services"||activeModule==="ai-agents"||activeModule==="marketing-analytics"?<>
+        <Pressable accessibilityRole="button" style={styles.backRow} onPress={()=>setActiveModule(null)}>
+         <Text style={styles.backText}>‹ {tr("native.totalServices")}</Text>
+        </Pressable>
+        {activeModule==="web-services"?<BusinessServicesPanel session={session} focus="web"/>:
+         <View style={styles.servicesModuleHandoff}>
+          <View style={styles.servicesTileIcon}>
+           <Ionicons name={activeModule==="ai-agents"?"sparkles-outline":"trending-up-outline"} size={26} color="#7650BC"/>
+          </View>
+          <Text style={styles.servicesModuleHandoffTitle}>{activeModule==="ai-agents"?"AI Agents":"Marketing"}</Text>
+          <Button label={tr("home.explore")+" ↗"} secondary
+           onPress={()=>void openBusinessWeb(activeModule||undefined)}/>
+         </View>}
+       </>:<>
+        <Text style={styles.servicesUnifiedTitle}>{tr("common.services")}<Text style={{color:colors.accent}}>.</Text></Text>
+        <View style={styles.nativeCatalogSearch}>
+         <Ionicons name="search-outline" size={20} color="#8D65C9"/>
+         <TextInput accessibilityLabel={tr("catalog.searchLabel")} placeholder={tr("catalog.search")}
+          placeholderTextColor="#9B8BA8" autoCapitalize="none" autoCorrect={false}
+          value={catalogQuery} onChangeText={setCatalogQuery} style={styles.nativeCatalogSearchInput}/>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+         contentContainerStyle={styles.nativeCatalogFilterRow}>
+         {(["all","communication","digital","growth"] as const).map(group=>
+          <Pressable key={group} accessibilityRole="button"
+           accessibilityState={{selected:catalogGroup===group}}
+           style={[styles.nativeCatalogFilter,catalogGroup===group&&styles.nativeCatalogFilterActive]}
+           onPress={()=>setCatalogGroup(group)}>
+           <Text style={[styles.nativeCatalogFilterText,catalogGroup===group&&styles.nativeCatalogFilterTextActive]}>
+            {tr(group==="all"?"catalog.all":group==="communication"?"catalog.communication":group==="digital"?"catalog.digital":"catalog.growth")}
+           </Text>
+          </Pressable>)}
+        </ScrollView>
+        <View style={styles.nativeCatalogGrid}>
+         {filteredCatalogItems.map(item=><Pressable key={item.id} accessibilityRole="button"
+          accessibilityLabel={item.name+" · "+item.status}
+          onPress={item.open} style={[styles.nativeCatalogCard,item.tone]}>
+          <View style={styles.nativeCatalogIcon}><Ionicons name={item.Icon} size={26} color="#47345E"/></View>
+          <View><Text style={styles.nativeCatalogCardTitle}>{item.name}</Text>
+           <Text style={styles.nativeCatalogCardStatus}>{item.status}</Text></View>
+         </Pressable>)}
+        </View>
+        {!filteredCatalogItems.length&&(catalogGroup!=="all"||!catalogQuery.trim())?<Text style={styles.nativeCatalogEmpty}>{tr("catalog.noResults")}</Text>:null}
+        {catalogGroup==="all"?(catalogQuery.trim()?
+         <BusinessServicesPanel session={session} excludeFeatured searchTerm={catalogQuery} emptyLabel={filteredCatalogItems.length?"":tr("catalog.noResults")}/>:
+         <>
+          <Pressable accessibilityRole="button" accessibilityLabel={tr("settings.otherServices")}
+           accessibilityState={{expanded:moreModulesOpen}} onPress={()=>setMoreModulesOpen(value=>!value)}
+           style={styles.servicesMoreToggle}>
+           <Text style={styles.servicesMoreToggleText}>{tr("settings.otherServices")}</Text>
+           <Ionicons name={moreModulesOpen?"chevron-up-outline":"chevron-down-outline"} size={19} color="#8655CA"/>
+          </Pressable>
+          {moreModulesOpen?<BusinessServicesPanel session={session} excludeFeatured/>:null}
+         </>):null}
+       </>}
+      </>:null}
      {activeTab==="settings"?<>
       {settingsPage==="menu"?<>
-       <Text style={styles.kicker}>TU CUENTA</Text><Text style={styles.heading}>Ajustes<Text style={{color:colors.accent}}>.</Text></Text>
-       <Text style={styles.groupTitle}>CUENTA</Text>
-       <SettingRow emoji="👤" label="Perfil" onPress={()=>setSettingsPage("profile")}/>
-       <SettingRow emoji="🔒" label="Seguridad" onPress={()=>setSettingsPage("security")}/>
-       <Text style={styles.groupTitle}>LLAMADAS</Text>
-       <SettingRow emoji="📱" label="Número y verificación" onPress={()=>setSettingsPage("numbers")}/>
-       <SettingRow emoji="🕒" label="Historial" onPress={()=>setSettingsPage("history")}/>
+       <Text style={styles.heading}>{tr("common.settings")}<Text style={{color:colors.accent}}>.</Text></Text>
+       <Text style={styles.groupTitle}>{tr("settings.accountGroup")}</Text>
+       <SettingRow emoji="👤" label={tr("common.profile")} onPress={()=>setSettingsPage("profile")}/>
+       <SettingRow emoji="🔒" label={tr("common.security")} onPress={()=>setSettingsPage("security")}/>
+       <Text style={styles.groupTitle}>{tr("settings.callsGroup")}</Text>
+       <SettingRow emoji="📱" label={tr("settings.phoneAndVerification")} onPress={()=>setSettingsPage("numbers")}/>
+       <SettingRow emoji="🕒" label={tr("common.history")} onPress={()=>setSettingsPage("history")}/>
        <Text style={styles.groupTitle}>SUSCRIPCIÓN</Text>
        <SettingRow emoji="💎" label="Plan y minutos" onPress={()=>setSettingsPage("billing")}/>
        <Text style={styles.groupTitle}>VMV BUSINESS</Text>
+       <SettingRow emoji="💳" label="Finanzas · Stripe" onPress={()=>setSettingsPage("finances")}/>
        <SettingRow emoji="🖥️" label="Plataforma web" onPress={()=>void openBusinessWeb("smart-call")}/>
-       <SettingRow emoji="🧩" label="Catálogo de servicios" onPress={()=>setSettingsPage("services")}/>
-       <Text style={styles.groupTitle}>MÁS</Text>
-       <SettingRow emoji="🌐" label="Idiomas y asistente" onPress={()=>setSettingsPage("style")}/>
-       <SettingRow emoji="🎧" label="Soporte" onPress={()=>setSettingsPage("support")}/>
-       <Pressable style={styles.signout} onPress={()=>void logout()}><Text style={styles.signoutText}>Cerrar sesión</Text></Pressable>
+       <SettingRow emoji="🧩" label="Mis servicios" onPress={()=>{setActiveModule(null);setActiveTab("services");}}/>
+       <Text style={styles.groupTitle}>{tr("settings.moreGroup")}</Text>
+       <SettingRow emoji="🌐" label={tr("settings.languagesAssistant")} onPress={()=>setSettingsPage("style")}/>
+       <SettingRow emoji="🎧" label={tr("common.support")} onPress={()=>setSettingsPage("support")}/>
+       {localePicker}
+       <Pressable style={styles.signout} onPress={()=>void logout()}><Text style={styles.signoutText}>{tr("common.signOut")}</Text></Pressable>
       </>:<>
-       <Pressable style={styles.backRow} onPress={()=>setSettingsPage("menu")}><Text style={styles.backText}>‹  Ajustes</Text></Pressable>
-       <Text style={styles.heading}>{({numbers:"Mi línea",billing:"Plan y billing",history:"Historial",security:"Seguridad",profile:"Perfil",style:"Idiomas y asistente",support:"Soporte",services:"Otros servicios",menu:"Ajustes"} as Record<typeof settingsPage,string>)[settingsPage]}</Text>
+       <Pressable style={styles.backRow} onPress={()=>setSettingsPage("menu")}><Text style={styles.backText}>‹  {tr("common.settings")}</Text></Pressable>
+       <Text style={styles.heading}>{({numbers:"Mi línea",billing:"Plan y minutos",finances:"Finanzas",history:"Historial",security:"Seguridad",profile:"Perfil",style:"Idiomas y asistente",support:"Soporte",services:"Otros servicios",menu:"Ajustes"} as Record<typeof settingsPage,string>)[settingsPage]}</Text>
        {settingsPage==="numbers"?<>
         <View style={styles.card}><Text style={styles.cardTitle}>Verificación SMS</Text>
          {verificationLoading?<ActivityIndicator color={colors.accent}/>:phoneVerification?
@@ -696,12 +1028,42 @@ export default function App(){
          </View>:null}
         </View>
        </>:null}
-       {settingsPage==="billing"?<View style={styles.card}><Text style={styles.cardTitle}>Mi plan</Text><Text style={styles.statNumber}>{billingOverview?.minutes.available??"—"}</Text><Text style={styles.helper}>Minutos disponibles</Text><Text style={styles.statusText}>{billingOverview?billingOverview.plan==="none"?"Sin suscripción":billingOverview.plan.toUpperCase():"Estado no disponible"}</Text><Text style={styles.helper}>Uso: {billingOverview?.minutes.used??"—"} min · Incluidos: {billingOverview?.minutes.included??"—"}</Text><Text style={styles.helper}>{billingOverview?.previewPilotActive?"✓ Prueba privada activa: usa tus minutos VMV. No hace falta otra compra.":"Los planes de referencia no activan llamadas reales hasta habilitar pagos de producción."}</Text><Button label="Actualizar" secondary onPress={()=>void refreshAccountOverview()}/><Button label="Elegir plan y configurar" secondary onPress={()=>{if(!activationProfile||!supabase)return;void (async()=>{
-         const {data}=await supabase.from("smartjob_profiles").update({
-          plan_prompt_seen:false,updated_at:new Date().toISOString()
-         }).eq("id",activationProfile.id).select("*").single();
-         if(data)setActivationProfile(data as NativeProfile);
-        })();}}/></View>:null}
+       {settingsPage==="finances"?<FinancesPanel session={session}/>:null}
+       {settingsPage==="billing"?<>
+        <Text style={styles.kicker}>TU PLAN {billingOverview?.plan&&billingOverview.plan!=="none"?"· "+billingOverview.plan.toUpperCase():""}</Text>
+        <View style={styles.card}>
+         <Text style={styles.cardTitle}>Llamadas normales</Text>
+         {billingOverview?.national?.enabled?<>
+          <Text style={styles.statNumber}>{billingOverview.national.available}</Text>
+          <Text style={styles.helper}>Minutos disponibles</Text>
+          <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Incluidos</Text><Text style={styles.callsInfoValue}>{billingOverview.national.included} min</Text></View>
+          <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Usados</Text><Text style={styles.callsInfoValue}>{billingOverview.national.used} min</Text></View>
+          {billingOverview.national.reserved>0?<View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>En llamada</Text><Text style={styles.callsInfoValue}>{billingOverview.national.reserved} min</Text></View>:null}
+         </>:<>
+          <Text style={styles.billingBigText}>{accountOverview?.billing.active?"Incluidas con tu plan":"Acceso no disponible"}</Text>
+          {billingOverview?.plan==="starter"?<View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Starter · plan previsto</Text><Text style={styles.callsInfoValue}>150 min nacionales</Text></View>:null}
+         </>}
+         <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Llamadas · 30 días</Text><Text style={styles.callsInfoValue}>{accountOverview?.usage.directCalls??"—"}</Text></View>
+         
+        </View>
+        <View style={styles.card}>
+         <Text style={styles.cardTitle}>Llamadas con traducción</Text>
+         <Text style={styles.statNumber}>{billingOverview?.minutes.available??"—"}</Text>
+         <Text style={styles.helper}>Minutos disponibles</Text>
+         <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Incluidos en el plan</Text><Text style={styles.callsInfoValue}>{billingOverview?.minutes.included??"—"} min</Text></View>
+         <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Consumidos</Text><Text style={styles.callsInfoValue}>{billingOverview?.minutes.used??"—"} min</Text></View>
+         <View style={styles.callsInfoRow}><Text style={styles.callsInfoLabel}>Recargas</Text><Text style={styles.callsInfoValue}>{billingOverview?.minutes.topup??"—"} min</Text></View>
+         <Text style={styles.helper}>{billingOverview?.previewPilotActive?"Cuenta de prueba · TEST":""}</Text>
+         <Button label="Actualizar saldos" secondary onPress={()=>void refreshAccountOverview()}/>
+         <Button label="Ver planes ↗" secondary onPress={()=>void Linking.openURL("https://vmv-business-design-git-feat-vm-073e13-valdys-projects-b97fc7a6.vercel.app/es/planes/").catch(()=>setError("No pudimos abrir los planes."))}/>
+         <Button label="Gestionar plan" secondary onPress={()=>{if(!activationProfile||!supabase)return;void (async()=>{
+          const {data}=await supabase.from("smartjob_profiles").update({
+           plan_prompt_seen:false,updated_at:new Date().toISOString()
+          }).eq("id",activationProfile.id).select("*").single();
+          if(data)setActivationProfile(data as NativeProfile);
+         })();}}/>
+        </View>
+       </>:null}
        {settingsPage==="history"?<View style={styles.card}>
          <View style={styles.compactBetween}><Text style={styles.cardTitle}>Llamadas</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Actualizar historial" onPress={()=>void refreshCallHistory()} style={styles.historyRefresh}><Text style={styles.historyRefreshText}>{historyBusy?"…":"↻"}</Text></Pressable>
@@ -713,8 +1075,8 @@ export default function App(){
            <Text style={styles.historyMinutes}>{item.duration_seconds==null?"—":Math.ceil(item.duration_seconds/60)+" min"}</Text>
           </View>):<Text style={styles.helper}>Aún no hay llamadas.</Text>}
         </View>:null}
-       {settingsPage==="profile"?<View style={styles.card}><Text style={styles.cardTitle}>Mi cuenta</Text><Text style={styles.helper}>{session.user.email}</Text><Text style={styles.helper}>Los datos del perfil pueden editarse en la web.</Text></View>:null}
-       {settingsPage==="security"?<View style={styles.card}><Text style={styles.cardTitle}>Acceso seguro</Text><Text style={styles.helper}>No compartas tu contraseña ni códigos de verificación.</Text><Button label="Cerrar sesión" danger onPress={()=>void logout()}/></View>:null}
+       {settingsPage==="profile"?<View style={styles.card}><Text style={styles.cardTitle}>Mi cuenta</Text><Text style={styles.helper}>{session.user.email}</Text><Text style={styles.helper}>{tr("native.profileHint")}</Text></View>:null}
+       {settingsPage==="security"?<View style={styles.card}><Text style={styles.cardTitle}>{tr("settings.secureAccess")}</Text><Text style={styles.helper}>No compartas tu contraseña ni códigos de verificación.</Text><Button label={tr("common.signOut")} danger onPress={()=>void logout()}/></View>:null}
        {settingsPage==="style"?<>
          <View style={styles.card}>
           <Text style={styles.cardTitle}>Idiomas</Text>
@@ -761,15 +1123,31 @@ export default function App(){
     {error?<View accessibilityRole="alert" style={styles.alert}><Text style={styles.alertText}>{error}</Text></View>:null}
     {working?<ActivityIndicator style={{marginTop:12}} color={colors.accent}/>:null}
    </ScrollView>
-   {session&&!keyboardVisible?<View style={styles.bottomDock}>{([{id:"home",emoji:"🏠",label:"Inicio"},{id:"calls",emoji:"📞",label:"Llamadas"},{id:"live",emoji:"🎙️",label:"Traductor"},{id:"settings",emoji:"⚙️",label:"Ajustes"}] as const).map(item=><Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected:activeTab===item.id}} onPress={()=>{setError("");setActiveTab(item.id);if(item.id==="settings")setSettingsPage("menu");}} style={styles.bottomItem}><View style={[styles.bottomOrb,activeTab===item.id&&styles.bottomOrbActive]}><Text style={styles.bottomEmoji}>{item.emoji}</Text></View><Text style={[styles.bottomLabel,activeTab===item.id&&styles.bottomLabelActive]}>{item.label}</Text></Pressable>)}</View>:null}
+   {session&&!keyboardVisible?<View style={styles.bottomDock}>
+     {([{id:"home",icon:"home-outline",label:tr("common.home")},{id:"services",icon:"grid-outline",label:tr("common.services")},
+       {id:"calls",icon:"call-outline",label:tr("common.calls")},{id:"live",icon:"language-outline",label:tr("common.translator")},
+       {id:"settings",icon:"person-outline",label:tr("common.account")}] as const).map(item=>
+       <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={item.label}
+        accessibilityState={{selected:activeTab===item.id}}
+        onPress={()=>{setError("");setActiveTab(item.id);if(item.id==="services")setActiveModule(null);if(item.id==="settings")setSettingsPage("menu");}}
+        style={[styles.bottomItem,activeTab===item.id&&styles.bottomItemSelected,item.id==="calls"&&styles.bottomItemCenter]}>
+        <View style={[styles.bottomOrb,activeTab===item.id&&styles.bottomOrbActive,item.id==="calls"&&styles.bottomOrbCenter,
+          item.id==="calls"&&activeTab===item.id&&styles.bottomOrbCenterActive]}>
+         <Ionicons name={item.icon} size={item.id==="calls"?25:22}
+          color={activeTab===item.id?"#20142E":"#FFFFFF"}/>
+        </View>
+        <Text numberOfLines={1} style={[styles.bottomLabel,item.id==="calls"&&styles.bottomLabelCenter,
+         activeTab===item.id&&styles.bottomLabelActive]}>{item.label}</Text>
+       </Pressable>)}
+    </View>:null}
   </KeyboardAvoidingView>
-  {session&&activationProfile&&!activationProfile.plan_prompt_seen?
+  {session&&activationProfile&&activationProfile.id===session.user.id&&!activationProfile.plan_prompt_seen?
    <NativeActivation session={session} profile={activationProfile} onComplete={setActivationProfile}/>:null}
   <Modal visible={!!invite||!!call} animationType="fade" presentationStyle="fullScreen"
     onRequestClose={()=>{}}>
     <CallScreen voice={voice} invite={invite} call={call} busy={working} status={status}
       ownerLanguage={assistantPrefs.desired_language==="en"?"en-US":"es-ES"}
-      onAccept={()=>void accept()} onReject={()=>void reject()} onEnd={()=>void end()}/>
+      onAccept={()=>void accept()} onReject={()=>void reject()} onEnd={()=>void end()} directCall={directCallbackActive}/>
   </Modal>
  </SafeAreaView>;
 }
@@ -786,6 +1164,150 @@ function Button({label,onPress,disabled,secondary,danger}:{label:string,onPress:
  </Pressable>;
 }
 const styles=StyleSheet.create({
+
+ conceptHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:29,minHeight:42},
+ conceptBrand:{flexDirection:"row",alignItems:"center",gap:8},
+ conceptV:{fontSize:37,lineHeight:43,color:"#9969EB",fontWeight:"900",fontStyle:"italic",letterSpacing:-5,textShadowColor:"#E0C7FF",textShadowOffset:{width:-3,height:-2},textShadowRadius:1},
+ conceptBrandName:{color:"#171127",fontSize:21,fontWeight:"900",letterSpacing:-.8},
+ conceptWelcome:{marginBottom:23},
+ conceptGreeting:{fontSize:32,lineHeight:38,color:"#171127",fontWeight:"900",letterSpacing:-1.2},
+ conceptSubtitle:{color:"#5D5668",fontSize:15,lineHeight:22,marginTop:8},
+ conceptGrowthHero:{minHeight:225,borderRadius:24,backgroundColor:"#E2CDFB",padding:22,marginBottom:17,position:"relative",overflow:"hidden",justifyContent:"center"},
+ conceptHeroCopy:{position:"relative",zIndex:2,width:"64%",alignItems:"flex-start"},
+ conceptHeroTitle:{color:"#171127",fontSize:30,lineHeight:31,fontWeight:"900",letterSpacing:-1.25},
+ conceptHeroSub:{color:"#423354",fontSize:13,lineHeight:19,marginTop:13},
+ conceptStartLabel:{flexDirection:"row",alignItems:"center",gap:9,borderRadius:24,backgroundColor:"#FFFFFF",paddingVertical:11,paddingHorizontal:15,marginTop:19,shadowColor:"#71529D",shadowOpacity:.13,shadowRadius:10,shadowOffset:{width:0,height:4},elevation:2},
+ conceptStartText:{color:"#181026",fontSize:14,fontWeight:"900"},
+ conceptRocketHalo:{position:"absolute",right:-8,top:26,width:150,height:150,borderRadius:75,backgroundColor:"#C5A4F3",opacity:.55},
+ conceptRocket:{position:"absolute",right:5,top:52,transform:[{rotate:"24deg"}],opacity:.94},
+ conceptTiles:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",rowGap:12},
+ conceptTile:{width:"48%",minHeight:143,padding:14,alignItems:"center",justifyContent:"center",gap:14,borderRadius:22},
+ conceptTileText:{fontSize:17,color:"#171127",fontWeight:"900",textAlign:"center",letterSpacing:-.5},
+ conceptMint:{backgroundColor:"#DFFBDD"},
+ conceptPink:{backgroundColor:"#FBE0ED"},
+ conceptLavender:{backgroundColor:"#E7D7FF"},
+ conceptGreen:{backgroundColor:"#E0F9DD"},
+ conceptBusinessTitle:{fontSize:23,fontWeight:"900",color:"#171127",marginTop:24,marginBottom:13,letterSpacing:-.8},
+ conceptSummary:{flexDirection:"row",alignItems:"center",gap:13,backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#EEE7F5",borderRadius:21,padding:13,shadowColor:"#28134A",shadowOpacity:.04,shadowRadius:14,shadowOffset:{width:0,height:6}},
+ conceptSummaryIcon:{width:52,height:52,borderRadius:16,alignItems:"center",justifyContent:"center",backgroundColor:"#EEE0FF"},
+ conceptSummaryTitle:{fontSize:18,fontWeight:"900",color:"#181127"},
+ conceptSummarySub:{fontSize:12,color:"#6E6877",marginTop:4},
+
+ // Business Home: real operational status and recent activity, not a second catalog.
+ nativeDashboardHero:{width:"100%",borderRadius:23,padding:19,backgroundColor:"#7D4DDA",marginTop:2,marginBottom:3,overflow:"hidden",shadowColor:"#7243BD",shadowOpacity:.17,shadowRadius:11,shadowOffset:{width:0,height:6},elevation:3},
+ nativeDashboardHeroTop:{flexDirection:"row",alignItems:"center",justifyContent:"space-between"},
+ nativeDashboardKicker:{fontSize:10,color:"#E6D7FF",fontWeight:"900",letterSpacing:1.1},
+ nativeDashboardTitle:{fontSize:25,fontWeight:"900",color:"#FFFFFF",lineHeight:28,letterSpacing:-1.05,marginTop:16},
+ nativeDashboardStatus:{fontSize:11,color:"#F2E9FF",marginTop:8,lineHeight:16},
+ nativeDashboardMetrics:{flexDirection:"row",gap:10,marginTop:17},
+ nativeDashboardMetric:{flex:1,minWidth:0,backgroundColor:"#FFFFFF24",borderWidth:1,borderColor:"#FFFFFF40",borderRadius:14,paddingVertical:11,paddingHorizontal:12,gap:5},
+ nativeDashboardNumber:{fontSize:22,fontWeight:"900",color:"#FFFFFF"},
+ nativeDashboardMetricLabel:{fontSize:10,fontWeight:"600",color:"#F0E6FF",lineHeight:14},
+ nativeDashboardHeading:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8,marginTop:22,marginBottom:12},
+ nativeDashboardHeadingText:{fontSize:18,fontWeight:"800",color:"#29213E",letterSpacing:-.55},
+ nativeDashboardQuickGrid:{flexDirection:"row",justifyContent:"space-between",gap:11},
+ nativeDashboardQuick:{width:"48%",minHeight:115,borderRadius:20,padding:16,justifyContent:"space-between",alignItems:"flex-start",position:"relative"},
+ nativeDashboardQuickTitle:{fontSize:16,fontWeight:"800",color:"#302745",letterSpacing:-.5,marginTop:10},
+ nativeDashboardActivity:{backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#E8E0F1",borderRadius:21,padding:16,marginTop:18,marginBottom:10},
+ nativeDashboardActivityHead:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:7,marginBottom:11},
+ nativeDashboardHistoryRow:{flexDirection:"row",alignItems:"center",gap:11,borderTopWidth:1,borderTopColor:"#F0EAF6",paddingVertical:11},
+ nativeDashboardHistoryIcon:{width:38,height:38,borderRadius:12,alignItems:"center",justifyContent:"center",backgroundColor:"#F0E7FC"},
+ nativeDashboardHistoryTitle:{fontSize:12,fontWeight:"800",color:"#332642"},
+ nativeDashboardHistoryDate:{fontSize:10,color:"#8B7D9C",marginTop:4},
+ nativeDashboardEmpty:{color:"#82778E",fontSize:11,lineHeight:17,marginTop:2},
+ // Product catalog: search, category filters and accessible action tiles.
+ nativeCatalogSearch:{flexDirection:"row",alignItems:"center",gap:10,borderWidth:1,borderColor:"#E8DFF1",borderRadius:15,paddingHorizontal:14,minHeight:48,backgroundColor:"#FFFFFF"},
+ nativeCatalogSearchInput:{flex:1,minHeight:46,fontSize:13,fontWeight:"600",color:"#352A44",paddingVertical:8},
+ nativeCatalogFilterRow:{flexDirection:"row",alignItems:"center",gap:7,paddingTop:12,paddingBottom:17},
+ nativeCatalogFilter:{minHeight:35,paddingHorizontal:13,paddingVertical:8,backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#E6DCF0",borderRadius:99,justifyContent:"center"},
+ nativeCatalogFilterActive:{backgroundColor:"#8957DF",borderColor:"#8957DF"},
+ nativeCatalogFilterText:{fontSize:11,fontWeight:"800",color:"#765F8E"},
+ nativeCatalogFilterTextActive:{color:"#FFFFFF"},
+ nativeCatalogGrid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",rowGap:11},
+ nativeCatalogCard:{width:"48%",minHeight:144,borderRadius:20,padding:15,justifyContent:"space-between",position:"relative",overflow:"hidden"},
+ nativeCatalogIcon:{width:44,height:44,borderRadius:14,backgroundColor:"#FFFFFF96",alignItems:"center",justifyContent:"center"},
+ nativeCatalogCardTitle:{fontSize:16,fontWeight:"800",letterSpacing:-.5,color:"#332744"},
+ nativeCatalogCardStatus:{fontSize:10,fontWeight:"700",color:"#756587",marginTop:5},
+ nativeCatalogViolet:{backgroundColor:"#E5D8FF"},
+ nativeCatalogMint:{backgroundColor:"#BDEFD9"},
+ nativeCatalogYellow:{backgroundColor:"#FFE4A6"},
+ nativeCatalogSky:{backgroundColor:"#C8E6FF"},
+ nativeCatalogPink:{backgroundColor:"#F9D5E8"},
+ nativeCatalogEmpty:{fontSize:12,color:"#817691",textAlign:"center",paddingVertical:17},
+ // Services: same palette and spacious card hierarchy as the Home.
+ servicesUnifiedTitle:{color:"#28223C",fontSize:26,fontWeight:"800",letterSpacing:-1.1,marginBottom:15},
+ servicesModuleHandoff:{borderRadius:21,backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#E8DFF3",padding:20,gap:15,marginTop:10},
+ servicesModuleHandoffTitle:{fontSize:21,fontWeight:"800",color:"#2A2240"},
+ homeExploreCompact:{flexDirection:"row",alignItems:"center",justifyContent:"center",gap:10,borderRadius:15,minHeight:49,paddingVertical:12,paddingHorizontal:15,backgroundColor:"#F1EAFB",borderWidth:1,borderColor:"#E4D8F4",marginTop:15,marginBottom:6},
+ homeExploreCompactText:{fontSize:13,color:"#714CBC",fontWeight:"800"},
+ servicesSpotlight:{backgroundColor:"#E4D0FB",borderRadius:24,padding:20,minHeight:222,overflow:"hidden",marginBottom:6,
+  shadowColor:"#7548C0",shadowOpacity:.18,shadowRadius:14,shadowOffset:{width:0,height:8},elevation:4},
+ servicesSpotlightTop:{flexDirection:"row",alignItems:"flex-start",justifyContent:"space-between",marginBottom:15},
+ servicesSpotlightIcon:{height:52,width:52,borderRadius:17,backgroundColor:"#FFCB94",alignItems:"center",justifyContent:"center"},
+ servicesPilot:{fontSize:9,color:"#624293",fontWeight:"800",letterSpacing:1,backgroundColor:"#FFFFFFAB",paddingHorizontal:11,paddingVertical:9,borderRadius:20,overflow:"hidden"},
+ servicesSpotlightTitle:{fontSize:31,color:"#171127",letterSpacing:-1.5,fontWeight:"800"},
+ servicesSpotlightNote:{fontSize:12,color:"#594477",marginTop:7},
+ servicesSpotlightLink:{alignSelf:"flex-start",paddingVertical:10,paddingHorizontal:12,backgroundColor:"#FFFFFFC7",borderRadius:22,marginTop:20},
+ servicesSpotlightLinkText:{fontSize:12,color:"#614094",fontWeight:"800"},
+ servicesSpotlightStar:{position:"absolute",right:-3,bottom:-40,fontSize:130,color:"#D7C0FF67",zIndex:-1},
+ servicesSectionHead:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8,marginTop:26,marginBottom:15},
+ servicesMoreToggle:{marginTop:20,minHeight:52,backgroundColor:"#F2ECFA",borderRadius:16,borderWidth:1,borderColor:"#E4D6F5",paddingHorizontal:16,flexDirection:"row",alignItems:"center",justifyContent:"space-between"},
+ servicesMoreToggleText:{fontSize:13,fontWeight:"800",color:"#60418B"},
+ servicesSectionTitle:{fontSize:24,color:"#2A2240",fontWeight:"800",letterSpacing:-1.2},
+ servicesSectionHint:{fontSize:9,fontWeight:"800",color:"#A193B8",letterSpacing:.5},
+ servicesProductGrid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",rowGap:12},
+ servicesProductTile:{width:"48%",minHeight:151,borderRadius:21,padding:16,justifyContent:"space-between",overflow:"hidden"},
+ servicesTileBlue:{backgroundColor:"#DCEAFE"},
+ servicesTileYellow:{backgroundColor:"#FFF0C9"},
+ servicesTilePink:{backgroundColor:"#FBE0ED"},
+ servicesTileMint:{backgroundColor:"#DFFBDD"},
+ servicesTileLavender:{backgroundColor:"#E6D5FF"},
+ servicesTilePeach:{backgroundColor:"#FFD6BA"},
+ servicesTileIcon:{height:45,width:45,borderRadius:15,backgroundColor:"#FFFFFF90",alignItems:"center",justifyContent:"center"},
+ servicesTileTitle:{fontSize:17,fontWeight:"800",color:"#29213D",letterSpacing:-.7},
+ servicesTileCaption:{fontSize:11,fontWeight:"700",color:"#6D6478",marginTop:6},
+ // Premium VMV Home: purple communications hero, warm pastel product catalogue.
+ homeScrollSurface:{backgroundColor:"#FBFAFF"},
+ homeWelcomeV2:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:16},
+ homeUser:{flex:1,flexDirection:"row",alignItems:"center",gap:11},
+ homeAvatar:{width:46,height:46,borderRadius:16,alignItems:"center",justifyContent:"center",backgroundColor:"#E6D6FF"},
+ homeEyebrow:{fontSize:10,fontWeight:"800",letterSpacing:1.1,color:"#9B91AD",marginBottom:4},
+ homeGreeting:{fontSize:18,fontWeight:"800",letterSpacing:-.55,color:"#231E38"},
+ homeBrandBadge:{borderRadius:24,backgroundColor:"#F0E9FF",paddingHorizontal:11,paddingVertical:11},
+ homeBrandBadgeText:{color:"#744DBB",fontSize:10,fontWeight:"800",letterSpacing:.5},
+ homeSpotlightV2:{minHeight:209,backgroundColor:"#8656E4",borderRadius:25,overflow:"hidden",padding:19,position:"relative",marginBottom:2,shadowColor:"#7348D5",shadowOpacity:.18,shadowRadius:12,shadowOffset:{width:0,height:7},elevation:5},
+ homeSpotlightRingOuter:{position:"absolute",width:120,height:120,borderRadius:60,borderWidth:13,borderColor:"#DCC3FC",opacity:.48,top:56,right:12},
+ homeSpotlightRingInner:{position:"absolute",width:92,height:92,borderRadius:46,borderWidth:9,borderColor:"#F9E5FF",opacity:.6,top:70,right:26},
+ homeSpotlightPhone:{position:"absolute",width:72,height:72,borderRadius:36,alignItems:"center",justifyContent:"center",backgroundColor:"#FFC887",right:35,top:80,borderWidth:2,borderColor:"#FFE9BD",shadowColor:"#6B388B",shadowOpacity:.34,shadowRadius:11,shadowOffset:{width:0,height:8},elevation:5,transform:[{rotate:"-12deg"}]},
+ homeSpotlightPhoneShine:{position:"absolute",width:30,height:13,left:11,top:9,borderRadius:10,backgroundColor:"#FFFAE9",opacity:.43,transform:[{rotate:"-21deg"}]},
+ homeSpotlightMiniBubble:{position:"absolute",right:105,top:139,width:32,height:32,borderRadius:16,backgroundColor:"#B5EBDD",borderWidth:2,borderColor:"#E9FFF7",justifyContent:"center",alignItems:"center",shadowColor:"#6B388B",shadowOpacity:.19,shadowRadius:5,shadowOffset:{width:0,height:4},elevation:3},
+ homeSpotlightSpark:{position:"absolute",right:25,top:33,color:"#F7E185",fontSize:27,fontWeight:"800"},
+ homeSpotlightKicker:{fontSize:10,fontWeight:"800",letterSpacing:1,color:"#EFE4FF"},
+ homeSpotlightHeadline:{color:"#FFFFFF",fontSize:24,lineHeight:27,fontWeight:"800",letterSpacing:-1.2,marginTop:24,maxWidth:"58%"},
+ homeSpotlightCaption:{fontSize:11,color:"#E9DDFF",marginTop:8},
+ homeSpotlightMinutes:{alignSelf:"flex-start",backgroundColor:"#FFFFFF29",borderWidth:1,borderColor:"#FFFFFF65",paddingVertical:7,paddingHorizontal:11,borderRadius:20,marginTop:16},
+ homeSpotlightMinutesText:{fontSize:12,color:"#FFFFFF",fontWeight:"800"},
+ homeSpotlightArrow:{position:"absolute",right:16,bottom:15,width:32,height:32,borderRadius:16,backgroundColor:"#FFFFFF34",alignItems:"center",justifyContent:"center"},
+ homeSectionHead:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:9,marginTop:21,marginBottom:13},
+ homeSectionTitle:{fontSize:25,color:"#221B34",fontWeight:"800",letterSpacing:-1.2},
+ homeSeeAll:{flexDirection:"row",alignItems:"center",gap:3,paddingVertical:6},
+ homeSeeAllText:{fontSize:12,color:"#8960D4",fontWeight:"800"},
+ homeProductGrid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",rowGap:12},
+ homeProductTile:{width:"48%",minHeight:148,borderRadius:21,padding:15,justifyContent:"space-between",overflow:"hidden"},
+ homeProductMint:{backgroundColor:"#B7EDDA"},
+ homeProductYellow:{backgroundColor:"#FFE083"},
+ homeProductSky:{backgroundColor:"#BFE5FF"},
+ homeProductPink:{backgroundColor:"#FFD2E7"},
+ homeProductIconV2:{width:45,height:45,borderRadius:15,backgroundColor:"#FFFFFF82",alignItems:"center",justifyContent:"center",zIndex:2},
+ homeProductArt:{position:"absolute",right:-12,top:-9,opacity:.16,transform:[{rotate:"-12deg"}]},
+ homeProductTitle:{fontSize:18,fontWeight:"800",letterSpacing:-.7},
+ homeProductSub:{fontSize:11,fontWeight:"700",marginTop:5},
+ homeExploreV2:{position:"relative",overflow:"hidden",borderRadius:23,backgroundColor:"#FFC365",padding:21,minHeight:159,marginTop:13,marginBottom:12,alignItems:"flex-start"},
+ homeExploreSpark:{position:"absolute",right:3,top:-2,fontSize:124,color:"#FFFFFF70",transform:[{rotate:"-18deg"}]},
+ homeExploreEyebrow:{fontSize:10,fontWeight:"800",letterSpacing:1.2,color:"#855235"},
+ homeExploreTitle:{fontSize:25,fontWeight:"800",lineHeight:29,letterSpacing:-1.1,color:"#4A2A27",marginTop:11},
+ homeExploreAction:{borderRadius:24,backgroundColor:"#FFFFFF85",paddingHorizontal:12,paddingVertical:9,marginTop:13},
+ homeExploreActionText:{fontSize:11,color:"#51352D",fontWeight:"800"},
  // Mint cards use only two image placeholders; native image files can replace these later.
  homeSubtitle:{fontSize:15,color:"#727885",marginBottom:16,marginTop:-9},
  homeFeatureCard:{flexDirection:"row",alignItems:"stretch",borderRadius:26,padding:18,borderWidth:1,borderColor:"#D5EFEB",marginBottom:18,overflow:"hidden"},
@@ -825,18 +1347,18 @@ const styles=StyleSheet.create({
  safe:{flex:1,backgroundColor:colors.bg},
  content:{flexGrow:1,paddingHorizontal:22,paddingTop:22,paddingBottom:46,maxWidth:620,width:"100%",alignSelf:"center"},
  brand:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:30},
- brandMark:{width:50,height:50,borderRadius:16,backgroundColor:"#1CE0BC",alignItems:"center",justifyContent:"center"},
+ brandMark:{width:50,height:50,borderRadius:16,backgroundColor:"#C7A6F8",alignItems:"center",justifyContent:"center"},
  brandIcon:{fontSize:23,fontWeight:"900",color:colors.accentText},
  brandText:{color:colors.text,fontSize:24,fontWeight:"900",letterSpacing:-1.3},
  kicker:{color:"#06A887",fontSize:11,fontWeight:"800",letterSpacing:2.6,marginBottom:12},
  heading:{color:colors.text,fontSize:39,fontWeight:"800",lineHeight:45,letterSpacing:-1.7,marginBottom:16},
  description:{color:colors.muted,fontSize:15,lineHeight:24,marginBottom:25},
- card:{backgroundColor:colors.card,borderWidth:1,borderColor:colors.line,borderRadius:23,padding:21,marginBottom:18},
+ card:{backgroundColor:colors.card,borderWidth:1,borderColor:colors.line,borderRadius:23,padding:20,marginBottom:15,shadowColor:"#30204A",shadowOpacity:.03,shadowRadius:9,shadowOffset:{width:0,height:3}},
  cardTitle:{color:colors.text,fontSize:21,fontWeight:"800",marginBottom:8},
  helper:{color:colors.muted,fontSize:13,lineHeight:21,marginBottom:17},
- field:{height:53,borderRadius:13,borderWidth:1,borderColor:"#D0E3E1",backgroundColor:"#FCFFFE",
+ field:{height:53,borderRadius:16,borderWidth:1,borderColor:"#E5DDED",backgroundColor:"#FFFFFF",
    paddingHorizontal:15,color:colors.text,fontSize:16,marginBottom:13},
- btn:{backgroundColor:colors.accent,minHeight:52,borderRadius:13,alignItems:"center",justifyContent:"center",padding:13,marginTop:12},
+ btn:{backgroundColor:colors.accent,minHeight:50,borderRadius:16,alignItems:"center",justifyContent:"center",padding:13,marginTop:12},
  btnText:{fontSize:15,fontWeight:"800",color:colors.accentText},
  secondary:{backgroundColor:"#E4F8F1"},
  danger:{backgroundColor:"#F5D7DD"},
@@ -857,7 +1379,7 @@ const styles=StyleSheet.create({
  footer:{color:"#617380",fontSize:10,fontWeight:"700",letterSpacing:1.4,alignSelf:"center",marginTop:26},
  headerAvatar:{marginLeft:"auto",width:43,height:43,borderRadius:23,alignItems:"center",justifyContent:"center",backgroundColor:"#BDF3E7"},
  headerAvatarText:{fontSize:17,color:"#006746",fontWeight:"800"},
- featureCard:{backgroundColor:"#E5FBF3",borderColor:"#C7EDE0",padding:21},
+ featureCard:{backgroundColor:"#EDE5FE",borderColor:"#DCCBF9",padding:21},
  compactBetween:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
  featureLabel:{fontSize:13,color:colors.text,fontWeight:"800"},
  stateTag:{fontSize:11,fontWeight:"800",letterSpacing:.5},
@@ -877,21 +1399,60 @@ const styles=StyleSheet.create({
  quickRow:{flexDirection:"row",gap:10,marginVertical:10},
  quickButton:{flex:1,borderRadius:14,padding:15,backgroundColor:"#1A363E",alignItems:"center"},
  quickButtonText:{color:colors.text,fontSize:14,fontWeight:"800"},
- bottomDock:{position:"absolute",bottom:5,left:12,right:12,height:78,backgroundColor:"#FFFFFF",borderRadius:27,borderWidth:1,borderColor:"#E4EEEE",flexDirection:"row",alignItems:"center",justifyContent:"space-around",paddingHorizontal:6},
- bottomItem:{flex:1,alignItems:"center",justifyContent:"center",height:74},
- bottomOrb:{width:42,height:42,borderRadius:24,alignItems:"center",justifyContent:"center"},
- bottomOrbActive:{backgroundColor:"#C5F9E9",width:49,height:43,borderRadius:18,borderWidth:0},
- bottomEmoji:{fontSize:22},
- bottomLabel:{color:"#6C7582",fontSize:10,fontWeight:"700",marginTop:1},
- bottomLabelActive:{color:"#0A7658",marginTop:0},
- groupTitle:{color:"#06A886",fontSize:11,fontWeight:"800",letterSpacing:1.7,marginTop:20,marginBottom:8},
+ bottomDock:{position:"absolute",bottom:13,left:15,right:15,height:78,backgroundColor:"#080809",borderRadius:28,borderWidth:1,borderColor:"#080809",flexDirection:"row",alignItems:"center",justifyContent:"space-around",paddingHorizontal:5,paddingVertical:5,shadowColor:"#171326",shadowOpacity:.15,shadowRadius:9,shadowOffset:{width:0,height:6},elevation:6},
+ bottomItem:{flex:1,minWidth:0,alignItems:"center",justifyContent:"center",height:68,borderRadius:22},
+ bottomItemCenter:{},
+ bottomOrb:{width:42,height:39,borderRadius:15,alignItems:"center",justifyContent:"center"},
+ bottomItemSelected:{backgroundColor:"#C7A3F6"},
+ bottomOrbActive:{backgroundColor:"transparent"},
+ bottomOrbCenter:{width:42,height:39,borderRadius:15,backgroundColor:"transparent",borderWidth:0},
+ bottomOrbCenterActive:{backgroundColor:"transparent"},
+ bottomLabel:{color:"#FFFFFF",fontSize:9,fontWeight:"700",marginTop:2,textAlign:"center",maxWidth:"100%"},
+ bottomLabelActive:{color:"#20142E"},
+ bottomLabelCenter:{color:"#FFFFFF"},
+ groupTitle:{color:"#9B77D4",fontSize:10,fontWeight:"800",letterSpacing:1.7,marginTop:22,marginBottom:11},
  languageChoice:{flexDirection:"row",gap:10,marginVertical:11},
- languageOption:{flex:1,alignItems:"center",justifyContent:"center",padding:13,backgroundColor:"#F0FDF9",borderRadius:12,borderWidth:1,borderColor:"#CEEAE4"},
- languageSelected:{borderColor:colors.accent,backgroundColor:"#D6FAED"},
+ languageOption:{flex:1,alignItems:"center",justifyContent:"center",padding:13,backgroundColor:"#F4EFFB",borderRadius:15,borderWidth:1,borderColor:"#E5D9F2"},
+ languageSelected:{borderColor:colors.accent,backgroundColor:"#E6D6FF"},
  languageOptionText:{fontSize:14,fontWeight:"700",color:colors.text},
+ interfaceLanguageCard:{backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#ECE6F3",borderRadius:20,padding:15,marginBottom:13,alignItems:"flex-start",gap:7},
+ interfaceLanguageTitle:{fontSize:13,fontWeight:"800",color:"#28223C"},
+ interfaceLanguageChoice:{flexDirection:"row",alignItems:"center",backgroundColor:"#F5F0FB",borderRadius:24,borderWidth:1,borderColor:"#E4D9F2",padding:3,gap:4},
+ interfaceLanguageOption:{height:43,width:54,alignItems:"center",justifyContent:"center",borderRadius:22,borderWidth:2,borderColor:"transparent",position:"relative"},
+ interfaceLanguageSelected:{backgroundColor:"#FFFFFF",borderColor:"#8D5EE6"},
+ interfaceLanguageFlag:{fontSize:26},
+ interfaceLanguageCheck:{position:"absolute",right:-3,top:-3},
+ interfaceLanguageHint:{fontSize:11,color:"#766A86",lineHeight:16},
  greetingEditor:{height:105,paddingTop:12},
 
 
+ callsHeadingRow:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:8},
+ contactsEntry:{borderWidth:1,borderColor:"#B8E9D3",backgroundColor:"#E9FAF1",paddingVertical:10,paddingHorizontal:12,borderRadius:12,marginBottom:10},
+ contactsEntryText:{fontSize:12,color:"#0A8867",fontWeight:"800"},
+ historySaveContact:{fontSize:11,color:"#8053C7",fontWeight:"800",paddingVertical:5},
+ billingBigText:{fontSize:21,fontWeight:"800",color:"#0A8365",marginBottom:10},
+ historyCallback:{fontSize:11,color:"#8154CD",fontWeight:"800",paddingVertical:5},
+ callbackNotice:{fontSize:12,color:"#744BA8",lineHeight:19,backgroundColor:"#EFE5FF",padding:12,borderRadius:13,marginTop:14},
+ callsTabEmoji:{fontSize:25,lineHeight:34,textAlign:"center"},
+ callsHistoryToolbar:{flexDirection:"row",alignItems:"center",gap:8,marginBottom:14},
+ callsTabs:{flexDirection:"row",backgroundColor:"#EFE7FA",borderWidth:1,borderColor:"#E3D7F5",padding:5,borderRadius:19,marginBottom:18,gap:5},
+ callsTab:{flex:1,minHeight:67,borderRadius:13,alignItems:"center",justifyContent:"center",gap:3},
+ callsTabLabel:{fontSize:11,fontWeight:"700",color:"#786C8B"},
+ callsTabLabelActive:{color:"#6C42BB"},
+ callsTabActive:{backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#DFCFF7"},
+ callsTabText:{fontSize:14,fontWeight:"700",color:"#758B81"},
+ callsTabTextActive:{color:"#08795B",fontWeight:"800"},
+ callsDivider:{height:1,backgroundColor:"#CFE6DA",marginVertical:18},
+ callsInfoRow:{flexDirection:"row",justifyContent:"space-between",gap:10,paddingVertical:12,borderBottomWidth:1,borderBottomColor:"#DDEEE7",alignItems:"center"},
+ callsInfoLabel:{fontSize:12,color:"#648176",flex:1,fontWeight:"600"},
+ callsInfoValue:{fontSize:12,color:"#193C30",flex:1,textAlign:"right",fontWeight:"800"},
+ callsHistoryHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:14},
+ callsFilters:{flex:1,flexDirection:"row",gap:8,marginBottom:0},
+ callsFilter:{flex:1,minHeight:42,borderRadius:13,borderWidth:1,borderColor:"#E5D9F2",backgroundColor:"#FFFFFF",alignItems:"center",justifyContent:"center",paddingHorizontal:5},
+ callsFilterActive:{backgroundColor:"#E8D9FF",borderColor:"#D0B8F4"},
+ callsFilterText:{fontSize:12,fontWeight:"700",color:"#6C867A"},
+ callsFilterTextActive:{fontWeight:"800",color:"#7248B7"},
+ callsHistoryFoot:{fontSize:11,textAlign:"center",color:"#84968C",marginTop:15},
  historyRefresh:{width:38,height:38,borderRadius:12,backgroundColor:"#21414A",alignItems:"center",justifyContent:"center"},
  historyRefreshText:{fontSize:25,color:colors.accent},
  historyRow:{flexDirection:"row",alignItems:"center",borderBottomWidth:1,borderBottomColor:colors.line,paddingVertical:14,gap:12},
@@ -899,16 +1460,16 @@ const styles=StyleSheet.create({
  historyStatus:{fontSize:11,color:colors.muted,marginTop:4},
  historyMinutes:{fontSize:12,color:colors.accent,fontWeight:"700"},
 
- settingRow:{flexDirection:"row",alignItems:"center",gap:12,paddingVertical:15,borderBottomWidth:1,borderBottomColor:"#E3EEEB"},
- settingIcon:{width:39,height:39,alignItems:"center",justifyContent:"center",borderRadius:12,backgroundColor:"#E3FAF2"},
+ settingRow:{flexDirection:"row",alignItems:"center",gap:13,padding:14,marginBottom:9,borderRadius:17,backgroundColor:"#FFFFFF",borderWidth:1,borderColor:"#ECE6F2"},
+ settingIcon:{width:43,height:43,alignItems:"center",justifyContent:"center",borderRadius:15,backgroundColor:"#EFE6FF"},
  settingEmoji:{fontSize:19},
  settingLabel:{flex:1,color:colors.text,fontWeight:"700",fontSize:14},
  settingChevron:{fontSize:24,color:"#83959A"},
  backRow:{paddingBottom:20},
  backText:{color:colors.accent,fontSize:15,fontWeight:"700"},
  speakerRow:{flexDirection:"row",gap:12,marginBottom:15},
- speakerCard:{flex:1,backgroundColor:"#E1FAF2",borderWidth:1,borderColor:"#BDECDD",borderRadius:16,padding:13,alignItems:"center"},
- speakerActive:{backgroundColor:"#C3F9E8",borderColor:"#20C9A7"},
+ speakerCard:{flex:1,backgroundColor:"#EFE7FF",borderWidth:1,borderColor:"#DDD0F5",borderRadius:18,padding:13,alignItems:"center"},
+ speakerActive:{backgroundColor:"#D9C8FC",borderColor:"#9D6AE7"},
  speakerEmoji:{fontSize:25,marginBottom:6},
  speakerText:{color:colors.text,fontSize:15,fontWeight:"800"},
  consentRow:{flexDirection:"row",gap:10,alignItems:"center",paddingVertical:10},

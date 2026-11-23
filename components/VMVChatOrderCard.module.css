@@ -1,0 +1,22 @@
+.card,.done{display:grid;gap:10px;width:100%;box-sizing:border-box;padding:15px;
+ border-radius:17px;border:1px solid #dfcef7;background:#faf7ff;color:#342445;
+ font:500 12px/1.4 system-ui,sans-serif;min-width:0}
+.heading{display:flex;align-items:center;gap:7px;color:#7046ad;font-size:14px}
+.card label:not(.consent){display:grid;gap:5px;font-size:11px;font-weight:800;color:#665178}
+.card input:not([type=checkbox]),.card select{box-sizing:border-box;min-width:0;width:100%;
+ padding:10px;border:1px solid #ddd0ef;border-radius:10px;background:#fff;
+ font:500 12px system-ui,sans-serif;color:#302342}
+.card>small{font-size:10px;color:#826f96}
+.total{font-size:12px;color:#503080}
+.consent{display:flex;align-items:flex-start;gap:8px;font-size:11px;line-height:1.45}
+.consent input{flex-shrink:0;width:17px;height:17px;accent-color:#8053c8;margin:0}
+.card button{display:flex;align-items:center;justify-content:center;gap:8px;
+ width:100%;border:0;border-radius:11px;background:#8050d0;color:#fff;
+ padding:12px;font-size:12px;font-weight:850;cursor:pointer}
+.card button:disabled{opacity:.5;cursor:not-allowed}
+.error{margin:0;color:#a53854;font-size:11px}
+.done{justify-items:start;background:#f3effb;color:#604095}
+.done strong{font-size:15px}.done small{color:#665476;line-height:1.5}
+.spin{animation:vmvOrderSpin .9s linear infinite}
+@keyframes vmvOrderSpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation:none}}

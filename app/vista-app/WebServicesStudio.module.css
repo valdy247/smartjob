@@ -1,0 +1,234 @@
+/* Scoped Web Studio — VMV mint-violet design without modifying shared app styles. */
+.studio{color:#2b223e;margin:12px 0 28px;width:100%;min-width:0;container-type:inline-size}
+.studio *{box-sizing:border-box}
+.studio button{cursor:pointer}
+.studio button:disabled{opacity:.55;cursor:not-allowed}
+.studio button:focus-visible,.studio a:focus-visible,.studio input:focus-visible,.studio textarea:focus-visible{outline:3px solid #a17aef;outline-offset:2px}
+.back{display:flex;align-items:center;gap:7px;border:0;padding:8px 0;margin-bottom:16px;color:#8d59dc;font-size:13px;font-weight:800;background:transparent}
+.heading{min-width:0;display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}
+.heading span{font-size:10px;letter-spacing:1.8px;color:#8e65ce;font-weight:900}
+.heading h2{margin:5px 0 0;font-size:clamp(27px,4vw,37px);letter-spacing:-1.5px;font-weight:900;line-height:1.1}
+.heading h2 b{color:#8e59df}
+.heading>small{flex-shrink:0;font-size:10px;font-weight:850;background:#f0e7ff;color:#7450aa;border-radius:999px;padding:9px 12px}
+.workbench{display:grid;grid-template-columns:minmax(0,1fr);gap:13px;min-width:0}
+.editor,.visual{min-width:0;width:100%;overflow:hidden;background:#fff;border:1px solid #e5ddf1;border-radius:22px}
+.panelHead{height:58px;border-bottom:1px solid #eee8f7;display:flex;justify-content:space-between;align-items:center;padding:0 17px;gap:14px;background:#fff}
+.panelHead strong{font-size:14px;letter-spacing:-.3px}
+.panelHead small{font-size:10px;letter-spacing:1px;color:#9c90b0;font-weight:800}
+.fields{max-height:510px;overflow:auto;padding:17px;display:flex;flex-direction:column;gap:13px}
+.field{display:flex;flex-direction:column;gap:7px}
+.field>span,.fieldTitle{color:#755d97;font-size:11px;font-weight:850}
+.field input,.field textarea{border-radius:12px;border:1px solid #e5d9f1;background:#fcfbff;color:#29213d;font:inherit;font-size:13px;max-width:100%;width:100%;min-width:0;padding:12px;resize:vertical}
+.field input{height:46px}
+.field textarea{min-height:72px;line-height:1.45}
+.field input::placeholder,.field textarea::placeholder{color:#aba0bb}
+.options{display:flex;flex-wrap:wrap;gap:7px;margin-top:-3px}
+.options button,.devices button{border:1px solid #e4d9ef;border-radius:9px;color:#766b89;background:#fff;font-size:11px;font-weight:800;padding:9px 11px}
+.options .active,.devices .active{background:#9060e6;color:#fff;border-color:#9060e6}
+.devices{display:flex;align-items:center;gap:5px}
+.devices button{padding:7px 10px}
+.previewBg{background:radial-gradient(circle at 35% 15%,#ddc8ff,transparent 55%),#efeaf6;min-height:400px;display:flex;justify-content:center;align-items:flex-start;padding:17px;overflow:hidden}
+.device,.mobile{background:#fff;border:6px solid #39314b;border-radius:15px;box-shadow:0 20px 32px #261d4433;overflow:hidden;min-height:375px;width:100%;max-width:790px;transition:max-width .25s ease}
+.mobile{max-width:260px}
+.bar{height:25px;background:#e9e7ed;display:flex;align-items:center;gap:4px;padding:0 8px}
+.bar i{width:6px;height:6px;border-radius:50%;background:#b7aebd}
+.bar span{margin:auto;font-size:9px;color:#8d8898;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.site{color:var(--web-ink);background:#fff;min-height:346px}
+.siteNav{min-height:51px;padding:14px 6%;display:flex;align-items:center;justify-content:space-between;gap:6px}
+.siteNav strong{font-size:clamp(10px,2vw,16px);font-weight:900;letter-spacing:-.6px;overflow-wrap:anywhere}
+.siteNav strong b,.serviceArea h4 b{color:var(--web-color)}
+.siteNav small{font-size:7px;white-space:nowrap}
+.hero{display:flex;align-items:flex-start;flex-direction:column;justify-content:center;padding:35px 7%;background:var(--web-light);min-height:205px}
+.hero small{font-size:8px;letter-spacing:1.3px;color:var(--web-color);font-weight:900}
+.hero h3{font-size:clamp(24px,4.4vw,48px);line-height:1;letter-spacing:-.075em;margin:16px 0 10px;overflow-wrap:anywhere}
+.hero p{font-size:10px;line-height:1.6;margin:0 0 9px}
+.cta{display:inline-flex;background:var(--web-color);color:#fff!important;border-radius:30px;padding:9px 12px;font-size:9px;font-weight:900;margin-top:10px}
+.showcase{background:var(--web-ink);color:#fff}
+.showcase small{color:var(--web-light)}
+.showcase .cta{background:var(--web-light);color:var(--web-ink)!important}
+.minimal{background:white}
+.serviceArea{padding:22px 7%}
+.serviceArea h4{font-size:18px;letter-spacing:-.8px;margin:0 0 12px}
+.serviceArea>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.serviceArea>div span{background:var(--web-light);border-radius:8px;min-height:50px;padding:11px;font-size:10px;font-weight:800;overflow-wrap:anywhere}
+.mobile .siteNav{flex-direction:column;align-items:flex-start;gap:4px}
+.mobile .hero{min-height:240px;padding:30px 7%}
+.mobile .hero h3{font-size:30px}
+.mobile .serviceArea>div{grid-template-columns:1fr}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.actions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:47px;padding:10px 13px;border-radius:13px;font-size:12px;font-weight:900}
+.save{flex:1;border:1px solid #e4d8f4;background:#fff;color:#8158c8}
+.publish{flex:1.2;background:#8c5fe2;color:white;border:1px solid #8c5fe2}
+.delete{border:1px solid #f3ccd6;background:#fff4f5;color:#b14e69}
+.url{display:flex;align-items:center;gap:9px;background:#f0e8ff;border-radius:12px;padding:12px;color:#704bb2;font-size:11px;margin-top:11px}
+.url>a:first-of-type{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.url button,.url>a:last-child{display:grid;place-items:center;color:#7449be;flex-shrink:0;background:transparent;border:0;padding:4px}
+.notice{font-size:12px;font-weight:700;min-height:22px;color:#7450a6;margin:14px 0 0;display:flex;align-items:center;gap:6px}
+
+/* The app preview is a narrow phone inside a wide desktop viewport.
+   Breakpoints MUST follow the Web Studio container, never the browser window. */
+.switch{display:flex;align-items:center;gap:5px;background:#efe8fa;border-radius:15px;padding:5px;margin-bottom:14px}
+.switch button{display:flex;justify-content:center;align-items:center;gap:7px;flex:1;border:0;background:transparent;color:#75638f;border-radius:11px;padding:12px 5px;font-size:12px;font-weight:850}
+.switch .active{background:#fff;color:#7044bd;box-shadow:0 3px 8px #382a6816}
+.actions{margin:0 0 12px}
+.actions button{min-width:0;white-space:nowrap}
+.actions .publish{flex:1.2}
+.url{margin:0 0 12px}
+.notice{margin:7px 0 12px}
+@container (min-width:720px){
+ .workbench{grid-template-columns:minmax(0,.87fr) minmax(0,1.18fr)}
+ .switch{display:none}
+ .fields{max-height:570px;overflow:auto}
+}
+@container (max-width:719px){
+ .workbench[data-mode="edit"] .visual{display:none}
+ .workbench[data-mode="preview"] .editor{display:none}
+ .fields{max-height:none;overflow:visible;padding:15px}
+ .editor,.visual{border-radius:17px}
+ .panelHead{padding:0 13px;height:53px}
+ .panelHead strong{font-size:13px}
+ .previewBg{padding:12px;min-height:0}
+ .device,.mobile{width:100%;max-width:100%;min-width:0;min-height:350px;border-width:5px;border-radius:14px}
+ .bar{height:22px}
+ .site{min-height:300px}
+ .siteNav{min-height:49px;padding:12px 7%;gap:4px}
+ .siteNav strong{font-size:clamp(12px,4.6vw,17px);line-height:1.2;overflow-wrap:break-word;word-break:normal;min-width:0}
+ .siteNav small{font-size:7px;flex-shrink:0}
+ .hero{padding:34px 7%;min-height:220px}
+ .hero h3{font-size:clamp(25px,7vw,33px);line-height:1.05;letter-spacing:-.06em}
+ .serviceArea>div{grid-template-columns:1fr}
+ .serviceArea h4{font-size:17px}
+ .mobile{max-width:260px;min-width:0}
+ .mobile .hero h3{font-size:28px}
+ .heading{margin-bottom:13px}
+ .heading h2{font-size:27px}
+ .heading>small{font-size:9px;padding:8px}
+ .actions button{font-size:11px;padding:9px 8px;min-height:44px}
+ .url{font-size:10px}
+}
+@container (max-width:290px){
+ .siteNav{flex-direction:column;align-items:flex-start}
+ .heading h2{font-size:24px}
+ .panelHead{padding:0 9px}
+ .actions button{font-size:10px;gap:4px}
+ .previewBg{padding:7px}
+ .fields{padding:12px}
+}
+
+
+/* Site structure controls — match narrow simulated phones without side-scrolling. */
+.field select{height:47px;border-radius:12px;border:1px solid #e5d9f1;background:#fcfbff;color:#29213d;font:inherit;font-size:13px;width:100%;min-width:0;padding:9px}
+.field select:focus-visible{outline:3px solid #9d73ec;outline-offset:1px}
+.field select option,.field select optgroup{color:#29213d}
+.serviceEditor{display:flex;flex-direction:column;gap:9px;border-top:1px solid #eee6f7;padding-top:17px;min-width:0}
+.serviceHeader{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#765493}
+.serviceHeader strong{font-weight:900}
+.serviceHeader span{font-size:10px;font-weight:800}
+.serviceRow{display:grid;grid-template-columns:18px minmax(0,1fr) repeat(3,24px);gap:3px;align-items:center;width:100%;min-width:0}
+.serviceRow small{font-size:10px;color:#9e89b1;font-weight:850}
+.serviceRow input,.addService input{width:100%;min-width:0;border:1px solid #e3d5f1;background:#fcfaff;color:#29213d;border-radius:10px;padding:9px;font-size:12px;height:41px}
+.serviceRow button{height:25px;width:24px;display:grid;place-items:center;padding:0;border:0;border-radius:7px;color:#784fbd;background:#f1e8ff}
+.serviceRow button:last-child{color:#b04766;background:#fff0f4}
+.serviceRow button:disabled{opacity:.3}
+.addService{display:grid;grid-template-columns:minmax(0,1fr) 41px;gap:8px;min-width:0}
+.addService button{height:41px;border:0;background:#8c5fe2;color:#fff;display:grid;place-items:center;border-radius:10px}
+.addService button:disabled{opacity:.45}
+.visualDesign{display:flex;flex-direction:column;gap:10px;padding:17px;border-top:1px solid #e9e0f3;background:#fff}
+.visualDesign .fieldTitle{color:#7051a0}
+.visualDesign .options{margin:0 0 7px}
+.visualDesign .options button{border-radius:12px;min-width:0;flex:1;min-height:40px;font-size:11px;padding:8px 5px}
+.visualDesign .options button.active{box-shadow:0 3px 10px #583f8526}
+.heroImage{width:100%;height:clamp(100px,22vw,240px);object-fit:cover;border-radius:10px;margin:14px 0 4px}
+.previewGallery{margin-top:15px;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px}
+.previewGallery img{width:100%;height:100px;object-fit:cover;border-radius:7px}
+@container (max-width:719px){
+ .visualDesign{padding:12px}
+ .visualDesign .options button{font-size:10px}
+ .heroImage{height:155px}
+ .serviceRow{grid-template-columns:16px minmax(0,1fr) repeat(3,23px);gap:2px}
+ .serviceRow button{width:23px}
+ .previewGallery img{height:85px}
+}
+
+
+/* Templates and swatches remain visible while the preview updates below. */
+.visualDesign{padding:12px 14px 8px;gap:6px}
+.visualDesign .options{margin:0 0 4px}
+.visualDesign .options button{display:flex;align-items:center;justify-content:center;gap:5px;min-height:36px}
+.paletteDot{display:inline-block;width:13px;height:13px;flex:0 0 13px;border:2px solid #ffffffb3;border-radius:50%;box-shadow:0 0 0 1px #3d304938}
+@container (max-width:719px){
+ .visualDesign{padding:10px 12px 7px;gap:5px}
+ .visualDesign .options button{min-height:36px;font-size:10px;padding:6px 4px}
+ .paletteDot{width:11px;height:11px;flex-basis:11px}
+}
+
+
+/* Focused three-stage workflow. Explicitly override the old desktop/phone split. */
+.studio .heading{margin-bottom:16px}
+.studio .switch{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:5px;margin:0 0 14px;background:#f0e9fa;border-radius:15px}
+.studio .switch button{min-width:0;min-height:43px;padding:10px 4px;border:0;background:transparent;border-radius:11px;font-size:12px;font-weight:850;color:#79668d;white-space:nowrap}
+.studio .switch .active{background:white;color:#7044bd;box-shadow:0 3px 9px #392b6212}
+.studio .workbench{display:block;min-width:0}
+.studio .workbench > [hidden]{display:none!important}
+.studio .fields{max-height:none;overflow:visible}
+.modeToolbar{display:flex;justify-content:flex-end;margin:0 0 13px}
+.modeToolbar button{display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid #e4d8f4;border-radius:12px;background:#fff;color:#8057c5;font-size:12px;font-weight:850;min-height:41px;padding:10px 16px}
+.studio .notice{margin:0 0 12px;padding:10px 12px;min-height:0;border-radius:10px;background:#f0e8ff;font-size:11px;font-weight:750;line-height:1.45;overflow-wrap:anywhere}
+.publication{display:flex;flex-direction:column;gap:16px;min-width:0}
+.publicationHeader{display:flex;align-items:center;gap:11px;padding:18px 13px;background:#fff;border:1px solid #e7dff1;border-radius:18px;min-width:0}
+.publicationIcon{display:grid;place-items:center;flex:0 0 43px;height:43px;border-radius:14px;color:#8659d0;background:#f0e5ff}
+.publicationInfo{display:flex;flex:1;flex-direction:column;gap:5px;min-width:0}
+.publicationCaption{font-size:9px;font-weight:900;letter-spacing:.08em;color:#957cab}
+.publicationInfo strong{font-size:13px;line-height:1.35;color:#2b223e;overflow-wrap:anywhere}
+.publicationBadge{background:#efe7ff;color:#7546c2;border-radius:50px;flex-shrink:0;padding:7px 8px;font-size:10px;font-weight:850}
+.primaryPublish{border:0;background:#895ce0;color:#fff;border-radius:15px;min-height:50px;display:flex;justify-content:center;align-items:center;gap:9px;padding:13px;font-weight:900;font-size:13px}
+.primaryPublish:disabled,.withdraw:disabled{opacity:.5}
+.publicationLink{display:flex;flex-direction:column;gap:12px;min-width:0;border:1px solid #e8def6;background:#fff;border-radius:17px;padding:15px}
+.publicationAddress{display:flex;gap:9px;align-items:center;color:#7652b4;background:#f7f3ff;padding:12px;border-radius:11px;min-width:0}
+.publicationAddress svg{flex-shrink:0}
+.publicationAddress span{font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.publicationLinkActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.publicationLinkActions a,.publicationLinkActions button{display:flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;font-size:11px;font-weight:850;border:1px solid #e5d9f4;border-radius:11px;background:#fcfaff;color:#754cc0;padding:12px 6px;min-height:42px;white-space:nowrap}
+.withdraw{display:flex;align-items:center;justify-content:center;gap:8px;background:#fff6f7;border:1px solid #f0d9df;border-radius:12px;color:#af536e;min-height:43px;font-size:12px;font-weight:800}
+.closeStudio{background:transparent;border:0;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:800;color:#786592;padding:10px;margin-top:2px}
+@container (max-width:719px){
+ .studio .switch button{font-size:11px;min-height:43px;padding:10px 2px}
+ .publicationHeader{padding:14px 10px;gap:8px}
+ .publicationIcon{flex-basis:38px;height:38px}
+ .publicationInfo strong{font-size:12px}
+ .publicationBadge{font-size:9px;padding:6px 7px}
+ .modeToolbar button{min-height:38px;padding:9px 13px}
+}
+
+
+/* Conversion configuration stays inside Content, away from publication controls. */
+.contactPanel{display:flex;flex-direction:column;gap:13px;padding:16px;margin:5px 0;border:1px solid #e7def5;border-radius:15px;background:#faf7ff}
+.contactPanelHeading{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:900;color:#6d4aa6}
+.contactPanel .field input,.contactPanel .field textarea,.contactPanel .field select{background:#fff}
+.contactFieldError{display:block;color:#a84667;font-size:11px;line-height:1.45}
+.previewChannel{display:inline-flex;align-items:center;gap:4px;margin-top:9px;color:var(--web-color);font-size:10px;font-weight:800}
+@container (max-width:719px){.contactPanel{padding:13px;gap:11px}}
+
+
+/* Quiet autosave indicator; recovery appears only for a real interrupted draft. */
+.draftIndicator{flex-shrink:0;font-size:10px!important;letter-spacing:0!important;font-weight:850!important;color:#7c5bae!important;background:#f0e9fa;border-radius:999px;padding:7px 10px}
+.recovery{border:1px solid #e2d5f5;background:#f8f2ff;border-radius:14px;padding:12px 13px;margin-bottom:13px;display:flex;flex-direction:column;gap:11px;color:#5e477f;font-size:12px;font-weight:750}
+.recovery>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.recovery button{min-height:36px;border-radius:10px;border:1px solid #dbc9f2;background:#fff;color:#7442bc;font-size:11px;font-weight:850}
+.recovery button:first-child{background:#885ae2;color:#fff;border-color:#885ae2}
+@container (max-width:719px){.studio .heading{gap:5px}.draftIndicator{padding:6px 8px;font-size:9px!important}}
+
+
+.inquiryToggle{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border-radius:12px;border:1px solid #e5dbf1;padding:13px;cursor:pointer}
+.inquiryToggle>span{display:flex;flex:1;flex-direction:column;gap:4px}
+.inquiryToggle strong{font-size:12px;color:#513871}
+.inquiryToggle small{font-size:10px;color:#9787ac}
+.inquiryToggle input{appearance:none;position:relative;flex:0 0 38px;width:38px;height:23px;background:#d6cce5;border:0;border-radius:99px;cursor:pointer;transition:background .15s}
+.inquiryToggle input:before{position:absolute;content:"";left:3px;top:3px;width:17px;height:17px;background:white;border-radius:50%;box-shadow:0 1px 3px #0002;transition:transform .15s}
+.inquiryToggle input:checked{background:#8c5fe2}
+.inquiryToggle input:checked:before{transform:translateX(15px)}
+.inquiryToggle input:focus-visible{outline:3px solid #905ede;outline-offset:3px}
+.previewInquiry{display:flex;flex-direction:column;gap:7px;margin-top:15px;border:1px solid #e4def0;border-radius:11px;padding:13px;color:var(--web-ink);background:white}
+.previewInquiry strong{font-size:12px;letter-spacing:-.3px}
+.previewInquiry span{color:#80768b;font-size:9px}
+.previewInquiry b{background:var(--web-color);color:white;border-radius:30px;padding:8px 10px;font-size:9px;font-weight:850;align-self:flex-start}

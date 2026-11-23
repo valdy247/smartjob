@@ -1,0 +1,71 @@
+.root{display:flex;flex-direction:column;gap:13px;color:#2e233d;padding-bottom:25px}
+.back{display:flex;align-items:center;gap:7px;background:transparent;color:#8351d5;border:0;font-size:12px;font-weight:900;padding:7px 0;width:fit-content}
+.hero{display:flex;align-items:center;gap:12px;background:linear-gradient(110deg,#8555e6,#b489fa);border-radius:20px;padding:19px;color:white}
+.avatar{background:#fff3;border-radius:14px;display:grid;place-items:center;width:48px;height:48px;flex-shrink:0}
+.hero div{display:flex;flex-direction:column;gap:5px;min-width:0}
+.hero strong{font-size:17px;overflow:hidden;text-overflow:ellipsis}
+.hero small{font-size:10px;color:#f7edff;line-height:1.4}
+.notice{display:flex;align-items:flex-start;gap:9px;border-radius:13px;background:#e8f7ee;padding:12px;color:#376c52;font-size:11px;line-height:1.55}
+.notice svg{flex-shrink:0}
+.history{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:800;color:#5a436a}
+.history select{border:1px solid #e5daf1;border-radius:12px;padding:11px;background:white;color:#392548;font-size:12px;width:100%}
+.chat{background:#fff;border:1px solid #ece3f4;border-radius:17px;min-height:175px;max-height:350px;overflow:auto;padding:13px;display:flex;flex-direction:column;gap:10px}
+.empty{display:flex;align-items:center;gap:8px;font-size:11px;color:#82758e;line-height:1.6}
+.customer,.agentReply{margin:0;max-width:88%;font-size:11px;display:flex;flex-direction:column;gap:5px;line-height:1.5;padding:11px;border-radius:13px}
+.customer{align-self:flex-end;border-bottom-right-radius:4px;background:#8755df;color:#fff}
+.agentReply{align-self:flex-start;border-bottom-left-radius:4px;background:#f2edf8;color:#3e3051}
+.customer small,.agentReply small{font-size:9px;font-weight:900;letter-spacing:.6px;opacity:.8}
+.error{padding:11px;border-radius:12px;background:#fff0ef;color:#9a4654;font-size:11px;line-height:1.5}
+.entryLabel{font-size:11px;font-weight:850;color:#4e3a63}
+.root textarea{width:100%;resize:vertical;border:1px solid #e4d9f0;border-radius:13px;padding:12px;color:#2d213d;font:500 12px/1.5 system-ui,sans-serif;background:#fff}
+.root textarea:focus{outline:2px solid #c6a9f7;outline-offset:1px}
+.send{display:flex;justify-content:center;align-items:center;gap:8px;background:#8558e5;color:#fff;border:0;border-radius:13px;padding:13px;font-size:12px;font-weight:900}
+.send:disabled{opacity:.5}
+.edit{display:flex;align-items:center;justify-content:center;padding:12px;background:#fff;color:#8556dc;border:1px solid #e3d6f3;border-radius:12px;font-size:11px;font-weight:900}
+button:focus-visible{outline:3px solid #bfa1f6;outline-offset:2px}
+
+.catalogAccess{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:#faf7ff;border:1px solid #e9ddfa;border-radius:13px;padding:12px}
+.catalogAccess div{display:flex;flex:1 1 180px;flex-direction:column;gap:5px}
+.catalogAccess strong{font-size:12px;color:#463064}
+.catalogAccess small{font-size:11px;line-height:1.5;color:#766588}
+.catalogAccess button{font-size:11px;font-weight:850;background:#8857df;border:0;border-radius:11px;color:white;padding:11px 13px}
+.catalogAccess button:disabled{opacity:.6}
+
+/* Full-screen, intentionally minimal customer-view preview. */
+.webFullscreen{display:flex;flex-direction:column;width:100%;height:100%;min-height:0;background:#fff;
+ color:#252136;position:relative;overflow:hidden;padding:0 16px}
+.webBack{display:flex;align-items:center;justify-content:center;width:42px;height:42px;position:absolute;left:15px;top:13px;
+ border:0;border-radius:12px;background:transparent;color:#312447;cursor:pointer;z-index:1}
+.webIdentity{display:flex;flex-direction:column;align-items:center;gap:7px;padding:60px 12px 18px;text-align:center}
+.webRobot{width:65px;height:65px;display:grid;place-items:center;background:linear-gradient(140deg,#eae3ff,#d8f7ec);
+ border-radius:22px;color:#6543a3}
+.webIdentity strong{font-weight:850;font-size:16px;color:#32253f}
+.webIdentity small{color:#93869c;font-size:11px}
+.webConversation{flex:1;display:flex;flex-direction:column;gap:12px;overflow-y:auto;overscroll-behavior:contain;
+ padding:15px 2px;scrollbar-width:thin}
+.webGreeting,.webCustomer,.webAgent{max-width:85%;padding:13px 16px;border-radius:18px;line-height:1.52;
+ font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}
+.webGreeting,.webAgent{align-self:flex-start;background:#f0edf6;color:#41344d;border-bottom-left-radius:5px}
+.webCustomer{align-self:flex-end;background:#8058bc;color:#fff;border-bottom-right-radius:5px}
+.webTyping{align-self:flex-start;display:flex;align-items:center;gap:8px;color:#9985aa;font-size:11px;padding:6px}
+.webError{font-size:12px;line-height:1.5;color:#a9506d;background:#fff1f5;border-radius:12px;padding:11px}
+.webComposer{display:flex;align-items:center;gap:10px;width:100%;padding:12px 0 calc(18px + env(safe-area-inset-bottom));background:#fff}
+.webComposer input{flex:1;min-width:0;min-height:49px;border:1px solid #e4dfec;background:#f9f8fb;
+ border-radius:999px;padding:12px 18px;font:400 14px/1.4 system-ui,sans-serif;color:#34253f;outline:none}
+.webComposer input:focus{border-color:#9f81c7;box-shadow:0 0 0 3px #b59cdb2a}
+.webComposer button{width:49px;height:49px;display:grid;place-items:center;border:0;border-radius:50%;
+ background:#8153b4;color:#fff;cursor:pointer}
+.webComposer button:disabled{background:#e2dbea;cursor:not-allowed}
+.webSrOnly{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+.webSpin{animation:spinPreview .9s linear infinite}
+@keyframes spinPreview{to{transform:rotate(360deg)}}
+@media(max-width:480px){.webIdentity{padding-top:65px}.webFullscreen{padding:0 14px}.webGreeting,.webCustomer,.webAgent{font-size:12px}}
+@media(prefers-reduced-motion:reduce){.webSpin{animation:none}}
+
+.webPurchase{align-self:flex-start;display:grid;gap:9px;border:1px solid #e7d9ee;border-radius:16px;
+ padding:13px 14px;max-width:92%;background:linear-gradient(140deg,#f4edff,#eefbf4)}
+.webPurchase strong{font-size:12px;color:#433152}
+.webPurchase button{border:0;background:#7950ab;color:#fff;border-radius:11px;padding:10px 12px;
+ font-size:11px;font-weight:850;cursor:pointer}
+.webPurchase button:disabled{opacity:.5}
+.webPurchase small{font-size:10px;color:#8a7997;line-height:1.5}

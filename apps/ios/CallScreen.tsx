@@ -26,6 +26,7 @@ type Props={
   onReject:()=>void;
   onEnd:()=>void;
   ownerLanguage?:"en-US"|"es-ES";
+  directCall?:boolean;
 };
 const formatSeconds=(s:number)=>
   String(Math.floor(s/60)).padStart(2,"0")+":"+
@@ -42,7 +43,7 @@ const roomTitle="VMV CALL";
 
 export function CallScreen({
   voice,invite,call,busy,status,onAccept,onReject,onEnd,
-  ownerLanguage="es-ES"
+  ownerLanguage="es-ES",directCall=false
 }:Props){
   const [muted,setMuted]=useState(false);
   const [speaker,setSpeaker]=useState(false);
@@ -92,7 +93,7 @@ export function CallScreen({
   },[voice,call]);
 
   useEffect(()=>{
-    if(!call||!transcriptOpen)return;
+    if(!call||!transcriptOpen||directCall)return;
     let cancelled=false;
     async function update(){
       if(polling.current||cancelled)return;
@@ -146,7 +147,7 @@ export function CallScreen({
     void update();
     const timer=setInterval(()=>{void update();},1150);
     return()=>{cancelled=true;clearInterval(timer);};
-  },[call,transcriptOpen]);
+  },[call,transcriptOpen,directCall]);
 
   async function muteMicrophone(){
     if(!call||audioBusy)return;
@@ -198,10 +199,10 @@ export function CallScreen({
         <View style={styles.brandIcon}>
           <Ionicons name="pulse" color="#FFFFFF" size={21}/>
         </View>
-        <Text style={styles.brandText}>{roomTitle}</Text>
+        <Text style={styles.brandText}>{directCall?"VMV BUSINESS":roomTitle}</Text>
       </View>
       <View style={styles.callerArea}>
-        <Text style={styles.callerName}>Cliente</Text>
+        <Text style={styles.callerName}>{directCall?"Devolución de llamada":"Cliente"}</Text>
         <Text style={styles.callClock}>
           {call?connectedAt.current===null?"Conectando…":formatSeconds(elapsed):"Llamada entrante"}
         </Text>
@@ -217,7 +218,7 @@ export function CallScreen({
           <CallControl label="Altavoz" icon={speaker?"volume-high":"volume-high-outline"}
             selected={speaker} disabled={audioBusy} onPress={()=>void changeSpeaker()}/>
         </View>:<Text style={styles.ringingTip}>Desliza o responde desde tu iPhone</Text>}
-        {call?<Pressable accessibilityRole="button"
+        {call&&!directCall?<Pressable accessibilityRole="button"
             accessibilityLabel="Ver transcripción en vivo"
             onPress={()=>setTranscriptOpen(true)} style={styles.transcriptButton}>
             <Ionicons name="document-text-outline" color="#FFFFFF" size={23}/>
@@ -283,7 +284,7 @@ export function CallScreen({
       </View>
     </View>:null}
 
-    {call&&transcriptOpen?<View style={styles.overlay}>
+    {call&&transcriptOpen&&!directCall?<View style={styles.overlay}>
       {/* Blur the actual call screen rather than replacing it with a new theme. */}
       <BlurView tint="dark" intensity={95} style={StyleSheet.absoluteFill}/>
       <View style={styles.overlayTint}/>

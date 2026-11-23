@@ -1,0 +1,15 @@
+.root{display:grid;gap:14px;color:#49375b}
+.intro{font-size:13px;line-height:1.7;color:#655774;margin:0}
+.field{display:grid;gap:7px;font-size:12px;font-weight:750}
+.field input{border:1px solid #dfd3ee;border-radius:12px;padding:12px;background:#fff;color:#3d2a51;font-size:14px}
+.field small,.search small{font-size:11px;color:#786b87;line-height:1.5}
+.search{display:grid;gap:12px}
+.primary,.secondary{border-radius:12px;padding:12px;font-size:12px;font-weight:800;display:flex;gap:8px;align-items:center;justify-content:center;cursor:pointer}
+.primary{background:#7844bd;color:#fff;border:0}.primary:disabled,.secondary:disabled{opacity:.5;cursor:not-allowed}
+.secondary{background:#fff;color:#67418f;border:1px solid #e2d4ee}
+.numbers{display:grid;gap:7px;max-height:275px;overflow:auto}
+.number{display:flex;align-items:center;gap:11px;border:1px solid #e7dcf0;border-radius:12px;padding:11px;font-size:12px;cursor:pointer}
+.number input{accent-color:#7d46c1}.number span{display:grid;gap:3px}.number small{font-size:10px;color:#776988}
+.notice{display:flex;gap:9px;background:#f7f1ff;padding:11px;border-radius:12px;color:#684d84;font-size:11px;line-height:1.6}
+.error{color:#a82547;font-size:12px}.success{display:grid;gap:14px;justify-items:center;text-align:center;border-radius:17px;padding:22px;border:1px solid #c8e9d7;background:#f1faf5}
+.success strong{color:#236f4f}.success p{color:#4f6a5d;font-size:12px;line-height:1.6;margin:0}

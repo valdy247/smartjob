@@ -1,0 +1,44 @@
+/* Video Generator uses the same clean agent cards and five-minute accent cycle. */
+.label{font-size:11px;font-weight:850;color:#6b5280}
+.reference{display:grid;gap:9px}
+.reference img{width:100%;max-height:320px;object-fit:contain;background:#fff;
+ border:1px solid #e9dff3;border-radius:15px}
+.imageAiBox{display:grid;gap:13px;padding:14px;border-radius:17px;
+ background:#fcfaff;border:1px solid #e8def2}
+.imageActions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.imageActions button{min-height:46px;font-size:12px}
+.success{display:flex;align-items:center;gap:7px;color:#23725d;font-size:12px;font-weight:800}
+.generating{display:flex;align-items:center;justify-content:center;gap:10px;
+ background:#f4edfc;border-radius:14px;padding:18px;color:#7653af;font-size:12px;font-weight:850}
+@media(max-width:370px){.imageActions{grid-template-columns:1fr}}
+
+.vision{display:grid;gap:9px;padding:14px;border:1px solid #d7e8dd;
+ background:#f4faf7;border-radius:17px;color:#285f50}
+.vision strong{font-size:12px}.vision p{font-size:11px;line-height:1.5;margin:0}
+.conflict{display:grid;gap:9px;background:#fff3f5;border:1px solid #efc6d5;
+ border-radius:14px;padding:12px;color:#8d3b58}
+.visionChoices{display:grid;gap:9px}
+.visionChoices button{min-height:43px;font-size:11px;text-align:center}
+
+.referenceUpload{display:grid;justify-items:center;align-content:center;gap:8px;
+ border:1px dashed #cdb5e9;background:#f9f5ff;border-radius:16px;padding:21px;
+ min-height:118px;color:#7851b0;cursor:pointer}
+.referenceUpload strong{font-size:13px}.referenceUpload small{font-size:10px;color:#947aab}
+.referenceUpload input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.referenceUpload:focus-within{outline:2px solid #8855c6;outline-offset:3px}
+
+.entryOptions{display:grid;gap:12px;width:100%}
+.entryOptions>button,.entryOptions>.fileChoice{
+ display:flex;align-items:center;justify-content:flex-start;gap:16px;width:100%;
+ box-sizing:border-box;min-height:76px;padding:16px 20px;font:inherit;font-weight:700;font-size:17px;text-align:left;cursor:pointer;
+}
+.entryOptions svg{width:30px;height:30px;flex:none}
+.fileChoice{position:relative}
+.fileChoice input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.fileChoice:focus-within{outline:2px solid #8855c6;outline-offset:3px}
+.sizeOptions,.qualityOptions{display:grid;gap:8px;width:100%}
+.sizeOptions{grid-template-columns:repeat(3,minmax(0,1fr))}
+.qualityOptions{grid-template-columns:repeat(2,minmax(0,1fr))}
+.sizeOptions>button{min-width:0;min-height:90px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;padding:8px 3px}
+.qualityOptions>button{min-height:54px}
+.frame{box-sizing:border-box;border:2px solid currentColor;border-radius:4px}

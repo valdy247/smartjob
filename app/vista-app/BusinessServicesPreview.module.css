@@ -1,0 +1,100 @@
+/* VMV Business offer tiles — scoped to the /vista-app simulator. */
+.root{color:#29213d;margin-top:19px;padding-bottom:24px}
+.root *{box-sizing:border-box}
+.header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.header h3{font-size:25px;font-weight:900;letter-spacing:-1.1px;margin:0}
+.header h3 span{color:#895de4}
+.headerIcon{width:38px;height:38px;border-radius:13px;background:#eee3ff;display:grid;place-items:center;color:#895de4}
+.toggle{display:flex;gap:5px;background:#f1ecf9;border-radius:18px;padding:5px;margin-bottom:15px}
+.toggle button{flex:1;border:0;border-radius:13px;padding:12px 6px;background:transparent;color:#847698;font-size:13px;font-weight:800;cursor:pointer}
+.toggle .selected{background:#fff;color:#6541ad;box-shadow:0 3px 9px #5d418117}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.tile{text-align:left;position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:17px;min-height:160px;border:0;border-radius:22px;padding:15px;color:#29213d;overflow:hidden}
+button.tile{cursor:pointer}
+button.tile:focus-visible,.toggle button:focus-visible,.back:focus-visible,.save:focus-visible,.primary:focus-visible{outline:3px solid #7449cc;outline-offset:3px}
+.tile .offerIcon{width:45px;height:45px;border-radius:15px;display:grid;place-items:center;background:#ffffffb4;color:#513b76}
+.offerBottom{display:flex;flex-direction:column;gap:9px}
+.offerBottom strong{font-size:16px;letter-spacing:-.55px;font-weight:900;line-height:1.2}
+.badges{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.badges small{background:#ffffffb7;border-radius:8px;padding:6px;font-size:10px;line-height:1;font-weight:800;color:#695979}
+.badges small+small{background:transparent;padding:6px 1px;color:#746883}
+.violet{background:#dfd0ff}.yellow{background:#ffe39c}.blue{background:#c4e8ff}
+.mint{background:#bcefdc}.pink{background:#ffd5e7}.lilac{background:#e5dafe}
+.back{border:0;background:transparent;display:flex;align-items:center;gap:3px;color:#895de4;font-size:13px;font-weight:800;padding:4px 0 15px;cursor:pointer}
+.editorHero{display:flex;align-items:center;gap:12px;margin-bottom:17px}
+.editorIcon{width:54px;height:54px;flex-shrink:0;border-radius:17px;display:grid;place-items:center;background:#ded0ff;color:#6941a1}
+.editorHero h3{font-size:20px;font-weight:900;letter-spacing:-.9px;margin:0 0 4px;line-height:1.2}
+.editorHero span{font-size:11px;font-weight:800;color:#7d68a4}
+.form{padding:16px;border:1px solid #e7dff2;border-radius:22px;background:#fff;display:flex;flex-direction:column;gap:13px}
+.field{display:flex;flex-direction:column;gap:8px}
+.field>span{font-size:12px;font-weight:800;color:#6b5789}
+.field input,.field textarea{display:block;width:100%;min-width:0;max-width:100%;padding:12px;border:1px solid #e6daf2;background:#fbfaff;border-radius:12px;color:#29213d;font-size:14px;font-family:inherit}
+.field input:focus-visible,.field textarea:focus-visible{outline:2px solid #9569db;outline-offset:1px}
+.field input{min-height:49px}.field textarea{resize:vertical;min-height:75px}
+.field input::placeholder,.field textarea::placeholder{color:#aca1bc}
+.check{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;color:#29213d;margin:5px 0}
+.check input{width:18px;height:18px;accent-color:#895de4;flex-shrink:0}
+.save,.primary{min-height:49px;border-radius:15px;font-size:13px;font-weight:850;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer}
+.save{background:#fff;border:1px solid #e8ddf6;color:#895de4}
+.primary{border:0;background:#895de4;color:#fff}
+.status{font-size:11px;color:#6a5b89;text-align:center;min-height:13px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:350px){.grid{gap:8px}.tile{padding:11px}.offerBottom strong{font-size:14px}.badges small{font-size:9px}}
+
+
+.field select{display:block;width:100%;min-height:49px;min-width:0;max-width:100%;padding:12px;border:1px solid #e6daf2;background:#fbfaff;color:#29213d;border-radius:12px;font-size:14px;font-family:inherit}
+.field select:focus-visible{outline:3px solid #9764e2;outline-offset:1px}
+
+
+.webActions{display:grid;grid-template-columns:minmax(0,1fr);gap:9px;margin:0 0 16px}
+.webActions .primary{width:100%;margin:0}
+.webActionSecondary{display:flex;align-items:center;justify-content:center;gap:9px;min-height:49px;color:#895de4;background:#fff;border:1px solid #e8dcf7;border-radius:15px;font-size:13px;font-weight:850;cursor:pointer}
+.webActionSecondary:focus-visible{outline:3px solid #8b60da;outline-offset:2px}
+.searchEmpty{padding:12px 4px 4px;text-align:center;color:#8b7e98;font-size:12px;line-height:1.5}
+
+/* Web Services now offers four intentional entry points, not an unrelated catalog. */
+.webHub{width:100%;padding:5px 0 29px;color:#29213e}
+.webHubHeading{margin-bottom:22px}
+.webHubHeading>span{font-size:10px;font-weight:900;letter-spacing:.12em;color:#8766ce}
+.webHubHeading h2{font-size:clamp(27px,5vw,39px);letter-spacing:-.065em;line-height:1.1;margin:8px 0 9px}
+.webHubHeading h2 span{color:#8e5ddd}
+.webHubHeading p{max-width:550px;font-size:12px;line-height:1.6;color:#827993;margin:0}
+.webHubGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.webHubCard{display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:180px;min-width:0;border-radius:21px;padding:19px 17px;color:inherit;text-decoration:none;transition:transform .16s,box-shadow .16s}
+.webHubCard:hover{transform:translateY(-2px);box-shadow:0 8px 22px #2a174019}
+.webHubCard>svg{border-radius:14px;box-sizing:content-box;background:#ffffff85;padding:10px}
+.webHubCard strong{font-size:17px;line-height:1.2;letter-spacing:-.035em}
+.webHubCard small{font-size:11px;line-height:1.5;opacity:.78}
+.webHubCard>span{display:inline-flex;align-items:center;gap:5px;margin-top:auto;font-size:11px;font-weight:850}
+.webHubViolet{background:#e4d7ff;color:#5f40a4}
+.webHubMint{background:#b6efdb;color:#125642}
+.webHubYellow{background:#ffdf87;color:#694914}
+.webHubSky{background:#c6e5ff;color:#2c547d}
+.webHubTools{display:flex;flex-wrap:wrap;align-items:center;gap:11px;margin-top:17px}
+.webHubTools>a,.webHubTools>button{display:inline-flex;align-items:center;gap:7px;border:1px solid #e7ddf0;border-radius:12px;min-height:42px;padding:10px 12px;background:#fff;color:#7652b4;font-size:11px;font-weight:850;text-decoration:none;font-family:inherit;cursor:pointer}
+.webHub a:focus-visible,.webHub button:focus-visible{outline:3px solid #9f7de4;outline-offset:3px}
+@media(max-width:530px){.webHubGrid{grid-template-columns:1fr}.webHubCard{min-height:130px;padding:15px 17px}.webHubCard strong{font-size:16px}.webHubHeading h2{font-size:27px}}
+@media(prefers-reduced-motion:reduce){.webHubCard{transition:none}.webHubCard:hover{transform:none}}
+
+/* Dedicated home for existing sites, separate from the four creation services. */
+.webHubLibrary{display:flex;align-items:center;gap:12px;margin-top:18px;padding:16px;
+ border:1px solid #e6d8f0;border-radius:17px;background:#fff;color:#4b3964;
+ text-decoration:none;min-height:78px}
+.webHubLibraryIcon{display:grid;place-items:center;flex:none;width:43px;height:43px;
+ border-radius:13px;background:#f0e8fc;color:#8353c7}
+.webHubLibrary>span:nth-child(2){display:flex;flex:1;flex-direction:column;gap:4px;min-width:0}
+.webHubLibrary strong{font-size:14px;font-weight:900}
+.webHubLibrary small{font-size:11px;color:#837492;line-height:1.4}
+.webHubLibrary>svg:last-child{flex:none;color:#8056bd}
+
+
+/* VMV pastel catalog consistency across the Services journey. */
+.root{color:#171127}
+.tile{border-radius:21px}
+.violet,.webHubViolet{background:#e7d7ff}
+.mint,.webHubMint{background:#dff9df}
+.webHubYellow{background:#fff0ca}
+.webHubSky{background:#dceaff}
+.webHubLibrary{border-color:#eee6f4;border-radius:20px;box-shadow:0 6px 15px #2913400b}
+.webHubCard{border-radius:21px}
+.webHubTools>a,.webHubTools>button{border-radius:14px}
