@@ -70,3 +70,30 @@ export function rescueStudioDraft(
   changedMoments:originalCount-scenes.length+repetitiveVisualPairs(source).length
  }};
 }
+
+/** Recover visual batches without losing a usable narration when structured image
+ * prompts are malformed. The final editorial review can replace all of them.
+ */
+export function rescueVisualBatch(
+ lines:string[],outline:StudioAuditOutline,start:number
+):StudioAuditScene[]{
+ const motions=["animate","zoom","animate","zoom","animate","zoom"] as const;
+ return lines.map((speech,index)=>{
+  const i=start+index;
+  const beat=outline.beats[i%outline.beats.length]||outline.logline;
+  const shot=shots[i%shots.length];
+  const character=outline.characters.slice(0,170);
+  const setting=outline.setting.slice(0,120);
+  return {
+   speech,
+   imagePrompt:(
+    shot+". "+character+" in "+setting+". "+
+    "The foreground must clearly illustrate this exact narration: "+speech.slice(0,205)+
+    ". Visual idea: "+beat.slice(0,150)+
+    ". No rendered letters or subtitles. Keep consistent character identity."
+   ).slice(0,900),
+   caption:speech.trim().split(/\s+/).slice(0,7).join(" ").slice(0,110),
+   motion:motions[i%motions.length]
+  };
+ });
+}
