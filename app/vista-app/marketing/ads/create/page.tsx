@@ -20,7 +20,7 @@ export default function CreateAdsCampaignPage(){
   const draft=params.get("draft")||"";
   const resume=/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(draft);
   setFromAgent(agent);
-  if(!agent&&!resume)window.location.replace("/vista-app/ai-agents");
+  // Standalone Ads Studio creation is supported; AI Agents handoff is optional.
  },[]);
  const {language}=useInterfaceLanguage();
  return <main className={styles.page}><div className={styles.shell}>
