@@ -18,13 +18,15 @@ test("V1 preserves original Home layout, personalized four cards and six-service
  const css=read("app/vista-app/VMVV1Shell.module.css");
  const original=read("app/vista-app/page.tsx");
  assert.match(original,/return <VMVV1Shell\/>/);
- for(const className of ["stage","layout","phoneFrame","device","scrollArea","homeConcept","homeIdentity","homeHello","homeGrowHero","homeRocketArt","homeServiceTiles","homeBusinessArea","homeSummaryCard","bottomNav"]){
+ for(const className of ["stage","layout","phoneFrame","device","scrollArea","homeConcept","homeIdentity","homeHello","homeGrowHero","homeRocketArt","homeServiceTiles","bottomNav"]){
   assert.ok(ui.includes("homeStyles."+className),"missing original layout: "+className);
   assert.ok(oldCss.includes("."+className),"missing original CSS: "+className);
  }
  for(const name of ["Web Services","AI Agents","Video Studio","Smart Quote","Marketing","Ads Studio"])
   assert.match(ui,new RegExp('name:"'+name+'"'));
  assert.match(ui,/suggestedServices\.map\(service=>/);
+ assert.match(ui,/!hasAssessment\?<section className=\{homeStyles\.homeGrowHero\}/);
+ assert.doesNotMatch(ui,/className=\{homeStyles\.homeSummaryCard\}/);
  assert.match(ui,/recommendV1Services\(needsAnswers,legacyAnswers\)/);
  assert.match(ui,/readV1Needs\(who\.user_metadata,businessId\)/);
  assert.match(ui,/readDiagnosticRecord\(who\.user_metadata,businessId\)/);
