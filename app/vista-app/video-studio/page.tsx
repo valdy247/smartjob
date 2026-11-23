@@ -170,12 +170,26 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
   let active=true;
   const check=async()=>{try{const data=await api("jobs?id="+encodeURIComponent(job.id));
     if(!active||!data?.job)return;setJob(data.job);
-    if(data.job.status==="awaiting_image_approval")setStage("images");
-    else if(data.job.status==="completed")setStage("result");
+    if(data.job.status==="awaiting_image_approval"){
+     // The user already confirmed the complete cost on the script screen.
+     // Auto-approval is safe only when all image validation checks passed.
+     if(data.job.scenes.some((s:Scene)=>s.requiresReview===true)){setStage("images");return;}
+     if(autoApprovalRef.current!==data.job.id){
+      autoApprovalRef.current=data.job.id;
+      try{
+       const approved=await api("jobs","PATCH",{id:data.job.id,action:"approve_all",confirmAnimationCost:true});
+       if(!active)return;
+       if(approved?.job)setJob(approved.job);
+       void loadCredits();
+      }catch(e){
+       if(active){setError(e instanceof Error?e.message:"studio_invalid_action");setStage("images");}
+      }
+     }
+    }else if(data.job.status==="completed")setStage("result");
   }catch{/* Keep the last server state; next poll may succeed. */}};
   void check();const timer=setInterval(()=>{void check();},6000);
   return()=>{active=false;clearInterval(timer);};
- },[api,stage,job?.id]);
+ },[api,stage,job?.id,loadCredits]);
  const next=(s:Stage)=>{setError("");setStage(s)};
  const previous=()=>{setError("");if(stage==="images"||stage==="progress"||stage==="result"){setStage("history");void loadHistory();return;}
   const idx=order.indexOf(stage);setStage(idx>0?order[idx-1]:"home");};
