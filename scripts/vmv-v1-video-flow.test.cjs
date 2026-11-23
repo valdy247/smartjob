@@ -211,7 +211,7 @@ test("creative plan only runs in Preview, requires signed-in owner and explicit 
 test("Video Studio lets owners listen to OpenAI previews with a daily quota and no wallet charge",()=>{
  const component=read("app/vista-app/vmv-pilot/PilotVoiceStep.tsx");
  const api=read("app/api/video-studio/voice-preview/route.ts");
- assert.match(ui,/previewEndpoint="\/api\/video-studio\/voice-preview" sampleMode="limited"/);
+ assert.match(ui,/previewEndpoint="\/api\/video-studio\/voice-preview" activationEndpoint="\/api\/video-studio\/voice-activate" libraryMode sampleMode="limited"/);
  assert.match(component,/sampleMode==="limited"&&v\.provider==="openai"/);
  assert.match(component,/fetch\(previewEndpoint,/);
  assert.match(component,/const hasPublicSample=/);
