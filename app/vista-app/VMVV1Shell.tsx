@@ -154,14 +154,14 @@ export default function VMVV1Shell(){
         <h2>{en?"Hi":"Hola"}, {profile?.first_name||L("bienvenido","welcome")} 👋</h2>
         <p>{L("Todo tu negocio, en un solo lugar.","Your whole business, in one place.")}</p>
        </div>
-       {!hasAssessment?<section className={homeStyles.homeGrowHero} aria-label={L("Haz crecer tu negocio","Grow your business")}>
+       <section className={homeStyles.homeGrowHero} aria-label={L("Haz crecer tu negocio","Grow your business")}>
         <div className={homeStyles.homeGrowCopy}>
          <h3>{en?"Grow your\nbusiness":"Haz crecer\ntu negocio"}</h3>
          <p>{L("Herramientas, servicios y IA para emprendedores.","Tools, services and AI for entrepreneurs.")}</p>
          <button type="button" className={homeStyles.homeGrowStart} onClick={()=>setAssessmentOpen(true)}>{hasAssessment?L("Actualizar necesidades","Update your needs"):L("Comenzar","Get started")} <ArrowUpRight size={18}/></button>
         </div>
         <div className={homeStyles.homeRocketArt} aria-hidden="true"><span className={homeStyles.homeRocketHalo}/><Rocket size={104} strokeWidth={1.35}/><span className={homeStyles.homeRocketCloud}/></div>
-       </section>:null}
+       </section>
        <div className={styles.homeRecommendedHeading}>
         <div><h3>{hasAssessment?L("Recomendado para ti","Recommended for you"):L("Herramientas para comenzar","Tools to get started")}</h3>
          <p>{hasAssessment?L("Según las necesidades de tu negocio.","Based on your business needs."):L("Responde unas preguntas para personalizar tu inicio.","Answer a few questions to personalize your Home.")}</p>
