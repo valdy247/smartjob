@@ -294,12 +294,6 @@ export default function VideoStudioV1(){
   <header className={styles.header}><button className={styles.back} onClick={()=>stage==="home"?window.location.assign("/vista-app"):previous()} aria-label="Volver"><ArrowLeft size={19}/></button><div><strong>Video Studio</strong><small>VMV Business · Creator</small></div><Link href="/vista-app" className={styles.brand}>VMV</Link></header>
   {stage!=="home"&&stage!=="history"&&stage!=="images"&&stage!=="progress"&&stage!=="result"?<div className={styles.progressTop}><span>{labels[stage]}</span><span>{Math.max(1,order.indexOf(stage)+1)} / {order.length}</span><div className={styles.bar}><div style={{width:Math.max(5,(order.indexOf(stage)+1)/order.length*100)+"%"}}/></div></div>:null}
   {stage==="home"?<>
-   <section className={styles.welcome}>
-    <span className={styles.kicker}><Sparkles size={14}/> VMV CREATIVE STUDIO</span>
-    <h1>Convierte tus ideas en <em>historias animadas.</em></h1>
-    <p>De una idea a escenas, voz y video. Todo en un estudio.</p>
-    <span className={styles.welcomeTag}><CheckCircle2 size={15}/> Crea videos por escenas</span>
-   </section>
    <div className={styles.homeGrid}>
     <button className={styles.homeCard+" "+styles.createCard} onClick={reset}>
      <span className={styles.homeIllustration}><img src="/video-studio/styles/cartoon3d.svg" alt="" aria-hidden="true"/><span className={styles.homeFloatIcon}><PlayCircle size={23}/></span></span>
