@@ -62,6 +62,17 @@ test("silent videos bypass text-to-speech and use silent scene-based subtitle ti
  assert.match(worker,/else args\.push\("-an"\)/);
  assert.match(worker,/assemble\(job,dir,clips,narration,timing,variant\)/);
 });
+test("provider readiness protects credits if Render cannot synthesize ElevenLabs audio",()=>{
+ const worker=read("services/vmv-studio-worker/worker.mjs");
+ const cloud=read("lib/vmv-studio-cloud-readiness.ts");
+ const jobs=read("app/api/video-studio/jobs/route.ts");
+ assert.match(worker,/req\.url==="\/voice-readyz"/);
+ assert.match(worker,/process\.env\.ELEVENLABS_API_KEY\?\.trim\(\)/);
+ assert.match(cloud,/url\.pathname="\/voice-readyz"/);
+ assert.match(jobs,/videoStudioWorkerReady\("elevenlabs"\)/);
+ assert.ok(jobs.indexOf('videoStudioWorkerReady("elevenlabs")')<
+  jobs.indexOf('db.rpc("vmv_studio_create_job"'));
+});
 test("new and modified TS/TSX files parse with no errors",()=>{
  for(const path of ["lib/vmv-studio-topics.ts","app/vista-app/video-studio/page.tsx",
  "app/vista-app/vmv-pilot/PilotVoiceStep.tsx","app/api/video-studio/voices/route.ts",
