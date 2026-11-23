@@ -23,7 +23,7 @@
 ## 1. Shell, acceso y navegación V1 [P0]
 
 - [ ] Separar login/perfil/onboarding de `useSmartCallAccount` y de las peticiones Twilio/minutos en el Home.
-- [ ] Nueva portada limpia con seis servicios y accesos Home, Servicios y Cuenta.
+- [x] Home V1 actualizado sobre el diseño anterior (saludo, hero con cohete, tarjetas, Mi Negocio y navegación inferior); seis servicios visibles y sin Smart Call/Traductor/Instagram Connect. Compilación Preview READY en commit 84773818 (falta QA funcional en navegador).
 - [ ] Retirar Smart Call, Traductor e Instagram Connect del catálogo, home, búsqueda, accesos rápidos, onboarding, recomendaciones y menús.
 - [ ] Ocultar/retirar pantallas telefónicas, traductor y enlaces profundos de primera versión; guardar código/datos y preservar webhooks compartidos hasta auditar.
 - [ ] Reasignar todos los enlaces de video existentes de Home, Servicios, Pilot y AI Agents a una **única** entrada Video Studio.
@@ -132,6 +132,8 @@
 - [ ] Preparar lista de bloqueadores detectados, resolverlos y volver a probar sin marcar pasos por simples supuestos.
 - [ ] Aprobar checklist GO/NO-GO con evidencia, plan de reversión y presupuesto de beta.
 - [ ] Obtener autorización explícita para fusionar/desplegar a producción; comprobar dominio, jobs, métricas y errores postlanzamiento.
+
+**Evidencia Home:** diseño anterior reutilizado mediante `vista-app.module.css`, conservando clases `homeConcept`, `homeGrowHero`, `homeServiceTiles` y `homeBusinessArea`. Preview de código construido (READY). La aplicación completa sigue sin estar lista para producción.
 
 ## P1 — después de V1 (no bloqueantes si se ocultan)
 
