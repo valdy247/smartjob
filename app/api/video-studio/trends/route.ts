@@ -9,9 +9,9 @@ export const maxDuration=45;
 const reply=(value:Record<string,unknown>,status=200)=>NextResponse.json(value,{status,headers:{"Cache-Control":"no-store"}});
 type Scan={id:string;owner_id:string;query:string;status:string;results:RadarVideo[];failure_code:string|null};
 const transform=(scan:Scan)=>({
- scan:{id:scan.id,status:scan.status,items:(scan.results||[]).slice(0,3).map(v=>({
+ scan:{id:scan.id,status:scan.status,country:scan.query.match(/\[region:([A-Z]{2})\]/)?.[1]||null,items:(scan.results||[]).slice(0,3).map(v=>({
   sourceId:v.id,title:v.title,description:v.description,thumbnail:v.thumbnail,url:v.url,channel:v.channel,views:v.views
- }))},source:"youtube",country:scan.query.match(/\[region:([A-Z]{2})\]/)?.[1]||null,originalMetadataOnly:true
+ }))},source:"youtube",originalMetadataOnly:true
 });
 async function getScan(id:string,owner:string):Promise<Scan|null>{
  const {data,error}=await videoDb().from("vmv_video_radar_scans")
