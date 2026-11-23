@@ -103,3 +103,8 @@
 .addPhotoSlot{align-self:flex-start;min-height:41px;padding:10px 14px;border-radius:12px;background:#ede5fa;border:1px solid #d8c8ef;color:#68449d;font-size:12px;font-weight:850;cursor:pointer}
 .removePhotoSlot{align-self:flex-start;border:0;background:none;color:#8257b8;padding:8px 0;font-size:11px;font-weight:800;cursor:pointer}
 @media(max-width:510px){.galleryColumnChoices{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* The owner can finish with an editable template even if AI is unavailable. */
+.templateContinue{display:flex;align-items:center;justify-content:center;gap:9px;min-height:53px;padding:12px 18px;border:1px solid #b7a0e5;border-radius:14px;background:#f0e8ff;color:#5a349b;font-weight:900;font-size:14px;cursor:pointer}
+.templateContinue:disabled{opacity:.5;cursor:not-allowed}
+.templateContinue:focus-visible{outline:3px solid #9d76e9;outline-offset:3px}
