@@ -119,6 +119,79 @@ test("structured video script generation retries malformed output without invent
  assert.doesNotMatch(plan,/console\.warn\([^;]*topic/);
 });
 
+test("short trending topic generates three actual scripts with strict schema in one request",async()=>{
+ const vm=require("node:vm");
+ const source=read("app/api/video-studio/plan/route.ts");
+ const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+ const resultModule={exports:{}};
+ const topic="O Parasita que ROUBA a Língua dos Peixes!";
+ const outline={
+  title:"El extraño parásito de los peces",logline:"Descubrimos cómo vive el parásito en la boca del pez.",
+  hook:"Un pez abre la boca y revela un organismo inesperado.",
+  ending:"Una última vista del pez muestra su adaptación sorprendente.",
+  characters:"Pez marino de colores suaves y pequeño isópodo parásito.",
+  setting:"Mar submarino y un primer plano de la boca del pez.",
+  beats:["El pez nada y abre su boca.","El parásito aparece y se adhiere al pez.","El animal sigue nadando con el parásito."]
+ };
+ const scenes=outline.beats.map((beat,i)=>({
+  speech:["Un pez esconde una sorpresa impresionante dentro de su boca.",
+   "Este pequeño parásito puede reemplazar parte de su lengua.",
+   "La naturaleza tiene relaciones increíbles que todavía investigamos."][i],
+  imagePrompt:"Detailed underwater educational animation with a consistent blue fish and tiny marine isopod. "+beat,
+  caption:"Curiosidad marina"
+ }));
+ let calls=0;
+ const mockRequire=id=>{
+  if(id==="next/server")return {NextResponse:{json:(body,{status=200}={})=>({body,status})}};
+  if(id==="@/lib/auth-server")return {authenticatedUser:async()=>"owner"};
+  if(id==="@/lib/vmv-ai-agents/model")return {askAiAgent:async arg=>{
+   calls++;
+   assert.equal(arg.jsonSchema.name,"vmv_video_complete");
+   assert.equal(arg.jsonSchema.schema.additionalProperties,false);
+   assert.ok(arg.jsonSchema.schema.required.includes("scenes"));
+   return JSON.stringify({...outline,scenes});
+  }};
+  if(id==="@/lib/vmv-pilot-voice-config")return {validPilotLanguage:x=>x==="es",pilotLanguageName:()=>"Spanish"};
+  throw Error("Unexpected dependency: "+id);
+ };
+ const context={exports:resultModule.exports,module:resultModule,require:mockRequire,process:{env:{VERCEL_ENV:"preview"}},console:{warn:()=>{}}};
+ vm.runInNewContext(output,context,{timeout:5000});
+ const request={headers:{get:()=>null},json:async()=>({
+  mode:"complete",topic,idea:topic,audience:"Todos",style:"cartoon3d",language:"es",seconds:15,
+  confirmPlanCost:true,source:{title:topic,platform:"YouTube"}
+ })};
+ const result=await resultModule.exports.POST(request);
+ assert.equal(result.status,200);
+ assert.equal(result.body.scenes.length,3);
+ assert.equal(result.body.outline.beats.length,3);
+ assert.equal(result.body.scenes[0].speech,scenes[0].speech);
+ assert.equal(calls,1,"one real model call for a 15s script");
+});
+
+test("short script failure rejects bad AI output instead of inventing scenes",async()=>{
+ const vm=require("node:vm");
+ const source=read("app/api/video-studio/plan/route.ts");
+ const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+ const mod={exports:{}};
+ let calls=0;
+ const mockRequire=id=>{
+  if(id==="next/server")return {NextResponse:{json:(body,{status=200}={})=>({body,status})}};
+  if(id==="@/lib/auth-server")return {authenticatedUser:async()=>"owner"};
+  if(id==="@/lib/vmv-ai-agents/model")return {askAiAgent:async()=>{calls++;return "{}";}};
+  if(id==="@/lib/vmv-pilot-voice-config")return {validPilotLanguage:x=>x==="es",pilotLanguageName:()=>"Spanish"};
+  throw Error("Unexpected dependency: "+id);
+ };
+ vm.runInNewContext(code,{exports:mod.exports,module:mod,require:mockRequire,process:{env:{VERCEL_ENV:"preview"}},console:{warn:()=>{}}},{timeout:5000});
+ const result=await mod.exports.POST({headers:{get:()=>null},json:async()=>({
+  mode:"complete",topic:"Parasita peixe",idea:"Parasita peixe",audience:"Público general",
+  style:"cartoon3d",language:"es",seconds:15,confirmPlanCost:true
+ })});
+ assert.equal(result.status,502);
+ assert.equal(result.body.error,"studio_plan_incomplete");
+ assert.equal(result.body.scenes,undefined);
+ assert.equal(calls,2);
+});
+
 test("creative plan only runs in Preview, requires signed-in owner and explicit request",()=>{
  assert.match(plan,/process\.env\.VERCEL_ENV!=="preview"/);
  assert.match(plan,/authenticatedUser\(req\)/);
