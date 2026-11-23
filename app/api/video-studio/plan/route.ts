@@ -155,7 +155,15 @@ export async function POST(req:NextRequest){
    "Some moments last 3 seconds, others 7 or more; narrative transitions decide the scene changes. No redundant shots.";
   const result=await askStructured("outline",system,
    {topic,idea:idea||topic,source:sourceContext,seconds,style,audience},
-   value=>{const valueOutline=readOutline(value);return valueOutline&&splitNarrationIntoMoments(valueOutline.narration).length?valueOutline:null;},
+   value=>{
+    const valueOutline=readOutline(value);
+    if(!valueOutline||!splitNarrationIntoMoments(valueOutline.narration).length)return null;
+    // The user selected an approximate runtime, but the worker must not get
+    // a wildly short or long script that would fail after reserving credits.
+    const spokenWords=valueOutline.narration.trim().split(/\s+/).filter(Boolean).length;
+    const estimatedTime=spokenWords/(language==="es"?2.3:2.25);
+    return Math.abs(estimatedTime-seconds)<=Math.max(5,seconds*.2)?valueOutline:null;
+   },
    Math.min(5000,1400+Math.ceil(seconds/4)*65));
   if(!result.value)return json({error:result.error,detail:"outline"},result.error==="studio_plan_incomplete"?502:503);
   const moments=splitNarrationIntoMoments(result.value.narration);
