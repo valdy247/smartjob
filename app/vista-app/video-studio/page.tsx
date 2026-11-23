@@ -217,11 +217,28 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
   try{
    const mainTopic=(topic==="Otro"?otherTopic:topic).trim()||ideaPrompt.trim().slice(0,180);
    const shared={
-    topic:mainTopic,idea:ideaPrompt.trim()||mainTopic,audience:audience==="Otro"?otherAudience:audience,
+    topic:chosenTrend?.title?.trim().slice(0,220)||mainTopic,
+    idea:chosenTrend?.title?.trim().slice(0,220)||ideaPrompt.trim()||mainTopic,
+    audience:audience==="Otro"?otherAudience:audience,
     style:visual,seconds,language,
     source:chosenTrend?{platform,sourceId:chosenTrend.sourceId,title:chosenTrend.title,url:chosenTrend.url}:null,
     confirmPlanCost:true
    };
+   // Generate short-form creative scripts atomically from the chosen topic.
+   if(seconds/5<=6){
+    setDraftPhase("Escribiendo la historia y las escenas…");
+    const result=await api("plan","POST",{...shared,mode:"complete"});
+    if(!result?.outline||!Array.isArray(result?.scenes)||result.scenes.length!==seconds/5)
+     throw Error("studio_plan_incomplete");
+    const script=result.scenes as Scene[];
+    if(script.some(scene=>typeof scene?.speech!=="string"||scene.speech.trim().length<5||
+      typeof scene?.imagePrompt!=="string"||scene.imagePrompt.trim().length<35))
+     throw Error("studio_plan_incomplete");
+    setOutline(result.outline);setTitle(result.outline.title);
+    setScenes(script);setManualDraft(false);setPlanNotice("");
+    setDraftProgress(100);setDraftPhase("Guion listo para revisar");
+    return;
+   }
    const first=await api("plan","POST",{...shared,mode:"outline"});
    if(!first?.outline||!Array.isArray(first.outline.beats)||first.outline.beats.length!==seconds/5)
     throw Error("studio_plan_incomplete");
