@@ -61,6 +61,7 @@ const errorMessages:Record<string,string>={
  studio_plan_invalid_request:"Revisa los datos de tu proyecto antes de generar el guion.",
  studio_plan_invalid_outline:"El plan de escenas debe regenerarse.",
  studio_trends_unavailable:"No podemos consultar las tendencias en este momento.",
+ studio_country_unavailable:"YouTube no publica una lista de tendencias para este país. Elige otro país; no mostraremos tendencias de otra región.",
  studio_plan_confirmation_required:"Confirma que quieres generar el guion antes de continuar.",
  studio_plan_invalid_batch:"No se pudo organizar el guion. Vuelve a intentarlo.",
  authentication_required:"Tu sesión ha terminado. Inicia sesión para continuar.",
