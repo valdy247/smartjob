@@ -154,6 +154,7 @@ export async function POST(req:NextRequest){
   "Audience: "+audience+". The ONLY language governing the proposed idea, script, title, captions, and final spoken narration is the Video Studio Wizard language: "+lang+".",
   "The country of a discovered trend controls ONLY the regional source search. Never infer or change the writing language from the selected country, the trend video language or its foreign-language title.",
   "Use an incoming trend title in any language only as thematic inspiration. Propose an ORIGINAL idea, hook, full narration, and storyboard entirely in "+lang+". Do not reproduce or retain foreign-language phrasing unless it is a proper name.",
+  "The selected topic is mandatory. A source trend may inspire the concept, but it must NEVER change the subject or produce a story unrelated to the chosen topic.",
   "STYLE BIBLE: "+STYLES[style],
   "Each VISUAL clip is FIVE SECONDS, but the voiceover is ONE CONTINUOUS natural story. Never force a sentence, clause or pause to end at a scene boundary.",
   "Write the full spoken narration as connected prose across scene boundaries; each speech field is a consecutive segment of the SAME continuous voiceover, not an independent line or mini-story.",
