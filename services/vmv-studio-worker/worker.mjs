@@ -477,7 +477,7 @@ async function claim(){
  return Array.isArray(data)?data[0]||null:null;
 }
 async function loop(){
- log("service_started",{configured:!STOP()});
+ log("service_started",{configured:!STOP(),enabled:process.env.VMV_STUDIO_WORKER_ENABLED==="true",missing:missingConfig()});
  while(!closing){
   if(STOP()){await sleep(15000);continue;}
   try{
