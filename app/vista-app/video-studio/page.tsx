@@ -25,8 +25,7 @@ const stylesList:VideoExample[]=[
  {id:"stickman",label:"Stickman 2D",description:"Historias sencillas con gran expresividad",poster:"/video-studio/styles/stickman.svg",video:null},
  {id:"cartoon2d",label:"Cartoon 2D",description:"Dibujo animado con color y personalidad",poster:"/video-studio/styles/cartoon2d.svg",video:null},
  {id:"cartoon3d",label:"Cartoon 3D",description:"Personajes tridimensionales cinematográficos",poster:"/video-studio/styles/cartoon3d.svg",video:null},
- {id:"clay",label:"Plastilina 3D",description:"Mundos artesanales con textura real",poster:"/video-studio/styles/clay.svg",video:null},
- {id:"illustrated",label:"Cuento ilustrado",description:"Historias con ilustración artística",poster:"/video-studio/styles/storybook.svg",video:null}
+ {id:"clay",label:"Plastilina 3D",description:"Mundos artesanales con textura real",poster:"/video-studio/styles/clay.svg",video:null}
 ];
 const labels:Record<Stage,string>={
  home:"Video Studio",topic:"¿Qué tema?",audience:"¿Para quién?",style:"Elige un estilo",duration:"Duración",language:"Idioma del video",voice:"Elige una voz",subtitles:"Subtítulos",source:"¿Analizar tendencias?",trends:"Tendencias",idea:"Tu idea",plan:"Tu guion y escenas",quality:"Calidad",summary:"Resumen",images:"Revisa las escenas",progress:"Producción en la nube",result:"Video listo",history:"Historial"
