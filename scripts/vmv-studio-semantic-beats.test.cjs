@@ -23,7 +23,7 @@ test("eggplant story uses complete ideas rather than six forced five-second slic
  assert.equal(scenes.join(" "),narration);
  assert.ok(scenes.some(line=>line.includes("soy una baya")));
  assert.ok(scenes.some(line=>line.includes("como una esponja")));
- assert.ok(new Set(scenes.map(line=>line.split(/\\s+/).length)).size>1);
+ assert.ok(new Set(scenes.map(line=>line.split(/\s+/).length)).size>1);
  assert.ok(scenes.some(line=>approximateMomentSeconds(line,narration,30)>5));
  assert.ok(scenes.some(line=>approximateMomentSeconds(line,narration,30)<5));
 });
