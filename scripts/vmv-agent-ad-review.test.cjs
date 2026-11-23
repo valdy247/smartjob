@@ -35,14 +35,16 @@ test("AI copy and Meta image are prepared in Agent before Marketing review, with
  assert.match(studio,/confirmPaused:true/);
 });
 
-test("Only AI Agent can initiate new campaign, all requirements completed before review",()=>{
+test("Ads Studio opens a standalone campaign wizard and optional AI Agent handoff, keeping review safeguards",()=>{
  const hub=read("app/vista-app/marketing/ads/page.tsx");
  const create=read("app/vista-app/marketing/ads/create/page.tsx");
- assert.match(hub,/href="\/vista-app\/ai-agents"/);
- assert.match(create,/window\.location\.replace\("\/vista-app\/ai-agents"\)/);
+ assert.match(hub,/href="\/vista-app\/marketing\/ads\/create"/);
+ assert.match(hub,/href="\/vista-app\/marketing\/ads\/campaigns"/);
+ assert.doesNotMatch(hub,/href="\/vista-app\/ai-agents"/);
+ assert.match(create,/AdsStudio mode="wizard"/);
+ assert.doesNotMatch(create,/window\.location\.replace\("\/vista-app\/ai-agents"\)/);
  assert.match(create,/params\.get\("draft"\)/);
- assert.match(studio,/mode==="wizard"&&!agentBrief&&!draftId/);
- assert.match(studio,/mode==="wizard"&&!agentBrief/);
+ assert.match(studio,/mode==="wizard"/);
  assert.match(intake,/meta\/accounts/);
  assert.match(intake,/meta\/locations/);
  assert.match(intake,/meta\/image/);
