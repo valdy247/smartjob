@@ -131,8 +131,7 @@ export default function AIAgentsPreview(){
    setCommerceTab("catalog");setNotice("");
    setScreen(commerceNeedsSetup(agent)?"commerceWizard":"commerce");
   }else if(kind==="calls"){
-   setScreen("call");
-   setNotice(phone?.agentId===agent.id?"":translate("agents.notice.configureCalls"));
+   setScreen("home");setNotice("");
   }else if(kind==="bookings"){
    setBookingTab("services");setResumeBooking(false);
    setScreen(bookingsNeedsSetup(agent)?"bookingsWizard":"bookings");setNotice("");
@@ -331,7 +330,7 @@ export default function AIAgentsPreview(){
   if(loading||!authenticated)return;
   const url=new URL(window.location.href);
   const service=url.searchParams.get("service");
-  if(!["web","video","call","quote","inventory","sales","bookings"].includes(String(service)))return;
+  if(!["web","video","quote","inventory","sales","bookings"].includes(String(service)))return;
   if(service!=="video"&&(!principal||!selectedBusiness||!selectedWorkspace))return;
   url.searchParams.delete("service");
   window.history.replaceState(null,"",url.pathname+url.search+url.hash);
@@ -376,7 +375,7 @@ export default function AIAgentsPreview(){
      {screen==="home"?<>
       {notice?<div role="status" className={styles.info}><ShieldCheck size={17}/>{notice}</div>:null}
       <div className={styles.tiles}>
-       {types.filter(type=>type.id!=="custom"&&type.id!=="operations").map(type=>{const title=label(type.id);
+       {types.filter(type=>type.id!=="custom"&&type.id!=="operations"&&type.id!=="calls").map(type=>{const title=label(type.id);
        const configured=principal?.setup||{};
        const status=!principal?translate("agents.status.notConfigured"):
         type.id==="calls"?(phone?.agentId===principal.id&&phone.serverEnrolled?
