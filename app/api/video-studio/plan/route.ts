@@ -26,7 +26,14 @@ function parseAiJson(text:string):Record<string,unknown>|null{
   return isRecord(result)?result:null;
  }catch{return null;}
 }
-type Outline={title:string;logline:string;hook:string;ending:string;characters:string;setting:string;beats:string[]};
+type Outline={title:string;logline:string;hook:string;ending:string;characters:string;setting:string;narration:string;beats:string[]};
+// Split a single uninterrupted script into equal visual windows. This is a
+// storage/visual association only: sentences remain intact in the final audio.
+const partitionNarration=(script:string,count:number):string[]=>{
+ const words=script.trim().split(/\s+/).filter(Boolean);
+ if(words.length<count*3)return [];
+ return Array.from({length:count},(_,i)=>words.slice(Math.floor(i*words.length/count),Math.floor((i+1)*words.length/count)).join(" "));
+};
 function readOutline(data:unknown,count:number):Outline|null{
  if(!isRecord(data)||!Array.isArray(data.beats)||data.beats.length!==count)return null;
  const beats=data.beats.map(x=>safe(isRecord(x)?(x.action||x.description||x.beat):x,160));
@@ -34,7 +41,7 @@ function readOutline(data:unknown,count:number):Outline|null{
  const outline={
   title:safe(data.title,100),logline:safe(data.logline,300),hook:safe(data.hook,200),
   ending:safe(data.ending,200),characters:safe(data.characters,500),
-  setting:safe(data.setting,350),beats
+  setting:safe(data.setting,350),narration:safe(data.narration,9000),beats
  };
  return outline.title.length>=3&&outline.characters.length>=8&&outline.logline.length>=8?outline:null;
 }
@@ -57,10 +64,10 @@ const sceneSchema={
 };
 const outlineProperties={
  title:stringField,logline:stringField,hook:stringField,ending:stringField,
- characters:stringField,setting:stringField,
+ characters:stringField,setting:stringField,narration:stringField,
  beats:{type:"array",items:stringField}
 };
-const outlineKeys=["title","logline","hook","ending","characters","setting","beats"];
+const outlineKeys=["title","logline","hook","ending","characters","setting","narration","beats"];
 function outputSchema(stage:"complete"|"outline"|"scenes"):Record<string,unknown>{
  const properties=stage==="scenes"
   ?{scenes:{type:"array",items:sceneSchema}}
@@ -74,7 +81,12 @@ function outputSchema(stage:"complete"|"outline"|"scenes"):Record<string,unknown
 type CompleteDraft={outline:Outline;scenes:DraftScene[]};
 function readComplete(data:Record<string,unknown>|null,count:number):CompleteDraft|null{
  const outline=readOutline(data,count),scenes=readScenes(data,count);
- return outline&&scenes?{outline,scenes}:null;
+ if(!outline||!scenes)return null;
+ // The full narration, not individually written five-second lines, is canonical.
+ const narrative=outline.narration||scenes.map(x=>x.speech).join(" ");
+ const fragments=partitionNarration(narrative,count);
+ if(fragments.length!==count||fragments.some(x=>x.length>230))return null;
+ return {outline:{...outline,narration:narrative},scenes:scenes.map((s,i)=>({...s,speech:fragments[i]}))};
 }
 async function askStructured<T>(stage:"complete"|"outline"|"scenes",system:string,
  payload:Record<string,unknown>,check:(value:Record<string,unknown>|null)=>T|null,
@@ -156,7 +168,8 @@ export async function POST(req:NextRequest){
   const system=shared+
    " Create the ENTIRE original short-video screenplay in one response. Return a JSON object with title, logline, hook, ending, characters, setting, beats and scenes. "+
    "Provide exactly "+count+" distinct beats (strings) and exactly "+count+" scenes, each corresponding to one five-second clip. "+
-   "Each scene has speech, imagePrompt and caption. Aim for 9–13 natural spoken words per five-second visual segment, but prioritize coherent sentences spanning multiple scenes. No artificial pauses or standalone sentence per scene. "+
+   "First write narration: ONE complete, expressive, grammatically connected voiceover of approximately "+Math.round(seconds*2.3)+" words. Sentences may span multiple clips, with NO sentence boundary imposed at 5 seconds. "+
+   "Then plan scenes corresponding in order to short consecutive excerpts of the narration. Each scene has speech, imagePrompt and caption; speech is merely an excerpt of the full narration. "+
    "The imagePrompt is a detailed English description of the exact action and relevant subjects in the narration, maintaining consistent appearance and environment. "+
    "Write the scene's content, not instructions about what to write. Every scene must advance the factual explanation or original story. "+
    "When the trend refers to an animal or scientific phenomenon, treat the animals as subjects and describe them in the characters field.";
@@ -167,7 +180,7 @@ export async function POST(req:NextRequest){
   return json({...result.value,count});
  }
  if(mode==="outline"){
-  const system=shared+" Return JSON with title, logline, hook, ending, characters, setting and beats array. Exactly "+count+" distinct beats, one for each FIVE SECOND scene. The beats must be strings describing specific actions, facts or narration. Include recurring character designs and continuity.";
+  const system=shared+" Return JSON with title, logline, hook, ending, characters, setting, narration and beats array. Write narration FIRST: a SINGLE natural continuous spoken script of approximately "+Math.round(seconds*2.3)+" words, with connected sentences across visual cuts. Then provide exactly "+count+" distinct visual beats, one for each five-second shot, in the same story order. Include recurring character designs and continuity. No ending or pause at every beat." ;
   const result=await askStructured("outline",system,
    {topic,idea:idea||topic,source:sourceContext,seconds,style,audience},
    value=>readOutline(value,count),Math.min(4000,1100+count*80));
@@ -179,11 +192,12 @@ export async function POST(req:NextRequest){
    !Number.isInteger(batchSize)||batchSize<1||batchSize>6||start+batchSize>count)
   return json({error:"studio_plan_invalid_batch"},400);
  const outline=readOutline(b?.outline,count);
- if(!outline)return json({error:"studio_plan_invalid_outline"},400);
- const system=shared+" Using the fixed narrative outline, generate scenes "+(start+1)+" through "+(start+batchSize)+" of "+count+". Return JSON with a scenes array of exactly "+batchSize+" items, each with speech, imagePrompt and caption fields. Each speech is a consecutive 9–13 word excerpt of one continuous natural narration in "+lang+"; do not end sentences at visual boundaries unless natural. The detailed English imagePrompt depicts the same beat, recurring characters, fixed clothing, expression, action, camera angle, background and visual style. Caption 2–7 words faithfully taken from speech. No generic filler.";
+ if(!outline||partitionNarration(outline.narration,count).length!==count)return json({error:"studio_plan_invalid_outline"},400);
+ const voiceoverExcerpts=partitionNarration(outline.narration,count).slice(start,start+batchSize);
+ const system=shared+" Using the already-written COMPLETE narration, design ONLY the visuals for scenes "+(start+1)+" through "+(start+batchSize)+" of "+count+". Return a scenes array of exactly "+batchSize+" with speech, imagePrompt and caption. The speech for each scene MUST equal its supplied voiceoverExcerpts entry; DO NOT rewrite or invent speech. An excerpt can start or end in the middle of a sentence. Image prompts in detailed English follow the corresponding narration meaning, recurring character faces, clothing, art style and location continuity. No generic filler." ;
  const result=await askStructured("scenes",system,
-  {topic,idea:idea||topic,outline,beats:outline.beats.slice(start,start+batchSize),start,source:sourceContext},
+  {topic,idea:idea||topic,outline,voiceoverExcerpts,beats:outline.beats.slice(start,start+batchSize),start,source:sourceContext},
   value=>readScenes(value,batchSize),3000);
  if(!result.value)return json({error:result.error,detail:"scenes"},result.error==="studio_plan_incomplete"?502:503);
- return json({start,scenes:result.value});
+ return json({start,scenes:result.value.map((scene,i)=>({...scene,speech:voiceoverExcerpts[i]}))});
 }
