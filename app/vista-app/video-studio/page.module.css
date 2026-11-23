@@ -199,3 +199,12 @@
 .planDraftNote span{flex:1}
 .planDraftNote button{flex-shrink:0;align-self:center;padding:9px 10px;border-radius:10px;background:white;border:1px solid #ded0ed;color:#6e449c;font-size:11px;font-weight:800;cursor:pointer}
 @media(max-width:550px){.planDraftNote{flex-wrap:wrap}.planDraftNote button{margin-left:auto}}
+
+/* Match the viewport of the test phone when mounted natively in the V1 shell. */
+.page[data-vmv-embedded="true"]{min-height:100%;width:100%;padding:12px 12px 34px;background:#fcfafd}
+.page[data-vmv-embedded="true"] .shell{max-width:100%;min-width:0}
+.page[data-vmv-embedded="true"] .header{height:51px;margin-bottom:18px}
+.page[data-vmv-embedded="true"] .header strong{font-size:16px}
+.page[data-vmv-embedded="true"] .header small{font-size:10px}
+.page[data-vmv-embedded="true"] .brand{font-size:16px}
+.page[data-vmv-embedded="true"] .footer{display:none}
