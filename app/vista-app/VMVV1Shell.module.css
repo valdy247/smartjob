@@ -90,3 +90,14 @@
 .embeddedBar button{display:grid;place-items:center;flex:0 0 31px;width:31px;height:31px;border-radius:10px;border:1px solid #e4d8f0;background:white;color:#7750b2;cursor:pointer}
 .embeddedBar strong{font-size:12px;font-weight:850;letter-spacing:-.03em}
 .embeddedFrame{display:block;flex:1 1 0;min-height:0;min-width:0;width:100%;height:100%;border:0;background:#fdfcff}
+
+/* Native Video Studio preview: never expose the app's dark global canvas while loading. */
+.embeddedContent{flex:1 1 0;min-height:0;width:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;background:#fcfafd}
+.embeddedLoading{height:100%;min-height:340px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px 30px;background:radial-gradient(circle at 50% 30%,#f2e8ff 0,transparent 56%),#fcfafd;color:#33214a;text-align:center}
+.loadingSymbol{width:66px;height:66px;display:grid;place-items:center;border-radius:22px;background:linear-gradient(135deg,#e9d8ff,#e5f6f1);color:#8044b4;box-shadow:0 10px 30px #69489415}
+.embeddedLoading strong{font-size:16px;font-weight:850;letter-spacing:-.035em}
+.embeddedLoading p{font-size:12px;color:#8c7b9e;line-height:1.5;margin:0}
+.loadingTrack{width:110px;height:4px;border-radius:10px;background:#e9e0f3;overflow:hidden;margin-top:10px}
+.loadingTrack span{display:block;height:100%;width:45%;border-radius:10px;background:#9e72d0;animation:previewLoading 1.5s ease-in-out infinite alternate}
+@keyframes previewLoading{from{transform:translateX(0)}to{transform:translateX(130%)}}
+@media(prefers-reduced-motion:reduce){.loadingTrack span{animation:none;width:100%}}
