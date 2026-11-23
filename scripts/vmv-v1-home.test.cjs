@@ -54,6 +54,20 @@ test("phone simulator fits the viewport with only its content scrolling",()=>{
  assert.deepEqual(parsed.parseDiagnostics.map(x=>ts.flattenDiagnosticMessageText(x.messageText," ")),[]);
 });
 
+test("service navigation stays inside the phone simulator and cannot embed arbitrary URLs",()=>{
+ const ui=read("app/vista-app/VMVV1Shell.tsx");
+ const css=read("app/vista-app/VMVV1Shell.module.css");
+ assert.match(ui,/router\.push\("\/vista-app\?preview="\+encodeURIComponent\(id\)\)/);
+ assert.match(ui,/services\.find\(item=>item\.id===params\.get\("preview"\)&&Boolean\(item\.url\)\)/);
+ assert.match(ui,/iframe ref=\{previewFrameRef\}/);
+ assert.match(ui,/src=\{embeddedService\.url\+"\?vmvEmbed=1"\}/);
+ assert.match(ui,/event\.origin!==window\.location\.origin/);
+ assert.match(ui,/event\.source!==previewFrameRef\.current\?\.contentWindow/);
+ assert.match(css,/\.embeddedService\{display:flex;flex-direction:column/);
+ assert.match(css,/\.embeddedFrame\{display:block;flex:1 1 0;min-height:0/);
+ assert.match(ui,/href="\/vista-app\?preview=video"/);
+});
+
 test("navigation centers three buttons and labels the last one Settings",()=>{
  const ui=read("app/vista-app/VMVV1Shell.tsx");
  const css=read("app/vista-app/VMVV1Shell.module.css");
