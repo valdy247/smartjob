@@ -11,7 +11,9 @@ test("V1 voice catalog is authenticated, read-only and does not need the old vid
  assert.doesNotMatch(api,/videoAllowed|VMV_VIDEO_PILOT_ENABLED|VMV_VIDEO_ALLOWED_OWNER_ID/);
  assert.match(api,/process\.env\.ELEVENLABS_API_KEY/);
  assert.match(api,/https:\/\/api\.elevenlabs\.io\/v2\/voices/);
- assert.match(api,/page_size:"40"/);
+ assert.match(api,/page_size:"100"/);
+ assert.match(api,/next_page_token/);
+ assert.match(api,/responseData\.elevenlabs\.length<120/);
  assert.doesNotMatch(api,/generateSpeech|\/v1\/text-to-speech|method:"POST"/);
  assert.doesNotMatch(api,/return.*key/);
 });
