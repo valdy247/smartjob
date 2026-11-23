@@ -110,6 +110,10 @@ export async function POST(req:NextRequest){
  if(length>65000)return reply({error:"studio_invalid_job"},413);
  const input=parseInput(await req.json().catch(()=>null));
  if(!input)return reply({error:"studio_invalid_job"},400);
+ // Never reserve credits for ElevenLabs jobs unless that provider is ready
+ // in the SAME Render worker that will render the final narration.
+ if(input.payload.voice_provider==="elevenlabs"&&!await videoStudioWorkerReady("elevenlabs"))
+  return reply({error:"studio_elevenlabs_worker_not_ready"},503);
  try{
   const db=videoDb();
   const {data,error}=await db.rpc("vmv_studio_create_job",{
