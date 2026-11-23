@@ -28,9 +28,10 @@ function removableIndex(scenes:StudioAuditScene[]):number{
    scenes.filter((_,j)=>j!==i).flatMap(s=>[...words(s.speech)]));
   const unique=[...own].filter(t=>!outside.has(t)).length;
   const redundancy=[...own].filter(t=>outside.has(t)).length;
-  const transition=/^(as[ií] que|adem[aá]s|y para|por otro lado|de hecho|en otras palabras|y tambi[eé]n|so next time|by the way|also|furthermore)\b/i.test(scenes[i].speech);
+  const bridge=/^(as[ií] que|so next time|by the way)\b/i.test(scenes[i].speech);
+  const transition=/^(adem[aá]s|y para|por otro lado|de hecho|en otras palabras|y tambi[eé]n|also|furthermore)\b/i.test(scenes[i].speech);
   const specificity=(/[\d]|:|[!?]|antioxid|tomate|baya|esponja|fruta|scientific|fact/i.test(scenes[i].speech)?2:0);
-  const value=unique*3-redundancy+specificity*3-(transition?10:0);
+  const value=unique*3-redundancy+specificity*3-(bridge?22:transition?3:0);
   if(value<score){score=value;selected=i;}
  }
  return selected;
