@@ -30,3 +30,24 @@ export async function videoStudioWorkerReady(voiceProvider:"openai"|"elevenlabs"
   return response.status===200&&(await response.text()).trim()==="ready";
  }catch{return false;}
 }
+
+/** Prevent a new variable-length job from reaching an older five-second worker.
+ * The legacy /readyz remains unchanged for other clients.
+ */
+export async function videoStudioSemanticWorkerReady():Promise<boolean>{
+ if(!cloudLaunchEnabled())return false;
+ const raw=process.env.VMV_STUDIO_WORKER_READY_URL?.trim();
+ if(!raw||raw.length>250)return false;
+ let url:URL;
+ try{url=new URL(raw);}catch{return false;}
+ if(url.protocol!=="https:"||!url.hostname.endsWith(".onrender.com")||
+  url.hostname===".onrender.com"||url.username||url.password||
+  url.port||url.pathname!=="/readyz"||url.search||url.hash)return false;
+ url.pathname="/semantic-readyz";
+ try{
+  const response=await fetch(url.toString(),{
+   method:"GET",cache:"no-store",redirect:"error",signal:AbortSignal.timeout(3500)
+  });
+  return response.status===200&&(await response.text()).trim()==="semantic-v2";
+ }catch{return false;}
+}
