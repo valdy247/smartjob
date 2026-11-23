@@ -50,3 +50,5 @@
 .libraryFilters select,.libraryFilters input{width:100%;min-width:0;background:#fff;color:#443151;border:1px solid #e1d5eb;border-radius:11px;padding:10px;font:inherit;font-size:12px}
 .libraryFilters select:focus-visible,.libraryFilters input:focus-visible{outline:3px solid #a375d0;outline-offset:1px}
 @media(max-width:380px){.libraryFilters{grid-template-columns:1fr}}
+
+.accentSelect input{max-width:75%;min-width:0;border:1px solid #e3d6ec;border-radius:12px;padding:9px 12px;background:#fff;color:#49335b;font:inherit}
