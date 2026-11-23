@@ -200,7 +200,7 @@ test("invalid AI outline cannot create fabricated scenes or charge credits",asyn
  assert.equal(result.status,502);
  assert.equal(result.body.error,"studio_plan_incomplete");
  assert.equal(result.body.scenes,undefined);
- assert.equal(calls,2);
+ assert.equal(calls,3); // Two structured attempts and one narration-only recovery.
 });
 
 test("creative plan only runs in Preview, requires signed-in owner and explicit request",()=>{
