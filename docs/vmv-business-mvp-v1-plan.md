@@ -81,3 +81,23 @@ Las funciones de telefonía usadas por AI Agents se revisarán antes de retirar 
 - El mismo video no paga de nuevo por clips reutilizados, y queda guardado en biblioteca.
 - Todo lo pendiente muestra un estado real y no promete funcionamiento.
 - La nueva rama obtiene build READY y revisión QA antes de decidir el lanzamiento.
+
+
+## Decisión confirmada: aprobación de imágenes antes de animar (22 nov 2026)
+
+El cliente termina el wizard (tema, público, estilo, duración 15/30/60/120/180 s o personalizado, idioma, voz OpenAI/ElevenLabs, subtítulos, tendencias y propuesta de guion editable, calidad Turbo/Alta, resumen y costos) y confirma la primera operación pagada.
+
+1. El backend crea un proyecto y un job DURABLE con identificador idempotente y configuración congelada por versión.
+2. Genera el guion editable, el storyboard y los fotogramas de todas las escenas (por defecto escenas de 5 s), con un progreso real por etapa.
+3. Pasa el job a **awaiting_image_approval**; el usuario puede cerrar el navegador, regresar y aprobar cada fotograma individualmente o todos al final. Puede cambiar el guion, la acción o regenerar una imagen con el costo por crédito indicado antes de autorizar el gasto. Una edición que afecta un fotograma aprobado anula solo esa aprobación.
+4. **No se genera ningún clip animado antes de que TODAS las imágenes estén aprobadas.**
+5. Al aprobar todas las escenas, se realiza preflight de imágenes existentes, permisos y presupuesto y se reserva el costo del trabajo de animación según la política de créditos. Se encola el job durable para el worker, SIN requerir que el navegador permanezca abierto.
+6. El worker genera clips en la nube, guarda cada clip exitoso, reintenta fallos con idempotencia y límites y jamás reprocesa clips válidos por recargar/cerrar navegador.
+7. A continuación el worker genera UNA narración sincronizada con escenas (si la opción del wizard la requiere), mezcla audio, coloca subtítulos, une todos los clips, verifica duración/calidad y guarda un MP4 final privado en la biblioteca.
+8. El progreso visible se restaura desde la base de datos al iniciar sesión: estado real, porcentaje basado en eventos de trabajo (no cronómetro artificial) y ETA orientativa diferenciada de porcentaje. La finalización se muestra incluso si el usuario cerró la pestaña.
+9. En caso de fallo, se informa cuál escena/proveedor falló, se preserva todo el material generado y se libera/reembolsa cualquier crédito no consumido según política explícita, sin duplicar cobros.
+10. Estados sugeridos: draft → planning → generating_images → awaiting_image_approval → queued_animation → animating → generating_voice → assembling → verifying → completed (o failed/retryable/cancelled).
+
+**Restricciones V1:** solo generación de video; no "crear imagen", "editar foto", "editar video", música, efectos o selector de cambios de voz tras el montaje. Las imágenes son solo fotogramas de un video. No se activan gastos externos sin confirmación. Video original 9:16; tendencias desde YouTube, Facebook, Instagram o TikTok solo si sus contenidos verificables y previews están disponibles conforme a las APIs de origen. El resto debe marcarse no disponible.
+
+**Criterio de aceptación crítico:** iniciar proyecto → generar fotogramas → cerrar navegador → reabrir → revisar/aprobar todos → cerrar navegador → animación/narración/montaje continúan hasta MP4 → historial y descarga al volver. No basta con un MediaRecorder ejecutándose en el dispositivo del cliente.
