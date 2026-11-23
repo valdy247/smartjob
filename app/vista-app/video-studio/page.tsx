@@ -1,5 +1,5 @@
 "use client";
-import {useCallback,useEffect,useState} from "react";
+import {useCallback,useEffect,useRef,useState} from "react";
 import Link from "next/link";
 import {ArrowLeft,ArrowRight,ArrowUpRight,Check,CheckCircle2,ChevronRight,Clapperboard,Clock3,Download,Film,FolderOpen,Globe2,LoaderCircle,Pencil,PlayCircle,RefreshCw,Search,Sparkles,Subtitles,Video,Eye,X,ShieldCheck} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
@@ -14,7 +14,9 @@ type Style="stickman"|"cartoon2d"|"cartoon3d"|"clay"|"illustrated";
 type Quality="turbo"|"high";
 type Scene={speech:string;imagePrompt:string;caption:string;approved?:boolean;imageUrl?:string;imagePath?:string};
 type Trend={sourceId:string;title:string;thumbnail:string;url:string;channel?:string;views?:number};
-type Job={id:string;status:string;phase:string;progress:number;scenes:Scene[];seconds:number;style:string;quality_mode:string;title:string;videoUrl?:string|null;created_at:string;failure_code?:string|null;etaSeconds?:number|null};
+type Job={id:string;status:string;phase:string;progress:number;scenes:Scene[];seconds:number;style:string;quality_mode:string;title:string;videoUrl?:string|null;created_at:string;failure_code?:string|null;etaSeconds?:number|null;charge_credits?:number;credits_settled?:boolean;version?:number};
+type Wallet={balance:number;reserved:number;available:number};
+type CreditPack={id:string;credits:number;usdCents:number};
 const topics=["Curiosidades","Historia","Ciencia","Tecnología","Educación","Entretenimiento","Negocios","Otro"];
 const audiences=["Público general","Niños","Adolescentes","Jóvenes","Adultos","Familias","Emprendedores","Otro"];
 const durations=[15,30,60,120,180] as const;
@@ -40,6 +42,14 @@ const errorMessages:Record<string,string>={
  video_studio_insufficient_credits:"No tienes créditos suficientes para esta generación.",
  video_studio_worker_not_ready:"El procesador de videos todavía no está listo.",
  video_studio_duplicate:"Esta solicitud ya existe. Abre Historial para continuar.",
+ studio_invalid_job:"Revisa tu guion y configuración antes de generar.",
+ studio_invalid_action:"Esta escena no se pudo actualizar.",
+ studio_scene_locked:"El trabajo ya está en producción y no admite edición de imágenes.",
+ studio_images_not_ready:"Primero deben estar listas todas las imágenes.",
+ studio_regeneration_confirmation_required:"Confirma el costo de regenerar una imagen.",
+ studio_credit_purchases_not_ready:"Las compras de créditos en modo prueba aún no están conectadas.",
+ studio_stripe_checkout_unavailable:"No se pudo iniciar la compra de prueba.",
+ video_studio_wallet_unavailable:"No pudimos consultar los créditos."
  studio_trends_daily_limit:"Has alcanzado el límite diario de investigaciones. Puedes continuar con tu idea.",
  studio_trends_database_unavailable:"No pudimos consultar tendencias ahora. Inténtalo después o continúa con tu idea.",
  studio_youtube_not_connected:"YouTube todavía no está configurado en este entorno.",
@@ -79,6 +89,12 @@ export default function VideoStudioV1(){
  const [job,setJob]=useState<Job|null>(null),[jobs,setJobs]=useState<Job[]>([]);
  const [historyLoading,setHistoryLoading]=useState(false),[sceneIndex,setSceneIndex]=useState(0);
  const [savingScene,setSavingScene]=useState(false);
+ const [wallet,setWallet]=useState<Wallet|null>(null),[packages,setPackages]=useState<CreditPack[]>([]);
+ const [purchasesEnabled,setPurchasesEnabled]=useState(false),[purchaseBusy,setPurchaseBusy]=useState(false);
+ const [walletBusy,setWalletBusy]=useState(false);
+ const [regenIndex,setRegenIndex]=useState<number|null>(null);
+ const [frameSpeech,setFrameSpeech]=useState(""),[frameVisual,setFrameVisual]=useState("");
+ const clientKeyRef=useRef<string>("");
  const [trendConsent,setTrendConsent]=useState(false);
 
  const authenticate=useCallback(async()=>{
@@ -104,7 +120,32 @@ export default function VideoStudioV1(){
   catch(e){setError(e instanceof Error?e.message:"video_studio_db_unavailable");}
   finally{setHistoryLoading(false);}
  },[api]);
- useEffect(()=>{if(stage!=="progress"&&stage!=="images"||!job?.id)return;
+ const loadCredits=useCallback(async()=>{
+  setWalletBusy(true);
+  try{
+   const data=await api("credits");
+   if(data?.wallet)setWallet(data.wallet);
+   setPackages(Array.isArray(data?.packages)?data.packages:[]);
+   setPurchasesEnabled(Boolean(data?.purchasesEnabled));
+  }catch{/* Retry later; never invent credits. */}
+  finally{setWalletBusy(false);}
+ },[api]);
+ useEffect(()=>{if(isSignedIn)void loadCredits();},[isSignedIn,loadCredits]);
+ useEffect(()=>{
+  const scene=job?.scenes?.[sceneIndex];
+  setFrameSpeech(scene?.speech||"");setFrameVisual(scene?.imagePrompt||"");
+ },[job?.id,job?.version,sceneIndex]);
+ const checkout=async(pack:string)=>{
+  setPurchaseBusy(true);setError("");
+  try{
+   const data=await api("checkout","POST",{pack,confirmPurchase:true,clientKey:crypto.randomUUID()});
+   if(typeof data?.url!=="string"||!data.url.startsWith("https://checkout.stripe.com/"))
+    throw Error("studio_stripe_checkout_unavailable");
+   window.location.assign(data.url);
+  }catch(e){setError(e instanceof Error?e.message:"studio_stripe_checkout_unavailable");}
+  finally{setPurchaseBusy(false);}
+ };
+  useEffect(()=>{if(stage!=="progress"&&stage!=="images"||!job?.id)return;
   let active=true;
   const check=async()=>{try{const data=await api("jobs?id="+encodeURIComponent(job.id));
     if(!active||!data?.job)return;setJob(data.job);
@@ -117,7 +158,7 @@ export default function VideoStudioV1(){
  const next=(s:Stage)=>{setError("");setStage(s)};
  const previous=()=>{setError("");if(stage==="images"||stage==="progress"||stage==="result"){setStage("history");void loadHistory();return;}
   const idx=order.indexOf(stage);setStage(idx>0?order[idx-1]:"home");};
- const reset=()=>{setStage("topic");setTopic("");setOtherTopic("");setAudience("Público general");setVisual("stickman");setSeconds(30);setScenes([]);setTitle("");setIdeaPrompt("");setOutline(null);setDraftProgress(0);setPlatform("idea");setSelectedTrend(null);setApprovedCost(false);setJob(null);setError("");};
+ const reset=()=>{clientKeyRef.current="";setStage("topic");setTopic("");setOtherTopic("");setAudience("Público general");setVisual("stickman");setSeconds(30);setScenes([]);setTitle("");setIdeaPrompt("");setOutline(null);setDraftProgress(0);setPlatform("idea");setSelectedTrend(null);setApprovedCost(false);setJob(null);setError("");};
  const trendSearch=async()=>{
   setError("");setBusy(true);setTrendResults([]);
   try{
@@ -186,9 +227,9 @@ export default function VideoStudioV1(){
   if(!approvedCost||scenes.length!==seconds/5)return;
   setBusy(true);setError("");
   try{
-   const data=await api("jobs","POST",{clientKey:crypto.randomUUID(),title,topic:topic==="Otro"?otherTopic:topic,audience:audience==="Otro"?otherAudience:audience,style:visual,seconds,language,voiceProvider,voiceId,subtitles,qualityMode:quality,scenes,sourcePlatform:platform,sourceUrl:selectedTrend?.url||null,estimatedCredits:estimatedCredits(seconds,quality),confirmCost:true});
+   const data=await api("jobs","POST",{clientKey:clientKeyRef.current||(clientKeyRef.current=crypto.randomUUID()),title,topic:topic==="Otro"?otherTopic:topic,audience:audience==="Otro"?otherAudience:audience,style:visual,seconds,language,voiceProvider,voiceId,subtitles,qualityMode:quality,scenes,sourcePlatform:platform,sourceUrl:selectedTrend?.url||null,estimatedCredits:estimatedCredits(seconds,quality),confirmCost:true});
    if(!data?.job?.id)throw Error("video_studio_unavailable");
-   setJob(data.job);next(data.job.status==="awaiting_image_approval"?"images":"progress");
+   setJob(data.job);void loadCredits();next(data.job.status==="awaiting_image_approval"?"images":"progress");
   }catch(e){setError(e instanceof Error?e.message:"video_studio_unavailable");}
   finally{setBusy(false);}
  };
@@ -196,7 +237,7 @@ export default function VideoStudioV1(){
   if(!job)return;setSavingScene(true);setError("");
   try{const data=await api("jobs","PATCH",{id:job.id,action:index===undefined?"approve_all":"approve",index,confirmAnimationCost:true});
    if(!data?.job)throw Error("video_studio_unavailable");
-   setJob(data.job);
+   setJob(data.job);void loadCredits();
    if(data.job.status==="queued_animation"||data.job.status==="animating")next("progress");
   }catch(e){setError(e instanceof Error?e.message:"video_studio_unavailable");}
   finally{setSavingScene(false);}
@@ -204,8 +245,20 @@ export default function VideoStudioV1(){
  const updateFrame=async(index:number,field:"speech"|"imagePrompt",value:string)=>{
   if(!job)return;setSavingScene(true);setError("");
   try{const data=await api("jobs","PATCH",{id:job.id,action:"edit_scene",index,field,value});
-   if(data?.job)setJob(data.job);
+   if(data?.job){setJob(data.job);void loadCredits();}
   }catch(e){setError(e instanceof Error?e.message:"video_studio_unavailable");}
+  finally{setSavingScene(false);}
+ };
+ const regenerateFrame=async(index:number,customVisual?:string)=>{
+  if(!job)return;
+  setSavingScene(true);setError("");
+  try{
+   const edit=typeof customVisual==="string";
+   const data=await api("jobs","PATCH",{id:job.id,index,
+    action:edit?"edit_scene":"regenerate",field:edit?"imagePrompt":undefined,
+    value:customVisual,confirmRegenerationCost:true});
+   if(data?.job){setJob(data.job);setRegenIndex(null);void loadCredits();next("progress");}
+  }catch(e){setError(e instanceof Error?e.message:"studio_invalid_action");}
   finally{setSavingScene(false);}
  };
  const credit=estimatedCredits(seconds,quality);
@@ -232,6 +285,9 @@ export default function VideoStudioV1(){
     </button>
    </div>
    <p className={styles.footerHint}>Un solo proceso creativo. Tú decides, la IA produce.</p>
+   <div className={styles.walletStrip}><span><Sparkles size={18}/><strong>{wallet?wallet.available:"—"}</strong><small>créditos disponibles</small></span>
+    <button type="button" onClick={()=>{next("history");void loadHistory();}}><FolderOpen size={16}/> Ver mis proyectos</button>
+   </div>
   </>:null}
   {stage==="topic"?<><h1>¿Qué tema?</h1><div className={styles.choiceGrid}>{topics.map(s=><button key={s} className={topic===s?styles.chosen:styles.choice} onClick={()=>{setTopic(s);if(s!=="Otro")next("audience")}}>{s}<ChevronRight size={17}/></button>)}</div>{topic==="Otro"?<div className={styles.field}><input autoFocus maxLength={220} value={otherTopic} placeholder="Describe el tema de tu video" onChange={e=>setOtherTopic(e.target.value)}/><button className={styles.primary} disabled={otherTopic.trim().length<4} onClick={()=>next("audience")}>Continuar</button></div>:null}</>:null}
   {stage==="audience"?<><h1>¿Para quién?</h1><div className={styles.choiceGrid}>{audiences.map(s=><button className={audience===s?styles.chosen:styles.choice} key={s} onClick={()=>{setAudience(s);if(s!=="Otro")next("style")}}>{s}<ChevronRight size={17}/></button>)}</div>{audience==="Otro"?<div className={styles.field}><input value={otherAudience} placeholder="Describe tu público" onChange={e=>setOtherAudience(e.target.value)}/><button className={styles.primary} disabled={otherAudience.trim().length<3} onClick={()=>next("style")}>Continuar</button></div>:null}</>:null}
