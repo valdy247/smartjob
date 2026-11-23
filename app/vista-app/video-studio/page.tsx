@@ -82,9 +82,11 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const [subtitles,setSubtitles]=useState(true);
  const [platform,setPlatform]=useState("idea"),[trendResults,setTrendResults]=useState<Trend[]>([]);
  const order=stepsFor(platform);
+ const normalizeCountrySearch=(value:string)=>value.normalize("NFD").replace(/\p{M}/gu,"").toLocaleLowerCase("es");
+ const searchCountry=normalizeCountrySearch(trendCountrySearch.trim());
  const matchingTrendCountries=VIDEO_STUDIO_COUNTRIES.filter(country=>
-  !trendCountrySearch.trim()||country.name.toLocaleLowerCase("es").includes(trendCountrySearch.trim().toLocaleLowerCase("es"))||
-  country.code.toLocaleLowerCase().includes(trendCountrySearch.trim().toLocaleLowerCase())||country.code===trendCountry);
+  !searchCountry||normalizeCountrySearch(country.name).includes(searchCountry)||
+  country.code.toLocaleLowerCase().includes(searchCountry)||country.code===trendCountry);
  const selectedTrendCountry=VIDEO_STUDIO_COUNTRIES.find(country=>country.code===trendCountry);
  const [ideaPrompt,setIdeaPrompt]=useState("");
  const [exampleStyle,setExampleStyle]=useState<Style|null>(null);
