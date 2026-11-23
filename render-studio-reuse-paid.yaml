@@ -1,0 +1,23 @@
+# Proposed, reversible reuse of the existing paid "smartjob" Render service.
+# This file is separate from the original render.yaml that still describes
+# the live-bridge call server. No second paid service should be created.
+# Apply ONLY after reviewing a Render Blueprint plan that adopts srv-dbntaoc9v7es73dn7h7g.
+services:
+  - type: web
+    name: smartjob
+    runtime: docker
+    repo: https://github.com/valdy247/smartjob
+    branch: release/vmv-business-mvp-v1
+    plan: 0.5c-512mb
+    region: oregon
+    dockerContext: services/vmv-studio-worker
+    dockerfilePath: services/vmv-studio-worker/Dockerfile
+    healthCheckPath: /healthz
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Keep video job claiming OFF until credentials and FFmpeg are verified.
+      # Existing call credentials remain stored for a later rollback.
+      - key: VMV_STUDIO_WORKER_ENABLED
+        value: "false"
