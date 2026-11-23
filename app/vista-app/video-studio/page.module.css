@@ -66,12 +66,16 @@
 .exampleCaption button{display:flex;align-items:center;justify-content:center;gap:8px;background:white;border:0;border-radius:12px;color:#5e2a8b;font-weight:850;padding:12px 20px;margin-top:5px;cursor:pointer}
 
 .trends{display:grid;gap:13px;margin:21px 0}
-.trendCard{display:grid;grid-template-columns:133px 1fr;align-items:stretch;gap:14px;border-radius:19px;border:1px solid #e9dfef;padding:12px;box-shadow:0 8px 23px #50386416}
-.trendPreview{width:133px;aspect-ratio:9/16;border-radius:13px;position:relative;align-self:start}
-.trendPreview img{width:100%;height:100%;object-fit:cover;object-position:center}
+.trendCard{display:grid;grid-template-columns:133px minmax(0,1fr);gap:12px;align-items:stretch;height:252px;overflow:hidden;border-radius:19px;border:1px solid #e9dfef;padding:11px;box-shadow:0 8px 23px #50386416}
+.trendPreview{width:133px;height:100%;position:relative;border-radius:13px;overflow:hidden;background:#eee9f2}
+.trendPreview img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
 .trendSource{position:absolute;left:8px;top:9px;font-size:10px;letter-spacing:.03em;font-weight:800;color:white;background:#ae3358d9;padding:5px 7px;border-radius:7px}
-.trendActions{justify-content:center;gap:12px}
-.trendActions a,.trendActions button{width:100%;min-height:50px;background:#f3ebfc;color:#7540a8;border-radius:12px;font-size:12px;font-weight:800;padding:12px}
+.trendBody{display:flex;flex-direction:column;gap:9px;min-width:0;min-height:0;overflow:hidden}
+.trendCopy{display:flex;flex-direction:column;gap:5px;min-width:0;min-height:0;overflow:hidden}
+.trendTitle{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;font-size:13px;line-height:1.35;letter-spacing:-.015em;color:#34263f}
+.trendDescription{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden;margin:0;font-size:11px;line-height:1.4;color:#85748f;overflow-wrap:anywhere}
+.trendActions{display:flex;flex-direction:column;gap:7px;margin-top:auto;flex-shrink:0}
+.trendActions a,.trendActions button{width:100%;min-height:41px;display:flex;justify-content:center;align-items:center;gap:5px;background:#f3ebfc;color:#7540a8;border:0;border-radius:11px;font-size:11px;font-weight:800;padding:9px 6px;text-align:center;text-decoration:none;cursor:pointer}
 .trendActions a:hover,.trendActions button:hover{background:#e8daf9}
 .trendActions button{background:#eee0ff;color:#6434a0}
 .trendActions button:disabled{opacity:.55}
@@ -127,9 +131,9 @@
  .styleInfo strong{font-size:14px}
  .styleInfo small{font-size:10px}
  .exampleButton{font-size:11px;min-height:39px}
- .trendCard{grid-template-columns:112px 1fr;gap:10px;padding:9px}
- .trendPreview{width:112px}
- .trendActions a,.trendActions button{font-size:11px;min-height:47px;padding:10px}
+ .trendCard{grid-template-columns:108px minmax(0,1fr);height:244px;gap:10px;padding:9px}
+ .trendPreview{width:108px}
+ .trendActions a,.trendActions button{font-size:10px;min-height:42px;padding:7px 4px}
  .ideaCard,.planSummary{padding:16px}
 }
 @media(max-width:370px){
@@ -137,8 +141,8 @@
  .homeCardInfo strong{font-size:15px}
  .styleGraphic{height:167px}
  .styleInfo{min-height:72px}
- .trendCard{grid-template-columns:96px 1fr}
- .trendPreview{width:96px}
+ .trendCard{grid-template-columns:94px minmax(0,1fr);height:238px}
+ .trendPreview{width:94px}
  .trendActions a,.trendActions button{font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){
