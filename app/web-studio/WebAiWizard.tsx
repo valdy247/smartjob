@@ -5,7 +5,7 @@ import {ArrowLeft,ArrowRight,Check,CheckCircle2,Image as ImageIcon,LoaderCircle,
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {getSupabase} from "@/lib/supabase";
 import {normalizeSocialLinks} from "@/lib/web-builder-social";
-import type {SiteIntake,SiteProposal,SiteProduct,SiteDesignPreferences} from "@/lib/web-builder-templates";
+import {applyChosenSiteDesign,type SiteIntake,type SiteProposal,type SiteProduct,type SiteDesignPreferences} from "@/lib/web-builder-templates";
 const TemplateProposals=dynamic(()=>import("./TemplateProposals"),{ssr:false,loading:()=>
  <div role="status" style={{padding:18,color:"#7e57b2"}}>Preparando vista previa de tu web…</div>
 });
@@ -45,7 +45,7 @@ const shapes:{id:ImageShape;label:string;description:string}[]=[
  {id:"pill",label:"Orgánicas",description:"Curvas pronunciadas"},
  {id:"bordered",label:"Con marco",description:"Contorno destacado"}
 ];
-const stepNames=["Tu negocio","3 colores","Tipografía","Fotos y marcos","Conexiones","Confirmar"];
+const stepNames=["Tu negocio","Diseño","Personaliza","Imágenes","Conexiones","Revisar"];
 const toServices=(s:string)=>s.split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean).slice(0,20);
 const fmtPrice=(cents:number)=>"$"+(cents/100).toFixed(2);
 export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy:boolean;onChoose:(input:SiteIntake,proposal:SiteProposal)=>void}){
@@ -78,6 +78,7 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
  const [error,setError]=useState("");
  const [generating,setGenerating]=useState(false);
  const [proposal,setProposal]=useState<SiteProposal|null>(null);
+ const [selectedTemplate,setSelectedTemplate]=useState<SiteProposal|null>(null);
  const applyBusiness=(b:Business)=>{
   setAgentChoice(null);setReplyMode("manual");
   setBusinessId(b.id);setForm({business:b.name||"",categoryId:b.category_id||"",phone:b.phone||"",
@@ -158,7 +159,7 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
    if(form.business.trim().length<2||!form.categoryId){setError("Completa el nombre y la categoría del negocio.");return;}
    if(form.email.trim()&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())){setError("Revisa el correo comercial.");return;}
   }
-  if(step===1&&colors.length!==3){setError("Selecciona exactamente tres colores.");return;}
+  if(step===2&&colors.length!==3){setError("Selecciona exactamente tres colores.");return;}
   if(step===3&&!cover&&!skipPhotos){setError("Agrega una foto real de portada o marca «Continuar sin fotos por ahora».");return;}
   setError("");setStep(s=>Math.min(5,s+1));
  };
@@ -174,7 +175,7 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
  },[form,inventory,booking,catalog,socials,selectedDesign,logo,cover,gallery,selectedBusiness]);
  const generate=async()=>{
   if(busy||generating)return;
-  if(colors.length!==3){setError("Selecciona tres colores.");setStep(1);return;}
+  if(colors.length!==3){setError("Selecciona tres colores.");setStep(2);return;}
   if(aiState!=="ready"){setError(aiError||"No se ha conectado el generador de IA.");return;}
   setGenerating(true);setError("");
   try{
@@ -183,25 +184,33 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
    if(!session?.access_token)throw Error("Inicia sesión de nuevo.");
    const res=await fetch("/api/web-services/generate-site",{
     method:"POST",cache:"no-store",headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
-    body:JSON.stringify({intake:input,direction:context.trim().slice(0,360)})
+    body:JSON.stringify({intake:input,direction:([selectedTemplate?"Inspírate en el estilo "+selectedTemplate.name+". ":"",context.trim()].filter(Boolean).join("")).slice(0,360)})
    });
    const result=await res.json() as {proposal?:SiteProposal;error?:string};
    if(!res.ok||!result.proposal?.data)throw Error(result.error||"No pudimos crear el diseño.");
-   setProposal(result.proposal);
+   setProposal({...result.proposal,data:applyChosenSiteDesign(result.proposal.data,selectedDesign)});
   }catch(e){setError(e instanceof Error?e.message:"No se pudo crear el diseño.");}
   finally{setGenerating(false);}
  };
  if(proposal)return <TemplateProposals input={input} generated={proposal} busy={busy} onBack={()=>setProposal(null)}
   onChoose={p=>onChoose(input,p)}/>;
+ if(step===1)return <TemplateProposals input={input} busy={busy||generating}
+  onBack={()=>{setStep(0);setError("");}}
+  onChoose={chosen=>{
+   setSelectedTemplate(chosen);
+   const order=Number(chosen.id.split("-").pop()||0);
+   const presets=[["#835CD5","#79CEB8","#293F77"],["#293F77","#F3E9D7","#EE8AA9"],["#3D4052","#D5A13F","#79CEB8"]];
+   setColors(presets[order]||presets[0]);setError("");setStep(2);
+  }}/>;
  return <section className={styles.root}>
   <header className={styles.heading}><span><Sparkles size={16}/> VMV AI WEB STUDIO</span>
-   <h1>Diseña una web que se parezca a tu negocio<span>.</span></h1>
-   <p>Usaremos la información que ya tiene VMV. Puedes corregirla antes de generar.</p></header>
+   <h1>Crea una web profesional, a tu manera<span>.</span></h1>
+   <p>Elige una plantilla y personalízala con tus datos. Si quieres, la IA creará una alternativa.</p></header>
   <nav className={styles.steps} aria-label="Pasos de creación">{stepNames.map((n,i)=>
    <button key={n} type="button" aria-current={step===i?"step":undefined} disabled={i>step||busy||generating}
     onClick={()=>{setStep(i);setError("");}}><b>{i<step?<Check size={14}/>:i+1}</b><span>{n}</span></button>)}</nav>
   {step===0?<div className={styles.panel}>
-   <h2>01 · Tu negocio y sus datos</h2>
+   <h2>01 · Tu negocio</h2>
    <p>Un solo perfil para Marketing, agentes y Web Services. Esta copia es editable y no cambia tu perfil central.</p>
    {loading?<p role="status"><LoaderCircle size={15}/> Cargando tu negocio…</p>:null}
    {businesses.length?<label>Negocio de VMV<select value={businessId} onChange={e=>{const b=businesses.find(x=>x.id===e.target.value);if(b){applyBusiness(b);setCatalog([]);setError("");}}}>
@@ -221,23 +230,23 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
    <label>Servicios principales (uno por línea)<textarea value={form.services} rows={3} maxLength={1000} onChange={e=>patch("services",e.target.value)}/></label>
    {selectedBusiness?.products?<small className={styles.note}>VMV también conserva los productos descritos en tu perfil. El catálogo verificado se carga si activas Inventario.</small>:null}
   </div>:null}
-  {step===1?<div className={styles.panel}>
-   <h2>02 · Selecciona 3 colores para tu web</h2><p>El orden importa: principal, secundario y detalles. Puedes cambiar cualquiera.</p>
+  {step===2?<div className={styles.panel}>
+   <h2>03 · Personaliza tu diseño</h2>
+   <p>Empezamos con <strong>{selectedTemplate?.name||"un diseño profesional"}</strong>. Personaliza los colores y la tipografía en una pantalla. Todo seguirá editable.</p>
+   <h3 className={styles.frameHeading}>Tus colores</h3>
    <div className={styles.colorGrid}>{palette.map(([name,hex])=>{const rank=colors.indexOf(hex);
     return <button key={hex} type="button" className={styles.colorTile} aria-pressed={rank>=0}
      onClick={()=>toggleColor(hex)} title={name+" · "+hex}>
      <span className={styles.swatch} style={{backgroundColor:hex}}>{rank>=0?<b>{rank+1}</b>:null}</span>
      <small>{name}</small></button>})}</div>
    <div className={styles.palettePreview}><strong>{colors.length}/3 colores</strong>
-    <div>{colors.map((hex,i)=><span key={hex} style={{background:hex,color:i===0?"#fff":"#201a29"}}>{["Principal","Secundario","Detalle"][i]}</span>)}</div></div>
-  </div>:null}
-  {step===2?<div className={styles.panel}>
-   <h2>03 · ¿Qué tipografía te representa?</h2><p>Prueba estas fuentes populares. Quedará disponible para ajustar en el Editor 2.0.</p>
+    <div>{colors.map((hex,i)=><span key={hex} style={{backgroundColor:hex,color:i===0?"#fff":"#201a29"}}>{["Principal","Secundario","Detalle"][i]}</span>)}</div></div>
+   <h3 className={styles.frameHeading}>Tipografía</h3>
    <div className={styles.fontGrid}>{fonts.map(item=><button type="button" key={item.id} aria-pressed={font===item.id}
-    onClick={()=>setFont(item.id)}><small>{item.label}</small><strong style={{fontFamily:item.css}}>{item.sample}</strong></button>)}</div>
+     onClick={()=>setFont(item.id)}><small>{item.label}</small><strong style={{fontFamily:item.css}}>{item.sample}</strong></button>)}</div>
   </div>:null}
   {step===3?<div className={styles.panel}>
-   <h2>04 · Tus fotografías, tu identidad</h2><p>La IA utilizará las fotos reales que selecciones para la portada y la galería. No inventará imágenes ni precios de tus productos.</p>
+   <h2>04 · Tus imágenes</h2><p>La IA utilizará las fotos reales que selecciones para la portada y la galería. No inventará imágenes ni precios de tus productos.</p>
    <div className={styles.imageSelectors}>
     <div><strong>Logo del negocio (opcional)</strong><BuilderImageField kind="logo" value={logo} onChange={setLogo}/></div>
     <div><strong>Tu mejor fotografía de portada *</strong><small>Producto, local o trabajo propio, en horizontal y con buena luz.</small><BuilderImageField value={cover} onChange={url=>{setCover(url);if(url)setSkipPhotos(false);}}/></div>
@@ -284,13 +293,14 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
    </div>:null}
   </div>:null}
   {step===5?<div className={styles.panel}>
-   <h2>06 · Últimos detalles para la IA</h2>
-   <p>Cuéntale el estilo, público y prioridades. No hace falta repetir la información del negocio.</p>
+   <h2>06 · Revisa y crea tu web</h2>
+   <p>Continúa con tu diseño o solicita una alternativa con IA. Ninguno se publicará automáticamente.</p>
    <label>Indicaciones adicionales (opcional)<textarea value={context} maxLength={360} rows={4}
     placeholder="Ej. Imagen moderna y premium, muy fácil de usar desde móvil, fotos grandes, llamada a la acción visible…"
     onChange={e=>setContext(e.target.value)}/></label>
    <div className={styles.summary}>
     <div><small>Negocio</small><strong>{form.business}</strong></div>
+     <div><small>Plantilla</small><strong>{selectedTemplate?.name||"Diseño profesional"}</strong></div>
     <div><small>Colores</small><span className={styles.miniColors}>{colors.map(c=><i key={c} style={{background:c}}/>)}</span></div>
     <div><small>Fuente</small><strong>{fonts.find(f=>f.id===font)?.label}</strong></div>
     <div><small>Imágenes</small><strong>{shapes.find(f=>f.id===shape)?.label} · {[cover,...gallery].filter(Boolean).length} fotos · {galleryColumns} columnas</strong></div>
@@ -299,9 +309,13 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
    </div>
    <div className={styles.connection} role="status">{aiState==="checking"?<><LoaderCircle size={16}/> Comprobando IA…</>:
     aiState==="ready"?<><CheckCircle2 size={16}/> {aiDailyLimit===null?"Modo de pruebas: sin límite diario por cuenta. Sujeto a la capacidad compartida de IA.":`Generador de VMV conectado. Hasta ${aiDailyLimit} generaciones de IA por día.`}</>:
-    <><ShieldCheck size={16}/> {aiError||"La IA no está disponible."} <a href="/web-studio?mode=templates">Usar plantillas</a></>}</div>
-   <button type="button" className={styles.generate} disabled={aiState!=="ready"||generating||busy} onClick={()=>void generate()}>
-    {generating?<LoaderCircle size={18}/>:<Sparkles size={18}/>} {generating?"Creando tu diseño…":"Generar mi web con IA"} <ArrowRight size={17}/></button>
+    <><ShieldCheck size={16}/> La IA no está disponible ahora; puedes continuar con tu plantilla.</>}</div>
+   <button type="button" className={styles.templateContinue} disabled={!selectedTemplate||busy||generating}
+     onClick={()=>{if(selectedTemplate)setProposal({...selectedTemplate,data:applyChosenSiteDesign(selectedTemplate.data,selectedDesign)});}}>
+     <CheckCircle2 size={18}/> Continuar con mi diseño <ArrowRight size={17}/>
+    </button>
+    <button type="button" className={styles.generate} disabled={aiState!=="ready"||generating||busy} onClick={()=>void generate()}>
+    {generating?<LoaderCircle size={18}/>:<Sparkles size={18}/>} {generating?"Creando tu diseño…":"Crear alternativa con IA"} <ArrowRight size={17}/></button>
   </div>:null}
   {error?<p className={styles.error} role="alert">{error}</p>:null}
   <footer className={styles.footer}>
