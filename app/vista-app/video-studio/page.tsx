@@ -7,6 +7,7 @@ import {useInterfaceLanguage} from "@/lib/i18n-web";
 import VMVAuthGateway from "@/components/VMVAuthGateway";
 import PilotVoiceStep from "../vmv-pilot/PilotVoiceStep";
 import type {PilotLanguage,PilotVoiceProvider} from "@/lib/vmv-pilot-voice-config";
+import {VIDEO_STUDIO_COUNTRIES} from "@/lib/vmv-studio-countries";
 import styles from "./page.module.css";
 
 type Stage="home"|"topic"|"audience"|"style"|"duration"|"language"|"voice"|"subtitles"|"source"|"trends"|"idea"|"plan"|"quality"|"summary"|"images"|"progress"|"result"|"history";
@@ -80,6 +81,10 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const [subtitles,setSubtitles]=useState(true);
  const [platform,setPlatform]=useState("idea"),[trendResults,setTrendResults]=useState<Trend[]>([]);
  const order=stepsFor(platform);
+ const matchingTrendCountries=VIDEO_STUDIO_COUNTRIES.filter(country=>
+  !trendCountrySearch.trim()||country.name.toLocaleLowerCase("es").includes(trendCountrySearch.trim().toLocaleLowerCase("es"))||
+  country.code.toLocaleLowerCase().includes(trendCountrySearch.trim().toLocaleLowerCase())||country.code===trendCountry);
+ const selectedTrendCountry=VIDEO_STUDIO_COUNTRIES.find(country=>country.code===trendCountry);
  const [ideaPrompt,setIdeaPrompt]=useState("");
  const [exampleStyle,setExampleStyle]=useState<Style|null>(null);
  const [draftProgress,setDraftProgress]=useState(0);
@@ -103,7 +108,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const autoApprovalRef=useRef<string>("");
  const [trendConsent,setTrendConsent]=useState(false);
  const [trendCountry,setTrendCountry]=useState("US");
- const [trendLanguage,setTrendLanguage]=useState("es");
+ const [trendCountrySearch,setTrendCountrySearch]=useState("");
  useEffect(()=>{
   // Direct Preview links also open the phone simulator; embedded visits never redirect.
   if(embedded||window.self!==window.top||new URLSearchParams(window.location.search).get("standalone")==="1")return;
@@ -193,7 +198,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const next=(s:Stage)=>{setError("");setStage(s)};
  const previous=()=>{setError("");if(stage==="images"||stage==="progress"||stage==="result"){setStage("history");void loadHistory();return;}
   const idx=order.indexOf(stage);setStage(idx>0?order[idx-1]:"home");};
- const reset=()=>{clientKeyRef.current="";autoApprovalRef.current="";setNarrationDraft("");setStage("topic");setTopic("");setOtherTopic("");setAudience("Público general");setVisual("stickman");setSeconds(30);setScenes([]);setTitle("");setIdeaPrompt("");setOutline(null);setDraftProgress(0);setManualDraft(false);setPlanNotice("");setPlatform("idea");setSelectedTrend(null);setApprovedCost(false);setJob(null);setError("");};
+ const reset=()=>{clientKeyRef.current="";autoApprovalRef.current="";setNarrationDraft("");setTrendCountry("US");setTrendCountrySearch("");setTrendResults([]);setStage("topic");setTopic("");setOtherTopic("");setAudience("Público general");setVisual("stickman");setSeconds(30);setScenes([]);setTitle("");setIdeaPrompt("");setOutline(null);setDraftProgress(0);setManualDraft(false);setPlanNotice("");setPlatform("idea");setSelectedTrend(null);setApprovedCost(false);setJob(null);setError("");};
  const trendSearch=async()=>{
   setError("");setBusy(true);setTrendResults([]);
   try{
@@ -201,7 +206,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
    const access=await authenticate();
    const query=encodeURIComponent((topic==="Otro"?otherTopic:topic).slice(0,90));
    const headers={Authorization:"Bearer "+access,"X-VMV-YouTube-Consent":"accepted"};
-   let res=await fetch("/api/video-studio/trends?q="+query+"&country="+encodeURIComponent(trendCountry)+"&language="+encodeURIComponent(trendLanguage),{cache:"no-store",headers});
+   let res=await fetch("/api/video-studio/trends?q="+query+"&country="+encodeURIComponent(trendCountry),{cache:"no-store",headers});
    let data=await res.json().catch(()=>null);
    if(!res.ok&&res.status!==202)throw Error(typeof data?.error==="string"?data.error:"studio_trends_unavailable");
    let attempts=0;
@@ -240,7 +245,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
     idea:chosenTrend?.title?.trim().slice(0,220)||ideaPrompt.trim()||mainTopic,
     audience:audience==="Otro"?otherAudience:audience,
     style:visual,seconds,language,
-    source:chosenTrend?{platform,sourceId:chosenTrend.sourceId,title:chosenTrend.title,url:chosenTrend.url}:null,
+    source:chosenTrend?{platform,sourceId:chosenTrend.sourceId,title:chosenTrend.title,url:chosenTrend.url,country:trendCountry}:null,
     confirmPlanCost:true
    };
    // Generate short-form creative scripts atomically from the chosen topic.
@@ -393,7 +398,17 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
   {stage==="trends"?<>
    <h1>Tendencias · {platform==="youtube"?"YouTube":platform.charAt(0).toUpperCase()+platform.slice(1)}</h1>
    {platform==="youtube"?<>
-    <p className={styles.help}>Elige uno de tres videos reales como inspiración. Crearemos un guion nuevo, no una copia.</p>
+    <p className={styles.help}>Elige uno de tres videos populares del país seleccionado. La búsqueda incluye videos de cualquier idioma; el idioma del guion y del video es el que elegiste antes en el Wizard.</p>
+    <div className={styles.field}>
+     <label htmlFor="vmv-trend-country-search">País de las tendencias</label>
+     <input id="vmv-trend-country-search" type="search" value={trendCountrySearch} disabled={busy}
+      placeholder="Buscar entre todos los países…" onChange={e=>setTrendCountrySearch(e.target.value)}/>
+     <select aria-label="País de las tendencias" value={trendCountry} disabled={busy}
+      onChange={e=>{setTrendCountry(e.target.value);setTrendCountrySearch("");setTrendResults([]);setSelectedTrend(null);}}>
+      {matchingTrendCountries.map(country=><option key={country.code} value={country.code}>{country.name}</option>)}
+     </select>
+     <small>País seleccionado: {selectedTrendCountry?.name||trendCountry}. Si YouTube no publica tendencias para ese país, te lo indicaremos sin mostrar resultados de otros países.</small>
+    </div>
     <label className={styles.consent}><input type="checkbox" checked={trendConsent} onChange={e=>setTrendConsent(e.target.checked)}/> Autorizo consultar tendencias públicas de YouTube.</label>
     <button className={styles.primary} disabled={busy||!trendConsent} onClick={()=>void trendSearch()}>{busy?<LoaderCircle className={styles.spin} size={18}/>:<Search size={18}/>} {busy?"Buscando videos reales…":"Mostrar 3 tendencias"}</button>
     <div className={styles.trends}>{trendResults.map(t=><article className={styles.trendCard} key={t.sourceId}>
@@ -409,7 +424,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
       </div>
      </div>
     </article>)}</div>
-    {trendResults.length>0?<p className={styles.note}>Miniaturas y enlaces procedentes de YouTube. No representan un análisis del contenido completo.</p>:null}
+    {trendResults.length>0?<p className={styles.note}>Videos de la lista regional de popularidad de YouTube para {selectedTrendCountry?.name||trendCountry}. El país no indica dónde se grabó el video y no modifica el idioma del guion. Los enlaces y miniaturas son originales; no analizamos el contenido completo.</p>:null}
    </>:<div className={styles.unavailable}><Clock3 size={25}/><strong>Conexión pendiente</strong><p>Esta plataforma todavía no dispone de una búsqueda oficial verificada. No mostraremos tendencias inventadas.</p></div>}
    <button className={styles.secondary} onClick={()=>{setSelectedTrend(null);next("idea")}}>Continuar con mi idea <ArrowRight size={16}/></button>
   </>:null}
