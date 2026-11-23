@@ -246,7 +246,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
   try{
    const mainTopic=(topic==="Otro"?otherTopic:topic).trim()||ideaPrompt.trim().slice(0,180);
    const shared={
-    topic:chosenTrend?.title?.trim().slice(0,220)||mainTopic,
+    topic:mainTopic,
     idea:chosenTrend?.title?.trim().slice(0,220)||ideaPrompt.trim()||mainTopic,
     audience:audience==="Otro"?otherAudience:audience,
     style:visual,seconds,language,
