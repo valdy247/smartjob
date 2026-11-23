@@ -391,13 +391,19 @@ async function processJob(job){
     if(closing)throw Error("worker_stopping");
     if(typeof scenes[i].imagePath==="string"&&scenes[i].imagePath.startsWith(prefix)&&scenes[i].imagePath.endsWith(".jpg"))continue;
     const image=path.join(dir,"image-"+i+".jpg");
-    let accepted=null;
+    let accepted=null,lastCandidate=null;
     for(let attempt=0;attempt<2;attempt++){
      const buffer=await makeImage(job,scenes[i],null);
+     lastCandidate=buffer;
      if(await validateSceneImage(job,scenes[i],buffer)){accepted=buffer;break;}
      log("frame_rejected",{id:job.id,scene:i+1,attempt:attempt+1});
     }
-    if(!accepted)throw Error("scene_visual_mismatch");
+    if(!accepted){
+     // The user reviews and explicitly approves every storyboard image before animation.
+     // Keep a rejected candidate for manual review rather than fail the entire project.
+     accepted=lastCandidate;
+     log("frame_requires_manual_review",{id:job.id,scene:i+1});
+    }
     await writeFile(image,accepted);
     await persistAsset(job,"image_"+i,image,"image/jpeg");
     scenes[i]={...scenes[i],imagePath:job.assets["image_"+i],approved:false};
