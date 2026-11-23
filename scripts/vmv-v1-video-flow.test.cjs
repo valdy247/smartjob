@@ -98,7 +98,7 @@ test("failed AI cannot masquerade as completed scenes; manual writing is opt-in"
  assert.match(ui,/Escribir guion manualmente/);
  assert.match(ui,/setManualDraft\(true\)/);
  assert.match(ui,/setError\(errorMessages\[code\]\?code:"studio_plan_provider_unavailable"\)/);
- assert.match(ui,/setScenes\(\[\]\);setNarrationDraft\(" "\);setManualDraft\(false\)/);
+ assert.match(ui,/setScenes\(\[\]\);setNarrationDraft\(""\);setManualDraft\(false\)/);
  assert.doesNotMatch(ui,/else makeEditableDraft\(\)/);
  assert.match(ui,/Reintentar IA/);
  assert.match(ui,/window\.confirm\("Regenerar con IA reemplazará/);
