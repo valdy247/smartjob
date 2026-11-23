@@ -5,6 +5,7 @@ import {validPilotLanguage,pilotLanguageName} from "@/lib/vmv-pilot-voice-config
 import {isVideoStudioCountry} from "@/lib/vmv-studio-countries";
 import {splitNarrationIntoMoments} from "@/lib/vmv-studio-semantic-beats";
 import {applyStudioAudit,validStudioDraft,studioAuditIssues} from "@/lib/vmv-studio-script-auditor";
+import {rescueStudioDraft,rescueVisualBatch} from "@/lib/vmv-studio-preflight-rescue";
 import type {StudioAuditDecision,StudioAuditScene} from "@/lib/vmv-studio-script-auditor";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -213,7 +214,9 @@ export async function POST(req:NextRequest){
    "Respond quickly; this is a small final polish, NOT an open-ended content generation loop.";
   let feedback="";
   let hadValidResponse=false;
-  const outputLimit=Math.min(10500,1700+scenes.length*225);
+  // A complete rewrite can be longer than a terse diagnosis. Avoid truncating
+  // JSON before all revised scenes have arrived.
+  const outputLimit=Math.min(12000,1600+scenes.length*390);
   for(let attempt=0;attempt<2;attempt++){
    try{
     const response=await askAiAgent({
@@ -226,7 +229,7 @@ export async function POST(req:NextRequest){
      })}],
      jsonMode:true,jsonSchema:{name:"vmv_video_audit",schema:outputSchema("audit")},
      maxOutputTokens:outputLimit,temperature:attempt===0?.3:.15,
-     timeoutMs:attempt===0?23000:19000
+     timeoutMs:attempt===0?18000:14000
     });
     const parsed=parseAiJson(response);
     const report=parsed as unknown as StudioAuditDecision;
@@ -250,6 +253,18 @@ export async function POST(req:NextRequest){
     feedback="Return a valid concise JSON object with a complete, coherent scene list.";
    }
   }
+  // Never discard the creator's already-generated story solely because the
+  // optional editorial model timed out or returned malformed JSON.
+  const recovered=rescueStudioDraft(outline,scenes,seconds,language);
+  if(recovered){
+   console.warn("[vmv-video-studio/plan] audit_recovered",{
+    originalScenes:scenes.length,finalScenes:recovered.scenes.length,aiResponse:hadValidResponse
+   });
+   return json({...recovered,auditPassed:true});
+  }
+  console.warn("[vmv-video-studio/plan] audit_unrecoverable",{
+   originalScenes:scenes.length,issues:baseIssues,aiResponse:hadValidResponse
+  });
   return json({error:hadValidResponse?"studio_plan_incomplete":"studio_plan_provider_unavailable",detail:"audit"},502);
  }
  const start=Number(b?.start),batchSize=Number(b?.batchSize);
@@ -268,6 +283,12 @@ export async function POST(req:NextRequest){
  const result=await askStructured("scenes",system,
   {topic,idea:idea||topic,outline,voiceoverExcerpts,creativeBeatReferences:outline.beats,start,source:sourceContext},
   value=>readScenes(value,batchSize),3200);
- if(!result.value)return json({error:result.error,detail:"scenes"},result.error==="studio_plan_incomplete"?502:503);
+ if(!result.value){
+  console.warn("[vmv-video-studio/plan] visual_batch_recovered",{
+   start,batchSize,reason:result.error
+  });
+  const fallback=rescueVisualBatch(voiceoverExcerpts,outline,start);
+  return json({start,scenes:fallback,recovered:true});
+ }
  return json({start,scenes:result.value.map((scene,i)=>({...scene,speech:voiceoverExcerpts[i]}))});
 }
