@@ -13,7 +13,7 @@ type Stage="home"|"topic"|"audience"|"style"|"duration"|"language"|"voice"|"subt
 type Style="stickman"|"cartoon2d"|"cartoon3d"|"clay"|"illustrated";
 type Quality="turbo"|"high";
 type Scene={speech:string;imagePrompt:string;caption:string;approved?:boolean;imageUrl?:string;imagePath?:string};
-type Trend={sourceId:string;title:string;thumbnail:string;url:string;channel?:string;views?:number};
+type Trend={sourceId:string;title:string;description?:string;thumbnail:string;url:string;channel?:string;views?:number};
 type Job={id:string;status:string;phase:string;progress:number;scenes:Scene[];seconds:number;style:string;quality_mode:string;title:string;videoUrl?:string|null;created_at:string;failure_code?:string|null;etaSeconds?:number|null;charge_credits?:number;credits_settled?:boolean;version?:number};
 type Wallet={balance:number;reserved:number;available:number};
 type CreditPack={id:string;credits:number;usdCents:number};
@@ -60,7 +60,9 @@ const errorMessages:Record<string,string>={
  studio_plan_invalid_outline:"El plan de escenas debe regenerarse.",
  studio_trends_unavailable:"No podemos consultar las tendencias en este momento.",
  studio_plan_confirmation_required:"Confirma que quieres generar el guion antes de continuar.",
- studio_plan_invalid_batch:"No se pudo organizar el guion. Vuelve a intentarlo."
+ studio_plan_invalid_batch:"No se pudo organizar el guion. Vuelve a intentarlo.",
+ authentication_required:"Tu sesión ha terminado. Inicia sesión para continuar.",
+ video_studio_unavailable:"Este servicio no está disponible ahora. Tus datos del proyecto siguen aquí."
 };
 const sampleInitial:Scene[]=[];
 export default function VideoStudioV1(){
@@ -81,6 +83,8 @@ export default function VideoStudioV1(){
  const [exampleStyle,setExampleStyle]=useState<Style|null>(null);
  const [draftProgress,setDraftProgress]=useState(0);
  const [draftPhase,setDraftPhase]=useState("");
+ const [manualDraft,setManualDraft]=useState(false);
+ const [planNotice,setPlanNotice]=useState("");
  const [outline,setOutline]=useState<{title:string;logline:string;hook:string;ending:string;characters:string;setting:string;beats:string[]}|null>(null);
  const [selectedTrend,setSelectedTrend]=useState<Trend|null>(null);
  const [title,setTitle]=useState(""),[scenes,setScenes]=useState<Scene[]>(sampleInitial);
@@ -157,7 +161,7 @@ export default function VideoStudioV1(){
  const next=(s:Stage)=>{setError("");setStage(s)};
  const previous=()=>{setError("");if(stage==="images"||stage==="progress"||stage==="result"){setStage("history");void loadHistory();return;}
   const idx=order.indexOf(stage);setStage(idx>0?order[idx-1]:"home");};
- const reset=()=>{clientKeyRef.current="";setStage("topic");setTopic("");setOtherTopic("");setAudience("Público general");setVisual("stickman");setSeconds(30);setScenes([]);setTitle("");setIdeaPrompt("");setOutline(null);setDraftProgress(0);setPlatform("idea");setSelectedTrend(null);setApprovedCost(false);setJob(null);setError("");};
+ const reset=()=>{clientKeyRef.current="";setStage("topic");setTopic("");setOtherTopic("");setAudience("Público general");setVisual("stickman");setSeconds(30);setScenes([]);setTitle("");setIdeaPrompt("");setOutline(null);setDraftProgress(0);setManualDraft(false);setPlanNotice("");setPlatform("idea");setSelectedTrend(null);setApprovedCost(false);setJob(null);setError("");};
  const trendSearch=async()=>{
   setError("");setBusy(true);setTrendResults([]);
   try{
@@ -185,11 +189,29 @@ export default function VideoStudioV1(){
   }catch(e){setError(e instanceof Error?e.message:"studio_trends_unavailable");}
   finally{setBusy(false);}
  };
+ const makeEditableDraft=()=>{
+  const subject=(ideaPrompt.trim()||selectedTrend?.title|| (topic==="Otro"?otherTopic:topic).trim()||"Mi historia").slice(0,110);
+  const count=Math.max(3,Math.round(seconds/5));
+  const segments:Scene[]=Array.from({length:count},(_,index)=>{
+   const phase=index===0?"Introducción":index===count-1?"Cierre":index<count/2?"Desarrollo":"Continuación";
+   return {
+    speech:index===0?"Presenta la idea de forma breve, interesante y natural.":
+     index===count-1?"Resume el mensaje principal y termina con claridad.":
+     "Explica una parte concreta de tu historia en esta escena.",
+    imagePrompt:"Escena "+(index+1)+" de "+count+". "+phase+" visual de la idea: "+subject+". Describe personajes, acción, entorno y movimientos de cámara; conserva su apariencia entre las escenas.",
+    caption:index===0?"Idea principal":index===count-1?"Mensaje final":"Escena "+(index+1)
+   };
+  });
+  setTitle(subject.slice(0,100));setScenes(segments);setOutline(null);setManualDraft(true);
+  setDraftProgress(100);setDraftPhase("Borrador editable");
+  setPlanNotice("La IA no completó el guion. Preparamos una estructura editable sin IA para que puedas continuar. Revisa cada escena antes de generar.");
+  setError("");
+ };
  const prepare=async(chosenTrend:Trend|null=selectedTrend)=>{
-  setBusy(true);setError("");setDraftProgress(0);setDraftPhase("Creando una historia original…");
+  setBusy(true);setError("");setManualDraft(false);setPlanNotice("");setDraftProgress(0);setDraftPhase("Creando una historia original…");
   setScenes([]);setOutline(null);
   try{
-   const mainTopic=(topic==="Otro"?otherTopic:topic).trim();
+   const mainTopic=(topic==="Otro"?otherTopic:topic).trim()||ideaPrompt.trim().slice(0,180);
    const shared={
     topic:mainTopic,idea:ideaPrompt.trim()||mainTopic,audience:audience==="Otro"?otherAudience:audience,
     style:visual,seconds,language,
@@ -217,8 +239,13 @@ export default function VideoStudioV1(){
    }
    if(completed.length!==count||completed.some(s=>!s||typeof s.speech!=="string"||typeof s.imagePrompt!=="string"))
     throw Error("studio_plan_incomplete");
-   setScenes(completed);setDraftProgress(100);setDraftPhase("Guion listo para revisar");
-  }catch(e){setError(e instanceof Error?e.message:"studio_plan_provider_unavailable");setScenes([]);}
+   setScenes(completed);setManualDraft(false);setPlanNotice("");setDraftProgress(100);setDraftPhase("Guion listo para revisar");
+  }catch(e){
+   const code=e instanceof Error?e.message:"studio_plan_provider_unavailable";
+   if(["authentication_required","studio_plan_invalid_request","studio_plan_confirmation_required"].includes(code)){
+    setError(code);setScenes([]);
+   }else makeEditableDraft();
+  }
   finally{setBusy(false);}
  };
  const patchScene=(index:number,key:"speech"|"imagePrompt",value:string)=>{setScenes(previous=>previous.map((s,i)=>i===index?{...s,[key]:value}:s));setApprovedCost(false);};
@@ -314,9 +341,15 @@ export default function VideoStudioV1(){
     <button className={styles.primary} disabled={busy||!trendConsent} onClick={()=>void trendSearch()}>{busy?<LoaderCircle className={styles.spin} size={18}/>:<Search size={18}/>} {busy?"Buscando videos reales…":"Mostrar 3 tendencias"}</button>
     <div className={styles.trends}>{trendResults.map(t=><article className={styles.trendCard} key={t.sourceId}>
      <div className={styles.trendPreview}><img src={t.thumbnail} alt={"Miniatura del video original de "+t.channel} loading="lazy"/><span className={styles.trendSource}>YouTube</span></div>
-     <div className={styles.trendActions}>
-      <a href={t.url} target="_blank" rel="noopener noreferrer"><PlayCircle size={17}/> Ver tendencia <ArrowUpRight size={15}/></a>
-      <button disabled={busy} onClick={()=>{setSelectedTrend(t);setScenes([]);next("plan");void prepare(t);}}><Sparkles size={17}/> Proponer idea sobre este tema <ArrowRight size={15}/></button>
+     <div className={styles.trendBody}>
+      <div className={styles.trendCopy}>
+       <strong className={styles.trendTitle} title={t.title}>{t.title}</strong>
+       {t.description?.trim()?<p className={styles.trendDescription}>{t.description.trim()}</p>:null}
+      </div>
+      <div className={styles.trendActions}>
+       <a href={t.url} target="_blank" rel="noopener noreferrer"><PlayCircle size={16}/> Ver tendencia <ArrowUpRight size={14}/></a>
+       <button disabled={busy} onClick={()=>{setSelectedTrend(t);setScenes([]);next("plan");void prepare(t);}}><Sparkles size={16}/> Proponer idea <ArrowRight size={14}/></button>
+      </div>
      </div>
     </article>)}</div>
     {trendResults.length>0?<p className={styles.note}>Miniaturas y enlaces procedentes de YouTube. No representan un análisis del contenido completo.</p>:null}
@@ -355,6 +388,7 @@ export default function VideoStudioV1(){
     <button className={styles.secondary} onClick={()=>next(platform==="idea"?"idea":"trends")}><Pencil size={16}/> Editar idea</button>
    </div>:null}
    {!busy&&scenes.length>0?<div className={styles.planContent}>
+    {manualDraft?<div role="status" className={styles.planDraftNote}><ShieldCheck size={17}/><span>{planNotice}</span><button type="button" disabled={busy} onClick={()=>void prepare(platform==="idea"?null:selectedTrend)}>Reintentar IA</button></div>:null}
     <div className={styles.field}><label>Título</label><input value={title} onChange={e=>setTitle(e.target.value)} maxLength={140}/></div>
     {outline?<div className={styles.planSummary}><span className={styles.kicker}>CONCEPTO CREATIVO</span>
      <label>Historia principal</label><textarea rows={3} value={outline.logline} onChange={e=>setOutline(p=>p?{...p,logline:e.target.value}:p)}/>
@@ -432,7 +466,7 @@ next(response.job.status==="completed"?"result":response.job.status==="awaiting_
 {!jobs.length&&!historyLoading&&!error?<div className={styles.unavailable}><FolderOpen size={30}/><p>Cuando generes un video aparecerá aquí.</p><button onClick={reset} className={styles.primary}>Crear video</button></div>:null}
 </div>
 </>:null}
-  {error?<div role="alert" className={styles.error}><ShieldCheck size={18}/><span>{errorMessages[error]||error}</span></div>:null}
+  {error?<div role="alert" className={styles.error}><ShieldCheck size={18}/><span>{errorMessages[error]||"No se pudo completar la operación. Revisa tu configuración e inténtalo de nuevo."}</span></div>:null}
   {previewExample?<div role="dialog" aria-modal="true" aria-label={"Ejemplo de "+previewExample.label} className={styles.exampleOverlay}>
    <button type="button" onClick={()=>setExampleStyle(null)} className={styles.exampleClose} aria-label="Cerrar ejemplo"><X size={24}/></button>
    <div className={styles.exampleContent}>
