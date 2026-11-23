@@ -35,6 +35,15 @@ test("Video Studio home has only creation and history cards without the removed 
  assert.match(ui,/<strong>Historial<\/strong>/);
 });
 
+test("Video Studio is safe inside the phone Preview and standalone links return to it",()=>{
+ assert.match(ui,/window\.self!==window\.top/);
+ assert.match(ui,/window\.location\.replace\("\/vista-app\?preview=video"\)/);
+ assert.match(ui,/vmv-preview-navigate/);
+ assert.match(ui,/window\.parent\.postMessage/);
+ assert.match(ui,/returnToVMV\(\)/);
+ assert.match(ui,/get\("standalone"\)==="1"/);
+});
+
 test("own idea has short prompt and AI produces editable scenes without null dereference",()=>{
  assert.match(ui,/stage==="idea"/);
  assert.match(ui,/maxLength=\{700\}/);
