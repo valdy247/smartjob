@@ -57,11 +57,12 @@ function parseInput(b:unknown){
   typeof x.title!=="string"||x.title.trim().length<3||x.title.length>140||
   typeof x.topic!=="string"||x.topic.trim().length<3||x.topic.length>220||
   typeof x.audience!=="string"||x.audience.trim().length<2||x.audience.length>140||
-  !["openai","elevenlabs"].includes(String(x.voiceProvider))||
+  !["openai","elevenlabs","none"].includes(String(x.voiceProvider))||
   !isSafeId(x.voiceId,64)||typeof x.subtitles!=="boolean"||
   !validUuid(x.clientKey)||x.confirmCost!==true||!Array.isArray(x.scenes)||
   x.scenes.length!==Number(seconds)/5||!x.scenes.every(sceneValid)||
   x.estimatedCredits!==price(Number(seconds),String(x.qualityMode)))return null;
+ if(x.voiceProvider==="none"&&x.voiceId!=="none")return null;
  if(x.voiceProvider==="openai"&&!openAi.has(String(x.voiceId)))return null;
  if(x.voiceProvider==="elevenlabs"&&!/^[A-Za-z0-9]{15,32}$/.test(String(x.voiceId)))return null;
  return {
