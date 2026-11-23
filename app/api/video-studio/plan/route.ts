@@ -134,7 +134,7 @@ export async function POST(req:NextRequest){
  if(size>18000)return json({error:"studio_plan_invalid_request"},413);
  const b=await req.json().catch(()=>null);
  const mode=b?.mode;
- const topic=safe(b?.topic,220),idea=safe(b?.idea,700),audience=safe(b?.audience,120);
+ const topic=safe(b?.topic,220),idea=safe(b?.idea,3000),audience=safe(b?.audience,120);
  const style=safe(b?.style,40) as keyof typeof STYLES,language=b?.language;
  const seconds=Number(b?.seconds),count=seconds/5;
  if(!["outline","scenes","complete"].includes(mode)||topic.length<3||audience.length<2||
