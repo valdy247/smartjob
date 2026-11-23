@@ -23,3 +23,24 @@
 .cardSelected .preview{background:#f7effd}
 .select:disabled,.none:disabled{opacity:.5;cursor:default}
 @media(max-width:480px){.grid{grid-template-columns:1fr}}
+
+.searchWrap{display:flex;align-items:center;gap:9px;border:1px solid #e3d6ec;border-radius:15px;
+ background:#fff;color:#9162b8;padding:0 13px;margin-bottom:12px}
+.searchWrap:focus-within{outline:2px solid #a574d4;outline-offset:2px}
+.searchWrap input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:#30213c;
+ font:inherit;font-size:14px;padding:13px 0}
+.searchWrap input::placeholder{color:#9b8da7}
+.accentSelect{display:flex;align-items:center;justify-content:space-between;gap:12px;
+ margin:0 0 10px;color:#79529c;font-size:12px;font-weight:750}
+.accentSelect select{max-width:75%;border:1px solid #e3d6ec;border-radius:12px;padding:9px 12px;
+ background:#fff;color:#49335b;font:inherit}
+.count{font-size:11px;color:#806c90;margin:0 0 10px}
+.accent{color:#875db0!important}
+.voiceDescription{font-size:11px!important;line-height:1.35;color:#81718c!important;
+ display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+ text-overflow:ellipsis;white-space:normal!important}
+.empty{font-size:13px;color:#806c90;padding:12px 0}
+.more{display:block;width:100%;margin-top:12px;border:1px solid #e3d6ec;border-radius:12px;
+ background:#fff;color:#79529c;padding:12px;font-weight:800;cursor:pointer}
+.more:hover{border-color:#a270d1}
+.more:focus-visible{outline:3px solid #9162c2;outline-offset:2px}
