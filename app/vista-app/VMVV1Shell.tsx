@@ -1,6 +1,7 @@
 "use client";
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {useRouter,useSearchParams} from "next/navigation";
 import {ArrowLeft,ArrowUpRight,Bot,CheckCircle2,Clapperboard,FileText,Globe,Home,LayoutGrid,LoaderCircle,LogOut,Megaphone,Search,Settings2,ShieldCheck,Sparkles,UserRound,Video,ChartNoAxesCombined,Bell,Rocket,TrendingUp,ChevronLeft} from "lucide-react";
 import type {LucideIcon} from "lucide-react";
@@ -18,6 +19,15 @@ import {readV1Needs,recommendV1Services,type V1NeedsAnswers} from "@/lib/vmv-v1-
 import styles from "./VMVV1Shell.module.css";
 import homeStyles from "./vista-app.module.css";
 
+const VideoStudioPreview=dynamic(()=>import("./video-studio/page"),{
+ ssr:false,
+ loading:()=> <div className={styles.embeddedLoading} role="status" aria-live="polite">
+  <div className={styles.loadingSymbol}><Clapperboard size={28}/></div>
+  <strong>Preparando Video Studio</strong>
+  <p>Tu espacio creativo está listo en un momento.</p>
+  <div className={styles.loadingTrack}><span/></div>
+ </div>
+});
 type Tab="home"|"services"|"account";
 type Service={id:string;name:string;description:string;url?:string;Icon:LucideIcon;className:string;homeTone:string;shortcutId:string};
 const services:Service[]=[
@@ -164,18 +174,23 @@ export default function VMVV1Shell(){
      </div>
      <div className={homeStyles.scrollArea+" "+styles.previewScroll}>
       {embeddedService?<section className={styles.embeddedService} aria-label={embeddedService.name}>
-       <div className={styles.embeddedBar}>
-        <button type="button" aria-label={L("Volver a servicios","Back to services")} onClick={()=>nav("services")}><ChevronLeft size={17}/></button>
-        <strong>{embeddedService.name}</strong>
-       </div>
-       <iframe ref={previewFrameRef} className={styles.embeddedFrame}
-        title={embeddedService.name} src={embeddedService.url+"?vmvEmbed=1"}
-        onLoad={()=>{
-         try{
-          if(previewFrameRef.current?.contentWindow?.location.pathname==="/vista-app")
-           router.push("/vista-app?tab=home");
-         }catch{/* A cross-origin destination cannot control the simulator. */}
-        }}/>
+       {embeddedService.id==="video"?
+        <div className={styles.embeddedContent}>
+         <VideoStudioPreview embedded onExit={()=>nav("services")}/>
+        </div>:<>
+        <div className={styles.embeddedBar}>
+         <button type="button" aria-label={L("Volver a servicios","Back to services")} onClick={()=>nav("services")}><ChevronLeft size={17}/></button>
+         <strong>{embeddedService.name}</strong>
+        </div>
+        <iframe ref={previewFrameRef} className={styles.embeddedFrame}
+         title={embeddedService.name} src={embeddedService.url+"?vmvEmbed=1"}
+         onLoad={()=>{
+          try{
+           if(previewFrameRef.current?.contentWindow?.location.pathname==="/vista-app")
+            router.push("/vista-app?tab=home");
+          }catch{/* A cross-origin destination cannot control the simulator. */}
+         }}/>
+       </>}
       </section>:null}
       {!embeddedService?<>
       {tab==="home"&&assessmentOpen&&profile?<VMVV1NeedsAssessment businessId={profile.id} en={en} initial={needsAnswers} onSaved={answers=>{setNeedsAnswers(answers);setAssessmentOpen(false);}} onClose={()=>setAssessmentOpen(false)}/>:null}
