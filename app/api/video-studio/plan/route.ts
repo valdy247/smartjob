@@ -86,7 +86,7 @@ async function askStructured<T>(stage:"outline"|"scenes"|"audit",system:string,
     messages:[{role:"user",content:JSON.stringify(payload)}],
     jsonMode:true,jsonSchema:{name:"vmv_video_"+stage,schema:outputSchema(stage)},
     maxOutputTokens,temperature:attempt===0?0.35:0.15,
-    timeoutMs:attempt===0?25000:20000
+    timeoutMs:attempt===0?19000:15000
    });
    const parsed=parseAiJson(answer);
    const value=check(parsed);
@@ -170,7 +170,38 @@ export async function POST(req:NextRequest){
     return valueOutline;
    },
    Math.min(5000,1400+Math.ceil(seconds/4)*65));
-  if(!result.value)return json({error:result.error,detail:"outline"},result.error==="studio_plan_incomplete"?502:503);
+  if(!result.value){
+   // Structured metadata may fail independently of a perfectly usable script.
+   // One short narration-only rescue avoids discarding a creator's original idea.
+   try{
+    const plain=await askAiAgent({
+     system:shared+" Write ONLY the uninterrupted spoken narration in "+lang+
+      ", 4 to 7 complete punctuated sentences, about "+Math.round(seconds*(language==="es"?2.3:2.25))+
+      " words. Match the requested duration and topic. No JSON, headings, scene numbers, filler or markdown.",
+     messages:[{role:"user",content:JSON.stringify({topic,idea:idea||topic,audience,seconds,style,source:sourceContext})}],
+     maxOutputTokens:Math.min(1300,350+Math.ceil(seconds*4.2)),temperature:.25,timeoutMs:12000
+    });
+    const narration=safe(plain.replace(/^["']|["']$/g,""),9000);
+    const moments=splitNarrationIntoMoments(narration);
+    if(moments.length>=3&&moments.length<=36){
+     const title=topic.slice(0,100),subject=idea||topic;
+     const outline:Outline={title,logline:("Historia original: "+subject).slice(0,300),
+      hook:moments[0].slice(0,200),ending:moments.at(-1)!.slice(0,200),
+      characters:("Main visual subject: "+topic).slice(0,500),
+      setting:("Consistent visual setting related to "+topic).slice(0,350),
+      narration,beats:moments.map(moment=>moment.slice(0,160))};
+     if(readOutline(outline)){
+      console.warn("[vmv-video-studio/plan] narration_only_rescue_success",{moments:moments.length});
+      return json({outline,moments,count:moments.length,recovered:true});
+     }
+    }
+   }catch(e){
+    console.warn("[vmv-video-studio/plan] narration_only_rescue_failed",{
+     reason:e instanceof Error?e.name:"unknown"
+    });
+   }
+   return json({error:result.error,detail:"outline"},result.error==="studio_plan_incomplete"?502:503);
+  }
   const moments=splitNarrationIntoMoments(result.value.narration);
   return json({outline:result.value,moments,count:moments.length});
  }
