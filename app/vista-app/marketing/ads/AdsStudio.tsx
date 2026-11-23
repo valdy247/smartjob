@@ -735,16 +735,6 @@ export default function AdsStudio({mode="wizard",registerHeaderBack}:{mode?:"wiz
   </details>
 
  </div>;
- if(mode==="wizard"&&!agentBrief&&!draftId)return <div className={styles.workspace}>
-  <div className={styles.simpleCard}>
-   <h2>{localized("Prepara tu anuncio con AI Agents","Prepare your ad with AI Agents")}</h2>
-   <p className={styles.muted}>{handoffLoading?
-    localized("Recibiendo anuncio de tu agente…","Receiving your agent's ad…"):
-    localized("La creación comienza en AI Agents. Tu agente reúne los datos y Marketing revisa el presupuesto.",
-     "Creation starts in AI Agents. Your agent gathers the details and Marketing reviews the budget.")}</p>
-   <a className={styles.primary} href="/vista-app/ai-agents">{localized("Abrir AI Agents","Open AI Agents")}</a>
-  </div>
- </div>;
  return <div className={styles.workspace}>
   <div className={styles.compactIntro}>
    <div><span className={styles.eyebrow}><Megaphone size={15}/>{localized("MARKETING · ANUNCIOS","MARKETING · ADS")}</span>
