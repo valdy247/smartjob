@@ -38,10 +38,18 @@ export function splitNarrationIntoMoments(narration:string):string[]{
  }
  // Keep very short phrases connected to a neighbor, without altering the script.
  const result:string[]=[];
+ let pending="";
  for(const part of refined){
-  if(result.length&&words(part)<4&&result[result.length-1].length+part.length+1<=230)
-   result[result.length-1]+=" "+part;
-  else result.push(part);
+  if(!result.length&&words(part)<4){pending=normalize([pending,part].filter(Boolean).join(" "));continue;}
+  const joined=normalize([pending,part].filter(Boolean).join(" "));
+  pending="";
+  if(result.length&&words(joined)<4&&result[result.length-1].length+joined.length+1<=230)
+   result[result.length-1]+=" "+joined;
+  else result.push(joined);
+ }
+ if(pending){
+  if(result.length&&result[result.length-1].length+pending.length+1<=230)result[result.length-1]+=" "+pending;
+  else result.push(pending);
  }
  while(result.length>36){
   let merged=false;
