@@ -44,6 +44,17 @@ test("Video Studio is safe inside the phone Preview and standalone links return 
  assert.match(ui,/get\("standalone"\)==="1"/);
 });
 
+test("Video Studio accepts native phone embedding without redirecting out of it",()=>{
+ assert.match(ui,/function VideoStudioV1\(\{embedded=false,onExit\}/);
+ assert.match(ui,/if\(embedded\|\|window\.self!==window\.top/);
+ assert.match(ui,/if\(embedded\)\{onExit\?\.\(\);return;\}/);
+ assert.match(ui,/data-vmv-embedded=\{embedded\?"true":undefined\}/);
+ assert.match(ui,/if\(embedded\|\|window\.self!==window\.top\)\{event\.preventDefault\(\);returnToVMV\(\);/);
+ assert.match(css,/\.page\[data-vmv-embedded="true"\]\{min-height:100%;width:100%/);
+ const parsed=ts.createSourceFile("page.tsx",ui,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+ assert.deepEqual(parsed.parseDiagnostics.map(x=>ts.flattenDiagnosticMessageText(x.messageText," ")),[]);
+});
+
 test("own idea has short prompt and AI produces editable scenes without null dereference",()=>{
  assert.match(ui,/stage==="idea"/);
  assert.match(ui,/maxLength=\{700\}/);
