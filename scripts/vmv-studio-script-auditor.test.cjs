@@ -49,10 +49,10 @@ test("an editor can rewrite every scene and change scene count, movement, visual
    imagePrompt:"A lively final full-body wide shot of the eggplant presenting a colorful meal on a dining table.",motion:"animate"}
  ];
  // Include the story's additional beats so that pacing fits 30s.
- revised[0].speech+=" Te sorprenderás con lo que viene.";
- revised[1].speech+=" ¡Sí, de verdad!";
- revised[2].speech+=" Esto explica mi color tan particular.";
- revised[3].speech+=" Un truco de cocina que conviene conocer.";
+ 
+ 
+ 
+ revised[3].speech+=" Es una característica útil que debes recordar.";
  revised[4].speech+=" Cuenta tu curiosidad favorita.";
  const r=applyStudioAudit(outline,scenes,{
   decision:"revise",reason:"Improve visual variety and align each shot to the narration.",
@@ -68,12 +68,12 @@ test("an editor can rewrite every scene and change scene count, movement, visual
 test("full rewrites with changed moment counts are accepted when coherent",()=>{
  const {outline,scenes}=sample();
  const rewrite=[
-  {...scenes[0],speech:"Hola, humano, hoy te contaré una historia que probablemente no esperabas sobre mí."},
-  {...scenes[1],speech:"Soy una fruta, y tengo parentesco con tomates y papas. ¡Muy sorprendente!"},
-  {...scenes[2],speech:"Mi piel morada contiene pigmentos naturales llamados antocianinas, que producen ese color espectacular."},
-  {...scenes[3],speech:"Mira lo que ocurre cuando me cocinas. ¡Puedo absorber muchísimo aceite en la sartén!"},
-  {...scenes[4],speech:"Ahora conoces mis secretos. Pero antes de irte, ¿te atreves a probarme de otra forma?"},
-  {speech:"Hasta pronto, humano, y recuerda esta historia la próxima vez que veas una berenjena.",
+  {...scenes[0],speech:"Hola, humano, hoy te contaré una verdad sobre mi identidad secreta."},
+  {...scenes[1],speech:"Soy una fruta y tengo parentesco con tomates y papas."},
+  {...scenes[2],speech:"Mi piel morada contiene pigmentos naturales que producen ese color espectacular."},
+  {...scenes[3],speech:"Al cocinarme puedo absorber mucho aceite, como una esponja."},
+  {...scenes[4],speech:"Y por eso soy un ingrediente versátil que sorprende en la cocina."},
+  {speech:"¿Te atreves a probarme? Nos vemos en tu próxima receta deliciosa.",
    imagePrompt:"Overhead view of an illustrated kitchen table with a plate of eggplant slices, fresh tomato and small cooking props.",caption:"Hasta pronto",motion:"zoom"}
  ];
  const r=applyStudioAudit(outline,scenes,{
@@ -122,7 +122,7 @@ test("no intermediate draft appears; one auditable stage runs before showing app
  assert.ok(flow.indexOf('mode:"audit"')<flow.indexOf("setScenes(reviewed.scenes)"));
  assert.doesNotMatch(flow,/setScenes\(completed\)/);
  assert.match(route,/FULL editorial authority to revise ALL scenes/);
- assert.match(route,/Repetitive adjacent visual prompts/);
+ assert.match(route,/Detect boring repeated images/);
  assert.doesNotMatch(route,/vmv_studio_create_job|charge_credits|stripe/);
  assert.match(ui,/Revisando ajustes finales/);
 });
