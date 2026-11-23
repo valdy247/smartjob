@@ -82,12 +82,6 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const [subtitles,setSubtitles]=useState(true);
  const [platform,setPlatform]=useState("idea"),[trendResults,setTrendResults]=useState<Trend[]>([]);
  const order=stepsFor(platform);
- const normalizeCountrySearch=(value:string)=>value.normalize("NFD").replace(/\p{M}/gu,"").toLocaleLowerCase("es");
- const searchCountry=normalizeCountrySearch(trendCountrySearch.trim());
- const matchingTrendCountries=VIDEO_STUDIO_COUNTRIES.filter(country=>
-  !searchCountry||normalizeCountrySearch(country.name).includes(searchCountry)||
-  country.code.toLocaleLowerCase().includes(searchCountry)||country.code===trendCountry);
- const selectedTrendCountry=VIDEO_STUDIO_COUNTRIES.find(country=>country.code===trendCountry);
  const [ideaPrompt,setIdeaPrompt]=useState("");
  const [exampleStyle,setExampleStyle]=useState<Style|null>(null);
  const [draftProgress,setDraftProgress]=useState(0);
@@ -112,6 +106,12 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const [trendConsent,setTrendConsent]=useState(false);
  const [trendCountry,setTrendCountry]=useState("US");
  const [trendCountrySearch,setTrendCountrySearch]=useState("");
+ const normalizeCountrySearch=(value:string)=>value.normalize("NFD").replace(/\p{M}/gu,"").toLocaleLowerCase("es");
+ const searchCountry=normalizeCountrySearch(trendCountrySearch.trim());
+ const matchingTrendCountries=VIDEO_STUDIO_COUNTRIES.filter(country=>
+  !searchCountry||normalizeCountrySearch(country.name).includes(searchCountry)||
+  country.code.toLocaleLowerCase().includes(searchCountry)||country.code===trendCountry);
+ const selectedTrendCountry=VIDEO_STUDIO_COUNTRIES.find(country=>country.code===trendCountry);
  useEffect(()=>{
   // Direct Preview links also open the phone simulator; embedded visits never redirect.
   if(embedded||window.self!==window.top||new URLSearchParams(window.location.search).get("standalone")==="1")return;
