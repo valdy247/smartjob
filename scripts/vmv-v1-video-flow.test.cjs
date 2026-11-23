@@ -62,7 +62,7 @@ test("own idea has short prompt and AI produces editable scenes without null der
  assert.match(ui,/api\("plan","POST",\{\.\.\.shared,mode:"outline"\}\)/);
  assert.match(ui,/mode:"scenes",outline:plan,start:b\.start,batchSize:b\.size/);
  assert.match(ui,/Array\.isArray\(chunk\?\.scenes\)/);
- assert.match(ui,/Array\.isArray\(first\.outline\.beats\)/);
+ assert.match(ui,/Array\.isArray\(first\?\.moments\)/);
  assert.match(ui,/setDraftPhase\("Escribiendo escenas y movimientos…"\)/);
  assert.match(ui,/editNarration\(e\.target\.value\)/);
  assert.match(ui,/patchScene\(i,"imagePrompt"/);
@@ -112,80 +112,85 @@ test("structured video script generation retries malformed output without invent
  assert.match(plan,/async function askStructured<T>/);
  assert.match(plan,/jsonMode:true/);
  assert.match(plan,/for\(let attempt=0;attempt<2;attempt\+\+\)/);
- assert.match(plan,/readOutline\(value,count\)/);
+ assert.match(plan,/readOutline\(value\)/);
  assert.match(plan,/readScenes\(value,batchSize\)/);
  assert.match(plan,/vmv-video-studio\/plan/);
  assert.match(plan,/invalid_output/);
  assert.doesNotMatch(plan,/console\.warn\([^;]*topic/);
 });
 
-test("short trending topic generates three actual scripts with strict schema in one request",async()=>{
+test("preview generates continuous narration then natural visual moments with an explicit schema",async()=>{
  const vm=require("node:vm");
  const source=read("app/api/video-studio/plan/route.ts");
  const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
- const resultModule={exports:{}};
- const topic="O Parasita que ROUBA a Língua dos Peixes!";
+ const mod={exports:{}},subject="El extraño parásito marino";
+ const fragments=[
+  "Un pez esconde una sorpresa impresionante dentro de su boca.",
+  "Este pequeño parásito puede reemplazar parte de su lengua.",
+  "La naturaleza tiene relaciones increíbles que todavía investigamos."
+ ];
  const outline={
-  title:"El extraño parásito de los peces",logline:"Descubrimos cómo vive el parásito en la boca del pez.",
+  title:subject,logline:"Descubrimos cómo vive el parásito en la boca del pez.",
   hook:"Un pez abre la boca y revela un organismo inesperado.",
   ending:"Una última vista del pez muestra su adaptación sorprendente.",
   characters:"Pez marino de colores suaves y pequeño isópodo parásito.",
   setting:"Mar submarino y un primer plano de la boca del pez.",
+  narration:fragments.join(" "),
   beats:["El pez nada y abre su boca.","El parásito aparece y se adhiere al pez.","El animal sigue nadando con el parásito."]
  };
  const scenes=outline.beats.map((beat,i)=>({
-  speech:["Un pez esconde una sorpresa impresionante dentro de su boca.",
-   "Este pequeño parásito puede reemplazar parte de su lengua.",
-   "La naturaleza tiene relaciones increíbles que todavía investigamos."][i],
-  imagePrompt:"Detailed underwater educational animation with a consistent blue fish and tiny marine isopod. "+beat,
-  caption:"Curiosidad marina"
+  speech:fragments[i],imagePrompt:"Detailed underwater educational animation with a consistent blue fish and tiny marine isopod. "+beat,
+  caption:"Curiosidad marina",motion:i===1?"zoom":"animate"
  }));
  let calls=0;
  const mockRequire=id=>{
   if(id==="next/server")return {NextResponse:{json:(body,{status=200}={})=>({body,status})}};
   if(id==="@/lib/auth-server")return {authenticatedUser:async()=>"owner"};
   if(id==="@/lib/vmv-ai-agents/model")return {askAiAgent:async arg=>{
-   calls++;
-   assert.equal(arg.jsonSchema.name,"vmv_video_complete");
-   assert.equal(arg.jsonSchema.schema.additionalProperties,false);
+   calls++;assert.equal(arg.jsonSchema.schema.additionalProperties,false);
+   if(arg.jsonSchema.name==="vmv_video_outline")return JSON.stringify(outline);
+   assert.equal(arg.jsonSchema.name,"vmv_video_scenes");
    assert.ok(arg.jsonSchema.schema.required.includes("scenes"));
-   return JSON.stringify({...outline,scenes});
+   return JSON.stringify({scenes});
   }};
+  if(id==="@/lib/vmv-studio-semantic-beats")return {splitNarrationIntoMoments:()=>fragments};
   if(id==="@/lib/vmv-pilot-voice-config")return {validPilotLanguage:x=>x==="es",pilotLanguageName:()=>"Spanish"};
   if(id==="@/lib/vmv-studio-countries")return {isVideoStudioCountry:x=>typeof x==="string"&&/^[A-Z]{2}$/.test(x)};
   throw Error("Unexpected dependency: "+id);
  };
- const context={exports:resultModule.exports,module:resultModule,require:mockRequire,process:{env:{VERCEL_ENV:"preview"}},console:{warn:()=>{}}};
- vm.runInNewContext(output,context,{timeout:5000});
- const request={headers:{get:()=>null},json:async()=>({
-  mode:"complete",topic,idea:topic,audience:"Todos",style:"cartoon3d",language:"es",seconds:15,
-  confirmPlanCost:true,source:{title:topic,platform:"YouTube"}
- })};
- const result=await resultModule.exports.POST(request);
- assert.equal(result.status,200);
- assert.equal(result.body.scenes.length,3);
- assert.equal(result.body.outline.beats.length,3);
- assert.equal(result.body.scenes.map(s=>s.speech).join(" "),scenes.map(s=>s.speech).join(" "));
- assert.equal(calls,1,"one real model call for a 15s script");
+ vm.runInNewContext(output,{exports:mod.exports,module:mod,require:mockRequire,
+  process:{env:{VERCEL_ENV:"preview"}},console:{warn:()=>{}}},{timeout:5000});
+ const common={topic:subject,idea:subject,audience:"Todos",style:"cartoon3d",language:"es",
+  seconds:15,confirmPlanCost:true};
+ const request=b=>({headers:{get:()=>null},json:async()=>b});
+ const first=await mod.exports.POST(request({...common,mode:"outline"}));
+ assert.equal(first.status,200);
+ assert.equal(first.body.count,3);
+ assert.equal(first.body.moments.join(" "),outline.narration);
+ const second=await mod.exports.POST(request({...common,mode:"scenes",outline,start:0,batchSize:3}));
+ assert.equal(second.status,200);
+ assert.equal(second.body.scenes.length,3);
+ assert.equal(second.body.scenes.map(s=>s.speech).join(" "),outline.narration);
+ assert.equal(second.body.scenes[1].motion,"zoom");
+ assert.equal(calls,2);
 });
-
-test("short script failure rejects bad AI output instead of inventing scenes",async()=>{
- const vm=require("node:vm");
- const source=read("app/api/video-studio/plan/route.ts");
+test("invalid AI outline cannot create fabricated scenes or charge credits",async()=>{
+ const vm=require("node:vm"),source=read("app/api/video-studio/plan/route.ts");
  const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
- const mod={exports:{}};
- let calls=0;
+ const mod={exports:{}};let calls=0;
  const mockRequire=id=>{
   if(id==="next/server")return {NextResponse:{json:(body,{status=200}={})=>({body,status})}};
   if(id==="@/lib/auth-server")return {authenticatedUser:async()=>"owner"};
   if(id==="@/lib/vmv-ai-agents/model")return {askAiAgent:async()=>{calls++;return "{}";}};
+  if(id==="@/lib/vmv-studio-semantic-beats")return {splitNarrationIntoMoments:()=>[]};
   if(id==="@/lib/vmv-pilot-voice-config")return {validPilotLanguage:x=>x==="es",pilotLanguageName:()=>"Spanish"};
   if(id==="@/lib/vmv-studio-countries")return {isVideoStudioCountry:x=>typeof x==="string"&&/^[A-Z]{2}$/.test(x)};
   throw Error("Unexpected dependency: "+id);
  };
- vm.runInNewContext(code,{exports:mod.exports,module:mod,require:mockRequire,process:{env:{VERCEL_ENV:"preview"}},console:{warn:()=>{}}},{timeout:5000});
+ vm.runInNewContext(code,{exports:mod.exports,module:mod,require:mockRequire,
+  process:{env:{VERCEL_ENV:"preview"}},console:{warn:()=>{}}},{timeout:5000});
  const result=await mod.exports.POST({headers:{get:()=>null},json:async()=>({
-  mode:"complete",topic:"Parasita peixe",idea:"Parasita peixe",audience:"Público general",
+  mode:"outline",topic:"Parasita peixe",idea:"Parasita peixe",audience:"Público general",
   style:"cartoon3d",language:"es",seconds:15,confirmPlanCost:true
  })});
  assert.equal(result.status,502);
