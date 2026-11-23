@@ -2,6 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {videoDb,validUuid} from "@/lib/vmv-video-generator";
 import {validPilotLanguage} from "@/lib/vmv-pilot-voice-config";
+import {cloudLaunchEnabled,videoStudioWorkerReady} from "@/lib/vmv-studio-cloud-readiness";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -98,10 +99,11 @@ export async function GET(req:NextRequest){
 export async function POST(req:NextRequest){
  const owner=await authenticatedUser(req);
  if(!owner)return reply({error:"authentication_required"},401);
- if(process.env.VERCEL_ENV!=="preview"||process.env.VMV_STUDIO_GENERATION_ENABLED!=="true")
+ if(!cloudLaunchEnabled())
   return reply({error:"video_studio_not_ready"},503);
- // Generation requires a tested, continuously running cloud worker, never a browser worker.
- if(process.env.VMV_STUDIO_WORKER_READY!=="true")
+ // Static flags are insufficient: reject new reservations if the Render worker
+ // cannot prove that it is alive and connected right now.
+ if(!await videoStudioWorkerReady())
   return reply({error:"video_studio_worker_not_ready"},503);
  const length=Number(req.headers.get("content-length")||0);
  if(length>65000)return reply({error:"studio_invalid_job"},413);
