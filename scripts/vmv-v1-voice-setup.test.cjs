@@ -15,15 +15,20 @@ test("V1 voice catalog is authenticated, read-only and does not need the old vid
  assert.doesNotMatch(api,/generateSpeech|\/v1\/text-to-speech|method:"POST"/);
  assert.doesNotMatch(api,/return.*key/);
 });
-test("V1 shows ElevenLabs samples without permitting paid TTS or changing the Pilot workflow",()=>{
+test("V1 enables quota-protected voice demos without altering the original Pilot workflow",()=>{
  const studio=read("app/vista-app/video-studio/page.tsx");
  const picker=read("app/vista-app/vmv-pilot/PilotVoiceStep.tsx");
- assert.match(studio,/catalogEndpoint="\/api\/video-studio\/voices" sampleMode="prerecorded"/);
- assert.match(picker,/catalogEndpoint="\/api\/video-generator\/pilot-voices",sampleMode="paid"/);
- assert.match(picker,/const canPreview=sampleMode==="paid"\|\|/);
+ const preview=read("app/api/video-studio/voice-preview/route.ts");
+ assert.match(studio,/catalogEndpoint="\/api\/video-studio\/voices" previewEndpoint="\/api\/video-studio\/voice-preview" sampleMode="limited"/);
+ assert.match(picker,/catalogEndpoint="\/api\/video-generator\/pilot-voices",previewEndpoint="\/api\/video-generator\/pilot-voice-preview",sampleMode="paid"/);
+ assert.match(picker,/const canPreview=sampleMode==="paid"\|\|\(sampleMode==="limited"&&v.provider==="openai"\)\|\|hasPublicSample/);
  assert.match(picker,/disabled=\{disabled\|\|Boolean\(loadingId\)\|\|!canPreview\}/);
+ assert.match(picker,/sampleMode==="limited"/);
  assert.match(picker,/sampleMode==="prerecorded"/);
- for(const p of ["app/api/video-studio/voices/route.ts","app/vista-app/vmv-pilot/PilotVoiceStep.tsx","app/vista-app/video-studio/page.tsx"]){
+ assert.match(preview,/authenticatedUser\(req\)/);
+ assert.match(preview,/vmv_pilot_voice_preview_claim/);
+ assert.doesNotMatch(preview,/wallet|stripe|charge_credits/);
+ for(const p of ["app/api/video-studio/voices/route.ts","app/api/video-studio/voice-preview/route.ts","app/vista-app/vmv-pilot/PilotVoiceStep.tsx","app/vista-app/video-studio/page.tsx"]){
   const src=ts.createSourceFile(p,read(p),ts.ScriptTarget.Latest,true,p.endsWith(".tsx")?ts.ScriptKind.TSX:ts.ScriptKind.TS);
   assert.deepEqual(src.parseDiagnostics.map(x=>{const at=src.getLineAndCharacterOfPosition(x.start||0);return (at.line+1)+":"+(at.character+1)+" "+ts.flattenDiagnosticMessageText(x.messageText," ");}),[],p);
  }
