@@ -53,10 +53,25 @@ test("V1 independently searches verified YouTube sources with owner-scoped persi
  assert.match(trends,/www\.googleapis\.com\/youtube\/v3/);
  assert.match(trends,/sourceId:v\.id/);
  assert.match(trends,/slice\(0,3\)/);
- assert.match(ui,/Proponer idea sobre este tema/);
+ assert.match(ui,/Proponer idea/);
+ assert.match(trends,/description:v\.description/);
+ assert.match(ui,/styles\.trendTitle/);
+ assert.match(ui,/styles\.trendDescription/);
+ assert.match(ui,/styles\.trendBody/);
+ assert.match(css,/\.trendCard\{display:grid;grid-template-columns:133px/);
+ assert.match(css,/height:252px/);
  assert.match(ui,/Ver tendencia/);
  assert.match(ui,/Conexión pendiente/);
  assert.doesNotMatch(trends,/videoGenerate|startRunway|generateSpeech/);
+});
+
+test("own idea can continue with an editable draft when AI is temporarily unavailable",()=>{
+ assert.match(ui,/makeEditableDraft=\(\)=>/);
+ assert.match(ui,/setManualDraft\(true\)/);
+ assert.match(ui,/Reintentar IA/);
+ assert.match(ui,/setPlanNotice\(/);
+ assert.match(ui,/platform==="idea"\?null:selectedTrend/);
+ assert.match(ui,/errorMessages\[error\]\|\|"No se pudo completar la operación/);
 });
 
 test("creative plan only runs in Preview, requires signed-in owner and explicit request",()=>{
