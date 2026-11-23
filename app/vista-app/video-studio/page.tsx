@@ -398,7 +398,17 @@ catch(e){setError(e instanceof Error?e.message:"studio_invalid_action");}finally
 <button className={styles.secondary} onClick={()=>setRegenIndex(null)}>Cancelar</button>
 </div></div>:null}
 </>:null}
-  {stage==="progress"&&job?<><h1>Estamos creando tu video</h1><p className={styles.help}>La generación continúa en la nube aunque cierres la página.</p><div className={styles.progressCard}><div className={styles.progressRing} style={{background:"conic-gradient(#9156c8 "+Math.max(0,Math.min(100,job.progress||0))+"%,#eee9f2 0)"}}><span>{job.progress||0}%</span></div><strong>{job.phase||"En cola"}</strong><small>Estado: {job.status}</small><small>{typeof job.etaSeconds==="number"?"Tiempo aproximado: "+readable(Math.ceil(job.etaSeconds)):"Calculando tiempo estimado…"}</small></div><button className={styles.secondary} onClick={()=>{next("history");void loadHistory()}}>Ver historial</button></>:null}
+  {stage==="progress"&&job?<><h1>Creando tu video</h1><p className={styles.help}>El trabajo continúa en la nube. Puedes cerrar la web y volver desde Historial.</p>
+<div className={styles.progressCard}>
+<div className={styles.progressRing} style={{background:"conic-gradient(#9156c8 "+Math.max(0,Math.min(100,job.progress||0))+"%,#eee9f2 0)"}}><span>{job.progress||0}%</span></div>
+<strong>{job.phase||"En cola"}</strong><small>{job.status}</small>
+<small>{typeof job.etaSeconds==="number"?"Tiempo aproximado: "+readable(Math.ceil(job.etaSeconds)):"Calculando tiempo estimado…"}</small>
+</div>
+{job.status==="failed"||job.status==="cancelled"?<div className={styles.error}>
+{job.status==="failed"?"No pudimos terminar este proyecto. Liberamos los créditos reservados.":"Proyecto cancelado."} {job.failure_code||""}
+</div>:null}
+<button className={styles.secondary} onClick={()=>{next("history");void loadHistory();}}>Ver historial</button>
+</>:null}
   {stage==="result"&&job?<><h1>¡Video listo!</h1>{job.videoUrl?<><video className={styles.videoFinal} controls playsInline src={job.videoUrl}/><a className={styles.primary} href={job.videoUrl} download={"vmv-video-"+job.id+".mp4"}><Download size={19}/> Descargar MP4</a></>:<p className={styles.help}>El archivo está guardado. Actualiza el enlace desde Historial.</p>}<button className={styles.secondary} onClick={()=>{next("history");void loadHistory()}}>Abrir historial</button></>:null}
   {stage==="history"?<><h1>Mis videos</h1><button className={styles.secondary} disabled={historyLoading} onClick={()=>void loadHistory()}>{historyLoading?<LoaderCircle className={styles.spin} size={16}/>:<RefreshCw size={16}/>} Actualizar</button><div className={styles.history}>{jobs.map(j=><button key={j.id} className={styles.historyItem} onClick={()=>{setJob(j);next(j.status==="completed"?"result":j.status==="awaiting_image_approval"?"images":"progress")}}><span className={styles.historyIcon}><Film size={20}/></span><span><strong>{j.title||"Video sin título"}</strong><small>{readable(j.seconds)} · {j.phase||j.status}</small></span><ChevronRight size={18}/></button>)}{!jobs.length&&!historyLoading&&!error?<div className={styles.unavailable}><FolderOpen size={30}/><p>Todavía no hay videos guardados.</p><button onClick={reset} className={styles.primary}>Crear video</button></div>:null}</div></>:null}
   {error?<div role="alert" className={styles.error}><ShieldCheck size={18}/><span>{errorMessages[error]||error}</span></div>:null}
