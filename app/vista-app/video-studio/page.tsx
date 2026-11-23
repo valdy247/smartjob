@@ -438,7 +438,7 @@ catch(e){setError(e instanceof Error?e.message:"studio_invalid_action");}finally
 <small>{typeof job.etaSeconds==="number"?"Tiempo aproximado: "+readable(Math.ceil(job.etaSeconds)):"Calculando tiempo estimado…"}</small>
 </div>
 {job.status==="failed"||job.status==="cancelled"?<div className={styles.error}>
-{job.status==="failed"?"No pudimos terminar este proyecto. Liberamos los créditos reservados.":"Proyecto cancelado."} {job.failure_code||""}
+{job.status==="failed"?"No pudimos terminar este proyecto. Liberamos los créditos reservados.":"Proyecto cancelado."}
 </div>:null}
 <button className={styles.secondary} onClick={()=>{next("history");void loadHistory();}}>Ver historial</button>
 </>:null}
