@@ -5,7 +5,7 @@ import {ArrowLeft,ArrowRight,Check,CheckCircle2,Image as ImageIcon,LoaderCircle,
 import BusinessCategoryPicker from "@/components/BusinessCategoryPicker";
 import {getSupabase} from "@/lib/supabase";
 import {normalizeSocialLinks} from "@/lib/web-builder-social";
-import {applyChosenSiteDesign,type SiteIntake,type SiteProposal,type SiteProduct,type SiteDesignPreferences} from "@/lib/web-builder-templates";
+import {applyChosenSiteDesign,createSiteProposals,type SiteIntake,type SiteProposal,type SiteProduct,type SiteDesignPreferences} from "@/lib/web-builder-templates";
 const TemplateProposals=dynamic(()=>import("./TemplateProposals"),{ssr:false,loading:()=>
  <div role="status" style={{padding:18,color:"#7e57b2"}}>Preparando vista previa de tu web…</div>
 });
@@ -311,7 +311,7 @@ export default function WebAiWizard({ownerId,busy,onChoose}:{ownerId:string;busy
     aiState==="ready"?<><CheckCircle2 size={16}/> {aiDailyLimit===null?"Modo de pruebas: sin límite diario por cuenta. Sujeto a la capacidad compartida de IA.":`Generador de VMV conectado. Hasta ${aiDailyLimit} generaciones de IA por día.`}</>:
     <><ShieldCheck size={16}/> La IA no está disponible ahora; puedes continuar con tu plantilla.</>}</div>
    <button type="button" className={styles.templateContinue} disabled={!selectedTemplate||busy||generating}
-     onClick={()=>{if(selectedTemplate)setProposal({...selectedTemplate,data:applyChosenSiteDesign(selectedTemplate.data,selectedDesign)});}}>
+     onClick={()=>{if(selectedTemplate){const refreshed=createSiteProposals(input).find(x=>x.id===selectedTemplate.id)||selectedTemplate;setProposal({...refreshed,data:applyChosenSiteDesign(refreshed.data,selectedDesign)});}}}>
      <CheckCircle2 size={18}/> Continuar con mi diseño <ArrowRight size={17}/>
     </button>
     <button type="button" className={styles.generate} disabled={aiState!=="ready"||generating||busy} onClick={()=>void generate()}>
