@@ -13,10 +13,10 @@ const {applyStudioAudit,estimatedStudioVoiceSeconds,studioRuntimePlausible,valid
 
 const sample=()=>{
  const scenes=[
-  {speech:"¡Hola, humano! Tengo una historia sorprendente que contarte hoy.",imagePrompt:"A smiling animated eggplant faces the camera with lively expression and gentle studio lighting.",caption:"¡Hola, humano!",motion:"animate"},
-  {speech:"Aunque muchos me llaman verdura, técnicamente soy una fruta de la familia del tomate.",imagePrompt:"The same eggplant proudly shows a simplified family tree with tomatoes and other botanical relatives.",caption:"Soy una fruta",motion:"zoom"},
-  {speech:"Mi piel morada tiene pigmentos naturales que le dan ese color tan especial.",imagePrompt:"A detailed closeup of the eggplant's glossy violet skin with soft realistic studio highlights.",caption:"Mi piel morada",motion:"zoom"},
-  {speech:"Y cuando me cocinas, puedo absorber mucho aceite, como una auténtica esponja.",imagePrompt:"The same playful eggplant appears next to a pan and a sponge demonstrating liquid absorption.",caption:"Como una esponja",motion:"animate"},
+  {speech:"¡Hola, humano! Tengo una historia sorprendente que contarte hoy sobre mi verdadera identidad.",imagePrompt:"A smiling animated eggplant faces the camera with lively expression and gentle studio lighting.",caption:"¡Hola, humano!",motion:"animate"},
+  {speech:"Aunque muchos me llaman verdura, técnicamente soy una fruta de la familia del tomate y de la papa.",imagePrompt:"The same eggplant proudly shows a simplified family tree with tomatoes and other botanical relatives.",caption:"Soy una fruta",motion:"zoom"},
+  {speech:"Mi piel morada tiene pigmentos naturales que le dan ese color tan especial y brillante.",imagePrompt:"A detailed closeup of the eggplant's glossy violet skin with soft realistic studio highlights.",caption:"Mi piel morada",motion:"zoom"},
+  {speech:"Y cuando me cocinas, puedo absorber mucho aceite, como una auténtica esponja de cocina.",imagePrompt:"The same playful eggplant appears next to a pan and a sponge demonstrating liquid absorption.",caption:"Como una esponja",motion:"animate"},
   {speech:"¿Ahora que conoces mi secreto, todavía piensas que soy aburrida?",imagePrompt:"The animated eggplant looks at the audience with a cheeky grin and a fun final camera push.",caption:"¿Aburrida yo?",motion:"animate"}
  ];
  const outline={title:"El secreto de la berenjena",logline:"Una berenjena narra curiosidades.",hook:"Una sorpresa",ending:"Una pregunta",characters:"Berenjena morada parlante",
