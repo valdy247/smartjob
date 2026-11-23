@@ -129,8 +129,12 @@ export default function BusinessServicesPreview({userId,focus="all",excludeFeatu
  if(focus==="web"&&!editor)return <section className={styles.webHub} aria-label="Web Services">
   <div className={styles.webHubHeading}><span>{translate("web.hub.kicker")}</span><h2>{translate("web.hub.title")}<span>.</span></h2><p>{translate("web.hub.intro")}</p></div>
   <div className={styles.webHubGrid}>
-   <a className={styles.webHubCard+" "+styles.webHubViolet} href="/vista-app/ai-agents?service=web"><LayoutTemplate size={27}/><strong>{translate("web.hub.templates")}</strong><small>{translate("web.hub.templatesDesc")}</small><span>{translate("web.hub.templatesAction")} <ArrowUpRight size={16}/></span></a>
-   <a className={styles.webHubCard+" "+styles.webHubMint} href="/vista-app/ai-agents?service=web"><Sparkles size={27}/><strong>{translate("web.hub.ai")}</strong><small>{translate("web.hub.aiDesc")}</small><span>{translate("web.hub.aiAction")} <ArrowUpRight size={16}/></span></a>
+   <a className={styles.webHubCard+" "+styles.webHubUnified} href="/web-studio?mode=ai" aria-label={language==="en"?"Create a website with templates and AI":"Crear página web con plantillas e IA"}>
+    <span className={styles.webHubUnifiedIcons}><LayoutTemplate size={26}/><Sparkles size={23}/></span>
+    <strong>{language==="en"?"Create your website":"Crea tu página web"}</strong>
+    <small>{language==="en"?"Professional templates, AI-assisted design and full control in the visual editor.":"Plantillas profesionales, diseño con IA y libertad para personalizar en el editor visual."}</small>
+    <span>{language==="en"?"Start creating":"Comenzar a crear"} <ArrowUpRight size={16}/></span>
+   </a>
    <a className={styles.webHubCard+" "+styles.webHubYellow} href="/vista-app/marketing?service=other&goal=Solicito%20una%20p%C3%A1gina%20web%20profesional%20para%20mi%20negocio"><BriefcaseBusiness size={27}/><strong>{translate("web.hub.pro")}</strong><small>{translate("web.hub.proDesc")}</small><span>{translate("web.hub.proAction")} <ArrowUpRight size={16}/></span></a>
    <a className={styles.webHubCard+" "+styles.webHubSky} href="/vista-app/marketing?service=seo_improvement"><ScanSearch size={27}/><strong>{translate("web.hub.audit")}</strong><small>{translate("web.hub.auditDesc")}</small><span>{translate("web.hub.auditAction")} <ArrowUpRight size={16}/></span></a>
   </div>
