@@ -226,7 +226,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
    const verified=matches.filter((t:Trend)=>typeof t?.sourceId==="string"&&
     /^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(t.url)&&
     typeof t.thumbnail==="string"&&t.thumbnail.startsWith("https://")).slice(0,3) as Trend[];
-   if(!verified.length)throw Error("No encontramos videos recientes verificables. Prueba otro tema o continúa con tu idea.");
+   if(!verified.length)throw Error("No encontramos tendencias relacionadas con «"+(topic==="Otro"?otherTopic:topic)+"» en "+(selectedTrendCountry?.name||trendCountry)+". Prueba otro país o continúa con tu idea.");
    setTrendResults(verified);
   }catch(e){setError(e instanceof Error?e.message:"studio_trends_unavailable");}
   finally{setBusy(false);}
@@ -442,7 +442,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
      <small>País seleccionado: {selectedTrendCountry?.name||trendCountry}. Si YouTube no publica tendencias para ese país, te lo indicaremos sin mostrar resultados de otros países.</small>
     </div>
     <label className={styles.consent}><input type="checkbox" checked={trendConsent} onChange={e=>setTrendConsent(e.target.checked)}/> Autorizo consultar tendencias públicas de YouTube.</label>
-    <button className={styles.primary} disabled={busy||!trendConsent} onClick={()=>void trendSearch()}>{busy?<LoaderCircle className={styles.spin} size={18}/>:<Search size={18}/>} {busy?"Buscando videos reales…":"Mostrar 3 tendencias"}</button>
+    <button className={styles.primary} disabled={busy||!trendConsent} onClick={()=>void trendSearch()}>{busy?<LoaderCircle className={styles.spin} size={18}/>:<Search size={18}/>} {busy?"Buscando videos del tema…":"Buscar tendencias del tema"}</button>
     <div className={styles.trends}>{trendResults.map(t=><article className={styles.trendCard} key={t.sourceId}>
      <div className={styles.trendPreview}><img src={t.thumbnail} alt={"Miniatura del video original de "+t.channel} loading="lazy"/><span className={styles.trendSource}>YouTube</span></div>
      <div className={styles.trendBody}>
@@ -456,7 +456,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
       </div>
      </div>
     </article>)}</div>
-    {trendResults.length>0?<p className={styles.note}>Videos de la lista regional de popularidad de YouTube para {selectedTrendCountry?.name||trendCountry}. El país no indica dónde se grabó el video y no modifica el idioma del guion. Los enlaces y miniaturas son originales; no analizamos el contenido completo.</p>:null}
+    {trendResults.length>0?<p className={styles.note}>Videos de la lista regional de popularidad de YouTube relacionados con «{topic==="Otro"?otherTopic:topic}» para {selectedTrendCountry?.name||trendCountry}. El país no indica dónde se grabó el video ni modifica el idioma del guion. La relevancia se comprueba con los metadatos públicos; no analizamos el contenido completo.</p>:null}
    </>:<div className={styles.unavailable}><Clock3 size={25}/><strong>Conexión pendiente</strong><p>Esta plataforma todavía no dispone de una búsqueda oficial verificada. No mostraremos tendencias inventadas.</p></div>}
    <button className={styles.secondary} onClick={()=>{setSelectedTrend(null);next("idea")}}>Continuar con mi idea <ArrowRight size={16}/></button>
   </>:null}
