@@ -4,6 +4,8 @@ import {askAiAgent} from "@/lib/vmv-ai-agents/model";
 import {validPilotLanguage,pilotLanguageName} from "@/lib/vmv-pilot-voice-config";
 import {isVideoStudioCountry} from "@/lib/vmv-studio-countries";
 import {splitNarrationIntoMoments} from "@/lib/vmv-studio-semantic-beats";
+import {applyStudioAudit,validStudioDraft} from "@/lib/vmv-studio-script-auditor";
+import type {StudioAuditDecision,StudioAuditScene} from "@/lib/vmv-studio-script-auditor";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -63,12 +65,20 @@ const outlineProperties={
  beats:{type:"array",items:stringField}
 };
 const outlineKeys=["title","logline","hook","ending","characters","setting","narration","beats"];
-function outputSchema(stage:"outline"|"scenes"):Record<string,unknown>{
- const properties=stage==="scenes"?{scenes:{type:"array",items:sceneSchema}}:outlineProperties;
- const required=stage==="scenes"?["scenes"]:outlineKeys;
+const auditEditSchema={type:"object",additionalProperties:false,
+ properties:{index:{type:"integer"},speech:stringField,imagePrompt:stringField,
+  caption:stringField,motion:{type:"string",enum:["animate","zoom"]},reason:stringField},
+ required:["index","speech","imagePrompt","caption","motion","reason"]};
+const auditProperties={decision:{type:"string",enum:["pass","fix","block"]},
+ reason:stringField,changes:{type:"array",items:auditEditSchema}};
+function outputSchema(stage:"outline"|"scenes"|"audit"):Record<string,unknown>{
+ const properties=stage==="audit"?auditProperties:
+  stage==="scenes"?{scenes:{type:"array",items:sceneSchema}}:outlineProperties;
+ const required=stage==="audit"?["decision","reason","changes"]:
+  stage==="scenes"?["scenes"]:outlineKeys;
  return {type:"object",additionalProperties:false,properties,required};
 }
-async function askStructured<T>(stage:"outline"|"scenes",system:string,
+async function askStructured<T>(stage:"outline"|"scenes"|"audit",system:string,
  payload:Record<string,unknown>,check:(value:Record<string,unknown>|null)=>T|null,
  maxOutputTokens:number):Promise<{value:T|null;error:"studio_plan_incomplete"|"studio_plan_provider_unavailable"|null}>{
  let invalid=false;
@@ -111,13 +121,13 @@ export async function POST(req:NextRequest){
  const owner=await authenticatedUser(req);
  if(!owner)return json({error:"authentication_required"},401);
  const size=Number(req.headers.get("content-length")||0);
- if(size>18000)return json({error:"studio_plan_invalid_request"},413);
+ if(size>58000)return json({error:"studio_plan_invalid_request"},413);
  const b=await req.json().catch(()=>null);
  const mode=b?.mode;
  const topic=safe(b?.topic,220),idea=safe(b?.idea,3000),audience=safe(b?.audience,120);
  const style=safe(b?.style,40) as keyof typeof STYLES,language=b?.language;
  const seconds=Number(b?.seconds);
- if(!["outline","scenes"].includes(mode)||topic.length<3||audience.length<2||
+ if(!["outline","scenes","audit"].includes(mode)||topic.length<3||audience.length<2||
   !Object.hasOwn(STYLES,style)||!validPilotLanguage(language)||
   !Number.isInteger(seconds)||seconds<15||seconds>180)
   return json({error:"studio_plan_invalid_request"},400);
@@ -168,6 +178,62 @@ export async function POST(req:NextRequest){
   if(!result.value)return json({error:result.error,detail:"outline"},result.error==="studio_plan_incomplete"?502:503);
   const moments=splitNarrationIntoMoments(result.value.narration);
   return json({outline:result.value,moments,count:moments.length});
+ }
+
+ if(mode==="audit"){
+  // The complete narration and storyboard are still server-side work-in-progress:
+  // do not expose the user preview until this single editorial preflight completes.
+  const outline=readOutline(b?.outline);
+  const supplied=Array.isArray(b?.scenes)?b.scenes:[];
+  const scenes:StudioAuditScene[]=supplied.map((item:unknown)=>{
+   const v=isRecord(item)?item:{};
+   return {speech:safe(v.speech,230),imagePrompt:safe(v.imagePrompt,950),
+    caption:safe(v.caption,110),motion:v.motion==="zoom"?"zoom":"animate"};
+  });
+  if(!outline||!validStudioDraft(outline,scenes))
+   return json({error:"studio_plan_invalid_batch"},400);
+  const instruction=shared+
+   " You are the last quality auditor before showing a SHORT-FORM video proposal to the creator. "+
+   "Review the ENTIRE continuous script and EACH visual moment for factual caution, matching visuals, character continuity, "+
+   "hook clarity, coherent payoff, natural voice timing, attention and retention, and whether the proposed animate/zoom motion fits the spoken beat. "+
+   "Potential viral appeal is an editorial judgment, never a promise of views, virality or success. "+
+   "This is an APPROXIMATE voiceover, not rendered audio. Final scene durations are determined later from the recorded speech timestamps. "+
+   "Never enforce 5-second windows; concise moments can be static with a gentle zoom, dynamic action can animate. "+
+   "The narration target is "+seconds+" seconds in "+lang+
+   ". Prefer a natural conversational rhythm, approximately "+Math.round(seconds*(language==="es"?2.3:2.25))+" words; do not add rushed filler. "+
+   "STRICT EDITORIAL POLICY: If the story and visuals work, decision=pass and changes=[]. Make NO gratuitous rewrites. "+
+   "If you detect a concrete material defect, decision=fix and return ONLY minimal scene-level changes, each with its original 0-based index, "+
+   "complete replacement speech, imagePrompt, caption and motion, and a precise reason. "+
+   "Preserve the author's topic, facts, character identity, tone, language and unedited moments. "+
+   "Adjust individual spoken lines only as needed to make timing and visuals coherent; each moment can take a different amount of time. "+
+   "Change at most "+Math.max(2,Math.ceil(scenes.length*.35))+" moments out of "+scenes.length+
+   ". Never edit the title or unrelated scenes. "+
+   "If there is a critical problem that cannot be solved within those minimal edits, decision=block with a concise reason and changes=[]. "+
+   "Do not claim to have seen any source video or recorded voice. "+
+   "For decision=pass, use a short reason. Return only JSON with decision, reason and changes.";
+  type AuditOutcome={status:"blocked";reason:string}|{status:"approved";
+   draft:NonNullable<ReturnType<typeof applyStudioAudit>>};
+  const result=await askStructured<AuditOutcome>("audit",instruction,{
+   topic,idea:idea||topic,style,seconds,language,
+   source:sourceContext,outline,
+   scenes:scenes.map((scene,index)=>({index,...scene}))
+  },value=>{
+   if(!value||typeof value.decision!=="string"||typeof value.reason!=="string"||
+    !Array.isArray(value.changes)||value.reason.trim().length<6||
+    value.reason.length>320)return null;
+   if(value.decision==="block"){
+    return value.changes.length===0?
+     {status:"blocked" as const,reason:safe(value.reason,250)}:null;
+   }
+   const report=value as unknown as StudioAuditDecision;
+   const draft=applyStudioAudit(outline,scenes,report,seconds,language);
+   return draft?{status:"approved" as const,draft}:null;
+  },Math.min(5200,1900+scenes.length*85));
+  if(!result.value)return json({error:result.error,detail:"audit"},
+   result.error==="studio_plan_incomplete"?502:503);
+  if(result.value.status==="blocked")
+   return json({error:"studio_plan_audit_blocked",reason:result.value.reason},422);
+  return json({...result.value.draft,auditPassed:true});
  }
  const start=Number(b?.start),batchSize=Number(b?.batchSize);
  const outline=readOutline(b?.outline);
