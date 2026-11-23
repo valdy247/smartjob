@@ -63,7 +63,7 @@ test("own idea has short prompt and AI produces editable scenes without null der
  assert.match(ui,/mode:"scenes",outline:plan,start:b\.start,batchSize:b\.size/);
  assert.match(ui,/Array\.isArray\(chunk\?\.scenes\)/);
  assert.match(ui,/Array\.isArray\(first\?\.moments\)/);
- assert.match(ui,/setDraftPhase\("Escribiendo escenas y movimientos…"\)/);
+ assert.match(ui,/setDraftPhase\("Revisando ajustes finales…"\)/);
  assert.match(ui,/editNarration\(e\.target\.value\)/);
  assert.match(ui,/patchScene\(i,"imagePrompt"/);
  assert.match(ui,/stepsFor\(platform\)/);
