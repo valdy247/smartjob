@@ -25,7 +25,8 @@ test("V1 preserves original Home layout, personalized four cards and six-service
  for(const name of ["Web Services","AI Agents","Video Studio","Smart Quote","Marketing","Ads Studio"])
   assert.match(ui,new RegExp('name:"'+name+'"'));
  assert.match(ui,/suggestedServices\.map\(service=>/);
- assert.match(ui,/!hasAssessment\?<section className=\{homeStyles\.homeGrowHero\}/);
+ assert.match(ui,/<section className=\{homeStyles\.homeGrowHero\}/);
+ assert.doesNotMatch(ui,/!hasAssessment\?<section className=\{homeStyles\.homeGrowHero\}/);
  assert.doesNotMatch(ui,/className=\{homeStyles\.homeSummaryCard\}/);
  assert.match(ui,/recommendV1Services\(needsAnswers,legacyAnswers\)/);
  assert.match(ui,/readV1Needs\(who\.user_metadata,businessId\)/);
