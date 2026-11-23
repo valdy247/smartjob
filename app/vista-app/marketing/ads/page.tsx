@@ -22,7 +22,7 @@ export default function MarketingAdsPage(){
    <p>{en?"Create new campaigns or review those you've already prepared, with their status and available results.":"Crea campañas nuevas o revisa las que ya preparaste, con su estado y los resultados disponibles."}</p>
   </section>
   <section className={styles.adsHubCards} aria-label={en?"Ads Studio options":"Opciones de Ads Studio"}>
-   <Link href="/vista-app/ai-agents" className={styles.adsHubCard}>
+   <Link href="/vista-app/marketing/ads/create" className={styles.adsHubCard}>
     <span className={styles.adsHubIcon}><PlusCircle size={24}/></span>
     <span className={styles.adsHubCardCopy}>
      <strong>{en?"Create campaign":"Crear campaña"}</strong>
