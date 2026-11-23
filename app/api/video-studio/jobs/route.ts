@@ -132,8 +132,23 @@ export async function PATCH(req:NextRequest){
  if(!owner)return reply({error:"authentication_required"},401);
  const b=await req.json().catch(()=>null),id=b?.id,action=b?.action;
  if(!validUuid(id)||typeof action!=="string"||
-  !["approve","approve_all","edit_scene","regenerate","cancel"].includes(action))
+  !["approve","approve_all","edit_scene","regenerate","cancel","resume"].includes(action))
   return reply({error:"studio_invalid_action"},400);
+ if(action==="resume"){
+  if(!cloudLaunchEnabled()||!await videoStudioWorkerReady())
+   return reply({error:"video_studio_worker_not_ready"},503);
+  try{
+   const {data,error}=await videoDb().rpc("vmv_studio_resume",{p_owner:owner,p_job:id});
+   if(error){
+    if(error.message?.includes("studio_insufficient_credits"))
+     return reply({error:"video_studio_insufficient_credits"},402);
+    if(error.message?.includes("studio_resume_limit"))
+     return reply({error:"studio_resume_limit"},409);
+    return reply({error:"studio_resume_unavailable"},409);
+   }
+   return reply({job:await present(data as JobRow,owner)});
+  }catch{return reply({error:"video_studio_db_unavailable"},503);}
+ }
  const index=Number.isInteger(b?.index)?b.index:null;
  let value:string|null=null,regen=false,rpcAction=action;
  if(action==="edit_scene"){
