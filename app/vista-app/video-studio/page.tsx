@@ -100,6 +100,8 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const [frameSpeech,setFrameSpeech]=useState(""),[frameVisual,setFrameVisual]=useState("");
  const clientKeyRef=useRef<string>("");
  const [trendConsent,setTrendConsent]=useState(false);
+ const [trendCountry,setTrendCountry]=useState("US");
+ const [trendLanguage,setTrendLanguage]=useState("es");
  useEffect(()=>{
   // Direct Preview links also open the phone simulator; embedded visits never redirect.
   if(embedded||window.self!==window.top||new URLSearchParams(window.location.search).get("standalone")==="1")return;
@@ -183,7 +185,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
    const access=await authenticate();
    const query=encodeURIComponent((topic==="Otro"?otherTopic:topic).slice(0,90));
    const headers={Authorization:"Bearer "+access,"X-VMV-YouTube-Consent":"accepted"};
-   let res=await fetch("/api/video-studio/trends?q="+query,{cache:"no-store",headers});
+   let res=await fetch("/api/video-studio/trends?q="+query+"&country="+encodeURIComponent(trendCountry)+"&language="+encodeURIComponent(trendLanguage),{cache:"no-store",headers});
    let data=await res.json().catch(()=>null);
    if(!res.ok&&res.status!==202)throw Error(typeof data?.error==="string"?data.error:"studio_trends_unavailable");
    let attempts=0;
