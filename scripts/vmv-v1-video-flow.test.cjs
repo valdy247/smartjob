@@ -154,6 +154,7 @@ test("preview generates continuous narration then natural visual moments with an
    return JSON.stringify({scenes});
   }};
   if(id==="@/lib/vmv-studio-semantic-beats")return {splitNarrationIntoMoments:()=>fragments};
+  if(id==="@/lib/vmv-studio-script-auditor")return {validStudioDraft:()=>true,applyStudioAudit:()=>null};
   if(id==="@/lib/vmv-pilot-voice-config")return {validPilotLanguage:x=>x==="es",pilotLanguageName:()=>"Spanish"};
   if(id==="@/lib/vmv-studio-countries")return {isVideoStudioCountry:x=>typeof x==="string"&&/^[A-Z]{2}$/.test(x)};
   throw Error("Unexpected dependency: "+id);
@@ -183,6 +184,7 @@ test("invalid AI outline cannot create fabricated scenes or charge credits",asyn
   if(id==="@/lib/auth-server")return {authenticatedUser:async()=>"owner"};
   if(id==="@/lib/vmv-ai-agents/model")return {askAiAgent:async()=>{calls++;return "{}";}};
   if(id==="@/lib/vmv-studio-semantic-beats")return {splitNarrationIntoMoments:()=>[]};
+  if(id==="@/lib/vmv-studio-script-auditor")return {validStudioDraft:()=>true,applyStudioAudit:()=>null};
   if(id==="@/lib/vmv-pilot-voice-config")return {validPilotLanguage:x=>x==="es",pilotLanguageName:()=>"Spanish"};
   if(id==="@/lib/vmv-studio-countries")return {isVideoStudioCountry:x=>typeof x==="string"&&/^[A-Z]{2}$/.test(x)};
   throw Error("Unexpected dependency: "+id);
