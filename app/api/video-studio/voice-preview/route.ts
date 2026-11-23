@@ -24,7 +24,7 @@ const script={
 } as const;
 
 /** V1 preview only. Daily quota is claimed before the paid provider is called.
- * Never charge the customer's Video Studio wallet for listening to a demo. */
+ * Listening to a demo never deducts Video Studio credits. */
 export async function POST(req:NextRequest){
  if(process.env.VERCEL_ENV!=="preview")return failure("voice_preview_unavailable",503);
  const owner=await authenticatedUser(req);
