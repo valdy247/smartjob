@@ -8,6 +8,7 @@ import VMVAuthGateway from "@/components/VMVAuthGateway";
 import PilotVoiceStep from "../vmv-pilot/PilotVoiceStep";
 import type {PilotLanguage,PilotVoiceProvider} from "@/lib/vmv-pilot-voice-config";
 import {VIDEO_STUDIO_COUNTRIES} from "@/lib/vmv-studio-countries";
+import {VIDEO_STUDIO_TOPIC_GROUPS,searchStudioTopics} from "@/lib/vmv-studio-topics";
 import styles from "./page.module.css";
 
 type Stage="home"|"topic"|"audience"|"style"|"duration"|"language"|"voice"|"subtitles"|"source"|"trends"|"idea"|"plan"|"quality"|"summary"|"images"|"progress"|"result"|"history";
@@ -18,7 +19,6 @@ type Trend={sourceId:string;title:string;description?:string;thumbnail:string;ur
 type Job={id:string;status:string;phase:string;progress:number;scenes:Scene[];seconds:number;style:string;quality_mode:string;title:string;videoUrl?:string|null;created_at:string;failure_code?:string|null;etaSeconds?:number|null;charge_credits?:number;credits_settled?:boolean;version?:number};
 type Wallet={balance:number;reserved:number;available:number};
 type CreditPack={id:string;credits:number;usdCents:number};
-const topics=["Curiosidades","Historia","Ciencia","Tecnología","Educación","Entretenimiento","Negocios","Otro"];
 const audiences=["Público general","Niños","Adolescentes","Jóvenes","Adultos","Familias","Emprendedores","Otro"];
 const durations=[15,30,60,120,180] as const;
 type VideoExample={id:Style;label:string;description:string;poster:string;video:string|null};
@@ -74,6 +74,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const [busy,setBusy]=useState(false),[error,setError]=useState("");
  const [isSignedIn,setIsSignedIn]=useState<boolean|null>(null);
  const [topic,setTopic]=useState(""),[otherTopic,setOtherTopic]=useState("");
+ const [topicGroup,setTopicGroup]=useState("popular"),[topicSearch,setTopicSearch]=useState("");
  const [audience,setAudience]=useState("Público general"),[otherAudience,setOtherAudience]=useState("");
  const [visual,setVisual]=useState<Style>("stickman");
  const [seconds,setSeconds]=useState(30),[customSeconds,setCustomSeconds]=useState("45");
@@ -201,7 +202,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const next=(s:Stage)=>{setError("");setStage(s)};
  const previous=()=>{setError("");if(stage==="images"||stage==="progress"||stage==="result"){setStage("history");void loadHistory();return;}
   const idx=order.indexOf(stage);setStage(idx>0?order[idx-1]:"home");};
- const reset=()=>{clientKeyRef.current="";autoApprovalRef.current="";setNarrationDraft("");setTrendCountry("US");setTrendCountrySearch("");setTrendResults([]);setStage("topic");setTopic("");setOtherTopic("");setAudience("Público general");setVisual("stickman");setSeconds(30);setScenes([]);setTitle("");setIdeaPrompt("");setOutline(null);setDraftProgress(0);setManualDraft(false);setPlanNotice("");setPlatform("idea");setSelectedTrend(null);setApprovedCost(false);setJob(null);setError("");};
+ const reset=()=>{clientKeyRef.current="";autoApprovalRef.current="";setTopicGroup("popular");setTopicSearch("");setNarrationDraft("");setTrendCountry("US");setTrendCountrySearch("");setTrendResults([]);setStage("topic");setTopic("");setOtherTopic("");setAudience("Público general");setVisual("stickman");setSeconds(30);setScenes([]);setTitle("");setIdeaPrompt("");setOutline(null);setDraftProgress(0);setManualDraft(false);setPlanNotice("");setPlatform("idea");setSelectedTrend(null);setApprovedCost(false);setJob(null);setError("");};
  const trendSearch=async()=>{
   setError("");setBusy(true);setTrendResults([]);
   try{
@@ -380,7 +381,34 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
     <button type="button" onClick={()=>{next("history");void loadHistory();}}><FolderOpen size={16}/> Ver mis proyectos</button>
    </div>
   </>:null}
-  {stage==="topic"?<><h1>¿Qué tema?</h1><div className={styles.choiceGrid}>{topics.map(s=><button key={s} className={topic===s?styles.chosen:styles.choice} onClick={()=>{setTopic(s);if(s!=="Otro")next("audience")}}>{s}<ChevronRight size={17}/></button>)}</div>{topic==="Otro"?<div className={styles.field}><input autoFocus maxLength={220} value={otherTopic} placeholder="Describe el tema de tu video" onChange={e=>setOtherTopic(e.target.value)}/><button className={styles.primary} disabled={otherTopic.trim().length<4} onClick={()=>next("audience")}>Continuar</button></div>:null}</>:null}
+  {stage==="topic"?<>
+   <h1>¿Qué tema?</h1>
+   <p className={styles.help}>Elige algo que quieras compartir o escribe tu propio tema.</p>
+   <label className={styles.topicSearch} aria-label="Buscar temas">
+    <Search size={18} aria-hidden="true"/>
+    <input type="search" value={topicSearch} placeholder="Buscar temas…" maxLength={70}
+     onChange={e=>setTopicSearch(e.target.value)}/>
+   </label>
+   <div className={styles.topicCategories} role="group" aria-label="Categorías de temas">
+    {VIDEO_STUDIO_TOPIC_GROUPS.map(group=><button key={group.id} type="button"
+     aria-pressed={topicGroup===group.id}
+     className={topicGroup===group.id?styles.topicCategoryActive:styles.topicCategory}
+     onClick={()=>{setTopicGroup(group.id);setTopicSearch("");}}>
+     {group.label}</button>)}
+   </div>
+   <div className={styles.choiceGrid}>{searchStudioTopics(topicSearch,topicGroup).map(s=><button key={s}
+    className={topic===s?styles.chosen:styles.choice} onClick={()=>{setTopic(s);next("audience")}}>
+    {s}<ChevronRight size={17}/></button>)}</div>
+   {searchStudioTopics(topicSearch,topicGroup).length===0?<p className={styles.help}>No encontramos ese tema. Puedes crear uno personalizado.</p>:null}
+   <button type="button" className={styles.secondary} onClick={()=>setTopic("Otro")}>
+    <Pencil size={16}/> Otro tema · Escribir el mío
+   </button>
+   {topic==="Otro"?<div className={styles.field}>
+    <input autoFocus maxLength={220} value={otherTopic} placeholder="Describe el tema de tu video"
+     onChange={e=>setOtherTopic(e.target.value)}/>
+    <button className={styles.primary} disabled={otherTopic.trim().length<4} onClick={()=>next("audience")}>Continuar</button>
+   </div>:null}
+  </>:null}
   {stage==="audience"?<><h1>¿Para quién?</h1><div className={styles.choiceGrid}>{audiences.map(s=><button className={audience===s?styles.chosen:styles.choice} key={s} onClick={()=>{setAudience(s);if(s!=="Otro")next("style")}}>{s}<ChevronRight size={17}/></button>)}</div>{audience==="Otro"?<div className={styles.field}><input value={otherAudience} placeholder="Describe tu público" onChange={e=>setOtherAudience(e.target.value)}/><button className={styles.primary} disabled={otherAudience.trim().length<3} onClick={()=>next("style")}>Continuar</button></div>:null}</>:null}
   {stage==="style"?<>
    <h1>Elige un estilo</h1><p className={styles.help}>Cada historia tendrá una identidad visual. Explora los estilos antes de elegir.</p>
