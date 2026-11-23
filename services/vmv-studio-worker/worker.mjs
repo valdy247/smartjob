@@ -447,29 +447,41 @@ async function processJob(job){
   if(scenes.some(s=>s.approved!==true||typeof s.imagePath!=="string"||
     !s.imagePath.startsWith(prefix)||!s.imagePath.endsWith(".jpg")))throw Error("studio_images_not_approved");
   await verifyScriptLanguage(job,scenes);
-  // Voice preflight happens BEFORE spending on animated clips. The scenes are
-  // independent visual windows; spoken grammar is never fitted to their edges.
-  await patch(job,{status:"animating",phase:"Preparando narración continua",progress:32,eta_seconds:100});
-  const narration=path.join(dir,"narration.mp3");
-  let alignment=null;
-  if(!await restoreAsset(job,"voice_continuous",narration)){
-   alignment=await generateContinuousSpeech(job,scenes,narration);
-   await persistAsset(job,"voice_continuous",narration,"audio/mpeg");
+  // A silent project is a complete video with NO audio track. Its optional
+  // on-screen captions follow the visual windows rather than speech timestamps.
+  const silent=job.voice_provider==="none"&&job.voice_id==="none";
+  const narration=silent?null:path.join(dir,"narration.mp3");
+  let duration=job.seconds;
+  let timing=silent?{
+   duration,segments:scenes.map((_,i)=>({index:i,start:i*5,end:(i+1)*5,duration:5})),
+   cues:job.subtitles?scenes.map((scene,i)=>({
+    start:i*5,end:(i+1)*5,text:String(scene.speech||"").trim()
+   })):[],alignmentSource:"silent_visual_timeline"
+  }:job.assets?.voice_timeline;
+  if(!silent){
+   // Voice preflight happens BEFORE spending on animated clips. The scenes are
+   // independent visual windows; spoken grammar is never fitted to their edges.
+   await patch(job,{status:"animating",phase:"Preparando narración continua",progress:32,eta_seconds:100});
+   let alignment=null;
+   if(!await restoreAsset(job,"voice_continuous",narration)){
+    alignment=await generateContinuousSpeech(job,scenes,narration);
+    await persistAsset(job,"voice_continuous",narration,"audio/mpeg");
+   }
+   duration=await probe(narration);
+   if(duration/job.seconds<0.90||duration/job.seconds>1.10)throw Error("voice_length_requires_script_revision");
+   if(!alignment&&timing?.segments?.length===n&&
+    typeof timing.duration==="number"&&Math.abs(timing.duration-duration)<.25&&
+    ["whisper_words","elevenlabs_characters"].includes(timing.alignmentSource)&&
+    Array.isArray(timing.cues)&&timing.cues.length){
+    // A previous attempt already saved verified timestamps for this recording.
+   }else{
+    if(!alignment)alignment=await transcribeWordTimings(job,narration);
+    timing=speechTimeline(scenes,duration,alignment);
+    if(timing.alignmentSource==="estimated_legacy")throw Error("voice_alignment_unavailable");
+    await patch(job,{assets:{...job.assets,voice_timeline:timing}});
+   }
+   await verifyAudioLanguage(job,[narration],dir);
   }
-  const duration=await probe(narration);
-  if(duration/job.seconds<0.90||duration/job.seconds>1.10)throw Error("voice_length_requires_script_revision");
-  let timing=job.assets?.voice_timeline;
-  if(!alignment&&timing?.segments?.length===n&&
-   typeof timing.duration==="number"&&Math.abs(timing.duration-duration)<.25&&
-   ["whisper_words","elevenlabs_characters"].includes(timing.alignmentSource)&&Array.isArray(timing.cues)&&timing.cues.length) {
-   // Already verified and persisted in a previous worker attempt.
-  }else{
-   if(!alignment)alignment=await transcribeWordTimings(job,narration);
-   timing=speechTimeline(scenes,duration,alignment);
-   if(timing.alignmentSource==="estimated_legacy")throw Error("voice_alignment_unavailable");
-   await patch(job,{assets:{...job.assets,voice_timeline:timing}});
-  }
-  await verifyAudioLanguage(job,[narration],dir);
   const variant=job.quality_mode,clips=[];
   for(let i=0;i<n;i++){
    if(closing)throw Error("worker_stopping");
