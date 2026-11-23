@@ -78,6 +78,6 @@ test("new TS/TSX routes and client parse successfully",()=>{
    "app/api/video-studio/plan/route.ts","app/api/video-studio/trends/route.ts"]){
   const src=ts.createSourceFile(p,read(p),ts.ScriptTarget.Latest,true,
    p.endsWith(".tsx")?ts.ScriptKind.TSX:ts.ScriptKind.TS);
-  assert.deepEqual(src.parseDiagnostics.map(x=>ts.flattenDiagnosticMessageText(x.messageText," ")),[],p);
+  assert.deepEqual(src.parseDiagnostics.map(x=>{const at=src.getLineAndCharacterOfPosition(x.start||0);return (at.line+1)+":"+(at.character+1)+" "+ts.flattenDiagnosticMessageText(x.messageText," ");}),[],p);
  }
 });
