@@ -49,7 +49,6 @@ const errorMessages:Record<string,string>={
  studio_regeneration_confirmation_required:"Confirma el costo de regenerar una imagen.",
  studio_credit_purchases_not_ready:"Las compras de créditos en modo prueba aún no están conectadas.",
  studio_stripe_checkout_unavailable:"No se pudo iniciar la compra de prueba.",
- video_studio_wallet_unavailable:"No pudimos consultar los créditos."
  studio_trends_daily_limit:"Has alcanzado el límite diario de investigaciones. Puedes continuar con tu idea.",
  studio_trends_database_unavailable:"No pudimos consultar tendencias ahora. Inténtalo después o continúa con tu idea.",
  studio_youtube_not_connected:"YouTube todavía no está configurado en este entorno.",
