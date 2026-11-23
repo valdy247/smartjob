@@ -25,6 +25,6 @@ test("V1 shows ElevenLabs samples without permitting paid TTS or changing the Pi
  assert.match(picker,/sampleMode==="prerecorded"/);
  for(const p of ["app/api/video-studio/voices/route.ts","app/vista-app/vmv-pilot/PilotVoiceStep.tsx","app/vista-app/video-studio/page.tsx"]){
   const src=ts.createSourceFile(p,read(p),ts.ScriptTarget.Latest,true,p.endsWith(".tsx")?ts.ScriptKind.TSX:ts.ScriptKind.TS);
-  assert.deepEqual(src.parseDiagnostics.map(x=>ts.flattenDiagnosticMessageText(x.messageText," ")),[],p);
+  assert.deepEqual(src.parseDiagnostics.map(x=>{const at=src.getLineAndCharacterOfPosition(x.start||0);return (at.line+1)+":"+(at.character+1)+" "+ts.flattenDiagnosticMessageText(x.messageText," ");}),[],p);
  }
 });
