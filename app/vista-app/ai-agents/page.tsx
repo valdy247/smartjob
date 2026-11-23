@@ -507,9 +507,9 @@ export default function AIAgentsPreview(){
         const nextAgent=agents.find(a=>a.id===nextWorkspace?.primary_agent_id);
         setChosenBusiness(id);
         if(nextWorkspace&&nextAgent&&nextAgent.revision>0){
-         setSelected(nextAgent.id);setNotice("");
+         setQuoteAdvanceAfterSwitch(true);setSelected(nextAgent.id);setNotice("");
         }else{
-         setScreen("home");
+         setQuoteAdvanceAfterSwitch(false);setScreen("home");
          setNotice("Para cotizar con ese negocio, primero configura su agente principal.");
         }
        }}/>:null}
