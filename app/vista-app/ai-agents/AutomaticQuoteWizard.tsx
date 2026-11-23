@@ -33,12 +33,12 @@ function localDate(offset=0){
  return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");
 }
 function expiry(){return localDate(7);}
-export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose,businesses,onChooseBusiness}:{
+export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose,businesses,onChooseBusiness,initialStep="business"}:{
  business:CentralBusiness;agent:PersistedAgent;workspaceId:string;onClose:()=>void;
- businesses:CentralBusiness[];onChooseBusiness:(id:string)=>void;
+ businesses:CentralBusiness[];onChooseBusiness:(id:string)=>void;initialStep?:Step;
 }){
- const [step,setStep]=useState<Step>("business"),[editing,setEditing]=useState(false);
- const [businessConfirmed,setBusinessConfirmed]=useState(false);
+ const [step,setStep]=useState<Step>(initialStep),[editing,setEditing]=useState(false);
+ const [businessConfirmed,setBusinessConfirmed]=useState(initialStep!=="business");
  const [showBusinesses,setShowBusinesses]=useState(false);
  const [design,setDesign]=useState<Design>("modern");
  const [savedOutcome,setSavedOutcome]=useState<"draft"|"approved">("draft");
