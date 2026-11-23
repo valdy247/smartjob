@@ -53,8 +53,8 @@ function readScenes(data:Record<string,unknown>|null,batchSize:number):DraftScen
   const scene=isRecord(x)?x:{};
   return {speech:safe(scene.speech,230),imagePrompt:safe(scene.imagePrompt,950),caption:safe(scene.caption,110)};
  });
- return scenes.some(s=>wordCount(s.speech)<3||wordCount(s.speech)>18||
-  s.imagePrompt.length<35||s.caption.length<2)?null:scenes;
+ // Spoken length is determined by the full voiceover, never per visual shot.
+ return scenes.some(s=>s.speech.length<5||s.imagePrompt.length<35||s.caption.length<2)?null:scenes;
 }
 const stringField={type:"string"} as const;
 const sceneProperties={speech:stringField,imagePrompt:stringField,caption:stringField};
