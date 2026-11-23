@@ -59,3 +59,25 @@
  .v1BottomNav.v1BottomNav button small{font-size:9px}
 }
 @media(prefers-reduced-motion:reduce){.catalogService,.assessmentProgress span{transition:none}}
+
+/* V1 phone simulator: keep the entire device inside the current browser viewport.
+   All long screens scroll inside the device; its header, frame and bottom tabs stay fixed. */
+.previewStage.previewStage{display:flex;flex-direction:column;height:100dvh;min-height:0;max-height:100dvh;overflow:hidden}
+.previewStage .previewLayout{display:flex;align-items:center;justify-content:space-between;gap:clamp(24px,5vw,80px);flex:1 1 0;min-height:0;width:100%;padding:clamp(12px,2.5dvh,28px) clamp(16px,4vw,54px)}
+.previewStage .previewIntro{flex:1 1 0;min-width:0}
+.previewStage .previewPhone{flex:0 1 420px;width:100%;min-width:0;min-height:0;height:100%;max-height:785px}
+.previewStage .previewDevice{display:flex;flex-direction:column;width:100%;min-height:0;height:100%;max-height:100%;overflow:hidden}
+.previewStage .previewScroll{width:100%;min-width:0;min-height:0;flex:1 1 0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin}
+.previewStage .previewScroll>*{min-width:0;max-width:100%}
+@media(min-width:601px) and (max-width:970px){
+ .previewStage .previewLayout{justify-content:center}
+ .previewStage .previewIntro{display:none}
+ .previewStage .previewPhone{flex:0 1 402px;max-width:402px}
+}
+@media(max-width:600px){
+ .previewStage .previewLayout{display:block;flex:1 1 0;min-height:0;width:100%;height:100%;padding:0}
+ .previewStage .previewIntro{display:none}
+ .previewStage .previewPhone{width:100%;height:100%;max-height:none}
+ .previewStage .previewDevice{height:100%;max-height:none}
+ .previewStage .previewScroll{min-height:0;overflow-y:auto;overflow-x:hidden}
+}
