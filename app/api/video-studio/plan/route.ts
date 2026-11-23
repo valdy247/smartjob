@@ -4,6 +4,8 @@ import {askAiAgent} from "@/lib/vmv-ai-agents/model";
 import {validPilotLanguage,pilotLanguageName} from "@/lib/vmv-pilot-voice-config";
 import {isVideoStudioCountry} from "@/lib/vmv-studio-countries";
 import {splitNarrationIntoMoments} from "@/lib/vmv-studio-semantic-beats";
+import {applyStudioAudit,validStudioDraft,studioAuditIssues} from "@/lib/vmv-studio-script-auditor";
+import type {StudioAuditDecision,StudioAuditScene} from "@/lib/vmv-studio-script-auditor";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -63,12 +65,16 @@ const outlineProperties={
  beats:{type:"array",items:stringField}
 };
 const outlineKeys=["title","logline","hook","ending","characters","setting","narration","beats"];
-function outputSchema(stage:"outline"|"scenes"):Record<string,unknown>{
- const properties=stage==="scenes"?{scenes:{type:"array",items:sceneSchema}}:outlineProperties;
- const required=stage==="scenes"?["scenes"]:outlineKeys;
+const auditProperties={decision:{type:"string",enum:["pass","revise"]},
+ reason:stringField,title:stringField,scenes:{type:"array",items:sceneSchema}};
+function outputSchema(stage:"outline"|"scenes"|"audit"):Record<string,unknown>{
+ const properties=stage==="audit"?auditProperties:
+  stage==="scenes"?{scenes:{type:"array",items:sceneSchema}}:outlineProperties;
+ const required=stage==="audit"?["decision","reason","title","scenes"]:
+  stage==="scenes"?["scenes"]:outlineKeys;
  return {type:"object",additionalProperties:false,properties,required};
 }
-async function askStructured<T>(stage:"outline"|"scenes",system:string,
+async function askStructured<T>(stage:"outline"|"scenes"|"audit",system:string,
  payload:Record<string,unknown>,check:(value:Record<string,unknown>|null)=>T|null,
  maxOutputTokens:number):Promise<{value:T|null;error:"studio_plan_incomplete"|"studio_plan_provider_unavailable"|null}>{
  let invalid=false;
@@ -111,13 +117,13 @@ export async function POST(req:NextRequest){
  const owner=await authenticatedUser(req);
  if(!owner)return json({error:"authentication_required"},401);
  const size=Number(req.headers.get("content-length")||0);
- if(size>18000)return json({error:"studio_plan_invalid_request"},413);
+ if(size>58000)return json({error:"studio_plan_invalid_request"},413);
  const b=await req.json().catch(()=>null);
  const mode=b?.mode;
  const topic=safe(b?.topic,220),idea=safe(b?.idea,3000),audience=safe(b?.audience,120);
  const style=safe(b?.style,40) as keyof typeof STYLES,language=b?.language;
  const seconds=Number(b?.seconds);
- if(!["outline","scenes"].includes(mode)||topic.length<3||audience.length<2||
+ if(!["outline","scenes","audit"].includes(mode)||topic.length<3||audience.length<2||
   !Object.hasOwn(STYLES,style)||!validPilotLanguage(language)||
   !Number.isInteger(seconds)||seconds<15||seconds>180)
   return json({error:"studio_plan_invalid_request"},400);
@@ -158,16 +164,93 @@ export async function POST(req:NextRequest){
    value=>{
     const valueOutline=readOutline(value);
     if(!valueOutline||!splitNarrationIntoMoments(valueOutline.narration).length)return null;
-    // The user selected an approximate runtime, but the worker must not get
-    // a wildly short or long script that would fail after reserving credits.
-    const spokenWords=valueOutline.narration.trim().split(/\s+/).filter(Boolean).length;
-    const estimatedTime=spokenWords/(language==="es"?2.3:2.25);
-    return Math.abs(estimatedTime-seconds)<=Math.max(5,seconds*.2)?valueOutline:null;
+    // The complete first draft is PRIVATE. The full-story editor will adjust
+    // runtime, story pacing and visuals before anything is shown to the user.
+    return valueOutline;
    },
    Math.min(5000,1400+Math.ceil(seconds/4)*65));
   if(!result.value)return json({error:result.error,detail:"outline"},result.error==="studio_plan_incomplete"?502:503);
   const moments=splitNarrationIntoMoments(result.value.narration);
   return json({outline:result.value,moments,count:moments.length});
+ }
+
+ if(mode==="audit"){
+  // One compact final-review phase: no credits, no image/video generation.
+  const outline=readOutline(b?.outline);
+  const source=Array.isArray(b?.scenes)?b.scenes:[];
+  const scenes:StudioAuditScene[]=source.map((item:unknown)=>{
+   const v=isRecord(item)?item:{};
+   return {speech:safe(v.speech,230),imagePrompt:safe(v.imagePrompt,950),
+    caption:safe(v.caption,110),motion:v.motion==="zoom"?"zoom":"animate"};
+  });
+  if(!outline||!validStudioDraft(outline,scenes))
+   return json({error:"studio_plan_invalid_batch"},400);
+  const baseIssues=studioAuditIssues(outline,scenes,seconds,language);
+  const system=shared+
+   " You are the FINAL VIDEO EDITOR, not a passive critic. This is an automated pre-user-preview editorial stage. "+
+   "Review the complete script and the actual visual prompts side by side. Make sure every shot illustrates the words being spoken, "+
+   "not earlier or later narration, and that the subject, audience, language and style match the user's request. "+
+   "Detect boring repeated images, identical camera angles or compositions, unnecessary repetition, illogical actions, "+
+   "unclear hooks, weak payoff, misleading factual claims, continuity mistakes and any timing mismatch. "+
+   "Use a varied shot list (wide establishing, closeup, action, detail, character interaction, visual demonstration) WHEN meaningful. "+
+   "Keep recurring character identity consistent but show genuinely different objects, positions, actions and framing. "+
+   "If the initial draft has any real issue, you have FULL editorial authority to revise ALL scenes, their spoken lines, "+
+   "scene count, visual prompts, shot types and animate/zoom choices. You do NOT have to preserve the original eight scenes "+
+   "or their durations; choose 3 to 36 meaningful moments and preserve the core topic and user intent. "+
+   "Write a coherent ORIGINAL narration near "+Math.round(seconds*(language==="es"?2.3:2.25))+
+   " words for "+seconds+" seconds in "+lang+". Target a natural, NOT rushed delivery. "+
+   "The duration is estimated, and the worker will later synchronize scenes to actual voice timestamps. "+
+   "Always keep every word in exactly one scene speech, without dividing a sentence at arbitrary five-second boundaries. "+
+   "Each visual prompt MUST be distinctive, concrete and optimized for generating images: composition, action, camera, "+
+   "visible subject, environment, and consistent character details where relevant. No text baked into images. "+
+   "Choose zoom for still or short moments and animate when the action should truly move; never force animation. "+
+   "Do not invent statistics or claim guaranteed viral outcomes. Engagement is a qualitative goal. "+
+   "IMPORTANT: If no changes are necessary and the draft meets all technical constraints, "+
+   "respond {decision:'pass',reason:'...',title:'',scenes:[]}. "+
+   "If ANY changes are necessary, respond {decision:'revise',reason:'...',title:'...',scenes:[...]} with the COMPLETE "+
+   "corrected scene list, not partial edits. Editing all scenes is allowed and encouraged if needed. "+
+   "Use exactly the JSON schema; speech in "+lang+" and detailed English image prompts. "+
+   "Respond quickly; this is a small final polish, NOT an open-ended content generation loop.";
+  let feedback="";
+  let hadValidResponse=false;
+  const outputLimit=Math.min(10500,1700+scenes.length*225);
+  for(let attempt=0;attempt<2;attempt++){
+   try{
+    const response=await askAiAgent({
+     system:system+" Return only STRICT JSON, no markdown.",
+     messages:[{role:"user",content:JSON.stringify({
+      topic,idea:idea||topic,audience,style,seconds,language,
+      source:sourceContext,outline,scenes,issues:baseIssues,
+      ...(feedback?{revisionFeedback:feedback}:{}),
+      instructions:"Never approve a draft that fails any listed issue. Adjust everything necessary."
+     })}],
+     jsonMode:true,jsonSchema:{name:"vmv_video_audit",schema:outputSchema("audit")},
+     maxOutputTokens:outputLimit,temperature:attempt===0?.3:.15,
+     timeoutMs:attempt===0?23000:19000
+    });
+    const parsed=parseAiJson(response);
+    const report=parsed as unknown as StudioAuditDecision;
+    hadValidResponse=Boolean(parsed);
+    const draft=applyStudioAudit(outline,scenes,report,seconds,language);
+    if(draft)return json({...draft,auditPassed:true});
+    // At most one short retry with specific technical issues, not endless loops.
+    const proposed=Array.isArray(parsed?.scenes)?parsed.scenes as StudioAuditScene[]:[];
+    const proposalOutline={...outline,narration:proposed.map(s=>s?.speech||"").join(" ")};
+    const reviewIssues=proposed.length?
+     studioAuditIssues(proposalOutline,proposed,seconds,language):baseIssues;
+    feedback="Your first result failed quality validation: "+
+     (reviewIssues.length?reviewIssues.join("; "):
+      "Use decision=pass only if current input meets all requirements, otherwise give a COMPLETE revised scene list.")+
+     ". Fix all issues without changing the selected topic, then return schema-valid JSON.";
+   }catch(e){
+    const message=e instanceof Error?e.message:"";
+    console.warn("[vmv-video-studio/plan] audit_attempt_failed",{
+     attempt:attempt+1,reason:/HTTP (401|403|429)/.test(message)?"provider_unavailable":"generation"});
+    if(/HTTP (401|403|429)/.test(message))break;
+    feedback="Return a valid concise JSON object with a complete, coherent scene list.";
+   }
+  }
+  return json({error:hadValidResponse?"studio_plan_incomplete":"studio_plan_provider_unavailable",detail:"audit"},502);
  }
  const start=Number(b?.start),batchSize=Number(b?.batchSize);
  const outline=readOutline(b?.outline);
