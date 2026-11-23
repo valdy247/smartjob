@@ -11,7 +11,8 @@ const account=read("app/vista-app/page.tsx");
 const shared=read("app/vista-app/AgentSettingsEntry.tsx");
 
 test("Identity and Activity do not render standalone AI Agent tiles",()=>{
- assert.ok(ai.includes('types.filter(type=>type.id!=="custom"&&type.id!=="operations").map'));
+ assert.ok(ai.includes('types.filter(type=>type.id!=="custom"&&type.id!=="operations"&&type.id!=="calls").map'));
+ assert.ok(!ai.includes('type.id!=="operations").map'));
  assert.ok(!ai.includes('setScreen("editor")'));
  assert.ok(!ai.includes('setScreen("quality")'));
  assert.ok(!ai.includes("import AgentSetupWizard"));
