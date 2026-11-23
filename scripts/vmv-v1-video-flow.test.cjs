@@ -152,6 +152,7 @@ test("short trending topic generates three actual scripts with strict schema in 
    return JSON.stringify({...outline,scenes});
   }};
   if(id==="@/lib/vmv-pilot-voice-config")return {validPilotLanguage:x=>x==="es",pilotLanguageName:()=>"Spanish"};
+  if(id==="@/lib/vmv-studio-countries")return {isVideoStudioCountry:x=>typeof x==="string"&&/^[A-Z]{2}$/.test(x)};
   throw Error("Unexpected dependency: "+id);
  };
  const context={exports:resultModule.exports,module:resultModule,require:mockRequire,process:{env:{VERCEL_ENV:"preview"}},console:{warn:()=>{}}};
@@ -179,6 +180,7 @@ test("short script failure rejects bad AI output instead of inventing scenes",as
   if(id==="@/lib/auth-server")return {authenticatedUser:async()=>"owner"};
   if(id==="@/lib/vmv-ai-agents/model")return {askAiAgent:async()=>{calls++;return "{}";}};
   if(id==="@/lib/vmv-pilot-voice-config")return {validPilotLanguage:x=>x==="es",pilotLanguageName:()=>"Spanish"};
+  if(id==="@/lib/vmv-studio-countries")return {isVideoStudioCountry:x=>typeof x==="string"&&/^[A-Z]{2}$/.test(x)};
   throw Error("Unexpected dependency: "+id);
  };
  vm.runInNewContext(code,{exports:mod.exports,module:mod,require:mockRequire,process:{env:{VERCEL_ENV:"preview"}},console:{warn:()=>{}}},{timeout:5000});
