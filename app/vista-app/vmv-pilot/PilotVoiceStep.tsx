@@ -21,6 +21,7 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
  const [libraryTotal,setLibraryTotal]=useState<number|null>(null);
  const [libraryLoading,setLibraryLoading]=useState(false),[libraryError,setLibraryError]=useState("");
  const [ageFilter,setAgeFilter]=useState(""),[useCaseFilter,setUseCaseFilter]=useState("");
+ const [qualityFilter,setQualityFilter]=useState<"high_quality"|"all">("high_quality");
  const [loading,setLoading]=useState(true),[loadingId,setLoadingId]=useState("");
  const [playingId,setPlayingId]=useState(""),[error,setError]=useState("");
  const [genderFilter,setGenderFilter]=useState<"male"|"female"|"all">("all");
@@ -59,7 +60,7 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
  useEffect(()=>{
   if(!libraryMode)return;
   setLibraryVoices([]);setLibraryPage(0);setVisibleCount(24);setLibraryMore(false);
- },[libraryMode,language,search,genderFilter,ageFilter,accentFilter,useCaseFilter]);
+ },[libraryMode,language,search,genderFilter,ageFilter,accentFilter,useCaseFilter,qualityFilter]);
  useEffect(()=>{
   if(!libraryMode)return;
   let alive=true;
@@ -76,6 +77,7 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
     if(ageFilter)params.set("age",ageFilter);
     if(accentFilter)params.set("accent",accentFilter);
     if(useCaseFilter)params.set("use_case",useCaseFilter);
+    if(qualityFilter==="all")params.set("quality","all");
     const response=await fetch(catalogEndpoint+"?"+params,{
      headers:{Authorization:"Bearer "+access},cache:"no-store",signal:abort.signal
     });
@@ -95,7 +97,7 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
    }finally{if(alive)setLibraryLoading(false);}
   })();},search?320:0);
   return()=>{alive=false;clearTimeout(timer);abort.abort();};
- },[libraryMode,language,catalogEndpoint,libraryPage,search,genderFilter,ageFilter,accentFilter,useCaseFilter]);
+ },[libraryMode,language,catalogEndpoint,libraryPage,search,genderFilter,ageFilter,accentFilter,useCaseFilter,qualityFilter]);
  const choose=async(v:Voice)=>{
   stop();setError("");
   if(!libraryMode||v.origin!=="library"){onChoose(v.provider,v.id,v.name);return;}
@@ -216,7 +218,15 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
     <button type="button" key={f.id} className={genderFilter===f.id?css.active:""}
      aria-pressed={genderFilter===f.id} onClick={()=>{setGenderFilter(f.id);setVisibleCount(24);}}>{f.label}</button>)}
   </div>
-  {accents.length>0?<label className={css.accentSelect}>
+  {libraryMode?<label className={css.accentSelect}>
+   <span>{en?"Accent":"Acento"}</span>
+   <input type="search" list="vmv-voice-accents" maxLength={32} value={accentFilter}
+    placeholder={en?"Any accent · e.g. mexican":"Cualquier acento · ej. mexican"}
+    onChange={e=>{setAccentFilter(e.target.value);setVisibleCount(24);}}/>
+   <datalist id="vmv-voice-accents">
+    {accents.map(a=><option key={a} value={a}/>)}
+   </datalist>
+  </label>:accents.length>0?<label className={css.accentSelect}>
    <span>{en?"Accent":"Acento"}</span>
    <select value={accentFilter} onChange={e=>{setAccentFilter(e.target.value);setVisibleCount(24);}}>
     <option value="">{en?"All accents":"Todos los acentos"}</option>
@@ -224,6 +234,10 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
    </select>
   </label>:null}
   {libraryMode?<div className={css.libraryFilters}>
+   <label>{en?"Quality":"Calidad"}<select value={qualityFilter} onChange={e=>setQualityFilter(e.target.value as "high_quality"|"all")}>
+    <option value="high_quality">{en?"Studio quality":"Calidad de estudio"}</option>
+    <option value="all">{en?"All available":"Todas las disponibles"}</option>
+   </select></label>
    <label>{en?"Age":"Edad"}<select value={ageFilter} onChange={e=>setAgeFilter(e.target.value)}>
     <option value="">{en?"All":"Todas"}</option>
     <option value="young">{en?"Young":"Joven"}</option>
