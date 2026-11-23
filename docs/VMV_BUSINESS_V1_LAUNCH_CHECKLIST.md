@@ -23,13 +23,13 @@
 ## 1. Shell, acceso y navegación V1 [P0]
 
 - [ ] Separar login/perfil/onboarding de `useSmartCallAccount` y de las peticiones Twilio/minutos en el Home.
-- [x] Home V1 actualizado sobre el diseño anterior (saludo, hero con cohete, tarjetas, Mi Negocio y navegación inferior); seis servicios visibles y sin Smart Call/Traductor/Instagram Connect. Compilación Preview READY en commit 84773818 (falta QA funcional en navegador).
-- [ ] Retirar Smart Call, Traductor e Instagram Connect del catálogo, home, búsqueda, accesos rápidos, onboarding, recomendaciones y menús.
+- [x] Home V1 conserva saludo, hero con cohete, Mi Negocio y estilo original; **cuatro** servicios destacados según diagnóstico del cliente (o cuatro opciones iniciales sin diagnóstico). `readV1Needs` reutiliza diagnóstico V1 y `readDiagnosticRecord` el diagnóstico anterior. Guardado de respuestas vía Supabase Auth. Build Preview READY en `0c4e005` (pendiente prueba de usuario en móvil).
+- [ ] Retirar Smart Call, Traductor e Instagram Connect del catálogo, home, búsqueda, accesos rápidos, onboarding, recomendaciones y menús. **Avance:** retirados de Home y catálogo V1; revisar enlaces de otros módulos y rutas directas.
 - [ ] Ocultar/retirar pantallas telefónicas, traductor y enlaces profundos de primera versión; guardar código/datos y preservar webhooks compartidos hasta auditar.
 - [ ] Reasignar todos los enlaces de video existentes de Home, Servicios, Pilot y AI Agents a una **única** entrada Video Studio.
 - [ ] Actualizar Cuenta: perfil, negocios, opciones, sesión y avisos sin referencias a servicios pospuestos.
 - [ ] Revisar registro/inicio de sesión, recuperación de contraseña, creación del primer negocio, roles, sesiones y cierre de sesión.
-- [ ] Probar navegación móvil, botón atrás, deep links, selector de idioma, estados vacíos y errores de permisos.
+- [ ] Probar navegación móvil, botón atrás, deep links, selector de idioma, estados vacíos y errores de permisos. **Avance:** menú Inicio/Servicios/Configuración con 3 columnas centradas; catálogo V1 en dos columnas con 6 herramientas y búsqueda; prueba automatizada incluida y build READY. Falta revisión visual en dispositivos.
 
 ## 2. Video Studio — wizard único [P0]
 
@@ -133,7 +133,7 @@
 - [ ] Aprobar checklist GO/NO-GO con evidencia, plan de reversión y presupuesto de beta.
 - [ ] Obtener autorización explícita para fusionar/desplegar a producción; comprobar dominio, jobs, métricas y errores postlanzamiento.
 
-**Evidencia Home:** diseño anterior reutilizado mediante `vista-app.module.css`, conservando clases `homeConcept`, `homeGrowHero`, `homeServiceTiles` y `homeBusinessArea`. Preview de código construido (READY). La aplicación completa sigue sin estar lista para producción.
+**Evidencia Home:** diseño anterior reutilizado mediante `vista-app.module.css`, conservando `homeConcept`, `homeGrowHero`, `homeServiceTiles` y `homeBusinessArea`. Recomendador puro `lib/vmv-v1-recommendations.ts`, diagnóstico en `VMVV1NeedsAssessment.tsx`, catálogo de 2 columnas y `v1BottomNav`. Pruebas `scripts/vmv-v1-home.test.cjs` pasaron en Vercel; despliegue V1 READY `0c4e005`. La aplicación completa sigue sin estar lista para producción.
 
 ## P1 — después de V1 (no bloqueantes si se ocultan)
 
