@@ -35,11 +35,22 @@ const log=(event,details={})=>console.log("[vmv-studio-worker]",event,JSON.strin
 let closing=false,active=false;
 process.on("SIGTERM",()=>{closing=true;});
 process.on("SIGINT",()=>{closing=true;});
-createServer((req,res)=>{
+createServer(async(req,res)=>{
  const health=req.url==="/healthz",ready=req.url==="/readyz";
- const status=health?200:ready?(STOP()?503:200):404;
- res.writeHead(status,{"Content-Type":"text/plain","Cache-Control":"no-store"});
- res.end(health?"ok":ready?(STOP()?"standby":"ready"):"not found");
+ if(health){res.writeHead(200,{"Content-Type":"text/plain","Cache-Control":"no-store"});res.end("ok");return;}
+ if(!ready){res.writeHead(404,{"Content-Type":"text/plain","Cache-Control":"no-store"});res.end("not found");return;}
+ let connected=false;
+ if(!STOP()){
+  try{
+   // A ready worker must have the database job queue available, not merely
+   // an environment flag. A read-only HEAD query never claims a job.
+   const {error}=await db.from("vmv_studio_jobs").select("id",{head:true}).limit(1);
+   connected=!error;
+  }catch{connected=false;}
+ }
+ const enabled=!STOP()&&connected;
+ res.writeHead(enabled?200:503,{"Content-Type":"text/plain","Cache-Control":"no-store"});
+ res.end(enabled?"ready":"standby");
 }).listen(Number(process.env.PORT||10000),"0.0.0.0");
 const auth=k=>({Authorization:"Bearer "+process.env[k]});
 async function request(url,options={},ms=80000){
