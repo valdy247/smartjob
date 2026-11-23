@@ -1,7 +1,7 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
 import Link from "next/link";
-import {ArrowLeft,ArrowRight,ArrowUpRight,BookOpen,Check,CheckCircle2,ChevronRight,Clapperboard,Clock3,Download,Film,FolderOpen,Globe2,LoaderCircle,Pencil,PlayCircle,RefreshCw,Search,Sparkles,Subtitles,Video} from "lucide-react";
+import {ArrowLeft,ArrowRight,ArrowUpRight,Check,CheckCircle2,ChevronRight,Clapperboard,Clock3,Download,Film,FolderOpen,Globe2,LoaderCircle,Pencil,PlayCircle,RefreshCw,Search,Sparkles,Subtitles,Video,Eye,X,ShieldCheck} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import VMVAuthGateway from "@/components/VMVAuthGateway";
@@ -9,7 +9,7 @@ import PilotVoiceStep from "../vmv-pilot/PilotVoiceStep";
 import type {PilotLanguage,PilotVoiceProvider} from "@/lib/vmv-pilot-voice-config";
 import styles from "./page.module.css";
 
-type Stage="home"|"topic"|"audience"|"style"|"duration"|"language"|"voice"|"subtitles"|"source"|"trends"|"plan"|"quality"|"summary"|"images"|"progress"|"result"|"history";
+type Stage="home"|"topic"|"audience"|"style"|"duration"|"language"|"voice"|"subtitles"|"source"|"trends"|"idea"|"plan"|"quality"|"summary"|"images"|"progress"|"result"|"history";
 type Style="stickman"|"cartoon2d"|"cartoon3d"|"clay"|"illustrated";
 type Quality="turbo"|"high";
 type Scene={speech:string;imagePrompt:string;caption:string;approved?:boolean;imageUrl?:string;imagePath?:string};
@@ -18,17 +18,18 @@ type Job={id:string;status:string;phase:string;progress:number;scenes:Scene[];se
 const topics=["Curiosidades","Historia","Ciencia","Tecnología","Educación","Entretenimiento","Negocios","Otro"];
 const audiences=["Público general","Niños","Adolescentes","Jóvenes","Adultos","Familias","Emprendedores","Otro"];
 const durations=[15,30,60,120,180] as const;
-const stylesList:{id:Style;label:string;description:string;emoji:string}[]=[
- {id:"stickman",label:"Stickman 2D",description:"Personajes de palitos",emoji:"✏️"},
- {id:"cartoon2d",label:"Cartoon 2D",description:"Dibujos animados",emoji:"🎨"},
- {id:"cartoon3d",label:"Cartoon 3D",description:"Animación tridimensional",emoji:"🧸"},
- {id:"clay",label:"Plastilina 3D",description:"Stop motion artesanal",emoji:"🪁"},
- {id:"illustrated",label:"Cuento ilustrado",description:"Ilustración animada",emoji:"📖"}
+type VideoExample={id:Style;label:string;description:string;poster:string;video:string|null};
+const stylesList:VideoExample[]=[
+ {id:"stickman",label:"Stickman 2D",description:"Historias sencillas con gran expresividad",poster:"/video-studio/styles/stickman.svg",video:null},
+ {id:"cartoon2d",label:"Cartoon 2D",description:"Dibujo animado con color y personalidad",poster:"/video-studio/styles/cartoon2d.svg",video:null},
+ {id:"cartoon3d",label:"Cartoon 3D",description:"Personajes tridimensionales cinematográficos",poster:"/video-studio/styles/cartoon3d.svg",video:null},
+ {id:"clay",label:"Plastilina 3D",description:"Mundos artesanales con textura real",poster:"/video-studio/styles/clay.svg",video:null},
+ {id:"illustrated",label:"Cuento ilustrado",description:"Historias con ilustración artística",poster:"/video-studio/styles/storybook.svg",video:null}
 ];
 const labels:Record<Stage,string>={
- home:"Video Studio",topic:"¿Qué tema?",audience:"¿Para quién?",style:"Elige un estilo",duration:"Duración",language:"Idioma del video",voice:"Elige una voz",subtitles:"Subtítulos",source:"¿Analizar tendencias?",trends:"Tendencias",plan:"Tu guion y escenas",quality:"Calidad",summary:"Resumen",images:"Revisa las escenas",progress:"Producción en la nube",result:"Video listo",history:"Historial"
+ home:"Video Studio",topic:"¿Qué tema?",audience:"¿Para quién?",style:"Elige un estilo",duration:"Duración",language:"Idioma del video",voice:"Elige una voz",subtitles:"Subtítulos",source:"¿Analizar tendencias?",trends:"Tendencias",idea:"Tu idea",plan:"Tu guion y escenas",quality:"Calidad",summary:"Resumen",images:"Revisa las escenas",progress:"Producción en la nube",result:"Video listo",history:"Historial"
 };
-const order:Stage[]=["topic","audience","style","duration","language","voice","subtitles","source","trends","plan","quality","summary"];
+const stepsFor=(platform:string):Stage[]=>["topic","audience","style","duration","language","voice","subtitles","source",platform==="idea"?"idea":"trends","plan","quality","summary"];
 const estimatedCredits=(seconds:number,quality:Quality)=>Math.ceil(seconds*(quality==="high"?2.5:1));
 const readable=(seconds:number)=>seconds>=60?seconds%60===0?seconds/60+" min":Math.floor(seconds/60)+" min "+seconds%60+" s":seconds+" s";
 const errorMessages:Record<string,string>={
@@ -38,7 +39,19 @@ const errorMessages:Record<string,string>={
  video_studio_wallet_unavailable:"Los créditos reales todavía no están configurados. No se ha cobrado nada.",
  video_studio_insufficient_credits:"No tienes créditos suficientes para esta generación.",
  video_studio_worker_not_ready:"El procesador de videos todavía no está listo.",
- video_studio_duplicate:"Esta solicitud ya existe. Abre Historial para continuar."
+ video_studio_duplicate:"Esta solicitud ya existe. Abre Historial para continuar.",
+ studio_trends_daily_limit:"Has alcanzado el límite diario de investigaciones. Puedes continuar con tu idea.",
+ studio_trends_database_unavailable:"No pudimos consultar tendencias ahora. Inténtalo después o continúa con tu idea.",
+ studio_youtube_not_connected:"YouTube todavía no está configurado en este entorno.",
+ studio_youtube_quota:"YouTube agotó temporalmente su cuota. Continúa con tu idea.",
+ studio_plan_incomplete:"El guion llegó incompleto. Puedes volver a intentarlo sin perder tu idea.",
+ studio_plan_provider_unavailable:"No pudimos preparar el guion. Inténtalo otra vez.",
+ studio_plan_not_enabled:"La creación de guiones está disponible solo en el entorno de pruebas.",
+ studio_plan_invalid_request:"Revisa los datos de tu proyecto antes de generar el guion.",
+ studio_plan_invalid_outline:"El plan de escenas debe regenerarse.",
+ studio_trends_unavailable:"No podemos consultar las tendencias en este momento.",
+ studio_plan_confirmation_required:"Confirma que quieres generar el guion antes de continuar.",
+ studio_plan_invalid_batch:"No se pudo organizar el guion. Vuelve a intentarlo."
 };
 const sampleInitial:Scene[]=[];
 export default function VideoStudioV1(){
@@ -54,6 +67,12 @@ export default function VideoStudioV1(){
  const [voiceProvider,setVoiceProvider]=useState<PilotVoiceProvider>("openai"),[voiceId,setVoiceId]=useState("alloy"),[voiceLabel,setVoiceLabel]=useState("Alloy");
  const [subtitles,setSubtitles]=useState(true);
  const [platform,setPlatform]=useState("idea"),[trendResults,setTrendResults]=useState<Trend[]>([]);
+ const order=stepsFor(platform);
+ const [ideaPrompt,setIdeaPrompt]=useState("");
+ const [exampleStyle,setExampleStyle]=useState<Style|null>(null);
+ const [draftProgress,setDraftProgress]=useState(0);
+ const [draftPhase,setDraftPhase]=useState("");
+ const [outline,setOutline]=useState<{title:string;logline:string;hook:string;ending:string;characters:string;setting:string;beats:string[]}|null>(null);
  const [selectedTrend,setSelectedTrend]=useState<Trend|null>(null);
  const [title,setTitle]=useState(""),[scenes,setScenes]=useState<Scene[]>(sampleInitial);
  const [quality,setQuality]=useState<Quality>("turbo"),[approvedCost,setApprovedCost]=useState(false);
@@ -61,7 +80,7 @@ export default function VideoStudioV1(){
  const [historyLoading,setHistoryLoading]=useState(false),[sceneIndex,setSceneIndex]=useState(0);
  const [savingScene,setSavingScene]=useState(false);
  const [trendConsent,setTrendConsent]=useState(false);
- const [planApproval,setPlanApproval]=useState(false);
+
  const authenticate=useCallback(async()=>{
   const sb=getSupabase();if(!sb)throw Error("Inicia sesión.");
   const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Inicia sesión.");
@@ -98,30 +117,68 @@ export default function VideoStudioV1(){
  const next=(s:Stage)=>{setError("");setStage(s)};
  const previous=()=>{setError("");if(stage==="images"||stage==="progress"||stage==="result"){setStage("history");void loadHistory();return;}
   const idx=order.indexOf(stage);setStage(idx>0?order[idx-1]:"home");};
- const reset=()=>{setStage("topic");setTopic("");setOtherTopic("");setAudience("Público general");setVisual("stickman");setSeconds(30);setScenes([]);setTitle("");setSelectedTrend(null);setApprovedCost(false);setJob(null);setError("");};
+ const reset=()=>{setStage("topic");setTopic("");setOtherTopic("");setAudience("Público general");setVisual("stickman");setSeconds(30);setScenes([]);setTitle("");setIdeaPrompt("");setOutline(null);setDraftProgress(0);setPlatform("idea");setSelectedTrend(null);setApprovedCost(false);setJob(null);setError("");};
  const trendSearch=async()=>{
   setError("");setBusy(true);setTrendResults([]);
   try{
-   if(platform!=="youtube")throw Error("Por ahora solo YouTube dispone de búsqueda verificada. Puedes continuar con tu idea.");
+   if(platform!=="youtube")throw Error("studio_trends_unavailable");
    const access=await authenticate();
    const query=encodeURIComponent((topic==="Otro"?otherTopic:topic).slice(0,90));
-   const res=await fetch("/api/video-generator/radar?q="+query+"&days=30",{cache:"no-store",headers:{Authorization:"Bearer "+access,"X-VMV-YouTube-Consent":"accepted"}});
-   const data=await res.json().catch(()=>null);
-   if(!res.ok)throw Error(String(data?.error||"radar_unavailable"));
-   const matches=(Array.isArray(data?.scan?.items)?data.scan.items:[]).slice(0,3) as Trend[];
-   if(!matches.length)throw Error("No encontramos tendencias recientes verificadas para ese tema.");
-   setTrendResults(matches);
-  }catch(e){setError(e instanceof Error?e.message:"No pudimos consultar las tendencias.");}
+   const headers={Authorization:"Bearer "+access,"X-VMV-YouTube-Consent":"accepted"};
+   let res=await fetch("/api/video-studio/trends?q="+query,{cache:"no-store",headers});
+   let data=await res.json().catch(()=>null);
+   if(!res.ok&&res.status!==202)throw Error(typeof data?.error==="string"?data.error:"studio_trends_unavailable");
+   let attempts=0;
+   while(res.status===202&&typeof data?.scan?.id==="string"&&attempts<5){
+    await new Promise(resolve=>setTimeout(resolve,1800));
+    res=await fetch("/api/video-studio/trends?id="+encodeURIComponent(data.scan.id),{cache:"no-store",headers});
+    data=await res.json().catch(()=>null);attempts++;
+    if(!res.ok&&res.status!==202)throw Error(typeof data?.error==="string"?data.error:"studio_trends_unavailable");
+   }
+   if(res.status===202)throw Error("La búsqueda está en curso. Vuelve a tocar Buscar tendencias en unos segundos.");
+   const matches=Array.isArray(data?.scan?.items)?data.scan.items:[];
+   const verified=matches.filter((t:Trend)=>typeof t?.sourceId==="string"&&
+    /^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(t.url)&&
+    typeof t.thumbnail==="string"&&t.thumbnail.startsWith("https://")).slice(0,3) as Trend[];
+   if(!verified.length)throw Error("No encontramos videos recientes verificables. Prueba otro tema o continúa con tu idea.");
+   setTrendResults(verified);
+  }catch(e){setError(e instanceof Error?e.message:"studio_trends_unavailable");}
   finally{setBusy(false);}
  };
- const prepare=async()=>{
-  setBusy(true);setError("");
+ const prepare=async(chosenTrend:Trend|null=selectedTrend)=>{
+  setBusy(true);setError("");setDraftProgress(0);setDraftPhase("Creando una historia original…");
+  setScenes([]);setOutline(null);
   try{
-   const idea=(topic==="Otro"?otherTopic:topic).trim();
-   const result=await api("plan","POST",{topic:idea,audience:audience==="Otro"?otherAudience:audience,style:visual,seconds,language,source:selectedTrend?{platform,sourceId:selectedTrend.sourceId,title:selectedTrend.title,url:selectedTrend.url}:null,confirmPlanCost:true});
-   if(!Array.isArray(result.scenes)||result.scenes.length!==seconds/5)throw Error("El guion está incompleto.");
-   setTitle(String(result.title||idea));setScenes(result.scenes);setPlanApproval(true);
-  }catch(e){setError(e instanceof Error?e.message:"No se pudo preparar el guion.");}
+   const mainTopic=(topic==="Otro"?otherTopic:topic).trim();
+   const shared={
+    topic:mainTopic,idea:ideaPrompt.trim()||mainTopic,audience:audience==="Otro"?otherAudience:audience,
+    style:visual,seconds,language,
+    source:chosenTrend?{platform,sourceId:chosenTrend.sourceId,title:chosenTrend.title,url:chosenTrend.url}:null,
+    confirmPlanCost:true
+   };
+   const first=await api("plan","POST",{...shared,mode:"outline"});
+   if(!first?.outline||!Array.isArray(first.outline.beats)||first.outline.beats.length!==seconds/5)
+    throw Error("studio_plan_incomplete");
+   const plan=first.outline as {title:string;logline:string;hook:string;ending:string;characters:string;setting:string;beats:string[]};
+   setOutline(plan);setTitle(plan.title);
+   setDraftProgress(12);setDraftPhase("Escribiendo escenas y movimientos…");
+   const count=seconds/5;
+   const batches=Array.from({length:Math.ceil(count/6)},(_,i)=>({start:i*6,size:Math.min(6,count-i*6)}));
+   const completed:Scene[]=[];
+   // Two short parallel chunks at a time keep large projects within serverless limits.
+   for(let i=0;i<batches.length;i+=2){
+    const group=await Promise.all(batches.slice(i,i+2).map(async b=>{
+     const chunk=await api("plan","POST",{...shared,mode:"scenes",outline:plan,start:b.start,batchSize:b.size});
+     if(!Array.isArray(chunk?.scenes)||chunk.scenes.length!==b.size)throw Error("studio_plan_incomplete");
+     return {start:b.start,items:chunk.scenes as Scene[]};
+    }));
+    for(const piece of group)completed.splice(piece.start,piece.items.length,...piece.items);
+    setDraftProgress(Math.min(95,12+Math.round(completed.filter(Boolean).length/count*82)));
+   }
+   if(completed.length!==count||completed.some(s=>!s||typeof s.speech!=="string"||typeof s.imagePrompt!=="string"))
+    throw Error("studio_plan_incomplete");
+   setScenes(completed);setDraftProgress(100);setDraftPhase("Guion listo para revisar");
+  }catch(e){setError(e instanceof Error?e.message:"studio_plan_provider_unavailable");setScenes([]);}
   finally{setBusy(false);}
  };
  const patchScene=(index:number,key:"speech"|"imagePrompt",value:string)=>{setScenes(previous=>previous.map((s,i)=>i===index?{...s,[key]:value}:s));setApprovedCost(false);};
@@ -152,28 +209,130 @@ export default function VideoStudioV1(){
   finally{setSavingScene(false);}
  };
  const credit=estimatedCredits(seconds,quality);
+ const previewExample=stylesList.find(x=>x.id===exampleStyle)||null;
  if(isSignedIn===false){const sb=getSupabase();return sb?<VMVAuthGateway supabase={sb}/>:<main className={styles.center}>Inicia sesión en VMV Business.</main>;}
  return <main className={styles.page}><div className={styles.shell}>
   <header className={styles.header}><button className={styles.back} onClick={()=>stage==="home"?window.location.assign("/vista-app"):previous()} aria-label="Volver"><ArrowLeft size={19}/></button><div><strong>Video Studio</strong><small>VMV Business · Creator</small></div><Link href="/vista-app" className={styles.brand}>VMV</Link></header>
   {stage!=="home"&&stage!=="history"&&stage!=="images"&&stage!=="progress"&&stage!=="result"?<div className={styles.progressTop}><span>{labels[stage]}</span><span>{Math.max(1,order.indexOf(stage)+1)} / {order.length}</span><div className={styles.bar}><div style={{width:Math.max(5,(order.indexOf(stage)+1)/order.length*100)+"%"}}/></div></div>:null}
-  {stage==="home"?<><div className={styles.welcome}><span className={styles.kicker}>CREATIVE STUDIO</span><h1>Historias que cobran vida.</h1><p>Un guion, escenas animadas y narración. Todo en un video.</p></div><div className={styles.homeGrid}><button className={styles.homeCard} onClick={reset}><div className={styles.homeIllustration}><Clapperboard size={62}/><Sparkles size={25}/></div><strong>Crear video</strong><small>Empieza una nueva historia</small><ArrowUpRight className={styles.arrow}/></button><button className={styles.homeCard} onClick={()=>{next("history");void loadHistory();}}><div className={styles.homeIllustrationAlt}><FolderOpen size={58}/></div><strong>Historial</strong><small>Videos y proyectos guardados</small><ArrowUpRight className={styles.arrow}/></button></div></>:null}
+  {stage==="home"?<>
+   <section className={styles.welcome}>
+    <span className={styles.kicker}><Sparkles size={14}/> VMV CREATIVE STUDIO</span>
+    <h1>Convierte tus ideas en <em>historias animadas.</em></h1>
+    <p>De una idea a escenas, voz y video. Todo en un estudio.</p>
+    <span className={styles.welcomeTag}><CheckCircle2 size={15}/> Crea videos por escenas</span>
+   </section>
+   <div className={styles.homeGrid}>
+    <button className={styles.homeCard+" "+styles.createCard} onClick={reset}>
+     <span className={styles.homeIllustration}><img src="/video-studio/styles/cartoon3d.svg" alt="" aria-hidden="true"/><span className={styles.homeFloatIcon}><PlayCircle size={23}/></span></span>
+     <span className={styles.homeCardInfo}><span><strong>Crear video</strong><small>Comienza una nueva historia</small></span><ArrowUpRight size={22}/></span>
+    </button>
+    <button className={styles.homeCard+" "+styles.libraryCard} onClick={()=>{next("history");void loadHistory();}}>
+     <span className={styles.homeIllustrationAlt}><img src="/video-studio/styles/storybook.svg" alt="" aria-hidden="true"/><span className={styles.homeFloatIcon}><FolderOpen size={23}/></span></span>
+     <span className={styles.homeCardInfo}><span><strong>Historial</strong><small>Tus proyectos y videos guardados</small></span><ArrowUpRight size={22}/></span>
+    </button>
+   </div>
+   <p className={styles.footerHint}>Un solo proceso creativo. Tú decides, la IA produce.</p>
+  </>:null}
   {stage==="topic"?<><h1>¿Qué tema?</h1><div className={styles.choiceGrid}>{topics.map(s=><button key={s} className={topic===s?styles.chosen:styles.choice} onClick={()=>{setTopic(s);if(s!=="Otro")next("audience")}}>{s}<ChevronRight size={17}/></button>)}</div>{topic==="Otro"?<div className={styles.field}><input autoFocus maxLength={220} value={otherTopic} placeholder="Describe el tema de tu video" onChange={e=>setOtherTopic(e.target.value)}/><button className={styles.primary} disabled={otherTopic.trim().length<4} onClick={()=>next("audience")}>Continuar</button></div>:null}</>:null}
   {stage==="audience"?<><h1>¿Para quién?</h1><div className={styles.choiceGrid}>{audiences.map(s=><button className={audience===s?styles.chosen:styles.choice} key={s} onClick={()=>{setAudience(s);if(s!=="Otro")next("style")}}>{s}<ChevronRight size={17}/></button>)}</div>{audience==="Otro"?<div className={styles.field}><input value={otherAudience} placeholder="Describe tu público" onChange={e=>setOtherAudience(e.target.value)}/><button className={styles.primary} disabled={otherAudience.trim().length<3} onClick={()=>next("style")}>Continuar</button></div>:null}</>:null}
-  {stage==="style"?<><h1>Elige un estilo</h1><div className={styles.styleGrid}>{stylesList.map(s=><button key={s.id} className={visual===s.id?styles.styleChosen:styles.styleOption} onClick={()=>{setVisual(s.id);next("duration")}}><span className={styles.styleGraphic}>{s.emoji}</span><strong>{s.label}</strong><small>{s.description}</small></button>)}</div></>:null}
+  {stage==="style"?<>
+   <h1>Elige un estilo</h1><p className={styles.help}>Cada historia tendrá una identidad visual. Explora los estilos antes de elegir.</p>
+   <div className={styles.styleGrid}>{stylesList.map(item=><article key={item.id} className={visual===item.id?styles.styleChosen:styles.styleOption}>
+    <button type="button" className={styles.styleSelect} onClick={()=>{setVisual(item.id);setScenes([]);setOutline(null);next("duration");}}>
+     <span className={styles.styleGraphic}><img src={item.poster} alt={"Ilustración del estilo "+item.label} loading="lazy"/></span>
+     <span className={styles.styleInfo}><strong>{item.label}</strong><small>{item.description}</small></span>
+    </button>
+    <button type="button" className={styles.exampleButton} onClick={()=>setExampleStyle(item.id)}><Eye size={16}/> Ver ejemplo <ArrowUpRight size={15}/></button>
+   </article>)}</div>
+   <p className={styles.styleNote}><Film size={15}/> Ilustraciones de referencia. Los videos completos de cada estilo se añadirán próximamente.</p>
+  </>:null}
   {stage==="duration"?<><h1>¿Cuánto debe durar?</h1><div className={styles.optionStack}>{durations.map(s=><button className={styles.optionRow} key={s} onClick={()=>{setSeconds(s);next("language")}}><Clock3 size={18}/><strong>{readable(s)}</strong><small>{s/5} escenas</small><ChevronRight size={18}/></button>)}<button className={styles.optionRow} onClick={()=>{setSeconds(45);setCustomSeconds("45")}}>Personalizado <ChevronRight size={18}/></button></div>{seconds===45?<div className={styles.field}><label>Duración (múltiplos de 5 s, entre 15 y 180)</label><input type="number" min={15} max={180} step={5} value={customSeconds} onChange={e=>setCustomSeconds(e.target.value)}/><button className={styles.primary} disabled={Number(customSeconds)<15||Number(customSeconds)>180||Number(customSeconds)%5!==0} onClick={()=>{setSeconds(Number(customSeconds));next("language")}}>Continuar</button></div>:null}</>:null}
   {stage==="language"?<><h1>Idioma del video</h1><div className={styles.optionStack}>{([{id:"es",label:"Español"},{id:"en",label:"English"},{id:"pt",label:"Português"},{id:"fr",label:"Français"},{id:"de",label:"Deutsch"},{id:"it",label:"Italiano"}] as const).map(x=><button className={styles.optionRow} key={x.id} onClick={()=>{setLanguage(x.id);next("voice")}}><Globe2 size={18}/><strong>{x.label}</strong><ChevronRight size={17}/></button>)}</div></>:null}
   {stage==="voice"?<><h1>Elige una voz</h1><p className={styles.help}>Elige una voz de OpenAI o ElevenLabs. Puedes escuchar las muestras pregrabadas disponibles.</p><PilotVoiceStep language={language} en={uiLanguage==="en"} selectedProvider={voiceProvider==="none"?undefined:voiceProvider} selectedVoiceId={voiceId} catalogEndpoint="/api/video-studio/voices" sampleMode="prerecorded" onChoose={(provider,id,name)=>{setVoiceProvider(provider);setVoiceId(id);setVoiceLabel(name);next("subtitles")}}/></>:null}
   {stage==="subtitles"?<><h1>¿Quieres subtítulos?</h1><div className={styles.optionStack}><button className={styles.optionRow} onClick={()=>{setSubtitles(true);next("source")}}><Subtitles size={20}/><strong>Con subtítulos</strong><ChevronRight/></button><button className={styles.optionRow} onClick={()=>{setSubtitles(false);next("source")}}><Subtitles size={20}/><strong>Sin subtítulos</strong><ChevronRight/></button></div></>:null}
-  {stage==="source"?<><h1>¿Analizar tendencias?</h1><p className={styles.help}>Encuentra inspiración real o crea directamente con tu tema.</p><div className={styles.optionStack}>{["youtube","facebook","instagram","tiktok","idea"].map(p=><button className={styles.optionRow} key={p} onClick={()=>{setPlatform(p);setSelectedTrend(null);setTrendResults([]);if(p==="idea")next("plan");else next("trends")}}><PlayCircle size={19}/><strong>{p==="idea"?"Continuar con mi idea":p==="youtube"?"YouTube":p==="facebook"?"Facebook":p==="instagram"?"Instagram":"TikTok"}</strong><ChevronRight size={17}/></button>)}</div></>:null}
-  {stage==="trends"?<><h1>Tendencias · {platform.charAt(0).toUpperCase()+platform.slice(1)}</h1>{platform==="youtube"?<><p className={styles.help}>Tres videos verificables para inspirar una historia original. Abrir el original no lo copia.</p><label className={styles.consent}><input type="checkbox" checked={trendConsent} onChange={e=>setTrendConsent(e.target.checked)}/> Autorizo consultar tendencias públicas de YouTube.</label><button className={styles.primary} disabled={busy||!trendConsent} onClick={()=>void trendSearch()}>{busy?<LoaderCircle className={styles.spin} size={18}/>:<Search size={18}/>} Buscar tendencias</button><div className={styles.trends}>{trendResults.map(t=><div className={styles.trendCard} key={t.sourceId}><div className={styles.trendPreview}>{t.thumbnail?<img src={t.thumbnail} alt="Vista previa del video original" loading="lazy"/>:<Film/>}</div><div className={styles.trendActions}><a href={t.url} target="_blank" rel="noopener noreferrer">Ver tendencia <ArrowUpRight size={15}/></a><button onClick={()=>{setSelectedTrend(t);setScenes([]);next("plan")}}>Proponer idea sobre este tema <Sparkles size={16}/></button></div></div>)}</div></>:<div className={styles.unavailable}><Clock3 size={25}/><strong>Próximamente</strong><p>La búsqueda de videos verificables en esta plataforma requiere conexión oficial. No mostraremos tendencias inventadas.</p></div>}<button className={styles.secondary} onClick={()=>{setSelectedTrend(null);next("plan")}}>Continuar con mi idea <ArrowRight size={16}/></button></>:null}
-  {stage==="plan"?<><h1>Tu guion y escenas</h1><p className={styles.help}>{selectedTrend?"Crearemos una historia original inspirada en el tema seleccionado.":"Prepara un guion original a partir de tu idea."} Revisa el contenido antes de animarlo.</p>{selectedTrend?<div className={styles.selectedTrend}><strong>{selectedTrend.title}</strong><a href={selectedTrend.url} target="_blank" rel="noopener noreferrer">Ver tendencia</a></div>:null}{scenes.length===0?<button className={styles.primary} disabled={busy} onClick={()=>void prepare()}>{busy?<LoaderCircle className={styles.spin} size={17}/>:<Sparkles size={17}/>} Proponer guion y escenas</button>:<><div className={styles.field}><label>Título del video</label><input value={title} onChange={e=>setTitle(e.target.value)} maxLength={140}/></div><p className={styles.help}>Guion de {scenes.length} escenas de 5 segundos. Todo es editable.</p><div className={styles.scenes}>{scenes.map((scene,i)=><div className={styles.sceneEditor} key={i}><strong>Escena {i+1} · {i*5}–{(i+1)*5} s</strong><label>Texto narrado</label><textarea rows={3} value={scene.speech} maxLength={350} onChange={e=>patchScene(i,"speech",e.target.value)}/><label>Imagen / acción</label><textarea rows={3} maxLength={1300} value={scene.imagePrompt} onChange={e=>patchScene(i,"imagePrompt",e.target.value)}/></div>)}</div><button className={styles.primary} disabled={scenes.some(x=>x.speech.length<5||x.imagePrompt.length<20)} onClick={()=>next("quality")}>Continuar <ArrowRight size={17}/></button></>}</>:null}
+  {stage==="source"?<><h1>¿Analizar tendencias?</h1><p className={styles.help}>Encuentra inspiración real o crea directamente con tu tema.</p><div className={styles.optionStack}>{["youtube","facebook","instagram","tiktok","idea"].map(p=><button className={styles.optionRow} key={p} onClick={()=>{setPlatform(p);setSelectedTrend(null);setTrendResults([]);if(p==="idea")next("idea");else next("trends")}}><PlayCircle size={19}/><strong>{p==="idea"?"Continuar con mi idea":p==="youtube"?"YouTube":p==="facebook"?"Facebook":p==="instagram"?"Instagram":"TikTok"}</strong><ChevronRight size={17}/></button>)}</div></>:null}
+  {stage==="trends"?<>
+   <h1>Tendencias · {platform==="youtube"?"YouTube":platform.charAt(0).toUpperCase()+platform.slice(1)}</h1>
+   {platform==="youtube"?<>
+    <p className={styles.help}>Elige uno de tres videos reales como inspiración. Crearemos un guion nuevo, no una copia.</p>
+    <label className={styles.consent}><input type="checkbox" checked={trendConsent} onChange={e=>setTrendConsent(e.target.checked)}/> Autorizo consultar tendencias públicas de YouTube.</label>
+    <button className={styles.primary} disabled={busy||!trendConsent} onClick={()=>void trendSearch()}>{busy?<LoaderCircle className={styles.spin} size={18}/>:<Search size={18}/>} {busy?"Buscando videos reales…":"Mostrar 3 tendencias"}</button>
+    <div className={styles.trends}>{trendResults.map(t=><article className={styles.trendCard} key={t.sourceId}>
+     <div className={styles.trendPreview}><img src={t.thumbnail} alt={"Miniatura del video original de "+t.channel} loading="lazy"/><span className={styles.trendSource}>YouTube</span></div>
+     <div className={styles.trendActions}>
+      <a href={t.url} target="_blank" rel="noopener noreferrer"><PlayCircle size={17}/> Ver tendencia <ArrowUpRight size={15}/></a>
+      <button disabled={busy} onClick={()=>{setSelectedTrend(t);setScenes([]);next("plan");void prepare(t);}}><Sparkles size={17}/> Proponer idea sobre este tema <ArrowRight size={15}/></button>
+     </div>
+    </article>)}</div>
+    {trendResults.length>0?<p className={styles.note}>Miniaturas y enlaces procedentes de YouTube. No representan un análisis del contenido completo.</p>:null}
+   </>:<div className={styles.unavailable}><Clock3 size={25}/><strong>Conexión pendiente</strong><p>Esta plataforma todavía no dispone de una búsqueda oficial verificada. No mostraremos tendencias inventadas.</p></div>}
+   <button className={styles.secondary} onClick={()=>{setSelectedTrend(null);next("idea")}}>Continuar con mi idea <ArrowRight size={16}/></button>
+  </>:null}
+  {stage==="idea"?<>
+   <span className={styles.kicker}><Sparkles size={14}/> TU IDEA, TU VIDEO</span>
+   <h1>Cuéntanos tu idea</h1>
+   <p className={styles.help}>No necesitas saber escribir guiones. Una o dos frases bastan para crear una historia con estructura, personajes y escenas.</p>
+   <div className={styles.ideaCard}>
+    <label htmlFor="vmv-idea">¿Qué te gustaría contar?</label>
+    <textarea id="vmv-idea" value={ideaPrompt} onChange={e=>{setIdeaPrompt(e.target.value);setScenes([]);}} maxLength={700} rows={5}
+     placeholder="Ejemplo: Haz un video divertido sobre los beneficios del apio con un personaje que cuenta curiosidades sorprendentes."/>
+    <span>{ideaPrompt.length} / 700</span>
+    <p>La IA adaptará el guion a tu público, estilo, idioma y duración.</p>
+   </div>
+   <button className={styles.primary} disabled={busy||ideaPrompt.trim().length<10} onClick={()=>{next("plan");void prepare(null);}}>
+    <Sparkles size={18}/> Crear mi guion con IA <ArrowRight size={17}/>
+   </button>
+  </>:null}
+  {stage==="plan"?<>
+   <h1>Tu guion y escenas</h1>
+   <p className={styles.help}>{selectedTrend?"Inspirado en el tema de un video real, pero con una historia original.":"Tu idea convertida en una historia original y organizada."} Todo será editable antes de producir.</p>
+   {selectedTrend?<div className={styles.selectedTrend}><strong>{selectedTrend.title}</strong><a href={selectedTrend.url} target="_blank" rel="noopener noreferrer">Ver original</a></div>:null}
+   {busy?<div className={styles.draftLoading} role="status" aria-live="polite">
+    <div className={styles.draftOrb}><Sparkles size={33}/><span>{draftProgress}%</span></div>
+    <strong>{draftPhase||"Preparando tu guion…"}</strong><p>Diseñando una secuencia coherente de {seconds/5} escenas de cinco segundos.</p>
+    <div className={styles.bar}><div style={{width:String(draftProgress)+"%"}}/></div>
+   </div>:null}
+   {!busy&&scenes.length===0?<div className={styles.planEmpty}>
+    <span><Clapperboard size={29}/></span>
+    <h2>Tu historia empieza aquí</h2>
+    <p>La IA preparará un guion con estructura narrativa, escenas, diálogo y acciones de cámara.</p>
+    <button className={styles.primary} onClick={()=>void prepare()}><Sparkles size={18}/> {error?"Volver a intentar":"Generar propuesta"}</button>
+    <button className={styles.secondary} onClick={()=>next(platform==="idea"?"idea":"trends")}><Pencil size={16}/> Editar idea</button>
+   </div>:null}
+   {!busy&&scenes.length>0?<div className={styles.planContent}>
+    <div className={styles.field}><label>Título</label><input value={title} onChange={e=>setTitle(e.target.value)} maxLength={140}/></div>
+    {outline?<div className={styles.planSummary}><span className={styles.kicker}>CONCEPTO CREATIVO</span>
+     <label>Historia principal</label><textarea rows={3} value={outline.logline} onChange={e=>setOutline(p=>p?{...p,logline:e.target.value}:p)}/>
+     <label>Gancho inicial</label><textarea rows={2} value={outline.hook} onChange={e=>setOutline(p=>p?{...p,hook:e.target.value}:p)}/>
+     <label>Personajes y continuidad</label><textarea rows={3} value={outline.characters} onChange={e=>setOutline(p=>p?{...p,characters:e.target.value}:p)}/>
+    </div>:null}
+    <div className={styles.sceneHeading}><strong>{scenes.length} escenas listas para revisar</strong><span>{readable(seconds)}</span></div>
+    <div className={styles.scenes}>{scenes.map((scene,i)=><div className={styles.sceneEditor} key={i}>
+     <div className={styles.sceneNumber}><strong>Escena {i+1}</strong><small>{i*5}–{(i+1)*5} s</small></div>
+     <label>Narración</label><textarea rows={3} value={scene.speech} maxLength={230} onChange={e=>patchScene(i,"speech",e.target.value)}/>
+     <label>Acción e imagen</label><textarea rows={3} maxLength={950} value={scene.imagePrompt} onChange={e=>patchScene(i,"imagePrompt",e.target.value)}/>
+    </div>)}</div>
+    <button className={styles.primary} disabled={scenes.some(x=>x.speech.trim().length<5||x.imagePrompt.trim().length<20)} onClick={()=>next("quality")}>Continuar a calidad <ArrowRight size={17}/></button>
+   </div>:null}
+  </>:null}
   {stage==="quality"?<><h1>Calidad del video</h1><p className={styles.help}>Estimaciones de créditos de la versión propuesta; las tarifas definitivas se confirmarán al habilitar los pagos.</p><div className={styles.optionStack}>{([{id:"turbo",label:"Turbo · 720p",description:"Renderizado optimizado"},{id:"high",label:"Alta calidad · 720p",description:"Motor de mayor calidad"}] as const).map(x=><button key={x.id} className={styles.optionRow} onClick={()=>{setQuality(x.id);setApprovedCost(false);next("summary")}}><Video size={20}/><span><strong>{x.label}</strong><small>{x.description}</small></span><b>{estimatedCredits(seconds,x.id)} cr.</b><ChevronRight size={16}/></button>)}</div></>:null}
   {stage==="summary"?<><h1>Resumen de tu video</h1><div className={styles.review}>{([{label:"Tema",value:topic==="Otro"?otherTopic:topic,edit:"topic"},{label:"Público",value:audience==="Otro"?otherAudience:audience,edit:"audience"},{label:"Estilo",value:stylesList.find(x=>x.id===visual)?.label,edit:"style"},{label:"Duración",value:readable(seconds),edit:"duration"},{label:"Idioma",value:language.toUpperCase(),edit:"language"},{label:"Voz",value:voiceLabel,edit:"voice"},{label:"Subtítulos",value:subtitles?"Sí":"No",edit:"subtitles"},{label:"Tendencias",value:selectedTrend?selectedTrend.title:platform==="idea"?"Mi idea":platform,edit:"source"},{label:"Guion",value:scenes.length+" escenas editables",edit:"plan"},{label:"Calidad",value:quality==="high"?"Alta":"Turbo",edit:"quality"}] as {label:string;value:string|undefined;edit:Stage}[]).map(r=><div className={styles.reviewRow} key={r.label}><div><small>{r.label}</small><strong>{r.value}</strong></div><button aria-label={"Editar "+r.label} onClick={()=>next(r.edit)}><Pencil size={17}/></button></div>)}</div><div className={styles.price}><small>Generación estimada · tarifa provisional</small><strong>{credit} créditos</strong><p>Incluye clips, narración seleccionada, subtítulos y montaje. La regeneración de imágenes puede tener costo adicional.</p></div><label className={styles.consent}><input type="checkbox" checked={approvedCost} onChange={e=>setApprovedCost(e.target.checked)}/> Confirmo la configuración y autorizo el uso de créditos indicado cuando el sistema esté habilitado.</label><button className={styles.primary} disabled={busy||!approvedCost||scenes.length!==seconds/5} onClick={()=>void makeJob()}>{busy?<LoaderCircle className={styles.spin} size={17}/>:<Clapperboard size={17}/>} Generar por {credit} créditos</button></>:null}
   {stage==="images"&&job?<><h1>Revisa las imágenes</h1><p className={styles.help}>No se animará ninguna escena hasta que apruebes todas las imágenes. Puedes cerrar la web y regresar más tarde.</p><div className={styles.gallery}>{(job.scenes||[]).map((s,i)=><div key={i} className={styles.frameCard}><div className={styles.framePreview}>{s.imageUrl?<img src={s.imageUrl} alt={"Fotograma "+(i+1)}/>:<Film size={30}/>}</div><div className={styles.frameInfo}><strong>Escena {i+1}</strong><small>{i*5}–{(i+1)*5}s</small><p>{s.speech}</p><button className={styles.secondary} onClick={()=>setSceneIndex(i)}>Revisar</button>{s.approved?<span className={styles.passed}><Check size={14}/> Aprobada</span>:<button disabled={savingScene} className={styles.primaryMini} onClick={()=>void approve(i)}>Aprobar</button>}</div></div>)}</div>{job.scenes?.[sceneIndex]?<div className={styles.frameEdit}><h2>Editar escena {sceneIndex+1}</h2><label>Guion</label><textarea key={job.id+":s:"+sceneIndex} defaultValue={job.scenes[sceneIndex].speech} onBlur={e=>{if(e.target.value!==job.scenes[sceneIndex].speech)void updateFrame(sceneIndex,"speech",e.target.value)}}/><label>Imagen / acción</label><textarea key={job.id+":v:"+sceneIndex} defaultValue={job.scenes[sceneIndex].imagePrompt} onBlur={e=>{if(e.target.value!==job.scenes[sceneIndex].imagePrompt)void updateFrame(sceneIndex,"imagePrompt",e.target.value)}}/><p className={styles.help}>La regeneración del fotograma exige un presupuesto y una aprobación independiente. No se cobrará automáticamente.</p></div>:null}<button className={styles.primary} disabled={savingScene||!job.scenes?.length||job.scenes.some(x=>!x.imageUrl)} onClick={()=>void approve()}>Aprobar todas y continuar automáticamente</button></>:null}
   {stage==="progress"&&job?<><h1>Estamos creando tu video</h1><p className={styles.help}>La generación continúa en la nube aunque cierres la página.</p><div className={styles.progressCard}><div className={styles.progressRing} style={{background:"conic-gradient(#9156c8 "+Math.max(0,Math.min(100,job.progress||0))+"%,#eee9f2 0)"}}><span>{job.progress||0}%</span></div><strong>{job.phase||"En cola"}</strong><small>Estado: {job.status}</small><small>{typeof job.etaSeconds==="number"?"Tiempo aproximado: "+readable(Math.ceil(job.etaSeconds)):"Calculando tiempo estimado…"}</small></div><button className={styles.secondary} onClick={()=>{next("history");void loadHistory()}}>Ver historial</button></>:null}
   {stage==="result"&&job?<><h1>¡Video listo!</h1>{job.videoUrl?<><video className={styles.videoFinal} controls playsInline src={job.videoUrl}/><a className={styles.primary} href={job.videoUrl} download={"vmv-video-"+job.id+".mp4"}><Download size={19}/> Descargar MP4</a></>:<p className={styles.help}>El archivo está guardado. Actualiza el enlace desde Historial.</p>}<button className={styles.secondary} onClick={()=>{next("history");void loadHistory()}}>Abrir historial</button></>:null}
   {stage==="history"?<><h1>Mis videos</h1><button className={styles.secondary} disabled={historyLoading} onClick={()=>void loadHistory()}>{historyLoading?<LoaderCircle className={styles.spin} size={16}/>:<RefreshCw size={16}/>} Actualizar</button><div className={styles.history}>{jobs.map(j=><button key={j.id} className={styles.historyItem} onClick={()=>{setJob(j);next(j.status==="completed"?"result":j.status==="awaiting_image_approval"?"images":"progress")}}><span className={styles.historyIcon}><Film size={20}/></span><span><strong>{j.title||"Video sin título"}</strong><small>{readable(j.seconds)} · {j.phase||j.status}</small></span><ChevronRight size={18}/></button>)}{!jobs.length&&!historyLoading&&!error?<div className={styles.unavailable}><FolderOpen size={30}/><p>Todavía no hay videos guardados.</p><button onClick={reset} className={styles.primary}>Crear video</button></div>:null}</div></>:null}
-  {error?<div role="alert" className={styles.error}>{errorMessages[error]||error}</div>:null}
-  <footer className={styles.footer}><span>VMV Business · Video Studio V1</span><button onClick={()=>next("home")}>Inicio</button></footer>
+  {error?<div role="alert" className={styles.error}><ShieldCheck size={18}/><span>{errorMessages[error]||error}</span></div>:null}
+  {previewExample?<div role="dialog" aria-modal="true" aria-label={"Ejemplo de "+previewExample.label} className={styles.exampleOverlay}>
+   <button type="button" onClick={()=>setExampleStyle(null)} className={styles.exampleClose} aria-label="Cerrar ejemplo"><X size={24}/></button>
+   <div className={styles.exampleContent}>
+    {previewExample.video?<video src={previewExample.video} controls autoPlay playsInline poster={previewExample.poster}/>:
+     <img src={previewExample.poster} alt={"Vista ilustrada del estilo "+previewExample.label}/>}
+    <div className={styles.exampleCaption}><strong>{previewExample.label}</strong>
+     <small>{previewExample.video?"Vista previa del video animado":"Ilustración de referencia · video animado próximamente"}</small>
+     <button type="button" onClick={()=>{setVisual(previewExample.id);setExampleStyle(null);next("duration");}}>Elegir este estilo <ArrowRight size={16}/></button>
+    </div>
+   </div>
+  </div>:null}
+  <footer className={styles.footer}><span>VMV Business · Video Studio</span><button onClick={()=>next("home")}>Inicio</button></footer>
  </div></main>;
 }
