@@ -104,6 +104,30 @@ test("creative plan only runs in Preview, requires signed-in owner and explicit 
  assert.doesNotMatch(plan,/startRunway|generateSpeech|stripe/);
 });
 
+test("Video Studio lets owners listen to OpenAI previews with a daily quota and no wallet charge",()=>{
+ const component=read("app/vista-app/vmv-pilot/PilotVoiceStep.tsx");
+ const api=read("app/api/video-studio/voice-preview/route.ts");
+ assert.match(ui,/previewEndpoint="\/api\/video-studio\/voice-preview" sampleMode="limited"/);
+ assert.match(component,/sampleMode==="limited"&&v\.provider==="openai"/);
+ assert.match(component,/fetch\(previewEndpoint,/);
+ assert.match(component,/const hasPublicSample=/);
+ assert.match(api,/process\.env\.VERCEL_ENV!=="preview"/);
+ assert.match(api,/authenticatedUser\(req\)/);
+ assert.match(api,/validPilotLanguage\(language\)/);
+ assert.match(api,/provider!=="openai"/);
+ assert.match(api,/validPilotVoice\(provider,voiceId\)/);
+ assert.match(api,/vmv_pilot_voice_preview_claim/);
+ assert.match(api,/if\(!granted\)return failure\("voice_preview_limit",429\)/);
+ assert.match(api,/generateSpeech\(/);
+ assert.match(api,/gateway\.speechModel\("openai\/tts-1"\)/);
+ assert.doesNotMatch(api,/wallet|charge_credits|stripe/);
+ assert.doesNotMatch(api,/videoAllowed/);
+ for(const p of ["app/vista-app/vmv-pilot/PilotVoiceStep.tsx","app/api/video-studio/voice-preview/route.ts"]){
+  const source=read(p),parsed=ts.createSourceFile(p,source,ts.ScriptTarget.Latest,true,p.endsWith(".tsx")?ts.ScriptKind.TSX:ts.ScriptKind.TS);
+  assert.deepEqual(parsed.parseDiagnostics.map(x=>ts.flattenDiagnosticMessageText(x.messageText," ")),[],p);
+ }
+});
+
 test("new TS/TSX routes and client parse successfully",()=>{
  for(const p of ["app/vista-app/video-studio/page.tsx",
    "app/api/video-studio/plan/route.ts","app/api/video-studio/trends/route.ts"]){
