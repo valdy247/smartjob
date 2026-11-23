@@ -2,7 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {videoDb,validUuid} from "@/lib/vmv-video-generator";
 import {validPilotLanguage} from "@/lib/vmv-pilot-voice-config";
-import {cloudLaunchEnabled,videoStudioWorkerReady} from "@/lib/vmv-studio-cloud-readiness";
+import {cloudLaunchEnabled,videoStudioWorkerReady,videoStudioSemanticWorkerReady} from "@/lib/vmv-studio-cloud-readiness";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -105,7 +105,7 @@ export async function POST(req:NextRequest){
   return reply({error:"video_studio_not_ready"},503);
  // Static flags are insufficient: reject new reservations if the Render worker
  // cannot prove that it is alive and connected right now.
- if(!await videoStudioWorkerReady())
+ if(!await videoStudioWorkerReady()||!await videoStudioSemanticWorkerReady())
   return reply({error:"video_studio_worker_not_ready"},503);
  const length=Number(req.headers.get("content-length")||0);
  if(length>65000)return reply({error:"studio_invalid_job"},413);
