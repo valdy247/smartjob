@@ -1,60 +1,97 @@
-// A five-second visual shot must never determine where a spoken sentence ends.
-// Audio timestamps drive subtitles; the visual shots cover the audio timeline independently.
+// The voice recording is canonical. Visual edits follow actual spoken-word
+// boundaries; unlike legacy timelines, scene lengths are never divided evenly.
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const normalize=(word)=>String(word||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+ .toLowerCase().replace(/[^a-z0-9]/g,"");
+const sourceWords=scenes=>scenes.flatMap(s=>String(s.speech||"").trim().split(/\s+/).filter(Boolean));
+function characterWords(alignment,text){
+ const chars=alignment?.characters,starts=alignment?.character_start_times_seconds,
+  ends=alignment?.character_end_times_seconds;
+ if(!Array.isArray(chars)||!Array.isArray(starts)||!Array.isArray(ends)||
+  chars.length!==starts.length||chars.length!==ends.length||
+  chars.join("").replace(/\s+/g," ").trim()!==text.replace(/\s+/g," ").trim())return null;
+ const words=[];let word="",first=0,last=0;
+ const flush=()=>{if(word.trim())words.push({word,start:first,end:last});word="";};
+ chars.forEach((ch,i)=>{if(/\s/u.test(ch)){flush();return;}if(!word)first=starts[i];word+=ch;last=ends[i];});
+ flush();return words;
+}
+function recognizedWords(alignment,duration,text){
+ const fromWhisper=Array.isArray(alignment?.words)&&alignment.words.length;
+ const input=fromWhisper?alignment.words:characterWords(alignment,text);
+ if(!Array.isArray(input)||!input.length)return null;
+ const words=input.map(w=>({word:String(w.word||""),start:Number(w.start),end:Number(w.end)}))
+  .filter(w=>w.word.trim()&&Number.isFinite(w.start)&&Number.isFinite(w.end)&&
+   w.start>=0&&w.end>w.start&&w.start<duration&&w.end<=duration+.5);
+ if(!words.length)return null;
+ for(let i=1;i<words.length;i++)if(words[i].start+0.05<words[i-1].start)
+  throw Error("voice_alignment_incomplete");
+ return {words,source:fromWhisper?"whisper_words":"elevenlabs_characters"};
+}
+function visualSegments(scenes,duration,recognized){
+ const original=sourceWords(scenes),heard=recognized.map(w=>normalize(w.word)),
+  written=original.map(normalize),n=written.length,m=heard.length;
+ if(n<6||m<3||m<Math.floor(n*.78)||m>n*1.25)throw Error("voice_alignment_incomplete");
+ // LCS aligns imperfect transcripts without guessing a time from equal scene lengths.
+ // Memory is bounded by 36 scenes / 180-second narration.
+ const width=m+1,dp=new Uint16Array((n+1)*width);
+ for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--){
+  dp[i*width+j]=written[i]&&written[i]===heard[j]?
+   1+dp[(i+1)*width+j+1]:
+   Math.max(dp[(i+1)*width+j],dp[i*width+j+1]);
+ }
+ const matches=[];let i=0,j=0;
+ while(i<n&&j<m){
+  if(written[i]&&written[i]===heard[j]){matches.push({source:i,heard:j});i++;j++;}
+  else if(dp[(i+1)*width+j]>=dp[i*width+j+1])i++;
+  else j++;
+ }
+ if(matches.length<Math.max(3,Math.floor(n*.72)))throw Error("voice_alignment_incomplete");
+ const segments=[],counts=scenes.map(s=>sourceWords([s]).length);let total=0;
+ for(let k=0;k<scenes.length;k++){
+  const start=segments.length?segments.at(-1).end:0;
+  total+=counts[k];
+  let end=duration;
+  if(k<scenes.length-1){
+   const next=matches.find(match=>match.source>=total);
+   const previous=[...matches].reverse().find(match=>match.source<total);
+   if(!next||!previous)throw Error("voice_scene_alignment_incomplete");
+   // A cut happens at the beginning of the FIRST word of the next thought.
+   // A gap between sentences belongs to the preceding visual, not a black frame.
+   end=clamp(recognized[next.heard].start,0,duration);
+  }
+  if(end<=start+.25||end>duration+.05)throw Error("voice_scene_alignment_incomplete");
+  segments.push({index:k,start,end,duration:end-start});
+ }
+ return segments;
+}
 export function speechTimeline(scenes,duration,alignment=null){
- if(!Number.isFinite(duration)||duration<1||duration>300||!Array.isArray(scenes)||!scenes.length)
-  throw Error("voice_duration_invalid");
+ if(!Number.isFinite(duration)||duration<1||duration>300||!Array.isArray(scenes)||
+  scenes.length<1||scenes.length>36)throw Error("voice_duration_invalid");
  const text=scenes.map(s=>String(s.speech||"").trim()).join(" ");
- const segments=scenes.map((_,i)=>{
-  const start=duration*i/scenes.length,end=duration*(i+1)/scenes.length;
-  return {index:i,start,end,duration:end-start};
- });
- const cues=[];
- if(Array.isArray(alignment?.words)&&alignment.words.length){
-  // Whisper timestamps describe the words actually heard in the continuous recording.
-  // Use that real timeline even when transcription punctuation differs from the source.
-  const words=alignment.words.filter(w=>typeof w?.word==="string"&&w.word.trim()&&
-   Number.isFinite(w.start)&&Number.isFinite(w.end)&&w.end>w.start&&w.start>=0&&w.start<duration);
-  const sourceWords=text.split(/\s+/).filter(Boolean);
-  if(words.length<Math.max(3,Math.floor(sourceWords.length*.8)))
-   throw Error("voice_alignment_incomplete");
-  let last=0;
-  for(let i=0;i<words.length;i+=5){
-   const batch=words.slice(i,i+5),start=clamp(batch[0].start,0,duration);
-   const end=clamp(batch.at(-1).end,start+.04,duration);
-   if(start+0.04>=end||end<=last)continue;
-   cues.push({start:Math.max(last,start),end,text:batch.map(w=>w.word.trim()).join(" ")});
-   last=end;
-  }
-  if(!cues.length)throw Error("voice_alignment_incomplete");
-  return {duration,segments,cues,alignmentSource:"whisper_words"};
- }
- const chars=alignment?.characters;
- const starts=alignment?.character_start_times_seconds,ends=alignment?.character_end_times_seconds;
- if(Array.isArray(chars)&&Array.isArray(starts)&&Array.isArray(ends)&&
-  chars.length===starts.length&&chars.length===ends.length&&
-  chars.join("").replace(/\s+/g," ").trim()===text.replace(/\s+/g," ").trim()){
-  const words=[];let word="",first=0,last=0;
-  const flush=()=>{if(word.trim())words.push({text:word.trim(),start:first,end:last});word="";};
-  chars.forEach((ch,i)=>{
-   if(/\s/u.test(ch)){flush();return;}
-   if(!word)first=starts[i];
-   word+=ch;last=ends[i];
-  });flush();
-  for(let i=0;i<words.length;i+=5){
-   const batch=words.slice(i,i+5);
-   if(Number.isFinite(batch[0].start)&&Number.isFinite(batch.at(-1).end))
-    cues.push({start:clamp(batch[0].start,0,duration),end:clamp(batch.at(-1).end,0,duration),
-     text:batch.map(w=>w.text).join(" ")});
-  }
-  if(cues.length)return {duration,segments,cues,alignmentSource:"elevenlabs_characters"};
- }
- // Legacy fallback is retained for old completed projects, but new renders must
- // explicitly obtain real alignment before assembling subtitles.
- const words=text.split(/\s+/).filter(Boolean);
+ const source=recognizedWords(alignment,duration,text);
+ if(!source)throw Error("voice_alignment_unavailable");
+ const {words}=source,segments=visualSegments(scenes,duration,words);
+ const cues=[];let last=0;
  for(let i=0;i<words.length;i+=5){
-  const group=words.slice(i,i+5);
-  cues.push({start:duration*i/words.length,end:duration*(i+group.length)/words.length,text:group.join(" ")});
+  const batch=words.slice(i,i+5),start=clamp(batch[0].start,0,duration),
+   end=clamp(batch.at(-1).end,start+.04,duration);
+  if(end<=last)continue;
+  cues.push({start:Math.max(last,start),end,text:batch.map(w=>w.word.trim()).join(" ")});
+  last=end;
  }
- return {duration,segments,cues,alignmentSource:"estimated_legacy"};
+ if(!cues.length)throw Error("voice_alignment_incomplete");
+ return {duration,segments,cues,alignmentSource:source.source};
+}
+export function silentTimeline(scenes,duration,withCaptions=true){
+ if(!Number.isFinite(duration)||duration<1||!Array.isArray(scenes)||scenes.length<3)throw Error("scene_timing_invalid");
+ const counts=scenes.map(s=>sourceWords([s]).length),total=counts.reduce((a,b)=>a+b,0);
+ if(!total)throw Error("scene_timing_invalid");
+ let current=0;const segments=[],cues=[];
+ scenes.forEach((scene,index)=>{
+  const start=current;
+  current=index===scenes.length-1?duration:duration*(counts.slice(0,index+1).reduce((a,b)=>a+b,0))/total;
+  segments.push({index,start,end:current,duration:current-start});
+  if(withCaptions)cues.push({start,end:current,text:String(scene.speech||"").trim()});
+ });
+ return {duration,segments,cues,alignmentSource:"silent_visual_timeline"};
 }
