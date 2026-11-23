@@ -17,7 +17,7 @@ const designs:{id:Design;label:string;hint:string;color:string}[]=[
  {id:"classic",label:"Clásica",hint:"Profesional",color:"#285c73"}
 ];
 const questions:Record<Step,string>={
- business:"¿Esta cotización es para tu negocio?",
+ business:"Primero, tu negocio",
  services:"¿Qué productos o servicios cotizaremos?",
  customer:"¿A quién prepararemos la cotización?",
  charges:"¿Qué condiciones tendrá?",
@@ -280,20 +280,22 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
    <span>{index+1}/{steps.length}</span></header>
   <div className={styles.track}><span className={theme.agentProgress}
    style={{width:(index+1)/steps.length*100+"%"}}/></div>
-  <div className={styles.robot+" "+theme.agentRobot}><Bot size={35}/><Sparkles size={16}/></div>
+  {step!=="business"?<div className={styles.robot+" "+theme.agentRobot}><Bot size={35}/><Sparkles size={16}/></div>:null}
   <h1 className={styles.question+" "+theme.agentHeading}>{questions[step]}</h1>
+  {step==="business"?<p className={extra.businessStepLabel}>Paso 1 de {steps.length} · Servicio elegido: Smart Quote</p>:null}
   {loading?<p role="status" className={styles.note}><LoaderCircle size={17}/> Consultando tu negocio…</p>:null}
-  {!loading&&owner&&step==="business"?<div className={styles.panel}>
-   <strong className={styles.emphasis+" "+theme.agentText}>{business.name}</strong>
-   <button type="button" aria-pressed={businessConfirmed}
-    className={businessConfirmed?styles.optionActive:styles.option}
-    onClick={()=>setBusinessConfirmed(true)}><Check size={16}/> Sí, este negocio</button>
-   <button type="button" className={styles.option} aria-expanded={showBusinesses}
+  {!loading&&owner&&step==="business"?<div className={styles.panel+" "+extra.businessChoice}>
+   <button type="button" className={extra.businessPrimary}
+    onClick={()=>{setBusinessConfirmed(true);setError("");if(editing){void prepareReview();}else setStep("services");}}>
+    <span>Seguir con <strong>{business.name}</strong></span><ArrowRight size={18}/>
+   </button>
+   <button type="button" className={extra.businessSecondary} aria-expanded={showBusinesses}
     onClick={()=>setShowBusinesses(value=>!value)}>
-    {showBusinesses?"Ocultar negocios":"Cambiar negocio"}</button>
+    {showBusinesses?"Ocultar negocios":"Cambiar negocio"}
+   </button>
    {showBusinesses?<div className={styles.optionsVertical} aria-label="Otros negocios disponibles">
     {businesses.filter(b=>b.id!==business.id).length===0?
-     <p className={styles.note}>No tienes otros negocios registrados para seleccionar.</p>:
+     <p className={styles.note}>No tienes otros negocios registrados.</p>:
      businesses.filter(b=>b.id!==business.id).map(b=>
       <button type="button" key={b.id} className={styles.option}
        onClick={()=>{
@@ -302,7 +304,6 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
         onChooseBusiness(b.id);
        }}>{b.name}</button>)}
    </div>:null}
-   <p className={styles.note}>La cotización usará precios de tu catálogo real de Smart Quote, no precios imaginados por IA.</p>
   </div>:null}
   {!loading&&owner&&step==="services"?<div className={styles.panel}>
    <p className={styles.note}>Conecta el inventario o los servicios de Mi agente. También puedes añadir uno aquí; quedará disponible en AI Agents y Smart Quote.</p>
@@ -430,7 +431,7 @@ export default function AutomaticQuoteWizard({business,agent,workspaceId,onClose
    </div>}
   </div>:null}
   {error?<div className={styles.error} role="alert">{error}</div>:null}
-  {!loading&&owner?<div className={styles.footer}>
+  {!loading&&owner&&step!=="business"?<div className={styles.footer}>
    {step==="review"?<div className={extra.deliveryActions}>
     {(!savedId||savedOutcome==="approved")&&<button type="button"
      className={styles.primary+" "+theme.agentButton} disabled={Boolean(busy)||!pdfFile}
