@@ -74,7 +74,7 @@ export async function GET(req:NextRequest){
   // NOT prove that a video is trending in that country. Use the regional
   // mostPopular chart instead, which is explicitly ranked for that region.
   // Never fall back to a worldwide chart when a regional chart is unavailable.
-  const normalized=query.normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase();
+  const normalized=query.normalize("NFD").replace(/\p{M}/gu,"").toLowerCase();
   const categories:{[key:string]:string}={
    curiosidades:"27",historia:"27",ciencia:"28",tecnologia:"28",educacion:"27",
    entretenimiento:"24",negocios:"22"
