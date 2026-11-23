@@ -1,7 +1,8 @@
 import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {videoDb,validUuid} from "@/lib/vmv-video-generator";
-import {cleanRadarQuery,validRadarId,videoToRadar,type RadarVideo} from "@/lib/vmv-video-radar";
+import {cleanRadarQuery,videoToRadar,type RadarVideo} from "@/lib/vmv-video-radar";
+import {isVideoStudioCountry} from "@/lib/vmv-studio-countries";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=45;
@@ -10,7 +11,7 @@ type Scan={id:string;owner_id:string;query:string;status:string;results:RadarVid
 const transform=(scan:Scan)=>({
  scan:{id:scan.id,status:scan.status,items:(scan.results||[]).slice(0,3).map(v=>({
   sourceId:v.id,title:v.title,description:v.description,thumbnail:v.thumbnail,url:v.url,channel:v.channel,views:v.views
- }))},source:"youtube",originalMetadataOnly:true
+ }))},source:"youtube",country:scan.query.match(/\[region:([A-Z]{2})\]/)?.[1]||null,originalMetadataOnly:true
 });
 async function getScan(id:string,owner:string):Promise<Scan|null>{
  const {data,error}=await videoDb().from("vmv_video_radar_scans")
@@ -23,7 +24,13 @@ async function youtubeApi(path:string,params:URLSearchParams,key:string){
  const res=await fetch("https://www.googleapis.com/youtube/v3/"+path+"?"+params.toString(),{
   cache:"no-store",signal:AbortSignal.timeout(11500),headers:{Accept:"application/json"}
  });
- if(!res.ok)throw Error(res.status===403||res.status===429?"studio_youtube_quota":"studio_youtube_unavailable");
+ if(!res.ok){
+  const error=await res.json().catch(()=>null);
+  const reason=String(error?.error?.errors?.[0]?.reason||"");
+  if(res.status===400&&["videoChartNotFound","invalidRegionCode","invalidRegion"].includes(reason))
+   throw Error("studio_country_unavailable");
+  throw Error(res.status===403||res.status===429?"studio_youtube_quota":"studio_youtube_unavailable");
+ }
  const body=await res.json().catch(()=>null);
  if(!Array.isArray(body?.items))throw Error("studio_youtube_unavailable");
  return body.items as Record<string,unknown>[];
@@ -40,8 +47,9 @@ export async function GET(req:NextRequest){
    reply({error:"studio_trends_not_found"},404);
  }
  const country=(req.nextUrl.searchParams.get("country")||"US").toUpperCase();
- const language=(req.nextUrl.searchParams.get("language")||"es").toLowerCase();
- if(!/^[A-Z]{2}$/.test(country)||!/^[a-z]{2}$/.test(language))return reply({error:"studio_trends_invalid"},400);
+ if(!isVideoStudioCountry(country))return reply({error:"studio_trends_invalid"},400);
+ // Never accept a language filter here: language belongs exclusively to the
+ // separate Video Studio Wizard setting used by the scriptwriter.
  const query=cleanRadarQuery(req.nextUrl.searchParams.get("q"));
  if(!query)return reply({error:"studio_trends_invalid"},400);
  const key=process.env.YOUTUBE_DATA_API_KEY?.trim();
@@ -50,7 +58,7 @@ export async function GET(req:NextRequest){
  try{
   // Reuse existing durable, owner-scoped six-hour cache and twenty searches/day quota.
   const db=videoDb();
-  const claimed=await db.rpc("vmv_video_radar_claim",{p_owner:owner,p_query:query+" [region:"+country+";lang:"+language+"]",p_days:30});
+  const claimed=await db.rpc("vmv_video_radar_claim",{p_owner:owner,p_query:query+" [region:"+country+"]",p_days:30});
   if(claimed.error){
    const code=String(claimed.error.message).includes("radar_daily_limit")?"studio_trends_daily_limit":"studio_trends_database_unavailable";
    return reply({error:code},code==="studio_trends_daily_limit"?429:503);
@@ -62,16 +70,33 @@ export async function GET(req:NextRequest){
    if(!scan)return reply({error:"studio_trends_database_unavailable"},503);
    return reply({...transform(scan),cached:true},scan.status==="pending"?202:200);
   }
-  const since=new Date(Date.now()-30*86400000).toISOString();
-  const search=await youtubeApi("search",new URLSearchParams({
-   part:"snippet",type:"video",maxResults:"12",q:query,order:"viewCount",
-   publishedAfter:since,videoDuration:"short",safeSearch:"moderate",regionCode:country,relevanceLanguage:language
-  }),key);
-  const ids=search.map(item=>(item.id as Record<string,unknown>|undefined)?.videoId).filter(validRadarId);
-  const results:RadarVideo[]=ids.length?(await youtubeApi("videos",
-   new URLSearchParams({part:"snippet,statistics",id:ids.join(",")}),key))
-   .map(v=>videoToRadar(v)).filter((v):v is RadarVideo=>Boolean(v))
-   .sort((a,b)=>b.views-a.views).slice(0,12):[];
+  // search.list?regionCode only restricts where a video is viewable. It does
+  // NOT prove that a video is trending in that country. Use the regional
+  // mostPopular chart instead, which is explicitly ranked for that region.
+  // Never fall back to a worldwide chart when a regional chart is unavailable.
+  const normalized=query.normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase();
+  const categories:{[key:string]:string}={
+   curiosidades:"27",historia:"27",ciencia:"28",tecnologia:"28",educacion:"27",
+   entretenimiento:"24",negocios:"22"
+  };
+  const category=Object.entries(categories).find(([topic])=>normalized.includes(topic))?.[1];
+  const popularParams=(categoryId?:string)=>new URLSearchParams({
+   part:"snippet,statistics",chart:"mostPopular",regionCode:country,
+   maxResults:"50",...(categoryId?{videoCategoryId:categoryId}:{})
+  });
+  let items:Record<string,unknown>[]=[];
+  if(category){
+   try{items=await youtubeApi("videos",popularParams(category),key);}
+   catch(e){
+    if(e instanceof Error&&e.message==="studio_youtube_quota")throw e;
+    // Some regions do not publish the requested category chart.
+    // The unfiltered chart still remains country-specific.
+   }
+  }
+  if(items.length<3)items=await youtubeApi("videos",popularParams(),key);
+  const results:RadarVideo[]=items.map(v=>videoToRadar(v))
+   .filter((v):v is RadarVideo=>Boolean(v)).slice(0,12);
+  if(!results.length)throw Error("studio_country_unavailable");
   const saved=await db.from("vmv_video_radar_scans")
    .update({status:"ready",results,updated_at:new Date().toISOString(),failure_code:null})
    .eq("id",scanId).eq("owner_id",owner).select("*").single();
@@ -82,6 +107,6 @@ export async function GET(req:NextRequest){
   if(scanId)await videoDb().from("vmv_video_radar_scans")
    .update({status:"failed",failure_code:code,updated_at:new Date().toISOString()})
    .eq("id",scanId).eq("owner_id",owner);
-  return reply({error:code},503);
+  return reply({error:code},code==="studio_country_unavailable"?422:503);
  }
 }
