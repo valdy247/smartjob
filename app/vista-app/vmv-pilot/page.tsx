@@ -91,9 +91,10 @@ export default function VMVPilotPage(){
   finally{setLoading(false);}
  };
  useEffect(()=>{void refresh();},[]);
- const start=()=>{setMotionEngine(false);setForm(defaults);setStep(0);setCustomNiche(false);setCustomAudience(false);setError("");setApproved(false);setScreen("create");};
+ const start=()=>{setMotionEngine(true);setForm(defaults);setStep(0);setCustomNiche(false);setCustomAudience(false);setError("");setApproved(false);setScreen("create");};
  const edit=(pilot:Pilot)=>{
-  setMotionEngine(false);
+  const motionSupported=pilot.style==="stickman";
+  setMotionEngine(motionSupported);
   setForm({...defaults,id:pilot.id,niche:pilot.niche,audience:pilot.audience,
    goal:pilot.goal,style:pilot.style,frequency:pilot.frequency,
    monthly_budget_cents:pilot.monthly_budget_cents||0,
@@ -106,8 +107,10 @@ export default function VMVPilotPage(){
     pilot.voice_provider==="elevenlabs"?"ElevenLabs":pilot.voice_id||"Alloy",
    narration:pilot.voice_provider!=="none",
    seconds:([15,30,60] as const).find(v=>v===pilot.seconds)||60,
-   subtitles:pilot.subtitles!==false,qualityMode:pilot.quality_mode||"turbo"});
-  setStep(11);setCustomNiche(false);setCustomAudience(false);setError("");setApproved(false);setScreen("create");
+   subtitles:pilot.subtitles!==false,qualityMode:motionSupported?"turbo":pilot.quality_mode||"turbo"});
+  setStep(motionSupported?11:3);setCustomNiche(false);setCustomAudience(false);
+  setError(motionSupported?"":"El estilo de esta campaña requiere el motor automático que aún no está activo. Elige Stickman para crear con VMV Motion.");
+  setApproved(false);setScreen("create");
  };
  const back=()=>{
   setError("");
@@ -117,6 +120,10 @@ export default function VMVPilotPage(){
  };
  const generate=async()=>{
   if(busy||!approved||form.niche.trim().length<3)return;
+  if(!motionEngine||form.style!=="stickman"||form.qualityMode!=="turbo"){
+   setError("Ese estilo o calidad necesita el renderizador automático que todavía no está activo. Selecciona Stickman y Turbo.");
+   return;
+  }
   setBusy(true);setError("");
   let navigating=false;
   try{
@@ -244,8 +251,10 @@ export default function VMVPilotPage(){
      <Pencil size={23}/><strong>{L("Otro","Other")}</strong>
     </button></div>:null}
    {step===3?<div className={css.styleGrid}>{stylesOptions.map(item=>
-    <button key={item.id} type="button" onClick={()=>{update({style:item.id});setStep(4);}}>
+    <button key={item.id} type="button" disabled={item.id!=="stickman"}
+     onClick={()=>{setMotionEngine(true);setError("");update({style:item.id,qualityMode:"turbo"});setStep(4);}}>
      <Preview id={item.preview}/><strong>{item.label}</strong>
+     <small>{item.id==="stickman"?"Disponible con Seedance":"Disponible próximamente"}</small>
     </button>)}</div>:null}
    {step===4?<div className={css.tiles}>{([15,30,60] as const).map(n=>
     <button key={n} type="button" onClick={()=>{update({seconds:n});setStep(5);}}>
@@ -272,17 +281,14 @@ export default function VMVPilotPage(){
      onSkip={()=>{update({creative_seed:"",research_video_id:"",research_scan_id:null});setStep(10);}}
      onChoose={selectedIdea}/>:null}
    {step===10?<div className={css.choices}>{pilotQualityOptions.map(item=>
-    <button type="button" key={item.id} onClick={()=>{setMotionEngine(false);update({qualityMode:item.id});setStep(11);}}>
+    <button type="button" key={item.id} disabled={item.id!=="turbo"}
+     onClick={()=>{setMotionEngine(true);update({qualityMode:item.id});setStep(11);}}>
      {item.id==="turbo"?<Zap size={21}/>:item.id==="high"?<Sparkles size={21}/>:<GitCompareArrows size={21}/>}
      <strong>{item.id==="compare"?L("Probar ambas","Test both"):item.id==="high"?L("Alta","High"):item.name}</strong>
-     <small className={css.qualityPrice}>{priceUSD(animationCostCents(form.seconds,item.id))}</small>
+     <small className={css.qualityPrice}>{item.id==="turbo"
+      ?priceUSD(animationCostCents(form.seconds,item.id)):"Próximamente"}</small>
     </button>)}
-    <p className={css.qualityNote}>{L("Costo estimado de animación · otros servicios aparte","Estimated animation cost · other services extra")}</p>
-    {form.style==="stickman"&&["es","en"].includes(form.language)?<button type="button" className={css.ownEngine}
-     onClick={()=>{update({qualityMode:"turbo"});setMotionEngine(true);setApproved(false);setStep(11);}}>
-     <Clapperboard size={19}/>{"Crear con VMV Motion · Seedance 720p · "+form.seconds+" s"}
-     <ArrowRight size={17}/>
-    </button>:null}
+    <p className={css.qualityNote}>{L("Turbo usa VMV Motion · Seedance 720p. Alta y Comparar necesitan activar el motor automático.","Turbo uses VMV Motion · Seedance 720p. High and Compare require the automatic renderer.")}</p>
    </div>:null}
    {step===11?<div className={css.review}>
     {motionEngine?<div><span>Motor</span><strong>VMV Motion · Seedance 720p · {form.seconds} s</strong></div>:null}

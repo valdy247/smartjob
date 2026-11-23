@@ -895,3 +895,21 @@ test("VMV Motion publication copy comes from real contextual AI instead of repea
  assert.match(route,/motion_publication_invalid_ai_output/);
  assert.doesNotMatch(route,/hashtags:"#VMVMotion/);
 });
+
+test("Pilot avoids disabled worker for newly created and paused Stickman campaigns",()=>{
+ const ui=read("app/vista-app/vmv-pilot/page.tsx");
+ const api=read("app/api/video-generator/pilot-render/route.ts");
+ assert.match(api,/process\.env\.VMV_PILOT_RENDER_ENABLED/);
+ assert.match(api,/pilot_worker_not_ready/);
+ assert.match(ui,/const start=\(\)=>\{setMotionEngine\(true\)/);
+ assert.match(ui,/const motionSupported=pilot\.style==="stickman"/);
+ assert.match(ui,/setMotionEngine\(motionSupported\)/);
+ assert.match(ui,/setStep\(motionSupported\?11:3\)/);
+ assert.match(ui,/disabled=\{item\.id!=="stickman"\}/);
+ assert.match(ui,/disabled=\{item\.id!=="turbo"\}/);
+ assert.match(ui,/setMotionEngine\(true\);update\(\{qualityMode:item\.id\}\)/);
+ assert.match(ui,/if\(!motionEngine\|\|form\.style!=="stickman"\|\|form\.qualityMode!=="turbo"\)/);
+ assert.match(ui,/router\.push\("\/vista-app\/vmv-pilot\/stickman-lab\?pilotMotion="/);
+ assert.match(ui,/Disponible próximamente/);
+ assert.match(ui,/El estilo de esta campaña requiere el motor automático/);
+});
