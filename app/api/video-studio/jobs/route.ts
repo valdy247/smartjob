@@ -21,7 +21,7 @@ const sceneValid=(s:unknown):s is {speech:string;imagePrompt:string;caption:stri
   (s as {caption:string}).caption.length<=110);
 const isSafeId=(v:unknown,max:number)=>typeof v==="string"&&v.length>0&&v.length<=max&&/^[a-zA-Z0-9_-]+$/.test(v);
 type StudioScene={speech:string;imagePrompt:string;caption:string;imagePath?:string|null;approved?:boolean};
-type JobRow={id:string;owner_id:string;status:string;scenes:StudioScene[];assets:Record<string,unknown>;output_path:string|null;seconds:number;quality_mode:string;[key:string]:unknown};
+type JobRow={id:string;status:string;scenes:StudioScene[];assets:Record<string,unknown>;output_path:string|null;seconds:number;quality_mode:string;[key:string]:unknown};
 const publicColumns="id,title,topic,audience,style,seconds,language,voice_provider,voice_id,subtitles,quality_mode,source_platform,status,phase,progress,eta_seconds,scenes,assets,output_path,failure_code,charge_credits,credits_settled,version,created_at,updated_at,finished_at";
 async function present(row:JobRow,owner:string,showFrames=true){
  const {assets,output_path,...safe}=row;
