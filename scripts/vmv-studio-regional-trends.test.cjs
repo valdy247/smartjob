@@ -111,6 +111,8 @@ test("wizard locale controls idea and narration, regardless of country or origin
  assert.match(plan,/ONLY language governing the proposed idea/);
  assert.match(plan,/Never infer or change the writing language from the selected country/);
  assert.match(plan,/Use an incoming trend title in any language only as thematic inspiration/);
+ assert.match(plan,/The selected topic is mandatory/);
+ assert.match(ui,/topic:mainTopic,/);
  assert.match(countries,/VIDEO_STUDIO_COUNTRY_CODES/);
  assert.match(countries,/Intl\.DisplayNames/);
 });
