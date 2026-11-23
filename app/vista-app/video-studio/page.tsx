@@ -12,7 +12,7 @@ import styles from "./page.module.css";
 type Stage="home"|"topic"|"audience"|"style"|"duration"|"language"|"voice"|"subtitles"|"source"|"trends"|"idea"|"plan"|"quality"|"summary"|"images"|"progress"|"result"|"history";
 type Style="stickman"|"cartoon2d"|"cartoon3d"|"clay"|"illustrated";
 type Quality="turbo"|"high";
-type Scene={speech:string;imagePrompt:string;caption:string;approved?:boolean;imageUrl?:string;imagePath?:string};
+type Scene={speech:string;imagePrompt:string;caption:string;approved?:boolean;requiresReview?:boolean;imageUrl?:string;imagePath?:string};
 type Trend={sourceId:string;title:string;description?:string;thumbnail:string;url:string;channel?:string;views?:number};
 type Job={id:string;status:string;phase:string;progress:number;scenes:Scene[];seconds:number;style:string;quality_mode:string;title:string;videoUrl?:string|null;created_at:string;failure_code?:string|null;etaSeconds?:number|null;charge_credits?:number;credits_settled?:boolean;version?:number};
 type Wallet={balance:number;reserved:number;available:number};
@@ -30,7 +30,7 @@ const stylesList:VideoExample[]=[
 const labels:Record<Stage,string>={
  home:"Video Studio",topic:"¿Qué tema?",audience:"¿Para quién?",style:"Elige un estilo",duration:"Duración",language:"Idioma del video",voice:"Elige una voz",subtitles:"Subtítulos",source:"¿Analizar tendencias?",trends:"Tendencias",idea:"Tu idea",plan:"Tu guion y escenas",quality:"Calidad",summary:"Resumen",images:"Revisa las escenas",progress:"Producción en la nube",result:"Video listo",history:"Historial"
 };
-const stepsFor=(platform:string):Stage[]=>["topic","audience","style","duration","language","voice","subtitles","source",platform==="idea"?"idea":"trends","plan","quality","summary"];
+const stepsFor=(platform:string):Stage[]=>["topic","audience","style","duration","language","voice","subtitles","source",platform==="idea"?"idea":"trends","plan"];
 const estimatedCredits=(seconds:number,quality:Quality)=>Math.ceil(seconds*(quality==="high"?2.5:1));
 const readable=(seconds:number)=>seconds>=60?seconds%60===0?seconds/60+" min":Math.floor(seconds/60)+" min "+seconds%60+" s":seconds+" s";
 const errorMessages:Record<string,string>={
@@ -89,6 +89,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const [outline,setOutline]=useState<{title:string;logline:string;hook:string;ending:string;characters:string;setting:string;beats:string[]}|null>(null);
  const [selectedTrend,setSelectedTrend]=useState<Trend|null>(null);
  const [title,setTitle]=useState(""),[scenes,setScenes]=useState<Scene[]>(sampleInitial);
+ const [narrationDraft,setNarrationDraft]=useState("");
  const [quality,setQuality]=useState<Quality>("turbo"),[approvedCost,setApprovedCost]=useState(false);
  const [job,setJob]=useState<Job|null>(null),[jobs,setJobs]=useState<Job[]>([]);
  const [historyLoading,setHistoryLoading]=useState(false),[sceneIndex,setSceneIndex]=useState(0);
@@ -99,6 +100,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const [regenIndex,setRegenIndex]=useState<number|null>(null);
  const [frameSpeech,setFrameSpeech]=useState(""),[frameVisual,setFrameVisual]=useState("");
  const clientKeyRef=useRef<string>("");
+ const autoApprovalRef=useRef<string>("");
  const [trendConsent,setTrendConsent]=useState(false);
  const [trendCountry,setTrendCountry]=useState("US");
  const [trendLanguage,setTrendLanguage]=useState("es");
@@ -177,7 +179,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const next=(s:Stage)=>{setError("");setStage(s)};
  const previous=()=>{setError("");if(stage==="images"||stage==="progress"||stage==="result"){setStage("history");void loadHistory();return;}
   const idx=order.indexOf(stage);setStage(idx>0?order[idx-1]:"home");};
- const reset=()=>{clientKeyRef.current="";setStage("topic");setTopic("");setOtherTopic("");setAudience("Público general");setVisual("stickman");setSeconds(30);setScenes([]);setTitle("");setIdeaPrompt("");setOutline(null);setDraftProgress(0);setManualDraft(false);setPlanNotice("");setPlatform("idea");setSelectedTrend(null);setApprovedCost(false);setJob(null);setError("");};
+ const reset=()=>{clientKeyRef.current="";autoApprovalRef.current="";setNarrationDraft("");setStage("topic");setTopic("");setOtherTopic("");setAudience("Público general");setVisual("stickman");setSeconds(30);setScenes([]);setTitle("");setIdeaPrompt("");setOutline(null);setDraftProgress(0);setManualDraft(false);setPlanNotice("");setPlatform("idea");setSelectedTrend(null);setApprovedCost(false);setJob(null);setError("");};
  const trendSearch=async()=>{
   setError("");setBusy(true);setTrendResults([]);
   try{
@@ -209,7 +211,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
   const subject=(ideaPrompt.trim()||selectedTrend?.title||(topic==="Otro"?otherTopic:topic).trim()||"Mi historia").slice(0,110);
   // Manual editing is explicit: empty scenes can never be mistaken for a completed script.
   const segments:Scene[]=Array.from({length:seconds/5},()=>({speech:"",imagePrompt:"",caption:""}));
-  setTitle(subject.slice(0,100));setScenes(segments);setOutline(null);setManualDraft(true);
+  setTitle(subject.slice(0,100));setScenes(segments);setNarrationDraft("");setOutline(null);setManualDraft(true);
   setDraftProgress(0);setDraftPhase("");
   setPlanNotice("Editor manual: escribe la narración y describe cada imagen. Para continuar, completa todas las escenas.");
   setError("");
@@ -238,7 +240,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
       typeof scene?.imagePrompt!=="string"||scene.imagePrompt.trim().length<35))
      throw Error("studio_plan_incomplete");
     setOutline(result.outline);setTitle(result.outline.title);
-    setScenes(script);setManualDraft(false);setPlanNotice("");
+    setScenes(script);setNarrationDraft(script.map(s=>s.speech).join(" "));setManualDraft(false);setPlanNotice("");
     setDraftProgress(100);setDraftPhase("Guion listo para revisar");
     return;
    }
@@ -263,22 +265,31 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
    }
    if(completed.length!==count||completed.some(s=>!s||typeof s.speech!=="string"||typeof s.imagePrompt!=="string"))
     throw Error("studio_plan_incomplete");
-   setScenes(completed);setManualDraft(false);setPlanNotice("");setDraftProgress(100);setDraftPhase("Guion listo para revisar");
+   setScenes(completed);setNarrationDraft(completed.map(s=>s.speech).join(" "));setManualDraft(false);setPlanNotice("");setDraftProgress(100);setDraftPhase("Guion listo para revisar");
   }catch(e){
    const code=e instanceof Error?e.message:"studio_plan_provider_unavailable";
    setError(errorMessages[code]?code:"studio_plan_provider_unavailable");
-   setScenes([]);setManualDraft(false);
+   setScenes([]);setNarrationDraft("");setManualDraft(false);
   }
   finally{setBusy(false);}
  };
  const patchScene=(index:number,key:"speech"|"imagePrompt",value:string)=>{setScenes(previous=>previous.map((s,i)=>i===index?{...s,[key]:value}:s));setApprovedCost(false);};
+ const editNarration=(value:string)=>{
+  setNarrationDraft(value);setApprovedCost(false);
+  const words=value.trim().split(/\s+/).filter(Boolean);
+  setScenes(previous=>previous.map((scene,i)=>{
+   const n=previous.length;
+   const part=words.slice(Math.floor(i*words.length/n),Math.floor((i+1)*words.length/n)).join(" ");
+   return {...scene,speech:part,caption:part.split(/\s+/).slice(0,6).join(" ")};
+  }));
+ };
  const makeJob=async()=>{
   if(!approvedCost||scenes.length!==seconds/5)return;
   setBusy(true);setError("");
   try{
    const data=await api("jobs","POST",{clientKey:clientKeyRef.current||(clientKeyRef.current=crypto.randomUUID()),title,topic:topic==="Otro"?otherTopic:topic,audience:audience==="Otro"?otherAudience:audience,style:visual,seconds,language,voiceProvider,voiceId,subtitles,qualityMode:quality,scenes,sourcePlatform:platform,sourceUrl:selectedTrend?.url||null,estimatedCredits:estimatedCredits(seconds,quality),confirmCost:true});
    if(!data?.job?.id)throw Error("video_studio_unavailable");
-   setJob(data.job);void loadCredits();next(data.job.status==="awaiting_image_approval"?"images":"progress");
+   setJob(data.job);void loadCredits();next("progress");
   }catch(e){setError(e instanceof Error?e.message:"video_studio_unavailable");}
   finally{setBusy(false);}
  };
@@ -321,6 +332,10 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
   finally{setBusy(false);}
  };
  const credit=estimatedCredits(seconds,quality);
+ const scriptWords=narrationDraft.trim()?narrationDraft.trim().split(/\s+/).length:0;
+ const scriptSeconds=Math.round(scriptWords/(language==="es"?2.3:2.25));
+ const durationPlausible=Math.abs(scriptSeconds-seconds)<=Math.max(5,seconds*.20);
+ const validDraft=scenes.length===seconds/5&&scenes.every(s=>s.speech.trim().length>=5&&s.speech.length<=230&&s.imagePrompt.trim().length>=20);
  const previewExample=stylesList.find(x=>x.id===exampleStyle)||null;
  if(isSignedIn===false){const sb=getSupabase();return sb?<VMVAuthGateway supabase={sb}/>:<main className={styles.center}>Inicia sesión en VMV Business.</main>;}
  return <main className={styles.page} data-vmv-embedded={embedded?"true":undefined}><div className={styles.shell}>
