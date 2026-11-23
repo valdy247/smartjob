@@ -45,6 +45,8 @@ const errorMessages:Record<string,string>={
  studio_invalid_job:"Revisa tu guion y configuración antes de generar.",
  studio_invalid_action:"Esta escena no se pudo actualizar.",
  studio_scene_locked:"El trabajo ya está en producción y no admite edición de imágenes.",
+ studio_resume_unavailable:"Este proyecto no se puede reanudar.",
+ studio_resume_limit:"Este proyecto alcanzó el límite de reanudaciones.",
  studio_images_not_ready:"Primero deben estar listas todas las imágenes.",
  studio_regeneration_confirmation_required:"Confirma el costo de regenerar una imagen.",
  studio_credit_purchases_not_ready:"Las compras de créditos en modo prueba aún no están conectadas.",
@@ -307,6 +309,16 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
   }catch(e){setError(e instanceof Error?e.message:"studio_invalid_action");}
   finally{setSavingScene(false);}
  };
+ const resumeJob=async()=>{
+  if(!job||job.status!=="failed")return;
+  setBusy(true);setError("");
+  try{
+   const data=await api("jobs","PATCH",{id:job.id,action:"resume"});
+   if(!data?.job)throw Error("studio_resume_unavailable");
+   setJob(data.job);void loadCredits();next("progress");
+  }catch(e){setError(e instanceof Error?e.message:"studio_resume_unavailable");}
+  finally{setBusy(false);}
+ };
  const credit=estimatedCredits(seconds,quality);
  const previewExample=stylesList.find(x=>x.id===exampleStyle)||null;
  if(isSignedIn===false){const sb=getSupabase();return sb?<VMVAuthGateway supabase={sb}/>:<main className={styles.center}>Inicia sesión en VMV Business.</main>;}
@@ -459,7 +471,10 @@ catch(e){setError(e instanceof Error?e.message:"studio_invalid_action");}finally
 {job.status==="failed"||job.status==="cancelled"?<div className={styles.error}>
 {job.status==="failed"?"No pudimos terminar este proyecto. Liberamos los créditos reservados.":"Proyecto cancelado."}
 </div>:null}
-<button className={styles.secondary} onClick={()=>{next("history");void loadHistory();}}>Ver historial</button>
+{job.status==="failed"?<button className={styles.primary} disabled={busy} onClick={()=>void resumeJob()}>
+ {busy?<LoaderCircle size={18} className={styles.spin}/>:<RefreshCw size={18}/>} Reanudar video
+ </button>:null}
+ <button className={styles.secondary} onClick={()=>{next("history");void loadHistory();}}>Ver historial</button>
 </>:null}
   {stage==="result"&&job?<><h1>¡Video listo!</h1>{job.videoUrl?<><video className={styles.videoFinal} controls playsInline src={job.videoUrl}/><a className={styles.primary} href={job.videoUrl} download={"vmv-video-"+job.id+".mp4"}><Download size={19}/> Descargar MP4</a></>:<p className={styles.help}>El archivo está guardado. Actualiza el enlace desde Historial.</p>}<button className={styles.secondary} onClick={()=>{next("history");void loadHistory()}}>Abrir historial</button></>:null}
   {stage==="history"?<><h1>Mis videos</h1>
