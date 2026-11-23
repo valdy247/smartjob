@@ -2,6 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {askAiAgent} from "@/lib/vmv-ai-agents/model";
 import {validPilotLanguage,pilotLanguageName} from "@/lib/vmv-pilot-voice-config";
+import {isVideoStudioCountry} from "@/lib/vmv-studio-countries";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -144,12 +145,15 @@ export async function POST(req:NextRequest){
  if(b?.confirmPlanCost!==true)return json({error:"studio_plan_confirmation_required"},403);
  const titleSource=safe(b?.source?.title,180);
  const sourcePlatform=safe(b?.source?.platform,20);
- const sourceContext=titleSource?{title:titleSource,platform:sourcePlatform}:null;
+ const sourceCountry=isVideoStudioCountry(b?.source?.country)?b.source.country:null;
+ const sourceContext=titleSource?{title:titleSource,platform:sourcePlatform,country:sourceCountry}:null;
  const lang=pilotLanguageName(language);
  const shared=[
   "Act as an award-winning animation director and educational short-film scriptwriter.",
   "Produce original, high-quality entertainment or education, not generic filler.",
-  "Audience: "+audience+". Language of script, captions and title: "+lang+".",
+  "Audience: "+audience+". The ONLY language governing the proposed idea, script, title, captions, and final spoken narration is the Video Studio Wizard language: "+lang+".",
+  "The country of a discovered trend controls ONLY the regional source search. Never infer or change the writing language from the selected country, the trend video language or its foreign-language title.",
+  "Use an incoming trend title in any language only as thematic inspiration. Propose an ORIGINAL idea, hook, full narration, and storyboard entirely in "+lang+". Do not reproduce or retain foreign-language phrasing unless it is a proper name.",
   "STYLE BIBLE: "+STYLES[style],
   "Each VISUAL clip is FIVE SECONDS, but the voiceover is ONE CONTINUOUS natural story. Never force a sentence, clause or pause to end at a scene boundary.",
   "Write the full spoken narration as connected prose across scene boundaries; each speech field is a consecutive segment of the SAME continuous voiceover, not an independent line or mini-story.",
