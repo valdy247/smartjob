@@ -58,6 +58,7 @@ const errorMessages:Record<string,string>={
  studio_youtube_not_connected:"YouTube todavía no está configurado en este entorno.",
  studio_youtube_quota:"YouTube agotó temporalmente su cuota. Continúa con tu idea.",
  studio_plan_incomplete:"El guion llegó incompleto. Puedes volver a intentarlo sin perder tu idea.",
+ studio_plan_audit_blocked:"La revisión detectó un problema importante que no puede solucionarse con un cambio pequeño. Regenera la propuesta sin gastar créditos.",
  studio_plan_provider_unavailable:"No pudimos preparar el guion. Inténtalo otra vez.",
  studio_plan_not_enabled:"La creación de guiones está disponible solo en el entorno de pruebas.",
  studio_plan_invalid_request:"Revisa los datos de tu proyecto antes de generar el guion.",
@@ -259,7 +260,6 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
    if(!first?.outline||!Array.isArray(first?.moments)||first.moments.length<3||
     first.moments.length>36)throw Error("studio_plan_incomplete");
    const plan=first.outline as {title:string;logline:string;hook:string;ending:string;characters:string;setting:string;narration:string;beats:string[]};
-   setOutline(plan);setTitle(plan.title);
    setDraftProgress(12);setDraftPhase("Escribiendo escenas y movimientos…");
    const count=first.moments.length;
    const batches=Array.from({length:Math.ceil(count/6)},(_,i)=>({start:i*6,size:Math.min(6,count-i*6)}));
@@ -276,7 +276,17 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
    }
    if(completed.length!==count||completed.some(s=>!s||typeof s.speech!=="string"||typeof s.imagePrompt!=="string"))
     throw Error("studio_plan_incomplete");
-   setScenes(completed);setNarrationDraft(completed.map(s=>s.speech).join(" "));setManualDraft(false);setPlanNotice("");setDraftProgress(100);setDraftPhase("Guion listo para revisar");
+   // The first draft is PRIVATE until the independent editorial auditor either
+   // approves it unchanged or fixes a material defect in a small number of beats.
+   setDraftProgress(96);setDraftPhase("Revisando ritmo, imágenes y coherencia…");
+   const reviewed=await api("plan","POST",{...shared,mode:"audit",outline:plan,scenes:completed});
+   if(!reviewed?.auditPassed||!reviewed?.outline||
+    !Array.isArray(reviewed?.scenes)||reviewed.scenes.length!==count||
+    reviewed.scenes.map((x:Scene)=>x.speech.trim()).join(" ")!==reviewed.outline.narration)
+    throw Error("studio_plan_incomplete");
+   setOutline(reviewed.outline);setTitle(reviewed.outline.title);
+   setScenes(reviewed.scenes);setNarrationDraft(reviewed.outline.narration);
+   setManualDraft(false);setPlanNotice("");setDraftProgress(100);setDraftPhase("Guion listo para revisar");
   }catch(e){
    const code=e instanceof Error?e.message:"studio_plan_provider_unavailable";
    setError(errorMessages[code]?code:"studio_plan_provider_unavailable");
