@@ -245,3 +245,16 @@ test("new TS/TSX routes and client parse successfully",()=>{
   assert.deepEqual(src.parseDiagnostics.map(x=>{const at=src.getLineAndCharacterOfPosition(x.start||0);return (at.line+1)+":"+(at.character+1)+" "+ts.flattenDiagnosticMessageText(x.messageText," ");}),[],p);
  }
 });
+
+test("generation button shows exact reasons for disabled state and offers safe regeneration",()=>{
+ assert.match(ui,/const draftBlockReason=/);
+ assert.match(ui,/incompleteScene>=0\?"El momento "/);
+ assert.match(ui,/!storyboardMatchesNarration\?"El guion completo/);
+ assert.match(ui,/!durationPlausible\?"La narración se estima en "/);
+ assert.match(ui,/draftBlockReason\?<div className=\{styles\.planDraftNote\} role="alert"/);
+ assert.match(ui,/Regenerar propuesta/);
+ assert.match(ui,/window\.confirm\("Regenerar reemplazará el guion y las escenas actuales/);
+ assert.match(ui,/No se consumirán créditos hasta que puedas confirmar un guion válido/);
+ assert.match(ui,/\{error\?<div role="alert" className=\{styles\.error\}/);
+ assert.match(ui,/if\(!approvedCost\|\|!validDraft\|\|!durationPlausible\)return/);
+});
