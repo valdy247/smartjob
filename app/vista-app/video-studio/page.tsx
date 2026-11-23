@@ -243,7 +243,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
   setError("");
  };
  const prepare=async(chosenTrend:Trend|null=selectedTrend)=>{
-  setBusy(true);setError("");setManualDraft(false);setPlanNotice("");setDraftProgress(0);setDraftPhase("Creando una historia original…");
+  setBusy(true);setError("");setManualDraft(false);setPlanNotice("");setDraftProgress(0);setDraftPhase("Revisando ajustes finales…");
   setScenes([]);setOutline(null);
   try{
    const mainTopic=(topic==="Otro"?otherTopic:topic).trim()||ideaPrompt.trim().slice(0,180);
@@ -255,12 +255,12 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
     source:chosenTrend?{platform,sourceId:chosenTrend.sourceId,title:chosenTrend.title,url:chosenTrend.url,country:trendCountry}:null,
     confirmPlanCost:true
    };
-   setDraftPhase("Escribiendo la narración completa…");
+   setDraftPhase("Revisando ajustes finales…");
    const first=await api("plan","POST",{...shared,mode:"outline"});
    if(!first?.outline||!Array.isArray(first?.moments)||first.moments.length<3||
     first.moments.length>36)throw Error("studio_plan_incomplete");
    const plan=first.outline as {title:string;logline:string;hook:string;ending:string;characters:string;setting:string;narration:string;beats:string[]};
-   setDraftProgress(12);setDraftPhase("Escribiendo escenas y movimientos…");
+   setDraftProgress(12);setDraftPhase("Revisando ajustes finales…");
    const count=first.moments.length;
    const batches=Array.from({length:Math.ceil(count/6)},(_,i)=>({start:i*6,size:Math.min(6,count-i*6)}));
    const completed:Scene[]=[];
@@ -278,10 +278,10 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
     throw Error("studio_plan_incomplete");
    // The first draft is PRIVATE until the independent editorial auditor either
    // approves it unchanged or fixes a material defect in a small number of beats.
-   setDraftProgress(96);setDraftPhase("Revisando ritmo, imágenes y coherencia…");
+   setDraftProgress(96);setDraftPhase("Revisando ajustes finales…");
    const reviewed=await api("plan","POST",{...shared,mode:"audit",outline:plan,scenes:completed});
    if(!reviewed?.auditPassed||!reviewed?.outline||
-    !Array.isArray(reviewed?.scenes)||reviewed.scenes.length!==count||
+    !Array.isArray(reviewed?.scenes)||reviewed.scenes.length<3||reviewed.scenes.length>36||
     reviewed.scenes.map((x:Scene)=>x.speech.trim()).join(" ")!==reviewed.outline.narration)
     throw Error("studio_plan_incomplete");
    setOutline(reviewed.outline);setTitle(reviewed.outline.title);
@@ -493,7 +493,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
    {selectedTrend?<div className={styles.selectedTrend}><strong>{selectedTrend.title}</strong><a href={selectedTrend.url} target="_blank" rel="noopener noreferrer">Ver original</a></div>:null}
    {busy?<div className={styles.draftLoading} role="status" aria-live="polite">
     <div className={styles.draftOrb}><Sparkles size={33}/><span>{draftProgress}%</span></div>
-    <strong>{draftPhase||"Preparando tu guion…"}</strong><p>Organizando momentos visuales según el significado de la narración, sin tiempos fijos.</p>
+    <strong>{draftPhase||"Revisando ajustes finales…"}</strong><p>Comprobando el guion y las imágenes para entregarte una propuesta coherente.</p>
     <div className={styles.bar}><div style={{width:String(draftProgress)+"%"}}/></div>
    </div>:null}
    {!busy&&scenes.length===0?<div className={styles.planEmpty}>
