@@ -416,11 +416,11 @@ async function processJob(job){
      }
      visualReference=previous;
     }
-    let accepted=null,lastCandidate=null;
+    let accepted=null,lastCandidate=null,visuallyValid=false;
     for(let attempt=0;attempt<2;attempt++){
      const buffer=await makeImage(job,scenes[i],visualReference);
      lastCandidate=buffer;
-     if(await validateSceneImage(job,scenes[i],buffer)){accepted=buffer;break;}
+     if(await validateSceneImage(job,scenes[i],buffer)){accepted=buffer;visuallyValid=true;break;}
      log("frame_rejected",{id:job.id,scene:i+1,attempt:attempt+1});
     }
     if(!accepted){
@@ -431,7 +431,7 @@ async function processJob(job){
     }
     await writeFile(image,accepted);
     await persistAsset(job,"image_"+i,image,"image/jpeg");
-    scenes[i]={...scenes[i],imagePath:job.assets["image_"+i],approved:false,requiresReview:!Boolean(accepted&&accepted!==lastCandidate)};
+    scenes[i]={...scenes[i],imagePath:job.assets["image_"+i],approved:false,requiresReview:!visuallyValid};
     await patch(job,{scenes:scenes.map(s=>({...s})),phase:"Creando fotograma "+(i+1)+"/"+n,
      progress:5+Math.floor(25*(i+1)/n),eta_seconds:Math.max(30,(n-i-1)*35)});
    }
