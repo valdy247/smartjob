@@ -56,23 +56,23 @@ test("Approved quotes offer a printable document without inventing payment event
  assert.ok(page.includes('styles.printSheet'));
 });
 
-test("Smart Quote AI wizard uses a compact next action in the business step and waits for confirmation",()=>{
+test("Smart Quote starts with a minimal, tappable business choice and no Next button",()=>{
  const wizard=readFileSync("app/vista-app/ai-agents/AutomaticQuoteWizard.tsx","utf8");
  const parsed=ts.createSourceFile("AutomaticQuoteWizard.tsx",wizard,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
  assert.deepEqual(parsed.parseDiagnostics.map(x=>ts.flattenDiagnosticMessageText(x.messageText," ")),[]);
- assert.match(wizard,/step==="business"\?businessConfirmed/);
- assert.match(wizard,/aria-pressed=\{businessConfirmed\}/);
- assert.match(wizard,/onClick=\{\(\)=>setBusinessConfirmed\(true\)\}/);
- assert.match(wizard,/disabled=\{!valid\|\|Boolean\(busy\)\} onClick=\{next\}/);
- assert.match(wizard,/step==="design"\?"Preparar cotización":null/);
- assert.equal(wizard.includes('className={styles.optionActive} onClick={next}'),false);
- assert.equal(wizard.includes('step!=="business"?<button'),false);
+ assert.match(wizard,/business:"Primero, tu negocio"/);
+ assert.match(wizard,/Seguir con <strong>\{business.name\}<\/strong>/);
+ assert.match(wizard,/onClick=\{\(\)=>\{setBusinessConfirmed\(true\);setError\(""\);/);
+ assert.match(wizard,/setStep\("services"\)/);
+ assert.match(wizard,/step!=="business"\?<div className=\{styles.robot/);
+ assert.match(wizard,/owner&&step!=="business"\?<div className=\{styles.footer\}/);
  assert.match(wizard,/Cambiar negocio/);
  assert.match(wizard,/aria-expanded=\{showBusinesses\}/);
- assert.match(wizard,/onChooseBusiness\(b\.id\)/);
+ assert.match(wizard,/onChooseBusiness\(b.id\)/);
  const agentPage=readFileSync("app/vista-app/ai-agents/page.tsx","utf8");
- assert.ok(agentPage.includes('businesses={businesses} onChooseBusiness={id=>'));
- assert.ok(agentPage.includes('setChosenBusiness(id)'));
+ assert.match(agentPage,/quoteAdvanceAfterSwitch\?"services":"business"/);
+ assert.match(agentPage,/setQuoteAdvanceAfterSwitch\(true\)/);
+ assert.ok(agentPage.includes("setChosenBusiness(id)"));
 });
 
 
