@@ -45,7 +45,7 @@ begin
  insert into public.vmv_studio_credit_ledger(owner_id,job_id,kind,reserved_delta,external_ref)
  values(p_owner,v_id,'reserve',v_price,'job:'||v_id::text);
  return v_id;
-end $function$
+end $function$;
 
 -- Preserve the existing service-only RPC permission boundary.
 REVOKE ALL ON FUNCTION public.vmv_studio_create_job(uuid,uuid,jsonb) FROM PUBLIC,anon,authenticated;
