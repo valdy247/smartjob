@@ -541,7 +541,7 @@ catch(e){setError(e instanceof Error?e.message:"studio_invalid_action");}finally
 <div className={styles.history}>{jobs.map(item=><button key={item.id} className={styles.historyItem} onClick={async()=>{
 try{const response=await api("jobs?id="+encodeURIComponent(item.id));if(!response?.job)return;
 setJob(response.job);setSceneIndex(0);
-next(response.job.status==="completed"?"result":response.job.status==="awaiting_image_approval"?"images":"progress");
+next(response.job.status==="completed"?"result":response.job.status==="awaiting_image_approval"&&(!Array.isArray(response.job.scenes)||!response.job.scenes.every((s:Scene)=>s.requiresReview===false))?"images":"progress");
 }catch(e){setError(e instanceof Error?e.message:"video_studio_db_unavailable");}
 }}><span className={styles.historyIcon}><Film size={20}/></span><span>
 <strong>{item.title||"Video sin título"}</strong><small>{readable(item.seconds)} · {item.phase||item.status}</small>
