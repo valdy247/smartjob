@@ -1,5 +1,5 @@
 "use client";
-import {useCallback,useEffect,useMemo,useState} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import Link from "next/link";
 import {useRouter,useSearchParams} from "next/navigation";
 import {ArrowLeft,ArrowUpRight,Bot,CheckCircle2,Clapperboard,FileText,Globe,Home,LayoutGrid,LoaderCircle,LogOut,Megaphone,Search,Settings2,ShieldCheck,Sparkles,UserRound,Video,ChartNoAxesCombined,Bell,Rocket,TrendingUp,ChevronLeft} from "lucide-react";
@@ -51,6 +51,7 @@ export default function VMVV1Shell(){
  const [businessName,setBusinessName]=useState("");
  const [saving,setSaving]=useState(false);
  const [assessmentOpen,setAssessmentOpen]=useState(false);
+ const previewFrameRef=useRef<HTMLIFrameElement|null>(null);
  const [needsAnswers,setNeedsAnswers]=useState<V1NeedsAnswers|null>(null);
  const [legacyAnswers,setLegacyAnswers]=useState<DiagnosticAnswers|null>(null);
  const reload=useCallback(async(sb:SupabaseClient)=>{
@@ -105,12 +106,30 @@ export default function VMVV1Shell(){
  const suggestedServices=useMemo(()=>recommendV1Services(needsAnswers,legacyAnswers)
   .map(id=>services.find(item=>item.id===id)).filter((item):item is Service=>Boolean(item)),[needsAnswers,legacyAnswers]);
  const hasAssessment=Boolean(needsAnswers||legacyAnswers);
+ const embeddedService=services.find(item=>item.id===params.get("preview")&&Boolean(item.url))||null;
+ useEffect(()=>{
+  if(!embeddedService)return;
+  setTab("services");setWebView(false);setAssessmentOpen(false);
+ },[embeddedService?.id]);
+ useEffect(()=>{
+  const onFrameMessage=(event:MessageEvent)=>{
+   if(event.origin!==window.location.origin||event.source!==previewFrameRef.current?.contentWindow)return;
+   if(event.data?.type!=="vmv-preview-navigate")return;
+   if(event.data.destination==="home"||event.data.destination==="services")
+    router.push("/vista-app?tab="+event.data.destination);
+  };
+  window.addEventListener("message",onFrameMessage);
+  return()=>window.removeEventListener("message",onFrameMessage);
+ },[router]);
  const open=(id:string)=>{
   if(id==="web"){setTab("services");setWebView(true);return;}
   const href=services.find(s=>s.id===id)?.url;
-  if(href)router.push(href);
+  if(href)router.push("/vista-app?preview="+encodeURIComponent(id));
  };
- const nav=(next:Tab)=>{setTab(next);setWebView(false);setAssessmentOpen(false);setError("");};
+ const nav=(next:Tab)=>{
+  setTab(next);setWebView(false);setAssessmentOpen(false);setError("");
+  if(embeddedService)router.push("/vista-app?tab="+next);
+ };
  const save=async()=>{
   if(!client||!user||!profile||!businessName.trim()||saving)return;
   setSaving(true);setError("");
@@ -127,7 +146,7 @@ export default function VMVV1Shell(){
   <header className={homeStyles.pageHeader}>
    <a href="/" className={homeStyles.wordmark}>VMV<span> BUSINESS</span></a>
    <span className={homeStyles.previewTag}>VMV BUSINESS · V1 PREVIEW</span>
-   <a href="/vista-app/video-studio" className={homeStyles.webLink}>{L("Video Studio","Video Studio")} <ArrowUpRight size={15}/></a>
+   <a href="/vista-app?preview=video" className={homeStyles.webLink}>{L("Video Studio","Video Studio")} <ArrowUpRight size={15}/></a>
   </header>
   <div className={homeStyles.layout+" "+styles.previewLayout}>
    <aside className={homeStyles.intro+" "+styles.previewIntro}>
@@ -138,12 +157,27 @@ export default function VMVV1Shell(){
    <div className={homeStyles.phoneFrame+" "+styles.previewPhone}>
     <div className={homeStyles.device+" "+styles.previewDevice}>
      <div className={homeStyles.statusBar}><span>VMV</span><div className={homeStyles.dynamicIsland}/><span>◢ ▰</span></div>
-     <div className={tab==="home"?homeStyles.homeTopHidden:homeStyles.appTop}>
+     <div className={tab==="home"||embeddedService?homeStyles.homeTopHidden:homeStyles.appTop}>
       <div className={homeStyles.appLogo}><span className={homeStyles.mark}>▥</span><b>VMV<span> BUSINESS</span></b></div>
       <div className={styles.topActions}><InterfaceLanguagePicker compact/></div>
       <button type="button" onClick={()=>nav("account")} aria-label={L("Mi cuenta","My account")}><UserRound size={18}/></button>
      </div>
      <div className={homeStyles.scrollArea+" "+styles.previewScroll}>
+      {embeddedService?<section className={styles.embeddedService} aria-label={embeddedService.name}>
+       <div className={styles.embeddedBar}>
+        <button type="button" aria-label={L("Volver a servicios","Back to services")} onClick={()=>nav("services")}><ChevronLeft size={17}/></button>
+        <strong>{embeddedService.name}</strong>
+       </div>
+       <iframe ref={previewFrameRef} className={styles.embeddedFrame}
+        title={embeddedService.name} src={embeddedService.url+"?vmvEmbed=1"}
+        onLoad={()=>{
+         try{
+          if(previewFrameRef.current?.contentWindow?.location.pathname==="/vista-app")
+           router.push("/vista-app?tab=home");
+         }catch{/* A cross-origin destination cannot control the simulator. */}
+        }}/>
+      </section>:null}
+      {!embeddedService?<>
       {tab==="home"&&assessmentOpen&&profile?<VMVV1NeedsAssessment businessId={profile.id} en={en} initial={needsAnswers} onSaved={answers=>{setNeedsAnswers(answers);setAssessmentOpen(false);}} onClose={()=>setAssessmentOpen(false)}/>:null}
       {tab==="home"&&!assessmentOpen?<div className={homeStyles.screen+" "+homeStyles.homeV2+" "+homeStyles.homeConcept} data-vmv-shortcut-scope="home">
        <header className={homeStyles.homeIdentity}>
@@ -204,6 +238,7 @@ export default function VMVV1Shell(){
        <button className={styles.logout} onClick={()=>client&&void client.auth.signOut()}><LogOut size={17}/>{L("Cerrar sesión","Sign out")}</button>
       </section>:null}
       {error?<p className={styles.error} role="alert">{error}</p>:null}
+      </>:null}
      </div>
      <nav className={homeStyles.bottomNav+" "+styles.v1BottomNav} aria-label={L("Navegación principal","Main navigation")}>
       {([{id:"home",name:L("Inicio","Home"),Icon:Home},{id:"services",name:L("Servicios","Services"),Icon:LayoutGrid},{id:"account",name:L("Configuración","Settings"),Icon:Settings2}] as const).map(item=>
