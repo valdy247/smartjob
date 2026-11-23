@@ -99,6 +99,18 @@ export default function VideoStudioV1(){
  const [frameSpeech,setFrameSpeech]=useState(""),[frameVisual,setFrameVisual]=useState("");
  const clientKeyRef=useRef<string>("");
  const [trendConsent,setTrendConsent]=useState(false);
+ useEffect(()=>{
+  // Direct Preview links also open the phone simulator; embedded visits never redirect.
+  if(window.self!==window.top||new URLSearchParams(window.location.search).get("standalone")==="1")return;
+  window.location.replace("/vista-app?preview=video");
+ },[]);
+ const returnToVMV=()=>{
+  if(window.self!==window.top){
+   window.parent.postMessage({type:"vmv-preview-navigate",destination:"services"},window.location.origin);
+   return;
+  }
+  window.location.assign("/vista-app?tab=services");
+ };
 
  const authenticate=useCallback(async()=>{
   const sb=getSupabase();if(!sb)throw Error("Inicia sesión.");
@@ -291,7 +303,8 @@ export default function VideoStudioV1(){
  const previewExample=stylesList.find(x=>x.id===exampleStyle)||null;
  if(isSignedIn===false){const sb=getSupabase();return sb?<VMVAuthGateway supabase={sb}/>:<main className={styles.center}>Inicia sesión en VMV Business.</main>;}
  return <main className={styles.page}><div className={styles.shell}>
-  <header className={styles.header}><button className={styles.back} onClick={()=>stage==="home"?window.location.assign("/vista-app"):previous()} aria-label="Volver"><ArrowLeft size={19}/></button><div><strong>Video Studio</strong><small>VMV Business · Creator</small></div><Link href="/vista-app" className={styles.brand}>VMV</Link></header>
+  <header className={styles.header}><button className={styles.back} onClick={()=>stage==="home"?returnToVMV():previous()} aria-label="Volver"><ArrowLeft size={19}/></button><div><strong>Video Studio</strong><small>VMV Business · Creator</small></div><Link href="/vista-app?tab=services" className={styles.brand}
+    onClick={event=>{if(window.self!==window.top){event.preventDefault();returnToVMV();}}}>VMV</Link></header>
   {stage!=="home"&&stage!=="history"&&stage!=="images"&&stage!=="progress"&&stage!=="result"?<div className={styles.progressTop}><span>{labels[stage]}</span><span>{Math.max(1,order.indexOf(stage)+1)} / {order.length}</span><div className={styles.bar}><div style={{width:Math.max(5,(order.indexOf(stage)+1)/order.length*100)+"%"}}/></div></div>:null}
   {stage==="home"?<>
    <div className={styles.homeGrid}>
