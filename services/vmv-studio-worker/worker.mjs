@@ -226,7 +226,8 @@ async function generateSpeech(job,text,file){
  }else if(job.voice_provider==="openai"&&["alloy","ash","ballad","coral","echo","fable","nova","onyx","sage","shimmer","verse","marin","cedar"].includes(job.voice_id)){
   const response=await request(OPENAI+"/audio/speech",{
    method:"POST",headers:{...auth("OPENAI_API_KEY"),"Content-Type":"application/json"},
-   body:JSON.stringify({model:"gpt-4o-mini-tts",voice:job.voice_id,input:text,response_format:"mp3",speed:1.0})
+   body:JSON.stringify({model:"gpt-4o-mini-tts",voice:job.voice_id,input:text,response_format:"mp3",speed:1.0,
+    instructions:"Narrate as one seamless, expressive, human-sounding story in "+LANGUAGES[job.language]+". Speak at a comfortable conversational pace with natural phrasing and emphasis. Never insert pauses at five-second visual scene boundaries; the text is one continuous narration."})
   },90000);
   await writeFile(file,await bytes(response,1500000));
  }else throw Error("voice_invalid");
@@ -250,7 +251,7 @@ async function generateContinuousSpeech(job,scenes,file){
  const text=scenes.map(scene=>scene.speech.trim()).join(" ");
  if(job.voice_provider!=="elevenlabs"){
   await generateSpeech(job,text,file);
-  return null;
+  return await transcribeWordTimings(job,file);
  }
  if(!process.env.ELEVENLABS_API_KEY)throw Error("elevenlabs_key_missing");
  const response=await request("https://api.elevenlabs.io/v1/text-to-speech/"+
@@ -345,14 +346,14 @@ async function assemble(job,dir,clips,narrationFile,timing,variant){
   raw=path.join(dir,"raw-"+variant+".mp4"),
   final=path.join(dir,"final-"+variant+".mp4");
  const originalDuration=Number(timing?.duration)||job.seconds;
- const speed=originalDuration/job.seconds;
- if(narrationFile&&(speed<0.78||speed>1.25))throw Error("voice_length_requires_script_revision");
+ if(originalDuration/job.seconds<0.90||originalDuration/job.seconds>1.10)
+  throw Error("voice_length_requires_script_revision");
  const segments=timing?.segments;
  if(!Array.isArray(segments)||segments.length!==clips.length)throw Error("scene_timing_invalid");
  const clipPaths=[];
  for(let i=0;i<clips.length;i++){
   const segment=segments[i];
-  const sceneSeconds=segment.duration/speed;
+  const sceneSeconds=segment.duration;
   if(!Number.isFinite(sceneSeconds)||sceneSeconds<0.2||sceneSeconds>20)throw Error("scene_timing_invalid");
   const normalized=path.join(dir,"norm-"+variant+"-"+i+".mp4");
   const scale=(sceneSeconds/5).toFixed(6);
@@ -371,8 +372,8 @@ async function assemble(job,dir,clips,narrationFile,timing,variant){
  if(job.subtitles&&Array.isArray(timing.cues)&&timing.cues.length){
   const subs=path.join(dir,"subtitles-"+variant+".srt");
   const lines=timing.cues.map((cue,index)=>
-   String(index+1)+"\n"+timecode(cue.start/speed)+" --> "+
-    timecode(Math.max(cue.start/speed+.08,cue.end/speed))+"\n"+
+   String(index+1)+"\n"+timecode(cue.start)+" --> "+
+    timecode(Math.max(cue.start+.08,cue.end))+"\n"+
     String(cue.text).replace(/[\r\n]/g," ")+"\n\n").join("");
   await writeFile(subs,lines);
   vf="subtitles="+subs+
@@ -384,10 +385,9 @@ async function assemble(job,dir,clips,narrationFile,timing,variant){
  args.push("-c:v",vf?"libx264":"copy");
  if(vf)args.push("-preset","veryfast","-crf","26");
  if(narrationFile){
-  args.push("-map","0:v:0","-map","1:a:0","-af","atempo="+speed.toFixed(5),
-   "-c:a","aac","-b:a","128k");
+  args.push("-map","0:v:0","-map","1:a:0","-c:a","aac","-b:a","128k");
  }else args.push("-an");
- args.push("-t",String(job.seconds),"-movflags","+faststart",final);
+ args.push("-t",String(originalDuration),"-movflags","+faststart",final);
  await shell("ffmpeg",args,300000);
  const output=await stat(final);
  if(output.size<20000||output.size>150*1024*1024)throw Error("render_file_invalid");
@@ -406,9 +406,19 @@ async function processJob(job){
     if(closing)throw Error("worker_stopping");
     if(typeof scenes[i].imagePath==="string"&&scenes[i].imagePath.startsWith(prefix)&&scenes[i].imagePath.endsWith(".jpg"))continue;
     const image=path.join(dir,"image-"+i+".jpg");
+    // Carry the preceding approved keyframe into the next shot to stabilize
+    // recurring faces, clothing, materials and color palette across the film.
+    let visualReference=null;
+    if(i>0){
+     const previous=path.join(dir,"image-"+(i-1)+".jpg");
+     try{await stat(previous);}catch{
+      if(typeof scenes[i-1].imagePath==="string")await download(WORK,scenes[i-1].imagePath,previous);
+     }
+     visualReference=previous;
+    }
     let accepted=null,lastCandidate=null;
     for(let attempt=0;attempt<2;attempt++){
-     const buffer=await makeImage(job,scenes[i],null);
+     const buffer=await makeImage(job,scenes[i],visualReference);
      lastCandidate=buffer;
      if(await validateSceneImage(job,scenes[i],buffer)){accepted=buffer;break;}
      log("frame_rejected",{id:job.id,scene:i+1,attempt:attempt+1});
@@ -421,7 +431,7 @@ async function processJob(job){
     }
     await writeFile(image,accepted);
     await persistAsset(job,"image_"+i,image,"image/jpeg");
-    scenes[i]={...scenes[i],imagePath:job.assets["image_"+i],approved:false};
+    scenes[i]={...scenes[i],imagePath:job.assets["image_"+i],approved:false,requiresReview:!Boolean(accepted&&accepted!==lastCandidate)};
     await patch(job,{scenes:scenes.map(s=>({...s})),phase:"Creando fotograma "+(i+1)+"/"+n,
      progress:5+Math.floor(25*(i+1)/n),eta_seconds:Math.max(30,(n-i-1)*35)});
    }
@@ -434,6 +444,29 @@ async function processJob(job){
   if(scenes.some(s=>s.approved!==true||typeof s.imagePath!=="string"||
     !s.imagePath.startsWith(prefix)||!s.imagePath.endsWith(".jpg")))throw Error("studio_images_not_approved");
   await verifyScriptLanguage(job,scenes);
+  // Voice preflight happens BEFORE spending on animated clips. The scenes are
+  // independent visual windows; spoken grammar is never fitted to their edges.
+  await patch(job,{status:"animating",phase:"Preparando narración continua",progress:32,eta_seconds:100});
+  const narration=path.join(dir,"narration.mp3");
+  let alignment=null;
+  if(!await restoreAsset(job,"voice_continuous",narration)){
+   alignment=await generateContinuousSpeech(job,scenes,narration);
+   await persistAsset(job,"voice_continuous",narration,"audio/mpeg");
+  }
+  const duration=await probe(narration);
+  if(duration/job.seconds<0.90||duration/job.seconds>1.10)throw Error("voice_length_requires_script_revision");
+  let timing=job.assets?.voice_timeline;
+  if(!alignment&&timing?.segments?.length===n&&
+   typeof timing.duration==="number"&&Math.abs(timing.duration-duration)<.25&&
+   timing.alignmentSource!=="estimated_legacy"&&Array.isArray(timing.cues)&&timing.cues.length) {
+   // Already verified and persisted in a previous worker attempt.
+  }else{
+   if(!alignment)alignment=await transcribeWordTimings(job,narration);
+   timing=speechTimeline(scenes,duration,alignment);
+   if(timing.alignmentSource==="estimated_legacy")throw Error("voice_alignment_unavailable");
+   await patch(job,{assets:{...job.assets,voice_timeline:timing}});
+  }
+  await verifyAudioLanguage(job,[narration],dir);
   const variant=job.quality_mode,clips=[];
   for(let i=0;i<n;i++){
    if(closing)throw Error("worker_stopping");
@@ -455,28 +488,10 @@ async function processJob(job){
    await patch(job,{status:"animating",phase:"Animando escena "+(i+1)+"/"+n,
     progress:30+Math.floor(55*(i+1)/n),eta_seconds:Math.max(45,(n-i-1)*90+75)});
   }
-  await patch(job,{status:"voice",phase:"Generando narración",progress:88,eta_seconds:60});
-  const narration=path.join(dir,"narration.mp3");
-  let timing=speechTimeline(scenes,job.seconds),alignment=null;
-  if(!await restoreAsset(job,"voice_continuous",narration)){
-   alignment=await generateContinuousSpeech(job,scenes,narration);
-   await persistAsset(job,"voice_continuous",narration,"audio/mpeg");
-  }
-  const duration=await probe(narration);
-  if(duration/job.seconds<0.78||duration/job.seconds>1.25)throw Error("voice_length_requires_script_revision");
-  if(alignment){
-   timing=speechTimeline(scenes,duration,alignment);
-   await patch(job,{assets:{...job.assets,voice_timeline:timing}});
-  }else if(job.assets?.voice_timeline?.segments?.length===n)timing=job.assets.voice_timeline;
-  else{
-   timing=speechTimeline(scenes,duration);
-   await patch(job,{assets:{...job.assets,voice_timeline:timing}});
-  }
-  await verifyAudioLanguage(job,[narration],dir);
   await patch(job,{status:"assembling",phase:"Uniendo clips y sincronizando voz",
    progress:94,eta_seconds:60});
   const final=await assemble(job,dir,clips,narration,timing,variant);
-  if(Math.abs((await probe(final))-job.seconds)>1.7)throw Error("studio_duration_mismatch");
+  if(Math.abs((await probe(final))-duration)>1.2)throw Error("studio_duration_mismatch");
   const output=prefix+"final.mp4";
   await upload(FINAL,output,final,"video/mp4");
   await patch(job,{status:"verifying",phase:"Guardando video en tu historial",
