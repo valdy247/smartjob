@@ -9,8 +9,8 @@ const css=read("app/vista-app/video-studio/page.module.css");
 const plan=read("app/api/video-studio/plan/route.ts");
 const trends=read("app/api/video-studio/trends/route.ts");
 
-test("five style cards have original illustrations and a fullscreen example viewer",()=>{
- const posters=["stickman","cartoon2d","cartoon3d","clay","storybook"];
+test("four approved style cards have original illustrations and a fullscreen example viewer",()=>{
+ const posters=["stickman","cartoon2d","cartoon3d","clay"];
  for(const id of posters){
   const p="public/video-studio/styles/"+id+".svg";
   const svg=read(p);
@@ -64,7 +64,7 @@ test("own idea has short prompt and AI produces editable scenes without null der
  assert.match(ui,/Array\.isArray\(chunk\?\.scenes\)/);
  assert.match(ui,/Array\.isArray\(first\.outline\.beats\)/);
  assert.match(ui,/setDraftPhase\("Escribiendo escenas y movimientos…"\)/);
- assert.match(ui,/patchScene\(i,"speech"/);
+ assert.match(ui,/editNarration\(e\.target\.value\)/);
  assert.match(ui,/patchScene\(i,"imagePrompt"/);
  assert.match(ui,/stepsFor\(platform\)/);
  assert.match(ui,/platform==="idea"\?"idea":"trends"/);
@@ -98,7 +98,7 @@ test("failed AI cannot masquerade as completed scenes; manual writing is opt-in"
  assert.match(ui,/Escribir guion manualmente/);
  assert.match(ui,/setManualDraft\(true\)/);
  assert.match(ui,/setError\(errorMessages\[code\]\?code:"studio_plan_provider_unavailable"\)/);
- assert.match(ui,/setScenes\(\[\]\);setManualDraft\(false\)/);
+ assert.match(ui,/setScenes\(\[\]\);setNarrationDraft\(" "\);setManualDraft\(false\)/);
  assert.doesNotMatch(ui,/else makeEditableDraft\(\)/);
  assert.match(ui,/Reintentar IA/);
  assert.match(ui,/window\.confirm\("Regenerar con IA reemplazará/);
@@ -164,7 +164,7 @@ test("short trending topic generates three actual scripts with strict schema in 
  assert.equal(result.status,200);
  assert.equal(result.body.scenes.length,3);
  assert.equal(result.body.outline.beats.length,3);
- assert.equal(result.body.scenes[0].speech,scenes[0].speech);
+ assert.equal(result.body.scenes.map(s=>s.speech).join(" "),scenes.map(s=>s.speech).join(" "));
  assert.equal(calls,1,"one real model call for a 15s script");
 });
 
