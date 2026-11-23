@@ -12,18 +12,21 @@ import VMVAuthGateway from "@/components/VMVAuthGateway";
 import {InterfaceLanguagePicker} from "@/components/InterfaceLanguagePicker";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import BusinessServicesPreview from "./BusinessServicesPreview";
+import VMVV1NeedsAssessment from "./VMVV1NeedsAssessment";
+import {readDiagnosticRecord,type DiagnosticAnswers} from "@/lib/business-diagnostic";
+import {readV1Needs,recommendV1Services,type V1NeedsAnswers} from "@/lib/vmv-v1-recommendations";
 import styles from "./VMVV1Shell.module.css";
 import homeStyles from "./vista-app.module.css";
 
 type Tab="home"|"services"|"account";
-type Service={id:string;name:string;description:string;url?:string;Icon:LucideIcon;className:string};
+type Service={id:string;name:string;description:string;url?:string;Icon:LucideIcon;className:string;homeTone:string;shortcutId:string};
 const services:Service[]=[
- {id:"web",name:"Web Services",description:"Crea y administra sitios web.",Icon:Globe,className:"web"},
- {id:"agents",name:"AI Agents",description:"Atención, ventas y reservas con IA.",url:"/vista-app/ai-agents",Icon:Bot,className:"agents"},
- {id:"video",name:"Video Studio",description:"Historias animadas, escenas y narración.",url:"/vista-app/video-studio",Icon:Clapperboard,className:"video"},
- {id:"quote",name:"Smart Quote",description:"Cotizaciones y propuestas profesionales.",url:"/vista-app/smart-quote",Icon:FileText,className:"quote"},
- {id:"marketing",name:"Marketing",description:"Haz crecer tu negocio con estrategia.",url:"/vista-app/marketing",Icon:ChartNoAxesCombined,className:"marketing"},
- {id:"ads",name:"Ads Studio",description:"Prepara y revisa tus campañas.",url:"/vista-app/marketing/ads",Icon:Megaphone,className:"ads"},
+ {id:"web",name:"Web Services",description:"Crea y administra sitios web.",Icon:Globe,className:"web",homeTone:"homeTilePink",shortcutId:"web"},
+ {id:"agents",name:"AI Agents",description:"Atención, ventas y reservas con IA.",url:"/vista-app/ai-agents",Icon:Bot,className:"agents",homeTone:"homeTileLavender",shortcutId:"ai-agents"},
+ {id:"video",name:"Video Studio",description:"Historias animadas, escenas y narración.",url:"/vista-app/video-studio",Icon:Clapperboard,className:"video",homeTone:"homeTileMint",shortcutId:"agent-video"},
+ {id:"quote",name:"Smart Quote",description:"Cotizaciones y propuestas profesionales.",url:"/vista-app/smart-quote",Icon:FileText,className:"quote",homeTone:"homeTileLavender",shortcutId:"agent-quote"},
+ {id:"marketing",name:"Marketing",description:"Haz crecer tu negocio con estrategia.",url:"/vista-app/marketing",Icon:ChartNoAxesCombined,className:"marketing",homeTone:"homeTileGreen",shortcutId:"marketing"},
+ {id:"ads",name:"Ads Studio",description:"Prepara y revisa tus campañas.",url:"/vista-app/marketing/ads",Icon:Megaphone,className:"ads",homeTone:"homeTilePink",shortcutId:"ads"}
 ];
 const EN:Record<string,string>={
  "Crea y administra sitios web.":"Build and manage websites.",
@@ -47,11 +50,14 @@ export default function VMVV1Shell(){
  const [editing,setEditing]=useState(false);
  const [businessName,setBusinessName]=useState("");
  const [saving,setSaving]=useState(false);
+ const [assessmentOpen,setAssessmentOpen]=useState(false);
+ const [needsAnswers,setNeedsAnswers]=useState<V1NeedsAnswers|null>(null);
+ const [legacyAnswers,setLegacyAnswers]=useState<DiagnosticAnswers|null>(null);
  const reload=useCallback(async(sb:SupabaseClient)=>{
   setError("");
   const identity=await sb.auth.getUser();
   if(identity.error||!identity.data.user||identity.data.user.is_anonymous){
-   setProfile(null);setUser(null);setState("guest");return;
+   setProfile(null);setUser(null);setNeedsAnswers(null);setLegacyAnswers(null);setState("guest");return;
   }
   const who=identity.data.user;
   setUser(who);
@@ -70,6 +76,9 @@ export default function VMVV1Shell(){
   }
   if(!profileData){setState("missing");return;}
   setProfile(profileData as Profile);
+  const businessId=String(profileData.id||who.id);
+  setNeedsAnswers(readV1Needs(who.user_metadata,businessId)?.answers||null);
+  setLegacyAnswers(readDiagnosticRecord(who.user_metadata,businessId)?.answers||null);
   setBusinessName(String(profileData.business_name||""));
   setState("ready");
  },[language]);
@@ -88,17 +97,20 @@ export default function VMVV1Shell(){
  },[reload]);
  useEffect(()=>{
   const value=params.get("tab");
-  if(value==="services"||value==="home"||value==="account")setTab(value);
+  if(value==="services"||value==="home"||value==="account"||value==="settings")setTab(value==="settings"?"account":value);
   if(params.get("returnTo")==="web-studio"&&state==="ready")router.replace("/web-studio");
   if(params.get("returnTo")==="marketing"&&state==="ready")router.replace("/vista-app/marketing");
  },[params,router,state]);
  const filtered=useMemo(()=>services.filter(item=>(item.name+" "+item.description).toLowerCase().includes(search.toLowerCase().trim())),[search]);
+ const suggestedServices=useMemo(()=>recommendV1Services(needsAnswers,legacyAnswers)
+  .map(id=>services.find(item=>item.id===id)).filter((item):item is Service=>Boolean(item)),[needsAnswers,legacyAnswers]);
+ const hasAssessment=Boolean(needsAnswers||legacyAnswers);
  const open=(id:string)=>{
   if(id==="web"){setTab("services");setWebView(true);return;}
   const href=services.find(s=>s.id===id)?.url;
   if(href)router.push(href);
  };
- const nav=(next:Tab)=>{setTab(next);setWebView(false);setError("");};
+ const nav=(next:Tab)=>{setTab(next);setWebView(false);setAssessmentOpen(false);setError("");};
  const save=async()=>{
   if(!client||!user||!profile||!businessName.trim()||saving)return;
   setSaving(true);setError("");
@@ -132,7 +144,8 @@ export default function VMVV1Shell(){
       <button type="button" onClick={()=>nav("account")} aria-label={L("Mi cuenta","My account")}><UserRound size={18}/></button>
      </div>
      <div className={homeStyles.scrollArea}>
-      {tab==="home"?<div className={homeStyles.screen+" "+homeStyles.homeV2+" "+homeStyles.homeConcept} data-vmv-shortcut-scope="home">
+      {tab==="home"&&assessmentOpen&&profile?<VMVV1NeedsAssessment businessId={profile.id} en={en} initial={needsAnswers} onSaved={answers=>{setNeedsAnswers(answers);setAssessmentOpen(false);}} onClose={()=>setAssessmentOpen(false)}/>:null}
+      {tab==="home"&&!assessmentOpen?<div className={homeStyles.screen+" "+homeStyles.homeV2+" "+homeStyles.homeConcept} data-vmv-shortcut-scope="home">
        <header className={homeStyles.homeIdentity}>
         <span className={homeStyles.homeIdentityBrand}><span className={homeStyles.homeIdentityV} aria-hidden="true">V</span><strong>VMV Business</strong></span>
         <span className={homeStyles.homeIdentityActions}><InterfaceLanguagePicker compact/><span className={homeStyles.homeBell} aria-hidden="true"><Bell size={21}/></span></span>
@@ -145,17 +158,20 @@ export default function VMVV1Shell(){
         <div className={homeStyles.homeGrowCopy}>
          <h3>{en?"Grow your\nbusiness":"Haz crecer\ntu negocio"}</h3>
          <p>{L("Herramientas, servicios y IA para emprendedores.","Tools, services and AI for entrepreneurs.")}</p>
-         <button type="button" className={homeStyles.homeGrowStart} onClick={()=>nav("services")}>{L("Comenzar","Get started")} <ArrowUpRight size={18}/></button>
+         <button type="button" className={homeStyles.homeGrowStart} onClick={()=>setAssessmentOpen(true)}>{hasAssessment?L("Actualizar necesidades","Update your needs"):L("Comenzar","Get started")} <ArrowUpRight size={18}/></button>
         </div>
         <div className={homeStyles.homeRocketArt} aria-hidden="true"><span className={homeStyles.homeRocketHalo}/><Rocket size={104} strokeWidth={1.35}/><span className={homeStyles.homeRocketCloud}/></div>
        </section>
+       <div className={styles.homeRecommendedHeading}>
+        <div><h3>{hasAssessment?L("Recomendado para ti","Recommended for you"):L("Herramientas para comenzar","Tools to get started")}</h3>
+         <p>{hasAssessment?L("Según las necesidades de tu negocio.","Based on your business needs."):L("Responde unas preguntas para personalizar tu inicio.","Answer a few questions to personalize your Home.")}</p>
+        </div>
+        <button type="button" onClick={()=>nav("services")}>{L("Ver todos","See all")} <ArrowUpRight size={15}/></button>
+       </div>
        <div className={homeStyles.homeServiceTiles}>
-        <button type="button" className={homeStyles.homeTilePink} data-vmv-shortcut-id="web" onClick={()=>open("web")}><Globe size={31}/><strong>Web Services</strong></button>
-        <button type="button" className={homeStyles.homeTileLavender} data-vmv-shortcut-id="ai-agents" onClick={()=>open("agents")}><Bot size={31}/><strong>AI Agents</strong></button>
-        <button type="button" className={homeStyles.homeTileMint} data-vmv-shortcut-id="agent-video" onClick={()=>open("video")}><Clapperboard size={31}/><strong>Video Studio</strong></button>
-        <button type="button" className={homeStyles.homeTileLavender} data-vmv-shortcut-id="agent-quote" onClick={()=>open("quote")}><FileText size={31}/><strong>Smart Quote</strong></button>
-        <button type="button" className={homeStyles.homeTileGreen} data-vmv-shortcut-id="marketing" onClick={()=>open("marketing")}><ChartNoAxesCombined size={31}/><strong>Marketing</strong></button>
-        <button type="button" className={homeStyles.homeTilePink} data-vmv-shortcut-id="ads" onClick={()=>open("ads")}><Megaphone size={31}/><strong>Ads Studio</strong></button>
+        {suggestedServices.map(service=><button key={service.id} type="button" className={homeStyles[service.homeTone]} data-vmv-shortcut-id={service.shortcutId} onClick={()=>open(service.id)}>
+         <service.Icon size={31}/><strong>{service.name}</strong>
+        </button>)}
        </div>
        <section className={homeStyles.homeBusinessArea}>
         <h3>{L("Mi Negocio","My Business")}</h3>
@@ -170,26 +186,34 @@ export default function VMVV1Shell(){
        <button className={homeStyles.back} onClick={()=>setWebView(false)}><ChevronLeft size={18}/>{L("Todos los servicios","All services")}</button>
        <BusinessServicesPreview userId={user.id} focus="web"/>
       </section>:null}
-      {tab==="services"&&!webView?<section className={styles.catalog}>
-       <span className={styles.overline}>{L("CATÁLOGO V1","V1 CATALOG")}</span><h1>{L("Nuestros servicios","Our services")}</h1>
-       <label className={styles.search}><Search size={18}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder={L("Buscar servicio","Search services")}/></label>
-       <div className={styles.grid}>{filtered.map(s=><button key={s.id} className={styles.service+" "+styles[s.className]} onClick={()=>open(s.id)}><span className={styles.serviceIcon}><s.Icon size={23}/></span><strong>{s.name}</strong><small>{en?EN[s.description]:s.description}</small><ArrowUpRight size={16} className={styles.serviceArrow}/></button>)}</div>
-       {!filtered.length?<p className={styles.empty}>{L("Sin resultados.","No results.")}</p>:null}
+      {tab==="services"&&!webView?<section className={styles.catalog+" "+styles.catalogPremium}>
+       <span className={styles.overline}>{L("SERVICIOS VMV","VMV SERVICES")}</span>
+       <h1>{L("Nuestros servicios","Our services")}</h1>
+       <p className={styles.catalogIntro}>{L("Todas las herramientas de tu negocio, organizadas en un solo lugar.","All your business tools in one place.")}</p>
+       <label className={styles.search}><Search size={19}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder={L("Buscar servicio","Search services")}/></label>
+       <div className={styles.catalogTiles}>{filtered.map(service=><button key={service.id} className={styles.catalogService+" "+styles[service.className]} onClick={()=>open(service.id)} data-vmv-shortcut-id={service.shortcutId}>
+        <span className={styles.catalogIconLarge}><service.Icon size={27}/></span>
+        <ArrowUpRight size={17} className={styles.catalogArrow}/>
+        <strong>{service.name}</strong>
+        <small>{en?EN[service.description]:service.description}</small>
+       </button>)}</div>
+       {!filtered.length?<p className={styles.empty}>{L("No encontramos ese servicio.","No matching services found.")}</p>:null}
       </section>:null}
       {tab==="account"?<section className={styles.account}>
-       <span className={styles.overline}>{L("CONFIGURACIÓN","SETTINGS")}</span><h1>{L("Mi cuenta","My account")}</h1>
+       <span className={styles.overline}>VMV BUSINESS</span><h1>{L("Configuración","Settings")}</h1>
        <div className={styles.accountCard}><div className={styles.avatar}><UserRound size={26}/></div><strong>{[profile?.first_name,profile?.last_name].filter(Boolean).join(" ")||L("Mi perfil","My profile")}</strong><small>{user?.email}</small></div>
        <div className={styles.accountCard}><label>{L("Nombre de tu negocio","Business name")}</label>
         {editing?<><input value={businessName} onChange={e=>setBusinessName(e.target.value)} maxLength={120}/><div className={styles.inline}>
          <button disabled={saving||!businessName.trim()} onClick={()=>void save()} className={styles.mainButton}>{saving?L("Guardando…","Saving…"):L("Guardar","Save")}</button>
          <button className={styles.softButton} onClick={()=>{setEditing(false);setBusinessName(profile?.business_name||"")}}>{L("Cancelar","Cancel")}</button></div></>:<div className={styles.inline}><strong>{profile?.business_name||L("Sin nombre","Not set")}</strong><button onClick={()=>setEditing(true)} className={styles.softButton}>{L("Editar","Edit")}</button></div>}
-       </div><div className={styles.accountCard}><p>{L("Tus proyectos y trabajos se guardan en los servicios correspondientes.","Your projects are saved in their respective services.")}</p><Link href="/vista-app/soporte">{L("Contactar soporte","Contact support")} <ArrowUpRight size={15}/></Link></div>
+       </div><div className={styles.accountCard}><label>{L("Recomendaciones del negocio","Business recommendations")}</label><p>{L("Personaliza las cuatro herramientas de tu inicio con un diagnóstico breve.","Personalize your four Home recommendations with a short assessment.")}</p><button type="button" className={styles.softButton} onClick={()=>{setTab("home");setAssessmentOpen(true);}}>{hasAssessment?L("Actualizar diagnóstico","Update assessment"):L("Personalizar mi Home","Personalize my Home")}</button></div>
+       <div className={styles.accountCard}><p>{L("Tus proyectos y trabajos se guardan en los servicios correspondientes.","Your projects are saved in their respective services.")}</p><Link href="/vista-app/soporte">{L("Contactar soporte","Contact support")} <ArrowUpRight size={15}/></Link></div>
        <button className={styles.logout} onClick={()=>client&&void client.auth.signOut()}><LogOut size={17}/>{L("Cerrar sesión","Sign out")}</button>
       </section>:null}
       {error?<p className={styles.error} role="alert">{error}</p>:null}
      </div>
-     <nav className={homeStyles.bottomNav} aria-label={L("Navegación principal","Main navigation")}>
-      {([{id:"home",name:L("Inicio","Home"),Icon:Home},{id:"services",name:L("Servicios","Services"),Icon:LayoutGrid},{id:"account",name:L("Cuenta","Account"),Icon:UserRound}] as const).map(item=>
+     <nav className={homeStyles.bottomNav+" "+styles.v1BottomNav} aria-label={L("Navegación principal","Main navigation")}>
+      {([{id:"home",name:L("Inicio","Home"),Icon:Home},{id:"services",name:L("Servicios","Services"),Icon:LayoutGrid},{id:"account",name:L("Configuración","Settings"),Icon:Settings2}] as const).map(item=>
        <button type="button" key={item.id} className={tab===item.id?homeStyles.activeNav:""} aria-pressed={tab===item.id} onClick={()=>nav(item.id)}><span><item.Icon size={22}/></span><small>{item.name}</small></button>)}
      </nav>
     </div>
