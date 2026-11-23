@@ -410,7 +410,29 @@ catch(e){setError(e instanceof Error?e.message:"studio_invalid_action");}finally
 <button className={styles.secondary} onClick={()=>{next("history");void loadHistory();}}>Ver historial</button>
 </>:null}
   {stage==="result"&&job?<><h1>¡Video listo!</h1>{job.videoUrl?<><video className={styles.videoFinal} controls playsInline src={job.videoUrl}/><a className={styles.primary} href={job.videoUrl} download={"vmv-video-"+job.id+".mp4"}><Download size={19}/> Descargar MP4</a></>:<p className={styles.help}>El archivo está guardado. Actualiza el enlace desde Historial.</p>}<button className={styles.secondary} onClick={()=>{next("history");void loadHistory()}}>Abrir historial</button></>:null}
-  {stage==="history"?<><h1>Mis videos</h1><button className={styles.secondary} disabled={historyLoading} onClick={()=>void loadHistory()}>{historyLoading?<LoaderCircle className={styles.spin} size={16}/>:<RefreshCw size={16}/>} Actualizar</button><div className={styles.history}>{jobs.map(j=><button key={j.id} className={styles.historyItem} onClick={()=>{setJob(j);next(j.status==="completed"?"result":j.status==="awaiting_image_approval"?"images":"progress")}}><span className={styles.historyIcon}><Film size={20}/></span><span><strong>{j.title||"Video sin título"}</strong><small>{readable(j.seconds)} · {j.phase||j.status}</small></span><ChevronRight size={18}/></button>)}{!jobs.length&&!historyLoading&&!error?<div className={styles.unavailable}><FolderOpen size={30}/><p>Todavía no hay videos guardados.</p><button onClick={reset} className={styles.primary}>Crear video</button></div>:null}</div></>:null}
+  {stage==="history"?<><h1>Mis videos</h1>
+<div className={styles.walletPanel}><span className={styles.kicker}>MIS CRÉDITOS</span>
+<strong>{wallet?wallet.available:"—"} <small>disponibles</small></strong>
+<p>{wallet?wallet.reserved:0} créditos reservados en trabajos activos. Solo se cobran cuando el video termina correctamente.</p>
+<button className={styles.secondary} disabled={walletBusy} onClick={()=>void loadCredits()}><RefreshCw size={16}/> Actualizar saldo</button>
+</div>
+<section className={styles.creditPackages}><h2>Comprar créditos</h2>
+<p>{purchasesEnabled?"Compra de prueba por Stripe, sin cargos reales.":"Las compras estarán disponibles al conectar las credenciales de Stripe en modo de prueba."}</p>
+<div>{packages.map(pack=><button key={pack.id} disabled={purchaseBusy||!purchasesEnabled} onClick={()=>void checkout(pack.id)}>
+<strong>{pack.credits} créditos</strong><small>{"$"+(pack.usdCents/100).toFixed(2)} · prueba</small>
+</button>)}</div></section>
+<div className={styles.historyHeading}><h2>Proyectos guardados</h2><button className={styles.secondary} disabled={historyLoading} onClick={()=>{void loadHistory();void loadCredits();}}>{historyLoading?<LoaderCircle size={16} className={styles.spin}/>:<RefreshCw size={16}/>} Actualizar</button></div>
+<div className={styles.history}>{jobs.map(item=><button key={item.id} className={styles.historyItem} onClick={async()=>{
+try{const response=await api("jobs?id="+encodeURIComponent(item.id));if(!response?.job)return;
+setJob(response.job);setSceneIndex(0);
+next(response.job.status==="completed"?"result":response.job.status==="awaiting_image_approval"?"images":"progress");
+}catch(e){setError(e instanceof Error?e.message:"video_studio_db_unavailable");}
+}}><span className={styles.historyIcon}><Film size={20}/></span><span>
+<strong>{item.title||"Video sin título"}</strong><small>{readable(item.seconds)} · {item.phase||item.status}</small>
+</span><ChevronRight size={18}/></button>)}
+{!jobs.length&&!historyLoading&&!error?<div className={styles.unavailable}><FolderOpen size={30}/><p>Cuando generes un video aparecerá aquí.</p><button onClick={reset} className={styles.primary}>Crear video</button></div>:null}
+</div>
+</>:null}
   {error?<div role="alert" className={styles.error}><ShieldCheck size={18}/><span>{errorMessages[error]||error}</span></div>:null}
   {previewExample?<div role="dialog" aria-modal="true" aria-label={"Ejemplo de "+previewExample.label} className={styles.exampleOverlay}>
    <button type="button" onClick={()=>setExampleStyle(null)} className={styles.exampleClose} aria-label="Cerrar ejemplo"><X size={24}/></button>
