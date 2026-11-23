@@ -67,6 +67,14 @@ button.tile:focus-visible,.toggle button:focus-visible,.back:focus-visible,.save
 .webHubCard small{font-size:11px;line-height:1.5;opacity:.78}
 .webHubCard>span{display:inline-flex;align-items:center;gap:5px;margin-top:auto;font-size:11px;font-weight:850}
 .webHubViolet{background:#e4d7ff;color:#5f40a4}
+.webHubUnified{grid-column:1/-1;min-height:176px;background:linear-gradient(112deg,#e6d9ff 0%,#f3eaff 47%,#dcf8e6 100%);color:#563d85;position:relative}
+.webHubUnifiedIcons{display:inline-flex!important;align-items:center;gap:11px;margin:0 0 3px!important}
+.webHubUnifiedIcons svg{box-sizing:content-box;padding:10px;border-radius:14px;background:#ffffffa8}
+.webHubUnifiedIcons svg:last-child{color:#126b56}
+.webHubUnified strong{font-size:21px}
+.webHubUnified small{max-width:430px;font-size:12px;opacity:.85}
+.webHubUnified>span:last-child{margin-top:auto}
+.webHubUnified:focus-visible{outline:3px solid #8a58c9;outline-offset:3px}
 .webHubMint{background:#b6efdb;color:#125642}
 .webHubYellow{background:#ffdf87;color:#694914}
 .webHubSky{background:#c6e5ff;color:#2c547d}
