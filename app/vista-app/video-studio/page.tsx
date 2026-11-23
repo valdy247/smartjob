@@ -173,7 +173,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
     if(data.job.status==="awaiting_image_approval"){
      // The user already confirmed the complete cost on the script screen.
      // Auto-approval is safe only when all image validation checks passed.
-     if(data.job.scenes.some((s:Scene)=>s.requiresReview===true)){setStage("images");return;}
+     if(!Array.isArray(data.job.scenes)||!data.job.scenes.length||!data.job.scenes.every((s:Scene)=>s.requiresReview===false)){setStage("images");return;}
      if(autoApprovalRef.current!==data.job.id){
       autoApprovalRef.current=data.job.id;
       try{
