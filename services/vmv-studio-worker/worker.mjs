@@ -36,7 +36,7 @@ let closing=false,active=false;
 process.on("SIGTERM",()=>{closing=true;});
 process.on("SIGINT",()=>{closing=true;});
 createServer(async(req,res)=>{
- const health=req.url==="/healthz",ready=req.url==="/readyz";
+ const health=req.url==="/healthz",voiceReady=req.url==="/voice-readyz",ready=req.url==="/readyz"||voiceReady;
  if(health){res.writeHead(200,{"Content-Type":"text/plain","Cache-Control":"no-store"});res.end("ok");return;}
  if(!ready){res.writeHead(404,{"Content-Type":"text/plain","Cache-Control":"no-store"});res.end("not found");return;}
  let connected=false;
@@ -48,7 +48,7 @@ createServer(async(req,res)=>{
    connected=!error;
   }catch{connected=false;}
  }
- const enabled=!STOP()&&connected;
+ const enabled=!STOP()&&connected&&(!voiceReady||Boolean(process.env.ELEVENLABS_API_KEY?.trim()));
  res.writeHead(enabled?200:503,{"Content-Type":"text/plain","Cache-Control":"no-store"});
  res.end(enabled?"ready":"standby");
 }).listen(Number(process.env.PORT||10000),"0.0.0.0");
