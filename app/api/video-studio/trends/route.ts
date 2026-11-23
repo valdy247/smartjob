@@ -39,6 +39,9 @@ export async function GET(req:NextRequest){
   return scan?reply(transform(scan),scan.status==="pending"?202:200):
    reply({error:"studio_trends_not_found"},404);
  }
+ const country=(req.nextUrl.searchParams.get("country")||"US").toUpperCase();
+ const language=(req.nextUrl.searchParams.get("language")||"es").toLowerCase();
+ if(!/^[A-Z]{2}$/.test(country)||!/^[a-z]{2}$/.test(language))return reply({error:"studio_trends_invalid"},400);
  const query=cleanRadarQuery(req.nextUrl.searchParams.get("q"));
  if(!query)return reply({error:"studio_trends_invalid"},400);
  const key=process.env.YOUTUBE_DATA_API_KEY?.trim();
@@ -47,7 +50,7 @@ export async function GET(req:NextRequest){
  try{
   // Reuse existing durable, owner-scoped six-hour cache and twenty searches/day quota.
   const db=videoDb();
-  const claimed=await db.rpc("vmv_video_radar_claim",{p_owner:owner,p_query:query,p_days:30});
+  const claimed=await db.rpc("vmv_video_radar_claim",{p_owner:owner,p_query:query+" [region:"+country+";lang:"+language+"]",p_days:30});
   if(claimed.error){
    const code=String(claimed.error.message).includes("radar_daily_limit")?"studio_trends_daily_limit":"studio_trends_database_unavailable";
    return reply({error:code},code==="studio_trends_daily_limit"?429:503);
@@ -62,7 +65,7 @@ export async function GET(req:NextRequest){
   const since=new Date(Date.now()-30*86400000).toISOString();
   const search=await youtubeApi("search",new URLSearchParams({
    part:"snippet",type:"video",maxResults:"12",q:query,order:"viewCount",
-   publishedAfter:since,videoDuration:"short",safeSearch:"moderate"
+   publishedAfter:since,videoDuration:"short",safeSearch:"moderate",regionCode:country,relevanceLanguage:language
   }),key);
   const ids=search.map(item=>(item.id as Record<string,unknown>|undefined)?.videoId).filter(validRadarId);
   const results:RadarVideo[]=ids.length?(await youtubeApi("videos",
