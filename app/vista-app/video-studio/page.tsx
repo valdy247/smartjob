@@ -437,18 +437,37 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
       void prepare(platform==="idea"?null:selectedTrend);
      }}>Reintentar IA</button></div>:null}
     <div className={styles.field}><label>Título</label><input value={title} onChange={e=>setTitle(e.target.value)} maxLength={140}/></div>
-    {outline?<div className={styles.planSummary}><span className={styles.kicker}>CONCEPTO CREATIVO</span>
-     <label>Historia principal</label><textarea rows={3} value={outline.logline} onChange={e=>setOutline(p=>p?{...p,logline:e.target.value}:p)}/>
-     <label>Gancho inicial</label><textarea rows={2} value={outline.hook} onChange={e=>setOutline(p=>p?{...p,hook:e.target.value}:p)}/>
-     <label>Personajes y continuidad</label><textarea rows={3} value={outline.characters} onChange={e=>setOutline(p=>p?{...p,characters:e.target.value}:p)}/>
-    </div>:null}
-    <div className={styles.sceneHeading}><strong>{scenes.length} escenas {manualDraft?"para escribir":"listas para revisar"}</strong><span>{readable(seconds)}</span></div>
+    <div className={styles.field}>
+     <label>Narración completa · editable</label>
+     <textarea rows={9} maxLength={8200} value={narrationDraft} onChange={e=>editNarration(e.target.value)}
+      placeholder="Escribe una historia continua. Una misma oración puede acompañar varias imágenes."/>
+     <p className={styles.help}>{scriptWords} palabras · voz estimada: {readable(scriptSeconds)} · objetivo: {readable(seconds)}</p>
+     {!durationPlausible?<p className={styles.note}>Ajusta la extensión del guion. La narración debe acercarse a la duración seleccionada para evitar acelerar o cortar la voz.</p>:null}
+    </div>
+    <div className={styles.sceneHeading}><strong>Imágenes sugeridas · {scenes.length}</strong><span>Un cambio visual cada ~5 s</span></div>
     <div className={styles.scenes}>{scenes.map((scene,i)=><div className={styles.sceneEditor} key={i}>
-     <div className={styles.sceneNumber}><strong>Escena {i+1}</strong><small>{i*5}–{(i+1)*5} s</small></div>
-     <label>Narración</label><textarea rows={3} value={scene.speech} maxLength={230} onChange={e=>patchScene(i,"speech",e.target.value)}/>
-     <label>Acción e imagen</label><textarea rows={3} maxLength={950} value={scene.imagePrompt} onChange={e=>patchScene(i,"imagePrompt",e.target.value)}/>
+     <div className={styles.sceneNumber}><strong>Imagen {i+1}</strong><small>{i*5}–{(i+1)*5} s aprox.</small></div>
+     <p className={styles.help}>{scene.speech}</p>
+     <label>Descripción visual editable</label>
+     <textarea rows={3} maxLength={950} value={scene.imagePrompt} onChange={e=>patchScene(i,"imagePrompt",e.target.value)}/>
     </div>)}</div>
-    <button className={styles.primary} disabled={scenes.some(x=>x.speech.trim().length<5||x.imagePrompt.trim().length<20)} onClick={()=>next("quality")}>Continuar a calidad <ArrowRight size={17}/></button>
+    <div className={styles.field}><label>Calidad del video</label>
+     <div className={styles.optionStack}>
+      {([{id:"turbo",label:"Turbo · 720p"},{id:"high",label:"Alta calidad · 720p"}] as const).map(v=>
+       <button type="button" key={v.id} className={styles.optionRow} aria-pressed={quality===v.id}
+        onClick={()=>{setQuality(v.id);setApprovedCost(false);}}>
+        <Video size={19}/><strong>{v.label}</strong><span>{estimatedCredits(seconds,v.id)} créditos</span>{quality===v.id?<Check size={17}/>:null}
+       </button>)}
+     </div>
+    </div>
+    <div className={styles.price}><small>Costo completo confirmado antes de generar</small><strong>{credit} créditos</strong>
+     <p>Incluye imágenes, animación, narración continua, subtítulos si los elegiste y montaje.</p>
+    </div>
+    <label className={styles.consent}><input type="checkbox" checked={approvedCost} onChange={e=>setApprovedCost(e.target.checked)}/>
+     Apruebo este guion, las imágenes sugeridas y el uso de {credit} créditos para generar mi video.</label>
+    <button className={styles.primary} disabled={busy||!approvedCost||!durationPlausible||!validDraft} onClick={()=>void makeJob()}>
+     {busy?<LoaderCircle className={styles.spin} size={17}/>:<Clapperboard size={17}/>} Generar video por {credit} créditos
+    </button>
    </div>:null}
   </>:null}
   {stage==="quality"?<><h1>Calidad del video</h1><p className={styles.help}>Estimaciones de créditos de la versión propuesta; las tarifas definitivas se confirmarán al habilitar los pagos.</p><div className={styles.optionStack}>{([{id:"turbo",label:"Turbo · 720p",description:"Renderizado optimizado"},{id:"high",label:"Alta calidad · 720p",description:"Motor de mayor calidad"}] as const).map(x=><button key={x.id} className={styles.optionRow} onClick={()=>{setQuality(x.id);setApprovedCost(false);next("summary")}}><Video size={20}/><span><strong>{x.label}</strong><small>{x.description}</small></span><b>{estimatedCredits(seconds,x.id)} cr.</b><ChevronRight size={16}/></button>)}</div></>:null}
