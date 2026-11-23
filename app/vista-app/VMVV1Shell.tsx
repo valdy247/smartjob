@@ -123,27 +123,27 @@ export default function VMVV1Shell(){
  if(state==="checking")return <main className={styles.center}><LoaderCircle className={styles.spin} size={30}/><p>{L("Comprobando tu sesión…","Checking your session…")}</p></main>;
  if(state==="guest"&&client)return <VMVAuthGateway supabase={client}/>;
  if(state==="missing")return <main className={styles.center}><ShieldCheck size={30}/><h1>{L("Completa tu perfil","Complete your profile")}</h1><p>{error||L("Necesitas completar el registro antes de continuar.","Finish registration before continuing.")}</p><Link className={styles.mainButton} href="/registro">{L("Ir a registro","Go to registration")}</Link><button className={styles.softButton} onClick={()=>client&&void reload(client)}>{L("Reintentar","Retry")}</button></main>;
- return <main className={homeStyles.stage}>
+ return <main className={homeStyles.stage+" "+styles.previewStage}>
   <header className={homeStyles.pageHeader}>
    <a href="/" className={homeStyles.wordmark}>VMV<span> BUSINESS</span></a>
    <span className={homeStyles.previewTag}>VMV BUSINESS · V1 PREVIEW</span>
    <a href="/vista-app/video-studio" className={homeStyles.webLink}>{L("Video Studio","Video Studio")} <ArrowUpRight size={15}/></a>
   </header>
-  <div className={homeStyles.layout}>
-   <aside className={homeStyles.intro}>
+  <div className={homeStyles.layout+" "+styles.previewLayout}>
+   <aside className={homeStyles.intro+" "+styles.previewIntro}>
     <span className={homeStyles.kicker}>VMV BUSINESS</span>
     <h1>{L("Tu negocio.","Your business.")}<br/><em>{L("En tu bolsillo.","In your pocket.")}</em></h1>
     <p>{L("Todo tu negocio, en un solo lugar. Herramientas, servicios e inteligencia artificial para emprendedores.","Your whole business in one place. Tools, services and AI for entrepreneurs.")}</p>
    </aside>
-   <div className={homeStyles.phoneFrame}>
-    <div className={homeStyles.device}>
+   <div className={homeStyles.phoneFrame+" "+styles.previewPhone}>
+    <div className={homeStyles.device+" "+styles.previewDevice}>
      <div className={homeStyles.statusBar}><span>VMV</span><div className={homeStyles.dynamicIsland}/><span>◢ ▰</span></div>
      <div className={tab==="home"?homeStyles.homeTopHidden:homeStyles.appTop}>
       <div className={homeStyles.appLogo}><span className={homeStyles.mark}>▥</span><b>VMV<span> BUSINESS</span></b></div>
       <div className={styles.topActions}><InterfaceLanguagePicker compact/></div>
       <button type="button" onClick={()=>nav("account")} aria-label={L("Mi cuenta","My account")}><UserRound size={18}/></button>
      </div>
-     <div className={homeStyles.scrollArea}>
+     <div className={homeStyles.scrollArea+" "+styles.previewScroll}>
       {tab==="home"&&assessmentOpen&&profile?<VMVV1NeedsAssessment businessId={profile.id} en={en} initial={needsAnswers} onSaved={answers=>{setNeedsAnswers(answers);setAssessmentOpen(false);}} onClose={()=>setAssessmentOpen(false)}/>:null}
       {tab==="home"&&!assessmentOpen?<div className={homeStyles.screen+" "+homeStyles.homeV2+" "+homeStyles.homeConcept} data-vmv-shortcut-scope="home">
        <header className={homeStyles.homeIdentity}>
