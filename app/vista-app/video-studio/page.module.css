@@ -208,3 +208,12 @@
 .page[data-vmv-embedded="true"] .header small{font-size:10px}
 .page[data-vmv-embedded="true"] .brand{font-size:16px}
 .page[data-vmv-embedded="true"] .footer{display:none}
+
+/* Creator-friendly topic discovery: one search and compact category chips. */
+.topicSearch{display:flex;align-items:center;gap:10px;border:1px solid #e4d8f0;border-radius:15px;background:#fff;padding:0 14px;color:#8652b4;margin:8px 0 13px}
+.topicSearch:focus-within{outline:2px solid #a375d0;outline-offset:1px}
+.topicSearch input{flex:1;min-width:0;background:transparent;border:0;outline:none;padding:14px 0;color:#332342;font-size:14px;font:inherit}
+.topicCategories{display:flex;gap:7px;overflow-x:auto;padding:2px 0 13px;margin-bottom:7px;scrollbar-width:thin}
+.topicCategory,.topicCategoryActive{flex:0 0 auto;border:1px solid #e3d7ed;border-radius:999px;background:#fff;color:#76568e;font:inherit;font-weight:750;font-size:12px;padding:9px 13px;cursor:pointer;white-space:nowrap}
+.topicCategoryActive{background:#8b59c0;border-color:#8b59c0;color:#fff}
+.topicCategory:focus-visible,.topicCategoryActive:focus-visible{outline:3px solid #a375d0;outline-offset:2px}
