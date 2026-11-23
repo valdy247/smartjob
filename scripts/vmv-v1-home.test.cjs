@@ -37,6 +37,23 @@ test("V1 preserves original Home layout, personalized four cards and six-service
  assert.doesNotMatch(ui,/(Smart Call|Traductor|Instagram Connect)/);
 });
 
+test("phone simulator fits the viewport with only its content scrolling",()=>{
+ const ui=read("app/vista-app/VMVV1Shell.tsx");
+ const css=read("app/vista-app/VMVV1Shell.module.css");
+ for(const className of ["previewStage","previewLayout","previewIntro","previewPhone","previewDevice","previewScroll"]){
+  assert.ok(ui.includes("styles."+className),"missing scoped phone viewport class: "+className);
+  assert.ok(css.includes("."+className),"missing phone viewport rule: "+className);
+ }
+ assert.ok(css.includes("height:100dvh;min-height:0;max-height:100dvh;overflow:hidden"));
+ assert.ok(css.includes(".previewStage .previewPhone{flex:0 1 420px"));
+ assert.ok(css.includes(".previewStage .previewDevice{display:flex;flex-direction:column"));
+ assert.ok(css.includes(".previewStage .previewScroll{width:100%;min-width:0;min-height:0;flex:1 1 0;overflow-y:auto;overflow-x:hidden"));
+ assert.ok(css.includes("@media(max-width:600px)"));
+ assert.ok(css.includes("@media(min-width:601px) and (max-width:970px)"));
+ const parsed=ts.createSourceFile("VMVV1Shell.tsx",ui,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+ assert.deepEqual(parsed.parseDiagnostics.map(x=>ts.flattenDiagnosticMessageText(x.messageText," ")),[]);
+});
+
 test("navigation centers three buttons and labels the last one Settings",()=>{
  const ui=read("app/vista-app/VMVV1Shell.tsx");
  const css=read("app/vista-app/VMVV1Shell.module.css");
