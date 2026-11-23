@@ -3,6 +3,24 @@ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export function speechTimeline(scenes,duration,alignment=null){
  if(!Number.isFinite(duration)||duration<1||duration>300||!scenes?.length)throw Error("voice_duration_invalid");
  const text=scenes.map(s=>s.speech.trim()).join(" ");
+ const timedWords=alignment?.words;
+ if(Array.isArray(timedWords)&&timedWords.length){
+  const words=timedWords.filter(w=>typeof w.word==="string"&&Number.isFinite(w.start)&&Number.isFinite(w.end)&&w.end>w.start);
+  const normalize=s=>s.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu,"");
+  const sourceWords=scenes.flatMap(s=>s.speech.trim().split(/\s+/));
+  if(words.length!==sourceWords.length||words.some((w,i)=>normalize(w.word)!==normalize(sourceWords[i])))
+   throw Error("voice_alignment_text_mismatch");
+  let cursor=0,previous=0;const segments=[];
+  for(let i=0;i<scenes.length;i++){
+   cursor+=scenes[i].speech.trim().split(/\s+/).length;
+   const end=i===scenes.length-1?duration:Math.min(duration,Math.max(previous+.05,(words[cursor-1].end+words[cursor].start)/2));
+   segments.push({index:i,start:previous,end,duration:end-previous});previous=end;
+  }
+  const cues=[];
+  for(let i=0;i<words.length;i+=5){const group=words.slice(i,i+5);
+   cues.push({start:group[0].start,end:group.at(-1).end,text:group.map(w=>w.word.trim()).join(" ")});}
+  return {duration,segments,cues,alignmentSource:"word_timestamps"};
+ }
  const characters=alignment?.characters;
  const ends=alignment?.character_end_times_seconds;
  let boundaries=null;
