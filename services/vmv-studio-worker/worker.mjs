@@ -461,7 +461,7 @@ async function processJob(job){
   let timing=job.assets?.voice_timeline;
   if(!alignment&&timing?.segments?.length===n&&
    typeof timing.duration==="number"&&Math.abs(timing.duration-duration)<.25&&
-   timing.alignmentSource!=="estimated_legacy"&&Array.isArray(timing.cues)&&timing.cues.length) {
+   ["whisper_words","elevenlabs_characters"].includes(timing.alignmentSource)&&Array.isArray(timing.cues)&&timing.cues.length) {
    // Already verified and persisted in a previous worker attempt.
   }else{
    if(!alignment)alignment=await transcribeWordTimings(job,narration);
