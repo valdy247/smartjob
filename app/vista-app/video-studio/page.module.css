@@ -193,3 +193,9 @@
  .creditPackages>div strong{font-size:12px}
  .creditPackages>div small{font-size:10px}
 }
+
+.planDraftNote{display:flex;align-items:flex-start;gap:10px;padding:12px 13px;background:#f5f0fc;border:1px solid #e6dbf2;border-radius:14px;color:#635075;font-size:12px;line-height:1.5}
+.planDraftNote svg{flex-shrink:0;margin-top:1px;color:#7b50b0}
+.planDraftNote span{flex:1}
+.planDraftNote button{flex-shrink:0;align-self:center;padding:9px 10px;border-radius:10px;background:white;border:1px solid #ded0ed;color:#6e449c;font-size:11px;font-weight:800;cursor:pointer}
+@media(max-width:550px){.planDraftNote{flex-wrap:wrap}.planDraftNote button{margin-left:auto}}
