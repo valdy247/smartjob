@@ -34,7 +34,7 @@ export async function GET(req:NextRequest){
     const ordered=voices.sort((a,b)=>
      Number(b.labels?.gender?.toLowerCase()==="male")-
      Number(a.labels?.gender?.toLowerCase()==="male"));
-    result.elevenlabs=ordered.slice(0,16).map(v=>({
+    result.elevenlabs=ordered.slice(0,40).map(v=>({
      id:v.voice_id!,name:v.name!.slice(0,60),provider:"elevenlabs",
      gender:v.labels?.gender?.toLowerCase()==="male"?"male":
       v.labels?.gender?.toLowerCase()==="female"?"female":"unknown",

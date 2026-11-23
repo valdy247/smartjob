@@ -13,7 +13,7 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
  const [voices,setVoices]=useState<Voice[]>([]);
  const [loading,setLoading]=useState(true),[loadingId,setLoadingId]=useState("");
  const [playingId,setPlayingId]=useState(""),[error,setError]=useState("");
- const [genderFilter,setGenderFilter]=useState<"male"|"all">("male");
+ const [genderFilter,setGenderFilter]=useState<"male"|"all">("all");
  const playing=useRef<HTMLAudioElement|null>(null);
  const controller=useRef<AbortController|null>(null);
  const cache=useRef<Map<string,string>>(new Map());
@@ -35,7 +35,7 @@ export default function PilotVoiceStep({language,en,disabled=false,selectedProvi
      cache:"no-store",headers:{Authorization:"Bearer "+access}});
     const data=await r.json();
     if(r.ok&&alive&&Array.isArray(data.elevenlabs))
-     setVoices(data.elevenlabs.slice(0,16));
+     setVoices(data.elevenlabs.slice(0,40));
    }catch{/* Standard narrator voices are still available. */}
    finally{if(alive)setLoading(false);}
   })();
