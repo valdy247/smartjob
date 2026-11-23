@@ -144,3 +144,48 @@
 @media(prefers-reduced-motion:reduce){
  .homeCard,.homeIllustration img,.homeIllustrationAlt img,.styleGraphic img,.back{transition:none}
 }
+
+/* Durable V1 video and credit interfaces */
+.walletStrip{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:20px 0 12px;padding:16px 20px;border-radius:19px;background:linear-gradient(115deg,#faf2ff,#ede5ff);border:1px solid #e4d4f6}
+.walletStrip span{display:flex;align-items:center;gap:9px;color:#7c48af}
+.walletStrip strong{font-size:23px;font-weight:900;color:#35234d}
+.walletStrip small{font-size:11px;color:#725d87}
+.walletStrip button{border:0;border-radius:11px;background:#fff;color:#8354bd;padding:11px 12px;font-size:11px;font-weight:850;display:flex;align-items:center;gap:7px;cursor:pointer}
+.approvalNotice{display:flex;align-items:center;gap:9px;border-radius:14px;background:#edeafc;color:#5b3b9d;padding:13px 15px;font-weight:850;font-size:12px;margin:20px 0}
+.framePreview{width:100%;border:0;cursor:pointer}
+.frameEditImage{width:min(100%,280px);max-height:480px;aspect-ratio:9/16;object-fit:cover;border-radius:15px;justify-self:center}
+.frameEdit textarea{min-height:90px}
+.frameEdit button{margin-top:0}
+.confirmLayer{position:fixed;inset:0;z-index:1050;background:#1c1125cc;backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:17px}
+.confirmCard{width:min(100%,430px);border-radius:23px;padding:24px;background:#fff;box-shadow:0 26px 80px #10051b8a}
+.confirmCard h2{font-size:23px;letter-spacing:-.05em}
+.confirmCard p{color:#72647b;font-size:13px;line-height:1.6}
+.confirmCard .secondary{margin-top:8px}
+.walletPanel{background:linear-gradient(130deg,#342051,#7851aa);color:white;border-radius:23px;padding:26px;display:flex;flex-direction:column;gap:9px;margin:14px 0 27px;box-shadow:0 15px 33px #4c2d6e33}
+.walletPanel .kicker{color:#e5bfff}
+.walletPanel>strong{font-size:42px;letter-spacing:-.06em}
+.walletPanel>strong small{font-size:13px;letter-spacing:0;color:#e7d6fa;font-weight:550}
+.walletPanel p{color:#e1d1f3;font-size:12px;line-height:1.6;max-width:430px;margin:0}
+.walletPanel .secondary{align-self:flex-start;width:auto;min-height:37px;background:#ffffff1c;color:white;border:1px solid #ffffff54;margin-top:9px}
+.creditPackages{margin:12px 0 27px}
+.creditPackages h2,.historyHeading h2{font-size:20px;letter-spacing:-.045em;color:#31213f}
+.creditPackages>p{font-size:12px;color:#846f94;line-height:1.5}
+.creditPackages>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:17px 0}
+.creditPackages>div>button{padding:17px 9px;min-height:90px;border-radius:15px;border:1px solid #e3d5ee;background:#fff;color:#3e2753;display:flex;align-items:center;flex-direction:column;justify-content:center;gap:9px;cursor:pointer;text-align:center}
+.creditPackages>div>button:not(:disabled):hover{border-color:#9b64d2;background:#f5ecff}
+.creditPackages>div>button:disabled{opacity:.6;cursor:not-allowed}
+.creditPackages>div strong{font-size:14px;font-weight:900}
+.creditPackages>div small{font-size:11px;color:#856995}
+.historyHeading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.historyHeading h2{margin:0}
+.historyHeading .secondary{width:auto;min-height:37px;margin:0;font-size:11px;padding:8px 12px}
+@media(max-width:410px){
+ .walletStrip{padding:12px;gap:6px}
+ .walletStrip span{gap:5px}.walletStrip strong{font-size:20px}
+ .walletStrip small{font-size:9px}
+ .walletStrip button{font-size:10px;padding:9px}
+ .creditPackages>div{gap:7px}
+ .creditPackages>div>button{padding:11px 4px}
+ .creditPackages>div strong{font-size:12px}
+ .creditPackages>div small{font-size:10px}
+}
