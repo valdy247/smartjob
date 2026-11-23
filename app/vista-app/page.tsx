@@ -1,3 +1,4 @@
+import VMVV1Shell from "./VMVV1Shell";
 "use client";
 import {useCallback,useEffect,useRef,useState,type FormEvent} from "react";
 import {House,LayoutGrid,PhoneCall,Languages,UserRound,ArrowUpRight,ChevronLeft,Clock3,ContactRound,UserRoundPlus,
@@ -76,7 +77,7 @@ function History({calls,onSave,onCallBack,onLookup,canCallBack=false,callingSid=
    <UserRoundPlus size={13}/>{item.caller_phone?translate("services.history.saveContact"):translate("services.history.addContact")}</button>:null}</span>
  </div>)}</div>:<div className={styles.emptyHistory}><Clock3 size={28}/><strong>{translate("services.history.empty")}</strong></div>;
 }
-export default function VMVMobilePreview(){
+function VMVLegacyApp(){
  const {translate,language}=useInterfaceLanguage();
  const localizedVoiceChoices=choices.map(c=>({...c,label:translate(c.value==="default"?"services.call.voiceStandard":c.value==="bright"?"services.call.voiceBright":"services.call.voiceCalm")}));
  const account=useSmartCallAccount();
@@ -634,3 +635,4 @@ export default function VMVMobilePreview(){
   </div>
  </main>;
 }
+export default function VMVMobilePreview(){ return <VMVV1Shell/>; }
