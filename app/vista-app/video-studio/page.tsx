@@ -379,9 +379,9 @@ export default function VideoStudioV1(){
    </div>:null}
    {!busy&&scenes.length===0?<div className={styles.planEmpty}>
     <span><Clapperboard size={29}/></span>
-    <h2>Tu historia empieza aquí</h2>
-    <p>La IA preparará un guion con estructura narrativa, escenas, diálogo y acciones de cámara.</p>
-    <button className={styles.primary} onClick={()=>void prepare()}><Sparkles size={18}/> {error?"Volver a intentar":"Generar propuesta"}</button>
+    <h2>{error?"Todavía no tenemos tu guion":"Tu historia empieza aquí"}</h2>
+    <p>{error?(errorMessages[error]||"No pudimos completar el guion. Tu idea sigue guardada."):"La IA preparará una historia original con escenas, narración y acciones de cámara."}</p>
+    <button className={styles.primary} onClick={()=>void prepare()}><Sparkles size={18}/> {error?"Reintentar con IA":"Generar propuesta"}</button>
     <button className={styles.secondary} type="button" onClick={makeEditableDraft}><Pencil size={16}/> Escribir guion manualmente</button>
      <button className={styles.secondary} onClick={()=>next(platform==="idea"?"idea":"trends")}><Pencil size={16}/> Editar idea</button>
    </div>:null}
@@ -396,7 +396,7 @@ export default function VideoStudioV1(){
      <label>Gancho inicial</label><textarea rows={2} value={outline.hook} onChange={e=>setOutline(p=>p?{...p,hook:e.target.value}:p)}/>
      <label>Personajes y continuidad</label><textarea rows={3} value={outline.characters} onChange={e=>setOutline(p=>p?{...p,characters:e.target.value}:p)}/>
     </div>:null}
-    <div className={styles.sceneHeading}><strong>{scenes.length} escenas listas para revisar</strong><span>{readable(seconds)}</span></div>
+    <div className={styles.sceneHeading}><strong>{scenes.length} escenas {manualDraft?"para escribir":"listas para revisar"}</strong><span>{readable(seconds)}</span></div>
     <div className={styles.scenes}>{scenes.map((scene,i)=><div className={styles.sceneEditor} key={i}>
      <div className={styles.sceneNumber}><strong>Escena {i+1}</strong><small>{i*5}–{(i+1)*5} s</small></div>
      <label>Narración</label><textarea rows={3} value={scene.speech} maxLength={230} onChange={e=>patchScene(i,"speech",e.target.value)}/>
@@ -467,7 +467,7 @@ next(response.job.status==="completed"?"result":response.job.status==="awaiting_
 {!jobs.length&&!historyLoading&&!error?<div className={styles.unavailable}><FolderOpen size={30}/><p>Cuando generes un video aparecerá aquí.</p><button onClick={reset} className={styles.primary}>Crear video</button></div>:null}
 </div>
 </>:null}
-  {error?<div role="alert" className={styles.error}><ShieldCheck size={18}/><span>{errorMessages[error]||"No se pudo completar la operación. Revisa tu configuración e inténtalo de nuevo."}</span></div>:null}
+  {error&&stage!=="plan"?<div role="alert" className={styles.error}><ShieldCheck size={18}/><span>{errorMessages[error]||"No se pudo completar la operación. Revisa tu configuración e inténtalo de nuevo."}</span></div>:null}
   {previewExample?<div role="dialog" aria-modal="true" aria-label={"Ejemplo de "+previewExample.label} className={styles.exampleOverlay}>
    <button type="button" onClick={()=>setExampleStyle(null)} className={styles.exampleClose} aria-label="Cerrar ejemplo"><X size={24}/></button>
    <div className={styles.exampleContent}>
