@@ -68,6 +68,21 @@ test("service navigation stays inside the phone simulator and cannot embed arbit
  assert.match(ui,/href="\/vista-app\?preview=video"/);
 });
 
+test("Video Studio mounts natively inside phone with polished loading rather than a dark iframe",()=>{
+ const ui=read("app/vista-app/VMVV1Shell.tsx");
+ const css=read("app/vista-app/VMVV1Shell.module.css");
+ assert.match(ui,/dynamic\(\(\)=>import\("\.\/video-studio\/page"\)/);
+ assert.match(ui,/embeddedService\.id==="video"\?/);
+ assert.match(ui,/<VideoStudioPreview embedded onExit=\{\(\)=>nav\("services"\)\}\/>/);
+ assert.match(ui,/className=\{styles\.embeddedLoading\}/);
+ assert.match(ui,/className=\{styles\.embeddedContent\}/);
+ assert.match(css,/\.embeddedLoading\{height:100%;min-height:340px/);
+ assert.match(css,/\.embeddedContent\{flex:1 1 0;min-height:0/);
+ assert.match(css,/\.loadingTrack span\{display:block/);
+ const parsed=ts.createSourceFile("VMVV1Shell.tsx",ui,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+ assert.deepEqual(parsed.parseDiagnostics.map(x=>ts.flattenDiagnosticMessageText(x.messageText," ")),[]);
+});
+
 test("navigation centers three buttons and labels the last one Settings",()=>{
  const ui=read("app/vista-app/VMVV1Shell.tsx");
  const css=read("app/vista-app/VMVV1Shell.module.css");
