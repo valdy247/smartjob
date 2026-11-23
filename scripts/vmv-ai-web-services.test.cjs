@@ -89,11 +89,14 @@ test("Visual stages offer eight real fonts, image-style examples, and skip prese
  assert.match(wizard,/photoGrid/);
  for(const key of ["mono","classic","humanist","luxury"])assert.ok(builder.includes(key));
 });
-test("Web Services offers agent-led intake while Web Studio also retains its unified creator",()=>{
- assert.match(services,/href="\/vista-app\/ai-agents\?service=web"/);
- assert.match(editor,/<UnifiedWebWizard ownerId=\{userId\}/);
- assert.match(entry,/window\.location\.replace\("\/vista-app\/ai-agents\?service=web"\)/);
- assert.match(wizard,/\/web-studio\?mode=templates&open=/);
+test("Web Services opens the unified template and AI creator without legacy redirect",()=>{
+ assert.match(services,/href="\\/web-studio\\?mode=ai"/);
+ assert.match(services,/styles\\.webHubUnified/);
+ assert.doesNotMatch(services,/href="\\/vista-app\\/ai-agents\\?service=web"/);
+ assert.match(editor,/<UnifiedWebWizard ownerId=\\{userId\\}/);
+ assert.match(entry,/get\\("mode"\\)==="ai"\\?"ai":"templates"/);
+ assert.doesNotMatch(entry,/window\\.location\\.replace/);
+ assert.match(wizard,/\\/web-studio\\?mode=templates&open=/);
 });
 test("Buttons, progress and robot have a slow accessible pink-purple-blue-green color drift",()=>{
  assert.match(animation,/300s ease-in-out infinite/g);
