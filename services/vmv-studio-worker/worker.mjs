@@ -231,6 +231,21 @@ async function generateSpeech(job,text,file){
   await writeFile(file,await bytes(response,1500000));
  }else throw Error("voice_invalid");
 }
+async function transcribeWordTimings(job,file){
+ const form=new FormData();
+ form.append("file",new Blob([await readFile(file)],{type:"audio/mpeg"}),"narration.mp3");
+ form.append("model","whisper-1");
+ form.append("response_format","verbose_json");
+ form.append("timestamp_granularities[]","word");
+ form.append("language",job.language);
+ const response=await request(OPENAI+"/audio/transcriptions",{
+  method:"POST",headers:auth("OPENAI_API_KEY"),body:form
+ },90000);
+ if(!response.ok)throw Error("voice_alignment_unavailable_"+response.status);
+ const data=await response.json();
+ if(!Array.isArray(data.words)||!data.words.length)throw Error("voice_alignment_unavailable");
+ return {words:data.words};
+}
 async function generateContinuousSpeech(job,scenes,file){
  const text=scenes.map(scene=>scene.speech.trim()).join(" ");
  if(job.voice_provider!=="elevenlabs"){
