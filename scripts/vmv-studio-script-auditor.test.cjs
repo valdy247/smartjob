@@ -23,64 +23,106 @@ const sample=()=>{
   setting:"Cocina de colores brillantes",narration:scenes.map(s=>s.speech).join(" "),beats:scenes.map(s=>s.imagePrompt)};
  return {scenes,outline};
 };
-test("healthy storyboard passes without changing a single line or spending credits",()=>{
+test("healthy storyboard passes without edits or credits",()=>{
  const {outline,scenes}=sample();
  assert.equal(validStudioDraft(outline,scenes),true);
  assert.equal(studioRuntimePlausible(outline.narration,30,"es"),true);
- const result=applyStudioAudit(outline,scenes,{decision:"pass",reason:"Continuity and pacing are coherent.",changes:[]},30,"es");
- assert.equal(result.audit.decision,"pass");
- assert.equal(result.audit.changedMoments,0);
- assert.equal(result.outline.narration,outline.narration);
- assert.deepEqual(Array.from(result.scenes,s=>s.speech),Array.from(scenes,s=>s.speech));
+ const r=applyStudioAudit(outline,scenes,{
+  decision:"pass",reason:"A coherent, well-paced short.",title:"",scenes:[]
+ },30,"es");
+ assert.equal(r.audit.decision,"pass");
+ assert.equal(r.audit.changedMoments,0);
+ assert.equal(r.outline.narration,outline.narration);
+ assert.deepEqual(Array.from(r.scenes,s=>s.imagePrompt),Array.from(scenes,s=>s.imagePrompt));
 });
-test("fixes only defective narration, image direction and animation choice",()=>{
+test("an editor can rewrite every scene and change scene count, movement, visuals and script",()=>{
  const {outline,scenes}=sample();
- const replacement={...scenes[1],index:1,motion:"animate",
-  imagePrompt:"The same violet eggplant points to a tomato and clearly gestures while explaining their botanical relationship.",
-  reason:"A demonstrative gesture works better than an unrelated tree diagram."};
- const r=applyStudioAudit(outline,scenes,{decision:"fix",reason:"Scene two illustrates a different moment.",changes:[replacement]},30,"es");
- assert.equal(r.audit.changedMoments,1);
+ const revised=[
+  {...scenes[0],speech:"¡Atención! Nadie te contó jamás la verdadera historia de esta berenjena que habla."},
+  {...scenes[1],speech:"Soy una fruta, y aquí me ves junto a mis parientes: tomates y papas.",
+   imagePrompt:"The purple eggplant stands in a botanical garden, pointing at a vivid tomato and an actual potato plant, wide three-quarter shot.",motion:"animate"},
+  {...scenes[2],speech:"Mira estos destellos en mi piel; son pigmentos naturales llamados antocianinas.",
+   imagePrompt:"Extreme macro view of the purple eggplant skin with light passing through translucent violet textures, science illustration.",motion:"zoom"},
+  {...scenes[3],speech:"Al cocinarme, absorbo aceite fácilmente. ¡Míralo en esta sartén!",
+   imagePrompt:"Top down cooking demonstration of eggplant slices sizzling and visibly taking up oil from a shallow pan.",motion:"animate"},
+  {...scenes[4],speech:"Ya entiendes por qué soy interesante. ¿Te atreves a probarme?",
+   imagePrompt:"A lively final full-body wide shot of the eggplant presenting a colorful meal on a dining table.",motion:"animate"}
+ ];
+ // Include the story's additional beats so that pacing fits 30s.
+ revised[0].speech+=" Te sorprenderás con lo que viene.";
+ revised[1].speech+=" ¡Sí, de verdad!";
+ revised[2].speech+=" Esto explica mi color tan particular.";
+ revised[3].speech+=" Un truco de cocina que conviene conocer.";
+ revised[4].speech+=" Cuenta tu curiosidad favorita.";
+ const r=applyStudioAudit(outline,scenes,{
+  decision:"revise",reason:"Improve visual variety and align each shot to the narration.",
+  title:"La berenjena sorprendente",scenes:revised
+ },30,"es");
+ assert.ok(r);
+ assert.equal(r.audit.decision,"revise");
+ assert.equal(r.outline.title,"La berenjena sorprendente");
  assert.equal(r.scenes[1].motion,"animate");
- assert.equal(r.scenes[0].imagePrompt,scenes[0].imagePrompt);
- assert.equal(r.scenes[2].imagePrompt,scenes[2].imagePrompt);
  assert.equal(r.outline.narration,r.scenes.map(s=>s.speech).join(" "));
+ assert.equal(r.audit.changedMoments,5);
 });
-test("revised speech is synchronized with the final displayed narration",()=>{
+test("full rewrites with changed moment counts are accepted when coherent",()=>{
  const {outline,scenes}=sample();
- const revised={...scenes[2],index:2,
-  speech:"Mi piel morada tiene pigmentos vegetales que le dan ese color especial.",
-  reason:"Shorten dense narration without changing the scientific claim."};
- const r=applyStudioAudit(outline,scenes,{decision:"fix",reason:"This line needs a quicker tempo.",changes:[revised]},30,"es");
- assert.equal(r.outline.narration,r.scenes.map(s=>s.speech).join(" "));
- assert.notEqual(r.outline.narration,outline.narration);
+ const rewrite=[
+  {...scenes[0],speech:"Hola, humano, hoy te contaré una historia que probablemente no esperabas sobre mí."},
+  {...scenes[1],speech:"Soy una fruta, y tengo parentesco con tomates y papas. ¡Muy sorprendente!"},
+  {...scenes[2],speech:"Mi piel morada contiene pigmentos naturales llamados antocianinas, que producen ese color espectacular."},
+  {...scenes[3],speech:"Mira lo que ocurre cuando me cocinas. ¡Puedo absorber muchísimo aceite en la sartén!"},
+  {...scenes[4],speech:"Ahora conoces mis secretos. Pero antes de irte, ¿te atreves a probarme de otra forma?"},
+  {speech:"Hasta pronto, humano, y recuerda esta historia la próxima vez que veas una berenjena.",
+   imagePrompt:"Overhead view of an illustrated kitchen table with a plate of eggplant slices, fresh tomato and small cooking props.",caption:"Hasta pronto",motion:"zoom"}
+ ];
+ const r=applyStudioAudit(outline,scenes,{
+  decision:"revise",reason:"A clearer ending and new cutaway were needed.",title:"",scenes:rewrite
+ },30,"es");
+ assert.ok(r);
+ assert.equal(r.scenes.length,6);
+ assert.equal(r.outline.beats.length,6);
 });
-test("a 90-word narration never silently passes as 30 seconds",()=>{
+test("a 90-word voiceover cannot pass the 30-second preflight",()=>{
  const {outline,scenes}=sample();
  const long=Array.from({length:90},(_,i)=>"palabra"+i).join(" ");
  assert.equal(studioRuntimePlausible(long,30,"es"),false);
  assert.equal(studioRuntimePlausible(outline.narration,30,"es"),true);
 });
-test("rejected audit reports cannot rewrite a majority or create inconsistent beats",()=>{
+test("identical adjacent prompts are automatically flagged, even if AI approves them",()=>{
  const {outline,scenes}=sample();
- const change=i=>({...scenes[i],index:i,reason:"Improve scene coherence."});
+ const duplicated=scenes.map(x=>({...x}));
+ duplicated[1].imagePrompt=duplicated[0].imagePrompt;
+ const invalidOutline={...outline,narration:duplicated.map(x=>x.speech).join(" ")};
+ assert.deepEqual(Array.from(mod.exports.repetitiveVisualPairs(duplicated)),[1]);
+ assert.ok(Array.from(mod.exports.studioAuditIssues(invalidOutline,duplicated,30,"es"))
+  .some(x=>x.includes("Repetitive")));
+ assert.equal(applyStudioAudit(invalidOutline,duplicated,{
+  decision:"pass",reason:"No issues.",title:"",scenes:[]
+ },30,"es"),null);
+});
+test("a rewrite must meet duration, completeness and visual variety to be shown",()=>{
+ const {outline,scenes}=sample();
+ const wrong=[...scenes.map(s=>({...s}))];
+ wrong[0].imagePrompt=wrong[1].imagePrompt;
  for(const report of [
-  {decision:"fix",reason:"Many issues.",changes:[change(0),change(1),change(2)]},
-  {decision:"fix",reason:"Duplicate.",changes:[change(0),change(0)]},
-  {decision:"pass",reason:"Contradictory.",changes:[change(0)]},
-  {decision:"fix",reason:"Nothing to fix.",changes:[]},
-  {decision:"block",reason:"Needs a full rework.",changes:[]},
-  {decision:"fix",reason:"Invalid timing.",changes:[{...change(0),speech:"la"}]},
-  {decision:"fix",reason:"Invalid movement.",changes:[{...change(0),motion:"teleport"}]}
+  {decision:"pass",reason:"But I changed content.",title:"new",scenes:[]},
+  {decision:"revise",reason:"Empty proposal.",title:"",scenes:[]},
+  {decision:"revise",reason:"Bad voiceover.",title:"",scenes:[{...scenes[0],speech:"la"},...scenes.slice(1)]},
+  {decision:"revise",reason:"Repetitive shots.",title:"",scenes:wrong},
+  {decision:"revise",reason:"Unsupported motion.",title:"",scenes:[{...scenes[0],motion:"explode"},...scenes.slice(1)]},
+  {decision:"revise",reason:"Bad title.",title:"ab",scenes}
  ])assert.equal(applyStudioAudit(outline,scenes,report,30,"es"),null);
 });
-test("auditor protocol sits before draft is shown and cannot reserve credits",()=>{
+test("no intermediate draft appears; one auditable stage runs before showing approval",()=>{
  const ui=fs.readFileSync("app/vista-app/video-studio/page.tsx","utf8");
  const route=fs.readFileSync("app/api/video-studio/plan/route.ts","utf8");
  const flow=ui.slice(ui.indexOf("const prepare=async"),ui.indexOf("const patchScene="));
  assert.match(flow,/mode:"audit",outline:plan,scenes:completed/);
  assert.ok(flow.indexOf('mode:"audit"')<flow.indexOf("setScenes(reviewed.scenes)"));
  assert.doesNotMatch(flow,/setScenes\(completed\)/);
- assert.match(route,/decision=pass and changes=\[\]/);
- assert.match(route,/decision=block/);
+ assert.match(route,/FULL editorial authority to revise ALL scenes/);
+ assert.match(route,/Repetitive adjacent visual prompts/);
  assert.doesNotMatch(route,/vmv_studio_create_job|charge_credits|stripe/);
+ assert.match(ui,/Revisando ajustes finales/);
 });
