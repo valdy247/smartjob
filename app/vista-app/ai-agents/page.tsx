@@ -470,9 +470,9 @@ export default function AIAgentsPreview(){
         const nextAgent=agents.find(a=>a.id===nextWorkspace?.primary_agent_id);
         setChosenBusiness(id);
         if(nextWorkspace&&nextAgent){
-         setQuoteAdvanceAfterSwitch(true);setSelected(nextAgent.id);setNotice("");
+         setSelected(nextAgent.id);setNotice("");
         }else{
-         setQuoteAdvanceAfterSwitch(false);setScreen("home");
+         setScreen("home");
          setNotice("Para configurar las llamadas de ese negocio, primero prepara su agente principal.");
         }
        }}/>:null}
