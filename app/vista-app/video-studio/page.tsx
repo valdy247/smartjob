@@ -423,7 +423,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
   </>:null}
   {stage==="duration"?<><h1>¿Cuánto debe durar?</h1><div className={styles.optionStack}>{durations.map(s=><button className={styles.optionRow} key={s} onClick={()=>{setSeconds(s);next("language")}}><Clock3 size={18}/><strong>{readable(s)}</strong><small>{s/5} escenas</small><ChevronRight size={18}/></button>)}<button className={styles.optionRow} onClick={()=>{setSeconds(45);setCustomSeconds("45")}}>Personalizado <ChevronRight size={18}/></button></div>{seconds===45?<div className={styles.field}><label>Duración (múltiplos de 5 s, entre 15 y 180)</label><input type="number" min={15} max={180} step={5} value={customSeconds} onChange={e=>setCustomSeconds(e.target.value)}/><button className={styles.primary} disabled={Number(customSeconds)<15||Number(customSeconds)>180||Number(customSeconds)%5!==0} onClick={()=>{setSeconds(Number(customSeconds));next("language")}}>Continuar</button></div>:null}</>:null}
   {stage==="language"?<><h1>Idioma del video</h1><div className={styles.optionStack}>{([{id:"es",label:"Español"},{id:"en",label:"English"},{id:"pt",label:"Português"},{id:"fr",label:"Français"},{id:"de",label:"Deutsch"},{id:"it",label:"Italiano"}] as const).map(x=><button className={styles.optionRow} key={x.id} onClick={()=>{setLanguage(x.id);next("voice")}}><Globe2 size={18}/><strong>{x.label}</strong><ChevronRight size={17}/></button>)}</div></>:null}
-  {stage==="voice"?<><h1>Elige una voz</h1><p className={styles.help}>Elige una voz de OpenAI o ElevenLabs. Escucha una muestra antes de elegir. No se descuentan créditos por escuchar.</p><PilotVoiceStep language={language} en={uiLanguage==="en"} selectedProvider={voiceProvider==="none"?undefined:voiceProvider} selectedVoiceId={voiceId} catalogEndpoint="/api/video-studio/voices" previewEndpoint="/api/video-studio/voice-preview" sampleMode="limited" onChoose={(provider,id,name)=>{setVoiceProvider(provider);setVoiceId(id);setVoiceLabel(name);next("subtitles")}}/></>:null}
+  {stage==="voice"?<><h1>Elige una voz</h1><p className={styles.help}>Elige una voz de OpenAI o ElevenLabs. Escucha una muestra antes de elegir. No se descuentan créditos por escuchar.</p><PilotVoiceStep language={language} en={uiLanguage==="en"} selectedProvider={voiceProvider==="none"?undefined:voiceProvider} selectedVoiceId={voiceId} catalogEndpoint="/api/video-studio/voices" previewEndpoint="/api/video-studio/voice-preview" activationEndpoint="/api/video-studio/voice-activate" libraryMode sampleMode="limited" onChoose={(provider,id,name)=>{setVoiceProvider(provider);setVoiceId(id);setVoiceLabel(name);next("subtitles")}}/></>:null}
   {stage==="subtitles"?<><h1>¿Quieres subtítulos?</h1><div className={styles.optionStack}><button className={styles.optionRow} onClick={()=>{setSubtitles(true);next("source")}}><Subtitles size={20}/><strong>Con subtítulos</strong><ChevronRight/></button><button className={styles.optionRow} onClick={()=>{setSubtitles(false);next("source")}}><Subtitles size={20}/><strong>Sin subtítulos</strong><ChevronRight/></button></div></>:null}
   {stage==="source"?<><h1>¿Analizar tendencias?</h1><p className={styles.help}>Encuentra inspiración real o crea directamente con tu tema.</p><div className={styles.optionStack}>{["youtube","facebook","instagram","tiktok","idea"].map(p=><button className={styles.optionRow} key={p} onClick={()=>{setPlatform(p);setSelectedTrend(null);setTrendResults([]);if(p==="idea")next("idea");else next("trends")}}><PlayCircle size={19}/><strong>{p==="idea"?"Continuar con mi idea":p==="youtube"?"YouTube":p==="facebook"?"Facebook":p==="instagram"?"Instagram":"TikTok"}</strong><ChevronRight size={17}/></button>)}</div></>:null}
   {stage==="trends"?<>
@@ -498,7 +498,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
      }}>Reintentar IA</button></div>:null}
     <div className={styles.field}><label>Título</label><input value={title} onChange={e=>setTitle(e.target.value)} maxLength={140}/></div>
     <div className={styles.field}>
-     <label>Narración completa · editable</label>
+     <label>{voiceProvider==="none"?"Texto para imágenes y subtítulos · editable":"Narración completa · editable"}</label>
      <textarea rows={9} maxLength={8200} value={narrationDraft} onChange={e=>editNarration(e.target.value)}
       placeholder="Escribe una historia continua. Una misma oración puede acompañar varias imágenes."/>
      <p className={styles.help}>{scriptWords} palabras · voz estimada: {readable(scriptSeconds)} · objetivo: {readable(seconds)}</p>
@@ -521,7 +521,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
      </div>
     </div>
     <div className={styles.price}><small>Costo completo confirmado antes de generar</small><strong>{credit} créditos</strong>
-     <p>Incluye imágenes, animación, narración continua, subtítulos si los elegiste y montaje.</p>
+     <p>Incluye imágenes, animación, {voiceProvider==="none"?"video silencioso":"narración continua"}, subtítulos si los elegiste y montaje.</p>
     </div>
     <label className={styles.consent}><input type="checkbox" checked={approvedCost} onChange={e=>setApprovedCost(e.target.checked)}/>
      Apruebo este guion, las imágenes sugeridas y el uso de {credit} créditos para generar mi video.</label>
