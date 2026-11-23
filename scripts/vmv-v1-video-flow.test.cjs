@@ -81,13 +81,31 @@ test("V1 independently searches verified YouTube sources with owner-scoped persi
  assert.doesNotMatch(trends,/videoGenerate|startRunway|generateSpeech/);
 });
 
-test("own idea can continue with an editable draft when AI is temporarily unavailable",()=>{
- assert.match(ui,/makeEditableDraft=\(\)=>/);
+test("failed AI cannot masquerade as completed scenes; manual writing is opt-in",()=>{
+ assert.match(ui,/const makeEditableDraft=\(\)=>/);
+ assert.match(ui,/speech:"",imagePrompt:"",caption:""/);
+ assert.match(ui,/Escribir guion manualmente/);
  assert.match(ui,/setManualDraft\(true\)/);
+ assert.match(ui,/setError\(errorMessages\[code\]\?code:"studio_plan_provider_unavailable"\)/);
+ assert.match(ui,/setScenes\(\[\]\);setManualDraft\(false\)/);
+ assert.doesNotMatch(ui,/else makeEditableDraft\(\)/);
  assert.match(ui,/Reintentar IA/);
- assert.match(ui,/setPlanNotice\(/);
- assert.match(ui,/platform==="idea"\?null:selectedTrend/);
- assert.match(ui,/errorMessages\[error\]\|\|"No se pudo completar la operación/);
+ assert.match(ui,/window\.confirm\("Regenerar con IA reemplazará/);
+ assert.match(ui,/scene\.speech/);
+});
+
+test("structured video script generation retries malformed output without inventing facts",()=>{
+ const model=read("lib/vmv-ai-agents/model.ts");
+ assert.match(model,/jsonMode\?:boolean/);
+ assert.match(model,/response_format:\{type:"json_object"\}/);
+ assert.match(plan,/async function askStructured<T>/);
+ assert.match(plan,/jsonMode:true/);
+ assert.match(plan,/for\(let attempt=0;attempt<2;attempt\+\+\)/);
+ assert.match(plan,/readOutline\(value,count\)/);
+ assert.match(plan,/readScenes\(value,batchSize\)/);
+ assert.match(plan,/vmv-video-studio\/plan/);
+ assert.match(plan,/invalid_output/);
+ assert.doesNotMatch(plan,/console\.warn\([^;]*topic/);
 });
 
 test("creative plan only runs in Preview, requires signed-in owner and explicit request",()=>{
