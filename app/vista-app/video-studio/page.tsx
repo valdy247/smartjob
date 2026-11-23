@@ -9,12 +9,13 @@ import PilotVoiceStep from "../vmv-pilot/PilotVoiceStep";
 import type {PilotLanguage,PilotVoiceProvider} from "@/lib/vmv-pilot-voice-config";
 import {VIDEO_STUDIO_COUNTRIES} from "@/lib/vmv-studio-countries";
 import {VIDEO_STUDIO_TOPIC_GROUPS,searchStudioTopics} from "@/lib/vmv-studio-topics";
+import {splitNarrationIntoMoments,approximateMomentSeconds} from "@/lib/vmv-studio-semantic-beats";
 import styles from "./page.module.css";
 
 type Stage="home"|"topic"|"audience"|"style"|"duration"|"language"|"voice"|"subtitles"|"source"|"trends"|"idea"|"plan"|"quality"|"summary"|"images"|"progress"|"result"|"history";
 type Style="stickman"|"cartoon2d"|"cartoon3d"|"clay"|"illustrated";
 type Quality="turbo"|"high";
-type Scene={speech:string;imagePrompt:string;caption:string;approved?:boolean;requiresReview?:boolean;imageUrl?:string;imagePath?:string};
+type Scene={speech:string;imagePrompt:string;caption:string;motion?:"zoom"|"animate";approved?:boolean;requiresReview?:boolean;imageUrl?:string;imagePath?:string};
 type Trend={sourceId:string;title:string;description?:string;thumbnail:string;url:string;channel?:string;views?:number};
 type Job={id:string;status:string;phase:string;progress:number;scenes:Scene[];seconds:number;style:string;quality_mode:string;title:string;videoUrl?:string|null;created_at:string;failure_code?:string|null;etaSeconds?:number|null;charge_credits?:number;credits_settled?:boolean;version?:number};
 type Wallet={balance:number;reserved:number;available:number};
@@ -234,10 +235,10 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const makeEditableDraft=()=>{
   const subject=(ideaPrompt.trim()||selectedTrend?.title||(topic==="Otro"?otherTopic:topic).trim()||"Mi historia").slice(0,110);
   // Manual editing is explicit: empty scenes can never be mistaken for a completed script.
-  const segments:Scene[]=Array.from({length:seconds/5},()=>({speech:"",imagePrompt:"",caption:""}));
+  const segments:Scene[]=Array.from({length:3},()=>({speech:"",imagePrompt:"",caption:"",motion:"animate"}));
   setTitle(subject.slice(0,100));setScenes(segments);setNarrationDraft("");setOutline(null);setManualDraft(true);
   setDraftProgress(0);setDraftPhase("");
-  setPlanNotice("Editor manual: escribe la narración y describe cada imagen. Para continuar, completa todas las escenas.");
+  setPlanNotice("Escribe la narración completa. Los momentos visuales se dividirán por ideas, no por intervalos fijos.");
   setError("");
  };
  const prepare=async(chosenTrend:Trend|null=selectedTrend)=>{
@@ -253,28 +254,14 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
     source:chosenTrend?{platform,sourceId:chosenTrend.sourceId,title:chosenTrend.title,url:chosenTrend.url,country:trendCountry}:null,
     confirmPlanCost:true
    };
-   // Generate short-form creative scripts atomically from the chosen topic.
-   if(seconds/5<=6){
-    setDraftPhase("Escribiendo la historia y las escenas…");
-    const result=await api("plan","POST",{...shared,mode:"complete"});
-    if(!result?.outline||!Array.isArray(result?.scenes)||result.scenes.length!==seconds/5)
-     throw Error("studio_plan_incomplete");
-    const script=result.scenes as Scene[];
-    if(script.some(scene=>typeof scene?.speech!=="string"||scene.speech.trim().length<5||
-      typeof scene?.imagePrompt!=="string"||scene.imagePrompt.trim().length<35))
-     throw Error("studio_plan_incomplete");
-    setOutline(result.outline);setTitle(result.outline.title);
-    setScenes(script);setNarrationDraft(script.map(s=>s.speech).join(" "));setManualDraft(false);setPlanNotice("");
-    setDraftProgress(100);setDraftPhase("Guion listo para revisar");
-    return;
-   }
+   setDraftPhase("Escribiendo la narración completa…");
    const first=await api("plan","POST",{...shared,mode:"outline"});
-   if(!first?.outline||!Array.isArray(first.outline.beats)||first.outline.beats.length!==seconds/5)
-    throw Error("studio_plan_incomplete");
-   const plan=first.outline as {title:string;logline:string;hook:string;ending:string;characters:string;setting:string;beats:string[]};
+   if(!first?.outline||!Array.isArray(first?.moments)||first.moments.length<3||
+    first.moments.length>36)throw Error("studio_plan_incomplete");
+   const plan=first.outline as {title:string;logline:string;hook:string;ending:string;characters:string;setting:string;narration:string;beats:string[]};
    setOutline(plan);setTitle(plan.title);
    setDraftProgress(12);setDraftPhase("Escribiendo escenas y movimientos…");
-   const count=seconds/5;
+   const count=first.moments.length;
    const batches=Array.from({length:Math.ceil(count/6)},(_,i)=>({start:i*6,size:Math.min(6,count-i*6)}));
    const completed:Scene[]=[];
    // Two short parallel chunks at a time keep large projects within serverless limits.
@@ -300,15 +287,19 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const patchScene=(index:number,key:"speech"|"imagePrompt",value:string)=>{setScenes(previous=>previous.map((s,i)=>i===index?{...s,[key]:value}:s));setApprovedCost(false);};
  const editNarration=(value:string)=>{
   setNarrationDraft(value);setApprovedCost(false);
-  const words=value.trim().split(/\s+/).filter(Boolean);
-  setScenes(previous=>previous.map((scene,i)=>{
-   const n=previous.length;
-   const part=words.slice(Math.floor(i*words.length/n),Math.floor((i+1)*words.length/n)).join(" ");
-   return {...scene,speech:part,caption:part.split(/\s+/).slice(0,6).join(" ")};
-  }));
+  const parts=splitNarrationIntoMoments(value);
+  if(!parts.length){
+   setPlanNotice("Completa una narración con al menos 3 ideas claras y puntuación. No dividiremos frases arbitrariamente.");
+   return;
+  }
+  setScenes(previous=>parts.map((part,i)=>({
+   speech:part,imagePrompt:previous[i]?.imagePrompt||"",caption:part.split(/\s+/).slice(0,6).join(" "),
+   motion:previous[i]?.motion||"animate"
+  })));
+  setPlanNotice(parts.length!==scenes.length?"Revisa las descripciones: cambió el número de momentos visuales. Puedes regenerar la propuesta con IA.":"Revisa que cada imagen represente el fragmento actualizado.");
  };
  const makeJob=async()=>{
-  if(!approvedCost||scenes.length!==seconds/5)return;
+  if(!approvedCost||!validDraft)return;
   setBusy(true);setError("");
   try{
    const data=await api("jobs","POST",{clientKey:clientKeyRef.current||(clientKeyRef.current=crypto.randomUUID()),title,topic:topic==="Otro"?otherTopic:topic,audience:audience==="Otro"?otherAudience:audience,style:visual,seconds,language,voiceProvider,voiceId,subtitles,qualityMode:quality,scenes,sourcePlatform:platform,sourceUrl:selectedTrend?.url||null,estimatedCredits:estimatedCredits(seconds,quality),confirmCost:true});
@@ -359,7 +350,9 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const scriptWords=narrationDraft.trim()?narrationDraft.trim().split(/\s+/).length:0;
  const scriptSeconds=Math.round(scriptWords/(language==="es"?2.3:2.25));
  const durationPlausible=Math.abs(scriptSeconds-seconds)<=Math.max(5,seconds*.20);
- const validDraft=scenes.length===seconds/5&&scenes.every(s=>s.speech.trim().length>=5&&s.speech.length<=230&&s.imagePrompt.trim().length>=20);
+ const validDraft=scenes.length>=3&&scenes.length<=36&&
+  scenes.every(s=>s.speech.trim().length>=5&&s.speech.length<=230&&s.imagePrompt.trim().length>=20)&&
+  scenes.map(s=>s.speech.trim()).join(" ").replace(/\s+/g," ").trim()===narrationDraft.trim().replace(/\s+/g," ");
  const previewExample=stylesList.find(x=>x.id===exampleStyle)||null;
  if(isSignedIn===false){const sb=getSupabase();return sb?<VMVAuthGateway supabase={sb}/>:<main className={styles.center}>Inicia sesión en VMV Business.</main>;}
  return <main className={styles.page} data-vmv-embedded={embedded?"true":undefined}><div className={styles.shell}>
@@ -422,7 +415,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
    </article>)}</div>
    <p className={styles.styleNote}><Film size={15}/> Ilustraciones de referencia. Los videos completos de cada estilo se añadirán próximamente.</p>
   </>:null}
-  {stage==="duration"?<><h1>¿Cuánto debe durar?</h1><div className={styles.optionStack}>{durations.map(s=><button className={styles.optionRow} key={s} onClick={()=>{setSeconds(s);next("language")}}><Clock3 size={18}/><strong>{readable(s)}</strong><small>{s/5} escenas</small><ChevronRight size={18}/></button>)}<button className={styles.optionRow} onClick={()=>{setSeconds(45);setCustomSeconds("45")}}>Personalizado <ChevronRight size={18}/></button></div>{seconds===45?<div className={styles.field}><label>Duración (múltiplos de 5 s, entre 15 y 180)</label><input type="number" min={15} max={180} step={5} value={customSeconds} onChange={e=>setCustomSeconds(e.target.value)}/><button className={styles.primary} disabled={Number(customSeconds)<15||Number(customSeconds)>180||Number(customSeconds)%5!==0} onClick={()=>{setSeconds(Number(customSeconds));next("language")}}>Continuar</button></div>:null}</>:null}
+  {stage==="duration"?<><h1>¿Cuánto debe durar?</h1><div className={styles.optionStack}>{durations.map(s=><button className={styles.optionRow} key={s} onClick={()=>{setSeconds(s);next("language")}}><Clock3 size={18}/><strong>{readable(s)}</strong><small>Escenas según el guion</small><ChevronRight size={18}/></button>)}<button className={styles.optionRow} onClick={()=>{setSeconds(45);setCustomSeconds("45")}}>Personalizado <ChevronRight size={18}/></button></div>{seconds===45?<div className={styles.field}><label>Duración (múltiplos de 5 s, entre 15 y 180)</label><input type="number" min={15} max={180} step={5} value={customSeconds} onChange={e=>setCustomSeconds(e.target.value)}/><button className={styles.primary} disabled={Number(customSeconds)<15||Number(customSeconds)>180||Number(customSeconds)%5!==0} onClick={()=>{setSeconds(Number(customSeconds));next("language")}}>Continuar</button></div>:null}</>:null}
   {stage==="language"?<><h1>Idioma del video</h1><div className={styles.optionStack}>{([{id:"es",label:"Español"},{id:"en",label:"English"},{id:"pt",label:"Português"},{id:"fr",label:"Français"},{id:"de",label:"Deutsch"},{id:"it",label:"Italiano"}] as const).map(x=><button className={styles.optionRow} key={x.id} onClick={()=>{setLanguage(x.id);next("voice")}}><Globe2 size={18}/><strong>{x.label}</strong><ChevronRight size={17}/></button>)}</div></>:null}
   {stage==="voice"?<><h1>Elige una voz</h1><p className={styles.help}>Elige una voz de OpenAI o ElevenLabs. Escucha una muestra antes de elegir. No se descuentan créditos por escuchar.</p><PilotVoiceStep language={language} en={uiLanguage==="en"} selectedProvider={voiceProvider==="none"?undefined:voiceProvider} selectedVoiceId={voiceId} catalogEndpoint="/api/video-studio/voices" previewEndpoint="/api/video-studio/voice-preview" activationEndpoint="/api/video-studio/voice-activate" libraryMode sampleMode="limited" onChoose={(provider,id,name)=>{setVoiceProvider(provider);setVoiceId(id);setVoiceLabel(name);next("subtitles")}}/></>:null}
   {stage==="subtitles"?<><h1>¿Quieres subtítulos?</h1><div className={styles.optionStack}><button className={styles.optionRow} onClick={()=>{setSubtitles(true);next("source")}}><Subtitles size={20}/><strong>Con subtítulos</strong><ChevronRight/></button><button className={styles.optionRow} onClick={()=>{setSubtitles(false);next("source")}}><Subtitles size={20}/><strong>Sin subtítulos</strong><ChevronRight/></button></div></>:null}
@@ -481,7 +474,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
    {selectedTrend?<div className={styles.selectedTrend}><strong>{selectedTrend.title}</strong><a href={selectedTrend.url} target="_blank" rel="noopener noreferrer">Ver original</a></div>:null}
    {busy?<div className={styles.draftLoading} role="status" aria-live="polite">
     <div className={styles.draftOrb}><Sparkles size={33}/><span>{draftProgress}%</span></div>
-    <strong>{draftPhase||"Preparando tu guion…"}</strong><p>Diseñando una secuencia coherente de {seconds/5} escenas de cinco segundos.</p>
+    <strong>{draftPhase||"Preparando tu guion…"}</strong><p>Organizando momentos visuales según el significado de la narración, sin tiempos fijos.</p>
     <div className={styles.bar}><div style={{width:String(draftProgress)+"%"}}/></div>
    </div>:null}
    {!busy&&scenes.length===0?<div className={styles.planEmpty}>
@@ -493,7 +486,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
      <button className={styles.secondary} onClick={()=>next(platform==="idea"?"idea":"trends")}><Pencil size={16}/> Editar idea</button>
    </div>:null}
    {!busy&&scenes.length>0?<div className={styles.planContent}>
-    {manualDraft?<div role="status" className={styles.planDraftNote}><ShieldCheck size={17}/><span>{planNotice}</span><button type="button" disabled={busy} onClick={()=>{
+    {(manualDraft||Boolean(planNotice))?<div role="status" className={styles.planDraftNote}><ShieldCheck size={17}/><span>{planNotice}</span><button type="button" disabled={busy} onClick={()=>{
       if(scenes.some(x=>x.speech.trim()||x.imagePrompt.trim())&&!window.confirm("Regenerar con IA reemplazará las escenas que escribiste. ¿Continuar?"))return;
       void prepare(platform==="idea"?null:selectedTrend);
      }}>Reintentar IA</button></div>:null}
@@ -505,12 +498,13 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
      <p className={styles.help}>{scriptWords} palabras · voz estimada: {readable(scriptSeconds)} · objetivo: {readable(seconds)}</p>
      {!durationPlausible?<p className={styles.note}>Ajusta la extensión del guion. La narración debe acercarse a la duración seleccionada para evitar acelerar o cortar la voz.</p>:null}
     </div>
-    <div className={styles.sceneHeading}><strong>Imágenes sugeridas · {scenes.length}</strong><span>Un cambio visual cada ~5 s</span></div>
+    <div className={styles.sceneHeading}><strong>Momentos visuales · {scenes.length}</strong><span>Duraciones flexibles · sincronización al generar la voz</span></div>
     <div className={styles.scenes}>{scenes.map((scene,i)=><div className={styles.sceneEditor} key={i}>
-     <div className={styles.sceneNumber}><strong>Imagen {i+1}</strong><small>{i*5}–{(i+1)*5} s aprox.</small></div>
+     <div className={styles.sceneNumber}><strong>Momento {i+1}</strong><small>≈ {approximateMomentSeconds(scene.speech,narrationDraft,scriptSeconds||seconds)} s · se ajustará al audio</small></div>
      <p className={styles.help}>{scene.speech}</p>
      <label>Descripción visual editable</label>
      <textarea rows={3} maxLength={950} value={scene.imagePrompt} onChange={e=>patchScene(i,"imagePrompt",e.target.value)}/>
+     <div className={styles.field}><label>Movimiento visual</label><select value={scene.motion||"animate"} onChange={e=>{setScenes(previous=>previous.map((x,j)=>j===i?{...x,motion:e.target.value==="zoom"?"zoom":"animate"}:x));setApprovedCost(false);}}><option value="animate">Animación</option><option value="zoom">Zoom suave en imagen</option></select></div>
     </div>)}</div>
     <div className={styles.field}><label>Calidad del video</label>
      <div className={styles.optionStack}>
@@ -532,13 +526,13 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
    </div>:null}
   </>:null}
   {stage==="quality"?<><h1>Calidad del video</h1><p className={styles.help}>Estimaciones de créditos de la versión propuesta; las tarifas definitivas se confirmarán al habilitar los pagos.</p><div className={styles.optionStack}>{([{id:"turbo",label:"Turbo · 720p",description:"Renderizado optimizado"},{id:"high",label:"Alta calidad · 720p",description:"Motor de mayor calidad"}] as const).map(x=><button key={x.id} className={styles.optionRow} onClick={()=>{setQuality(x.id);setApprovedCost(false);next("summary")}}><Video size={20}/><span><strong>{x.label}</strong><small>{x.description}</small></span><b>{estimatedCredits(seconds,x.id)} cr.</b><ChevronRight size={16}/></button>)}</div></>:null}
-  {stage==="summary"?<><h1>Resumen de tu video</h1><div className={styles.review}>{([{label:"Tema",value:topic==="Otro"?otherTopic:topic,edit:"topic"},{label:"Público",value:audience==="Otro"?otherAudience:audience,edit:"audience"},{label:"Estilo",value:stylesList.find(x=>x.id===visual)?.label,edit:"style"},{label:"Duración",value:readable(seconds),edit:"duration"},{label:"Idioma",value:language.toUpperCase(),edit:"language"},{label:"Voz",value:voiceLabel,edit:"voice"},{label:"Subtítulos",value:subtitles?"Sí":"No",edit:"subtitles"},{label:"Tendencias",value:selectedTrend?selectedTrend.title:platform==="idea"?"Mi idea":platform,edit:"source"},{label:"Guion",value:scenes.length+" escenas editables",edit:"plan"},{label:"Calidad",value:quality==="high"?"Alta":"Turbo",edit:"quality"}] as {label:string;value:string|undefined;edit:Stage}[]).map(r=><div className={styles.reviewRow} key={r.label}><div><small>{r.label}</small><strong>{r.value}</strong></div><button aria-label={"Editar "+r.label} onClick={()=>next(r.edit)}><Pencil size={17}/></button></div>)}</div><div className={styles.price}><small>Generación estimada · tarifa provisional</small><strong>{credit} créditos</strong><p>Incluye clips, narración seleccionada, subtítulos y montaje. La regeneración de imágenes puede tener costo adicional.</p></div><label className={styles.consent}><input type="checkbox" checked={approvedCost} onChange={e=>setApprovedCost(e.target.checked)}/> Confirmo la configuración y autorizo el uso de créditos indicado cuando el sistema esté habilitado.</label><button className={styles.primary} disabled={busy||!approvedCost||scenes.length!==seconds/5} onClick={()=>void makeJob()}>{busy?<LoaderCircle className={styles.spin} size={17}/>:<Clapperboard size={17}/>} Generar por {credit} créditos</button></>:null}
+  {stage==="summary"?<><h1>Resumen de tu video</h1><div className={styles.review}>{([{label:"Tema",value:topic==="Otro"?otherTopic:topic,edit:"topic"},{label:"Público",value:audience==="Otro"?otherAudience:audience,edit:"audience"},{label:"Estilo",value:stylesList.find(x=>x.id===visual)?.label,edit:"style"},{label:"Duración",value:readable(seconds),edit:"duration"},{label:"Idioma",value:language.toUpperCase(),edit:"language"},{label:"Voz",value:voiceLabel,edit:"voice"},{label:"Subtítulos",value:subtitles?"Sí":"No",edit:"subtitles"},{label:"Tendencias",value:selectedTrend?selectedTrend.title:platform==="idea"?"Mi idea":platform,edit:"source"},{label:"Guion",value:scenes.length+" momentos visuales editables",edit:"plan"},{label:"Calidad",value:quality==="high"?"Alta":"Turbo",edit:"quality"}] as {label:string;value:string|undefined;edit:Stage}[]).map(r=><div className={styles.reviewRow} key={r.label}><div><small>{r.label}</small><strong>{r.value}</strong></div><button aria-label={"Editar "+r.label} onClick={()=>next(r.edit)}><Pencil size={17}/></button></div>)}</div><div className={styles.price}><small>Generación estimada · tarifa provisional</small><strong>{credit} créditos</strong><p>Incluye clips, narración seleccionada, subtítulos y montaje. La regeneración de imágenes puede tener costo adicional.</p></div><label className={styles.consent}><input type="checkbox" checked={approvedCost} onChange={e=>setApprovedCost(e.target.checked)}/> Confirmo la configuración y autorizo el uso de créditos indicado cuando el sistema esté habilitado.</label><button className={styles.primary} disabled={busy||!approvedCost||!durationPlausible||!validDraft} onClick={()=>void makeJob()}>{busy?<LoaderCircle className={styles.spin} size={17}/>:<Clapperboard size={17}/>} Generar por {credit} créditos</button></>:null}
   {stage==="images"&&job?<><h1>Revisa las imágenes</h1>
 <p className={styles.help}>Aprueba los fotogramas antes de animarlos. Cuando estén aprobados, la voz y el montaje seguirán automáticamente en la nube, aunque cierres la web.</p>
 <div className={styles.approvalNotice}><CheckCircle2 size={18}/>{job.scenes.filter(x=>x.approved).length} / {job.scenes.length} imágenes aprobadas</div>
 <div className={styles.gallery}>{job.scenes.map((scene,i)=><article key={i} className={styles.frameCard}>
 <button type="button" className={styles.framePreview} onClick={()=>setSceneIndex(i)}>{scene.imageUrl?<img src={scene.imageUrl} alt={"Fotograma "+(i+1)}/>:<Film size={30}/>}</button>
-<div className={styles.frameInfo}><strong>Escena {i+1}</strong><small>{i*5}–{(i+1)*5} s</small><p>{scene.speech}</p>
+<div className={styles.frameInfo}><strong>Escena {i+1}</strong><small>Duración ajustada por la voz</small><p>{scene.speech}</p>
 <button className={styles.secondary} onClick={()=>setSceneIndex(i)}>Editar</button>
 {scene.approved?<span className={styles.passed}><Check size={14}/> Aprobada</span>:<button disabled={savingScene||!scene.imageUrl} className={styles.primaryMini} onClick={()=>void approve(i)}>Aprobar</button>}</div></article>)}</div>
 {job.scenes[sceneIndex]?<section className={styles.frameEdit}><h2>Escena {sceneIndex+1}</h2>
