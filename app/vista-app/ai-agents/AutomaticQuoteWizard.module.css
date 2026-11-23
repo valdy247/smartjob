@@ -78,3 +78,16 @@
 .previewNote{padding:13px 14px;border-radius:14px;background:#faf7ff;border:1px solid #e9dff3;font-size:11px;color:#776583;line-height:1.65}
 @media(max-width:390px){.templates{gap:6px}.template,.templateSelected{padding:9px 4px}.miniSheet{width:60px}}
 @media(prefers-reduced-motion:reduce){.switchTrack,.switchTrack:before{transition:none}}
+
+/* One-decision business selector for the Smart Quote wizard. */
+.businessStepLabel{font-size:11px;font-weight:750;color:#8b7b9d;margin:-11px 0 24px;text-align:center}
+.businessChoice{width:100%;gap:10px}
+.businessPrimary,.businessSecondary{width:100%;min-height:58px;border-radius:17px;display:flex;align-items:center;justify-content:center;gap:12px;padding:13px 16px;cursor:pointer;font-family:inherit;text-align:center}
+.businessPrimary{background:linear-gradient(120deg,#ede3ff,#e4f6ee);border:1px solid #cbb7e8;color:#583492;font-weight:800;font-size:14px}
+.businessPrimary span{min-width:0;overflow-wrap:anywhere}
+.businessPrimary strong{font-weight:900}
+.businessPrimary svg{flex-shrink:0}
+.businessSecondary{background:#fff;border:1px solid #e8deef;color:#79648e;font-size:12px;font-weight:800;min-height:48px}
+.businessPrimary:hover{border-color:#986aca}
+.businessSecondary:hover{background:#f8f4fc}
+.businessPrimary:focus-visible,.businessSecondary:focus-visible{outline:3px solid #9c77d8;outline-offset:3px}
