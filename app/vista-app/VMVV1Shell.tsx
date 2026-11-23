@@ -154,14 +154,14 @@ export default function VMVV1Shell(){
         <h2>{en?"Hi":"Hola"}, {profile?.first_name||L("bienvenido","welcome")} 👋</h2>
         <p>{L("Todo tu negocio, en un solo lugar.","Your whole business, in one place.")}</p>
        </div>
-       <section className={homeStyles.homeGrowHero} aria-label={L("Haz crecer tu negocio","Grow your business")}>
+       {!hasAssessment?<section className={homeStyles.homeGrowHero} aria-label={L("Haz crecer tu negocio","Grow your business")}>
         <div className={homeStyles.homeGrowCopy}>
          <h3>{en?"Grow your\nbusiness":"Haz crecer\ntu negocio"}</h3>
          <p>{L("Herramientas, servicios y IA para emprendedores.","Tools, services and AI for entrepreneurs.")}</p>
          <button type="button" className={homeStyles.homeGrowStart} onClick={()=>setAssessmentOpen(true)}>{hasAssessment?L("Actualizar necesidades","Update your needs"):L("Comenzar","Get started")} <ArrowUpRight size={18}/></button>
         </div>
         <div className={homeStyles.homeRocketArt} aria-hidden="true"><span className={homeStyles.homeRocketHalo}/><Rocket size={104} strokeWidth={1.35}/><span className={homeStyles.homeRocketCloud}/></div>
-       </section>
+       </section>:null}
        <div className={styles.homeRecommendedHeading}>
         <div><h3>{hasAssessment?L("Recomendado para ti","Recommended for you"):L("Herramientas para comenzar","Tools to get started")}</h3>
          <p>{hasAssessment?L("Según las necesidades de tu negocio.","Based on your business needs."):L("Responde unas preguntas para personalizar tu inicio.","Answer a few questions to personalize your Home.")}</p>
@@ -173,14 +173,7 @@ export default function VMVV1Shell(){
          <service.Icon size={31}/><strong>{service.name}</strong>
         </button>)}
        </div>
-       <section className={homeStyles.homeBusinessArea}>
-        <h3>{L("Mi Negocio","My Business")}</h3>
-        <button type="button" className={homeStyles.homeSummaryCard} data-vmv-shortcut-id="account" onClick={()=>nav("account")}>
-         <span className={homeStyles.homeSummaryIcon}><TrendingUp size={24}/></span>
-         <span><strong>{L("Resumen","Overview")}</strong><small>{L("Actividad y resultados","Activity and results")}</small></span>
-         <ChevronLeft size={21} className={homeStyles.homeSummaryChevron} aria-hidden="true"/>
-        </button>
-       </section>
+       
       </div>:null}
       {tab==="services"&&webView&&user?<section className={styles.webHost}>
        <button className={homeStyles.back} onClick={()=>setWebView(false)}><ChevronLeft size={18}/>{L("Todos los servicios","All services")}</button>
