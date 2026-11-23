@@ -43,6 +43,7 @@ const errorMessages:Record<string,string>={
  video_studio_worker_not_ready:"El procesador de videos todavía no está listo.",
  video_studio_duplicate:"Esta solicitud ya existe. Abre Historial para continuar.",
  studio_invalid_job:"Revisa tu guion y configuración antes de generar.",
+ studio_elevenlabs_worker_not_ready:"Esta voz de ElevenLabs todavía no está habilitada en el procesador. No se reservaron créditos; puedes elegir una voz de OpenAI.",
  studio_invalid_action:"Esta escena no se pudo actualizar.",
  studio_scene_locked:"El trabajo ya está en producción y no admite edición de imágenes.",
  studio_resume_unavailable:"Este proyecto no se puede reanudar.",
