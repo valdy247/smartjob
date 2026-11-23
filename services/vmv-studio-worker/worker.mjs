@@ -136,7 +136,8 @@ async function aiScript(job){
  const system=[
   "You are an original short video director creating a "+job.seconds+"-second vertical video.",
   "Return JSON with title and scenes array. EXACTLY "+n+" scenes, five seconds each.",
-  "Each scene has speech (7-11 words, max 13), imagePrompt in English (a visually exact action that represents those words), caption (3-8 words).",
+  "Write ONE natural, continuous voiceover of approximately "+Math.round(job.seconds*2.3)+" words before dividing it into visual clips. An ordinary sentence MAY continue through several clips.",
+  "Each scene has a consecutive excerpt of the voiceover in speech, imagePrompt in English (a visually exact action), caption (3-8 words).",
   "STRICT narration AND captions language: "+LANGUAGES[job.language]+". NEVER use a different language for any spoken or displayed words.",
   "STRICT immutable visual bible for EVERY scene: "+STYLE[job.style],
   "Stickman characters and visual palette must be CONSISTENT across the entire story.",
@@ -164,7 +165,7 @@ async function aiScript(job){
   caption:String(s.caption||"").trim().slice(0,100)
  }));
  if(scenes.some(s=>s.speech.length<10||s.imagePrompt.length<30||
-  s.speech.split(/\s+/).length>13))throw Error("script_timing_invalid");
+  s.speech.split(/\s+/).length>22))throw Error("script_timing_invalid");
  try{
   await verifyScriptLanguage(job,scenes);
  }catch(error){
@@ -179,19 +180,21 @@ async function aiScript(job){
 }
 async function verifyScriptLanguage(job,scenes){
  if(!LANGUAGES[job.language])throw Error("video_language_invalid");
+ // Scene excerpts are NOT independent sentences: evaluate the whole narration.
+ const narration=scenes.map(x=>x.speech.trim()).join(" ");
  const response=await request(OPENAI+"/chat/completions",{
   method:"POST",headers:{...auth("OPENAI_API_KEY"),"Content-Type":"application/json"},
-  body:JSON.stringify({model:"gpt-4.1-mini",temperature:0,max_tokens:350,
+  body:JSON.stringify({model:"gpt-4.1-mini",temperature:0,max_tokens:120,
    response_format:{type:"json_object"},
-   messages:[{role:"system",content:"Detect the language of EACH speech and caption. Respond ONLY JSON {languages:[ISO 639-1 code per scene]}. Do not translate, do not assume the requested language. Use one code per scene."},
-    {role:"user",content:JSON.stringify(scenes.map(x=>({speech:x.speech,caption:x.caption})))}]})
+   messages:[{role:"system",content:"Identify the dominant spoken language of this ONE continuous voiceover. Ignore brand names and occasional borrowed terms. Return only JSON {language: ISO-639-1 code}. Do not translate."},
+    {role:"user",content:narration}]})
  },45000);
  if(!response.ok)throw Error("script_language_check_unavailable");
  const data=await response.json();
- let parsed;
- try{parsed=JSON.parse(data.choices[0].message.content);}catch{throw Error("script_language_unverified");}
- if(!Array.isArray(parsed.languages)||parsed.languages.length!==scenes.length||
-   parsed.languages.some(code=>code!==job.language))throw Error("script_language_mismatch");
+ let parsed;try{parsed=JSON.parse(data.choices[0].message.content);}catch{
+  throw Error("script_language_unverified");
+ }
+ if(parsed.language!==job.language)throw Error("script_language_mismatch");
 }
 async function verifyAudioLanguage(job,voices,dir){
  const manifest=path.join(dir,"language-voices.txt"),joined=path.join(dir,"language-check.mp3");
