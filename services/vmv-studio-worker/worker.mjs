@@ -407,7 +407,7 @@ async function processJob(job){
     let accepted=null,lastCandidate=null,visuallyValid=false;
     for(let attempt=0;attempt<2;attempt++){
      const buffer=await makeImage(job,scenes[i],reference,i,n,
-      attempt?"Recompose with a stronger narrative action, different camera angle and clear visual subject.":"");
+      attempt?"Recompose with a stronger narrative action, different camera angle and clear visual subject.":String(scenes[i].visualCorrection||"").slice(0,420));
      lastCandidate=buffer;
      if(await validateSceneImage(job,scenes[i],buffer)){accepted=buffer;visuallyValid=true;break;}
      log("frame_rejected",{id:job.id,scene:i+1,attempt:attempt+1});
@@ -467,7 +467,7 @@ async function processJob(job){
       if(sound){
        await writeFile(files[i],replacement);
        await persistAsset(job,"image_"+i,files[i],"image/jpeg");
-       scenes[i]={...scenes[i],imagePath:job.assets["image_"+i],approved:false,requiresReview:false};
+       scenes[i]={...scenes[i],imagePath:job.assets["image_"+i],approved:false,requiresReview:false,visualCorrection:item.direction.slice(0,420)};
        corrected++;
        log("visual_frame_recomposed",{id:job.id,scene:i+1,problem:item.problem});
       }else scenes[i].requiresReview=true;
