@@ -6,6 +6,7 @@ import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import VMVAuthGateway from "@/components/VMVAuthGateway";
 import VideoShareControls from "./VideoShareControls";
+import CompletedSceneEditor from "./CompletedSceneEditor";
 import PilotVoiceStep from "../vmv-pilot/PilotVoiceStep";
 import type {PilotLanguage,PilotVoiceProvider} from "@/lib/vmv-pilot-voice-config";
 import {VIDEO_STUDIO_COUNTRIES} from "@/lib/vmv-studio-countries";
@@ -15,7 +16,7 @@ import {studioJobKey,validStudioJobId,isStudioJobRestorable,studioStageForJob} f
 import {studioRuntimeCompatible,estimatedStudioVoiceSeconds} from "@/lib/vmv-studio-script-auditor";
 import styles from "./page.module.css";
 
-type Stage="home"|"topic"|"audience"|"style"|"duration"|"language"|"voice"|"subtitles"|"source"|"trends"|"idea"|"plan"|"quality"|"summary"|"images"|"progress"|"result"|"history";
+type Stage="home"|"topic"|"audience"|"style"|"duration"|"language"|"voice"|"subtitles"|"source"|"trends"|"idea"|"plan"|"quality"|"summary"|"images"|"progress"|"result"|"history"|"edit_finished";
 type Style="stickman"|"cartoon2d"|"cartoon3d"|"clay"|"illustrated";
 type Quality="turbo"|"high";
 type Scene={speech:string;imagePrompt:string;caption:string;motion?:"zoom"|"animate";approved?:boolean;requiresReview?:boolean;imageUrl?:string;imagePath?:string};
@@ -33,7 +34,7 @@ const stylesList:VideoExample[]=[
  {id:"clay",label:"Plastilina 3D",description:"Mundos artesanales con textura real",poster:"/video-studio/styles/clay.svg",video:null}
 ];
 const labels:Record<Stage,string>={
- home:"Video Studio",topic:"¿Qué tema?",audience:"¿Para quién?",style:"Elige un estilo",duration:"Duración",language:"Idioma del video",voice:"Elige una voz",subtitles:"Subtítulos",source:"¿Analizar tendencias?",trends:"Tendencias",idea:"Tu idea",plan:"Tu guion y escenas",quality:"Calidad",summary:"Resumen",images:"Revisa las escenas",progress:"Producción en la nube",result:"Video listo",history:"Historial"
+ home:"Video Studio",topic:"¿Qué tema?",audience:"¿Para quién?",style:"Elige un estilo",duration:"Duración",language:"Idioma del video",voice:"Elige una voz",subtitles:"Subtítulos",source:"¿Analizar tendencias?",trends:"Tendencias",idea:"Tu idea",plan:"Tu guion y escenas",quality:"Calidad",summary:"Resumen",images:"Revisa las escenas",progress:"Producción en la nube",result:"Video listo",history:"Historial",edit_finished:"Editar escenas"
 };
 const stepsFor=(platform:string):Stage[]=>["topic","audience","style","duration","language","voice","subtitles","source",platform==="idea"?"idea":"trends","plan"];
 const estimatedCredits=(seconds:number,quality:Quality)=>Math.ceil(seconds*(quality==="high"?2.5:1));
@@ -54,6 +55,10 @@ const errorMessages:Record<string,string>={
  studio_resume_limit:"Este proyecto alcanzó el límite de reanudaciones.",
  studio_images_not_ready:"Primero deben estar listas todas las imágenes.",
  studio_regeneration_confirmation_required:"Confirma el costo de regenerar una imagen.",
+ studio_revision_invalid:"Describe la nueva escena con al menos 20 caracteres.",
+ studio_revision_not_available:"El video terminado no tiene todos los archivos necesarios para editar solo una escena.",
+ studio_revision_price_changed:"El costo de esta edición cambió. Vuelve a abrirla para confirmar.",
+ studio_revision_unavailable:"No pudimos preparar la nueva versión. Tu video original está intacto.",
  studio_credit_purchases_not_ready:"Las compras de créditos en modo prueba aún no están conectadas.",
  studio_stripe_checkout_unavailable:"No se pudo iniciar la compra de prueba.",
  studio_trends_daily_limit:"Has alcanzado el límite diario de investigaciones. Puedes continuar con tu idea.",
@@ -484,7 +489,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  return <main className={styles.page} data-vmv-embedded={embedded?"true":undefined}><div className={styles.shell}>
   <header className={styles.header}><button className={styles.back} onClick={()=>stage==="home"?returnToVMV():previous()} aria-label="Volver"><ArrowLeft size={19}/></button><div><strong>Video Studio</strong><small>VMV Business · Creator</small></div><Link href="/vista-app?tab=services" className={styles.brand}
     onClick={event=>{if(embedded||window.self!==window.top){event.preventDefault();returnToVMV();}}}>VMV</Link></header>
-  {stage!=="home"&&stage!=="history"&&stage!=="images"&&stage!=="progress"&&stage!=="result"?<div className={styles.progressTop}><span>{labels[stage]}</span><span>{Math.max(1,order.indexOf(stage)+1)} / {order.length}</span><div className={styles.bar}><div style={{width:Math.max(5,(order.indexOf(stage)+1)/order.length*100)+"%"}}/></div></div>:null}
+  {stage!=="home"&&stage!=="history"&&stage!=="images"&&stage!=="progress"&&stage!=="result"&&stage!=="edit_finished"?<div className={styles.progressTop}><span>{labels[stage]}</span><span>{Math.max(1,order.indexOf(stage)+1)} / {order.length}</span><div className={styles.bar}><div style={{width:Math.max(5,(order.indexOf(stage)+1)/order.length*100)+"%"}}/></div></div>:null}
   {stage==="home"?<>
    <div className={styles.homeGrid}>
     <button className={styles.homeCard+" "+styles.createCard} onClick={reset}>
@@ -708,7 +713,22 @@ catch(e){setError(e instanceof Error?e.message:"studio_invalid_action");}finally
  </button>:null}
  <button className={styles.secondary} onClick={()=>{next("history");void loadHistory();}}>Ver historial</button>
 </>:null}
-  {stage==="result"&&job?<><h1>¡Video listo!</h1><p className={styles.help}>Duración final: {readable(Math.round(job.actualSeconds||job.seconds))}. La voz conserva su ritmo natural.</p>{job.videoUrl?<><video className={styles.videoFinal} controls playsInline src={job.videoUrl}/><a className={styles.primary} href={job.videoUrl} download={"vmv-video-"+job.id+".mp4"}><Download size={19}/> Descargar MP4</a></>:<p className={styles.help}>El archivo está guardado. Actualiza el enlace desde Historial.</p>}<VideoShareControls jobId={job.id} request={api}/><button className={styles.secondary} onClick={()=>{next("history");void loadHistory()}}>Abrir historial</button></>:null}
+  {stage==="result"&&job?<><h1>¡Video listo!</h1><p className={styles.help}>Duración final: {readable(Math.round(job.actualSeconds||job.seconds))}. La voz conserva su ritmo natural.</p>{job.videoUrl?<><video className={styles.videoFinal} controls playsInline src={job.videoUrl}/><a className={styles.primary} href={job.videoUrl} download={"vmv-video-"+job.id+".mp4"}><Download size={19}/> Descargar MP4</a></>:<p className={styles.help}>El archivo está guardado. Actualiza el enlace desde Historial.</p>}<VideoShareControls jobId={job.id} request={api}/>
+<button className={styles.primary} onClick={()=>{setSceneIndex(0);next("edit_finished");}}>
+ <Pencil size={18}/> Editar escenas de este video
+</button>
+<button className={styles.secondary} onClick={()=>{next("history");void loadHistory()}}>Abrir historial</button></>:null}
+  {stage==="edit_finished"&&job?.status==="completed"?
+   <CompletedSceneEditor key={job.id} job={job} request={api}
+    onBack={()=>next("result")}
+    onCreated={async id=>{
+     const response=await api("jobs?id="+encodeURIComponent(id));
+     if(!response?.job)throw Error("studio_revision_unavailable");
+     persistJobId(id);
+     setJob(response.job);setSceneIndex(0);
+     void loadCredits();
+     next("progress");
+    }}/>:null}
   {stage==="history"?<><h1>Mis videos</h1>
 <div className={styles.walletPanel}><span className={styles.kicker}>MIS CRÉDITOS</span>
 <strong>{wallet?wallet.available:"—"} <small>disponibles</small></strong>
@@ -728,7 +748,16 @@ next(response.job.status==="completed"?"result":response.job.status==="awaiting_
 }catch(e){setError(e instanceof Error?e.message:"video_studio_db_unavailable");}
 }}><span className={styles.historyIcon}><Film size={20}/></span><span>
 <strong>{item.title||"Video sin título"}</strong><small>{readable(item.seconds)} · {item.phase||item.status}</small>
-</span><ChevronRight size={18}/></button>{item.status==="completed"?<VideoShareControls jobId={item.id} request={api}/>:null}</div>)}
+</span><ChevronRight size={18}/></button>{item.status==="completed"?<>
+ <VideoShareControls jobId={item.id} request={api}/>
+ <button className={styles.secondary} onClick={async()=>{
+  try{
+   const response=await api("jobs?id="+encodeURIComponent(item.id));
+   if(!response?.job)throw Error("studio_revision_unavailable");
+   setJob(response.job);setSceneIndex(0);next("edit_finished");
+  }catch(e){setError(e instanceof Error?e.message:"studio_revision_unavailable");}
+ }}><Pencil size={15}/> Editar escenas</button>
+ </>:null}</div>)}
 {!jobs.length&&!historyLoading&&!error?<div className={styles.unavailable}><FolderOpen size={30}/><p>Cuando generes un video aparecerá aquí.</p><button onClick={reset} className={styles.primary}>Crear video</button></div>:null}
 </div>
 </>:null}
