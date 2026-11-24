@@ -74,5 +74,5 @@ test("render worker preflights narration and can create zoom shots without chang
  assert.match(src,/timing\.segments\[i\]\.duration\*24/);
  assert.match(src,/semanticReady\?"semantic-v2"/);
  assert.doesNotMatch(active,/job\.scenes\.length!==job\.seconds\/5/);
- assert.match(src,/requiresReview:!visuallyValid/);
+ assert.match(src,/requiresReview:Boolean\(job.assets\?\.revision_source_id\)\|\|!visuallyValid/);
 });
