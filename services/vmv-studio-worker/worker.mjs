@@ -8,6 +8,7 @@ import {randomUUID} from "node:crypto";
 import {startMotionClip,waitMotionClip} from "./motion-engine.mjs";
 import {speechTimeline,silentTimeline} from "./speech-timeline.mjs";
 import {recordedVoiceRuntime} from "./voice-runtime.mjs";
+import {prepareRevisionAssets} from "./revision-assets.mjs";
 import {sceneVisualDirection,imageUsesCharacterReference,validVisualPlan} from "./visual-director.mjs";
 import {planVisualIdentity,generateCharacterMaster,reviewVisualSequence} from "./visual-quality.mjs";
 
@@ -311,7 +312,8 @@ async function assemble(job,dir,clips,narrationFile,timing,variant){
   final=path.join(dir,"final-"+variant+".mp4");
  const originalDuration=narrationFile?
   recordedVoiceRuntime(job.seconds,Number(timing?.duration),
-   Number(job.resume_count)>0&&Boolean(job.assets?.voice_continuous)):
+   (Number(job.resume_count)>0||Boolean(job.assets?.revision_source_id))&&
+    Boolean(job.assets?.voice_continuous)):
   job.seconds;
  const segments=timing?.segments;
  if(!Array.isArray(segments)||segments.length!==clips.length)throw Error("scene_timing_invalid");
@@ -367,6 +369,11 @@ async function processJob(job){
  const heartbeat=setInterval(()=>{void keepAlive(job).catch(err=>log("heartbeat_failed",{id:job.id,reason:String(err.message).slice(0,50)}));},60000);
  try{
   const scenes=job.scenes.map(s=>({...s})),n=scenes.length,prefix=job.owner_id+"/"+job.id+"/";
+  if(job.status==="generating_images"&&job.assets?.revision_source_id){
+   await prepareRevisionAssets({db,job,scenes,patch,bucket:WORK});
+   log("single_scene_revision_assets_prepared",{id:job.id,
+    source:job.assets.revision_source_id,changedScene:job.assets.revision_scene_index+1});
+  }
   if(job.status==="generating_images"){
    // A neutral identity master is shared by ALL scenes. Never chain the full
    // previous scene as the next image reference: that repeated the same kitchen,
@@ -420,7 +427,8 @@ async function processJob(job){
     }
     await writeFile(image,accepted);
     await persistAsset(job,"image_"+i,image,"image/jpeg");
-    scenes[i]={...scenes[i],imagePath:job.assets["image_"+i],approved:false,requiresReview:!visuallyValid};
+    scenes[i]={...scenes[i],imagePath:job.assets["image_"+i],
+     approved:false,requiresReview:Boolean(job.assets?.revision_source_id)||!visuallyValid};
     await patch(job,{scenes:scenes.map(s=>({...s})),phase:"Creando fotograma "+(i+1)+"/"+n,
      progress:5+Math.floor(20*(i+1)/n),eta_seconds:Math.max(30,(n-i-1)*35)});
    }
@@ -508,7 +516,8 @@ async function processJob(job){
     await persistAsset(job,"voice_continuous",narration,"audio/mpeg");
    }
    const measuredVoiceSeconds=await probe(narration);
-   const resumedExistingVoice=Number(job.resume_count)>0&&Boolean(job.assets?.voice_continuous);
+   const resumedExistingVoice=(Number(job.resume_count)>0||
+    Boolean(job.assets?.revision_source_id))&&Boolean(job.assets?.voice_continuous);
    log("voice_duration_measured",{id:job.id,targetSeconds:job.seconds,
     actualSeconds:Number(measuredVoiceSeconds.toFixed(2)),recovery:resumedExistingVoice});
    duration=recordedVoiceRuntime(job.seconds,measuredVoiceSeconds,resumedExistingVoice);
