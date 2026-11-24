@@ -126,3 +126,37 @@ test("no intermediate draft appears; one auditable stage runs before showing app
  assert.doesNotMatch(route,/vmv_studio_create_job|charge_credits|stripe/);
  assert.match(ui,/Revisando ajustes finales/);
 });
+
+test("silent videos accept full visual storytelling irrespective of approximate spoken seconds",()=>{
+ const {outline,scenes}=sample();
+ const issues=mod.exports.studioAuditIssues(outline,scenes,15,"es","none");
+ assert.deepEqual(Array.from(issues),[]);
+ const r=applyStudioAudit(outline,scenes,{
+  decision:"pass",reason:"Action and visual narrative are coherent.",title:"",scenes:[]
+ },15,"es","none");
+ assert.ok(r);
+ assert.equal(r.scenes.length,scenes.length);
+ assert.equal(r.outline.narration,outline.narration);
+});
+test("voiced preflight checks the same safe estimate range as the worker, not a strict 9 percent",()=>{
+ const {outline,scenes}=sample();
+ const approx39=Array.from({length:90},(_,i)=>"palabra"+i).join(" ");
+ assert.equal(studioRuntimePlausible(approx39,30,"es"),false);
+ assert.equal(mod.exports.studioRuntimeCompatible(approx39,30,"es","elevenlabs"),true);
+ assert.equal(mod.exports.studioRuntimeCompatible(approx39,30,"es","none"),true);
+ assert.equal(mod.exports.studioRuntimeCompatible("muy corto",30,"es","elevenlabs"),false);
+ assert.equal(mod.exports.studioRuntimeCompatible("muy corto",30,"es","none"),true);
+ assert.equal(mod.exports.studioRuntimeCompatible(approx39,10,"es","none"),false);
+ assert.equal(mod.exports.studioAuditIssues({...outline,narration:approx39},scenes,30,"es","elevenlabs")
+  .includes("Voiceover length does not match selected runtime"),false);
+});
+test("silent mode still blocks incomplete scenes and repeated visual prompts",()=>{
+ const {outline,scenes}=sample();
+ const duplicate=scenes.map(s=>({...s}));
+ duplicate[1].imagePrompt=duplicate[0].imagePrompt;
+ const issues=mod.exports.studioAuditIssues(outline,duplicate,15,"es","none");
+ assert.ok(issues.some(v=>v.includes("Repetitive")));
+ duplicate[2].speech="no";
+ assert.ok(mod.exports.studioAuditIssues(outline,duplicate,15,"es","none")
+  .some(v=>v.includes("Storyboard incomplete")));
+});
