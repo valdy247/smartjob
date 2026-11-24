@@ -237,7 +237,7 @@ async function generateContinuousSpeech(job,scenes,file){
 async function makeImage(job,scene,reference,index=0,total=1,correction=""){
  const director=sceneVisualDirection(scene,index,total,correction);
  const prompt=[
-  "Portrait 9:16 keyframe for a coherent multi-shot original video.",
+  "Portrait keyframe for a coherent multi-shot original video. The provider canvas is 1024x1536 (2:3); protect a central 9:16 safe crop, keeping all important faces, bodies, interactions and objects within the central 84% of the image width.",
   "LOCKED STYLE: "+STYLE[job.style],
   director.direction,
   "The exact story moment: "+scene.speech,
