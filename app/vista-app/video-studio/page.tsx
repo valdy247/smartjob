@@ -10,6 +10,7 @@ import type {PilotLanguage,PilotVoiceProvider} from "@/lib/vmv-pilot-voice-confi
 import {VIDEO_STUDIO_COUNTRIES} from "@/lib/vmv-studio-countries";
 import {VIDEO_STUDIO_TOPIC_GROUPS,searchStudioTopics} from "@/lib/vmv-studio-topics";
 import {splitNarrationIntoMoments,approximateMomentSeconds} from "@/lib/vmv-studio-semantic-beats";
+import {studioJobKey,validStudioJobId,isStudioJobRestorable,studioStageForJob} from "@/lib/vmv-studio-progress-persistence";
 import styles from "./page.module.css";
 
 type Stage="home"|"topic"|"audience"|"style"|"duration"|"language"|"voice"|"subtitles"|"source"|"trends"|"idea"|"plan"|"quality"|"summary"|"images"|"progress"|"result"|"history";
@@ -107,6 +108,17 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const [frameSpeech,setFrameSpeech]=useState(""),[frameVisual,setFrameVisual]=useState("");
  const clientKeyRef=useRef<string>("");
  const autoApprovalRef=useRef<string>("");
+ const activeOwnerRef=useRef("");
+ const stageRef=useRef<Stage>(stage);
+ stageRef.current=stage;
+ const persistJobId=(id:string)=>{
+  const key=studioJobKey(activeOwnerRef.current);
+  if(key&&validStudioJobId(id))try{window.localStorage.setItem(key,id);}catch{/* Private browsing may block storage. */}
+ };
+ const clearRememberedJob=()=>{
+  const key=studioJobKey(activeOwnerRef.current);
+  if(key)try{window.localStorage.removeItem(key);}catch{/* Storage may be blocked. */}
+ };
  const [trendConsent,setTrendConsent]=useState(false);
  const [trendCountry,setTrendCountry]=useState("US");
  const [trendCountrySearch,setTrendCountrySearch]=useState("");
@@ -142,11 +154,79 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
   if(!response.ok)throw Error(String(json?.error||"video_studio_unavailable"));
   return json;
  },[authenticate]);
- useEffect(()=>{const sb=getSupabase();if(!sb){setIsSignedIn(false);return;}
-  let active=true;void sb.auth.getSession().then(x=>{if(active)setIsSignedIn(Boolean(x.data.session));});
-  const {data}=sb.auth.onAuthStateChange((_event,session)=>{if(active)setIsSignedIn(Boolean(session));});
+ useEffect(()=>{const sb=getSupabase();if(!sb){activeOwnerRef.current="";setIsSignedIn(false);return;}
+  let active=true;void sb.auth.getSession().then(x=>{if(active){
+   activeOwnerRef.current=x.data.session?.user.id||"";
+   setIsSignedIn(Boolean(x.data.session));
+  }});
+  const {data}=sb.auth.onAuthStateChange((_event,session)=>{if(active){
+   activeOwnerRef.current=session?.user.id||"";
+   setIsSignedIn(Boolean(session));
+  }});
   return()=>{active=false;data.subscription.unsubscribe();};
  },[]);
+ // On iOS Safari/embedded browsers the OS may discard the whole page while
+ // backgrounded. Only a job UUID is persisted; all content and permissions are
+ // checked again through the authenticated owner's API on the next visit.
+ useEffect(()=>{
+  if(isSignedIn!==true)return;
+  let alive=true,restoring=false;
+  const restore=async()=>{
+   if(restoring||stageRef.current!=="home")return;
+   const key=studioJobKey(activeOwnerRef.current);
+   if(!key)return;
+   restoring=true;
+   try{
+    let id:string|null=null;
+    try{id=window.localStorage.getItem(key);}catch{/* Disabled storage: still check existing jobs. */}
+    let restored:Job|null=null;
+    if(validStudioJobId(id)){
+     try{
+      const data=await api("jobs?id="+encodeURIComponent(id));
+      if(data?.job&&isStudioJobRestorable(data.job.status))restored=data.job;
+      else try{window.localStorage.removeItem(key);}catch{}
+     }catch(e){
+      // A temporary offline/auth error must not erase the project pointer.
+      if(!(e instanceof Error)||e.message!=="studio_not_found")return;
+      try{window.localStorage.removeItem(key);}catch{}
+     }
+    }else if(id)try{window.localStorage.removeItem(key);}catch{}
+    if(!restored){
+     // Also restore projects started before this improvement was deployed.
+     const data=await api("jobs");
+     const running=Array.isArray(data?.jobs)?data.jobs.find((item:Job)=>
+      validStudioJobId(item.id)&&[
+       "queued_images","generating_images","awaiting_image_approval",
+       "queued_animation","animating","assembling","verifying"
+      ].includes(item.status)):null;
+     if(running){
+      const detail=await api("jobs?id="+encodeURIComponent(running.id));
+      if(detail?.job&&isStudioJobRestorable(detail.job.status))restored=detail.job;
+     }
+    }
+    if(!alive||stageRef.current!=="home"||!restored)return;
+    persistJobId(restored.id);
+    setJob(restored);setSceneIndex(0);setStage(studioStageForJob(restored));
+   }catch{/* Browsing and creating new videos must remain available while offline. */}
+   finally{restoring=false;}
+  };
+  void restore();
+  const onWake=()=>{if(document.visibilityState==="visible")void restore();};
+  document.addEventListener("visibilitychange",onWake);
+  window.addEventListener("focus",onWake);
+  window.addEventListener("pageshow",onWake);
+  return()=>{
+   alive=false;
+   document.removeEventListener("visibilitychange",onWake);
+   window.removeEventListener("focus",onWake);
+   window.removeEventListener("pageshow",onWake);
+  };
+ },[api,isSignedIn]);
+ // The server owns the progress, never a local fake percentage or countdown.
+ useEffect(()=>{
+  if(isSignedIn&&job?.id&&["progress","images","result"].includes(stage))
+   persistJobId(job.id);
+ },[isSignedIn,job?.id,stage]);
  const loadHistory=useCallback(async()=>{
   setHistoryLoading(true);setError("");
   try{const result=await api("jobs");setJobs(Array.isArray(result.jobs)?result.jobs:[]);}
@@ -178,9 +258,12 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
   }catch(e){setError(e instanceof Error?e.message:"studio_stripe_checkout_unavailable");}
   finally{setPurchaseBusy(false);}
  };
-  useEffect(()=>{if(stage!=="progress"&&stage!=="images"||!job?.id)return;
-  let active=true;
-  const check=async()=>{try{const data=await api("jobs?id="+encodeURIComponent(job.id));
+  useEffect(()=>{if(!["progress","images","result"].includes(stage)||!job?.id)return;
+  let active=true,checking=false;
+  const check=async()=>{
+   if(checking||!active)return;
+   checking=true;
+   try{const data=await api("jobs?id="+encodeURIComponent(job.id));
     if(!active||!data?.job)return;setJob(data.job);
     if(data.job.status==="awaiting_image_approval"){
      // The user already confirmed the complete cost on the script screen.
@@ -198,14 +281,31 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
       }
      }
     }else if(data.job.status==="completed")setStage("result");
-  }catch{/* Keep the last server state; next poll may succeed. */}};
-  void check();const timer=setInterval(()=>{void check();},6000);
-  return()=>{active=false;clearInterval(timer);};
+  }catch{/* Keep the last server state; next poll may succeed. */}
+   finally{checking=false;}
+  };
+  const onWake=()=>{if(document.visibilityState==="visible")void check();};
+  void check();
+  const timer=stage==="result"?null:setInterval(()=>{void check();},6000);
+  document.addEventListener("visibilitychange",onWake);
+  window.addEventListener("pageshow",onWake);
+  window.addEventListener("focus",onWake);
+  return()=>{
+   active=false;
+   if(timer)clearInterval(timer);
+   document.removeEventListener("visibilitychange",onWake);
+   window.removeEventListener("pageshow",onWake);
+   window.removeEventListener("focus",onWake);
+  };
  },[api,stage,job?.id,loadCredits]);
- const next=(s:Stage)=>{setError("");setStage(s)};
- const previous=()=>{setError("");if(stage==="images"||stage==="progress"||stage==="result"){setStage("history");void loadHistory();return;}
+ const next=(s:Stage)=>{
+  if(s==="history"||s==="home")clearRememberedJob();
+  setError("");setStage(s);
+ };
+ const previous=()=>{setError("");if(stage==="images"||stage==="progress"||stage==="result"){
+  clearRememberedJob();setStage("history");void loadHistory();return;}
   const idx=order.indexOf(stage);setStage(idx>0?order[idx-1]:"home");};
- const reset=()=>{clientKeyRef.current="";autoApprovalRef.current="";setTopicGroup("popular");setTopicSearch("");setNarrationDraft("");setTrendCountry("US");setTrendCountrySearch("");setTrendResults([]);setStage("topic");setTopic("");setOtherTopic("");setAudience("Público general");setVisual("stickman");setSeconds(30);setScenes([]);setTitle("");setIdeaPrompt("");setOutline(null);setDraftProgress(0);setManualDraft(false);setPlanNotice("");setPlatform("idea");setSelectedTrend(null);setApprovedCost(false);setJob(null);setError("");};
+ const reset=()=>{clearRememberedJob();clientKeyRef.current="";autoApprovalRef.current="";setTopicGroup("popular");setTopicSearch("");setNarrationDraft("");setTrendCountry("US");setTrendCountrySearch("");setTrendResults([]);setStage("topic");setTopic("");setOtherTopic("");setAudience("Público general");setVisual("stickman");setSeconds(30);setScenes([]);setTitle("");setIdeaPrompt("");setOutline(null);setDraftProgress(0);setManualDraft(false);setPlanNotice("");setPlatform("idea");setSelectedTrend(null);setApprovedCost(false);setJob(null);setError("");};
  const trendSearch=async()=>{
   setError("");setBusy(true);setTrendResults([]);
   try{
@@ -314,7 +414,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
   try{
    const data=await api("jobs","POST",{clientKey:clientKeyRef.current||(clientKeyRef.current=crypto.randomUUID()),title,topic:topic==="Otro"?otherTopic:topic,audience:audience==="Otro"?otherAudience:audience,style:visual,seconds,language,voiceProvider,voiceId,subtitles,qualityMode:quality,scenes,sourcePlatform:platform,sourceUrl:selectedTrend?.url||null,estimatedCredits:estimatedCredits(seconds,quality),confirmCost:true});
    if(!data?.job?.id)throw Error("video_studio_unavailable");
-   setJob(data.job);void loadCredits();next("progress");
+   persistJobId(data.job.id);setJob(data.job);void loadCredits();next("progress");
   }catch(e){setError(e instanceof Error?e.message:"video_studio_unavailable");}
   finally{setBusy(false);}
  };
@@ -580,7 +680,7 @@ catch(e){setError(e instanceof Error?e.message:"studio_invalid_action");}finally
 <button className={styles.secondary} onClick={()=>setRegenIndex(null)}>Cancelar</button>
 </div></div>:null}
 </>:null}
-  {stage==="progress"&&job?<><h1>Creando tu video</h1><p className={styles.help}>El trabajo continúa en la nube. Puedes cerrar la web y volver desde Historial.</p>
+  {stage==="progress"&&job?<><h1>Creando tu video</h1><p className={styles.help}>Puedes minimizar el navegador o bloquear tu móvil. La producción continúa en la nube y al regresar recuperarás automáticamente el progreso real.</p>
 <div className={styles.progressCard}>
 <div className={styles.progressRing} style={{background:"conic-gradient(#9156c8 "+Math.max(0,Math.min(100,job.progress||0))+"%,#eee9f2 0)"}}><span>{job.progress||0}%</span></div>
 <strong>{job.phase||"En cola"}</strong><small>{job.status}</small>
