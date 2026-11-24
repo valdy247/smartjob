@@ -12,7 +12,7 @@ import {VIDEO_STUDIO_COUNTRIES} from "@/lib/vmv-studio-countries";
 import {VIDEO_STUDIO_TOPIC_GROUPS,searchStudioTopics} from "@/lib/vmv-studio-topics";
 import {splitNarrationIntoMoments,approximateMomentSeconds} from "@/lib/vmv-studio-semantic-beats";
 import {studioJobKey,validStudioJobId,isStudioJobRestorable,studioStageForJob} from "@/lib/vmv-studio-progress-persistence";
-import {studioRuntimeCompatible} from "@/lib/vmv-studio-script-auditor";
+import {studioRuntimeCompatible,estimatedStudioVoiceSeconds} from "@/lib/vmv-studio-script-auditor";
 import styles from "./page.module.css";
 
 type Stage="home"|"topic"|"audience"|"style"|"duration"|"language"|"voice"|"subtitles"|"source"|"trends"|"idea"|"plan"|"quality"|"summary"|"images"|"progress"|"result"|"history";
@@ -61,6 +61,7 @@ const errorMessages:Record<string,string>={
  studio_youtube_not_connected:"YouTube todavía no está configurado en este entorno.",
  studio_youtube_quota:"YouTube agotó temporalmente su cuota. Continúa con tu idea.",
  studio_plan_incomplete:"El guion llegó incompleto. Puedes volver a intentarlo sin perder tu idea.",
+ studio_voiceover_duration_mismatch:"La narración no cabe naturalmente en la duración elegida. Ajusta el guion antes de gastar créditos.",
  studio_plan_audit_blocked:"La revisión detectó un problema importante que no puede solucionarse con un cambio pequeño. Regenera la propuesta sin gastar créditos.",
  studio_plan_provider_unavailable:"No pudimos preparar el guion. Inténtalo otra vez.",
  studio_plan_not_enabled:"La creación de guiones está disponible solo en el entorno de pruebas.",
@@ -450,6 +451,10 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  };
  const resumeJob=async()=>{
   if(!job||job.status!=="failed")return;
+  if(job.failure_code==="voice_duration_outside_safe_range"&&!window.confirm(
+   "Este video conserva sus imágenes y una voz más larga de lo previsto. Si reanudas, el video podría superar ampliamente los "+
+   job.seconds+" segundos elegidos para conservar la narración sin acelerarla ni cortarla. ¿Continuar reservando los créditos indicados?"
+  ))return;
   setBusy(true);setError("");
   try{
    const data=await api("jobs","PATCH",{id:job.id,action:"resume"});
@@ -460,7 +465,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  };
  const credit=estimatedCredits(seconds,quality);
  const scriptWords=narrationDraft.trim()?narrationDraft.trim().split(/\s+/).length:0;
- const scriptSeconds=Math.round(scriptWords/(language==="es"?2.3:2.25));
+ const scriptSeconds=Math.round(estimatedStudioVoiceSeconds(narrationDraft,language,voiceProvider));
  const durationPlausible=studioRuntimeCompatible(narrationDraft,seconds,language,voiceProvider);
  const incompleteScene=scenes.findIndex(s=>
   s.speech.trim().length<5||s.speech.length>230||
@@ -696,6 +701,8 @@ catch(e){setError(e instanceof Error?e.message:"studio_invalid_action");}finally
 {job.status==="failed"||job.status==="cancelled"?<div className={styles.error}>
 {job.status==="failed"?"No pudimos terminar este proyecto. Liberamos los créditos reservados.":"Proyecto cancelado."}
 </div>:null}
+{job.status==="failed"&&job.failure_code==="voice_duration_outside_safe_range"?
+ <p className={styles.help}>La narración duró más de lo permitido para este proyecto. Las imágenes y el audio se han conservado. Puedes reanudar aceptando un video final potencialmente más largo, sin acelerar ni cortar la voz.</p>:null}
 {job.status==="failed"?<button className={styles.primary} disabled={busy} onClick={()=>void resumeJob()}>
  {busy?<LoaderCircle size={18} className={styles.spin}/>:<RefreshCw size={18}/>} Reanudar video
  </button>:null}
