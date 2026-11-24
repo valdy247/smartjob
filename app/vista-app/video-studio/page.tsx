@@ -584,7 +584,7 @@ catch(e){setError(e instanceof Error?e.message:"studio_invalid_action");}finally
 <div className={styles.progressCard}>
 <div className={styles.progressRing} style={{background:"conic-gradient(#9156c8 "+Math.max(0,Math.min(100,job.progress||0))+"%,#eee9f2 0)"}}><span>{job.progress||0}%</span></div>
 <strong>{job.phase||"En cola"}</strong><small>{job.status}</small>
-<small>{typeof job.etaSeconds==="number"?"Tiempo aproximado: "+readable(Math.ceil(job.etaSeconds)):"Calculando tiempo estimado…"}</small>
+{job.status==="failed"||job.status==="cancelled"?null:<small>{typeof job.etaSeconds==="number"?"Tiempo aproximado: "+readable(Math.ceil(job.etaSeconds)):"Calculando tiempo estimado…"}</small>}
 </div>
 {job.status==="failed"||job.status==="cancelled"?<div className={styles.error}>
 {job.status==="failed"?"No pudimos terminar este proyecto. Liberamos los créditos reservados.":"Proyecto cancelado."}
