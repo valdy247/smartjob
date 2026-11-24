@@ -109,3 +109,17 @@ test("worker never edits the immediately previous scene to derive another one",a
  assert.match(src,/visual_gallery_report/);
  assert.match(src,/job\.quality_mode==="high"\?"high":"medium"/);
 });
+
+test("Render Docker image includes every local ES module imported by the worker",async()=>{
+ const docker=await readFile(new URL("../services/vmv-studio-worker/Dockerfile",import.meta.url),"utf8");
+ const worker=await readFile(new URL("../services/vmv-studio-worker/worker.mjs",import.meta.url),"utf8");
+ assert.match(docker,/COPY \*\.mjs \.\//);
+ const imports=[...worker.matchAll(/from "\.\/([^"]+\.mjs)"/g)].map(m=>m[1]);
+ assert.ok(imports.includes("visual-director.mjs"));
+ assert.ok(imports.includes("visual-quality.mjs"));
+ for(const mod of imports){
+  const full=new URL("../services/vmv-studio-worker/"+mod,import.meta.url);
+  const code=await readFile(full,"utf8");
+  assert.ok(code.length>80,mod);
+ }
+});
