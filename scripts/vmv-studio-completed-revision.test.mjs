@@ -103,7 +103,6 @@ test("completion remains a new video, with separate fixed-cost quote and origina
  assert.match(ui,/onCreated\(result.id\)/);
  assert.match(parent,/Editar escenas de este video/);
  assert.match(parent,/Editar escenas<\/button>/);
- assert.match(sql,/v_source.status/); // note source status guaranteed by filtered SELECT.
  assert.match(sql,/status='completed'/);
  assert.match(sql,/jsonb_build_object\('revision_source_id'/);
  assert.match(sql,/charge_credits,status,phase,progress/);
