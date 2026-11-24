@@ -28,6 +28,18 @@ export function studioRuntimePlausible(script:string,seconds:number,language:str
  return Number.isInteger(seconds)&&seconds>=15&&seconds<=180&&
   Math.abs(estimate-seconds)<=Math.max(2,seconds*.09);
 }
+/** The strict 9% estimate is an editorial target, never a rendering gate.
+ * The worker uses the recorded audio, allowing 55-150% of the nominal runtime.
+ * Silent video has no spoken runtime to measure, so word count cannot block it.
+ */
+export function studioRuntimeCompatible(script:string,seconds:number,language:string,
+ voiceProvider:string="openai"){
+ if(!Number.isInteger(seconds)||seconds<15||seconds>180)return false;
+ if(voiceProvider==="none")return true;
+ const estimate=estimatedStudioVoiceSeconds(script,language);
+ return Number.isFinite(estimate)&&estimate>=Math.max(8,seconds*.55)&&
+  estimate<=Math.min(300,seconds*1.5);
+}
 const sceneValid=(s:StudioAuditScene)=>Boolean(s&&typeof s.speech==="string"&&
  s.speech.trim().length>=5&&s.speech.length<=230&&
  typeof s.imagePrompt==="string"&&s.imagePrompt.trim().length>=35&&s.imagePrompt.length<=950&&
@@ -54,10 +66,10 @@ export function repetitiveVisualPairs(scenes:StudioAuditScene[]):number[]{
  return overlaps;
 }
 export function studioAuditIssues(outline:StudioAuditOutline,scenes:StudioAuditScene[],
- seconds:number,language:string):string[]{
+ seconds:number,language:string,voiceProvider:string="openai"):string[]{
  const issues:string[]=[];
  if(!validStudioDraft(outline,scenes))issues.push("Storyboard incomplete or narration does not match visual segments");
- if(!studioRuntimePlausible(outline?.narration||"",seconds,language))
+ if(!studioRuntimeCompatible(outline?.narration||"",seconds,language,voiceProvider))
   issues.push("Voiceover length does not match selected runtime");
  if(Array.isArray(scenes)){
   const repeated=repetitiveVisualPairs(scenes);
@@ -70,14 +82,14 @@ export function studioAuditIssues(outline:StudioAuditOutline,scenes:StudioAuditS
  */
 export function applyStudioAudit(
  originalOutline:StudioAuditOutline,originalScenes:StudioAuditScene[],
- report:StudioAuditDecision,seconds:number,language:string
+ report:StudioAuditDecision,seconds:number,language:string,voiceProvider:string="openai"
 ):StudioAuditedDraft|null{
  if(!validStudioDraft(originalOutline,originalScenes)||!report||
   !["pass","revise"].includes(report.decision)||
   typeof report.reason!=="string"||report.reason.trim().length<4||
   report.reason.length>320||!Array.isArray(report.scenes)||
   typeof report.title!=="string")return null;
- const originalIssues=studioAuditIssues(originalOutline,originalScenes,seconds,language);
+ const originalIssues=studioAuditIssues(originalOutline,originalScenes,seconds,language,voiceProvider);
  if(report.decision==="pass"){
   if(report.scenes.length||report.title.trim()||originalIssues.length)return null;
   return {outline:originalOutline,scenes:originalScenes,
@@ -93,7 +105,7 @@ export function applyStudioAudit(
  }));
  const narration=scenes.map(s=>s.speech).join(" ");
  const outline={...originalOutline,title,narration,beats:scenes.map(s=>s.imagePrompt.slice(0,160))};
- if(title.length<3||title.length>100||studioAuditIssues(outline,scenes,seconds,language).length)
+ if(title.length<3||title.length>100||studioAuditIssues(outline,scenes,seconds,language,voiceProvider).length)
   return null;
  const changed=scenes.length!==originalScenes.length?Math.max(scenes.length,originalScenes.length):
   scenes.reduce((total,s,i)=>total+Number(
