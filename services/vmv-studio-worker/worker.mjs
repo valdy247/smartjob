@@ -7,6 +7,7 @@ import {spawn} from "node:child_process";
 import {randomUUID} from "node:crypto";
 import {startMotionClip,waitMotionClip} from "./motion-engine.mjs";
 import {speechTimeline,silentTimeline} from "./speech-timeline.mjs";
+import {recordedVoiceRuntime} from "./voice-runtime.mjs";
 import {sceneVisualDirection,imageUsesCharacterReference,validVisualPlan} from "./visual-director.mjs";
 import {planVisualIdentity,generateCharacterMaster,reviewVisualSequence} from "./visual-quality.mjs";
 
@@ -308,9 +309,9 @@ async function assemble(job,dir,clips,narrationFile,timing,variant){
  const concat=path.join(dir,"concat-"+variant+".txt"),
   raw=path.join(dir,"raw-"+variant+".mp4"),
   final=path.join(dir,"final-"+variant+".mp4");
- const originalDuration=Number(timing?.duration)||job.seconds;
- if(originalDuration/job.seconds<0.90||originalDuration/job.seconds>1.10)
-  throw Error("voice_length_requires_script_revision");
+ const originalDuration=narrationFile?
+  recordedVoiceRuntime(job.seconds,Number(timing?.duration)):
+  job.seconds;
  const segments=timing?.segments;
  if(!Array.isArray(segments)||segments.length!==clips.length)throw Error("scene_timing_invalid");
  const clipPaths=[];
@@ -505,8 +506,11 @@ async function processJob(job){
     alignment=await generateContinuousSpeech(job,scenes,narration);
     await persistAsset(job,"voice_continuous",narration,"audio/mpeg");
    }
-   duration=await probe(narration);
-   if(duration/job.seconds<0.90||duration/job.seconds>1.10)throw Error("voice_length_requires_script_revision");
+   duration=recordedVoiceRuntime(job.seconds,await probe(narration));
+   if(Math.abs(duration-job.seconds)>2){
+    log("voice_runtime_adjusted",{id:job.id,
+     targetSeconds:job.seconds,actualSeconds:Number(duration.toFixed(2))});
+   }
    if(!alignment&&timing?.segments?.length===n&&
     typeof timing.duration==="number"&&Math.abs(timing.duration-duration)<.25&&
     ["whisper_words","elevenlabs_characters"].includes(timing.alignmentSource)&&
@@ -568,7 +572,7 @@ async function processJob(job){
    p_id:job.id,p_token:job.lease_token,p_success:true,p_output:output,p_failure:null
   });
   if(finished.error||finished.data!==true)throw Error("studio_credit_finalize_failed");
-  log("video_completed",{id:job.id,scenes:n,seconds:job.seconds,quality:variant});
+  log("video_completed",{id:job.id,scenes:n,targetSeconds:job.seconds,actualSeconds:Number(duration.toFixed(2)),quality:variant});
  }finally{
   clearInterval(heartbeat);
   await rm(dir,{recursive:true,force:true});
