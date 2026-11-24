@@ -84,7 +84,7 @@ test("public page has no login and gives guests a player and MP4 download",()=>{
  assert.match(ownerApi,/confirmPublicSharing!==true/);
  assert.match(ownerApi,/eq\("owner_id",owner\)/);
  assert.match(ownerApi,/async function DELETE|export async function DELETE/);
- assert.match(ownerApi,/error\.code!=="23505"/);
+ assert.match(ownerApi,/insertError\.code!=="23505"/);
 });
 test("library lets users create, copy, send and deactivate public links",()=>{
  const library=fs.readFileSync("app/vista-app/video-studio/page.tsx","utf8");
