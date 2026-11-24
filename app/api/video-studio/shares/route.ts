@@ -1,11 +1,12 @@
 import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {videoDb,validUuid} from "@/lib/vmv-video-generator";
-import {completedOwnedVideo,newShareToken,sharePath,noStoreHeaders} from "@/lib/vmv-studio-video-sharing";
+import {completedOwnedVideo,newShareToken,sharePath,sharePublicUrl,noStoreHeaders} from "@/lib/vmv-studio-video-sharing";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const reply=(body:Record<string,unknown>,status=200)=>NextResponse.json(body,{status,headers:noStoreHeaders});
+const linkReply=(req:NextRequest,token:string,status=200)=>reply({path:sharePath(token),url:sharePublicUrl(req.nextUrl.origin,token)},status);
 async function ownedVideoId(req:NextRequest){
  const id=req.nextUrl.searchParams.get("id");
  return validUuid(id)?id:null;
@@ -20,7 +21,7 @@ export async function GET(req:NextRequest){
   const {data,error}=await videoDb().from("vmv_studio_video_shares")
    .select("token").eq("job_id",id).eq("owner_id",owner).maybeSingle();
   if(error)return reply({error:"studio_share_unavailable"},503);
-  return reply({path:data?sharePath(data.token):null});
+  return data?linkReply(req,data.token):reply({path:null,url:null});
  }catch{return reply({error:"studio_share_unavailable"},503);}
 }
 export async function POST(req:NextRequest){
@@ -37,7 +38,7 @@ export async function POST(req:NextRequest){
   const {data:prior,error:lookupError}=await db.from("vmv_studio_video_shares")
    .select("token").eq("job_id",id).eq("owner_id",owner).maybeSingle();
   if(lookupError)return reply({error:"studio_share_unavailable"},503);
-  if(prior)return reply({path:sharePath(prior.token)});
+  if(prior)return linkReply(req,prior.token);
   const token=newShareToken();
   const {error:insertError}=await db.from("vmv_studio_video_shares")
    .insert({job_id:id,owner_id:owner,token});
@@ -47,9 +48,9 @@ export async function POST(req:NextRequest){
    const {data,error}=await db.from("vmv_studio_video_shares")
     .select("token").eq("job_id",id).eq("owner_id",owner).maybeSingle();
    return error||!data?reply({error:"studio_share_unavailable"},503):
-    reply({path:sharePath(data.token)});
+    linkReply(req,data.token);
   }
-  return reply({path:sharePath(token)},201);
+  return linkReply(req,token,201);
  }catch{return reply({error:"studio_share_unavailable"},503);}
 }
 export async function DELETE(req:NextRequest){
