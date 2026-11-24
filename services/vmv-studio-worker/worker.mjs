@@ -310,7 +310,8 @@ async function assemble(job,dir,clips,narrationFile,timing,variant){
   raw=path.join(dir,"raw-"+variant+".mp4"),
   final=path.join(dir,"final-"+variant+".mp4");
  const originalDuration=narrationFile?
-  recordedVoiceRuntime(job.seconds,Number(timing?.duration)):
+  recordedVoiceRuntime(job.seconds,Number(timing?.duration),
+   Number(job.resume_count)>0&&Boolean(job.assets?.voice_continuous)):
   job.seconds;
  const segments=timing?.segments;
  if(!Array.isArray(segments)||segments.length!==clips.length)throw Error("scene_timing_invalid");
@@ -506,7 +507,14 @@ async function processJob(job){
     alignment=await generateContinuousSpeech(job,scenes,narration);
     await persistAsset(job,"voice_continuous",narration,"audio/mpeg");
    }
-   duration=recordedVoiceRuntime(job.seconds,await probe(narration));
+   const measuredVoiceSeconds=await probe(narration);
+   const resumedExistingVoice=Number(job.resume_count)>0&&Boolean(job.assets?.voice_continuous);
+   log("voice_duration_measured",{id:job.id,targetSeconds:job.seconds,
+    actualSeconds:Number(measuredVoiceSeconds.toFixed(2)),recovery:resumedExistingVoice});
+   duration=recordedVoiceRuntime(job.seconds,measuredVoiceSeconds,resumedExistingVoice);
+   if(resumedExistingVoice&&duration>job.seconds*1.5)
+    log("approved_voice_extended_on_resume",{id:job.id,
+     targetSeconds:job.seconds,actualSeconds:Number(duration.toFixed(2))});
    if(Math.abs(duration-job.seconds)>2){
     log("voice_runtime_adjusted",{id:job.id,
      targetSeconds:job.seconds,actualSeconds:Number(duration.toFixed(2))});

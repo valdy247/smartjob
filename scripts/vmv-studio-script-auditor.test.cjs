@@ -138,17 +138,17 @@ test("silent videos accept full visual storytelling irrespective of approximate 
  assert.equal(r.scenes.length,scenes.length);
  assert.equal(r.outline.narration,outline.narration);
 });
-test("voiced preflight checks the same safe estimate range as the worker, not a strict 9 percent",()=>{
+test("ElevenLabs planning is conservative to prevent post-image voiceovers from being too long",()=>{
  const {outline,scenes}=sample();
  const approx39=Array.from({length:90},(_,i)=>"palabra"+i).join(" ");
  assert.equal(studioRuntimePlausible(approx39,30,"es"),false);
- assert.equal(mod.exports.studioRuntimeCompatible(approx39,30,"es","elevenlabs"),true);
+ assert.equal(mod.exports.studioRuntimeCompatible(approx39,30,"es","elevenlabs"),false);
  assert.equal(mod.exports.studioRuntimeCompatible(approx39,30,"es","none"),true);
  assert.equal(mod.exports.studioRuntimeCompatible("muy corto",30,"es","elevenlabs"),false);
  assert.equal(mod.exports.studioRuntimeCompatible("muy corto",30,"es","none"),true);
  assert.equal(mod.exports.studioRuntimeCompatible(approx39,10,"es","none"),false);
  assert.equal(mod.exports.studioAuditIssues({...outline,narration:approx39},scenes,30,"es","elevenlabs")
-  .includes("Voiceover length does not match selected runtime"),false);
+  .includes("Voiceover length does not match selected runtime"),true);
 });
 test("silent mode still blocks incomplete scenes and repeated visual prompts",()=>{
  const {outline,scenes}=sample();
@@ -159,4 +159,19 @@ test("silent mode still blocks incomplete scenes and repeated visual prompts",()
  duplicate[2].speech="no";
  assert.ok(mod.exports.studioAuditIssues(outline,duplicate,15,"es","none")
   .some(v=>v.includes("Storyboard incomplete")));
+});
+
+test("a 40-second 132-word Spanish ElevenLabs script is audited BEFORE paid image generation",()=>{
+ const speech=Array.from({length:132},(_,i)=>"palabra"+i).join(" ");
+ assert.ok(mod.exports.estimatedStudioVoiceSeconds(speech,"es","elevenlabs")>60);
+ assert.equal(mod.exports.studioRuntimeCompatible(speech,40,"es","elevenlabs"),false);
+ assert.equal(mod.exports.studioRuntimeCompatible(speech,40,"es","none"),true);
+ assert.equal(mod.exports.studioRuntimeCompatible(
+  Array.from({length:80},(_,i)=>"palabra"+i).join(" "),40,"es","elevenlabs"),true);
+ const route=fs.readFileSync("app/api/video-studio/jobs/route.ts","utf8");
+ assert.match(route,/studioRuntimeCompatible\(fullNarration,Number\(input.payload.seconds\)/);
+ assert.ok(route.indexOf("studio_voiceover_duration_mismatch")<
+  route.indexOf('db.rpc("vmv_studio_create_job"'));
+ const ui=fs.readFileSync("app/vista-app/video-studio/page.tsx","utf8");
+ assert.match(ui,/estimatedStudioVoiceSeconds\(narrationDraft,language,voiceProvider\)/);
 });

@@ -138,6 +138,11 @@ export async function POST(req:NextRequest){
  const sourceCountry=isVideoStudioCountry(b?.source?.country)?b.source.country:null;
  const sourceContext=titleSource?{title:titleSource,platform:sourcePlatform,country:sourceCountry}:null;
  const lang=pilotLanguageName(language);
+ const narrationRate=voiceProvider==="elevenlabs"?
+  (language==="es"?1.85:1.95):(language==="es"?2.3:2.25);
+ const narrationWords=Math.round(seconds*narrationRate);
+ const maxNarrationWords=Math.floor(seconds*narrationRate*
+  (voiceProvider==="elevenlabs"?1.35:1.5));
  const shared=[
   "Act as an award-winning animation director and educational short-film scriptwriter.",
   "Produce original, high-quality entertainment or education, not generic filler.",
@@ -164,7 +169,7 @@ export async function POST(req:NextRequest){
     "This is a SILENT video; narration is a visual storyline guide, NOT spoken audio. "+
     "Use enough complete visual sentences to tell the idea effectively without any words-per-second target. ":
     "Write narration FIRST: one expressive, continuous, well-punctuated voiceover of approximately "+
-    Math.round(seconds*2.3)+" words. ")+
+    narrationWords+" words. Stay below "+maxNarrationWords+" words. ")+
    "Use complete sentences and distinct meaningful clauses, with natural changes in subject, NOT equal word-count windows. "+
    "Provide 3 to 36 storyboard beat descriptions in story order (the actual count may vary according to meaning). "+
    "Some moments last 3 seconds, others 7 or more; narrative transitions decide the scene changes. No redundant shots.";
@@ -186,7 +191,7 @@ export async function POST(req:NextRequest){
      system:shared+" Write ONLY complete, well-punctuated narrative sentences in "+lang+
       (voiceProvider==="none"?
        ". This is a silent storyboard: the text guides action and visuals, not voiceover. Do not pad for speaking time. ":
-       ", about "+Math.round(seconds*(language==="es"?2.3:2.25))+
+       ", about "+narrationWords+
        " words. Match the approximate target duration. ")+
       "Provide 4 to 9 complete meaningful sentences. No JSON, headings, scene numbers, filler or markdown.",
      messages:[{role:"user",content:JSON.stringify({topic,idea:idea||topic,audience,seconds,style,source:sourceContext})}],
@@ -246,9 +251,9 @@ export async function POST(req:NextRequest){
    (voiceProvider==="none"?
     "This video has NO voiceover. The script is a visual action guide, so never reject or rewrite it just to fit a word count. "+
     "Prioritize cohesive action, scene variety and the requested "+seconds+" seconds of visual rhythm. ":
-    "Write a coherent ORIGINAL narration near "+Math.round(seconds*(language==="es"?2.3:2.25))+
-    " words for approximately "+seconds+" seconds in "+lang+". Target a natural, NOT rushed delivery. ")+
-   "The duration is estimated, and the worker will later synchronize scenes to actual voice timestamps. "+
+    "Write a coherent ORIGINAL narration near "+narrationWords+
+    " words for approximately "+seconds+" seconds in "+lang+". Never exceed "+maxNarrationWords+" words. Remove filler but preserve all story beats. Target a natural, NOT rushed delivery. ")+
+   "The duration is estimated, and the worker will later synchronize scenes to actual voice timestamps. Enforce speech length before giving users the final proposal. "+
    "Always keep every word in exactly one scene speech, without dividing a sentence at arbitrary five-second boundaries. "+
    "Each visual prompt MUST be distinctive, concrete and optimized for generating images: composition, action, camera, "+
    "visible subject, environment, and consistent character details where relevant. No text baked into images. "+

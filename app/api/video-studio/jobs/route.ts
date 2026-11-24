@@ -2,6 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {videoDb,validUuid} from "@/lib/vmv-video-generator";
 import {validPilotLanguage} from "@/lib/vmv-pilot-voice-config";
+import {studioRuntimeCompatible} from "@/lib/vmv-studio-script-auditor";
 import {cloudLaunchEnabled,videoStudioWorkerReady,videoStudioSemanticWorkerReady} from "@/lib/vmv-studio-cloud-readiness";
 
 export const runtime="nodejs";
@@ -115,6 +116,10 @@ export async function POST(req:NextRequest){
  if(length>65000)return reply({error:"studio_invalid_job"},413);
  const input=parseInput(await req.json().catch(()=>null));
  if(!input)return reply({error:"studio_invalid_job"},400);
+ const fullNarration=input.payload.scenes.map(scene=>scene.speech).join(" ");
+ if(!studioRuntimeCompatible(fullNarration,Number(input.payload.seconds),
+  String(input.payload.language),String(input.payload.voice_provider)))
+  return reply({error:"studio_voiceover_duration_mismatch"},422);
  // Never reserve credits for ElevenLabs jobs unless that provider is ready
  // in the SAME Render worker that will render the final narration.
  if(input.payload.voice_provider==="elevenlabs"&&!await videoStudioWorkerReady("elevenlabs"))
