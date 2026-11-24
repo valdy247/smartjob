@@ -16,7 +16,7 @@ export function recordedVoiceRuntime(targetSeconds,recordedSeconds,allowRecovere
  // may preserve a longer voice track. Rewriting the approved script AFTER
  // image generation would make the voice mismatch the existing pictures.
  // This bounded exception avoids abandoning already-generated customer assets.
- const recoveryMax=allowRecoveredOverflow?Math.min(240,target*2.5):ordinaryMax;
+ const recoveryMax=allowRecoveredOverflow?Math.min(240,target*1.8):ordinaryMax;
  if(actual<Math.max(8,target*.55)||actual>recoveryMax)
   throw Error("voice_duration_outside_safe_range");
  return actual;
