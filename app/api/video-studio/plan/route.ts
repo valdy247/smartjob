@@ -121,6 +121,10 @@ export async function POST(req:NextRequest){
  if(size>58000)return json({error:"studio_plan_invalid_request"},413);
  const b=await req.json().catch(()=>null);
  const mode=b?.mode;
+ // Backwards compatible with clients that predate the voice selection field.
+ // "none" explicitly means the script is a visual scene guide, not timed TTS.
+ const voiceProvider=["none","openai","elevenlabs"].includes(b?.voiceProvider)?
+  String(b.voiceProvider):"openai";
  const topic=safe(b?.topic,220),idea=safe(b?.idea,3000),audience=safe(b?.audience,120);
  const style=safe(b?.style,40) as keyof typeof STYLES,language=b?.language;
  const seconds=Number(b?.seconds);
@@ -156,7 +160,11 @@ export async function POST(req:NextRequest){
  ].join(" ");
  if(mode==="outline"){
   const system=shared+" Return JSON with title, logline, hook, ending, characters, setting, narration and beats array. "+
-   "Write narration FIRST: one expressive, continuous, well-punctuated voiceover of approximately "+Math.round(seconds*2.3)+" words. "+
+   (voiceProvider==="none"?
+    "This is a SILENT video; narration is a visual storyline guide, NOT spoken audio. "+
+    "Use enough complete visual sentences to tell the idea effectively without any words-per-second target. ":
+    "Write narration FIRST: one expressive, continuous, well-punctuated voiceover of approximately "+
+    Math.round(seconds*2.3)+" words. ")+
    "Use complete sentences and distinct meaningful clauses, with natural changes in subject, NOT equal word-count windows. "+
    "Provide 3 to 36 storyboard beat descriptions in story order (the actual count may vary according to meaning). "+
    "Some moments last 3 seconds, others 7 or more; narrative transitions decide the scene changes. No redundant shots.";
@@ -175,9 +183,12 @@ export async function POST(req:NextRequest){
    // One short narration-only rescue avoids discarding a creator's original idea.
    try{
     const plain=await askAiAgent({
-     system:shared+" Write ONLY the uninterrupted spoken narration in "+lang+
-      ", 4 to 7 complete punctuated sentences, about "+Math.round(seconds*(language==="es"?2.3:2.25))+
-      " words. Match the requested duration and topic. No JSON, headings, scene numbers, filler or markdown.",
+     system:shared+" Write ONLY complete, well-punctuated narrative sentences in "+lang+
+      (voiceProvider==="none"?
+       ". This is a silent storyboard: the text guides action and visuals, not voiceover. Do not pad for speaking time. ":
+       ", about "+Math.round(seconds*(language==="es"?2.3:2.25))+
+       " words. Match the approximate target duration. ")+
+      "Provide 4 to 9 complete meaningful sentences. No JSON, headings, scene numbers, filler or markdown.",
      messages:[{role:"user",content:JSON.stringify({topic,idea:idea||topic,audience,seconds,style,source:sourceContext})}],
      maxOutputTokens:Math.min(1300,350+Math.ceil(seconds*4.2)),temperature:.25,timeoutMs:12000
     });
@@ -217,7 +228,7 @@ export async function POST(req:NextRequest){
   });
   if(!outline||!validStudioDraft(outline,scenes))
    return json({error:"studio_plan_invalid_batch"},400);
-  const baseIssues=studioAuditIssues(outline,scenes,seconds,language);
+  const baseIssues=studioAuditIssues(outline,scenes,seconds,language,voiceProvider);
   const system=shared+
    " You are the FINAL VIDEO EDITOR, not a passive critic. This is an automated pre-user-preview editorial stage. "+
    "Review the complete script and the actual visual prompts side by side. Make sure every shot illustrates the words being spoken, "+
@@ -232,8 +243,11 @@ export async function POST(req:NextRequest){
    "If the initial draft has any real issue, you have FULL editorial authority to revise ALL scenes, their spoken lines, "+
    "scene count, visual prompts, shot types and animate/zoom choices. You do NOT have to preserve the original eight scenes "+
    "or their durations; choose 3 to 36 meaningful moments and preserve the core topic and user intent. "+
-   "Write a coherent ORIGINAL narration near "+Math.round(seconds*(language==="es"?2.3:2.25))+
-   " words for "+seconds+" seconds in "+lang+". Target a natural, NOT rushed delivery. "+
+   (voiceProvider==="none"?
+    "This video has NO voiceover. The script is a visual action guide, so never reject or rewrite it just to fit a word count. "+
+    "Prioritize cohesive action, scene variety and the requested "+seconds+" seconds of visual rhythm. ":
+    "Write a coherent ORIGINAL narration near "+Math.round(seconds*(language==="es"?2.3:2.25))+
+    " words for approximately "+seconds+" seconds in "+lang+". Target a natural, NOT rushed delivery. ")+
    "The duration is estimated, and the worker will later synchronize scenes to actual voice timestamps. "+
    "Always keep every word in exactly one scene speech, without dividing a sentence at arbitrary five-second boundaries. "+
    "Each visual prompt MUST be distinctive, concrete and optimized for generating images: composition, action, camera, "+
@@ -256,7 +270,7 @@ export async function POST(req:NextRequest){
     const response=await askAiAgent({
      system:system+" Return only STRICT JSON, no markdown.",
      messages:[{role:"user",content:JSON.stringify({
-      topic,idea:idea||topic,audience,style,seconds,language,
+      topic,idea:idea||topic,audience,style,seconds,language,voiceProvider,
       source:sourceContext,outline,scenes,issues:baseIssues,
       ...(feedback?{revisionFeedback:feedback}:{}),
       instructions:"Never approve a draft that fails any listed issue. Adjust everything necessary."
@@ -268,13 +282,13 @@ export async function POST(req:NextRequest){
     const parsed=parseAiJson(response);
     const report=parsed as unknown as StudioAuditDecision;
     hadValidResponse=Boolean(parsed);
-    const draft=applyStudioAudit(outline,scenes,report,seconds,language);
+    const draft=applyStudioAudit(outline,scenes,report,seconds,language,voiceProvider);
     if(draft)return json({...draft,auditPassed:true});
     // At most one short retry with specific technical issues, not endless loops.
     const proposed=Array.isArray(parsed?.scenes)?parsed.scenes as StudioAuditScene[]:[];
     const proposalOutline={...outline,narration:proposed.map(s=>s?.speech||"").join(" ")};
     const reviewIssues=proposed.length?
-     studioAuditIssues(proposalOutline,proposed,seconds,language):baseIssues;
+     studioAuditIssues(proposalOutline,proposed,seconds,language,voiceProvider):baseIssues;
     feedback="Your first result failed quality validation: "+
      (reviewIssues.length?reviewIssues.join("; "):
       "Use decision=pass only if current input meets all requirements, otherwise give a COMPLETE revised scene list.")+
@@ -289,7 +303,7 @@ export async function POST(req:NextRequest){
   }
   // Never discard the creator's already-generated story solely because the
   // optional editorial model timed out or returned malformed JSON.
-  const recovered=rescueStudioDraft(outline,scenes,seconds,language);
+  const recovered=rescueStudioDraft(outline,scenes,seconds,language,voiceProvider);
   if(recovered){
    console.warn("[vmv-video-studio/plan] audit_recovered",{
     originalScenes:scenes.length,finalScenes:recovered.scenes.length,aiResponse:hadValidResponse
