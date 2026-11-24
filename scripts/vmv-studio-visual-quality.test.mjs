@@ -98,7 +98,7 @@ test("contact sheet compares ACTUAL images in one bounded vision call",async()=>
   assert.deepEqual(found.map(x=>x.index),[1]);
  }finally{await rm(dir,{recursive:true,force:true});}
 });
-test("worker never edits the immediately previous scene to derive another one",()=>{
+test("worker never edits the immediately previous scene to derive another one",async()=>{
  const src=(await readFile(new URL("../services/vmv-studio-worker/worker.mjs",import.meta.url),"utf8"));
  assert.match(src,/persistAsset\(job,"character_master"/);
  assert.match(src,/referenceFor\(i\)/);
