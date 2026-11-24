@@ -5,6 +5,7 @@ import {ArrowLeft,ArrowRight,ArrowUpRight,Check,CheckCircle2,ChevronRight,Clappe
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import VMVAuthGateway from "@/components/VMVAuthGateway";
+import VideoShareControls from "./VideoShareControls";
 import PilotVoiceStep from "../vmv-pilot/PilotVoiceStep";
 import type {PilotLanguage,PilotVoiceProvider} from "@/lib/vmv-pilot-voice-config";
 import {VIDEO_STUDIO_COUNTRIES} from "@/lib/vmv-studio-countries";
@@ -694,7 +695,7 @@ catch(e){setError(e instanceof Error?e.message:"studio_invalid_action");}finally
  </button>:null}
  <button className={styles.secondary} onClick={()=>{next("history");void loadHistory();}}>Ver historial</button>
 </>:null}
-  {stage==="result"&&job?<><h1>¡Video listo!</h1><p className={styles.help}>Duración final: {readable(Math.round(job.actualSeconds||job.seconds))}. La voz conserva su ritmo natural.</p>{job.videoUrl?<><video className={styles.videoFinal} controls playsInline src={job.videoUrl}/><a className={styles.primary} href={job.videoUrl} download={"vmv-video-"+job.id+".mp4"}><Download size={19}/> Descargar MP4</a></>:<p className={styles.help}>El archivo está guardado. Actualiza el enlace desde Historial.</p>}<button className={styles.secondary} onClick={()=>{next("history");void loadHistory()}}>Abrir historial</button></>:null}
+  {stage==="result"&&job?<><h1>¡Video listo!</h1><p className={styles.help}>Duración final: {readable(Math.round(job.actualSeconds||job.seconds))}. La voz conserva su ritmo natural.</p>{job.videoUrl?<><video className={styles.videoFinal} controls playsInline src={job.videoUrl}/><a className={styles.primary} href={job.videoUrl} download={"vmv-video-"+job.id+".mp4"}><Download size={19}/> Descargar MP4</a></>:<p className={styles.help}>El archivo está guardado. Actualiza el enlace desde Historial.</p>}<VideoShareControls jobId={job.id} request={api}/><button className={styles.secondary} onClick={()=>{next("history");void loadHistory()}}>Abrir historial</button></>:null}
   {stage==="history"?<><h1>Mis videos</h1>
 <div className={styles.walletPanel}><span className={styles.kicker}>MIS CRÉDITOS</span>
 <strong>{wallet?wallet.available:"—"} <small>disponibles</small></strong>
@@ -707,14 +708,14 @@ catch(e){setError(e instanceof Error?e.message:"studio_invalid_action");}finally
 <strong>{pack.credits} créditos</strong><small>{"$"+(pack.usdCents/100).toFixed(2)} · prueba</small>
 </button>)}</div></section>
 <div className={styles.historyHeading}><h2>Proyectos guardados</h2><button className={styles.secondary} disabled={historyLoading} onClick={()=>{void loadHistory();void loadCredits();}}>{historyLoading?<LoaderCircle size={16} className={styles.spin}/>:<RefreshCw size={16}/>} Actualizar</button></div>
-<div className={styles.history}>{jobs.map(item=><button key={item.id} className={styles.historyItem} onClick={async()=>{
+<div className={styles.history}>{jobs.map(item=><div key={item.id} className={styles.historyEntry}><button className={styles.historyItem} onClick={async()=>{
 try{const response=await api("jobs?id="+encodeURIComponent(item.id));if(!response?.job)return;
 setJob(response.job);setSceneIndex(0);
 next(response.job.status==="completed"?"result":response.job.status==="awaiting_image_approval"&&(!Array.isArray(response.job.scenes)||!response.job.scenes.every((s:Scene)=>s.requiresReview===false))?"images":"progress");
 }catch(e){setError(e instanceof Error?e.message:"video_studio_db_unavailable");}
 }}><span className={styles.historyIcon}><Film size={20}/></span><span>
 <strong>{item.title||"Video sin título"}</strong><small>{readable(item.seconds)} · {item.phase||item.status}</small>
-</span><ChevronRight size={18}/></button>)}
+</span><ChevronRight size={18}/></button>{item.status==="completed"?<VideoShareControls jobId={item.id} request={api}/>:null}</div>)}
 {!jobs.length&&!historyLoading&&!error?<div className={styles.unavailable}><FolderOpen size={30}/><p>Cuando generes un video aparecerá aquí.</p><button onClick={reset} className={styles.primary}>Crear video</button></div>:null}
 </div>
 </>:null}
