@@ -7,6 +7,8 @@ import {spawn} from "node:child_process";
 import {randomUUID} from "node:crypto";
 import {startMotionClip,waitMotionClip} from "./motion-engine.mjs";
 import {speechTimeline,silentTimeline} from "./speech-timeline.mjs";
+import {sceneVisualDirection,imageUsesCharacterReference,validVisualPlan} from "./visual-director.mjs";
+import {planVisualIdentity,generateCharacterMaster,reviewVisualSequence} from "./visual-quality.mjs";
 
 const required=["OPENAI_API_KEY","AI_GATEWAY_API_KEY"];
 const supabaseUrl=process.env.SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -232,27 +234,33 @@ async function generateContinuousSpeech(job,scenes,file){
  await writeFile(file,Buffer.from(base64,"base64"));
  return alignment;
 }
-async function makeImage(job,scene,reference){
+async function makeImage(job,scene,reference,index=0,total=1,correction=""){
+ const director=sceneVisualDirection(scene,index,total,correction);
  const prompt=[
-  "Portrait 9:16 image for a real video moment whose timing follows the narration.",
+  "Portrait keyframe for a coherent multi-shot original video. The provider canvas is 1024x1536 (2:3); protect a central 9:16 safe crop, keeping all important faces, bodies, interactions and objects within the central 84% of the image width.",
   "LOCKED STYLE: "+STYLE[job.style],
-  "Visual must show the action in: "+scene.speech,
-  "Illustration: "+scene.imagePrompt,
-  "Preserve the same characters, proportions, clothes, and palette as reference if provided.",
-  "Compose an action-ready dynamic shot. No writing, subtitles, text, logos or watermarks."
+  director.direction,
+  "The exact story moment: "+scene.speech,
+  "Scene-specific composition and visible actions: "+scene.imagePrompt,
+  reference?
+   "The supplied MASTER identity sheet controls ONLY recurring character proportions, face, colors and clothing. " +
+   "IGNORE its neutral background, camera, pose, expression and arrangement. DO NOT recreate the identity sheet; " +
+   "illustrate this entirely different scene according to the script and director shot.":
+   "This shot is independently composed. DO NOT add a narrator's face unless the scene requires it.",
+  "No writing, captions, subtitles, text, logos or watermarks."
  ].join(" ");
  let response;
  if(reference){
   const form=new FormData();
   form.set("model","gpt-image-1-mini");form.set("size","1024x1536");
-  form.set("quality","medium");form.set("output_format","jpeg");
+  form.set("quality",job.quality_mode==="high"?"high":"medium");form.set("output_format","jpeg");
   form.set("prompt",prompt.slice(0,3500));
   form.append("image",new Blob([await readFile(reference)],{type:"image/jpeg"}),"reference.jpg");
   response=await request(OPENAI+"/images/edits",{method:"POST",headers:auth("OPENAI_API_KEY"),body:form},180000);
  }else{
   response=await request(OPENAI+"/images/generations",{
    method:"POST",headers:{...auth("OPENAI_API_KEY"),"Content-Type":"application/json"},
-   body:JSON.stringify({model:"gpt-image-1-mini",size:"1024x1536",quality:"medium",
+   body:JSON.stringify({model:"gpt-image-1-mini",size:"1024x1536",quality:job.quality_mode==="high"?"high":"medium",
     output_format:"jpeg",n:1,prompt:prompt.slice(0,3500)})
   },180000);
  }
@@ -358,30 +366,53 @@ async function processJob(job){
  try{
   const scenes=job.scenes.map(s=>({...s})),n=scenes.length,prefix=job.owner_id+"/"+job.id+"/";
   if(job.status==="generating_images"){
+   // A neutral identity master is shared by ALL scenes. Never chain the full
+   // previous scene as the next image reference: that repeated the same kitchen,
+   // character pose and framing in every image.
+   let visualPlan=job.assets?.visual_plan;
+   if(!validVisualPlan(visualPlan,n)){
+    try{
+     visualPlan=await planVisualIdentity(job,request,OPENAI,process.env.OPENAI_API_KEY);
+    }catch(e){
+     visualPlan={identityNeeded:false,characterDescription:"",sceneReference:Array(n).fill(false)};
+     log("visual_identity_fallback",{id:job.id,reason:String(e?.message||"unknown").slice(0,70)});
+    }
+    await patch(job,{assets:{...job.assets,visual_plan:visualPlan}});
+   }
+   let master=null;
+   if(visualPlan.identityNeeded){
+    master=path.join(dir,"character-master.jpg");
+    try{
+     if(!await restoreAsset(job,"character_master",master)){
+      const design=await generateCharacterMaster(visualPlan,job,request,OPENAI,process.env.OPENAI_API_KEY);
+      if(!design)throw Error("character_master_invalid");
+      await writeFile(master,design);
+      await persistAsset(job,"character_master",master,"image/jpeg");
+     }
+    }catch(e){
+     // A master is a quality improvement, not a reason to lose a paid job.
+     master=null;
+     log("character_master_unavailable",{id:job.id,reason:String(e?.message||"unknown").slice(0,60)});
+    }
+   }
+   const referenceFor=index=>master&&imageUsesCharacterReference(scenes[index],visualPlan.sceneReference[index])?master:null;
    for(let i=0;i<n;i++){
     if(closing)throw Error("worker_stopping");
-    if(typeof scenes[i].imagePath==="string"&&scenes[i].imagePath.startsWith(prefix)&&scenes[i].imagePath.endsWith(".jpg"))continue;
     const image=path.join(dir,"image-"+i+".jpg");
-    // Carry the preceding approved keyframe into the next shot to stabilize
-    // recurring faces, clothing, materials and color palette across the film.
-    let visualReference=null;
-    if(i>0){
-     const previous=path.join(dir,"image-"+(i-1)+".jpg");
-     try{await stat(previous);}catch{
-      if(typeof scenes[i-1].imagePath==="string")await download(WORK,scenes[i-1].imagePath,previous);
-     }
-     visualReference=previous;
+    if(typeof scenes[i].imagePath==="string"&&scenes[i].imagePath.startsWith(prefix)&&scenes[i].imagePath.endsWith(".jpg")){
+     // Reload only when the final gallery audit needs the actual image.
+     continue;
     }
+    const reference=referenceFor(i);
     let accepted=null,lastCandidate=null,visuallyValid=false;
     for(let attempt=0;attempt<2;attempt++){
-     const buffer=await makeImage(job,scenes[i],visualReference);
+     const buffer=await makeImage(job,scenes[i],reference,i,n,
+      attempt?"Recompose with a stronger narrative action, different camera angle and clear visual subject.":String(scenes[i].visualCorrection||"").slice(0,420));
      lastCandidate=buffer;
      if(await validateSceneImage(job,scenes[i],buffer)){accepted=buffer;visuallyValid=true;break;}
      log("frame_rejected",{id:job.id,scene:i+1,attempt:attempt+1});
     }
     if(!accepted){
-     // The user reviews and explicitly approves every storyboard image before animation.
-     // Keep a rejected candidate for manual review rather than fail the entire project.
      accepted=lastCandidate;
      log("frame_requires_manual_review",{id:job.id,scene:i+1});
     }
@@ -389,7 +420,66 @@ async function processJob(job){
     await persistAsset(job,"image_"+i,image,"image/jpeg");
     scenes[i]={...scenes[i],imagePath:job.assets["image_"+i],approved:false,requiresReview:!visuallyValid};
     await patch(job,{scenes:scenes.map(s=>({...s})),phase:"Creando fotograma "+(i+1)+"/"+n,
-     progress:5+Math.floor(25*(i+1)/n),eta_seconds:Math.max(30,(n-i-1)*35)});
+     progress:5+Math.floor(20*(i+1)/n),eta_seconds:Math.max(30,(n-i-1)*35)});
+   }
+   // Contact sheets expose actual repeated shot composition that independent
+   // prompt checks cannot see. Review in overlapping groups of up to 8 frames.
+   // At most two fully automatic image replacements per project, never billed
+   // separately to the creator. All original images remain recoverable.
+   if(!job.assets?.visual_gallery_audited){
+    const files=[];
+    for(let i=0;i<n;i++){
+     const local=path.join(dir,"image-"+i+".jpg");
+     try{await stat(local);}catch{
+      const remote=scenes[i].imagePath||job.assets?.["image_"+i];
+      if(remote)await download(WORK,remote,local);
+     }
+     files.push(local);
+    }
+    const feedback=new Map();
+    let auditCompleted=true;
+    for(let offset=0;offset<n;offset+=6){
+     const groupFiles=files.slice(offset,Math.min(n,offset+8));
+     if(groupFiles.length<2)break;
+     try{
+      const fixes=await reviewVisualSequence(job,scenes.slice(offset,offset+groupFiles.length),
+       groupFiles,offset,dir,request,OPENAI,process.env.OPENAI_API_KEY,shell);
+      for(const item of fixes)if(!feedback.has(item.index))feedback.set(item.index,item);
+     }catch(e){
+      auditCompleted=false;
+      log("visual_gallery_audit_unavailable",{id:job.id,segment:offset,
+       reason:String(e?.message||"unknown").slice(0,70)});
+     }
+     if(offset+8>=n)break;
+    }
+    const flagged=[...feedback.values()].sort((a,b)=>a.index-b.index);
+    let corrected=0;
+    for(const item of flagged){
+     const i=item.index;
+     // Do not replace already approved or previously reviewed images.
+     if(i<0||i>=n||scenes[i].approved||corrected>=2){
+      if(i>=0&&i<n&&!scenes[i].approved)scenes[i].requiresReview=true;
+      continue;
+     }
+     try{
+      const replacement=await makeImage(job,scenes[i],referenceFor(i),i,n,item.direction);
+      const sound=await validateSceneImage(job,scenes[i],replacement);
+      if(sound){
+       await writeFile(files[i],replacement);
+       await persistAsset(job,"image_"+i,files[i],"image/jpeg");
+       scenes[i]={...scenes[i],imagePath:job.assets["image_"+i],approved:false,requiresReview:false,visualCorrection:item.direction.slice(0,420)};
+       corrected++;
+       log("visual_frame_recomposed",{id:job.id,scene:i+1,problem:item.problem});
+      }else scenes[i].requiresReview=true;
+     }catch(e){
+      scenes[i].requiresReview=true;
+      log("visual_frame_recompose_failed",{id:job.id,scene:i+1,
+       reason:String(e?.message||"unknown").slice(0,70)});
+     }
+    }
+    await patch(job,{assets:{...job.assets,visual_gallery_audited:true,
+      visual_gallery_report:{checked:auditCompleted,flagged:flagged.length,corrected}},
+     scenes:scenes.map(s=>({...s})),phase:"Revisión visual finalizada",progress:30});
    }
    await patch(job,{status:"awaiting_image_approval",phase:"Revisa tus imágenes",
     progress:30,eta_seconds:null,lease_token:null,lease_expires_at:null});
