@@ -3,7 +3,7 @@
  * Actual video timing still follows the worker's measured audio.
  */
 import {
- estimatedStudioVoiceSeconds,studioRuntimePlausible,studioAuditIssues,validStudioDraft,repetitiveVisualPairs
+ estimatedStudioVoiceSeconds,studioRuntimePlausible,studioRuntimeCompatible,studioAuditIssues,validStudioDraft,repetitiveVisualPairs
 } from "./vmv-studio-script-auditor";
 import type {StudioAuditScene,StudioAuditOutline,StudioAuditedDraft} from "./vmv-studio-script-auditor";
 
@@ -37,16 +37,19 @@ function removableIndex(scenes:StudioAuditScene[]):number{
  return selected;
 }
 export function rescueStudioDraft(
- outline:StudioAuditOutline,source:StudioAuditScene[],seconds:number,language:string
+ outline:StudioAuditOutline,source:StudioAuditScene[],seconds:number,language:string,
+ voiceProvider:string="openai"
 ):StudioAuditedDraft|null{
  if(!validStudioDraft(outline,source))return null;
  const scenes=source.map(s=>({...s}));
  const originalCount=scenes.length;
- // Keep complete thoughts; never accelerate or cut the spoken waveform.
- for(let turn=0;turn<8;turn++){
+ // Silent scenes are visual descriptions, not a spoken track. Preserve them all.
+ // Spoken tracks may lose redundant entire beats, but only when they exceed
+ // the upper safe duration of the actual worker, not a strict 9% estimate.
+ for(let turn=0;voiceProvider!=="none"&&turn<8;turn++){
   const narration=scenes.map(s=>normalized(s.speech)).join(" ");
   const estimate=estimatedStudioVoiceSeconds(narration,language);
-  if(studioRuntimePlausible(narration,seconds,language))break;
+  if(studioRuntimeCompatible(narration,seconds,language,voiceProvider))break;
   if(estimate<seconds||scenes.length<=3)return null;
   const pick=removableIndex(scenes);
   if(pick<0)return null;
@@ -64,7 +67,7 @@ export function rescueStudioDraft(
  }
  const narration=scenes.map(s=>normalized(s.speech)).join(" ");
  const fixedOutline={...outline,narration,beats:scenes.map(s=>s.imagePrompt.slice(0,160))};
- if(studioAuditIssues(fixedOutline,scenes,seconds,language).length)return null;
+ if(studioAuditIssues(fixedOutline,scenes,seconds,language,voiceProvider).length)return null;
  return {outline:fixedOutline,scenes,audit:{
   decision:"revise",reason:"Recovered natural pacing and varied repeated shot directions without inventing facts.",
   estimatedSeconds:Math.round(estimatedStudioVoiceSeconds(narration,language)*10)/10,
