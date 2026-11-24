@@ -1,0 +1,25 @@
+.editor{display:flex;flex-direction:column;gap:17px;padding-bottom:22px}
+.back{display:flex;gap:9px;align-items:center;align-self:flex-start;border:0;background:transparent;color:#8153ad;font-size:13px;font-weight:750;padding:7px 0}
+.editor h1{margin:0;color:#211733;font-size:27px;letter-spacing:-.04em}
+.intro{font-size:13px;line-height:1.65;color:#7c698a;margin:0}
+.strip{display:flex;gap:9px;overflow-x:auto;max-width:100%;padding:4px 2px 12px;scroll-snap-type:x mandatory}
+.strip button{flex:0 0 102px;min-width:0;border:2px solid #dfd5e9;padding:5px;border-radius:14px;background:white;scroll-snap-align:start;display:flex;flex-direction:column;gap:7px;align-items:center;color:#705980;font-weight:750;font-size:11px;cursor:pointer}
+.strip button img{height:118px;width:100%;object-fit:cover;border-radius:9px;background:#f2eaf9}
+.strip button span{padding-bottom:4px}
+.strip button.activeFrame{border-color:#9257cf;background:#f6efff;box-shadow:0 0 0 2px #e9d4ff}
+.form{border:1px solid #e5d7ed;background:white;border-radius:19px;padding:17px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.form h2{font-size:18px;font-weight:850;color:#2b1b37;margin:0}
+.speech{color:#614d76;font-size:13px;line-height:1.55;margin:0;background:#f9f4fc;border-radius:10px;padding:12px}
+.form>label:not(.confirm){color:#49355b;font-weight:750;font-size:12px}
+.form textarea,.form select{border:1px solid #d9c5e6;background:white;color:#30213e;border-radius:12px;padding:12px;font:inherit;font-size:13px;min-width:0;width:100%;box-sizing:border-box}
+.form textarea:focus,.form select:focus{outline:2px solid #b68dda;outline-offset:1px}
+.hint{font-size:11px;color:#8c7c96;line-height:1.5}
+.price{border-top:1px solid #eee5f4;padding-top:14px;display:flex;justify-content:space-between;gap:10px;align-items:center;color:#665371;font-size:12px}
+.price strong{font-size:17px;color:#7f45b2;white-space:nowrap}
+.confirm{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:#604c70;line-height:1.55}
+.confirm input{accent-color:#8d55bf;flex:0 0 auto;margin-top:3px;width:16px;height:16px}
+.submit{display:flex;align-items:center;justify-content:center;gap:9px;min-height:52px;border:0;border-radius:14px;background:linear-gradient(100deg,#8150c3,#a45ed7);color:#fff;font-weight:850;font-size:13px;cursor:pointer}
+.submit:disabled{opacity:.47;cursor:not-allowed}
+.error{font-size:12px;color:#b72c57;line-height:1.5}
+.footer{display:flex;align-items:center;gap:8px;color:#725f7f;font-size:11px;line-height:1.5;margin:0}
+.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
