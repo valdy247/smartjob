@@ -27,7 +27,11 @@ const publicColumns="id,title,topic,audience,style,seconds,language,voice_provid
 async function present(row:JobRow,owner:string,showFrames=true){
  const {assets,output_path,...safe}=row;
  const scenes=Array.isArray(row.scenes)?row.scenes:[];
+ const measured=assets?.voice_timeline as {duration?:unknown}|undefined;
+ const actualSeconds=typeof measured?.duration==="number"&&Number.isFinite(measured.duration)&&
+  measured.duration>=3&&measured.duration<=300?measured.duration:row.seconds;
  const data:Record<string,unknown>={...safe,
+  actualSeconds,
   qualityMode:row.quality_mode,
   etaSeconds:typeof row.eta_seconds==="number"?row.eta_seconds:null,
   scenes:scenes.map(s=>({...s,imageUrl:null})),videoUrl:null};
