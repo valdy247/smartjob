@@ -21,7 +21,7 @@ const terms=(s:string)=>normalize(s).normalize("NFD").replace(/[\u0300-\u036f]/g
  "consistent","continuous","purple","eggplant","shows","showing","detailed","visual"].includes(w));
 export function estimatedStudioVoiceSeconds(script:string,language:string,
  voiceProvider:string="openai"){
- const n=normalize(script).split(/\\s+/).filter(Boolean).length;
+ const n=normalize(script).split(/\s+/).filter(Boolean).length;
  const rate=voiceProvider==="elevenlabs"?
   (language==="es"?1.85:1.95):(language==="es"?2.3:2.25);
  return n/rate;
