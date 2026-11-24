@@ -19,9 +19,12 @@ const terms=(s:string)=>normalize(s).normalize("NFD").replace(/[\u0300-\u036f]/g
  !["same","with","that","this","from","animated","animation","scene","image","color","colors",
  "camera","character","characters","style","lighting","light","cinematic","frame","background",
  "consistent","continuous","purple","eggplant","shows","showing","detailed","visual"].includes(w));
-export function estimatedStudioVoiceSeconds(script:string,language:string){
- const n=normalize(script).split(/\s+/).filter(Boolean).length;
- return n/(language==="es"?2.3:2.25);
+export function estimatedStudioVoiceSeconds(script:string,language:string,
+ voiceProvider:string="openai"){
+ const n=normalize(script).split(/\\s+/).filter(Boolean).length;
+ const rate=voiceProvider==="elevenlabs"?
+  (language==="es"?1.85:1.95):(language==="es"?2.3:2.25);
+ return n/rate;
 }
 export function studioRuntimePlausible(script:string,seconds:number,language:string){
  const estimate=estimatedStudioVoiceSeconds(script,language);
@@ -36,9 +39,13 @@ export function studioRuntimeCompatible(script:string,seconds:number,language:st
  voiceProvider:string="openai"){
  if(!Number.isInteger(seconds)||seconds<15||seconds>180)return false;
  if(voiceProvider==="none")return true;
- const estimate=estimatedStudioVoiceSeconds(script,language);
+ // Planning must be more conservative than the absolute worker boundary.
+ // ElevenLabs multilingual voices often deliver a deliberately expressive
+ // pace, so an estimated 132 words/40s should be revised BEFORE image spend.
+ const estimate=estimatedStudioVoiceSeconds(script,language,voiceProvider);
+ const limit=voiceProvider==="elevenlabs"?1.35:1.5;
  return Number.isFinite(estimate)&&estimate>=Math.max(8,seconds*.55)&&
-  estimate<=Math.min(300,seconds*1.5);
+  estimate<=Math.min(300,seconds*limit);
 }
 const sceneValid=(s:StudioAuditScene)=>Boolean(s&&typeof s.speech==="string"&&
  s.speech.trim().length>=5&&s.speech.length<=230&&
