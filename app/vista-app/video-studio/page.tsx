@@ -12,6 +12,7 @@ import {VIDEO_STUDIO_COUNTRIES} from "@/lib/vmv-studio-countries";
 import {VIDEO_STUDIO_TOPIC_GROUPS,searchStudioTopics} from "@/lib/vmv-studio-topics";
 import {splitNarrationIntoMoments,approximateMomentSeconds} from "@/lib/vmv-studio-semantic-beats";
 import {studioJobKey,validStudioJobId,isStudioJobRestorable,studioStageForJob} from "@/lib/vmv-studio-progress-persistence";
+import {studioRuntimeCompatible} from "@/lib/vmv-studio-script-auditor";
 import styles from "./page.module.css";
 
 type Stage="home"|"topic"|"audience"|"style"|"duration"|"language"|"voice"|"subtitles"|"source"|"trends"|"idea"|"plan"|"quality"|"summary"|"images"|"progress"|"result"|"history";
@@ -352,7 +353,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
     topic:mainTopic,
     idea:chosenTrend?.title?.trim().slice(0,220)||ideaPrompt.trim()||mainTopic,
     audience:audience==="Otro"?otherAudience:audience,
-    style:visual,seconds,language,
+    style:visual,seconds,language,voiceProvider,
     source:chosenTrend?{platform,sourceId:chosenTrend.sourceId,title:chosenTrend.title,url:chosenTrend.url,country:trendCountry}:null,
     confirmPlanCost:true
    };
@@ -460,7 +461,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const credit=estimatedCredits(seconds,quality);
  const scriptWords=narrationDraft.trim()?narrationDraft.trim().split(/\s+/).length:0;
  const scriptSeconds=Math.round(scriptWords/(language==="es"?2.3:2.25));
- const durationPlausible=Math.abs(scriptSeconds-seconds)<=Math.max(5,seconds*.20);
+ const durationPlausible=studioRuntimeCompatible(narrationDraft,seconds,language,voiceProvider);
  const incompleteScene=scenes.findIndex(s=>
   s.speech.trim().length<5||s.speech.length>230||
   s.imagePrompt.trim().length<20||s.imagePrompt.length>950);
@@ -615,12 +616,17 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
      <label>{voiceProvider==="none"?"Texto para imágenes y subtítulos · editable":"Narración completa · editable"}</label>
      <textarea rows={9} maxLength={8200} value={narrationDraft} onChange={e=>editNarration(e.target.value)}
       placeholder="Escribe una historia continua. Una misma oración puede acompañar varias imágenes."/>
-     <p className={styles.help}>{scriptWords} palabras · voz estimada: {readable(scriptSeconds)} · objetivo: {readable(seconds)}</p>
-     {!durationPlausible?<p className={styles.note}>Ajusta la extensión del guion. La narración debe acercarse a la duración seleccionada para evitar acelerar o cortar la voz.</p>:null}
+     <p className={styles.help}>{voiceProvider==="none"?
+       scriptWords+" palabras para orientar las imágenes · video de "+readable(seconds)+" · sin narración":
+       scriptWords+" palabras · voz estimada: "+readable(scriptSeconds)+" · objetivo aproximado: "+readable(seconds)}</p>
+     {voiceProvider!=="none"&&durationPlausible&&Math.abs(scriptSeconds-seconds)>Math.max(5,seconds*.20)?
+      <p className={styles.note}>La voz puede durar algo más o menos que el objetivo. El montaje respetará la duración real del audio, sin acelerarlo ni cortarlo.</p>:null}
+     {!durationPlausible&&voiceProvider!=="none"?
+      <p className={styles.note}>La narración se aleja demasiado del objetivo. Ajusta el texto para evitar un video excesivamente largo o corto.</p>:null}
     </div>
-    <div className={styles.sceneHeading}><strong>Momentos visuales · {scenes.length}</strong><span>Duraciones flexibles · sincronización al generar la voz</span></div>
+    <div className={styles.sceneHeading}><strong>Momentos visuales · {scenes.length}</strong><span>{voiceProvider==="none"?"Duraciones flexibles · ritmo visual sin audio":"Duraciones flexibles · sincronización al generar la voz"}</span></div>
     <div className={styles.scenes}>{scenes.map((scene,i)=><div className={styles.sceneEditor} key={i}>
-     <div className={styles.sceneNumber}><strong>Momento {i+1}</strong><small>≈ {approximateMomentSeconds(scene.speech,narrationDraft,scriptSeconds||seconds)} s · se ajustará al audio</small></div>
+     <div className={styles.sceneNumber}><strong>Momento {i+1}</strong><small>≈ {approximateMomentSeconds(scene.speech,narrationDraft,voiceProvider==="none"?seconds:scriptSeconds||seconds)} s · {voiceProvider==="none"?"ritmo visual":"se ajustará al audio"}</small></div>
      <p className={styles.help}>{scene.speech}</p>
      <label>Descripción visual editable</label>
      <textarea rows={3} maxLength={950} value={scene.imagePrompt} onChange={e=>patchScene(i,"imagePrompt",e.target.value)}/>

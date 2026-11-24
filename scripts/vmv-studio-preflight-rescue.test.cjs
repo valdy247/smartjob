@@ -43,19 +43,19 @@ const fixture=()=>{
   setting:"Colorful home kitchen",beats:visuals.map(x=>x.slice(0,160)),narration:source.join(" ")};
  return {scenes,outline};
 };
-test("the exact 90-word eggplant story is repaired to a natural 30s without losing its berry reveal",()=>{
+test("the exact 90-word eggplant story is kept intact when measured voice can run longer",()=>{
  const {outline,scenes}=fixture();
  assert.equal(outline.narration.split(/\s+/).length,90);
  assert.equal(auditor.studioRuntimePlausible(outline.narration,30,"es"),false);
  const result=rescue.rescueStudioDraft(outline,scenes,30,"es");
  assert.ok(result,"recover the story instead of returning an empty page");
  assert.equal(result.outline.narration,result.scenes.map(x=>x.speech).join(" "));
- assert.ok(auditor.studioRuntimePlausible(result.outline.narration,30,"es"));
+ assert.ok(auditor.studioRuntimeCompatible(result.outline.narration,30,"es","openai"));
  assert.ok(result.outline.narration.includes("baya"),"do not cut the central fact");
  assert.ok(result.outline.narration.includes("tomate"));
  assert.ok(result.outline.narration.includes("antocianinas"));
- assert.equal(result.scenes.length,7);
- assert.equal(result.scenes.some(x=>x.speech.startsWith("Así que la próxima vez")),false);
+ assert.equal(result.scenes.length,8);
+ assert.equal(result.scenes.some(x=>x.speech.startsWith("Así que la próxima vez")),true);
 });
 test("recovery varies identical images without modifying spoken claims",()=>{
  const {outline,scenes}=fixture();
@@ -90,7 +90,27 @@ test("incomplete AI-generated image batches receive corresponding varied visual 
 });
 test("the audio scene analyzer remains separate from editorial preview",()=>{
  const route=fs.readFileSync("app/api/video-studio/plan/route.ts","utf8");
- assert.match(route,/rescueStudioDraft\(outline,scenes,seconds,language\)/);
+ assert.match(route,/rescueStudioDraft\(outline,scenes,seconds,language,voiceProvider\)/);
  assert.match(route,/rescueVisualBatch\(voiceoverExcerpts,outline,start\)/);
  assert.doesNotMatch(route,/vmv_studio_create_job\(/);
+});
+
+test("silent videos retain all six complete visual ideas even with a longer descriptive script",()=>{
+ const {outline,scenes}=fixture();
+ const original=JSON.stringify(scenes);
+ const result=rescue.rescueStudioDraft(outline,scenes,15,"es","none");
+ assert.ok(result,"Silent story must survive despite long descriptive text");
+ assert.equal(result.scenes.length,scenes.length);
+ assert.equal(result.outline.narration,outline.narration);
+ assert.equal(JSON.stringify(scenes),original);
+ assert.equal(auditor.studioAuditIssues(result.outline,result.scenes,15,"es","none").length,0);
+});
+test("voiced extreme short scripts remain invalid, while silent scripts may be visually timed",()=>{
+ const {outline,scenes}=fixture();
+ const shortScenes=scenes.slice(0,3);
+ const shortOutline={...outline,narration:shortScenes.map(s=>s.speech).join(" ")};
+ assert.equal(rescue.rescueStudioDraft(shortOutline,shortScenes,30,"es","openai"),null);
+ const silent=rescue.rescueStudioDraft(shortOutline,shortScenes,30,"es","none");
+ assert.ok(silent);
+ assert.equal(silent.scenes.length,3);
 });
