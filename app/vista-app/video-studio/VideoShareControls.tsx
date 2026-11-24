@@ -5,7 +5,7 @@ import styles from "./VideoShareControls.module.css";
 
 type Api=(path:string,method?:string,data?:unknown)=>Promise<unknown>;
 type Props={jobId:string;request:Api};
-type Response={path?:string|null;error?:string};
+type Response={path?:string|null;url?:string|null;error?:string};
 export default function VideoShareControls({jobId,request}:Props){
  const [url,setUrl]=useState("");
  const [busy,setBusy]=useState(false);
@@ -19,7 +19,15 @@ export default function VideoShareControls({jobId,request}:Props){
    const response=await request("shares","POST",{id:jobId,confirmPublicSharing:true}) as Response;
    if(typeof response?.path!=="string"||!/^\/v\/[a-f0-9]{64}$/.test(response.path))
     throw Error("invalid_share");
-   setUrl(window.location.origin+response.path);
+   let destination=window.location.origin+response.path;
+   if(typeof response.url==="string"){
+    try{
+     const candidate=new URL(response.url);
+     if(candidate.protocol==="https:"&&candidate.pathname===response.path)
+      destination=candidate.toString();
+    }catch{/* Keep a safe same-origin fallback. */}
+   }
+   setUrl(destination);
    setExpanded(true);
   }catch{setNotice("No pudimos crear el enlace. Vuelve a intentarlo.");}
   finally{setBusy(false);}

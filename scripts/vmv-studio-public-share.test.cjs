@@ -35,8 +35,9 @@ const db={
  };}}
 };
 const moduleObj={exports:{}};
+const env={NEXT_PUBLIC_SUPABASE_URL:"https://example.supabase.co"};
 vm.runInNewContext(output,{
- module:moduleObj,exports:moduleObj.exports,URL,process:{env:{NEXT_PUBLIC_SUPABASE_URL:"https://example.supabase.co"}},
+ module:moduleObj,exports:moduleObj.exports,URL,process:{env},
  Buffer,require:(name)=>name==="node:crypto"?require("node:crypto"):
   name==="@/lib/vmv-video-generator"?{videoDb:()=>db,validUuid:()=>true}:
   (()=>{throw Error("Unknown module "+name)})()
@@ -103,4 +104,23 @@ test("SQL share table is private with row-level security and no anonymous SELECT
  assert.match(migration,/revoke all on table public\.vmv_studio_video_shares from public, anon, authenticated/i);
  assert.match(migration,/grant select, insert, delete on table public\.vmv_studio_video_shares to service_role/i);
  assert.match(migration,/token text not null unique/);
+});
+
+test("shared URL uses the stable Preview branch alias instead of per-commit deployment",()=>{
+ env.VERCEL_ENV="preview";
+ env.VERCEL_BRANCH_URL="smartjob-git-release-branch-scope.vercel.app";
+ assert.equal(sharing.sharePublicUrl("https://smartjob-xyz-scope.vercel.app",token),
+  "https://smartjob-git-release-branch-scope.vercel.app/v/"+token);
+ delete env.VERCEL_BRANCH_URL;
+ assert.equal(sharing.sharePublicUrl("https://smartjob-xyz-scope.vercel.app",token),
+  "https://smartjob-xyz-scope.vercel.app/v/"+token);
+ env.VERCEL_ENV="production";
+ env.VERCEL_PROJECT_PRODUCTION_URL="my-vmv.example.com";
+ assert.equal(sharing.sharePublicUrl("https://smartjob-xyz-scope.vercel.app",token),
+  "https://my-vmv.example.com/v/"+token);
+ delete env.VERCEL_ENV;delete env.VERCEL_PROJECT_PRODUCTION_URL;
+ const api=fs.readFileSync("app/api/video-studio/shares/route.ts","utf8");
+ const ui=fs.readFileSync("app/vista-app/video-studio/VideoShareControls.tsx","utf8");
+ assert.match(api,/sharePublicUrl\(req.nextUrl.origin,token\)/);
+ assert.match(ui,/candidate.pathname===response.path/);
 });
