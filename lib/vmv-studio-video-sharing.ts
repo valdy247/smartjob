@@ -19,6 +19,21 @@ export function validStudioOutputPath(path:unknown,owner:unknown,id:unknown):pat
 }
 export function newShareToken(){return randomBytes(32).toString("hex");}
 export const sharePath=(token:string)=>"/v/"+token;
+/** Use Vercel's branch alias instead of an ephemeral per-commit Preview URL.
+ * On production, use the configured production hostname. User-supplied Host
+ * is only a fallback, never the preferred source of public link origins.
+ */
+export function sharePublicUrl(requestOrigin:string,token:string){
+ const env=process.env.VERCEL_ENV;
+ const host=env==="preview"?process.env.VERCEL_BRANCH_URL:
+  env==="production"?process.env.VERCEL_PROJECT_PRODUCTION_URL:undefined;
+ try{
+  const base=host&&/^[a-z0-9.-]+$/i.test(host)?"https://"+host:requestOrigin;
+  const url=new URL(sharePath(token),base);
+  return url.protocol==="https:"||url.hostname==="localhost"?url.toString():null;
+ }catch{return null;}
+}
+
 
 export async function completedOwnedVideo(owner:string,id:string){
  if(!validUuid(owner)||!validUuid(id))return null;
