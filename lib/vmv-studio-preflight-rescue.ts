@@ -88,7 +88,8 @@ export function rescueVisualBatch(
   return {
    speech,
    imagePrompt:(
-    shot+". "+character+" in "+setting+". "+
+    shot+". Keep the visual identity of "+character+" when the actor is present. "+
+    "Use a new environment or detail insert when the narration demands it; overall world style: "+setting+". "+
     "The foreground must clearly illustrate this exact narration: "+speech.slice(0,205)+
     ". Visual idea: "+beat.slice(0,150)+
     ". No rendered letters or subtitles. Keep consistent character identity."
