@@ -32,7 +32,6 @@ export async function planVisualIdentity(job,request,openai,key){
     speech:String(s.speech||"").slice(0,200),
     visual:String(s.imagePrompt||"").slice(0,320)
    }))})}]})
-  })
  },26000);
  const result=await parseJson(response);
  if(!validVisualPlan(result,scenes.length))throw Error("visual_identity_invalid");
@@ -105,7 +104,6 @@ export async function reviewVisualSequence(
     }))})},
     {type:"image_url",image_url:{url:"data:image/jpeg;base64,"+sheet.toString("base64"),detail:"high"}}
    ]}]})
-  })
  },45000);
  const report=await parseJson(response);
  return sanitizedVisualFeedback(report,start,files.length);
