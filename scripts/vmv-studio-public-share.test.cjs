@@ -90,7 +90,8 @@ test("public page has no login and gives guests a player and MP4 download",()=>{
 test("library lets users create, copy, send and deactivate public links",()=>{
  const library=fs.readFileSync("app/vista-app/video-studio/page.tsx","utf8");
  const ui=fs.readFileSync("app/vista-app/video-studio/VideoShareControls.tsx","utf8");
- assert.match(library,/item\.status==="completed"\?<VideoShareControls/);
+ assert.match(library,/item\.status==="completed"\?<\>/);
+ assert.match(library,/<VideoShareControls jobId=\{item.id\} request=\{api\}/);
  assert.match(library,/jobId=\{job\.id\} request=\{api\}/);
  assert.match(ui,/navigator\.clipboard\.writeText\(url\)/);
  assert.match(ui,/navigator\.share/);
