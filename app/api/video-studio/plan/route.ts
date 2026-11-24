@@ -224,7 +224,10 @@ export async function POST(req:NextRequest){
    "not earlier or later narration, and that the subject, audience, language and style match the user's request. "+
    "Detect boring repeated images, identical camera angles or compositions, unnecessary repetition, illogical actions, "+
    "unclear hooks, weak payoff, misleading factual claims, continuity mistakes and any timing mismatch. "+
-   "Use a varied shot list (wide establishing, closeup, action, detail, character interaction, visual demonstration) WHEN meaningful. "+
+   "Use an editorial SHOT LIST with varied angles, props, actions, and genuine narrative changes: hook, revelation, evidence, comparison, demonstration, payoff. "+
+   "A new scene must SHOW NEW INFORMATION, not merely the protagonist making another face in the same location. "+
+   "Do not reuse the same framing, background and pose in consecutive shots. "+
+   "Use B-ROLL with no narrator character when demonstrating science, food, objects, maps, or visual evidence. "+
    "Keep recurring character identity consistent but show genuinely different objects, positions, actions and framing. "+
    "If the initial draft has any real issue, you have FULL editorial authority to revise ALL scenes, their spoken lines, "+
    "scene count, visual prompts, shot types and animate/zoom choices. You do NOT have to preserve the original eight scenes "+
@@ -308,6 +311,8 @@ export async function POST(req:NextRequest){
  const voiceoverExcerpts=fragments.slice(start,start+batchSize);
  const system=shared+" Using the already-written COMPLETE narration, design ONLY the visuals for moments "+(start+1)+" through "+(start+batchSize)+" of "+count+". "+
   "Return exactly "+batchSize+" scenes in the same order, each with speech, imagePrompt, caption, and motion (animate or zoom). "+
+  "Each image prompt must specify a distinct VISUAL FACT, foreground objects, composition, camera angle and meaningful action. "+
+  "Do not simply repeat the same character portrait and background. For science or cooking, show the real demonstration as B-roll when relevant. "+
   "speech MUST be the exact corresponding voiceoverExcerpts entry; imagePrompt MUST depict that exact portion of the narration, not preceding or future claims. "+
   "Use motion=zoom for short visual details or establishing shots, animate for active motion. "+
   "Descriptions in English, narration and captions in "+lang+". Recurring characters, faces and wardrobe must remain consistent.";
