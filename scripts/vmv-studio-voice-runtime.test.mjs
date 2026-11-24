@@ -22,12 +22,12 @@ test("reject extreme runtime deviations and invalid data before expensive animat
 test("worker reuses continuous voice and existing scene assets on resumed jobs",()=>{
  const worker=readFileSync(new URL("../services/vmv-studio-worker/worker.mjs",import.meta.url),"utf8");
  assert.match(worker,/restoreAsset\(job,"voice_continuous",narration\)/);
- assert.match(worker,/recordedVoiceRuntime\(job.seconds,await probe\(narration\)\)/);
- assert.match(worker,/recordedVoiceRuntime\(job.seconds,Number\(timing\?\.duration\)\)/);
+ assert.match(worker,/duration=recordedVoiceRuntime\(job.seconds,measuredVoiceSeconds,resumedExistingVoice\)/);
+ assert.match(worker,/recordedVoiceRuntime\(job.seconds,Number\(timing\?\.duration\),/);
  assert.doesNotMatch(worker,/voice_length_requires_script_revision/);
  assert.doesNotMatch(worker,/atempo=/);
  assert.match(worker,/speechTimeline\(scenes,duration,alignment\)/);
- assert.ok(worker.indexOf("recordedVoiceRuntime(job.seconds,await probe(narration))") <
+ assert.ok(worker.indexOf("duration=recordedVoiceRuntime(job.seconds,measuredVoiceSeconds,resumedExistingVoice)") <
   worker.indexOf("startMotionClip("));
 });
 test("UI distinguishes target duration from the measured voice duration",()=>{
@@ -37,4 +37,17 @@ test("UI distinguishes target duration from the measured voice duration",()=>{
  assert.match(ui,/Duración objetivo/);
  assert.match(ui,/Duración final:/);
  assert.match(ui,/job.actualSeconds\|\|job.seconds/);
+});
+
+test("saved ElevenLabs speech on a previously failed video may finish naturally without a new image call",()=>{
+ assert.throws(()=>recordedVoiceRuntime(40,73),/voice_duration_outside_safe_range/);
+ assert.equal(recordedVoiceRuntime(40,73,true),73);
+ assert.equal(recordedVoiceRuntime(40,98,true),98);
+ assert.throws(()=>recordedVoiceRuntime(40,101,true),/voice_duration_outside_safe_range/);
+ assert.throws(()=>recordedVoiceRuntime(40,13,true),/voice_duration_outside_safe_range/);
+ const worker=readFileSync(new URL("../services/vmv-studio-worker/worker.mjs",import.meta.url),"utf8");
+ assert.match(worker,/Number\(job.resume_count\)>0&&Boolean\(job.assets\?\.voice_continuous\)/);
+ assert.match(worker,/approved_voice_extended_on_resume/);
+ assert.match(worker,/voice_duration_measured/);
+ assert.match(worker,/await restoreAsset\(job,"voice_continuous",narration\)/);
 });
