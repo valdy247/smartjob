@@ -55,7 +55,7 @@ function setup(){
   "@/lib/vmv-studio-preflight-rescue":rescue,
   "@/lib/vmv-studio-semantic-beats":{splitNarrationIntoMoments:()=>moments},
   "@/lib/vmv-pilot-voice-config":{validPilotLanguage:x=>x==="es",pilotLanguageName:()=>"Spanish"},
-  "@/lib/vmv-studio-countries":{isVideoStudioCountry:()=>true}
+  "@/lib/vmv-studio-countries":{isVideoStudioCountry:x=>typeof x==="string"&&/^[A-Z]{2}$/.test(x)}
  };
  vm.runInNewContext(code,{module:mod,exports:mod.exports,
   require:id=>{if(Object.hasOwn(modules,id))return modules[id];throw Error("Missing mock "+id);},
