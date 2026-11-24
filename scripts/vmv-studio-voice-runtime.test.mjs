@@ -46,7 +46,7 @@ test("saved ElevenLabs speech on a previously failed video may finish naturally 
  assert.throws(()=>recordedVoiceRuntime(40,73,true),/voice_duration_outside_safe_range/);
  assert.throws(()=>recordedVoiceRuntime(40,13,true),/voice_duration_outside_safe_range/);
  const worker=readFileSync(new URL("../services/vmv-studio-worker/worker.mjs",import.meta.url),"utf8");
- assert.match(worker,/Number\(job.resume_count\)>0&&Boolean\(job.assets\?\.voice_continuous\)/);
+ assert.match(worker,/Number\(job.resume_count\)>0\|\|\s*Boolean\(job.assets\?\.revision_source_id\)/);
  assert.match(worker,/approved_voice_extended_on_resume/);
  assert.match(worker,/voice_duration_measured/);
  assert.match(worker,/await restoreAsset\(job,"voice_continuous",narration\)/);
