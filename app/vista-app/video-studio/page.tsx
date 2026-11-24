@@ -560,6 +560,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
 <div className={styles.gallery}>{job.scenes.map((scene,i)=><article key={i} className={styles.frameCard}>
 <button type="button" className={styles.framePreview} onClick={()=>setSceneIndex(i)}>{scene.imageUrl?<img src={scene.imageUrl} alt={"Fotograma "+(i+1)}/>:<Film size={30}/>}</button>
 <div className={styles.frameInfo}><strong>Escena {i+1}</strong><small>Duración ajustada por la voz</small><p>{scene.speech}</p>
+{scene.requiresReview&&!scene.approved?<p role="status" className={styles.note}>La revisión visual recomienda comprobar este fotograma. Puedes regenerar solo esta escena antes de aprobar.</p>:null}
 <button className={styles.secondary} onClick={()=>setSceneIndex(i)}>Editar</button>
 {scene.approved?<span className={styles.passed}><Check size={14}/> Aprobada</span>:<button disabled={savingScene||!scene.imageUrl} className={styles.primaryMini} onClick={()=>void approve(i)}>Aprobar</button>}</div></article>)}</div>
 {job.scenes[sceneIndex]?<section className={styles.frameEdit}><h2>Escena {sceneIndex+1}</h2>
