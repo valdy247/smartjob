@@ -71,7 +71,7 @@ test("render worker preflights narration and can create zoom shots without chang
  assert.ok(active.indexOf('phase:"Preparando narración continua"')<active.indexOf("startMotionClip("));
  assert.match(active,/transcribeWordTimings\(job,narration\)/);
  assert.match(src,/silentTimeline\(scenes,duration,job.subtitles\)/);
- assert.match(src,/timing\.segments\[i\]\.duration\*24/);
+ assert.match(src,/buildZoomMotion\(timing\.segments\[i\]\.duration\)/);
  assert.match(src,/semanticReady\?"semantic-v2"/);
  assert.doesNotMatch(active,/job\.scenes\.length!==job\.seconds\/5/);
  assert.match(src,/requiresReview:Boolean\(job.assets\?\.revision_source_id\)\|\|!visuallyValid/);
