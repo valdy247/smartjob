@@ -212,6 +212,7 @@ export async function PATCH(req:NextRequest){
    if(message.includes("studio_insufficient_credits"))return reply({error:"video_studio_insufficient_credits"},402);
    if(message.includes("studio_images_not_ready"))return reply({error:"studio_images_not_ready"},409);
    if(message.includes("studio_scene_locked"))return reply({error:"studio_scene_locked"},409);
+   if(message.includes("studio_speech_too_long"))return reply({error:"studio_speech_too_long"},400);
    return reply({error:"studio_invalid_action"},400);
   }
   return reply({job:await present(data as JobRow,owner)});

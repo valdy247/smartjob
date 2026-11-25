@@ -50,6 +50,7 @@ const errorMessages:Record<string,string>={
  studio_invalid_job:"Revisa tu guion y configuración antes de generar.",
  studio_elevenlabs_worker_not_ready:"Esta voz de ElevenLabs todavía no está habilitada en el procesador. No se reservaron créditos; puedes elegir una voz de OpenAI.",
  studio_invalid_action:"Esta escena no se pudo actualizar.",
+ studio_speech_too_long:"La narración de esta escena supera el límite de 230 caracteres. La descripción visual puede tener hasta 950.",
  studio_scene_locked:"El trabajo ya está en producción y no admite edición de imágenes.",
  studio_resume_unavailable:"Este proyecto no se puede reanudar.",
  studio_resume_limit:"Este proyecto alcanzó el límite de reanudaciones.",
@@ -724,6 +725,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  <option value="zoom">Zoom de cámara (imagen fija)</option>
 </select>
 <p className={styles.motionHelp}>Se guarda al seleccionarlo. Cambiar movimiento no regenera la imagen ni consume créditos.</p>
+<p className={styles.motionHelp}>Para aplicar los cambios de la descripción, pulsa «Regenerar imagen» y confirma 1 crédito. La imagen actual se conserva hasta que confirmes.</p>
 <button className={styles.secondary} disabled={savingScene} onClick={()=>setRegenIndex(sceneIndex)}><RefreshCw size={16}/> Regenerar imagen · 1 crédito</button>
 </section>:null}
 <button className={styles.primary} disabled={savingScene||job.scenes.some(x=>!x.imageUrl)} onClick={()=>void approve()}>Aprobar todas y generar video <ArrowRight size={17}/></button>
