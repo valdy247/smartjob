@@ -37,6 +37,18 @@ async function present(row:JobRow,owner:string,showFrames=true){
   etaSeconds:typeof row.eta_seconds==="number"?row.eta_seconds:null,
   scenes:scenes.map(s=>({...s,imageUrl:null})),videoUrl:null};
  if(showFrames){
+  if(row.status==="awaiting_image_approval"){
+   const {data:files}=await videoDb().storage.from("vmv-studio-assets").list(owner+"/"+row.id,{limit:1000,sortBy:{column:"created_at",order:"desc"}});
+   const frames=data.scenes as Array<StudioScene&{imageUrl:string|null;imageVersions?:Array<{name:string;url:string}>}>;
+   await Promise.all(frames.map(async (frame,i)=>{
+    const pattern=new RegExp("^image_"+i+"(?:_[a-f0-9-]{36})?\\.jpg$");
+    const previous=(files||[]).filter(f=>pattern.test(f.name)&&owner+"/"+row.id+"/"+f.name!==frame.imagePath).slice(0,10);
+    frame.imageVersions=(await Promise.all(previous.map(async f=>{
+     const {data:link}=await videoDb().storage.from("vmv-studio-assets").createSignedUrl(owner+"/"+row.id+"/"+f.name,600);
+     return link?.signedUrl?{name:f.name,url:link.signedUrl}:null;
+    }))).filter((v):v is {name:string;url:string}=>v!==null);
+   }));
+  }
   const paths=scenes.map((s,i)=>({
    path:typeof s.imagePath==="string"?s.imagePath:"",
    index:i
