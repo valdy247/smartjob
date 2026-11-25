@@ -19,7 +19,7 @@ import styles from "./page.module.css";
 type Stage="home"|"topic"|"audience"|"style"|"duration"|"language"|"voice"|"subtitles"|"source"|"trends"|"idea"|"plan"|"quality"|"summary"|"images"|"progress"|"result"|"history"|"edit_finished";
 type Style="stickman"|"cartoon2d"|"cartoon3d"|"clay"|"illustrated";
 type Quality="turbo"|"high";
-type Scene={speech:string;imagePrompt:string;caption:string;motion?:"zoom"|"animate";approved?:boolean;requiresReview?:boolean;imageUrl?:string;imagePath?:string};
+type Scene={speech:string;imagePrompt:string;motionPrompt?:string;caption:string;motion?:"zoom"|"animate";approved?:boolean;requiresReview?:boolean;imageUrl?:string;imagePath?:string};
 type Trend={sourceId:string;title:string;description?:string;thumbnail:string;url:string;channel?:string;views?:number};
 type Job={id:string;status:string;phase:string;progress:number;scenes:Scene[];seconds:number;actualSeconds?:number;style:string;quality_mode:string;title:string;videoUrl?:string|null;created_at:string;failure_code?:string|null;etaSeconds?:number|null;charge_credits?:number;credits_settled?:boolean;version?:number};
 type Wallet={balance:number;reserved:number;available:number};
@@ -115,7 +115,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const [walletBusy,setWalletBusy]=useState(false);
  const [regenIndex,setRegenIndex]=useState<number|null>(null);
  const frameEditRef=useRef<HTMLElement|null>(null);
- const [frameSpeech,setFrameSpeech]=useState(""),[frameVisual,setFrameVisual]=useState("");
+ const [frameSpeech,setFrameSpeech]=useState(""),[frameVisual,setFrameVisual]=useState(""),[frameMotionPrompt,setFrameMotionPrompt]=useState("");
  const clientKeyRef=useRef<string>("");
  const autoApprovalRef=useRef<string>("");
  const activeOwnerRef=useRef("");
@@ -256,7 +256,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  useEffect(()=>{if(isSignedIn)void loadCredits();},[isSignedIn,loadCredits]);
  useEffect(()=>{
   const scene=job?.scenes?.[sceneIndex];
-  setFrameSpeech(scene?.speech||"");setFrameVisual(scene?.imagePrompt||"");
+  setFrameSpeech(scene?.speech||"");setFrameVisual(scene?.imagePrompt||"");setFrameMotionPrompt(scene?.motionPrompt||"");
  },[job?.id,job?.version,sceneIndex]);
  const checkout=async(pack:string)=>{
   setPurchaseBusy(true);setError("");
@@ -728,6 +728,13 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  <option value="animate">Animación (personajes y objetos)</option>
  <option value="zoom">Zoom de cámara (imagen fija)</option>
 </select>
+<label>Instrucciones de animación (no modifica la imagen)</label>
+ <textarea value={frameMotionPrompt} maxLength={950} onChange={e=>setFrameMotionPrompt(e.target.value)} placeholder="Describe únicamente qué debe moverse y qué debe permanecer quieto."/>
+ <button className={styles.secondary} disabled={savingScene||frameMotionPrompt.trim()===(job.scenes[sceneIndex].motionPrompt||"")} onClick={async()=>{
+  setSavingScene(true);setError("");
+  try{const data=await api("jobs","PATCH",{id:job.id,action:"set_motion_prompt",index:sceneIndex,value:frameMotionPrompt.trim()});if(data?.job)setJob(data.job);}
+  catch(e){setError(e instanceof Error?e.message:"studio_invalid_action");}finally{setSavingScene(false);}
+ }}>Guardar instrucciones de animación</button>
 <p className={styles.motionHelp}>Se guarda al seleccionarlo. Cambiar movimiento no regenera la imagen ni consume créditos.</p>
 <p className={styles.motionHelp}>Para aplicar los cambios de la descripción, pulsa «Regenerar imagen» y confirma 1 crédito. La imagen actual se conserva hasta que confirmes.</p>
 <button className={styles.secondary} disabled={savingScene} onClick={()=>setRegenIndex(sceneIndex)}><RefreshCw size={16}/> Regenerar imagen · 1 crédito</button>
