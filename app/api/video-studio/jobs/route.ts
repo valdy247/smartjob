@@ -147,7 +147,7 @@ export async function PATCH(req:NextRequest){
  if(!owner)return reply({error:"authentication_required"},401);
  const b=await req.json().catch(()=>null),id=b?.id,action=b?.action;
  if(!validUuid(id)||typeof action!=="string"||
-  !["approve","approve_all","edit_scene","regenerate","cancel","resume"].includes(action))
+  !["approve","approve_all","edit_scene","regenerate","cancel","resume","set_motion"].includes(action))
   return reply({error:"studio_invalid_action"},400);
  if(action==="resume"){
   if(!cloudLaunchEnabled()||!await videoStudioWorkerReady())
@@ -160,6 +160,25 @@ export async function PATCH(req:NextRequest){
     if(error.message?.includes("studio_resume_limit"))
      return reply({error:"studio_resume_limit"},409);
     return reply({error:"studio_resume_unavailable"},409);
+   }
+   return reply({job:await present(data as JobRow,owner)});
+  }catch{return reply({error:"video_studio_db_unavailable"},503);}
+ }
+ // This only updates the motion of an existing frame, does not trigger
+ // regeneration and must never touch the credit ledger.
+ if(action==="set_motion"){
+  if(!Number.isInteger(b?.index)||b.index<0||b.index>35||
+   !["zoom","animate"].includes(b?.motion))
+   return reply({error:"studio_motion_invalid"},400);
+  try{
+   const {data,error}=await videoDb().rpc("vmv_studio_set_scene_motion",{
+    p_owner:owner,p_job:id,p_index:b.index,p_motion:b.motion
+   });
+   if(error){
+    const reason=error.message||"";
+    if(reason.includes("studio_scene_locked"))return reply({error:"studio_scene_locked"},409);
+    if(reason.includes("studio_images_not_ready"))return reply({error:"studio_images_not_ready"},409);
+    return reply({error:"studio_motion_invalid"},400);
    }
    return reply({job:await present(data as JobRow,owner)});
   }catch{return reply({error:"video_studio_db_unavailable"},503);}
