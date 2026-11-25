@@ -14,8 +14,8 @@ export async function startMotionClip({db,bucket,imagePath,style,scene,variant})
   "Animate the supplied illustration as one five-second vertical 9:16 clip at 720p.",
   "Preserve the starting character designs, lighting, framing, colors, and visual genre: "+style,
   "ONLY this story moment: "+scene.speech,
-  "Visually animate: "+scene.imagePrompt,
-  "Show real character action, body and vehicle movement rather than camera-only zoom.",
+  "Visually animate: "+(scene.motionPrompt?.trim()||scene.imagePrompt),
+  scene.motionPrompt?.trim()?"Follow the requested movement exactly; keep all unspecified elements still and do not introduce new objects or people.":"Show real character action, body and vehicle movement rather than camera-only zoom.",
   "Do not reveal future characters, repeat previous scenes, add text or narrate."
  ].join(" ").slice(0,1400);
  const started=await startVideo({model,prompt:{image:data.signedUrl,text:direction},
