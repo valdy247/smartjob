@@ -34,7 +34,7 @@ export async function POST(req:NextRequest){
    return respond({error:"manual_invalid_image"},400);
   const path=manualImagePath(owner,id,index);
   const {error}=await db.storage.from("vmv-studio-assets")
-   .upload(path,bytes,{contentType:"image/jpeg",upsert:true,cacheControl:"private"});
+   .upload(path,bytes,{contentType:"image/jpeg",upsert:true,cacheControl:"0"});
   if(error)return respond({error:"manual_upload_unavailable"},503);
   return respond({index,ready:true});
  }catch{return respond({error:"manual_upload_unavailable"},503);}
