@@ -27,7 +27,7 @@ begin
  v_scene=v_job.scenes->p_index;
  if coalesce(v_scene->>'imagePath','')='' or
   coalesce(v_scene->>'imagePath','') not like
-   p_owner::text||'/'||p_job::text||'/%' then
+   (p_owner::text||'/'||p_job::text||'/%') then
   raise exception 'studio_images_not_ready';
  end if;
  if coalesce(v_scene->>'motion','animate')=p_motion then
