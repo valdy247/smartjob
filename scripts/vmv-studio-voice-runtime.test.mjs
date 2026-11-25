@@ -10,7 +10,7 @@ test("30-second selection accepts natural ElevenLabs voice durations without rus
 });
 test("silent nominal duration is unchanged and never calls TTS",()=>{
  const worker=readFileSync(new URL("../services/vmv-studio-worker/worker.mjs",import.meta.url),"utf8");
- assert.match(worker,/silent\?silentTimeline\(scenes,duration,job.subtitles\)/);
+ assert.match(worker,/manualTimeline\(scenes,duration\):silentTimeline\(scenes,duration,job.subtitles\)/);
  assert.match(worker,/const originalDuration=narrationFile\?/);
 });
 test("reject extreme runtime deviations and invalid data before expensive animation",()=>{
