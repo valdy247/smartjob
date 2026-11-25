@@ -9,6 +9,7 @@ import {startMotionClip,waitMotionClip} from "./motion-engine.mjs";
 import {speechTimeline,silentTimeline} from "./speech-timeline.mjs";
 import {recordedVoiceRuntime} from "./voice-runtime.mjs";
 import {prepareRevisionAssets} from "./revision-assets.mjs";
+import {buildZoomMotion} from "./zoom-motion.mjs";
 import {sceneVisualDirection,imageUsesCharacterReference,validVisualPlan} from "./visual-director.mjs";
 import {planVisualIdentity,generateCharacterMaster,reviewVisualSequence} from "./visual-quality.mjs";
 
@@ -552,12 +553,10 @@ async function processJob(job){
     if(scenes[i].motion==="zoom"){
      const image=path.join(dir,"zoom-"+i+".jpg");
      await download(WORK,scenes[i].imagePath,image);
-     const frames=Math.ceil(timing.segments[i].duration*24);
-     const vf="scale=760:1360:force_original_aspect_ratio=increase,crop=760:1360,"+
-      "zoompan=z='min(zoom+0.00055,1.16)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=720x1280:fps=24,format=yuv420p";
-     await shell("ffmpeg",["-hide_banner","-loglevel","error","-y","-framerate","24","-loop","1","-i",image,
+     const {frames,vf}=buildZoomMotion(timing.segments[i].duration);
+     await shell("ffmpeg",["-hide_banner","-loglevel","error","-y","-i",image,
       "-vf",vf,"-frames:v",String(frames),"-an","-c:v","libx264","-preset","veryfast",
-      "-crf","26","-movflags","+faststart",clip],240000);
+      "-crf","25","-movflags","+faststart",clip],240000);
      await persistAsset(job,key,clip,"video/mp4");
     }else{
     const taskKey="task_"+variant+"_"+i;

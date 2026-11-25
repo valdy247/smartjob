@@ -113,6 +113,7 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
  const [purchasesEnabled,setPurchasesEnabled]=useState(false),[purchaseBusy,setPurchaseBusy]=useState(false);
  const [walletBusy,setWalletBusy]=useState(false);
  const [regenIndex,setRegenIndex]=useState<number|null>(null);
+ const frameEditRef=useRef<HTMLElement|null>(null);
  const [frameSpeech,setFrameSpeech]=useState(""),[frameVisual,setFrameVisual]=useState("");
  const clientKeyRef=useRef<string>("");
  const autoApprovalRef=useRef<string>("");
@@ -435,6 +436,28 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
   }catch(e){setError(e instanceof Error?e.message:"video_studio_unavailable");}
   finally{setSavingScene(false);}
  };
+ const openFrameEditor=(index:number)=>{
+  setSceneIndex(index);
+  setRegenIndex(null);
+  // The editor lives after the gallery; move the viewport so the Edit
+  // control actually opens the chosen scene on mobile Safari.
+  requestAnimationFrame(()=>frameEditRef.current?.scrollIntoView({
+   behavior:"smooth",block:"start"
+  }));
+ };
+ const saveFrameMotion=async(index:number,motion:"zoom"|"animate")=>{
+  if(!job||savingScene||job.scenes[index]?.motion===motion)return;
+  setSavingScene(true);setError("");
+  try{
+   const data=await api("jobs","PATCH",{
+    id:job.id,action:"set_motion",index,motion
+   });
+   if(!data?.job)throw Error("studio_motion_invalid");
+   setJob(data.job);
+  }catch(e){
+   setError(e instanceof Error?e.message:"studio_motion_invalid");
+  }finally{setSavingScene(false);}
+ };
  const updateFrame=async(index:number,field:"speech"|"imagePrompt",value:string)=>{
   if(!job)return;setSavingScene(true);setError("");
   try{const data=await api("jobs","PATCH",{id:job.id,action:"edit_scene",index,field,value});
@@ -675,16 +698,32 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
 <p className={styles.help}>Aprueba los fotogramas antes de animarlos. Cuando estén aprobados, la voz y el montaje seguirán automáticamente en la nube, aunque cierres la web.</p>
 <div className={styles.approvalNotice}><CheckCircle2 size={18}/>{job.scenes.filter(x=>x.approved).length} / {job.scenes.length} imágenes aprobadas</div>
 <div className={styles.gallery}>{job.scenes.map((scene,i)=><article key={i} className={styles.frameCard}>
-<button type="button" className={styles.framePreview} onClick={()=>setSceneIndex(i)}>{scene.imageUrl?<img src={scene.imageUrl} alt={"Fotograma "+(i+1)}/>:<Film size={30}/>}</button>
+<button type="button" className={styles.framePreview} onClick={()=>openFrameEditor(i)}>{scene.imageUrl?<img src={scene.imageUrl} alt={"Fotograma "+(i+1)}/>:<Film size={30}/>}</button>
 <div className={styles.frameInfo}><strong>Escena {i+1}</strong><small>Duración ajustada por la voz</small><p>{scene.speech}</p>
 {scene.requiresReview&&!scene.approved?<p role="status" className={styles.note}>La revisión visual recomienda comprobar este fotograma. Puedes regenerar solo esta escena antes de aprobar.</p>:null}
-<button className={styles.secondary} onClick={()=>setSceneIndex(i)}>Editar</button>
+<label htmlFor={"vmv-motion-card-"+i} className={styles.motionLabel}>Movimiento visual</label>
+<select id={"vmv-motion-card-"+i} className={styles.frameMotionSelect}
+ value={scene.motion==="zoom"?"zoom":"animate"} disabled={savingScene}
+ onChange={e=>void saveFrameMotion(i,e.target.value==="zoom"?"zoom":"animate")}>
+ <option value="animate">Animación (personajes y objetos)</option>
+ <option value="zoom">Zoom de cámara (imagen fija)</option>
+</select>
+<button className={styles.secondary} onClick={()=>openFrameEditor(i)}><Pencil size={14}/> Editar escena</button>
 {scene.approved?<span className={styles.passed}><Check size={14}/> Aprobada</span>:<button disabled={savingScene||!scene.imageUrl} className={styles.primaryMini} onClick={()=>void approve(i)}>Aprobar</button>}</div></article>)}</div>
-{job.scenes[sceneIndex]?<section className={styles.frameEdit}><h2>Escena {sceneIndex+1}</h2>
+{job.scenes[sceneIndex]?<section ref={frameEditRef} className={styles.frameEdit}><h2>Escena {sceneIndex+1}</h2>
 {job.scenes[sceneIndex].imageUrl?<img className={styles.frameEditImage} src={job.scenes[sceneIndex].imageUrl} alt={"Escena "+(sceneIndex+1)}/>:null}
 <label>Narración</label><textarea value={frameSpeech} maxLength={230} onChange={e=>setFrameSpeech(e.target.value)}/>
 <button className={styles.secondary} disabled={savingScene||frameSpeech.trim()===job.scenes[sceneIndex].speech||frameSpeech.trim().length<5} onClick={()=>void updateFrame(sceneIndex,"speech",frameSpeech.trim())}>Guardar guion</button>
 <label>Descripción de la imagen</label><textarea value={frameVisual} maxLength={950} onChange={e=>setFrameVisual(e.target.value)}/>
+<label htmlFor="vmv-frame-motion">Movimiento visual de esta escena</label>
+<select id="vmv-frame-motion" className={styles.frameMotionSelect}
+ value={job.scenes[sceneIndex].motion==="zoom"?"zoom":"animate"}
+ disabled={savingScene}
+ onChange={e=>void saveFrameMotion(sceneIndex,e.target.value==="zoom"?"zoom":"animate")}>
+ <option value="animate">Animación (personajes y objetos)</option>
+ <option value="zoom">Zoom de cámara (imagen fija)</option>
+</select>
+<p className={styles.motionHelp}>Se guarda al seleccionarlo. Cambiar movimiento no regenera la imagen ni consume créditos.</p>
 <button className={styles.secondary} disabled={savingScene} onClick={()=>setRegenIndex(sceneIndex)}><RefreshCw size={16}/> Regenerar imagen · 1 crédito</button>
 </section>:null}
 <button className={styles.primary} disabled={savingScene||job.scenes.some(x=>!x.imageUrl)} onClick={()=>void approve()}>Aprobar todas y generar video <ArrowRight size={17}/></button>
