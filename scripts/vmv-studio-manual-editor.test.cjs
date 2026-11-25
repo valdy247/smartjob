@@ -36,6 +36,7 @@ test("manual montage charges only montage and selected motion, not image or voic
 test("server only accepts real small JPEG frames, resized to 720x1280",()=>{
  const bytes=new Uint8Array(1200);
  bytes.set([0xff,0xd8,0xff,0xc0,0,17,8,5,0,2,208,3,1,17,0,2,17,1,3,17,1],0);
+ bytes.set([0xff,0xd9],bytes.length-2);
  assert.equal(x.readManualJpegDimensions(bytes).width,720);
  assert.equal(x.readManualJpegDimensions(bytes).height,1280);
  bytes[0]=0;
