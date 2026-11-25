@@ -1,7 +1,7 @@
 "use client";
 import {useCallback,useEffect,useRef,useState} from "react";
 import Link from "next/link";
-import {ArrowLeft,ArrowRight,ArrowUpRight,Check,CheckCircle2,ChevronRight,Clapperboard,Clock3,Download,Film,FolderOpen,Globe2,LoaderCircle,Pencil,PlayCircle,RefreshCw,Search,Sparkles,Subtitles,Video,Eye,X,ShieldCheck} from "lucide-react";
+import {ArrowLeft,ArrowRight,ArrowUpRight,Check,CheckCircle2,ChevronRight,Clapperboard,Clock3,Download,Film,FolderOpen,Globe2,LoaderCircle,Pencil,PlayCircle,RefreshCw,Search,Sparkles,Subtitles,Video,Eye,X,ShieldCheck,ImagePlus} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import {useInterfaceLanguage} from "@/lib/i18n-web";
 import VMVAuthGateway from "@/components/VMVAuthGateway";
@@ -520,6 +520,10 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
      <span className={styles.homeIllustration}><img src="/video-studio/styles/cartoon3d.svg" alt="" aria-hidden="true"/><span className={styles.homeFloatIcon}><PlayCircle size={23}/></span></span>
      <span className={styles.homeCardInfo}><span><strong>Crear video</strong><small>Comienza una nueva historia</small></span><ArrowUpRight size={22}/></span>
     </button>
+    <Link href="/vista-app/video-studio/manual" className={styles.homeCard+" "+styles.manualCard}>
+     <span className={styles.homeIllustrationAlt}><ImagePlus size={45}/></span>
+     <span className={styles.homeCardInfo}><span><strong>Editor manual</strong><small>Sube tus fotos, ordénalas y crea el video a tu manera</small></span><ArrowUpRight size={22}/></span>
+    </Link>
     <button className={styles.homeCard+" "+styles.libraryCard} onClick={()=>{next("history");void loadHistory();}}>
      <span className={styles.homeIllustrationAlt}><img src="/video-studio/styles/cartoon2d.svg" alt="" aria-hidden="true"/><span className={styles.homeFloatIcon}><FolderOpen size={23}/></span></span>
      <span className={styles.homeCardInfo}><span><strong>Historial</strong><small>Tus proyectos y videos guardados</small></span><ArrowUpRight size={22}/></span>
