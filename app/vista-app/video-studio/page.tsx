@@ -19,7 +19,7 @@ import styles from "./page.module.css";
 type Stage="home"|"topic"|"audience"|"style"|"duration"|"language"|"voice"|"subtitles"|"source"|"trends"|"idea"|"plan"|"quality"|"summary"|"images"|"progress"|"result"|"history"|"edit_finished";
 type Style="stickman"|"cartoon2d"|"cartoon3d"|"clay"|"illustrated";
 type Quality="turbo"|"high";
-type Scene={speech:string;imagePrompt:string;motionPrompt?:string;caption:string;motion?:"zoom"|"animate";approved?:boolean;requiresReview?:boolean;imageUrl?:string;imagePath?:string};
+type Scene={speech:string;imagePrompt:string;motionPrompt?:string;caption:string;motion?:"zoom"|"animate";approved?:boolean;requiresReview?:boolean;imageUrl?:string;imagePath?:string;imageVersions?:Array<{name:string;url:string}>};
 type Trend={sourceId:string;title:string;description?:string;thumbnail:string;url:string;channel?:string;views?:number};
 type Job={id:string;status:string;phase:string;progress:number;scenes:Scene[];seconds:number;actualSeconds?:number;style:string;quality_mode:string;title:string;videoUrl?:string|null;created_at:string;failure_code?:string|null;etaSeconds?:number|null;charge_credits?:number;credits_settled?:boolean;version?:number};
 type Wallet={balance:number;reserved:number;available:number};
@@ -717,7 +717,11 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
 {scene.approved?<span className={styles.passed}><Check size={14}/> Aprobada</span>:<button disabled={savingScene||!scene.imageUrl} className={styles.primaryMini} onClick={()=>void approve(i)}>Aprobar</button>}</div></article>)}</div>
 {job.scenes[sceneIndex]?<section ref={frameEditRef} className={styles.frameEdit}><h2>Escena {sceneIndex+1}</h2>
 {job.scenes[sceneIndex].imageUrl?<img className={styles.frameEditImage} src={job.scenes[sceneIndex].imageUrl} alt={"Escena "+(sceneIndex+1)}/>:null}
-<label>Narración</label><textarea value={frameSpeech} maxLength={230} onChange={e=>setFrameSpeech(e.target.value)}/>
+{job.scenes[sceneIndex].imageVersions?.length?<div><label>Imágenes anteriores</label>{job.scenes[sceneIndex].imageVersions?.map((v,i)=><button key={v.name} className={styles.secondary} disabled={savingScene} onClick={async()=>{
+ setSavingScene(true);setError("");try{const data=await api("jobs","PATCH",{id:job.id,action:"restore_image",index:sceneIndex,value:v.name});if(data?.job)setJob(data.job);}
+ catch(e){setError(e instanceof Error?e.message:"studio_invalid_action");}finally{setSavingScene(false);}
+ }}><img src={v.url} alt={"Versión anterior "+(i+1)} width={48}/> Restaurar imagen {i+1}</button>)}</div>:null}
+ <label>Narración</label><textarea value={frameSpeech} maxLength={230} onChange={e=>setFrameSpeech(e.target.value)}/>
 <button className={styles.secondary} disabled={savingScene||frameSpeech.trim()===job.scenes[sceneIndex].speech||frameSpeech.trim().length<5} onClick={()=>void updateFrame(sceneIndex,"speech",frameSpeech.trim())}>Guardar guion</button>
 <label>Descripción de la imagen</label><textarea value={frameVisual} maxLength={950} onChange={e=>setFrameVisual(e.target.value)}/>
 <label htmlFor="vmv-frame-motion">Movimiento visual de esta escena</label>
