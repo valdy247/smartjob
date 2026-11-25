@@ -1,3 +1,5 @@
+import {randomUUID} from "node:crypto";
+import {readManualJpegDimensions,MAX_MANUAL_UPLOAD_BYTES} from "@/lib/vmv-studio-manual";
 import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {videoDb,validUuid} from "@/lib/vmv-video-generator";
@@ -255,4 +257,32 @@ export async function PATCH(req:NextRequest){
   }
   return reply({job:await present(data as JobRow,owner)});
  }catch{return reply({error:"video_studio_db_unavailable"},503);}
+}
+
+export async function PUT(req:NextRequest){
+ const owner=await authenticatedUser(req);
+ if(!owner)return reply({error:"authentication_required"},401);
+ if(Number(req.headers.get("content-length")||0)>MAX_MANUAL_UPLOAD_BYTES+30000)return reply({error:"manual_image_too_large"},413);
+ try{
+  const form=await req.formData(),id=form.get("id"),index=Number(form.get("index")),image=form.get("image");
+  if(!validUuid(id)||form.get("index")===null||!Number.isInteger(index)||index<0||index>35||!(image instanceof File)||image.type!=="image/jpeg"||image.size<1024||image.size>MAX_MANUAL_UPLOAD_BYTES)return reply({error:"manual_invalid_image"},400);
+  const bytes=Buffer.from(await image.arrayBuffer()),dimensions=readManualJpegDimensions(bytes);
+  if(!dimensions||dimensions.width!==720||dimensions.height!==1280)return reply({error:"manual_invalid_image"},400);
+  const db=videoDb();
+  const {data:row,error:readError}=await db.from("vmv_studio_jobs").select(publicColumns).eq("id",id).eq("owner_id",owner).eq("status","awaiting_image_approval").maybeSingle();
+  if(readError||!row)return reply({error:"studio_scene_locked"},409);
+  const job=row as JobRow,scene=job.scenes[index];
+  if(!scene?.imagePath)return reply({error:"studio_images_not_ready"},409);
+  const path=owner+"/"+id+"/image_"+index+"_"+randomUUID()+".jpg";
+  const bucket=db.storage.from("vmv-studio-assets");
+  const {error:uploadError}=await bucket.upload(path,bytes,{contentType:"image/jpeg",upsert:false,cacheControl:"60"});
+  if(uploadError)return reply({error:"manual_upload_unavailable"},503);
+  const scenes=job.scenes.slice(),assets={...job.assets};
+  scenes[index]={...scene,imagePath:path,approved:false,requiresReview:false} as StudioScene;
+  assets["image_"+index]=path;
+  for(const key of ["clip_turbo_","clip_high_","task_turbo_","task_high_"])delete assets[key+index];
+  const {data:updated,error}=await db.from("vmv_studio_jobs").update({scenes,assets,version:Number(job.version)+1,updated_at:new Date().toISOString()}).eq("id",id).eq("owner_id",owner).eq("status","awaiting_image_approval").eq("version",job.version).select(publicColumns).maybeSingle();
+  if(error||!updated){await bucket.remove([path]);return reply({error:"studio_scene_locked"},409);}
+  return reply({job:await present(updated as JobRow,owner)});
+ }catch{return reply({error:"manual_upload_unavailable"},503);}
 }
