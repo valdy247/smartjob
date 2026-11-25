@@ -6,7 +6,7 @@ import path from "node:path";
 import {spawn} from "node:child_process";
 import {randomUUID} from "node:crypto";
 import {startMotionClip,waitMotionClip} from "./motion-engine.mjs";
-import {speechTimeline,silentTimeline} from "./speech-timeline.mjs";
+import {speechTimeline,silentTimeline,manualTimeline} from "./speech-timeline.mjs";
 import {recordedVoiceRuntime} from "./voice-runtime.mjs";
 import {prepareRevisionAssets} from "./revision-assets.mjs";
 import {buildZoomMotion} from "./zoom-motion.mjs";
@@ -500,13 +500,17 @@ async function processJob(job){
   if(job.status!=="animating")throw Error("studio_job_not_claimed");
   if(scenes.some(s=>s.approved!==true||typeof s.imagePath!=="string"||
     !s.imagePath.startsWith(prefix)||!s.imagePath.endsWith(".jpg")))throw Error("studio_images_not_approved");
-  await verifyScriptLanguage(job,scenes);
+  // Manual image projects contain instructions, not spoken words; checking
+  // their dominant text language would be irrelevant and could block montage.
+  if(job.assets?.manual_editor!==true)await verifyScriptLanguage(job,scenes);
   // A silent project is a complete video with NO audio track. Its optional
   // on-screen captions follow the visual windows rather than speech timestamps.
   const silent=job.voice_provider==="none"&&job.voice_id==="none";
   const narration=silent?null:path.join(dir,"narration.mp3");
   let duration=job.seconds;
-  let timing=silent?silentTimeline(scenes,duration,job.subtitles):job.assets?.voice_timeline;
+  let timing=silent?(job.assets?.manual_editor===true?
+   manualTimeline(scenes,duration):silentTimeline(scenes,duration,job.subtitles)):
+   job.assets?.voice_timeline;
   if(!silent){
    // Voice preflight happens BEFORE spending on animated clips. The scenes are
    // independent visual windows; spoken grammar is never fitted to their edges.
@@ -558,12 +562,24 @@ async function processJob(job){
       "-vf",vf,"-frames:v",String(frames),"-an","-c:v","libx264","-preset","veryfast",
       "-crf","25","-movflags","+faststart",clip],240000);
      await persistAsset(job,key,clip,"video/mp4");
+    }else if(scenes[i].motion==="still"&&job.assets?.manual_editor===true){
+     const image=path.join(dir,"still-"+i+".jpg");
+     await download(WORK,scenes[i].imagePath,image);
+     await shell("ffmpeg",["-hide_banner","-loglevel","error","-y",
+      "-loop","1","-framerate","24","-i",image,
+      "-vf","scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,format=yuv420p",
+      "-t",String(timing.segments[i].duration),"-an",
+      "-c:v","libx264","-preset","veryfast","-crf","25",
+      "-movflags","+faststart",clip],240000);
+     await persistAsset(job,key,clip,"video/mp4");
     }else{
     const taskKey="task_"+variant+"_"+i;
     let task=job.assets?.[taskKey];
     if(!task){
      task=await startMotionClip({db,bucket:WORK,imagePath:scenes[i].imagePath,
-      style:STYLE[job.style],scene:scenes[i],variant});
+      style:job.assets?.manual_editor===true?
+       "Keep the exact original photographic or illustrated style of the uploaded picture. Preserve characters, identities, colors and scene details; animate only what the user's prompt explicitly asks.":
+       STYLE[job.style],scene:scenes[i],variant});
      await patch(job,{assets:{...job.assets,[taskKey]:task}});
     }
     const url=await waitMotionClip(task,variant,()=>closing);
