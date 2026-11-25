@@ -123,7 +123,7 @@ async function download(bucket,remote,local){
 }
 async function persistAsset(job,key,local,mime){
  const prefix=job.owner_id+"/"+job.id+"/",suffix=key+(mime==="audio/mpeg"?".mp3":mime==="image/jpeg"?".jpg":".mp4");
- const dest=prefix+suffix;
+ const dest=prefix+(mime==="image/jpeg"&&/^image_\d+$/.test(key)?key+"_"+randomUUID()+".jpg":suffix);
  await upload(WORK,dest,local,mime);
  const assets={...job.assets,[key]:dest};
  await patch(job,{assets});
