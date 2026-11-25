@@ -22,7 +22,7 @@ const sceneValid=(s:unknown):s is {speech:string;imagePrompt:string;caption:stri
   typeof (s as Record<string,unknown>).caption==="string"&&
   (s as {caption:string}).caption.length<=110);
 const isSafeId=(v:unknown,max:number)=>typeof v==="string"&&v.length>0&&v.length<=max&&/^[a-zA-Z0-9_-]+$/.test(v);
-type StudioScene={speech:string;imagePrompt:string;caption:string;motion?:"animate"|"zoom";imagePath?:string|null;approved?:boolean};
+type StudioScene={speech:string;imagePrompt:string;motionPrompt?:string;caption:string;motion?:"animate"|"zoom";imagePath?:string|null;approved?:boolean};
 type JobRow={id:string;status:string;scenes:StudioScene[];assets:Record<string,unknown>;output_path:string|null;seconds:number;quality_mode:string;[key:string]:unknown};
 const publicColumns="id,title,topic,audience,style,seconds,language,voice_provider,voice_id,subtitles,quality_mode,source_platform,status,phase,progress,eta_seconds,scenes,assets,output_path,failure_code,charge_credits,credits_settled,version,created_at,updated_at,finished_at";
 async function present(row:JobRow,owner:string,showFrames=true){
@@ -147,8 +147,34 @@ export async function PATCH(req:NextRequest){
  if(!owner)return reply({error:"authentication_required"},401);
  const b=await req.json().catch(()=>null),id=b?.id,action=b?.action;
  if(!validUuid(id)||typeof action!=="string"||
-  !["approve","approve_all","edit_scene","regenerate","cancel","resume","set_motion"].includes(action))
+  !["approve","approve_all","edit_scene","regenerate","cancel","resume","set_motion","set_motion_prompt","restore_image"].includes(action))
   return reply({error:"studio_invalid_action"},400);
+ if(action==="set_motion_prompt"||action==="restore_image"){
+  if(!Number.isInteger(b.index)||b.index<0||b.index>35||
+   typeof b.value!=="string"||b.value.length>950)return reply({error:"studio_invalid_action"},400);
+  try{
+   const db=videoDb();
+   const {data:row,error:readError}=await db.from("vmv_studio_jobs").select(publicColumns)
+    .eq("id",id).eq("owner_id",owner).eq("status","awaiting_image_approval").maybeSingle();
+   if(readError||!row)return reply({error:"studio_scene_locked"},409);
+   const job=row as JobRow,scene=job.scenes[b.index];
+   if(!scene?.imagePath)return reply({error:"studio_images_not_ready"},409);
+   const scenes=job.scenes.slice(),assets={...job.assets};
+   if(action==="restore_image"){
+    const prefix=owner+"/"+id+"/",name=b.value as string;
+    if(!new RegExp("^image_"+b.index+"(?:_[a-f0-9-]{36})?\\.jpg$").test(name))return reply({error:"studio_invalid_action"},400);
+    const {data:files,error}=await db.storage.from("vmv-studio-assets").list(prefix.slice(0,-1),{search:name,limit:100});
+    if(error||!files?.some(f=>f.name===name))return reply({error:"studio_images_not_ready"},409);
+    scenes[b.index]={...scene,imagePath:prefix+name,approved:false};
+    assets["image_"+b.index]=prefix+name;
+   }else scenes[b.index]={...scene,motionPrompt:b.value.trim()};
+   for(const key of ["clip_turbo_","clip_high_","task_turbo_","task_high_"])delete assets[key+b.index];
+   const {data:updated,error}=await db.from("vmv_studio_jobs").update({scenes,assets,version:Number(job.version)+1,updated_at:new Date().toISOString()})
+    .eq("id",id).eq("owner_id",owner).eq("status","awaiting_image_approval").eq("version",job.version).select(publicColumns).maybeSingle();
+   if(error||!updated)return reply({error:"studio_scene_locked"},409);
+   return reply({job:await present(updated as JobRow,owner)});
+  }catch{return reply({error:"video_studio_db_unavailable"},503);}
+ }
  if(action==="resume"){
   if(!cloudLaunchEnabled()||!await videoStudioWorkerReady())
    return reply({error:"video_studio_worker_not_ready"},503);
