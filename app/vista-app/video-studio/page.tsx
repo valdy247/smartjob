@@ -717,6 +717,29 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
 {scene.approved?<span className={styles.passed}><Check size={14}/> Aprobada</span>:<button disabled={savingScene||!scene.imageUrl} className={styles.primaryMini} onClick={()=>void approve(i)}>Aprobar</button>}</div></article>)}</div>
 {job.scenes[sceneIndex]?<section ref={frameEditRef} className={styles.frameEdit}><h2>Escena {sceneIndex+1}</h2>
 {job.scenes[sceneIndex].imageUrl?<img className={styles.frameEditImage} src={job.scenes[sceneIndex].imageUrl} alt={"Escena "+(sceneIndex+1)}/>:null}
+ <input type="file" accept="image/*" id="vmv-replace-frame" hidden disabled={savingScene} onChange={async e=>{
+  const file=e.target.files?.[0];e.target.value="";if(!file||savingScene)return;
+  const index=sceneIndex,jobId=job.id;setSavingScene(true);setError("");
+  const url=URL.createObjectURL(file);
+  try{
+   const picture=new Image();picture.src=url;await picture.decode();
+   const canvas=document.createElement("canvas");canvas.width=720;canvas.height=1280;
+   const ctx=canvas.getContext("2d");if(!ctx)throw Error("manual_invalid_image");
+   const scale=Math.max(720/picture.naturalWidth,1280/picture.naturalHeight);
+   const w=picture.naturalWidth*scale,h=picture.naturalHeight*scale;
+   ctx.fillStyle="#fff";ctx.fillRect(0,0,720,1280);ctx.drawImage(picture,(720-w)/2,(1280-h)/2,w,h);
+   const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,"image/jpeg",0.9));
+   if(!blob)throw Error("manual_invalid_image");
+   const form=new FormData();form.append("id",jobId);form.append("index",String(index));form.append("image",blob,"frame.jpg");
+   const token=await authenticate();
+   const response=await fetch("/api/video-studio/jobs",{method:"PUT",headers:{Authorization:"Bearer "+token},body:form});
+   const data=await response.json();if(!response.ok||!data?.job)throw Error(data?.error||"manual_upload_unavailable");
+   setJob(data.job);
+  }catch(e){setError(e instanceof Error?e.message:"manual_upload_unavailable");}
+  finally{URL.revokeObjectURL(url);setSavingScene(false);}
+ }}/>
+ <button type="button" className={styles.secondary} disabled={savingScene} onClick={()=>document.getElementById("vmv-replace-frame")?.click()}><ImagePlus size={16}/> Cambiar imagen</button>
+
 {job.scenes[sceneIndex].imageVersions?.length?<div><label>Imágenes anteriores</label>{job.scenes[sceneIndex].imageVersions?.map((v,i)=><button key={v.name} className={styles.secondary} disabled={savingScene} onClick={async()=>{
  setSavingScene(true);setError("");try{const data=await api("jobs","PATCH",{id:job.id,action:"restore_image",index:sceneIndex,value:v.name});if(data?.job)setJob(data.job);}
  catch(e){setError(e instanceof Error?e.message:"studio_invalid_action");}finally{setSavingScene(false);}
