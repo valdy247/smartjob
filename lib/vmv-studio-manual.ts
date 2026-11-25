@@ -21,7 +21,8 @@ export function validManualStoryboard(scenes:unknown):scenes is {
 /** Reject non-JPEG content or malformed/dangerous dimensions before storage. */
 export function readManualJpegDimensions(bytes:Uint8Array){
  if(bytes.length<1024||bytes.length>MAX_MANUAL_UPLOAD_BYTES||
-  bytes[0]!==0xff||bytes[1]!==0xd8)return null;
+  bytes[0]!==0xff||bytes[1]!==0xd8||
+  bytes[bytes.length-2]!==0xff||bytes[bytes.length-1]!==0xd9)return null;
  let i=2;
  while(i<bytes.length-10){
   if(bytes[i]!==0xff)return null;
