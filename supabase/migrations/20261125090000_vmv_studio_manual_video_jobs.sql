@@ -6,7 +6,7 @@ create or replace function public.vmv_studio_create_manual_job(
  p_owner uuid,p_job uuid,p_key uuid,p_title text,
  p_quality text,p_scenes jsonb,p_expected integer
 ) returns uuid
-language plpgsql security definer
+language plpgsql security invoker
 set search_path to 'public','pg_temp'
 as $fn$
 declare
