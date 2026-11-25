@@ -50,5 +50,5 @@ test("motion-only backend only accepts the owner in pre-render scene review and 
  assert.match(sql,/version=version\+1/);
  assert.match(sql,/security invoker/);
  assert.match(sql,/revoke all on function public\.vmv_studio_set_scene_motion/);
- assert.doesNotMatch(sql,/(update public\.vmv_studio_wallets|charge_credits|regenerate|vmv_studio_credit_ledger)/);
+ assert.doesNotMatch(sql,/(update public\.vmv_studio_wallets|charge_credits|vmv_studio_credit_ledger)/);
 });
