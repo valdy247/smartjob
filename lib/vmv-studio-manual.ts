@@ -42,3 +42,7 @@ export function readManualJpegDimensions(bytes:Uint8Array){
  }
  return null;
 }
+
+export function validSingleImageStoryboard(scenes:unknown):scenes is {prompt:string;motion:"animate"}[]{
+ return Array.isArray(scenes)&&scenes.length===1&&scenes[0]?.motion==="animate"&&typeof scenes[0].prompt==="string"&&scenes[0].prompt.trim().length>=3&&scenes[0].prompt.length<=950;
+}
