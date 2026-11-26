@@ -100,7 +100,7 @@ export function silentTimeline(scenes,duration,withCaptions=true){
  * It never distributes durations by prose length or invents speech cues.
  */
 export function manualTimeline(scenes,duration){
- if(!Array.isArray(scenes)||scenes.length<3||scenes.length>12||
+ if(!Array.isArray(scenes)||(scenes.length<3&&!(scenes.length===1&&scenes[0]?.motion==="animate"))||scenes.length>12||
   !Number.isInteger(duration)||duration!==scenes.length*5)
   throw Error("manual_scene_timing_invalid");
  const segments=scenes.map((scene,index)=>{
