@@ -41,7 +41,7 @@ let closing=false,active=false;
 process.on("SIGTERM",()=>{closing=true;});
 process.on("SIGINT",()=>{closing=true;});
 createServer(async(req,res)=>{
- const health=req.url==="/healthz",voiceReady=req.url==="/voice-readyz",semanticReady=req.url==="/semantic-readyz",ready=req.url==="/readyz"||voiceReady||semanticReady;
+ const health=req.url==="/healthz",voiceReady=req.url==="/voice-readyz",semanticReady=req.url==="/semantic-readyz",singleReady=req.url==="/single-image-readyz",ready=req.url==="/readyz"||voiceReady||semanticReady||singleReady;
  if(health){res.writeHead(200,{"Content-Type":"text/plain","Cache-Control":"no-store"});res.end("ok");return;}
  if(!ready){res.writeHead(404,{"Content-Type":"text/plain","Cache-Control":"no-store"});res.end("not found");return;}
  let connected=false;
@@ -51,11 +51,12 @@ createServer(async(req,res)=>{
    // an environment flag. A read-only HEAD query never claims a job.
    const {error}=await db.from("vmv_studio_jobs").select("id",{head:true}).limit(1);
    connected=!error;
+   if(connected&&singleReady){const result=await db.rpc("vmv_studio_single_image_schema_ready");connected=!result.error&&result.data===true;}
   }catch{connected=false;}
  }
  const enabled=!STOP()&&connected&&(!voiceReady||Boolean(process.env.ELEVENLABS_API_KEY?.trim()));
  res.writeHead(enabled?200:503,{"Content-Type":"text/plain","Cache-Control":"no-store"});
- res.end(enabled?(semanticReady?"semantic-v2":"ready"):"standby");
+ res.end(enabled?(singleReady?"single-image-v1":semanticReady?"semantic-v2":"ready"):"standby");
 }).listen(Number(process.env.PORT||10000),"0.0.0.0");
 const auth=k=>({Authorization:"Bearer "+process.env[k]});
 async function request(url,options={},ms=80000){
@@ -363,7 +364,8 @@ async function assemble(job,dir,clips,narrationFile,timing,variant){
  return final;
 }
 async function processJob(job){
- if(!Array.isArray(job.scenes)||job.scenes.length<3||job.scenes.length>36||
+ const single=job.assets?.single_image===true&&job.assets?.manual_editor===true&&job.seconds===5&&job.scenes?.length===1&&job.scenes[0]?.motion==="animate";
+ if(!Array.isArray(job.scenes)||(!single&&job.scenes.length<3)||job.scenes.length>36||
   !STYLE[job.style]||!LANGUAGES[job.language]||job.credits_settled||
   !["turbo","high"].includes(job.quality_mode))throw Error("studio_job_invalid");
  const dir=await mkdtemp(path.join(tmpdir(),"vmv-studio-"));
