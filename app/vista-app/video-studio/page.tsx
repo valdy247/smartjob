@@ -528,6 +528,10 @@ export default function VideoStudioV1({embedded=false,onExit}:{embedded?:boolean
      <span className={styles.homeIllustrationAlt}><img src="/video-studio/styles/cartoon2d.svg" alt="" aria-hidden="true"/><span className={styles.homeFloatIcon}><FolderOpen size={23}/></span></span>
      <span className={styles.homeCardInfo}><span><strong>Historial</strong><small>Tus proyectos y videos guardados</small></span><ArrowUpRight size={22}/></span>
     </button>
+    <Link href="/vista-app/video-studio/image-to-video" className={styles.homeCard+" "+styles.manualCard}>
+     <span className={styles.homeIllustrationAlt}><Video size={45}/></span>
+     <span className={styles.homeCardInfo}><span><strong>Imagen a video</strong><small>Una imagen, un prompt, una animación</small></span><ArrowUpRight size={22}/></span>
+    </Link>
    </div>
    <p className={styles.footerHint}>Un solo proceso creativo. Tú decides, la IA produce.</p>
    <div className={styles.walletStrip}><span><Sparkles size={18}/><strong>{wallet?wallet.available:"—"}</strong><small>créditos disponibles</small></span>
