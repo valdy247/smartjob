@@ -1,8 +1,8 @@
 import {NextRequest,NextResponse} from "next/server";
 import {authenticatedUser} from "@/lib/auth-server";
 import {videoDb,validUuid} from "@/lib/vmv-video-generator";
-import {cloudLaunchEnabled,videoStudioWorkerReady} from "@/lib/vmv-studio-cloud-readiness";
-import {manualImagePath,manualPrice,validManualStoryboard,validManualQuality} from "@/lib/vmv-studio-manual";
+import {cloudLaunchEnabled,videoStudioWorkerReady,videoStudioWorkerProbe} from "@/lib/vmv-studio-cloud-readiness";
+import {manualImagePath,manualPrice,validManualStoryboard,validManualQuality,validSingleImageStoryboard} from "@/lib/vmv-studio-manual";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -17,9 +17,11 @@ export async function POST(req:NextRequest){
  const size=Number(req.headers.get("content-length")||0);
  if(size>18000)return respond({error:"manual_invalid_request"},413);
  const b=await req.json().catch(()=>null);
+ const single=b?.mode==="single";
+ if(single&&!(await videoStudioWorkerProbe("none",true)).ready)return respond({error:"single_image_worker_not_ready"},503);
  if(!validUuid(b?.projectId)||!validUuid(b?.clientKey)||
   typeof b?.title!=="string"||b.title.trim().length<3||b.title.length>140||
-  !validManualQuality(b?.quality)||!validManualStoryboard(b?.scenes)||
+  !validManualQuality(b?.quality)||!(single?validSingleImageStoryboard(b?.scenes):validManualStoryboard(b?.scenes))||
   b?.confirmCost!==true)return respond({error:"manual_invalid_request"},400);
  const credit=manualPrice(b.scenes.map((s:{motion:"animate"|"zoom"|"still"})=>s.motion),b.quality);
  if(b.expectedCredits!==credit)return respond({error:"manual_price_changed"},409);
@@ -47,8 +49,9 @@ export async function POST(req:NextRequest){
     return respond({error:"manual_images_missing"},409);
   }
   const scenes=b.scenes.map((scene:{prompt:string;motion:"animate"|"zoom"|"still"},i:number)=>({
-   speech:scene.prompt.trim().slice(0,220),
+   speech:single?"Animación de una imagen":scene.prompt.trim().slice(0,220),
    imagePrompt:scene.prompt.trim(),
+   ...(single?{motionPrompt:scene.prompt.trim()}:{}),
    caption:"",
    motion:scene.motion,
    imagePath:manualImagePath(owner,b.projectId,i),
@@ -56,7 +59,7 @@ export async function POST(req:NextRequest){
    requiresReview:false,
    durationSeconds:5
   }));
-  const {data,error}=await db.rpc("vmv_studio_create_manual_job",{
+  const {data,error}=await db.rpc(single?"vmv_studio_create_single_image_job":"vmv_studio_create_manual_job",{
    p_owner:owner,p_job:b.projectId,p_key:b.clientKey,
    p_title:b.title.trim(),p_quality:b.quality,p_scenes:scenes,p_expected:credit
   });
