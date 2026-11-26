@@ -1,6 +1,7 @@
 "use client";
 import {useCallback,useEffect,useRef,useState} from "react";
 import Link from "next/link";
+import {usePathname} from "next/navigation";
 import {ArrowLeft,ArrowRight,Check,ChevronDown,ChevronUp,Clapperboard,Download,Film,ImagePlus,LoaderCircle,Play,RefreshCw,ShieldCheck,Sparkles,Trash2,Upload,Video} from "lucide-react";
 import {getSupabase} from "@/lib/supabase";
 import VMVAuthGateway from "@/components/VMVAuthGateway";
@@ -22,6 +23,7 @@ const failureMessages:Record<string,string>={
  video_studio_insufficient_credits:"No tienes créditos disponibles suficientes para este montaje.",
  manual_create_unavailable:"No pudimos crear el proyecto. No hemos iniciado el montaje.",
  manual_project_already_started:"Este montaje ya está en producción. Abre su progreso.",
+ single_image_worker_not_ready:"La animación individual todavía no está disponible. No se han reservado créditos.",
  video_studio_worker_not_ready:"El procesador de videos no está disponible ahora. No se han reservado créditos.",
  authentication_required:"Inicia sesión para usar el Editor manual."
 };
@@ -51,19 +53,21 @@ async function normalisePhoto(file:File){
  }finally{URL.revokeObjectURL(url);}
 }
 export default function ManualVideoStudio(){
+ const single=usePathname()?.endsWith("/image-to-video")===true;
  const [signedIn,setSignedIn]=useState<boolean|null>(null);
  const [owner,setOwner]=useState("");
  const [shots,setShots]=useState<Shot[]>([]);
  const shotsRef=useRef<Shot[]>([]);
  const [step,setStep]=useState<Step>("upload");
  const [selected,setSelected]=useState(0);
- const [title,setTitle]=useState("Mi video personalizado");
+ const [title,setTitle]=useState(single?"Imagen a video":"Mi video personalizado");
  const [quality,setQuality]=useState<ManualQuality>("turbo");
  const [consent,setConsent]=useState(false);
  const [busy,setBusy]=useState(false);
  const [progress,setProgress]=useState("");
  const [error,setError]=useState("");
  const [job,setJob]=useState<CloudJob|null>(null);
+ const jobKey=single?"vmv-single-image-job:":"vmv-manual-job:";
  const projectRef=useRef<string>("");
  const keyRef=useRef<string>("");
  useEffect(()=>{shotsRef.current=shots;},[shots]);
@@ -103,9 +107,9 @@ export default function ManualVideoStudio(){
    setOwner(user?.id||"");
    setSignedIn(Boolean(user));
    if(user){
-    const id=window.localStorage.getItem("vmv-manual-job:"+user.id);
+    const id=window.localStorage.getItem(jobKey+user.id);
     if(id&&/^[a-f0-9-]{36}$/i.test(id))
-     void openJob(id).catch(()=>{window.localStorage.removeItem("vmv-manual-job:"+user.id);});
+     void openJob(id).catch(()=>{window.localStorage.removeItem(jobKey+user.id);});
    }
   }).catch(()=>{if(active)setSignedIn(false);});
   const {data:subscription}=sb.auth.onAuthStateChange((_event,session)=>{
@@ -114,7 +118,7 @@ export default function ManualVideoStudio(){
    setSignedIn(Boolean(session?.user));
   });
   return()=>{active=false;subscription.subscription.unsubscribe();};
- },[openJob]);
+ },[openJob,jobKey]);
  useEffect(()=>{
   if(step!=="running"||!job?.id)return;
   let active=true,checking=false;
@@ -141,12 +145,13 @@ export default function ManualVideoStudio(){
  const addPhotos=(files:FileList|null)=>{
   if(!files)return;
   setError("");
-  const available=MAX_MANUAL_SCENES-shots.length;
+  const available=single?1:MAX_MANUAL_SCENES-shots.length;
   const incoming=Array.from(files).slice(0,available).filter(file=>file.type.startsWith("image/"));
   if(incoming.length===0){setError("Elige fotografías válidas. Puedes usar hasta 12.");return;}
-  setShots(current=>[...current,...incoming.map(file=>({
+  if(single){shots.forEach(s=>URL.revokeObjectURL(s.url));setConsent(false);projectRef.current="";keyRef.current="";}
+  setShots(current=>[...(single?[]:current),...incoming.map(file=>({
    id:crypto.randomUUID(),file,url:URL.createObjectURL(file),
-   prompt:defaultPrompt,motion:"zoom" as ManualMotion
+   prompt:single?"":defaultPrompt,motion:(single?"animate":"zoom") as ManualMotion
   }))]);
  };
  const swap=(index:number,direction:number)=>{
@@ -170,13 +175,13 @@ export default function ManualVideoStudio(){
   setConsent(false);
  };
  const quote=manualPrice(shots.map(x=>x.motion),quality);
- const ready=shots.length>=3&&shots.length<=MAX_MANUAL_SCENES&&
-  shots.every(s=>s.prompt.trim().length>=20&&s.prompt.length<=950);
+ const ready=single?shots.length===1&&shots[0].prompt.trim().length>=3&&shots[0].prompt.length<=950:
+  shots.length>=3&&shots.length<=MAX_MANUAL_SCENES&&shots.every(s=>s.prompt.trim().length>=20&&s.prompt.length<=950);
  const restart=()=>{
   if(busy)return;
   setStep("upload");setJob(null);setConsent(false);setError("");
   projectRef.current="";keyRef.current="";
-  if(owner)window.localStorage.removeItem("vmv-manual-job:"+owner);
+  if(owner)window.localStorage.removeItem(jobKey+owner);
  };
  const generate=async()=>{
   if(!consent||!ready||busy||title.trim().length<3)return;
@@ -185,6 +190,7 @@ export default function ManualVideoStudio(){
   const clientKey=keyRef.current||(keyRef.current=crypto.randomUUID());
   try{
    const token=await getToken();
+   if(single){const check=await fetch("/api/video-studio/readiness?mode=single",{cache:"no-store"});if(!check.ok)throw Error("single_image_worker_not_ready");}
    for(let i=0;i<shots.length;i++){
     setProgress("Preparando y subiendo foto "+(i+1)+" de "+shots.length);
     const jpeg=await normalisePhoto(shots[i].file);
@@ -200,12 +206,12 @@ export default function ManualVideoStudio(){
    }
    setProgress("Guardando orden y creando tu montaje");
    const result=await api("manual/jobs","POST",{
-    projectId,clientKey,title:title.trim(),quality,
+    projectId,clientKey,title:title.trim(),quality,...(single?{mode:"single"}:{}),
     scenes:shots.map(s=>({prompt:s.prompt.trim(),motion:s.motion})),
     expectedCredits:quote,confirmCost:true
    });
    if(typeof result.id!=="string")throw Error("manual_create_unavailable");
-   if(owner)window.localStorage.setItem("vmv-manual-job:"+owner,result.id);
+   if(owner)window.localStorage.setItem(jobKey+owner,result.id);
    await openJob(result.id);
   }catch(e){
    const message=e instanceof Error?e.message:"manual_create_unavailable";
@@ -221,11 +227,19 @@ export default function ManualVideoStudio(){
  return <main className={styles.page}><div className={styles.shell}>
   <header className={styles.top}>
    <Link href="/vista-app/video-studio" className={styles.back} aria-label="Volver a Video Studio"><ArrowLeft size={19}/></Link>
-   <div><strong>Editor de videos</strong><small>VMV Business · Creación manual</small></div>
+   <div><strong>{single?"Imagen a video":"Editor de videos"}</strong><small>VMV Business · {single?"Animación IA":"Creación manual"}</small></div>
    <span className={styles.mark}>VMV</span>
   </header>
   {signedIn===null?<p className={styles.help}>Comprobando tu sesión…</p>:<>
-   {step==="upload"?<>
+   {single&&step==="upload"?<>
+    <div className={styles.heading}><h1>Imagen a video</h1><p>Sube una imagen y describe el movimiento.</p></div>
+    <label className={styles.upload}><ImagePlus size={31}/><strong>{shots.length?"Cambiar imagen":"Subir imagen"}</strong><input type="file" accept="image/*" disabled={busy} onChange={e=>{addPhotos(e.target.files);e.target.value="";}}/></label>
+    {shots[0]?<section className={styles.director}><img className={styles.sceneImage} src={shots[0].url} alt="Imagen original"/><label htmlFor="single-prompt">Prompt</label><textarea id="single-prompt" value={shots[0].prompt} placeholder="Describe qué debe moverse…" maxLength={950} rows={4} disabled={busy} onChange={e=>update(0,{prompt:e.target.value})}/>
+    <div className={styles.choiceRow}><span>Calidad</span><div>{(["turbo","high"] as const).map(q=><button key={q} disabled={busy} className={quality===q?styles.qualityActive:styles.quality} onClick={()=>{setQuality(q);setConsent(false);}}>{q==="turbo"?"Turbo":"Alta"}</button>)}</div></div>
+    <div className={styles.price}><span>5 s · Sin narración</span><strong>{quote} créditos</strong></div><label className={styles.consent}><input type="checkbox" checked={consent} disabled={busy} onChange={e=>setConsent(e.target.checked)}/>Autorizo reservar {quote} créditos.</label>
+    <button className={styles.mainButton} disabled={!ready||!consent||busy} onClick={()=>void generate()}>{busy?<LoaderCircle size={18} className={styles.spin}/>:<Clapperboard size={18}/>} {busy?"Preparando…":"Generar video"}</button>{progress?<p role="status" className={styles.hint}>{progress}</p>:null}</section>:null}
+   </>:null}
+   {!single&&step==="upload"?<>
     <div className={styles.heading}><span>01 / 03 · TUS IMÁGENES</span>
      <h1>Crea con tus propias fotos</h1>
      <p>Elige entre 3 y 12 imágenes. Tú decides el orden; VMV no inventará escenas.</p>
@@ -341,7 +355,7 @@ export default function ManualVideoStudio(){
    </section>:null}
    {error?<div role="alert" className={styles.error}><ShieldCheck size={17}/><span>{error}</span></div>:null}
   </>}
-  <footer className={styles.footer}><span>Editor manual · Independiente del generador automático</span>
+  <footer className={styles.footer}><span>{single?"Imagen a video":"Editor manual · Independiente del generador automático"}</span>
    <Link href="/vista-app/video-studio">Video Studio</Link></footer>
  </div></main>;
 }
