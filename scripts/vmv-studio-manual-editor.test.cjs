@@ -86,10 +86,19 @@ test("worker reuses user images, bypasses automatic storyboard, and can mix stil
 });
 test("the manual studio can recover a cloud job after the iPhone closes Safari",()=>{
  const ui=fs.readFileSync("app/vista-app/video-studio/manual/page.tsx","utf8");
- assert.match(ui,/localStorage\.setItem\("vmv-manual-job:"\+owner/);
- assert.match(ui,/localStorage\.getItem\("vmv-manual-job:"\+user\.id\)/);
+ assert.match(ui,/localStorage\.setItem\(jobKey\+owner/);
+ assert.match(ui,/localStorage\.getItem\(jobKey\+user\.id\)/);
  assert.match(ui,/document\.addEventListener\("visibilitychange",onWake\)/);
  assert.match(ui,/window\.addEventListener\("pageshow",onWake\)/);
  assert.match(ui,/api\("jobs\?id="\+encodeURIComponent\(job.id\)\)/);
  assert.match(ui,/<video className=\{styles\.finalVideo\}/);
+});
+
+test("single image is explicit and does not relax multi-scene validation",()=>{
+ assert.equal(x.validSingleImageStoryboard([{prompt:"Move",motion:"animate"}]),true);
+ assert.equal(x.validSingleImageStoryboard([{prompt:"Move",motion:"zoom"}]),false);
+ assert.equal(x.validManualStoryboard([{prompt,motion:"animate"}]),false);
+ const api=fs.readFileSync("app/api/video-studio/manual/jobs/route.ts","utf8");
+ assert.match(api,/videoStudioWorkerProbe\("none",true\)/);
+ assert.match(api,/vmv_studio_create_single_image_job/);
 });
