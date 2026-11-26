@@ -9,7 +9,7 @@ export function cloudLaunchEnabled():boolean{
   process.env.VMV_STUDIO_WORKER_READY==="true";
 }
 
-export async function videoStudioWorkerProbe(voiceProvider:"openai"|"elevenlabs"|"none"="openai"):Promise<{ready:boolean;reason:string;status?:number}>{
+export async function videoStudioWorkerProbe(voiceProvider:"openai"|"elevenlabs"|"none"="openai",single=false):Promise<{ready:boolean;reason:string;status?:number}>{
  if(!cloudLaunchEnabled())return {ready:false,reason:"preview_disabled"};
  const raw=process.env.VMV_STUDIO_WORKER_READY_URL?.trim();
  if(!raw||raw.length>250)return {ready:false,reason:"url_missing"};
@@ -18,12 +18,13 @@ export async function videoStudioWorkerProbe(voiceProvider:"openai"|"elevenlabs"
  if(url.protocol!=="https:"||!url.hostname.endsWith(".onrender.com")||
   url.hostname===".onrender.com"||url.username||url.password||
   url.port||url.pathname!=="/readyz"||url.search||url.hash)return {ready:false,reason:"url_invalid"};
- if(voiceProvider==="elevenlabs")url.pathname="/voice-readyz";
+ if(single)url.pathname="/single-image-readyz";
+ else if(voiceProvider==="elevenlabs")url.pathname="/voice-readyz";
  let result:{ready:boolean;reason:string;status?:number}={ready:false,reason:"network_error"};
  for(const timeout of [6500,4500]){
   try{
    const response=await fetch(url.toString(),{method:"GET",cache:"no-store",redirect:"error",signal:AbortSignal.timeout(timeout)});
-   if(response.status===200&&(await response.text()).trim()==="ready")return {ready:true,reason:"ready",status:200};
+   if(response.status===200&&(await response.text()).trim()===(single?"single-image-v1":"ready"))return {ready:true,reason:"ready",status:200};
    result={ready:false,reason:"worker_not_ready",status:response.status};
    if(response.status<500)return result;
   }catch(error){result={ready:false,reason:error instanceof Error&&/timeout|abort/i.test(error.name+" "+error.message)?"timeout":"network_error"};}
