@@ -55,6 +55,7 @@ async function normalisePhoto(file:File){
 export default function ManualVideoStudio(){
  const single=usePathname()?.endsWith("/image-to-video")===true;
  const [signedIn,setSignedIn]=useState<boolean|null>(null);
+ const [restoring,setRestoring]=useState(single);
  const [owner,setOwner]=useState("");
  const [shots,setShots]=useState<Shot[]>([]);
  const shotsRef=useRef<Shot[]>([]);
@@ -99,28 +100,40 @@ export default function ManualVideoStudio(){
  },[api]);
  useEffect(()=>{
   const sb=getSupabase();
-  if(!sb){setSignedIn(false);return;}
+  if(!sb){setSignedIn(false);setRestoring(false);return;}
   let active=true;
-  void sb.auth.getUser().then(({data})=>{
+  void sb.auth.getUser().then(async({data})=>{
    if(!active)return;
    const user=data.user;
    setOwner(user?.id||"");
    setSignedIn(Boolean(user));
    if(user){
     const id=window.localStorage.getItem(jobKey+user.id);
-    if(id&&/^[a-f0-9-]{36}$/i.test(id))
-     void openJob(id).catch(()=>{window.localStorage.removeItem(jobKey+user.id);});
+    if(id&&/^[a-f0-9-]{36}$/i.test(id)){
+     if(single){
+      try{
+       const result=await api("jobs?id="+encodeURIComponent(id));
+       if(!active)return;
+       const saved=result.job as CloudJob|undefined;
+       if(!saved||["completed","failed","cancelled"].includes(saved.status)){
+        if(window.localStorage.getItem(jobKey+user.id)===id)window.localStorage.removeItem(jobKey+user.id);
+       }else{
+        setJob(saved);setStep("running");
+       }
+      }catch{if(active)setError("No pudimos recuperar el último video. Puedes consultar su estado en Historial.");}
+     }else void openJob(id).catch(()=>{window.localStorage.removeItem(jobKey+user.id);});
+    }
    }
-  }).catch(()=>{if(active)setSignedIn(false);});
+  }).catch(()=>{if(active)setSignedIn(false);}).finally(()=>{if(active)setRestoring(false);});
   const {data:subscription}=sb.auth.onAuthStateChange((_event,session)=>{
    if(!active)return;
    setOwner(session?.user?.id||"");
    setSignedIn(Boolean(session?.user));
   });
   return()=>{active=false;subscription.subscription.unsubscribe();};
- },[openJob,jobKey]);
+ },[openJob,jobKey,api,single]);
  useEffect(()=>{
-  if(step!=="running"||!job?.id)return;
+  if(step!=="running"||!job?.id||(single&&["failed","cancelled"].includes(job.status)))return;
   let active=true,checking=false;
   const check=async()=>{
    if(!active||checking)return;
@@ -130,6 +143,7 @@ export default function ManualVideoStudio(){
     if(!active||!result.job)return;
     setJob(result.job);
     if(result.job.status==="completed")setStep("done");
+    if(single&&["completed","failed","cancelled"].includes(result.job.status)&&owner&&window.localStorage.getItem(jobKey+owner)===job.id)window.localStorage.removeItem(jobKey+owner);
    }catch{/* Keep the last confirmed server status; retry when online. */}
    finally{checking=false;}
   };
@@ -141,7 +155,7 @@ export default function ManualVideoStudio(){
    document.removeEventListener("visibilitychange",onWake);
    window.removeEventListener("pageshow",onWake);
   };
- },[step,job?.id,api]);
+ },[step,job?.id,job?.status,api,single,owner,jobKey]);
  const addPhotos=(files:FileList|null)=>{
   if(!files)return;
   setError("");
@@ -180,6 +194,7 @@ export default function ManualVideoStudio(){
  const restart=()=>{
   if(busy)return;
   setStep("upload");setJob(null);setConsent(false);setError("");
+  if(single){shotsRef.current.forEach(s=>URL.revokeObjectURL(s.url));setShots([]);setSelected(0);setTitle("Imagen a video");setProgress("");}
   projectRef.current="";keyRef.current="";
   if(owner)window.localStorage.removeItem(jobKey+owner);
  };
@@ -230,7 +245,7 @@ export default function ManualVideoStudio(){
    <div><strong>{single?"Imagen a video":"Editor de videos"}</strong><small>VMV Business · {single?"Animación IA":"Creación manual"}</small></div>
    <span className={styles.mark}>VMV</span>
   </header>
-  {signedIn===null?<p className={styles.help}>Comprobando tu sesión…</p>:<>
+  {signedIn===null||restoring?<p className={styles.help}>Comprobando tu sesión…</p>:<>
    {single&&step==="upload"?<>
     <div className={styles.heading}><h1>Imagen a video</h1><p>Sube una imagen y describe el movimiento.</p></div>
     <label className={styles.upload}><ImagePlus size={31}/><strong>{shots.length?"Cambiar imagen":"Subir imagen"}</strong><input type="file" accept="image/*" disabled={busy} onChange={e=>{addPhotos(e.target.files);e.target.value="";}}/></label>
@@ -335,23 +350,24 @@ export default function ManualVideoStudio(){
     <button className={styles.secondaryButton} disabled={busy} onClick={()=>setStep("direct")}>Seguir editando escenas</button>
    </>:null}
    {step==="running"&&job?<section className={styles.production}>
-    <Film size={30}/><h1>{job.status==="failed"?"No pudimos finalizar el montaje":"Montando tu video"}</h1>
+    <Film size={30}/><h1>{job.status==="cancelled"?"Video cancelado":job.status==="failed"?"No pudimos finalizar el montaje":"Montando tu video"}</h1>
     <div className={styles.circle}>{job.progress??0}%</div>
     <p>{job.phase||job.status}</p>
     <p className={styles.hint}>Puedes cerrar o minimizar el móvil. El proceso sigue en la nube y consultarás su estado cuando regreses.</p>
-    {job.status==="failed"?<><p className={styles.warning}>No se completó el proyecto. Las reservas se liberan cuando el servidor registra el fallo.</p>
+    {job.status==="failed"||job.status==="cancelled"?<><p className={styles.warning}>No se completó el proyecto. Las reservas se liberan cuando el servidor registra el fallo.</p>
      <button className={styles.secondaryButton} onClick={restart}>Empezar otro proyecto</button></>:null}
     <Link className={styles.softButton} href="/vista-app/video-studio">Ver biblioteca y proyectos</Link>
    </section>:null}
    {step==="done"&&job?<section className={styles.production}>
     <Check size={35}/><h1>¡Tu video está listo!</h1>
+    {single?<button className={styles.mainButton} onClick={restart}><ImagePlus size={18}/> Crear nuevo video</button>:null}
     <p>{job.title}</p>
     {job.videoUrl?<><video className={styles.finalVideo} src={job.videoUrl} controls playsInline/>
      <a className={styles.mainButton} href={job.videoUrl} download={"vmv-manual-"+job.id+".mp4"}>
       <Download size={18}/> Descargar MP4
      </a></>:<p>Tu video está guardado. Abre la biblioteca para obtener su enlace actualizado.</p>}
     <VideoShareControls jobId={job.id} request={api}/>
-    <button className={styles.secondaryButton} onClick={restart}>Crear otro video con mis fotos</button>
+    <button className={styles.secondaryButton} onClick={restart}>{single?"Crear nuevo video":"Crear otro video con mis fotos"}</button>
    </section>:null}
    {error?<div role="alert" className={styles.error}><ShieldCheck size={17}/><span>{error}</span></div>:null}
   </>}
