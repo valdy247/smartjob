@@ -102,3 +102,12 @@ test("single image is explicit and does not relax multi-scene validation",()=>{
  assert.match(api,/videoStudioWorkerProbe\("none",true\)/);
  assert.match(api,/vmv_studio_create_single_image_job/);
 });
+
+test("single-image studio starts fresh after a terminal job and exposes a new video action",()=>{
+ const ui=fs.readFileSync("app/vista-app/video-studio/manual/page.tsx","utf8");
+ assert.match(ui,/\["completed","failed","cancelled"\]\.includes\(saved\.status\)/);
+ assert.match(ui,/setJob\(saved\);setStep\("running"\)/);
+ assert.match(ui,/if\(single\)\{shotsRef\.current\.forEach[\s\S]*?setShots\(\[\]\)/);
+ assert.match(ui,/if\(owner\)window\.localStorage\.removeItem\(jobKey\+owner\)/);
+ assert.match(ui,/onClick=\{restart\}><ImagePlus size=\{18\}\/> Crear nuevo video/);
+});
